@@ -1,0 +1,14 @@
+#IFNDEF ACT
+ACT = all
+#ENDIF
+
+all: $(DIRS)
+
+$(DIRS):
+	@echo building .../$@ ...
+	@cd ../$@
+	@call $(MAKE) $(ACT) -f Makefile.nmake
+	@cd ..
+
+clean:
+	call $(MAKE) all ACT=clean -f Makefile.nmake

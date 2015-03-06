@@ -1,0 +1,17 @@
+
+ifndef ACT
+ACT=all
+endif
+
+all:
+	for dir in $(DIRS); do \
+		cd $$dir; \
+		$(MAKE) $(ACT); \
+		cd ..; \
+	done;
+
+clean:
+	$(MAKE) all ACT=clean
+
+	
+	

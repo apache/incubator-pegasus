@@ -1,0 +1,5 @@
+TARGET = echo.exe
+INC_EXTRA = 
+LIB_EXTRA =
+TYPE = LIB
+!INCLUDE ../../../scripts/Makefile.nmake.common

@@ -1,0 +1,6 @@
+DIRS = \
+	apps/echo \
+	apps/failure_detector \
+	apps/replication
+	
+!INCLUDE ../../scripts/Makefile.nmake.recursive

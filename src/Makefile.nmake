@@ -1,0 +1,7 @@
+DIRS = \
+	src/core \
+	src/dev \
+	src/tools \
+	src/apps
+	
+!INCLUDE ../scripts/Makefile.nmake.recursive

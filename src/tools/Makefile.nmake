@@ -1,0 +1,5 @@
+DIRS = \
+	tools/common \
+	tools/simulator
+
+!INCLUDE ../../scripts/Makefile.nmake.recursive

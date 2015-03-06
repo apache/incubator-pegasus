@@ -1,0 +1,3 @@
+TARGET=rdsn.replication.client.lib
+TYPE = LIB
+!INCLUDE ../../../../scripts/Makefile.nmake.common

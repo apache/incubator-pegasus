@@ -1,0 +1,3 @@
+TARGET=rdsn.core.lib
+TYPE=LIB
+!INCLUDE ../../scripts/Makefile.nmake.common

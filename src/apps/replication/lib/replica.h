@@ -1,0 +1,171 @@
+#pragma once
+
+//
+// a replica is a replication partition of a serivce,
+// which handles all replication related issues
+// and redirect the app messages to replication_app_base
+// which is binded to this replication partition
+//
+
+# include <rdsn/serviceletex.h>
+# include "replication_common.h"
+# include "mutation.h"
+# include "prepare_list.h"
+# include "replica_context.h"
+
+namespace rdsn { namespace replication {
+
+class replication_app_base;
+class mutation_log;
+class replica_stub;
+
+using namespace ::rdsn::service;
+
+class replica : public serviceletex<replica>, public ref_object
+{
+public:        
+    ~replica(void);
+
+    //
+    //    routines for replica stub
+    //
+    static replica* load(replica_stub* stub, const char* dir, replication_options& options, bool renameDirOnFailure);    
+    static replica* newr(replica_stub* stub, const char* app_type, global_partition_id gpid, replication_options& options);    
+    void replay_mutation(mutation_ptr& mu);
+    void reset_prepare_list_after_replay();
+    void update_local_configuration_with_no_ballot_change(partition_status status);
+    void close();
+
+    //
+    //    requests from clients
+    // 
+    void on_client_write(message_ptr& request);
+    void on_client_read(const client_read_request& meta, message_ptr& request);
+
+    //
+    //    messages and tools from/for meta server
+    //
+    void OnConfigProposal(configuration_update_request& proposal);
+    void OnConfigurationSync(const partition_configuration& config);
+            
+    //
+    //    messages from peers (primary or secondary)
+    //
+    void OnPrepare(message_ptr& request);    
+    void OnLearn(const learn_request& request, __out learn_response& response);
+    void OnLearnCompletionNotification(const group_check_response& report);
+    void OnAddLearner(const group_check_request& request);
+    void OnRemove(const replica_configuration& request);
+    void OnGroupCheck(const group_check_request& request, __out group_check_response& response);
+
+    //
+    //    messsages from liveness monitor
+    //
+    void on_meta_server_disconnected();
+    
+    //
+    //  routine for testing purpose only
+    //
+    void send_group_check_once_for_test(int delay_milliseconds);
+    
+    //
+    //  local information query
+    //
+    ballot get_ballot() const {return _config.ballot; }    
+    partition_status status() const { return _config.status; }
+    global_partition_id get_gpid() const { return _config.gpid; }    
+    replication_app_base* get_app() { return _app; }
+    decree max_prepared_decree() const { return _prepare_list->max_decree(); }
+    decree last_committed_decree() const { return _prepare_list->last_committed_decree(); }
+    decree LastPreparedDecree() const;
+    decree last_durable_decree() const;    
+    const std::string& dir() const { return _dir; }
+    bool group_configuration(__out partition_configuration& config) const;
+    uint64_t last_config_change_time_milliseconds() const { return _last_config_change_time_ms; }
+    const char* name() const { return _name; }
+        
+private:
+    // common helpers
+    void init_state();
+    void response_client_message(message_ptr& request, int error, decree decree = -1);    
+    void execute_mutation(mutation_ptr& mu);
+    mutation_ptr new_mutation(decree decree);
+    
+    // initialization
+    int  init_app_and_prepare_list(const char* app_type, bool createNew);
+    int  initialize_on_load(const char* dir, bool renameDirOnFailure);        
+    int  initialize_on_new(const char* app_type, global_partition_id gpid);
+    replica(replica_stub* stub, replication_options& options); // for replica::load(..) only
+    replica(replica_stub* stub, global_partition_id gpid, replication_options& options); // for replica::newr(...) only
+        
+    /////////////////////////////////////////////////////////////////
+    // 2pc
+    void on_mutation_pending_timeout(mutation_ptr& mu);
+    void init_prepare(mutation_ptr& mu);
+    void send_prepare_message(const end_point& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds, int maxSendCount);
+    void on_append_log_completed(mutation_ptr& mu, uint32_t err, uint32_t size);
+    void on_prepare_replay(mutation_ptr& mu, partition_status targetStatus, int err, message_ptr& request, message_ptr& reply);
+    void do_possible_commit_on_primary(mutation_ptr& mu);    
+    void ack_prepare_message(int err, mutation_ptr& mu);
+    void cleanup_preparing_mutations(bool isPrimary);
+    
+    /////////////////////////////////////////////////////////////////
+    // learning    
+    void init_learn(uint64_t signature = 0);
+    void on_learn_reply(error_code err, boost::shared_ptr<learn_request> req, boost::shared_ptr<learn_response> resp);
+    void on_learn_remote_state(boost::shared_ptr<learn_response> resp);
+    void on_learn_remote_state_completed(int err);
+    void handle_learning_error(int err);
+    void handle_learning_succeeded_on_primary(const end_point& node, uint64_t learnSignature);
+    void notify_learn_completion();
+        
+    /////////////////////////////////////////////////////////////////
+    // failure handling    
+    void handle_local_failure(int error);
+    void handle_remote_failure(partition_status status, const end_point& node, int error);
+
+    /////////////////////////////////////////////////////////////////
+    // reconfiguration
+    void assign_primary(configuration_update_request& proposal);
+    void add_potential_secondary(configuration_update_request& proposal);
+    void upgrade_to_secondary_on_primary(const end_point& node);
+    void downgrade_to_secondary_on_primary(configuration_update_request& proposal);
+    void downgrade_to_inactive_on_primary(configuration_update_request& proposal);
+    void remove(configuration_update_request& proposal);
+    void update_configuration_on_meta_server(config_type type, const end_point& node, partition_configuration& newConfig);
+    void on_update_configuration_on_meta_server_reply(error_code err, message_ptr& request, message_ptr& response, boost::shared_ptr<configuration_update_request> req);
+    void update_configuration(const partition_configuration& config);
+    void update_local_configuration(const replica_configuration& config);
+    void replay_prepare_list();
+
+    /////////////////////////////////////////////////////////////////
+    // group check
+    void init_group_check();
+    void broadcast_group_check();
+    void on_group_check_reply(error_code err, boost::shared_ptr<group_check_request> req, boost::shared_ptr<group_check_response> resp);
+    
+private:
+    // replica configuration, updated by update_local_configuration ONLY    
+    replica_configuration   _config;
+    uint64_t                 _last_config_change_time_ms;
+
+    // prepare list
+    prepare_list*           _prepare_list;
+
+    // application
+    replication_app_base*    _app;
+
+    // constants
+    replica_stub*           _stub;
+    std::string            _dir;
+    char                   _name[256]; // TableID.index @ host:port
+    replication_options     _options;
+    
+    // replica status specific states
+    primary_context            _primary_states;
+    potential_secondary_context _potential_secondary_states;
+};
+
+DEFINE_REF_OBJECT(replica)
+
+}} // namespace

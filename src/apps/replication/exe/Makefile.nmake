@@ -1,0 +1,5 @@
+TARGET=rdsn.replication.exe
+INC_EXTRA = /I../client_lib /I../lib /I../meta_server
+LIB_EXTRA = rdsn.replication.lib rdsn.replication.client.lib rdsn.replication.meta_server.lib rdsn.failure_detector.lib
+TYPE = EXE
+!INCLUDE ../../../../scripts/Makefile.nmake.common
