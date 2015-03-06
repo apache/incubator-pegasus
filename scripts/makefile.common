@@ -1,8 +1,8 @@
 ROOT = /Users/imzhenyu/projects/rdsn
 
-BOOST_INC = /usr/local/include
-BOOST_LIB = /usr/local/lib
-BOOST_LIB_DEPS = -lboost_chrono \
+SYS_INC = /usr/local/include
+SYS_LIB = /usr/local/lib
+SYS_LIB_DEPS = -lboost_chrono \
 	-lboost_date_time \
 	-lboost_filesystem \
 	-lboost_regex \
@@ -20,9 +20,9 @@ SOURCES = $(wildcard *.cpp)
 OBJS = $(SOURCES:%.cpp=%.o)
 
 CPP = gcc
-CPPFLAGS = -std=c++11 -I$(ROOT)/inc -I$(BOOST_INC) -I./ $(INC_EXTRA) -O0 -g 
+CPPFLAGS = -std=c++11 -I$(ROOT)/inc -I$(SYS_INC) -I./ $(INC_EXTRA) -O0 -g 
 LD = gcc
-LDFLAGS = -L$(BIN_DIR) -L$(BOOST_LIB) $(BOOST_LIB_DEPS)  $(LIB_EXTRA_DEPS)
+LDFLAGS = -L$(BIN_DIR) -L$(SYS_LIB) $(SYS_LIB_DEPS)  $(LIB_EXTRA_DEPS)
 AR = ar
 ARFLAGS = rv
 
