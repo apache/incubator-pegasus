@@ -190,8 +190,9 @@ namespace rdsn {
                 if (ret == ERR_ADDRESS_ALREADY_USED && addr_used_here)
                 {
                     // reuse the same network
-                    delete kv.second;
                     kv.second = net;
+
+                    // TODO: recycle memory 
                 }
                 else
                     return ret;

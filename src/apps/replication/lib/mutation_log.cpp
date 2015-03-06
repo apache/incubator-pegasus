@@ -187,7 +187,7 @@ int mutation_log::write_pending_mutations(bool create_new_log_when_necessary)
     rdsn_assert (_pending_write != nullptr, "");
     rdsn_assert(_pending_write_timer == nullptr, "");
 
-    _pending_write->seal(true, "");
+    _pending_write->seal(true);
     auto bb = _pending_write->get_output_buffer();
     uint64_t offset = end_offset() - bb.length();
     auto buf = bb.buffer();
