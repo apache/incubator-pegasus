@@ -8,7 +8,7 @@ namespace rdsn {
 
         static void tracer_on_task_enqueue(task* caller, task* callee)
         {
-            rdsn_debug("ENQUEUE %s, task_id = %016llx",
+            rdebug("%s ENQUEUE, task_id = %016llx",
                 callee->spec().name,
                 callee->id()
                 );
@@ -16,31 +16,21 @@ namespace rdsn {
 
         static void tracer_on_task_begin(task* this_)
         {
-            rdsn_debug("EXEC %s BEGIN, task_id = %016llx",
-                this_->spec().name,
-                this_->id()
-                );
-        }
-
-        static void tracer_on_task_end(task* this_)
-        {
             switch (this_->spec().type)
             {
             case task_type::TASK_TYPE_COMPUTE:
             case task_type::TASK_TYPE_AIO:
-                rdsn_debug("EXEC %s END, task_id = %016llx, err = %s",
+                rdebug("%s EXEC BEGIN, task_id = %016llx",
                     this_->spec().name,
-                    this_->id(),
-                    this_->error().to_string()
+                    this_->id()
                     );
                 break;
             case task_type::TASK_TYPE_RPC_REQUEST:
             {
                 auto tsk = (rpc_request_task*)this_;
-                rdsn_debug("EXEC %s, task_id = %016llx, err = %s, %s:%u => %s:%u, rpc_id = %016llx",
+                rdebug("%s EXEC BEGIN, task_id = %016llx, %s:%u => %s:%u, rpc_id = %016llx",
                     this_->spec().name,
                     this_->id(),
-                    this_->error().to_string(),
                     tsk->get_request()->header().from_address.name.c_str(),
                     (int)tsk->get_request()->header().from_address.port,
                     tsk->get_request()->header().to_address.name.c_str(),
@@ -52,10 +42,9 @@ namespace rdsn {
             case task_type::TASK_TYPE_RPC_RESPONSE:
             {
                 auto tsk = (rpc_response_task*)this_;
-                rdsn_debug("EXEC %s, task_id = %016llx, err = %s, %s:%u => %s:%u, rpc_id = %016llx",
+                rdebug("%s EXEC BEGIN, task_id = %016llx, %s:%u => %s:%u, rpc_id = %016llx",
                     this_->spec().name,
                     this_->id(),
-                    this_->error().to_string(),
                     tsk->get_request()->header().to_address.name.c_str(),
                     (int)tsk->get_request()->header().to_address.port,
                     tsk->get_request()->header().from_address.name.c_str(),
@@ -67,9 +56,18 @@ namespace rdsn {
             }
         }
 
+        static void tracer_on_task_end(task* this_)
+        {
+            rdebug("%s EXEC END, task_id = %016llx, err = %s",
+                this_->spec().name,
+                this_->id(),
+                this_->error().to_string()
+                );
+        }
+
         static void tracer_on_task_cancelled(task* this_)
         {
-            rdsn_debug("CANCELLED %s, task_id = %016llx",
+            rdebug("%s CANCELLED, task_id = %016llx",
                 this_->spec().name,
                 this_->id()
                 );
@@ -93,7 +91,7 @@ namespace rdsn {
         // return true means continue, otherwise early terminate with task::set_error_code
         static void tracer_on_aio_call(task* caller, aio_task* callee)
         {
-            rdsn_debug("AIO.CALL %s, task_id = %016llx",
+            rdebug("%s AIO.CALL, task_id = %016llx",
                 callee->spec().name,
                 callee->id()
                 );
@@ -101,7 +99,7 @@ namespace rdsn {
 
         static void tracer_on_aio_enqueue(aio_task* this_)
         {
-            rdsn_debug("AIO.ENQUEUE %s, task_id = %016llx",
+            rdebug("%s AIO.ENQUEUE, task_id = %016llx",
                 this_->spec().name,
                 this_->id()
                 );
@@ -111,8 +109,8 @@ namespace rdsn {
         static void tracer_on_rpc_call(task* caller, message* req, rpc_response_task* callee)
         {
             message_header& hdr = req->header();
-            rdsn_debug(
-                "RPC.CALL %s: %s:%u => %s:%u, rpc_id = %016llx, timeout_task = %016llx, timeout = %ums",
+            rdebug(
+                "%s RPC.CALL: %s:%u => %s:%u, rpc_id = %016llx, timeout_task = %016llx, timeout = %ums",
                 hdr.rpc_name,
                 hdr.from_address.name.c_str(),
                 (int)hdr.from_address.port,
@@ -126,7 +124,7 @@ namespace rdsn {
 
         static void tracer_on_rpc_request_enqueue(rpc_request_task* callee)
         {
-            rdsn_debug("RPC.REQUEST.ENQUEUE %s, task_id = %016llx, %s:%u => %s:%u, rpc_id = %016llx",
+            rdebug("%s RPC.REQUEST.ENQUEUE, task_id = %016llx, %s:%u => %s:%u, rpc_id = %016llx",
                 callee->spec().name,
                 callee->id(),
                 callee->get_request()->header().from_address.name.c_str(),
@@ -142,8 +140,8 @@ namespace rdsn {
         {
             message_header& hdr = msg->header();
 
-            rdsn_debug(
-                "RPC.REPLY %s: %s:%u => %s:%u, rpc_id = %016llx",
+            rdebug(
+                "%s RPC.REPLY: %s:%u => %s:%u, rpc_id = %016llx",
                 hdr.rpc_name,
                 hdr.from_address.name.c_str(),
                 (int)hdr.from_address.port,
@@ -155,7 +153,7 @@ namespace rdsn {
 
         static void tracer_on_rpc_response_enqueue(rpc_response_task* resp)
         {
-            rdsn_debug("RPC.RESPONSE.ENQUEUE %s, task_id = %016llx, %s:%u => %s:%u, rpc_id = %016llx",
+            rdebug("%s RPC.RESPONSE.ENQUEUE, task_id = %016llx, %s:%u => %s:%u, rpc_id = %016llx",
                 resp->spec().name,
                 resp->id(),
                 resp->get_request()->header().to_address.name.c_str(),
@@ -177,7 +175,7 @@ namespace rdsn {
 
                 std::string section_name = std::string("task.") + std::string(task_code::to_string(i));
                 task_spec* spec = task_spec::get(i);
-                rdsn_assert(spec != nullptr, "task_spec cannot be null");
+                rassert(spec != nullptr, "task_spec cannot be null");
 
                 if (!_configuration->get_value<bool>(section_name.c_str(), "is_trace", trace))
                     continue;

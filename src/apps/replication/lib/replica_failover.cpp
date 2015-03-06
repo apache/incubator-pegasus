@@ -10,7 +10,7 @@ namespace rdsn { namespace replication {
 
 void replica::handle_local_failure(int error)
 {
-    rdsn_debug(
+    rdebug(
         "%s: handle local failure error %x, status = %s",
         name(),
         error,
@@ -27,7 +27,7 @@ void replica::handle_local_failure(int error)
 
 void replica::handle_remote_failure(partition_status status, const end_point& node, int error)
 {    
-    rdsn_debug(
+    rdebug(
         "%s: handle remote failure error %u, status = %s, node = %s:%u",
         name(),
         error,
@@ -35,13 +35,13 @@ void replica::handle_remote_failure(partition_status status, const end_point& no
         node.name.c_str(), (int)node.port
         );
 
-    rdsn_assert (status == PS_PRIMARY, "");
-    rdsn_assert (node != address(), "");
+    rassert (status == PS_PRIMARY, "");
+    rassert (node != address(), "");
 
     switch (status)
     {
     case PS_SECONDARY:
-        rdsn_assert (_primary_states.CheckExist(node, PS_SECONDARY), "");
+        rassert (_primary_states.CheckExist(node, PS_SECONDARY), "");
         {
             configuration_update_request request;
             request.node = node;
@@ -66,14 +66,14 @@ void replica::handle_remote_failure(partition_status status, const end_point& no
     case PS_ERROR:
         break;
     default:
-        rdsn_assert (false, "");
+        rassert (false, "");
         break;
     }
 }
 
 void replica::on_meta_server_disconnected()
 {
-    rdsn_debug( "%s: coordinator disconnected", name());
+    rdebug( "%s: coordinator disconnected", name());
 
     update_local_configuration_with_no_ballot_change(PS_INACTIVE);
 }

@@ -28,9 +28,9 @@ namespace rdsn {
 
         error_code native_posix_aio_provider::close(handle_t hFile)
         {
-			// TODO: handle failure
+            // TODO: handle failure
             ::close((int)hFile);
-			return ERR_SUCCESS;
+            return ERR_SUCCESS;
         }
 
         struct posix_disk_aio_context : public disk_aio
@@ -55,10 +55,10 @@ namespace rdsn {
         {
             aio_internal(aio_tsk, true);
         }
-		
-		static void aio_completed(sigval sigval)
-		{
-		}
+        
+        static void aio_completed(sigval sigval)
+        {
+        }
 
         error_code native_posix_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool async, __out uint32_t* pbytes /*= nullptr*/)
         {
@@ -92,13 +92,13 @@ namespace rdsn {
                 r = aio_write(&aio->cb);
                 break;
             default:
-                rdsn_assert(false, "unknown aio type %u", (int)aio->type);
+                rassert(false, "unknown aio type %u", (int)aio->type);
                 break;
             }
 
             if (r < 0)
             {
-                rdsn_error("file op faile, err = %d", r);
+                rerror("file op faile, err = %d", r);
             }
 
             if (async)

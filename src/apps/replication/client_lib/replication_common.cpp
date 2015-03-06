@@ -171,8 +171,8 @@ void replication_options::initialize(configuration_ptr config)
 
 void replication_options::sanity_check()
 {
-    rdsn_assert (GroupCheckTimeoutMs * GroupCheckMaxSendCount < GroupCheckIntervalMs, "");
-    rdsn_assert(StalenessForStartPrepareForPotentialSecondary >= StalenessForCommit, "");
+    rassert (GroupCheckTimeoutMs * GroupCheckMaxSendCount < GroupCheckIntervalMs, "");
+    rassert(StalenessForStartPrepareForPotentialSecondary >= StalenessForCommit, "");
 }
    
 /*static*/ bool ReplicaHelper::RemoveNode(const end_point& node, __inout std::vector<end_point>& nodeList)

@@ -23,7 +23,7 @@ namespace rdsn { namespace tools {
         sim_network_provider* rnet = nullptr;
         if (!s_switch.get(msg->header().to_address, rnet))
         {
-            rdsn_warn("cannot find destination node %s:%u in simulator", 
+            rwarn("cannot find destination node %s:%u in simulator", 
                 msg->header().to_address.name.c_str(), 
                 (int)msg->header().to_address.port
                 );
@@ -54,7 +54,7 @@ namespace rdsn { namespace tools {
         sim_network_provider* rnet = nullptr;
         if (!s_switch.get(reply_msg->header().to_address, rnet))
         {
-            rdsn_warn("cannot find destination node %s:%u in simulator",
+            rwarn("cannot find destination node %s:%u in simulator",
                 reply_msg->header().to_address.name.c_str(),
                 (int)reply_msg->header().to_address.port
                 );
@@ -72,7 +72,7 @@ namespace rdsn { namespace tools {
         }
         else
         {
-            rdsn_warn("cannot find origination client for %s:%u @ %s:%u in simulator",
+            rwarn("cannot find origination client for %s:%u @ %s:%u in simulator",
                 reply_msg->header().from_address.name.c_str(),
                 (int)reply_msg->header().from_address.port,
                 reply_msg->header().to_address.name.c_str(),
@@ -95,9 +95,9 @@ namespace rdsn { namespace tools {
         }
     }
 
-	error_code sim_network_provider::start(int port, bool client_only)
+    error_code sim_network_provider::start(int port, bool client_only)
     { 
-		client_only;
+        client_only;
         _primary_address.port = port;
         if (s_switch.put(_primary_address, this))
             return ERR_SUCCESS;

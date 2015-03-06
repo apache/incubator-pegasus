@@ -28,7 +28,7 @@ replication_app_example1::replication_app_example1(replica* replica, const repli
 
 int replication_app_example1::write(std::list<message_ptr>& requests, decree decree, bool ackClient)
 {
-    rdsn_assert(_lastCommittedDecree + 1 == decree, "");
+    rassert(_lastCommittedDecree + 1 == decree, "");
     _lastCommittedDecree = decree;
 
     for (auto it = requests.begin(); it != requests.end(); it++)
@@ -63,7 +63,7 @@ int replication_app_example1::write(std::list<message_ptr>& requests, decree dec
             }
             break;
         default:
-            rdsn_assert(false, "");
+            rassert(false, "");
         }    
         }
 
@@ -84,7 +84,7 @@ void replication_app_example1::read(const client_read_request& meta, rdsn::messa
     SimpleKvRequest msg;
     unmarshall(request, msg);
 
-    rdsn_assert(msg.op == SimpleKvOperation::SKV_READ, "");
+    rassert(msg.op == SimpleKvOperation::SKV_READ, "");
 
     SimpleKvResponse resp;
     resp.key = msg.key;
@@ -256,7 +256,7 @@ int replication_app_example1::get_learn_state(decree start, const utils::blob& l
 
     writer.write(_lastCommittedDecree);
 
-    rdsn_assert(_lastCommittedDecree >= 0, "");
+    rassert(_lastCommittedDecree >= 0, "");
     
     int count = (int)_store.size();
     writer.write(count);
@@ -304,12 +304,12 @@ int replication_app_example1::apply_learn_state(learn_state& state)
     int magic;
     reader.read(magic);
 
-    rdsn_assert(magic == 0xdeadbeef, "");
+    rassert(magic == 0xdeadbeef, "");
 
     decree decree;
     reader.read(decree);
 
-    rdsn_assert(decree >= 0, "");
+    rassert(decree >= 0, "");
 
     int count;
     reader.read(count);

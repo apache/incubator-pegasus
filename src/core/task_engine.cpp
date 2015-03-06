@@ -76,7 +76,7 @@ void task_worker_pool::start()
 
 void task_worker_pool::enqueue_task(task_ptr& task)
 {
-    rdsn_assert (task->spec().pool_code == spec().pool_code || task->spec().type == TASK_TYPE_RPC_RESPONSE, "Invalid thread pool used");
+    rassert (task->spec().pool_code == spec().pool_code || task->spec().type == TASK_TYPE_RPC_RESPONSE, "Invalid thread pool used");
 
     if (_is_running)
     {
@@ -94,7 +94,7 @@ void task_worker_pool::enqueue_task(task_ptr& task)
                     {
                         task->spec().rejection_handler(task.get(), controller);
 
-                        rdsn_log(log_level_DEBUG, __TITLE__,
+                        rlog(log_level_DEBUG, __TITLE__,
                                 "timer_task %s (%016llx) is rejected",                            
                                 task->spec().name,
                                 task->id()
@@ -115,7 +115,7 @@ void task_worker_pool::enqueue_task(task_ptr& task)
                     {
                         task->spec().rejection_handler(task.get(), controller);
 
-                        rdsn_log(log_level_DEBUG, __TITLE__,
+                        rlog(log_level_DEBUG, __TITLE__,
                                 "task %s (%016llx) is rejected because the target queue is full",                            
                                 task->spec().name,
                                 task->id()
@@ -135,7 +135,7 @@ void task_worker_pool::enqueue_task(task_ptr& task)
     }
     else
     {
-        rdsn_assert (false, "worker pool %s must be started before enqueue task %s",
+        rassert (false, "worker pool %s must be started before enqueue task %s",
             spec().name.c_str(),
             task->spec().name
             );

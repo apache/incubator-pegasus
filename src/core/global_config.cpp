@@ -67,7 +67,7 @@ bool threadpool_spec::init(configuration_ptr& config, __out std::vector<threadpo
     defaultSpec.worker_priority = enum_from_string(config->get_string_value("threadpool.default", "worker_priority", "THREAD_xPRIORITY_NORMAL").c_str(), THREAD_xPRIORITY_INVALID);
     if (defaultSpec.worker_priority == THREAD_xPRIORITY_INVALID)
     {
-        rdsn_log(log_level_ERROR, __TITLE__,  "invalid worker priority in [threadpool.default]");
+        rlog(log_level_ERROR, __TITLE__,  "invalid worker priority in [threadpool.default]");
         return false;
     }
     defaultSpec.worker_share_core = config->get_value<bool>("threadpool.default", "worker_share_core", true);
@@ -220,9 +220,9 @@ bool service_spec::init(configuration_ptr c)
         {
             service_app_spec app;
             app.init((*it).c_str(), config);
-			rdsn_assert(app.port == 0 || app.port > 1024, "specified port is either 0 (no listen port) or greater than 1024");
+            rassert(app.port == 0 || app.port > 1024, "specified port is either 0 (no listen port) or greater than 1024");
 
-			int lport = app.port;
+            int lport = app.port;
             int count = config->get_value<int>((*it).c_str(), "count", 1);
             std::string name = app.name;
             for (int i = 1; i <= count; i++)
@@ -231,29 +231,21 @@ bool service_spec::init(configuration_ptr c)
                 sprintf(buf, ".%u", i);
                 app.name = (count > 1 ? (name + buf) : name);
 
-				if (lport == 0)
-				{
-					app.port = ++network::max_faked_port_for_client_only_node;
-					rdsn_assert(app.port <= 1024, "faked port for client nodes only must not exceed 1024");
-					app_specs.push_back(app);
-				}
-				else
-				{
-					app_specs.push_back(app);
-					app.port++;
-				}
+                if (lport == 0)
+                {
+                    app.port = ++network::max_faked_port_for_client_only_node;
+                    rassert(app.port <= 1024, "faked port for client nodes only must not exceed 1024");
+                    app_specs.push_back(app);
+                }
+                else
+                {
+                    app_specs.push_back(app);
+                    app.port++;
+                }
             }
         }
     }
 
-    /*
-    if (!TraceInitialize(config))
-        return false;
-        
-    if (!failure_options.init(config))
-        return false;
-
-    config = config;*/
     return true;
 }
 

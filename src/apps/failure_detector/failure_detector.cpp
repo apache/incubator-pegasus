@@ -54,7 +54,7 @@ bool failure_detector::uninit()
     if ( _is_started == true )
     {
         // did not stop, can not uninit
-        rdsn_error("can not uninit failure detector without stopping it first");
+        rerror("can not uninit failure detector without stopping it first");
         return false;
     }
 
@@ -75,7 +75,7 @@ void failure_detector::on_configuration_changed(
 {
     _lock.lock();
 
-    rdsn_info(
+    rinfo(
         "failure_detector configuration HotChanged, CheckInterval=%u->%u , BeaconInterval=%u->%u , LeaseInterval=%u->%u , GraceInterval=%u->%u",
         _check_interval_milliseconds, check_interval_seconds, _beacon_interval_milliseconds, beacon_interval_seconds, _lease_milliseconds, lease_seconds, _grace_milliseconds, grace_seconds);
 
@@ -99,7 +99,7 @@ void failure_detector::register_master(const end_point& target)
     auto ret = _masters.insert(std::make_pair(target, record));
     if ( ret.second == true )
     {
-        rdsn_info(
+        rinfo(
             "register_rpc_handler master successfully, target machine ip [%u], port[%u]",
             target.ip, (int)target.port);
     }
@@ -107,7 +107,7 @@ void failure_detector::register_master(const end_point& target)
     {
         // active the beacon again in case previously local node is not in target's allow list
         ret.first->second.rejected = false;
-        rdsn_info(       
+        rinfo(       
             "Master already registered, for target machine: target machine ip [%u], port[%u]",
             target.ip, (int)target.port);
     }
@@ -126,7 +126,7 @@ bool failure_detector::switch_master(const end_point& from, const end_point& to)
         {
             if (it2 != _masters.end())
             {
-                rdsn_info(       
+                rinfo(       
                     "Master switch, switch master from %s:%u to %s:%u failed as both are already registered",
                     from.name.c_str(), (int)from.port,
                     to.name.c_str(), (int)to.port
@@ -139,7 +139,7 @@ bool failure_detector::switch_master(const end_point& from, const end_point& to)
             _masters.insert(std::make_pair(to, it->second));
             _masters.erase(from);
 
-            rdsn_info(       
+            rinfo(       
                 "Master switch, switch master from %s:%u to %s:%u succeeded",
                 from.name.c_str(), (int)from.port,
                 to.name.c_str(), (int)to.port
@@ -147,7 +147,7 @@ bool failure_detector::switch_master(const end_point& from, const end_point& to)
         }
         else
         {
-            rdsn_info(       
+            rinfo(       
                 "Master switch, switch master from %s:%u to %s:%u failed as the former has not been registered yet",
                 from.name.c_str(), (int)from.port,
                 to.name.c_str(), (int)to.port
@@ -200,7 +200,7 @@ bool failure_detector::is_time_greater_than(uint64_t ts, uint64_t base)
 
 void failure_detector::report(const end_point& node, bool is_master, bool is_connected)
 {
-    rdsn_debug( 
+    rdebug( 
         "%s %s:%hu %sconnected", is_master ? "Master":"worker", node.name.c_str(), node.port, is_connected ? "" : "dis");
 
     printf ("%s %s:%hu %sconnected\n", is_master ? "Master":"worker", node.name.c_str(), node.port, is_connected ? "" : "dis");    
@@ -313,7 +313,7 @@ void failure_detector::on_beacon(const beacon_msg& beacon, __out beacon_ack& ack
     {
         if (_use_allow_list && _allow_list.find(node) == _allow_list.end())
         {
-            rdsn_debug("Client %s:%hu is rejected", node.name.c_str(), node.port);
+            rdebug("Client %s:%hu is rejected", node.name.c_str(), node.port);
             ack.allowed = false;
             return;
         }
@@ -323,7 +323,7 @@ void failure_detector::on_beacon(const beacon_msg& beacon, __out beacon_ack& ack
         _workers.insert(std::make_pair(node, record));
         
         itr = _workers.find(node);
-        rdsn_assert( itr != _workers.end(), "cannot find the worker" );
+        rassert( itr != _workers.end(), "cannot find the worker" );
 
         itr->second.status = ST_Connected;
 
@@ -359,7 +359,7 @@ void failure_detector::on_beacon_ack(error_code err, boost::shared_ptr<beacon_ms
 
     if ( itr == _masters.end() )
     {
-        rdsn_warn("Failure in process beacon ack in liveness monitor, received beacon ack without corresponding beacon record, remote node name[%s], local node name[%s]",
+        rwarn("Failure in process beacon ack in liveness monitor, received beacon ack without corresponding beacon record, remote node name[%s], local node name[%s]",
             node.name.c_str(), address().name.c_str());
 
         return;
@@ -368,7 +368,7 @@ void failure_detector::on_beacon_ack(error_code err, boost::shared_ptr<beacon_ms
     master_record& record = itr->second;
     if (!ack->allowed)
     {
-        rdsn_debug( "Server %s:%hu rejected me as i'm not in its allow list, stop sending beacon message", node.name.c_str(), node.port);
+        rdebug( "Server %s:%hu rejected me as i'm not in its allow list, stop sending beacon message", node.name.c_str(), node.port);
         record.rejected = true;
         return;
     }
@@ -409,7 +409,7 @@ bool failure_detector::unregister_master(const end_point & node)
         ret = true;
     }
 
-    rdsn_info("remove send record sucessfully, removed node [%s], removed entry count [%u]",
+    rinfo("remove send record sucessfully, removed node [%s], removed entry count [%u]",
         node.name.c_str(), (uint32_t)count);
     
     return ret;
@@ -437,13 +437,13 @@ void failure_detector::register_worker( const end_point& target, bool is_connect
     auto ret = _workers.insert(std::make_pair(target, record));
     if ( ret.second == true )
     {
-        rdsn_info(
+        rinfo(
             "register_rpc_handler worker successfully", "target machine ip [%u], port[%u]",
             target.ip, (int)target.port);
     }
     else
     {
-        rdsn_info(       
+        rinfo(       
             "worker already registered", "for target machine: target machine ip [%u], port[%u]",
             target.ip, (int)target.port);
     }
@@ -466,7 +466,7 @@ bool failure_detector::unregister_worker(const end_point& node)
         ret = true;
     }
 
-    rdsn_info("remove recv record sucessfully, removed node [%s], removed entry count [%u]",
+    rinfo("remove recv record sucessfully, removed node [%s], removed entry count [%u]",
         node.name.c_str(), (uint32_t)count);
     return ret;
 }

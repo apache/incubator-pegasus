@@ -13,7 +13,7 @@ void replica::init_group_check()
     if (PS_PRIMARY != status() || _options.GroupCheckDisabled)
         return;
 
-    rdsn_assert (nullptr == _primary_states.GroupCheckTask, "");
+    rassert (nullptr == _primary_states.GroupCheckTask, "");
     _primary_states.GroupCheckTask = enqueue_task(
             LPC_GROUP_CHECK,
             &replica::broadcast_group_check,
@@ -25,10 +25,10 @@ void replica::init_group_check()
 
 void replica::broadcast_group_check()
 {
-    rdsn_assert (nullptr != _primary_states.GroupCheckTask, "");
+    rassert (nullptr != _primary_states.GroupCheckTask, "");
     if (_primary_states.GroupCheckPendingReplies.size() > 0)
     {
-        rdsn_warn(
+        rwarn(
             "%s: %u group check replies are still pending when doing next round check",
             name(), (int)_primary_states.GroupCheckPendingReplies.size()
             );
@@ -56,7 +56,7 @@ void replica::broadcast_group_check()
         if (it->second == PS_POTENTIAL_SECONDARY)
         {
             auto it2 = _primary_states.Learners.find(it->first);
-            rdsn_assert (it2 != _primary_states.Learners.end(), "");
+            rassert (it2 != _primary_states.Learners.end(), "");
             request->learnerSignature = it2->second.signature;
         }
 
@@ -71,7 +71,7 @@ void replica::broadcast_group_check()
 
         _primary_states.GroupCheckPendingReplies[addr] = caller_tsk;
 
-        rdsn_debug(
+        rdebug(
             "%s: init_group_check for %s:%u", name(), addr.name.c_str(), addr.port
         );
     }
@@ -79,7 +79,7 @@ void replica::broadcast_group_check()
 
 void replica::OnGroupCheck(const group_check_request& request, __out group_check_response& response)
 {
-    rdsn_debug(
+    rdebug(
         "%s: OnGroupCheck from %s:%u",
         name(), request.config.primary.name.c_str(), request.config.primary.port
         );
@@ -110,7 +110,7 @@ void replica::OnGroupCheck(const group_check_request& request, __out group_check
     case PS_ERROR:
         break;
     default:
-        rdsn_assert (false, "");
+        rassert (false, "");
     }
     
     response.gpid = get_gpid();
@@ -135,7 +135,7 @@ void replica::on_group_check_reply(error_code err, boost::shared_ptr<group_check
     }
 
     auto r = _primary_states.GroupCheckPendingReplies.erase(req->node);
-    rdsn_assert (r == 1, "");
+    rassert (r == 1, "");
 
     if (err)
     {
@@ -160,7 +160,7 @@ void replica::on_group_check_reply(error_code err, boost::shared_ptr<group_check
 // for testing purpose only
 void replica::send_group_check_once_for_test(int delay_milliseconds)
 {
-    rdsn_assert (_options.GroupCheckDisabled, "");
+    rassert (_options.GroupCheckDisabled, "");
 
     _primary_states.GroupCheckTask = enqueue_task(
             LPC_GROUP_CHECK,

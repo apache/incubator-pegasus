@@ -12,7 +12,7 @@ namespace rdsn { namespace replication {
 replica::replica(replica_stub* stub, replication_options& options)
 : serviceletex<replica>("replica")
 {
-    rdsn_assert (stub, "");
+    rassert (stub, "");
     _stub = stub;
     _app = nullptr;
         
@@ -25,7 +25,7 @@ replica::replica(replica_stub* stub, replication_options& options)
 replica::replica(replica_stub* stub, global_partition_id gpid, replication_options& options)
 : serviceletex<replica>("replica")
 {
-    rdsn_assert (stub, "");
+    rassert (stub, "");
     _stub = stub;
     _app = nullptr;    
     _options = options;
@@ -77,7 +77,7 @@ void replica::on_client_read(const client_read_request& meta, message_ptr& reque
         return;
     }
 
-    rdsn_assert (_app != nullptr, "");
+    rassert (_app != nullptr, "");
     _app->read(meta, request);
 }
 
@@ -91,7 +91,7 @@ void replica::response_client_message(message_ptr& request, int error, decree d/
 
 void replica::execute_mutation(mutation_ptr& mu)
 {
-    rdsn_assert (nullptr != _app, "");
+    rassert (nullptr != _app, "");
 
     int err = ERR_SUCCESS;
     switch (status())
@@ -103,7 +103,7 @@ void replica::execute_mutation(mutation_ptr& mu)
     case PS_PRIMARY:
     case PS_SECONDARY:
         {
-        rdsn_assert (_app->last_committed_decree() + 1 == mu->data.header.decree, "");
+        rassert (_app->last_committed_decree() + 1 == mu->data.header.decree, "");
         bool ackClient = (status() == PS_PRIMARY);
         if (ackClient)
         {
@@ -126,20 +126,20 @@ void replica::execute_mutation(mutation_ptr& mu)
             }
             else
             {
-                rdsn_assert (mu->data.header.decree <= _app->last_committed_decree(), "");
+                rassert (mu->data.header.decree <= _app->last_committed_decree(), "");
             }
         }
         else
         {
             // drop mutations as learning will catch up
-            rdsn_debug("%s: mutation %s skipped coz learing buffer overflow", name(), mu->name());
+            rdebug("%s: mutation %s skipped coz learing buffer overflow", name(), mu->name());
         }
         break;
     case PS_ERROR:
         break;
     }
      
-    rdsn_debug("TwoPhaseCommit, %s: mutation %s committed, err = %x", name(), mu->name(), err);
+    rdebug("TwoPhaseCommit, %s: mutation %s committed, err = %x", name(), mu->name(), err);
 
     if (err != ERR_SUCCESS)
     {

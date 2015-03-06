@@ -37,7 +37,7 @@ service_app::~service_app(void)
 
 void service_app::set_address(const end_point& addr)
 {
-    rdsn_assert (_address.port == 0 || _address.port == addr.port, "invalid service address");
+    rassert (_address.port == 0 || _address.port == addr.port, "invalid service address");
     _address = addr;
 }
 

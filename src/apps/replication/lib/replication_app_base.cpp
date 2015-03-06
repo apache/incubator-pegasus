@@ -15,11 +15,11 @@ replication_app_base::replication_app_base(replica* replica, const replication_a
 
 int replication_app_base::WriteInternal(mutation_ptr& mu, bool ackClient)
 {
-    rdsn_assert (mu->data.header.decree == last_committed_decree() + 1, "");
+    rassert (mu->data.header.decree == last_committed_decree() + 1, "");
 
     int err = write(mu->client_requests, mu->data.header.decree, ackClient);
 
-    //rdsn_assert(mu->data.header.decree == last_committed_decree(), "");
+    //rassert(mu->data.header.decree == last_committed_decree(), "");
 
     return err;
 }

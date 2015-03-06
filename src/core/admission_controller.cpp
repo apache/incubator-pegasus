@@ -15,12 +15,12 @@ namespace rdsn {
 //        _maxTaskQueueSize = atoi(sargs[0].c_str());
 //        if (_maxTaskQueueSize <= 0)
 //        {
-//            rdsn_assert (false, "Invalid arguments for BoundedQueueAdmissionController: MaxTaskQueueSize = '%s'", sargs[0].c_str());
+//            rassert (false, "Invalid arguments for BoundedQueueAdmissionController: MaxTaskQueueSize = '%s'", sargs[0].c_str());
 //        }
 //    }
 //    else
 //    {
-//        rdsn_assert (false, "arguments for BoundedQueueAdmissionController is missing: MaxTaskQueueSize");
+//        rassert (false, "arguments for BoundedQueueAdmissionController is missing: MaxTaskQueueSize");
 //    }
 //}
 //
@@ -65,7 +65,7 @@ namespace rdsn {
 //            || _percentile >= 5
 //            )
 //        {
-//            rdsn_assert (false, "Invalid arguments for SingleRpcClassResponseTimeAdmissionController: RpcRequestEventCode PercentileType(0-4) LatencyThreshold100ns\n"
+//            rassert (false, "Invalid arguments for SingleRpcClassResponseTimeAdmissionController: RpcRequestEventCode PercentileType(0-4) LatencyThreshold100ns\n"
 //                "\tcounter percentile type (0-4): 999,   99,  95,  90,  50\n");
 //        }
 //
@@ -73,7 +73,7 @@ namespace rdsn {
 //    }
 //    else
 //    {
-//        rdsn_assert (false, "arguments for SingleRpcClassResponseTimeAdmissionController is missing: RpcRequestEventCode PercentileType(0-4) LatencyThreshold100ns\n"
+//        rassert (false, "arguments for SingleRpcClassResponseTimeAdmissionController is missing: RpcRequestEventCode PercentileType(0-4) LatencyThreshold100ns\n"
 //            "\tcounter percentile type (0-4): 999,   99,  95,  90,  50\n");
 //    }
 //}

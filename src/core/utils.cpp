@@ -128,7 +128,7 @@ void binary_reader::read(blob& blob)
     }
     else
     {
-        rdsn_assert (false, "read beyond the end of buffer");
+        rassert (false, "read beyond the end of buffer");
     }
 }
 
@@ -141,7 +141,7 @@ void binary_reader::read(char* buffer, int sz)
     }
     else
     {
-        rdsn_assert (false, "read beyond the end of buffer");
+        rassert (false, "read beyond the end of buffer");
     }
 }
 

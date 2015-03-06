@@ -145,9 +145,6 @@ public:
 
     virtual void  exec();
 
-protected:
-    uint64_t          StartTime100ns;
-
 private:
     message_ptr   _request;
     message_ptr   _response;

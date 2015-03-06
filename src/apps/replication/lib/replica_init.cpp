@@ -28,7 +28,7 @@ int replica::initialize_on_new(const char* app_type, global_partition_id gpid)
     boost::filesystem::create_directory(_dir);
 
     int err = init_app_and_prepare_list(app_type, true);
-    rdsn_assert (err == ERR_SUCCESS, "");
+    rassert (err == ERR_SUCCESS, "");
     return err;
 }
 
@@ -50,7 +50,7 @@ int replica::initialize_on_load(const char* dir, bool renameDirOnFailure)
     auto pos = dr.find_last_of('/');
     if (pos == std::string::npos)
     {
-        rdsn_error( "invalid replica dir %s", dir);
+        rerror( "invalid replica dir %s", dir);
         return ERR_PATH_NOT_FOUND;
     }
 
@@ -59,7 +59,7 @@ int replica::initialize_on_load(const char* dir, bool renameDirOnFailure)
     std::string name = dr.substr(pos + 1);
     if (4 != sscanf(name.c_str(), "%u.%u.%s", &gpid.tableId, &gpid.pidx, app_type))
     {
-        rdsn_error( "invalid replica dir %s", dir);
+        rerror( "invalid replica dir %s", dir);
         return ERR_PATH_NOT_FOUND;
     }
     
@@ -75,7 +75,7 @@ int replica::initialize_on_load(const char* dir, bool renameDirOnFailure)
         sprintf(newPath, "%s.%x.err", dir, random32(0, (uint32_t)-1));  
         boost::filesystem::remove_all(newPath);
         boost::filesystem::rename(dir, newPath);
-        rdsn_error( "move bad replica from '%s' to '%s'", dir, newPath);
+        rerror( "move bad replica from '%s' to '%s'", dir, newPath);
     }
 
     return err;
@@ -99,24 +99,24 @@ int replica::initialize_on_load(const char* dir, bool renameDirOnFailure)
 
 int replica::init_app_and_prepare_list(const char* app_type, bool createNew)
 {
-    rdsn_assert (nullptr == _app, "");
+    rassert (nullptr == _app, "");
 
     _app = replication_app_factory::instance().create(app_type, this, _stub->config());
     if (nullptr == _app)
     {
         return ERR_OBJECT_NOT_FOUND;
     }
-    rdsn_assert(nullptr != _app, "");
+    rassert(nullptr != _app, "");
 
     int err = _app->open(createNew);    
     if (ERR_SUCCESS == err)
     {
-        rdsn_assert (_app->last_durable_decree() == _app->last_committed_decree(), "");
+        rassert (_app->last_durable_decree() == _app->last_committed_decree(), "");
         _prepare_list->reset(_app->last_committed_decree());
     }
     else
     {
-        rdsn_error( "open replica '%s' under '%s' failed, err = %x", app_type, dir().c_str(), err);
+        rerror( "open replica '%s' under '%s' failed, err = %x", app_type, dir().c_str(), err);
         delete _app;
         _app = nullptr;
     }
@@ -139,7 +139,7 @@ void replica::replay_mutation(mutation_ptr& mu)
     }
 
     // prepare
-    /*rdsn_debug( 
+    /*rdebug( 
             "%u.%u @ %s:%u: replay mutation ballot = %llu, decree = %llu, lastCommittedDecree = %llu",
             get_gpid().tableId, get_gpid().pidx, 
             address().name.c_str(), (int)address().port,
@@ -149,7 +149,7 @@ void replica::replay_mutation(mutation_ptr& mu)
         );*/
 
     int err = _prepare_list->prepare(mu, PS_INACTIVE);
-    rdsn_assert(err == ERR_SUCCESS, "");
+    rassert(err == ERR_SUCCESS, "");
 }
 
 void replica::reset_prepare_list_after_replay()

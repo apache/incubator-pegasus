@@ -50,7 +50,7 @@ handle_t native_win_aio_provider::open(const char* file_name, int flag, int pmod
 
     if (flag & O_APPEND)
     {
-        rdsn_assert(false, "append is not supported");
+        rassert(false, "append is not supported");
     }
 
     if (flag & O_CREAT)
@@ -76,7 +76,7 @@ handle_t native_win_aio_provider::open(const char* file_name, int flag, int pmod
     {
         if (_iocp != ::CreateIoCompletionPort(fileHandle, _iocp, 0, 0))
         {
-            rdsn_assert(false, "cannot associate file handle %s to io completion port, err = %x\n", file_name, ::GetLastError());
+            rassert(false, "cannot associate file handle %s to io completion port, err = %x\n", file_name, ::GetLastError());
             return nullptr;
         }
         else
@@ -86,7 +86,7 @@ handle_t native_win_aio_provider::open(const char* file_name, int flag, int pmod
     }
     else
     {
-        rdsn_assert(false, "cannot create file %s, err = %x\n", file_name, ::GetLastError());
+        rassert(false, "cannot create file %s, err = %x\n", file_name, ::GetLastError());
         return nullptr;
     }
 }
@@ -97,7 +97,7 @@ error_code native_win_aio_provider::close(handle_t hFile)
         return ERR_SUCCESS;
     else
     {
-        rdsn_error("close file failed, err = %x\n", ::GetLastError());
+        rerror("close file failed, err = %x\n", ::GetLastError());
         return ERR_FILE_OPERATION_FAILED;
     }        
 }
@@ -149,7 +149,7 @@ error_code native_win_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool asy
         r = ::WriteFile(aio->file, aio->buffer, aio->buffer_size, NULL, &aio->olp);
         break;
     default:
-        rdsn_assert(false, "unknown aio type %u", (int)aio->type);
+        rassert(false, "unknown aio type %u", (int)aio->type);
         break;
     }
 
@@ -159,7 +159,7 @@ error_code native_win_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool asy
         
         if (err != ERROR_IO_PENDING)
         {
-            rdsn_error("file operation failed, err = %u", err);
+            rerror("file operation failed, err = %u", err);
 
             if (async)
             {
@@ -220,7 +220,7 @@ void native_win_aio_provider::worker()
         else if (overLap)
         {
             dwErrorCode = ::GetLastError();
-            rdsn_error("file operation failed, err = %u", dwErrorCode);
+            rerror("file operation failed, err = %u", dwErrorCode);
 
             windows_disk_aio_context* ctx = CONTAINING_RECORD(overLap, windows_disk_aio_context, olp);
             if (!ctx->evt)

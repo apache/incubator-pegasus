@@ -20,7 +20,7 @@ public:
 
     virtual long enqueue(T obj, uint32_t priority)
     {
-        rdsn_assert (priority >= 0 && priority < priority_count, "wrong priority");
+        rassert (priority >= 0 && priority < priority_count, "wrong priority");
 
         std::lock_guard<std::mutex>  l(_lock);
         {
@@ -49,7 +49,7 @@ public:
                 }
             }
 
-            rdsn_assert(index >= 0, "must find something");
+            rassert(index >= 0, "must find something");
             auto c = _items[index].front();
             _items[index].pop();
             return c;
@@ -87,7 +87,7 @@ protected:
                 }
             }
 
-            rdsn_assert(index >= 0, "must find something");
+            rassert(index >= 0, "must find something");
             auto c = _items[index].front();
             _items[index].pop();
             return c;

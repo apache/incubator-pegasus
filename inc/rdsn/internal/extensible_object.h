@@ -20,13 +20,13 @@ public:
         
     void set_extension(uint32_t id, uint64_t data)
     {
-        rdsn_debug_assert(id < _count);
+        dbg_rassert(id < _count);
         _ptr[id] = data;
     }
 
     uint64_t& get_extension(uint32_t id)
     {
-        rdsn_debug_assert(id < _count);
+        dbg_rassert(id < _count);
         return _ptr[id];
     }
 
@@ -72,7 +72,7 @@ public:
         else
         {
             idx = INVALID_SLOT;
-            rdsn_assert (false, "allocate extension failed, not enough slots available");
+            rassert (false, "allocate extension failed, not enough slots available");
         }
         return idx;
     }

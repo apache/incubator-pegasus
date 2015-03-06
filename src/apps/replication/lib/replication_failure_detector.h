@@ -20,8 +20,8 @@ public:
     virtual void on_master_connected( const end_point& node);
 
     // server side
-    virtual void on_worker_disconnected( const std::vector<end_point>& nodes ) { rdsn_assert(false, ""); }
-    virtual void on_worker_connected( const end_point& node )  { rdsn_assert(false, ""); }
+    virtual void on_worker_disconnected( const std::vector<end_point>& nodes ) { rassert(false, ""); }
+    virtual void on_worker_connected( const end_point& node )  { rassert(false, ""); }
 
     end_point current_server_contact() const { zauto_lock l(_meta_lock); return _current_meta_server; }
     std::vector<end_point> get_servers() const  { zauto_lock l(_meta_lock); return _meta_servers; }

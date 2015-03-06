@@ -137,7 +137,7 @@ namespace rdsn {
 
                 std::string name = std::string("task.") + std::string(task_code::to_string(i));
                 task_spec* spec = task_spec::get(i);
-                rdsn_assert(spec != nullptr, "task_spec cannot be null");
+                rassert(spec != nullptr, "task_spec cannot be null");
 
                 s_spec_profilers[i].task_queueing_time_ns = rdsn::utils::perf_counters::instance().get_counter((name + std::string(".queue(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
                 s_spec_profilers[i].task_exec_time_ns = rdsn::utils::perf_counters::instance().get_counter((name + std::string(".exec(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);

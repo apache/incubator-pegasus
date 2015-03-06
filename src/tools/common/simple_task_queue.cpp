@@ -27,7 +27,7 @@ namespace rdsn {
                         this->enqueue((task_ptr&)task);
                     else
                     {
-                        rdsn_fatal("delayed execution failed for task %s, err = %u",
+                        rfatal("delayed execution failed for task %s, err = %u",
                             task->spec().name, ec.value());
                     }
                 });

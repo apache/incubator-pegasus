@@ -99,7 +99,7 @@ public:
                 return false;
         }
 
-        rdsn_assert(_count > 0, "semphoare must be greater than zero");
+        rassert(_count > 0, "semphoare must be greater than zero");
         _count--;
         return true;
     }

@@ -51,7 +51,7 @@ public:
 
     blob range(int offset) const
     {
-        rdsn_assert (offset <= _length, "offset cannot exceed the current length value");
+        rassert (offset <= _length, "offset cannot exceed the current length value");
 
         blob temp = *this;
         temp._data += offset;
@@ -61,12 +61,12 @@ public:
 
     blob range(int offset, int len) const
     {
-        rdsn_assert (offset <= _length, "offset cannot exceed the current length value");
+        rassert (offset <= _length, "offset cannot exceed the current length value");
 
         blob temp = *this;
         temp._data += offset;
         temp._length -= offset;
-        rdsn_assert (temp._length >= len, "buffer length must exceed the required length");
+        rassert (temp._length >= len, "buffer length must exceed the required length");
         temp._length = len;
         return temp;
     }
@@ -86,7 +86,7 @@ public:
     binary_reader(blob& blob);
 
     template<typename T> void read_pod(__out T& val);
-    template<typename T> void read(__out T& val) { rdsn_assert (false, "read of this type is not implemented"); }
+    template<typename T> void read(__out T& val) { rassert (false, "read of this type is not implemented"); }
     void read(__out int8_t& val) { read_pod(val); }
     void read(__out uint8_t& val) { read_pod(val); }
     void read(__out int16_t& val) { read_pod(val); }
@@ -125,7 +125,7 @@ public:
 
     uint16_t write_placeholder();
     template<typename T> void write_pod(const T& val, uint16_t pos = 0xffff);
-    template<typename T> void write(const T& val, uint16_t pos = 0xffff) { rdsn_assert(false, "write of this type is not implemented"); }
+    template<typename T> void write(const T& val, uint16_t pos = 0xffff) { rassert(false, "write of this type is not implemented"); }
     void write(const int8_t& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
     void write(const uint8_t& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
     void write(const int16_t& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
@@ -173,7 +173,7 @@ inline void binary_reader::read_pod(__out T& val)
     }
     else
     {
-        rdsn_assert (false, "read beyond the end of buffer");
+        rassert (false, "read beyond the end of buffer");
     }
 }
         

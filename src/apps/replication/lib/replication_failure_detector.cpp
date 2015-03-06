@@ -24,7 +24,7 @@ end_point replication_failure_detector::find_next_meta_server(end_point current)
     else
     {
         auto it = std::find(_meta_servers.begin(), _meta_servers.end(), current);
-        rdsn_assert(it != _meta_servers.end(), "");
+        rassert(it != _meta_servers.end(), "");
         it++;
         if (it != _meta_servers.end())
             return *it;

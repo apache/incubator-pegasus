@@ -215,7 +215,7 @@ std::list<std::string> configuration::get_string_value_list(const char* section,
 
 void configuration::register_config_change_notification(config_file_change_notifier notifier)
 {
-    rdsn_assert(false, "not implemented");
+    rassert(false, "not implemented");
 }
 
 bool configuration::has_section(const char* section)

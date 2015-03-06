@@ -44,7 +44,7 @@ void message_header::new_rpc_id()
     int32_t crc32 = *(int32_t*)hdr;
     if (crc32)
     {
-        //rdsn_assert  (*(int32_t*)data == hdr_crc32, "HeaderCrc must be put at the beginning of the buffer");
+        //rassert  (*(int32_t*)data == hdr_crc32, "HeaderCrc must be put at the beginning of the buffer");
         *(int32_t*)hdr = 0;
         bool r = ((uint32_t)crc32 == crc32::compute(hdr, message_header::serialized_size(), 0));
         *(int32_t*)hdr = crc32;
@@ -149,7 +149,7 @@ message_ptr message::create_response()
     msg->header().local_rpc_code = _msg_header.local_rpc_code;
     msg->header().from_address = _msg_header.to_address;
     msg->header().to_address = _msg_header.from_address;
-	msg->header().client_port = _msg_header.from_address.port;
+    msg->header().client_port = _msg_header.from_address.port;
 
     msg->_server_session = _server_session;
 
@@ -158,7 +158,7 @@ message_ptr message::create_response()
 
 void message::seal(bool fillCrc, bool is_placeholder /*= false*/)
 {
-    rdsn_assert  (!is_read(), "seal can only be applied to write mode messages");
+    rassert  (!is_read(), "seal can only be applied to write mode messages");
     if (is_placeholder)
     {
         std::string dummy;
@@ -201,12 +201,12 @@ void message::seal(bool fillCrc, bool is_placeholder /*= false*/)
                     len += it->length();
                 }
 
-                rdsn_assert  (len == (uint32_t)header().body_length, "data length is wrong");
+                rassert  (len == (uint32_t)header().body_length, "data length is wrong");
                 header().body_crc32 = crc32;
             }
 
             utils::blob bb = _writer->get_first_buffer();
-            rdsn_assert  (bb.length() >= _msg_header.serialized_size(), "the reserved blob size for message must be greater than the header size to ensure header is contiguous");
+            rassert  (bb.length() >= _msg_header.serialized_size(), "the reserved blob size for message must be greater than the header size to ensure header is contiguous");
             header().hdr_crc32 = 0;
             binary_writer writer(bb);
             _msg_header.marshall(writer);
@@ -219,7 +219,7 @@ void message::seal(bool fillCrc, bool is_placeholder /*= false*/)
         else
         {
             utils::blob bb = _writer->get_first_buffer();
-            rdsn_assert  (bb.length() >= _msg_header.serialized_size(), "the reserved blob size for message must be greater than the header size to ensure header is contiguous");
+            rassert  (bb.length() >= _msg_header.serialized_size(), "the reserved blob size for message must be greater than the header size to ensure header is contiguous");
             binary_writer writer(bb);
             _msg_header.marshall(writer);
         }
@@ -228,7 +228,7 @@ void message::seal(bool fillCrc, bool is_placeholder /*= false*/)
 
 bool message::is_right_header() const
 {
-    rdsn_assert  (is_read(), "message must be of read mode");
+    rassert  (is_read(), "message must be of read mode");
     if (_msg_header.hdr_crc32)
     {
         utils::blob bb = _reader->get_buffer();
@@ -244,7 +244,7 @@ bool message::is_right_header() const
 
 bool message::is_right_body() const
 {
-    rdsn_assert  (is_read(), "message must be of read mode");
+    rassert  (is_read(), "message must be of read mode");
     if (_msg_header.body_crc32)
     {
         utils::blob bb = _reader->get_buffer();
@@ -260,7 +260,7 @@ bool message::is_right_body() const
 
 void message::read_header()
 {
-    rdsn_assert  (is_read(), "message must be of read mode");
+    rassert  (is_read(), "message must be of read mode");
     _msg_header.unmarshall(*_reader);
 }
 

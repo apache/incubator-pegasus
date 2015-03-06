@@ -56,8 +56,8 @@ void replica::on_mutation_pending_timeout(mutation_ptr& mu)
 {
     check_hashed_access();
 
-    rdsn_assert (_primary_states.PendingMutation == mu, "");
-    rdsn_assert (PS_PRIMARY == status(), "");
+    rassert (_primary_states.PendingMutation == mu, "");
+    rassert (PS_PRIMARY == status(), "");
 
     init_prepare(_primary_states.PendingMutation);
     _primary_states.PendingMutation = nullptr;
@@ -66,7 +66,7 @@ void replica::on_mutation_pending_timeout(mutation_ptr& mu)
 
 void replica::init_prepare(mutation_ptr& mu)
 {
-    rdsn_assert (PS_PRIMARY == status(), "");
+    rassert (PS_PRIMARY == status(), "");
 
     int err = ERR_SUCCESS;
     uint8_t count = 0;
@@ -93,7 +93,7 @@ void replica::init_prepare(mutation_ptr& mu)
         goto ErrOut;
     }
  
-    rdsn_assert (mu->data.header.decree > last_committed_decree(), "");
+    rassert (mu->data.header.decree > last_committed_decree(), "");
 
     // local prepare without log
     err = _prepare_list->prepare(mu, PS_PRIMARY);
@@ -102,15 +102,15 @@ void replica::init_prepare(mutation_ptr& mu)
         goto ErrOut;
     }
         
-    rdsn_debug( "%s: mutation %s init_prepare with %u client requests", name(), mu->name(), (int)mu->client_requests.size());
+    rdebug( "%s: mutation %s init_prepare with %u client requests", name(), mu->name(), (int)mu->client_requests.size());
 
     //
     // TODO: bounded staleness on secondaries
     //
-    rdsn_assert (mu->data.header.decree <= last_committed_decree() + _options.StalenessForCommit, "");
+    rassert (mu->data.header.decree <= last_committed_decree() + _options.StalenessForCommit, "");
     
     // remote prepare
-    rdsn_assert (mu->remote_tasks().size() == 0, "");
+    rassert (mu->remote_tasks().size() == 0, "");
     mu->set_left_secondary_ack_count((unsigned int)_primary_states.membership.secondaries.size());
     for (auto it = _primary_states.membership.secondaries.begin(); it != _primary_states.membership.secondaries.end(); it++)
     {
@@ -129,8 +129,8 @@ void replica::init_prepare(mutation_ptr& mu)
     mu->set_left_potential_secondary_ack_count(count);
 
     // local log
-    rdsn_assert (mu->data.header.logOffset == invalid_offset, "");
-    rdsn_assert (mu->log_task() == nullptr, "");
+    rassert (mu->data.header.logOffset == invalid_offset, "");
+    rassert (mu->log_task() == nullptr, "");
     mu->log_task() = _stub->_log->append(mu,
         LPC_WRITE_REPLICATION_LOG,
         this,
@@ -168,7 +168,7 @@ void replica::send_prepare_message(const end_point& addr, partition_status statu
     marshall(msg, rconfig);
     mu->write_to(msg);
 
-    rdsn_debug_assert (mu->remote_tasks().find(addr) == mu->remote_tasks().end());
+    dbg_rassert (mu->remote_tasks().find(addr) == mu->remote_tasks().end());
 
     mu->remote_tasks()[addr] = rpc_call(addr, msg, 
         std::bind(&replica::on_prepare_replay, this, mu, rconfig.status, 
@@ -178,7 +178,7 @@ void replica::send_prepare_message(const end_point& addr, partition_status statu
         gpid_to_hash(get_gpid())
         );
 
-    rdsn_debug( 
+    rdebug( 
         "%s: mutation %s send_prepare_message to %s:%u as %s", 
         name(), mu->name(),
         addr.name.c_str(), (int)addr.port,
@@ -188,8 +188,8 @@ void replica::send_prepare_message(const end_point& addr, partition_status statu
 
 void replica::do_possible_commit_on_primary(mutation_ptr& mu)
 {
-    rdsn_assert (_config.ballot == mu->data.header.ballot, "");
-    rdsn_assert (PS_PRIMARY == status(), "");
+    rassert (_config.ballot == mu->data.header.ballot, "");
+    rassert (PS_PRIMARY == status(), "");
 
     if (mu->is_ready_for_commit())
     {   
@@ -212,13 +212,13 @@ void replica::OnPrepare(message_ptr& request)
 
     mutation_ptr mu = mutation::read_from(request);
 
-    rdsn_debug( "%s: mutation %s OnPrepare", name(), mu->name());
+    rdebug( "%s: mutation %s OnPrepare", name(), mu->name());
 
-    rdsn_assert (mu->data.header.ballot == rconfig.ballot, "");
+    rassert (mu->data.header.ballot == rconfig.ballot, "");
 
     if (mu->data.header.ballot < get_ballot())
     {
-        rdsn_debug( "%s: mutation %s OnPrepare skipped due to old view", name(), mu->name());
+        rdebug( "%s: mutation %s OnPrepare skipped due to old view", name(), mu->name());
         return;
     }
 
@@ -230,7 +230,7 @@ void replica::OnPrepare(message_ptr& request)
 
     if (PS_INACTIVE == status() || PS_ERROR == status())
     {
-        rdsn_debug( 
+        rdebug( 
             "%s: mutation %s OnPrepare  to %s skipped",
             name(), mu->name(),
             enum_to_string(status())
@@ -243,7 +243,7 @@ void replica::OnPrepare(message_ptr& request)
     {
         if (_potential_secondary_states.LearningState != LearningWithPrepare && _potential_secondary_states.LearningState != LearningSucceeded)
         {
-            rdsn_debug( 
+            rdebug( 
                 "%s: mutation %s OnPrepare to %s skipped, learnings state = %s",
                 name(), mu->name(),
                 enum_to_string(status()),
@@ -255,7 +255,7 @@ void replica::OnPrepare(message_ptr& request)
         }
     }
 
-    rdsn_assert (rconfig.status == status(), "");
+    rassert (rconfig.status == status(), "");
     decree decree = mu->data.header.decree;
     if (decree <= last_committed_decree())
     {
@@ -267,25 +267,25 @@ void replica::OnPrepare(message_ptr& request)
     auto mu2 = _prepare_list->get_mutation_by_decree(decree);
     if (mu2 != nullptr && mu2->data.header.ballot == mu->data.header.ballot)
     {
-        rdsn_debug( "%s: mutation %s redundant prepare skipped", name(), mu->name());
+        rdebug( "%s: mutation %s redundant prepare skipped", name(), mu->name());
         return;
     }
 
     int err = _prepare_list->prepare(mu, status());
-    rdsn_assert (err == ERR_SUCCESS, "");
+    rassert (err == ERR_SUCCESS, "");
 
     if (PS_POTENTIAL_SECONDARY == status())
     {
-        rdsn_assert (mu->data.header.decree <= last_committed_decree() + _options.StalenessForStartPrepareForPotentialSecondary, "");
+        rassert (mu->data.header.decree <= last_committed_decree() + _options.StalenessForStartPrepareForPotentialSecondary, "");
     }
     else
     {
-        rdsn_assert (PS_SECONDARY == status(), "");
-        rdsn_assert (mu->data.header.decree <= last_committed_decree() + _options.StalenessForCommit, "");
+        rassert (PS_SECONDARY == status(), "");
+        rassert (mu->data.header.decree <= last_committed_decree() + _options.StalenessForCommit, "");
     }
     
     // write log
-    rdsn_assert (mu->log_task() == nullptr, "");
+    rassert (mu->log_task() == nullptr, "");
     mu->log_task() = _stub->_log->append(mu,
         LPC_WRITE_REPLICATION_LOG,
         this,
@@ -305,7 +305,7 @@ void replica::on_append_log_completed(mutation_ptr& mu, uint32_t err, uint32_t s
 {
     check_hashed_access();
 
-    rdsn_debug( "%s: mutation %s on_append_log_completed, err = %u", name(), mu->name(), err);
+    rdebug( "%s: mutation %s on_append_log_completed, err = %u", name(), mu->name(), err);
 
     if (err == ERR_SUCCESS)
     {
@@ -341,7 +341,7 @@ void replica::on_append_log_completed(mutation_ptr& mu, uint32_t err, uint32_t s
     case PS_ERROR:
         break;
     default:
-        rdsn_assert (false, "");
+        rassert (false, "");
         break;
     }
 }
@@ -354,7 +354,7 @@ void replica::on_prepare_replay(mutation_ptr& mu, partition_status targetStatus,
     if (mu->data.header.ballot < get_ballot() || PS_PRIMARY != status())
         return;
     
-    rdsn_assert (mu->data.header.ballot == get_ballot(), "");
+    rassert (mu->data.header.ballot == get_ballot(), "");
 
     end_point node = request->header().to_address;
     partition_status status = _primary_states.GetNodeStatus(node);
@@ -371,7 +371,7 @@ void replica::on_prepare_replay(mutation_ptr& mu, partition_status targetStatus,
     {
         unmarshall(reply, resp);        
 
-        rdsn_debug( 
+        rdebug( 
             "%s: mutation %s on_prepare_replay from %s:%u", 
             name(), mu->name(),
             node.name.c_str(), (int)node.port
@@ -380,28 +380,28 @@ void replica::on_prepare_replay(mutation_ptr& mu, partition_status targetStatus,
        
     if (resp.err == ERR_SUCCESS)
     {
-        rdsn_assert (resp.ballot == get_ballot(), "");
-        rdsn_assert (resp.decree == mu->data.header.decree, "");
+        rassert (resp.ballot == get_ballot(), "");
+        rassert (resp.decree == mu->data.header.decree, "");
 
         switch (targetStatus)
         {
         case PS_SECONDARY:
-            rdsn_assert (_primary_states.CheckExist(node, PS_SECONDARY), "");
-            rdsn_assert (mu->left_secondary_ack_count() > 0, "");
+            rassert (_primary_states.CheckExist(node, PS_SECONDARY), "");
+            rassert (mu->left_secondary_ack_count() > 0, "");
             if (0 == mu->decrease_left_secondary_ack_count())
             {
                 do_possible_commit_on_primary(mu);
             }
             break;
         case PS_POTENTIAL_SECONDARY:            
-            rdsn_assert (mu->left_potential_secondary_ack_count() > 0, "");
+            rassert (mu->left_potential_secondary_ack_count() > 0, "");
             if (0 == mu->decrease_left_potential_secondary_ack_count())
             {
                 do_possible_commit_on_primary(mu);
             }
             break;
         default:
-            rdsn_debug( 
+            rdebug( 
                 "%s: mutation %s prepare ack skipped coz the node is now inactive", name(), mu->name()
                 );
             break;
@@ -414,7 +414,7 @@ void replica::on_prepare_replay(mutation_ptr& mu, partition_status targetStatus,
         // note targetStatus and (curent) status may diff
         if (targetStatus == PS_POTENTIAL_SECONDARY)
         {
-            rdsn_assert (mu->left_potential_secondary_ack_count() > 0, "");
+            rassert (mu->left_potential_secondary_ack_count() > 0, "");
             if (0 == mu->decrease_left_potential_secondary_ack_count())
             {
                 do_possible_commit_on_primary(mu);
@@ -436,10 +436,10 @@ void replica::ack_prepare_message(int err, mutation_ptr& mu)
     resp.lastCommittedDecreeInApp = _app->last_committed_decree(); 
     resp.lastCommittedDecreeInPrepareList = last_committed_decree();
 
-    rdsn_assert (nullptr != mu->owner_message(), "");
+    rassert (nullptr != mu->owner_message(), "");
     rpc_response(mu->owner_message(), resp);
 
-    rdsn_debug( "%s: mutation %s ack_prepare_message", name(), mu->name());
+    rdebug( "%s: mutation %s ack_prepare_message", name(), mu->name());
 }
 
 void replica::cleanup_preparing_mutations(bool isPrimary)
@@ -455,7 +455,7 @@ void replica::cleanup_preparing_mutations(bool isPrimary)
             int c = mu->clear_prepare_or_commit_tasks();
             if (!isPrimary)
             {
-                rdsn_assert (0 == c, "");
+                rassert (0 == c, "");
             }
             else
             {

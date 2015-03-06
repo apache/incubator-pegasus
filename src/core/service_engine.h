@@ -46,7 +46,7 @@ public:
     service_node* get_node(uint16_t port) const;
     
     void init_before_toollets(const service_spec& spec);
-	void init_after_toollets();
+    void init_after_toollets();
     void configuration_changed(configuration_ptr configuration);
 
     service_node* start_node(uint16_t port);

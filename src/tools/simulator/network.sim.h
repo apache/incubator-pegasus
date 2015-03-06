@@ -28,7 +28,7 @@ namespace rdsn { namespace tools {
         sim_network_provider(rpc_engine* rpc, network* inner_provider);
         ~sim_network_provider(void) {}
 
-		virtual error_code start(int port, bool client_only);
+        virtual error_code start(int port, bool client_only);
     
         virtual const end_point& address() { return _primary_address; }
 

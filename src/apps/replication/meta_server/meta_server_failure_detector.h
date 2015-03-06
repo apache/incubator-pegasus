@@ -21,12 +21,12 @@ public:
     // client side
     virtual void on_master_disconnected(const std::vector<end_point>& nodes)
     {
-        rdsn_assert(false, "unsupported method");
+        rassert(false, "unsupported method");
     }
 
     virtual void on_master_connected(const end_point& node)
     {
-        rdsn_assert(false, "unsupported method");
+        rassert(false, "unsupported method");
     }
 
     // server side

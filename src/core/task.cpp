@@ -142,7 +142,7 @@ bool task::wait(int timeout_milliseconds)
 {
     service::lock_checker::check_wait_safety();
 
-    rdsn_assert (this != task::get_current_task(), "task cannot wait itself");
+    rassert (this != task::get_current_task(), "task cannot wait itself");
 
     if (!spec().on_task_wait_pre.execute(task::get_current_task(), this, (uint32_t)timeout_milliseconds, true))
     {
@@ -190,7 +190,7 @@ bool task::cancel(bool wait_until_finished)
 
     if (current_tsk == this)
     {
-        rdsn_warn(
+        rwarn(
             "task %s (id=%016llx) cannot cancel itself",                
             spec().name,
             id()
@@ -237,7 +237,7 @@ void task::enqueue(int delay_milliseconds, service::service_app* app)
     task_worker_pool* pool = nullptr;
     if (caller_worker() != nullptr)
     {
-        rdsn_debug_assert(app == nullptr || caller_worker()->pool()->engine() == app->svc_node()->computation(), "tasks can only be dispatched to local node");
+        dbg_rassert(app == nullptr || caller_worker()->pool()->engine() == app->svc_node()->computation(), "tasks can only be dispatched to local node");
         if (spec().type != TASK_TYPE_RPC_RESPONSE)
         {
             pool = caller_worker()->pool()->engine()->get_pool(spec().pool_code);
@@ -249,13 +249,12 @@ void task::enqueue(int delay_milliseconds, service::service_app* app)
     }
     else if (app != nullptr)
     {
-        //rdsn_assert (app != nullptr, "tasks enqueued outside tasks must be specified with which service app");
+        //rassert (app != nullptr, "tasks enqueued outside tasks must be specified with which service app");
         pool = app->svc_node()->computation()->get_pool(spec().pool_code);
     }
     else
     {
-		rdsn_assert(false, "neither inside a service, nor service app is specified, unable to find the right engine to execute this");
-        //pool = service_engine::instance().primary_node()->computation()->get_pool(spec().pool_code);
+        rassert(false, "neither inside a service, nor service app is specified, unable to find the right engine to execute this");
     }
 
     enqueue(delay_milliseconds, pool);
@@ -263,7 +262,7 @@ void task::enqueue(int delay_milliseconds, service::service_app* app)
 
 void task::enqueue(int delay_milliseconds, task_worker_pool* pool)
 {
-    rdsn_assert(pool != nullptr, "pool not exist");
+    rassert(pool != nullptr, "pool not exist");
 
     set_delay(delay_milliseconds);
 
@@ -286,7 +285,7 @@ void task::enqueue(int delay_milliseconds, task_worker_pool* pool)
 timer_task::timer_task(task_code code,  uint32_t interval_milliseconds, int hash) 
     : task(code, hash), _interval_milliseconds(interval_milliseconds) 
 {
-    rdsn_assert (TASK_TYPE_COMPUTE == spec().type, "this must be a computation type task");
+    rassert (TASK_TYPE_COMPUTE == spec().type, "this must be a computation type task");
 }
 
 void timer_task::exec()
@@ -308,7 +307,7 @@ rpc_request_task::rpc_request_task(message_ptr& request)
     : task(task_code(request->header().local_rpc_code), request->header().hash), 
       _request(request)
 {
-    rdsn_debug_assert (TASK_TYPE_RPC_REQUEST == spec().type, "task type must be RPC_REQUEST");
+    dbg_rassert (TASK_TYPE_RPC_REQUEST == spec().type, "task type must be RPC_REQUEST");
 }
 
 void rpc_request_task::enqueue(int delay_milliseconds, service_node* node)
@@ -327,7 +326,7 @@ rpc_response_task::rpc_response_task(message_ptr& request, int hash)
 {
     set_error_code(ERR_IO_PENDING);
 
-    rdsn_debug_assert (TASK_TYPE_RPC_RESPONSE == spec().type, "task must be of RPC_RESPONSE type");
+    dbg_rassert (TASK_TYPE_RPC_RESPONSE == spec().type, "task must be of RPC_RESPONSE type");
 
     _request = request;
 }
@@ -346,11 +345,11 @@ void rpc_response_task::enqueue(error_code err, message_ptr& reply, int delay_mi
 aio_task::aio_task(task_code code, int hash) 
     : task(code, hash)
 {
-    rdsn_assert (TASK_TYPE_AIO == spec().type, "task must be of AIO type");
+    rassert (TASK_TYPE_AIO == spec().type, "task must be of AIO type");
     set_error_code(ERR_IO_PENDING);
 
     auto node = task::get_current_node();
-    rdsn_assert(node != nullptr, "this function can only be invoked inside tasks");
+    rassert(node != nullptr, "this function can only be invoked inside tasks");
 
     _aio = node->disk()->prepare_aio_context(this);
 }

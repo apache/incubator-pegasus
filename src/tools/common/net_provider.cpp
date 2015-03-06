@@ -13,29 +13,29 @@ namespace rdsn {
             _socket.reset(new boost::asio::ip::tcp::socket(_io_service));
         }
 
-		error_code asio_network_provider::start(int port, bool client_only)
+        error_code asio_network_provider::start(int port, bool client_only)
         {
             if (_acceptor != nullptr)
                 return ERR_SERVICE_ALREADY_RUNNING;
-			
+            
             _address = end_point(boost::asio::ip::host_name().c_str(), port);
 
-			if (!client_only)
-			{
-				auto v4_addr = boost::asio::ip::address_v4::any(); //(ntohl(_address.ip));
-				::boost::asio::ip::tcp::endpoint ep(v4_addr, _address.port);
+            if (!client_only)
+            {
+                auto v4_addr = boost::asio::ip::address_v4::any(); //(ntohl(_address.ip));
+                ::boost::asio::ip::tcp::endpoint ep(v4_addr, _address.port);
 
-				try
-				{
-					_acceptor.reset(new boost::asio::ip::tcp::acceptor(_io_service, ep, false));
-					do_accept();
-				}
-				catch (boost::system::system_error& err)
-				{
-					printf("boost asio listen on port %u failed, err: %s\n", port, err.what());
-					return ERR_ADDRESS_ALREADY_USED;
-				}
-			}            
+                try
+                {
+                    _acceptor.reset(new boost::asio::ip::tcp::acceptor(_io_service, ep, false));
+                    do_accept();
+                }
+                catch (boost::system::system_error& err)
+                {
+                    printf("boost asio listen on port %u failed, err: %s\n", port, err.what());
+                    return ERR_ADDRESS_ALREADY_USED;
+                }
+            }            
 
             return ERR_SUCCESS;
         }

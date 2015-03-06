@@ -30,7 +30,7 @@ public:
     // state change
     void set_id(ballot b, decree c);
     void add_client_request(message_ptr& request);
-    void set_logged() { rdsn_assert(!is_logged(), ""); _notLogged = 0; }
+    void set_logged() { rassert(!is_logged(), ""); _notLogged = 0; }
     unsigned int decrease_left_secondary_ack_count() { return --_leftSecondaryAckCount; }
     unsigned int decrease_left_potential_secondary_ack_count() { return --_leftPotentialSecondaryAckCount; }
     void set_left_secondary_ack_count(unsigned int count) { _leftSecondaryAckCount = count; }

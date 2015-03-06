@@ -46,7 +46,7 @@ int mutation_cache::put(mutation_ptr& mu)
     mutation_ptr old = _array[idx];
     if (old != nullptr)
     {
-        rdsn_assert(old->data.header.ballot <= mu->data.header.ballot, "");
+        rassert(old->data.header.ballot <= mu->data.header.ballot, "");
     }
 
     _array[idx] = mu;
@@ -96,7 +96,7 @@ mutation_ptr mutation_cache::pop_min()
         if (_interval == 0)
         {
             //TODO: FIXE ME LATER
-            //rdsn_assert (_totalSizeInBytes == 0, "");
+            //rassert (_totalSizeInBytes == 0, "");
 
             _endDecree = _startDecree;
             _endIndex = _startIndex;

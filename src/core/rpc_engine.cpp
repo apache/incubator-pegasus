@@ -84,11 +84,11 @@ namespace rdsn {
         {
             utils::auto_lock l(_requests_lock);
             auto pr = _requests.insert(rpc_requests::value_type(hdr.id, match_entry()));
-			rdsn_assert (pr.second, "the message is already on the fly!!!");
-			pr.first->second.resp_task = call;
-			pr.first->second.timeout_task = timeout_tsk;
-			pr.first->second.client = client;
-			//{call, timeout_tsk, client }
+            rassert (pr.second, "the message is already on the fly!!!");
+            pr.first->second.resp_task = call;
+            pr.first->second.timeout_task = timeout_tsk;
+            pr.first->second.client = client;
+            //{call, timeout_tsk, client }
         }
 
         int timeout_milliseconds = hdr.timeout_milliseconds > spec->rpc_min_timeout_milliseconds_for_retry ? spec->rpc_retry_interval_milliseconds : hdr.timeout_milliseconds;
@@ -174,7 +174,7 @@ namespace rdsn {
         {
             if (_networks[i] == nullptr)
             {
-                rdsn_warn("network factory for %s not designated, may result fault when demanded",
+                rwarn("network factory for %s not designated, may result fault when demanded",
                     rpc_channel::to_string(i)
                     );
             }
@@ -205,7 +205,7 @@ namespace rdsn {
         }
         _address = _networks[RPC_CHANNEL_TCP]->address();
     
-        rdsn_debug("rpc server started, listen on port %u...", (int)address().port);
+        rdebug("rpc server started, listen on port %u...", (int)address().port);
     
         _is_running = true;
         return ERR_SUCCESS;
@@ -254,7 +254,7 @@ namespace rdsn {
         else
         {
             // TODO: warning about this msg
-            rdsn_warn(
+            rwarn(
                 "recv unknown message with type %s from %s:%u",
                 msg->header().rpc_name,
                 msg->header().from_address.name.c_str(),
@@ -274,8 +274,8 @@ namespace rdsn {
             msg->header().is_response_expected = true;
         }
         
-		msg->header().client_port = address().port;
-		msg->header().from_address = address();
+        msg->header().client_port = address().port;
+        msg->header().from_address = address();
         msg->header().new_rpc_id();  
         msg->seal(_message_crc_required);
 
@@ -292,7 +292,7 @@ namespace rdsn {
         }
 
         network* net = _networks[sp->rpc_message_channel];
-        rdsn_assert(nullptr != net, "network not present for rpc channel %s used by rpc %s",
+        rassert(nullptr != net, "network not present for rpc channel %s used by rpc %s",
             sp->rpc_message_channel.to_string(),
             msg->header().rpc_name
             );
@@ -310,7 +310,7 @@ namespace rdsn {
             return;
                 
         auto s = response->server_session().get();
-        rdsn_assert(s != nullptr, "rpc server session missing for sending response msg");
+        rassert(s != nullptr, "rpc server session missing for sending response msg");
         s->send(response);
     }
 

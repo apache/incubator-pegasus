@@ -15,7 +15,7 @@ namespace rdsn { namespace service {
         {
             if (zlock_exclusive_count + zlock_shared_count > 0)
             {
-                rdsn_assert(false, "wait inside locks may lead to deadlocks - current thread owns %u exclusive locks and %u shared locks now.",
+                rassert(false, "wait inside locks may lead to deadlocks - current thread owns %u exclusive locks and %u shared locks now.",
                     zlock_exclusive_count, zlock_shared_count
                     );
             }
@@ -25,7 +25,7 @@ namespace rdsn { namespace service {
         {
             if (zlock_exclusive_count + zlock_shared_count > 0)
             {
-                rdsn_assert(false, "locks should not be hold at this point - current thread owns %u exclusive locks and %u shared locks now.",
+                rassert(false, "locks should not be hold at this point - current thread owns %u exclusive locks and %u shared locks now.",
                     zlock_exclusive_count, zlock_shared_count
                     );
             }

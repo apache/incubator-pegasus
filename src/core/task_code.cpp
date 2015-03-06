@@ -40,7 +40,7 @@ task_spec::task_spec(int code, const char* name, task_type type, threadpool_code
     on_rpc_response_enqueue((std::string(name) + std::string(".rpc.response.enqueue")).c_str()),
     rpc_message_channel(RPC_CHANNEL_TCP)
 {
-    rdsn_assert (
+    rassert (
         strlen(name) <= MAX_TASK_CODE_NAME_LENGTH, 
         "task code name '%s' is too long: length must not be larger than MAX_TASK_CODE_NAME_LENGTH (%u)", 
         name, MAX_TASK_CODE_NAME_LENGTH
@@ -74,7 +74,7 @@ bool task_spec::init(configuration_ptr config)
     defaultSpec.priority = enum_from_string(config->get_string_value("task.default", "priority", "TASK_PRIORITY_COMMON").c_str(), TASK_PRIORITY_INVALID);
     if (defaultSpec.priority == TASK_PRIORITY_INVALID)
     {
-        rdsn_error("invalid task priority in [task.default]");
+        rerror("invalid task priority in [task.default]");
         return false;
     }
 
@@ -83,7 +83,7 @@ bool task_spec::init(configuration_ptr config)
     auto cn = config->get_string_value("task.default", "rpc_message_channel", RPC_CHANNEL_TCP.to_string());
     if (!rpc_channel::is_exist(cn.c_str()))
     {
-        rdsn_error("invalid task rpc_message_channel in [task.default]");
+        rerror("invalid task rpc_message_channel in [task.default]");
         return false;
     }
     defaultSpec.rpc_message_channel = rpc_channel::from_string(cn.c_str(), RPC_CHANNEL_TCP);    
@@ -95,14 +95,14 @@ bool task_spec::init(configuration_ptr config)
 
         std::string section_name = std::string("task.") + std::string(task_code::to_string(code));
         task_spec* spec = task_spec::get(code);
-        rdsn_assert (spec != nullptr, "task_spec cannot be null");
+        rassert (spec != nullptr, "task_spec cannot be null");
 
         if (config->has_section(section_name.c_str()))
         {
             auto pool = threadpool_code::from_string(config->get_string_value(section_name.c_str(), "pool_code", spec->pool_code.to_string()).c_str(), THREAD_POOL_INVALID);
             if (pool == THREAD_POOL_INVALID)
             {
-                rdsn_error("invalid ThreadPool in [%s]", section_name.c_str());
+                rerror("invalid ThreadPool in [%s]", section_name.c_str());
                 return false;
             }
 
@@ -111,7 +111,7 @@ bool task_spec::init(configuration_ptr config)
             auto pri = enum_from_string(config->get_string_value(section_name.c_str(), "priority", enum_to_string(spec->priority)).c_str(), TASK_PRIORITY_INVALID);
             if (pri == TASK_PRIORITY_INVALID)
             {
-                rdsn_error("invalid priority in [%s]", section_name.c_str());
+                rerror("invalid priority in [%s]", section_name.c_str());
                 return false;
             }
             spec->priority = pri;
@@ -121,7 +121,7 @@ bool task_spec::init(configuration_ptr config)
             auto cn = config->get_string_value(section_name.c_str(), "rpc_message_channel", defaultSpec.rpc_message_channel.to_string());
             if (!rpc_channel::is_exist(cn.c_str()))
             {
-                rdsn_error("invalid task rpc_message_channel in [%s]", section_name.c_str());
+                rerror("invalid task rpc_message_channel in [%s]", section_name.c_str());
                 return false;
             }
 

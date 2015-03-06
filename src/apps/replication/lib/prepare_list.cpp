@@ -16,7 +16,7 @@ prepare_list::prepare_list(
 
 void prepare_list::sanity_check()
 {
-    rdsn_assert (
+    rassert (
         last_committed_decree() <= min_decree(), ""
         );
 }
@@ -38,7 +38,7 @@ void prepare_list::truncate(decree initDecree)
 
 int prepare_list::prepare(mutation_ptr& mu, partition_status status)
 {
-    rdsn_assert(mu->data.header.decree > last_committed_decree(), "");
+    rassert(mu->data.header.decree > last_committed_decree(), "");
 
     int err;
     switch (status)
@@ -49,7 +49,7 @@ int prepare_list::prepare(mutation_ptr& mu, partition_status status)
     case PS_SECONDARY: 
         commit(mu->data.header.lastCommittedDecree, true);
         err = mutation_cache::put(mu);
-        rdsn_assert(err == ERR_SUCCESS, "");
+        rassert(err == ERR_SUCCESS, "");
         return err;
 
     case PS_POTENTIAL_SECONDARY:
@@ -58,14 +58,14 @@ int prepare_list::prepare(mutation_ptr& mu, partition_status status)
             err = mutation_cache::put(mu);
             if (err == ERR_CAPACITY_EXCEEDED)
             {
-                rdsn_assert (min_decree() == last_committed_decree() + 1, "");
-                rdsn_assert (mu->data.header.lastCommittedDecree > last_committed_decree(), "");
+                rassert (min_decree() == last_committed_decree() + 1, "");
+                rassert (mu->data.header.lastCommittedDecree > last_committed_decree(), "");
                 commit (last_committed_decree() + 1, true);
             }
             else
                 break;
         }
-        rdsn_assert(err == ERR_SUCCESS, "");
+        rassert(err == ERR_SUCCESS, "");
         return err;
      
     case PS_INACTIVE: // only possible during init  
@@ -90,16 +90,16 @@ int prepare_list::prepare(mutation_ptr& mu, partition_status status)
                 }
             }
 
-            rdsn_assert (_lastCommittedDecree == mu->data.header.lastCommittedDecree, "");
+            rassert (_lastCommittedDecree == mu->data.header.lastCommittedDecree, "");
             sanity_check();
         }
         
         err = mutation_cache::put(mu);
-        rdsn_assert (err == ERR_SUCCESS, "");
+        rassert (err == ERR_SUCCESS, "");
         return err;
 
     default:
-        rdsn_assert (false, "");
+        rassert (false, "");
         return 0;
     }
 }
@@ -124,7 +124,7 @@ bool prepare_list::commit(decree d, bool force)
             _lastCommittedDecree++;
             _committer(mu);
 
-            rdsn_assert(mutation_cache::min_decree() == _lastCommittedDecree, "");
+            rassert(mutation_cache::min_decree() == _lastCommittedDecree, "");
             pop_min();
 
             mu = mutation_cache::get_mutation_by_decree(_lastCommittedDecree + 1);
@@ -135,12 +135,12 @@ bool prepare_list::commit(decree d, bool force)
         for (decree d0 = last_committed_decree() + 1; d0 <= d; d0++)
         {
             mutation_ptr mu = get_mutation_by_decree(d0);
-            rdsn_assert(mu != nullptr && mu->is_prepared(), "");
+            rassert(mu != nullptr && mu->is_prepared(), "");
 
             _lastCommittedDecree++;
             _committer(mu);
 
-            rdsn_assert (mutation_cache::min_decree() == _lastCommittedDecree, "");
+            rassert (mutation_cache::min_decree() == _lastCommittedDecree, "");
             pop_min();
         }
     }

@@ -35,7 +35,7 @@ replication_app_base* replication_app_factory::create(const char* app_type, repl
     }
     else
     {
-        rdsn_error( "replica type '%s' not registered", app_type);
+        rerror( "replica type '%s' not registered", app_type);
         return nullptr;
     }
 }

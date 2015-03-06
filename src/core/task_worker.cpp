@@ -182,7 +182,7 @@ void task_worker::loop()
     /*}
     catch (std::exception& ex)
     {
-        rdsn_assert(false, "%s: unhandled exception '%s'", name().c_str(), ex.what());
+        rassert(false, "%s: unhandled exception '%s'", name().c_str(), ex.what());
     }*/
 }
 

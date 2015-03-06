@@ -30,7 +30,7 @@ error_code service_node::start(const service_spec& spec)
     // init task engine
     _computation = new task_engine(this);
     _computation->start(spec.threadpool_specs);    
-    rdsn_assert (_computation->is_started(), "task engine must be started at this point");
+    rassert (_computation->is_started(), "task engine must be started at this point");
 
     // init disk engine
     _disk = new disk_engine(this);
@@ -75,19 +75,19 @@ service_engine::service_engine(void)
 
 void service_engine::init_before_toollets(const service_spec& spec)
 {
-	_spec = spec;
+    _spec = spec;
 
-	// init common providers (first half)
+    // init common providers (first half)
     _logging = factory_store<logging_provider>::create(spec.logging_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
     perf_counters::instance().register_factory(factory_store<perf_counter>::get_factory<perf_counter_factory>(spec.perf_counter_factory_name.c_str(), PROVIDER_TYPE_MAIN));
 }
 
 void service_engine::init_after_toollets()
 {
-	// init common providers (second half)
-	_env = factory_store<env_provider>::create(_spec.env_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
-	for (auto it = _spec.env_aspects.begin();
-		it != _spec.env_aspects.end();
+    // init common providers (second half)
+    _env = factory_store<env_provider>::create(_spec.env_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
+    for (auto it = _spec.env_aspects.begin();
+        it != _spec.env_aspects.end();
         it++)
     {
         _env = factory_store<env_provider>::create(it->c_str(), PROVIDER_TYPE_ASPECT, _env);
@@ -108,7 +108,7 @@ service_node* service_engine::start_node(uint16_t port)
 
         auto node = new service_node();
         error_code err = node->start(spec);
-        rdsn_assert (err == 0, "service node start failed, err = %s", err.to_string());
+        rassert (err == 0, "service node start failed, err = %s", err.to_string());
         _engines[node->rpc()->address().port] = node;
 
         return node;

@@ -117,7 +117,7 @@ bool primary_context::CheckExist(const end_point& node, partition_status status)
     case PS_INACTIVE:
         return std::find(membership.dropOuts.begin(), membership.dropOuts.end(), node) != membership.dropOuts.end();
     default:
-        rdsn_assert(false, "");
+        rassert(false, "");
         return false;
     }
 }

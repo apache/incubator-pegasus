@@ -109,7 +109,7 @@ void meta_service::OnMetaServiceRequest(message_ptr& msg)
 
     else
     {
-        rdsn_assert(false, "unknown rpc tag %x", hdr.RpcTag);
+        rassert(false, "unknown rpc tag %x", hdr.RpcTag);
     }
 
     rpc_response(resp);

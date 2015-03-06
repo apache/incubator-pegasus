@@ -34,7 +34,7 @@ namespace rdsn {
             }
             catch (std::exception& ex)
             {
-                rdsn_warn("network session %s:%u exits failed, err = %s",
+                rwarn("network session %s:%u exits failed, err = %s",
                     remote_address().to_ip_string().c_str(),
                     (int)remote_address().port,
                     ex.what()
@@ -83,7 +83,7 @@ namespace rdsn {
                 }
                 else
                 {
-                    rdsn_error("network client read message failed, error = %s, read sz = %d",
+                    rerror("network client read message failed, error = %s, read sz = %d",
                         ec.message().c_str(), length
                         );
                     on_failure();

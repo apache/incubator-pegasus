@@ -48,6 +48,6 @@ void meta_service_app::stop(bool cleanup)
     }
     else
     {
-        rdsn_assert(_service == nullptr, "service must be null");
+        rassert(_service == nullptr, "service must be null");
     }
 }

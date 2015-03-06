@@ -94,7 +94,7 @@ public:
 private:
     static void report_error(const char* name, int type)
     {
-        rdsn_log(log_level_FATAL, "Cannot find factory '%s' with factory type %s", name, type == PROVIDER_TYPE_MAIN ? "provider" : "aspect");
+        rlog(log_level_FATAL, "Cannot find factory '%s' with factory type %s", name, type == PROVIDER_TYPE_MAIN ? "provider" : "aspect");
 
         printf("Cannot find factory '%s' with factory type %s\n", name, type == PROVIDER_TYPE_MAIN ? "provider" : "aspect");
 

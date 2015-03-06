@@ -38,7 +38,7 @@ perf_counter_ptr perf_counters::get_counter(const char *section, const char *nam
         }
         else
         {
-            rdsn_assert (it2->second.second == flags, "counters with the same name %s.%s with differnt types", section_name, name);
+            rassert (it2->second.second == flags, "counters with the same name %s.%s with differnt types", section_name, name);
             return it2->second.first;
         }
     }

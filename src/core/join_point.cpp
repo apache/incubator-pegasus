@@ -42,7 +42,7 @@ bool join_point_base::put_before(const char* base, void* fn, const char* name, b
     auto e0 = get_by_name(name);
     if (e0 == nullptr)
     {
-        rdsn_assert(false, "cannot find advice with name '%s' in '%s'", name, _name.c_str());
+        rassert(false, "cannot find advice with name '%s' in '%s'", name, _name.c_str());
         return false;
     }
 
@@ -62,7 +62,7 @@ bool join_point_base::put_after(const char* base, void* fn, const char* name, bo
     auto e0 = get_by_name(name);
     if (e0 == nullptr)
     {
-        rdsn_assert(false, "cannot find advice with name '%s' in '%s'", name, _name.c_str());
+        rassert(false, "cannot find advice with name '%s' in '%s'", name, _name.c_str());
         return false;
     }
 
@@ -82,7 +82,7 @@ bool join_point_base::put_replace(const char* base, void* fn, const char* name)
     auto e0 = get_by_name(name);
     if (e0 == nullptr)
     {
-        rdsn_assert(false, "cannot find advice with name '%s' in '%s'", name, _name.c_str());
+        rassert(false, "cannot find advice with name '%s' in '%s'", name, _name.c_str());
         return false;
     }
     else
@@ -98,7 +98,7 @@ bool join_point_base::remove(const char* name)
     auto e0 = get_by_name(name);
     if (e0 == nullptr)
     {
-        rdsn_assert(false, "cannot find advice with name '%s' in '%s'", name, _name.c_str());
+        rassert(false, "cannot find advice with name '%s' in '%s'", name, _name.c_str());
         return false;
     }
 

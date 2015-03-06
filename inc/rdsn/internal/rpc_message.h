@@ -16,7 +16,7 @@ struct message_header
     int32_t       body_crc32;
     int32_t       body_length;
     int16_t       version;
-	uint16_t      client_port;
+    uint16_t      client_port;
 
     uint64_t      id;
     uint64_t      rpc_id;    
