@@ -95,8 +95,9 @@ namespace rdsn { namespace tools {
         }
     }
 
-    error_code sim_network_provider::start(int port)
+	error_code sim_network_provider::start(int port, bool client_only)
     { 
+		client_only;
         _primary_address.port = port;
         if (s_switch.put(_primary_address, this))
             return ERR_SUCCESS;

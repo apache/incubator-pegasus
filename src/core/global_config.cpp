@@ -2,6 +2,7 @@
 # include <thread>
 # include <rdsn/internal/logging.h>
 # include <rdsn/internal/task_code.h>
+# include <rdsn/internal/network.h>
 
 #define __TITLE__ "ConfigFile"
 
@@ -160,16 +161,6 @@ bool service_spec::init(configuration_ptr c)
 {
     std::vector<std::string> poolIds;
 
-    /*
-    [rdsn]
-    port = 20700
-    ; 0xdeadbeef
-    random_seed = 3735928559
-
-    ;
-    use_random_random_seed = false
-    */
-
     config = c;
     tool = config->get_string_value("core", "tool", "");
     toollets = config->get_string_value_list("core", "toollets", ',');
@@ -229,20 +220,28 @@ bool service_spec::init(configuration_ptr c)
         {
             service_app_spec app;
             app.init((*it).c_str(), config);
-            
-            // use first runnable app's port as primary port
-            if (port == 0 && app.run)
-                port = app.port;
+			rdsn_assert(app.port == 0 || app.port > 1024, "specified port is either 0 (no listen port) or greater than 1024");
 
+			int lport = app.port;
             int count = config->get_value<int>((*it).c_str(), "count", 1);
             std::string name = app.name;
             for (int i = 1; i <= count; i++)
             {
                 char buf[16];
                 sprintf(buf, ".%u", i);
-                app.name = (count > 1 ? (name + buf) : name);                
-                app_specs.push_back(app);
-                app.port++;
+                app.name = (count > 1 ? (name + buf) : name);
+
+				if (lport == 0)
+				{
+					app.port = ++network::max_faked_port_for_client_only_node;
+					rdsn_assert(app.port <= 1024, "faked port for client nodes only must not exceed 1024");
+					app_specs.push_back(app);
+				}
+				else
+				{
+					app_specs.push_back(app);
+					app.port++;
+				}
             }
         }
     }

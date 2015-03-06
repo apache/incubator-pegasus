@@ -31,7 +31,7 @@ public:
     // all return values are error code
     //
     // application state write and read
-    // @requests: update requests – they are batched and delivered to the application
+    // @requests: update requests ?they are batched and delivered to the application
     // @decree: a version number that is used to align between replication and application
     // @ackClient: when it is true, the application needs to reply to the client by invoking 
     //             rpc_response<TResponse>(request, response);

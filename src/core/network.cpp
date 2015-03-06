@@ -48,6 +48,7 @@ namespace rdsn {
     void rpc_server_session::on_recv_request(message_ptr& msg, int delay_handling_milliseconds)
     {
         msg->header().from_address = remote_address();
+		msg->header().from_address.port = msg->header().client_port;
         msg->header().to_address = _net.address();
 
         msg->server_session() = shared_from_this();
@@ -61,6 +62,8 @@ namespace rdsn {
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
+
+	int network::max_faked_port_for_client_only_node = 0;
 
     network::network(rpc_engine* srv, network* inner_provider)
         : _engine(srv)

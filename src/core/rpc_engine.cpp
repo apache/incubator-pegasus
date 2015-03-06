@@ -184,7 +184,7 @@ namespace rdsn {
         network* net = nullptr;
         for (auto& kv : networks)
         {
-            error_code ret = kv.second->start(port);
+            error_code ret = kv.second->start(port, port <= network::max_faked_port_for_client_only_node);
             if (ret != ERR_SUCCESS)
             {
                 if (ret == ERR_ADDRESS_ALREADY_USED && addr_used_here)
@@ -274,6 +274,8 @@ namespace rdsn {
             msg->header().is_response_expected = true;
         }
         
+		msg->header().client_port = address().port;
+		msg->header().from_address = address();
         msg->header().new_rpc_id();  
         msg->seal(_message_crc_required);
 

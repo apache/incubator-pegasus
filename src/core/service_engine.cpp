@@ -69,61 +69,33 @@ error_code service_node::start(const service_spec& spec)
 
 service_engine::service_engine(void)
 {
-    _is_running = false;
     _env = nullptr;
     _logging = nullptr;
 }
 
-void service_engine::prepare_minimum_providers_for_toollets(const service_spec& spec)
+void service_engine::init_before_toollets(const service_spec& spec)
 {
-    _logging = factory_store<logging_provider>::create(spec.logging_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
+	_spec = spec;
 
-    // init perf counter provider
+	// init common providers (first half)
+    _logging = factory_store<logging_provider>::create(spec.logging_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
     perf_counters::instance().register_factory(factory_store<perf_counter>::get_factory<perf_counter_factory>(spec.perf_counter_factory_name.c_str(), PROVIDER_TYPE_MAIN));
 }
 
-error_code service_engine::start(const service_spec& spec)
+void service_engine::init_after_toollets()
 {
-    rdsn_assert (!_is_running, "cannot start as it is running!");
-
-    std::string factoryName;
-    
-    _spec = spec;
-        
-    // init log provider    
-    if (nullptr != _logging) delete _logging;
-    _logging = factory_store<logging_provider>::create(spec.logging_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
-
-    //std::srand(_spec.failure_options.GetCurrentRandomSeed());
-
-    // init perf counter provider
-    perf_counters::instance().register_factory(factory_store<perf_counter>::get_factory<perf_counter_factory>(_spec.perf_counter_factory_name.c_str(), PROVIDER_TYPE_MAIN));
-    
-    // init env provider
-    _env = factory_store<env_provider>::create(spec.env_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
-    for (auto it = spec.env_aspects.begin();
-        it != spec.env_aspects.end();
+	// init common providers (second half)
+	_env = factory_store<env_provider>::create(_spec.env_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
+	for (auto it = _spec.env_aspects.begin();
+		it != _spec.env_aspects.end();
         it++)
     {
         _env = factory_store<env_provider>::create(it->c_str(), PROVIDER_TYPE_ASPECT, _env);
-    }      
-    
-    // init primary rpc/disk/tasking
-    _primary_node = new service_node();    
-    error_code err = _primary_node->start(spec);
-    _engines[_primary_node->rpc()->address().port] = _primary_node;
-
-    _is_running = true;
-    return err;
+    }
 }
 
-service_node* service_engine::start_secondary(uint16_t port)
+service_node* service_engine::start_node(uint16_t port)
 {
-    if (0 == port)
-    {
-        return _primary_node;
-    }
-
     auto it = _engines.find(port);
     if (it != _engines.end())
     {
@@ -141,11 +113,6 @@ service_node* service_engine::start_secondary(uint16_t port)
 
         return node;
     }
-}
-
-const end_point& service_engine::primary_address() const
-{ 
-    return _primary_node->rpc()->address(); 
 }
 
 void service_engine::configuration_changed(configuration_ptr configuration)

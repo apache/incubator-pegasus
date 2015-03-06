@@ -234,7 +234,7 @@ bool task::cancel(bool wait_until_finished)
 
 void task::enqueue(int delay_milliseconds, service::service_app* app)
 {        
-    task_worker_pool* pool;
+    task_worker_pool* pool = nullptr;
     if (caller_worker() != nullptr)
     {
         rdsn_debug_assert(app == nullptr || caller_worker()->pool()->engine() == app->svc_node()->computation(), "tasks can only be dispatched to local node");
@@ -254,7 +254,8 @@ void task::enqueue(int delay_milliseconds, service::service_app* app)
     }
     else
     {
-        pool = service_engine::instance().primary_node()->computation()->get_pool(spec().pool_code);
+		rdsn_assert(false, "neither inside a service, nor service app is specified, unable to find the right engine to execute this");
+        //pool = service_engine::instance().primary_node()->computation()->get_pool(spec().pool_code);
     }
 
     enqueue(delay_milliseconds, pool);

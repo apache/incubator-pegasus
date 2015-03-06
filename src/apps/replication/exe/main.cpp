@@ -42,14 +42,10 @@ int __cdecl main(int argc, char * argv[])
     rdsn::tools::register_toollet<rdsn::tools::tracer>("tracer");
     rdsn::tools::register_toollet<rdsn::tools::profiler>("profiler");
     rdsn::tools::register_toollet<rdsn::tools::fault_injector>("fault_injector");
-        
-    // specify what services and tools will run in config files
-    system::initialize(config);
     
-    // run the system
-    system::run();
-    std::this_thread::sleep_for(std::chrono::hours(1000));
-    ::getchar();
+	// specify what services and tools will run in config file, then run
+	system::run(config);
+	::getchar();
 
     return 0;
 }

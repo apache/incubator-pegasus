@@ -49,7 +49,6 @@ public:
     virtual end_point get_read_address(read_semantic semantic, const partition_configuration& config);
 
     void clear_all_pending_tasks();
-    const end_point& address() const { return _local_address; }
 
 private:
     void _internal_rpc_reply_handler(error_code err, message_ptr& request, message_ptr& response);
@@ -63,7 +62,6 @@ private:
 
 private:
     std::string                            _app_name;
-    end_point                            _local_address;
     std::vector<end_point>               _meta_servers;
 
     mutable rdsn::service::zlock           _lock;

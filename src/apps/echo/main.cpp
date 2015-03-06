@@ -21,11 +21,8 @@ int __cdecl main(int argc, char * argv[])
     rdsn::tools::register_toollet<rdsn::tools::profiler>("profiler");
     rdsn::tools::register_toollet<rdsn::tools::fault_injector>("fault_injector");
         
-    // specify what services and tools will run in config files
-    system::initialize("echo.ini");
-    
-    // run the system
-    system::run();
+    // specify what services and tools will run in config file, then run
+    system::run("echo.ini");
     ::getchar();
 
     return 0;

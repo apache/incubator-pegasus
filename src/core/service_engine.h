@@ -43,23 +43,18 @@ public:
     const service_spec& spec() const { return _spec; }
     env_provider* env() const { return _env; }
     logging_provider* logging() const { return _logging; }
-    const end_point& primary_address() const;
     service_node* get_node(uint16_t port) const;
-    service_node* primary_node() const { return _primary_node; }
     
-    void prepare_minimum_providers_for_toollets(const service_spec& spec);
-
-    error_code start(const service_spec& spec);    
+    void init_before_toollets(const service_spec& spec);
+	void init_after_toollets();
     void configuration_changed(configuration_ptr configuration);
 
-    service_node* start_secondary(uint16_t port);
+    service_node* start_node(uint16_t port);
 
 private:
     service_spec                    _spec;
-    bool                           _is_running;
     env_provider*                   _env;
     logging_provider*               _logging;
-    service_node*                   _primary_node;
 
     // <port, servicenode>
     typedef std::map<uint16_t, service_node*> node_engines;

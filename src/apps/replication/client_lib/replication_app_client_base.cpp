@@ -62,7 +62,6 @@ replication_app_client_base::replication_app_client_base(const std::vector<end_p
 : rdsn::service::serviceletex<replication_app_client_base>(std::string(appServiceName).append(".client").c_str())
 {
     _app_name = std::string(appServiceName);   
-    _local_address = pLocalAddr ? *pLocalAddr : service::rpc::get_primary_address();
     _meta_servers = meta_servers;
 
     _app_id = appServiceId;
@@ -232,13 +231,8 @@ int replication_app_client_base::send_client_message(message_ptr& msg2, rpc_resp
             marshall(msg2, gpid, msg->HeaderPlaceholderPos);            
         }
 
-        msg->header().from_address = _local_address;
-        msg->header().to_address = addr;
-
-        msg->header().is_response_expected = true;
         msg->header().hash = gpid_to_hash(gpid);
-
-        rpc::call(msg->header().to_address, msg2, reply);
+        rpc::call(addr, msg2, reply);
     }
     else if (!firstTime)
     {
@@ -350,7 +344,7 @@ void replication_app_client_base::query_partition_configuration(int pidx)
     marshall(msg, req);
 
     it->second.first = rpc_replicated(
-        _local_address,
+        address(),
         _last_contact_point,
         _meta_servers, 
         msg,            

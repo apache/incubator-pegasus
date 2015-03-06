@@ -26,8 +26,6 @@ namespace tasking
 
 namespace rpc
 {
-    extern const end_point& get_primary_address();
-
     extern const end_point& get_local_address();
 
     extern bool register_rpc_handler(task_code code, const char* name, rpc_server_handler* handler);
@@ -66,9 +64,7 @@ namespace env
 
 namespace system
 {
-    extern bool initialize(const char* config);
-
-    extern void run();
+	extern bool run(const char* config);
 
     namespace internal_use_only
     {

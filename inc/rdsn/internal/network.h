@@ -34,7 +34,7 @@ namespace rdsn {
         std::shared_ptr<rpc_client_session> get_client_session(const end_point& ep);
         void on_client_session_disconnected(std::shared_ptr<rpc_client_session>& s);
 
-        virtual error_code start(int port) = 0;
+        virtual error_code start(int port, bool client_only) = 0;
         virtual const end_point& address() = 0;
         virtual std::shared_ptr<rpc_client_session> create_client_session(const end_point& server_addr) = 0;
 
@@ -48,6 +48,9 @@ namespace rdsn {
         typedef std::map<end_point, std::shared_ptr<rpc_server_session>> server_sessions;
         server_sessions               _servers;
         utils::rw_lock                _servers_lock;
+
+	public:
+		static int max_faked_port_for_client_only_node;
     };
 
 

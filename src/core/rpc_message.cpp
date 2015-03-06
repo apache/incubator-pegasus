@@ -149,6 +149,7 @@ message_ptr message::create_response()
     msg->header().local_rpc_code = _msg_header.local_rpc_code;
     msg->header().from_address = _msg_header.to_address;
     msg->header().to_address = _msg_header.from_address;
+	msg->header().client_port = _msg_header.from_address.port;
 
     msg->_server_session = _server_session;
 
