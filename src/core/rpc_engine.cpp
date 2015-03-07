@@ -8,6 +8,7 @@
 # include "rpc_engine.h"
 # include "service_engine.h"
 # include <rdsn/internal/perf_counters.h>
+# include <set>
 
 # define __TITLE__ "rpc.engine"
 
@@ -181,31 +182,32 @@ namespace rdsn {
         }
 
         bool addr_used_here = false;
-        network* net = nullptr;
+        std::set<network*> started_nets;
         for (auto& kv : networks)
         {
+            if (started_nets.find(kv.second) != started_nets.end())
+                continue;
+
             error_code ret = kv.second->start(port, port <= network::max_faked_port_for_client_only_node);
             if (ret != ERR_SUCCESS)
             {
-                if (ret == ERR_ADDRESS_ALREADY_USED && addr_used_here)
-                {
-                    // reuse the same network
-                    kv.second = net;
-
-                    // TODO: recycle memory 
-                }
-                else
-                    return ret;
+                return ret;
             }
-            else if (!addr_used_here)
+            else
             {
-                addr_used_here = true;
-                net = kv.second;
+                started_nets.insert(kv.second);
             }
         }
         _address = _networks[RPC_CHANNEL_TCP]->address();
     
-        rdebug("rpc server started, listen on port %u...", (int)address().port);
+        if (address().port <= network::max_faked_port_for_client_only_node)
+        {
+            rdebug("rpc client started, named as fake port %u ...", (int)address().port);
+        }
+        else
+        {
+            rdebug("rpc server started, listen on port %u...", (int)address().port);
+        }
     
         _is_running = true;
         return ERR_SUCCESS;

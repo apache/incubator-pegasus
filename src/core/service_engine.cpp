@@ -48,16 +48,24 @@ error_code service_node::start(const service_spec& spec)
 
     // init all networks
     std::map<rpc_channel, network*> nets;
-    
+    std::map<std::string, network*> named_nets;
     for (auto& kv : spec.network_factory_names)
     {
-        network* net = factory_store<network>::create(kv.second.c_str(), PROVIDER_TYPE_MAIN, _rpc, nullptr);
-        for (auto it = spec.network_aspects.begin();
-            it != spec.network_aspects.end();
-            it++)
+        network* net;
+        if (named_nets.find(kv.second) != named_nets.end())
+            net = named_nets[kv.second];
+        else
         {
-            net = factory_store<network>::create(it->c_str(), PROVIDER_TYPE_ASPECT, _rpc, net);
+            net = factory_store<network>::create(kv.second.c_str(), PROVIDER_TYPE_MAIN, _rpc, nullptr);
+            for (auto it = spec.network_aspects.begin();
+                it != spec.network_aspects.end();
+                it++)
+            {
+                net = factory_store<network>::create(it->c_str(), PROVIDER_TYPE_ASPECT, _rpc, net);
+            }
+            named_nets[kv.second] = net;
         }
+
         nets[kv.first] = net;
     }
 
