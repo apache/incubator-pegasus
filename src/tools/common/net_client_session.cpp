@@ -72,6 +72,9 @@ namespace rdsn {
                     }
                     else
                     {
+                        rerror("network client session connect failed, error = %s",
+                            ec.message().c_str()
+                            );
                         on_failure();
                     }
                 });
@@ -82,7 +85,7 @@ namespace rdsn {
         {
             boost::asio::async_read(_socket,
                 boost::asio::buffer(_read_msg_hdr.get(), message_header::serialized_size()),
-                [this](boost::system::error_code ec, std::size_t /*length*/)
+                [this](boost::system::error_code ec, std::size_t length)
             {
                 if (!ec && message_header::is_right_header(_read_msg_hdr.get()))
                 {
@@ -90,6 +93,9 @@ namespace rdsn {
                 }
                 else
                 {
+                    rerror("network client session read message header failed, error = %s, read sz = %d",
+                        ec.message().c_str(), length
+                        );
                     on_failure();
                 }
             });
@@ -116,7 +122,7 @@ namespace rdsn {
                 }
                 else
                 {
-                    rerror("network client read message failed, error = %s, read sz = %d",
+                    rerror("network client session read message failed, error = %s, read sz = %d",
                         ec.message().c_str(), length
                         );
                     on_failure();
@@ -138,12 +144,15 @@ namespace rdsn {
             {
                 buffers2.push_back(boost::asio::const_buffer(b.data(), b.length()));
             }
-            
+
             boost::asio::async_write(_socket, buffers2,
-                [this](boost::system::error_code ec, std::size_t /*length*/)
+                [this, msg](boost::system::error_code ec, std::size_t length)
             {
                 if (ec)
                 {
+                    rerror("network client session write message failed, error = %s, read sz = %d",
+                        ec.message().c_str(), length
+                        );
                     on_failure();
                 }
             });

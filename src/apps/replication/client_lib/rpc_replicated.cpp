@@ -142,7 +142,8 @@ rpc_response_task_ptr rpc_replicated(
         rpc_reply_handler callback  
         )
 {
-    return rpc_replicated(localAddr, firstTryServer, servers, request, svc, callback, request->header().hash);
+    return rpc_replicated(localAddr, firstTryServer, servers, request, svc, callback, 
+        request->header().client.hash);
 }
 
 }} // end namespace

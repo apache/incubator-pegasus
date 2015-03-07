@@ -92,7 +92,7 @@ namespace rdsn {
             //{call, timeout_tsk, client }
         }
 
-        int timeout_milliseconds = hdr.timeout_milliseconds > spec->rpc_min_timeout_milliseconds_for_retry ? spec->rpc_retry_interval_milliseconds : hdr.timeout_milliseconds;
+        int timeout_milliseconds = hdr.client.timeout_milliseconds > spec->rpc_min_timeout_milliseconds_for_retry ? spec->rpc_retry_interval_milliseconds : hdr.client.timeout_milliseconds;
         timeout_tsk->enqueue(timeout_milliseconds);
         msg->add_elapsed_timeout_milliseconds(timeout_milliseconds);
 
@@ -114,7 +114,7 @@ namespace rdsn {
         }
 
         message_ptr& msg = call->get_request();
-        int remainTime = msg->header().timeout_milliseconds - msg->elapsed_timeout_milliseconds();
+        int remainTime = msg->header().client.timeout_milliseconds - msg->elapsed_timeout_milliseconds();
 
         if (remainTime <= 0)
         {
@@ -271,12 +271,7 @@ namespace rdsn {
     {
         message* msg = request.get();
         
-        if (call != nullptr)
-        {
-            msg->header().is_response_expected = true;
-        }
-        
-        msg->header().client_port = address().port;
+        msg->header().client.port = address().port;
         msg->header().from_address = address();
         msg->header().new_rpc_id();  
         msg->seal(_message_crc_required);
@@ -288,7 +283,7 @@ namespace rdsn {
             if (call != nullptr)
             {
                 message_ptr nil;
-                call->enqueue(ERR_TIMEOUT, nil, msg->header().timeout_milliseconds);
+                call->enqueue(ERR_TIMEOUT, nil, msg->header().client.timeout_milliseconds);
             }   
             return;
         }

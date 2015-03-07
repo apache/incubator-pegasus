@@ -49,14 +49,18 @@ namespace rdsn {
         {
             boost::asio::async_read(_socket,
                 boost::asio::buffer(_read_msg_hdr.get(), message_header::serialized_size()),
-                [this](boost::system::error_code ec, std::size_t /*length*/)
+                [this](boost::system::error_code ec, std::size_t length)
             {
                 if (!ec && message_header::is_right_header(_read_msg_hdr.get()))
                 {
+                    rassert(length == message_header::serialized_size(), "");
                     do_read_body();
                 }
                 else
                 {
+                    rerror("network server session read message header failed, error = %s, read sz = %d",
+                        ec.message().c_str(), length
+                        );
                     on_failure();
                 }
             });
@@ -65,6 +69,7 @@ namespace rdsn {
         void net_server_session::do_read_body()
         {
             int body_sz = message_header::get_body_length(_read_msg_hdr.get());
+            rassert(body_sz > 0, "");
             int sz = message_header::serialized_size() + body_sz;
             auto buf = std::shared_ptr<char>((char*)malloc(sz));
             _read_buffer.assign(buf, 0, sz);
@@ -83,7 +88,7 @@ namespace rdsn {
                 }
                 else
                 {
-                    rerror("network client read message failed, error = %s, read sz = %d",
+                    rerror("network server session read message failed, error = %s, read sz = %d",
                         ec.message().c_str(), length
                         );
                     on_failure();
@@ -104,10 +109,13 @@ namespace rdsn {
             }
 
             boost::asio::async_write(_socket, buffers2,
-                [this](boost::system::error_code ec, std::size_t /*length*/)
+                [this, msg](boost::system::error_code ec, std::size_t length)
             {
                 if (ec)
                 {
+                    rerror("network server session write message failed, error = %s, read sz = %d",
+                        ec.message().c_str(), length
+                        );
                     on_failure();
                 }
             });

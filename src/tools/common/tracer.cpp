@@ -118,7 +118,7 @@ namespace rdsn {
                 (int)hdr.to_address.port,
                 hdr.rpc_id,
                 callee ? callee->id() : 0,
-                hdr.timeout_milliseconds
+                hdr.client.timeout_milliseconds
                 );
         }
 
