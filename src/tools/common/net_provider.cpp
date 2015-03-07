@@ -27,7 +27,7 @@ namespace rdsn {
 
                 try
                 {
-                    _acceptor.reset(new boost::asio::ip::tcp::acceptor(_io_service, ep, false));
+                    _acceptor.reset(new boost::asio::ip::tcp::acceptor(_io_service, ep, true));
                     do_accept();
                 }
                 catch (boost::system::system_error& err)

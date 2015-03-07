@@ -58,6 +58,7 @@ namespace rdsn {
         
         static void aio_completed(sigval sigval)
         {
+            printf("hello, aio_completed");
         }
 
         error_code native_posix_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool async, __out uint32_t* pbytes /*= nullptr*/)

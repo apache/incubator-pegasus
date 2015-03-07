@@ -110,7 +110,7 @@ namespace rdsn {
         {
             message_header& hdr = req->header();
             rdebug(
-                "%s RPC.CALL: %s:%u => %s:%u, rpc_id = %016llx, timeout_task = %016llx, timeout = %ums",
+                "%s RPC.CALL: %s:%u => %s:%u, rpc_id = %016llx, callback_task = %016llx, timeout = %ums",
                 hdr.rpc_name,
                 hdr.from_address.name.c_str(),
                 (int)hdr.from_address.port,

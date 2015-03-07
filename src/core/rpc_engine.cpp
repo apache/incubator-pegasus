@@ -202,11 +202,11 @@ namespace rdsn {
     
         if (address().port <= network::max_faked_port_for_client_only_node)
         {
-            rdebug("rpc client started, named as fake port %u ...", (int)address().port);
+            rdebug("rpc node started @ %s:%u (client only) ...", address().name.c_str(), (int)address().port);
         }
         else
         {
-            rdebug("rpc server started, listen on port %u...", (int)address().port);
+            rdebug("rpc node started @ %s:%u ...", address().name.c_str(), (int)address().port);
         }
     
         _is_running = true;
