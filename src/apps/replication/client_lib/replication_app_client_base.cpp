@@ -29,13 +29,12 @@ public:
         RepClientMessage* msg = new RepClientMessage();
 
         msg->header().local_rpc_code = (uint16_t)rpc_code;
-        msg->header().hash = hash;
-        msg->header().timeout_milliseconds = 0;
+        msg->header().client.hash = hash;
+        msg->header().client.timeout_milliseconds = 0;
 
         const char* rpcName = rpc_code.to_string();
         strcpy(msg->header().rpc_name, rpcName);    
 
-        msg->header().is_request = true;
         msg->header().id = message::new_id();
         
         return msg;
@@ -131,7 +130,7 @@ void replication_app_client_base::enqueue_pending_list(int pidx, message_ptr& us
             LPC_TEST,
             std::bind(&replication_app_client_base::on_user_request_timeout, this, caller_tsk),
             0,
-            userRequest->header().timeout_milliseconds
+            userRequest->header().client.timeout_milliseconds
             );
     pm.msg = userRequest;
     pm.caller_tsk = caller_tsk;
@@ -162,7 +161,7 @@ rpc_response_task_ptr replication_app_client_base::send(
     )
 {
     RepClientMessage* msg = (RepClientMessage*)request.get();
-    msg->header().timeout_milliseconds = timeout_milliseconds;
+    msg->header().client.timeout_milliseconds = timeout_milliseconds;
 
     msg->Callback = callback;
 
@@ -231,7 +230,7 @@ int replication_app_client_base::send_client_message(message_ptr& msg2, rpc_resp
             marshall(msg2, gpid, msg->HeaderPlaceholderPos);            
         }
 
-        msg->header().hash = gpid_to_hash(gpid);
+        msg->header().client.hash = gpid_to_hash(gpid);
         rpc::call(addr, msg2, reply);
     }
     else if (!firstTime)

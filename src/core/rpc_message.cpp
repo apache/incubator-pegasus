@@ -112,20 +112,19 @@ message_ptr message::create_request(task_code rpc_code, int timeout_milliseconds
 {
     message_ptr msg(new message());
     msg->header().local_rpc_code = (uint16_t)rpc_code;
-    msg->header().hash = hash;
+    msg->header().client.hash = hash;
     if (timeout_milliseconds == 0)
     {
-        msg->header().timeout_milliseconds = task_spec::get(rpc_code)->rpc_default_timeout_milliseconds;
+        msg->header().client.timeout_milliseconds = task_spec::get(rpc_code)->rpc_default_timeout_milliseconds;
     }
     else
     {
-        msg->header().timeout_milliseconds = timeout_milliseconds;
+        msg->header().client.timeout_milliseconds = timeout_milliseconds;
     }    
 
     const char* rpcName = rpc_code.to_string();
     strcpy(msg->header().rpc_name, rpcName);
 
-    msg->header().is_request = true;            
     msg->header().id = message::new_id();
     return msg;
 }
@@ -137,19 +136,12 @@ message_ptr message::create_response()
     msg->header().id = _msg_header.id;
     msg->header().rpc_id = _msg_header.rpc_id;
         
-    msg->header().error = ERR_SUCCESS;    
+    msg->header().server.error = ERR_SUCCESS.get();    
     strcpy(msg->header().rpc_name, _msg_header.rpc_name);
-
-    msg->header().hash = _msg_header.hash;
-    msg->header().timeout_milliseconds = _msg_header.timeout_milliseconds;
-
-    msg->header().is_request = false;
-    msg->header().is_response_expected = true;
      
     msg->header().local_rpc_code = _msg_header.local_rpc_code;
     msg->header().from_address = _msg_header.to_address;
     msg->header().to_address = _msg_header.from_address;
-    msg->header().client_port = _msg_header.from_address.port;
 
     msg->_server_session = _server_session;
 

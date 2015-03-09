@@ -12,21 +12,28 @@ namespace rdsn {
 struct message_header
 {    
     int32_t       hdr_crc32;
-    int32_t       hdr_length;
     int32_t       body_crc32;
     int32_t       body_length;
-    int16_t       version;
-    uint16_t      client_port;
-
+    int32_t       version;
     uint64_t      id;
-    uint64_t      rpc_id;    
+    uint64_t      rpc_id;
     char          rpc_name[MAX_TASK_CODE_NAME_LENGTH + 1];
-    int32_t       hash;
-    error_code    error;
-    int32_t       timeout_milliseconds;
 
-    bool          is_request;
-    bool          is_response_expected;
+    // info from client => server
+    union
+    {
+        struct 
+        {
+            int32_t  hash;
+            int32_t  timeout_milliseconds;
+            uint16_t port;
+        } client;
+
+        struct 
+        {
+            int32_t  error;
+        } server;
+    };
 
     // local fields - no need to be transmitted
     end_point     from_address;
@@ -95,10 +102,9 @@ public:
     //
     void seal(bool fillCrc, bool is_placeholder = false);
     message_header& header() { return _msg_header; }
-    bool is_request() const { return _msg_header.is_request; }                
     int  total_size() const { return is_read() ? _reader->total_size() : _writer->total_size(); }
     bool is_read() const { return _reader != nullptr; }
-    error_code error() const { return _msg_header.error; }
+    error_code error() const { error_code ec; ec.set(_msg_header.server.error); return ec; }
     int elapsed_timeout_milliseconds() const { return _elapsed_timeout_milliseconds; }
     void add_elapsed_timeout_milliseconds(int timeout_milliseconds) { _elapsed_timeout_milliseconds += timeout_milliseconds; }
     bool is_right_header() const;

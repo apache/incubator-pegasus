@@ -63,7 +63,7 @@ ENUM_BEGIN(task_state, TASK_STATE_INVALID)
     ENUM_REG(TASK_STATE_CANCELLED)
 ENUM_END(task_state)
 
-#define MAX_TASK_CODE_NAME_LENGTH 63
+#define MAX_TASK_CODE_NAME_LENGTH 47
 
 struct task_code : public rdsn::utils::customized_id<task_code>
 {

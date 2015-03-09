@@ -17,14 +17,14 @@ static __thread
 struct 
 { 
     uint32_t    magic; 
-    task       *currentTask;
-    task_worker *currentWorker;
+    task       *current_task;
+    task_worker *current_worker;
 } tls_taskInfo;  
 
 /*static*/ task* task::get_current_task()
 {
     if (tls_taskInfo.magic == 0xdeadbeef)
-        return tls_taskInfo.currentTask;
+        return tls_taskInfo.current_task;
     else
         return nullptr;
 }
@@ -32,7 +32,7 @@ struct
 /*static*/ uint64_t task::get_current_task_id()
 {
     if (tls_taskInfo.magic == 0xdeadbeef)
-        return tls_taskInfo.currentTask->id();
+        return tls_taskInfo.current_task ? tls_taskInfo.current_task->id() : 0;
     else
         return 0;
 }
@@ -41,7 +41,7 @@ struct
 /*static*/ task_worker* task::get_current_worker()
 {
     if (tls_taskInfo.magic == 0xdeadbeef)
-        return tls_taskInfo.currentWorker;
+        return tls_taskInfo.current_worker;
     else
         return nullptr;
 }
@@ -49,7 +49,7 @@ struct
 /*static*/ task_worker_pool* task::get_current_worker_pool()
 {
     if (tls_taskInfo.magic == 0xdeadbeef)
-        return tls_taskInfo.currentWorker->pool();
+        return tls_taskInfo.current_worker->pool();
     else
         return nullptr;
 }
@@ -57,7 +57,7 @@ struct
 /*static*/ service_node* task::get_current_node()
 {
     if (tls_taskInfo.magic == 0xdeadbeef)
-        return tls_taskInfo.currentWorker->pool()->node();
+        return tls_taskInfo.current_worker->pool()->node();
     else
         return nullptr;
 }
@@ -65,8 +65,8 @@ struct
 /*static*/ void task::set_current_worker(task_worker* worker)
 {
     tls_taskInfo.magic = 0xdeadbeef;
-    tls_taskInfo.currentWorker = worker;
-    tls_taskInfo.currentTask = nullptr;
+    tls_taskInfo.current_worker = worker;
+    tls_taskInfo.current_task = nullptr;
 }
 
 task::task(task_code code, int hash)
@@ -97,8 +97,8 @@ void task::exec_internal()
 
     if (_state.compare_exchange_strong(READY_STATE, TASK_STATE_RUNNING))
     {
-        auto parentTask = tls_taskInfo.currentTask;
-        tls_taskInfo.currentTask = this;
+        auto parentTask = tls_taskInfo.current_task;
+        tls_taskInfo.current_task = this;
 
         _spec->on_task_begin.execute(this);
 
@@ -118,7 +118,7 @@ void task::exec_internal()
         }
         // ]
         
-        tls_taskInfo.currentTask = parentTask;
+        tls_taskInfo.current_task = parentTask;
     }
 
     if (!_spec->allow_inline)
@@ -304,7 +304,7 @@ void timer_task::exec()
 }
 
 rpc_request_task::rpc_request_task(message_ptr& request) 
-    : task(task_code(request->header().local_rpc_code), request->header().hash), 
+    : task(task_code(request->header().local_rpc_code), request->header().client.hash), 
       _request(request)
 {
     dbg_rassert (TASK_TYPE_RPC_REQUEST == spec().type, "task type must be RPC_REQUEST");

@@ -8,6 +8,7 @@
 # include "rpc_engine.h"
 # include "service_engine.h"
 # include <rdsn/internal/perf_counters.h>
+# include <set>
 
 # define __TITLE__ "rpc.engine"
 
@@ -91,7 +92,7 @@ namespace rdsn {
             //{call, timeout_tsk, client }
         }
 
-        int timeout_milliseconds = hdr.timeout_milliseconds > spec->rpc_min_timeout_milliseconds_for_retry ? spec->rpc_retry_interval_milliseconds : hdr.timeout_milliseconds;
+        int timeout_milliseconds = hdr.client.timeout_milliseconds > spec->rpc_min_timeout_milliseconds_for_retry ? spec->rpc_retry_interval_milliseconds : hdr.client.timeout_milliseconds;
         timeout_tsk->enqueue(timeout_milliseconds);
         msg->add_elapsed_timeout_milliseconds(timeout_milliseconds);
 
@@ -113,7 +114,7 @@ namespace rdsn {
         }
 
         message_ptr& msg = call->get_request();
-        int remainTime = msg->header().timeout_milliseconds - msg->elapsed_timeout_milliseconds();
+        int remainTime = msg->header().client.timeout_milliseconds - msg->elapsed_timeout_milliseconds();
 
         if (remainTime <= 0)
         {
@@ -181,31 +182,32 @@ namespace rdsn {
         }
 
         bool addr_used_here = false;
-        network* net = nullptr;
+        std::set<network*> started_nets;
         for (auto& kv : networks)
         {
+            if (started_nets.find(kv.second) != started_nets.end())
+                continue;
+
             error_code ret = kv.second->start(port, port <= network::max_faked_port_for_client_only_node);
             if (ret != ERR_SUCCESS)
             {
-                if (ret == ERR_ADDRESS_ALREADY_USED && addr_used_here)
-                {
-                    // reuse the same network
-                    kv.second = net;
-
-                    // TODO: recycle memory 
-                }
-                else
-                    return ret;
+                return ret;
             }
-            else if (!addr_used_here)
+            else
             {
-                addr_used_here = true;
-                net = kv.second;
+                started_nets.insert(kv.second);
             }
         }
         _address = _networks[RPC_CHANNEL_TCP]->address();
     
-        rdebug("rpc server started, listen on port %u...", (int)address().port);
+        if (address().port <= network::max_faked_port_for_client_only_node)
+        {
+            rdebug("rpc node started @ %s:%u (client only) ...", address().name.c_str(), (int)address().port);
+        }
+        else
+        {
+            rdebug("rpc node started @ %s:%u ...", address().name.c_str(), (int)address().port);
+        }
     
         _is_running = true;
         return ERR_SUCCESS;
@@ -269,12 +271,7 @@ namespace rdsn {
     {
         message* msg = request.get();
         
-        if (call != nullptr)
-        {
-            msg->header().is_response_expected = true;
-        }
-        
-        msg->header().client_port = address().port;
+        msg->header().client.port = address().port;
         msg->header().from_address = address();
         msg->header().new_rpc_id();  
         msg->seal(_message_crc_required);
@@ -286,7 +283,7 @@ namespace rdsn {
             if (call != nullptr)
             {
                 message_ptr nil;
-                call->enqueue(ERR_TIMEOUT, nil, msg->header().timeout_milliseconds);
+                call->enqueue(ERR_TIMEOUT, nil, msg->header().client.timeout_milliseconds);
             }   
             return;
         }
