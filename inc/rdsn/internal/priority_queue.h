@@ -16,6 +16,7 @@ public:
     {
         _name = name;
         _count = 0;
+        _peeked_item = nullptr;
     }
 
     virtual long enqueue(T obj, uint32_t priority)
@@ -29,31 +30,41 @@ public:
         }
     }
 
+    virtual T peek()
+    {
+        std::lock_guard<std::mutex>  l(_lock);
+
+        // already peeked
+        if (nullptr != _peeked_item)
+            return nullptr;
+
+        else
+        {
+            long ct = 0;
+            _peeked_item = dequeue_impl(ct);
+            return _peeked_item;
+        }
+    }
+
+    virtual T dequeue_peeked()
+    {
+        std::lock_guard<std::mutex>  l(_lock);
+        auto c = _peeked_item;
+        _peeked_item = nullptr;
+        return c;
+    }
+
+    bool is_peeked()
+    {
+        std::lock_guard<std::mutex>  l(_lock);
+        return _peeked_item != nullptr;
+    }
+
     virtual T dequeue()
     {
         std::lock_guard<std::mutex>  l(_lock);
-        {
-            if (_count == 0)
-            {
-                return nullptr;
-            }
-
-            --_count;
-
-            int index = priority_count - 1;
-            for (; index >= 0; index--)
-            {
-                if (_items[index].size() > 0)
-                {
-                    break;
-                }
-            }
-
-            rassert(index >= 0, "must find something");
-            auto c = _items[index].front();
-            _items[index].pop();
-            return c;
-        }
+        long ct = 0;
+        return dequeue_impl(ct);
     }
 
     virtual T dequeue(__out long& ct)
@@ -67,36 +78,34 @@ public:
     long count() const { std::lock_guard<std::mutex>  l(_lock); return _count; }
 
 protected:
-    T dequeue_impl(__out long& ct)
+    T dequeue_impl(__out long& ct, bool pop = true)
     {
-
+        if (_count == 0)
         {
-            if (_count == 0)
-            {
-                return nullptr;
-            }
-
-            ct = --_count;
-
-            int index = priority_count - 1;
-            for (; index >= 0; index--)
-            {
-                if (_items[index].size() > 0)
-                {
-                    break;
-                }
-            }
-
-            rassert(index >= 0, "must find something");
-            auto c = _items[index].front();
-            _items[index].pop();
-            return c;
+            return nullptr;
         }
+
+        ct = --_count;
+
+        int index = priority_count - 1;
+        for (; index >= 0; index--)
+        {
+            if (_items[index].size() > 0)
+            {
+                break;
+            }
+        }
+
+        rassert(index >= 0, "must find something");
+        auto c = _items[index].front();
+        _items[index].pop();
+        return c;
     }
 
 private:
     std::string   _name;
     TQueue        _items[priority_count];
+    T             _peeked_item;
 
 protected:
     long          _count;

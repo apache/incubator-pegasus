@@ -11,8 +11,8 @@ namespace rdsn {
             : _net(net), 
             _io_service(shared_io_service::instance().ios),
             _socket(std::move(socket)),
-            _read_msg_hdr((char*)malloc(message_header::serialized_size())),
-            rpc_server_session(net, remote_addr)
+            rpc_server_session(net, remote_addr),
+            _sq("net_server_session.send.queue")
         {
             do_read_header();
         }
@@ -48,17 +48,17 @@ namespace rdsn {
         void net_server_session::do_read_header()
         {
             boost::asio::async_read(_socket,
-                boost::asio::buffer(_read_msg_hdr.get(), message_header::serialized_size()),
+                boost::asio::buffer((void*)&_read_msg_hdr, message_header::serialized_size()),
                 [this](boost::system::error_code ec, std::size_t length)
             {
-                if (!ec && message_header::is_right_header(_read_msg_hdr.get()))
+                if (!ec && message_header::is_right_header((char*)&_read_msg_hdr))
                 {
                     rassert(length == message_header::serialized_size(), "");
                     do_read_body();
                 }
                 else
                 {
-                    rerror("network server session read message header failed, error = %s, read sz = %d",
+                    rerror("network server session read message header failed, error = %s, sz = %d",
                         ec.message().c_str(), length
                         );
                     on_failure();
@@ -68,27 +68,39 @@ namespace rdsn {
 
         void net_server_session::do_read_body()
         {
-            int body_sz = message_header::get_body_length(_read_msg_hdr.get());
+            int body_sz = message_header::get_body_length((char*)&_read_msg_hdr); 
             rassert(body_sz > 0, "");
             int sz = message_header::serialized_size() + body_sz;
             auto buf = std::shared_ptr<char>((char*)malloc(sz));
             _read_buffer.assign(buf, 0, sz);
-            memcpy((void*)_read_buffer.data(), _read_msg_hdr.get(), message_header::serialized_size());
+            memcpy((void*)_read_buffer.data(), (const void*)&_read_msg_hdr, message_header::serialized_size());
 
             boost::asio::async_read(_socket,
                 boost::asio::buffer((char*)_read_buffer.data() + message_header::serialized_size(), body_sz),
-                [this](boost::system::error_code ec, std::size_t length)
+                [this, body_sz](boost::system::error_code ec, std::size_t length)
             {
                 if (!ec)
                 {
                     message_ptr msg = new message(_read_buffer, true);
-                    this->on_recv_request(msg);
+                    rassert(msg->header().body_length == body_sz, "");
+                    
+                    if (msg->is_right_body())
+                    {
+                        this->on_recv_request(msg);
+                    }
+                    else
+                    {
+                        rerror("invalid request body (type = %s, body len = %u, skip ...",
+                            msg->header().rpc_name,
+                            msg->header().body_length
+                            );
+                    }
 
                     do_read_header();
                 }
                 else
                 {
-                    rerror("network server session read message failed, error = %s, read sz = %d",
+                    rerror("network server session read message failed, error = %s, sz = %d",
                         ec.message().c_str(), length
                         );
                     on_failure();
@@ -97,8 +109,13 @@ namespace rdsn {
         }
 
 
-        void net_server_session::write(message_ptr& msg)
+
+        void net_server_session::do_write()
         {
+            auto msg = _sq.peek();
+            if (nullptr == msg.get())
+                return;
+
             std::vector<utils::blob> buffers;
             msg->get_output_buffers(buffers);
 
@@ -113,12 +130,27 @@ namespace rdsn {
             {
                 if (ec)
                 {
-                    rerror("network server session write message failed, error = %s, read sz = %d",
+                    rerror("network server session write message failed, error = %s, sz = %d",
                         ec.message().c_str(), length
                         );
                     on_failure();
                 }
+                else
+                {
+                    rassert(length == msg->total_size(), "");
+
+                    auto smsg = _sq.dequeue_peeked();
+                    rassert(smsg == msg, "sent msg must be the first msg in send queue");
+
+                    do_write();
+                }
             });
+        }
+
+        void net_server_session::write(message_ptr& msg)
+        {
+            _sq.enqueue(msg, task_spec::get(msg->header().local_rpc_code)->priority);
+            do_write();
         }
     }
 }

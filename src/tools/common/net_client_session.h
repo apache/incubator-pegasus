@@ -1,6 +1,7 @@
 #pragma once
 
 # include "net_provider.h"
+# include <rdsn/internal/priority_queue.h>
 
 namespace rdsn {
     namespace tools {
@@ -22,6 +23,7 @@ namespace rdsn {
         private:
             void do_read_header();
             void do_read_body();
+            void do_write();
             void on_failure();
 
         protected:
@@ -34,11 +36,14 @@ namespace rdsn {
 
             boost::asio::io_service      &_io_service;
             boost::asio::ip::tcp::socket _socket;
-            boost::shared_ptr<char>      _read_msg_hdr;
+            message_header               _read_msg_hdr;
             utils::blob                  _read_buffer;
             asio_network_provider        &_net;
             std::atomic<session_state>   _state;
             int                          _reconnect_count;
+            
+            typedef utils::priority_queue<message_ptr, TASK_PRIORITY_COUNT> send_queue;
+            send_queue                   _sq;
         };
     }
 }
