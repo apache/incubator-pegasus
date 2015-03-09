@@ -9,21 +9,11 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\inc\zion\internal\serialization.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\service_base.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\file_server.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\servicelet.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\serviceletex.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
+    <ClInclude Include="..\..\inc\rdsn\internal\file_server.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\serialization.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\service_base.h" />
+    <ClInclude Include="..\..\inc\rdsn\servicelet.h" />
+    <ClInclude Include="..\..\inc\rdsn\serviceletex.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="service.cpp">

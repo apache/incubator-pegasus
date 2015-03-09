@@ -1,3 +1,26 @@
+/*
+ * The MIT License (MIT)
+
+ * Copyright (c) 2015 Microsoft Corporation
+
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 # include <rdsn/internal/network.h>
 # include "rpc_engine.h"
 
@@ -14,8 +37,8 @@ namespace rdsn {
     {
         if (call != nullptr)
         {
-            auto sthis = shared_from_this();
-            _matcher->on_call(request, call, sthis);
+            rpc_client_session_ptr sp = this;
+            _matcher->on_call(request, call, sp);
         }
 
         send(request);
@@ -23,8 +46,8 @@ namespace rdsn {
 
     void rpc_client_session::on_disconnected()
     {
-        auto s = shared_from_this();
-        _net.on_client_session_disconnected(s);
+        rpc_client_session_ptr sp = this;
+        _net.on_client_session_disconnected(sp);
     }
 
     bool rpc_client_session::on_recv_reply(uint64_t key, message_ptr& reply, int delay_handling_milliseconds)
@@ -51,14 +74,14 @@ namespace rdsn {
         msg->header().from_address.port = msg->header().client.port;
         msg->header().to_address = _net.address();
 
-        msg->server_session() = shared_from_this();
+        msg->server_session().reset(this);
         return _net.engine()->on_recv_request(msg, delay_handling_milliseconds);
     }
 
     void rpc_server_session::on_disconnected()
     {
-        auto s = shared_from_this();
-        return _net.on_server_session_disconnected(s);
+        rpc_server_session_ptr sp = this;
+        return _net.on_server_session_disconnected(sp);
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -77,7 +100,7 @@ namespace rdsn {
 
     void network::call(message_ptr& request, rpc_response_task_ptr& call)
     {
-        std::shared_ptr<rpc_client_session> client = nullptr;
+        rpc_client_session_ptr client = nullptr;
         end_point& to = request->header().to_address;
 
         {
@@ -111,20 +134,20 @@ namespace rdsn {
         // TODO: periodical check to remove idle clients
     }
 
-    std::shared_ptr<rpc_server_session> network::get_server_session(const end_point& ep)
+    rpc_server_session_ptr network::get_server_session(const end_point& ep)
     {
         utils::auto_read_lock l(_servers_lock);
         auto it = _servers.find(ep);
         return it != _servers.end() ? it->second : nullptr;
     }
 
-    void network::on_server_session_accepted(std::shared_ptr<rpc_server_session>& s)
+    void network::on_server_session_accepted(rpc_server_session_ptr& s)
     {
         utils::auto_write_lock l(_servers_lock);
         _servers.insert(server_sessions::value_type(s->remote_address(), s));
     }
 
-    void network::on_server_session_disconnected(std::shared_ptr<rpc_server_session>& s)
+    void network::on_server_session_disconnected(rpc_server_session_ptr& s)
     {
         utils::auto_write_lock l(_servers_lock);
         auto it = _servers.find(s->remote_address());
@@ -132,14 +155,14 @@ namespace rdsn {
             _servers.erase(it);
     }
 
-    std::shared_ptr<rpc_client_session> network::get_client_session(const end_point& ep)
+    rpc_client_session_ptr network::get_client_session(const end_point& ep)
     {
         utils::auto_read_lock l(_clients_lock);
         auto it = _clients.find(ep);
         return it != _clients.end() ? it->second : nullptr;
     }
 
-    void network::on_client_session_disconnected(std::shared_ptr<rpc_client_session>& s)
+    void network::on_client_session_disconnected(rpc_client_session_ptr& s)
     {
         utils::auto_write_lock l(_clients_lock);
         auto it = _clients.find(s->remote_address());

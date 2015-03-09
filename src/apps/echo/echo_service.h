@@ -1,3 +1,26 @@
+/*
+ * The MIT License (MIT)
+
+ * Copyright (c) 2015 Microsoft Corporation
+
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 # pragma once
 
 # include <rdsn/serviceletex.h>
@@ -56,22 +79,37 @@ private:
 class echo_client : public serviceletex<echo_client>
 {
 public:
-    echo_client(const char* host, uint16_t port, int message_size) : serviceletex<echo_client>("echo_client")
+    echo_client(const char* host, uint16_t port, 
+        int message_size,
+        int concurrency = 1
+    )
+        : serviceletex<echo_client>("echo_client")
     {
         _seq = 0;
         _message_size = message_size;
+        _concurrency = concurrency;
         _server = end_point(host, port);
+
         enqueue_task(LPC_ECHO_TIMER, &echo_client::on_echo_timer, 0, 0, 1000);
     }
 
     void on_echo_timer()
     {
-        char buf[120];
-        sprintf(buf, "%u", ++_seq);
-        boost::shared_ptr<std::string> req(new std::string("hi, rdsn "));
-        *req = req->append(buf);
-        req->resize(_message_size);
-        rpc_typed(_server, RPC_ECHO, req, &echo_client::on_echo_reply, 0, 3000);
+        for (int i = 0; i < _concurrency; i++)
+        {
+            char buf[120];
+            sprintf(buf, "%u", ++_seq);
+            boost::shared_ptr<std::string> req(new std::string("hi, rdsn "));
+            *req = req->append(buf);
+            req->resize(_message_size);
+            rpc_typed(_server, RPC_ECHO, req, &echo_client::on_echo_reply, 0, 3000);
+        }
+
+        std::cout
+            << "echo: " << _seq
+            << ", throughput(MB/s) = "
+            << ((double)_message_size * (double)_concurrency / 1024.0 / 1024.0)
+            << std::endl;
     }
 
     void on_echo_reply(error_code err, boost::shared_ptr<std::string> req, boost::shared_ptr<std::string> resp)
@@ -79,7 +117,7 @@ public:
         if (err != ERR_SUCCESS) std::cout << "echo err: " << err.to_string() << std::endl;
         else
         {
-            std::cout << "echo result: " << resp->c_str() << "(len = " << resp->length() << ")" << std::endl;
+            //std::cout << "echo result: " << resp->c_str() << "(len = " << resp->length() << ")" << std::endl;
         }
     }
 
@@ -87,6 +125,7 @@ private:
     end_point _server;
     int _seq;
     int _message_size;
+    int _concurrency;
 };
 
 class echo_client_app : public service_app
@@ -108,7 +147,8 @@ public:
             return ERR_INVALID_PARAMETERS;
 
         int sz = config()->get_value<int>("apps.client", "message_size", 1024);
-        _client = new echo_client(argv[1], (uint16_t)atoi(argv[2]), sz);
+        int cc = config()->get_value<int>("apps.client", "concurrency", 1);
+        _client = new echo_client(argv[1], (uint16_t)atoi(argv[2]), sz, cc);
         return ERR_SUCCESS;
     }
 
