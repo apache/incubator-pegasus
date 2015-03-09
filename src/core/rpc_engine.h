@@ -9,7 +9,7 @@ namespace rdsn {
 class rpc_client_matcher : public std::enable_shared_from_this<rpc_client_matcher>
 {
 public:
-    void on_call(message_ptr& request, rpc_response_task_ptr& call, std::shared_ptr<rpc_client_session>& client);
+    void on_call(message_ptr& request, rpc_response_task_ptr& call, rpc_client_session_ptr& client);
     bool on_recv_reply(uint64_t key, message_ptr& reply, int delay_handling_milliseconds = 0);
     
 private:
@@ -21,7 +21,7 @@ private:
     {
         rpc_response_task_ptr resp_task;
         task_ptr              timeout_task;
-        std::shared_ptr<rpc_client_session> client;
+        rpc_client_session_ptr client;
     };
     typedef std::map<uint64_t, match_entry> rpc_requests;
     rpc_requests         _requests;

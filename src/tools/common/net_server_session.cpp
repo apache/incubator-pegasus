@@ -47,9 +47,10 @@ namespace rdsn {
 
         void net_server_session::do_read_header()
         {
+            rpc_server_session_ptr sp = this;
             boost::asio::async_read(_socket,
                 boost::asio::buffer((void*)&_read_msg_hdr, message_header::serialized_size()),
-                [this](boost::system::error_code ec, std::size_t length)
+                [this, sp](boost::system::error_code ec, std::size_t length)
             {
                 if (!ec && message_header::is_right_header((char*)&_read_msg_hdr))
                 {
@@ -75,9 +76,10 @@ namespace rdsn {
             _read_buffer.assign(buf, 0, sz);
             memcpy((void*)_read_buffer.data(), (const void*)&_read_msg_hdr, message_header::serialized_size());
 
+            rpc_server_session_ptr sp = this;
             boost::asio::async_read(_socket,
                 boost::asio::buffer((char*)_read_buffer.data() + message_header::serialized_size(), body_sz),
-                [this, body_sz](boost::system::error_code ec, std::size_t length)
+                [this, body_sz, sp](boost::system::error_code ec, std::size_t length)
             {
                 if (!ec)
                 {
@@ -125,8 +127,9 @@ namespace rdsn {
                 buffers2.push_back(boost::asio::const_buffer(b.data(), b.length()));
             }
 
+            rpc_server_session_ptr sp = this;
             boost::asio::async_write(_socket, buffers2,
-                [this, msg](boost::system::error_code ec, std::size_t length)
+                [this, msg, sp](boost::system::error_code ec, std::size_t length)
             {
                 if (ec)
                 {

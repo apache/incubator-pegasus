@@ -40,10 +40,10 @@ namespace rdsn {
             return ERR_SUCCESS;
         }
 
-        std::shared_ptr<rpc_client_session> asio_network_provider::create_client_session(const end_point& server_addr)
+        rpc_client_session_ptr asio_network_provider::create_client_session(const end_point& server_addr)
         {
             auto matcher = new_client_matcher();
-            return std::shared_ptr<rpc_client_session>(new net_client_session(*this, server_addr, matcher));
+            return rpc_client_session_ptr(new net_client_session(*this, server_addr, matcher));
         }
 
         void asio_network_provider::do_accept()
@@ -60,7 +60,7 @@ namespace rdsn {
                     // TODO: convert ip to host name
                     client_addr.name = _socket->remote_endpoint().address().to_string();
 
-                    auto s = std::shared_ptr<rpc_server_session>(new net_server_session(*this, client_addr, std::move(*_socket)));
+                    auto s = rpc_server_session_ptr(new net_server_session(*this, client_addr, std::move(*_socket)));
                     this->on_server_session_accepted(s);
                 }
 

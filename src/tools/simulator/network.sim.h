@@ -32,10 +32,10 @@ namespace rdsn { namespace tools {
     
         virtual const end_point& address() { return _primary_address; }
 
-        virtual std::shared_ptr<rpc_client_session> create_client_session(const end_point& server_addr)
+        virtual rpc_client_session_ptr create_client_session(const end_point& server_addr)
         {
             auto matcher = new_client_matcher();
-            return std::shared_ptr<rpc_client_session>(new sim_client_session(*this, server_addr, matcher));
+            return rpc_client_session_ptr(new sim_client_session(*this, server_addr, matcher));
         }
 
         uint32_t net_delay_milliseconds() const;

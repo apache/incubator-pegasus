@@ -73,7 +73,7 @@ namespace rdsn {
         return ret;
     }
 
-    void rpc_client_matcher::on_call(message_ptr& request, rpc_response_task_ptr& call, std::shared_ptr<rpc_client_session>& client)
+    void rpc_client_matcher::on_call(message_ptr& request, rpc_response_task_ptr& call, rpc_client_session_ptr& client)
     {
         message* msg = request.get();
         task_ptr timeout_tsk;
@@ -101,7 +101,7 @@ namespace rdsn {
     void rpc_client_matcher::on_rpc_timeout(uint64_t key, task_spec* spec)
     {
         rpc_response_task_ptr call;
-        std::shared_ptr<rpc_client_session> client;
+        rpc_client_session_ptr client;
 
         {
             utils::auto_lock l(_requests_lock);

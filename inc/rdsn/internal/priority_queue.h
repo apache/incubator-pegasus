@@ -102,12 +102,10 @@ protected:
         return c;
     }
 
-private:
-    std::string   _name;
-    TQueue        _items[priority_count];
-    T             _peeked_item;
-
 protected:
+    std::string   _name;
+    T             _peeked_item;
+    TQueue        _items[priority_count];
     long          _count;
     mutable std::mutex _lock;
 };
@@ -119,23 +117,35 @@ public:
     blocking_priority_queue(const std::string& name)
         : priority_queue<T, priority_count, TQueue>(name)
     {
+        _wait_count = 0;
     }
 
     virtual long enqueue(T obj, uint32_t priority)
     {
-        long r = priority_queue<T, priority_count, TQueue>::enqueue(obj, priority);
-        _cond.notify_one();
+        long r;
+        std::lock_guard<std::mutex> l(priority_queue<T, priority_count, TQueue>::_lock);
+        
+        priority_queue<T, priority_count, TQueue>::_items[priority].push(obj);
+        r = ++priority_queue<T, priority_count, TQueue>::_count;
+        
+        if (_wait_count > 0)
+        {
+            _cond.notify_one();
+        }
+        
         return r;
     }
 
     virtual T dequeue(__out long ct, int millieseconds = INFINITE)
     {
         std::unique_lock<std::mutex> l(priority_queue<T, priority_count, TQueue>::_lock);
+        
         if (priority_queue<T, priority_count, TQueue>::_count > 0)
         {
             return priority_queue<T, priority_count, TQueue>::dequeue_impl(ct);
         }
 
+        ++_wait_count;
         if (millieseconds == INFINITE)
         {
             _cond.wait(l);
@@ -144,12 +154,14 @@ public:
         {
             _cond.wait_for(l, std::chrono::milliseconds(millieseconds));
         }
+        --_wait_count;
 
         return priority_queue<T, priority_count, TQueue>::dequeue_impl(ct);
     }
     
 private:
     std::condition_variable _cond;
+    int                     _wait_count;
 };
 
 }} // end namespace

@@ -89,111 +89,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\inc\zion\service_api.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\tool_api.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\admission_controller.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\aio_provider.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\configuration.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\customizable_id.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\end_point.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\enum_helper.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\env_provider.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\error_code.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\extensible_object.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\factory_store.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\global_config.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\join_point.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\logging.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\logging_provider.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\network.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\perf_counter.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\perf_counters.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\priority_queue.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\rpc_message.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\service_app.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\singleton.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\singleton_store.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\singleton_vector_store.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\synchronize.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\task.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\task_code.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\task_queue.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\task_worker.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\threadpool_code.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\utils.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\zion_types.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\zlock_provider.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\inc\zion\internal\zlocks.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="rpc_engine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -209,5 +104,41 @@
     <ClInclude Include="disk_engine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\inc\rdsn\internal\admission_controller.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\aio_provider.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\configuration.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\customizable_id.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\end_point.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\enum_helper.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\env_provider.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\error_code.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\extensible_object.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\factory_store.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\global_config.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\join_point.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\logging.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\logging_provider.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\network.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\perf_counter.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\perf_counters.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\priority_queue.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\rpc_message.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\service_app.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\singleton.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\singleton_store.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\singleton_vector_store.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\synchronize.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\task.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\task_code.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\task_queue.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\task_worker.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\threadpool_code.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\utils.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\rdsn_types.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\zlocks.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\zlock_provider.h" />
+    <ClInclude Include="..\..\inc\rdsn\service_api.h" />
+    <ClInclude Include="..\..\inc\rdsn\tool_api.h" />
+    <ClInclude Include="..\..\inc\rdsn\internal\link.h" />
   </ItemGroup>
 </Project>

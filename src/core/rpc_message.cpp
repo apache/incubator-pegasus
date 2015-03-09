@@ -1,5 +1,7 @@
+# include <rdsn/internal/rdsn_types.h>
 # include <rdsn/internal/rpc_message.h>
 # include <rdsn/internal/logging.h>
+# include <rdsn/internal/network.h>
 # include "task_engine.h"
 # include <rdsn/service_api.h>
 # include "crc.h"

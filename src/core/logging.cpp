@@ -1,4 +1,3 @@
-
 # include <rdsn/internal/logging_provider.h>
 # include "service_engine.h"
 

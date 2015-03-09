@@ -4,6 +4,7 @@
 
 # include <Windows.h>
 __pragma(warning(disable:4127))
+
 #define __thread __declspec(thread)
 #define __selectany __declspec(selectany) extern 
 typedef void* handle_t;
@@ -102,10 +103,14 @@ namespace rdsn
     } 
 
     class task;
-    typedef ::boost::intrusive_ptr<task> task_ptr;
-
     class message;
+    class rpc_client_session;
+    class rpc_server_session;
+
+    typedef ::boost::intrusive_ptr<task> task_ptr;
     typedef ::boost::intrusive_ptr<message> message_ptr;
+    typedef ::boost::intrusive_ptr<rpc_client_session> rpc_client_session_ptr;
+    typedef ::boost::intrusive_ptr<rpc_server_session> rpc_server_session_ptr;
 
     #define TOOL_TYPE_MAIN 0
     #define TOOL_TYPE_ASPECT 1

@@ -110,7 +110,7 @@ public:
     bool is_right_header() const;
     bool is_right_body() const;
     static uint64_t new_id() { return ++_id; }
-    std::shared_ptr<rpc_server_session>& server_session() { return _server_session; }
+    rpc_server_session_ptr& server_session() { return _server_session; }
 
 private:            
     void read_header();
@@ -118,7 +118,7 @@ private:
 private:
     message_header       _msg_header;
     int                  _elapsed_timeout_milliseconds;
-    std::shared_ptr<rpc_server_session> _server_session;
+    rpc_server_session_ptr _server_session;
 
     utils::binary_reader *_reader;
     utils::binary_writer *_writer;

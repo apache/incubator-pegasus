@@ -13,7 +13,7 @@ namespace rdsn {
 
             virtual error_code start(int port, bool client_only);
             virtual const end_point& address() { return _address;  }
-            virtual std::shared_ptr<rpc_client_session> create_client_session(const end_point& server_addr);
+            virtual rpc_client_session_ptr create_client_session(const end_point& server_addr);
 
         private:
             void do_accept();

@@ -8,9 +8,7 @@ namespace rdsn {
 
     class rpc_engine;
     class rpc_client_matcher;
-    class rpc_client_session;
-    class rpc_server_session;
-
+    
     class network
     {
     public:
@@ -27,25 +25,25 @@ namespace rdsn {
         std::shared_ptr<rpc_client_matcher> new_client_matcher();
         void call(message_ptr& request, rpc_response_task_ptr& call);
 
-        std::shared_ptr<rpc_server_session> get_server_session(const end_point& ep);
-        void on_server_session_accepted(std::shared_ptr<rpc_server_session>& s);
-        void on_server_session_disconnected(std::shared_ptr<rpc_server_session>& s);
+        rpc_server_session_ptr get_server_session(const end_point& ep);
+        void on_server_session_accepted(rpc_server_session_ptr& s);
+        void on_server_session_disconnected(rpc_server_session_ptr& s);
 
-        std::shared_ptr<rpc_client_session> get_client_session(const end_point& ep);
-        void on_client_session_disconnected(std::shared_ptr<rpc_client_session>& s);
+        rpc_client_session_ptr get_client_session(const end_point& ep);
+        void on_client_session_disconnected(rpc_client_session_ptr& s);
 
         virtual error_code start(int port, bool client_only) = 0;
         virtual const end_point& address() = 0;
-        virtual std::shared_ptr<rpc_client_session> create_client_session(const end_point& server_addr) = 0;
+        virtual rpc_client_session_ptr create_client_session(const end_point& server_addr) = 0;
 
     protected:
         rpc_engine *_engine;
         
-        typedef std::map<end_point, std::shared_ptr<rpc_client_session>> client_sessions;
+        typedef std::map<end_point, rpc_client_session_ptr> client_sessions;
         client_sessions               _clients;
         utils::rw_lock                _clients_lock;
 
-        typedef std::map<end_point, std::shared_ptr<rpc_server_session>> server_sessions;
+        typedef std::map<end_point, rpc_server_session_ptr> server_sessions;
         server_sessions               _servers;
         utils::rw_lock                _servers_lock;
 
@@ -54,7 +52,7 @@ namespace rdsn {
     };
 
 
-    class rpc_client_session : public std::enable_shared_from_this<rpc_client_session>
+    class rpc_client_session : public ref_object
     {
     public:
         rpc_client_session(network& net, const end_point& remote_addr, std::shared_ptr<rpc_client_matcher>& matcher);
@@ -72,7 +70,9 @@ namespace rdsn {
         std::shared_ptr<rpc_client_matcher> _matcher;
     };
 
-    class rpc_server_session : public std::enable_shared_from_this<rpc_server_session>
+    DEFINE_REF_OBJECT(rpc_client_session)
+
+    class rpc_server_session : public ref_object
     {
     public:
         rpc_server_session(network& net, const end_point& remote_addr);
@@ -86,4 +86,6 @@ namespace rdsn {
         network&   _net;
         end_point _remote_addr;
     };
+
+    DEFINE_REF_OBJECT(rpc_server_session)
 }

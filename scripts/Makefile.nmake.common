@@ -5,12 +5,12 @@ BOOST_LIB=$(ROOT)/external/libs
 rDSN_INC=$(ROOT)/inc
 BIN_DIR= $(ROOT)\bin
 COMMON_LIBS= \
-	libboost_chrono-vc120-mt-gd-1_57.lib \
-	libboost_date_time-vc120-mt-gd-1_57.lib \
-	libboost_filesystem-vc120-mt-gd-1_57.lib \
-	libboost_regex-vc120-mt-gd-1_57.lib \
-	libboost_system-vc120-mt-gd-1_57.lib \
-	libboost_thread-vc120-mt-gd-1_57.lib \
+	libboost_chrono-vc120-mt-1_57.lib \
+	libboost_date_time-vc120-mt-1_57.lib \
+	libboost_filesystem-vc120-mt-1_57.lib \
+	libboost_regex-vc120-mt-1_57.lib \
+	libboost_system-vc120-mt-1_57.lib \
+	libboost_thread-vc120-mt-1_57.lib \
 	rdsn.core.lib \
 	rdsn.dev.lib \
 	rdsn.tools.common.lib \
@@ -19,12 +19,13 @@ COMMON_LIBS= \
 BIN_DIR= $(ROOT)\bin
 INC= $(INC_EXTRA) /I. /I$(BOOST_INC) /I$(rDSN_INC)
 CPPFLAGS= $(INC) /W3 /nologo /wd4996 /EHsc \
-		  /GS /analyze- /Zc:wchar_t /ZI /Gm /Od /sdl \
-		  /fp:precise /D "_CRT_SECURE_NO_WARNINGS" /D "WIN32" /D "_DEBUG" /D "_CONSOLE" \
-		  /errorReport:prompt /WX- /Zc:forScope /RTC1 /Gd /Oy- /MDd
-
+		  /GS /analyze- /Gy /Zc:wchar_t /Zi /Gm- /O2 \
+		  /fp:precise /D "WIN32" /D "NDEBUG" /D "_LIB" /D "_UNICODE" /D "UNICODE" \
+		  /D "_CRT_SECURE_NO_WARNINGS" \
+		  /errorReport:prompt /WX- /Zc:forScope /Gd /Oy- /Oi /MT	  
+		  
 LIBFLAGS= /nologo
-LINKFLAGS= /LIBPATH:$(BOOST_LIB) /LIBPATH:$(BIN_DIR) $(COMMON_LIBS) $(LIB_EXTRA)
+LINKFLAGS = /LIBPATH:$(BOOST_LIB) /LIBPATH:$(BIN_DIR) $(COMMON_LIBS) $(LIB_EXTRA)
 
 !if [bash -c "echo SOURCES = *.cpp" >.source.mk]
 !error failed to generate source list
