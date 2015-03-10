@@ -62,29 +62,23 @@ public:
     }
 
 private:
-    enum record_status
-    {
-        ST_Disconnected,
-        ST_Connected
-    };
-
     class master_record
     {
     public:
         end_point       node;
         uint64_t        last_send_time_for_beacon_with_ack;
         uint64_t        next_beacon_time;
-        record_status   status;
+        bool            is_alive;
         bool            rejected;
 
         // masters are always considered *disconnected* initially which is ok even when master thinks workers are connected
         master_record(const end_point& n, uint64_t last_send_time_for_beacon_with_ack_, uint64_t next_beacon_time_)
         {
-            node                               = n;
+            node                    = n;
             last_send_time_for_beacon_with_ack = last_send_time_for_beacon_with_ack_;
             next_beacon_time        = next_beacon_time_;
-            status                 = ST_Disconnected;
-            rejected               = false;
+            is_alive                = false;
+            rejected                = false;
         }
     };
 
@@ -93,14 +87,14 @@ private:
     public:
         end_point       node;
         uint64_t        last_beacon_recv_time;
-        record_status   status;
+        bool            is_alive;
 
         // workers are always considered *connected* initially which is ok even when workers think master is disconnected
         worker_record(const end_point& node, uint64_t last_beacon_recv_time)
         {
             this->node                  = node;
             this->last_beacon_recv_time = last_beacon_recv_time;
-            status                      = ST_Connected;
+            is_alive                    = true;
         }
     };
 

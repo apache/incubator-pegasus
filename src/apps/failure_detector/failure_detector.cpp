@@ -74,7 +74,7 @@ bool failure_detector::init(uint32_t check_interval_seconds, uint32_t beacon_int
 
 bool failure_detector::uninit()
 {
-    if ( _is_started == true )
+    if ( _is_started )
     {
         // did not stop, can not uninit
         rerror("can not uninit failure detector without stopping it first");
@@ -120,7 +120,7 @@ void failure_detector::register_master(const end_point& target)
     master_record record(target, now, now + _beacon_interval_milliseconds);
 
     auto ret = _masters.insert(std::make_pair(target, record));
-    if ( ret.second == true )
+    if ( ret.second )
     {
         rinfo(
             "register_rpc_handler master successfully, target machine ip [%u], port[%u]",
@@ -267,11 +267,11 @@ void failure_detector::process_all_records()
             }
         }
 
-        if (record.status == ST_Connected 
+        if (record.is_alive 
             && now - record.last_send_time_for_beacon_with_ack >= _lease_milliseconds)
         {
             expire.push_back(record.node);
-            record.status = ST_Disconnected;
+            record.is_alive = false;
 
             report(record.node, true, false);
         }
@@ -291,11 +291,11 @@ void failure_detector::process_all_records()
     {
         worker_record& record = itq->second;
         
-        if (record.status != ST_Disconnected
+        if (record.is_alive != false
             && now - record.last_beacon_recv_time > _grace_milliseconds)
         {
             expire.push_back(record.node);
-            record.status = ST_Disconnected;
+            record.is_alive = false;
 
             report(record.node, false, false);
         }
@@ -348,7 +348,7 @@ void failure_detector::on_beacon(const beacon_msg& beacon, __out beacon_ack& ack
         itr = _workers.find(node);
         rassert( itr != _workers.end(), "cannot find the worker" );
 
-        itr->second.status = ST_Connected;
+        itr->second.is_alive = true;
 
         report(node, false, true);
         on_worker_connected(node);
@@ -357,9 +357,9 @@ void failure_detector::on_beacon(const beacon_msg& beacon, __out beacon_ack& ack
     {
         itr->second.last_beacon_recv_time = now;
 
-        if (itr->second.status == ST_Disconnected)
+        if (itr->second.is_alive == false)
         {
-            itr->second.status = ST_Connected;
+            itr->second.is_alive = true;
 
             report(node, false, true);            
             on_worker_connected(node);
@@ -406,11 +406,11 @@ void failure_detector::on_beacon_ack(error_code err, boost::shared_ptr<beacon_ms
         return;
     }
 
-    if (record.status == ST_Disconnected
+    if (record.is_alive == false
         && now - record.last_send_time_for_beacon_with_ack <= _lease_milliseconds)
     {
         report(node, true, true);
-        itr->second.status = ST_Connected;
+        itr->second.is_alive = true;
         on_master_connected(node);
     }
 }
@@ -443,7 +443,7 @@ bool failure_detector::is_master_connected( const end_point& node) const
     zauto_lock l(_lock);
     auto it = _masters.find(node);
     if (it != _masters.end())
-        return it->second.status == ST_Connected;
+        return it->second.is_alive;
     else
         return false;
 }
@@ -455,10 +455,10 @@ void failure_detector::register_worker( const end_point& target, bool is_connect
     zauto_lock l(_lock);
 
     worker_record record(target, now);
-    record.status = is_connected ? ST_Connected : ST_Disconnected;
+    record.is_alive = is_connected ? true : false;
 
     auto ret = _workers.insert(std::make_pair(target, record));
-    if ( ret.second == true )
+    if ( ret.second )
     {
         rinfo(
             "register_rpc_handler worker successfully", "target machine ip [%u], port[%u]",
@@ -505,7 +505,7 @@ bool failure_detector::is_worker_connected( const end_point& node) const
     zauto_lock l(_lock);
     auto it = _workers.find(node);
     if (it != _workers.end())
-        return it->second.status == ST_Connected;
+        return it->second.is_alive;
     else
         return false;
 }
