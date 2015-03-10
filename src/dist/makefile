@@ -1,6 +1,5 @@
 DIRS = \
-	echo \
-    replication  
+    failure_detector  
 	
 include ../../scripts/makefile.recursive
 

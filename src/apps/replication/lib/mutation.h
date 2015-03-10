@@ -98,7 +98,7 @@ inline void mutation::set_id(ballot b, decree c)
 {
     data.header.ballot = b;
     data.header.decree = c;
-    sprintf (_name, "%llu.%llu", b, c);
+    sprintf (_name, "%lld.%lld", b, c);
 }
 
 }} // namespace

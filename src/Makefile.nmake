@@ -2,6 +2,7 @@ DIRS = \
 	src/core \
 	src/dev \
 	src/tools \
+	src/dist \
 	src/apps
 	
 !INCLUDE ../scripts/Makefile.nmake.recursive

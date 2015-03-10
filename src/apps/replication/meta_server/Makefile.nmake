@@ -1,4 +1,4 @@
 TARGET=dsn.replication.meta_server.lib
-INC_EXTRA = /I../client_lib /I../../failure_detector
+INC_EXTRA = /I../client_lib /I../../../dist/failure_detector
 TYPE = LIB
 !INCLUDE ../../../../scripts/Makefile.nmake.common
