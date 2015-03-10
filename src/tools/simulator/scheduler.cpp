@@ -165,15 +165,6 @@ void scheduler::wait_schedule(bool in_continue, bool is_continue_ready /*= false
 
 void scheduler::schedule()
 {
-    // run watchers
-    {
-        utils::auto_read_lock l(_watcherLock);
-        for (auto it = _watchers.begin(); it != _watchers.end(); it++)
-        {
-            (*it)();
-        }
-    }
-
     while (true)
     {
         // run ready workers whenever possible
@@ -215,7 +206,7 @@ void scheduler::schedule()
         }
 
         // wait a moment
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
 

@@ -65,21 +65,17 @@ public:
     scheduler(void);
     ~scheduler(void);
 
-    void start() { _running = true; }
-    void reset();
-    bool has_more_events() const { return _wheel.has_more_events(); }
+    void start() { _running = true; }    
     uint64_t now_ns() const { utils::auto_lock l(_lock); return _time_ns; }
 
+    void reset();
     void add_task(task_ptr& task, task_queue* q);
     void wait_schedule(bool in_continue, bool is_continue_ready = false);
     
-    typedef void (*StateWatcher)();
-    void add_watcher(StateWatcher watcher);
-
 public:
     struct task_state_ext
     {
-        task_queue                   *queue;
+        task_queue                     *queue;
         std::list<sim_worker_state*>   wait_threads;
 
         static void deletor(void* p)
@@ -91,21 +87,15 @@ public:
     typedef object_extension_helper<task_state_ext, task> task_ext;
 
 private:
-    event_wheel _wheel;
-
-    mutable std::recursive_mutex _lock;
-    uint64_t         _time_ns;
-
-    bool           _running;
-    
-    typedef std::list<StateWatcher> WatcherList;
-    mutable utils::rw_lock _watcherLock;    
-    WatcherList     _watchers;
-
+    event_wheel                    _wheel;
+    mutable std::recursive_mutex   _lock;
+    uint64_t                       _time_ns;
+    bool                           _running;
     std::vector<sim_worker_state*> _threads;
     
 private:
     void schedule();
+
     static void on_task_worker_create(task_worker* worker);
     static void on_task_worker_start(task_worker* worker);
     static void on_task_wait(task* waitor, task* waitee, uint32_t timeout_milliseconds);
@@ -113,19 +103,10 @@ private:
 };
 
 // ------------------  inline implementation ----------------------------
-inline void scheduler::add_watcher(StateWatcher watcher)
-{
-    utils::auto_write_lock l(_watcherLock);
-    _watchers.push_back(watcher);
-}
 
 inline void scheduler::reset()
 {
     _wheel.clear();
-    {
-        utils::auto_write_lock l(_watcherLock);
-        _watchers.clear();
-    }
 }
 
 }} // end namespace
