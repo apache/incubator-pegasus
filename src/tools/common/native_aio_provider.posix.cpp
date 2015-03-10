@@ -60,6 +60,7 @@ namespace dsn {
         {
             struct aiocb cb;
             aio_task*  tsk;
+            native_posix_aio_provider* this_;
             utils::notify_event*  evt;
             error_code err;
             uint32_t bytes;
@@ -79,17 +80,40 @@ namespace dsn {
             aio_internal(aio_tsk, true);
         }
         
-        static void aio_completed(sigval sigval)
+        void aio_completed(sigval sigval)
         {
-            printf("hello, aio_completed");
+            auto ctx = (posix_disk_aio_context *)sigval.sival_ptr;
+            
+            int err = aio_error(&ctx->cb);
+            if (err != EINPROGRESS)
+            {
+                if (err != 0)
+                {
+                    derror("file operation failed, errno = %d", err);
+                }
+
+                size_t bytes = aio_return(&ctx->cb); // from e.g., read or write
+                if (!ctx->evt)
+                {
+                    aio_task_ptr aio(ctx->tsk);
+                    ctx->this_->complete_io(aio, err == 0 ? ERR_SUCCESS : ERR_FILE_OPERATION_FAILED, bytes);
+                }
+                else
+                {
+                    ctx->err = err == 0 ? ERR_SUCCESS : ERR_FILE_OPERATION_FAILED;
+                    ctx->bytes = bytes;
+                    ctx->evt->notify();
+                }
+            }
         }
 
         error_code native_posix_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool async, __out_param uint32_t* pbytes /*= nullptr*/)
         {
-            auto aio = (posix_disk_aio_context*)aio_tsk->aio().get();
+            auto aio = (posix_disk_aio_context *)aio_tsk->aio().get();
             int r;
 
-            aio->cb.aio_fildes = (int)(long)aio->file;
+            aio->this_ = this;
+            aio->cb.aio_fildes = (int)(ssize_t)aio->file;
             aio->cb.aio_buf = aio->buffer;
             aio->cb.aio_nbytes = aio->buffer_size;
             aio->cb.aio_offset = aio->file_offset;
@@ -97,7 +121,7 @@ namespace dsn {
             // set up callback
             aio->cb.aio_sigevent.sigev_notify = SIGEV_THREAD;
             aio->cb.aio_sigevent.sigev_notify_function = aio_completed;
-            aio->cb.aio_sigevent.sigev_notify_attributes = NULL;
+            aio->cb.aio_sigevent.sigev_notify_attributes = nullptr;
             aio->cb.aio_sigevent.sigev_value.sival_ptr = aio;
 
             if (!async)

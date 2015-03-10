@@ -25,6 +25,10 @@
 
 # include <dsn/tool_api.h>
 # include <dsn/internal/synchronize.h>
+# if defined(__MACH__) || defined(__linux__)
+# include <aio.h>
+# include <fcntl.h>
+# endif
 
 namespace dsn {
     namespace tools {
@@ -43,6 +47,7 @@ namespace dsn {
             error_code aio_internal(aio_task_ptr& aio, bool async, __out_param uint32_t* pbytes = nullptr);
 
         private:
+            friend void aio_completed(sigval sigval);
         };
     }
 }

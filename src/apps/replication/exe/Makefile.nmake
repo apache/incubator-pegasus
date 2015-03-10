@@ -1,4 +1,4 @@
-TARGET=dsn.replication.exe
+TARGET=replication.exe
 INC_EXTRA = /I../client_lib /I../lib /I../meta_server
 LIB_EXTRA = dsn.replication.lib dsn.replication.client.lib dsn.replication.meta_server.lib dsn.failure_detector.lib
 TYPE = EXE

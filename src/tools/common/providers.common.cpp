@@ -30,6 +30,7 @@
 # include "native_aio_provider.posix.h"
 # include "wrong_perf_counter.h"
 # include "simple_task_queue.h"
+# include "network.sim.h"
 
 namespace dsn {
     namespace tools {
@@ -43,6 +44,7 @@ namespace dsn {
             register_component_provider<std_semaphore_provider>("dsn::tools::std_semaphore_provider");
             register_component_provider<wrong_perf_counter>("dsn::tools::wrong_perf_counter");
             register_component_provider<asio_network_provider>("dsn::tools::asio_network_provider");
+            register_component_provider<sim_network_provider>("dsn::tools::sim_network_provider");
             register_component_provider<simple_task_queue>("dsn::tools::simple_task_queue");
 #if defined(_WIN32)
             register_component_provider<native_win_aio_provider>("dsn::tools::native_aio_provider");
