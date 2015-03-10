@@ -27,7 +27,6 @@
 
 #include "diske.sim.h"
 #include "env.sim.h"
-#include "network.sim.h"
 #include "task_engine.sim.h"
 
 namespace dsn { namespace tools {
@@ -38,7 +37,6 @@ void simulator::install(service_spec& spec)
     
     register_component_provider<sim_aio_provider>("dsn::tools::sim_aio_provider");
     register_component_provider<sim_env_provider>("dsn::tools::sim_env_provider");
-    register_component_provider<sim_network_provider>("dsn::tools::sim_network_provider");
     register_component_provider<sim_task_queue>("dsn::tools::sim_task_queue");
     register_component_provider<sim_semaphore_provider>("dsn::tools::sim_semaphore_provider");
 
