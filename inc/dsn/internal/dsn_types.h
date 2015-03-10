@@ -102,6 +102,7 @@ namespace dsn
     {
     public:
         ref_object() { ref_counter = 0; }
+        virtual ~ref_object() {}
         std::atomic<long> ref_counter;
 
         void add_ref()

@@ -1,36 +1,55 @@
-# ROOT = /Users/imzhenyu/projects/dsn
-ROOT = /home/zhenyug/projects/dsn
+ROOT = $(HOME)/projects/dsn
 
-SYS_INC = /usr/local/include
-SYS_LIB = /usr/lib/x86_64-linux-gnu
-SYS_LIB_DEPS = \
+SYS	_INC = /usr/local/include /usr/include
+SYS_LIB_DEPS_COMMON = \
 	-lpthread \
 	-lstdc++ \
-	-lrt \
 	-lboost_chrono \
 	-lboost_date_time \
 	-lboost_filesystem \
 	-lboost_regex \
-	-lboost_system \
-	-lboost_thread
+	-lboost_system 
 
 BIN_DIR = $(ROOT)/bin
-
 LIB_EXTRA_S = $(LIB_EXTRA) dsn.core dsn.dev dsn.tools.common dsn.tools.simulator 
 LIB_EXTRA_DEPS = $(LIB_EXTRA_S:%=-l%)
 LIB_EXTRA_TARGETS = $(LIB_EXTRA_S:%=$(BIN_DIR)/lib%.a) 
-LIB_NONLINKED_WR = $(BIN_DIR)/libdsn.core.a \
-				   $(SYS_LIB)/libboost_thread.a \
-				   $(SYS_LIB)/libboost_filesystem.a \
-				   $(SYS_LIB)/librt.a 
-
 SOURCES = $(wildcard *.cpp)
 OBJS = $(SOURCES:%.cpp=%.o)
 
 CPP = g++
-CPPFLAGS = -std=c++11 -I$(ROOT)/inc -I$(SYS_INC) -I./ $(INC_EXTRA) -O0 -g 
-LD = g++
-LDFLAGS = -L$(BIN_DIR) -L$(SYS_LIB) $(SYS_LIB_DEPS)  $(LIB_EXTRA_DEPS) $(LIB_NONLINKED_WR)
+CPPFLAGS = -std=c++11 -I$(ROOT)/inc $(SYS_INC:%= -I%) -I./ $(INC_EXTRA:%= -I%) -O0 -g 
+
+######
+ifeq (/Users/$(LOGNAME), $(HOME))  # mac
+
+	SYS_LIB = /usr/local/lib
+	SYS_LIB_DEPS =                           \
+		$(SYS_LIB_DEPS_COMMON)				 \
+		-lboost_thread-mt					 
+										 
+	LD = g++							     
+	LDFLAGS = -L$(BIN_DIR) $(SYS_LIB:%= -L%) $(SYS_LIB_DEPS) $(LIB_EXTRA_DEPS) 
+										 
+else # linux									 
+										 
+	SYS_LIB = /usr/lib/x86_64-linux-gnu /usr/local/lib
+	SYS_LIB_DEPS =							 
+		$(SYS_LIB_DEPS_COMMON)	\
+		-lrt								  
+										 
+	LIB_NONLINKED_PATH = /usr/lib/x86_64-linux-gnu
+	LIB_NONLINKED_WR = $(BIN_DIR)/libdsn.core.a					\
+				   $(LIB_NONLINKED_PATH)/libboost_thread.a		\
+				   $(LIB_NONLINKED_PATH)/libboost_filesystem.a	\
+				   $(LIB_NONLINKED_PATH)/librt.a
+										 
+	LD = g++ -pthread
+	LDFLAGS = -L$(BIN_DIR) $(SYS_LIB:%= -L%) $(SYS_LIB_DEPS) $(LIB_EXTRA_DEPS) $(LIB_NONLINKED_WR) 
+
+endif
+##########
+
 AR = ar
 ARFLAGS = rv
 
@@ -52,7 +71,7 @@ LIB: $(BIN_DIR) $(OBJS)
 
 EXE: $(BIN_DIR) $(OBJS) $(LIB_EXTRA_TARGETS)
 	echo building executable $(BIN_DIR)/$(TARGET) ...
-	$(LD) -pthread -o $(BIN_DIR)/$(TARGET) $(OBJS) $(LDFLAGS) 
+	$(LD) -o $(BIN_DIR)/$(TARGET) $(OBJS) $(LDFLAGS) 
 
 
 
