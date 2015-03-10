@@ -21,10 +21,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-# include <rdsn/internal/admission_controller.h>
+# include <dsn/internal/admission_controller.h>
 # include "task_engine.h"
 
-namespace rdsn {
+namespace dsn {
 
 //
 ////-------------------------- BoundedQueueAdmissionController --------------------------------------------------
@@ -38,12 +38,12 @@ namespace rdsn {
 //        _maxTaskQueueSize = atoi(sargs[0].c_str());
 //        if (_maxTaskQueueSize <= 0)
 //        {
-//            rassert (false, "Invalid arguments for BoundedQueueAdmissionController: MaxTaskQueueSize = '%s'", sargs[0].c_str());
+//            dassert (false, "Invalid arguments for BoundedQueueAdmissionController: MaxTaskQueueSize = '%s'", sargs[0].c_str());
 //        }
 //    }
 //    else
 //    {
-//        rassert (false, "arguments for BoundedQueueAdmissionController is missing: MaxTaskQueueSize");
+//        dassert (false, "arguments for BoundedQueueAdmissionController is missing: MaxTaskQueueSize");
 //    }
 //}
 //
@@ -88,7 +88,7 @@ namespace rdsn {
 //            || _percentile >= 5
 //            )
 //        {
-//            rassert (false, "Invalid arguments for SingleRpcClassResponseTimeAdmissionController: RpcRequestEventCode PercentileType(0-4) LatencyThreshold100ns\n"
+//            dassert (false, "Invalid arguments for SingleRpcClassResponseTimeAdmissionController: RpcRequestEventCode PercentileType(0-4) LatencyThreshold100ns\n"
 //                "\tcounter percentile type (0-4): 999,   99,  95,  90,  50\n");
 //        }
 //
@@ -96,7 +96,7 @@ namespace rdsn {
 //    }
 //    else
 //    {
-//        rassert (false, "arguments for SingleRpcClassResponseTimeAdmissionController is missing: RpcRequestEventCode PercentileType(0-4) LatencyThreshold100ns\n"
+//        dassert (false, "arguments for SingleRpcClassResponseTimeAdmissionController is missing: RpcRequestEventCode PercentileType(0-4) LatencyThreshold100ns\n"
 //            "\tcounter percentile type (0-4): 999,   99,  95,  90,  50\n");
 //    }
 //}

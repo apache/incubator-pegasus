@@ -21,10 +21,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-# include <rdsn/internal/perf_counters.h>
-# include <rdsn/internal/logging.h>
+# include <dsn/internal/perf_counters.h>
+# include <dsn/internal/logging.h>
 
-namespace rdsn { namespace utils {
+namespace dsn { namespace utils {
     
 perf_counters::perf_counters(void)
 {
@@ -61,7 +61,7 @@ perf_counter_ptr perf_counters::get_counter(const char *section, const char *nam
         }
         else
         {
-            rassert (it2->second.second == flags, "counters with the same name %s.%s with differnt types", section_name, name);
+            dassert (it2->second.second == flags, "counters with the same name %s.%s with differnt types", section_name, name);
             return it2->second.first;
         }
     }

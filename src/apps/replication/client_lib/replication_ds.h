@@ -23,10 +23,10 @@
  */
 #pragma once
 
-# include <rdsn/internal/serialization.h>
-# include <rdsn/internal/enum_helper.h>
+# include <dsn/internal/serialization.h>
+# include <dsn/internal/enum_helper.h>
 
-namespace rdsn {
+namespace dsn {
     namespace replication {
 
         struct ReplicationMsgHeader
@@ -319,13 +319,13 @@ namespace rdsn {
         DEFINE_POD_SERIALIZATION(replication::ReplicationMsgHeader)
             DEFINE_POD_SERIALIZATION(replication::CdtMsgHeader)
 
-            inline void marshall(::rdsn::utils::binary_writer& writer, const CdtMsgResponseHeader& val, uint16_t pos = 0xffff)
+            inline void marshall(::dsn::utils::binary_writer& writer, const CdtMsgResponseHeader& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.Err, pos);
             marshall(writer, val.PrimaryAddress, pos);
         }
 
-        inline void unmarshall(::rdsn::utils::binary_reader& reader, __out_param CdtMsgResponseHeader& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param CdtMsgResponseHeader& val)
         {
             unmarshall(reader, val.Err);
             unmarshall(reader, val.PrimaryAddress);
@@ -335,13 +335,13 @@ namespace rdsn {
 
             DEFINE_POD_SERIALIZATION(replication::MutationHeader)
 
-            inline void marshall(::rdsn::utils::binary_writer& writer, const mutation_data& val, uint16_t pos = 0xffff)
+            inline void marshall(::dsn::utils::binary_writer& writer, const mutation_data& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.header, pos);
             marshall(writer, val.updates, pos);
         }
 
-        inline void unmarshall(::rdsn::utils::binary_reader& reader, __out_param mutation_data& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param mutation_data& val)
         {
             unmarshall(reader, val.header);
             unmarshall(reader, val.updates);
@@ -349,7 +349,7 @@ namespace rdsn {
 
         DEFINE_POD_SERIALIZATION(replication::partition_status)
 
-            inline void marshall(::rdsn::utils::binary_writer& writer, const partition_configuration& val, uint16_t pos = 0xffff)
+            inline void marshall(::dsn::utils::binary_writer& writer, const partition_configuration& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.app_type, pos);
             marshall(writer, val.gpid, pos);
@@ -361,7 +361,7 @@ namespace rdsn {
             marshall(writer, val.lastCommittedDecree, pos);
         }
 
-        inline void unmarshall(::rdsn::utils::binary_reader& reader, __out_param partition_configuration& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param partition_configuration& val)
         {
             unmarshall(reader, val.app_type);
             unmarshall(reader, val.gpid);
@@ -373,7 +373,7 @@ namespace rdsn {
             unmarshall(reader, val.lastCommittedDecree);
         }
 
-        inline void marshall(::rdsn::utils::binary_writer& writer, const replica_configuration& val, uint16_t pos = 0xffff)
+        inline void marshall(::dsn::utils::binary_writer& writer, const replica_configuration& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.gpid, pos);
             marshall(writer, val.ballot, pos);
@@ -381,7 +381,7 @@ namespace rdsn {
             marshall(writer, val.status, pos);
         }
 
-        inline void unmarshall(::rdsn::utils::binary_reader& reader, __out_param replica_configuration& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param replica_configuration& val)
         {
             unmarshall(reader, val.gpid);
             unmarshall(reader, val.ballot);
@@ -397,13 +397,13 @@ namespace rdsn {
 
             DEFINE_POD_SERIALIZATION(replication::PrepareAck)
 
-            inline void marshall(::rdsn::utils::binary_writer& writer, const learn_state& val, uint16_t pos = 0xffff)
+            inline void marshall(::dsn::utils::binary_writer& writer, const learn_state& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.meta, pos);
             marshall(writer, val.files, pos);
         }
 
-        inline void unmarshall(::rdsn::utils::binary_reader& reader, __out_param learn_state& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param learn_state& val)
         {
             unmarshall(reader, val.meta);
             unmarshall(reader, val.files);
@@ -411,25 +411,25 @@ namespace rdsn {
 
         DEFINE_POD_SERIALIZATION(replication::LearnerState)
 
-            inline void marshall(::rdsn::utils::binary_writer& writer, const QueryConfigurationByIndexRequest& val, uint16_t pos = 0xffff)
+            inline void marshall(::dsn::utils::binary_writer& writer, const QueryConfigurationByIndexRequest& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.app_name, pos);
             marshall(writer, val.parIdxes, pos);
         }
 
-        inline void unmarshall(::rdsn::utils::binary_reader& reader, __out_param QueryConfigurationByIndexRequest& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param QueryConfigurationByIndexRequest& val)
         {
             unmarshall(reader, val.app_name);
             unmarshall(reader, val.parIdxes);
         }
 
-        inline void marshall(::rdsn::utils::binary_writer& writer, const QueryConfigurationByIndexResponse& val, uint16_t pos = 0xffff)
+        inline void marshall(::dsn::utils::binary_writer& writer, const QueryConfigurationByIndexResponse& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.err, pos);
             marshall(writer, val.partitions, pos);
         }
 
-        inline void unmarshall(::rdsn::utils::binary_reader& reader, __out_param QueryConfigurationByIndexResponse& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param QueryConfigurationByIndexResponse& val)
         {
             unmarshall(reader, val.err);
             unmarshall(reader, val.partitions);
@@ -439,14 +439,14 @@ namespace rdsn {
         DEFINE_POD_SERIALIZATION(replication::SimpleKvOperation)
 
 
-            inline void marshall(::rdsn::utils::binary_writer& writer, const SimpleKvRequest& val, uint16_t pos = 0xffff)
+            inline void marshall(::dsn::utils::binary_writer& writer, const SimpleKvRequest& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.op, pos);
             marshall(writer, val.key, pos);
             marshall(writer, val.value, pos);
         }
 
-        inline void unmarshall(::rdsn::utils::binary_reader& reader, __out_param SimpleKvRequest& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param SimpleKvRequest& val)
         {
             unmarshall(reader, val.op);
             unmarshall(reader, val.key);
@@ -455,21 +455,21 @@ namespace rdsn {
 
 
 
-        inline void marshall(::rdsn::utils::binary_writer& writer, const SimpleKvResponse& val, uint16_t pos = 0xffff)
+        inline void marshall(::dsn::utils::binary_writer& writer, const SimpleKvResponse& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.err, pos);
             marshall(writer, val.key, pos);
             marshall(writer, val.value, pos);
         }
 
-        inline void unmarshall(::rdsn::utils::binary_reader& reader, __out_param SimpleKvResponse& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param SimpleKvResponse& val)
         {
             unmarshall(reader, val.err);
             unmarshall(reader, val.key);
             unmarshall(reader, val.value);
         }
 
-        inline void marshall(::rdsn::utils::binary_writer& writer, const learn_request& val, uint16_t pos = 0xffff)
+        inline void marshall(::dsn::utils::binary_writer& writer, const learn_request& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.gpid, pos);
             marshall(writer, val.learner, pos);
@@ -479,7 +479,7 @@ namespace rdsn {
             marshall(writer, val.appSpecificLearnRequest, pos);
         }
 
-        inline void unmarshall(::rdsn::utils::binary_reader& reader, __out_param learn_request& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param learn_request& val)
         {
             unmarshall(reader, val.gpid);
             unmarshall(reader, val.learner);
@@ -489,7 +489,7 @@ namespace rdsn {
             unmarshall(reader, val.appSpecificLearnRequest);
         }
 
-        inline void marshall(::rdsn::utils::binary_writer& writer, const learn_response& val, uint16_t pos = 0xffff)
+        inline void marshall(::dsn::utils::binary_writer& writer, const learn_response& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.err, pos);
             marshall(writer, val.config, pos);
@@ -499,7 +499,7 @@ namespace rdsn {
             marshall(writer, val.baseLocalDir, pos);
         }
 
-        inline void unmarshall(::rdsn::utils::binary_reader& reader, __out_param learn_response& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param learn_response& val)
         {
             unmarshall(reader, val.err);
             unmarshall(reader, val.config);
@@ -509,7 +509,7 @@ namespace rdsn {
             unmarshall(reader, val.baseLocalDir);
         }
 
-        inline void marshall(::rdsn::utils::binary_writer& writer, const group_check_request& val, uint16_t pos = 0xffff)
+        inline void marshall(::dsn::utils::binary_writer& writer, const group_check_request& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.app_type, pos);
             marshall(writer, val.node, pos);
@@ -518,7 +518,7 @@ namespace rdsn {
             marshall(writer, val.learnerSignature, pos);
         }
 
-        inline void unmarshall(::rdsn::utils::binary_reader& reader, __out_param group_check_request& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param group_check_request& val)
         {
             unmarshall(reader, val.app_type);
             unmarshall(reader, val.node);
@@ -527,7 +527,7 @@ namespace rdsn {
             unmarshall(reader, val.learnerSignature);
         }
 
-        inline void marshall(::rdsn::utils::binary_writer& writer, const group_check_response& val, uint16_t pos = 0xffff)
+        inline void marshall(::dsn::utils::binary_writer& writer, const group_check_response& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.gpid, pos);
             marshall(writer, val.err, pos);
@@ -538,7 +538,7 @@ namespace rdsn {
             marshall(writer, val.node, pos);
         }
 
-        inline void unmarshall(::rdsn::utils::binary_reader& reader, __out_param group_check_response& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param group_check_response& val)
         {
             unmarshall(reader, val.gpid);
             unmarshall(reader, val.err);
@@ -551,39 +551,39 @@ namespace rdsn {
 
         DEFINE_POD_SERIALIZATION(replication::config_type)
 
-            inline void marshall(::rdsn::utils::binary_writer& writer, const configuration_update_request& val, uint16_t pos = 0xffff)
+            inline void marshall(::dsn::utils::binary_writer& writer, const configuration_update_request& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.config, pos);
             marshall(writer, val.type, pos);
             marshall(writer, val.node, pos);
         }
 
-        inline void unmarshall(::rdsn::utils::binary_reader& reader, __out_param configuration_update_request& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param configuration_update_request& val)
         {
             unmarshall(reader, val.config);
             unmarshall(reader, val.type);
             unmarshall(reader, val.node);
         }
 
-        inline void marshall(::rdsn::utils::binary_writer& writer, const ConfigurationUpdateResponse& val, uint16_t pos = 0xffff)
+        inline void marshall(::dsn::utils::binary_writer& writer, const ConfigurationUpdateResponse& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.err, pos);
             marshall(writer, val.config, pos);
         }
 
-        inline void unmarshall(::rdsn::utils::binary_reader& reader, __out_param ConfigurationUpdateResponse& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param ConfigurationUpdateResponse& val)
         {
             unmarshall(reader, val.err);
             unmarshall(reader, val.config);
         }
 
-        inline void marshall(::rdsn::utils::binary_writer& writer, const QueryPNDecreeRequest& val, uint16_t pos = 0xffff)
+        inline void marshall(::dsn::utils::binary_writer& writer, const QueryPNDecreeRequest& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.partitionId, pos);
             marshall(writer, val.node, pos);
         }
 
-        inline void unmarshall(::rdsn::utils::binary_reader& reader, __out_param QueryPNDecreeRequest& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param QueryPNDecreeRequest& val)
         {
             unmarshall(reader, val.partitionId);
             unmarshall(reader, val.node);
@@ -591,26 +591,26 @@ namespace rdsn {
 
         DEFINE_POD_SERIALIZATION(replication::QueryPNDecreeResponse)
 
-            inline void marshall(::rdsn::utils::binary_writer& writer, const ConfigurationNodeQueryRequest& val, uint16_t pos = 0xffff)
+            inline void marshall(::dsn::utils::binary_writer& writer, const ConfigurationNodeQueryRequest& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.node, pos);
         }
 
-        inline void unmarshall(::rdsn::utils::binary_reader& reader, __out_param ConfigurationNodeQueryRequest& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param ConfigurationNodeQueryRequest& val)
         {
             unmarshall(reader, val.node);
         }
 
-        inline void marshall(::rdsn::utils::binary_writer& writer, const ConfigurationNodeQueryResponse& val, uint16_t pos = 0xffff)
+        inline void marshall(::dsn::utils::binary_writer& writer, const ConfigurationNodeQueryResponse& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.err, pos);
             marshall(writer, val.partitions, pos);
         }
 
-        inline void unmarshall(::rdsn::utils::binary_reader& reader, __out_param ConfigurationNodeQueryResponse& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param ConfigurationNodeQueryResponse& val)
         {
             unmarshall(reader, val.err);
             unmarshall(reader, val.partitions);
         }
     }
-} // end namespace rdsn::replication
+} // end namespace dsn::replication

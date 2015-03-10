@@ -25,7 +25,7 @@
 
 #include "mutation.h"
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
 struct remote_learner_state
 {

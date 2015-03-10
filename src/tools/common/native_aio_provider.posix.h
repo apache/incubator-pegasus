@@ -23,10 +23,10 @@
  */
 #pragma once
 
-# include <rdsn/tool_api.h>
-# include <rdsn/internal/synchronize.h>
+# include <dsn/tool_api.h>
+# include <dsn/internal/synchronize.h>
 
-namespace rdsn {
+namespace dsn {
     namespace tools {
         class native_posix_aio_provider : public aio_provider
         {

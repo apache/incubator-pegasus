@@ -30,9 +30,9 @@
 
 #define __TITLE__ "mutation_log"
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
-    using namespace ::rdsn::service;
+    using namespace ::dsn::service;
 
 mutation_log::mutation_log(uint32_t LogBufferSizeMB, uint32_t LogPendingMaxMilliseconds, uint32_t maxLogFileSizeInMB, bool batchWrite, int writeTaskNumber)
 : service_base("mutation_log")
@@ -82,7 +82,7 @@ int mutation_log::initialize(const char* dir)
     //create dir if necessary
     if (!boost::filesystem::exists(dir) && !boost::filesystem::create_directory(dir))
     {
-        rerror("open mutation_log: create log path failed");
+        derror("open mutation_log: create log path failed");
         return ERR_FILE_OPERATION_FAILED;
     }
 
@@ -102,12 +102,12 @@ int mutation_log::initialize(const char* dir)
         log_file_ptr log = log_file::opend_read(fullPath.c_str());
         if (log == nullptr)
         {
-            rwarn(
+            dwarn(
                 "Skip file %s during log init", fullPath.c_str());
             continue;
         }
 
-        rassert(_log_files.find(log->index()) == _log_files.end(), "");
+        dassert(_log_files.find(log->index()) == _log_files.end(), "");
         _log_files[log->index()] = log;
     }
 
@@ -121,7 +121,7 @@ int mutation_log::initialize(const char* dir)
     {
         if (++_last_file_number != it->first)
         {
-            rerror(
+            derror(
                 "log file missing with index %u", _last_file_number);
             return ERR_OBJECT_NOT_FOUND;
         }
@@ -134,31 +134,31 @@ int mutation_log::initialize(const char* dir)
 
 int mutation_log::create_new_log_file()
 {
-    //rassert (_lock.IsHeldByCurrentThread(), "");
+    //dassert (_lock.IsHeldByCurrentThread(), "");
 
     if (_current_log_file != nullptr)
     {
         _last_log_file = _current_log_file;
-        rassert(_current_log_file->end_offset() == _global_end_offset, "");
+        dassert(_current_log_file->end_offset() == _global_end_offset, "");
     }
 
     log_file_ptr logFile = log_file::create_write(_dir.c_str(), _last_file_number + 1, _global_end_offset, _max_staleness_for_commit, _write_task_number);
     if (logFile == nullptr)
     {
-        rerror(
+        derror(
             "cannot create log file with index %u", _last_file_number);
         return ERR_FILE_OPERATION_FAILED;
     }    
 
-    rerror(
+    derror(
         "create new log file %s", logFile->Path().c_str());
         
     _last_file_number++;
-    rassert(_log_files.find(_last_file_number) == _log_files.end(), "");
+    dassert(_log_files.find(_last_file_number) == _log_files.end(), "");
     _log_files[_last_file_number] = logFile;
 
-    rassert(logFile->end_offset() == logFile->start_offset(), "");
-    rassert(_global_end_offset == logFile->end_offset(), "");
+    dassert(logFile->end_offset() == logFile->start_offset(), "");
+    dassert(_global_end_offset == logFile->end_offset(), "");
 
     _current_log_file = logFile; 
 
@@ -171,9 +171,9 @@ int mutation_log::create_new_log_file()
 
 void mutation_log::create_new_pending_buffer()
 {
-    rassert(_pending_write == nullptr, "");
-    rassert(_pending_write_callbacks == nullptr, "");
-    rassert (_pending_write_timer == nullptr, "");
+    dassert(_pending_write == nullptr, "");
+    dassert(_pending_write_callbacks == nullptr, "");
+    dassert (_pending_write_timer == nullptr, "");
 
     _pending_write = message::create_request(RPC_PREPARE, _log_pending_max_milliseconds);
     _pending_write_callbacks.reset(new std::list<aio_task_ptr>);
@@ -189,16 +189,16 @@ void mutation_log::create_new_pending_buffer()
             );
     }
 
-    rassert(_pending_write->total_size() == message_header::serialized_size(), "");
+    dassert(_pending_write->total_size() == message_header::serialized_size(), "");
     _global_end_offset += message_header::serialized_size();
 }
 
 void mutation_log::internal_pending_write_timer(uint64_t id)
 {
     zauto_lock l(_lock);
-    rassert(nullptr != _pending_write, "");
-    rassert (_pending_write->header().id == id, "");
-    rassert (task::get_current_task() == _pending_write_timer, "");
+    dassert(nullptr != _pending_write, "");
+    dassert (_pending_write->header().id == id, "");
+    dassert (task::get_current_task() == _pending_write_timer, "");
 
     _pending_write_timer = nullptr;
     write_pending_mutations();
@@ -206,9 +206,9 @@ void mutation_log::internal_pending_write_timer(uint64_t id)
 
 int mutation_log::write_pending_mutations(bool create_new_log_when_necessary)
 {
-    //rassert (_lock.IsHeldByCurrentThread(), "");
-    rassert (_pending_write != nullptr, "");
-    rassert(_pending_write_timer == nullptr, "");
+    //dassert (_lock.IsHeldByCurrentThread(), "");
+    dassert (_pending_write != nullptr, "");
+    dassert(_pending_write_timer == nullptr, "");
 
     _pending_write->seal(true);
     auto bb = _pending_write->get_output_buffer();
@@ -235,7 +235,7 @@ int mutation_log::write_pending_mutations(bool create_new_log_when_necessary)
     }
     else
     {
-        rassert(_global_end_offset == _current_log_file->end_offset(), "");
+        dassert(_global_end_offset == _current_log_file->end_offset(), "");
     }
 
     _pending_write = nullptr;
@@ -252,7 +252,7 @@ int mutation_log::write_pending_mutations(bool create_new_log_when_necessary)
         int ret = create_new_log_file();
         if (ERR_SUCCESS != ret)
         {
-            rerror("create new log file failed, err = %d", ret);
+            derror("create new log file failed, err = %d", ret);
         }
         return ret;
     }
@@ -282,13 +282,13 @@ int mutation_log::replay(ReplayCallback callback)
 
         if (log->start_offset() != offset)
         {
-            rerror("offset mismatch in log file offset and global offset %lld vs %lld", log->start_offset(), offset);
+            derror("offset mismatch in log file offset and global offset %lld vs %lld", log->start_offset(), offset);
             return ERR_FILE_OPERATION_FAILED;
         }
 
         _last_log_file = log;
 
-        rdsn::utils::blob bb;
+        dsn::utils::blob bb;
         err = log->read_next_log_entry(bb);
         if (err != ERR_SUCCESS)
         {
@@ -298,7 +298,7 @@ int mutation_log::replay(ReplayCallback callback)
                 continue;
             }
 
-            rerror(
+            derror(
                 "read log header failed for %s, err = %x", log->Path().c_str(), err);
             break;
         }
@@ -309,7 +309,7 @@ int mutation_log::replay(ReplayCallback callback)
 
         if (!msg->is_right_body())
         {
-            rerror(
+            derror(
                         "data read crc check failed at offset %llu", offset);
             return ERR_WRONG_CHECKSUM;
         }
@@ -322,12 +322,12 @@ int mutation_log::replay(ReplayCallback callback)
             {
                 auto oldSz = msg->get_remaining_size();
                 mutation_ptr mu = mutation::read_from(msg);
-                rassert(nullptr != mu, "");                                
+                dassert(nullptr != mu, "");                                
                 mu->set_logged();
 
                 if (mu->data.header.logOffset != offset)
                 {
-                    rerror(
+                    derror(
                         "offset mismatch in log entry and mutation %lld vs %lld", offset, mu->data.header.logOffset);
                     return ERR_FILE_OPERATION_FAILED;
                 }
@@ -346,7 +346,7 @@ int mutation_log::replay(ReplayCallback callback)
                     break;
                 }
 
-                rerror(
+                derror(
                     "read log entry failed for %s, err = %x", log->Path().c_str(), err);
                 break;
             }
@@ -356,7 +356,7 @@ int mutation_log::replay(ReplayCallback callback)
 
             if (!msg->is_right_body())
             {
-                rerror(
+                derror(
                             "data read crc check failed at offset %llu", offset);
                 return ERR_WRONG_CHECKSUM;
             }
@@ -376,7 +376,7 @@ int mutation_log::replay(ReplayCallback callback)
     }
     else if (err == ERR_SUCCESS)
     {
-        rassert(end_offset() == offset, "");
+        dassert(end_offset() == offset, "");
     }
 
     return err;
@@ -389,7 +389,7 @@ int mutation_log::start_write_service(multi_partition_decrees& initMaxDecrees, i
     _init_prepared_decrees = initMaxDecrees;
     _max_staleness_for_commit = maxStalenessForCommit;
     
-    rassert(_current_log_file == nullptr, "");
+    dassert(_current_log_file == nullptr, "");
     return create_new_log_file();
 }
 
@@ -405,7 +405,7 @@ void mutation_log::close()
             {
                 _pending_write_timer = nullptr;
                 write_pending_mutations(false);
-                rassert(nullptr == _pending_write_timer, "");
+                dassert(nullptr == _pending_write_timer, "");
             }
             else
             {
@@ -460,9 +460,9 @@ task_ptr mutation_log::append(mutation_ptr& mu,
     
     _pending_write_callbacks->push_back(tsk);
 
-    /*if (rdsn::service::spec().traceOptions.PathTracing)
+    /*if (dsn::service::spec().traceOptions.PathTracing)
     {
-        rdebug( 
+        ddebug( 
             "BATCHTHROUGH mutation write with io callback DstTaskId = %016llx", task->TaskId()
                 );
     }*/
@@ -543,7 +543,7 @@ int mutation_log::garbage_collection(multi_partition_decrees& durable_decrees)
     {
         itr->second->close();
 
-        rdebug(
+        ddebug(
             "remove log segment %s", itr->second->Path().c_str());
 
         std::string newName = itr->second->Path() + ".removed";
@@ -584,7 +584,7 @@ std::map<int, log_file_ptr>& mutation_log::get_logfiles_for_test()
     auto pos = pt.find_last_of('/');
     if (pos == std::string::npos)
     {
-        rwarn( "Invalid log path %s", path);
+        dwarn( "Invalid log path %s", path);
         return nullptr;
     }
 
@@ -595,7 +595,7 @@ std::map<int, log_file_ptr>& mutation_log::get_logfiles_for_test()
         || (name.length() > strlen(".removed") && name.substr(name.length() - strlen(".removed")) == std::string(".removed"))
         )
     {
-        rwarn( "Invalid log path %s", path);
+        dwarn( "Invalid log path %s", path);
         return nullptr;
     }
 
@@ -603,7 +603,7 @@ std::map<int, log_file_ptr>& mutation_log::get_logfiles_for_test()
     auto pos2 = name.find_first_of('.', pos + 1);
     if (pos2 == std::string::npos)
     {
-        rwarn( "Invalid log path %s", path);
+        dwarn( "Invalid log path %s", path);
         return nullptr;
     }
 
@@ -611,7 +611,7 @@ std::map<int, log_file_ptr>& mutation_log::get_logfiles_for_test()
 
     if (hFile == 0)
     {
-        rwarn("open log %s failed", path);
+        dwarn("open log %s failed", path);
         return nullptr;
     }
 
@@ -627,10 +627,10 @@ std::map<int, log_file_ptr>& mutation_log::get_logfiles_for_test()
     char path[512]; 
     sprintf (path, "%s/log.%u.%llu", dir, index, startOffset);
     
-    handle_t hFile = rdsn::service::file::open(path, O_RDWR | O_CREAT, 0);
+    handle_t hFile = dsn::service::file::open(path, O_RDWR | O_CREAT, 0);
     if (hFile == 0)
     {
-        rwarn("create log %s failed", path);
+        dwarn("create log %s failed", path);
         return nullptr;
     }
 
@@ -673,15 +673,15 @@ void log_file::close()
         if (_isRead)
             ::close((int)_handle);
         else
-            rdsn::service::file::close(_handle);
+            dsn::service::file::close(_handle);
 
         _handle = 0;
     }
 }
 
-int log_file::read_next_log_entry(__out_param rdsn::utils::blob& bb)
+int log_file::read_next_log_entry(__out_param dsn::utils::blob& bb)
 {
-    rassert(_isRead, "");
+    dassert(_isRead, "");
 
     std::shared_ptr<char> hdrBuffer(new char[message_header::serialized_size()]);
     
@@ -695,13 +695,13 @@ int log_file::read_next_log_entry(__out_param rdsn::utils::blob& bb)
     }
 
     message_header hdr;
-    rdsn::utils::blob bb2(hdrBuffer, message_header::serialized_size());
-    rdsn::utils::binary_reader reader(bb2);
+    dsn::utils::blob bb2(hdrBuffer, message_header::serialized_size());
+    dsn::utils::binary_reader reader(bb2);
     hdr.unmarshall(reader);
 
     if (!hdr.is_right_header((char*)hdrBuffer.get()))
     {
-        rerror("invalid data header");
+        derror("invalid data header");
         return ERR_INVALID_DATA;
     }
 
@@ -730,8 +730,8 @@ aio_task_ptr log_file::write_log_entry(
                 int hash
                 )
 {
-    rassert(!_isRead, "");
-    rassert (offset == end_offset(), "");
+    dassert(!_isRead, "");
+    dassert (offset == end_offset(), "");
 
     auto task = service_base::file_write(
         _handle, 

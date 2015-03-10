@@ -34,10 +34,10 @@
 # include <arpa/inet.h>
 # endif
 
-# include <rdsn/internal/end_point.h>
+# include <dsn/internal/end_point.h>
 # include <mutex>
 
-namespace rdsn {
+namespace dsn {
 
 const end_point end_point::INVALID;
 

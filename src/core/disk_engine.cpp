@@ -22,17 +22,17 @@
  * THE SOFTWARE.
  */
 # include "disk_engine.h"
-# include <rdsn/internal/perf_counters.h>
-# include <rdsn/internal/logging.h>
-# include <rdsn/internal/aio_provider.h>
-# include <rdsn/internal/utils.h>
-# include <rdsn/service_api.h>
+# include <dsn/internal/perf_counters.h>
+# include <dsn/internal/logging.h>
+# include <dsn/internal/aio_provider.h>
+# include <dsn/internal/utils.h>
+# include <dsn/service_api.h>
 
 #define __TITLE__ "disk_engine"
 
-using namespace rdsn::utils;
+using namespace dsn::utils;
 
-namespace rdsn {
+namespace dsn {
 
 //----------------- disk_engine ------------------------
 disk_engine::disk_engine(service_node* node)
@@ -115,7 +115,7 @@ void disk_engine::complete_io(aio_task_ptr& aio, error_code err, uint32_t bytes,
 
     if (err != ERR_SUCCESS)
     {
-        rwarn(
+        dwarn(
                     "disk operation failure with code %s, err = 0x%x, aio task id = %llx",
                     aio->spec().name,
                     err.get(),

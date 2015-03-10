@@ -24,7 +24,7 @@
 #include "mutation.h"
 
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
 mutation::mutation()
 {
@@ -40,7 +40,7 @@ mutation::~mutation()
 
 void mutation::add_client_request(message_ptr& request)
 {
-    rdsn::utils::blob buffer(request->get_input_remaining_buffer());
+    dsn::utils::blob buffer(request->get_input_remaining_buffer());
     auto buf = buffer.buffer();
     utils::blob bb(buf, static_cast<int>(buffer.data() - buffer.buffer().get()), buffer.length());
 
@@ -58,7 +58,7 @@ void mutation::add_client_request(message_ptr& request)
     {        
         void * buf = malloc(it->length());
         memcpy(buf, it->data(), it->length());                              
-        rdsn::utils::blob bb((const char *)buf, 0, it->length());
+        dsn::utils::blob bb((const char *)buf, 0, it->length());
         message_ptr msg(new message(bb, false));
         mu->client_requests.push_back(msg);
         mu->_memorySize += msg->total_size();

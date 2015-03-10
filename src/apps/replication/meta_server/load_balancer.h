@@ -25,9 +25,9 @@
 
 #include "server_state.h"
 
-using namespace rdsn;
-using namespace rdsn::service;
-using namespace rdsn::replication;
+using namespace dsn;
+using namespace dsn::service;
+using namespace dsn::replication;
 
 class load_balancer : public serviceletex<load_balancer>
 {

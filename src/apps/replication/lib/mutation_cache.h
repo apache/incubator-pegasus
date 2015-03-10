@@ -27,7 +27,7 @@
 #include "replication_common.h"
 #include <vector>
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
 class mutation_cache
 {

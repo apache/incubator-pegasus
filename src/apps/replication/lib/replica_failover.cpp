@@ -29,11 +29,11 @@
 
 #define __TITLE__ "FailOver"
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
 void replica::handle_local_failure(int error)
 {
-    rdebug(
+    ddebug(
         "%s: handle local failure error %x, status = %s",
         name(),
         error,
@@ -50,7 +50,7 @@ void replica::handle_local_failure(int error)
 
 void replica::handle_remote_failure(partition_status status, const end_point& node, int error)
 {    
-    rdebug(
+    ddebug(
         "%s: handle remote failure error %u, status = %s, node = %s:%u",
         name(),
         error,
@@ -58,13 +58,13 @@ void replica::handle_remote_failure(partition_status status, const end_point& no
         node.name.c_str(), (int)node.port
         );
 
-    rassert (status == PS_PRIMARY, "");
-    rassert (node != address(), "");
+    dassert (status == PS_PRIMARY, "");
+    dassert (node != address(), "");
 
     switch (status)
     {
     case PS_SECONDARY:
-        rassert (_primary_states.CheckExist(node, PS_SECONDARY), "");
+        dassert (_primary_states.CheckExist(node, PS_SECONDARY), "");
         {
             configuration_update_request request;
             request.node = node;
@@ -89,14 +89,14 @@ void replica::handle_remote_failure(partition_status status, const end_point& no
     case PS_ERROR:
         break;
     default:
-        rassert (false, "");
+        dassert (false, "");
         break;
     }
 }
 
 void replica::on_meta_server_disconnected()
 {
-    rdebug( "%s: coordinator disconnected", name());
+    ddebug( "%s: coordinator disconnected", name());
 
     update_local_configuration_with_no_ballot_change(PS_INACTIVE);
 }

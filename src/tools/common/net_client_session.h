@@ -24,9 +24,9 @@
 #pragma once
 
 # include "net_provider.h"
-# include <rdsn/internal/priority_queue.h>
+# include <dsn/internal/priority_queue.h>
 
-namespace rdsn {
+namespace dsn {
     namespace tools {
 
         class asio_network_provider;

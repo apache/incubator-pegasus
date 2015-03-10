@@ -1,4 +1,4 @@
-ROOT = d:\rdsn
+ROOT = d:\dsn
 
 BOOST_INC=$(ROOT)/external
 BOOST_LIB=$(ROOT)/external/libs
@@ -11,10 +11,10 @@ COMMON_LIBS= \
 	libboost_regex-vc120-mt-1_57.lib \
 	libboost_system-vc120-mt-1_57.lib \
 	libboost_thread-vc120-mt-1_57.lib \
-	rdsn.core.lib \
-	rdsn.dev.lib \
-	rdsn.tools.common.lib \
-	rdsn.tools.simulator.lib
+	dsn.core.lib \
+	dsn.dev.lib \
+	dsn.tools.common.lib \
+	dsn.tools.simulator.lib
 
 BIN_DIR= $(ROOT)\bin
 INC= $(INC_EXTRA) /I. /I$(BOOST_INC) /I$(rDSN_INC)

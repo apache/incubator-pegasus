@@ -23,10 +23,10 @@
  */
 #pragma once
 
-# include <rdsn/tool_api.h>
-# include <rdsn/internal/priority_queue.h>
+# include <dsn/tool_api.h>
+# include <dsn/internal/priority_queue.h>
 
-namespace rdsn {
+namespace dsn {
     namespace tools {
         class simple_task_queue : public task_queue
         {

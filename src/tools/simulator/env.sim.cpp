@@ -26,7 +26,7 @@
 
 #define __TITLE__ "env.provider.simulator"
 
-namespace rdsn { namespace tools {
+namespace dsn { namespace tools {
 
 /*static*/ int sim_env_provider::_seed;
 

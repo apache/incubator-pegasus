@@ -25,9 +25,9 @@
 
 #include "app_client_example1.h"
 
-using namespace rdsn;
-using namespace rdsn::service;
-using namespace rdsn::replication;
+using namespace dsn;
+using namespace dsn::service;
+using namespace dsn::replication;
 
 class app_client_example1_service : public serviceletex<app_client_example1_service>, public service_app
 {

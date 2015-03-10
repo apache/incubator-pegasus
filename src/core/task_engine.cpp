@@ -22,21 +22,21 @@
  * THE SOFTWARE.
  */
 # include "task_engine.h"
-# include <rdsn/internal/perf_counters.h>
-# include <rdsn/internal/factory_store.h>
-# include <rdsn/service_api.h>
+# include <dsn/internal/perf_counters.h>
+# include <dsn/internal/factory_store.h>
+# include <dsn/service_api.h>
 
 #define __TITLE__ "task_engine"
 
-using namespace rdsn::utils;
+using namespace dsn::utils;
 
-namespace rdsn {
+namespace dsn {
 
 task_worker_pool::task_worker_pool(const threadpool_spec& opts, task_engine* owner)
     : _spec(opts), _owner(owner), _node(owner->node())
 {
     _is_running = false;
-    _pending_task_counter = rdsn::utils::perf_counters::instance().get_counter((_spec.name + std::string(".PendingTask#")).c_str(),  COUNTER_TYPE_NUMBER, true);
+    _pending_task_counter = dsn::utils::perf_counters::instance().get_counter((_spec.name + std::string(".PendingTask#")).c_str(),  COUNTER_TYPE_NUMBER, true);
 }
 
 void task_worker_pool::start()
@@ -99,7 +99,7 @@ void task_worker_pool::start()
 
 void task_worker_pool::enqueue_task(task_ptr& task)
 {
-    rassert (task->spec().pool_code == spec().pool_code || task->spec().type == TASK_TYPE_RPC_RESPONSE, "Invalid thread pool used");
+    dassert (task->spec().pool_code == spec().pool_code || task->spec().type == TASK_TYPE_RPC_RESPONSE, "Invalid thread pool used");
 
     if (_is_running)
     {
@@ -117,7 +117,7 @@ void task_worker_pool::enqueue_task(task_ptr& task)
                     {
                         task->spec().rejection_handler(task.get(), controller);
 
-                        rlog(log_level_DEBUG, __TITLE__,
+                        dlog(log_level_DEBUG, __TITLE__,
                                 "timer_task %s (%016llx) is rejected",                            
                                 task->spec().name,
                                 task->id()
@@ -138,7 +138,7 @@ void task_worker_pool::enqueue_task(task_ptr& task)
                     {
                         task->spec().rejection_handler(task.get(), controller);
 
-                        rlog(log_level_DEBUG, __TITLE__,
+                        dlog(log_level_DEBUG, __TITLE__,
                                 "task %s (%016llx) is rejected because the target queue is full",                            
                                 task->spec().name,
                                 task->id()
@@ -158,7 +158,7 @@ void task_worker_pool::enqueue_task(task_ptr& task)
     }
     else
     {
-        rassert (false, "worker pool %s must be started before enqueue task %s",
+        dassert (false, "worker pool %s must be started before enqueue task %s",
             spec().name.c_str(),
             task->spec().name
             );

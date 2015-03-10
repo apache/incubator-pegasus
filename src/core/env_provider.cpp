@@ -21,11 +21,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-# include <rdsn/internal/env_provider.h>
-# include <rdsn/internal/utils.h>
+# include <dsn/internal/env_provider.h>
+# include <dsn/internal/utils.h>
 # include <chrono>
 
-namespace rdsn {
+namespace dsn {
 
 //------------ env_provider ---------------
 

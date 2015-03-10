@@ -25,7 +25,7 @@
 
 # include <cstdint>
 
-namespace rdsn { namespace utils {
+namespace dsn { namespace utils {
 
 template<typename uintxx_t, uintxx_t uPoly> struct crc_generator
 {

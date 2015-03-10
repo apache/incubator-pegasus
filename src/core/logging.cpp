@@ -21,10 +21,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-# include <rdsn/internal/logging_provider.h>
+# include <dsn/internal/logging_provider.h>
 # include "service_engine.h"
 
-namespace rdsn {
+namespace dsn {
 
     void logv(const char *file, const char *function, const int line, logging_level logLevel, const char* title, const char* fmt, va_list args)
     {

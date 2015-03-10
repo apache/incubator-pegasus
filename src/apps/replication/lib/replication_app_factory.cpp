@@ -26,7 +26,7 @@
 
 #define __TITLE__ "init"
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
     bool replication_app_factory::register_factory(const char* app_type, replica_factory factory)
 {
@@ -58,7 +58,7 @@ replication_app_base* replication_app_factory::create(const char* app_type, repl
     }
     else
     {
-        rerror( "replica type '%s' not registered", app_type);
+        derror( "replica type '%s' not registered", app_type);
         return nullptr;
     }
 }

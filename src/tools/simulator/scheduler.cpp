@@ -23,9 +23,9 @@
  */
 #include "scheduler.h"
 #include "env.sim.h"
-#include <rdsn/service_api.h>
+#include <dsn/service_api.h>
 
-namespace rdsn { namespace tools {
+namespace dsn { namespace tools {
 
 void event_wheel::add_event(uint64_t ts, task_ptr& task)
 {
@@ -190,7 +190,7 @@ void scheduler::schedule()
 
         if (readyWorkers.size() > 0)
         {
-            int i = rdsn::service::env::random32(0, (uint32_t)readyWorkers.size() - 1);
+            int i = dsn::service::env::random32(0, (uint32_t)readyWorkers.size() - 1);
             _threads[readyWorkers[i]]->runnable.release();
             return;
         }

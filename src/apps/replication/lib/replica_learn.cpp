@@ -30,13 +30,13 @@
 
 #define __TITLE__ "Learn"
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
 void replica::init_learn(uint64_t signature)
 {
     check_hashed_access();
 
-    rassert (status() == PS_POTENTIAL_SECONDARY, "");
+    dassert (status() == PS_POTENTIAL_SECONDARY, "");
         
     // at most one learning task running
     if (_potential_secondary_states.LearningRoundIsRuning)
@@ -69,7 +69,7 @@ void replica::init_learn(uint64_t signature)
         case LearningWithoutPrepare:
             break;
         default:
-            rassert (false, "");
+            dassert (false, "");
         }
     }
         
@@ -92,7 +92,7 @@ void replica::init_learn(uint64_t signature)
         _options.LearnTimeoutMs
         );
 
-    rdebug(
+    ddebug(
         "%s: init_learn with lastAppC/DDecree = <%llu,%llu>, lastCDecree = %llu, learnState = %s",
         name(),
         _app->last_committed_decree(),
@@ -114,7 +114,7 @@ void replica::OnLearn(const learn_request& request, __out_param learn_response& 
         
     if (request.lastCommittedDecreeInApp > last_committed_decree())
     {
-        rdebug(
+        ddebug(
             "%s: OnLearn %s:%u, learner state is lost due to DDD, with its appCommittedDecree = %llu vs localCommitedDecree %llu",
             name(),
             request.learner.name.c_str(), (int)request.learner.port,
@@ -138,7 +138,7 @@ void replica::OnLearn(const learn_request& request, __out_param learn_response& 
         return;
     }
 
-    rdebug(
+    ddebug(
         "%s: OnLearn %s:%u with its appCommittedDecree = %llu vs localCommitedDecree %llu",
         name(),
         request.learner.name.c_str(), (int)request.learner.port,
@@ -159,7 +159,7 @@ void replica::OnLearn(const learn_request& request, __out_param learn_response& 
             cleanup_preparing_mutations(true);
             replay_prepare_list();
 
-            rdebug(
+            ddebug(
                 "%s: OnLearn with prepareStartDecree = %llu for %s:%u",
                 name(),
                 last_committed_decree() + 1,
@@ -182,8 +182,8 @@ void replica::on_learn_reply(error_code err, boost::shared_ptr<learn_request> re
 {
     check_hashed_access();
 
-    rassert (PS_POTENTIAL_SECONDARY == status(), "");
-    rassert (req->signature == _potential_secondary_states.LearningSignature, "");
+    dassert (PS_POTENTIAL_SECONDARY == status(), "");
+    dassert (req->signature == _potential_secondary_states.LearningSignature, "");
 
     if (resp == nullptr)
     {
@@ -191,7 +191,7 @@ void replica::on_learn_reply(error_code err, boost::shared_ptr<learn_request> re
         return;
     }
 
-    rdebug(
+    ddebug(
         "%s: on_learn_reply with err = 0x%x, prepareStartDecree = %llu, current learnState = %s",
         name(), resp->err, resp->prepareStartDecree, enum_to_string(_potential_secondary_states.LearningState)
         );
@@ -264,7 +264,7 @@ void replica::on_learn_remote_state(boost::shared_ptr<learn_response> resp)
 
         err = _app->apply_learn_state(resp->state);
 
-        rdebug(
+        ddebug(
                 "%s: learning %d files to %s, err = %x, "
                 "appCommit(%llu => %llu), durable(%llu), remoteC(%llu), prepStart(%llu), state(%s)",
                 name(),
@@ -281,13 +281,13 @@ void replica::on_learn_remote_state(boost::shared_ptr<learn_response> resp)
             err = _app->compact(true);
             if (err == ERR_SUCCESS)
             {
-                rassert (_app->last_committed_decree() == _app->last_durable_decree(), "");
+                dassert (_app->last_committed_decree() == _app->last_durable_decree(), "");
             }
         }
     } 
     else 
     {
-        rerror(
+        derror(
                 "%s: Transfer %d files to %s failed, err = %d",
                 name(),
                 resp->state.files.size(), _dir.c_str(), err);
@@ -324,7 +324,7 @@ void replica::handle_learning_error(int err)
 {
     check_hashed_access();
 
-    rwarn(
+    dwarn(
         "%s: learning failed with err = 0x%X, LastCommitted = %lld",
         name(),
         err,
@@ -374,7 +374,7 @@ void replica::OnAddLearner(const group_check_request& request)
         return;
 
     update_local_configuration(request.config);
-    rassert(PS_POTENTIAL_SECONDARY == status(), "");
+    dassert(PS_POTENTIAL_SECONDARY == status(), "");
     init_learn(request.learnerSignature);
 }
 

@@ -49,7 +49,7 @@ void meta_server_failure_detector::on_worker_disconnected(const std::vector<end_
     {
         states.push_back(std::make_pair(n, false));
 
-        rwarn("client expired: %s:%hu", n.name.c_str(), n.port);
+        dwarn("client expired: %s:%hu", n.name.c_str(), n.port);
     }
     
     _state->SetNodeState(states);
@@ -65,7 +65,7 @@ void meta_server_failure_detector::on_worker_connected(const end_point& node)
     NodeStates states;
     states.push_back(std::make_pair(node, true));
 
-    rwarn("Client reconnected",
+    dwarn("Client reconnected",
         "Client %s:%hu", node.name.c_str(), node.port);
 
     _state->SetNodeState(states);

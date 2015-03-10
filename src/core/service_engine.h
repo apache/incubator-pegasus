@@ -23,13 +23,13 @@
  */
 # pragma once
 
-# include <rdsn/internal/rdsn_types.h>
-# include <rdsn/internal/singleton.h>
-# include <rdsn/internal/end_point.h>
-# include <rdsn/internal/global_config.h>
-# include <rdsn/internal/error_code.h>
+# include <dsn/internal/dsn_types.h>
+# include <dsn/internal/singleton.h>
+# include <dsn/internal/end_point.h>
+# include <dsn/internal/global_config.h>
+# include <dsn/internal/error_code.h>
 
-namespace rdsn { 
+namespace dsn { 
 
 class task_engine;
 class rpc_engine;

@@ -23,11 +23,11 @@
  */
 # pragma once
 
-# include <rdsn/internal/task.h>
-# include <rdsn/internal/network.h>
-# include <rdsn/internal/synchronize.h>
+# include <dsn/internal/task.h>
+# include <dsn/internal/network.h>
+# include <dsn/internal/synchronize.h>
 
-namespace rdsn {
+namespace dsn {
 
 class rpc_client_matcher : public std::enable_shared_from_this<rpc_client_matcher>
 {

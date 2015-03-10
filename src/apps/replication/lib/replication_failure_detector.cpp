@@ -24,7 +24,7 @@
 #include "replication_failure_detector.h"
 #include "replica_stub.h"
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
 
 replication_failure_detector::replication_failure_detector(replica_stub* stub, std::vector<end_point>& meta_servers)
@@ -47,7 +47,7 @@ end_point replication_failure_detector::find_next_meta_server(end_point current)
     else
     {
         auto it = std::find(_meta_servers.begin(), _meta_servers.end(), current);
-        rassert(it != _meta_servers.end(), "");
+        dassert(it != _meta_servers.end(), "");
         it++;
         if (it != _meta_servers.end())
             return *it;

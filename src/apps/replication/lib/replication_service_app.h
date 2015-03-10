@@ -23,15 +23,15 @@
  */
 #pragma once
 
-#include <rdsn/service_api.h>
+#include <dsn/service_api.h>
 #include "replica_stub.h"
 
-using namespace rdsn::service;
-using namespace rdsn;
+using namespace dsn::service;
+using namespace dsn;
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
-class replication_service_app : public rdsn::service::service_app
+class replication_service_app : public dsn::service::service_app
 {
 public:
     replication_service_app(service_app_spec* s, configuration_ptr c);

@@ -24,10 +24,10 @@
 # pragma once
 
 # include "service_engine.h"
-# include <rdsn/internal/synchronize.h>
-# include <rdsn/internal/aio_provider.h>
+# include <dsn/internal/synchronize.h>
+# include <dsn/internal/aio_provider.h>
 
-namespace rdsn {
+namespace dsn {
 
 class disk_engine
 {

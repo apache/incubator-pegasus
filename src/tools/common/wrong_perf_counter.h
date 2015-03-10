@@ -23,9 +23,9 @@
  */
 #pragma once
 
-# include <rdsn/tool_api.h>
+# include <dsn/tool_api.h>
 
-namespace rdsn {
+namespace dsn {
     namespace tools {
 
         class wrong_perf_counter : public perf_counter

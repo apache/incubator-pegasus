@@ -21,10 +21,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-# include <rdsn/internal/service_app.h>
-# include <rdsn/service_api.h>
+# include <dsn/internal/service_app.h>
+# include <dsn/service_api.h>
 
-namespace rdsn { namespace service {
+namespace dsn { namespace service {
 
 service_app::service_app(service_app_spec* s, configuration_ptr c)
 {
@@ -60,7 +60,7 @@ service_app::~service_app(void)
 
 void service_app::set_address(const end_point& addr)
 {
-    rassert (_address.port == 0 || _address.port == addr.port, "invalid service address");
+    dassert (_address.port == 0 || _address.port == addr.port, "invalid service address");
     _address = addr;
 }
 
@@ -78,4 +78,4 @@ service_app* service_apps::get(const char* name) const
         return nullptr;
 }
 
-}} // end namespace rdsn::service_api
+}} // end namespace dsn::service_api

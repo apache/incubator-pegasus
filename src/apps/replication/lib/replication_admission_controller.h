@@ -23,11 +23,11 @@
  */
 #pragma once
 
-#include <rdsn/tool_api.h>
-using namespace rdsn::service;
+#include <dsn/tool_api.h>
+using namespace dsn::service;
 #include "codes.h"
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
 class replication_admission_controller :
     public admission_controller

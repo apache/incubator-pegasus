@@ -22,9 +22,9 @@
  * THE SOFTWARE.
  */
 #include "replication_common.h"
-#include <rdsn/internal/configuration.h>
+#include <dsn/internal/configuration.h>
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
 replication_options::replication_options()
 {
@@ -194,8 +194,8 @@ void replication_options::initialize(configuration_ptr config)
 
 void replication_options::sanity_check()
 {
-    rassert (GroupCheckTimeoutMs * GroupCheckMaxSendCount < GroupCheckIntervalMs, "");
-    rassert(StalenessForStartPrepareForPotentialSecondary >= StalenessForCommit, "");
+    dassert (GroupCheckTimeoutMs * GroupCheckMaxSendCount < GroupCheckIntervalMs, "");
+    dassert(StalenessForStartPrepareForPotentialSecondary >= StalenessForCommit, "");
 }
    
 /*static*/ bool ReplicaHelper::RemoveNode(const end_point& node, __inout_param std::vector<end_point>& nodeList)

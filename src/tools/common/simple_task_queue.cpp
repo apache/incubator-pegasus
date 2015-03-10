@@ -27,7 +27,7 @@
 
 # define __TITLE__ "task.queue.simple"
 
-namespace rdsn {
+namespace dsn {
     namespace tools{
         simple_task_queue::simple_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider)
             : task_queue(pool, index, inner_provider), _queue("")
@@ -50,7 +50,7 @@ namespace rdsn {
                         this->enqueue((task_ptr&)task);
                     else
                     {
-                        rfatal("delayed execution failed for task %s, err = %u",
+                        dfatal("delayed execution failed for task %s, err = %u",
                             task->spec().name, ec.value());
                     }
                 });

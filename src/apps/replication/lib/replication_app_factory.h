@@ -26,9 +26,9 @@
 #include "replication_app_base.h"
 
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
-class replication_app_factory : public rdsn::utils::singleton<replication_app_factory>
+class replication_app_factory : public dsn::utils::singleton<replication_app_factory>
 {
 public:
     typedef std::function<replication_app_base* (replica* replica, configuration_ptr config)> replica_factory;

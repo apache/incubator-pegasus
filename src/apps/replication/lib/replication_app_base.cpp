@@ -28,7 +28,7 @@
 
 #define __TITLE__ "TwoPhaseCommit"
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
 replication_app_base::replication_app_base(replica* replica, const replication_app_config* config)
 {
@@ -38,11 +38,11 @@ replication_app_base::replication_app_base(replica* replica, const replication_a
 
 int replication_app_base::WriteInternal(mutation_ptr& mu, bool ackClient)
 {
-    rassert (mu->data.header.decree == last_committed_decree() + 1, "");
+    dassert (mu->data.header.decree == last_committed_decree() + 1, "");
 
     int err = write(mu->client_requests, mu->data.header.decree, ackClient);
 
-    //rassert(mu->data.header.decree == last_committed_decree(), "");
+    //dassert(mu->data.header.decree == last_committed_decree(), "");
 
     return err;
 }

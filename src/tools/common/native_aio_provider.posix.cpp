@@ -32,7 +32,7 @@
 
 #define __TITLE__ "aio.provider.posix"
 
-namespace rdsn {
+namespace dsn {
     namespace tools {
 
         native_posix_aio_provider::native_posix_aio_provider(disk_engine* disk, aio_provider* inner_provider)
@@ -116,13 +116,13 @@ namespace rdsn {
                 r = aio_write(&aio->cb);
                 break;
             default:
-                rassert(false, "unknown aio type %u", (int)aio->type);
+                dassert(false, "unknown aio type %u", (int)aio->type);
                 break;
             }
 
             if (r < 0)
             {
-                rerror("file op faile, err = %d", r);
+                derror("file op faile, err = %d", r);
             }
 
             if (async)
@@ -140,5 +140,5 @@ namespace rdsn {
         }
 
     }
-} // end namespace rdsn::tools
+} // end namespace dsn::tools
 #endif

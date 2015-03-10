@@ -25,11 +25,11 @@
     <ClCompile Include="tracer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\inc\rdsn\toollet\fault_injector.h" />
-    <ClInclude Include="..\..\..\inc\rdsn\toollet\profiler.h" />
-    <ClInclude Include="..\..\..\inc\rdsn\toollet\tracer.h" />
-    <ClInclude Include="..\..\..\inc\rdsn\tool\nativerun.h" />
-    <ClInclude Include="..\..\..\inc\rdsn\tool\providers.common.h" />
+    <ClInclude Include="..\..\..\inc\dsn\toollet\fault_injector.h" />
+    <ClInclude Include="..\..\..\inc\dsn\toollet\profiler.h" />
+    <ClInclude Include="..\..\..\inc\dsn\toollet\tracer.h" />
+    <ClInclude Include="..\..\..\inc\dsn\tool\nativerun.h" />
+    <ClInclude Include="..\..\..\inc\dsn\tool\providers.common.h" />
     <ClInclude Include="native_aio_provider.posix.h" />
     <ClInclude Include="shared_io_service.h" />
     <ClInclude Include="native_aio_provider.win.h" />

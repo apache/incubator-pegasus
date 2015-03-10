@@ -28,23 +28,23 @@
 
 #define __TITLE__ "failure_detector"
 
-namespace rdsn { 
+namespace dsn { 
 namespace fd {
-    inline void marshall(::rdsn::utils::binary_writer& writer, const failure_detector::beacon_msg& msg, uint16_t pos = 0xffff)
+    inline void marshall(::dsn::utils::binary_writer& writer, const failure_detector::beacon_msg& msg, uint16_t pos = 0xffff)
     {
         marshall(writer, msg.time, pos);
         marshall(writer, msg.from, pos);
         marshall(writer, msg.to, pos);
     }
 
-    inline void unmarshall(::rdsn::utils::binary_reader& reader, __out_param failure_detector::beacon_msg& msg)
+    inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param failure_detector::beacon_msg& msg)
     {
         unmarshall(reader, msg.time);
         unmarshall(reader, msg.from);
         unmarshall(reader, msg.to);
     }
 
-    inline void marshall(::rdsn::utils::binary_writer& writer, const failure_detector::beacon_ack& msg, uint16_t pos = 0xffff)
+    inline void marshall(::dsn::utils::binary_writer& writer, const failure_detector::beacon_ack& msg, uint16_t pos = 0xffff)
     {
         marshall(writer, msg.time, pos);
         marshall(writer, msg.is_master, pos);
@@ -52,7 +52,7 @@ namespace fd {
         marshall(writer, msg.allowed, pos);
     }
 
-    inline void unmarshall(::rdsn::utils::binary_reader& reader, __out_param failure_detector::beacon_ack& msg)
+    inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param failure_detector::beacon_ack& msg)
     {
         unmarshall(reader, msg.time);
         unmarshall(reader, msg.is_master);
@@ -77,7 +77,7 @@ bool failure_detector::uninit()
     if ( _is_started )
     {
         // did not stop, can not uninit
-        rerror("can not uninit failure detector without stopping it first");
+        derror("can not uninit failure detector without stopping it first");
         return false;
     }
 
@@ -98,7 +98,7 @@ void failure_detector::on_configuration_changed(
 {
     _lock.lock();
 
-    rinfo(
+    dinfo(
         "failure_detector configuration HotChanged, CheckInterval=%u->%u , BeaconInterval=%u->%u , LeaseInterval=%u->%u , GraceInterval=%u->%u",
         _check_interval_milliseconds, check_interval_seconds, _beacon_interval_milliseconds, beacon_interval_seconds, _lease_milliseconds, lease_seconds, _grace_milliseconds, grace_seconds);
 
@@ -122,7 +122,7 @@ void failure_detector::register_master(const end_point& target)
     auto ret = _masters.insert(std::make_pair(target, record));
     if ( ret.second )
     {
-        rinfo(
+        dinfo(
             "register_rpc_handler master successfully, target machine ip [%u], port[%u]",
             target.ip, (int)target.port);
     }
@@ -130,7 +130,7 @@ void failure_detector::register_master(const end_point& target)
     {
         // active the beacon again in case previously local node is not in target's allow list
         ret.first->second.rejected = false;
-        rinfo(       
+        dinfo(       
             "Master already registered, for target machine: target machine ip [%u], port[%u]",
             target.ip, (int)target.port);
     }
@@ -149,7 +149,7 @@ bool failure_detector::switch_master(const end_point& from, const end_point& to)
         {
             if (it2 != _masters.end())
             {
-                rinfo(       
+                dinfo(       
                     "Master switch, switch master from %s:%u to %s:%u failed as both are already registered",
                     from.name.c_str(), (int)from.port,
                     to.name.c_str(), (int)to.port
@@ -162,7 +162,7 @@ bool failure_detector::switch_master(const end_point& from, const end_point& to)
             _masters.insert(std::make_pair(to, it->second));
             _masters.erase(from);
 
-            rinfo(       
+            dinfo(       
                 "Master switch, switch master from %s:%u to %s:%u succeeded",
                 from.name.c_str(), (int)from.port,
                 to.name.c_str(), (int)to.port
@@ -170,7 +170,7 @@ bool failure_detector::switch_master(const end_point& from, const end_point& to)
         }
         else
         {
-            rinfo(       
+            dinfo(       
                 "Master switch, switch master from %s:%u to %s:%u failed as the former has not been registered yet",
                 from.name.c_str(), (int)from.port,
                 to.name.c_str(), (int)to.port
@@ -223,7 +223,7 @@ bool failure_detector::is_time_greater_than(uint64_t ts, uint64_t base)
 
 void failure_detector::report(const end_point& node, bool is_master, bool is_connected)
 {
-    rdebug( 
+    ddebug( 
         "%s %s:%hu %sconnected", is_master ? "Master":"worker", node.name.c_str(), node.port, is_connected ? "" : "dis");
 
     printf ("%s %s:%hu %sconnected\n", is_master ? "Master":"worker", node.name.c_str(), node.port, is_connected ? "" : "dis");    
@@ -336,7 +336,7 @@ void failure_detector::on_beacon(const beacon_msg& beacon, __out_param beacon_ac
     {
         if (_use_allow_list && _allow_list.find(node) == _allow_list.end())
         {
-            rdebug("Client %s:%hu is rejected", node.name.c_str(), node.port);
+            ddebug("Client %s:%hu is rejected", node.name.c_str(), node.port);
             ack.allowed = false;
             return;
         }
@@ -346,7 +346,7 @@ void failure_detector::on_beacon(const beacon_msg& beacon, __out_param beacon_ac
         _workers.insert(std::make_pair(node, record));
         
         itr = _workers.find(node);
-        rassert( itr != _workers.end(), "cannot find the worker" );
+        dassert( itr != _workers.end(), "cannot find the worker" );
 
         itr->second.is_alive = true;
 
@@ -382,7 +382,7 @@ void failure_detector::on_beacon_ack(error_code err, boost::shared_ptr<beacon_ms
 
     if ( itr == _masters.end() )
     {
-        rwarn("Failure in process beacon ack in liveness monitor, received beacon ack without corresponding beacon record, remote node name[%s], local node name[%s]",
+        dwarn("Failure in process beacon ack in liveness monitor, received beacon ack without corresponding beacon record, remote node name[%s], local node name[%s]",
             node.name.c_str(), address().name.c_str());
 
         return;
@@ -391,7 +391,7 @@ void failure_detector::on_beacon_ack(error_code err, boost::shared_ptr<beacon_ms
     master_record& record = itr->second;
     if (!ack->allowed)
     {
-        rdebug( "Server %s:%hu rejected me as i'm not in its allow list, stop sending beacon message", node.name.c_str(), node.port);
+        ddebug( "Server %s:%hu rejected me as i'm not in its allow list, stop sending beacon message", node.name.c_str(), node.port);
         record.rejected = true;
         return;
     }
@@ -432,7 +432,7 @@ bool failure_detector::unregister_master(const end_point & node)
         ret = true;
     }
 
-    rinfo("remove send record sucessfully, removed node [%s], removed entry count [%u]",
+    dinfo("remove send record sucessfully, removed node [%s], removed entry count [%u]",
         node.name.c_str(), (uint32_t)count);
     
     return ret;
@@ -460,13 +460,13 @@ void failure_detector::register_worker( const end_point& target, bool is_connect
     auto ret = _workers.insert(std::make_pair(target, record));
     if ( ret.second )
     {
-        rinfo(
+        dinfo(
             "register_rpc_handler worker successfully", "target machine ip [%u], port[%u]",
             target.ip, (int)target.port);
     }
     else
     {
-        rinfo(       
+        dinfo(       
             "worker already registered", "for target machine: target machine ip [%u], port[%u]",
             target.ip, (int)target.port);
     }
@@ -489,7 +489,7 @@ bool failure_detector::unregister_worker(const end_point& node)
         ret = true;
     }
 
-    rinfo("remove recv record sucessfully, removed node [%s], removed entry count [%u]",
+    dinfo("remove recv record sucessfully, removed node [%s], removed entry count [%u]",
         node.name.c_str(), (uint32_t)count);
     return ret;
 }

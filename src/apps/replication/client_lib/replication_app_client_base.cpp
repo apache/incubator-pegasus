@@ -24,9 +24,9 @@
 #include "replication_app_client_base.h"
 #include "rpc_replicated.h"
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
-    using namespace ::rdsn::service;
+    using namespace ::dsn::service;
 
 class RepClientMessage : public message
 {
@@ -81,7 +81,7 @@ replication_app_client_base::replication_app_client_base(const std::vector<end_p
                                                    int32_t coordinatorRpcCallTimeoutMillisecondsPerSend,
                                                    int32_t coordinatorRpcCallMaxSendCount,
                                                    const end_point* pLocalAddr /*= nullptr*/)
-: rdsn::service::serviceletex<replication_app_client_base>(std::string(appServiceName).append(".client").c_str())
+: dsn::service::serviceletex<replication_app_client_base>(std::string(appServiceName).append(".client").c_str())
 {
     _app_name = std::string(appServiceName);   
     _meta_servers = meta_servers;
@@ -107,7 +107,7 @@ void replication_app_client_base::clear_all_pending_tasks()
     {
         if (it->second.first != nullptr) it->second.first->cancel(false);
 
-        dbg_rassert (it->second.second != nullptr);
+        dbg_dassert (it->second.second != nullptr);
         for (auto it2 = it->second.second->begin(); it2 != it->second.second->end(); it2++)
         {
             it2->timeout_tsk->cancel(false);
@@ -159,11 +159,11 @@ void replication_app_client_base::enqueue_pending_list(int pidx, message_ptr& us
     pm.caller_tsk = caller_tsk;
     
     {
-    rdsn::service::zauto_lock l(_lock);
+    dsn::service::zauto_lock l(_lock);
     auto it = _pending_messages.find(pidx);
     if (it != _pending_messages.end())
     {
-        dbg_rassert (it->second.second != nullptr);
+        dbg_dassert (it->second.second != nullptr);
         it->second.second->push_back(pm);
     }
     else
@@ -331,7 +331,7 @@ error_code replication_app_client_base::get_address(int pidx, bool isWrite, __ou
             addr = get_read_address(semantic, config);
         }
 
-        if (rdsn::end_point::INVALID == addr)
+        if (dsn::end_point::INVALID == addr)
         {
             err = ERR_IO_PENDING;
         }
@@ -341,7 +341,7 @@ error_code replication_app_client_base::get_address(int pidx, bool isWrite, __ou
 
 void replication_app_client_base::query_partition_configuration(int pidx)
 {            
-    rdsn::service::zauto_lock l(_lock);    
+    dsn::service::zauto_lock l(_lock);    
 
     auto it = _pending_messages.find(pidx);
     if (it != _pending_messages.end())
@@ -396,7 +396,7 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
             {
                 if (_app_id != -1 && _app_id != resp.partitions[0].gpid.tableId)
                 {
-                    rassert(false, "App id is changed (mostly the given app id is incorrect), local Vs remote: %u vs %u ", _app_id, resp.partitions[0].gpid.tableId);
+                    dassert(false, "App id is changed (mostly the given app id is incorrect), local Vs remote: %u vs %u ", _app_id, resp.partitions[0].gpid.tableId);
                 }
 
                 _app_id = resp.partitions[0].gpid.tableId;
@@ -461,7 +461,7 @@ end_point replication_app_client_base::get_read_address(read_semantic_t semantic
     {
         bool hasPrimary = false;
         int N = (int)config.secondaries.size();
-        if (config.primary != rdsn::end_point::INVALID)
+        if (config.primary != dsn::end_point::INVALID)
         {
             N++;
             hasPrimary = true;

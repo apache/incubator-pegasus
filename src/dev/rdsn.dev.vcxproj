@@ -11,11 +11,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\inc\rdsn\internal\file_server.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\serialization.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\service_base.h" />
-    <ClInclude Include="..\..\inc\rdsn\servicelet.h" />
-    <ClInclude Include="..\..\inc\rdsn\serviceletex.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\file_server.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\serialization.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\service_base.h" />
+    <ClInclude Include="..\..\inc\dsn\servicelet.h" />
+    <ClInclude Include="..\..\inc\dsn\serviceletex.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="file_server.cpp" />
@@ -24,8 +24,8 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{F3913C07-F781-413B-91A8-259ADD82C0B1}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>rdsnnet</RootNamespace>
-    <ProjectName>rdsn.dev</ProjectName>
+    <RootNamespace>dsnnet</RootNamespace>
+    <ProjectName>dsn.dev</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

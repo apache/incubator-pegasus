@@ -23,14 +23,14 @@
  */
 # pragma once
 
-# include <rdsn/serviceletex.h>
+# include <dsn/serviceletex.h>
 # include <string>
 # include "codes.h"
 # include "replication_ds.h"
 
-using namespace ::rdsn::service;
+using namespace ::dsn::service;
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
 typedef int32_t app_id;
 typedef int32_t PartitionID;

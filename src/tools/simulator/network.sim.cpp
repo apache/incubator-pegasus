@@ -22,13 +22,13 @@
  * THE SOFTWARE.
  */
 #include <boost/asio.hpp>
-#include <rdsn/service_api.h>
-#include <rdsn/internal/singleton_store.h>
+#include <dsn/service_api.h>
+#include <dsn/internal/singleton_store.h>
 #include "network.sim.h" 
 
 #define __TITLE__ "net.provider.sim"
 
-namespace rdsn { namespace tools {
+namespace dsn { namespace tools {
 
     static utils::singleton_store<end_point, sim_network_provider*> s_switch; // multiple machines connect to the same switch
 
@@ -46,7 +46,7 @@ namespace rdsn { namespace tools {
         sim_network_provider* rnet = nullptr;
         if (!s_switch.get(msg->header().to_address, rnet))
         {
-            rwarn("cannot find destination node %s:%u in simulator", 
+            dwarn("cannot find destination node %s:%u in simulator", 
                 msg->header().to_address.name.c_str(), 
                 (int)msg->header().to_address.port
                 );
@@ -77,7 +77,7 @@ namespace rdsn { namespace tools {
         sim_network_provider* rnet = nullptr;
         if (!s_switch.get(reply_msg->header().to_address, rnet))
         {
-            rwarn("cannot find destination node %s:%u in simulator",
+            dwarn("cannot find destination node %s:%u in simulator",
                 reply_msg->header().to_address.name.c_str(),
                 (int)reply_msg->header().to_address.port
                 );
@@ -95,7 +95,7 @@ namespace rdsn { namespace tools {
         }
         else
         {
-            rwarn("cannot find origination client for %s:%u @ %s:%u in simulator",
+            dwarn("cannot find origination client for %s:%u @ %s:%u in simulator",
                 reply_msg->header().from_address.name.c_str(),
                 (int)reply_msg->header().from_address.port,
                 reply_msg->header().to_address.name.c_str(),
@@ -113,8 +113,8 @@ namespace rdsn { namespace tools {
         auto config = tool_app::get_service_spec().config;
         if (config != NULL)
         {
-            _minMessageDelayMicroseconds = config->get_value<uint32_t>("rdsn.simulation", "MinMessageDelayMicroseconds", _minMessageDelayMicroseconds);
-            _maxMessageDelayMicroseconds = config->get_value<uint32_t>("rdsn.simulation", "MaxMessageDelayMicroseconds", _maxMessageDelayMicroseconds);
+            _minMessageDelayMicroseconds = config->get_value<uint32_t>("dsn.simulation", "MinMessageDelayMicroseconds", _minMessageDelayMicroseconds);
+            _maxMessageDelayMicroseconds = config->get_value<uint32_t>("dsn.simulation", "MaxMessageDelayMicroseconds", _maxMessageDelayMicroseconds);
         }
     }
 
@@ -130,6 +130,6 @@ namespace rdsn { namespace tools {
 
     uint32_t sim_network_provider::net_delay_milliseconds() const
     {
-        return (int)rdsn::service::env::random32(_minMessageDelayMicroseconds, _maxMessageDelayMicroseconds) / 1000;
+        return (int)dsn::service::env::random32(_minMessageDelayMicroseconds, _maxMessageDelayMicroseconds) / 1000;
     }    
 }} // end namespace

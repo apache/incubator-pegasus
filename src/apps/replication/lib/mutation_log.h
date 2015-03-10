@@ -26,7 +26,7 @@
 #include "replication_common.h"
 #include "mutation.h"
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
 #define INVALID_FILENUMBER (0)
 #define MAX_LOG_FILESIZE (32)
@@ -149,7 +149,7 @@ public:
     //
     // read routines
     //
-    int read_next_log_entry(__out_param rdsn::utils::blob& bb);
+    int read_next_log_entry(__out_param dsn::utils::blob& bb);
 
     //
     // write routines

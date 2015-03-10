@@ -25,9 +25,9 @@
 
 #include "replication_common.h"
 
-using namespace rdsn;
-using namespace rdsn::service;
-using namespace rdsn::replication;
+using namespace dsn;
+using namespace dsn::service;
+using namespace dsn::replication;
 
 class server_state;
 class load_balancer;

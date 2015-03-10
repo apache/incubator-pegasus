@@ -21,13 +21,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-# include <rdsn/tool_api.h>
-# include <rdsn/internal/service_app.h>
+# include <dsn/tool_api.h>
+# include <dsn/internal/service_app.h>
 # include "service_engine.h"
-# include <rdsn/internal/factory_store.h>
-# include <rdsn/internal/singleton_store.h>
+# include <dsn/internal/factory_store.h>
+# include <dsn/internal/singleton_store.h>
 
-namespace rdsn { namespace tools {
+namespace dsn { namespace tools {
 
 tool_base::tool_base(const char* name, configuration_ptr c)
 {
@@ -60,7 +60,7 @@ public:
         if (_start)
         {
             auto err = _app->start(_app->arg_count(), _app->args());
-            rassert(err == 0, "start app failed, err = %s", err.to_string());
+            dassert(err == 0, "start app failed, err = %s", err.to_string());
         }
         else
             _app->stop();
@@ -109,67 +109,67 @@ namespace internal_use_only
 {
     bool register_toollet(const char* name, toollet_factory f, int type)
     {
-        return rdsn::utils::factory_store<toollet>::register_factory(name, f, type);
+        return dsn::utils::factory_store<toollet>::register_factory(name, f, type);
     }
 
     bool register_tool(const char* name, tool_app_factory f, int type)
     {
-        return rdsn::utils::factory_store<tool_app>::register_factory(name, f, type);
+        return dsn::utils::factory_store<tool_app>::register_factory(name, f, type);
     }
 
     bool register_component_provider(const char* name, task_queue_factory f, int type)
     {
-        return rdsn::utils::factory_store<task_queue>::register_factory(name, f, type);
+        return dsn::utils::factory_store<task_queue>::register_factory(name, f, type);
     }
 
     bool register_component_provider(const char* name, task_worker_factory f, int type)
     {
-        return rdsn::utils::factory_store<task_worker>::register_factory(name, f, type);
+        return dsn::utils::factory_store<task_worker>::register_factory(name, f, type);
     }
 
     bool register_component_provider(const char* name, admission_controller_factory f, int type)
     {
-        return rdsn::utils::factory_store<admission_controller>::register_factory(name, f, type);
+        return dsn::utils::factory_store<admission_controller>::register_factory(name, f, type);
     }
 
     bool register_component_provider(const char* name, lock_factory f, int type)
     {
-        return rdsn::utils::factory_store<lock_provider>::register_factory(name, f, type);
+        return dsn::utils::factory_store<lock_provider>::register_factory(name, f, type);
     }
 
     bool register_component_provider(const char* name, read_write_lock_factory f, int type)
     {
-        return rdsn::utils::factory_store<rwlock_provider>::register_factory(name, f, type);
+        return dsn::utils::factory_store<rwlock_provider>::register_factory(name, f, type);
     }
 
     bool register_component_provider(const char* name, semaphore_factory f, int type)
     {
-        return rdsn::utils::factory_store<semaphore_provider>::register_factory(name, f, type);
+        return dsn::utils::factory_store<semaphore_provider>::register_factory(name, f, type);
     }
 
     bool register_component_provider(const char* name, network_factory f, int type)
     {
-        return rdsn::utils::factory_store<network>::register_factory(name, f, type);
+        return dsn::utils::factory_store<network>::register_factory(name, f, type);
     }
 
     bool register_component_provider(const char* name, aio_factory f, int type)
     {
-        return rdsn::utils::factory_store<aio_provider>::register_factory(name, f, type);
+        return dsn::utils::factory_store<aio_provider>::register_factory(name, f, type);
     }
 
     bool register_component_provider(const char* name, env_factory f, int type)
     {
-        return rdsn::utils::factory_store<env_provider>::register_factory(name, f, type);
+        return dsn::utils::factory_store<env_provider>::register_factory(name, f, type);
     }
 
     bool register_component_provider(const char* name, perf_counter_factory f, int type)
     {
-        return rdsn::utils::factory_store<perf_counter>::register_factory(name, f, type);
+        return dsn::utils::factory_store<perf_counter>::register_factory(name, f, type);
     }
 
     bool register_component_provider(const char* name, logging_factory f, int type)
     {
-        return rdsn::utils::factory_store<logging_provider>::register_factory(name, f, type);
+        return dsn::utils::factory_store<logging_provider>::register_factory(name, f, type);
     }
     
     toollet* get_toollet(const char* name, int type, configuration_ptr config)
@@ -185,4 +185,4 @@ namespace internal_use_only
         }
     }
 }
-}} // end namespace rdsn::tool_api
+}} // end namespace dsn::tool_api

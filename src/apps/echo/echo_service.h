@@ -23,15 +23,15 @@
  */
 # pragma once
 
-# include <rdsn/serviceletex.h>
+# include <dsn/serviceletex.h>
 # include <iostream>
 
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_TEST)
-DEFINE_TASK_CODE(LPC_ECHO_TIMER, ::rdsn::TASK_PRIORITY_HIGH, THREAD_POOL_TEST)
-DEFINE_TASK_CODE_RPC(RPC_ECHO, ::rdsn::TASK_PRIORITY_HIGH, THREAD_POOL_TEST)
+DEFINE_TASK_CODE(LPC_ECHO_TIMER, ::dsn::TASK_PRIORITY_HIGH, THREAD_POOL_TEST)
+DEFINE_TASK_CODE_RPC(RPC_ECHO, ::dsn::TASK_PRIORITY_HIGH, THREAD_POOL_TEST)
 
-using namespace rdsn;
-using namespace rdsn::service;
+using namespace dsn;
+using namespace dsn::service;
 
 class echo_server : public serviceletex<echo_server>
 {
@@ -99,7 +99,7 @@ public:
         {
             char buf[120];
             sprintf(buf, "%u", ++_seq);
-            boost::shared_ptr<std::string> req(new std::string("hi, rdsn "));
+            boost::shared_ptr<std::string> req(new std::string("hi, dsn "));
             *req = req->append(buf);
             req->resize(_message_size);
             rpc_typed(_server, RPC_ECHO, req, &echo_client::on_echo_reply, 0, 3000);

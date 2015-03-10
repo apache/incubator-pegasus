@@ -21,10 +21,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include <rdsn/tool/nativerun.h>
-#include <rdsn/tool/providers.common.h>
+#include <dsn/tool/nativerun.h>
+#include <dsn/tool/providers.common.h>
 
-namespace rdsn {
+namespace dsn {
     namespace tools {
 
         void nativerun::install(service_spec& spec)
@@ -33,42 +33,42 @@ namespace rdsn {
             
             if (spec.aio_factory_name == "")
             {
-                spec.aio_factory_name = ("rdsn::tools::native_aio_provider");
+                spec.aio_factory_name = ("dsn::tools::native_aio_provider");
             }
                 
             if (spec.env_factory_name == "")
-                spec.env_factory_name = ("rdsn::env_provider");
+                spec.env_factory_name = ("dsn::env_provider");
 
             if (spec.network_factory_names[RPC_CHANNEL_TCP] == "")
-                spec.network_factory_names[RPC_CHANNEL_TCP] = ("rdsn::tools::asio_network_provider");
+                spec.network_factory_names[RPC_CHANNEL_TCP] = ("dsn::tools::asio_network_provider");
 
             if (spec.network_factory_names[RPC_CHANNEL_UDP] == "")
-                spec.network_factory_names[RPC_CHANNEL_UDP] = ("rdsn::tools::asio_network_provider");
+                spec.network_factory_names[RPC_CHANNEL_UDP] = ("dsn::tools::asio_network_provider");
 
             if (spec.perf_counter_factory_name == "")
-                spec.perf_counter_factory_name = "rdsn::tools::wrong_perf_counter";
+                spec.perf_counter_factory_name = "dsn::tools::wrong_perf_counter";
 
             if (spec.logging_factory_name == "")
-                spec.logging_factory_name = "rdsn::tools::screen_logger";
+                spec.logging_factory_name = "dsn::tools::screen_logger";
 
             if (spec.lock_factory_name == "")
-                spec.lock_factory_name = ("rdsn::tools::std_lock_provider");
+                spec.lock_factory_name = ("dsn::tools::std_lock_provider");
 
             if (spec.rwlock_factory_name == "")
-                spec.rwlock_factory_name = ("rdsn::tools::std_rwlock_provider");
+                spec.rwlock_factory_name = ("dsn::tools::std_rwlock_provider");
 
             if (spec.semaphore_factory_name == "")
-                spec.semaphore_factory_name = ("rdsn::tools::std_semaphore_provider");
+                spec.semaphore_factory_name = ("dsn::tools::std_semaphore_provider");
 
             for (auto it = spec.threadpool_specs.begin(); it != spec.threadpool_specs.end(); it++)
             {
                 threadpool_spec& tspec = *it;
 
                 if (tspec.worker_factory_name == "")
-                    tspec.worker_factory_name = ("rdsn::task_worker");
+                    tspec.worker_factory_name = ("dsn::task_worker");
 
                 if (tspec.queue_factory_name == "")
-                    tspec.queue_factory_name = ("rdsn::tools::simple_task_queue");
+                    tspec.queue_factory_name = ("dsn::tools::simple_task_queue");
             }
 
         }
@@ -79,4 +79,4 @@ namespace rdsn {
         }
 
     }
-} // end namespace rdsn::tools
+} // end namespace dsn::tools

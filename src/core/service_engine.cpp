@@ -25,17 +25,17 @@
 # include "task_engine.h"
 # include "disk_engine.h"
 # include "rpc_engine.h"
-# include <rdsn/internal/env_provider.h>
-# include <rdsn/internal/perf_counters.h>
-# include <rdsn/internal/factory_store.h>
-# include <rdsn/internal/logging.h>
-# include <rdsn/tool_api.h>
+# include <dsn/internal/env_provider.h>
+# include <dsn/internal/perf_counters.h>
+# include <dsn/internal/factory_store.h>
+# include <dsn/internal/logging.h>
+# include <dsn/tool_api.h>
 
 #define __TITLE__ "service_engine"
 
-using namespace rdsn::utils;
+using namespace dsn::utils;
 
-namespace rdsn {
+namespace dsn {
 
 service_node::service_node(void)
 {
@@ -53,7 +53,7 @@ error_code service_node::start(const service_spec& spec)
     // init task engine
     _computation = new task_engine(this);
     _computation->start(spec.threadpool_specs);    
-    rassert (_computation->is_started(), "task engine must be started at this point");
+    dassert (_computation->is_started(), "task engine must be started at this point");
 
     // init disk engine
     _disk = new disk_engine(this);
@@ -139,7 +139,7 @@ service_node* service_engine::start_node(uint16_t port)
 
         auto node = new service_node();
         error_code err = node->start(spec);
-        rassert (err == 0, "service node start failed, err = %s", err.to_string());
+        dassert (err == 0, "service node start failed, err = %s", err.to_string());
         _engines[node->rpc()->address().port] = node;
 
         return node;

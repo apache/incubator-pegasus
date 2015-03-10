@@ -21,15 +21,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-# include <rdsn/internal/global_config.h>
+# include <dsn/internal/global_config.h>
 # include <thread>
-# include <rdsn/internal/logging.h>
-# include <rdsn/internal/task_code.h>
-# include <rdsn/internal/network.h>
+# include <dsn/internal/logging.h>
+# include <dsn/internal/task_code.h>
+# include <dsn/internal/network.h>
 
 #define __TITLE__ "ConfigFile"
 
-namespace rdsn {
+namespace dsn {
 
 threadpool_spec::threadpool_spec(const threadpool_spec& source)
     : pool_code(source.pool_code)
@@ -90,7 +90,7 @@ bool threadpool_spec::init(configuration_ptr& config, __out_param std::vector<th
     defaultSpec.worker_priority = enum_from_string(config->get_string_value("threadpool.default", "worker_priority", "THREAD_xPRIORITY_NORMAL").c_str(), THREAD_xPRIORITY_INVALID);
     if (defaultSpec.worker_priority == THREAD_xPRIORITY_INVALID)
     {
-        rlog(log_level_ERROR, __TITLE__,  "invalid worker priority in [threadpool.default]");
+        dlog(log_level_ERROR, __TITLE__,  "invalid worker priority in [threadpool.default]");
         return false;
     }
     defaultSpec.worker_share_core = config->get_value<bool>("threadpool.default", "worker_share_core", true);
@@ -243,7 +243,7 @@ bool service_spec::init(configuration_ptr c)
         {
             service_app_spec app;
             app.init((*it).c_str(), config);
-            rassert(app.port == 0 || app.port > 1024, "specified port is either 0 (no listen port) or greater than 1024");
+            dassert(app.port == 0 || app.port > 1024, "specified port is either 0 (no listen port) or greater than 1024");
 
             int lport = app.port;
             int count = config->get_value<int>((*it).c_str(), "count", 1);
@@ -257,7 +257,7 @@ bool service_spec::init(configuration_ptr c)
                 if (lport == 0)
                 {
                     app.port = ++network::max_faked_port_for_client_only_node;
-                    rassert(app.port <= 1024, "faked port for client nodes only must not exceed 1024");
+                    dassert(app.port <= 1024, "faked port for client nodes only must not exceed 1024");
                     app_specs.push_back(app);
                 }
                 else
@@ -273,4 +273,4 @@ bool service_spec::init(configuration_ptr c)
 }
 
 
-} // end namespace rdsn
+} // end namespace dsn

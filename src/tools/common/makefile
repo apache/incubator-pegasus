@@ -1,3 +1,3 @@
-TARGET=librdsn.tools.common.a
+TARGET=libdsn.tools.common.a
 TYPE = LIB
 include ../../../scripts/makefile.common

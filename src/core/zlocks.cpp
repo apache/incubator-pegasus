@@ -21,13 +21,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-# include <rdsn/internal/zlocks.h>
+# include <dsn/internal/zlocks.h>
 # include "service_engine.h"
-# include <rdsn/internal/factory_store.h>
+# include <dsn/internal/factory_store.h>
 
-using namespace rdsn::utils;
+using namespace dsn::utils;
 
-namespace rdsn { namespace service {
+namespace dsn { namespace service {
 
     namespace lock_checker 
     {
@@ -38,7 +38,7 @@ namespace rdsn { namespace service {
         {
             if (zlock_exclusive_count + zlock_shared_count > 0)
             {
-                rassert(false, "wait inside locks may lead to deadlocks - current thread owns %u exclusive locks and %u shared locks now.",
+                dassert(false, "wait inside locks may lead to deadlocks - current thread owns %u exclusive locks and %u shared locks now.",
                     zlock_exclusive_count, zlock_shared_count
                     );
             }
@@ -48,7 +48,7 @@ namespace rdsn { namespace service {
         {
             if (zlock_exclusive_count + zlock_shared_count > 0)
             {
-                rassert(false, "locks should not be hold at this point - current thread owns %u exclusive locks and %u shared locks now.",
+                dassert(false, "locks should not be hold at this point - current thread owns %u exclusive locks and %u shared locks now.",
                     zlock_exclusive_count, zlock_shared_count
                     );
             }
@@ -176,4 +176,4 @@ bool zevent::wait(int timeout_milliseconds)
     }
 }
 
-}} // end namespace rdsn::service
+}} // end namespace dsn::service

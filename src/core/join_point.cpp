@@ -21,10 +21,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-# include <rdsn/internal/join_point.h>
-# include <rdsn/internal/logging.h>
+# include <dsn/internal/join_point.h>
+# include <dsn/internal/logging.h>
 
-namespace rdsn
+namespace dsn
 {
 
 join_point_base::join_point_base(const char* name)
@@ -65,7 +65,7 @@ bool join_point_base::put_before(const char* base, void* fn, const char* name, b
     auto e0 = get_by_name(name);
     if (e0 == nullptr)
     {
-        rassert(false, "cannot find advice with name '%s' in '%s'", name, _name.c_str());
+        dassert(false, "cannot find advice with name '%s' in '%s'", name, _name.c_str());
         return false;
     }
 
@@ -85,7 +85,7 @@ bool join_point_base::put_after(const char* base, void* fn, const char* name, bo
     auto e0 = get_by_name(name);
     if (e0 == nullptr)
     {
-        rassert(false, "cannot find advice with name '%s' in '%s'", name, _name.c_str());
+        dassert(false, "cannot find advice with name '%s' in '%s'", name, _name.c_str());
         return false;
     }
 
@@ -105,7 +105,7 @@ bool join_point_base::put_replace(const char* base, void* fn, const char* name)
     auto e0 = get_by_name(name);
     if (e0 == nullptr)
     {
-        rassert(false, "cannot find advice with name '%s' in '%s'", name, _name.c_str());
+        dassert(false, "cannot find advice with name '%s' in '%s'", name, _name.c_str());
         return false;
     }
     else
@@ -121,7 +121,7 @@ bool join_point_base::remove(const char* name)
     auto e0 = get_by_name(name);
     if (e0 == nullptr)
     {
-        rassert(false, "cannot find advice with name '%s' in '%s'", name, _name.c_str());
+        dassert(false, "cannot find advice with name '%s' in '%s'", name, _name.c_str());
         return false;
     }
 
@@ -155,4 +155,4 @@ join_point_base::advice_entry* join_point_base::get_by_name(const char* name)
     return nullptr;
 }
 
-} // end namespace rdsn
+} // end namespace dsn

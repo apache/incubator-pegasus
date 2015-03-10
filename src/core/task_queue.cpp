@@ -21,13 +21,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-# include <rdsn/internal/task_queue.h>
+# include <dsn/internal/task_queue.h>
 # include "task_engine.h"
-# include <rdsn/internal/perf_counters.h>
+# include <dsn/internal/perf_counters.h>
 # include <cstdio>
 # define __TITLE__ "task_queue"
 
-namespace rdsn {
+namespace dsn {
 
 task_queue::task_queue(task_worker_pool* pool, int index, task_queue* inner_provider) : _pool(pool), _controller(nullptr)
 {
@@ -35,7 +35,7 @@ task_queue::task_queue(task_worker_pool* pool, int index, task_queue* inner_prov
     sprintf(num, "%u", index);
     _name = pool->spec().name + '.';
     _name.append(num);
-    _qps_counter = rdsn::utils::perf_counters::instance().get_counter((_name + std::string(".qps")).c_str(), COUNTER_TYPE_RATE, true);
+    _qps_counter = dsn::utils::perf_counters::instance().get_counter((_name + std::string(".qps")).c_str(), COUNTER_TYPE_RATE, true);
 }
 
 //void task_queue::on_dequeue(int count)

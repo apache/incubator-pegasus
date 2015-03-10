@@ -1,3 +1,3 @@
-TARGET=librdsn.replication.client.a
+TARGET=libdsn.replication.client.a
 TYPE = LIB
 include ../../../../scripts/makefile.common

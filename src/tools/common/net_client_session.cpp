@@ -22,11 +22,11 @@
  * THE SOFTWARE.
  */
 # include "net_client_session.h"
-# include <rdsn/internal/logging.h>
+# include <dsn/internal/logging.h>
 
 # define __TITLE__ "net.session"
 
-namespace rdsn {
+namespace dsn {
     namespace tools {
         net_client_session::net_client_session(asio_network_provider& net, const end_point& remote_addr, std::shared_ptr<rpc_client_matcher>& matcher)
             : _net(net), 
@@ -52,7 +52,7 @@ namespace rdsn {
             }
             catch (std::exception& ex)
             {
-                rwarn("network session %s:%u exits failed, err = %s",
+                dwarn("network session %s:%u exits failed, err = %s",
                     remote_address().to_ip_string().c_str(),
                     (int)remote_address().port,
                     ex.what()
@@ -96,7 +96,7 @@ namespace rdsn {
                     }
                     else
                     {
-                        rerror("network client session connect failed, error = %s",
+                        derror("network client session connect failed, error = %s",
                             ec.message().c_str()
                             );
                         on_failure();
@@ -114,12 +114,12 @@ namespace rdsn {
             {
                 if (!ec && message_header::is_right_header((char*)&_read_msg_hdr))
                 {
-                    rassert(length == message_header::serialized_size(), "");
+                    dassert(length == message_header::serialized_size(), "");
                     do_read_body();
                 }
                 else
                 {
-                    rerror("network client session read message header failed, error = %s, sz = %d",
+                    derror("network client session read message header failed, error = %s, sz = %d",
                         ec.message().c_str(), length
                         );
                     on_failure();
@@ -143,7 +143,7 @@ namespace rdsn {
                 if (!ec)
                 {
                     message_ptr msg = new message(_read_buffer, true);
-                    rassert(msg->header().body_length == body_sz, "");
+                    dassert(msg->header().body_length == body_sz, "");
 
                     if (msg->is_right_body())
                     {
@@ -151,7 +151,7 @@ namespace rdsn {
                     }
                     else
                     {
-                        rerror("invalid response body (type = %s, body len = %u, skip ...",
+                        derror("invalid response body (type = %s, body len = %u, skip ...",
                             msg->header().rpc_name,
                             msg->header().body_length
                             );
@@ -161,7 +161,7 @@ namespace rdsn {
                 }
                 else
                 {
-                    rerror("network client session read message failed, error = %s, sz = %d",
+                    derror("network client session read message failed, error = %s, sz = %d",
                         ec.message().c_str(), length
                         );
                     on_failure();
@@ -190,17 +190,17 @@ namespace rdsn {
             {
                 if (ec)
                 {
-                    rerror("network client session write message failed, error = %s, sz = %d",
+                    derror("network client session write message failed, error = %s, sz = %d",
                         ec.message().c_str(), length
                         );
                     on_failure();
                 }
                 else
                 {
-                    rassert(length == msg->total_size(), "");
+                    dassert(length == msg->total_size(), "");
 
                     auto smsg = _sq.dequeue_peeked();
-                    rassert(smsg == msg, "sent msg must be the first msg in send queue");
+                    dassert(smsg == msg, "sent msg must be the first msg in send queue");
 
                     do_write();
                 }

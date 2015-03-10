@@ -26,9 +26,9 @@
 #include "replication_common.h"
 #include <set>
 
-using namespace rdsn;
-using namespace rdsn::service;
-using namespace rdsn::replication;
+using namespace dsn;
+using namespace dsn::service;
+using namespace dsn::replication;
 
 typedef std::list<std::pair<end_point, bool>> NodeStates;
 

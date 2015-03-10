@@ -21,11 +21,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-# include <rdsn/internal/aio_provider.h>
+# include <dsn/internal/aio_provider.h>
 # include "disk_engine.h"
-# include <rdsn/internal/logging.h>
+# include <dsn/internal/logging.h>
 
-namespace rdsn {
+namespace dsn {
 
 aio_provider::aio_provider(disk_engine* disk, aio_provider* inner_provider)
     : _engine(disk)
@@ -37,4 +37,4 @@ void aio_provider::complete_io(aio_task_ptr& aio, error_code err, uint32_t bytes
     _engine->complete_io(aio, err, bytes, delay_milliseconds);
 }
 
-} // end namespace rdsn
+} // end namespace dsn

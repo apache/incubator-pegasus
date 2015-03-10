@@ -21,12 +21,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-# include <rdsn/internal/utils.h>
-# include <rdsn/internal/env_provider.h>
+# include <dsn/internal/utils.h>
+# include <dsn/internal/env_provider.h>
 # include <random>
-# include <rdsn/internal/singleton.h>
+# include <dsn/internal/singleton.h>
 
-namespace rdsn { namespace utils {
+namespace dsn { namespace utils {
 
 void split_args(const char* args, __out_param std::vector<std::string>& sargs, char splitter)
 {
@@ -151,7 +151,7 @@ void binary_reader::read(blob& blob)
     }
     else
     {
-        rassert (false, "read beyond the end of buffer");
+        dassert (false, "read beyond the end of buffer");
     }
 }
 
@@ -164,7 +164,7 @@ void binary_reader::read(char* buffer, int sz)
     }
     else
     {
-        rassert (false, "read beyond the end of buffer");
+        dassert (false, "read beyond the end of buffer");
     }
 }
 
@@ -327,7 +327,7 @@ void binary_writer::write(const char* buffer, int sz, uint16_t pos /*= 0xffff*/)
     _total_size += sz0;
 }
 
-}} // end namespace rdsn::utils
+}} // end namespace dsn::utils
 
 
 

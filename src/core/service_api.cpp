@@ -21,18 +21,18 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-# include <rdsn/service_api.h>
-# include <rdsn/tool_api.h>
+# include <dsn/service_api.h>
+# include <dsn/tool_api.h>
 # include "service_engine.h"
 # include "task_engine.h"
 # include "rpc_engine.h"
 # include "disk_engine.h"
-# include <rdsn/internal/env_provider.h>
-# include <rdsn/internal/factory_store.h>
+# include <dsn/internal/env_provider.h>
+# include <dsn/internal/factory_store.h>
 
-using namespace rdsn::tools;
+using namespace dsn::tools;
 
-namespace rdsn { namespace service {
+namespace dsn { namespace service {
 
 namespace system
 {
@@ -75,13 +75,13 @@ namespace system
         // init toollets
         for (auto it = spec.toollets.begin(); it != spec.toollets.end(); it++)
         {
-            auto tlet = rdsn::tools::internal_use_only::get_toollet(it->c_str(), 0, config);
-            rassert(tlet, "toolet not found");
+            auto tlet = dsn::tools::internal_use_only::get_toollet(it->c_str(), 0, config);
+            dassert(tlet, "toolet not found");
             tlet->install(spec);
         }
 
         // init provider specific system inits
-        rdsn::tools::syste_init.execute(config_file);
+        dsn::tools::syste_init.execute(config_file);
 
         // TODO: register syste_exit execution
 
@@ -94,7 +94,7 @@ namespace system
             if (it->run)
             {
                 service_app* app = utils::factory_store<service_app>::create(it->type.c_str(), 0, &(*it), config);
-                rassert(app != nullptr, "Cannot create service app with type name '%s'", it->type.c_str());
+                dassert(app != nullptr, "Cannot create service app with type name '%s'", it->type.c_str());
                 service_apps::instance().add(app);
             }
         }
@@ -121,7 +121,7 @@ namespace rpc
     const end_point& get_local_address()
     {
         auto node = task::get_current_node();
-        rassert(node != nullptr, "this function can only be invoked inside tasks");
+        dassert(node != nullptr, "this function can only be invoked inside tasks");
 
         return node->rpc()->address();
     }
@@ -129,7 +129,7 @@ namespace rpc
     bool register_rpc_handler(task_code code, const char* name, rpc_server_handler* handler)
     {
         auto node = task::get_current_node();
-        rassert(node != nullptr, "this function can only be invoked inside tasks");
+        dassert(node != nullptr, "this function can only be invoked inside tasks");
 
         rpc_handler_ptr h(new rpc_handler_info(code));
         h->name = std::string(name);
@@ -142,7 +142,7 @@ namespace rpc
     bool unregister_rpc_handler(task_code code)
     {
         auto node = task::get_current_node();
-        rassert(node != nullptr, "this function can only be invoked inside tasks");
+        dassert(node != nullptr, "this function can only be invoked inside tasks");
 
         return node->rpc()->unregister_rpc_handler(code);
     }
@@ -150,7 +150,7 @@ namespace rpc
     rpc_response_task_ptr call(const end_point& server, message_ptr& request, rpc_response_task_ptr callback)
     {
         auto node = task::get_current_node();
-        rassert(node != nullptr, "this function can only be invoked inside tasks");
+        dassert(node != nullptr, "this function can only be invoked inside tasks");
 
         rpc_engine* rpc = node->rpc();
         request->header().to_address = server;
@@ -161,7 +161,7 @@ namespace rpc
     void reply(message_ptr& response)
     {
         auto node = task::get_current_node();
-        rassert(node != nullptr, "this function can only be invoked inside tasks");
+        dassert(node != nullptr, "this function can only be invoked inside tasks");
 
         node->rpc()->reply(response);
     }
@@ -172,7 +172,7 @@ namespace file
     handle_t open(const char* file_name, int flag, int pmode)
     {
         auto node = task::get_current_node();
-        rassert(node != nullptr, "this function can only be invoked inside tasks");
+        dassert(node != nullptr, "this function can only be invoked inside tasks");
 
         return node->disk()->open(file_name, flag, pmode);
     }
@@ -180,7 +180,7 @@ namespace file
     void read(handle_t hFile, char* buffer, int count, uint64_t offset, aio_task_ptr& callback)
     {
         auto node = task::get_current_node();
-        rassert(node != nullptr, "this function can only be invoked inside tasks");
+        dassert(node != nullptr, "this function can only be invoked inside tasks");
 
         callback->aio()->buffer = buffer;
         callback->aio()->buffer_size = count;
@@ -195,7 +195,7 @@ namespace file
     void write(handle_t hFile, const char* buffer, int count, uint64_t offset, aio_task_ptr& callback)
     {
         auto node = task::get_current_node();
-        rassert(node != nullptr, "this function can only be invoked inside tasks");
+        dassert(node != nullptr, "this function can only be invoked inside tasks");
 
         callback->aio()->buffer = (char*)buffer;
         callback->aio()->buffer_size = count;
@@ -210,7 +210,7 @@ namespace file
     error_code close(handle_t hFile)
     {
         auto node = task::get_current_node();
-        rassert(node != nullptr, "this function can only be invoked inside tasks");
+        dassert(node != nullptr, "this function can only be invoked inside tasks");
 
         return node->disk()->close(hFile);
     }
@@ -231,4 +231,4 @@ namespace env
     }
 }
 
-}} // end namespace rdsn::service
+}} // end namespace dsn::service

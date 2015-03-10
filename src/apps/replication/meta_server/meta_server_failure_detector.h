@@ -26,10 +26,10 @@
 #include "failure_detector.h"
 #include "replication_common.h"
 
-using namespace rdsn;
-using namespace rdsn::service;
-using namespace rdsn::replication;
-using namespace rdsn::fd;
+using namespace dsn;
+using namespace dsn::service;
+using namespace dsn::replication;
+using namespace dsn::fd;
 
 class server_state;
 class meta_server_failure_detector : public failure_detector
@@ -44,12 +44,12 @@ public:
     // client side
     virtual void on_master_disconnected(const std::vector<end_point>& nodes)
     {
-        rassert(false, "unsupported method");
+        dassert(false, "unsupported method");
     }
 
     virtual void on_master_connected(const end_point& node)
     {
-        rassert(false, "unsupported method");
+        dassert(false, "unsupported method");
     }
 
     // server side

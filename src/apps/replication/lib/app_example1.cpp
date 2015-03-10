@@ -26,7 +26,7 @@
 #include <sstream>
 #include <boost/filesystem.hpp>
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
 replication_app_base* create_simplekv_app(replica* replica, configuration_ptr c)
 {
@@ -51,7 +51,7 @@ replication_app_example1::replication_app_example1(replica* replica, const repli
 
 int replication_app_example1::write(std::list<message_ptr>& requests, decree decree, bool ackClient)
 {
-    rassert(_lastCommittedDecree + 1 == decree, "");
+    dassert(_lastCommittedDecree + 1 == decree, "");
     _lastCommittedDecree = decree;
 
     for (auto it = requests.begin(); it != requests.end(); it++)
@@ -86,7 +86,7 @@ int replication_app_example1::write(std::list<message_ptr>& requests, decree dec
             }
             break;
         default:
-            rassert(false, "");
+            dassert(false, "");
         }    
         }
 
@@ -102,12 +102,12 @@ int replication_app_example1::write(std::list<message_ptr>& requests, decree dec
     return ERR_SUCCESS;
 }
 
-void replication_app_example1::read(const client_read_request& meta, rdsn::message_ptr& request)
+void replication_app_example1::read(const client_read_request& meta, dsn::message_ptr& request)
 {
     SimpleKvRequest msg;
     unmarshall(request, msg);
 
-    rassert(msg.op == SimpleKvOperation::SKV_READ, "");
+    dassert(msg.op == SimpleKvOperation::SKV_READ, "");
 
     SimpleKvResponse resp;
     resp.key = msg.key;
@@ -270,7 +270,7 @@ int replication_app_example1::compact(bool force)
 // helper routines to accelerate learning
 int replication_app_example1::get_learn_state(decree start, const utils::blob& learnRequest, __out_param learn_state& state)
 {
-    rdsn::utils::binary_writer writer;
+    dsn::utils::binary_writer writer;
 
     zauto_lock l(_lock);
 
@@ -279,7 +279,7 @@ int replication_app_example1::get_learn_state(decree start, const utils::blob& l
 
     writer.write(_lastCommittedDecree);
 
-    rassert(_lastCommittedDecree >= 0, "");
+    dassert(_lastCommittedDecree >= 0, "");
     
     int count = (int)_store.size();
     writer.write(count);
@@ -327,12 +327,12 @@ int replication_app_example1::apply_learn_state(learn_state& state)
     int magic;
     reader.read(magic);
 
-    rassert(magic == 0xdeadbeef, "");
+    dassert(magic == 0xdeadbeef, "");
 
     decree decree;
     reader.read(decree);
 
-    rassert(decree >= 0, "");
+    dassert(decree >= 0, "");
 
     int count;
     reader.read(count);

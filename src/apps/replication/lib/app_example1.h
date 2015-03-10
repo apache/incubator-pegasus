@@ -26,7 +26,7 @@
 #include "replication_app_base.h"
 #include <map>
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
 extern replication_app_base* create_simplekv_app(replica* replica, configuration_ptr config);
 
@@ -50,7 +50,7 @@ public:
     // all return values are error code
     //
     virtual int  write(std::list<message_ptr>& requests, decree decree, bool ackClient);
-    virtual void read(const client_read_request& meta, rdsn::message_ptr& request);
+    virtual void read(const client_read_request& meta, dsn::message_ptr& request);
 
     virtual int  open(bool createNew);
     virtual int  close(bool clearState);

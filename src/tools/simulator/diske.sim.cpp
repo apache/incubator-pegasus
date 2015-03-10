@@ -22,11 +22,11 @@
  * THE SOFTWARE.
  */
 #include "diske.sim.h"
-#include <rdsn/service_api.h>
+#include <dsn/service_api.h>
 
 #define __TITLE__ "aio_provider"
 
-namespace rdsn { namespace tools {
+namespace dsn { namespace tools {
 
 DEFINE_TASK_CODE(LPC_NATIVE_AIO_REDIRECT, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT)
 

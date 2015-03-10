@@ -21,13 +21,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-# include <rdsn/internal/configuration.h>
-# include <rdsn/internal/logging.h>
+# include <dsn/internal/configuration.h>
+# include <dsn/internal/logging.h>
 # include <cassert>
-# include <rdsn/internal/utils.h>
+# include <dsn/internal/utils.h>
 # include <errno.h>
 
-namespace rdsn {
+namespace dsn {
 
 configuration::configuration(const char* file_name)
 {
@@ -238,7 +238,7 @@ std::list<std::string> configuration::get_string_value_list(const char* section,
 
 void configuration::register_config_change_notification(config_file_change_notifier notifier)
 {
-    rassert(false, "not implemented");
+    dassert(false, "not implemented");
 }
 
 bool configuration::has_section(const char* section)

@@ -27,13 +27,13 @@
 //# include <sys/prctl.h>
 # endif
 
-# include <rdsn/internal/task_worker.h>
+# include <dsn/internal/task_worker.h>
 # include "task_engine.h"
 # include <sstream>
 
 # define __TITLE__ "task.worker"
 
-namespace rdsn {
+namespace dsn {
 
 join_point<void, task_worker*> task_worker::on_start("task_worker::on_start");
 join_point<void, task_worker*> task_worker::on_create("task_worker::on_create");
@@ -205,7 +205,7 @@ void task_worker::loop()
     /*}
     catch (std::exception& ex)
     {
-        rassert(false, "%s: unhandled exception '%s'", name().c_str(), ex.what());
+        dassert(false, "%s: unhandled exception '%s'", name().c_str(), ex.what());
     }*/
 }
 

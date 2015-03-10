@@ -22,12 +22,12 @@
  * THE SOFTWARE.
  */
 
-#include <rdsn/toollet/fault_injector.h>
-#include <rdsn/service_api.h>
+#include <dsn/toollet/fault_injector.h>
+#include <dsn/service_api.h>
 
 #define __TITLE__ "toollet.fault_injector"
 
-namespace rdsn {
+namespace dsn {
     namespace tools {
 
         struct fj_opt
@@ -180,7 +180,7 @@ namespace rdsn {
 
                 std::string section_name = std::string("task.") + std::string(task_code::to_string(i));
                 task_spec* spec = task_spec::get(i);
-                rassert(spec != nullptr, "task_spec cannot be null");
+                dassert(spec != nullptr, "task_spec cannot be null");
 
                 fj_opt& lopt = s_fj_opts[i];
                 lopt.fault_injection_enabled = _configuration->get_value<bool>(section_name.c_str(), "fault_injection_enabled", default_opt.fault_injection_enabled);

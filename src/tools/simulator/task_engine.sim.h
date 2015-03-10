@@ -23,10 +23,10 @@
  */
 #pragma once
 
-#include <rdsn/tool_api.h>
-#include <rdsn/internal/priority_queue.h>
+#include <dsn/tool_api.h>
+#include <dsn/internal/priority_queue.h>
 
-namespace rdsn { namespace tools {
+namespace dsn { namespace tools {
 
 class sim_task_queue : public task_queue
 {
@@ -45,7 +45,7 @@ struct sim_worker_state;
 class sim_semaphore_provider : public semaphore_provider
 {
 public:  
-    sim_semaphore_provider(rdsn::service::zsemaphore *sema, int initialCount, semaphore_provider *inner_provider)
+    sim_semaphore_provider(dsn::service::zsemaphore *sema, int initialCount, semaphore_provider *inner_provider)
         : semaphore_provider(sema, initialCount, inner_provider), _count(initialCount)
     {
     }

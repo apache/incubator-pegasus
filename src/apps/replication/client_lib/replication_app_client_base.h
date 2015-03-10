@@ -29,13 +29,13 @@
 // 
 
 #include "replication_common.h"
-#include <rdsn/serviceletex.h>
+#include <dsn/serviceletex.h>
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
 DEFINE_ERR_CODE(ERR_REPLICATION_FAILURE)
     
-class replication_app_client_base : public rdsn::service::serviceletex<replication_app_client_base>
+class replication_app_client_base : public dsn::service::serviceletex<replication_app_client_base>
 {    
 public:
     replication_app_client_base(        
@@ -87,7 +87,7 @@ private:
     std::string                            _app_name;
     std::vector<end_point>               _meta_servers;
 
-    mutable rdsn::service::zlock           _lock;
+    mutable dsn::service::zlock           _lock;
     std::map<int,  partition_configuration> _config_cache;
     int                                    _app_id;
     end_point                            _last_contact_point;

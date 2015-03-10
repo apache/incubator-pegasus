@@ -31,9 +31,9 @@
 #include "replication_common.h"
 
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
-using namespace rdsn::service;
+using namespace dsn::service;
 
 class replication_app_config
 {
@@ -105,7 +105,7 @@ inline message_ptr replication_app_base::PrepareRpcResponse(message_ptr& request
 
 inline void replication_app_base::rpc_response(message_ptr& response)
 {
-    rdsn::service::rpc::reply(response);
+    dsn::service::rpc::reply(response);
 }
 
 template<typename T> 

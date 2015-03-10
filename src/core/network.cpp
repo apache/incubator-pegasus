@@ -21,12 +21,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-# include <rdsn/internal/network.h>
+# include <dsn/internal/network.h>
 # include "rpc_engine.h"
 
 # define __TITLE__ "rpc_session"
 
-namespace rdsn {
+namespace dsn {
 
     rpc_client_session::rpc_client_session(network& net, const end_point& remote_addr, std::shared_ptr<rpc_client_matcher>& matcher)
         : _net(net), _remote_addr(remote_addr), _matcher(matcher)

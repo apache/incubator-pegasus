@@ -33,7 +33,7 @@
 
 #define __TITLE__ "aio.provider.native"
 
-namespace rdsn { namespace tools {
+namespace dsn { namespace tools {
 
 native_win_aio_provider::native_win_aio_provider(disk_engine* disk, aio_provider* inner_provider)
 : aio_provider(disk, inner_provider)
@@ -73,7 +73,7 @@ handle_t native_win_aio_provider::open(const char* file_name, int flag, int pmod
 
     if (flag & O_APPEND)
     {
-        rassert(false, "append is not supported");
+        dassert(false, "append is not supported");
     }
 
     if (flag & O_CREAT)
@@ -99,7 +99,7 @@ handle_t native_win_aio_provider::open(const char* file_name, int flag, int pmod
     {
         if (_iocp != ::CreateIoCompletionPort(fileHandle, _iocp, 0, 0))
         {
-            rassert(false, "cannot associate file handle %s to io completion port, err = %x\n", file_name, ::GetLastError());
+            dassert(false, "cannot associate file handle %s to io completion port, err = %x\n", file_name, ::GetLastError());
             return nullptr;
         }
         else
@@ -109,7 +109,7 @@ handle_t native_win_aio_provider::open(const char* file_name, int flag, int pmod
     }
     else
     {
-        rassert(false, "cannot create file %s, err = %x\n", file_name, ::GetLastError());
+        dassert(false, "cannot create file %s, err = %x\n", file_name, ::GetLastError());
         return nullptr;
     }
 }
@@ -120,7 +120,7 @@ error_code native_win_aio_provider::close(handle_t hFile)
         return ERR_SUCCESS;
     else
     {
-        rerror("close file failed, err = %x\n", ::GetLastError());
+        derror("close file failed, err = %x\n", ::GetLastError());
         return ERR_FILE_OPERATION_FAILED;
     }        
 }
@@ -172,7 +172,7 @@ error_code native_win_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool asy
         r = ::WriteFile(aio->file, aio->buffer, aio->buffer_size, NULL, &aio->olp);
         break;
     default:
-        rassert(false, "unknown aio type %u", (int)aio->type);
+        dassert(false, "unknown aio type %u", (int)aio->type);
         break;
     }
 
@@ -182,7 +182,7 @@ error_code native_win_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool asy
         
         if (err != ERROR_IO_PENDING)
         {
-            rerror("file operation failed, err = %u", err);
+            derror("file operation failed, err = %u", err);
 
             if (async)
             {
@@ -243,7 +243,7 @@ void native_win_aio_provider::worker()
         else if (overLap)
         {
             dwErrorCode = ::GetLastError();
-            rerror("file operation failed, err = %u", dwErrorCode);
+            derror("file operation failed, err = %u", dwErrorCode);
 
             windows_disk_aio_context* ctx = CONTAINING_RECORD(overLap, windows_disk_aio_context, olp);
             if (!ctx->evt)
@@ -265,5 +265,5 @@ void native_win_aio_provider::worker()
     } while (true);
 }
 
-}} // end namespace rdsn::tools
+}} // end namespace dsn::tools
 #endif

@@ -23,9 +23,9 @@
  */
 #pragma once
 
-#include <rdsn/servicelet.h>
+#include <dsn/servicelet.h>
 
-namespace rdsn { namespace service {
+namespace dsn { namespace service {
 
 rpc_response_task_ptr rpc_replicated(
             const end_point& localAddr,

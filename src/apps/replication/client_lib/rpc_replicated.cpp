@@ -24,9 +24,9 @@
 # include "replication_common.h"
 # include "rpc_replicated.h"
 
-using namespace rdsn::replication;
+using namespace dsn::replication;
 
-namespace rdsn { namespace service {
+namespace dsn { namespace service {
 
 namespace RpcReplicatedImpl { 
 

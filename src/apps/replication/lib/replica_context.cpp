@@ -23,7 +23,7 @@
  */
 #include "replica_context.h"
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
 void primary_context::Cleanup(bool cleanPendingMutations)
 {
@@ -74,7 +74,7 @@ void primary_context::ResetMembership(const partition_configuration& config, boo
 
     membership = config;
 
-    if (membership.primary != rdsn::end_point::INVALID)
+    if (membership.primary != dsn::end_point::INVALID)
     {
         Statuses[membership.primary] = PS_PRIMARY;
     }
@@ -140,7 +140,7 @@ bool primary_context::CheckExist(const end_point& node, partition_status status)
     case PS_INACTIVE:
         return std::find(membership.dropOuts.begin(), membership.dropOuts.end(), node) != membership.dropOuts.end();
     default:
-        rassert(false, "");
+        dassert(false, "");
         return false;
     }
 }

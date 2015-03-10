@@ -19,7 +19,7 @@
     <ClCompile Include="task_engine.sim.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\inc\rdsn\tool\simulator.h" />
+    <ClInclude Include="..\..\..\inc\dsn\tool\simulator.h" />
     <ClInclude Include="diske.sim.h" />
     <ClInclude Include="env.sim.h" />
     <ClInclude Include="network.sim.h" />

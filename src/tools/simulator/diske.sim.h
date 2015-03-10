@@ -23,7 +23,7 @@
  */
 #pragma once
 
-#include <rdsn/tool_api.h>
+#include <dsn/tool_api.h>
 #if defined(_WIN32)
 #define NATIVE_AIO_PROVIDER native_win_aio_provider
 #include "../common/native_aio_provider.win.h"
@@ -32,7 +32,7 @@
 #include "../common/native_aio_provider.posix.h"
 #endif
 
-namespace rdsn { namespace tools {
+namespace dsn { namespace tools {
 
 class sim_aio_provider : public NATIVE_AIO_PROVIDER
 {

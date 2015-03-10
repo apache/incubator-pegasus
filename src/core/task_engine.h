@@ -24,12 +24,12 @@
 # pragma once
 
 # include "service_engine.h"
-# include <rdsn/internal/task_queue.h>
-# include <rdsn/internal/admission_controller.h>
-# include <rdsn/internal/perf_counter.h>
-# include <rdsn/internal/task_worker.h>
+# include <dsn/internal/task_queue.h>
+# include <dsn/internal/admission_controller.h>
+# include <dsn/internal/perf_counter.h>
+# include <dsn/internal/task_worker.h>
 
-namespace rdsn {
+namespace dsn {
 
 class task_engine;
 class task_worker_pool;

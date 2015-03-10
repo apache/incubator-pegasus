@@ -22,15 +22,15 @@
  * THE SOFTWARE.
  */
 
-# include <rdsn/serviceletex.h>
-# include <rdsn/internal/singleton.h>
-# include <rdsn/internal/file_server.h>
+# include <dsn/serviceletex.h>
+# include <dsn/internal/singleton.h>
+# include <dsn/internal/file_server.h>
 # include <iostream>
 
-namespace rdsn {
+namespace dsn {
 namespace service {
 
-class service_objects : public ::rdsn::utils::singleton<service_objects>
+class service_objects : public ::dsn::utils::singleton<service_objects>
 {
 public:
     void add(service_base* obj)
@@ -64,7 +64,7 @@ service_base::~service_base()
     for (auto it = _events.begin(); it != _events.end(); it++)
     {
         bool r = unregister_rpc_handler(*it);
-        rassert(r, "rpc handler unregister failed");
+        dassert(r, "rpc handler unregister failed");
     }
 
     clear_outstanding_tasks();
@@ -80,14 +80,14 @@ void service_base::add_outstanding_task(task* tsk)
 {
     std::lock_guard<std::mutex> l(_outstanding_tasks_lock);
     auto pr = _outstanding_tasks.insert(std::map<uint64_t, task*>::value_type(tsk->id(), tsk));
-    rassert(pr.second, "task %llu must not be added to the hash table before", tsk->id());
+    dassert(pr.second, "task %llu must not be added to the hash table before", tsk->id());
 }
 
 void service_base::remove_outstanding_task(task* tsk)
 {
     std::lock_guard<std::mutex> l(_outstanding_tasks_lock);
     auto pr = _outstanding_tasks.erase(tsk->id());
-    rassert(pr == 1, "task %llu is not found in the hash table", tsk->id());
+    dassert(pr == 1, "task %llu is not found in the hash table", tsk->id());
 }
 
 void service_base::clear_outstanding_tasks()
@@ -104,7 +104,7 @@ void service_base::check_hashed_access()
 {
     if (_access_thread_id_inited)
     {
-        rassert(std::this_thread::get_id() == _access_thread_id, "the service is assumed to be accessed by one thread only!");
+        dassert(std::this_thread::get_id() == _access_thread_id, "the service is assumed to be accessed by one thread only!");
     }
     else
     {
@@ -200,15 +200,15 @@ bool service_base::unregister_rpc_handler(task_code rpc_code)
     )
 {
     aio_task_ptr tsk = new service_aio_task(callback_code, svc, callback, hash);
-    auto rci = new ::rdsn::service::remote_copy_request();
+    auto rci = new ::dsn::service::remote_copy_request();
     rci->source = remote;
     rci->source_dir = source_dir;
     rci->files = files;
     rci->dest_dir = dest_dir;
     rci->overwrite = overwrite;
 
-    rassert(false, "not implemented yet!!!");
+    dassert(false, "not implemented yet!!!");
 }
 
 
-}} // end namespace rdsn::service
+}} // end namespace dsn::service

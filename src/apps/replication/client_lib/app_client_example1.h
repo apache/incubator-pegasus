@@ -25,7 +25,7 @@
 
 #include "replication_app_client_base.h"
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
 class app_client_example1 : public replication_app_client_base
 {

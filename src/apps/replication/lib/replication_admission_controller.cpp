@@ -23,7 +23,7 @@
  */
 #include "replication_admission_controller.h"
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
 replication_admission_controller::replication_admission_controller(task_queue* q, std::vector<std::string>& sargs)
     : admission_controller(q, sargs)

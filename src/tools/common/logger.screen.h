@@ -23,10 +23,10 @@
  */
 # pragma once
 
-# include <rdsn/tool_api.h>
-# include <rdsn/service_api.h>
+# include <dsn/tool_api.h>
+# include <dsn/service_api.h>
 
-namespace rdsn { namespace tools {
+namespace dsn { namespace tools {
 
 class screen_logger : public logging_provider
 {
@@ -54,14 +54,14 @@ public:
         if (logLevel >= log_level_WARNING)
         {
             // TODO: console color output
-            printf("(%016llx) %llu ms @ %s ", task::get_current_task_id(), ::rdsn::service::env::now_ns() / 1000000, wn);
+            printf("(%016llx) %llu ms @ %s ", task::get_current_task_id(), ::dsn::service::env::now_ns() / 1000000, wn);
             vprintf(fmt, args);
             //printf(" [%s(%d) %s]\n", file, line, function);
             printf("\n");
         }
         else
         {
-            printf("(%016llx) %llu ms @ %s ", task::get_current_task_id(), ::rdsn::service::env::now_ns() / 1000000, wn);
+            printf("(%016llx) %llu ms @ %s ", task::get_current_task_id(), ::dsn::service::env::now_ns() / 1000000, wn);
             vprintf(fmt, args);
             //printf(" [%s(%d) %s]\n", file, line, function);
             printf("\n");

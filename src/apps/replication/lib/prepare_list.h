@@ -25,7 +25,7 @@
 
 #include "mutation_cache.h"
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
 
 class prepare_list : public mutation_cache

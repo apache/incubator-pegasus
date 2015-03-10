@@ -1,5 +1,5 @@
-# ROOT = /Users/imzhenyu/projects/rdsn
-ROOT = /home/zhenyug/projects/rdsn
+# ROOT = /Users/imzhenyu/projects/dsn
+ROOT = /home/zhenyug/projects/dsn
 
 SYS_INC = /usr/local/include
 SYS_LIB = /usr/lib/x86_64-linux-gnu
@@ -16,10 +16,10 @@ SYS_LIB_DEPS = \
 
 BIN_DIR = $(ROOT)/bin
 
-LIB_EXTRA_S = $(LIB_EXTRA) rdsn.core rdsn.dev rdsn.tools.common rdsn.tools.simulator 
+LIB_EXTRA_S = $(LIB_EXTRA) dsn.core dsn.dev dsn.tools.common dsn.tools.simulator 
 LIB_EXTRA_DEPS = $(LIB_EXTRA_S:%=-l%)
 LIB_EXTRA_TARGETS = $(LIB_EXTRA_S:%=$(BIN_DIR)/lib%.a) 
-LIB_NONLINKED_WR = $(BIN_DIR)/librdsn.core.a \
+LIB_NONLINKED_WR = $(BIN_DIR)/libdsn.core.a \
 				   $(SYS_LIB)/libboost_thread.a \
 				   $(SYS_LIB)/libboost_filesystem.a \
 				   $(SYS_LIB)/librt.a 

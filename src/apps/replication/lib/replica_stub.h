@@ -31,7 +31,7 @@
 
 #include "replication_common.h"
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
 class mutation_log;
 class replication_failure_detector;

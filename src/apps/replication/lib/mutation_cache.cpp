@@ -24,7 +24,7 @@
 #include "mutation_cache.h"
 #include "mutation.h"
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
 mutation_cache::mutation_cache(decree initDecree, int maxCount)
 {
@@ -69,7 +69,7 @@ int mutation_cache::put(mutation_ptr& mu)
     mutation_ptr old = _array[idx];
     if (old != nullptr)
     {
-        rassert(old->data.header.ballot <= mu->data.header.ballot, "");
+        dassert(old->data.header.ballot <= mu->data.header.ballot, "");
     }
 
     _array[idx] = mu;
@@ -119,7 +119,7 @@ mutation_ptr mutation_cache::pop_min()
         if (_interval == 0)
         {
             //TODO: FIXE ME LATER
-            //rassert (_totalSizeInBytes == 0, "");
+            //dassert (_totalSizeInBytes == 0, "");
 
             _endDecree = _startDecree;
             _endIndex = _startIndex;

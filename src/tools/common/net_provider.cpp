@@ -26,7 +26,7 @@
 #include "net_client_session.h"
 #include "net_server_session.h"
 
-namespace rdsn {
+namespace dsn {
     namespace tools{
 
         asio_network_provider::asio_network_provider(rpc_engine* srv, network* inner_provider)

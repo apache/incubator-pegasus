@@ -22,12 +22,12 @@
  * THE SOFTWARE.
  */
 
-#include <rdsn/toollet/profiler.h>
-#include <rdsn/service_api.h>
+#include <dsn/toollet/profiler.h>
+#include <dsn/service_api.h>
 
 #define __TITLE__ "toollet.profiler"
 
-namespace rdsn {
+namespace dsn {
     namespace tools {
 
         struct task_spec_profiler
@@ -50,13 +50,13 @@ namespace rdsn {
 
         static void profiler_on_task_enqueue(task* caller, task* callee)
         {
-            task_ext_for_profiler::get(callee) = ::rdsn::service::env::now_ns();
+            task_ext_for_profiler::get(callee) = ::dsn::service::env::now_ns();
         }
 
         static void profiler_on_task_begin(task* this_)
         {
             uint64_t& qts = task_ext_for_profiler::get(this_);
-            uint64_t now = ::rdsn::service::env::now_ns();
+            uint64_t now = ::dsn::service::env::now_ns();
             s_spec_profilers[this_->spec().code].task_queueing_time_ns->set(now - qts);
             qts = now;
         }
@@ -64,7 +64,7 @@ namespace rdsn {
         static void profiler_on_task_end(task* this_)
         {
             uint64_t qts = task_ext_for_profiler::get(this_);
-            uint64_t now = ::rdsn::service::env::now_ns();
+            uint64_t now = ::dsn::service::env::now_ns();
             s_spec_profilers[this_->spec().code].task_exec_time_ns->set(now - qts);
             s_spec_profilers[this_->spec().code].task_throughput->increment();
         }
@@ -93,13 +93,13 @@ namespace rdsn {
         static void profiler_on_aio_call(task* caller, aio_task* callee)
         {
             // time disk io starts
-            task_ext_for_profiler::get(callee) = ::rdsn::service::env::now_ns();
+            task_ext_for_profiler::get(callee) = ::dsn::service::env::now_ns();
         }
 
         static void profiler_on_aio_enqueue(aio_task* this_)
         {
             uint64_t& ats = task_ext_for_profiler::get(this_);
-            uint64_t now = ::rdsn::service::env::now_ns();
+            uint64_t now = ::dsn::service::env::now_ns();
 
             s_spec_profilers[this_->spec().code].aio_latency_ns->set(now - ats);
             ats = now;
@@ -111,13 +111,13 @@ namespace rdsn {
             // time rpc starts
             if (nullptr != callee)
             {
-                task_ext_for_profiler::get(callee) = ::rdsn::service::env::now_ns();
+                task_ext_for_profiler::get(callee) = ::dsn::service::env::now_ns();
             }
         }
 
         static void profiler_on_rpc_request_enqueue(rpc_request_task* callee)
         {
-            uint64_t now = ::rdsn::service::env::now_ns();
+            uint64_t now = ::dsn::service::env::now_ns();
             task_ext_for_profiler::get(callee) = now;
             message_ext_for_profiler::get(callee->get_request().get()) = now;
         }
@@ -126,14 +126,14 @@ namespace rdsn {
         static void profiler_on_rpc_reply(task* caller, message* msg)
         {
             uint64_t qts = message_ext_for_profiler::get(msg);
-            uint64_t now = ::rdsn::service::env::now_ns();
+            uint64_t now = ::dsn::service::env::now_ns();
             s_spec_profilers[msg->header().local_rpc_code].rpc_server_latency_ns->set(now - qts);
         }
 
         static void profiler_on_rpc_response_enqueue(rpc_response_task* resp)
         {
             uint64_t& cts = task_ext_for_profiler::get(resp);
-            uint64_t now = ::rdsn::service::env::now_ns();
+            uint64_t now = ::dsn::service::env::now_ns();
             if (resp->get_response() != nullptr)
             {
                 s_spec_profilers[resp->spec().code].rpc_client_non_timeout_latency_ns->set(now - cts);
@@ -160,25 +160,25 @@ namespace rdsn {
 
                 std::string name = std::string("task.") + std::string(task_code::to_string(i));
                 task_spec* spec = task_spec::get(i);
-                rassert(spec != nullptr, "task_spec cannot be null");
+                dassert(spec != nullptr, "task_spec cannot be null");
 
-                s_spec_profilers[i].task_queueing_time_ns = rdsn::utils::perf_counters::instance().get_counter((name + std::string(".queue(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
-                s_spec_profilers[i].task_exec_time_ns = rdsn::utils::perf_counters::instance().get_counter((name + std::string(".exec(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
-                s_spec_profilers[i].task_throughput = rdsn::utils::perf_counters::instance().get_counter((name + std::string(".qps")).c_str(), COUNTER_TYPE_RATE, true);
-                s_spec_profilers[i].task_cancelled = rdsn::utils::perf_counters::instance().get_counter((name + std::string(".cancelled#")).c_str(), COUNTER_TYPE_NUMBER, true);
+                s_spec_profilers[i].task_queueing_time_ns = dsn::utils::perf_counters::instance().get_counter((name + std::string(".queue(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
+                s_spec_profilers[i].task_exec_time_ns = dsn::utils::perf_counters::instance().get_counter((name + std::string(".exec(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
+                s_spec_profilers[i].task_throughput = dsn::utils::perf_counters::instance().get_counter((name + std::string(".qps")).c_str(), COUNTER_TYPE_RATE, true);
+                s_spec_profilers[i].task_cancelled = dsn::utils::perf_counters::instance().get_counter((name + std::string(".cancelled#")).c_str(), COUNTER_TYPE_NUMBER, true);
 
                 if (spec->type == task_type::TASK_TYPE_RPC_REQUEST)
                 {
-                    s_spec_profilers[i].rpc_server_latency_ns = rdsn::utils::perf_counters::instance().get_counter((name + std::string(".latency.server")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
+                    s_spec_profilers[i].rpc_server_latency_ns = dsn::utils::perf_counters::instance().get_counter((name + std::string(".latency.server")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
                 }
                 else if (spec->type == task_type::TASK_TYPE_RPC_RESPONSE)
                 {
-                    s_spec_profilers[i].rpc_client_non_timeout_latency_ns = rdsn::utils::perf_counters::instance().get_counter((name + std::string(".latency.client(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
-                    s_spec_profilers[i].rpc_client_timeout_throughput = rdsn::utils::perf_counters::instance().get_counter((name + std::string(".timeout.qps")).c_str(), COUNTER_TYPE_RATE, true);                    
+                    s_spec_profilers[i].rpc_client_non_timeout_latency_ns = dsn::utils::perf_counters::instance().get_counter((name + std::string(".latency.client(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
+                    s_spec_profilers[i].rpc_client_timeout_throughput = dsn::utils::perf_counters::instance().get_counter((name + std::string(".timeout.qps")).c_str(), COUNTER_TYPE_RATE, true);                    
                 }
                 else if (spec->type == task_type::TASK_TYPE_AIO)
                 {
-                    s_spec_profilers[i].aio_latency_ns = rdsn::utils::perf_counters::instance().get_counter((name + std::string(".latency(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
+                    s_spec_profilers[i].aio_latency_ns = dsn::utils::perf_counters::instance().get_counter((name + std::string(".latency(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
                 }
 
                 if (!_configuration->get_value<bool>(name.c_str(), "is_profile", profile))

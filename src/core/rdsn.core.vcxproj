@@ -39,42 +39,42 @@
     <ClCompile Include="zlocks.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\inc\rdsn\internal\admission_controller.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\aio_provider.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\configuration.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\customizable_id.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\end_point.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\enum_helper.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\env_provider.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\error_code.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\extensible_object.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\factory_store.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\global_config.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\join_point.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\link.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\logging.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\logging_provider.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\network.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\perf_counter.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\perf_counters.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\priority_queue.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\rpc_message.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\service_app.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\singleton.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\singleton_store.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\singleton_vector_store.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\synchronize.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\task.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\task_code.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\task_queue.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\task_worker.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\threadpool_code.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\utils.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\rdsn_types.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\zlocks.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\zlock_provider.h" />
-    <ClInclude Include="..\..\inc\rdsn\service_api.h" />
-    <ClInclude Include="..\..\inc\rdsn\tool_api.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\dsn_types.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\admission_controller.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\aio_provider.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\configuration.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\customizable_id.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\end_point.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\enum_helper.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\env_provider.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\error_code.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\extensible_object.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\factory_store.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\global_config.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\join_point.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\link.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\logging.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\logging_provider.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\network.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\perf_counter.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\perf_counters.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\priority_queue.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\rpc_message.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\service_app.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\singleton.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\singleton_store.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\singleton_vector_store.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\synchronize.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\task.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\task_code.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\task_queue.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\task_worker.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\threadpool_code.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\utils.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\zlocks.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\zlock_provider.h" />
+    <ClInclude Include="..\..\inc\dsn\service_api.h" />
+    <ClInclude Include="..\..\inc\dsn\tool_api.h" />
     <ClInclude Include="crc.h" />
     <ClInclude Include="disk_engine.h" />
     <ClInclude Include="rpc_engine.h" />
@@ -84,7 +84,8 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{F3913C07-F781-413B-91D8-259ADD82C0B1}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>rdsncore</RootNamespace>
+    <RootNamespace>dsncore</RootNamespace>
+    <ProjectName>dsn.core</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

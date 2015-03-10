@@ -23,7 +23,7 @@
  */
 #include "app_client_example1.h"
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
 
 app_client_example1::app_client_example1(const std::vector<end_point>& meta_servers)

@@ -23,11 +23,11 @@
  */
 # pragma once
 
-# include <rdsn/serviceletex.h>
+# include <dsn/serviceletex.h>
 
-using namespace rdsn::service;
+using namespace dsn::service;
 
-namespace rdsn { namespace fd {
+namespace dsn { namespace fd {
 
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_FAILURE_DETECTOR)
 

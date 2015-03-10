@@ -23,9 +23,9 @@
  */
 #pragma once
 
-#include <rdsn/tool_api.h>
+#include <dsn/tool_api.h>
 
-namespace rdsn { namespace tools {
+namespace dsn { namespace tools {
 
 class sim_env_provider : public env_provider
 {

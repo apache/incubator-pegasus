@@ -30,19 +30,19 @@
 // which is binded to this replication partition
 //
 
-# include <rdsn/serviceletex.h>
+# include <dsn/serviceletex.h>
 # include "replication_common.h"
 # include "mutation.h"
 # include "prepare_list.h"
 # include "replica_context.h"
 
-namespace rdsn { namespace replication {
+namespace dsn { namespace replication {
 
 class replication_app_base;
 class mutation_log;
 class replica_stub;
 
-using namespace ::rdsn::service;
+using namespace ::dsn::service;
 
 class replica : public serviceletex<replica>, public ref_object
 {

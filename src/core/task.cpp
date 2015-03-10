@@ -21,20 +21,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-# include <rdsn/service_api.h>
-# include <rdsn/internal/task.h>
+# include <dsn/service_api.h>
+# include <dsn/internal/task.h>
 # include "service_engine.h"
-# include <rdsn/internal/env_provider.h>
+# include <dsn/internal/env_provider.h>
 # include "task_engine.h"
-# include <rdsn/internal/utils.h>
-# include <rdsn/internal/service_app.h>
+# include <dsn/internal/utils.h>
+# include <dsn/internal/service_app.h>
 # include "service_engine.h"
 # include "disk_engine.h"
-# include <rdsn/internal/synchronize.h>
+# include <dsn/internal/synchronize.h>
 
 #define __TITLE__ "task"
 
-namespace rdsn {
+namespace dsn {
 
 static __thread
 struct 
@@ -165,7 +165,7 @@ bool task::wait(int timeout_milliseconds)
 {
     service::lock_checker::check_wait_safety();
 
-    rassert (this != task::get_current_task(), "task cannot wait itself");
+    dassert (this != task::get_current_task(), "task cannot wait itself");
 
     if (!spec().on_task_wait_pre.execute(task::get_current_task(), this, (uint32_t)timeout_milliseconds, true))
     {
@@ -213,7 +213,7 @@ bool task::cancel(bool wait_until_finished)
 
     if (current_tsk == this)
     {
-        rwarn(
+        dwarn(
             "task %s (id=%016llx) cannot cancel itself",                
             spec().name,
             id()
@@ -260,7 +260,7 @@ void task::enqueue(int delay_milliseconds, service::service_app* app)
     task_worker_pool* pool = nullptr;
     if (caller_worker() != nullptr)
     {
-        dbg_rassert(app == nullptr || caller_worker()->pool()->engine() == app->svc_node()->computation(), "tasks can only be dispatched to local node");
+        dbg_dassert(app == nullptr || caller_worker()->pool()->engine() == app->svc_node()->computation(), "tasks can only be dispatched to local node");
         if (spec().type != TASK_TYPE_RPC_RESPONSE)
         {
             pool = caller_worker()->pool()->engine()->get_pool(spec().pool_code);
@@ -272,12 +272,12 @@ void task::enqueue(int delay_milliseconds, service::service_app* app)
     }
     else if (app != nullptr)
     {
-        //rassert (app != nullptr, "tasks enqueued outside tasks must be specified with which service app");
+        //dassert (app != nullptr, "tasks enqueued outside tasks must be specified with which service app");
         pool = app->svc_node()->computation()->get_pool(spec().pool_code);
     }
     else
     {
-        rassert(false, "neither inside a service, nor service app is specified, unable to find the right engine to execute this");
+        dassert(false, "neither inside a service, nor service app is specified, unable to find the right engine to execute this");
     }
 
     enqueue(delay_milliseconds, pool);
@@ -285,7 +285,7 @@ void task::enqueue(int delay_milliseconds, service::service_app* app)
 
 void task::enqueue(int delay_milliseconds, task_worker_pool* pool)
 {
-    rassert(pool != nullptr, "pool not exist");
+    dassert(pool != nullptr, "pool not exist");
 
     set_delay(delay_milliseconds);
 
@@ -308,7 +308,7 @@ void task::enqueue(int delay_milliseconds, task_worker_pool* pool)
 timer_task::timer_task(task_code code,  uint32_t interval_milliseconds, int hash) 
     : task(code, hash), _interval_milliseconds(interval_milliseconds) 
 {
-    rassert (TASK_TYPE_COMPUTE == spec().type, "this must be a computation type task");
+    dassert (TASK_TYPE_COMPUTE == spec().type, "this must be a computation type task");
 }
 
 void timer_task::exec()
@@ -330,7 +330,7 @@ rpc_request_task::rpc_request_task(message_ptr& request)
     : task(task_code(request->header().local_rpc_code), request->header().client.hash), 
       _request(request)
 {
-    dbg_rassert (TASK_TYPE_RPC_REQUEST == spec().type, "task type must be RPC_REQUEST");
+    dbg_dassert (TASK_TYPE_RPC_REQUEST == spec().type, "task type must be RPC_REQUEST");
 }
 
 void rpc_request_task::enqueue(int delay_milliseconds, service_node* node)
@@ -349,7 +349,7 @@ rpc_response_task::rpc_response_task(message_ptr& request, int hash)
 {
     set_error_code(ERR_IO_PENDING);
 
-    dbg_rassert (TASK_TYPE_RPC_RESPONSE == spec().type, "task must be of RPC_RESPONSE type");
+    dbg_dassert (TASK_TYPE_RPC_RESPONSE == spec().type, "task must be of RPC_RESPONSE type");
 
     _request = request;
 }
@@ -368,11 +368,11 @@ void rpc_response_task::enqueue(error_code err, message_ptr& reply, int delay_mi
 aio_task::aio_task(task_code code, int hash) 
     : task(code, hash)
 {
-    rassert (TASK_TYPE_AIO == spec().type, "task must be of AIO type");
+    dassert (TASK_TYPE_AIO == spec().type, "task must be of AIO type");
     set_error_code(ERR_IO_PENDING);
 
     auto node = task::get_current_node();
-    rassert(node != nullptr, "this function can only be invoked inside tasks");
+    dassert(node != nullptr, "this function can only be invoked inside tasks");
 
     _aio = node->disk()->prepare_aio_context(this);
 }
