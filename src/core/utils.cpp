@@ -134,9 +134,12 @@ void binary_reader::read(__out_param std::string& s)
 {
     int len;
     read(len);
-    s.resize(len, 0);
 
-    read((char*)&s[0], len);
+    if (len > 0)
+    {
+        s.resize(len, 0);
+        read((char*)&s[0], len);
+    }
 }
 
 void binary_reader::read(blob& blob)
@@ -144,14 +147,17 @@ void binary_reader::read(blob& blob)
     int len;
     read(len);
 
-    if (len <= get_remaining_size())
+    if (len > 0)
     {
-        blob = _blob.range((int)(_ptr - _blob.data()), len);
-        _ptr += len;
-    }
-    else
-    {
-        dassert (false, "read beyond the end of buffer");
+        if (len <= get_remaining_size())
+        {
+            blob = _blob.range((int)(_ptr - _blob.data()), len);
+            _ptr += len;
+        }
+        else
+        {
+            dassert (false, "read beyond the end of buffer");
+        }
     }
 }
 

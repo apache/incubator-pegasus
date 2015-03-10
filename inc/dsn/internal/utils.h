@@ -216,14 +216,14 @@ inline void binary_writer::write(const std::string& val, uint16_t pos /*= 0xffff
 {
     int len = (int)val.length();
     write((const char*)&len, sizeof(int), pos);
-    write((const char*)&val[0], len, pos);
+    if (len > 0) write((const char*)&val[0], len, pos);
 }
 
 inline void binary_writer::write(const blob& val, uint16_t pos /*= 0xffff*/)
 {
     int len = val.length();
     write((const char*)&len, sizeof(int), pos);
-    write((const char*)val.data(), len, pos);
+    if (len > 0) write((const char*)val.data(), len, pos);
 }
 
 }} // end namespace dsn::utils
