@@ -117,13 +117,13 @@ public:
 private:
     static void report_error(const char* name, int type)
     {
-        dfatal("Cannot find factory '%s' with factory type %s", name, type == PROVIDER_TYPE_MAIN ? "provider" : "aspect");
+        dlog(dsn::log_level_FATAL, "factory.store", "cannot find factory '%s' with factory type %s", name, type == PROVIDER_TYPE_MAIN ? "provider" : "aspect");
 
-        printf("Cannot find factory '%s' with factory type %s\n", name, type == PROVIDER_TYPE_MAIN ? "provider" : "aspect");
+        printf("cannot find factory '%s' with factory type %s\n", name, type == PROVIDER_TYPE_MAIN ? "provider" : "aspect");
 
         std::vector<std::string> keys;
         singleton_store<std::string, factory_entry>::instance().get_all_keys(keys);
-        printf ("\tThe following %u factories are registered:\n", (int)keys.size());
+        printf ("\tthe following %u factories are registered:\n", (int)keys.size());
         for (auto it = keys.begin(); it != keys.end(); it++)
         {
             factory_entry entry;
