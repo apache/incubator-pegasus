@@ -24,7 +24,7 @@ CPPFLAGS = -std=c++11 -I$(ROOT)/inc $(SYS_INC:%= -I%) -I./ $(INC_EXTRA:%= -I%) -
 ifeq (/Users/$(LOGNAME), $(HOME))  # mac
 
 	SYS_LIB = /usr/local/lib
-	SYS_LIB_DEPS =                           \
+	SYS_LIB_DEPS = \
 		$(SYS_LIB_DEPS_COMMON)				 \
 		-lboost_thread-mt					 
 										 
@@ -34,7 +34,7 @@ ifeq (/Users/$(LOGNAME), $(HOME))  # mac
 else # linux									 
 										 
 	SYS_LIB = /usr/lib/x86_64-linux-gnu /usr/local/lib
-	SYS_LIB_DEPS =							 
+	SYS_LIB_DEPS = \
 		$(SYS_LIB_DEPS_COMMON)	\
 		-lrt								  
 										 
