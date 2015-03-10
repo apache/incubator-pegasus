@@ -16,6 +16,7 @@
     <ClCompile Include="native_aio_provider.win.cpp" />
     <ClCompile Include="lockp.std.cpp" />
     <ClCompile Include="nativerun.cpp" />
+    <ClCompile Include="network.sim.cpp" />
     <ClCompile Include="net_provider.cpp" />
     <ClCompile Include="net_server_session.cpp" />
     <ClCompile Include="net_client_session.cpp" />
@@ -31,6 +32,7 @@
     <ClInclude Include="..\..\..\inc\dsn\tool\nativerun.h" />
     <ClInclude Include="..\..\..\inc\dsn\tool\providers.common.h" />
     <ClInclude Include="native_aio_provider.posix.h" />
+    <ClInclude Include="network.sim.h" />
     <ClInclude Include="shared_io_service.h" />
     <ClInclude Include="native_aio_provider.win.h" />
     <ClInclude Include="lockp.std.h" />

@@ -47,7 +47,9 @@ namespace dsn {
             error_code aio_internal(aio_task_ptr& aio, bool async, __out_param uint32_t* pbytes = nullptr);
 
         private:
+# if defined(__MACH__) || defined(__linux__)
             friend void aio_completed(sigval sigval);
+# endif
         };
     }
 }
