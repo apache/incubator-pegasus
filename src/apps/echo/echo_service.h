@@ -41,7 +41,7 @@ public:
         register_rpc_handler(RPC_ECHO, "RPC_ECHO", &echo_server::on_echo);
     }
 
-    void on_echo(const std::string& req, __out std::string& resp)
+    void on_echo(const std::string& req, __out_param std::string& resp)
     {
         resp = req;
     }

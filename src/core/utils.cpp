@@ -28,7 +28,7 @@
 
 namespace rdsn { namespace utils {
 
-void split_args(const char* args, __out std::vector<std::string>& sargs, char splitter)
+void split_args(const char* args, __out_param std::vector<std::string>& sargs, char splitter)
 {
     std::string v(args);
 
@@ -56,7 +56,7 @@ void split_args(const char* args, __out std::vector<std::string>& sargs, char sp
         }
     }
 }
-void split_args(const char* args, __out std::list<std::string>& sargs, char splitter)
+void split_args(const char* args, __out_param std::list<std::string>& sargs, char splitter)
 {
     std::string v(args);
 
@@ -130,7 +130,7 @@ binary_reader::binary_reader(blob& blob)
     _ptr = blob.data();
 }
 
-void binary_reader::read(__out std::string& s)
+void binary_reader::read(__out_param std::string& s)
 {
     int len;
     read(len);

@@ -100,7 +100,7 @@ void replica::broadcast_group_check()
     }
 }
 
-void replica::OnGroupCheck(const group_check_request& request, __out group_check_response& response)
+void replica::OnGroupCheck(const group_check_request& request, __out_param group_check_response& response)
 {
     rdebug(
         "%s: OnGroupCheck from %s:%u",

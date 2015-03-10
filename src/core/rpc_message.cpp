@@ -42,7 +42,7 @@ void marshall(binary_writer& writer, const end_point& val, uint16_t pos /*= 0xff
     writer.write(val.name, pos);
 }
 
-void unmarshall(binary_reader& reader, __out end_point& val)
+void unmarshall(binary_reader& reader, __out_param end_point& val)
 {
     reader.read(val.ip);
     reader.read(val.port);

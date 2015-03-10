@@ -101,7 +101,7 @@ bool meta_server_failure_detector::is_primary() const
     return _isPrimary;
 }
 
-void meta_server_failure_detector::on_beacon(const beacon_msg& beacon, __out beacon_ack& ack)
+void meta_server_failure_detector::on_beacon(const beacon_msg& beacon, __out_param beacon_ack& ack)
 {
     if (!is_primary())
     {

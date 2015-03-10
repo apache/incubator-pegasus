@@ -39,7 +39,7 @@ public:
     void append(const std::string& key, const std::string& appendValue, rpc_reply_handler callback);
 
     // sync ops
-    int read(const std::string& key, __out std::string& value);
+    int read(const std::string& key, __out_param std::string& value);
     int Update(const std::string& key, const std::string& value);
     int append(const std::string& key, const std::string& appendValue);
     

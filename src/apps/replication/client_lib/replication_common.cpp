@@ -198,7 +198,7 @@ void replication_options::sanity_check()
     rassert(StalenessForStartPrepareForPotentialSecondary >= StalenessForCommit, "");
 }
    
-/*static*/ bool ReplicaHelper::RemoveNode(const end_point& node, __inout std::vector<end_point>& nodeList)
+/*static*/ bool ReplicaHelper::RemoveNode(const end_point& node, __inout_param std::vector<end_point>& nodeList)
 {
     auto it = std::find(nodeList.begin(), nodeList.end(), node);
     if (it != nodeList.end())
@@ -212,7 +212,7 @@ void replication_options::sanity_check()
     }
 }
 
-/*static*/ bool ReplicaHelper::GetReplicaConfig(const partition_configuration& partitionConfig, const end_point& node, __out replica_configuration& replicaConfig)
+/*static*/ bool ReplicaHelper::GetReplicaConfig(const partition_configuration& partitionConfig, const end_point& node, __out_param replica_configuration& replicaConfig)
 {
     replicaConfig.gpid = partitionConfig.gpid;
     replicaConfig.primary = partitionConfig.primary;

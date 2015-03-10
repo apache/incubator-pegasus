@@ -84,7 +84,7 @@ namespace rdsn {
             printf("hello, aio_completed");
         }
 
-        error_code native_posix_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool async, __out uint32_t* pbytes /*= nullptr*/)
+        error_code native_posix_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool async, __out_param uint32_t* pbytes /*= nullptr*/)
         {
             auto aio = (posix_disk_aio_context*)aio_tsk->aio().get();
             int r;

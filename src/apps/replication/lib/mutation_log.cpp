@@ -679,7 +679,7 @@ void log_file::close()
     }
 }
 
-int log_file::read_next_log_entry(__out rdsn::utils::blob& bb)
+int log_file::read_next_log_entry(__out_param rdsn::utils::blob& bb)
 {
     rassert(_isRead, "");
 

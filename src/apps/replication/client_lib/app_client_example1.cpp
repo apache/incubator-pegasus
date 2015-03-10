@@ -110,7 +110,7 @@ int app_client_example1::HandleResponse(rpc_response_task_ptr& reply, std::strin
         return ERR_TIMEOUT;
 }
 
-int app_client_example1::read(const std::string& key, __out std::string& value)
+int app_client_example1::read(const std::string& key, __out_param std::string& value)
 {
     auto req = create_read_request(KeyToPartitionIndex(key));
     SimpleKvRequest msg;

@@ -180,7 +180,7 @@ mutation_ptr replica::new_mutation(decree decree)
     return mu;
 }
 
-bool replica::group_configuration(__out partition_configuration& config) const
+bool replica::group_configuration(__out_param partition_configuration& config) const
 {
     if (PS_PRIMARY != status())
         return false;

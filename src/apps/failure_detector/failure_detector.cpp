@@ -37,7 +37,7 @@ namespace fd {
         marshall(writer, msg.to, pos);
     }
 
-    inline void unmarshall(::rdsn::utils::binary_reader& reader, __out failure_detector::beacon_msg& msg)
+    inline void unmarshall(::rdsn::utils::binary_reader& reader, __out_param failure_detector::beacon_msg& msg)
     {
         unmarshall(reader, msg.time);
         unmarshall(reader, msg.from);
@@ -52,7 +52,7 @@ namespace fd {
         marshall(writer, msg.allowed, pos);
     }
 
-    inline void unmarshall(::rdsn::utils::binary_reader& reader, __out failure_detector::beacon_ack& msg)
+    inline void unmarshall(::rdsn::utils::binary_reader& reader, __out_param failure_detector::beacon_ack& msg)
     {
         unmarshall(reader, msg.time);
         unmarshall(reader, msg.is_master);
@@ -319,7 +319,7 @@ bool failure_detector::remove_from_allow_list( const end_point& node)
     return _allow_list.erase(node) > 0;
 }
 
-void failure_detector::on_beacon(const beacon_msg& beacon, __out beacon_ack& ack)
+void failure_detector::on_beacon(const beacon_msg& beacon, __out_param beacon_ack& ack)
 {
     ack.is_master = true;
     ack.primary_node = address();

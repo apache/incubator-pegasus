@@ -45,7 +45,7 @@ void event_wheel::add_event(uint64_t ts, task_ptr& task)
 
 }
 
-std::vector<task_ptr>* event_wheel::pop_next_events(__out uint64_t& ts)
+std::vector<task_ptr>* event_wheel::pop_next_events(__out_param uint64_t& ts)
 {
     utils::auto_lock l(_lock);
 

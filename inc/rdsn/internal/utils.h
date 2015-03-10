@@ -28,8 +28,8 @@
 
 namespace rdsn { namespace utils {
 
-extern void split_args(const char* args, __out std::vector<std::string>& sargs, char splitter = ' ');
-extern void split_args(const char* args, __out std::list<std::string>& sargs, char splitter = ' ');
+extern void split_args(const char* args, __out_param std::vector<std::string>& sargs, char splitter = ' ');
+extern void split_args(const char* args, __out_param std::list<std::string>& sargs, char splitter = ' ');
 
 extern char* trim_string(char* s);
 
@@ -108,21 +108,21 @@ class binary_reader
 public:
     binary_reader(blob& blob);
 
-    template<typename T> void read_pod(__out T& val);
-    template<typename T> void read(__out T& val) { rassert (false, "read of this type is not implemented"); }
-    void read(__out int8_t& val) { read_pod(val); }
-    void read(__out uint8_t& val) { read_pod(val); }
-    void read(__out int16_t& val) { read_pod(val); }
-    void read(__out uint16_t& val) { read_pod(val); }
-    void read(__out int32_t& val) { read_pod(val); }
-    void read(__out long& val) { read_pod(val); }
-    void read(__out uint32_t& val) { read_pod(val); }
-    void read(__out unsigned long& val) { read_pod(val); }
-    void read(__out int64_t& val) { read_pod(val); }
-    void read(__out uint64_t& val) { read_pod(val); }
-    void read(__out bool& val) { read_pod(val); }
+    template<typename T> void read_pod(__out_param T& val);
+    template<typename T> void read(__out_param T& val) { rassert (false, "read of this type is not implemented"); }
+    void read(__out_param int8_t& val) { read_pod(val); }
+    void read(__out_param uint8_t& val) { read_pod(val); }
+    void read(__out_param int16_t& val) { read_pod(val); }
+    void read(__out_param uint16_t& val) { read_pod(val); }
+    void read(__out_param int32_t& val) { read_pod(val); }
+    void read(__out_param long& val) { read_pod(val); }
+    void read(__out_param uint32_t& val) { read_pod(val); }
+    void read(__out_param unsigned long& val) { read_pod(val); }
+    void read(__out_param int64_t& val) { read_pod(val); }
+    void read(__out_param uint64_t& val) { read_pod(val); }
+    void read(__out_param bool& val) { read_pod(val); }
 
-    void read(__out std::string& s);
+    void read(__out_param std::string& s);
     void read(char* buffer, int sz);
     void read(blob& blob);
 
@@ -165,7 +165,7 @@ public:
     void write(const char* buffer, int sz, uint16_t pos = 0xffff);
     void write(const blob& val, uint16_t pos = 0xffff);
 
-    void get_buffers(__out std::vector<blob>& buffers) const;
+    void get_buffers(__out_param std::vector<blob>& buffers) const;
     int  get_buffer_count() const { return (int)_buffers.size(); }
     blob get_buffer() const;
     blob get_first_buffer() const;
@@ -187,7 +187,7 @@ private:
 
 //--------------- inline implementation -------------------
 template<typename T>
-inline void binary_reader::read_pod(__out T& val)
+inline void binary_reader::read_pod(__out_param T& val)
 {
     if (sizeof(T) <= get_remaining_size())
     {
@@ -206,7 +206,7 @@ inline void binary_writer::write_pod(const T& val, uint16_t pos)
     write((char*)&val, (int)sizeof(T), pos);
 }
 
-inline void binary_writer::get_buffers(__out std::vector<blob>& buffers) const
+inline void binary_writer::get_buffers(__out_param std::vector<blob>& buffers) const
 {
     buffers = _data;
 }

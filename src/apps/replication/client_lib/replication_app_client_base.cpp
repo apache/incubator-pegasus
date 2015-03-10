@@ -300,7 +300,7 @@ void replication_app_client_base::on_user_request_timeout(rpc_response_task_ptr 
     caller_tsk->enqueue(ERR_TIMEOUT, nil);
 }
 
-error_code replication_app_client_base::get_address(int pidx, bool isWrite, __out end_point& addr, __out int& appId, read_semantic semantic)
+error_code replication_app_client_base::get_address(int pidx, bool isWrite, __out_param end_point& addr, __out_param int& appId, read_semantic semantic)
 {
     error_code err;
     partition_configuration config;

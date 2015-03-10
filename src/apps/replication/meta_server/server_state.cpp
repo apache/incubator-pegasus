@@ -57,7 +57,7 @@ void server_state::InitApp()
     _apps.push_back(app);
 }
 
-void server_state::GetNodeState(__out NodeStates& nodes)
+void server_state::GetNodeState(__out_param NodeStates& nodes)
 {
     zauto_read_lock l(_lock);
     for (auto it = _nodes.begin(); it != _nodes.end(); it++)
@@ -85,7 +85,7 @@ void server_state::SetNodeState(const NodeStates& nodes)
     }
 }
 
-bool server_state::GetMetaServerPrimary(__out end_point& node)
+bool server_state::GetMetaServerPrimary(__out_param end_point& node)
 {
     zauto_read_lock l(_metaLock);
     if (-1 == _leaderIndex)
@@ -149,7 +149,7 @@ void server_state::SwitchMetaPrimary()
 }
 
 // partition server & client => meta server
-void server_state::OnQueryConfig(ConfigurationNodeQueryRequest& request, __out ConfigurationNodeQueryResponse& response)
+void server_state::OnQueryConfig(ConfigurationNodeQueryRequest& request, __out_param ConfigurationNodeQueryResponse& response)
 {
     zauto_read_lock l(_lock);
     auto it = _nodes.find(request.node);
@@ -168,7 +168,7 @@ void server_state::OnQueryConfig(ConfigurationNodeQueryRequest& request, __out C
     }
 }
 
-void server_state::DoQueryConfigurationByIndexRequest(QueryConfigurationByIndexRequest& request, __out QueryConfigurationByIndexResponse& response)
+void server_state::DoQueryConfigurationByIndexRequest(QueryConfigurationByIndexRequest& request, __out_param QueryConfigurationByIndexResponse& response)
 {
     zauto_read_lock l(_lock);
 
@@ -193,7 +193,7 @@ void server_state::DoQueryConfigurationByIndexRequest(QueryConfigurationByIndexR
     response.err = ERR_OBJECT_NOT_FOUND;
 }
 
-void server_state::update_configuration(configuration_update_request& request, __out ConfigurationUpdateResponse& response)
+void server_state::update_configuration(configuration_update_request& request, __out_param ConfigurationUpdateResponse& response)
 {
     zauto_write_lock l(_lock);
 

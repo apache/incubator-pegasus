@@ -75,7 +75,7 @@ public:
 
 private:
     void _internal_rpc_reply_handler(error_code err, message_ptr& request, message_ptr& response);
-    error_code  get_address(int pidx, bool isWrite, __out end_point& addr, __out int& appId, read_semantic semantic = read_semantic::ReadLastUpdate);
+    error_code  get_address(int pidx, bool isWrite, __out_param end_point& addr, __out_param int& appId, read_semantic semantic = read_semantic::ReadLastUpdate);
     void query_partition_configuration(int pidx);
     void query_partition_configuration_reply(error_code err, message_ptr& request, message_ptr& response, int pidx);
     int  send_client_message(message_ptr& msg, rpc_response_task_ptr& reply, bool firstTime);

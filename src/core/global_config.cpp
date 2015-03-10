@@ -60,7 +60,7 @@ threadpool_spec& threadpool_spec::operator=(const threadpool_spec& source)
     return *this;
 }
 
-bool threadpool_spec::init(configuration_ptr& config, __out std::vector<threadpool_spec>& specs)
+bool threadpool_spec::init(configuration_ptr& config, __out_param std::vector<threadpool_spec>& specs)
 {
     /*
     [threadpool.default]

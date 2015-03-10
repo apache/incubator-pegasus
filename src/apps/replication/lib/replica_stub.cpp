@@ -315,7 +315,7 @@ void replica_stub::OnConfigProposal(const configuration_update_request& proposal
     }
 }
 
-void replica_stub::OnQueryDecree(const QueryPNDecreeRequest& req, __out QueryPNDecreeResponse& resp)
+void replica_stub::OnQueryDecree(const QueryPNDecreeRequest& req, __out_param QueryPNDecreeResponse& resp)
 {
     replica_ptr rep = get_replica(req.partitionId);
     if (rep != nullptr)
@@ -357,7 +357,7 @@ void replica_stub::OnPrepare(message_ptr& request)
     }
 }
 
-void replica_stub::OnGroupCheck(const group_check_request& request, __out group_check_response& response)
+void replica_stub::OnGroupCheck(const group_check_request& request, __out_param group_check_response& response)
 {
     if (!is_connected()) return;
 
@@ -384,7 +384,7 @@ void replica_stub::OnGroupCheck(const group_check_request& request, __out group_
     }
 }
 
-void replica_stub::OnLearn(const learn_request& request, __out learn_response& response)
+void replica_stub::OnLearn(const learn_request& request, __out_param learn_response& response)
 {
     replica_ptr rep = get_replica(request.gpid);
     if (rep != nullptr)

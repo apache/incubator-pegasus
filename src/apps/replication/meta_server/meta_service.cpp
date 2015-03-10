@@ -139,17 +139,17 @@ void meta_service::OnMetaServiceRequest(message_ptr& msg)
 }
 
 // partition server & client => meta server
-void meta_service::OnQueryConfig(ConfigurationNodeQueryRequest& request, __out ConfigurationNodeQueryResponse& response)
+void meta_service::OnQueryConfig(ConfigurationNodeQueryRequest& request, __out_param ConfigurationNodeQueryResponse& response)
 {
     _state->OnQueryConfig(request, response);
 }
 
-void meta_service::DoQueryConfigurationByIndexRequest(QueryConfigurationByIndexRequest& request, __out QueryConfigurationByIndexResponse& response)
+void meta_service::DoQueryConfigurationByIndexRequest(QueryConfigurationByIndexRequest& request, __out_param QueryConfigurationByIndexResponse& response)
 {
     _state->DoQueryConfigurationByIndexRequest(request, response);
 }
 
-void meta_service::update_configuration(configuration_update_request& request, __out ConfigurationUpdateResponse& response)
+void meta_service::update_configuration(configuration_update_request& request, __out_param ConfigurationUpdateResponse& response)
 {
     _state->update_configuration(request, response);
 }

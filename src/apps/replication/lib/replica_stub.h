@@ -63,7 +63,7 @@ public:
     //    messages from meta server
     //
     void OnConfigProposal(const configuration_update_request& proposal);
-    void OnQueryDecree(const QueryPNDecreeRequest& req, __out QueryPNDecreeResponse& resp);
+    void OnQueryDecree(const QueryPNDecreeRequest& req, __out_param QueryPNDecreeResponse& resp);
         
     //
     //    messages from peers (primary or secondary)
@@ -72,11 +72,11 @@ public:
     //        - learn
     //
     void OnPrepare(message_ptr& request);    
-    void OnLearn(const learn_request& request, __out learn_response& response);
+    void OnLearn(const learn_request& request, __out_param learn_response& response);
     void OnLearnCompletionNotification(const group_check_response& report);
     void OnAddLearner(const group_check_request& request);
     void OnRemove(const replica_configuration& request);
-    void OnGroupCheck(const group_check_request& request, __out group_check_response& response);
+    void OnGroupCheck(const group_check_request& request, __out_param group_check_response& response);
 
     //
     //    local messages

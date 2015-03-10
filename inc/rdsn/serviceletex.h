@@ -33,7 +33,7 @@ namespace rdsn {
         //
         // for TRequest/TResponse, we assume that the following routines are defined:
         //    marshall(binary_writer& writer, const T& val); 
-        //    unmarshall(binary_reader& reader, __out T& val);
+        //    unmarshall(binary_reader& reader, __out_param T& val);
         // either in the namespace of ::rdsn::utils or T
         // developers may write these helper functions by their own, or use tools
         // such as protocol-buffer, thrift, or bond to generate these functions automatically

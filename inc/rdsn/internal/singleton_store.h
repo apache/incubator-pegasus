@@ -47,7 +47,7 @@ public:
         }
     }
 
-    bool get(TKey key, __out TValue& val) const
+    bool get(TKey key, __out_param TValue& val) const
     {
         auto_read_lock l(_lock);
         auto it = _store.find(key);
@@ -66,7 +66,7 @@ public:
         return _store.erase(key) > 0;
     }
 
-    void get_all_keys(__out std::vector<TKey>& keys)
+    void get_all_keys(__out_param std::vector<TKey>& keys)
     {
         auto_read_lock l(_lock);
         for (auto it = _store.begin(); it != _store.end(); it++)

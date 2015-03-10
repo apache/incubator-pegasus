@@ -268,7 +268,7 @@ int replication_app_example1::compact(bool force)
 }
 
 // helper routines to accelerate learning
-int replication_app_example1::get_learn_state(decree start, const utils::blob& learnRequest, __out learn_state& state)
+int replication_app_example1::get_learn_state(decree start, const utils::blob& learnRequest, __out_param learn_state& state)
 {
     rdsn::utils::binary_writer writer;
 

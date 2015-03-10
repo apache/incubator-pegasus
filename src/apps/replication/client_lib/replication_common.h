@@ -129,8 +129,8 @@ private:
 class ReplicaHelper
 {
 public:
-    static bool RemoveNode(const end_point& node, __inout std::vector<end_point>& nodeList);
-    static bool GetReplicaConfig(const partition_configuration& partitionConfig, const end_point& node, __out replica_configuration& replicaConfig);
+    static bool RemoveNode(const end_point& node, __inout_param std::vector<end_point>& nodeList);
+    static bool GetReplicaConfig(const partition_configuration& partitionConfig, const end_point& node, __out_param replica_configuration& replicaConfig);
 };
 
 }} // namespace

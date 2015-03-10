@@ -99,7 +99,7 @@ void primary_context::ResetMembership(const partition_configuration& config, boo
     }
 }
 
-bool primary_context::GetReplicaConfig(const end_point& node, __out replica_configuration& config)
+bool primary_context::GetReplicaConfig(const end_point& node, __out_param replica_configuration& config)
 {
     config.gpid = membership.gpid;
     config.primary = membership.primary;  
@@ -119,7 +119,7 @@ bool primary_context::GetReplicaConfig(const end_point& node, __out replica_conf
 }
 
 
-void primary_context::GetReplicaConfig(partition_status status, __out replica_configuration& config)
+void primary_context::GetReplicaConfig(partition_status status, __out_param replica_configuration& config)
 {
     config.gpid = membership.gpid;
     config.primary = membership.primary;  

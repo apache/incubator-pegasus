@@ -79,7 +79,7 @@ struct threadpool_spec
     threadpool_spec(const threadpool_spec& source);
     threadpool_spec& operator=(const threadpool_spec& source);
 
-    static bool init(configuration_ptr& config, __out std::vector<threadpool_spec>& specs);
+    static bool init(configuration_ptr& config, __out_param std::vector<threadpool_spec>& specs);
 };
 
 } // end namespace

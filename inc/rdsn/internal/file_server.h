@@ -45,7 +45,7 @@ namespace rdsn {
 
         extern void marshall(::rdsn::utils::binary_writer& writer, const remote_copy_request& val, uint16_t pos = 0xffff);
 
-        extern void unmarshall(::rdsn::utils::binary_reader& reader, __out remote_copy_request& val);
+        extern void unmarshall(::rdsn::utils::binary_reader& reader, __out_param remote_copy_request& val);
 
         class file_server 
         {

@@ -75,11 +75,11 @@ public:
     //    messages from peers (primary or secondary)
     //
     void OnPrepare(message_ptr& request);    
-    void OnLearn(const learn_request& request, __out learn_response& response);
+    void OnLearn(const learn_request& request, __out_param learn_response& response);
     void OnLearnCompletionNotification(const group_check_response& report);
     void OnAddLearner(const group_check_request& request);
     void OnRemove(const replica_configuration& request);
-    void OnGroupCheck(const group_check_request& request, __out group_check_response& response);
+    void OnGroupCheck(const group_check_request& request, __out_param group_check_response& response);
 
     //
     //    messsages from liveness monitor
@@ -103,7 +103,7 @@ public:
     decree LastPreparedDecree() const;
     decree last_durable_decree() const;    
     const std::string& dir() const { return _dir; }
-    bool group_configuration(__out partition_configuration& config) const;
+    bool group_configuration(__out_param partition_configuration& config) const;
     uint64_t last_config_change_time_milliseconds() const { return _last_config_change_time_ms; }
     const char* name() const { return _name; }
         

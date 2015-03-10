@@ -34,7 +34,7 @@ public:
     ~event_wheel() { clear(); }
 
     void add_event(uint64_t ts, task_ptr& task);
-    std::vector<task_ptr>* pop_next_events(__out uint64_t& ts);
+    std::vector<task_ptr>* pop_next_events(__out_param uint64_t& ts);
     void clear();
     bool has_more_events() const {  utils::auto_lock l(_lock); return _events.size() > 0; }
 

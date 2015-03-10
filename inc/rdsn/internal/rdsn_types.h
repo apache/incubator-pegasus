@@ -64,16 +64,16 @@ typedef int handle_t;
 # define MAX_COMPUTERNAME_LENGTH 32
 # endif
 
-# ifndef __in
-# define __in
+# ifndef __in_param
+# define __in_param
 # endif
 
-# ifndef __out
-# define __out
+# ifndef __out_param
+# define __out_param
 # endif
 
-# ifndef __inout
-# define __inout
+# ifndef __inout_param
+# define __inout_param
 # endif
 
 // stl headers

@@ -102,7 +102,7 @@ void replica::init_learn(uint64_t signature)
         );
 }
 
-void replica::OnLearn(const learn_request& request, __out learn_response& response)
+void replica::OnLearn(const learn_request& request, __out_param learn_response& response)
 {
     check_hashed_access();
 

@@ -99,8 +99,8 @@ public:
     //
     // quick read
     //
-    template<typename T> void read(__out T& val) { _reader->read(val); }
-    void read(__out std::string& s) { _reader->read(s); }
+    template<typename T> void read(__out_param T& val) { _reader->read(val); }
+    void read(__out_param std::string& s) { _reader->read(s); }
     void read(char* buffer, int sz) { _reader->read(buffer, sz); }
     void read(utils::blob& blob) { _reader->read(blob); }
     utils::blob get_input_buffer() const { return _reader->get_buffer(); }
@@ -116,7 +116,7 @@ public:
     void write(const std::string& val, uint16_t pos = 0xffff) { return _writer->write(val, pos); }
     void write(const char* buffer, int sz, uint16_t pos = 0xffff) { return _writer->write(buffer, sz, pos); }
     void write(const utils::blob& val, uint16_t pos = 0xffff) { return _writer->write(val, pos); }
-    void get_output_buffers(__out std::vector<utils::blob>& buffers) const { return _writer->get_buffers(buffers); }
+    void get_output_buffers(__out_param std::vector<utils::blob>& buffers) const { return _writer->get_buffers(buffers); }
     int  get_output_buffer_count() const { return _writer->get_buffer_count(); }
     utils::blob get_output_buffer() const { return _writer->get_buffer();}
     
@@ -153,5 +153,5 @@ protected:
 DEFINE_REF_OBJECT(message)
 
 extern void marshall(utils::binary_writer& writer, const end_point& val, uint16_t pos = 0xffff);
-extern void unmarshall(utils::binary_reader& reader, __out end_point& val);
+extern void unmarshall(utils::binary_reader& reader, __out_param end_point& val);
 } // end namespace

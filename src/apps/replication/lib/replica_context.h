@@ -42,8 +42,8 @@ public:
     void Cleanup(bool cleanPendingMutations = true);
        
     void ResetMembership(const partition_configuration& config, bool clearLearners);
-    bool GetReplicaConfig(const end_point& node, __out replica_configuration& config);
-    void GetReplicaConfig(partition_status status, __out replica_configuration& config);
+    bool GetReplicaConfig(const end_point& node, __out_param replica_configuration& config);
+    void GetReplicaConfig(partition_status status, __out_param replica_configuration& config);
     bool CheckExist(const end_point& node, partition_status status);
     partition_status GetNodeStatus(const end_point& addr) const;
 

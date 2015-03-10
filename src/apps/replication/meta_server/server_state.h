@@ -38,18 +38,18 @@ public:
     server_state(void);
     ~server_state(void);
 
-    void GetNodeState(__out NodeStates& nodes);
+    void GetNodeState(__out_param NodeStates& nodes);
     void SetNodeState(const NodeStates& nodes);
-    bool GetMetaServerPrimary(__out end_point& node);
+    bool GetMetaServerPrimary(__out_param end_point& node);
 
     void AddMetaNode(const end_point& node);
     void RemoveMetaNode(const end_point& node);
     void SwitchMetaPrimary();
 
     // partition server & client => meta server
-    void OnQueryConfig(ConfigurationNodeQueryRequest& request, __out ConfigurationNodeQueryResponse& response);
-    void DoQueryConfigurationByIndexRequest(QueryConfigurationByIndexRequest& request, __out QueryConfigurationByIndexResponse& response);
-    void update_configuration(configuration_update_request& request, __out ConfigurationUpdateResponse& response);
+    void OnQueryConfig(ConfigurationNodeQueryRequest& request, __out_param ConfigurationNodeQueryResponse& response);
+    void DoQueryConfigurationByIndexRequest(QueryConfigurationByIndexRequest& request, __out_param QueryConfigurationByIndexResponse& response);
+    void update_configuration(configuration_update_request& request, __out_param ConfigurationUpdateResponse& response);
 
 private:
     void InitApp();

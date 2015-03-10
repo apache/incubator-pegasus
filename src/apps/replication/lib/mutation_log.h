@@ -149,7 +149,7 @@ public:
     //
     // read routines
     //
-    int read_next_log_entry(__out rdsn::utils::blob& bb);
+    int read_next_log_entry(__out_param rdsn::utils::blob& bb);
 
     //
     // write routines

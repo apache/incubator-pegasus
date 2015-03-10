@@ -90,7 +90,7 @@ public:
         return dequeue_impl(ct);
     }
 
-    virtual T dequeue(__out long& ct)
+    virtual T dequeue(__out_param long& ct)
     {
         std::lock_guard<std::mutex>  l(_lock);
         return dequeue_impl(ct);
@@ -101,7 +101,7 @@ public:
     long count() const { std::lock_guard<std::mutex>  l(_lock); return _count; }
 
 protected:
-    T dequeue_impl(__out long& ct, bool pop = true)
+    T dequeue_impl(__out_param long& ct, bool pop = true)
     {
         if (_count == 0)
         {
@@ -159,7 +159,7 @@ public:
         return r;
     }
 
-    virtual T dequeue(__out long ct, int millieseconds = INFINITE)
+    virtual T dequeue(__out_param long ct, int millieseconds = INFINITE)
     {
         std::unique_lock<std::mutex> l(priority_queue<T, priority_count, TQueue>::_lock);
         
