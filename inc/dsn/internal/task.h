@@ -91,13 +91,6 @@ private:
 private:
     task_spec              *_spec;
     task_worker            *_caller_worker;
-
-public:
-    struct
-    {
-        uint64_t enqueue_time_100ns;
-    }
-    internal_use_only;
 };
 
 DEFINE_REF_OBJECT(task)

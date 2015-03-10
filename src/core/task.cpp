@@ -101,7 +101,6 @@ task::task(task_code code, int hash)
     _hash = hash;
     _delay_milliseconds = 0;
     _caller_worker = task::get_current_worker();
-    memset((void*)&internal_use_only, 0, sizeof(internal_use_only));
 }
 
 task::~task()

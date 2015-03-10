@@ -69,10 +69,12 @@ void replica::init_state()
             )
     );
 
-    memset((void*)&_config, 0, sizeof(_config));
+    _config.ballot = 0;
+    _config.gpid.pidx = 0;
+    _config.gpid.tableId = 0;
     _config.status = PS_INACTIVE;
     _primary_states.membership.ballot = 0;
-    _last_config_change_time_ms =now_ms();
+    _last_config_change_time_ms = now_ms();
 }
 
 replica::~replica(void)

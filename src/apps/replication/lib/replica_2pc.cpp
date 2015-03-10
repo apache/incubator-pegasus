@@ -194,7 +194,7 @@ void replica::send_prepare_message(const end_point& addr, partition_status statu
     dbg_dassert (mu->remote_tasks().find(addr) == mu->remote_tasks().end());
 
     mu->remote_tasks()[addr] = rpc_call(addr, msg, 
-        std::bind(&replica::on_prepare_replay, this, mu, rconfig.status, 
+        std::bind(&replica::on_prepare_reply, this, mu, rconfig.status, 
             std::placeholders::_1, 
             std::placeholders::_2, 
             std::placeholders::_3),
@@ -369,7 +369,7 @@ void replica::on_append_log_completed(mutation_ptr& mu, uint32_t err, uint32_t s
     }
 }
 
-void replica::on_prepare_replay(mutation_ptr& mu, partition_status targetStatus, int err, message_ptr& request, message_ptr& reply)
+void replica::on_prepare_reply(mutation_ptr& mu, partition_status targetStatus, int err, message_ptr& request, message_ptr& reply)
 {
     check_hashed_access();
 
@@ -395,7 +395,7 @@ void replica::on_prepare_replay(mutation_ptr& mu, partition_status targetStatus,
         unmarshall(reply, resp);        
 
         ddebug( 
-            "%s: mutation %s on_prepare_replay from %s:%u", 
+            "%s: mutation %s on_prepare_reply from %s:%u", 
             name(), mu->name(),
             node.name.c_str(), (int)node.port
             );
