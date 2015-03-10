@@ -54,7 +54,7 @@ public:
 
     message_ptr create_read_request(        
         int partition_index,
-        read_semantic semantic = ReadOutdated,
+        read_semantic_t semantic = ReadOutdated,
         decree snapshot_decree = invalid_decree // only used when ReadSnapshot        
         );
 
@@ -69,13 +69,13 @@ public:
         );
 
     // get read address policy
-    virtual end_point get_read_address(read_semantic semantic, const partition_configuration& config);
+    virtual end_point get_read_address(read_semantic_t semantic, const partition_configuration& config);
 
     void clear_all_pending_tasks();
 
 private:
     void _internal_rpc_reply_handler(error_code err, message_ptr& request, message_ptr& response);
-    error_code  get_address(int pidx, bool isWrite, __out_param end_point& addr, __out_param int& appId, read_semantic semantic = read_semantic::ReadLastUpdate);
+    error_code  get_address(int pidx, bool isWrite, __out_param end_point& addr, __out_param int& appId, read_semantic_t semantic = read_semantic_t::ReadLastUpdate);
     void query_partition_configuration(int pidx);
     void query_partition_configuration_reply(error_code err, message_ptr& request, message_ptr& response, int pidx);
     int  send_client_message(message_ptr& msg, rpc_response_task_ptr& reply, bool firstTime);

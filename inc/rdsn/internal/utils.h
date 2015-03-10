@@ -115,9 +115,7 @@ public:
     void read(__out_param int16_t& val) { read_pod(val); }
     void read(__out_param uint16_t& val) { read_pod(val); }
     void read(__out_param int32_t& val) { read_pod(val); }
-    void read(__out_param long& val) { read_pod(val); }
     void read(__out_param uint32_t& val) { read_pod(val); }
-    void read(__out_param unsigned long& val) { read_pod(val); }
     void read(__out_param int64_t& val) { read_pod(val); }
     void read(__out_param uint64_t& val) { read_pod(val); }
     void read(__out_param bool& val) { read_pod(val); }
@@ -154,9 +152,7 @@ public:
     void write(const int16_t& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
     void write(const uint16_t& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
     void write(const int32_t& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
-    void write(const long& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
     void write(const uint32_t& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
-    void write(const unsigned long& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
     void write(const int64_t& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
     void write(const uint64_t& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
     void write(const bool& val, uint16_t pos = 0xffff) { write_pod(val, pos); }

@@ -31,9 +31,6 @@
 # include <rdsn/toollet/profiler.h>
 # include <rdsn/toollet/fault_injector.h>
 
-//# include "default_providers.h"
-
-//# include <rdsn/toollet/GlobalPredicate.h>
 # include "app_example1.h"
 # include "replication_app_factory.h"
 
@@ -41,7 +38,7 @@
 
 using namespace rdsn::service;
 
-int __cdecl main(int argc, char * argv[])
+int main(int argc, char * argv[])
 {
     const char* config = "metaserver.ini";
     if (argc > 1)

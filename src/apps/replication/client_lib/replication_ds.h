@@ -109,7 +109,7 @@ namespace rdsn {
             partition_status              status = PS_INACTIVE;
         };
 
-        enum read_semantic
+        enum read_semantic_t
         {
             ReadLastUpdate,
             ReadOutdated,
@@ -119,7 +119,7 @@ namespace rdsn {
         struct client_read_request
         {
             global_partition_id gpid;
-            read_semantic      semantic = ReadLastUpdate;
+            read_semantic_t      semantic = ReadLastUpdate;
             int64_t             versionDecree = -1;
         };
 
@@ -389,7 +389,7 @@ namespace rdsn {
             unmarshall(reader, val.status);
         }
 
-        DEFINE_POD_SERIALIZATION(replication::read_semantic)
+        DEFINE_POD_SERIALIZATION(replication::read_semantic_t)
 
             DEFINE_POD_SERIALIZATION(replication::client_read_request)
 

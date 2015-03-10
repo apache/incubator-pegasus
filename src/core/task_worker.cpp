@@ -118,7 +118,7 @@ void task_worker::set_name()
 # endif
 }
 
-void task_worker::set_priority(worker_priority pri)
+void task_worker::set_priority(worker_priority_t pri)
 {
 # ifdef _WIN32
     static int g_thread_priority_map[] = 

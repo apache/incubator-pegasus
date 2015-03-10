@@ -27,8 +27,10 @@
 # include <vector>
 # include <map>
 # include <cstdlib>
+# include <cstring>
 # include <string>
 # include <list>
+
 
 namespace rdsn {
 

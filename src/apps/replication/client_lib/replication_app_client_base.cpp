@@ -34,7 +34,7 @@ public:
     RepClientMessage() // For write Mode.            
     {
         Pidx = -1;
-        read_semantic = read_semantic::ReadOutdated;
+        read_semantic = read_semantic_t::ReadOutdated;
         ReadSnapshotDecree = invalid_decree;
         HeaderPlaceholderPos = 0;
 
@@ -65,7 +65,7 @@ public:
     
 public:
     int          Pidx;
-    read_semantic read_semantic;
+    read_semantic_t read_semantic;
     decree       ReadSnapshotDecree;
     uint16_t     HeaderPlaceholderPos;
 
@@ -127,7 +127,7 @@ message_ptr replication_app_client_base::create_write_request(int partition_inde
 
 message_ptr replication_app_client_base::create_read_request(
     int partition_index,
-    read_semantic semantic /*= ReadOutdated*/,
+    read_semantic_t semantic /*= ReadOutdated*/,
     decree snapshot_decree /*= invalid_decree*/ // only used when ReadSnapshot
     )
 {
@@ -300,7 +300,7 @@ void replication_app_client_base::on_user_request_timeout(rpc_response_task_ptr 
     caller_tsk->enqueue(ERR_TIMEOUT, nil);
 }
 
-error_code replication_app_client_base::get_address(int pidx, bool isWrite, __out_param end_point& addr, __out_param int& appId, read_semantic semantic)
+error_code replication_app_client_base::get_address(int pidx, bool isWrite, __out_param end_point& addr, __out_param int& appId, read_semantic_t semantic)
 {
     error_code err;
     partition_configuration config;
@@ -451,9 +451,9 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
     if (nullptr != messageList) delete messageList;
 }
 
-end_point replication_app_client_base::get_read_address(read_semantic semantic, const partition_configuration& config)
+end_point replication_app_client_base::get_read_address(read_semantic_t semantic, const partition_configuration& config)
 {
-    if (semantic == read_semantic::ReadLastUpdate)
+    if (semantic == read_semantic_t::ReadLastUpdate)
         return config.primary;
 
     // readsnapshot or readoutdated, using random

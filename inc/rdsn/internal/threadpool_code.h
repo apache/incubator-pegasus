@@ -30,7 +30,7 @@
 
 namespace rdsn {
 
-enum worker_priority
+enum worker_priority_t
 {
     THREAD_xPRIORITY_LOWEST,
     THREAD_xPRIORITY_BELOW_NORMAL,
@@ -41,13 +41,13 @@ enum worker_priority
     THREAD_xPRIORITY_INVALID,
 };
 
-ENUM_BEGIN(worker_priority, THREAD_xPRIORITY_INVALID)
+ENUM_BEGIN(worker_priority_t, THREAD_xPRIORITY_INVALID)
     ENUM_REG(THREAD_xPRIORITY_LOWEST)
     ENUM_REG(THREAD_xPRIORITY_BELOW_NORMAL)
     ENUM_REG(THREAD_xPRIORITY_NORMAL)
     ENUM_REG(THREAD_xPRIORITY_ABOVE_NORMAL)
     ENUM_REG(THREAD_xPRIORITY_HIGHEST)
-ENUM_END(worker_priority)
+ENUM_END(worker_priority_t)
 
 DEFINE_CUSTOMIZED_ID_TYPE(threadpool_code)
 
@@ -62,7 +62,7 @@ struct threadpool_spec
     threadpool_code          pool_code;
     bool                    run;
     int                     worker_count;
-    worker_priority          worker_priority;
+    worker_priority_t       worker_priority;
     bool                    worker_share_core;
     uint64_t                worker_affinity_mask;
     unsigned int            max_input_queue_length; // INFINITE by default

@@ -67,7 +67,7 @@ private:
 
 private:
     void set_name();
-    void set_priority(worker_priority pri);
+    void set_priority(worker_priority_t pri);
     void set_affinity(uint64_t affinity);
     void run_internal();
 

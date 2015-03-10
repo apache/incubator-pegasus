@@ -86,7 +86,9 @@ typedef int handle_t;
 
 // common c headers
 # include <cassert>
-#include <fcntl.h> // for file open flags
+# include <cstring>
+# include <cstdlib>
+# include <fcntl.h> // for file open flags
 
 // common utilities
 # include <atomic>

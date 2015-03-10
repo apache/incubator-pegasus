@@ -31,7 +31,7 @@
 
 using namespace rdsn::service;
 
-int __cdecl main(int argc, char * argv[])
+int main(int argc, char * argv[])
 {
     // register all possible services
     rdsn::service::system::register_service<echo_client_app>("echo_client_app");
