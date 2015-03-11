@@ -36,6 +36,7 @@ else # linux
 	SYS_LIB = /usr/lib/x86_64-linux-gnu /usr/local/lib
 	SYS_LIB_DEPS = \
 		$(SYS_LIB_DEPS_COMMON)	\
+		-lboost_thread \
 		-lrt								  
 										 
 	LIB_NONLINKED_PATH = /usr/lib/x86_64-linux-gnu
