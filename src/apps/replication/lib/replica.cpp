@@ -44,7 +44,7 @@ replica::replica(replica_stub* stub, replication_options& options)
     init_state();
 }
 
-// for create new replica only used in replica_stub::OnConfigProposal
+// for create new replica only used in replica_stub::on_config_proposal
 replica::replica(replica_stub* stub, global_partition_id gpid, replication_options& options)
 : serviceletex<replica>("replica")
 {
@@ -193,7 +193,7 @@ bool replica::group_configuration(__out_param partition_configuration& config) c
 
 decree replica::last_durable_decree() const { return _app->last_durable_decree(); }
 
-decree replica::LastPreparedDecree() const
+decree replica::last_prepared_decree() const
 {
     ballot lastBallot = 0;
     decree start = last_committed_decree();

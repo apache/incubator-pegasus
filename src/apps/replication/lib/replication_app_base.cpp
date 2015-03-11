@@ -42,7 +42,7 @@ int replication_app_base::WriteInternal(mutation_ptr& mu, bool ackClient)
 
     int err = write(mu->client_requests, mu->data.header.decree, ackClient);
 
-    //dassert(mu->data.header.decree == last_committed_decree(), "");
+    //dassert (mu->data.header.decree == last_committed_decree(), "");
 
     return err;
 }

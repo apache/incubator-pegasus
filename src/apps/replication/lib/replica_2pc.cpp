@@ -226,7 +226,7 @@ void replica::do_possible_commit_on_primary(mutation_ptr& mu)
     }
 }
 
-void replica::OnPrepare(message_ptr& request)
+void replica::on_prepare(message_ptr& request)
 {
     check_hashed_access();
 
@@ -235,13 +235,13 @@ void replica::OnPrepare(message_ptr& request)
 
     mutation_ptr mu = mutation::read_from(request);
 
-    ddebug( "%s: mutation %s OnPrepare", name(), mu->name());
+    ddebug( "%s: mutation %s on_prepare", name(), mu->name());
 
     dassert (mu->data.header.ballot == rconfig.ballot, "");
 
     if (mu->data.header.ballot < get_ballot())
     {
-        ddebug( "%s: mutation %s OnPrepare skipped due to old view", name(), mu->name());
+        ddebug( "%s: mutation %s on_prepare skipped due to old view", name(), mu->name());
         return;
     }
 
@@ -254,7 +254,7 @@ void replica::OnPrepare(message_ptr& request)
     if (PS_INACTIVE == status() || PS_ERROR == status())
     {
         ddebug( 
-            "%s: mutation %s OnPrepare  to %s skipped",
+            "%s: mutation %s on_prepare  to %s skipped",
             name(), mu->name(),
             enum_to_string(status())
             );
@@ -267,7 +267,7 @@ void replica::OnPrepare(message_ptr& request)
         if (_potential_secondary_states.LearningState != LearningWithPrepare && _potential_secondary_states.LearningState != LearningSucceeded)
         {
             ddebug( 
-                "%s: mutation %s OnPrepare to %s skipped, learnings state = %s",
+                "%s: mutation %s on_prepare to %s skipped, learnings state = %s",
                 name(), mu->name(),
                 enum_to_string(status()),
                 enum_to_string(_potential_secondary_states.LearningState)
@@ -291,6 +291,11 @@ void replica::OnPrepare(message_ptr& request)
     if (mu2 != nullptr && mu2->data.header.ballot == mu->data.header.ballot)
     {
         ddebug( "%s: mutation %s redundant prepare skipped", name(), mu->name());
+
+        if (mu2->is_prepared())
+        {
+            ack_prepare_message(ERR_SUCCESS, mu);
+        }
         return;
     }
 
@@ -380,7 +385,7 @@ void replica::on_prepare_reply(mutation_ptr& mu, partition_status targetStatus, 
     dassert (mu->data.header.ballot == get_ballot(), "");
 
     end_point node = request->header().to_address;
-    partition_status status = _primary_states.GetNodeStatus(node);
+    partition_status st = _primary_states.GetNodeStatus(node);
 
     // handle reply
     PrepareAck resp;
@@ -443,7 +448,7 @@ void replica::on_prepare_reply(mutation_ptr& mu, partition_status targetStatus, 
                 do_possible_commit_on_primary(mu);
             }
         }
-        handle_remote_failure(status, node, resp.err);
+        handle_remote_failure(st, node, resp.err);
     }
 }
 

@@ -119,7 +119,7 @@ protected:
             }
         }
 
-        dassert(index >= 0, "must find something");
+        dassert (index >= 0, "must find something");
         auto c = _items[index].front();
         _items[index].pop();
         return c;

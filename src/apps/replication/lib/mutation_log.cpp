@@ -107,7 +107,7 @@ int mutation_log::initialize(const char* dir)
             continue;
         }
 
-        dassert(_log_files.find(log->index()) == _log_files.end(), "");
+        dassert (_log_files.find(log->index()) == _log_files.end(), "");
         _log_files[log->index()] = log;
     }
 
@@ -139,7 +139,7 @@ int mutation_log::create_new_log_file()
     if (_current_log_file != nullptr)
     {
         _last_log_file = _current_log_file;
-        dassert(_current_log_file->end_offset() == _global_end_offset, "");
+        dassert (_current_log_file->end_offset() == _global_end_offset, "");
     }
 
     log_file_ptr logFile = log_file::create_write(_dir.c_str(), _last_file_number + 1, _global_end_offset, _max_staleness_for_commit, _write_task_number);
@@ -154,11 +154,11 @@ int mutation_log::create_new_log_file()
         "create new log file %s", logFile->Path().c_str());
         
     _last_file_number++;
-    dassert(_log_files.find(_last_file_number) == _log_files.end(), "");
+    dassert (_log_files.find(_last_file_number) == _log_files.end(), "");
     _log_files[_last_file_number] = logFile;
 
-    dassert(logFile->end_offset() == logFile->start_offset(), "");
-    dassert(_global_end_offset == logFile->end_offset(), "");
+    dassert (logFile->end_offset() == logFile->start_offset(), "");
+    dassert (_global_end_offset == logFile->end_offset(), "");
 
     _current_log_file = logFile; 
 
@@ -171,8 +171,8 @@ int mutation_log::create_new_log_file()
 
 void mutation_log::create_new_pending_buffer()
 {
-    dassert(_pending_write == nullptr, "");
-    dassert(_pending_write_callbacks == nullptr, "");
+    dassert (_pending_write == nullptr, "");
+    dassert (_pending_write_callbacks == nullptr, "");
     dassert (_pending_write_timer == nullptr, "");
 
     _pending_write = message::create_request(RPC_PREPARE, _log_pending_max_milliseconds);
@@ -189,14 +189,14 @@ void mutation_log::create_new_pending_buffer()
             );
     }
 
-    dassert(_pending_write->total_size() == message_header::serialized_size(), "");
+    dassert (_pending_write->total_size() == message_header::serialized_size(), "");
     _global_end_offset += message_header::serialized_size();
 }
 
 void mutation_log::internal_pending_write_timer(uint64_t id)
 {
     zauto_lock l(_lock);
-    dassert(nullptr != _pending_write, "");
+    dassert (nullptr != _pending_write, "");
     dassert (_pending_write->header().id == id, "");
     dassert (task::get_current_task() == _pending_write_timer, "");
 
@@ -208,7 +208,7 @@ int mutation_log::write_pending_mutations(bool create_new_log_when_necessary)
 {
     //dassert (_lock.IsHeldByCurrentThread(), "");
     dassert (_pending_write != nullptr, "");
-    dassert(_pending_write_timer == nullptr, "");
+    dassert (_pending_write_timer == nullptr, "");
 
     _pending_write->seal(true);
     auto bb = _pending_write->get_output_buffer();
@@ -235,7 +235,7 @@ int mutation_log::write_pending_mutations(bool create_new_log_when_necessary)
     }
     else
     {
-        dassert(_global_end_offset == _current_log_file->end_offset(), "");
+        dassert (_global_end_offset == _current_log_file->end_offset(), "");
     }
 
     _pending_write = nullptr;
@@ -322,7 +322,7 @@ int mutation_log::replay(ReplayCallback callback)
             {
                 auto oldSz = msg->get_remaining_size();
                 mutation_ptr mu = mutation::read_from(msg);
-                dassert(nullptr != mu, "");                                
+                dassert (nullptr != mu, "");                                
                 mu->set_logged();
 
                 if (mu->data.header.logOffset != offset)
@@ -376,7 +376,7 @@ int mutation_log::replay(ReplayCallback callback)
     }
     else if (err == ERR_SUCCESS)
     {
-        dassert(end_offset() == offset, "");
+        dassert (end_offset() == offset, "");
     }
 
     return err;
@@ -389,7 +389,7 @@ int mutation_log::start_write_service(multi_partition_decrees& initMaxDecrees, i
     _init_prepared_decrees = initMaxDecrees;
     _max_staleness_for_commit = maxStalenessForCommit;
     
-    dassert(_current_log_file == nullptr, "");
+    dassert (_current_log_file == nullptr, "");
     return create_new_log_file();
 }
 
@@ -405,7 +405,7 @@ void mutation_log::close()
             {
                 _pending_write_timer = nullptr;
                 write_pending_mutations(false);
-                dassert(nullptr == _pending_write_timer, "");
+                dassert (nullptr == _pending_write_timer, "");
             }
             else
             {
@@ -486,6 +486,12 @@ task_ptr mutation_log::append(mutation_ptr& mu,
     return tsk;
 }
 
+void mutation_log::on_partition_removed(global_partition_id gpid)
+{
+    zauto_lock l(_lock);
+    _init_prepared_decrees.erase(gpid);
+}
+
 int mutation_log::garbage_collection(multi_partition_decrees& durable_decrees)
 {
     std::map<int, log_file_ptr> files;
@@ -515,7 +521,7 @@ int mutation_log::garbage_collection(multi_partition_decrees& durable_decrees)
             else
             {
                 decree initPrepareDecree = it3->second;
-                decree maxPrepareDecreeBeforeThis = initPrepareDecree + log->header().maxStalenessForCommit; // due to concurent prepare
+                decree maxPrepareDecreeBeforeThis = initPrepareDecree;
                 
                 // when all possible decress are covered by durable decress
                 if (lastDurableDecree >= maxPrepareDecreeBeforeThis)
@@ -681,7 +687,7 @@ void log_file::close()
 
 int log_file::read_next_log_entry(__out_param dsn::utils::blob& bb)
 {
-    dassert(_isRead, "");
+    dassert (_isRead, "");
 
     std::shared_ptr<char> hdrBuffer(new char[message_header::serialized_size()]);
     
@@ -730,7 +736,7 @@ aio_task_ptr log_file::write_log_entry(
                 int hash
                 )
 {
-    dassert(!_isRead, "");
+    dassert (!_isRead, "");
     dassert (offset == end_offset(), "");
 
     auto task = service_base::file_write(

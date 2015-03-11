@@ -312,7 +312,7 @@ namespace dsn {
         }
 
         network* net = _networks[sp->rpc_message_channel];
-        dassert(nullptr != net, "network not present for rpc channel %s used by rpc %s",
+        dassert (nullptr != net, "network not present for rpc channel %s used by rpc %s",
             sp->rpc_message_channel.to_string(),
             msg->header().rpc_name
             );
@@ -330,7 +330,7 @@ namespace dsn {
             return;
                 
         auto s = response->server_session().get();
-        dassert(s != nullptr, "rpc server session missing for sending response msg");
+        dassert (s != nullptr, "rpc server session missing for sending response msg");
         s->send(response);
     }
 

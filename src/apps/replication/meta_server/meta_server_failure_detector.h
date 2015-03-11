@@ -44,12 +44,12 @@ public:
     // client side
     virtual void on_master_disconnected(const std::vector<end_point>& nodes)
     {
-        dassert(false, "unsupported method");
+        dassert (false, "unsupported method");
     }
 
     virtual void on_master_connected(const end_point& node)
     {
-        dassert(false, "unsupported method");
+        dassert (false, "unsupported method");
     }
 
     // server side

@@ -57,6 +57,7 @@ namespace dsn {
             utils::blob                  _read_buffer;
             asio_network_provider        &_net;
 
+            // TODO: move this to base class and expose the queue to be customizable
             typedef utils::priority_queue<message_ptr, TASK_PRIORITY_COUNT> send_queue;
             send_queue                   _sq;
         };

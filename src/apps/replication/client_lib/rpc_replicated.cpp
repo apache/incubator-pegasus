@@ -32,7 +32,6 @@ namespace RpcReplicatedImpl {
 
 struct Params
 {
-    end_point localAddr;
     std::vector<end_point> servers;
     service_base* svc;
     rpc_reply_handler callback;
@@ -117,7 +116,6 @@ static void InternalRpcReplyCallback(error_code err, message_ptr& request, messa
 } // end namespace RpcReplicatedImpl 
 
 rpc_response_task_ptr rpc_replicated(
-        const end_point& localAddr,
         const end_point& firstTryServer,
         const std::vector<end_point>& servers, 
         message_ptr& request,             
@@ -135,7 +133,6 @@ rpc_response_task_ptr rpc_replicated(
     }
 
     RpcReplicatedImpl::Params *params = new RpcReplicatedImpl::Params;
-    params->localAddr = localAddr;
     params->servers = servers;
     params->callback = callback;
     params->reply_hash = reply_hash;
@@ -155,7 +152,6 @@ rpc_response_task_ptr rpc_replicated(
 }
 
 rpc_response_task_ptr rpc_replicated(
-        const end_point& localAddr,
         const end_point& firstTryServer,
         const std::vector<end_point>& servers, 
         message_ptr& request,             
@@ -165,7 +161,7 @@ rpc_response_task_ptr rpc_replicated(
         rpc_reply_handler callback  
         )
 {
-    return rpc_replicated(localAddr, firstTryServer, servers, request, svc, callback, 
+    return rpc_replicated(firstTryServer, servers, request, svc, callback, 
         request->header().client.hash);
 }
 

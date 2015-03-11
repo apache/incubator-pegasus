@@ -33,10 +33,10 @@
 
 namespace dsn { namespace replication {
 
-void replica::OnConfigProposal(configuration_update_request& proposal)
+void replica::on_config_proposal(configuration_update_request& proposal)
 {
     ddebug(
-        "%s: OnConfigProposal %s for %s:%u", 
+        "%s: on_config_proposal %s for %s:%u", 
         name(),
         enum_to_string(proposal.type),
         proposal.node.name.c_str(), (int)proposal.node.port
@@ -68,7 +68,7 @@ void replica::OnConfigProposal(configuration_update_request& proposal)
         remove(proposal);
         break;
     default:
-        dassert(false, "");
+        dassert (false, "");
     }
 }
 
@@ -98,8 +98,8 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     if (proposal.config.ballot != get_ballot() || status() != PS_PRIMARY)
         return;
 
-    dassert(proposal.config.gpid == _primary_states.membership.gpid, "");
-    dassert(proposal.config.app_type == _primary_states.membership.app_type, "");
+    dassert (proposal.config.gpid == _primary_states.membership.gpid, "");
+    dassert (proposal.config.app_type == _primary_states.membership.app_type, "");
     dassert (proposal.config.primary == _primary_states.membership.primary, "");
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
 
@@ -157,8 +157,8 @@ void replica::downgrade_to_secondary_on_primary(configuration_update_request& pr
     if (proposal.config.ballot != get_ballot() || status() != PS_PRIMARY)
         return;
 
-    dassert(proposal.config.gpid == _primary_states.membership.gpid, "");
-    dassert(proposal.config.app_type == _primary_states.membership.app_type, "");
+    dassert (proposal.config.gpid == _primary_states.membership.gpid, "");
+    dassert (proposal.config.app_type == _primary_states.membership.app_type, "");
     dassert (proposal.config.primary == _primary_states.membership.primary, "");
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
     dassert (proposal.node == proposal.config.primary, "");
@@ -175,8 +175,8 @@ void replica::downgrade_to_inactive_on_primary(configuration_update_request& pro
     if (proposal.config.ballot != get_ballot() || status() != PS_PRIMARY)
         return;
 
-    dassert(proposal.config.gpid == _primary_states.membership.gpid, "");
-    dassert(proposal.config.app_type == _primary_states.membership.app_type, "");
+    dassert (proposal.config.gpid == _primary_states.membership.gpid, "");
+    dassert (proposal.config.app_type == _primary_states.membership.app_type, "");
     dassert (proposal.config.primary == _primary_states.membership.primary, "");
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
 
@@ -187,7 +187,7 @@ void replica::downgrade_to_inactive_on_primary(configuration_update_request& pro
     else
     {
         auto rt = ReplicaHelper::RemoveNode(proposal.node, proposal.config.secondaries);
-        dassert(rt, "");
+        dassert (rt, "");
     }
 
     proposal.config.dropOuts.push_back(proposal.node);
@@ -199,14 +199,14 @@ void replica::remove(configuration_update_request& proposal)
     if (proposal.config.ballot != get_ballot() || status() != PS_PRIMARY)
         return;
 
-    dassert(proposal.config.gpid == _primary_states.membership.gpid, "");
-    dassert(proposal.config.app_type == _primary_states.membership.app_type, "");
+    dassert (proposal.config.gpid == _primary_states.membership.gpid, "");
+    dassert (proposal.config.app_type == _primary_states.membership.app_type, "");
     dassert (proposal.config.primary == _primary_states.membership.primary, "");
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
 
-    auto status = _primary_states.GetNodeStatus(proposal.node);
+    auto st = _primary_states.GetNodeStatus(proposal.node);
 
-    switch (status)
+    switch (st)
     {
     case PS_PRIMARY:
         dassert (proposal.config.primary == proposal.node, "");
@@ -215,13 +215,13 @@ void replica::remove(configuration_update_request& proposal)
     case PS_SECONDARY:
         {
         auto rt = ReplicaHelper::RemoveNode(proposal.node, proposal.config.secondaries);
-        dassert(rt, "");
+        dassert (rt, "");
         }
         break;
     case PS_POTENTIAL_SECONDARY:
         {
         auto rt = ReplicaHelper::RemoveNode(proposal.node, proposal.config.dropOuts);
-        dassert(rt, "");
+        dassert (rt, "");
         }
         break;
     }
@@ -230,12 +230,12 @@ void replica::remove(configuration_update_request& proposal)
 }
 
 // from primary
-void replica::OnRemove(const replica_configuration& request)
+void replica::on_remove(const replica_configuration& request)
 { 
     if (request.ballot < get_ballot())
         return;
 
-    dassert(request.status == PS_INACTIVE, "");
+    dassert (request.status == PS_INACTIVE, "");
     update_local_configuration(request);
 }
 
@@ -245,7 +245,7 @@ void replica::update_configuration_on_meta_server(config_type type, const end_po
 
     if (type != CT_ASSIGN_PRIMARY)
     {
-        dassert(status() == PS_PRIMARY, "");
+        dassert (status() == PS_PRIMARY, "");
         dassert (newConfig.ballot == _primary_states.membership.ballot, "");
     }
 
@@ -295,7 +295,6 @@ void replica::update_configuration_on_meta_server(config_type type, const end_po
     //else
     {
         _primary_states.ReconfigurationTask = rpc_replicated(
-            address(),
             _stub->_livenessMonitor->current_server_contact(),
             _stub->_livenessMonitor->get_servers(),
             msg,
@@ -321,7 +320,6 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, messa
     if (err)
     {
         _primary_states.ReconfigurationTask = rpc_replicated(
-            address(),
             _stub->_livenessMonitor->current_server_contact(),
             _stub->_livenessMonitor->get_servers(),
             request,
@@ -353,8 +351,8 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, messa
     // post-update work items?
     if (resp.err == ERR_SUCCESS)
     {        
-        dassert(req->config.gpid == resp.config.gpid, "");
-        dassert(req->config.app_type == resp.config.app_type, "");
+        dassert (req->config.gpid == resp.config.gpid, "");
+        dassert (req->config.app_type == resp.config.app_type, "");
         dassert (req->config.primary == resp.config.primary, "");
         dassert (req->config.secondaries == resp.config.secondaries, "");
 
@@ -374,7 +372,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, messa
             }
             break;
         default:
-            dassert(false, "");
+            dassert (false, "");
         }
     }
     
@@ -398,8 +396,8 @@ void replica::update_configuration(const partition_configuration& config)
 
 void replica::update_local_configuration(const replica_configuration& config)
 {
-    dassert(config.ballot >= get_ballot(), "");
-    dassert(config.gpid == get_gpid(), "");
+    dassert (config.ballot >= get_ballot(), "");
+    dassert (config.gpid == get_gpid(), "");
 
     partition_status oldStatus = status();
     ballot oldBallot = get_ballot();
@@ -439,7 +437,7 @@ void replica::update_local_configuration(const replica_configuration& config)
     uint64_t oldTs = _last_config_change_time_ms;
     _config = config;
     _last_config_change_time_ms =now_ms();
-    dassert(max_prepared_decree() >= last_committed_decree(), "");
+    dassert (max_prepared_decree() >= last_committed_decree(), "");
     
     switch (oldStatus)
     {
@@ -458,10 +456,10 @@ void replica::update_local_configuration(const replica_configuration& config)
             _primary_states.Cleanup();
             break;
         case PS_POTENTIAL_SECONDARY:
-            dassert(false, "invalid execution path");
+            dassert (false, "invalid execution path");
             break;
         default:
-            dassert(false, "invalid execution path");
+            dassert (false, "invalid execution path");
         }        
         break;
     case PS_SECONDARY:
@@ -481,14 +479,14 @@ void replica::update_local_configuration(const replica_configuration& config)
         case PS_ERROR:
             break;
         default:
-            dassert(false, "invalid execution path");
+            dassert (false, "invalid execution path");
         }
         break;
     case PS_POTENTIAL_SECONDARY:
         switch (config.status)
         {
         case PS_PRIMARY:
-            dassert(false, "invalid execution path");
+            dassert (false, "invalid execution path");
             break;
         case PS_SECONDARY:
             _prepare_list->truncate(_app->last_committed_decree());            
@@ -502,7 +500,7 @@ void replica::update_local_configuration(const replica_configuration& config)
             _potential_secondary_states.Cleanup(true);
             break;
         default:
-            dassert(false, "invalid execution path");
+            dassert (false, "invalid execution path");
         }
         break;
     case PS_INACTIVE:
@@ -521,31 +519,31 @@ void replica::update_local_configuration(const replica_configuration& config)
         case PS_ERROR:
             break;
         default:
-            dassert(false, "invalid execution path");
+            dassert (false, "invalid execution path");
         }
         break;
     case PS_ERROR:
         switch (config.status)
         {
         case PS_PRIMARY:
-            dassert(false, "invalid execution path");
+            dassert (false, "invalid execution path");
             break;
         case PS_SECONDARY:
-            dassert(false, "invalid execution path");
+            dassert (false, "invalid execution path");
             break;
         case PS_POTENTIAL_SECONDARY:
             break;
         case PS_INACTIVE:
-            dassert(false, "invalid execution path");
+            dassert (false, "invalid execution path");
             break;
         case PS_ERROR:
             break;
         default:
-            dassert(false, "invalid execution path");
+            dassert (false, "invalid execution path");
         }
         break;
     default:
-        dassert(false, "invalid execution path");
+        dassert (false, "invalid execution path");
     }
 
     if (status() != oldStatus)
@@ -565,16 +563,16 @@ void replica::update_local_configuration(const replica_configuration& config)
             );
 
         bool isClosing = (status() == PS_ERROR || (status() == PS_INACTIVE && get_ballot() > oldBallot));
-        _stub->NotifyReplicaStateUpdate(config, isClosing);
+        _stub->notify_replica_state_update(config, isClosing);
 
         if (isClosing)
         {
-            _stub->BeginCloseReplica(this);
+            _stub->begin_close_replica(this);
         }
     }
     else
     {
-        _stub->NotifyReplicaStateUpdate(config, false);
+        _stub->notify_replica_state_update(config, false);
     }
 }
 
@@ -588,7 +586,7 @@ void replica::update_local_configuration_with_no_ballot_change(partition_status 
     update_local_configuration(config);
 }
 
-void replica::OnConfigurationSync(const partition_configuration& config)
+void replica::on_config_sync(const partition_configuration& config)
 {
     ddebug( "%s: configuration sync", name());
 

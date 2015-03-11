@@ -129,7 +129,7 @@ int replica::init_app_and_prepare_list(const char* app_type, bool createNew)
     {
         return ERR_OBJECT_NOT_FOUND;
     }
-    dassert(nullptr != _app, "");
+    dassert (nullptr != _app, "");
 
     int err = _app->open(createNew);    
     if (ERR_SUCCESS == err)
@@ -172,7 +172,7 @@ void replica::replay_mutation(mutation_ptr& mu)
         );*/
 
     int err = _prepare_list->prepare(mu, PS_INACTIVE);
-    dassert(err == ERR_SUCCESS, "");
+    dassert (err == ERR_SUCCESS, "");
 }
 
 void replica::reset_prepare_list_after_replay()

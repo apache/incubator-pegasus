@@ -146,7 +146,7 @@ public:
 
     uint16_t write_placeholder();
     template<typename T> void write_pod(const T& val, uint16_t pos = 0xffff);
-    template<typename T> void write(const T& val, uint16_t pos = 0xffff) { dassert(false, "write of this type is not implemented"); }
+    template<typename T> void write(const T& val, uint16_t pos = 0xffff) { dassert (false, "write of this type is not implemented"); }
     void write(const int8_t& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
     void write(const uint8_t& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
     void write(const int16_t& val, uint16_t pos = 0xffff) { write_pod(val, pos); }

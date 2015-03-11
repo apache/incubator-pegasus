@@ -100,10 +100,10 @@ void replica::broadcast_group_check()
     }
 }
 
-void replica::OnGroupCheck(const group_check_request& request, __out_param group_check_response& response)
+void replica::on_group_check(const group_check_request& request, __out_param group_check_response& response)
 {
     ddebug(
-        "%s: OnGroupCheck from %s:%u",
+        "%s: on_group_check from %s:%u",
         name(), request.config.primary.name.c_str(), request.config.primary.port
         );
     

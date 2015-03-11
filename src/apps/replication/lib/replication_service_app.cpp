@@ -45,6 +45,7 @@ error_code replication_service_app::start(int argc, char** argv)
 
     _stub = new replica_stub();
     _stub->initialize(opts, config(), true);
+    _stub->open_service();
     return ERR_SUCCESS;
 }
 

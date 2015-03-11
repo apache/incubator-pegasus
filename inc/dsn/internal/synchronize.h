@@ -122,7 +122,7 @@ public:
                 return false;
         }
 
-        dassert(_count > 0, "semphoare must be greater than zero");
+        dassert (_count > 0, "semphoare must be greater than zero");
         _count--;
         return true;
     }

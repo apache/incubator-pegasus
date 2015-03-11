@@ -68,6 +68,9 @@ public:
             aio_handler callback,
             int hash = -1);
 
+    // Remove entry <gpid, decree> from m_initPreparedDecrees when a partition is removed. 
+    void on_partition_removed(global_partition_id gpid);
+
     //
     //  garbage collection logs that are already covered by durable state on disk, return deleted log segment count
     //

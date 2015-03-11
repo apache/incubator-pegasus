@@ -61,7 +61,7 @@ void prepare_list::truncate(decree initDecree)
 
 int prepare_list::prepare(mutation_ptr& mu, partition_status status)
 {
-    dassert(mu->data.header.decree > last_committed_decree(), "");
+    dassert (mu->data.header.decree > last_committed_decree(), "");
 
     int err;
     switch (status)
@@ -72,7 +72,7 @@ int prepare_list::prepare(mutation_ptr& mu, partition_status status)
     case PS_SECONDARY: 
         commit(mu->data.header.lastCommittedDecree, true);
         err = mutation_cache::put(mu);
-        dassert(err == ERR_SUCCESS, "");
+        dassert (err == ERR_SUCCESS, "");
         return err;
 
     case PS_POTENTIAL_SECONDARY:
@@ -88,7 +88,7 @@ int prepare_list::prepare(mutation_ptr& mu, partition_status status)
             else
                 break;
         }
-        dassert(err == ERR_SUCCESS, "");
+        dassert (err == ERR_SUCCESS, "");
         return err;
      
     case PS_INACTIVE: // only possible during init  
@@ -147,7 +147,7 @@ bool prepare_list::commit(decree d, bool force)
             _lastCommittedDecree++;
             _committer(mu);
 
-            dassert(mutation_cache::min_decree() == _lastCommittedDecree, "");
+            dassert (mutation_cache::min_decree() == _lastCommittedDecree, "");
             pop_min();
 
             mu = mutation_cache::get_mutation_by_decree(_lastCommittedDecree + 1);
@@ -158,7 +158,7 @@ bool prepare_list::commit(decree d, bool force)
         for (decree d0 = last_committed_decree() + 1; d0 <= d; d0++)
         {
             mutation_ptr mu = get_mutation_by_decree(d0);
-            dassert(mu != nullptr && mu->is_prepared(), "");
+            dassert (mu != nullptr && mu->is_prepared(), "");
 
             _lastCommittedDecree++;
             _committer(mu);

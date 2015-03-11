@@ -81,7 +81,7 @@ void replica::init_learn(uint64_t signature)
     request->lastCommittedDecreeInPrepareList = _prepare_list->last_committed_decree();
     request->learner = address();
     request->signature = _potential_secondary_states.LearningSignature;
-    _app->PrepareLearningRequest(request->appSpecificLearnRequest);
+    _app->prepare_learning_request(request->appSpecificLearnRequest);
 
     _potential_secondary_states.LearningTask = rpc_typed(
         _config.primary,
@@ -102,7 +102,7 @@ void replica::init_learn(uint64_t signature)
         );
 }
 
-void replica::OnLearn(const learn_request& request, __out_param learn_response& response)
+void replica::on_learn(const learn_request& request, __out_param learn_response& response)
 {
     check_hashed_access();
 
@@ -115,7 +115,7 @@ void replica::OnLearn(const learn_request& request, __out_param learn_response& 
     if (request.lastCommittedDecreeInApp > last_committed_decree())
     {
         ddebug(
-            "%s: OnLearn %s:%u, learner state is lost due to DDD, with its appCommittedDecree = %llu vs localCommitedDecree %llu",
+            "%s: on_learn %s:%u, learner state is lost due to DDD, with its appCommittedDecree = %llu vs localCommitedDecree %llu",
             name(),
             request.learner.name.c_str(), (int)request.learner.port,
             request.lastCommittedDecreeInApp,
@@ -139,7 +139,7 @@ void replica::OnLearn(const learn_request& request, __out_param learn_response& 
     }
 
     ddebug(
-        "%s: OnLearn %s:%u with its appCommittedDecree = %llu vs localCommitedDecree %llu",
+        "%s: on_learn %s:%u with its appCommittedDecree = %llu vs localCommitedDecree %llu",
         name(),
         request.learner.name.c_str(), (int)request.learner.port,
         request.lastCommittedDecreeInApp,
@@ -160,7 +160,7 @@ void replica::OnLearn(const learn_request& request, __out_param learn_response& 
             replay_prepare_list();
 
             ddebug(
-                "%s: OnLearn with prepareStartDecree = %llu for %s:%u",
+                "%s: on_learn with prepareStartDecree = %llu for %s:%u",
                 name(),
                 last_committed_decree() + 1,
                 request.learner.name.c_str(), (int)request.learner.port
@@ -168,6 +168,10 @@ void replica::OnLearn(const learn_request& request, __out_param learn_response& 
         }
 
         response.prepareStartDecree = it->second.prepareStartDecree;
+    }
+    else
+    {
+        it->second.prepareStartDecree = invalid_decree;
     }
 
     decree decree = request.lastCommittedDecreeInApp + 1;
@@ -356,7 +360,7 @@ void replica::notify_learn_completion()
     rpc_typed(_config.primary, RPC_LEARN_COMPLETITION_NOTIFY, report, gpid_to_hash(get_gpid()));
 }
 
-void replica::OnLearnCompletionNotification(const group_check_response& report)
+void replica::on_learn_completion_notification(const group_check_response& report)
 {
     check_hashed_access();
     if (status() != PS_PRIMARY)
@@ -368,13 +372,13 @@ void replica::OnLearnCompletionNotification(const group_check_response& report)
     }
 }
 
-void replica::OnAddLearner(const group_check_request& request)
+void replica::on_add_learner(const group_check_request& request)
 {
     if (request.config.ballot < get_ballot())
         return;
 
     update_local_configuration(request.config);
-    dassert(PS_POTENTIAL_SECONDARY == status(), "");
+    dassert (PS_POTENTIAL_SECONDARY == status(), "");
     init_learn(request.learnerSignature);
 }
 

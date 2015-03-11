@@ -42,26 +42,26 @@ void replica::handle_local_failure(int error)
     
     if (status() == PS_PRIMARY)
     {
-        _stub->RemoveReplicaOnCoordinator(_primary_states.membership);
+        _stub->remove_replica_on_meta_server(_primary_states.membership);
     }
 
     update_local_configuration_with_no_ballot_change(PS_ERROR);
 }
 
-void replica::handle_remote_failure(partition_status status, const end_point& node, int error)
+void replica::handle_remote_failure(partition_status st, const end_point& node, int error)
 {    
     ddebug(
         "%s: handle remote failure error %u, status = %s, node = %s:%u",
         name(),
         error,
-        enum_to_string(status),
+        enum_to_string(st),
         node.name.c_str(), (int)node.port
         );
 
-    dassert (status == PS_PRIMARY, "");
+    dassert (status() == PS_PRIMARY, "");
     dassert (node != address(), "");
 
-    switch (status)
+    switch (st)
     {
     case PS_SECONDARY:
         dassert (_primary_states.CheckExist(node, PS_SECONDARY), "");

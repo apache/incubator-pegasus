@@ -119,17 +119,17 @@ bool primary_context::GetReplicaConfig(const end_point& node, __out_param replic
 }
 
 
-void primary_context::GetReplicaConfig(partition_status status, __out_param replica_configuration& config)
+void primary_context::GetReplicaConfig(partition_status st, __out_param replica_configuration& config)
 {
     config.gpid = membership.gpid;
     config.primary = membership.primary;  
     config.ballot = membership.ballot;
-    config.status = status;
+    config.status = st;
 }
 
-bool primary_context::CheckExist(const end_point& node, partition_status status)
+bool primary_context::CheckExist(const end_point& node, partition_status st)
 {
-    switch (status)
+    switch (st)
     {
     case PS_PRIMARY:
         return membership.primary == node;
@@ -140,7 +140,7 @@ bool primary_context::CheckExist(const end_point& node, partition_status status)
     case PS_INACTIVE:
         return std::find(membership.dropOuts.begin(), membership.dropOuts.end(), node) != membership.dropOuts.end();
     default:
-        dassert(false, "");
+        dassert (false, "");
         return false;
     }
 }

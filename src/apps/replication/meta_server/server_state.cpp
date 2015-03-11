@@ -128,7 +128,7 @@ void server_state::RemoveMetaNode(const end_point& node)
         }
     }
 
-    dassert(false, "cannot find node '%s:%u' in server state", node.name.c_str(), (int)node.port);
+    dassert (false, "cannot find node '%s:%u' in server state", node.name.c_str(), (int)node.port);
 }
 
 void server_state::SwitchMetaPrimary()
@@ -229,7 +229,7 @@ void server_state::update_configuration(configuration_update_request& request, _
             node.Partitions.insert(old.gpid);
             break;
         default:
-            dassert(false, "invalid config type %x", (int)request.type);
+            dassert (false, "invalid config type %x", (int)request.type);
         }
     }
     else

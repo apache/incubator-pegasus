@@ -346,7 +346,7 @@ void failure_detector::on_beacon(const beacon_msg& beacon, __out_param beacon_ac
         _workers.insert(std::make_pair(node, record));
         
         itr = _workers.find(node);
-        dassert( itr != _workers.end(), "cannot find the worker" );
+        dassert ( itr != _workers.end(), "cannot find the worker" );
 
         itr->second.is_alive = true;
 

@@ -71,6 +71,6 @@ void meta_service_app::stop(bool cleanup)
     }
     else
     {
-        dassert(_service == nullptr, "service must be null");
+        dassert (_service == nullptr, "service must be null");
     }
 }

@@ -73,7 +73,7 @@ handle_t native_win_aio_provider::open(const char* file_name, int flag, int pmod
 
     if (flag & O_APPEND)
     {
-        dassert(false, "append is not supported");
+        dassert (false, "append is not supported");
     }
 
     if (flag & O_CREAT)
@@ -99,7 +99,7 @@ handle_t native_win_aio_provider::open(const char* file_name, int flag, int pmod
     {
         if (_iocp != ::CreateIoCompletionPort(fileHandle, _iocp, 0, 0))
         {
-            dassert(false, "cannot associate file handle %s to io completion port, err = %x\n", file_name, ::GetLastError());
+            dassert (false, "cannot associate file handle %s to io completion port, err = %x\n", file_name, ::GetLastError());
             return nullptr;
         }
         else
@@ -109,7 +109,7 @@ handle_t native_win_aio_provider::open(const char* file_name, int flag, int pmod
     }
     else
     {
-        dassert(false, "cannot create file %s, err = %x\n", file_name, ::GetLastError());
+        dassert (false, "cannot create file %s, err = %x\n", file_name, ::GetLastError());
         return nullptr;
     }
 }
@@ -172,7 +172,7 @@ error_code native_win_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool asy
         r = ::WriteFile(aio->file, aio->buffer, aio->buffer_size, NULL, &aio->olp);
         break;
     default:
-        dassert(false, "unknown aio type %u", (int)aio->type);
+        dassert (false, "unknown aio type %u", (int)aio->type);
         break;
     }
 

@@ -38,19 +38,6 @@ using namespace dsn::service;
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/, bool is_long_subscriber/* = true*/)
     : serviceletex("replica_stub")
 {
-    register_rpc_handler(RPC_REPLICATION_CLIENT_WRITE, "write", &replica_stub::on_client_write);
-    register_rpc_handler(RPC_REPLICATION_CLIENT_READ, "read", &replica_stub::on_client_read);
-
-    register_rpc_handler(RPC_CONFIG_PROPOSAL, "ProposeConfig", &replica_stub::OnConfigProposal);
-
-    register_rpc_handler(RPC_PREPARE, "prepare", &replica_stub::OnPrepare);
-    register_rpc_handler(RPC_LEARN, "Learn", &replica_stub::OnLearn);
-    register_rpc_handler(RPC_LEARN_COMPLETITION_NOTIFY, "LearnNotify", &replica_stub::OnLearnCompletionNotification);
-    register_rpc_handler(RPC_LEARN_ADD_LEARNER, "LearnAdd", &replica_stub::OnAddLearner);
-    register_rpc_handler(RPC_REMOVE_REPLICA, "remove", &replica_stub::OnRemove);
-    register_rpc_handler(RPC_GROUP_CHECK, "GroupCheck", &replica_stub::OnGroupCheck);
-    register_rpc_handler(RPC_QUERY_PN_DECREE, "QueryDecree", &replica_stub::OnQueryDecree);
-
     _replicaStateSubscriber = subscriber;
     _isLongSubscriber = is_long_subscriber;
     _livenessMonitor = nullptr;
@@ -161,7 +148,7 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
     {
         _gcTimerTask = enqueue_task(
             LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
-            &replica_stub::OnGarbageCollection,
+            &replica_stub::on_gc,
             0,
             random32(0, _options.GcIntervalMs),
             _options.GcIntervalMs
@@ -186,7 +173,7 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
     {
         _partitionConfigurationSyncTimerTask = enqueue_task(
             LPC_QUERY_CONFIGURATION_ALL,
-            &replica_stub::QueryConfiguration,
+            &replica_stub::query_configuration,
             0, 
             _options.ConfigurationSyncIntervalMs,
             _options.ConfigurationSyncIntervalMs
@@ -234,11 +221,11 @@ replica_ptr replica_stub::get_replica(global_partition_id gpid, bool new_when_po
             return nullptr;
         else
         {
-            dassert(app_type, "");
+            dassert (app_type, "");
             replica* rep = replica::newr(this, app_type, gpid, _options);
             if (rep != nullptr) 
             {
-                AddReplica(rep);
+                add_replica(rep);
             }
             return rep;
         }
@@ -278,7 +265,7 @@ void replica_stub::on_client_write(message_ptr& request)
     }
     else
     {
-        ResponseClientError(request, ERR_OBJECT_NOT_FOUND);
+        response_client_error(request, ERR_OBJECT_NOT_FOUND);
     }
 }
 
@@ -295,27 +282,27 @@ void replica_stub::on_client_read(message_ptr& request)
     }
     else
     {
-        ResponseClientError(request, ERR_OBJECT_NOT_FOUND);
+        response_client_error(request, ERR_OBJECT_NOT_FOUND);
     }
 }
 
-void replica_stub::OnConfigProposal(const configuration_update_request& proposal)
+void replica_stub::on_config_proposal(const configuration_update_request& proposal)
 {
     if (!is_connected()) return;
 
     replica_ptr rep = get_replica(proposal.config.gpid, proposal.type == CT_ASSIGN_PRIMARY, proposal.config.app_type.c_str());
     if (rep == nullptr && proposal.type == CT_ASSIGN_PRIMARY)
     {
-        BeginOpenReplica(proposal.config.app_type, proposal.config.gpid);
+        begin_open_replica(proposal.config.app_type, proposal.config.gpid);
     }
 
     if (rep != nullptr)
     {
-        rep->OnConfigProposal((configuration_update_request&)proposal);
+        rep->on_config_proposal((configuration_update_request&)proposal);
     }
 }
 
-void replica_stub::OnQueryDecree(const QueryPNDecreeRequest& req, __out_param QueryPNDecreeResponse& resp)
+void replica_stub::on_query_decree(const QueryPNDecreeRequest& req, __out_param QueryPNDecreeResponse& resp)
 {
     replica_ptr rep = get_replica(req.partitionId);
     if (rep != nullptr)
@@ -329,7 +316,7 @@ void replica_stub::OnQueryDecree(const QueryPNDecreeRequest& req, __out_param Qu
         {
             resp.lastDecree = rep->last_committed_decree();
             // TODO: use the following to alleviate data lost
-            //resp.lastDecree = rep->LastPreparedDecree();
+            //resp.lastDecree = rep->last_prepared_decree();
         }
     }
     else
@@ -339,14 +326,14 @@ void replica_stub::OnQueryDecree(const QueryPNDecreeRequest& req, __out_param Qu
     }
 }
 
-void replica_stub::OnPrepare(message_ptr& request)
+void replica_stub::on_prepare(message_ptr& request)
 {
     global_partition_id gpid;
     unmarshall(request, gpid);    
     replica_ptr rep = get_replica(gpid);
     if (rep != nullptr)
     {
-        rep->OnPrepare(request);
+        rep->on_prepare(request);
     }
     else
     {
@@ -357,14 +344,14 @@ void replica_stub::OnPrepare(message_ptr& request)
     }
 }
 
-void replica_stub::OnGroupCheck(const group_check_request& request, __out_param group_check_response& response)
+void replica_stub::on_group_check(const group_check_request& request, __out_param group_check_response& response)
 {
     if (!is_connected()) return;
 
     replica_ptr rep = get_replica(request.config.gpid, request.config.status == PS_POTENTIAL_SECONDARY, request.app_type.c_str());
     if (rep != nullptr)
     {
-        rep->OnGroupCheck(request, response);
+        rep->on_group_check(request, response);
     }
     else 
     {
@@ -373,7 +360,7 @@ void replica_stub::OnGroupCheck(const group_check_request& request, __out_param 
             boost::shared_ptr<group_check_request> req(new group_check_request);
             *req = request;
 
-            BeginOpenReplica(request.app_type, request.config.gpid, req);
+            begin_open_replica(request.app_type, request.config.gpid, req);
             response.err = ERR_SUCCESS;
             response.learnerSignature = 0;
         }
@@ -384,12 +371,12 @@ void replica_stub::OnGroupCheck(const group_check_request& request, __out_param 
     }
 }
 
-void replica_stub::OnLearn(const learn_request& request, __out_param learn_response& response)
+void replica_stub::on_learn(const learn_request& request, __out_param learn_response& response)
 {
     replica_ptr rep = get_replica(request.gpid);
     if (rep != nullptr)
     {
-        rep->OnLearn(request, response);
+        rep->on_learn(request, response);
     }
     else
     {
@@ -397,41 +384,46 @@ void replica_stub::OnLearn(const learn_request& request, __out_param learn_respo
     }
 }
 
-void replica_stub::OnLearnCompletionNotification(const group_check_response& report)
+void replica_stub::on_learn_completion_notification(const group_check_response& report)
 {
     replica_ptr rep = get_replica(report.gpid);
     if (rep != nullptr)
     {
-        rep->OnLearnCompletionNotification(report);
+        rep->on_learn_completion_notification(report);
     }
 }
 
-void replica_stub::OnAddLearner(const group_check_request& request)
+void replica_stub::on_add_learner(const group_check_request& request)
 {
     replica_ptr rep = get_replica(request.config.gpid, true, request.app_type.c_str());
     if (rep != nullptr)
     {
-        rep->OnAddLearner(request);
+        rep->on_add_learner(request);
     }
     else
     {
         boost::shared_ptr<group_check_request> req(new group_check_request);
         *req = request;
-        BeginOpenReplica(request.app_type, request.config.gpid, req);
+        begin_open_replica(request.app_type, request.config.gpid, req);
     }
 }
 
-void replica_stub::OnRemove(const replica_configuration& request)
+void replica_stub::on_remove(const replica_configuration& request)
 {
     replica_ptr rep = get_replica(request.gpid);
     if (rep != nullptr)
     {
-        rep->OnRemove(request);
+        rep->on_remove(request);
     }
 }
 
-void replica_stub::QueryConfiguration()
+void replica_stub::query_configuration()
 {
+    if (_state == NS_Disconnected)
+    {
+        return;
+    }
+
     if (_partitionConfigurationQueryTask != nullptr)
     {
         _partitionConfigurationQueryTask->cancel(false);
@@ -448,12 +440,11 @@ void replica_stub::QueryConfiguration()
     marshall(msg, req);
 
     _partitionConfigurationQueryTask = rpc_replicated(
-        address(),
         _livenessMonitor->current_server_contact(),
         _livenessMonitor->get_servers(),
         msg,
         this,
-        std::bind(&replica_stub::OnNodeQueryReply, this, 
+        std::bind(&replica_stub::on_node_query_reply, this, 
             std::placeholders::_1, 
             std::placeholders::_2, 
             std::placeholders::_3
@@ -461,7 +452,7 @@ void replica_stub::QueryConfiguration()
         );
 }
 
-void replica_stub::OnCoordinatorConnected()
+void replica_stub::on_meta_server_connected()
 {
     ddebug(
         "%s:%u: coordinator connected",
@@ -472,11 +463,11 @@ void replica_stub::OnCoordinatorConnected()
     if (_state == NS_Disconnected)
     {
         _state = NS_Connecting;
-        QueryConfiguration();
+        query_configuration();
     }
 }
 
-void replica_stub::OnNodeQueryReply(int err, message_ptr& request, message_ptr& response)
+void replica_stub::on_node_query_reply(int err, message_ptr& request, message_ptr& response)
 {
     ddebug(
         "%s:%u: node view replied",
@@ -488,7 +479,7 @@ void replica_stub::OnNodeQueryReply(int err, message_ptr& request, message_ptr& 
         zauto_lock l(_replicasLock);
         if (_state == NS_Connecting)
         {
-            QueryConfiguration();
+            query_configuration();
         }
     }
     else
@@ -513,7 +504,7 @@ void replica_stub::OnNodeQueryReply(int err, message_ptr& request, message_ptr& 
             rs.erase(it->gpid);
             enqueue_task(
                 LPC_QUERY_NODE_CONFIGURATION_SCATTER,
-                std::bind(&replica_stub::OnNodeQueryReplyScatter, this, this, *it),
+                std::bind(&replica_stub::on_node_query_reply_scatter, this, this, *it),
                 gpid_to_hash(it->gpid)
                 );
         }
@@ -523,14 +514,14 @@ void replica_stub::OnNodeQueryReply(int err, message_ptr& request, message_ptr& 
         {
             enqueue_task(
                 LPC_QUERY_NODE_CONFIGURATION_SCATTER,
-                std::bind(&replica_stub::OnNodeQueryReplyScatter2, this, this, it->first),
+                std::bind(&replica_stub::on_node_query_reply_scatter2, this, this, it->first),
                 gpid_to_hash(it->first)
                 );
         }
     }
 }
 
-void replica_stub::SetCoordinatorConnectedForTest(const ConfigurationNodeQueryResponse& resp)
+void replica_stub::set_meta_server_connected_for_test(const ConfigurationNodeQueryResponse& resp)
 {
     zauto_lock l(_replicasLock);
     dassert (_state != NS_Connected, "");
@@ -540,27 +531,27 @@ void replica_stub::SetCoordinatorConnectedForTest(const ConfigurationNodeQueryRe
     {
         enqueue_task(
             LPC_QUERY_NODE_CONFIGURATION_SCATTER,
-            std::bind(&replica_stub::OnNodeQueryReplyScatter, this, this, *it),
+            std::bind(&replica_stub::on_node_query_reply_scatter, this, this, *it),
             gpid_to_hash(it->gpid)
             );
     }
 }
 
 // this_ is used to hold a ref to replica_stub so we don't need to cancel the task on replica_stub::close
-void replica_stub::OnNodeQueryReplyScatter(replica_stub_ptr this_, const partition_configuration& config)
+void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_, const partition_configuration& config)
 {
     replica_ptr replica = get_replica(config.gpid);
     if (replica != nullptr)
     {
-        replica->OnConfigurationSync(config);
+        replica->on_config_sync(config);
     }
     else
     {
-        RemoveReplicaOnCoordinator(config);
+        remove_replica_on_meta_server(config);
     }
 }
 
-void replica_stub::OnNodeQueryReplyScatter2(replica_stub_ptr this_, global_partition_id gpid)
+void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, global_partition_id gpid)
 {
     replica_ptr replica = get_replica(gpid);
     if (replica != nullptr)
@@ -574,7 +565,7 @@ void replica_stub::OnNodeQueryReplyScatter2(replica_stub_ptr this_, global_parti
     }
 }
 
-void replica_stub::RemoveReplicaOnCoordinator(const partition_configuration& config)
+void replica_stub::remove_replica_on_meta_server(const partition_configuration& config)
 {
     message_ptr msg = message::create_request(RPC_CM_CALL, _options.CoordinatorRpcCallTimeoutMs);
     CdtMsgHeader hdr;
@@ -602,7 +593,6 @@ void replica_stub::RemoveReplicaOnCoordinator(const partition_configuration& con
     marshall(msg, *request);
 
     rpc_replicated(
-        address(),
         _livenessMonitor->current_server_contact(),
         _livenessMonitor->get_servers(),
         msg,
@@ -627,14 +617,14 @@ void replica_stub::on_meta_server_disconnected()
     {
         enqueue_task(
             LPC_CM_DISCONNECTED_SCATTER,
-            std::bind(&replica_stub::OnCoordinatorDisconnectedScatter, this, this, it->first),
+            std::bind(&replica_stub::on_meta_server_disconnected_scatter, this, this, it->first),
             gpid_to_hash(it->first)
             );
     }
 }
 
 // this_ is used to hold a ref to replica_stub so we don't need to cancel the task on replica_stub::close
-void replica_stub::OnCoordinatorDisconnectedScatter(replica_stub_ptr this_, global_partition_id gpid)
+void replica_stub::on_meta_server_disconnected_scatter(replica_stub_ptr this_, global_partition_id gpid)
 {
     {
         zauto_lock l(_replicasLock);
@@ -649,26 +639,26 @@ void replica_stub::OnCoordinatorDisconnectedScatter(replica_stub_ptr this_, glob
     }
 }
 
-void replica_stub::ResponseClientError(message_ptr& request, int error)
+void replica_stub::response_client_error(message_ptr& request, int error)
 {
     message_ptr resp = request->create_response();
     resp->write(error);
     rpc_response(resp);
 }
 
-void replica_stub::InitGarbageCollectionForTest()
+void replica_stub::init_gc_for_test()
 {
     dassert (_options.GcDisabled, "");
 
     _gcTimerTask = enqueue_task(
         LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
-        &replica_stub::OnGarbageCollection,
+        &replica_stub::on_gc,
         0,
         _options.GcIntervalMs
         );
 }
 
-void replica_stub::OnGarbageCollection()
+void replica_stub::on_gc()
 {
     Replicas rs;
     {
@@ -702,15 +692,19 @@ void replica_stub::OnGarbageCollection()
     }
 }
 
-task_ptr replica_stub::BeginOpenReplica(const std::string& app_type, global_partition_id gpid, boost::shared_ptr<group_check_request> req)
+task_ptr replica_stub::begin_open_replica(const std::string& app_type, global_partition_id gpid, boost::shared_ptr<group_check_request> req)
 {
-    zauto_lock l(_replicasLock);
+    _replicasLock.lock();
     if (_replicas.find(gpid) != _replicas.end())
+    {
+        _replicasLock.unlock();
         return nullptr;
+    }        
 
     auto it = _openingReplicas.find(gpid);
     if (it != _openingReplicas.end())
     {
+        _replicasLock.unlock();
         return nullptr;
     }
     else 
@@ -722,32 +716,38 @@ task_ptr replica_stub::BeginOpenReplica(const std::string& app_type, global_part
             {
                 replica_ptr r = it2->second.second;
                 _closingReplicas.erase(it2);
-                AddReplica(r);
+                add_replica(r);
+
+                // unlock here to avoid dead lock
+                _replicasLock.unlock();
 
                 ddebug( "open replica which is to be closed '%s.%u.%u'", app_type.c_str(), gpid.tableId, gpid.pidx);
 
                 if (req != nullptr)
                 {
-                    OnAddLearner(*req);
+                    on_add_learner(*req);
                 }
+                return nullptr;
             }
             else 
             {
+                _replicasLock.unlock();
                 dwarn( "open replica '%s.%u.%u' failed coz replica is under closing", 
                     app_type.c_str(), gpid.tableId, gpid.pidx);                
+                return nullptr;
             }
-            return nullptr;
         }
         else 
         {
-            auto task = enqueue_task(LPC_OPEN_REPLICA, std::bind(&replica_stub::OpenReplica, this, app_type, gpid, req));
+            auto task = enqueue_task(LPC_OPEN_REPLICA, std::bind(&replica_stub::open_replica, this, app_type, gpid, req));
             _openingReplicas[gpid] = task;
+            _replicasLock.unlock();
             return task;
         }
     }
 }
 
-void replica_stub::OpenReplica(const std::string app_type, global_partition_id gpid, boost::shared_ptr<group_check_request> req)
+void replica_stub::open_replica(const std::string app_type, global_partition_id gpid, boost::shared_ptr<group_check_request> req)
 {
     char buffer[256];
     sprintf(buffer, "%u.%u.%s", gpid.tableId, gpid.pidx, app_type.c_str());
@@ -758,13 +758,13 @@ void replica_stub::OpenReplica(const std::string app_type, global_partition_id g
 
     replica_ptr rep = replica::load(this, dr.c_str(), _options, true);
     if (rep == nullptr) rep = replica::newr(this, app_type.c_str(), gpid, _options);
-    dassert(rep != nullptr, "");
+    dassert (rep != nullptr, "");
         
     {
         zauto_lock l(_replicasLock);
         auto it = _replicas.find(gpid);
         dassert (it == _replicas.end(), "");
-        AddReplica(rep);
+        add_replica(rep);
         _openingReplicas.erase(gpid);
     }
 
@@ -774,7 +774,7 @@ void replica_stub::OpenReplica(const std::string app_type, global_partition_id g
     }
 }
 
-task_ptr replica_stub::BeginCloseReplica(replica_ptr r)
+task_ptr replica_stub::begin_close_replica(replica_ptr r)
 {
     zauto_lock l(_replicasLock);
 
@@ -782,9 +782,9 @@ task_ptr replica_stub::BeginCloseReplica(replica_ptr r)
     if (nullptr == _livenessMonitor)
         return nullptr;
 
-    if (RemoveReplica(r))
+    if (remove_replica(r))
     {
-        auto task = enqueue_task(LPC_CLOSE_REPLICA, std::bind(&replica_stub::CloseReplica, this, r), -1, _options.GcMemoryReplicaIntervalMs);
+        auto task = enqueue_task(LPC_CLOSE_REPLICA, std::bind(&replica_stub::close_replica, this, r), -1, _options.GcMemoryReplicaIntervalMs);
         _closingReplicas[r->get_gpid()] = std::make_pair(task, r);
         return task;
     }
@@ -794,7 +794,7 @@ task_ptr replica_stub::BeginCloseReplica(replica_ptr r)
     }
 }
 
-void replica_stub::CloseReplica(replica_ptr r)
+void replica_stub::close_replica(replica_ptr r)
 {
     dwarn( "close replica '%s'", r->dir().c_str());
 
@@ -806,13 +806,13 @@ void replica_stub::CloseReplica(replica_ptr r)
     }
 }
 
-void replica_stub::AddReplica(replica_ptr r)
+void replica_stub::add_replica(replica_ptr r)
 {
     zauto_lock l(_replicasLock);
     _replicas[r->get_gpid()] = r;
 }
 
-bool replica_stub::RemoveReplica(replica_ptr r)
+bool replica_stub::remove_replica(replica_ptr r)
 {
     zauto_lock l(_replicasLock);
     if (_replicas.erase(r->get_gpid()) > 0)
@@ -823,7 +823,7 @@ bool replica_stub::RemoveReplica(replica_ptr r)
         return false;
 }
 
-void replica_stub::NotifyReplicaStateUpdate(const replica_configuration& config, bool isClosing)
+void replica_stub::notify_replica_state_update(const replica_configuration& config, bool isClosing)
 {
     if (nullptr != _replicaStateSubscriber)
     {
@@ -836,6 +836,22 @@ void replica_stub::NotifyReplicaStateUpdate(const replica_configuration& config,
             _replicaStateSubscriber(address(), config, isClosing);
         }
     }
+}
+
+void replica_stub::open_service()
+{
+    register_rpc_handler(RPC_REPLICATION_CLIENT_WRITE, "write", &replica_stub::on_client_write);
+    register_rpc_handler(RPC_REPLICATION_CLIENT_READ, "read", &replica_stub::on_client_read);
+
+    register_rpc_handler(RPC_CONFIG_PROPOSAL, "ProposeConfig", &replica_stub::on_config_proposal);
+
+    register_rpc_handler(RPC_PREPARE, "prepare", &replica_stub::on_prepare);
+    register_rpc_handler(RPC_LEARN, "Learn", &replica_stub::on_learn);
+    register_rpc_handler(RPC_LEARN_COMPLETITION_NOTIFY, "LearnNotify", &replica_stub::on_learn_completion_notification);
+    register_rpc_handler(RPC_LEARN_ADD_LEARNER, "LearnAdd", &replica_stub::on_add_learner);
+    register_rpc_handler(RPC_REMOVE_REPLICA, "remove", &replica_stub::on_remove);
+    register_rpc_handler(RPC_GROUP_CHECK, "GroupCheck", &replica_stub::on_group_check);
+    register_rpc_handler(RPC_QUERY_PN_DECREE, "QueryDecree", &replica_stub::on_query_decree);
 }
 
 void replica_stub::close()

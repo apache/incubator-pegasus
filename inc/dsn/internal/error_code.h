@@ -32,7 +32,7 @@ struct error_code : public dsn::utils::customized_id<error_code>
 {
     error_code(const char* name) : dsn::utils::customized_id<error_code>(name)
     {
-        dassert(name, "name for an error code cannot be empty");
+        dassert (name, "name for an error code cannot be empty");
         _used = false;
     }
 

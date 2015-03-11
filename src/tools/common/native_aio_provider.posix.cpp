@@ -140,7 +140,7 @@ namespace dsn {
                 r = aio_write(&aio->cb);
                 break;
             default:
-                dassert(false, "unknown aio type %u", (int)aio->type);
+                dassert (false, "unknown aio type %u", (int)aio->type);
                 break;
             }
 

@@ -60,7 +60,7 @@ public:
         if (_start)
         {
             auto err = _app->start(_app->arg_count(), _app->args());
-            dassert(err == 0, "start app failed, err = %s", err.to_string());
+            dassert (err == 0, "start app failed, err = %s", err.to_string());
         }
         else
             _app->stop();

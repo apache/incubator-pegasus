@@ -38,7 +38,7 @@ namespace dsn { namespace service {
         {
             if (zlock_exclusive_count + zlock_shared_count > 0)
             {
-                dassert(false, "wait inside locks may lead to deadlocks - current thread owns %u exclusive locks and %u shared locks now.",
+                dassert (false, "wait inside locks may lead to deadlocks - current thread owns %u exclusive locks and %u shared locks now.",
                     zlock_exclusive_count, zlock_shared_count
                     );
             }
@@ -48,7 +48,7 @@ namespace dsn { namespace service {
         {
             if (zlock_exclusive_count + zlock_shared_count > 0)
             {
-                dassert(false, "locks should not be hold at this point - current thread owns %u exclusive locks and %u shared locks now.",
+                dassert (false, "locks should not be hold at this point - current thread owns %u exclusive locks and %u shared locks now.",
                     zlock_exclusive_count, zlock_shared_count
                     );
             }

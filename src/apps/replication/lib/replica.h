@@ -68,18 +68,18 @@ public:
     //
     //    messages and tools from/for meta server
     //
-    void OnConfigProposal(configuration_update_request& proposal);
-    void OnConfigurationSync(const partition_configuration& config);
+    void on_config_proposal(configuration_update_request& proposal);
+    void on_config_sync(const partition_configuration& config);
             
     //
     //    messages from peers (primary or secondary)
     //
-    void OnPrepare(message_ptr& request);    
-    void OnLearn(const learn_request& request, __out_param learn_response& response);
-    void OnLearnCompletionNotification(const group_check_response& report);
-    void OnAddLearner(const group_check_request& request);
-    void OnRemove(const replica_configuration& request);
-    void OnGroupCheck(const group_check_request& request, __out_param group_check_response& response);
+    void on_prepare(message_ptr& request);    
+    void on_learn(const learn_request& request, __out_param learn_response& response);
+    void on_learn_completion_notification(const group_check_response& report);
+    void on_add_learner(const group_check_request& request);
+    void on_remove(const replica_configuration& request);
+    void on_group_check(const group_check_request& request, __out_param group_check_response& response);
 
     //
     //    messsages from liveness monitor
@@ -100,7 +100,7 @@ public:
     replication_app_base* get_app() { return _app; }
     decree max_prepared_decree() const { return _prepare_list->max_decree(); }
     decree last_committed_decree() const { return _prepare_list->last_committed_decree(); }
-    decree LastPreparedDecree() const;
+    decree last_prepared_decree() const;
     decree last_durable_decree() const;    
     const std::string& dir() const { return _dir; }
     bool group_configuration(__out_param partition_configuration& config) const;

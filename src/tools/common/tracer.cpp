@@ -198,7 +198,7 @@ namespace dsn {
 
                 std::string section_name = std::string("task.") + std::string(task_code::to_string(i));
                 task_spec* spec = task_spec::get(i);
-                dassert(spec != nullptr, "task_spec cannot be null");
+                dassert (spec != nullptr, "task_spec cannot be null");
 
                 if (!_configuration->get_value<bool>(section_name.c_str(), "is_trace", trace))
                     continue;

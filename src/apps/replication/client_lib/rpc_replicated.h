@@ -28,7 +28,6 @@
 namespace dsn { namespace service {
 
 rpc_response_task_ptr rpc_replicated(
-            const end_point& localAddr,
             const end_point& firstTryServer,
             const std::vector<end_point>& servers, 
             message_ptr& request,
@@ -39,7 +38,6 @@ rpc_response_task_ptr rpc_replicated(
             int reply_hash);
 
 rpc_response_task_ptr rpc_replicated(
-        const end_point& localAddr,
         const end_point& firstTryServer,
         const std::vector<end_point>& servers, 
         message_ptr& request,

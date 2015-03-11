@@ -205,7 +205,7 @@ void task_worker::loop()
     /*}
     catch (std::exception& ex)
     {
-        dassert(false, "%s: unhandled exception '%s'", name().c_str(), ex.what());
+        dassert (false, "%s: unhandled exception '%s'", name().c_str(), ex.what());
     }*/
 }
 

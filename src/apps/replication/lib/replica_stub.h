@@ -51,6 +51,7 @@ public:
     void initialize(const replication_options& opts, configuration_ptr config, bool clear = false);
     void initialize(configuration_ptr config, bool clear = false);
     void set_options(const replication_options& opts) { _options = opts; }
+    void open_service();
     void close();
 
     //
@@ -62,8 +63,8 @@ public:
     //
     //    messages from meta server
     //
-    void OnConfigProposal(const configuration_update_request& proposal);
-    void OnQueryDecree(const QueryPNDecreeRequest& req, __out_param QueryPNDecreeResponse& resp);
+    void on_config_proposal(const configuration_update_request& proposal);
+    void on_query_decree(const QueryPNDecreeRequest& req, __out_param QueryPNDecreeResponse& resp);
         
     //
     //    messages from peers (primary or secondary)
@@ -71,26 +72,26 @@ public:
     //        - commit
     //        - learn
     //
-    void OnPrepare(message_ptr& request);    
-    void OnLearn(const learn_request& request, __out_param learn_response& response);
-    void OnLearnCompletionNotification(const group_check_response& report);
-    void OnAddLearner(const group_check_request& request);
-    void OnRemove(const replica_configuration& request);
-    void OnGroupCheck(const group_check_request& request, __out_param group_check_response& response);
+    void on_prepare(message_ptr& request);    
+    void on_learn(const learn_request& request, __out_param learn_response& response);
+    void on_learn_completion_notification(const group_check_response& report);
+    void on_add_learner(const group_check_request& request);
+    void on_remove(const replica_configuration& request);
+    void on_group_check(const group_check_request& request, __out_param group_check_response& response);
 
     //
     //    local messages
     //
-    void OnCoordinatorConnected();
+    void on_meta_server_connected();
     void on_meta_server_disconnected();
-    void OnGarbageCollection();
+    void on_gc();
 
     //
     //  routines published for test
     // 
-    void InitGarbageCollectionForTest();
-    void SetCoordinatorDisconnectedForTest() { on_meta_server_disconnected(); }
-    void SetCoordinatorConnectedForTest(const ConfigurationNodeQueryResponse& config);
+    void init_gc_for_test();
+    void set_meta_server_disconnected_for_test() { on_meta_server_disconnected(); }
+    void set_meta_server_connected_for_test(const ConfigurationNodeQueryResponse& config);
 
     //
     // common routines for inquiry
@@ -113,19 +114,19 @@ private:
         NS_Connected
     };
 
-    void QueryConfiguration();
-    void OnCoordinatorDisconnectedScatter(replica_stub_ptr this_, global_partition_id gpid);
-    void OnNodeQueryReply(int err, message_ptr& request, message_ptr& response);
-    void OnNodeQueryReplyScatter(replica_stub_ptr this_, const partition_configuration& config);
-    void OnNodeQueryReplyScatter2(replica_stub_ptr this_, global_partition_id gpid);
-    void RemoveReplicaOnCoordinator(const partition_configuration& config);
-    task_ptr BeginOpenReplica(const std::string& app_type, global_partition_id gpid, boost::shared_ptr<group_check_request> req = nullptr);
-    void    OpenReplica(const std::string app_type, global_partition_id gpid, boost::shared_ptr<group_check_request> req);
-    task_ptr BeginCloseReplica(replica_ptr r);
-    void CloseReplica(replica_ptr r);
-    void AddReplica(replica_ptr r);
-    bool RemoveReplica(replica_ptr r);
-    void NotifyReplicaStateUpdate(const replica_configuration& config, bool isClosing);
+    void query_configuration();
+    void on_meta_server_disconnected_scatter(replica_stub_ptr this_, global_partition_id gpid);
+    void on_node_query_reply(int err, message_ptr& request, message_ptr& response);
+    void on_node_query_reply_scatter(replica_stub_ptr this_, const partition_configuration& config);
+    void on_node_query_reply_scatter2(replica_stub_ptr this_, global_partition_id gpid);
+    void remove_replica_on_meta_server(const partition_configuration& config);
+    task_ptr begin_open_replica(const std::string& app_type, global_partition_id gpid, boost::shared_ptr<group_check_request> req = nullptr);
+    void    open_replica(const std::string app_type, global_partition_id gpid, boost::shared_ptr<group_check_request> req);
+    task_ptr begin_close_replica(replica_ptr r);
+    void close_replica(replica_ptr r);
+    void add_replica(replica_ptr r);
+    bool remove_replica(replica_ptr r);
+    void notify_replica_state_update(const replica_configuration& config, bool isClosing);
 
 private:
     typedef std::map<global_partition_id, replica_ptr, GlobalPartitionIDComparor> Replicas;
@@ -155,7 +156,7 @@ private:
 
 private:    
     friend class replica;
-    void ResponseClientError(message_ptr& request, int error);
+    void response_client_error(message_ptr& request, int error);
     void replay_mutation(mutation_ptr& mu, Replicas* replicas);
 };
 

@@ -77,7 +77,7 @@ namespace dsn {
             {
                 if (!ec && message_header::is_right_header((char*)&_read_msg_hdr))
                 {
-                    dassert(length == message_header::serialized_size(), "");
+                    dassert (length == message_header::serialized_size(), "");
                     do_read_body();
                 }
                 else
@@ -93,7 +93,7 @@ namespace dsn {
         void net_server_session::do_read_body()
         {
             int body_sz = message_header::get_body_length((char*)&_read_msg_hdr); 
-            dassert(body_sz > 0, "");
+            dassert (body_sz > 0, "");
             int sz = message_header::serialized_size() + body_sz;
             auto buf = std::shared_ptr<char>((char*)malloc(sz));
             _read_buffer.assign(buf, 0, sz);
@@ -107,7 +107,7 @@ namespace dsn {
                 if (!ec)
                 {
                     message_ptr msg = new message(_read_buffer, true);
-                    dassert(msg->header().body_length == body_sz, "");
+                    dassert (msg->header().body_length == body_sz, "");
                     
                     if (msg->is_right_body())
                     {
@@ -163,10 +163,10 @@ namespace dsn {
                 }
                 else
                 {
-                    dassert(length == msg->total_size(), "");
+                    dassert (length == msg->total_size(), "");
 
                     auto smsg = _sq.dequeue_peeked();
-                    dassert(smsg == msg, "sent msg must be the first msg in send queue");
+                    dassert (smsg == msg, "sent msg must be the first msg in send queue");
 
                     do_write();
                 }

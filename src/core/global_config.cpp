@@ -243,7 +243,7 @@ bool service_spec::init(configuration_ptr c)
         {
             service_app_spec app;
             app.init((*it).c_str(), config);
-            dassert(app.port == 0 || app.port > 1024, "specified port is either 0 (no listen port) or greater than 1024");
+            dassert (app.port == 0 || app.port > 1024, "specified port is either 0 (no listen port) or greater than 1024");
 
             int lport = app.port;
             int count = config->get_value<int>((*it).c_str(), "count", 1);
@@ -257,7 +257,7 @@ bool service_spec::init(configuration_ptr c)
                 if (lport == 0)
                 {
                     app.port = ++network::max_faked_port_for_client_only_node;
-                    dassert(app.port <= 1024, "faked port for client nodes only must not exceed 1024");
+                    dassert (app.port <= 1024, "faked port for client nodes only must not exceed 1024");
                     app_specs.push_back(app);
                 }
                 else

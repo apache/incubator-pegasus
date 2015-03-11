@@ -276,7 +276,7 @@ void task::enqueue(int delay_milliseconds, service::service_app* app)
     }
     else
     {
-        dassert(false, "neither inside a service, nor service app is specified, unable to find the right engine to execute this");
+        dassert (false, "neither inside a service, nor service app is specified, unable to find the right engine to execute this");
     }
 
     enqueue(delay_milliseconds, pool);
@@ -284,7 +284,7 @@ void task::enqueue(int delay_milliseconds, service::service_app* app)
 
 void task::enqueue(int delay_milliseconds, task_worker_pool* pool)
 {
-    dassert(pool != nullptr, "pool not exist");
+    dassert (pool != nullptr, "pool not exist");
 
     set_delay(delay_milliseconds);
 
@@ -371,7 +371,7 @@ aio_task::aio_task(task_code code, int hash)
     set_error_code(ERR_IO_PENDING);
 
     auto node = task::get_current_node();
-    dassert(node != nullptr, "this function can only be invoked inside tasks");
+    dassert (node != nullptr, "this function can only be invoked inside tasks");
 
     _aio = node->disk()->prepare_aio_context(this);
 }

@@ -366,7 +366,6 @@ void replication_app_client_base::query_partition_configuration(int pidx)
     marshall(msg, req);
 
     it->second.first = rpc_replicated(
-        address(),
         _last_contact_point,
         _meta_servers, 
         msg,            
@@ -396,7 +395,7 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
             {
                 if (_app_id != -1 && _app_id != resp.partitions[0].gpid.tableId)
                 {
-                    dassert(false, "App id is changed (mostly the given app id is incorrect), local Vs remote: %u vs %u ", _app_id, resp.partitions[0].gpid.tableId);
+                    dassert (false, "App id is changed (mostly the given app id is incorrect), local Vs remote: %u vs %u ", _app_id, resp.partitions[0].gpid.tableId);
                 }
 
                 _app_id = resp.partitions[0].gpid.tableId;

@@ -47,7 +47,7 @@ end_point replication_failure_detector::find_next_meta_server(end_point current)
     else
     {
         auto it = std::find(_meta_servers.begin(), _meta_servers.end(), current);
-        dassert(it != _meta_servers.end(), "");
+        dassert (it != _meta_servers.end(), "");
         it++;
         if (it != _meta_servers.end())
             return *it;
@@ -132,7 +132,7 @@ void replication_failure_detector::on_master_connected( const end_point& node)
 
     if (isPrimary)
     {
-        _stub->OnCoordinatorConnected();
+        _stub->on_meta_server_connected();
     }
 }
 

@@ -155,7 +155,7 @@ void binary_reader::read(blob& blob)
     }
     else
     {
-        dassert(false, "read beyond the end of buffer");
+        dassert (false, "read beyond the end of buffer");
     }
 }
 
