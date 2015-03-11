@@ -39,6 +39,26 @@ namespace dsn {
         // such as protocol-buffer, thrift, or bond to generate these functions automatically
         // for their TRequest and TResponse
         //
+
+        template <typename TResponse>
+        class rpc_replier
+        {
+        public:
+            rpc_replier(message_ptr& request)
+            {
+                _response = request->create_response();
+            }
+
+            void operator () (const TResponse& resp)
+            {
+                marshall(_response->writer(), resp);
+                rpc::reply(_response);
+            }
+
+        private:
+            message_ptr _response;
+        };
+
         template <typename T>
         class serviceletex : public servicelet<T>
         {
@@ -115,6 +135,9 @@ namespace dsn {
 
             template<typename TRequest, typename TResponse>
             void register_rpc_handler(task_code rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&, TResponse&));
+
+            template<typename TRequest, typename TResponse>
+            void register_async_rpc_handler(task_code rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&, rpc_replier<TResponse>&));
             
         private:
             template<typename TRequest>
@@ -122,6 +145,9 @@ namespace dsn {
 
             template<typename TRequest, typename TResponse>
             void internal_rpc_handler2(message_ptr& request, void (T::*handler)(const TRequest&, TResponse&));
+
+            template<typename TRequest, typename TResponse>
+            void internal_rpc_handler3(message_ptr& request, void (T::*handler)(const TRequest&, rpc_replier<TResponse>& reply));
 
             template<typename TRequest, typename TResponse>
             void internal_rpc_reply_handler1(
@@ -273,6 +299,16 @@ namespace dsn {
                 std::bind(&serviceletex<T>::internal_rpc_handler2<TRequest, TResponse>, static_cast<T*>(this), std::placeholders::_1, handler)
                 );
         }
+
+        template<typename T> template<typename TRequest, typename TResponse>
+        inline void serviceletex<T>::register_async_rpc_handler(task_code rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&, rpc_replier<TResponse>&))
+        {
+            std::string rpc_name = std::string(service_base::name()).append(".").append(rpc_name_);
+            return service_base::register_rpc_handler(
+                rpc_code, rpc_name.c_str(),
+                std::bind(&serviceletex<T>::internal_rpc_handler3<TRequest, TResponse>, static_cast<T*>(this), std::placeholders::_1, handler)
+                );
+        }
                 
         template<typename T> template<typename TRequest>
         inline void serviceletex<T>::internal_rpc_handler1(message_ptr& request, void (T::*handler)(const TRequest&))
@@ -293,6 +329,16 @@ namespace dsn {
             (static_cast<T*>(this)->*handler)(req, resp);
 
             rpc_response(request, resp);
+        }
+
+        template<typename T> template<typename TRequest, typename TResponse>
+        inline void serviceletex<T>::internal_rpc_handler3(message_ptr& request, void (T::*handler)(const TRequest&, rpc_replier<TResponse>&))
+        {
+            TRequest req;
+            unmarshall(request->reader(), req);
+
+            rpc_replier<TResponse> reply(request);
+            (static_cast<T*>(this)->*handler)(req, reply);
         }
     } // end namespace service
 } // end namespace

@@ -29,6 +29,7 @@
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_TEST)
 DEFINE_TASK_CODE(LPC_ECHO_TIMER, ::dsn::TASK_PRIORITY_HIGH, THREAD_POOL_TEST)
 DEFINE_TASK_CODE_RPC(RPC_ECHO, ::dsn::TASK_PRIORITY_HIGH, THREAD_POOL_TEST)
+DEFINE_TASK_CODE_RPC(RPC_ECHO2, ::dsn::TASK_PRIORITY_HIGH, THREAD_POOL_TEST)
 
 using namespace dsn;
 using namespace dsn::service;
@@ -39,11 +40,17 @@ public:
     echo_server() : serviceletex<echo_server>("echo_server")
     {
         register_rpc_handler(RPC_ECHO, "RPC_ECHO", &echo_server::on_echo);
+        register_async_rpc_handler(RPC_ECHO2, "RPC_ECHO2", &echo_server::on_echo2);
     }
 
     void on_echo(const std::string& req, __out_param std::string& resp)
     {
         resp = req;
+    }
+
+    void on_echo2(const std::string& req, rpc_replier<std::string>& reply)
+    {
+        reply(req);
     }
 };
 
