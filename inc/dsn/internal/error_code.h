@@ -32,6 +32,7 @@ struct error_code : public dsn::utils::customized_id<error_code>
 {
     error_code(const char* name) : dsn::utils::customized_id<error_code>(name)
     {
+        dassert(name, "name for an error code cannot be empty");
         _used = false;
     }
 
@@ -51,14 +52,7 @@ struct error_code : public dsn::utils::customized_id<error_code>
         _used = false;
         return *this;
     }
-
-
-    /*error_code(int err)
-    {
-    _error = err;
-    _used = false;
-    }*/
-
+    
     ~error_code()
     {
         //assert (_used, "error code is not handled");

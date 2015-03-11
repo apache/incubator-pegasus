@@ -200,7 +200,7 @@ error_code native_win_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool asy
 
     if (async)
     {
-        return ERR_SUCCESS;
+        return ERR_IO_PENDING;
     }
     else
     {

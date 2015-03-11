@@ -151,7 +151,7 @@ namespace dsn {
 
             if (async)
             {
-                return 0;
+                return ERR_IO_PENDING;
             }
             else
             {
