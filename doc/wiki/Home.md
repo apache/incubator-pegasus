@@ -1,8 +1,8 @@
-What is the major challenge for a distributed system? Considering a single-thread sequential program, the major obstacle is the non-determinisic behaviors such as concurrency, asynchrony, failure, resource interference, and other environmental variances, leading to nemerous correctness and performance issues. 
+What is the major challenge for a distributed system? Considering a single-thread sequential program, the major obstacle is the non-determinisic behaviors such as concurrency, asynchrony, failure, resource interference, and other environmental variance, leading to nemerous correctness and performance issues. 
 
 **Robust Distributed System Nucleus (rDSN)** is a framework for quickly building robust and high performance distributed systems. It achieves robustness and high performance through disciplined API design to capture & expose all application level non-determinisic behaviors to the rDSN runtime, so that the latter gets full awareness and control of them, which is further manifested as an integrated set of local libraries, distributed frameworks, and tools as well as runtime policies for distributed system development and/or operation:
 
-* **rDSN.local** is a single machine runtime library, resembling the features such as those in [SEDA](http://www.eecs.harvard.edu/~mdw/proj/seda/) and [Apache Thrift](https://thrift.apache.org/). It exposes a Service API aiming at **programming agility and high performance**. 
+* **rDSN.local** is a single machine runtime library, resembling the features such as those in [SEDA](http://www.eecs.harvard.edu/~mdw/proj/seda/) and [Apache Thrift](https://thrift.apache.org/). It exposes a Service API around an unified task execution model, aiming at **programming agility and high performance**. 
 
 * **rDSN.distributed** contains a set of distributed frameworks, such as partitioning, load-balancing, replication, and failure-detection, to help address the challenges raised by distributed systems. The targets are **scalability, reliability, and high availability**, even with high workload and failure rate.
 
