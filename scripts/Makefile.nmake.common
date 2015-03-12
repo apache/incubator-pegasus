@@ -1,4 +1,5 @@
-ROOT = d:\rdsn
+#ROOT = d:\rdsn
+ROOT = c:\projects\rdsn
 
 BOOST_INC=$(ROOT)/external
 BOOST_LIB=$(ROOT)/external/libs
@@ -18,7 +19,7 @@ COMMON_LIBS= \
 
 BIN_DIR= $(ROOT)\bin
 INC= $(INC_EXTRA) /I. /I$(BOOST_INC) /I$(rDSN_INC)
-CPPFLAGS= $(INC) /W3 /nologo /wd4996 /EHsc \
+CPPFLAGS= $(INC) /MP /W3 /nologo /wd4996 /EHsc \
 		  /GS /analyze- /Gy /Zc:wchar_t /Zi /Gm- /O2 \
 		  /fp:precise /D "WIN32" /D "NDEBUG" /D "_LIB" /D "_UNICODE" /D "UNICODE" \
 		  /D "_CRT_SECURE_NO_WARNINGS" \
@@ -36,8 +37,8 @@ OBJS = $(SOURCES:.cpp=.obj)
 
 all: $(TYPE)
 
-.cpp.obj:
-	$(CPP) $(CPPFLAGS) /c $< /Fo$@
+#.cpp.obj:
+#	$(CPP) $(CPPFLAGS) /c $< /Fo$@
 
 $(BIN_DIR):
 	-mkdir $(BIN_DIR)

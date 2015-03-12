@@ -52,7 +52,6 @@ public:
     {
         reply(req);
     }
-};
 
     virtual error_code start(int argc, char** argv)
     {
