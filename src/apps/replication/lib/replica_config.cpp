@@ -260,7 +260,7 @@ void replica::update_configuration_on_meta_server(config_type type, const end_po
     hdr.RpcTag = RPC_CM_UPDATE_PARTITION_CONFIGURATION;
     marshall(msg, hdr);
 
-    boost::shared_ptr<configuration_update_request> request(new configuration_update_request);
+    std::shared_ptr<configuration_update_request> request(new configuration_update_request);
     request->config = newConfig;
     request->config.ballot++;    
     request->type = type;
@@ -310,7 +310,7 @@ void replica::update_configuration_on_meta_server(config_type type, const end_po
 }
 
 
-void replica::on_update_configuration_on_meta_server_reply(error_code err, message_ptr& request, message_ptr& response, boost::shared_ptr<configuration_update_request> req)
+void replica::on_update_configuration_on_meta_server_reply(error_code err, message_ptr& request, message_ptr& response, std::shared_ptr<configuration_update_request> req)
 {
     if (PS_INACTIVE != status() || _stub->is_connected() == false)
     {

@@ -39,6 +39,31 @@ namespace dsn {
         // such as protocol-buffer, thrift, or bond to generate these functions automatically
         // for their TRequest and TResponse
         //
+
+        template <typename TResponse>
+        class rpc_replier
+        {
+        public:
+            rpc_replier(message_ptr& request)
+            {
+                _response = request->create_response();
+            }
+
+            rpc_replier(const rpc_replier& r)
+            {
+                _response = r._response;
+            }
+
+            void operator () (const TResponse& resp)
+            {
+                marshall(_response->writer(), resp);
+                rpc::reply(_response);
+            }
+
+        private:
+            message_ptr _response;
+        };
+
         template <typename T>
         class serviceletex : public servicelet<T>
         {
@@ -51,8 +76,8 @@ namespace dsn {
             rpc_response_task_ptr rpc_typed(
                 const end_point& server_addr,
                 task_code code,
-                boost::shared_ptr<TRequest> req,
-                std::function<void(error_code, boost::shared_ptr<TRequest>, boost::shared_ptr<TResponse>)> callback,
+                std::shared_ptr<TRequest> req,
+                std::function<void(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>)> callback,
                 int request_hash = 0,                
                 int timeout_milliseconds = 0,
                 int reply_hash = 0
@@ -62,8 +87,8 @@ namespace dsn {
             rpc_response_task_ptr rpc_typed(
                 const end_point& server_addr,
                 task_code code,
-                boost::shared_ptr<TRequest> req,
-                void (T::*callback)(error_code, boost::shared_ptr<TRequest>, boost::shared_ptr<TResponse>),
+                std::shared_ptr<TRequest> req,
+                void (T::*callback)(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>),
                 int request_hash = 0,                
                 int timeout_milliseconds = 0,
                 int reply_hash = 0
@@ -115,6 +140,9 @@ namespace dsn {
 
             template<typename TRequest, typename TResponse>
             void register_rpc_handler(task_code rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&, TResponse&));
+
+            template<typename TRequest, typename TResponse>
+            void register_async_rpc_handler(task_code rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&, rpc_replier<TResponse>&));
             
         private:
             template<typename TRequest>
@@ -124,12 +152,15 @@ namespace dsn {
             void internal_rpc_handler2(message_ptr& request, void (T::*handler)(const TRequest&, TResponse&));
 
             template<typename TRequest, typename TResponse>
+            void internal_rpc_handler3(message_ptr& request, void (T::*handler)(const TRequest&, rpc_replier<TResponse>& reply));
+
+            template<typename TRequest, typename TResponse>
             void internal_rpc_reply_handler1(
                 error_code err,
                 message_ptr& request,
                 message_ptr& response,
-                std::function<void(error_code, boost::shared_ptr<TRequest>, boost::shared_ptr<TResponse>)> callback,
-                boost::shared_ptr<TRequest> req
+                std::function<void(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>)> callback,
+                std::shared_ptr<TRequest> req
                 );
 
             template<typename TRequest, typename TResponse>
@@ -137,8 +168,8 @@ namespace dsn {
                 error_code err,
                 message_ptr& request,
                 message_ptr& response,
-                void (T::*callback)(error_code, boost::shared_ptr<TRequest>, boost::shared_ptr<TResponse>),
-                boost::shared_ptr<TRequest> req
+                void (T::*callback)(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>),
+                std::shared_ptr<TRequest> req
                 );
         };
 
@@ -158,8 +189,8 @@ namespace dsn {
         inline rpc_response_task_ptr serviceletex<T>::rpc_typed(
             const end_point& server_addr,
             task_code code,
-            boost::shared_ptr<TRequest> req,
-            std::function<void(error_code, boost::shared_ptr<TRequest>, boost::shared_ptr<TResponse>)> callback,
+            std::shared_ptr<TRequest> req,
+            std::function<void(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>)> callback,
             int request_hash/* = 0*/,            
             int timeout_milliseconds /*= 0*/,
             int reply_hash /*= 0*/
@@ -187,14 +218,14 @@ namespace dsn {
             error_code err,
             message_ptr& request,
             message_ptr& response,
-            std::function<void(error_code, boost::shared_ptr<TRequest>, boost::shared_ptr<TResponse>)> callback,
-            boost::shared_ptr<TRequest> req
+            std::function<void(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>)> callback,
+            std::shared_ptr<TRequest> req
             )
         {
             if (!err)
             {
                 // TODO: exception handling
-                boost::shared_ptr<TResponse> resp(new TResponse);
+                std::shared_ptr<TResponse> resp(new TResponse);
                 unmarshall(response->reader(), *resp);
                 callback(err, req, resp);
             }
@@ -208,8 +239,8 @@ namespace dsn {
         inline rpc_response_task_ptr serviceletex<T>::rpc_typed(
             const end_point& server_addr,
             task_code code,
-            boost::shared_ptr<TRequest> req,
-            void (T::*callback)(error_code, boost::shared_ptr<TRequest>, boost::shared_ptr<TResponse>),
+            std::shared_ptr<TRequest> req,
+            void (T::*callback)(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>),
             int request_hash/* = 0*/,            
             int timeout_milliseconds /*= 0*/,
             int reply_hash /*= 0*/
@@ -237,14 +268,14 @@ namespace dsn {
             error_code err,
             message_ptr& request,
             message_ptr& response,
-            void (T::*callback)(error_code, boost::shared_ptr<TRequest>, boost::shared_ptr<TResponse>),
-            boost::shared_ptr<TRequest> req
+            void (T::*callback)(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>),
+            std::shared_ptr<TRequest> req
             )
         {
             if (!err)
             {
                 // TODO: exception handling
-                boost::shared_ptr<TResponse> resp(new TResponse);
+                std::shared_ptr<TResponse> resp(new TResponse);
                 unmarshall(response->reader(), *resp);
                 (static_cast<T*>(this)->*callback)(err, req, resp);
             }
@@ -273,6 +304,16 @@ namespace dsn {
                 std::bind(&serviceletex<T>::internal_rpc_handler2<TRequest, TResponse>, static_cast<T*>(this), std::placeholders::_1, handler)
                 );
         }
+
+        template<typename T> template<typename TRequest, typename TResponse>
+        inline void serviceletex<T>::register_async_rpc_handler(task_code rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&, rpc_replier<TResponse>&))
+        {
+            std::string rpc_name = std::string(service_base::name()).append(".").append(rpc_name_);
+            return service_base::register_rpc_handler(
+                rpc_code, rpc_name.c_str(),
+                std::bind(&serviceletex<T>::internal_rpc_handler3<TRequest, TResponse>, static_cast<T*>(this), std::placeholders::_1, handler)
+                );
+        }
                 
         template<typename T> template<typename TRequest>
         inline void serviceletex<T>::internal_rpc_handler1(message_ptr& request, void (T::*handler)(const TRequest&))
@@ -293,6 +334,16 @@ namespace dsn {
             (static_cast<T*>(this)->*handler)(req, resp);
 
             rpc_response(request, resp);
+        }
+
+        template<typename T> template<typename TRequest, typename TResponse>
+        inline void serviceletex<T>::internal_rpc_handler3(message_ptr& request, void (T::*handler)(const TRequest&, rpc_replier<TResponse>&))
+        {
+            TRequest req;
+            unmarshall(request->reader(), req);
+
+            rpc_replier<TResponse> reply(request);
+            (static_cast<T*>(this)->*handler)(req, reply);
         }
     } // end namespace service
 } // end namespace

@@ -56,7 +56,7 @@ end_point replication_failure_detector::find_next_meta_server(end_point current)
     }
 }
 
-void replication_failure_detector::on_beacon_ack(error_code err, boost::shared_ptr<beacon_msg> beacon, boost::shared_ptr<beacon_ack> ack)
+void replication_failure_detector::on_beacon_ack(error_code err, std::shared_ptr<beacon_msg> beacon, std::shared_ptr<beacon_ack> ack)
 {
     failure_detector::on_beacon_ack(err, beacon, ack);
 

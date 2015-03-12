@@ -40,7 +40,7 @@ namespace dsn {
                 _queue.enqueue(task, task->spec().priority);
             else
             {
-                boost::shared_ptr<boost::asio::deadline_timer> timer(new boost::asio::deadline_timer(shared_io_service::instance().ios));
+                std::shared_ptr<boost::asio::deadline_timer> timer(new boost::asio::deadline_timer(shared_io_service::instance().ios));
                 timer->expires_from_now(boost::posix_time::milliseconds(task->delay_milliseconds()));
                 task->set_delay(0);
 

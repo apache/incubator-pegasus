@@ -135,8 +135,8 @@ private:
     /////////////////////////////////////////////////////////////////
     // learning    
     void init_learn(uint64_t signature = 0);
-    void on_learn_reply(error_code err, boost::shared_ptr<learn_request> req, boost::shared_ptr<learn_response> resp);
-    void on_learn_remote_state(boost::shared_ptr<learn_response> resp);
+    void on_learn_reply(error_code err, std::shared_ptr<learn_request> req, std::shared_ptr<learn_response> resp);
+    void on_learn_remote_state(std::shared_ptr<learn_response> resp);
     void on_learn_remote_state_completed(int err);
     void handle_learning_error(int err);
     void handle_learning_succeeded_on_primary(const end_point& node, uint64_t learnSignature);
@@ -156,7 +156,7 @@ private:
     void downgrade_to_inactive_on_primary(configuration_update_request& proposal);
     void remove(configuration_update_request& proposal);
     void update_configuration_on_meta_server(config_type type, const end_point& node, partition_configuration& newConfig);
-    void on_update_configuration_on_meta_server_reply(error_code err, message_ptr& request, message_ptr& response, boost::shared_ptr<configuration_update_request> req);
+    void on_update_configuration_on_meta_server_reply(error_code err, message_ptr& request, message_ptr& response, std::shared_ptr<configuration_update_request> req);
     void update_configuration(const partition_configuration& config);
     void update_local_configuration(const replica_configuration& config);
     void replay_prepare_list();
@@ -165,7 +165,7 @@ private:
     // group check
     void init_group_check();
     void broadcast_group_check();
-    void on_group_check_reply(error_code err, boost::shared_ptr<group_check_request> req, boost::shared_ptr<group_check_response> resp);
+    void on_group_check_reply(error_code err, std::shared_ptr<group_check_request> req, std::shared_ptr<group_check_response> resp);
     
 private:
     // replica configuration, updated by update_local_configuration ONLY    

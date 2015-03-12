@@ -120,8 +120,8 @@ private:
     void on_node_query_reply_scatter(replica_stub_ptr this_, const partition_configuration& config);
     void on_node_query_reply_scatter2(replica_stub_ptr this_, global_partition_id gpid);
     void remove_replica_on_meta_server(const partition_configuration& config);
-    task_ptr begin_open_replica(const std::string& app_type, global_partition_id gpid, boost::shared_ptr<group_check_request> req = nullptr);
-    void    open_replica(const std::string app_type, global_partition_id gpid, boost::shared_ptr<group_check_request> req);
+    task_ptr begin_open_replica(const std::string& app_type, global_partition_id gpid, std::shared_ptr<group_check_request> req = nullptr);
+    void    open_replica(const std::string app_type, global_partition_id gpid, std::shared_ptr<group_check_request> req);
     task_ptr begin_close_replica(replica_ptr r);
     void close_replica(replica_ptr r);
     void add_replica(replica_ptr r);

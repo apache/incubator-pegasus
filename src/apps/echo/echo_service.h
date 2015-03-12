@@ -29,6 +29,7 @@
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_TEST)
 DEFINE_TASK_CODE(LPC_ECHO_TIMER, ::dsn::TASK_PRIORITY_HIGH, THREAD_POOL_TEST)
 DEFINE_TASK_CODE_RPC(RPC_ECHO, ::dsn::TASK_PRIORITY_HIGH, THREAD_POOL_TEST)
+DEFINE_TASK_CODE_RPC(RPC_ECHO2, ::dsn::TASK_PRIORITY_HIGH, THREAD_POOL_TEST)
 
 using namespace dsn;
 using namespace dsn::service;
@@ -46,6 +47,12 @@ public:
     {
         resp = req;
     }
+
+    void on_echo2(const std::string& req, rpc_replier<std::string>& reply)
+    {
+        reply(req);
+    }
+};
 
     virtual error_code start(int argc, char** argv)
     {
@@ -91,7 +98,7 @@ public:
         {
             char buf[120];
             sprintf(buf, "%u", ++_seq);
-            boost::shared_ptr<std::string> req(new std::string("hi, dsn "));
+            std::shared_ptr<std::string> req(new std::string("hi, dsn "));
             *req = req->append(buf);
             req->resize(_message_size);
             rpc_typed(_server, RPC_ECHO, req, &echo_client::on_echo_reply, 0, 3000);
@@ -104,7 +111,7 @@ public:
             << std::endl;
     }
 
-    void on_echo_reply(error_code err, boost::shared_ptr<std::string> req, boost::shared_ptr<std::string> resp)
+    void on_echo_reply(error_code err, std::shared_ptr<std::string> req, std::shared_ptr<std::string> resp)
     {
         if (err != ERR_SUCCESS) std::cout << "echo err: " << err.to_string() << std::endl;
         else

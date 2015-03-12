@@ -75,7 +75,7 @@ void replica::init_learn(uint64_t signature)
         
     _potential_secondary_states.LearningRoundIsRuning = true;
 
-    boost::shared_ptr<learn_request> request(new learn_request);
+    std::shared_ptr<learn_request> request(new learn_request);
     request->gpid = get_gpid();
     request->lastCommittedDecreeInApp = _app->last_committed_decree();
     request->lastCommittedDecreeInPrepareList = _prepare_list->last_committed_decree();
@@ -182,7 +182,7 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
         *itr = itr->substr(_dir.length()); 
 }
 
-void replica::on_learn_reply(error_code err, boost::shared_ptr<learn_request> req, boost::shared_ptr<learn_response> resp)
+void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request> req, std::shared_ptr<learn_response> resp)
 {
     check_hashed_access();
 
@@ -228,7 +228,7 @@ void replica::on_learn_reply(error_code err, boost::shared_ptr<learn_request> re
         );
 }
 
-void replica::on_learn_remote_state(boost::shared_ptr<learn_response> resp)
+void replica::on_learn_remote_state(std::shared_ptr<learn_response> resp)
 {
     int err = ERR_SUCCESS;
     

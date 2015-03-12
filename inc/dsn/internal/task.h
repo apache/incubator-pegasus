@@ -206,7 +206,7 @@ public:
     disk_engine *engine;
 };
 
-typedef ::boost::shared_ptr<disk_aio> disk_aio_ptr;
+typedef ::std::shared_ptr<disk_aio> disk_aio_ptr;
 
 class aio_task : public task
 {

@@ -367,7 +367,7 @@ void failure_detector::on_beacon(const beacon_msg& beacon, __out_param beacon_ac
     }
 }
 
-void failure_detector::on_beacon_ack(error_code err, boost::shared_ptr<beacon_msg> beacon, boost::shared_ptr<beacon_ack> ack)
+void failure_detector::on_beacon_ack(error_code err, std::shared_ptr<beacon_msg> beacon, std::shared_ptr<beacon_ack> ack)
 {
     if (err) return;
 
@@ -512,7 +512,7 @@ bool failure_detector::is_worker_connected( const end_point& node) const
 
 void failure_detector::send_beacon(const end_point& target, uint64_t time)
 {
-    boost::shared_ptr<beacon_msg> beacon(new beacon_msg);
+    std::shared_ptr<beacon_msg> beacon(new beacon_msg);
     beacon->time = time;
     beacon->from = address();
     beacon->to = target;

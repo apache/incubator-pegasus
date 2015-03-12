@@ -88,7 +88,7 @@ private:
     //
     //  internal helpers
     //
-    typedef boost::shared_ptr<std::list<aio_task_ptr>> pending_callbacks_ptr;
+    typedef std::shared_ptr<std::list<aio_task_ptr>> pending_callbacks_ptr;
 
     int  create_new_log_file();
     void create_new_pending_buffer();    

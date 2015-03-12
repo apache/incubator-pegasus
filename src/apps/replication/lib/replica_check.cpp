@@ -69,7 +69,7 @@ void replica::broadcast_group_check()
             continue;
 
         end_point addr = it->first;
-        boost::shared_ptr<group_check_request> request(new group_check_request);
+        std::shared_ptr<group_check_request> request(new group_check_request);
 
         request->app_type = _primary_states.membership.app_type;
         request->node = addr;
@@ -150,7 +150,7 @@ void replica::on_group_check(const group_check_request& request, __out_param gro
     response.learnerSignature = _potential_secondary_states.LearningSignature;
 }
 
-void replica::on_group_check_reply(error_code err, boost::shared_ptr<group_check_request> req, boost::shared_ptr<group_check_response> resp)
+void replica::on_group_check_reply(error_code err, std::shared_ptr<group_check_request> req, std::shared_ptr<group_check_response> resp)
 {
     if (PS_PRIMARY != status() || req->config.ballot < get_ballot())
     {
