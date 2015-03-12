@@ -33,64 +33,56 @@ DEFINE_TASK_CODE_RPC(RPC_ECHO, ::dsn::TASK_PRIORITY_HIGH, THREAD_POOL_TEST)
 using namespace dsn;
 using namespace dsn::service;
 
-class echo_server : public serviceletex<echo_server>
+class echo_server : public serviceletex<echo_server>, public service_app
 {
 public:
-    echo_server() : serviceletex<echo_server>("echo_server")
+    echo_server(service_app_spec* s, configuration_ptr c)
+        : service_app(s, c), serviceletex<echo_server>("echo_server")
     {
-        register_rpc_handler(RPC_ECHO, "RPC_ECHO", &echo_server::on_echo);
+        
     }
 
     void on_echo(const std::string& req, __out_param std::string& resp)
     {
         resp = req;
     }
-};
-
-class echo_server_app : public service_app
-{
-public:
-    echo_server_app(service_app_spec* s, configuration_ptr c)
-        : service_app(s, c)
-    {
-        _server = nullptr;
-    }
-
-    virtual ~echo_server_app(void)
-    {
-    }
 
     virtual error_code start(int argc, char** argv)
     {
-        _server = new echo_server();
+        register_rpc_handler(RPC_ECHO, "RPC_ECHO", &echo_server::on_echo);
         return ERR_SUCCESS;
     }
 
     virtual void stop(bool cleanup = false)
     {
-        delete _server;
-        _server = nullptr;
+        unregister_rpc_handler(RPC_ECHO);
     }
-
-private:
-    echo_server *_server;
 };
 
-class echo_client : public serviceletex<echo_client>
+class echo_client : public serviceletex<echo_client>, public service_app
 {
 public:
-    echo_client(const char* host, uint16_t port, 
-        int message_size,
-        int concurrency = 1
-    )
-        : serviceletex<echo_client>("echo_client")
+    echo_client(service_app_spec* s, configuration_ptr c)
+        : service_app(s, c), serviceletex<echo_client>("echo_client")
     {
+        _message_size = config()->get_value<int>("apps.client", "message_size", 1024);
+        _concurrency = config()->get_value<int>("apps.client", "concurrency", 1);
         _seq = 0;
-        _message_size = message_size;
-        _concurrency = concurrency;
-        _server = end_point(host, port);
+    }
 
-        enqueue_task(LPC_ECHO_TIMER, &echo_client::on_echo_timer, 0, 0, 1000);
+    virtual error_code start(int argc, char** argv)
+    {
+        if (argc < 3)
+            return ERR_INVALID_PARAMETERS;
+
+        _server = end_point(argv[1], (uint16_t)atoi(argv[2]));
+        _timer = enqueue_task(LPC_ECHO_TIMER, &echo_client::on_echo_timer, 0, 0, 1000);
+        return ERR_SUCCESS;
+    }
+
+    virtual void stop(bool cleanup = false)
+    {
+        _timer->cancel(true);
     }
 
     void on_echo_timer()
@@ -126,38 +118,5 @@ private:
     int _seq;
     int _message_size;
     int _concurrency;
-};
-
-class echo_client_app : public service_app
-{
-public:
-    echo_client_app(service_app_spec* s, configuration_ptr c)
-        : service_app(s, c)
-    {
-        _client = nullptr;
-    }
-
-    virtual ~echo_client_app(void)
-    {
-    }
-
-    virtual error_code start(int argc, char** argv)
-    {
-        if (argc < 3)
-            return ERR_INVALID_PARAMETERS;
-
-        int sz = config()->get_value<int>("apps.client", "message_size", 1024);
-        int cc = config()->get_value<int>("apps.client", "concurrency", 1);
-        _client = new echo_client(argv[1], (uint16_t)atoi(argv[2]), sz, cc);
-        return ERR_SUCCESS;
-    }
-
-    virtual void stop(bool cleanup = false)
-    {
-        delete _client;
-        _client = nullptr;
-    }
-
-private:
-    echo_client *_client;
+    task_ptr _timer;
 };

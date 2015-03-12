@@ -1,4 +1,4 @@
-ROOT = d:\dsn
+ROOT = d:\rdsn
 
 BOOST_INC=$(ROOT)/external
 BOOST_LIB=$(ROOT)/external/libs

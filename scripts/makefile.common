@@ -1,4 +1,4 @@
-ROOT = $(HOME)/projects/dsn
+ROOT = $(HOME)/projects/rdsn
 
 SYS	_INC = /usr/local/include /usr/include
 SYS_LIB_DEPS_COMMON = \
