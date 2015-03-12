@@ -106,7 +106,7 @@ public:
         {
             char buf[120];
             sprintf(buf, "%u", ++_seq);
-            boost::shared_ptr<std::string> req(new std::string("hi, dsn "));
+            std::shared_ptr<std::string> req(new std::string("hi, dsn "));
             *req = req->append(buf);
             req->resize(_message_size);
             rpc_typed(_server, RPC_ECHO, req, &echo_client::on_echo_reply, 0, 3000);
@@ -119,7 +119,7 @@ public:
             << std::endl;
     }
 
-    void on_echo_reply(error_code err, boost::shared_ptr<std::string> req, boost::shared_ptr<std::string> resp)
+    void on_echo_reply(error_code err, std::shared_ptr<std::string> req, std::shared_ptr<std::string> resp)
     {
         if (err != ERR_SUCCESS) std::cout << "echo err: " << err.to_string() << std::endl;
         else

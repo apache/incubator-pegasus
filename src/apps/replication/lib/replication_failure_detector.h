@@ -36,7 +36,7 @@ public:
     replication_failure_detector(replica_stub* stub, std::vector<end_point>& meta_servers);
     ~replication_failure_detector(void);
 
-    virtual void on_beacon_ack(error_code err, boost::shared_ptr<beacon_msg> beacon, boost::shared_ptr<beacon_ack> ack);
+    virtual void on_beacon_ack(error_code err, std::shared_ptr<beacon_msg> beacon, std::shared_ptr<beacon_ack> ack);
 
      // client side
     virtual void on_master_disconnected( const std::vector<end_point>& nodes );

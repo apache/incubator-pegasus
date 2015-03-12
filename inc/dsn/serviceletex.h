@@ -49,6 +49,11 @@ namespace dsn {
                 _response = request->create_response();
             }
 
+            rpc_replier(const rpc_replier& r)
+            {
+                _response = r._response;
+            }
+
             void operator () (const TResponse& resp)
             {
                 marshall(_response->writer(), resp);
@@ -71,8 +76,8 @@ namespace dsn {
             rpc_response_task_ptr rpc_typed(
                 const end_point& server_addr,
                 task_code code,
-                boost::shared_ptr<TRequest> req,
-                std::function<void(error_code, boost::shared_ptr<TRequest>, boost::shared_ptr<TResponse>)> callback,
+                std::shared_ptr<TRequest> req,
+                std::function<void(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>)> callback,
                 int request_hash = 0,                
                 int timeout_milliseconds = 0,
                 int reply_hash = 0
@@ -82,8 +87,8 @@ namespace dsn {
             rpc_response_task_ptr rpc_typed(
                 const end_point& server_addr,
                 task_code code,
-                boost::shared_ptr<TRequest> req,
-                void (T::*callback)(error_code, boost::shared_ptr<TRequest>, boost::shared_ptr<TResponse>),
+                std::shared_ptr<TRequest> req,
+                void (T::*callback)(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>),
                 int request_hash = 0,                
                 int timeout_milliseconds = 0,
                 int reply_hash = 0
@@ -154,8 +159,8 @@ namespace dsn {
                 error_code err,
                 message_ptr& request,
                 message_ptr& response,
-                std::function<void(error_code, boost::shared_ptr<TRequest>, boost::shared_ptr<TResponse>)> callback,
-                boost::shared_ptr<TRequest> req
+                std::function<void(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>)> callback,
+                std::shared_ptr<TRequest> req
                 );
 
             template<typename TRequest, typename TResponse>
@@ -163,8 +168,8 @@ namespace dsn {
                 error_code err,
                 message_ptr& request,
                 message_ptr& response,
-                void (T::*callback)(error_code, boost::shared_ptr<TRequest>, boost::shared_ptr<TResponse>),
-                boost::shared_ptr<TRequest> req
+                void (T::*callback)(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>),
+                std::shared_ptr<TRequest> req
                 );
         };
 
@@ -184,8 +189,8 @@ namespace dsn {
         inline rpc_response_task_ptr serviceletex<T>::rpc_typed(
             const end_point& server_addr,
             task_code code,
-            boost::shared_ptr<TRequest> req,
-            std::function<void(error_code, boost::shared_ptr<TRequest>, boost::shared_ptr<TResponse>)> callback,
+            std::shared_ptr<TRequest> req,
+            std::function<void(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>)> callback,
             int request_hash/* = 0*/,            
             int timeout_milliseconds /*= 0*/,
             int reply_hash /*= 0*/
@@ -213,14 +218,14 @@ namespace dsn {
             error_code err,
             message_ptr& request,
             message_ptr& response,
-            std::function<void(error_code, boost::shared_ptr<TRequest>, boost::shared_ptr<TResponse>)> callback,
-            boost::shared_ptr<TRequest> req
+            std::function<void(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>)> callback,
+            std::shared_ptr<TRequest> req
             )
         {
             if (!err)
             {
                 // TODO: exception handling
-                boost::shared_ptr<TResponse> resp(new TResponse);
+                std::shared_ptr<TResponse> resp(new TResponse);
                 unmarshall(response->reader(), *resp);
                 callback(err, req, resp);
             }
@@ -234,8 +239,8 @@ namespace dsn {
         inline rpc_response_task_ptr serviceletex<T>::rpc_typed(
             const end_point& server_addr,
             task_code code,
-            boost::shared_ptr<TRequest> req,
-            void (T::*callback)(error_code, boost::shared_ptr<TRequest>, boost::shared_ptr<TResponse>),
+            std::shared_ptr<TRequest> req,
+            void (T::*callback)(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>),
             int request_hash/* = 0*/,            
             int timeout_milliseconds /*= 0*/,
             int reply_hash /*= 0*/
@@ -263,14 +268,14 @@ namespace dsn {
             error_code err,
             message_ptr& request,
             message_ptr& response,
-            void (T::*callback)(error_code, boost::shared_ptr<TRequest>, boost::shared_ptr<TResponse>),
-            boost::shared_ptr<TRequest> req
+            void (T::*callback)(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>),
+            std::shared_ptr<TRequest> req
             )
         {
             if (!err)
             {
                 // TODO: exception handling
-                boost::shared_ptr<TResponse> resp(new TResponse);
+                std::shared_ptr<TResponse> resp(new TResponse);
                 unmarshall(response->reader(), *resp);
                 (static_cast<T*>(this)->*callback)(err, req, resp);
             }

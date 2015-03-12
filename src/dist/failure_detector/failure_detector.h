@@ -161,7 +161,7 @@ public:
 protected:
     virtual void on_beacon(const beacon_msg& beacon, __out_param beacon_ack& ack);
 
-    virtual void on_beacon_ack(error_code err, boost::shared_ptr<beacon_msg> beacon, boost::shared_ptr<beacon_ack> ack);
+    virtual void on_beacon_ack(error_code err, std::shared_ptr<beacon_msg> beacon, std::shared_ptr<beacon_ack> ack);
 
     bool is_time_greater_than(uint64_t ts, uint64_t base); 
 

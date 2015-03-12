@@ -137,12 +137,12 @@ void load_balancer::SendConfigProposal(const end_point& node, const configuratio
     rpc_typed(node, RPC_CONFIG_PROPOSAL, proposal, gpid_to_hash(proposal.config.gpid));
 }
 
-void load_balancer::QueryDecree(boost::shared_ptr<QueryPNDecreeRequest> query)
+void load_balancer::QueryDecree(std::shared_ptr<QueryPNDecreeRequest> query)
 {
     rpc_typed(query->node, RPC_QUERY_PN_DECREE, query, &load_balancer::OnQueryDecreeAck, gpid_to_hash(query->partitionId), 3000);
 }
 
-void load_balancer::OnQueryDecreeAck(error_code err, boost::shared_ptr<QueryPNDecreeRequest> query, boost::shared_ptr<QueryPNDecreeResponse> resp)
+void load_balancer::OnQueryDecreeAck(error_code err, std::shared_ptr<QueryPNDecreeRequest> query, std::shared_ptr<QueryPNDecreeResponse> resp)
 {
     if (err)
     {

@@ -357,7 +357,7 @@ void replica_stub::on_group_check(const group_check_request& request, __out_para
     {
         if (request.config.status == PS_POTENTIAL_SECONDARY)
         {
-            boost::shared_ptr<group_check_request> req(new group_check_request);
+            std::shared_ptr<group_check_request> req(new group_check_request);
             *req = request;
 
             begin_open_replica(request.app_type, request.config.gpid, req);
@@ -402,7 +402,7 @@ void replica_stub::on_add_learner(const group_check_request& request)
     }
     else
     {
-        boost::shared_ptr<group_check_request> req(new group_check_request);
+        std::shared_ptr<group_check_request> req(new group_check_request);
         *req = request;
         begin_open_replica(request.app_type, request.config.gpid, req);
     }
@@ -572,7 +572,7 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
     hdr.RpcTag = RPC_CM_UPDATE_PARTITION_CONFIGURATION;
     marshall(msg, hdr);
 
-    boost::shared_ptr<configuration_update_request> request(new configuration_update_request);
+    std::shared_ptr<configuration_update_request> request(new configuration_update_request);
     request->config = config;
     request->config.ballot++;        
     request->node = address();
@@ -692,7 +692,7 @@ void replica_stub::on_gc()
     }
 }
 
-task_ptr replica_stub::begin_open_replica(const std::string& app_type, global_partition_id gpid, boost::shared_ptr<group_check_request> req)
+task_ptr replica_stub::begin_open_replica(const std::string& app_type, global_partition_id gpid, std::shared_ptr<group_check_request> req)
 {
     _replicasLock.lock();
     if (_replicas.find(gpid) != _replicas.end())
@@ -747,7 +747,7 @@ task_ptr replica_stub::begin_open_replica(const std::string& app_type, global_pa
     }
 }
 
-void replica_stub::open_replica(const std::string app_type, global_partition_id gpid, boost::shared_ptr<group_check_request> req)
+void replica_stub::open_replica(const std::string app_type, global_partition_id gpid, std::shared_ptr<group_check_request> req)
 {
     char buffer[256];
     sprintf(buffer, "%u.%u.%s", gpid.tableId, gpid.pidx, app_type.c_str());
