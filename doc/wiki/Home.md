@@ -19,13 +19,13 @@ Our design ensures that the above aspects are developed independently while they
 * Compatible client access using Thrift in many languages
 
 #### Features for high performance
+* Automated profiling
 * Easy plug-in with customized (high-performance) library and runtime policy (e.g., lock/network/thread/queue/throttling)
 * Global resource planning and flow control
 
 #### Features for test and debug
 * Single process multi-node simulation/deployment
 * Automated logging
-* Automated profiling
 * Automated fault-injection
 * Global assertion across nodes
 * Replay for reproducing the bugs
