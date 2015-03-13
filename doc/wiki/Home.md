@@ -8,8 +8,6 @@ What is the major challenge for a distributed system? Considering a single-threa
 
 * **rDSN.replication** is our first production example using rDSN, which is a general-purpose replication framework that makes services **scalable, reliable, and highly-available**.
 
-Our design ensures that the above aspects are developed independently while they can be seamlessly integrated, i.e., almost all tools and distributed frameworks can be applied to any distributed systems atop of rDSN. The current wiki focuses on the first two aspects.
-
 ## Features
 ***
 #### Features for writing the code quickly
