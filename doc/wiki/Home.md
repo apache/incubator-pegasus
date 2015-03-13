@@ -29,7 +29,7 @@ Our design ensures that the above aspects are developed independently while they
 * Automated fault-injection
 * Global assertion across nodes
 * Replay for reproducing the bugs
-* Progressive debugging
+* Diff-based debugging
 
 #### Other advanced features
 * API for writing new tools
