@@ -6,9 +6,7 @@ What is the major challenge for a distributed system? Considering a single-threa
 
 * **rDSN.tools** provides a set of tools/runtime policies improving how to better test, debug, deploy, online control, monitor, and even reasoning the distributed systems. The goal is **robustness** and rDSN introduces a Tool API for writing more tools and runtime policies.
 
-* **rDSN.service** is a general-purpose service library that makes a single service **scalable, reliable, and highly-available** (e.g., a replicated storage).
-
-[//]: # **rDSN.workflow** composes a set of services as workflows for end-to-end request or data procesing.
+* **rDSN.service** is a general-purpose service library that makes a single-box rDSN application **scalable, reliable, and highly-available** (e.g., a partitioned and replicated storage).
 
 ## Features
 ***
