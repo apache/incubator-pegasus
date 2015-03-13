@@ -6,7 +6,7 @@ What is the major challenge for a distributed system? Considering a single-threa
 
 * **rDSN.tools** provides a set of tools/runtime policies improving how to better test, debug, deploy, online control, monitor, and even reasoning the distributed systems. The goal is **robustness** and rDSN introduces a Tool API for writing more tools and runtime policies.
 
-* **rDSN.replication** is our first production example using rDSN.local, which is a general-purpose replication framework that makes services scalable, reliable, and highly-available.
+* **rDSN.replication** is our first production example using rDSN, which is a general-purpose replication framework that makes services scalable, reliable, and highly-available.
 
 Our design ensures that the above aspects are developed independently while they can be seamlessly integrated, i.e., almost all tools and distributed frameworks can be applied to any distributed systems atop of rDSN. The current wiki focuses on the first two aspects.
 
