@@ -11,11 +11,11 @@ What is the major challenge for a distributed system? Considering a single-threa
 Our design ensures that the above aspects are developed independently while they can be seamlessly integrated, i.e., almost all tools and distributed frameworks can be applied to any distributed systems atop of rDSN. The current wiki focuses on the first two aspects.
 
 ## Features
-##
+***
 #### Features for writing the code quickly
 * IDL for describing service interface
 * Code generation and initial executable ready within seconds
-* Rich API support such as RPC, thread pool, synchronization, aio
+* Rich API support such as RPC, thread pool, synchronization, aio, perf-counter, logging, configuration
 * Compatible client access using Thrift in many languages
 
 #### Features for high performance
