@@ -73,7 +73,7 @@ task_spec::task_spec(int code, const char* name, task_type type, threadpool_code
 
     // TODO: config for following values
     rpc_message_channel = RPC_CHANNEL_TCP;
-    rpc_default_timeout_milliseconds = 3600 * 1000; // 1 hr
+    rpc_timeout_milliseconds = 3600 * 1000; // 1 hr
     rpc_retry_interval_milliseconds = 3000;
     rpc_min_timeout_milliseconds_for_retry = 4000;
     async_rpc_max_send_time_milliseconds = 5000;
@@ -110,6 +110,7 @@ bool task_spec::init(configuration_ptr config)
         return false;
     }
     defaultSpec.rpc_message_channel = rpc_channel::from_string(cn.c_str(), RPC_CHANNEL_TCP);    
+    defaultSpec.rpc_timeout_milliseconds = config->get_value<int>("task.default", "rpc_timeout_milliseconds", defaultSpec.rpc_timeout_milliseconds);
     
     for (int code = 0; code <= task_code::max_value(); code++)
     {
@@ -140,6 +141,7 @@ bool task_spec::init(configuration_ptr config)
             spec->priority = pri;
 
             spec->allow_inline = config->get_value<bool>(section_name.c_str(), "allow_inline", defaultSpec.allow_inline);
+            spec->rpc_timeout_milliseconds = config->get_value<int>(section_name.c_str(), "rpc_timeout_milliseconds", defaultSpec.rpc_timeout_milliseconds);
 
             auto cn = config->get_string_value(section_name.c_str(), "rpc_message_channel", defaultSpec.rpc_message_channel.to_string());
             if (!rpc_channel::is_exist(cn.c_str()))

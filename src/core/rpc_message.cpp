@@ -140,7 +140,7 @@ message_ptr message::create_request(task_code rpc_code, int timeout_milliseconds
     msg->header().client.hash = hash;
     if (timeout_milliseconds == 0)
     {
-        msg->header().client.timeout_milliseconds = task_spec::get(rpc_code)->rpc_default_timeout_milliseconds;
+        msg->header().client.timeout_milliseconds = task_spec::get(rpc_code)->rpc_timeout_milliseconds;
     }
     else
     {

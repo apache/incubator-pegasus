@@ -106,7 +106,14 @@ template<> inline long long configuration::get_value<long long>(const char* sect
         return default_value;
     else
     {
-        return (long long)atol(value.c_str());
+        if (value.length() > 2 && (value.substr(0, 2) == "0x" || value.substr(0, 2) == "0X"))
+        {
+            int64_t v;
+            sscanf(value.c_str(), "0x%llx", &v);
+            return v;
+        }
+        else
+            return (long long)atol(value.c_str());
     }
 }
 
@@ -117,7 +124,14 @@ template<> inline long configuration::get_value<long>(const char* section, const
         return default_value;
     else
     {
-        return (long)atoi(value.c_str());
+        if (value.length() > 2 && (value.substr(0, 2) == "0x" || value.substr(0, 2) == "0X"))
+        {
+            int v;
+            sscanf(value.c_str(), "0x%x", &v);
+            return v;
+        }
+        else
+            return (long)atoi(value.c_str());
     }
 }
 

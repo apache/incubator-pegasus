@@ -154,7 +154,7 @@ public:
 
     task_rejection_handler rejection_handler;
     rpc_channel            rpc_message_channel;
-    int32_t                rpc_default_timeout_milliseconds;
+    int32_t                rpc_timeout_milliseconds;
     int32_t                rpc_retry_interval_milliseconds;
     int32_t                rpc_min_timeout_milliseconds_for_retry;
     int32_t                async_rpc_max_send_time_milliseconds;
