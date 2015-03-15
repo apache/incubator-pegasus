@@ -73,6 +73,7 @@ LIB: $(BIN_DIR) $(OBJS)
 EXE: $(BIN_DIR) $(OBJS) $(LIB_EXTRA_TARGETS)
 	echo building executable $(BIN_DIR)/$(TARGET) ...
 	$(LD) -o $(BIN_DIR)/$(TARGET) $(OBJS) $(LDFLAGS) 
+	cp *.ini $(BIN_DIR)/
 
 
 
