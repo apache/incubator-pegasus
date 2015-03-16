@@ -22,11 +22,10 @@
  * THE SOFTWARE.
  */
 
+# include <dsn/internal/end_point.h>
+
 # ifdef _WIN32
 
-# define _WINSOCK_DEPRECATED_NO_WARNINGS 1
-# include <WinSock2.h>
-# pragma comment(lib, "ws2_32.lib")
 
 # else
 # include <sys/socket.h>
@@ -34,7 +33,6 @@
 # include <arpa/inet.h>
 # endif
 
-# include <dsn/internal/end_point.h>
 # include <mutex>
 
 namespace dsn {

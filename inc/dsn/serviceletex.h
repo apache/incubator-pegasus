@@ -197,7 +197,7 @@ namespace dsn {
             )
         {
             message_ptr msg = message::create_request(code, timeout_milliseconds, request_hash);
-            ::dsn::marshall(msg->writer(), *req);
+            marshall(msg->writer(), *req);
 
             return service_base::rpc_call(
                 server_addr,

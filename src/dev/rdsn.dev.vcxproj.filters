@@ -9,11 +9,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\inc\rdsn\internal\file_server.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\serialization.h" />
-    <ClInclude Include="..\..\inc\rdsn\internal\service_base.h" />
-    <ClInclude Include="..\..\inc\rdsn\servicelet.h" />
-    <ClInclude Include="..\..\inc\rdsn\serviceletex.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\file_server.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\serialization.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\service_base.h" />
+    <ClInclude Include="..\..\inc\dsn\servicelet.h" />
+    <ClInclude Include="..\..\inc\dsn\serviceletex.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\thrift_helper.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="service.cpp">

@@ -21,4 +21,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-# include <dsn/internal/file_server.h>
+# include <dsn/internal/thrift_helper.h>
+//# include <dsn/internal/file_server.h>
+
+
+namespace dsn {
+    namespace utils {
+        void test()
+        {
+            blob bb;
+            binary_reader reader(bb);
+            binary_reader_transport trans(reader);
+
+            int32_t v;
+            unmarshall(reader, v);
+        }
+    }
+}
