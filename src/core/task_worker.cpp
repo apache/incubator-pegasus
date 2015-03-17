@@ -21,15 +21,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+# include <dsn/internal/task_worker.h>
+# include "task_engine.h"
+# include <sstream>
+
 # ifdef _WIN32
-# include <Windows.h>
+
 # else 
 //# include <sys/prctl.h>
 # endif
 
-# include <dsn/internal/task_worker.h>
-# include "task_engine.h"
-# include <sstream>
 
 # define __TITLE__ "task.worker"
 

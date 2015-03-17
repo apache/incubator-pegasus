@@ -23,8 +23,8 @@
  */
 #pragma once
 
-# include <boost/asio.hpp>
 # include <dsn/tool_api.h>
+# include <boost/asio.hpp>
 
 namespace dsn {
     namespace tools {

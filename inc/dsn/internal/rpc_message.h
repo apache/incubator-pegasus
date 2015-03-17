@@ -73,7 +73,10 @@ struct message_header
     void new_rpc_id();
     
     static bool is_right_header(char* hdr);
-    static int get_body_length(char* hdr);
+    static int get_body_length(char* hdr)
+    {
+        return ((message_header*)hdr)->body_length;
+    }
 };
 
 class rpc_server_session;

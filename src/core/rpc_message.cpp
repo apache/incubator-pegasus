@@ -83,11 +83,6 @@ void message_header::new_rpc_id()
     }
 }
 
-/*static*/ int message_header::get_body_length(char* hdr)
-{
-    return ((message_header*)hdr)->body_length;
-}
-
 std::atomic<uint64_t> message::_id(0);
 
 message::message()

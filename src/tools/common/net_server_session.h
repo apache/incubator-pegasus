@@ -24,7 +24,8 @@
 #pragma once
 
 # include "net_provider.h"
-# include <dsn/internal/priority_queue.h>
+# include <dsn/internal/message_parser.h>
+# include "net_io.h"
 
 namespace dsn {
     namespace tools {
@@ -34,32 +35,47 @@ namespace dsn {
             : public rpc_server_session
         {
         public:
-            net_server_session(asio_network_provider& net, const end_point& remote_addr,
-                boost::asio::ip::tcp::socket socket);
+            net_server_session(
+                asio_network_provider& net, 
+                const end_point& remote_addr,
+                boost::asio::ip::tcp::socket& socket,
+                std::shared_ptr<message_parser>& parser);
             ~net_server_session();
 
-            virtual void send(message_ptr& reply_msg) { return write(reply_msg); }
-
-            void write(message_ptr& msg);
-            void close();
-
+            virtual void send(message_ptr& reply_msg) { return _io->write(reply_msg); }
+            
         private:            
-            void do_read_header();
-            void do_read_body();
-            void do_write();
             void on_failure();
+            void on_failed();
+            void on_message_read(message_ptr& msg);
 
-        protected:
+        private:
+            class net_io_server : public net_io
+            {
+            public:
+                net_io_server(const end_point& remote_addr,
+                    boost::asio::ip::tcp::socket& socket,
+                    std::shared_ptr<dsn::message_parser>& parser,
+                    net_server_session* host)
+                    : net_io(remote_addr, socket, parser)
+                {
+                }
 
-            boost::asio::io_service      &_io_service;
-            boost::asio::ip::tcp::socket _socket;
-            message_header               _read_msg_hdr;
-            utils::blob                  _read_buffer;
-            asio_network_provider        &_net;
+                virtual void on_failure() { return _host->on_failure(); }
+                virtual void on_failed() { return _host->on_failed(); }
+                virtual void on_message_read(message_ptr& msg) 
+                {
+                    return _host->on_message_read(msg);
+                }
 
-            // TODO: move this to base class and expose the queue to be customizable
-            typedef utils::priority_queue<message_ptr, TASK_PRIORITY_COUNT> send_queue;
-            send_queue                   _sq;
+            private:
+                net_server_session* _host;
+            };
+
+        private:
+            net_io_ptr                      _io;
+            std::shared_ptr<message_parser> _parser;
+            asio_network_provider           &_net;
         };
     }
 }

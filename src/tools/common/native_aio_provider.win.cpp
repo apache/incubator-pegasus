@@ -23,7 +23,6 @@
  */
 #ifdef _WIN32
 
-#include <Windows.h>
 #include "native_aio_provider.win.h"
 #include <fcntl.h>
 #include <sys/types.h>

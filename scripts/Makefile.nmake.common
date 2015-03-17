@@ -1,5 +1,5 @@
-#ROOT = d:\rdsn
-ROOT = c:\projects\rdsn
+ROOT = d:\rdsn
+#ROOT = c:\projects\rdsn
 
 BOOST_INC=$(ROOT)/external
 BOOST_LIB=$(ROOT)/external/libs
@@ -42,7 +42,7 @@ CPPFLAGS= $(INC) $(DRFLAG) /D_WIN32_WINNT=0x0501 /MP /W3 /nologo /wd4996 /EHsc \
 		  /errorReport:prompt /WX- /Zc:forScope /Gd /Oy- /Oi
 		  
 LIBFLAGS= /nologo
-LINKFLAGS = /LIBPATH:$(BOOST_LIB) /LIBPATH:$(BIN_DIR) $(COMMON_LIBS) $(LIB_EXTRA)
+LINKFLAGS = /LIBPATH:$(BOOST_LIB) /LIBPATH:$(BIN_DIR) $(COMMON_LIBS) $(LIB_EXTRA) /PDB:"$(BIN_DIR)\$(TARGET).pdb" /DEBUG
 
 !if [bash -c "echo SOURCES = *.cpp" >.source.mk]
 !error failed to generate source list

@@ -131,7 +131,6 @@ namespace dsn {
         }
 
         client->call(request, call);
-        // TODO: periodical check to remove idle clients
     }
 
     rpc_server_session_ptr network::get_server_session(const end_point& ep)

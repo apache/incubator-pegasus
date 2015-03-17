@@ -294,12 +294,17 @@ namespace dsn {
     {
         message* msg = request.get();
         
-        msg->header().client.port = address().port;
-        msg->header().from_address = address();
-        msg->header().new_rpc_id();  
-        msg->seal(_message_crc_required);
-
         auto sp = task_spec::get(msg->header().local_rpc_code);
+        network* net = _networks[sp->rpc_message_channel];
+        dassert(nullptr != net, "network not present for rpc channel %s used by rpc %s",
+            sp->rpc_message_channel.to_string(),
+            msg->header().rpc_name
+            );
+
+        msg->header().client.port = net->address().port;
+        msg->header().from_address = net->address();
+        msg->header().new_rpc_id();
+        msg->seal(_message_crc_required);
 
         if (!sp->on_rpc_call.execute(task::get_current_task(), msg, call.get(), true))
         {
@@ -310,12 +315,6 @@ namespace dsn {
             }   
             return;
         }
-
-        network* net = _networks[sp->rpc_message_channel];
-        dassert (nullptr != net, "network not present for rpc channel %s used by rpc %s",
-            sp->rpc_message_channel.to_string(),
-            msg->header().rpc_name
-            );
 
         net->call(request, call);
     }
