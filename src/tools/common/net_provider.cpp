@@ -66,7 +66,8 @@ namespace dsn {
         rpc_client_session_ptr asio_network_provider::create_client_session(const end_point& server_addr)
         {
             auto matcher = new_client_matcher();
-            return rpc_client_session_ptr(new net_client_session(*this, server_addr, matcher));
+            auto parser = new_message_parser();
+            return rpc_client_session_ptr(new net_client_session(*this, server_addr, matcher, parser));
         }
 
         void asio_network_provider::do_accept()
@@ -83,7 +84,8 @@ namespace dsn {
                     // TODO: convert ip to host name
                     client_addr.name = _socket->remote_endpoint().address().to_string();
 
-                    auto s = rpc_server_session_ptr(new net_server_session(*this, client_addr, std::move(*_socket)));
+                    auto parser = new_message_parser();
+                    auto s = rpc_server_session_ptr(new net_server_session(*this, client_addr, std::move(*_socket), parser));
                     this->on_server_session_accepted(s);
                 }
 

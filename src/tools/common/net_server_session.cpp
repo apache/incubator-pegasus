@@ -38,29 +38,16 @@ namespace dsn {
             std::shared_ptr<message_parser>& parser
             )
             : _net(net),
-            rpc_server_session(net, remote_addr)
+            rpc_server_session(net, remote_addr),
+            net_io(remote_addr, socket, parser)
         {
-            _io.reset(new net_io_server(remote_addr, socket, parser, this));
+            start_read();
         }
 
         net_server_session::~net_server_session()
         {
         }
 
-        void net_server_session::on_failure()
-        {
-            _io->close();
-        }
-
-        void net_server_session::on_failed()
-        {
-            _io->close();
-        }
-
-        void net_server_session::on_message_read(message_ptr& msg)
-        {
-            this->on_recv_request(msg);
-        }        
     }
 }
 

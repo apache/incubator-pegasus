@@ -27,11 +27,13 @@
 # define ZION_NOT_USE_DEFAULT_SERIALIZATION 1
 # include <dsn/internal/serialization.h>
 # include <dsn/internal/utils.h>
+# include <dsn/internal/message_parser.h>
 
 # include <thrift/Thrift.h>
 # include <thrift/protocol/TBinaryProtocol.h>
 # include <thrift/protocol/TVirtualProtocol.h>
 # include <thrift/transport/TVirtualTransport.h>
+# include <thrift/TApplicationException.h>
 
 using namespace ::apache::thrift::transport;
 
@@ -54,8 +56,13 @@ namespace dsn {
 
             uint32_t read(uint8_t* buf, uint32_t len)
             {
-                _reader.read((char*)buf, (int)len);
-                return len;
+                int l = _reader.read((char*)buf, (int)len);
+                if (l == 0)
+                {
+                    throw TTransportException(TTransportException::END_OF_FILE,
+                        "no more data to read after end-of-buffer");
+                }
+                return (uint32_t)l;
             }
             
         private:
@@ -85,85 +92,156 @@ namespace dsn {
             binary_writer& _writer;
         };
 
+        class thrift_binary_message_parser : public message_parser
+        {
+        public:
+            thrift_binary_message_parser(int buffer_block_size)
+                : message_parser(buffer_block_size)
+            {
+            }
 
-        /*
-        TYPE_VOID,
-        TYPE_STRING,
-        TYPE_BOOL,
-        TYPE_BYTE,
-        TYPE_I16,
-        TYPE_I32,
-        TYPE_I64,
-        TYPE_DOUBLE
-        */
+            virtual message_ptr on_read(int read_length, __out_param int& read_next)
+            {
+                mark_read(read_length);
 
-    #define DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(TName, TTag, TMethod) \
-        inline void marshall(::dsn::utils::binary_writer& writer, const TName& val)\
-        {\
-            boost::shared_ptr<::dsn::utils::binary_writer_transport> transport(new ::dsn::utils::binary_writer_transport(writer));\
-            ::apache::thrift::protocol::TBinaryProtocol proto(transport);\
-            uint32_t xfer = 0;\
-            \
-            xfer += proto.writeStructBegin("val");\
-            xfer += proto.writeFieldBegin("val", ::apache::thrift::protocol::T_##TTag, 0); \
-            xfer += proto.write##TMethod(val); \
-            xfer += proto.writeFieldEnd(); \
-            xfer += proto.writeFieldStop();\
-            xfer += proto.writeStructEnd();\
-        }\
-        \
-        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param TName& val)\
-        {\
-            boost::shared_ptr<::dsn::utils::binary_reader_transport> transport(new ::dsn::utils::binary_reader_transport(reader));\
-            ::apache::thrift::protocol::TBinaryProtocol proto(transport);\
-            uint32_t xfer = 0;\
-            std::string fname;\
-            ::apache::thrift::protocol::TType ftype;\
-            int16_t fid;\
-            \
-            xfer += proto.readStructBegin(fname);\
-            \
-            using ::apache::thrift::protocol::TProtocolException;\
-            \
-            while (true)\
+                if (_read_buffer_occupied < 10)
+                {
+                    read_next = 128;
+                    return nullptr;
+                }
+
+                try
+                {
+                    blob bb = _read_buffer.range(0, _read_buffer_occupied);
+                    binary_reader reader(bb);
+                    boost::shared_ptr<::dsn::utils::binary_reader_transport> transport(new ::dsn::utils::binary_reader_transport(reader));
+                    ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+
+                    int32_t rseqid = 0;
+                    std::string fname;
+                    ::apache::thrift::protocol::TMessageType mtype;
+
+                    proto.readMessageBegin(fname, mtype, rseqid);
+                    int hdr_sz = _read_buffer_occupied - reader.get_remaining_size();
+                    
+                    if (mtype == ::apache::thrift::protocol::T_EXCEPTION) 
+                    {
+                        ::apache::thrift::TApplicationException x;
+                        x.read(&proto);
+                        proto.readMessageEnd();
+                        proto.getTransport()->readEnd();
+                    }
+                    else
+                    {
+                        proto.skip(::apache::thrift::protocol::T_STRUCT);                        
+                    }
+
+                    proto.readMessageEnd();
+                    proto.getTransport()->readEnd();
+
+                    // msg done
+                    int msg_sz = _read_buffer_occupied - reader.get_remaining_size() - hdr_sz;
+                    auto msg_bb = _read_buffer.range(hdr_sz, msg_sz);
+                    message_ptr msg = new message(msg_bb, false);
+                    msg->header().id = msg->header().rpc_id = rseqid;
+                    strcpy(msg->header().rpc_name, fname.c_str());
+                    msg->header().body_length = msg_sz;
+
+                    _read_buffer = _read_buffer.range(msg_sz + hdr_sz);
+                    _read_buffer_occupied -= (msg_sz + hdr_sz);
+                    read_next = 128;
+                    return msg;
+                }
+                catch (TTransportException& ex)
+                {
+                    return nullptr;
+                }
+            }
+        };
+
+        #define DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(TName, TMethod) \
+            inline int write_base(::apache::thrift::protocol::TProtocol* proto, const TName& val)\
             {\
-                xfer += proto.readFieldBegin(fname, ftype, fid);\
-                if (ftype == ::apache::thrift::protocol::T_STOP) {\
-                    break;\
-                }\
-                switch (fid)\
-                {\
-                case 0:\
-                if (ftype == ::apache::thrift::protocol::T_##TTag) {\
-                    xfer += proto.read##TMethod(val); \
-                    }\
-                    else {\
-                        xfer += proto.skip(ftype);\
-                    }\
-                    break;\
-                default:\
-                    xfer += proto.skip(ftype);\
-                    break;\
-                }\
-                xfer += proto.readFieldEnd();\
+                return proto->write##TMethod(val);\
             }\
-            \
-            xfer += proto.readStructEnd();\
-        }
-
-        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(bool, BOOL, Bool)
-        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int8_t, BYTE, Byte)
-        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int16_t, I16, I16)
-        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int32_t, I32, I32)
-        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int64_t, I64, I64)
-
-        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(double, DOUBLE, Double)
+            inline int read_base(::apache::thrift::protocol::TProtocol* proto, __out_param TName& val)\
+            {\
+                return proto->read##TMethod(val); \
+            }
         
-        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(std::string, STRING, String)
+        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(bool, Bool)
+        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int8_t, Byte)
+        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int16_t, I16)
+        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int32_t, I32)
+        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(int64_t, I64)
+        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(double, Double)        
+        DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(std::string, String)
 
+        template<typename TName, ::apache::thrift::protocol::TType TTag>
+        inline void marshall(::dsn::utils::binary_writer& writer, const TName& val)
+        {
+            boost::shared_ptr<::dsn::utils::binary_writer_transport> transport(new ::dsn::utils::binary_writer_transport(writer));
+            ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+            uint32_t xfer = 0; 
+            
+            ;
+            xfer += proto.writeStructBegin("val");
+            xfer += proto.writeFieldBegin("val", TTag, 0);
+
+            xfer += write_base(&proto, val);
+
+            xfer += proto.writeFieldEnd();
+            xfer += proto.writeFieldStop();
+            xfer += proto.writeStructEnd();
+        }
+        
+        template<typename TName, ::apache::thrift::protocol::TType TTag>
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param TName& val)
+        {
+            boost::shared_ptr<::dsn::utils::binary_reader_transport> transport(new ::dsn::utils::binary_reader_transport(reader));
+            ::apache::thrift::protocol::TBinaryProtocol proto(transport);
+            uint32_t xfer = 0;
+            std::string fname;
+            ::apache::thrift::protocol::TType ftype;
+            int16_t fid;
+        
+            xfer += proto.readStructBegin(fname);
+        
+            using ::apache::thrift::protocol::TProtocolException;
+        
+            while (true)
+            {
+                xfer += proto.readFieldBegin(fname, ftype, fid);
+                if (ftype == ::apache::thrift::protocol::T_STOP) {
+                    break;
+                }
+
+                switch (fid)
+                {
+                case 0:
+                    if (ftype == TTag) {
+                        xfer += read_base(&proto, val);
+                    }
+                    else {
+                        xfer += proto.skip(ftype);
+                    }
+                    break;
+                default:
+                    xfer += proto.skip(ftype);
+                    break;
+                }
+
+                xfer += proto.readFieldEnd();
+            }
+            
+            xfer += proto.readStructEnd();
+        }
     }
 }
 
+/*
+    symbols defined in libthrift, putting here so we don't need to link :-)
+*/
 namespace apache {
     namespace thrift {
         namespace transport {

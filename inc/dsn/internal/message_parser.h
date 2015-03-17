@@ -8,6 +8,12 @@ namespace dsn
     class message_parser
     {
     public:
+        template <typename T> static message_parser* create(int buffer_block_size)
+        {
+            return new T(buffer_block_size);
+        }
+
+    public:
         message_parser(int buffer_block_size);
 
         // before read
@@ -24,7 +30,7 @@ namespace dsn
     protected:        
         utils::blob            _read_buffer;
         int                    _read_buffer_occupied;
-        int                 _buffer_block_size;
+        int                    _buffer_block_size;
     };
 
     class dsn_message_parser : public message_parser

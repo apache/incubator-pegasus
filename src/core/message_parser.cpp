@@ -6,6 +6,7 @@
 namespace dsn {
 
     message_parser::message_parser(int buffer_block_size)
+        : _buffer_block_size(buffer_block_size)
     {
         create_new_buffer(buffer_block_size);
     }
@@ -35,8 +36,11 @@ namespace dsn {
             create_new_buffer(max(read_next + _read_buffer_occupied, _buffer_block_size));
 
             // copy
-            memcpy((void*)_read_buffer.data(), (const void*)rb.data(), rb.length());
-            _read_buffer_occupied = rb.length();
+            if (rb.length() > 0)
+            {
+                memcpy((void*)_read_buffer.data(), (const void*)rb.data(), rb.length());
+                _read_buffer_occupied = rb.length();
+            }            
             
             dassert (read_next + _read_buffer_occupied <= _read_buffer.length(), "");
         }

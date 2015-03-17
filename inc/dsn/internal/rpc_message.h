@@ -102,10 +102,10 @@ public:
     //
     // quick read
     //
-    template<typename T> void read(__out_param T& val) { _reader->read(val); }
-    void read(__out_param std::string& s) { _reader->read(s); }
-    void read(char* buffer, int sz) { _reader->read(buffer, sz); }
-    void read(utils::blob& blob) { _reader->read(blob); }
+    template<typename T> int read(__out_param T& val) { return _reader->read(val); }
+    int read(__out_param std::string& s) { return _reader->read(s); }
+    int read(char* buffer, int sz) { return _reader->read(buffer, sz); }
+    int read(utils::blob& blob) { return _reader->read(blob); }
     utils::blob get_input_buffer() const { return _reader->get_buffer(); }
     utils::blob get_input_remaining_buffer() const { return _reader->get_remaining_buffer(); }
     bool is_eof() const { return _reader->is_eof(); }

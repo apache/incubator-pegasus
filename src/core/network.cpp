@@ -98,6 +98,13 @@ namespace dsn {
         return std::shared_ptr<rpc_client_matcher>(new rpc_client_matcher());
     }
 
+    std::shared_ptr<message_parser> network::new_message_parser()
+    {
+        // TODO: use factory instead
+        message_parser * parser = new dsn_message_parser(1024);
+        return std::shared_ptr<message_parser>(parser);
+    }
+
     void network::call(message_ptr& request, rpc_response_task_ptr& call)
     {
         rpc_client_session_ptr client = nullptr;

@@ -24,7 +24,6 @@
 #pragma once
 
 # include "net_provider.h"
-# include <dsn/internal/message_parser.h>
 # include "net_io.h"
 
 namespace dsn {
@@ -32,7 +31,7 @@ namespace dsn {
 
         class asio_network_provider;
         class net_server_session
-            : public rpc_server_session
+            : public rpc_server_session, public net_io
         {
         public:
             net_server_session(
@@ -42,39 +41,17 @@ namespace dsn {
                 std::shared_ptr<message_parser>& parser);
             ~net_server_session();
 
-            virtual void send(message_ptr& reply_msg) { return _io->write(reply_msg); }
-            
-        private:            
-            void on_failure();
-            void on_failed();
-            void on_message_read(message_ptr& msg);
-
-        private:
-            class net_io_server : public net_io
+            virtual void send(message_ptr& reply_msg) { return write(reply_msg); }
+            virtual void on_failure() { close(); }
+            virtual void on_closed() { return on_disconnected(); }
+            virtual void on_message_read(message_ptr& msg)
             {
-            public:
-                net_io_server(const end_point& remote_addr,
-                    boost::asio::ip::tcp::socket& socket,
-                    std::shared_ptr<dsn::message_parser>& parser,
-                    net_server_session* host)
-                    : net_io(remote_addr, socket, parser)
-                {
-                }
-
-                virtual void on_failure() { return _host->on_failure(); }
-                virtual void on_failed() { return _host->on_failed(); }
-                virtual void on_message_read(message_ptr& msg) 
-                {
-                    return _host->on_message_read(msg);
-                }
-
-            private:
-                net_server_session* _host;
-            };
-
+                return on_recv_request(msg);
+            }
+            virtual void add_reference() { add_ref(); }
+            virtual void release_reference() { release_ref(); }
+            
         private:
-            net_io_ptr                      _io;
-            std::shared_ptr<message_parser> _parser;
             asio_network_provider           &_net;
         };
     }

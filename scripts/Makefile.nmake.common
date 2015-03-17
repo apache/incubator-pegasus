@@ -1,4 +1,4 @@
-ROOT = d:\rdsn
+ROOT = e:\rdsn
 #ROOT = c:\projects\rdsn
 
 BOOST_INC=$(ROOT)/external
@@ -6,20 +6,8 @@ BOOST_LIB=$(ROOT)/external/libs
 rDSN_INC=$(ROOT)/inc
 BIN_DIR= $(ROOT)\bin
 
-#IFNDEF DEBUG
-COMMON_LIBS= \
-	libboost_chrono-vc120-mt-s-1_57.lib \
-	libboost_date_time-vc120-mt-s-1_57.lib \
-	libboost_filesystem-vc120-mt-s-1_57.lib \
-	libboost_regex-vc120-mt-s-1_57.lib \
-	libboost_system-vc120-mt-s-1_57.lib \
-	libboost_thread-vc120-mt-s-1_57.lib \
-	dsn.core.lib \
-	dsn.dev.lib \
-	dsn.tools.common.lib \
-	dsn.tools.simulator.lib
-DRFLAG = /Zi /O2 /MT /D "NDEBUG" 
-#ELSE
+#IFDEF DEBUG
+
 COMMON_LIBS= \
 	libboost_chrono-vc120-mt-sgd-1_57.lib \
 	libboost_date_time-vc120-mt-sgd-1_57.lib \
@@ -32,6 +20,22 @@ COMMON_LIBS= \
 	dsn.tools.common.lib \
 	dsn.tools.simulator.lib
 DRFLAG = /ZI /Od /MTd /D "_DEBUG"
+
+#ELSE
+
+COMMON_LIBS= \
+	libboost_chrono-vc120-mt-s-1_57.lib \
+	libboost_date_time-vc120-mt-s-1_57.lib \
+	libboost_filesystem-vc120-mt-s-1_57.lib \
+	libboost_regex-vc120-mt-s-1_57.lib \
+	libboost_system-vc120-mt-s-1_57.lib \
+	libboost_thread-vc120-mt-s-1_57.lib \
+	dsn.core.lib \
+	dsn.dev.lib \
+	dsn.tools.common.lib \
+	dsn.tools.simulator.lib
+DRFLAG = /Zi /O2 /MT /D "NDEBUG" 
+
 #ENDIF
 
 BIN_DIR= $(ROOT)\bin
@@ -67,9 +71,11 @@ clean:
 	-del $(BIN_DIR)\$(TARGET)
 
 EXE: $(BIN_DIR) $(OBJS)
+	echo DEBUG = $(DEBUG)
 	link $(LINKFLAGS) $(OBJS) /out:$(BIN_DIR)/$(TARGET)
 	copy /Y *.ini $(BIN_DIR)
 
 LIB: $(BIN_DIR) $(OBJS)
+	echo DEBUG = $(DEBUG)
 	lib $(LIBFLAGS) $(OBJS) /out:$(BIN_DIR)/$(TARGET)
 

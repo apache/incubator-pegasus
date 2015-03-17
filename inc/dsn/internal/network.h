@@ -26,6 +26,7 @@
 # include <dsn/internal/task.h>
 # include <dsn/internal/network.h>
 # include <dsn/internal/synchronize.h>
+# include <dsn/internal/message_parser.h>
 
 namespace dsn {
 
@@ -46,6 +47,7 @@ namespace dsn {
 
         rpc_engine* engine() const { return _engine;  }
         std::shared_ptr<rpc_client_matcher> new_client_matcher();
+        std::shared_ptr<message_parser> new_message_parser();
         void call(message_ptr& request, rpc_response_task_ptr& call);
 
         rpc_server_session_ptr get_server_session(const end_point& ep);

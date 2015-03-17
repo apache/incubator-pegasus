@@ -108,21 +108,21 @@ class binary_reader
 public:
     binary_reader(blob& blob);
 
-    template<typename T> void read_pod(__out_param T& val);
-    template<typename T> void read(__out_param T& val) { dassert (false, "read of this type is not implemented"); }
-    void read(__out_param int8_t& val) { read_pod(val); }
-    void read(__out_param uint8_t& val) { read_pod(val); }
-    void read(__out_param int16_t& val) { read_pod(val); }
-    void read(__out_param uint16_t& val) { read_pod(val); }
-    void read(__out_param int32_t& val) { read_pod(val); }
-    void read(__out_param uint32_t& val) { read_pod(val); }
-    void read(__out_param int64_t& val) { read_pod(val); }
-    void read(__out_param uint64_t& val) { read_pod(val); }
-    void read(__out_param bool& val) { read_pod(val); }
+    template<typename T> int read_pod(__out_param T& val);
+    template<typename T> int read(__out_param T& val) { dassert(false, "read of this type is not implemented"); return 0; }
+    int read(__out_param int8_t& val) { return read_pod(val); }
+    int read(__out_param uint8_t& val) { return read_pod(val); }
+    int read(__out_param int16_t& val) { return read_pod(val); }
+    int read(__out_param uint16_t& val) { return read_pod(val); }
+    int read(__out_param int32_t& val) { return read_pod(val); }
+    int read(__out_param uint32_t& val) { return read_pod(val); }
+    int read(__out_param int64_t& val) { return read_pod(val); }
+    int read(__out_param uint64_t& val) { return read_pod(val); }
+    int read(__out_param bool& val) { return read_pod(val); }
 
-    void read(__out_param std::string& s);
-    void read(char* buffer, int sz);
-    void read(blob& blob);
+    int read(__out_param std::string& s);
+    int read(char* buffer, int sz);
+    int read(blob& blob);
 
     blob get_buffer() const { return _blob; }
     blob get_remaining_buffer() const { return _blob.range((int)(_ptr - _blob.data())); }
@@ -183,16 +183,18 @@ private:
 
 //--------------- inline implementation -------------------
 template<typename T>
-inline void binary_reader::read_pod(__out_param T& val)
+inline int binary_reader::read_pod(__out_param T& val)
 {
     if (sizeof(T) <= get_remaining_size())
     {
         memcpy((void*)&val, _ptr, sizeof(T));
         _ptr += sizeof(T);
+        return (int)sizeof(T);
     }
     else
     {
-        dassert (false, "read beyond the end of buffer");
+        dlog(::dsn::logging_level::log_level_WARNING, "dsn.utils", "read beyond the end of buffer");
+        return 0;
     }
 }
         

@@ -26,6 +26,8 @@
 # include <random>
 # include <dsn/internal/singleton.h>
 
+# define __TITLE__ "dsn.utils"
+
 namespace dsn { namespace utils {
 
 void split_args(const char* args, __out_param std::vector<std::string>& sargs, char splitter)
@@ -130,45 +132,56 @@ binary_reader::binary_reader(blob& blob)
     _ptr = blob.data();
 }
 
-void binary_reader::read(__out_param std::string& s)
+int binary_reader::read(__out_param std::string& s)
 {
     int len;
-    read(len);
+    if (0 == read(len))
+        return 0;
     
     s.resize(len, 0);
 
     if (len > 0)
     {
-        read((char*)&s[0], len);
+        int x = read((char*)&s[0], len);
+        return x == 0 ? x : (x + sizeof(len));
     }
+    else
+    {
+        return (int)sizeof(len);
+    }        
 }
 
-void binary_reader::read(blob& blob)
+int binary_reader::read(blob& blob)
 {
     int len;
-    read(len);
+    if (0 == read(len))
+        return 0;
 
     if (len <= get_remaining_size())
     {
         blob = _blob.range((int)(_ptr - _blob.data()), len);
         _ptr += len;
+        return len + sizeof(len);
     }
     else
     {
-        dassert (false, "read beyond the end of buffer");
+        dwarn("read beyond the end of buffer");
+        return 0;
     }
 }
 
-void binary_reader::read(char* buffer, int sz)
+int binary_reader::read(char* buffer, int sz)
 {
     if (sz <= get_remaining_size())
     {
         memcpy((void*)buffer, _ptr, sz);
         _ptr += sz;
+        return sz;
     }
     else
     {
-        dassert (false, "read beyond the end of buffer");
+        dwarn("read beyond the end of buffer");
+        return 0;
     }
 }
 

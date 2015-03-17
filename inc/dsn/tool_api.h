@@ -32,6 +32,7 @@
 # include <dsn/internal/env_provider.h>
 # include <dsn/internal/zlock_provider.h>
 # include <dsn/internal/zlocks.h>
+# include <dsn/internal/message_parser.h>
 # include <dsn/internal/logging_provider.h>
 # include <dsn/internal/perf_counters.h>
 # include <dsn/internal/logging.h>
@@ -101,6 +102,7 @@ typedef semaphore_provider* (*semaphore_factory)(dsn::service::zsemaphore *, int
 typedef network*       (*network_factory)(rpc_engine*, network*);
 typedef aio_provider*   (*aio_factory)(disk_engine*, aio_provider*);
 typedef env_provider*   (*env_factory)(env_provider*);
+typedef message_parser* (*message_parser_factory)(int);
 
 typedef perf_counter*    (*perf_counter_factory)(const char *, const char *, perf_counter_type);
 typedef logging_provider* (*logging_factory)(const char*);
@@ -120,6 +122,7 @@ namespace internal_use_only
     bool register_component_provider(const char* name, env_factory f, int type);
     bool register_component_provider(const char* name, perf_counter_factory f, int type);
     bool register_component_provider(const char* name, logging_factory f, int type);
+    bool register_component_provider(const char* name, message_parser_factory f, int type);
     
     bool register_toollet(const char* name, toollet_factory f, int type);
     bool register_tool(const char* name, tool_app_factory f, int type);
