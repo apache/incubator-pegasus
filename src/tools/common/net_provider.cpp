@@ -67,7 +67,8 @@ namespace dsn {
         {
             auto matcher = new_client_matcher();
             auto parser = new_message_parser();
-            return rpc_client_session_ptr(new net_client_session(*this, server_addr, matcher, parser));
+            auto sock = boost::asio::ip::tcp::socket(_io_service);
+            return rpc_client_session_ptr(new net_client_session(*this, sock, server_addr, matcher, parser));
         }
 
         void asio_network_provider::do_accept()

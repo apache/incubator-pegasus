@@ -30,13 +30,14 @@ namespace dsn {
     namespace tools {
         net_client_session::net_client_session(
             asio_network_provider& net, 
+            boost::asio::ip::tcp::socket& socket,
             const end_point& remote_addr, 
             std::shared_ptr<rpc_client_matcher>& matcher,
             std::shared_ptr<message_parser>& parser)
             : 
             _net(net),
             rpc_client_session(net, remote_addr, matcher),
-            client_net_io(remote_addr, boost::asio::ip::tcp::socket(net._io_service), parser)
+            client_net_io(remote_addr, socket, parser)
         {   
         }
         
