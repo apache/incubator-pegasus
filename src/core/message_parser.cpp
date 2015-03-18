@@ -33,7 +33,10 @@ namespace dsn {
             auto rb = _read_buffer.range(0, _read_buffer_occupied);
             
             // switch to next
-            create_new_buffer(max(read_next + _read_buffer_occupied, _buffer_block_size));
+            if (read_next + _read_buffer_occupied > _buffer_block_size)
+                create_new_buffer(read_next + _read_buffer_occupied);
+            else
+                create_new_buffer(_buffer_block_size);
 
             // copy
             if (rb.length() > 0)

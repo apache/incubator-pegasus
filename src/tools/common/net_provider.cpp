@@ -85,7 +85,8 @@ namespace dsn {
                     client_addr.name = _socket->remote_endpoint().address().to_string();
 
                     auto parser = new_message_parser();
-                    auto s = rpc_server_session_ptr(new net_server_session(*this, client_addr, std::move(*_socket), parser));
+                    auto sock = std::move(*_socket);
+                    auto s = rpc_server_session_ptr(new net_server_session(*this, client_addr, sock, parser));
                     this->on_server_session_accepted(s);
                 }
 

@@ -108,7 +108,7 @@ template<> inline long long configuration::get_value<long long>(const char* sect
     {
         if (value.length() > 2 && (value.substr(0, 2) == "0x" || value.substr(0, 2) == "0X"))
         {
-            int64_t v;
+            uint64_t v;
             sscanf(value.c_str(), "0x%llx", &v);
             return v;
         }

@@ -56,7 +56,7 @@ public:
         {
             // TODO: console color output
             //printf("(%016llx) %llu ms @ %s ", task::get_current_task_id(), ::dsn::service::env::now_ns() / 1000000, wn);
-            printf("(%u) %s: ", (int)std::this_thread::get_id().hash(), wn);
+            printf("%s: ", wn);
             vprintf(fmt, args);
             //printf(" [%s(%d) %s]\n", file, line, function);
             printf("\n");
@@ -64,7 +64,7 @@ public:
         else
         {
             //printf("(%016llx) %llu ms @ %s ", task::get_current_task_id(), ::dsn::service::env::now_ns() / 1000000, wn);
-            printf("(%u) %s: ", (int)std::this_thread::get_id().hash(), wn);
+            printf("%s: ", wn);
             vprintf(fmt, args);
             //printf(" [%s(%d) %s]\n", file, line, function);
             printf("\n");
