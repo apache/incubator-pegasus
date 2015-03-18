@@ -149,16 +149,30 @@ namespace dsn {
 
     void network::on_server_session_accepted(rpc_server_session_ptr& s)
     {
+        dinfo("server session %s:%u accepted", s->remote_address().name.c_str(), (int)s->remote_address().port);
+
         utils::auto_write_lock l(_servers_lock);
         _servers.insert(server_sessions::value_type(s->remote_address(), s));
+
     }
 
     void network::on_server_session_disconnected(rpc_server_session_ptr& s)
     {
-        utils::auto_write_lock l(_servers_lock);
-        auto it = _servers.find(s->remote_address());
-        if (it != _servers.end() && it->second.get() == s.get())
-            _servers.erase(it);
+        bool r = false;
+        {
+            utils::auto_write_lock l(_servers_lock);
+            auto it = _servers.find(s->remote_address());
+            if (it != _servers.end() && it->second.get() == s.get())
+            {
+                _servers.erase(it);
+                r = true;
+            }                
+        }
+
+        if (r)
+        {
+            dinfo("server session %s:%u disconnected", s->remote_address().name.c_str(), (int)s->remote_address().port);
+        }
     }
 
     rpc_client_session_ptr network::get_client_session(const end_point& ep)
@@ -170,9 +184,20 @@ namespace dsn {
 
     void network::on_client_session_disconnected(rpc_client_session_ptr& s)
     {
-        utils::auto_write_lock l(_clients_lock);
-        auto it = _clients.find(s->remote_address());
-        if (it != _clients.end() && it->second.get() == s.get())
-            _clients.erase(it);
+        bool r = false;
+        {
+            utils::auto_write_lock l(_clients_lock);
+            auto it = _clients.find(s->remote_address());
+            if (it != _clients.end() && it->second.get() == s.get())
+            {
+                _clients.erase(it);
+                r = true;
+            }
+        }
+
+        if (r)
+        {
+            dinfo("client session %s:%u disconnected", s->remote_address().name.c_str(), (int)s->remote_address().port);
+        }
     }
 }

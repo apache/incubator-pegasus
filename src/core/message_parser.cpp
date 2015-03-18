@@ -14,7 +14,7 @@ namespace dsn {
     void message_parser::create_new_buffer(int sz)
     {
         std::shared_ptr<char> buffer((char*)::malloc(sz));
-        _read_buffer = utils::blob(buffer, sz);
+        _read_buffer.assign(buffer, 0, sz);
         _read_buffer_occupied = 0;
     }
 
@@ -74,6 +74,8 @@ namespace dsn {
             {
                 auto msg_bb = _read_buffer.range(0, msg_sz);
                 message_ptr msg = new message(msg_bb, true);
+
+                dassert(msg->is_right_header() && msg->is_right_body(), "");
 
                 _read_buffer = _read_buffer.range(msg_sz);
                 _read_buffer_occupied -= msg_sz;

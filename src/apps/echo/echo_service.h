@@ -50,6 +50,7 @@ public:
 
     void on_echo2(const std::string& req, rpc_replier<std::string>& reply)
     {
+        std::cout << "recv " << req << std::endl;
         reply(req);
     }
 
@@ -82,7 +83,7 @@ public:
             return ERR_INVALID_PARAMETERS;
 
         _server = end_point(argv[1], (uint16_t)atoi(argv[2]));
-        _timer = enqueue_task(LPC_ECHO_TIMER, &echo_client::on_echo_timer, 0, 0, 1000);
+        _timer = enqueue_task(LPC_ECHO_TIMER, &echo_client::on_echo_timer, 0, 1000, 1000);
         return ERR_SUCCESS;
     }
 
@@ -115,7 +116,7 @@ public:
         if (err != ERR_SUCCESS) std::cout << "echo err: " << err.to_string() << std::endl;
         else
         {
-            //std::cout << "echo result: " << resp->c_str() << "(len = " << resp->length() << ")" << std::endl;
+            std::cout << "echo result: " << resp->c_str() << "(len = " << resp->length() << ")" << std::endl;
         }
     }
 
