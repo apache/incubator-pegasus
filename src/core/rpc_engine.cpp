@@ -164,8 +164,12 @@ namespace dsn {
         }
     }
 
+    //------------------------
+    /*static*/ bool rpc_engine::_message_crc_required;
+    /*static*/ int  rpc_engine::_max_udp_package_size;
+
     rpc_engine::rpc_engine(configuration_ptr config, service_node* node)
-        : _config(config), _node(*node)
+        : _config(config), _node(node)
     {
         _is_running = false;
         _message_crc_required = false;
@@ -273,8 +277,8 @@ namespace dsn {
         if (handler != nullptr)
         {
             msg->header().local_rpc_code = (uint16_t)handler->code;
-            auto tsk = handler->handler->new_request_task(msg);
-            tsk->enqueue(delay_handling_milliseconds, &_node);
+            auto tsk = handler->handler->new_request_task(msg, node());
+            tsk->enqueue(delay_handling_milliseconds, _node);
         }
         else
         {

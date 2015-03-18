@@ -25,6 +25,7 @@
 
 # include <dsn/tool_api.h>
 # include <dsn/service_api.h>
+# include <thread>
 
 namespace dsn { namespace tools {
 
@@ -54,14 +55,16 @@ public:
         if (logLevel >= log_level_WARNING)
         {
             // TODO: console color output
-            printf("(%016llx) %llu ms @ %s ", task::get_current_task_id(), ::dsn::service::env::now_ns() / 1000000, wn);
+            //printf("(%016llx) %llu ms @ %s ", task::get_current_task_id(), ::dsn::service::env::now_ns() / 1000000, wn);
+            printf("(%u) %s: ", (int)std::this_thread::get_id().hash(), wn);
             vprintf(fmt, args);
             //printf(" [%s(%d) %s]\n", file, line, function);
             printf("\n");
         }
         else
         {
-            printf("(%016llx) %llu ms @ %s ", task::get_current_task_id(), ::dsn::service::env::now_ns() / 1000000, wn);
+            //printf("(%016llx) %llu ms @ %s ", task::get_current_task_id(), ::dsn::service::env::now_ns() / 1000000, wn);
+            printf("(%u) %s: ", (int)std::this_thread::get_id().hash(), wn);
             vprintf(fmt, args);
             //printf(" [%s(%d) %s]\n", file, line, function);
             printf("\n");

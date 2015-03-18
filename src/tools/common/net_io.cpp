@@ -61,11 +61,11 @@ namespace dsn {
             }
             catch (std::exception& ex)
             {
-                dwarn("network session %s:%u exits failed, err = %s",
+                /*dwarn("network session %s:%u exits failed, err = %s",
                     _remote_addr.to_ip_string().c_str(),
                     (int)_remote_addr.port,
                     ex.what()
-                    );
+                    );*/
             }
 
             _socket.close();
@@ -84,9 +84,9 @@ namespace dsn {
             {
                 if (ec)
                 {
-                    derror("network server session read message header failed, error = %s, sz = %d",
+                    /*derror("network server session read message header failed, error = %s, sz = %d",
                         ec.message().c_str(), length
-                    );
+                    );*/
                     on_failure();
                 }
                 else
@@ -128,9 +128,9 @@ namespace dsn {
             {
                 if (ec)
                 {
-                    derror("network server session write message failed, error = %s, sz = %d",
+                    /*derror("network server session write message failed, error = %s, sz = %d",
                         ec.message().c_str(), length
-                        );
+                        );*/
                     on_failure();
                 }
                 else
@@ -207,6 +207,11 @@ namespace dsn {
                     {
                         _reconnect_count = 0;
                         _state = SS_CONNECTED;
+
+                        dinfo("client session %s:%u connected",
+                            _remote_addr.name.c_str(),
+                            (int)_remote_addr.port
+                            );
 
                         set_options();
                         do_read();

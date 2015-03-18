@@ -28,6 +28,8 @@
 namespace dsn {
 
 class disk_engine;
+class service_node;
+
 class aio_provider
 {
 public:
@@ -38,6 +40,7 @@ public:
 
 public:
     aio_provider(disk_engine* disk, aio_provider* inner_provider);
+    service_node* node() const;
 
     virtual handle_t  open(const char* file_name, int flag, int pmode) = 0;
     virtual error_code close(handle_t hFile) = 0;

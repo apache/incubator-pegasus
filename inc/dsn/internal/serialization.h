@@ -117,7 +117,7 @@ namespace dsn {
         template<typename T>
         inline void marshall(::dsn::utils::binary_writer& writer, const std::list<T>& val, uint16_t pos = 0xffff)
         {
-            int sz = val.size();
+            int sz = (int)val.size();
             marshall(writer, sz, pos);
             for (auto& v : val)
             {
@@ -141,7 +141,7 @@ namespace dsn {
         template<typename T>
         inline void marshall(::dsn::utils::binary_writer& writer, const std::vector<T>& val, uint16_t pos = 0xffff)
         {
-            int sz = val.size();
+            int sz = (int)val.size();
             marshall(writer, sz, pos);
             for (auto& v : val)
             {
@@ -165,7 +165,7 @@ namespace dsn {
         template<typename T>
         inline void marshall(::dsn::utils::binary_writer& writer, const std::set<T, std::less<T>, std::allocator<T>>& val, uint16_t pos = 0xffff)
         {
-            int sz = val.size();
+            int sz = (int)val.size();
             marshall(writer, sz, pos);
             for (auto& v : val)
             {

@@ -24,7 +24,6 @@
 # pragma once
 
 # include <dsn/internal/task.h>
-# include <dsn/internal/network.h>
 # include <dsn/internal/synchronize.h>
 # include <dsn/internal/message_parser.h>
 
@@ -32,6 +31,7 @@ namespace dsn {
 
     class rpc_engine;
     class rpc_client_matcher;
+    class service_node;
     
     class network
     {
@@ -45,7 +45,9 @@ namespace dsn {
         network(rpc_engine* srv, network* inner_provider); 
         virtual ~network() {}
 
+        service_node* node() const;
         rpc_engine* engine() const { return _engine;  }
+
         std::shared_ptr<rpc_client_matcher> new_client_matcher();
         std::shared_ptr<message_parser> new_message_parser();
         void call(message_ptr& request, rpc_response_task_ptr& call);

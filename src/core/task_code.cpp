@@ -102,6 +102,7 @@ bool task_spec::init(configuration_ptr config)
     }
 
     defaultSpec.allow_inline = config->get_value<bool>("task.default", "allow_inline", false);
+    defaultSpec.fast_execution_in_network_thread = config->get_value<bool>("task.default", "fast_execution_in_network_thread", false);
 
     auto cn = config->get_string_value("task.default", "rpc_message_channel", RPC_CHANNEL_TCP.to_string());
     if (!rpc_channel::is_exist(cn.c_str()))
@@ -111,7 +112,7 @@ bool task_spec::init(configuration_ptr config)
     }
     defaultSpec.rpc_message_channel = rpc_channel::from_string(cn.c_str(), RPC_CHANNEL_TCP);    
     defaultSpec.rpc_timeout_milliseconds = config->get_value<int>("task.default", "rpc_timeout_milliseconds", defaultSpec.rpc_timeout_milliseconds);
-    
+        
     for (int code = 0; code <= task_code::max_value(); code++)
     {
         if (code == TASK_CODE_INVALID)
@@ -138,9 +139,12 @@ bool task_spec::init(configuration_ptr config)
                 derror("invalid priority in [%s]", section_name.c_str());
                 return false;
             }
-            spec->priority = pri;
 
+            spec->priority = pri;                        
             spec->allow_inline = config->get_value<bool>(section_name.c_str(), "allow_inline", defaultSpec.allow_inline);
+            spec->fast_execution_in_network_thread = 
+                ((spec->type == TASK_TYPE_RPC_RESPONSE || spec->type == TASK_TYPE_RPC_REQUEST)
+                && config->get_value<bool>(section_name.c_str(), "fast_execution_in_network_thread", defaultSpec.fast_execution_in_network_thread));
             spec->rpc_timeout_milliseconds = config->get_value<int>(section_name.c_str(), "rpc_timeout_milliseconds", defaultSpec.rpc_timeout_milliseconds);
 
             auto cn = config->get_string_value(section_name.c_str(), "rpc_message_channel", defaultSpec.rpc_message_channel.to_string());
@@ -154,7 +158,13 @@ bool task_spec::init(configuration_ptr config)
         }
         else
         {
-            spec->allow_inline = defaultSpec.allow_inline;
+            spec->allow_inline = (spec->type != TASK_TYPE_RPC_RESPONSE 
+                && spec->type != TASK_TYPE_RPC_REQUEST
+                && defaultSpec.allow_inline
+                );
+            spec->fast_execution_in_network_thread =
+                ((spec->type == TASK_TYPE_RPC_RESPONSE || spec->type == TASK_TYPE_RPC_REQUEST)
+                && defaultSpec.fast_execution_in_network_thread);
             spec->rpc_message_channel = defaultSpec.rpc_message_channel;
         }
     }

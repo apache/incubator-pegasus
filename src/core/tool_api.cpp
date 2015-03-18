@@ -51,7 +51,7 @@ class service_control_task : public task
 {
 public:
     service_control_task(service::service_app* app, bool start)
-        : _app(app), task(LPC_CONTROL_SERVICE_APP), _start(start)
+        : _app(app), task(LPC_CONTROL_SERVICE_APP, 0, app->svc_node()), _start(start)
     {    
     }
 
@@ -77,7 +77,7 @@ void tool_app::start_all_service_apps()
     for (auto it = apps.begin(); it != apps.end(); it++)
     {
         task_ptr t(new service_control_task(it->second, true));
-        t->enqueue(1000 * it->second->spec().delay_seconds, it->second);
+        t->enqueue(1000 * it->second->spec().delay_seconds);
     }
 }
 
@@ -88,7 +88,7 @@ void tool_app::stop_all_service_apps()
     for (auto it = apps.begin(); it != apps.end(); it++)
     {
         task_ptr t(new service_control_task(it->second, false));
-        t->enqueue(0, it->second);
+        t->enqueue(0);
     }
 }
 

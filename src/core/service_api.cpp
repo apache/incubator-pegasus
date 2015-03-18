@@ -120,39 +120,39 @@ namespace rpc
 {
     const end_point& get_local_address()
     {
-        auto node = task::get_current_node();
-        dassert (node != nullptr, "this function can only be invoked inside tasks");
+        auto tsk = task::get_current_task();
+        dassert (tsk != nullptr, "this function can only be invoked inside tasks");
 
-        return node->rpc()->address();
+        return tsk->node()->rpc()->address();
     }
 
     bool register_rpc_handler(task_code code, const char* name, rpc_server_handler* handler)
     {
-        auto node = task::get_current_node();
-        dassert (node != nullptr, "this function can only be invoked inside tasks");
+        auto tsk = task::get_current_task();
+        dassert(tsk != nullptr, "this function can only be invoked inside tasks");
 
         rpc_handler_ptr h(new rpc_handler_info(code));
         h->name = std::string(name);
         h->handler = handler;
-        h->service_address = node->rpc()->address();
+        h->service_address = tsk->node()->rpc()->address();
 
-        return node->rpc()->register_rpc_handler(h);
+        return tsk->node()->rpc()->register_rpc_handler(h);
     }
 
     bool unregister_rpc_handler(task_code code)
     {
-        auto node = task::get_current_node();
-        dassert (node != nullptr, "this function can only be invoked inside tasks");
+        auto tsk = task::get_current_task();
+        dassert(tsk != nullptr, "this function can only be invoked inside tasks");
 
-        return node->rpc()->unregister_rpc_handler(code);
+        return tsk->node()->rpc()->unregister_rpc_handler(code);
     }
 
     rpc_response_task_ptr call(const end_point& server, message_ptr& request, rpc_response_task_ptr callback)
     {
-        auto node = task::get_current_node();
-        dassert (node != nullptr, "this function can only be invoked inside tasks");
+        auto tsk = task::get_current_task();
+        dassert(tsk != nullptr, "this function can only be invoked inside tasks");
 
-        rpc_engine* rpc = node->rpc();
+        rpc_engine* rpc = tsk->node()->rpc();
         request->header().to_address = server;
         rpc->call(request, callback);
         return callback;
@@ -160,10 +160,7 @@ namespace rpc
     
     void reply(message_ptr& response)
     {
-        auto node = task::get_current_node();
-        dassert (node != nullptr, "this function can only be invoked inside tasks");
-
-        node->rpc()->reply(response);
+        rpc_engine::reply(response);
     }
 }
 
@@ -171,16 +168,16 @@ namespace file
 {
     handle_t open(const char* file_name, int flag, int pmode)
     {
-        auto node = task::get_current_node();
-        dassert (node != nullptr, "this function can only be invoked inside tasks");
+        auto tsk = task::get_current_task();
+        dassert(tsk != nullptr, "this function can only be invoked inside tasks");
 
-        return node->disk()->open(file_name, flag, pmode);
+        return tsk->node()->disk()->open(file_name, flag, pmode);
     }
 
     void read(handle_t hFile, char* buffer, int count, uint64_t offset, aio_task_ptr& callback)
     {
-        auto node = task::get_current_node();
-        dassert (node != nullptr, "this function can only be invoked inside tasks");
+        auto tsk = task::get_current_task();
+        dassert(tsk != nullptr, "this function can only be invoked inside tasks");
 
         callback->aio()->buffer = buffer;
         callback->aio()->buffer_size = count;
@@ -189,13 +186,13 @@ namespace file
         callback->aio()->file_offset = offset;
         callback->aio()->type = AIO_Read;
 
-        node->disk()->read(callback);
+        tsk->node()->disk()->read(callback);
     }
 
     void write(handle_t hFile, const char* buffer, int count, uint64_t offset, aio_task_ptr& callback)
     {
-        auto node = task::get_current_node();
-        dassert (node != nullptr, "this function can only be invoked inside tasks");
+        auto tsk = task::get_current_task();
+        dassert(tsk != nullptr, "this function can only be invoked inside tasks");
 
         callback->aio()->buffer = (char*)buffer;
         callback->aio()->buffer_size = count;
@@ -204,15 +201,15 @@ namespace file
         callback->aio()->file_offset = offset;
         callback->aio()->type = AIO_Write;
 
-        node->disk()->write(callback);
+        tsk->node()->disk()->write(callback);
     }
 
     error_code close(handle_t hFile)
     {
-        auto node = task::get_current_node();
-        dassert (node != nullptr, "this function can only be invoked inside tasks");
+        auto tsk = task::get_current_task();
+        dassert(tsk != nullptr, "this function can only be invoked inside tasks");
 
-        return node->disk()->close(hFile);
+        return tsk->node()->disk()->close(hFile);
     }
 }
 

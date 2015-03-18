@@ -72,12 +72,13 @@ public:
     // rpc routines
     //
     void call(message_ptr& request, rpc_response_task_ptr& call);
-    void reply(message_ptr& response);
+    static void reply(message_ptr& response);
     
     //
     // information inquery
     //
     const end_point& address() const { return _address; }
+    service_node* node() const { return _node; }
 
 private:
     friend class rpc_server_session;    
@@ -85,7 +86,7 @@ private:
         
 private:
     configuration_ptr             _config;    
-    service_node                  &_node;
+    service_node                  *_node;
     std::vector<network*>         _networks;
     std::shared_ptr<rpc_client_matcher>   _matcher;
 
@@ -95,9 +96,10 @@ private:
     utils::rw_lock                _handlers_lock;
     
     bool                          _is_running;
-    bool                          _message_crc_required;
-    int                           _max_udp_package_size;
     end_point                     _address;
+
+    static bool                   _message_crc_required;
+    static int                    _max_udp_package_size;    
 };
 
 } // end namespace

@@ -40,30 +40,43 @@ public:
     echo_server(service_app_spec* s, configuration_ptr c)
         : service_app(s, c), serviceletex<echo_server>("echo_server")
     {
-        
+        _empty_reply = config()->get_value<bool>("apps.server", "empty_reply", false);
     }
 
     void on_echo(const std::string& req, __out_param std::string& resp)
     {
-        resp = req;
+        if (!_empty_reply)
+            resp = req;
+        else
+            resp = "";
     }
 
-    void on_echo2(const std::string& req, rpc_replier<std::string>& reply)
+    void on_echo2(const utils::blob& req, rpc_replier<utils::blob>& reply)
     {
-        std::cout << "recv " << req << std::endl;
-        reply(req);
+        if (!_empty_reply)
+            reply(req);
+        else
+        {
+            utils::blob empty;
+            reply(empty);
+        }
     }
 
     virtual error_code start(int argc, char** argv)
     {
         register_rpc_handler(RPC_ECHO, "RPC_ECHO", &echo_server::on_echo);
+        register_async_rpc_handler(RPC_ECHO2, "RPC_ECHO2", &echo_server::on_echo2);
         return ERR_SUCCESS;
     }
 
     virtual void stop(bool cleanup = false)
     {
         unregister_rpc_handler(RPC_ECHO);
+        unregister_rpc_handler(RPC_ECHO2);
     }
+
+private:
+    bool _empty_reply;
 };
 
 class echo_client : public serviceletex<echo_client>, public service_app
@@ -74,7 +87,13 @@ public:
     {
         _message_size = config()->get_value<int>("apps.client", "message_size", 1024);
         _concurrency = config()->get_value<int>("apps.client", "concurrency", 1);
+        _echo2 = config()->get_value<bool>("apps.client", "echo2", false);
+        
+
         _seq = 0;
+        _last_report_ts_ms = now_ms();
+        _recv_bytes_since_last = 0;
+        _live_echo_count = 0;
     }
 
     virtual error_code start(int argc, char** argv)
@@ -83,7 +102,7 @@ public:
             return ERR_INVALID_PARAMETERS;
 
         _server = end_point(argv[1], (uint16_t)atoi(argv[2]));
-        _timer = enqueue_task(LPC_ECHO_TIMER, &echo_client::on_echo_timer, 0, 1000, 1000);
+        _timer = enqueue_task(LPC_ECHO_TIMER, &echo_client::on_echo_timer, 0, 1000);
         return ERR_SUCCESS;
     }
 
@@ -92,38 +111,122 @@ public:
         _timer->cancel(true);
     }
 
+    void send_one()
+    {
+        char buf[120];
+        sprintf(buf, "%u", ++_seq);
+
+        if (!_echo2)
+        {
+            std::shared_ptr<std::string> req(new std::string("hi, dsn "));
+            *req = req->append(buf);
+            req->resize(_message_size);
+            rpc_typed(_server, RPC_ECHO, req, &echo_client::on_echo_reply, 0, 5000);
+        }
+        else
+        {
+            std::shared_ptr<char> buffer((char*)::malloc(_message_size));
+            std::shared_ptr<utils::blob> bb(new utils::blob(buffer, _message_size));
+            rpc_typed(_server, RPC_ECHO2, bb, &echo_client::on_echo_reply2, 0, 5000);
+        }
+    }
+
     void on_echo_timer()
     {
         for (int i = 0; i < _concurrency; i++)
         {
-            char buf[120];
-            sprintf(buf, "%u", ++_seq);
-            std::shared_ptr<std::string> req(new std::string("hi, dsn "));
-            *req = req->append(buf);
-            req->resize(_message_size);
-            rpc_typed(_server, RPC_ECHO, req, &echo_client::on_echo_reply, 0, 3000);
+            {
+                zauto_lock l(_lock);
+                ++_live_echo_count;
+            }
+            send_one();
         }
-
-        std::cout
-            << "echo: " << _seq
-            << ", throughput(MB/s) = "
-            << ((double)_message_size * (double)_concurrency / 1024.0 / 1024.0)
-            << std::endl;
     }
 
     void on_echo_reply(error_code err, std::shared_ptr<std::string> req, std::shared_ptr<std::string> resp)
     {
-        if (err != ERR_SUCCESS) std::cout << "echo err: " << err.to_string() << std::endl;
+        if (err != ERR_SUCCESS)
+        {
+            bool s = false;
+            std::cout << "echo err: " << err.to_string() << std::endl;
+            {
+                zauto_lock l(_lock);
+                if (1 == --_live_echo_count)
+                {
+                    ++_live_echo_count;                    
+                    s = true;
+                }                
+            }
+
+            if (s) send_one();
+        }
         else
         {
-            std::cout << "echo result: " << resp->c_str() << "(len = " << resp->length() << ")" << std::endl;
+            {
+                zauto_lock l(_lock);
+                _recv_bytes_since_last += _message_size;
+                auto n = now_ms();
+                if (n - _last_report_ts_ms >= 1000)
+                {
+                    std::cout << "throughput = "
+                        << (double)(_recv_bytes_since_last) / 1024.0 / 1024.0 / (((double)(n - _last_report_ts_ms)) / 1000.0)
+                        << " MB/s" << std::endl;
+                    _last_report_ts_ms = n;
+                    _recv_bytes_since_last = 0;
+                }
+            }
+
+            send_one();
+        }        
+    }
+
+    void on_echo_reply2(error_code err, std::shared_ptr<utils::blob> req, std::shared_ptr<utils::blob> resp)
+    {
+        if (err != ERR_SUCCESS)
+        {
+            bool s = false;
+            std::cout << "echo err: " << err.to_string() << std::endl;
+            {
+                zauto_lock l(_lock);
+                if (1 == --_live_echo_count)
+                {
+                    ++_live_echo_count;
+                    s = true;
+                }
+            }
+
+            if (s) send_one();
+        }
+        else
+        {
+            {
+                zauto_lock l(_lock);
+                _recv_bytes_since_last += _message_size;
+                auto n = now_ms();
+                if (n - _last_report_ts_ms >= 1000)
+                {
+                    std::cout << "throughput = "
+                        << (double)(_recv_bytes_since_last) / 1024.0 / 1024.0 / (((double)(n - _last_report_ts_ms)) / 1000.0)
+                        << " MB/s" << std::endl;
+                    _last_report_ts_ms = n;
+                    _recv_bytes_since_last = 0;
+                }
+            }
+
+            send_one();
         }
     }
 
 private:
+    zlock _lock;
+    uint64_t _recv_bytes_since_last;
+    uint64_t _last_report_ts_ms;
+    int32_t  _live_echo_count;
+
     end_point _server;
     int _seq;
     int _message_size;
     int _concurrency;
+    bool _echo2;
     task_ptr _timer;
 };

@@ -34,11 +34,6 @@ namespace dsn {
 
 //----------------- common task -------------------------------------------------------
 
-namespace service 
-{
-    class service_app;
-}
-
 class task_worker;
 class task_worker_pool;
 class service_node;
@@ -46,7 +41,7 @@ class service_node;
 class task : public ref_object, public extensible_object<task, 4>
 {
 public:
-    task(task_code code, int hash = 0);
+    task(task_code code, int hash = 0, service_node* node = nullptr);
     virtual ~task();
         
     virtual void exec() = 0;
@@ -54,7 +49,7 @@ public:
     void                    exec_internal();    
     bool                    cancel(bool wait_until_finished);
     bool                    wait(int timeout_milliseconds = INFINITE);
-    void                    enqueue(int delay_milliseconds = 0, service::service_app* app = nullptr);
+    void                    enqueue(int delay_milliseconds = 0);
     void                    set_error_code(error_code err) { _error = err; }
     void                    set_delay(int delay_milliseconds = 0) { _delay_milliseconds = delay_milliseconds; }
 
@@ -64,14 +59,12 @@ public:
     task_spec&              spec() const { return *_spec; }
     int                     hash() const { return _hash; }
     int                     delay_milliseconds() const { return _delay_milliseconds; }
-    error_code              error() const { return _error; }        
-    task_worker*            caller_worker() const { return _caller_worker; }
+    error_code              error() const { return _error; }
+    service_node*           node() const { return _node; }
     
     static task*            get_current_task();
     static uint64_t         get_current_task_id();
-    static task_worker*      get_current_worker();
-    static task_worker_pool* get_current_worker_pool();
-    static service_node*     get_current_node();
+    static task_worker*     get_current_worker();
     static void             set_current_worker(task_worker* worker);
 
 protected:
@@ -90,7 +83,7 @@ private:
     
 private:
     task_spec              *_spec;
-    task_worker            *_caller_worker;
+    service_node           *_node;
 };
 
 DEFINE_REF_OBJECT(task)
@@ -115,7 +108,7 @@ class service_node;
 class rpc_request_task : public task
 {
 public:
-    rpc_request_task(message_ptr& request);
+    rpc_request_task(message_ptr& request, service_node* node);
 
     message_ptr&  get_request() { return _request; }
     void          enqueue(int delay_milliseconds, service_node* node);
@@ -131,7 +124,7 @@ typedef ::boost::intrusive_ptr<rpc_request_task> rpc_request_task_ptr;
 class rpc_server_handler
 {
 public:
-    virtual rpc_request_task_ptr new_request_task(message_ptr& request) = 0;
+    virtual rpc_request_task_ptr new_request_task(message_ptr& request, service_node* node) = 0;
     virtual ~rpc_server_handler(){}
 };
 

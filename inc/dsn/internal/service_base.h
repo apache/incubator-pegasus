@@ -269,8 +269,8 @@ namespace dsn {
         class service_rpc_request_task : public rpc_request_task
         {
         public:
-            service_rpc_request_task(message_ptr& request, service_base* svc, rpc_handler& callback)
-                : rpc_request_task(request)
+            service_rpc_request_task(message_ptr& request, service_base* svc, rpc_handler& callback, service_node* node)
+                : rpc_request_task(request, node)
             {
                 _handler = callback;
                 _svc = svc;
@@ -302,9 +302,9 @@ namespace dsn {
                 _svc = svc;
             }
 
-            virtual rpc_request_task_ptr new_request_task(message_ptr& request)
+            virtual rpc_request_task_ptr new_request_task(message_ptr& request, service_node* node)
             {
-                return new service_rpc_request_task(request, _svc, _handler);
+                return new service_rpc_request_task(request, _svc, _handler, node);
             }
 
         private:

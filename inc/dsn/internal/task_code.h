@@ -35,21 +35,21 @@
 namespace dsn {
 
 enum task_type
-{
-    TASK_TYPE_COMPUTE,
-    TASK_TYPE_AIO,
+{    
     TASK_TYPE_RPC_REQUEST,
     TASK_TYPE_RPC_RESPONSE,
+    TASK_TYPE_COMPUTE,
+    TASK_TYPE_AIO,
     TASK_TYPE_CONTINUATION,
     TASK_TYPE_COUNT,
     TASK_TYPE_INVALID,
 };
 
-ENUM_BEGIN(task_type, TASK_TYPE_INVALID)
-    ENUM_REG(TASK_TYPE_COMPUTE)
-    ENUM_REG(TASK_TYPE_AIO)
+ENUM_BEGIN(task_type, TASK_TYPE_INVALID)    
     ENUM_REG(TASK_TYPE_RPC_REQUEST)
     ENUM_REG(TASK_TYPE_RPC_RESPONSE)
+    ENUM_REG(TASK_TYPE_COMPUTE)
+    ENUM_REG(TASK_TYPE_AIO)
     ENUM_REG(TASK_TYPE_CONTINUATION)
 ENUM_END(task_type)
 
@@ -151,6 +151,7 @@ public:
     task_priority          priority;
     threadpool_code        pool_code; 
     bool                   allow_inline; // allow task executed in other thread pools or tasks
+    bool                   fast_execution_in_network_thread;
 
     task_rejection_handler rejection_handler;
     rpc_channel            rpc_message_channel;

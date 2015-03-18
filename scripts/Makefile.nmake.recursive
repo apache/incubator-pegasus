@@ -1,6 +1,6 @@
-#IFNDEF ACT
+!IFNDEF ACT
 ACT = all
-#ENDIF
+!ENDIF
 
 all: $(DIRS)
 

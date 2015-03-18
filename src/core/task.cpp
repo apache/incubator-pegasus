@@ -39,23 +39,23 @@ namespace dsn {
 static __thread
 struct 
 { 
-    uint32_t    magic; 
-    task       *current_task;
-    task_worker *current_worker;
-} tls_taskInfo;  
+    uint32_t     magic; 
+    task         *current_task;
+    task_worker  *worker;
+} tls_task_info;  
 
 /*static*/ task* task::get_current_task()
 {
-    if (tls_taskInfo.magic == 0xdeadbeef)
-        return tls_taskInfo.current_task;
+    if (tls_task_info.magic == 0xdeadbeef)
+        return tls_task_info.current_task;
     else
         return nullptr;
 }
 
 /*static*/ uint64_t task::get_current_task_id()
 {
-    if (tls_taskInfo.magic == 0xdeadbeef)
-        return tls_taskInfo.current_task ? tls_taskInfo.current_task->id() : 0;
+    if (tls_task_info.magic == 0xdeadbeef)
+        return tls_task_info.current_task ? tls_task_info.current_task->id() : 0;
     else
         return 0;
 }
@@ -63,36 +63,27 @@ struct
 
 /*static*/ task_worker* task::get_current_worker()
 {
-    if (tls_taskInfo.magic == 0xdeadbeef)
-        return tls_taskInfo.current_worker;
-    else
-        return nullptr;
-}
-
-/*static*/ task_worker_pool* task::get_current_worker_pool()
-{
-    if (tls_taskInfo.magic == 0xdeadbeef)
-        return tls_taskInfo.current_worker->pool();
-    else
-        return nullptr;
-}
-
-/*static*/ service_node* task::get_current_node()
-{
-    if (tls_taskInfo.magic == 0xdeadbeef)
-        return tls_taskInfo.current_worker->pool()->node();
+    if (tls_task_info.magic == 0xdeadbeef)
+        return tls_task_info.worker;
     else
         return nullptr;
 }
 
 /*static*/ void task::set_current_worker(task_worker* worker)
 {
-    tls_taskInfo.magic = 0xdeadbeef;
-    tls_taskInfo.current_worker = worker;
-    tls_taskInfo.current_task = nullptr;
+    if (tls_task_info.magic == 0xdeadbeef)
+    {
+        tls_task_info.worker = worker;
+    }
+    else
+    {
+        tls_task_info.magic = 0xdeadbeef;
+        tls_task_info.worker = worker;
+        tls_task_info.current_task = nullptr;
+    }
 }
 
-task::task(task_code code, int hash)
+task::task(task_code code, int hash, service_node* node)
     : _state(TASK_STATE_READY)
 {
     _spec = task_spec::get(code);
@@ -100,7 +91,18 @@ task::task(task_code code, int hash)
     _wait_event.store(nullptr);
     _hash = hash;
     _delay_milliseconds = 0;
-    _caller_worker = task::get_current_worker();
+    
+    if (node != nullptr)
+    {
+        _node = node;
+    }
+    else
+    {
+        auto p = get_current_task();
+        dassert(p != nullptr, "tasks without explicit service node "
+            "can only be created inside other tasks");
+        _node = p->node();
+    }
 }
 
 task::~task()
@@ -119,8 +121,17 @@ void task::exec_internal()
 
     if (_state.compare_exchange_strong(READY_STATE, TASK_STATE_RUNNING))
     {
-        auto parentTask = tls_taskInfo.current_task;
-        tls_taskInfo.current_task = this;
+        task* parent_task = nullptr;
+        if (tls_task_info.magic == 0xdeadbeef)
+        {
+            parent_task = tls_task_info.current_task;
+        }
+        else
+        {
+            set_current_worker(nullptr);
+        }
+        
+        tls_task_info.current_task = this;
 
         _spec->on_task_begin.execute(this);
 
@@ -140,7 +151,7 @@ void task::exec_internal()
         }
         // ]
         
-        tls_taskInfo.current_task = parentTask;
+        tls_task_info.current_task = parent_task;
     }
 
     if (!_spec->allow_inline)
@@ -254,31 +265,10 @@ bool task::cancel(bool wait_until_finished)
     return ret;
 }
 
-void task::enqueue(int delay_milliseconds, service::service_app* app)
+void task::enqueue(int delay_milliseconds)
 {        
-    task_worker_pool* pool = nullptr;
-    if (caller_worker() != nullptr)
-    {
-        dbg_dassert(app == nullptr || caller_worker()->pool()->engine() == app->svc_node()->computation(), "tasks can only be dispatched to local node");
-        if (spec().type != TASK_TYPE_RPC_RESPONSE)
-        {
-            pool = caller_worker()->pool()->engine()->get_pool(spec().pool_code);
-        }
-        else
-        {
-            pool = caller_worker()->pool();
-        }
-    }
-    else if (app != nullptr)
-    {
-        //dassert (app != nullptr, "tasks enqueued outside tasks must be specified with which service app");
-        pool = app->svc_node()->computation()->get_pool(spec().pool_code);
-    }
-    else
-    {
-        dassert (false, "neither inside a service, nor service app is specified, unable to find the right engine to execute this");
-    }
-
+    dassert(_node != nullptr, "service node unknown for this task");
+    auto pool = node()->computation()->get_pool(spec().pool_code);
     enqueue(delay_milliseconds, pool);
 }
 
@@ -293,7 +283,9 @@ void task::enqueue(int delay_milliseconds, task_worker_pool* pool)
         spec().on_task_enqueue.execute(task::get_current_task(), this);
     }
 
-    if (spec().allow_inline)
+    if (_spec->allow_inline
+        || _spec->fast_execution_in_network_thread
+        )
     {
         exec_internal();
     }
@@ -325,10 +317,11 @@ void timer_task::exec()
     }
 }
 
-rpc_request_task::rpc_request_task(message_ptr& request) 
-    : task(task_code(request->header().local_rpc_code), request->header().client.hash), 
-      _request(request)
+rpc_request_task::rpc_request_task(message_ptr& request, service_node* node) 
+    : task(task_code(request->header().local_rpc_code), request->header().client.hash, node), 
+    _request(request)
 {
+
     dbg_dassert (TASK_TYPE_RPC_REQUEST == spec().type, "task type must be RPC_REQUEST");
 }
 
@@ -370,10 +363,7 @@ aio_task::aio_task(task_code code, int hash)
     dassert (TASK_TYPE_AIO == spec().type, "task must be of AIO type");
     set_error_code(ERR_IO_PENDING);
 
-    auto node = task::get_current_node();
-    dassert (node != nullptr, "this function can only be invoked inside tasks");
-
-    _aio = node->disk()->prepare_aio_context(this);
+    _aio = node()->disk()->prepare_aio_context(this);
 }
 
 void aio_task::exec() 
@@ -394,7 +384,7 @@ void aio_task::enqueue(error_code err, uint32_t transferred_size, int delay_mill
     }
     else
     {
-        task::enqueue(delay_milliseconds, (service::service_app*)nullptr);
+        task::enqueue(delay_milliseconds);
     }
 }
 

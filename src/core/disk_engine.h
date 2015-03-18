@@ -44,6 +44,7 @@ public:
     void            write(aio_task_ptr& aio);  
 
     disk_aio_ptr    prepare_aio_context(aio_task* tsk) { return _provider->prepare_aio_context(tsk); }
+    service_node*   node() const { return _node; }
     
 private:
     friend class aio_provider;

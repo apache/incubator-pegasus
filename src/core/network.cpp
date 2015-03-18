@@ -92,6 +92,11 @@ namespace dsn {
         : _engine(srv)
     {
     }
+
+    service_node* network::node() const
+    {
+        return _engine->node();
+    }
     
     std::shared_ptr<rpc_client_matcher> network::new_client_matcher()
     {

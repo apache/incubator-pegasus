@@ -31,9 +31,9 @@ namespace dsn { namespace service {
 
 namespace tasking
 {
-    inline void enqueue(task_ptr& task, int delay_milliseconds = 0, service_app* app = nullptr) 
+    inline void enqueue(task_ptr& task, int delay_milliseconds = 0)
     { 
-        task->enqueue(delay_milliseconds, app); 
+        task->enqueue(delay_milliseconds); 
     }
 
     inline bool cancel(task_ptr& task, bool wait_until_finished)

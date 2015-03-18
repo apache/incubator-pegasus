@@ -32,6 +32,11 @@ aio_provider::aio_provider(disk_engine* disk, aio_provider* inner_provider)
 {
 }
 
+service_node* aio_provider::node() const
+{
+    return _engine->node();
+}
+
 void aio_provider::complete_io(aio_task_ptr& aio, error_code err, uint32_t bytes, int delay_milliseconds)
 {
     _engine->complete_io(aio, err, bytes, delay_milliseconds);
