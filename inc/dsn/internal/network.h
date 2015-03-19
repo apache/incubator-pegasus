@@ -50,7 +50,6 @@ namespace dsn {
 
         std::shared_ptr<rpc_client_matcher> new_client_matcher();
         std::shared_ptr<message_parser> new_message_parser();
-        void call(message_ptr& request, rpc_response_task_ptr& call);
 
         rpc_server_session_ptr get_server_session(const end_point& ep);
         void on_server_session_accepted(rpc_server_session_ptr& s);
@@ -63,8 +62,14 @@ namespace dsn {
         virtual const end_point& address() = 0;
         virtual rpc_client_session_ptr create_client_session(const end_point& server_addr) = 0;
 
+        // used by rpc_engine only
+        void reset_parser(const std::string& name, int message_buffer_block_size);
+        void call(message_ptr& request, rpc_response_task_ptr& call);
+
     protected:
-        rpc_engine *_engine;
+        rpc_engine                    *_engine;
+        std::string                   _parser_type;
+        int                           _message_buffer_block_size;
         
         typedef std::map<end_point, rpc_client_session_ptr> client_sessions;
         client_sessions               _clients;

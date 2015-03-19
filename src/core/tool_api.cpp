@@ -174,7 +174,7 @@ namespace internal_use_only
 
     bool register_component_provider(const char* name, message_parser_factory f, int type)
     {
-        return dsn::utils::factory_store<message_parser_factory>::register_factory(name, f, type);
+        return dsn::utils::factory_store<message_parser>::register_factory(name, f, type);
     }
 
     toollet* get_toollet(const char* name, int type, configuration_ptr config)

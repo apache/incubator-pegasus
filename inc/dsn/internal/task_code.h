@@ -152,6 +152,7 @@ public:
     threadpool_code        pool_code; 
     bool                   allow_inline; // allow task executed in other thread pools or tasks
     bool                   fast_execution_in_network_thread;
+    std::string            rpc_call_remote_message_format;
 
     task_rejection_handler rejection_handler;
     rpc_channel            rpc_message_channel;
@@ -195,6 +196,10 @@ public:
 public:
     static bool init(configuration_ptr config);
     void init_profiling(bool profile);
+
+private:
+    friend class rpc_engine;
+    int rpc_call_remote_message_format_id;
 };
 
 } // end namespace

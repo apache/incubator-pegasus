@@ -31,6 +31,7 @@
 # include "rpc_engine.h"
 # include "service_engine.h"
 # include <dsn/internal/perf_counters.h>
+# include <dsn/internal/factory_store.h>
 # include <set>
 
 # define __TITLE__ "rpc.engine"
@@ -185,56 +186,111 @@ namespace dsn {
     //
     // management routines
     //
-    error_code rpc_engine::start(std::map<rpc_channel, network*>& networks, int port/* = 0*/)
+    error_code rpc_engine::start(const service_spec& spec, int port/* = 0*/)
     {
         if (_is_running)
         {
             return ERR_SERVICE_ALREADY_RUNNING;
         }
     
-        _networks.resize(rpc_channel::max_value() + 1); 
-        for (auto& kv : networks)
-        {
-            _networks[kv.first] = kv.second;
-        }            
+        // local cache for shared networks with same provider and message format and port
+        std::map<std::string, network*> named_nets; // factory##fmt##port -> net
 
+        // start to create networks
+        network* net = nullptr;
+        _networks.resize(rpc_channel::max_value() + 1);
         for (int i = 0; i <= rpc_channel::max_value(); i++)
         {
-            if (_networks[i] == nullptr)
+            auto& fmt_nets = _networks[i];
+            fmt_nets.resize(network_formats::instance().max_value() + 1);
+
+            for (int j = 0; j <= network_formats::instance().max_value(); j++)
             {
-                dwarn("network factory for %s not designated, may result fault when demanded",
-                    rpc_channel::to_string(i)
-                    );
+                network_config_spec cs;
+                cs.channel = rpc_channel(rpc_channel::to_string(i));
+                cs.message_format = network_formats::instance().get_name(j);
+
+                // find factory and message size
+                auto itnc = spec.network_configs.find(cs);
+                if (itnc == spec.network_configs.end())
+                {
+                    dwarn("network [%s.%s] not designated, may result fault when demanded",
+                        rpc_channel::to_string(i),
+                        network_formats::instance().get_name(j)
+                        );
+                    continue;
+                }
+                std::stringstream ss;
+                ss << itnc->second.factory_name
+                    << "##"
+                    << cs.message_format
+                    << "##"
+                    << port + j
+                    ;
+                std::string nname = ss.str();
+
+                // create net                
+                if (named_nets.find(nname) != named_nets.end())
+                    net = named_nets[nname];
+                else
+                {   
+                    net = utils::factory_store<network>::create(
+                        itnc->second.factory_name.c_str(), PROVIDER_TYPE_MAIN, this, nullptr);
+                    net->reset_parser(itnc->second.message_format, itnc->second.message_buffer_block_size);
+
+                    for (auto it = spec.network_aspects.begin();
+                        it != spec.network_aspects.end();
+                        it++)
+                    {
+                        net = utils::factory_store<network>::create(it->c_str(), PROVIDER_TYPE_ASPECT, this, net);
+                    }
+                                        
+                    // start the net
+                    error_code ret = net->start(port + j, port + j <= network::max_faked_port_for_client_only_node);
+                    if (ret != ERR_SUCCESS)
+                    {
+                        return ret;
+                    }
+
+                    named_nets[nname] = net;
+                }
+
+                // put net into _networks;
+                fmt_nets[j] = net;
             }
         }
 
-        bool addr_used_here = false;
-        std::set<network*> started_nets;
-        for (auto& kv : networks)
+        // report
+        for (int i = 0; i <= rpc_channel::max_value(); i++)
         {
-            if (started_nets.find(kv.second) != started_nets.end())
-                continue;
+            for (int j = 0; j <= network_formats::instance().max_value(); j++)
+            {
+                auto& fmt_nets = _networks[i];
+                if (fmt_nets[j] != nullptr)
+                {
+                    if (fmt_nets[j]->address().port <= network::max_faked_port_for_client_only_node)
+                    {
+                        dinfo("network [%s.%s] started at port %u (client only) ...",
+                            rpc_channel::to_string(i),
+                            network_formats::instance().get_name(j),
+                            (uint32_t)fmt_nets[j]->address().port
+                            );
+                    }
+                    else
+                    {
+                        dinfo("network [%s.%s] started at port %u ...",
+                            rpc_channel::to_string(i),
+                            network_formats::instance().get_name(j),
+                            (uint32_t)fmt_nets[j]->address().port
+                            );
+                    }
+                }
+            }
+        }
 
-            error_code ret = kv.second->start(port, port <= network::max_faked_port_for_client_only_node);
-            if (ret != ERR_SUCCESS)
-            {
-                return ret;
-            }
-            else
-            {
-                started_nets.insert(kv.second);
-            }
-        }
-        _address = _networks[RPC_CHANNEL_TCP]->address();
-    
-        if (address().port <= network::max_faked_port_for_client_only_node)
-        {
-            ddebug("rpc node started @ %s:%u (client only) ...", address().name.c_str(), (int)address().port);
-        }
-        else
-        {
-            ddebug("rpc node started @ %s:%u ...", address().name.c_str(), (int)address().port);
-        }
+        if (net)
+            _address = net->address();
+        _address.port = port;  
     
         _is_running = true;
         return ERR_SUCCESS;
@@ -299,9 +355,22 @@ namespace dsn {
         message* msg = request.get();
         
         auto sp = task_spec::get(msg->header().local_rpc_code);
-        network* net = _networks[sp->rpc_message_channel];
-        dassert(nullptr != net, "network not present for rpc channel %s used by rpc %s",
+        if (sp->rpc_call_remote_message_format_id == -1)
+        {
+            auto idx = network_formats::instance().get_id(sp->rpc_call_remote_message_format.c_str());
+            dassert(idx != -1, "invalid message format specified '%s' for rpc '%s'",
+                sp->rpc_call_remote_message_format.c_str(),
+                sp->name                
+                );
+            sp->rpc_call_remote_message_format_id = idx;
+        }
+
+        auto& named_nets = _networks[sp->rpc_message_channel];
+        network* net = named_nets[sp->rpc_call_remote_message_format_id];
+
+        dassert(nullptr != net, "network not present for rpc channel '%s' with format '%s' used by rpc %s",
             sp->rpc_message_channel.to_string(),
+            sp->rpc_call_remote_message_format.c_str(),
             msg->header().rpc_name
             );
 

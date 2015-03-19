@@ -35,7 +35,7 @@ public:
     singleton_vector_store(void){}
     ~singleton_vector_store(void){}
 
-    bool Contains(int index) const
+    bool contains(int index) const
     {
         if (index >= (int)_contains.size())
             return false;

@@ -26,6 +26,7 @@
 # include <dsn/internal/task.h>
 # include <dsn/internal/network.h>
 # include <dsn/internal/synchronize.h>
+# include <dsn/internal/global_config.h>
 
 namespace dsn {
 
@@ -60,7 +61,7 @@ public:
     //
     // management routines
     //
-    error_code start(std::map<rpc_channel, network*>& networks, int port = 0);
+    error_code start(const service_spec& spec, int port = 0);
 
     //
     // rpc registrations
@@ -85,9 +86,9 @@ private:
     void on_recv_request(message_ptr& msg, int delay_handling_milliseconds = 0);
         
 private:
-    configuration_ptr             _config;    
-    service_node                  *_node;
-    std::vector<network*>         _networks;
+    configuration_ptr                     _config;    
+    service_node                          *_node;
+    std::vector<std::vector<network*>>    _networks; // std::vector<CHANNEL:std::vector<PORT>>
     std::shared_ptr<rpc_client_matcher>   _matcher;
 
 

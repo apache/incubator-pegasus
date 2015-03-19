@@ -38,7 +38,7 @@ namespace dsn {
         public:
             shared_io_service()
             {
-                _io_service_worker_count = tool_app::config()->get_value<int>("boost.asio", "io_service_worker_count", 1);
+                _io_service_worker_count = tool_app::config()->get_value<int>("network", "io_service_worker_count", 1);
                 for (int i = 0; i < _io_service_worker_count; i++)
                 {
                     _workers.push_back(std::shared_ptr<std::thread>(new std::thread([this]()

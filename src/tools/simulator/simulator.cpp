@@ -48,11 +48,15 @@ void simulator::install(service_spec& spec)
     if (spec.env_factory_name == "")
         spec.env_factory_name = ("dsn::tools::sim_env_provider");
 
-    if (spec.network_factory_names[RPC_CHANNEL_TCP] == "")
-        spec.network_factory_names[RPC_CHANNEL_TCP] = ("dsn::tools::sim_network_provider");
+    network_config_spec cs;
+    cs.channel = RPC_CHANNEL_TCP;
+    cs.factory_name = "dsn::tools::sim_network_provider";
+    cs.message_format = "ns";
+    cs.message_buffer_block_size = 1024 * 64;
+    spec.register_network(cs, false);
 
-    if (spec.network_factory_names[RPC_CHANNEL_UDP] == "")
-        spec.network_factory_names[RPC_CHANNEL_UDP] = ("dsn::tools::sim_network_provider");
+    cs.channel = RPC_CHANNEL_UDP;
+    spec.register_network(cs, false);
 
     if (spec.perf_counter_factory_name == "")
         spec.perf_counter_factory_name = "dsn::tools::wrong_perf_counter";

@@ -177,7 +177,31 @@ bool service_app_spec::init(const char* section, configuration_ptr config)
     port = config->get_value<int>(section, "port", 0);    
     delay_seconds = config->get_value<int>(section, "delay_seconds", 0);    
     run = config->get_value<bool>(section, "run", true);
+
     return true;
+}
+
+bool network_config_spec::operator < (const network_config_spec& r) const
+{
+    return channel < r.channel ||
+        (channel == r.channel && message_format < r.message_format)
+        ;
+}
+
+void service_spec::register_network(const network_config_spec& netcs, bool force)
+{
+    if (force)
+    {
+        network_configs[netcs] = netcs;
+    }
+    else
+    {
+        auto it = network_configs.find(netcs);
+        if (it == network_configs.end())
+        {
+            network_configs[netcs] = netcs;
+        }
+    }    
 }
 
 bool service_spec::init(configuration_ptr c)
@@ -190,14 +214,37 @@ bool service_spec::init(configuration_ptr c)
     port = 0;   
     
     std::vector<std::string> cs;
-    config->get_all_keys("network.factory", cs);
+    config->get_all_keys("network", cs);
+
     for (auto& c : cs)
     {
-        if (!rpc_channel::is_exist(c.c_str()))
+        /*
+        ;channel.message_format = network_provider_name,buffer_block_size
+        ;each format will occupy a port (from app.port to app.port+1, ...)
+        RPC_CHANNEL_TCP.dsn = dsn::tools::asio_network_provider,65536
+        RPC_CHANNEL_UDP.dsn = dsn::tools::asio_network_provider,65536
+        RPC_CHANNEL_TCP.thrift = dsn::tools::asio_network_provider,65536
+        RPC_CHANNEL_UDP.thrift = dsn::tools::asio_network_provider,65536
+        */
+
+        if (c.find("RPC_CHANNEL_") != 0)
+            continue;
+
+        std::list<std::string> ks;
+        utils::split_args(c.c_str(), ks, '.');
+        if (ks.size() != 2)
+        {
+            printf("invalid network specification '%s', should be similar to '%channel.%message_format'\n",
+                c.c_str()
+                );
+            return false;
+        }
+        
+        if (!rpc_channel::is_exist(ks.begin()->c_str()))
         {
             printf("invalid rpc channel type '%s', please following the example below to define new channel:"
                 "\t\tDEFINE_CUSTOMIZED_ID(rpc_channel, RPC_CHANNEL_NEW_TYPE)"
-                "currently regisered rpc channels types are:\n", c.c_str());
+                "currently regisered rpc channels types are:\n", ks.begin()->c_str());
 
             for (int i = 0; i <= rpc_channel::max_value(); i++)
             {
@@ -206,9 +253,30 @@ bool service_spec::init(configuration_ptr c)
             return false;
         }
 
-        rpc_channel rc(c.c_str());
-        std::string s = config->get_string_value("network.factory", c.c_str(), "");
-        network_factory_names[rc] = s;
+        network_config_spec ns;
+        ns.channel = rpc_channel(ks.begin()->c_str());
+        ns.message_format = *ks.rbegin();
+        network_formats::instance().register_id(ns.message_format.c_str());
+        
+        std::string s = config->get_string_value("network", c.c_str(), "");
+        utils::split_args(s.c_str(), ks, ',');
+        if (ks.size() != 2)
+        {
+            printf("invalid network specification '%s', should be '%network_factory,%msg_buffer_size'\n",
+                s.c_str()
+                );
+            return false;
+        }
+
+        ns.factory_name = *ks.begin();
+        ns.message_buffer_block_size = atoi(ks.rbegin()->c_str());
+        if (ns.message_buffer_block_size == 0)
+        {
+            printf("invalid message buffer size specified: '%s'\n", ks.rbegin()->c_str());
+            return false;
+        }
+
+        network_configs[ns] = ns;
     }
 
     aio_factory_name = config->get_string_value("core", "aio_factory_name", "");
@@ -237,6 +305,7 @@ bool service_spec::init(configuration_ptr c)
     // init service apps
     std::vector<std::string> allSectionNames;
     config->get_all_sections(allSectionNames);
+    int ports_per_node = network_formats::instance().max_value() + 1;
     for (auto it = allSectionNames.begin(); it != allSectionNames.end(); it++)
     {
         if (it->substr(0, strlen("apps.")) == std::string("apps."))
@@ -256,14 +325,15 @@ bool service_spec::init(configuration_ptr c)
 
                 if (lport == 0)
                 {
-                    app.port = ++network::max_faked_port_for_client_only_node;
+                    app.port = network::max_faked_port_for_client_only_node;
                     dassert (app.port <= 1024, "faked port for client nodes only must not exceed 1024");
                     app_specs.push_back(app);
+                    network::max_faked_port_for_client_only_node += ports_per_node;
                 }
                 else
                 {
                     app_specs.push_back(app);
-                    app.port++;
+                    app.port += ports_per_node;
                 }
             }
         }

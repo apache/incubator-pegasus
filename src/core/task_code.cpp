@@ -34,7 +34,7 @@ namespace dsn {
 task_code::task_code(const char* xxx, task_type type, threadpool_code pool, task_priority pri, int rpcPairedCode) 
     : dsn::utils::customized_id<task_code>(xxx)
 {
-    if (!dsn::utils::singleton_vector_store<task_spec*, nullptr>::instance().Contains(*this))
+    if (!dsn::utils::singleton_vector_store<task_spec*, nullptr>::instance().contains(*this))
     {
         task_spec* spec = new task_spec(*this, xxx, type, pool, rpcPairedCode, pri);
         dsn::utils::singleton_vector_store<task_spec*, nullptr>::instance().put(*this, spec);
@@ -61,7 +61,8 @@ task_spec::task_spec(int code, const char* name, task_type type, threadpool_code
     on_rpc_request_enqueue((std::string(name) + std::string(".rpc.request.enqueue")).c_str()),
     on_rpc_reply((std::string(name) + std::string(".rpc.reply")).c_str()), 
     on_rpc_response_enqueue((std::string(name) + std::string(".rpc.response.enqueue")).c_str()),
-    rpc_message_channel(RPC_CHANNEL_TCP)
+    rpc_message_channel(RPC_CHANNEL_TCP),
+    rpc_call_remote_message_format_id(-1)
 {
     dassert (
         strlen(name) <= MAX_TASK_CODE_NAME_LENGTH, 
@@ -72,11 +73,12 @@ task_spec::task_spec(int code, const char* name, task_type type, threadpool_code
     rejection_handler = nullptr;
 
     // TODO: config for following values
+    rpc_call_remote_message_format = "dsn";
     rpc_message_channel = RPC_CHANNEL_TCP;
     rpc_timeout_milliseconds = 3600 * 1000; // 1 hr
     rpc_retry_interval_milliseconds = 3000;
     rpc_min_timeout_milliseconds_for_retry = 4000;
-    async_rpc_max_send_time_milliseconds = 5000;
+    async_rpc_max_send_time_milliseconds = 5000;    
 }
 
 bool task_spec::init(configuration_ptr config)

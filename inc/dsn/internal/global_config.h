@@ -45,6 +45,24 @@ struct service_app_spec
     bool init(const char* section, configuration_ptr config);
 };
 
+struct network_config_spec
+{
+    // [key
+    rpc_channel channel;
+    std::string message_format;
+    // ]
+
+    std::string factory_name; 
+    int         message_buffer_block_size;
+
+    network_config_spec() : channel(RPC_CHANNEL_TCP), message_buffer_block_size(0) {}
+    bool operator < (const network_config_spec& r) const;
+};
+
+struct network_message_format {};
+typedef utils::customized_id_mgr<network_message_format> network_formats; //"dsn->0" "thrift->1"
+typedef std::map<network_config_spec, network_config_spec> network_conf;
+
 struct service_spec
 {
     configuration_ptr            config;
@@ -53,7 +71,7 @@ struct service_spec
     std::list<std::string>       toollets;
     int                          port;    
     
-    std::map<rpc_channel, std::string> network_factory_names;
+    network_conf                 network_configs;
     std::string                  aio_factory_name;
     std::string                  env_factory_name;
     std::string                  lock_factory_name;
@@ -77,6 +95,7 @@ struct service_spec
     service_spec() {}
 
     bool init(configuration_ptr config);
+    void register_network(const network_config_spec& netcs, bool force);
 };
 
 enum syste_exit_type

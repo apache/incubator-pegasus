@@ -22,6 +22,7 @@
  * THE SOFTWARE.
  */
 # include <dsn/internal/network.h>
+# include <dsn/internal/factory_store.h>
 # include "rpc_engine.h"
 
 # define __TITLE__ "rpc_session"
@@ -86,11 +87,19 @@ namespace dsn {
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    int network::max_faked_port_for_client_only_node = 0;
+    int network::max_faked_port_for_client_only_node = 1;
 
     network::network(rpc_engine* srv, network* inner_provider)
         : _engine(srv)
     {
+        _parser_type = "dsn";
+        _message_buffer_block_size = 1024 * 64;
+    }
+
+    void network::reset_parser(const std::string& name, int message_buffer_block_size)
+    {
+        _message_buffer_block_size = message_buffer_block_size;
+        _parser_type = name;
     }
 
     service_node* network::node() const
@@ -105,8 +114,8 @@ namespace dsn {
 
     std::shared_ptr<message_parser> network::new_message_parser()
     {
-        // TODO: use factory instead
-        message_parser * parser = new dsn_message_parser(1024);
+        message_parser * parser = utils::factory_store<message_parser>::create(_parser_type.c_str(), PROVIDER_TYPE_MAIN, _message_buffer_block_size);
+        dassert(parser, "message parser '%s' not registerd or invalid!", _parser_type.c_str());
         return std::shared_ptr<message_parser>(parser);
     }
 
