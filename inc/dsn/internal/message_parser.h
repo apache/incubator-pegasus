@@ -46,6 +46,9 @@ namespace dsn
         // afer read, see if we can compose a message
         virtual message_ptr on_read(int read_length, __out_param int& read_next) = 0;
 
+        // before write
+        virtual void get_output_buffers(message_ptr& msg, __out_param std::vector<utils::blob>& buffers) = 0;
+        
     protected:
         void create_new_buffer(int sz);
         void mark_read(int read_length);
@@ -63,7 +66,9 @@ namespace dsn
 
         virtual message_ptr on_read(int read_length, __out_param int& read_next);
 
-    private:
-
+        virtual void get_output_buffers(message_ptr& msg, __out_param std::vector<utils::blob>& buffers)
+        {
+            return msg->get_output_buffers(buffers);
+        }
     };
 }

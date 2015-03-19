@@ -159,7 +159,7 @@ message_ptr message::create_response()
     msg->header().server.error = ERR_SUCCESS.get();    
     strcpy(msg->header().rpc_name, _msg_header.rpc_name);
      
-    msg->header().local_rpc_code = _msg_header.local_rpc_code;
+    msg->header().local_rpc_code = task_spec::get(_msg_header.local_rpc_code)->rpc_paired_code;
     msg->header().from_address = _msg_header.to_address;
     msg->header().to_address = _msg_header.from_address;
 

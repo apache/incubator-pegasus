@@ -193,6 +193,7 @@ void service_spec::register_network(const network_config_spec& netcs, bool force
     if (force)
     {
         network_configs[netcs] = netcs;
+        network_formats::instance().register_id(netcs.message_format.c_str());
     }
     else
     {
@@ -200,6 +201,7 @@ void service_spec::register_network(const network_config_spec& netcs, bool force
         if (it == network_configs.end())
         {
             network_configs[netcs] = netcs;
+            network_formats::instance().register_id(netcs.message_format.c_str());
         }
     }    
 }

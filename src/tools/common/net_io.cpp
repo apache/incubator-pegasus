@@ -137,7 +137,7 @@ namespace dsn {
                 return;
 
             std::vector<utils::blob> buffers;
-            msg->get_output_buffers(buffers);
+            _parser->get_output_buffers(msg, buffers);
 
             std::vector<boost::asio::const_buffer> buffers2;
             for (auto& b : buffers)
@@ -158,8 +158,6 @@ namespace dsn {
                 }
                 else
                 {
-                    dassert(length == msg->total_size(), "");
-
                     auto smsg = _sq.dequeue_peeked();
                     dassert(smsg == msg, "sent msg must be the first msg in send queue");
 

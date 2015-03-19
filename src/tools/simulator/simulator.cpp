@@ -51,7 +51,7 @@ void simulator::install(service_spec& spec)
     network_config_spec cs;
     cs.channel = RPC_CHANNEL_TCP;
     cs.factory_name = "dsn::tools::sim_network_provider";
-    cs.message_format = "ns";
+    cs.message_format = "dsn";
     cs.message_buffer_block_size = 1024 * 64;
     spec.register_network(cs, false);
 

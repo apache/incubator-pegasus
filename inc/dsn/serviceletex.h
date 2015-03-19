@@ -288,9 +288,8 @@ namespace dsn {
         template<typename T> template<typename TRequest>
         inline void serviceletex<T>::register_rpc_handler(task_code rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&))
         {
-            std::string rpc_name = std::string(service_base::name()).append(".").append(rpc_name_);
             return service_base::register_rpc_handler(
-                rpc_code, rpc_name.c_str(),
+                rpc_code, rpc_name_,
                 std::bind(&serviceletex<T>::internal_rpc_handler1<TRequest>, static_cast<T*>(this), std::placeholders::_1, handler)
                 );
         }
@@ -298,9 +297,8 @@ namespace dsn {
         template<typename T> template<typename TRequest, typename TResponse>
         inline void serviceletex<T>::register_rpc_handler(task_code rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&, TResponse&))
         {
-            std::string rpc_name = std::string(service_base::name()).append(".").append(rpc_name_);
             return service_base::register_rpc_handler(
-                rpc_code, rpc_name.c_str(),
+                rpc_code, rpc_name_,
                 std::bind(&serviceletex<T>::internal_rpc_handler2<TRequest, TResponse>, static_cast<T*>(this), std::placeholders::_1, handler)
                 );
         }
@@ -308,9 +306,8 @@ namespace dsn {
         template<typename T> template<typename TRequest, typename TResponse>
         inline void serviceletex<T>::register_async_rpc_handler(task_code rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&, rpc_replier<TResponse>&))
         {
-            std::string rpc_name = std::string(service_base::name()).append(".").append(rpc_name_);
             return service_base::register_rpc_handler(
-                rpc_code, rpc_name.c_str(),
+                rpc_code, rpc_name_,
                 std::bind(&serviceletex<T>::internal_rpc_handler3<TRequest, TResponse>, static_cast<T*>(this), std::placeholders::_1, handler)
                 );
         }

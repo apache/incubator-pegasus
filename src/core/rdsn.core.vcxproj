@@ -72,6 +72,7 @@
     <ClInclude Include="..\..\inc\dsn\internal\task_queue.h" />
     <ClInclude Include="..\..\inc\dsn\internal\task_worker.h" />
     <ClInclude Include="..\..\inc\dsn\internal\threadpool_code.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\thrift_helper.h" />
     <ClInclude Include="..\..\inc\dsn\internal\utils.h" />
     <ClInclude Include="..\..\inc\dsn\internal\zlocks.h" />
     <ClInclude Include="..\..\inc\dsn\internal\zlock_provider.h" />

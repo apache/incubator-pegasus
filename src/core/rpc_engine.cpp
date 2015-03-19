@@ -295,15 +295,16 @@ namespace dsn {
         _is_running = true;
         return ERR_SUCCESS;
     }
-
-
+    
     bool rpc_engine::register_rpc_handler(rpc_handler_ptr& handler)
     {
         utils::auto_write_lock l(_handlers_lock);
         auto it = _handlers.find(handler->code.to_string());
-        if (it == _handlers.end())
+        auto it2 = _handlers.find(handler->name);
+        if (it == _handlers.end() && it2 == _handlers.end())
         {
             _handlers[handler->code.to_string()] = handler;
+            _handlers[handler->name] = handler;
             return true;
         }
         else
@@ -315,7 +316,14 @@ namespace dsn {
     bool rpc_engine::unregister_rpc_handler(task_code rpc_code)
     {
         utils::auto_write_lock l(_handlers_lock);
-        return _handlers.erase(rpc_code.to_string()) > 0;
+        auto it = _handlers.find(rpc_code.to_string());
+        if (it == _handlers.end())
+            return false;
+
+        std::string name = it->second->name;
+        _handlers.erase(it);
+        _handlers.erase(name);
+        return true;
     }
 
     void rpc_engine::on_recv_request(message_ptr& msg, int delay_handling_milliseconds)
