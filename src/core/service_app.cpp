@@ -34,7 +34,7 @@ service_app::service_app(service_app_spec* s, configuration_ptr c)
     std::vector<std::string> args;
     utils::split_args(_spec.arguments.c_str(), args);
 
-    int argc = (int)args.size() + 1;
+    int argc = static_cast<int>(args.size()) + 1;
     _argsPtr.resize(argc);
     _args.resize(argc);
     for (int i = 0; i < argc; i++)

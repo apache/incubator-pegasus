@@ -138,9 +138,9 @@ public:
 
     bool remove_from_allow_list( const end_point& node);
 
-    int  worker_count() const { return (int)_workers.size(); }
+    int  worker_count() const { return static_cast<int>(_workers.size()); }
 
-    int  master_count() const { return (int)_masters.size(); }
+    int  master_count() const { return static_cast<int>(_masters.size()); }
 
 public:
     struct beacon_msg

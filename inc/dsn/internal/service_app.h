@@ -53,7 +53,7 @@ public:
     const service_app_spec& spec() const { return _spec; }
     configuration_ptr config() { return _config; }
     const std::string& name() const { return _spec.name; }
-    int arg_count() const { return (int)_args.size(); }
+    int arg_count() const { return static_cast<int>(_args.size()); }
     char** args() const { return (char**)&_argsPtr[0]; }
     const end_point& address() const { return _address; }
     service_node* svc_node() const { return _svc_node; }

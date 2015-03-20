@@ -48,7 +48,7 @@ namespace dsn { namespace tools {
         {
             dwarn("cannot find destination node %s:%u in simulator", 
                 msg->header().to_address.name.c_str(), 
-                (int)msg->header().to_address.port
+                static_cast<int>(msg->header().to_address.port)
                 );
             return;
         }
@@ -60,7 +60,7 @@ namespace dsn { namespace tools {
             rnet->on_server_session_accepted(server_session);
         }
 
-        message_ptr recv_msg(new message(msg->get_output_buffer()));
+        message_ptr recv_msg(new message(msg->writer().get_buffer()));
         server_session->on_recv_request(recv_msg, 
             recv_msg->header().from_address == recv_msg->header().to_address ?
             0 : rnet->net_delay_milliseconds()
@@ -79,7 +79,7 @@ namespace dsn { namespace tools {
         {
             dwarn("cannot find destination node %s:%u in simulator",
                 reply_msg->header().to_address.name.c_str(),
-                (int)reply_msg->header().to_address.port
+                static_cast<int>(reply_msg->header().to_address.port)
                 );
             return;
         }
@@ -87,7 +87,7 @@ namespace dsn { namespace tools {
         auto client_session = rnet->get_client_session(reply_msg->header().from_address);
         if (nullptr != client_session)
         {
-            message_ptr recv_msg(new message(reply_msg->get_output_buffer()));
+            message_ptr recv_msg(new message(reply_msg->writer().get_buffer()));
             client_session->on_recv_reply(recv_msg->header().id, recv_msg,
                 recv_msg->header().from_address == recv_msg->header().to_address ?
                 0 : rnet->net_delay_milliseconds()
@@ -97,9 +97,9 @@ namespace dsn { namespace tools {
         {
             dwarn("cannot find origination client for %s:%u @ %s:%u in simulator",
                 reply_msg->header().from_address.name.c_str(),
-                (int)reply_msg->header().from_address.port,
+                static_cast<int>(reply_msg->header().from_address.port),
                 reply_msg->header().to_address.name.c_str(),
-                (int)reply_msg->header().to_address.port
+                static_cast<int>(reply_msg->header().to_address.port)
                 );
         }
     }
@@ -130,6 +130,6 @@ namespace dsn { namespace tools {
 
     uint32_t sim_network_provider::net_delay_milliseconds() const
     {
-        return (int)dsn::service::env::random32(_minMessageDelayMicroseconds, _maxMessageDelayMicroseconds) / 1000;
+        return static_cast<uint32_t>(dsn::service::env::random32(_minMessageDelayMicroseconds, _maxMessageDelayMicroseconds)) / 1000;
     }    
 }} // end namespace

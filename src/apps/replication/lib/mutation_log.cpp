@@ -163,7 +163,8 @@ int mutation_log::create_new_log_file()
     _current_log_file = logFile; 
 
     create_new_pending_buffer();
-    auto len = logFile->write_header(_pending_write, _init_prepared_decrees, (int)_log_buffer_size_bytes);
+    auto len = logFile->write_header(_pending_write, _init_prepared_decrees, 
+        static_cast<int>(_log_buffer_size_bytes));
     _global_end_offset += len;
 
     return ERR_SUCCESS;
@@ -211,7 +212,7 @@ int mutation_log::write_pending_mutations(bool create_new_log_when_necessary)
     dassert (_pending_write_timer == nullptr, "");
 
     _pending_write->seal(true);
-    auto bb = _pending_write->get_output_buffer();
+    auto bb = _pending_write->writer().get_buffer();
     uint64_t offset = end_offset() - bb.length();
     auto buf = bb.buffer();
     utils::blob bb2(buf, bb.length());
@@ -318,9 +319,9 @@ int mutation_log::replay(ReplayCallback callback)
 
         while (true)
         {
-            while (!msg->is_eof())
+            while (!msg->reader().is_eof())
             {
-                auto oldSz = msg->get_remaining_size();
+                auto oldSz = msg->reader().get_remaining_size();
                 mutation_ptr mu = mutation::read_from(msg);
                 dassert (nullptr != mu, "");                                
                 mu->set_logged();
@@ -334,7 +335,7 @@ int mutation_log::replay(ReplayCallback callback)
 
                 callback(mu);
 
-                offset += oldSz - msg->get_remaining_size();
+                offset += oldSz - msg->reader().get_remaining_size();
             }
 
             err = log->read_next_log_entry(bb);
@@ -677,7 +678,7 @@ void log_file::close()
     if (0 != _handle)
     {
         if (_isRead)
-            ::close((int)_handle);
+            ::close((int)(_handle));
         else
             dsn::service::file::close(_handle);
 
@@ -692,7 +693,7 @@ int log_file::read_next_log_entry(__out_param dsn::utils::blob& bb)
     std::shared_ptr<char> hdrBuffer(new char[message_header::serialized_size()]);
     
     if (message_header::serialized_size() != ::read(
-        (int)_handle,
+        (int)(_handle),
         hdrBuffer.get(),
         message_header::serialized_size()
         ))
@@ -716,7 +717,7 @@ int log_file::read_next_log_entry(__out_param dsn::utils::blob& bb)
     bb.assign(data, 0, message_header::serialized_size() + hdr.body_length);
 
     if (hdr.body_length != ::read(
-            (int)_handle,
+            (int)(_handle),
             (void*)((char*)bb.data() + message_header::serialized_size()), 
             hdr.body_length
             ))
@@ -762,7 +763,7 @@ aio_task_ptr log_file::write_log_entry(
     }
 
     _writeTasks.at(_writeTaskItr) = task;
-    _writeTaskItr = (_writeTaskItr < (int)_writeTasks.size() - 1) ? _writeTaskItr + 1 : 0;*/
+    _writeTaskItr = (_writeTaskItr < static_cast<int>_writeTasks.size() - 1) ? _writeTaskItr + 1 : 0;*/
 
     return task;
 }
@@ -773,18 +774,18 @@ int log_file::read_header(message_ptr& reader)
     reader->reader().read_pod(_header);
 
     int count;
-    reader->read(count);
+    reader->reader().read(count);
     for (int i = 0; i < count; i++)
     {
         global_partition_id gpid;
         decree decree;
         unmarshall(reader, gpid);
-        reader->read(decree);
+        reader->reader().read(decree);
 
         _init_prepared_decrees[gpid] = decree;
     }
 
-    return (int)sizeof(_header) + (int)sizeof(count) + (int)(sizeof(global_partition_id) + sizeof(decree))*(int)_init_prepared_decrees.size();
+    return static_cast<int>(sizeof(_header) + sizeof(count) + (sizeof(global_partition_id) + sizeof(decree))*_init_prepared_decrees.size());
 }
 
 int log_file::write_header(message_ptr& writer, multi_partition_decrees& initMaxDecrees, int bufferSizeBytes)
@@ -799,15 +800,15 @@ int log_file::write_header(message_ptr& writer, multi_partition_decrees& initMax
 
     writer->writer().write_pod(_header);
     
-    int count = (int)_init_prepared_decrees.size();
-    writer->write(count);
+    int count = static_cast<int>(_init_prepared_decrees.size());
+    writer->writer().write(count);
     for (auto it = _init_prepared_decrees.begin(); it != _init_prepared_decrees.end(); it++)
     {
         marshall(writer, it->first);
-        writer->write(it->second);
+        writer->writer().write(it->second);
     }
 
-    return (int)sizeof(_header) + (int)sizeof(count) + (int)(sizeof(global_partition_id) + sizeof(decree))*(int)_init_prepared_decrees.size();
+    return static_cast<int>(sizeof(_header) + sizeof(count) + (sizeof(global_partition_id) + sizeof(decree))*_init_prepared_decrees.size());
 }
 
 }} // end namespace

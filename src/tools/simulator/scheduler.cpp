@@ -103,7 +103,7 @@ scheduler::~scheduler(void)
     s->worker = worker;
     s->first_time_schedule = true;
     s->in_continuation = false;
-    s->index = (int)scheduler::instance()._threads.size();    
+    s->index = static_cast<int>(scheduler::instance()._threads.size());    
     scheduler::instance()._threads.push_back(s);
 }
 

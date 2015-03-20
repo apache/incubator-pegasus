@@ -113,7 +113,7 @@ template<> inline long long configuration::get_value<long long>(const char* sect
             return v;
         }
         else
-            return (long long)atol(value.c_str());
+            return (long long)(atol(value.c_str()));
     }
 }
 
@@ -131,28 +131,28 @@ template<> inline long configuration::get_value<long>(const char* section, const
             return v;
         }
         else
-            return (long)atoi(value.c_str());
+            return (long)(atoi(value.c_str()));
     }
 }
 
 template<> inline int configuration::get_value<int>(const char* section, const char* key, int default_value)
 {
-    return (int)get_value<long>(section, key, default_value);
+    return static_cast<int>(get_value<long>(section, key, default_value));
 }
 
 template<> inline unsigned int configuration::get_value<unsigned int>(const char* section, const char* key, unsigned int default_value)
 {
-    return (unsigned int)get_value<long long>(section, key, default_value);
+    return (unsigned int)(get_value<long long>(section, key, default_value));
 }
 
 template<> inline short configuration::get_value<short>(const char* section, const char* key, short default_value)
 {
-    return (short)get_value<long>(section, key, default_value);
+    return (short)(get_value<long>(section, key, default_value));
 }
 
 template<> inline unsigned short configuration::get_value<unsigned short>(const char* section, const char* key, unsigned short default_value)
 {
-    return (unsigned short)get_value<long long>(section, key, default_value);
+    return (unsigned short)(get_value<long long>(section, key, default_value));
 }
 
 template<> inline bool configuration::get_value<bool>(const char* section, const char* key, bool default_value)

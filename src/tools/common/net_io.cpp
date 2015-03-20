@@ -86,7 +86,7 @@ namespace dsn {
             {
                 /*dwarn("network session %s:%u exits failed, err = %s",
                     _remote_addr.to_ip_string().c_str(),
-                    (int)_remote_addr.port,
+                    static_cast<int>_remote_addr.port,
                     ex.what()
                     );*/
             }
@@ -231,7 +231,7 @@ namespace dsn {
 
                         dinfo("client session %s:%u connected",
                             _remote_addr.name.c_str(),
-                            (int)_remote_addr.port
+                            static_cast<int>(_remote_addr.port)
                             );
 
                         set_options();

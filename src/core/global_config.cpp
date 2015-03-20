@@ -101,8 +101,8 @@ bool threadpool_spec::init(configuration_ptr& config, __out_param std::vector<th
     }
     
     defaultSpec.run = false;
-    defaultSpec.worker_count = (int)config->get_value<long>("threadpool.default", "worker_count", 1);
-    defaultSpec.max_input_queue_length = (int)config->get_value<long>("threadpool.default", "max_input_queue_length", 10000);
+    defaultSpec.worker_count = config->get_value<int>("threadpool.default", "worker_count", 1);
+    defaultSpec.max_input_queue_length = config->get_value<int>("threadpool.default", "max_input_queue_length", 10000);
     defaultSpec.partitioned = config->get_value<bool>("threadpool.default", "partitioned", false);
     defaultSpec.queue_aspects = config->get_string_value_list("threadpool.default", "queue_aspects", ',');
     defaultSpec.worker_aspects = config->get_string_value_list("threadpool.default", "worker_aspects", ',');
@@ -122,8 +122,8 @@ bool threadpool_spec::init(configuration_ptr& config, __out_param std::vector<th
         {
             spec.name = config->get_string_value(section_name.c_str(), "name", threadpool_code::to_string(code));
             spec.run = config->get_value<bool>(section_name.c_str(), "run", true);
-            spec.worker_count = (int)config->get_value<long>(section_name.c_str(), "worker_count", defaultSpec.worker_count);
-            spec.max_input_queue_length = (int)config->get_value<long>(section_name.c_str(), "max_input_queue_length", defaultSpec.max_input_queue_length);
+            spec.worker_count = config->get_value<int>(section_name.c_str(), "worker_count", defaultSpec.worker_count);
+            spec.max_input_queue_length = config->get_value<int>(section_name.c_str(), "max_input_queue_length", defaultSpec.max_input_queue_length);
             spec.partitioned = config->get_value<bool>(section_name.c_str(), "partitioned", defaultSpec.partitioned);
             spec.queue_aspects = config->get_string_value_list(section_name.c_str(), "queue_aspects", ',');
             spec.worker_priority = enum_from_string(config->get_string_value(section_name.c_str(), "worker_priority", "THREAD_xPRIORITY_NORMAL").c_str(), THREAD_xPRIORITY_INVALID);

@@ -105,7 +105,7 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
         {
             ddebug( "%u.%u @ %s:%u: load replica success with durable decree = %llu from '%s'",
                 r->get_gpid().tableId, r->get_gpid().pidx,
-                address().name.c_str(), (int)address().port,
+                address().name.c_str(), static_cast<int>(address().port),
                 r->last_durable_decree(),
                 name.c_str()
                 );
@@ -129,7 +129,7 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
         derror(
             "%u.%u @ %s:%u: initialized durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
             it->first.tableId, it->first.pidx,
-            address().name.c_str(), (int)address().port,
+            address().name.c_str(), static_cast<int>(address().port),
             it->second->last_durable_decree(),
             it->second->last_committed_decree(),
             it->second->max_prepared_decree(),
@@ -245,7 +245,9 @@ void replica_stub::get_primary_replica_list(uint32_t p_tableID, std::vector<glob
     zauto_lock l(_replicasLock);
     for (auto it = _replicas.begin(); it != _replicas.end(); it++)
     {
-        if (it->second->status() == PS_PRIMARY && (p_tableID == (uint32_t)-1 || it->second->get_gpid().tableId == (int)p_tableID ))
+        if (it->second->status() == PS_PRIMARY 
+            && (p_tableID == (uint32_t)-1 
+            || it->second->get_gpid().tableId == static_cast<int>(p_tableID) ))
         {
             p_repilcaList.push_back(it->second->get_gpid());
         }
@@ -456,7 +458,7 @@ void replica_stub::on_meta_server_connected()
 {
     ddebug(
         "%s:%u: coordinator connected",
-        address().name.c_str(), (int)address().port
+        address().name.c_str(), static_cast<int>(address().port)
         );
 
     zauto_lock l(_replicasLock);
@@ -471,7 +473,7 @@ void replica_stub::on_node_query_reply(int err, message_ptr& request, message_pt
 {
     ddebug(
         "%s:%u: node view replied",
-        address().name.c_str(), (int)address().port
+        address().name.c_str(), static_cast<int>(address().port)
         );
 
     if (response == nullptr)
@@ -559,7 +561,7 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, global_p
         ddebug(
             "%u.%u @ %s:%u: replica not exists on cdt, removed",
             gpid.tableId, gpid.pidx,
-            address().name.c_str(), (int)address().port
+            address().name.c_str(), static_cast<int>(address().port)
             );
         replica->update_local_configuration_with_no_ballot_change(PS_ERROR);
     }
@@ -605,7 +607,7 @@ void replica_stub::on_meta_server_disconnected()
 {
     ddebug(
         "%s:%u: coordinator disconnected",
-        address().name.c_str(), (int)address().port
+        address().name.c_str(), static_cast<int>(address().port)
         );
     zauto_lock l(_replicasLock);
     if (NS_Disconnected == _state)
@@ -642,7 +644,7 @@ void replica_stub::on_meta_server_disconnected_scatter(replica_stub_ptr this_, g
 void replica_stub::response_client_error(message_ptr& request, int error)
 {
     message_ptr resp = request->create_response();
-    resp->write(error);
+    resp->writer().write(error);
     rpc_response(resp);
 }
 

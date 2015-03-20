@@ -68,7 +68,7 @@ namespace dsn
 
         virtual void get_output_buffers(message_ptr& msg, __out_param std::vector<utils::blob>& buffers)
         {
-            return msg->get_output_buffers(buffers);
+            return msg->writer().get_buffers(buffers);
         }
     };
 }

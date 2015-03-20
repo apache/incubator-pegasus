@@ -301,7 +301,7 @@ template<typename uintxx_t, uintxx_t uPoly> struct crc_generator
                 printf (",");
             if (w == 0)
                 printf ("\n   ");
-            printf (" 0x%0*llx", (int) (sizeof (uintxx_t) * 2), (uint64_t) _uX2N[i]);
+            printf (" 0x%0*llx", static_cast<int> (sizeof (uintxx_t) * 2), (uint64_t) _uX2N[i]);
             w = (w + sizeof (uintxx_t)) & 31;
         }
         printf ("\n};\n\n");
@@ -313,7 +313,7 @@ template<typename uintxx_t, uintxx_t uPoly> struct crc_generator
                 printf (",");
             if (w == 0)
                 printf ("\n   ");
-            printf (" 0x%0*llx", (int) (sizeof (uintxx_t) * 2), (uint64_t) _crc_table[i]);
+            printf (" 0x%0*llx", static_cast<int> (sizeof (uintxx_t) * 2), (uint64_t) _crc_table[i]);
             w = (w + sizeof (uintxx_t)) & 31;
         }
         printf ("\n};\n\n");

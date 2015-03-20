@@ -65,7 +65,7 @@ struct message_header
     
     static int serialized_size()
     {
-        return (int)(FIELD_OFFSET(message_header, from_address));
+        return static_cast<int>(FIELD_OFFSET(message_header, from_address));
     }
 
     void marshall(utils::binary_writer& writer);
@@ -99,29 +99,29 @@ public:
     utils::binary_reader& reader() { return *_reader; }
     utils::binary_writer& writer() { return *_writer; }
 
-    //
-    // quick read
-    //
-    template<typename T> int read(__out_param T& val) { return _reader->read(val); }
-    int read(__out_param std::string& s) { return _reader->read(s); }
-    int read(char* buffer, int sz) { return _reader->read(buffer, sz); }
-    int read(utils::blob& blob) { return _reader->read(blob); }
-    utils::blob get_input_buffer() const { return _reader->get_buffer(); }
-    utils::blob get_input_remaining_buffer() const { return _reader->get_remaining_buffer(); }
-    bool is_eof() const { return _reader->is_eof(); }
-    int get_remaining_size() const { return _reader->get_remaining_size(); }
+    ////
+    //// quick read
+    ////
+    //template<typename T> int read(__out_param T& val) { return _reader->read(val); }
+    //int read(__out_param std::string& s) { return _reader->read(s); }
+    //int read(char* buffer, int sz) { return _reader->read(buffer, sz); }
+    //int read(utils::blob& blob) { return _reader->read(blob); }
+    //utils::blob get_input_buffer() const { return _reader->get_buffer(); }
+    //utils::blob get_input_remaining_buffer() const { return _reader->get_remaining_buffer(); }
+    //bool is_eof() const { return _reader->is_eof(); }
+    //int get_remaining_size() const { return _reader->get_remaining_size(); }
     
-    //
-    // quick write
-    //
-    uint16_t write_placeholder() { return _writer->write_placeholder(); }
-    template<typename T> void write(const T& val, uint16_t pos = 0xffff) { return _writer->write(val, pos); }
-    void write(const std::string& val, uint16_t pos = 0xffff) { return _writer->write(val, pos); }
-    void write(const char* buffer, int sz, uint16_t pos = 0xffff) { return _writer->write(buffer, sz, pos); }
-    void write(const utils::blob& val, uint16_t pos = 0xffff) { return _writer->write(val, pos); }
-    void get_output_buffers(__out_param std::vector<utils::blob>& buffers) const { return _writer->get_buffers(buffers); }
-    int  get_output_buffer_count() const { return _writer->get_buffer_count(); }
-    utils::blob get_output_buffer() const { return _writer->get_buffer();}
+    ////
+    //// quick write
+    ////
+    //uint16_t write_placeholder() { return _writer->write_placeholder(); }
+    //template<typename T> void write(const T& val, uint16_t pos = 0xffff) { return _writer->write(val, pos); }
+    //void write(const std::string& val, uint16_t pos = 0xffff) { return _writer->write(val, pos); }
+    //void write(const char* buffer, int sz, uint16_t pos = 0xffff) { return _writer->write(buffer, sz, pos); }
+    //void write(const utils::blob& val, uint16_t pos = 0xffff) { return _writer->write(val, pos); }
+    //void get_output_buffers(__out_param std::vector<utils::blob>& buffers) const { return _writer->get_buffers(buffers); }
+    //int  get_output_buffer_count() const { return _writer->get_buffer_count(); }
+    //utils::blob get_output_buffer() const { return _writer->get_buffer();}
     
     //
     // other routines

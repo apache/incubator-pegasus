@@ -42,7 +42,7 @@ static end_point GetNextServer(const end_point& currentServer, const std::vector
 {
     if (currentServer == end_point::INVALID)
     {
-        return servers[env::random32(0, (int)servers.size() * 13) % (int)servers.size()];
+        return servers[env::random32(0, static_cast<int>(servers.size()) * 13) % static_cast<int>(servers.size())];
     }
     else
     {
@@ -54,7 +54,7 @@ static end_point GetNextServer(const end_point& currentServer, const std::vector
         }
         else
         {
-            return servers[env::random32(0, (int)servers.size() * 13) % (int)servers.size()];
+            return servers[env::random32(0, static_cast<int>(servers.size()) * 13) % static_cast<int>(servers.size())];
         }
     }
 }

@@ -62,7 +62,7 @@ end_point load_balancer::FindMinimalLoadMachine(bool primaryOnly)
     {
         if (it->second.IsAlive)
         {
-            stats.push_back(std::make_pair(it->first, (int)(primaryOnly ? it->second.Primaries.size()
+            stats.push_back(std::make_pair(it->first, static_cast<int>(primaryOnly ? it->second.Primaries.size()
                 : it->second.Partitions.size())));
         }
     }
@@ -103,7 +103,7 @@ void load_balancer::RunLB(partition_configuration& pc)
         proposal.type = CT_ASSIGN_PRIMARY;
         if (pc.secondaries.size() > 0)
         {
-            proposal.node = pc.secondaries[env::random32(0, (int)pc.secondaries.size() - 1)];
+            proposal.node = pc.secondaries[env::random32(0, static_cast<int>(pc.secondaries.size()) - 1)];
         }
         else
         {

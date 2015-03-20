@@ -169,7 +169,7 @@ public:
                 if (n - _last_report_ts_ms >= 1000)
                 {
                     std::cout << "throughput = "
-                        << (double)(_recv_bytes_since_last) / 1024.0 / 1024.0 / (((double)(n - _last_report_ts_ms)) / 1000.0)
+                        << static_cast<double>(_recv_bytes_since_last) / 1024.0 / 1024.0 / ((static_cast<double>(n - _last_report_ts_ms)) / 1000.0)
                         << " MB/s" << std::endl;
                     _last_report_ts_ms = n;
                     _recv_bytes_since_last = 0;
@@ -206,7 +206,7 @@ public:
                 if (n - _last_report_ts_ms >= 1000)
                 {
                     std::cout << "throughput = "
-                        << (double)(_recv_bytes_since_last) / 1024.0 / 1024.0 / (((double)(n - _last_report_ts_ms)) / 1000.0)
+                        << static_cast<double>(_recv_bytes_since_last) / 1024.0 / 1024.0 / ((static_cast<double>(n - _last_report_ts_ms)) / 1000.0)
                         << " MB/s" << std::endl;
                     _last_report_ts_ms = n;
                     _recv_bytes_since_last = 0;

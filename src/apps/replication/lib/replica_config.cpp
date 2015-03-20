@@ -39,7 +39,7 @@ void replica::on_config_proposal(configuration_update_request& proposal)
         "%s: on_config_proposal %s for %s:%u", 
         name(),
         enum_to_string(proposal.type),
-        proposal.node.name.c_str(), (int)proposal.node.port
+        proposal.node.name.c_str(), static_cast<int>(proposal.node.port)
         );
 
     if (proposal.config.ballot < get_ballot())
@@ -139,7 +139,7 @@ void replica::upgrade_to_secondary_on_primary(const end_point& node)
     ddebug(
             "%s: upgrade potential secondary %s:%u to secondary",
             name(),
-            node.name.c_str(), (int)node.port
+            node.name.c_str(), static_cast<int>(node.port)
             );
 
     partition_configuration newConfig = _primary_states.membership;

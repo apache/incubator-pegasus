@@ -94,7 +94,7 @@ void replica::init_prepare(mutation_ptr& mu)
     int err = ERR_SUCCESS;
     uint8_t count = 0;
 
-    if ((int)_primary_states.membership.secondaries.size() + 1 < _options.MutationApplyMinReplicaNumber)
+    if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 < _options.MutationApplyMinReplicaNumber)
     {
         err = ERR_NOT_ENOUGH_MEMBER;
         goto ErrOut;
@@ -125,7 +125,7 @@ void replica::init_prepare(mutation_ptr& mu)
         goto ErrOut;
     }
         
-    ddebug( "%s: mutation %s init_prepare with %u client requests", name(), mu->name(), (int)mu->client_requests.size());
+    ddebug( "%s: mutation %s init_prepare with %u client requests", name(), mu->name(), static_cast<int>(mu->client_requests.size()));
 
     //
     // TODO: bounded staleness on secondaries
@@ -204,7 +204,7 @@ void replica::send_prepare_message(const end_point& addr, partition_status statu
     ddebug( 
         "%s: mutation %s send_prepare_message to %s:%u as %s", 
         name(), mu->name(),
-        addr.name.c_str(), (int)addr.port,
+        addr.name.c_str(), static_cast<int>(addr.port),
         enum_to_string(rconfig.status)
         );
 }
@@ -402,7 +402,7 @@ void replica::on_prepare_reply(mutation_ptr& mu, partition_status targetStatus, 
         ddebug( 
             "%s: mutation %s on_prepare_reply from %s:%u", 
             name(), mu->name(),
-            node.name.c_str(), (int)node.port
+            node.name.c_str(), static_cast<int>(node.port)
             );
     }
        

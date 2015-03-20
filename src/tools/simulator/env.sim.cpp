@@ -65,7 +65,7 @@ sim_env_provider::sim_env_provider(env_provider* inner_provider)
     }
     else
     {
-        _seed = (int)get_current_physical_time_ns();
+        _seed = static_cast<int>(get_current_physical_time_ns());
     }
 
     printf("simulation.random_seed.random seed for this round is %d\n", _seed);

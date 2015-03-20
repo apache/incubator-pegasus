@@ -55,9 +55,9 @@ namespace dsn {
                     this_->spec().name,
                     this_->id(),
                     tsk->get_request()->header().from_address.name.c_str(),
-                    (int)tsk->get_request()->header().from_address.port,
+                    static_cast<int>(tsk->get_request()->header().from_address.port),
                     tsk->get_request()->header().to_address.name.c_str(),
-                    (int)tsk->get_request()->header().to_address.port,
+                    static_cast<int>(tsk->get_request()->header().to_address.port),
                     tsk->get_request()->header().rpc_id
                     );
             }
@@ -69,9 +69,9 @@ namespace dsn {
                     this_->spec().name,
                     this_->id(),
                     tsk->get_request()->header().to_address.name.c_str(),
-                    (int)tsk->get_request()->header().to_address.port,
+                    static_cast<int>(tsk->get_request()->header().to_address.port),
                     tsk->get_request()->header().from_address.name.c_str(),
-                    (int)tsk->get_request()->header().from_address.port,
+                    static_cast<int>(tsk->get_request()->header().from_address.port),
                     tsk->get_request()->header().rpc_id
                     );
             }
@@ -136,9 +136,9 @@ namespace dsn {
                 "%s RPC.CALL: %s:%u => %s:%u, rpc_id = %016llx, callback_task = %016llx, timeout = %ums",
                 hdr.rpc_name,
                 hdr.from_address.name.c_str(),
-                (int)hdr.from_address.port,
+                static_cast<int>(hdr.from_address.port),
                 hdr.to_address.name.c_str(),
-                (int)hdr.to_address.port,
+                static_cast<int>(hdr.to_address.port),
                 hdr.rpc_id,
                 callee ? callee->id() : 0,
                 hdr.client.timeout_milliseconds
@@ -151,9 +151,9 @@ namespace dsn {
                 callee->spec().name,
                 callee->id(),
                 callee->get_request()->header().from_address.name.c_str(),
-                (int)callee->get_request()->header().from_address.port,
+                static_cast<int>(callee->get_request()->header().from_address.port),
                 callee->get_request()->header().to_address.name.c_str(),
-                (int)callee->get_request()->header().to_address.port,
+                static_cast<int>(callee->get_request()->header().to_address.port),
                 callee->get_request()->header().rpc_id
                 );
         }
@@ -167,9 +167,9 @@ namespace dsn {
                 "%s RPC.REPLY: %s:%u => %s:%u, rpc_id = %016llx",
                 hdr.rpc_name,
                 hdr.from_address.name.c_str(),
-                (int)hdr.from_address.port,
+                static_cast<int>(hdr.from_address.port),
                 hdr.to_address.name.c_str(),
-                (int)hdr.to_address.port,
+                static_cast<int>(hdr.to_address.port),
                 hdr.rpc_id
                 );
         }
@@ -180,9 +180,9 @@ namespace dsn {
                 resp->spec().name,
                 resp->id(),
                 resp->get_request()->header().to_address.name.c_str(),
-                (int)resp->get_request()->header().to_address.port,
+                static_cast<int>(resp->get_request()->header().to_address.port),
                 resp->get_request()->header().from_address.name.c_str(),
-                (int)resp->get_request()->header().from_address.port,
+                static_cast<int>(resp->get_request()->header().from_address.port),
                 resp->get_request()->header().rpc_id
                 );
         }

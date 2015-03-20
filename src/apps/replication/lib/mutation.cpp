@@ -40,7 +40,7 @@ mutation::~mutation()
 
 void mutation::add_client_request(message_ptr& request)
 {
-    dsn::utils::blob buffer(request->get_input_remaining_buffer());
+    dsn::utils::blob buffer(request->reader().get_remaining_buffer());
     auto buf = buffer.buffer();
     utils::blob bb(buf, static_cast<int>(buffer.data() - buffer.buffer().get()), buffer.length());
 

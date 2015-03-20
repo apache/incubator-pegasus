@@ -117,7 +117,7 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
         ddebug(
             "%s: on_learn %s:%u, learner state is lost due to DDD, with its appCommittedDecree = %llu vs localCommitedDecree %llu",
             name(),
-            request.learner.name.c_str(), (int)request.learner.port,
+            request.learner.name.c_str(), static_cast<int>(request.learner.port),
             request.lastCommittedDecreeInApp,
             last_committed_decree()
             );
@@ -141,7 +141,7 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
     ddebug(
         "%s: on_learn %s:%u with its appCommittedDecree = %llu vs localCommitedDecree %llu",
         name(),
-        request.learner.name.c_str(), (int)request.learner.port,
+        request.learner.name.c_str(), static_cast<int>(request.learner.port),
         request.lastCommittedDecreeInApp,
         last_committed_decree()
         );
@@ -163,7 +163,7 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
                 "%s: on_learn with prepareStartDecree = %llu for %s:%u",
                 name(),
                 last_committed_decree() + 1,
-                request.learner.name.c_str(), (int)request.learner.port
+                request.learner.name.c_str(), static_cast<int>(request.learner.port)
             );
         }
 

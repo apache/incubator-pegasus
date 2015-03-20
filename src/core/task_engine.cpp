@@ -181,7 +181,7 @@ bool task_worker_pool::shared_same_worker_with_current_task(task* tsk) const
             return true;
         else if (_spec.partitioned)
         {
-            int sz = (int)_workers.size();
+            int sz = static_cast<int>(_workers.size());
             return current->hash() % sz == tsk->hash() % sz;
         }
         else

@@ -44,7 +44,7 @@ public:
     int get_id(const char* name) const;    
     const char* get_name(int id) const;
     int register_id(const char* name);
-    int max_value() const { return (int)_names2.size() - 1; }
+    int max_value() const { return static_cast<int>(_names2.size()) - 1; }
 
 private:
     std::map<std::string, int> _names;
@@ -160,7 +160,7 @@ int customized_id_mgr<T>::get_id(const char* name) const
 template<typename T>
 const char* customized_id_mgr<T>::get_name(int id) const
 {
-    if (id < (int)_names2.size())
+    if (id < static_cast<int>(_names2.size()))
         return _names2[id].c_str();
     else
         return "unknown";
@@ -175,7 +175,7 @@ int customized_id_mgr<T>::register_id(const char* name)
         return id;
     }
 
-    int code = (int)_names.size();
+    int code = static_cast<int>(_names.size());
     _names[std::string(name)] = code;
     _names2.push_back(std::string(name));
     return code;

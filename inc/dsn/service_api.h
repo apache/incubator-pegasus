@@ -82,7 +82,7 @@ namespace env
     inline uint64_t now_us() { return now_ns() / 1000; }
     inline uint64_t now_ms() { return now_ns() / 1000000; }
     inline uint32_t random32(uint32_t min, uint32_t max) { return static_cast<uint32_t>(random64(min, max)); }
-    inline double   probability() { return (double)random32(0, 1000000000) / 1000000000.0; }
+    inline double   probability() { return static_cast<double>(random32(0, 1000000000)) / 1000000000.0; }
 }
 
 namespace system

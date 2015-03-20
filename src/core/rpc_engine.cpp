@@ -351,7 +351,7 @@ namespace dsn {
                 "recv unknown message with type %s from %s:%u",
                 msg->header().rpc_name,
                 msg->header().from_address.name.c_str(),
-                (int)msg->header().from_address.port
+                static_cast<int>(msg->header().from_address.port)
                 );
         }
 

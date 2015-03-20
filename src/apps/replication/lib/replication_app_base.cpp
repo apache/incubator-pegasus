@@ -50,7 +50,7 @@ int replication_app_base::WriteInternal(mutation_ptr& mu, bool ackClient)
 void replication_app_base::WriteReplicationResponse(message_ptr& response)
 {
     int err = ERR_SUCCESS;
-    response->write(err);
+    response->writer().write(err);
 }
 
 }} // end namespace

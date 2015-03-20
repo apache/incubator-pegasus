@@ -109,7 +109,7 @@ void replica::on_client_read(const client_read_request& meta, message_ptr& reque
 void replica::response_client_message(message_ptr& request, int error, decree d/* = invalid_decree*/)
 {
     message_ptr resp = request->create_response();
-    resp->write(error);
+    resp->writer().write(error);
 
     rpc_response(resp);
 }

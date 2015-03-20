@@ -65,7 +65,7 @@ namespace dsn {
 //
 //int  BoundedQueueAdmissionController::get_syste_utilization()
 //{
-//    return (int)(100.0 * (double)InQueueTaskCount() / (double)_maxTaskQueueSize);
+//    return static_cast<int>(100.0 * static_cast<double>InQueueTaskCount() / static_cast<double>_maxTaskQueueSize);
 //}
 //
 ////------------------------------ SingleRpcClassResponseTimeAdmissionController ----------------------------------------------------------------
@@ -122,7 +122,7 @@ namespace dsn {
 //
 //int SingleRpcClassResponseTimeAdmissionController::get_syste_utilization()
 //{
-//    return (int)(100.0 * (double)_counter->get_percentile(_percentile) / (double)_latencyThreshold100ns);
+//    return static_cast<int>(100.0 * static_cast<double>_counter->get_percentile(_percentile) / static_cast<double>_latencyThreshold100ns);
 //}
 
 } // end namespace

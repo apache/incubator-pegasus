@@ -40,7 +40,7 @@ namespace dsn {
             virtual void   decrement() { _val--; }
             virtual void   add(uint64_t val) { _val += val; }
             virtual void   set(uint64_t val) { _val = val; } // sample
-            virtual double get_value() { return (double)_val.load(); }
+            virtual double get_value() { return static_cast<double>(_val.load()); }
             virtual double get_percentile(counter_percentile_type type) { return 0.0; }
 
         private:

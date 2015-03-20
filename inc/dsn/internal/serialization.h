@@ -33,11 +33,11 @@
 #define DEFINE_POD_SERIALIZATION(T) \
     inline void marshall(::dsn::utils::binary_writer& writer, const T& val, uint16_t pos = 0xffff)\
     {\
-    writer.write((const char*)&val, (int)sizeof(val), pos); \
+    writer.write((const char*)&val, static_cast<int>(sizeof(val)), pos); \
     }\
     inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param T& val)\
     {\
-    reader.read((char*)&val, (int)sizeof(T)); \
+    reader.read((char*)&val, static_cast<int>(sizeof(T))); \
     }
 
 namespace dsn {
@@ -117,7 +117,7 @@ namespace dsn {
         template<typename T>
         inline void marshall(::dsn::utils::binary_writer& writer, const std::list<T>& val, uint16_t pos = 0xffff)
         {
-            int sz = (int)val.size();
+            int sz = static_cast<int>(val.size());
             marshall(writer, sz, pos);
             for (auto& v : val)
             {
@@ -141,7 +141,7 @@ namespace dsn {
         template<typename T>
         inline void marshall(::dsn::utils::binary_writer& writer, const std::vector<T>& val, uint16_t pos = 0xffff)
         {
-            int sz = (int)val.size();
+            int sz = static_cast<int>(val.size());
             marshall(writer, sz, pos);
             for (auto& v : val)
             {
@@ -165,7 +165,7 @@ namespace dsn {
         template<typename T>
         inline void marshall(::dsn::utils::binary_writer& writer, const std::set<T, std::less<T>, std::allocator<T>>& val, uint16_t pos = 0xffff)
         {
-            int sz = (int)val.size();
+            int sz = static_cast<int>val.size();
             marshall(writer, sz, pos);
             for (auto& v : val)
             {

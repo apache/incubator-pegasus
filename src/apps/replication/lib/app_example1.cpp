@@ -281,7 +281,7 @@ int replication_app_example1::get_learn_state(decree start, const utils::blob& l
 
     dassert (_lastCommittedDecree >= 0, "");
     
-    int count = (int)_store.size();
+    int count = static_cast<int>(_store.size());
     writer.write(count);
 
     for (auto it = _store.begin(); it != _store.end(); it++)
@@ -293,7 +293,7 @@ int replication_app_example1::get_learn_state(decree start, const utils::blob& l
     auto bb = writer.get_buffer();
     auto buf = bb.buffer();
 
-    state.meta = utils::blob(buf, (int)(bb.data() - bb.buffer().get()), bb.length());
+    state.meta = utils::blob(buf, static_cast<int>(bb.data() - bb.buffer().get()), bb.length());
        
 
     //// Test Sample

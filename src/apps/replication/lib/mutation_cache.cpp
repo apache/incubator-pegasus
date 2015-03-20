@@ -51,12 +51,12 @@ int mutation_cache::put(mutation_ptr& mu)
     }
     else if (decree > _endDecree)
     {
-        delta = (int)(decree - _endDecree);
+        delta = static_cast<int>(decree - _endDecree);
         tag = 1;
     }
     else if (decree < _startDecree)
     {
-        delta = (int)(_startDecree - decree);
+        delta = static_cast<int>(_startDecree - decree);
         tag = -1;
     }
 

@@ -88,7 +88,7 @@ int app_client_example1::HandleResponse(rpc_response_task_ptr& reply, std::strin
         int err = reply->error();
         if (err == ERR_SUCCESS)
         {
-            reply->get_response()->read(err);
+            reply->get_response()->reader().read(err);
         }
 
         if (err == ERR_SUCCESS)

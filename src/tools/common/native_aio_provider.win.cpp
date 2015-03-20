@@ -171,7 +171,7 @@ error_code native_win_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool asy
         r = ::WriteFile(aio->file, aio->buffer, aio->buffer_size, NULL, &aio->olp);
         break;
     default:
-        dassert (false, "unknown aio type %u", (int)aio->type);
+        dassert (false, "unknown aio type %u", static_cast<int>(aio->type));
         break;
     }
 

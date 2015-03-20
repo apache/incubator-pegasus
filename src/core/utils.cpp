@@ -45,7 +45,7 @@ void split_args(const char* args, __out_param std::vector<std::string>& sargs, c
             {
                 sargs.push_back(s);
             }
-            lastPos = (int)(pos + 1);
+            lastPos = static_cast<int>(pos + 1);
         }
         else
         {
@@ -77,7 +77,7 @@ void split_args(const char* args, __out_param std::list<std::string>& sargs, cha
                 if (s2.length() > 0)
                     sargs.push_back(s2);
             }
-            lastPos = (int)(pos + 1);
+            lastPos = static_cast<int>(pos + 1);
         }
         else
         {
@@ -153,7 +153,7 @@ int binary_reader::read(__out_param std::string& s)
     }
     else
     {
-        return (int)sizeof(len);
+        return static_cast<int>(sizeof(len));
     }        
 }
 
@@ -165,7 +165,7 @@ int binary_reader::read(blob& blob)
 
     if (len <= get_remaining_size())
     {
-        blob = _blob.range((int)(_ptr - _blob.data()), len);
+        blob = _blob.range(static_cast<int>(_ptr - _blob.data()), len);
         _ptr += len;
         return len + sizeof(len);
     }
@@ -271,7 +271,7 @@ blob binary_writer::get_buffer() const
         blob bb(bptr, _total_size);
         const char* ptr = bb.data();
 
-        for (int i = 0; i < (int)_data.size(); i++)
+        for (int i = 0; i < static_cast<int>(_data.size()); i++)
         {
             memcpy((void*)ptr, (const void*)_data[i].data(), (size_t)_data[i].length());
             ptr += _data[i].length();

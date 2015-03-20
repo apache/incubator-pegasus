@@ -61,7 +61,7 @@ struct GlobalPartitionIDComparor
 
 inline int gpid_to_hash(global_partition_id gpid)
 {
-    return (int)(gpid.tableId ^ gpid.pidx);
+    return static_cast<int>(gpid.tableId ^ gpid.pidx);
 }
 
 typedef std::set<end_point, end_point_comparor> NodeSet;

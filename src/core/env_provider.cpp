@@ -47,7 +47,7 @@ uint64_t env_provider::random64(uint64_t min, uint64_t max)
     }
     else
     {
-        gap = static_cast<uint64_t>(static_cast<double>(97 * gap) * (double)std::rand() / (double)RAND_MAX);
+        gap = static_cast<uint64_t>(static_cast<double>(97 * gap) * static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX));
         gap = gap % (max - min + 1);
         return min + gap;
     }

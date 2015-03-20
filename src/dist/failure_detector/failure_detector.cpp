@@ -124,7 +124,7 @@ void failure_detector::register_master(const end_point& target)
     {
         dinfo(
             "register_rpc_handler master successfully, target machine ip [%u], port[%u]",
-            target.ip, (int)target.port);
+            target.ip, static_cast<int>(target.port));
     }
     else
     {
@@ -132,7 +132,7 @@ void failure_detector::register_master(const end_point& target)
         ret.first->second.rejected = false;
         dinfo(       
             "Master already registered, for target machine: target machine ip [%u], port[%u]",
-            target.ip, (int)target.port);
+            target.ip, static_cast<int>(target.port));
     }
 
     send_beacon(target, now_ms());
@@ -151,8 +151,8 @@ bool failure_detector::switch_master(const end_point& from, const end_point& to)
             {
                 dinfo(       
                     "Master switch, switch master from %s:%u to %s:%u failed as both are already registered",
-                    from.name.c_str(), (int)from.port,
-                    to.name.c_str(), (int)to.port
+                    from.name.c_str(), static_cast<int>(from.port),
+                    to.name.c_str(), static_cast<int>(to.port)
                     );
                 return false;
             }
@@ -164,16 +164,16 @@ bool failure_detector::switch_master(const end_point& from, const end_point& to)
 
             dinfo(       
                 "Master switch, switch master from %s:%u to %s:%u succeeded",
-                from.name.c_str(), (int)from.port,
-                to.name.c_str(), (int)to.port
+                from.name.c_str(), static_cast<int>(from.port),
+                to.name.c_str(), static_cast<int>(to.port)
                 );
         }
         else
         {
             dinfo(       
                 "Master switch, switch master from %s:%u to %s:%u failed as the former has not been registered yet",
-                from.name.c_str(), (int)from.port,
-                to.name.c_str(), (int)to.port
+                from.name.c_str(), static_cast<int>(from.port),
+                to.name.c_str(), static_cast<int>(to.port)
                 );
             return false;
         }
@@ -462,13 +462,13 @@ void failure_detector::register_worker( const end_point& target, bool is_connect
     {
         dinfo(
             "register_rpc_handler worker successfully", "target machine ip [%u], port[%u]",
-            target.ip, (int)target.port);
+            target.ip, static_cast<int>(target.port));
     }
     else
     {
         dinfo(       
             "worker already registered", "for target machine: target machine ip [%u], port[%u]",
-            target.ip, (int)target.port);
+            target.ip, static_cast<int>(target.port));
     }
 }
 
@@ -523,7 +523,7 @@ void failure_detector::send_beacon(const end_point& target, uint64_t time)
         beacon,
         &failure_detector::on_beacon_ack,
         0,
-        (int)_check_interval_milliseconds,
+        static_cast<int>(_check_interval_milliseconds),
         0
         );
 }

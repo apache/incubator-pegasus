@@ -121,7 +121,7 @@ message_ptr replication_app_client_base::create_write_request(int partition_inde
 {
     auto msg = RepClientMessage::CreateClientRequest(RPC_REPLICATION_CLIENT_WRITE);
     msg->Pidx = partition_index;
-    msg->HeaderPlaceholderPos = msg->write_placeholder();
+    msg->HeaderPlaceholderPos = msg->writer().write_placeholder();
     return message_ptr(msg);
 }
 
@@ -135,7 +135,7 @@ message_ptr replication_app_client_base::create_read_request(
     msg->Pidx = partition_index;
     msg->read_semantic = semantic;
     msg->ReadSnapshotDecree = snapshot_decree;
-    msg->HeaderPlaceholderPos = msg->write_placeholder();
+    msg->HeaderPlaceholderPos = msg->writer().write_placeholder();
     return message_ptr(msg);
 }
 
@@ -279,7 +279,7 @@ void replication_app_client_base::_internal_rpc_reply_handler(
     else
     {
         int err2;
-        response->read(err2);
+        response->reader().read(err2);
         if (err2 != 0)
         {
             err = ERR_REPLICATION_FAILURE;
@@ -459,7 +459,7 @@ end_point replication_app_client_base::get_read_address(read_semantic_t semantic
     else
     {
         bool hasPrimary = false;
-        int N = (int)config.secondaries.size();
+        int N = static_cast<int>(config.secondaries.size());
         if (config.primary != dsn::end_point::INVALID)
         {
             N++;

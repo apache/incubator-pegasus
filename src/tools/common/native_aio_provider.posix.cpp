@@ -52,7 +52,7 @@ namespace dsn {
         error_code native_posix_aio_provider::close(handle_t hFile)
         {
             // TODO: handle failure
-            ::close((int)hFile);
+            ::close(static_cast<int>hFile);
             return ERR_SUCCESS;
         }
 
@@ -113,7 +113,7 @@ namespace dsn {
             int r;
 
             aio->this_ = this;
-            aio->cb.aio_fildes = (int)(ssize_t)aio->file;
+            aio->cb.aio_fildes = static_cast<int>(ssize_t)aio->file;
             aio->cb.aio_buf = aio->buffer;
             aio->cb.aio_nbytes = aio->buffer_size;
             aio->cb.aio_offset = aio->file_offset;
@@ -140,7 +140,7 @@ namespace dsn {
                 r = aio_write(&aio->cb);
                 break;
             default:
-                dassert (false, "unknown aio type %u", (int)aio->type);
+                dassert (false, "unknown aio type %u", static_cast<int>aio->type);
                 break;
             }
 

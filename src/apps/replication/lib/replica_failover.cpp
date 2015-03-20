@@ -55,7 +55,7 @@ void replica::handle_remote_failure(partition_status st, const end_point& node, 
         name(),
         error,
         enum_to_string(st),
-        node.name.c_str(), (int)node.port
+        node.name.c_str(), static_cast<int>(node.port)
         );
 
     dassert (status() == PS_PRIMARY, "");

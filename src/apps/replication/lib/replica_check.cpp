@@ -53,7 +53,7 @@ void replica::broadcast_group_check()
     {
         dwarn(
             "%s: %u group check replies are still pending when doing next round check",
-            name(), (int)_primary_states.GroupCheckPendingReplies.size()
+            name(), static_cast<int>(_primary_states.GroupCheckPendingReplies.size())
             );
 
         for (auto it = _primary_states.GroupCheckPendingReplies.begin(); it != _primary_states.GroupCheckPendingReplies.end(); it++)

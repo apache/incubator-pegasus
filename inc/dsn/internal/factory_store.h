@@ -123,7 +123,7 @@ private:
 
         std::vector<std::string> keys;
         singleton_store<std::string, factory_entry>::instance().get_all_keys(keys);
-        printf ("\tthe following %u factories are registered:\n", (int)keys.size());
+        printf ("\tthe following %u factories are registered:\n", static_cast<int>(keys.size()));
         for (auto it = keys.begin(); it != keys.end(); it++)
         {
             factory_entry entry;

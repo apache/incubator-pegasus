@@ -125,10 +125,10 @@ public:
     int read(blob& blob);
 
     blob get_buffer() const { return _blob; }
-    blob get_remaining_buffer() const { return _blob.range((int)(_ptr - _blob.data())); }
+    blob get_remaining_buffer() const { return _blob.range(static_cast<int>(_ptr - _blob.data())); }
     bool is_eof() const { return _ptr >= _blob.data() + _size; }
     int  total_size() const { return _size; }
-    int  get_remaining_size() const { return (int)(_blob.data() + _size - _ptr); }
+    int  get_remaining_size() const { return static_cast<int>(_blob.data() + _size - _ptr); }
 
 private:
     blob        _blob;
@@ -162,7 +162,7 @@ public:
     void write(const blob& val, uint16_t pos = 0xffff);
 
     void get_buffers(__out_param std::vector<blob>& buffers) const;
-    int  get_buffer_count() const { return (int)_buffers.size(); }
+    int  get_buffer_count() const { return static_cast<int>(_buffers.size()); }
     blob get_buffer() const;
     blob get_first_buffer() const;
 
@@ -189,7 +189,7 @@ inline int binary_reader::read_pod(__out_param T& val)
     {
         memcpy((void*)&val, _ptr, sizeof(T));
         _ptr += sizeof(T);
-        return (int)sizeof(T);
+        return static_cast<int>(sizeof(T));
     }
     else
     {
@@ -201,7 +201,7 @@ inline int binary_reader::read_pod(__out_param T& val)
 template<typename T>
 inline void binary_writer::write_pod(const T& val, uint16_t pos)
 {
-    write((char*)&val, (int)sizeof(T), pos);
+    write((char*)&val, static_cast<int>(sizeof(T)), pos);
 }
 
 inline void binary_writer::get_buffers(__out_param std::vector<blob>& buffers) const
@@ -216,7 +216,7 @@ inline blob binary_writer::get_first_buffer() const
 
 inline void binary_writer::write(const std::string& val, uint16_t pos /*= 0xffff*/)
 {
-    int len = (int)val.length();
+    int len = static_cast<int>(val.length());
     write((const char*)&len, sizeof(int), pos);
     if (len > 0) write((const char*)&val[0], len, pos);
 }

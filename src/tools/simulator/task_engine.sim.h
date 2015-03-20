@@ -35,7 +35,7 @@ public:
 
     virtual void    enqueue(task_ptr& task);
     virtual task_ptr dequeue();
-    virtual int      count() const { return (int)_tasks.count(); }
+    virtual int      count() const { return static_cast<int>(_tasks.count()); }
 
 private:
     utils::blocking_priority_queue<task_ptr, TASK_PRIORITY_COUNT> _tasks;

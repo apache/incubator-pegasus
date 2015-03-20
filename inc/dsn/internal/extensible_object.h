@@ -74,7 +74,7 @@ public:
 
     ~extensible_object()
     {
-        int maxId = (int)get_extension_count();
+        int maxId = static_cast<int>(get_extension_count());
 
         for (int i = 0; i < maxId; i++)
         {

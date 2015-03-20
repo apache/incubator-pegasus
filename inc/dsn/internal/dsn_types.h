@@ -36,7 +36,7 @@ __pragma(warning(disable:4127))
 
 #define __thread __declspec(thread)
 #define __selectany __declspec(selectany) extern 
-typedef void* handle_t;
+typedef HANDLE handle_t;
 
 #elif defined(__linux__)
 
