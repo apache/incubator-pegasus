@@ -58,7 +58,7 @@ namespace dsn {
 
             uint32_t read(uint8_t* buf, uint32_t len)
             {
-                int l = _reader.read((char*)buf, static_cast<int>len);
+                int l = _reader.read((char*)buf, static_cast<int>(len));
                 if (l == 0)
                 {
                     throw TTransportException(TTransportException::END_OF_FILE,
@@ -87,7 +87,7 @@ namespace dsn {
 
             void write(const uint8_t* buf, uint32_t len)
             {
-                _writer.write((const char*)buf, static_cast<int>len);
+                _writer.write((const char*)buf, static_cast<int>(len));
             }
 
         private:
@@ -292,7 +292,7 @@ namespace dsn {
 
                 // finalize
                 std::vector<blob> lbuffers;
-                msg->get_output_buffers(lbuffers);
+                msg->writer().get_buffers(lbuffers);
                 if (lbuffers[0].length() == message_header::serialized_size())
                 {
                     lbuffers[0] = writer.get_buffer();
@@ -304,7 +304,7 @@ namespace dsn {
                     buffers.resize(lbuffers.size() + 1);
                     buffers[0] = writer.get_buffer();
 
-                    for (int i = 0; i < static_cast<int>lbuffers.size(); i++)
+                    for (int i = 0; i < static_cast<int>(lbuffers.size()); i++)
                     {
                         if (i == 0)
                         {
