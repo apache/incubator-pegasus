@@ -84,6 +84,17 @@ void simulator::install(service_spec& spec)
             tspec.queue_factory_name = ("dsn::tools::sim_task_queue");
     }
 
+    // safety check
+    for (int i = 0; i <= task_code::max_value(); i++)
+    {
+        auto sp = task_spec::get(i);
+        if (sp->fast_execution_in_network_thread)
+        {
+            printf("Invalid configuration for simulator for task %s\n", sp->name);
+            printf("In simulator, task.fast_execution_in_network_thread must be false\n");
+            exit(0);
+        }
+    }
 }
 
 void simulator::run()

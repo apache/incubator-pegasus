@@ -76,7 +76,7 @@ public:
 
 public:
     tool_app(const char* name, configuration_ptr c);
-    
+   
     virtual void install(service_spec& spec) = 0;
 
     // this routine will be invoked in the main thread as the tool driver (if necessary for the tool, e.g., model checking)
