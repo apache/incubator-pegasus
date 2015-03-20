@@ -165,7 +165,7 @@ namespace dsn {
         template<typename T>
         inline void marshall(::dsn::utils::binary_writer& writer, const std::set<T, std::less<T>, std::allocator<T>>& val, uint16_t pos = 0xffff)
         {
-            int sz = static_cast<int>val.size();
+            int sz = static_cast<int>(val.size());
             marshall(writer, sz, pos);
             for (auto& v : val)
             {
