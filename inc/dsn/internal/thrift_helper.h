@@ -120,7 +120,7 @@ namespace dsn {
         template<typename T>
         uint32_t unmarshall_rpc_args(
             ::apache::thrift::protocol::TProtocol* iprot,
-            __out T& val,
+            __out_param T& val,
             uint32_t(*reader)(::apache::thrift::protocol::TProtocol*, T&)
             )
         {
