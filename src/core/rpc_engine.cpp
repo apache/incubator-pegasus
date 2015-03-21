@@ -116,10 +116,18 @@ namespace dsn {
             //{call, timeout_tsk, client }
         }
 
-        int timeout_milliseconds = hdr.client.timeout_milliseconds > spec->rpc_min_timeout_milliseconds_for_retry ? spec->rpc_retry_interval_milliseconds : hdr.client.timeout_milliseconds;
+        int timeout_milliseconds = get_timeout_ms(hdr.client.timeout_milliseconds, spec);
         timeout_tsk->enqueue(timeout_milliseconds);
         msg->add_elapsed_timeout_milliseconds(timeout_milliseconds);
 
+    }
+
+    int32_t rpc_client_matcher::get_timeout_ms(int32_t timeout_ms, task_spec* spec) const
+    {
+        if (timeout_ms >= spec->rpc_retry_interval_milliseconds * 2)
+            return spec->rpc_retry_interval_milliseconds;
+        else
+            return timeout_ms;
     }
 
     void rpc_client_matcher::on_rpc_timeout(uint64_t key, task_spec* spec)
@@ -138,9 +146,9 @@ namespace dsn {
         }
 
         message_ptr& msg = call->get_request();
-        int remainTime = msg->header().client.timeout_milliseconds - msg->elapsed_timeout_milliseconds();
+        int remain_time_ms = msg->header().client.timeout_milliseconds - msg->elapsed_timeout_milliseconds();
 
-        if (remainTime <= 0)
+        if (remain_time_ms <= 0)
         {
             message_ptr reply(nullptr);
             on_recv_reply(key, reply);
@@ -148,9 +156,9 @@ namespace dsn {
         else
         {
             task_ptr timeout_tsk(new rpc_timeout_task(shared_from_this(), key, spec));
-            int timeout = remainTime > spec->rpc_min_timeout_milliseconds_for_retry ? spec->rpc_retry_interval_milliseconds : remainTime;
-            msg->add_elapsed_timeout_milliseconds(timeout);
-            timeout_tsk->enqueue(timeout);
+            int timeout_ms = get_timeout_ms(remain_time_ms, spec);
+            msg->add_elapsed_timeout_milliseconds(timeout_ms);
+            timeout_tsk->enqueue(timeout_ms);
 
             {
                 utils::auto_lock l(_requests_lock);
@@ -363,22 +371,22 @@ namespace dsn {
         message* msg = request.get();
         
         auto sp = task_spec::get(msg->header().local_rpc_code);
-        if (sp->rpc_call_remote_message_format_id == -1)
+        if (sp->rpc_message_header_format_id == -1)
         {
-            auto idx = network_formats::instance().get_id(sp->rpc_call_remote_message_format.c_str());
+            auto idx = network_formats::instance().get_id(sp->rpc_message_header_format.c_str());
             dassert(idx != -1, "invalid message format specified '%s' for rpc '%s'",
-                sp->rpc_call_remote_message_format.c_str(),
+                sp->rpc_message_header_format.c_str(),
                 sp->name                
                 );
-            sp->rpc_call_remote_message_format_id = idx;
+            sp->rpc_message_header_format_id = idx;
         }
 
         auto& named_nets = _networks[sp->rpc_message_channel];
-        network* net = named_nets[sp->rpc_call_remote_message_format_id];
+        network* net = named_nets[sp->rpc_message_header_format_id];
 
         dassert(nullptr != net, "network not present for rpc channel '%s' with format '%s' used by rpc %s",
             sp->rpc_message_channel.to_string(),
-            sp->rpc_call_remote_message_format.c_str(),
+            sp->rpc_message_header_format.c_str(),
             msg->header().rpc_name
             );
 

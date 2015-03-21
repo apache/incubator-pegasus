@@ -60,7 +60,11 @@ namespace system
         // pause when necessary
         if (config->get_value<bool>("core", "pause_on_start", false))
         {
-            printf("\nPause for debugging ...\n");
+#if defined(_WIN32)
+            printf("\nPause for debugging (pid = %d)...\n", static_cast<int>(::GetCurrentProcessId()));
+#else
+            printf("\nPause for debugging (pid = %d)...\n", static_cast<int>(getpid()));
+#endif
             getchar();
         }
 

@@ -110,18 +110,24 @@ private:
     task_code& operator=(const task_code& source);
 };
 
-#define DEFINE_TASK_CODE(x, priority, pool) __selectany const dsn::task_code x(#x, dsn::TASK_TYPE_COMPUTE, pool, priority, 0);
-#define DEFINE_TASK_CODE_AIO(x, priority, pool) __selectany const dsn::task_code x(#x, dsn::TASK_TYPE_AIO, pool, priority, 0);
+// task code with explicit name
+#define DEFINE_NAMED_TASK_CODE(x, name, priority, pool) __selectany const dsn::task_code x(#name, dsn::TASK_TYPE_COMPUTE, pool, priority, 0);
+#define DEFINE_NAMED_TASK_CODE_AIO(x, name, priority, pool) __selectany const dsn::task_code x(#name, dsn::TASK_TYPE_AIO, pool, priority, 0);
 
 // RPC between client and server, usually use different pools for server and client callbacks
-#define DEFINE_TASK_CODE_RPC(x, priority, pool) \
-    __selectany const dsn::task_code x##_ACK(#x"_ACK", dsn::TASK_TYPE_RPC_RESPONSE, pool, priority, 0); \
-    __selectany const dsn::task_code x(#x, dsn::TASK_TYPE_RPC_REQUEST, pool, priority, x##_ACK);
+#define DEFINE_NAMED_TASK_CODE_RPC(x, name, priority, pool) \
+    __selectany const dsn::task_code x##_ACK(#name"_ACK", dsn::TASK_TYPE_RPC_RESPONSE, pool, priority, 0); \
+    __selectany const dsn::task_code x(#name, dsn::TASK_TYPE_RPC_REQUEST, pool, priority, x##_ACK);
 
-#define DEFINE_TASK_CODE_RPC_PRIVATE(x, priority, pool) \
-    static const dsn::task_code x##_ACK(#x"_ACK", dsn::TASK_TYPE_RPC_RESPONSE, pool, priority, 0); \
-    static const dsn::task_code x(#x, dsn::TASK_TYPE_RPC_REQUEST, pool, priority, x##_ACK);
+#define DEFINE_NAMED_TASK_CODE_RPC_PRIVATE(x, name, priority, pool) \
+    static const dsn::task_code x##_ACK(#name"_ACK", dsn::TASK_TYPE_RPC_RESPONSE, pool, priority, 0); \
+    static const dsn::task_code x(#name, dsn::TASK_TYPE_RPC_REQUEST, pool, priority, x##_ACK);
 
+// auto name version
+#define DEFINE_TASK_CODE(x, priority, pool) DEFINE_NAMED_TASK_CODE(x, x, priority, pool)
+#define DEFINE_TASK_CODE_AIO(x, priority, pool) DEFINE_NAMED_TASK_CODE_AIO(x, x, priority, pool)
+#define DEFINE_TASK_CODE_RPC(x, priority, pool) DEFINE_NAMED_TASK_CODE_RPC(x, x, priority, pool)
+#define DEFINE_TASK_CODE_RPC_PRIVATE(x, priority, pool) DEFINE_NAMED_TASK_CODE_RPC_PRIVATE(x, x, priority, pool)
 
 DEFINE_TASK_CODE(TASK_CODE_INVALID, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
@@ -152,14 +158,12 @@ public:
     threadpool_code        pool_code; 
     bool                   allow_inline; // allow task executed in other thread pools or tasks
     bool                   fast_execution_in_network_thread;
-    std::string            rpc_call_remote_message_format;
+    std::string            rpc_message_header_format;
 
     task_rejection_handler rejection_handler;
     rpc_channel            rpc_message_channel;
     int32_t                rpc_timeout_milliseconds;
     int32_t                rpc_retry_interval_milliseconds;
-    int32_t                rpc_min_timeout_milliseconds_for_retry;
-    int32_t                async_rpc_max_send_time_milliseconds;
 
     // COMPUTE
     join_point<void, task*, task*>               on_task_enqueue;    
@@ -199,7 +203,7 @@ public:
 
 private:
     friend class rpc_engine;
-    int rpc_call_remote_message_format_id;
+    int rpc_message_header_format_id;
 };
 
 } // end namespace

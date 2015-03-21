@@ -39,6 +39,7 @@ public:
 private:
     friend class rpc_timeout_task;
     void on_rpc_timeout(uint64_t key, task_spec* spec);
+    int32_t get_timeout_ms(int32_t timeout_ms, task_spec* spec) const;
 
 private:
     struct match_entry
@@ -84,7 +85,7 @@ public:
 private:
     friend class rpc_server_session;    
     void on_recv_request(message_ptr& msg, int delay_handling_milliseconds = 0);
-        
+            
 private:
     configuration_ptr                     _config;    
     service_node                          *_node;

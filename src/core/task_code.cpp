@@ -62,7 +62,7 @@ task_spec::task_spec(int code, const char* name, task_type type, threadpool_code
     on_rpc_reply((std::string(name) + std::string(".rpc.reply")).c_str()), 
     on_rpc_response_enqueue((std::string(name) + std::string(".rpc.response.enqueue")).c_str()),
     rpc_message_channel(RPC_CHANNEL_TCP),
-    rpc_call_remote_message_format_id(-1)
+    rpc_message_header_format_id(-1)
 {
     dassert (
         strlen(name) <= MAX_TASK_CODE_NAME_LENGTH, 
@@ -73,12 +73,10 @@ task_spec::task_spec(int code, const char* name, task_type type, threadpool_code
     rejection_handler = nullptr;
 
     // TODO: config for following values
-    rpc_call_remote_message_format = "dsn";
+    rpc_message_header_format = "dsn";
     rpc_message_channel = RPC_CHANNEL_TCP;
-    rpc_timeout_milliseconds = 3600 * 1000; // 1 hr
+    rpc_timeout_milliseconds = 60 * 1000; // 1 min
     rpc_retry_interval_milliseconds = 3000;
-    rpc_min_timeout_milliseconds_for_retry = 4000;
-    async_rpc_max_send_time_milliseconds = 5000;    
 }
 
 bool task_spec::init(configuration_ptr config)
@@ -95,16 +93,13 @@ bool task_spec::init(configuration_ptr config)
     is_profile = true
     */
 
-    task_spec defaultSpec(0, "placeholder", TASK_TYPE_COMPUTE, THREAD_POOL_DEFAULT, 0, TASK_PRIORITY_COMMON);
-    defaultSpec.priority = enum_from_string(config->get_string_value("task.default", "priority", "TASK_PRIORITY_COMMON").c_str(), TASK_PRIORITY_INVALID);
-    if (defaultSpec.priority == TASK_PRIORITY_INVALID)
+    task_spec default_spec(0, "placeholder", TASK_TYPE_COMPUTE, THREAD_POOL_DEFAULT, 0, TASK_PRIORITY_COMMON);
+    default_spec.priority = enum_from_string(config->get_string_value("task.default", "priority", "TASK_PRIORITY_COMMON").c_str(), TASK_PRIORITY_INVALID);
+    if (default_spec.priority == TASK_PRIORITY_INVALID)
     {
         derror("invalid task priority in [task.default]");
         return false;
     }
-
-    defaultSpec.allow_inline = config->get_value<bool>("task.default", "allow_inline", false);
-    defaultSpec.fast_execution_in_network_thread = config->get_value<bool>("task.default", "fast_execution_in_network_thread", false);
 
     auto cn = config->get_string_value("task.default", "rpc_message_channel", RPC_CHANNEL_TCP.to_string());
     if (!rpc_channel::is_exist(cn.c_str()))
@@ -112,9 +107,14 @@ bool task_spec::init(configuration_ptr config)
         derror("invalid task rpc_message_channel in [task.default]");
         return false;
     }
-    defaultSpec.rpc_message_channel = rpc_channel::from_string(cn.c_str(), RPC_CHANNEL_TCP);    
-    defaultSpec.rpc_timeout_milliseconds = config->get_value<int>("task.default", "rpc_timeout_milliseconds", defaultSpec.rpc_timeout_milliseconds);
-        
+
+    default_spec.allow_inline = config->get_value<bool>("task.default", "allow_inline", false);
+    default_spec.fast_execution_in_network_thread = config->get_value<bool>("task.default", "fast_execution_in_network_thread", false);    
+    default_spec.rpc_message_channel = rpc_channel::from_string(cn.c_str(), RPC_CHANNEL_TCP);        
+    default_spec.rpc_message_header_format = config->get_string_value("task.default", "rpc_message_header_format", "dsn");
+    default_spec.rpc_timeout_milliseconds = config->get_value<int>("task.default", "rpc_timeout_milliseconds", default_spec.rpc_timeout_milliseconds);
+    default_spec.rpc_retry_interval_milliseconds = config->get_value<int>("task.default", "rpc_retry_interval_milliseconds", default_spec.rpc_retry_interval_milliseconds);
+    
     for (int code = 0; code <= task_code::max_value(); code++)
     {
         if (code == TASK_CODE_INVALID)
@@ -133,8 +133,6 @@ bool task_spec::init(configuration_ptr config)
                 return false;
             }
 
-            spec->pool_code.reset(pool);
-
             auto pri = enum_from_string(config->get_string_value(section_name.c_str(), "priority", enum_to_string(spec->priority)).c_str(), TASK_PRIORITY_INVALID);
             if (pri == TASK_PRIORITY_INVALID)
             {
@@ -142,32 +140,40 @@ bool task_spec::init(configuration_ptr config)
                 return false;
             }
 
-            spec->priority = pri;                        
-            spec->allow_inline = config->get_value<bool>(section_name.c_str(), "allow_inline", defaultSpec.allow_inline);
-            spec->fast_execution_in_network_thread = 
-                ((spec->type == TASK_TYPE_RPC_RESPONSE || spec->type == TASK_TYPE_RPC_REQUEST)
-                && config->get_value<bool>(section_name.c_str(), "fast_execution_in_network_thread", defaultSpec.fast_execution_in_network_thread));
-            spec->rpc_timeout_milliseconds = config->get_value<int>(section_name.c_str(), "rpc_timeout_milliseconds", defaultSpec.rpc_timeout_milliseconds);
-
-            auto cn = config->get_string_value(section_name.c_str(), "rpc_message_channel", defaultSpec.rpc_message_channel.to_string());
+            auto cn = config->get_string_value(section_name.c_str(), "rpc_message_channel", default_spec.rpc_message_channel.to_string());
             if (!rpc_channel::is_exist(cn.c_str()))
             {
                 derror("invalid task rpc_message_channel in [%s]", section_name.c_str());
                 return false;
             }
 
+            spec->pool_code.reset(pool);
+            spec->priority = pri;                        
+            spec->allow_inline = (spec->type != TASK_TYPE_RPC_RESPONSE
+                && spec->type != TASK_TYPE_RPC_REQUEST
+                && config->get_value<bool>(section_name.c_str(), "allow_inline", default_spec.allow_inline));
+            spec->fast_execution_in_network_thread = 
+                ((spec->type == TASK_TYPE_RPC_RESPONSE || spec->type == TASK_TYPE_RPC_REQUEST)
+                && config->get_value<bool>(section_name.c_str(), "fast_execution_in_network_thread", default_spec.fast_execution_in_network_thread));
             spec->rpc_message_channel = rpc_channel::from_string(cn.c_str(), RPC_CHANNEL_TCP);
+            spec->rpc_message_header_format = config->get_string_value(section_name.c_str(), "rpc_message_header_format", default_spec.rpc_message_header_format.c_str());
+            spec->rpc_timeout_milliseconds = config->get_value<int>(section_name.c_str(), "rpc_timeout_milliseconds", default_spec.rpc_timeout_milliseconds);
+            spec->rpc_retry_interval_milliseconds = config->get_value<int>(section_name.c_str(), "rpc_retry_interval_milliseconds", default_spec.rpc_retry_interval_milliseconds);
         }
         else
         {
+            spec->priority = default_spec.priority;
             spec->allow_inline = (spec->type != TASK_TYPE_RPC_RESPONSE 
                 && spec->type != TASK_TYPE_RPC_REQUEST
-                && defaultSpec.allow_inline
+                && default_spec.allow_inline
                 );
             spec->fast_execution_in_network_thread =
                 ((spec->type == TASK_TYPE_RPC_RESPONSE || spec->type == TASK_TYPE_RPC_REQUEST)
-                && defaultSpec.fast_execution_in_network_thread);
-            spec->rpc_message_channel = defaultSpec.rpc_message_channel;
+                && default_spec.fast_execution_in_network_thread);
+            spec->rpc_message_channel = default_spec.rpc_message_channel;
+            spec->rpc_message_header_format = default_spec.rpc_message_header_format;
+            spec->rpc_timeout_milliseconds = default_spec.rpc_timeout_milliseconds;
+            spec->rpc_retry_interval_milliseconds = default_spec.rpc_retry_interval_milliseconds;
         }
     }
 

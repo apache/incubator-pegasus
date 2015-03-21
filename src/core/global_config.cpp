@@ -86,28 +86,28 @@ bool threadpool_spec::init(configuration_ptr& config, __out_param std::vector<th
     admission_controller_arguments = xxx
     */
 
-    threadpool_spec defaultSpec("placeholder");
-    defaultSpec.worker_priority = enum_from_string(config->get_string_value("threadpool.default", "worker_priority", "THREAD_xPRIORITY_NORMAL").c_str(), THREAD_xPRIORITY_INVALID);
-    if (defaultSpec.worker_priority == THREAD_xPRIORITY_INVALID)
+    threadpool_spec default_spec("placeholder");
+    default_spec.worker_priority = enum_from_string(config->get_string_value("threadpool.default", "worker_priority", "THREAD_xPRIORITY_NORMAL").c_str(), THREAD_xPRIORITY_INVALID);
+    if (default_spec.worker_priority == THREAD_xPRIORITY_INVALID)
     {
         dlog(log_level_ERROR, __TITLE__,  "invalid worker priority in [threadpool.default]");
         return false;
     }
-    defaultSpec.worker_share_core = config->get_value<bool>("threadpool.default", "worker_share_core", true);
-    defaultSpec.worker_affinity_mask = static_cast<uint64_t>(config->get_value<int64_t>("threadpool.default", "worker_affinity_mask", 0));
-    if (false == defaultSpec.worker_share_core && 0 == defaultSpec.worker_affinity_mask)
+    default_spec.worker_share_core = config->get_value<bool>("threadpool.default", "worker_share_core", true);
+    default_spec.worker_affinity_mask = static_cast<uint64_t>(config->get_value<int64_t>("threadpool.default", "worker_affinity_mask", 0));
+    if (false == default_spec.worker_share_core && 0 == default_spec.worker_affinity_mask)
     {
-        defaultSpec.worker_affinity_mask = (1 << std::thread::hardware_concurrency()) - 1;
+        default_spec.worker_affinity_mask = (1 << std::thread::hardware_concurrency()) - 1;
     }
     
-    defaultSpec.run = false;
-    defaultSpec.worker_count = config->get_value<int>("threadpool.default", "worker_count", 1);
-    defaultSpec.max_input_queue_length = config->get_value<int>("threadpool.default", "max_input_queue_length", 10000);
-    defaultSpec.partitioned = config->get_value<bool>("threadpool.default", "partitioned", false);
-    defaultSpec.queue_aspects = config->get_string_value_list("threadpool.default", "queue_aspects", ',');
-    defaultSpec.worker_aspects = config->get_string_value_list("threadpool.default", "worker_aspects", ',');
-    defaultSpec.admission_controller_factory_name = config->get_string_value("threadpool.default", "admission_controller_factory_name", "");
-    defaultSpec.admission_controller_arguments = config->get_string_value("threadpool.default", "admission_controller_arguments", "");
+    default_spec.run = false;
+    default_spec.worker_count = config->get_value<int>("threadpool.default", "worker_count", 1);
+    default_spec.max_input_queue_length = config->get_value<int>("threadpool.default", "max_input_queue_length", 10000);
+    default_spec.partitioned = config->get_value<bool>("threadpool.default", "partitioned", false);
+    default_spec.queue_aspects = config->get_string_value_list("threadpool.default", "queue_aspects", ',');
+    default_spec.worker_aspects = config->get_string_value_list("threadpool.default", "worker_aspects", ',');
+    default_spec.admission_controller_factory_name = config->get_string_value("threadpool.default", "admission_controller_factory_name", "");
+    default_spec.admission_controller_arguments = config->get_string_value("threadpool.default", "admission_controller_arguments", "");
     
     for (int code = 0; code <= threadpool_code::max_value(); code++)
     {
@@ -122,9 +122,9 @@ bool threadpool_spec::init(configuration_ptr& config, __out_param std::vector<th
         {
             spec.name = config->get_string_value(section_name.c_str(), "name", threadpool_code::to_string(code));
             spec.run = config->get_value<bool>(section_name.c_str(), "run", true);
-            spec.worker_count = config->get_value<int>(section_name.c_str(), "worker_count", defaultSpec.worker_count);
-            spec.max_input_queue_length = config->get_value<int>(section_name.c_str(), "max_input_queue_length", defaultSpec.max_input_queue_length);
-            spec.partitioned = config->get_value<bool>(section_name.c_str(), "partitioned", defaultSpec.partitioned);
+            spec.worker_count = config->get_value<int>(section_name.c_str(), "worker_count", default_spec.worker_count);
+            spec.max_input_queue_length = config->get_value<int>(section_name.c_str(), "max_input_queue_length", default_spec.max_input_queue_length);
+            spec.partitioned = config->get_value<bool>(section_name.c_str(), "partitioned", default_spec.partitioned);
             spec.queue_aspects = config->get_string_value_list(section_name.c_str(), "queue_aspects", ',');
             spec.worker_priority = enum_from_string(config->get_string_value(section_name.c_str(), "worker_priority", "THREAD_xPRIORITY_NORMAL").c_str(), THREAD_xPRIORITY_INVALID);
             
@@ -137,17 +137,17 @@ bool threadpool_spec::init(configuration_ptr& config, __out_param std::vector<th
             
             if (spec.queue_aspects.size() == 0)
             {
-                spec.queue_aspects = defaultSpec.queue_aspects;
+                spec.queue_aspects = default_spec.queue_aspects;
             }
 
             spec.worker_aspects = config->get_string_value_list(section_name.c_str(), "worker_aspects", ',');
             if (spec.worker_aspects.size() == 0)
             {
-                spec.worker_aspects = defaultSpec.worker_aspects;
+                spec.worker_aspects = default_spec.worker_aspects;
             }
 
-            spec.admission_controller_factory_name = config->get_string_value(section_name.c_str(), "admission_controller_factory_name", defaultSpec.admission_controller_factory_name.c_str());
-            spec.admission_controller_arguments = config->get_string_value(section_name.c_str(), "admission_controller_arguments", defaultSpec.admission_controller_arguments.c_str());
+            spec.admission_controller_factory_name = config->get_string_value(section_name.c_str(), "admission_controller_factory_name", default_spec.admission_controller_factory_name.c_str());
+            spec.admission_controller_arguments = config->get_string_value(section_name.c_str(), "admission_controller_arguments", default_spec.admission_controller_arguments.c_str());
         }
 
         if (spec.run)
