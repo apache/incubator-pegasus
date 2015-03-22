@@ -146,7 +146,7 @@ class rpc_response_task : public task
 public:
     rpc_response_task(message_ptr& request, int hash = 0);
 
-    virtual void on_response(error_code err, message_ptr& request, message_ptr& response) = 0;
+    virtual void on_response(error_code err, message_ptr& request, message_ptr& response) {}
 
     void             enqueue(error_code err, message_ptr& reply, int delay_milliseconds = 0);
     message_ptr&      get_request() { return _request; }

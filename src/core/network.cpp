@@ -123,6 +123,7 @@ namespace dsn {
     {
         rpc_client_session_ptr client = nullptr;
         end_point& to = request->header().to_address;
+        bool new_client = false;
 
         {
             utils::auto_read_lock l(_clients_lock);
@@ -145,12 +146,15 @@ namespace dsn {
             {
                 client = create_client_session(to);
                 _clients.insert(client_sessions::value_type(to, client));
-
-                // init connection
-                client->connect();
+                new_client = true;
             }
         }
 
+        // init connection if necessary
+        if (new_client) 
+            client->connect();
+
+        // rpc call
         client->call(request, call);
     }
 
