@@ -34,11 +34,87 @@ using namespace dsn::tools;
 
 namespace dsn { namespace service {
 
+    static tool_app* s_tool = nullptr;
+    static service_apps* s_apps = nullptr;
+
+    class system_runner
+    {
+    public:
+        static bool run(const char* config_file)
+        {
+            configuration_ptr config(new configuration(config_file));
+            service_spec spec;
+            if (!spec.init(config))
+            {
+                printf("error in config file %s, exit ...\n", config_file);
+                return false;
+            }
+
+            // pause when necessary
+            if (config->get_value<bool>("core", "pause_on_start", false))
+            {
+#if defined(_WIN32)
+                printf("\nPause for debugging (pid = %d)...\n", static_cast<int>(::GetCurrentProcessId()));
+#else
+                printf("\nPause for debugging (pid = %d)...\n", static_cast<int>(getpid()));
+#endif
+                getchar();
+            }
+
+
+            // init tools
+            s_tool = utils::factory_store<tool_app>::create(spec.tool.c_str(), 0, spec.tool.c_str(), config);
+            s_tool->install(spec);
+
+            // prepare minimum necessary
+            service_engine::instance().init_before_toollets(spec);
+
+            // init toollets
+            for (auto it = spec.toollets.begin(); it != spec.toollets.end(); it++)
+            {
+                auto tlet = dsn::tools::internal_use_only::get_toollet(it->c_str(), 0, config);
+                dassert(tlet, "toolet not found");
+                tlet->install(spec);
+            }
+
+            // init provider specific system inits
+            dsn::tools::syste_init.execute(config_file);
+
+            // TODO: register syste_exit execution
+
+            // init runtime
+            service_engine::instance().init_after_toollets();
+
+            // init apps
+            for (auto it = spec.app_specs.begin(); it != spec.app_specs.end(); it++)
+            {
+                if (it->run)
+                {
+                    service_app* app = utils::factory_store<service_app>::create(it->type.c_str(), 0, &(*it), config);
+                    dassert(app != nullptr, "Cannot create service app with type name '%s'", it->type.c_str());
+                    service_apps::instance().add(app);
+                }
+            }
+
+            s_apps = &service_apps::instance();
+
+            auto apps = service_apps::instance().get_all_apps();
+            for (auto it = apps.begin(); it != apps.end(); it++)
+            {
+                service_app* app = it->second;
+                auto node = service_engine::instance().start_node(app->address().port);
+                app->set_service_node(node);
+                app->set_address(node->rpc()->address());
+            }
+
+            // start the tool
+            s_tool->run();
+            return true;
+        }
+    };
+
 namespace system
 {
-    static tool_app* s_currentTool = nullptr;
-    static service_apps* s_allApps = nullptr;
-    
     namespace internal_use_only 
     {
         bool register_service(const char* name, service_app_factory factory)
@@ -49,74 +125,7 @@ namespace system
     
     bool run(const char* config_file)
     {
-        configuration_ptr config(new configuration(config_file));
-        service_spec spec;
-        if (!spec.init(config))
-        {
-            printf("error in config file %s, exit ...\n", config_file);
-            return false;
-        }
-
-        // pause when necessary
-        if (config->get_value<bool>("core", "pause_on_start", false))
-        {
-#if defined(_WIN32)
-            printf("\nPause for debugging (pid = %d)...\n", static_cast<int>(::GetCurrentProcessId()));
-#else
-            printf("\nPause for debugging (pid = %d)...\n", static_cast<int>(getpid()));
-#endif
-            getchar();
-        }
-
-
-        // init tools
-        s_currentTool = utils::factory_store<tool_app>::create(spec.tool.c_str(), 0, spec.tool.c_str(), config);
-        s_currentTool->install(spec);
-
-        // prepare minimum necessary
-        service_engine::instance().init_before_toollets(spec);
-
-        // init toollets
-        for (auto it = spec.toollets.begin(); it != spec.toollets.end(); it++)
-        {
-            auto tlet = dsn::tools::internal_use_only::get_toollet(it->c_str(), 0, config);
-            dassert (tlet, "toolet not found");
-            tlet->install(spec);
-        }
-
-        // init provider specific system inits
-        dsn::tools::syste_init.execute(config_file);
-
-        // TODO: register syste_exit execution
-
-        // init runtime
-        service_engine::instance().init_after_toollets();
-        
-        // init apps
-        for (auto it = spec.app_specs.begin(); it != spec.app_specs.end(); it++)
-        {
-            if (it->run)
-            {
-                service_app* app = utils::factory_store<service_app>::create(it->type.c_str(), 0, &(*it), config);
-                dassert (app != nullptr, "Cannot create service app with type name '%s'", it->type.c_str());
-                service_apps::instance().add(app);
-            }
-        }
-
-        s_allApps = &service_apps::instance();
-
-        auto apps = service_apps::instance().get_all_apps();
-        for (auto it = apps.begin(); it != apps.end(); it++)
-        {
-            service_app* app = it->second;
-            auto node = service_engine::instance().start_node(app->address().port);
-            app->set_service_node(node);
-            app->set_address(node->rpc()->address());
-        }
-
-        // start the tool
-        s_currentTool->run();
-        return true;
+        return ::dsn::service::system_runner::run(config_file);
     }
 }
 

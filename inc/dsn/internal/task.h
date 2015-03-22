@@ -130,7 +130,7 @@ public:
 
 struct rpc_handler_info
 {
-    task_code    code;
+    task_code   code;
     std::string name;
     rpc_server_handler  *handler;
     end_point service_address;
@@ -170,18 +170,6 @@ enum aio_type
 {
     AIO_Read,
     AIO_Write
-};
-
-DEFINE_CUSTOMIZED_ID_TYPE(AioCtrlTag)
-DEFINE_CUSTOMIZED_ID(AioCtrlTag, AIO_TAG_INVALID)
-DEFINE_CUSTOMIZED_ID(AioCtrlTag, AIO_TAG_WINAPI)
-
-struct aio_control_data
-{
-    AioCtrlTag type;
-    char       *data;
-
-    aio_control_data() : type(AIO_TAG_INVALID) {}
 };
 
 class disk_engine;

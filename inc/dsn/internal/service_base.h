@@ -35,7 +35,7 @@ namespace dsn {
     typedef std::function<void(error_code, message_ptr&, message_ptr&)> rpc_reply_handler;
     typedef std::function<void(error_code, uint32_t)> aio_handler;
 
-    namespace service {       
+    namespace service {
         
         //
         // service_base is the base class for RPC service and client
@@ -203,7 +203,7 @@ namespace dsn {
 
         private:
             std::string                    _name;
-            std::map<uint64_t, task*> _outstanding_tasks;
+            std::map<uint64_t, task*>      _outstanding_tasks;
             std::mutex                     _outstanding_tasks_lock;
             std::set<task_code>            _events;
             std::thread::id                _access_thread_id;

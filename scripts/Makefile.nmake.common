@@ -1,5 +1,5 @@
-ROOT = e:\rdsn
-#ROOT = c:\projects\rdsn
+#ROOT = e:\rdsn
+ROOT = c:\projects\rdsn
 
 BOOST_INC=$(ROOT)/external
 rDSN_INC=$(ROOT)/inc

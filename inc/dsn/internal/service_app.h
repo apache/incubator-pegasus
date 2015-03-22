@@ -54,20 +54,24 @@ public:
     configuration_ptr config() { return _config; }
     const std::string& name() const { return _spec.name; }
     int arg_count() const { return static_cast<int>(_args.size()); }
-    char** args() const { return (char**)&_argsPtr[0]; }
+    char** args() const { return (char**)&_args_ptr[0]; }
     const end_point& address() const { return _address; }
     service_node* svc_node() const { return _svc_node; }
+
+private:
+    friend class system_runner;
+
     void set_address(const end_point& addr);
     void set_service_node(service_node* node) { _svc_node = node; }
         
 private:    
     std::vector<std::string> _args;
-    std::vector<char*>       _argsPtr;
-    end_point                 _address;
-    service_node*             _svc_node;
+    std::vector<char*>       _args_ptr;
+    end_point                _address;
+    service_node*            _svc_node;
 
-    service_app_spec           _spec;
-    configuration_ptr         _config;
+    service_app_spec         _spec;
+    configuration_ptr        _config;
 };
 
 typedef service_app* (*service_app_factory)(service_app_spec*, configuration_ptr);

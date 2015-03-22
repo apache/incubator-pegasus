@@ -31,5 +31,5 @@ service counter
     i32 add(1:count_op op);
     i32 read(1:string name);
 	double any(1:count_bop op);
-	i32 any2(1:count_mop op);
+	void save(1:count_mop op);
 }

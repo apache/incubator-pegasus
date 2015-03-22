@@ -369,6 +369,7 @@ namespace dsn {
                 }
                 catch (TTransportException& ex)
                 {
+                    ex;
                     return nullptr;
                 }
             }

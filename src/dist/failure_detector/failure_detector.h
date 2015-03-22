@@ -115,7 +115,7 @@ public:
 
     int  stop();
 
-    void register_master( const end_point& target);
+    void register_master(const end_point& target);
 
     bool switch_master(const end_point& from, const end_point& to);
 

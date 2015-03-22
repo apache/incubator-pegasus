@@ -35,7 +35,7 @@ service_app::service_app(service_app_spec* s, configuration_ptr c)
     utils::split_args(_spec.arguments.c_str(), args);
 
     int argc = static_cast<int>(args.size()) + 1;
-    _argsPtr.resize(argc);
+    _args_ptr.resize(argc);
     _args.resize(argc);
     for (int i = 0; i < argc; i++)
     {
@@ -48,7 +48,7 @@ service_app::service_app(service_app_spec* s, configuration_ptr c)
             _args[i] = args[i-1];
         }
 
-        _argsPtr[i] = ((char*)_args[i].c_str());
+        _args_ptr[i] = ((char*)_args[i].c_str());
     }
 
     _address.port = (uint16_t)_spec.port;
