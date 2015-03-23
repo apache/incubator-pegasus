@@ -219,7 +219,7 @@ namespace dsn {
                 message_ptr msg = message::create_request(code, timeout_milliseconds, request_hash);
                 marshall(msg->writer(), *req);
 
-                rpc_response_task_ptr resp_task(new internal_use_only::service_rpc_response_task2<T, TRequest, TResponse>(
+                rpc_response_task_ptr resp_task(new internal_use_only::service_rpc_response_task2<TRequest, TResponse>(
                     context,
                     req,
                     callback,
@@ -246,7 +246,7 @@ namespace dsn {
                 message_ptr msg = message::create_request(code, timeout_milliseconds, request_hash);
                 marshall(msg->writer(), req);
 
-                rpc_response_task_ptr resp_task(new internal_use_only::service_rpc_response_task3<T, TRequest, TResponse>(
+                rpc_response_task_ptr resp_task(new internal_use_only::service_rpc_response_task3<TRequest, TResponse>(
                     context,
                     callback,
                     msg,
