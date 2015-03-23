@@ -31,8 +31,6 @@ namespace dsn {
 
         namespace tasking
         {
-            typedef std::function<void()> task_handler;
-
             task_ptr enqueue(
                 task_code evt,
                 servicelet *context,
@@ -42,7 +40,7 @@ namespace dsn {
                 int timer_interval_milliseconds = 0
                 );
 
-            template<typename T>
+            template<typename T> // where T : public virtual servicelet
             inline task_ptr enqueue(
                 task_code evt,
                 T* context,
@@ -55,7 +53,7 @@ namespace dsn {
                 task_handler h = std::bind(callback, context);
                 return enqueue(
                     evt,
-                    dynamic_cast<servicelet*>(context),
+                    context,
                     h,
                     hash,
                     delay_milliseconds,
@@ -140,8 +138,6 @@ namespace dsn {
 
         namespace file
         {
-            typedef std::function<void(error_code, uint32_t)> aio_handler;
-
             aio_task_ptr read(
                 handle_t hFile,
                 char* buffer,
@@ -177,7 +173,7 @@ namespace dsn {
                 )
             {
                 aio_handler h = std::bind(callback, context, std::placeholders::_1, std::placeholders::_2);
-                return read(hFile, buffer, count, offset, callback_code, dynamic_cast<servicelet*>(context), h, hash);
+                return read(hFile, buffer, count, offset, callback_code, context, h, hash);
             }
 
             template<typename T>
@@ -193,7 +189,7 @@ namespace dsn {
                 )
             {
                 aio_handler h = std::bind(callback, context, std::placeholders::_1, std::placeholders::_2);
-                return write(hFile, buffer, count, offset, callback_code, dynamic_cast<servicelet*>(context), h, hash);
+                return write(hFile, buffer, count, offset, callback_code, context, h, hash);
             }
 
             aio_task_ptr copy_remote_files(

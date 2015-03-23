@@ -38,7 +38,7 @@ namespace dsn {
         
         //
         // servicelet is the base class for RPC service and client
-        // there can be multiple service_bases in the system, mostly
+        // there can be multiple servicelet in the system, mostly
         // defined during initialization in main
         //
         class servicelet
