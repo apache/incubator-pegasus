@@ -23,7 +23,8 @@
  */
 # pragma once
 
-# include <dsn/serviceletex.h>
+# include <dsn/serverlet.h>
+# include <dsn/internal/serialization.h>
 # include <iostream>
 
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_TEST)
@@ -34,11 +35,11 @@ DEFINE_TASK_CODE_RPC(RPC_ECHO2, ::dsn::TASK_PRIORITY_HIGH, THREAD_POOL_TEST)
 using namespace dsn;
 using namespace dsn::service;
 
-class echo_server : public serviceletex<echo_server>, public service_app
+class echo_server : public serverlet<echo_server>, public service_app
 {
 public:
     echo_server(service_app_spec* s, configuration_ptr c)
-        : service_app(s, c), serviceletex<echo_server>("echo_server")
+        : service_app(s, c), serverlet<echo_server>("echo_server")
     {
         _empty_reply = config()->get_value<bool>("apps.server", "empty_reply", false);
     }
@@ -79,11 +80,11 @@ private:
     bool _empty_reply;
 };
 
-class echo_client : public serviceletex<echo_client>, public service_app
+class echo_client : public serverlet<echo_client>, public service_app
 {
 public:
     echo_client(service_app_spec* s, configuration_ptr c)
-        : service_app(s, c), serviceletex<echo_client>("echo_client")
+        : service_app(s, c), serverlet<echo_client>("echo_client")
     {
         _message_size = config()->get_value<int>("apps.client", "message_size", 1024);
         _concurrency = config()->get_value<int>("apps.client", "concurrency", 1);
@@ -102,7 +103,7 @@ public:
             return ERR_INVALID_PARAMETERS;
 
         _server = end_point(argv[1], (uint16_t)atoi(argv[2]));
-        _timer = enqueue_task(LPC_ECHO_TIMER, &echo_client::on_echo_timer, 0, 1000);
+        _timer = tasking::enqueue(LPC_ECHO_TIMER, this, &echo_client::on_echo_timer, 0, 1000);
         return ERR_SUCCESS;
     }
 
@@ -121,13 +122,13 @@ public:
             std::shared_ptr<std::string> req(new std::string("hi, dsn "));
             *req = req->append(buf);
             req->resize(_message_size);
-            rpc_typed(_server, RPC_ECHO, req, &echo_client::on_echo_reply, 0, 5000);
+            rpc::call_typed(_server, RPC_ECHO, req, this, &echo_client::on_echo_reply, 0, 5000);
         }
         else
         {
             std::shared_ptr<char> buffer((char*)::malloc(_message_size));
             std::shared_ptr<utils::blob> bb(new utils::blob(buffer, _message_size));
-            rpc_typed(_server, RPC_ECHO2, bb, &echo_client::on_echo_reply2, 0, 5000);
+            rpc::call_typed(_server, RPC_ECHO2, bb, this, &echo_client::on_echo_reply2, 0, 5000);
         }
     }
 

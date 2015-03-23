@@ -25,7 +25,7 @@
 #include "replication_common.h"
 
 app_client_example1_service::app_client_example1_service(service_app_spec* s, configuration_ptr c)
-: service_app(s, c), serviceletex<app_client_example1_service>(s->name.c_str())
+: service_app(s, c)
 {
     _client = nullptr;
     _writeTimer = nullptr;
@@ -42,7 +42,7 @@ error_code app_client_example1_service::start(int argc, char** argv)
     opts.initialize(config());
 
     _client = new app_client_example1(opts.MetaServers);
-    _writeTimer = enqueue_task(LPC_TEST, &app_client_example1_service::OnTimer, 0, 1000, 1000);
+    _writeTimer = tasking::enqueue(LPC_TEST, this, &app_client_example1_service::OnTimer, 0, 1000, 1000);
 
     return ERR_SUCCESS;
 }

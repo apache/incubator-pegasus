@@ -32,7 +32,7 @@ using namespace dsn::replication;
 class server_state;
 class load_balancer;
 class meta_server_failure_detector;
-class meta_service : public serviceletex<meta_service>
+class meta_service : public serverlet<meta_service>
 {
 public:
     meta_service(server_state* state, configuration_ptr c);

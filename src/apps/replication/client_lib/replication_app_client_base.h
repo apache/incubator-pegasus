@@ -29,13 +29,13 @@
 // 
 
 #include "replication_common.h"
-#include <dsn/serviceletex.h>
+#include <dsn/serverlet.h>
 
 namespace dsn { namespace replication {
 
 DEFINE_ERR_CODE(ERR_REPLICATION_FAILURE)
     
-class replication_app_client_base : public dsn::service::serviceletex<replication_app_client_base>
+class replication_app_client_base : public dsn::service::serverlet<replication_app_client_base>
 {    
 public:
     replication_app_client_base(        

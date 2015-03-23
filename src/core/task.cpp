@@ -292,7 +292,7 @@ void task::enqueue(int delay_milliseconds, task_worker_pool* pool)
     else
     {
         task_ptr this_(this);
-        pool->enqueue_task(this_);
+        pool->enqueue(this_);
     }
 }
 

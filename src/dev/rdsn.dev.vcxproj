@@ -11,16 +11,17 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\inc\dsn\internal\service.api.oo.h" />
     <ClInclude Include="..\..\inc\dsn\internal\file_server.h" />
     <ClInclude Include="..\..\inc\dsn\internal\serialization.h" />
-    <ClInclude Include="..\..\inc\dsn\internal\serverlet.h" />
-    <ClInclude Include="..\..\inc\dsn\internal\service_base.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\service.api.oo.impl.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\servicelet.h" />
     <ClInclude Include="..\..\inc\dsn\internal\thrift_helper.h" />
-    <ClInclude Include="..\..\inc\dsn\servicelet.h" />
-    <ClInclude Include="..\..\inc\dsn\serviceletex.h" />
+    <ClInclude Include="..\..\inc\dsn\serverlet.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="file_server.cpp" />
+    <ClCompile Include="service.api.oo.impl.cpp" />
     <ClCompile Include="service.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

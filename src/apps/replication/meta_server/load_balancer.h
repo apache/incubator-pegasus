@@ -29,7 +29,7 @@ using namespace dsn;
 using namespace dsn::service;
 using namespace dsn::replication;
 
-class load_balancer : public serviceletex<load_balancer>
+class load_balancer : public serverlet<load_balancer>
 {
 public:
     load_balancer(server_state* state);

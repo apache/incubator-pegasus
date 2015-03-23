@@ -39,7 +39,7 @@ class replication_failure_detector;
 // from, new replica config, isClosing
 typedef std::function<void (const end_point&, const replica_configuration&, bool)> replica_state_subscriber;
 
-class replica_stub : public serviceletex<replica_stub>, public ref_object
+class replica_stub : public serverlet<replica_stub>, public ref_object
 {
 public:
     replica_stub(replica_state_subscriber subscriber = nullptr, bool is_long_subscriber = true);

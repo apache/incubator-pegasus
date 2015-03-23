@@ -11,17 +11,22 @@
   <ItemGroup>
     <ClInclude Include="..\..\inc\dsn\internal\file_server.h" />
     <ClInclude Include="..\..\inc\dsn\internal\serialization.h" />
-    <ClInclude Include="..\..\inc\dsn\internal\service_base.h" />
-    <ClInclude Include="..\..\inc\dsn\servicelet.h" />
-    <ClInclude Include="..\..\inc\dsn\serviceletex.h" />
     <ClInclude Include="..\..\inc\dsn\internal\thrift_helper.h" />
-    <ClInclude Include="..\..\inc\dsn\internal\serverlet.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\service.api.oo.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\service.api.oo.impl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\inc\dsn\internal\servicelet.h" />
+    <ClInclude Include="..\..\inc\dsn\serverlet.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="service.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="file_server.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="service.api.oo.impl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

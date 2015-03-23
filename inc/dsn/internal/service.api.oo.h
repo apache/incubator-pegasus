@@ -1,0 +1,236 @@
+/*
+* The MIT License (MIT)
+
+* Copyright (c) 2015 Microsoft Corporation
+
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+
+* The above copyright notice and this permission notice shall be included in
+* all copies or substantial portions of the Software.
+
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+* THE SOFTWARE.
+*/
+
+# pragma once
+
+# include <dsn/internal/servicelet.h>
+
+namespace dsn {
+    namespace service {
+
+        namespace tasking
+        {
+            typedef std::function<void()> task_handler;
+
+            task_ptr enqueue(
+                task_code evt,
+                servicelet *context,
+                task_handler callback,
+                int hash = 0,
+                int delay_milliseconds = 0,
+                int timer_interval_milliseconds = 0
+                );
+
+            template<typename T>
+            inline task_ptr enqueue(
+                task_code evt,
+                T* context,
+                void (T::*callback)(),
+                int hash = 0,
+                int delay_milliseconds = 0,
+                int timer_interval_milliseconds = 0
+                )
+            {
+                task_handler h = std::bind(callback, context);
+                return enqueue(
+                    evt,
+                    dynamic_cast<servicelet*>(context),
+                    h,
+                    hash,
+                    delay_milliseconds,
+                    timer_interval_milliseconds
+                    );
+            }
+        }
+
+        namespace rpc
+        {
+            //
+            // for TRequest/TResponse, we assume that the following routines are defined:
+            //    marshall(binary_writer& writer, const T& val); 
+            //    unmarshall(binary_reader& reader, __out_param T& val);
+            // either in the namespace of ::dsn::utils or T
+            // developers may write these helper functions by their own, or use tools
+            // such as protocol-buffer, thrift, or bond to generate these functions automatically
+            // for their TRequest and TResponse
+            //
+
+            // no callback
+            template<typename TRequest>
+            void call_one_way_typed(
+                const end_point& server,
+                task_code code,
+                const TRequest& req,
+                int hash = 0
+                );
+
+            // callback type 1:
+            //  void (T::*callback)(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>)
+            template<typename T, typename TRequest, typename TResponse>
+            rpc_response_task_ptr call_typed(
+                const end_point& server,
+                task_code code,
+                std::shared_ptr<TRequest>& req,
+                T* context,
+                void (T::*callback)(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>),
+                int request_hash = 0,
+                int timeout_milliseconds = 0,
+                int reply_hash = 0
+                );
+
+            // callback type 2:
+            //  std::function<void(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>)>
+            template<typename TRequest, typename TResponse>
+            rpc_response_task_ptr call_typed(
+                const end_point& server,
+                task_code code,
+                std::shared_ptr<TRequest>& req,
+                servicelet* context,
+                std::function<void(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>)> callback,
+                int request_hash = 0,
+                int timeout_milliseconds = 0,
+                int reply_hash = 0
+                );
+
+            // callback type 3:
+            //  std::function<void(error_code, const TResponse&)>
+            template<typename TRequest, typename TResponse>
+            rpc_response_task_ptr call_typed(
+                const end_point& server,
+                task_code code,
+                const TRequest& req,
+                servicelet* context,
+                std::function<void(error_code, const TResponse&)> callback,
+                int request_hash = 0,
+                int timeout_milliseconds = 0,
+                int reply_hash = 0
+                );
+
+            // callback type 4:
+            //  std::function<void(error_code, message_ptr&, message_ptr&)>
+            rpc_response_task_ptr call(
+                const end_point& server,
+                message_ptr& request,
+                servicelet* context,
+                std::function<void(error_code, message_ptr&, message_ptr&)> callback,
+                int reply_hash = 0
+                );
+        }
+
+        namespace file
+        {
+            typedef std::function<void(error_code, uint32_t)> aio_handler;
+
+            aio_task_ptr read(
+                handle_t hFile,
+                char* buffer,
+                int count,
+                uint64_t offset,
+                task_code callback_code,
+                servicelet* context,
+                aio_handler callback,
+                int hash = 0
+                );
+
+            aio_task_ptr write(
+                handle_t hFile,
+                const char* buffer,
+                int count,
+                uint64_t offset,
+                task_code callback_code,
+                servicelet* context,
+                aio_handler callback,
+                int hash = 0
+                );
+
+            template<typename T>
+            inline aio_task_ptr read(
+                handle_t hFile,
+                char* buffer,
+                int count,
+                uint64_t offset,
+                task_code callback_code,
+                T* context,
+                void(T::*callback)(error_code, uint32_t),
+                int hash = 0
+                )
+            {
+                aio_handler h = std::bind(callback, context, std::placeholders::_1, std::placeholders::_2);
+                return read(hFile, buffer, count, offset, callback_code, dynamic_cast<servicelet*>(context), h, hash);
+            }
+
+            template<typename T>
+            inline aio_task_ptr write(
+                handle_t hFile,
+                const char* buffer,
+                int count,
+                uint64_t offset,
+                task_code callback_code,
+                T* context,
+                void(T::*callback)(error_code, uint32_t),
+                int hash = 0
+                )
+            {
+                aio_handler h = std::bind(callback, context, std::placeholders::_1, std::placeholders::_2);
+                return write(hFile, buffer, count, offset, callback_code, dynamic_cast<servicelet*>(context), h, hash);
+            }
+
+            aio_task_ptr copy_remote_files(
+                const end_point& remote,
+                std::string& source_dir,
+                std::vector<std::string>& files,  // empty for all
+                std::string& dest_dir,
+                bool overwrite,
+                task_code callback_code,
+                servicelet* context,
+                aio_handler callback,
+                int hash = 0
+                );
+
+            inline aio_task_ptr copy_remote_directory(
+                const end_point& remote,
+                std::string& source_dir,
+                std::string& dest_dir,
+                bool overwrite,
+                task_code callback_code,
+                servicelet* context,
+                aio_handler callback,
+                int hash = 0
+                )
+            {
+                std::vector<std::string> files;
+                return copy_remote_files(
+                    remote, source_dir, files, dest_dir, overwrite,
+                    callback_code, context, callback, hash
+                    );
+            }
+        }
+       
+    } // end namespace service
+} // end namespace
+
+# include <dsn/internal/service.api.oo.impl.h>
+
+
+

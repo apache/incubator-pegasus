@@ -33,7 +33,7 @@ namespace RpcReplicatedImpl {
 struct Params
 {
     std::vector<end_point> servers;
-    service_base* svc;
+    servicelet* svc;
     rpc_reply_handler callback;
     int reply_hash; 
 };
@@ -63,7 +63,7 @@ static void InternalRpcReplyCallback(error_code err, message_ptr& request, messa
 {
     //printf ("%s\n", __FUNCTION__);
 
-    end_point nextServer;
+    end_point next_server;
     if (!err) 
     {
         CdtMsgResponseHeader header;
@@ -75,7 +75,7 @@ static void InternalRpcReplyCallback(error_code err, message_ptr& request, messa
         }
         else if (header.Err == ERR_TALK_TO_OTHERS)
         {
-            nextServer = header.PrimaryAddress;
+            next_server = header.PrimaryAddress;
             err = ERR_SUCCESS;
         }
         else
@@ -99,9 +99,10 @@ static void InternalRpcReplyCallback(error_code err, message_ptr& request, messa
         return;
     }
 
-    params->svc->rpc_call(        
-        nextServer,
+    rpc::call(
+        next_server,
         request,
+        params->svc,
         std::bind(
             &RpcReplicatedImpl::InternalRpcReplyCallback, 
             std::placeholders::_1, 
@@ -116,20 +117,20 @@ static void InternalRpcReplyCallback(error_code err, message_ptr& request, messa
 } // end namespace RpcReplicatedImpl 
 
 rpc_response_task_ptr rpc_replicated(
-        const end_point& firstTryServer,
+        const end_point& first_server,
         const std::vector<end_point>& servers, 
         message_ptr& request,             
 
         // reply
-        service_base* svc,
+        servicelet* svc,
         rpc_reply_handler callback, 
         int reply_hash
         )
 {
-    end_point first = firstTryServer;
+    end_point first = first_server;
     if (first == end_point::INVALID)
     {
-        first = RpcReplicatedImpl::GetNextServer(firstTryServer, servers);
+        first = RpcReplicatedImpl::GetNextServer(first_server, servers);
     }
 
     RpcReplicatedImpl::Params *params = new RpcReplicatedImpl::Params;
@@ -138,9 +139,10 @@ rpc_response_task_ptr rpc_replicated(
     params->reply_hash = reply_hash;
     params->svc = svc;
 
-    return svc->rpc_call(
+    return rpc::call(
         first,
         request,
+        svc,
         std::bind(
         &RpcReplicatedImpl::InternalRpcReplyCallback,
         std::placeholders::_1,
@@ -152,16 +154,16 @@ rpc_response_task_ptr rpc_replicated(
 }
 
 rpc_response_task_ptr rpc_replicated(
-        const end_point& firstTryServer,
+        const end_point& first_server,
         const std::vector<end_point>& servers, 
         message_ptr& request,             
 
         // reply
-        service_base* svc,
+        servicelet* svc,
         rpc_reply_handler callback  
         )
 {
-    return rpc_replicated(firstTryServer, servers, request, svc, callback, 
+    return rpc_replicated(first_server, servers, request, svc, callback, 
         request->header().client.hash);
 }
 

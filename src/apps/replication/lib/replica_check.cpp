@@ -37,8 +37,9 @@ void replica::init_group_check()
         return;
 
     dassert (nullptr == _primary_states.GroupCheckTask, "");
-    _primary_states.GroupCheckTask = enqueue_task(
+    _primary_states.GroupCheckTask = tasking::enqueue(
             LPC_GROUP_CHECK,
+            this,
             &replica::broadcast_group_check,
             gpid_to_hash(get_gpid()),
             0,
@@ -83,10 +84,11 @@ void replica::broadcast_group_check()
             request->learnerSignature = it2->second.signature;
         }
 
-        task_ptr caller_tsk = rpc_typed(
+        task_ptr caller_tsk = rpc::call_typed(
             addr,
             RPC_GROUP_CHECK,
             request,            
+            this,
             &replica::on_group_check_reply,
             gpid_to_hash(get_gpid()),
             _options.GroupCheckTimeoutMs
@@ -185,8 +187,9 @@ void replica::send_group_check_once_for_test(int delay_milliseconds)
 {
     dassert (_options.GroupCheckDisabled, "");
 
-    _primary_states.GroupCheckTask = enqueue_task(
+    _primary_states.GroupCheckTask = tasking::enqueue(
             LPC_GROUP_CHECK,
+            this,
             &replica::broadcast_group_check,
             gpid_to_hash(get_gpid()),
             delay_milliseconds

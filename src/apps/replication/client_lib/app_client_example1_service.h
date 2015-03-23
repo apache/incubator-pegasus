@@ -29,7 +29,7 @@ using namespace dsn;
 using namespace dsn::service;
 using namespace dsn::replication;
 
-class app_client_example1_service : public serviceletex<app_client_example1_service>, public service_app
+class app_client_example1_service : public service_app, public virtual servicelet
 {
 public:
     app_client_example1_service(service_app_spec* s, configuration_ptr c);

@@ -25,6 +25,7 @@
 # include "failure_detector.h"
 # include <chrono>
 # include <ctime>
+# include <dsn/internal/serialization.h>
 
 #define __TITLE__ "failure_detector"
 
@@ -188,7 +189,7 @@ int failure_detector::start()
     register_rpc_handler(RPC_BEACON, "beacon_msg", &failure_detector::on_beacon);
 
     // start periodically check job
-    _currentTask = enqueue_task(LPC_BEACON_CHECK, &failure_detector::process_all_records, -1, _check_interval_milliseconds, _check_interval_milliseconds);
+    _currentTask = tasking::enqueue(LPC_BEACON_CHECK, this, &failure_detector::process_all_records, -1, _check_interval_milliseconds, _check_interval_milliseconds);
 
     _is_started = true;
     return ERR_SUCCESS;
@@ -517,10 +518,11 @@ void failure_detector::send_beacon(const end_point& target, uint64_t time)
     beacon->from = address();
     beacon->to = target;
 
-    rpc_typed(
+    rpc::call_typed(
         target,
         RPC_BEACON, 
         beacon,
+        this,
         &failure_detector::on_beacon_ack,
         0,
         static_cast<int>(_check_interval_milliseconds),

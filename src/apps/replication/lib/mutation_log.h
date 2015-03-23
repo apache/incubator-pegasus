@@ -36,7 +36,7 @@ typedef boost::intrusive_ptr<log_file> log_file_ptr;
 
 typedef std::map<global_partition_id, decree, GlobalPartitionIDComparor> multi_partition_decrees;
 
-class mutation_log : public service_base
+class mutation_log : public virtual servicelet
 {
 public:
     // mutationPtr
@@ -64,7 +64,7 @@ public:
     // return value: nullptr for error
     task_ptr append(mutation_ptr& mu, 
             task_code callback_code,
-            service_base* callback_host,
+            servicelet* callback_host,
             aio_handler callback,
             int hash = -1);
 
@@ -161,7 +161,7 @@ public:
     aio_task_ptr write_log_entry(
                     utils::blob& bb,
                     task_code evt,  // to indicate which thread pool to execute the callback
-                    service_base* callback_host,
+                    servicelet* callback_host,
                     aio_handler callback,
                     int64_t offset,
                     int hash

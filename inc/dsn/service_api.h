@@ -55,11 +55,11 @@ namespace rpc
 
     extern bool unregister_rpc_handler(task_code code);
 
+    extern void reply(message_ptr& response);
+
     // when callback is empty, we assume callers will invoke return::wait() to perform a synchronous rpc call
     // to invoke a one way rpc call, use call_one_way below
     extern rpc_response_task_ptr call(const end_point& server, message_ptr& request, rpc_response_task_ptr callback = nullptr);
-
-    extern void reply(message_ptr& response);
 
     extern void call_one_way(const end_point& server, message_ptr& request);
 }

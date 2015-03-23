@@ -36,7 +36,7 @@ namespace dsn { namespace replication {
 using namespace dsn::service;
 
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/, bool is_long_subscriber/* = true*/)
-    : serviceletex("replica_stub")
+    : serverlet("replica_stub")
 {
     _replicaStateSubscriber = subscriber;
     _isLongSubscriber = is_long_subscriber;
@@ -146,8 +146,9 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
     // start log serving    
     if (false == _options.GcDisabled)
     {
-        _gcTimerTask = enqueue_task(
+        _gcTimerTask = tasking::enqueue(
             LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
+            this,
             &replica_stub::on_gc,
             0,
             random32(0, _options.GcIntervalMs),
@@ -171,8 +172,9 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
     // start timer for configuration sync
     if (!_options.ConfigurationSyncDisabled)
     {
-        _partitionConfigurationSyncTimerTask = enqueue_task(
+        _partitionConfigurationSyncTimerTask = tasking::enqueue(
             LPC_QUERY_CONFIGURATION_ALL,
+            this,
             &replica_stub::query_configuration,
             0, 
             _options.ConfigurationSyncIntervalMs,
@@ -342,7 +344,7 @@ void replica_stub::on_prepare(message_ptr& request)
         PrepareAck resp;
         resp.gpid = gpid;
         resp.err = ERR_OBJECT_NOT_FOUND;
-        rpc_response(request, resp);
+        reply(request, resp);
     }
 }
 
@@ -504,8 +506,9 @@ void replica_stub::on_node_query_reply(int err, message_ptr& request, message_pt
         for (auto it = resp.partitions.begin(); it != resp.partitions.end(); it++)
         {
             rs.erase(it->gpid);
-            enqueue_task(
+            tasking::enqueue(
                 LPC_QUERY_NODE_CONFIGURATION_SCATTER,
+                this,
                 std::bind(&replica_stub::on_node_query_reply_scatter, this, this, *it),
                 gpid_to_hash(it->gpid)
                 );
@@ -514,8 +517,9 @@ void replica_stub::on_node_query_reply(int err, message_ptr& request, message_pt
         // for replicas not exist on meta_servers
         for (auto it = rs.begin(); it != rs.end(); it++)
         {
-            enqueue_task(
+            tasking::enqueue(
                 LPC_QUERY_NODE_CONFIGURATION_SCATTER,
+                this,
                 std::bind(&replica_stub::on_node_query_reply_scatter2, this, this, it->first),
                 gpid_to_hash(it->first)
                 );
@@ -531,8 +535,9 @@ void replica_stub::set_meta_server_connected_for_test(const ConfigurationNodeQue
 
     for (auto it = resp.partitions.begin(); it != resp.partitions.end(); it++)
     {
-        enqueue_task(
+        tasking::enqueue(
             LPC_QUERY_NODE_CONFIGURATION_SCATTER,
+            this,
             std::bind(&replica_stub::on_node_query_reply_scatter, this, this, *it),
             gpid_to_hash(it->gpid)
             );
@@ -617,8 +622,9 @@ void replica_stub::on_meta_server_disconnected()
 
     for (auto it = _replicas.begin(); it != _replicas.end(); it++)
     {
-        enqueue_task(
+        tasking::enqueue(
             LPC_CM_DISCONNECTED_SCATTER,
+            this,
             std::bind(&replica_stub::on_meta_server_disconnected_scatter, this, this, it->first),
             gpid_to_hash(it->first)
             );
@@ -645,15 +651,16 @@ void replica_stub::response_client_error(message_ptr& request, int error)
 {
     message_ptr resp = request->create_response();
     resp->writer().write(error);
-    rpc_response(resp);
+    rpc::reply(resp);
 }
 
 void replica_stub::init_gc_for_test()
 {
     dassert (_options.GcDisabled, "");
 
-    _gcTimerTask = enqueue_task(
+    _gcTimerTask = tasking::enqueue(
         LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
+        this,
         &replica_stub::on_gc,
         0,
         _options.GcIntervalMs
@@ -741,7 +748,7 @@ task_ptr replica_stub::begin_open_replica(const std::string& app_type, global_pa
         }
         else 
         {
-            auto task = enqueue_task(LPC_OPEN_REPLICA, std::bind(&replica_stub::open_replica, this, app_type, gpid, req));
+            auto task = tasking::enqueue(LPC_OPEN_REPLICA, this, std::bind(&replica_stub::open_replica, this, app_type, gpid, req));
             _openingReplicas[gpid] = task;
             _replicasLock.unlock();
             return task;
@@ -772,7 +779,7 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
 
     if (nullptr != req)
     {
-        rpc_typed(address(), RPC_LEARN_ADD_LEARNER, *req, gpid_to_hash(req->config.gpid));
+        rpc::call_one_way_typed(address(), RPC_LEARN_ADD_LEARNER, *req, gpid_to_hash(req->config.gpid));
     }
 }
 
@@ -786,7 +793,7 @@ task_ptr replica_stub::begin_close_replica(replica_ptr r)
 
     if (remove_replica(r))
     {
-        auto task = enqueue_task(LPC_CLOSE_REPLICA, std::bind(&replica_stub::close_replica, this, r), -1, _options.GcMemoryReplicaIntervalMs);
+        auto task = tasking::enqueue(LPC_CLOSE_REPLICA, this, std::bind(&replica_stub::close_replica, this, r), -1, _options.GcMemoryReplicaIntervalMs);
         _closingReplicas[r->get_gpid()] = std::make_pair(task, r);
         return task;
     }
@@ -831,7 +838,7 @@ void replica_stub::notify_replica_state_update(const replica_configuration& conf
     {
         if (_isLongSubscriber)
         {
-            enqueue_task(LPC_REPLICA_STATE_CHANGE_NOTIFICATION, std::bind(_replicaStateSubscriber, address(), config, isClosing));
+            tasking::enqueue(LPC_REPLICA_STATE_CHANGE_NOTIFICATION, this, std::bind(_replicaStateSubscriber, address(), config, isClosing));
         }
         else
         {

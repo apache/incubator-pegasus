@@ -30,7 +30,7 @@ bool MachineLoadComp(const std::pair<end_point, int>& l, const std::pair<end_poi
 }
 
 load_balancer::load_balancer(server_state* state)
-: _state(state), serviceletex<load_balancer>("load_balancer")
+: _state(state), serverlet<load_balancer>("load_balancer")
 {
 }
 
@@ -134,19 +134,19 @@ void load_balancer::RunLB(partition_configuration& pc)
 // meta server => partition server
 void load_balancer::SendConfigProposal(const end_point& node, const configuration_update_request& proposal)
 {
-    rpc_typed(node, RPC_CONFIG_PROPOSAL, proposal, gpid_to_hash(proposal.config.gpid));
+    rpc::call_one_way_typed(node, RPC_CONFIG_PROPOSAL, proposal, gpid_to_hash(proposal.config.gpid));
 }
 
 void load_balancer::QueryDecree(std::shared_ptr<QueryPNDecreeRequest> query)
 {
-    rpc_typed(query->node, RPC_QUERY_PN_DECREE, query, &load_balancer::OnQueryDecreeAck, gpid_to_hash(query->partitionId), 3000);
+    rpc::call_typed(query->node, RPC_QUERY_PN_DECREE, query, this, &load_balancer::OnQueryDecreeAck, gpid_to_hash(query->partitionId), 3000);
 }
 
 void load_balancer::OnQueryDecreeAck(error_code err, std::shared_ptr<QueryPNDecreeRequest> query, std::shared_ptr<QueryPNDecreeResponse> resp)
 {
     if (err)
     {
-        enqueue_task(LPC_QUERY_PN_DECREE, std::bind(&load_balancer::QueryDecree, this, query), 0, 1000);
+        tasking::enqueue(LPC_QUERY_PN_DECREE, this, std::bind(&load_balancer::QueryDecree, this, query), 0, 1000);
     }
     else
     {

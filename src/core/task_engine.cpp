@@ -97,7 +97,7 @@ void task_worker_pool::start()
     _is_running = true;
 }
 
-void task_worker_pool::enqueue_task(task_ptr& task)
+void task_worker_pool::enqueue(task_ptr& task)
 {
     dassert (task->spec().pool_code == spec().pool_code || task->spec().type == TASK_TYPE_RPC_RESPONSE, "Invalid thread pool used");
 

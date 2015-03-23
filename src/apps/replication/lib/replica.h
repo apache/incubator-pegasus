@@ -30,7 +30,7 @@
 // which is binded to this replication partition
 //
 
-# include <dsn/serviceletex.h>
+# include <dsn/serverlet.h>
 # include "replication_common.h"
 # include "mutation.h"
 # include "prepare_list.h"
@@ -44,7 +44,7 @@ class replica_stub;
 
 using namespace ::dsn::service;
 
-class replica : public serviceletex<replica>, public ref_object
+class replica : public serverlet<replica>, public ref_object
 {
 public:        
     ~replica(void);

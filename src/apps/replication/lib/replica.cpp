@@ -33,7 +33,7 @@ namespace dsn { namespace replication {
 
 // for replica::load(..) only
 replica::replica(replica_stub* stub, replication_options& options)
-: serviceletex<replica>("replica")
+: serverlet<replica>("replica")
 {
     dassert (stub, "");
     _stub = stub;
@@ -46,7 +46,7 @@ replica::replica(replica_stub* stub, replication_options& options)
 
 // for create new replica only used in replica_stub::on_config_proposal
 replica::replica(replica_stub* stub, global_partition_id gpid, replication_options& options)
-: serviceletex<replica>("replica")
+: serverlet<replica>("replica")
 {
     dassert (stub, "");
     _stub = stub;
@@ -111,7 +111,7 @@ void replica::response_client_message(message_ptr& request, int error, decree d/
     message_ptr resp = request->create_response();
     resp->writer().write(error);
 
-    rpc_response(resp);
+    rpc::reply(resp);
 }
 
 void replica::execute_mutation(mutation_ptr& mu)

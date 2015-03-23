@@ -35,7 +35,6 @@ namespace dsn { namespace replication {
     using namespace ::dsn::service;
 
 mutation_log::mutation_log(uint32_t LogBufferSizeMB, uint32_t LogPendingMaxMilliseconds, uint32_t maxLogFileSizeInMB, bool batchWrite, int writeTaskNumber)
-: service_base("mutation_log")
 {
     _log_buffer_size_bytes = LogBufferSizeMB * 1024 * 1024;
     _log_pending_max_milliseconds = LogPendingMaxMilliseconds;    
@@ -181,7 +180,7 @@ void mutation_log::create_new_pending_buffer()
 
     if (_batch_write)
     {
-        _pending_write_timer = service_base::enqueue_task(
+        _pending_write_timer = tasking::enqueue(
             LPC_MUTATION_LOG_PENDING_TIMER,
             this,
             std::bind(&mutation_log::internal_pending_write_timer, this, _pending_write->header().id),
@@ -426,7 +425,7 @@ void mutation_log::close()
 
 task_ptr mutation_log::append(mutation_ptr& mu, 
                         task_code callback_code,
-                        service_base* callback_host,
+                        servicelet* callback_host,
                         aio_handler callback,
                         int hash)
 {
@@ -457,7 +456,7 @@ task_ptr mutation_log::append(mutation_ptr& mu,
     mu->write_to(_pending_write);
     _global_end_offset += _pending_write->total_size() - oldSz;
 
-    aio_task_ptr tsk(new service_aio_task(callback_code, callback_host, callback, hash));
+    aio_task_ptr tsk(new file::internal_use_only::service_aio_task(callback_code, callback_host, callback, hash));
     
     _pending_write_callbacks->push_back(tsk);
 
@@ -731,7 +730,7 @@ int log_file::read_next_log_entry(__out_param dsn::utils::blob& bb)
 aio_task_ptr log_file::write_log_entry(
                 utils::blob& bb,
                 task_code evt,  // to indicate which thread pool to execute the callback
-                service_base* callback_host,
+                servicelet* callback_host,
                 aio_handler callback,
                 int64_t offset,
                 int hash
@@ -740,7 +739,7 @@ aio_task_ptr log_file::write_log_entry(
     dassert (!_isRead, "");
     dassert (offset == end_offset(), "");
 
-    auto task = service_base::file_write(
+    auto task = file::write(
         _handle, 
         bb.data(),
         bb.length(),

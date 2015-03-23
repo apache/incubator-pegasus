@@ -131,7 +131,7 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     request.lastCommittedDecree = last_committed_decree();
     request.learnerSignature = state.signature;
 
-    rpc_typed(proposal.node, RPC_LEARN_ADD_LEARNER, request, gpid_to_hash(get_gpid()));
+    rpc::call_one_way_typed(proposal.node, RPC_LEARN_ADD_LEARNER, request, gpid_to_hash(get_gpid()));
 }
 
 void replica::upgrade_to_secondary_on_primary(const end_point& node)
@@ -285,7 +285,7 @@ void replica::update_configuration_on_meta_server(config_type type, const end_po
     //    auto bb2 = msg2->get_output_buffer();
     //    message_ptr response(new message(bb2));
 
-    //    _primary_states.ReconfigurationTask = enqueue_task(
+    //    _primary_states.ReconfigurationTask = tasking::enqueue(
     //        LPC_SIM_UPDATE_PARTITION_CONFIGURATION_REPLY,
     //        std::bind(&replica::on_update_configuration_on_meta_server_reply, this, ERR_SUCCESS, msg, response, request),
     //        gpid_to_hash(get_gpid()),
@@ -368,7 +368,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, messa
             {
                 replica_configuration rconfig;
                 ReplicaHelper::GetReplicaConfig(resp.config, req->node, rconfig);
-                rpc_typed(req->node, RPC_REMOVE_REPLICA, rconfig, gpid_to_hash(get_gpid()));
+                rpc::call_one_way_typed(req->node, RPC_REMOVE_REPLICA, rconfig, gpid_to_hash(get_gpid()));
             }
             break;
         default:

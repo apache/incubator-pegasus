@@ -23,7 +23,7 @@
  */
 # pragma once
 
-# include <dsn/serviceletex.h>
+# include <dsn/serverlet.h>
 # include <string>
 # include "codes.h"
 # include "replication_ds.h"

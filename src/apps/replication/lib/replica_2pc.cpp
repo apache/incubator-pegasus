@@ -51,8 +51,9 @@ void replica::on_client_write(message_ptr& request)
         
         if (_primary_states.PendingMutationTask == nullptr)
         {
-            _primary_states.PendingMutationTask = enqueue_task(
+            _primary_states.PendingMutationTask = tasking::enqueue(
                 LPC_MUTATION_PENDING_TIMER,
+                this,
                 std::bind(&replica::on_mutation_pending_timeout, this, _primary_states.PendingMutation),
                 gpid_to_hash(get_gpid()),
                 _options.MutationMaxPendingTimeMs
@@ -193,7 +194,8 @@ void replica::send_prepare_message(const end_point& addr, partition_status statu
 
     dbg_dassert (mu->remote_tasks().find(addr) == mu->remote_tasks().end());
 
-    mu->remote_tasks()[addr] = rpc_call(addr, msg, 
+    mu->remote_tasks()[addr] = rpc::call(addr, msg, 
+        this,
         std::bind(&replica::on_prepare_reply, this, mu, rconfig.status, 
             std::placeholders::_1, 
             std::placeholders::_2, 
@@ -465,7 +467,7 @@ void replica::ack_prepare_message(int err, mutation_ptr& mu)
     resp.lastCommittedDecreeInPrepareList = last_committed_decree();
 
     dassert (nullptr != mu->owner_message(), "");
-    rpc_response(mu->owner_message(), resp);
+    reply(mu->owner_message(), resp);
 
     ddebug( "%s: mutation %s ack_prepare_message", name(), mu->name());
 }

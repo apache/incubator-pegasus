@@ -27,7 +27,7 @@
 #include "meta_server_failure_detector.h"
 
 meta_service::meta_service(server_state* state, configuration_ptr c)
-: _state(state), serviceletex("meta_service")
+: _state(state), serverlet("meta_service")
 {
     _balancer = nullptr;
     _livenessMonitor = nullptr;
@@ -44,7 +44,7 @@ void meta_service::start()
     _balancer = new load_balancer(_state);
     _livenessMonitor = new meta_server_failure_detector(_state);
     register_rpc_handler(RPC_CM_CALL, "RPC_CM_CALL", &meta_service::OnMetaServiceRequest);
-    _balancerTimer = enqueue_task(LPC_LBM_RUN, &meta_service::OnLoadBalancerTimer, 0, 1000, 5000);
+    _balancerTimer = tasking::enqueue(LPC_LBM_RUN, this, &meta_service::OnLoadBalancerTimer, 0, 1000, 5000);
 
     end_point primary;
     if (_state->GetMetaServerPrimary(primary) && primary == address())
@@ -135,7 +135,7 @@ void meta_service::OnMetaServiceRequest(message_ptr& msg)
         dassert (false, "unknown rpc tag %x", hdr.RpcTag);
     }
 
-    rpc_response(resp);
+    rpc::reply(resp);
 }
 
 // partition server & client => meta server

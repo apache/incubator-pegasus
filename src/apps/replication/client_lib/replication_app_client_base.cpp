@@ -81,7 +81,7 @@ replication_app_client_base::replication_app_client_base(const std::vector<end_p
                                                    int32_t coordinatorRpcCallTimeoutMillisecondsPerSend,
                                                    int32_t coordinatorRpcCallMaxSendCount,
                                                    const end_point* pLocalAddr /*= nullptr*/)
-: dsn::service::serviceletex<replication_app_client_base>(std::string(appServiceName).append(".client").c_str())
+: dsn::service::serverlet<replication_app_client_base>(std::string(appServiceName).append(".client").c_str())
 {
     _app_name = std::string(appServiceName);   
     _meta_servers = meta_servers;
@@ -149,8 +149,9 @@ void replication_app_client_base::enqueue_pending_list(int pidx, message_ptr& us
 {
     //RepClientMessage * msg = (RepClientMessage *)userRequest.get();
     pending_message pm;
-    pm.timeout_tsk = enqueue_task(
+    pm.timeout_tsk = tasking::enqueue(
             LPC_TEST,
+            this,
             std::bind(&replication_app_client_base::on_user_request_timeout, this, caller_tsk),
             0,
             userRequest->header().client.timeout_milliseconds
@@ -197,7 +198,7 @@ rpc_response_task_ptr replication_app_client_base::send(
             std::placeholders::_3);
     }
 
-    rpc_response_task_ptr task(new service_rpc_response_task(request, this, handler, reply_hash));
+    rpc_response_task_ptr task(new rpc::internal_use_only::service_rpc_response_task4(this, handler, request, reply_hash));
 
     int err = send_client_message(request, task, true);
     if (err != ERR_SUCCESS)

@@ -23,7 +23,7 @@
  */
 # pragma once
 
-# include <dsn/serviceletex.h>
+# include <dsn/serverlet.h>
 
 using namespace dsn::service;
 
@@ -47,11 +47,11 @@ public:
     virtual void on_worker_connected( const end_point& node ) = 0;
 };
 
-class failure_detector : public serviceletex<failure_detector>, public failure_detector_callback
+class failure_detector : public serverlet<failure_detector>, public failure_detector_callback
 {
 public:
     failure_detector(const char* service_name)
-    : serviceletex<failure_detector>(service_name)
+    : serverlet<failure_detector>(service_name)
     {
         _is_started = false;
         _currentTask = nullptr;

@@ -24,8 +24,7 @@
 
 # pragma once
 
-# include <dsn/service_api.h>
-# include <dsn/internal/serialization.h>
+# include <dsn/internal/service.api.oo.h>
 
 namespace dsn {
     namespace service {
@@ -64,8 +63,8 @@ namespace dsn {
             message_ptr _response;
         };
 
-        template <typename T>
-        class serverlet
+        template <typename T> // where T : serverlet<T>
+        class serverlet : public virtual servicelet
         {
         public:
             serverlet(const char* nm);
@@ -73,31 +72,38 @@ namespace dsn {
 
         protected:
             template<typename TRequest>
-            void register_rpc_handler(task_code rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&));
+            bool register_rpc_handler(task_code rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&));
 
             template<typename TRequest, typename TResponse>
-            void register_rpc_handler(task_code rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&, TResponse&));
+            bool register_rpc_handler(task_code rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&, TResponse&));
 
             template<typename TRequest, typename TResponse>
-            void register_async_rpc_handler(task_code rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&, rpc_replier<TResponse>&));
+            bool register_async_rpc_handler(task_code rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&, rpc_replier<TResponse>&));
+
+            bool register_rpc_handler(task_code rpc_code, const char* rpc_name_, void (T::*handler)(message_ptr&));
+
+            bool unregister_rpc_handler(task_code rpc_code);
+
+            template<typename TResponse>
+            void reply(message_ptr request, const TResponse& resp);
+
+        public:
+            const std::string& name() const { return _name; }
+
+        private:
+            std::string _name;
 
         private:
             // type 1 --------------------------
             template<typename TRequest>
-            class service_rpc_request_task1 : public rpc_request_task
+            class service_rpc_request_task1 : public rpc_request_task, public service_context_manager
             {
             public:
                 service_rpc_request_task1(message_ptr& request, service_node* node, T* svc, void (T::*handler)(const TRequest&))
-                    : rpc_request_task(request, node)
+                    : rpc_request_task(request, node), service_context_manager(_svc, this)
                 {
                     _handler = handler;
                     _svc = svc;
-                    if (nullptr != _svc) _svc->add_outstanding_task(this);
-                }
-
-                virtual ~service_rpc_request_task1()
-                {
-                    if (nullptr != _svc) _svc->remove_outstanding_task(this);
                 }
 
                 void exec()
@@ -122,41 +128,35 @@ namespace dsn {
                     _svc = svc;
                 }
 
-                virtual rpc_request_task_ptr new_request_task(message_ptr& request, T* node)
+                virtual rpc_request_task_ptr new_request_task(message_ptr& request, service_node* node)
                 {
-                    return new service_rpc_request_task1(request, node, _svc, _handler);
+                    return new service_rpc_request_task1<TRequest>(request, node, _svc, _handler);
                 }
 
             private:
                 void (T::*_handler)(const TRequest&);
                 T* _svc;
             };
-            
+
             // type 2 ---------------------------
             template<typename TRequest, typename TResponse>
-            class service_rpc_request_task2 : public rpc_request_task
+            class service_rpc_request_task2 : public rpc_request_task, public service_context_manager
             {
             public:
                 service_rpc_request_task2(message_ptr& request, service_node* node, T* svc, void (T::*handler)(const TRequest&, TResponse&))
-                    : rpc_request_task(request, node)
+                    : rpc_request_task(request, node), service_context_manager(svc, this)
                 {
                     _handler = handler;
                     _svc = svc;
-                    if (nullptr != _svc) _svc->add_outstanding_task(this);
-                }
-
-                virtual ~service_rpc_request_task2()
-                {
-                    if (nullptr != _svc) _svc->remove_outstanding_task(this);
                 }
 
                 void exec()
                 {
-                    TRequest req;                    
+                    TRequest req;
                     unmarshall(_request->reader(), req);
 
                     TResponse resp;
-                    (_svc->*handler)(req, resp);
+                    (_svc->*_handler)(req, resp);
 
                     rpc_replier<TResponse> replier(_request);
                     replier(resp);
@@ -177,9 +177,9 @@ namespace dsn {
                     _svc = svc;
                 }
 
-                virtual rpc_request_task_ptr new_request_task(message_ptr& request, T* node)
+                virtual rpc_request_task_ptr new_request_task(message_ptr& request, service_node* node)
                 {
-                    return new service_rpc_request_task2(request, node, _svc, _handler);
+                    return new service_rpc_request_task2<TRequest, TResponse>(request, node, _svc, _handler);
                 }
 
             private:
@@ -189,29 +189,23 @@ namespace dsn {
 
             // type 3 -----------------------------------
             template<typename TRequest, typename TResponse>
-            class service_rpc_request_task3 : public rpc_request_task
+            class service_rpc_request_task3 : public rpc_request_task, public service_context_manager
             {
             public:
                 service_rpc_request_task3(message_ptr& request, service_node* node, T* svc, void (T::*handler)(const TRequest&, rpc_replier<TResponse>&))
-                    : rpc_request_task(request, node)
+                    : rpc_request_task(request, node), service_context_manager(svc, this)
                 {
                     _handler = handler;
                     _svc = svc;
-                    if (nullptr != _svc) _svc->add_outstanding_task(this);
-                }
-
-                virtual ~service_rpc_request_task3()
-                {
-                    if (nullptr != _svc) _svc->remove_outstanding_task(this);
                 }
 
                 void exec()
                 {
-                    TRequest req;                    
+                    TRequest req;
                     unmarshall(_request->reader(), req);
 
                     rpc_replier<TResponse> replier(_request);
-                    (_svc->*handler)(req, replier);
+                    (_svc->*_handler)(req, replier);
                 }
 
             private:
@@ -229,13 +223,53 @@ namespace dsn {
                     _svc = svc;
                 }
 
-                virtual rpc_request_task_ptr new_request_task(message_ptr& request, T* node)
+                virtual rpc_request_task_ptr new_request_task(message_ptr& request, service_node* node)
                 {
-                    return new service_rpc_request_task3(request, node, _svc, _handler);
+                    return new service_rpc_request_task3<TRequest, TResponse>(request, node, _svc, _handler);
                 }
 
             private:
                 void (T::*_handler)(const TRequest&, rpc_replier<TResponse>&);
+                T* _svc;
+            };
+
+            // type 4 ------------------------------------------
+            class service_rpc_request_task4 : public rpc_request_task, public service_context_manager
+            {
+            public:
+                service_rpc_request_task4(message_ptr& request, service_node* node, T* svc, void (T::*handler)(message_ptr&))
+                    : rpc_request_task(request, node), service_context_manager(svc, this)
+                {
+                    _handler = handler;
+                    _svc = svc;
+                }
+
+                void exec()
+                {
+                    (_svc->*_handler)(_request);
+                }
+
+            private:
+                void (T::*_handler)(message_ptr&);
+                T* _svc;
+            };
+
+            class service_rpc_server_handler4 : public rpc_server_handler
+            {
+            public:
+                service_rpc_server_handler4(T* svc, void (T::*handler)(message_ptr&))
+                {
+                    _handler = handler;
+                    _svc = svc;
+                }
+
+                virtual rpc_request_task_ptr new_request_task(message_ptr& request, service_node* node)
+                {
+                    return new service_rpc_request_task4(request, node, _svc, _handler);
+                }
+
+            private:
+                void (T::*_handler)(message_ptr&);
                 T* _svc;
             };
         };
@@ -243,6 +277,7 @@ namespace dsn {
         // ------------- inline implementation ----------------
         template<typename T>
         serverlet<T>::serverlet(const char* nm)
+            : _name(nm)
         {
         }
 
@@ -252,24 +287,45 @@ namespace dsn {
         }
 
         template<typename T> template<typename TRequest>
-        inline void serverlet<T>::register_rpc_handler(task_code rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&))
+        inline bool serverlet<T>::register_rpc_handler(task_code rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&))
         {
             return rpc::register_rpc_handler(rpc_code, rpc_name_,
-                new service_rpc_server_handler1(static_cast<T*>(this), handler));
+                new service_rpc_server_handler1<TRequest>(static_cast<T*>(this), handler));
         }
 
         template<typename T> template<typename TRequest, typename TResponse>
-        inline void serverlet<T>::register_rpc_handler(task_code rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&, TResponse&))
+        inline bool serverlet<T>::register_rpc_handler(task_code rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&, TResponse&))
         {
             return rpc::register_rpc_handler(rpc_code, rpc_name_,
-                new service_rpc_server_handler2(static_cast<T*>(this), handler));
+                new service_rpc_server_handler2<TRequest, TResponse>(static_cast<T*>(this), handler));
         }
 
         template<typename T> template<typename TRequest, typename TResponse>
-        inline void serverlet<T>::register_async_rpc_handler(task_code rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&, rpc_replier<TResponse>&))
+        inline bool serverlet<T>::register_async_rpc_handler(task_code rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&, rpc_replier<TResponse>&))
         {
             return rpc::register_rpc_handler(rpc_code, rpc_name_,
-                new service_rpc_server_handler3(static_cast<T*>(this), handler));
+                new service_rpc_server_handler3<TRequest, TResponse>(static_cast<T*>(this), handler));
+        }
+
+        template<typename T>
+        inline bool serverlet<T>::register_rpc_handler(task_code rpc_code, const char* rpc_name_, void (T::*handler)(message_ptr&))
+        {
+            return rpc::register_rpc_handler(rpc_code, rpc_name_,
+                new service_rpc_server_handler4(static_cast<T*>(this), handler));
+        }
+
+        template<typename T>
+        inline bool serverlet<T>::unregister_rpc_handler(task_code rpc_code)
+        {
+            return rpc::unregister_rpc_handler(rpc_code);
+        }
+
+        template<typename T>template<typename TResponse>
+        inline void serverlet<T>::reply(message_ptr request, const TResponse& resp)
+        {
+            auto msg = request->create_response();
+            marshall(msg->writer(), resp);
+            rpc::reply(msg);
         }
     } // end namespace service
 } // end namespace

@@ -83,10 +83,11 @@ void replica::init_learn(uint64_t signature)
     request->signature = _potential_secondary_states.LearningSignature;
     _app->prepare_learning_request(request->appSpecificLearnRequest);
 
-    _potential_secondary_states.LearningTask = rpc_typed(
+    _potential_secondary_states.LearningTask = rpc::call_typed(
         _config.primary,
         RPC_LEARN,
         request,        
+        this,
         &replica::on_learn_reply,
         gpid_to_hash(get_gpid()),
         _options.LearnTimeoutMs
@@ -222,8 +223,9 @@ void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request> req,
         _prepare_list->reset(resp->prepareStartDecree - 1);
     }
 
-    _potential_secondary_states.LearnRemoteFilesTask = enqueue_task(
+    _potential_secondary_states.LearnRemoteFilesTask = tasking::enqueue(
         LPC_LEARN_REMOTE_DELTA_FILES,
+        this,
         std::bind(&replica::on_learn_remote_state, this, resp)        
         );
 }
@@ -242,7 +244,7 @@ void replica::on_learn_remote_state(std::shared_ptr<learn_response> resp)
                 
     if (!resp->state.files.empty())
     {
-        copy_remote_files(server, resp->baseLocalDir, resp->state.files, _dir, true, LPC_AIO_TEST, nullptr, nullptr);
+        file::copy_remote_files(server, resp->baseLocalDir, resp->state.files, _dir, true, LPC_AIO_TEST, nullptr, nullptr);
     }
 
     if (_options.LearnForAdditionalLongSecondsForTest != 0)
@@ -297,8 +299,9 @@ void replica::on_learn_remote_state(std::shared_ptr<learn_response> resp)
                 resp->state.files.size(), _dir.c_str(), err);
     }    
 
-    _potential_secondary_states.LearnRemoteFilesCompletedTask = enqueue_task(
+    _potential_secondary_states.LearnRemoteFilesCompletedTask = tasking::enqueue(
         LPC_LEARN_REMOTE_DELTA_FILES_COMPLETED,
+        this,
         std::bind(&replica::on_learn_remote_state_completed, this, err),
         gpid_to_hash(get_gpid())
         );
@@ -357,7 +360,7 @@ void replica::notify_learn_completion()
     report.learnerState = _potential_secondary_states.LearningState;
     report.node = address();
     
-    rpc_typed(_config.primary, RPC_LEARN_COMPLETITION_NOTIFY, report, gpid_to_hash(get_gpid()));
+    rpc::call_one_way_typed(_config.primary, RPC_LEARN_COMPLETITION_NOTIFY, report, gpid_to_hash(get_gpid()));
 }
 
 void replica::on_learn_completion_notification(const group_check_response& report)
