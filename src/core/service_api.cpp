@@ -165,10 +165,26 @@ namespace rpc
         auto tsk = task::get_current_task();
         dassert(tsk != nullptr, "this function can only be invoked inside tasks");
 
+        if (nullptr == callback)
+        {
+            callback.reset(new rpc_response_task(request));
+        }
+
         rpc_engine* rpc = tsk->node()->rpc();
         request->header().to_address = server;
         rpc->call(request, callback);
         return callback;
+    }
+
+    void call_one_way(const end_point& server, message_ptr& request)
+    {
+        auto tsk = task::get_current_task();
+        dassert(tsk != nullptr, "this function can only be invoked inside tasks");
+
+        rpc_response_task_ptr nil;
+        rpc_engine* rpc = tsk->node()->rpc();
+        request->header().to_address = server;
+        rpc->call(request, nil);
     }
     
     void reply(message_ptr& response)

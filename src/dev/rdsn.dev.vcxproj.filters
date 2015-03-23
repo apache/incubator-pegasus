@@ -15,6 +15,7 @@
     <ClInclude Include="..\..\inc\dsn\servicelet.h" />
     <ClInclude Include="..\..\inc\dsn\serviceletex.h" />
     <ClInclude Include="..\..\inc\dsn\internal\thrift_helper.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\serverlet.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="service.cpp">

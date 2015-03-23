@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\inc\dsn\internal\file_server.h" />
     <ClInclude Include="..\..\inc\dsn\internal\serialization.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\serverlet.h" />
     <ClInclude Include="..\..\inc\dsn\internal\service_base.h" />
     <ClInclude Include="..\..\inc\dsn\internal\thrift_helper.h" />
     <ClInclude Include="..\..\inc\dsn\servicelet.h" />
