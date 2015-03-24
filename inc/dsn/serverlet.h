@@ -100,7 +100,7 @@ namespace dsn {
             {
             public:
                 service_rpc_request_task1(message_ptr& request, service_node* node, T* svc, void (T::*handler)(const TRequest&))
-                    : rpc_request_task(request, node), service_context_manager(_svc, this)
+                    : rpc_request_task(request, node), service_context_manager(svc, this)
                 {
                     _handler = handler;
                     _svc = svc;

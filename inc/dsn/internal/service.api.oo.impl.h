@@ -87,17 +87,20 @@ namespace dsn {
 
                     virtual void on_response(error_code err, message_ptr& request, message_ptr& response)
                     {
-                        if (err == ERR_SUCCESS)
+                        if (nullptr != _callback)
                         {
-                            std::shared_ptr<TResponse> resp(new TResponse);
-                            unmarshall(response->reader(), *resp);
-                            _callback(err, _req, resp);
+                            if (err == ERR_SUCCESS)
+                            {
+                                std::shared_ptr<TResponse> resp(new TResponse);
+                                unmarshall(response->reader(), *resp);
+                                _callback(err, _req, resp);
+                            }
+                            else
+                            {
+                                _callback(err, _req, nullptr);
+                            }
+                            _callback = nullptr;
                         }
-                        else
-                        {
-                            _callback(err, _req, nullptr);
-                        }
-                        _callback = nullptr;
                     }
 
                 private:
@@ -122,17 +125,20 @@ namespace dsn {
 
                     virtual void on_response(error_code err, message_ptr& request, message_ptr& response)
                     {
-                        TResponse resp;
-                        if (err == ERR_SUCCESS)
+                        if (nullptr != _callback)
                         {
-                            unmarshall(response->reader(), resp);
-                            _callback(err, resp);
+                            TResponse resp;
+                            if (err == ERR_SUCCESS)
+                            {
+                                unmarshall(response->reader(), resp);
+                                _callback(err, resp);
+                            }
+                            else
+                            {
+                                _callback(err, resp);
+                            }
+                            _callback = nullptr;
                         }
-                        else
-                        {
-                            _callback(err, resp);
-                        }
-                        _callback = nullptr;
                     }
 
                 private:
@@ -155,8 +161,11 @@ namespace dsn {
 
                     virtual void on_response(error_code err, message_ptr& request, message_ptr& response)
                     {
-                        _callback(err, request, response);
-                        _callback = nullptr;
+                        if (nullptr != _callback)
+                        {
+                            _callback(err, request, response);
+                            _callback = nullptr;
+                        }
                     }
 
                 private:

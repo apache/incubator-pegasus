@@ -78,13 +78,19 @@ namespace dsn {
         public:
             service_context_manager(servicelet* context, task* task)
             {
-                _id = context->add_outstanding_task(task);
                 _context = context;
+                if (nullptr != _context)
+                {
+                    _id = context->add_outstanding_task(task);
+                }
             }
 
             ~service_context_manager()
             {
-                _context->remove_outstanding_task(_id);
+                if (nullptr != _context)
+                {
+                    _context->remove_outstanding_task(_id);
+                }
             }
 
         private:

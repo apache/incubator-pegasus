@@ -41,8 +41,11 @@ namespace dsn {
 
                 virtual void exec()
                 {
-                    _handler();
-                    _handler = nullptr;
+                    if (nullptr != _handler)
+                    {
+                        _handler();
+                        _handler = nullptr;
+                    }
                 }
 
                 //task_handler& handler() { return _handler; }

@@ -247,11 +247,11 @@ bool task::cancel(bool wait_until_finished)
 
     if (current_tsk == this)
     {
-        dwarn(
+        /*dwarn(
             "task %s (id=%016llx) cannot cancel itself",                
             spec().name,
             id()
-            );
+            );*/
         return false;
     }
     
