@@ -721,7 +721,7 @@ task_ptr replica_stub::begin_open_replica(const std::string& app_type, global_pa
         auto it2 = _closingReplicas.find(gpid);
         if (it2 != _closingReplicas.end())
         {
-            if (it2->second.first->cancel(false))
+            if (it2->second.first->state() == PS_INACTIVE && it2->second.first->cancel(false))
             {
                 replica_ptr r = it2->second.second;
                 _closingReplicas.erase(it2);
@@ -793,7 +793,11 @@ task_ptr replica_stub::begin_close_replica(replica_ptr r)
 
     if (remove_replica(r))
     {
-        auto task = tasking::enqueue(LPC_CLOSE_REPLICA, this, std::bind(&replica_stub::close_replica, this, r), -1, _options.GcMemoryReplicaIntervalMs);
+        auto task = tasking::enqueue(LPC_CLOSE_REPLICA, this, 
+            std::bind(&replica_stub::close_replica, this, r), 
+            0, 
+            r->status() == PS_ERROR ? 0 : _options.GcMemoryReplicaIntervalMs
+            );
         _closingReplicas[r->get_gpid()] = std::make_pair(task, r);
         return task;
     }

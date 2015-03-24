@@ -308,6 +308,8 @@ bool service_spec::init(configuration_ptr c)
     std::vector<std::string> allSectionNames;
     config->get_all_sections(allSectionNames);
     int ports_per_node = network_formats::instance().max_value() + 1;
+    if (0 == ports_per_node) ports_per_node = 1;
+
     for (auto it = allSectionNames.begin(); it != allSectionNames.end(); it++)
     {
         if (it->substr(0, strlen("apps.")) == std::string("apps."))

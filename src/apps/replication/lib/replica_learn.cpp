@@ -340,6 +340,8 @@ void replica::handle_learning_error(int err)
 
     _potential_secondary_states.Cleanup(true);
     _potential_secondary_states.LearningState = LearningFailed;
+
+    update_local_configuration_with_no_ballot_change(PS_ERROR);
 }
 
 void replica::handle_learning_succeeded_on_primary(const end_point& node, uint64_t learnSignature)

@@ -86,6 +86,12 @@ void servicelet::clear_outstanding_tasks()
     for (auto it = _outstanding_tasks.begin(); it != _outstanding_tasks.end(); it++)
     {
         it->second->cancel(true);
+
+        auto sc = dynamic_cast<service_context_manager*>(it->second);
+        if (nullptr != sc)
+        {
+            sc->clear_context();
+        }
     }
     _outstanding_tasks.clear();
 }

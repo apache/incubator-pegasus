@@ -320,6 +320,7 @@ namespace dsn {
         }
         else
         {
+            dassert(false, "rpc registration confliction for '%s'", handler->code.to_string());
             return false;
         }
     }

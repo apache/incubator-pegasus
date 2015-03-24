@@ -532,6 +532,7 @@ void replica::update_local_configuration(const replica_configuration& config)
             dassert (false, "invalid execution path");
             break;
         case PS_POTENTIAL_SECONDARY:
+            dassert(false, "invalid execution path");
             break;
         case PS_INACTIVE:
             dassert (false, "invalid execution path");

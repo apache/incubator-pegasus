@@ -35,6 +35,8 @@ extern char* trim_string(char* s);
 
 extern uint64_t get_random64();
 
+extern uint64_t get_random64_pseudo();
+
 extern uint64_t get_current_physical_time_ns();
 
 class blob

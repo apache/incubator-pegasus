@@ -75,10 +75,13 @@ error_code service_node::start(const service_spec& spec)
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
+static std::map<uint16_t, service_node*>* s_nodes;
+
 service_engine::service_engine(void)
 {
     _env = nullptr;
     _logging = nullptr;
+    s_nodes = &_engines;
 }
 
 void service_engine::init_before_toollets(const service_spec& spec)

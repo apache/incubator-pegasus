@@ -80,7 +80,7 @@ int replica::initialize_on_load(const char* dir, bool renameDirOnFailure)
     char app_type[128];
     global_partition_id gpid;
     std::string name = dr.substr(pos + 1);
-    if (4 != sscanf(name.c_str(), "%u.%u.%s", &gpid.tableId, &gpid.pidx, app_type))
+    if (3 != sscanf(name.c_str(), "%u.%u.%s", &gpid.tableId, &gpid.pidx, app_type))
     {
         derror( "invalid replica dir %s", dir);
         return ERR_PATH_NOT_FOUND;

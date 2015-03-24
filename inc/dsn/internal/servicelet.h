@@ -93,6 +93,8 @@ namespace dsn {
                 }
             }
 
+            void clear_context() { _context = nullptr; }
+
         private:
             int _id;
             servicelet *_context;

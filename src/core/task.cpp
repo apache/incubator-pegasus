@@ -87,7 +87,7 @@ task::task(task_code code, int hash, service_node* node)
     : _state(TASK_STATE_READY)
 {
     _spec = task_spec::get(code);
-    _task_id = utils::get_random64(); 
+    _task_id = (uint64_t)(this);
     _wait_event.store(nullptr);
     _hash = hash;
     _delay_milliseconds = 0;

@@ -126,6 +126,18 @@ uint64_t get_random64()
     return random64_generator::instance().next();
 }
 
+uint64_t get_random64_pseudo()
+{
+    uint64_t v = ((uint64_t)std::rand());
+    v *= ((uint64_t)std::rand());
+    v *= ((uint64_t)std::rand());
+    v *= ((uint64_t)std::rand());
+    v *= ((uint64_t)std::rand());
+    v ^= ((uint64_t)std::rand());
+    return v;
+}
+
+
 uint64_t get_current_physical_time_ns()
 {
     return env_provider::get_current_physical_time_ns();
