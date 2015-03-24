@@ -51,7 +51,7 @@ namespace dsn {
         _net.on_client_session_disconnected(sp);
     }
 
-    bool rpc_client_session::on_recv_reply(uint64_t key, message_ptr& reply, int delay_handling_milliseconds)
+    bool rpc_client_session::on_recv_reply(uint64_t key, message_ptr& reply, int delay_ms)
     {
         if (reply != nullptr)
         {
@@ -59,7 +59,7 @@ namespace dsn {
             reply->header().to_address = _net.address();
         }
 
-        return _matcher->on_recv_reply(key, reply, delay_handling_milliseconds);
+        return _matcher->on_recv_reply(key, reply, delay_ms);
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -69,14 +69,14 @@ namespace dsn {
     {
     }
 
-    void rpc_server_session::on_recv_request(message_ptr& msg, int delay_handling_milliseconds)
+    void rpc_server_session::on_recv_request(message_ptr& msg, int delay_ms)
     {
         msg->header().from_address = remote_address();
         msg->header().from_address.port = msg->header().client.port;
         msg->header().to_address = _net.address();
 
         msg->server_session().reset(this);
-        return _net.engine()->on_recv_request(msg, delay_handling_milliseconds);
+        return _net.engine()->on_recv_request(msg, delay_ms);
     }
 
     void rpc_server_session::on_disconnected()

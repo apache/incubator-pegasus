@@ -49,7 +49,7 @@ public:
     void                    exec_internal();    
     bool                    cancel(bool wait_until_finished);
     bool                    wait(int timeout_milliseconds = INFINITE);
-    void                    enqueue(int delay_milliseconds = 0);
+    void                    enqueue();
     void                    set_error_code(error_code err) { _error = err; }
     void                    set_delay(int delay_milliseconds = 0) { _delay_milliseconds = delay_milliseconds; }
 
@@ -68,7 +68,7 @@ public:
     static void             set_current_worker(task_worker* worker);
 
 protected:
-    void                    enqueue(int delay_milliseconds, task_worker_pool* pool);
+    void                    enqueue(task_worker_pool* pool);
     void                    signal_waiters();
     void                    set_task_id(uint64_t tid) { _task_id = tid;  }
 
@@ -80,6 +80,7 @@ private:
     int                    _hash;
     int                    _delay_milliseconds;
     error_code             _error;
+    bool                   _wait_for_cancel;
     
 private:
     task_spec              *_spec;
@@ -111,7 +112,7 @@ public:
     rpc_request_task(message_ptr& request, service_node* node);
 
     message_ptr&  get_request() { return _request; }
-    void          enqueue(int delay_milliseconds, service_node* node);
+    void          enqueue(service_node* node);
 
     virtual void  exec() = 0;
 
@@ -148,7 +149,7 @@ public:
 
     virtual void on_response(error_code err, message_ptr& request, message_ptr& response) {}
 
-    void             enqueue(error_code err, message_ptr& reply, int delay_milliseconds = 0);
+    void             enqueue(error_code err, message_ptr& reply);
     message_ptr&      get_request() { return _request; }
     message_ptr&      get_response() { return _response; }
 
@@ -194,7 +195,7 @@ class aio_task : public task
 public:
     aio_task(task_code code, int hash = 0);
 
-    void            enqueue(error_code err, uint32_t transferred_size, int delay_milliseconds, service_node* node);
+    void            enqueue(error_code err, uint32_t transferred_size, service_node* node);
     uint32_t        get_transferred_size() const { return _transferred_size; }
     disk_aio_ptr    aio() { return _aio; }
     void            exec();

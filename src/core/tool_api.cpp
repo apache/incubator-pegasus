@@ -77,7 +77,8 @@ void tool_app::start_all_service_apps()
     for (auto it = apps.begin(); it != apps.end(); it++)
     {
         task_ptr t(new service_control_task(it->second, true));
-        t->enqueue(1000 * it->second->spec().delay_seconds);
+        t->set_delay(1000 * it->second->spec().delay_seconds);
+        t->enqueue();
     }
 }
 
@@ -88,7 +89,7 @@ void tool_app::stop_all_service_apps()
     for (auto it = apps.begin(); it != apps.end(); it++)
     {
         task_ptr t(new service_control_task(it->second, false));
-        t->enqueue(0);
+        t->enqueue();
     }
 }
 

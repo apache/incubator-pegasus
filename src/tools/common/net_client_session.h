@@ -48,7 +48,7 @@ namespace dsn {
             virtual void on_closed() { return on_disconnected(); }
             virtual void on_message_read(message_ptr& msg)
             {
-                on_recv_reply(msg->header().id, msg);
+                on_recv_reply(msg->header().id, msg, 0);
             }
             virtual void add_reference() { add_ref(); }
             virtual void release_reference() { release_ref(); }

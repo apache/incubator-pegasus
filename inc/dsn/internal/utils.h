@@ -223,6 +223,7 @@ inline void binary_writer::write(const std::string& val, uint16_t pos /*= 0xffff
 
 inline void binary_writer::write(const blob& val, uint16_t pos /*= 0xffff*/)
 {
+    // TODO: optimization by not memcpy
     int len = val.length();
     write((const char*)&len, sizeof(int), pos);
     if (len > 0) write((const char*)val.data(), len, pos);

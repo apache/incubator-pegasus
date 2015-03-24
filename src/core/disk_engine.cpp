@@ -88,7 +88,7 @@ void disk_engine::start_io(aio_task_ptr& aio_tsk)
         auto_lock l(_lock);
         if (!_is_running)
         {
-            aio_tsk->enqueue(ERR_SERVICE_NOT_FOUND, 0, 0, _node);
+            aio_tsk->enqueue(ERR_SERVICE_NOT_FOUND, 0, _node);
             return;
         }
        
@@ -105,7 +105,7 @@ void disk_engine::start_io(aio_task_ptr& aio_tsk)
     }
     else
     {
-        aio_tsk->enqueue(ERR_FILE_OPERATION_FAILED, 0, 0, _node);
+        aio_tsk->enqueue(ERR_FILE_OPERATION_FAILED, 0, _node);
     }
 }
 
@@ -128,7 +128,7 @@ void disk_engine::complete_io(aio_task_ptr& aio, error_code err, uint32_t bytes,
         _request_count--;
     }
     
-    aio->enqueue(err, bytes, delay_milliseconds, _node);
+    aio->enqueue(err, bytes, _node);
     aio->release_ref();
 }
 

@@ -127,7 +127,9 @@ namespace dsn {
         {
             uint64_t qts = message_ext_for_profiler::get(msg);
             uint64_t now = ::dsn::service::env::now_ns();
-            s_spec_profilers[msg->header().local_rpc_code].rpc_server_latency_ns->set(now - qts);
+
+            auto code = task_spec::get(msg->header().local_rpc_code)->rpc_paired_code;
+            s_spec_profilers[code].rpc_server_latency_ns->set(now - qts);
         }
 
         static void profiler_on_rpc_response_enqueue(rpc_response_task* resp)

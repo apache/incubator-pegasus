@@ -34,7 +34,7 @@ class rpc_client_matcher : public std::enable_shared_from_this<rpc_client_matche
 {
 public:
     void on_call(message_ptr& request, rpc_response_task_ptr& call, rpc_client_session_ptr& client);
-    bool on_recv_reply(uint64_t key, message_ptr& reply, int delay_handling_milliseconds = 0);
+    bool on_recv_reply(uint64_t key, message_ptr& reply, int delay_ms);
     
 private:
     friend class rpc_timeout_task;
@@ -84,7 +84,7 @@ public:
 
 private:
     friend class rpc_server_session;    
-    void on_recv_request(message_ptr& msg, int delay_handling_milliseconds = 0);
+    void on_recv_request(message_ptr& msg, int delay_ms);
             
 private:
     configuration_ptr                     _config;    

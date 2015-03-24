@@ -88,7 +88,7 @@ namespace dsn {
     {
     public:
         rpc_client_session(network& net, const end_point& remote_addr, std::shared_ptr<rpc_client_matcher>& matcher);
-        bool on_recv_reply(uint64_t key, message_ptr& reply, int delay_handling_milliseconds = 0);
+        bool on_recv_reply(uint64_t key, message_ptr& reply, int delay_ms);
         void on_disconnected();
         void call(message_ptr& request, rpc_response_task_ptr& call);
         const end_point& remote_address() const { return _remote_addr; }
@@ -108,7 +108,7 @@ namespace dsn {
     {
     public:
         rpc_server_session(network& net, const end_point& remote_addr);
-        void on_recv_request(message_ptr& msg, int delay_handling_milliseconds = 0);
+        void on_recv_request(message_ptr& msg, int delay_ms);
         void on_disconnected();
         const end_point& remote_address() const { return _remote_addr; }
 

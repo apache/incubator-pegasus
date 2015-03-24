@@ -157,9 +157,11 @@ message_ptr message::create_response()
     msg->header().rpc_id = _msg_header.rpc_id;
         
     msg->header().server.error = ERR_SUCCESS.get();    
-    strcpy(msg->header().rpc_name, _msg_header.rpc_name);
-     
     msg->header().local_rpc_code = task_spec::get(_msg_header.local_rpc_code)->rpc_paired_code;
+    
+    strcpy(msg->header().rpc_name, _msg_header.rpc_name);
+    strcat(msg->header().rpc_name, "_ACK");
+
     msg->header().from_address = _msg_header.to_address;
     msg->header().to_address = _msg_header.from_address;
 

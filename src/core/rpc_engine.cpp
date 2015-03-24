@@ -61,7 +61,7 @@ namespace dsn {
         task_spec  *_spec;
     };
 
-    bool rpc_client_matcher::on_recv_reply(uint64_t key, message_ptr& reply, int delay_handling_milliseconds)
+    bool rpc_client_matcher::on_recv_reply(uint64_t key, message_ptr& reply, int delay_ms)
     {
         error_code sys_err = (reply != nullptr) ? reply->error() : ERR_TIMEOUT;
         rpc_response_task_ptr call;
@@ -90,8 +90,9 @@ namespace dsn {
             {
                 timeout_tsk->cancel(true);
             }
-
-            call->enqueue(sys_err, reply, delay_handling_milliseconds);
+            
+            call->set_delay(delay_ms);
+            call->enqueue(sys_err, reply);
         }
 
         return ret;
@@ -117,7 +118,8 @@ namespace dsn {
         }
 
         int timeout_milliseconds = get_timeout_ms(hdr.client.timeout_milliseconds, spec);
-        timeout_tsk->enqueue(timeout_milliseconds);
+        timeout_tsk->set_delay(timeout_milliseconds);
+        timeout_tsk->enqueue();
         msg->add_elapsed_timeout_milliseconds(timeout_milliseconds);
 
     }
@@ -151,14 +153,15 @@ namespace dsn {
         if (remain_time_ms <= 0)
         {
             message_ptr reply(nullptr);
-            on_recv_reply(key, reply);
+            on_recv_reply(key, reply, 0);
         }
         else
         {
             task_ptr timeout_tsk(new rpc_timeout_task(shared_from_this(), key, spec));
             int timeout_ms = get_timeout_ms(remain_time_ms, spec);
             msg->add_elapsed_timeout_milliseconds(timeout_ms);
-            timeout_tsk->enqueue(timeout_ms);
+            timeout_tsk->set_delay(timeout_ms);
+            timeout_tsk->enqueue();
 
             {
                 utils::auto_lock l(_requests_lock);
@@ -334,7 +337,7 @@ namespace dsn {
         return true;
     }
 
-    void rpc_engine::on_recv_request(message_ptr& msg, int delay_handling_milliseconds)
+    void rpc_engine::on_recv_request(message_ptr& msg, int delay_ms)
     {
         rpc_handler_ptr handler;
         {
@@ -350,7 +353,8 @@ namespace dsn {
         {
             msg->header().local_rpc_code = (uint16_t)handler->code;
             auto tsk = handler->handler->new_request_task(msg, node());
-            tsk->enqueue(delay_handling_milliseconds, _node);
+            tsk->set_delay(delay_ms);
+            tsk->enqueue(_node);
         }
         else
         {
@@ -400,7 +404,8 @@ namespace dsn {
             if (call != nullptr)
             {
                 message_ptr nil;
-                call->enqueue(ERR_TIMEOUT, nil, msg->header().client.timeout_milliseconds);
+                call->set_delay(msg->header().client.timeout_milliseconds);
+                call->enqueue(ERR_TIMEOUT, nil);
             }   
             return;
         }

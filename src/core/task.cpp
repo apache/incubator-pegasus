@@ -91,6 +91,7 @@ task::task(task_code code, int hash, service_node* node)
     _wait_event.store(nullptr);
     _hash = hash;
     _delay_milliseconds = 0;
+    _wait_for_cancel = false;
     
     if (node != nullptr)
     {
@@ -137,19 +138,42 @@ void task::exec_internal()
 
         exec();
         
-        _state.compare_exchange_strong(RUNNING_STATE, TASK_STATE_FINISHED);
-        
-        _spec->on_task_end.execute(this);
-
-        // signal_waiters(); [
-        // inline for performance
-        void* evt = _wait_event.load();
-        if (evt != nullptr)
+        if (_state.compare_exchange_strong(RUNNING_STATE, TASK_STATE_FINISHED))
         {
-            auto nevt = (utils::notify_event*)evt;
-            nevt->notify();
+            _spec->on_task_end.execute(this);
+
+            // signal_waiters(); [
+            // inline for performance
+            void* evt = _wait_event.load();
+            if (evt != nullptr)
+            {
+                auto nevt = (utils::notify_event*)evt;
+                nevt->notify();
+            }
+            // ]
         }
-        // ]
+
+        // for timer
+        else
+        {
+            _spec->on_task_end.execute(this);
+            if (!_wait_for_cancel) 
+                enqueue();
+            else
+            {
+                _state.compare_exchange_strong(READY_STATE, TASK_STATE_CANCELLED);
+
+                // signal_waiters(); [
+                // inline for performance
+                void* evt = _wait_event.load();
+                if (evt != nullptr)
+                {
+                    auto nevt = (utils::notify_event*)evt;
+                    nevt->notify();
+                }
+                // ]
+            }
+        }
         
         tls_task_info.current_task = parent_task;
     }
@@ -243,6 +267,7 @@ bool task::cancel(bool wait_until_finished)
         }
         else if (wait_until_finished)
         {
+            _wait_for_cancel = true;
             wait();
         }
         else
@@ -265,18 +290,16 @@ bool task::cancel(bool wait_until_finished)
     return ret;
 }
 
-void task::enqueue(int delay_milliseconds)
+void task::enqueue()
 {        
     dassert(_node != nullptr, "service node unknown for this task");
     auto pool = node()->computation()->get_pool(spec().pool_code);
-    enqueue(delay_milliseconds, pool);
+    enqueue(pool);
 }
 
-void task::enqueue(int delay_milliseconds, task_worker_pool* pool)
+void task::enqueue(task_worker_pool* pool)
 {
     dassert (pool != nullptr, "pool not exist");
-
-    set_delay(delay_milliseconds);
 
     if (spec().type == TASK_TYPE_COMPUTE)
     {
@@ -312,7 +335,7 @@ void timer_task::exec()
     {
         if (_state.compare_exchange_strong(RUNNING_STATE, TASK_STATE_READY))
         {
-            enqueue(_interval_milliseconds);
+            set_delay(_interval_milliseconds);            
         }        
     }
 }
@@ -325,10 +348,10 @@ rpc_request_task::rpc_request_task(message_ptr& request, service_node* node)
     dbg_dassert (TASK_TYPE_RPC_REQUEST == spec().type, "task type must be RPC_REQUEST");
 }
 
-void rpc_request_task::enqueue(int delay_milliseconds, service_node* node)
+void rpc_request_task::enqueue(service_node* node)
 {
     spec().on_rpc_request_enqueue.execute(this);
-    task::enqueue(delay_milliseconds, node->computation()->get_pool(spec().pool_code));
+    task::enqueue(node->computation()->get_pool(spec().pool_code));
 }
 
 void rpc_response_task::exec() 
@@ -346,14 +369,14 @@ rpc_response_task::rpc_response_task(message_ptr& request, int hash)
     _request = request;
 }
 
-void rpc_response_task::enqueue(error_code err, message_ptr& reply, int delay_milliseconds)
+void rpc_response_task::enqueue(error_code err, message_ptr& reply)
 {
     set_error_code(err);
     _response = (err == ERR_SUCCESS ? reply : nullptr);
 
     if (spec().on_rpc_response_enqueue.execute(this, true))
     {
-        task::enqueue(delay_milliseconds);
+        task::enqueue();
     }
 }
 
@@ -371,7 +394,7 @@ void aio_task::exec()
     on_completed(error(), _transferred_size);
 }
 
-void aio_task::enqueue(error_code err, uint32_t transferred_size, int delay_milliseconds, service_node* node)
+void aio_task::enqueue(error_code err, uint32_t transferred_size, service_node* node)
 {
     set_error_code(err);
     _transferred_size = transferred_size;
@@ -380,11 +403,11 @@ void aio_task::enqueue(error_code err, uint32_t transferred_size, int delay_mill
 
     if (node != nullptr)
     {
-        task::enqueue(delay_milliseconds, node->computation()->get_pool(spec().pool_code));
+        task::enqueue(node->computation()->get_pool(spec().pool_code));
     }
     else
     {
-        task::enqueue(delay_milliseconds);
+        task::enqueue();
     }
 }
 

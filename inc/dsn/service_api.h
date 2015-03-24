@@ -33,7 +33,11 @@ namespace tasking
 {
     inline void enqueue(task_ptr& task, int delay_milliseconds = 0)
     { 
-        task->enqueue(delay_milliseconds); 
+        if (delay_milliseconds > 0)
+        {
+            task->set_delay(delay_milliseconds);
+        }           
+        task->enqueue(); 
     }
 
     inline bool cancel(task_ptr& task, bool wait_until_finished)

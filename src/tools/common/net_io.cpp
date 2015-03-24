@@ -84,6 +84,7 @@ namespace dsn {
             }
             catch (std::exception& ex)
             {
+                ex;
                 /*dwarn("network session %s:%u exits failed, err = %s",
                     _remote_addr.to_ip_string().c_str(),
                     static_cast<int>_remote_addr.port,

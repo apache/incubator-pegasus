@@ -64,6 +64,12 @@ task_spec::task_spec(int code, const char* name, task_type type, threadpool_code
     rpc_message_channel(RPC_CHANNEL_TCP),
     rpc_message_header_format_id(-1)
 {
+    if (paired_code != 0)
+    {
+        task_spec* pc_spec = task_spec::get(paired_code);
+        pc_spec->rpc_paired_code.reset(task_code(code));
+    }
+
     dassert (
         strlen(name) <= MAX_TASK_CODE_NAME_LENGTH, 
         "task code name '%s' is too long: length must not be larger than MAX_TASK_CODE_NAME_LENGTH (%u)", 

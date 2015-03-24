@@ -263,7 +263,7 @@ void mutation_log::internal_write_callback(error_code err, uint32_t size, mutati
 {
     for (auto it = callbacks->begin(); it != callbacks->end(); it++)
     {
-        (*it)->enqueue(err, size, 0, nullptr);
+        (*it)->enqueue(err, size, nullptr);
     }
 }
 
