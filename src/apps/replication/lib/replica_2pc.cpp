@@ -236,6 +236,7 @@ void replica::on_prepare(message_ptr& request)
     unmarshall(request, rconfig);    
 
     mutation_ptr mu = mutation::read_from(request);
+    decree decree = mu->data.header.decree;
 
     ddebug( "%s: mutation %s on_prepare", name(), mu->name());
 
@@ -280,8 +281,7 @@ void replica::on_prepare(message_ptr& request)
         }
     }
 
-    dassert (rconfig.status == status(), "");
-    decree decree = mu->data.header.decree;
+    dassert (rconfig.status == status(), "");    
     if (decree <= last_committed_decree())
     {
         ack_prepare_message(ERR_SUCCESS, mu);

@@ -306,9 +306,9 @@ void task::enqueue(task_worker_pool* pool)
         spec().on_task_enqueue.execute(task::get_current_task(), this);
     }
 
-    if (_spec->allow_inline
-        || _spec->fast_execution_in_network_thread
-        )
+    if (_delay_milliseconds == 0
+        && (_spec->allow_inline || _spec->fast_execution_in_network_thread)
+       )
     {
         exec_internal();
     }
