@@ -314,6 +314,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, messa
 {
     if (PS_INACTIVE != status() || _stub->is_connected() == false)
     {
+        _primary_states.ReconfigurationTask = nullptr;
         return;
     }
 
@@ -346,7 +347,10 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, messa
         );
     
     if (resp.config.ballot < get_ballot())
+    {
+        _primary_states.ReconfigurationTask = nullptr;
         return;
+    }        
     
     // post-update work items?
     if (resp.err == ERR_SUCCESS)
@@ -377,6 +381,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, messa
     }
     
     update_configuration(resp.config);
+    _primary_states.ReconfigurationTask = nullptr;
 }
 
 void replica::update_configuration(const partition_configuration& config)
@@ -591,7 +596,8 @@ void replica::on_config_sync(const partition_configuration& config)
 {
     ddebug( "%s: configuration sync", name());
 
-    if (config.ballot >= get_ballot())
+    if (config.ballot >= get_ballot() 
+        && nullptr == _primary_states.ReconfigurationTask)
     {
         update_configuration(config);
     }
