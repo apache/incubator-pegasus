@@ -158,8 +158,9 @@ private:
     void update_configuration_on_meta_server(config_type type, const end_point& node, partition_configuration& newConfig);
     void on_update_configuration_on_meta_server_reply(error_code err, message_ptr& request, message_ptr& response, std::shared_ptr<configuration_update_request> req);
     void update_configuration(const partition_configuration& config);
-    void update_local_configuration(const replica_configuration& config);
+    void update_local_configuration(const replica_configuration& config, bool same_ballot = false);
     void replay_prepare_list();
+    bool is_same_ballot_status_change_allowed(partition_status olds, partition_status news);
 
     /////////////////////////////////////////////////////////////////
     // group check

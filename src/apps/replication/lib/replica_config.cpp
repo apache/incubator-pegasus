@@ -95,8 +95,12 @@ void replica::assign_primary(configuration_update_request& proposal)
 
 void replica::add_potential_secondary(configuration_update_request& proposal)
 {
-    if (proposal.config.ballot != get_ballot() || status() != PS_PRIMARY)
+    dassert(proposal.config.ballot == get_ballot(), "");
+    if (status() != PS_PRIMARY)
+    {
+        dassert(status() == PS_INACTIVE && _primary_states.ReconfigurationTask != nullptr, "");
         return;
+    }   
 
     dassert (proposal.config.gpid == _primary_states.membership.gpid, "");
     dassert (proposal.config.app_type == _primary_states.membership.app_type, "");
@@ -391,17 +395,43 @@ void replica::update_configuration(const partition_configuration& config)
     replica_configuration rconfig;
     ReplicaHelper::GetReplicaConfig(config, address(), rconfig);
 
-    if (config.ballot > get_ballot() || status() != rconfig.status)
+    if (rconfig.status == PS_PRIMARY && status() != PS_PRIMARY)
     {
         _primary_states.ResetMembership(config, config.primary != address());
     }
 
-    update_local_configuration(rconfig);
+    if (config.ballot > get_ballot() ||
+        is_same_ballot_status_change_allowed(status(), rconfig.status)
+        )
+    {
+        update_local_configuration(rconfig, true);
+    }   
 }
 
-void replica::update_local_configuration(const replica_configuration& config)
+bool replica::is_same_ballot_status_change_allowed(partition_status olds, partition_status news)
 {
-    dassert (config.ballot >= get_ballot(), "");
+    return
+        // add learner
+        (olds == PS_INACTIVE && news == PS_POTENTIAL_SECONDARY)
+
+        // learner ready for secondary
+        || (olds == PS_POTENTIAL_SECONDARY && news == PS_SECONDARY)
+
+        // meta server come back
+        || (olds == PS_INACTIVE && news == PS_SECONDARY)
+
+        // meta server come back
+        || (olds == PS_INACTIVE && news == PS_PRIMARY)
+
+        // no change
+        || (olds == news)
+        ;
+}
+
+void replica::update_local_configuration(const replica_configuration& config, bool same_ballot/* = false*/)
+{
+    dassert(config.ballot > get_ballot()
+        || (same_ballot && config.ballot == get_ballot()), "");
     dassert (config.gpid == get_gpid(), "");
 
     partition_status oldStatus = status();
@@ -589,18 +619,22 @@ void replica::update_local_configuration_with_no_ballot_change(partition_status 
 
     auto config = _config;
     config.status = s;
-    update_local_configuration(config);
+    update_local_configuration(config, true);
 }
 
 void replica::on_config_sync(const partition_configuration& config)
 {
     ddebug( "%s: configuration sync", name());
 
-    if (config.ballot >= get_ballot() 
-        && nullptr == _primary_states.ReconfigurationTask)
-    {
-        update_configuration(config);
-    }
+    // no update during reconfiguration
+    if (nullptr != _primary_states.ReconfigurationTask)
+        return;
+
+    // no outdated update
+    if (config.ballot < get_ballot())
+        return;
+
+    update_configuration(config);
 }
 
 void replica::replay_prepare_list()

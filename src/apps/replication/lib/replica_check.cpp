@@ -114,9 +114,13 @@ void replica::on_group_check(const group_check_request& request, __out_param gro
         response.err = ERR_VERSION_OUTDATED;
         return;
     }
-    else
+    else if (request.config.ballot > get_ballot())
     {
         update_local_configuration(request.config);
+    }
+    else if (is_same_ballot_status_change_allowed(status(), request.config.status))
+    {
+        update_local_configuration(request.config, true);
     }
     
     switch (status())

@@ -382,9 +382,13 @@ void replica::on_add_learner(const group_check_request& request)
     if (request.config.ballot < get_ballot())
         return;
 
-    update_local_configuration(request.config);
-    dassert (PS_POTENTIAL_SECONDARY == status(), "");
-    init_learn(request.learnerSignature);
+    if (request.config.ballot > get_ballot()
+        || is_same_ballot_status_change_allowed(status(), request.config.status))
+    {
+        update_local_configuration(request.config, true);
+        dassert(PS_POTENTIAL_SECONDARY == status(), "");
+        init_learn(request.learnerSignature);
+    }
 }
 
 }} // namespace
