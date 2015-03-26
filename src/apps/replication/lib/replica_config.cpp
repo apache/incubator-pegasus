@@ -607,6 +607,7 @@ void replica::update_local_configuration(const replica_configuration& config, bo
 
         if (isClosing)
         {
+            ddebug("%s: being close ...", name());
             _stub->begin_close_replica(this);
         }
     }
