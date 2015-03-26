@@ -56,7 +56,7 @@ public:
     static replica* newr(replica_stub* stub, const char* app_type, global_partition_id gpid, replication_options& options);    
     void replay_mutation(mutation_ptr& mu);
     void reset_prepare_list_after_replay();
-    void update_local_configuration_with_no_ballot_change(partition_status status);
+    bool update_local_configuration_with_no_ballot_change(partition_status status);
     void close();
 
     //
@@ -157,8 +157,9 @@ private:
     void remove(configuration_update_request& proposal);
     void update_configuration_on_meta_server(config_type type, const end_point& node, partition_configuration& newConfig);
     void on_update_configuration_on_meta_server_reply(error_code err, message_ptr& request, message_ptr& response, std::shared_ptr<configuration_update_request> req);
-    void update_configuration(const partition_configuration& config);
-    void update_local_configuration(const replica_configuration& config, bool same_ballot = false);
+    // return if is_closing
+    bool update_configuration(const partition_configuration& config);
+    bool update_local_configuration(const replica_configuration& config, bool same_ballot = false);
     void replay_prepare_list();
     bool is_same_ballot_status_change_allowed(partition_status olds, partition_status news);
 

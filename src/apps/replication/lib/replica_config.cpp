@@ -49,7 +49,11 @@ void replica::on_config_proposal(configuration_update_request& proposal)
 
     if (proposal.config.ballot > get_ballot())
     {
-        update_configuration(proposal.config);
+        if (update_configuration(proposal.config))
+        {
+            // is closing
+            return;
+        }   
     }
 
     switch (proposal.type)
@@ -392,7 +396,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, messa
     _primary_states.ReconfigurationTask = nullptr;
 }
 
-void replica::update_configuration(const partition_configuration& config)
+bool replica::update_configuration(const partition_configuration& config)
 {
     dassert (config.ballot >= get_ballot(), "");
     
@@ -408,8 +412,10 @@ void replica::update_configuration(const partition_configuration& config)
         is_same_ballot_status_change_allowed(status(), rconfig.status)
         )
     {
-        update_local_configuration(rconfig, true);
-    }   
+        return update_local_configuration(rconfig, true);
+    }
+    else
+        return false;
 }
 
 bool replica::is_same_ballot_status_change_allowed(partition_status olds, partition_status news)
@@ -432,7 +438,7 @@ bool replica::is_same_ballot_status_change_allowed(partition_status olds, partit
         ;
 }
 
-void replica::update_local_configuration(const replica_configuration& config, bool same_ballot/* = false*/)
+bool replica::update_local_configuration(const replica_configuration& config, bool same_ballot/* = false*/)
 {
     dassert(config.ballot > get_ballot()
         || (same_ballot && config.ballot == get_ballot()), "");
@@ -442,7 +448,7 @@ void replica::update_local_configuration(const replica_configuration& config, bo
     ballot oldBallot = get_ballot();
 
     if (oldStatus == config.status && oldBallot == config.ballot)
-        return;
+        return false;
 
     if (oldStatus == PS_ERROR && (config.status == PS_SECONDARY || config.status == PS_PRIMARY || config.status == PS_INACTIVE))
     {
@@ -454,7 +460,7 @@ void replica::update_local_configuration(const replica_configuration& config, bo
             enum_to_string(config.status),
             config.ballot
             );
-        return;
+        return false;
     }
 
     if (oldStatus == PS_POTENTIAL_SECONDARY && (config.status == PS_ERROR || config.status == PS_INACTIVE))
@@ -469,7 +475,7 @@ void replica::update_local_configuration(const replica_configuration& config, bo
                 enum_to_string(config.status),
                 config.ballot
                 );
-            return;
+            return false;
         }
     }
 
@@ -609,22 +615,24 @@ void replica::update_local_configuration(const replica_configuration& config, bo
         {
             ddebug("%s: being close ...", name());
             _stub->begin_close_replica(this);
+            return true;
         }
     }
     else
     {
         _stub->notify_replica_state_update(config, false);
     }
+    return false;
 }
 
-void replica::update_local_configuration_with_no_ballot_change(partition_status s)
+bool replica::update_local_configuration_with_no_ballot_change(partition_status s)
 {
     if (status() == s)
-        return;
+        return false;
 
     auto config = _config;
     config.status = s;
-    update_local_configuration(config, true);
+    return update_local_configuration(config, true);
 }
 
 void replica::on_config_sync(const partition_configuration& config)
