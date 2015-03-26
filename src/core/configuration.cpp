@@ -109,7 +109,8 @@ configuration::configuration(const char* file_name)
         if (nullptr == pEqual && *p != '[') {
             goto ConfReg;
         }
-        if (nullptr != pEqual && *p == '[') goto err;
+        if (nullptr != pEqual && *p == '[') 
+            goto err;
 
         //
         //    conf
@@ -124,7 +125,8 @@ ConfReg:
             if (pEqual)    *pEqual = '\0';
             char* pKey = utils::trim_string(p);
             char* pValue = pEqual ? utils::trim_string(++pEqual) : nullptr;
-            if (*pKey == '\0')    goto err;
+            if (*pKey == '\0')    
+                goto err;
 
             if (pSection->find((const char*)pKey) != pSection->end()) 
             {
@@ -155,14 +157,16 @@ ConfReg:
         else 
         {
             char* pRight = strchr(p, ']');
-            if (nullptr == pRight)    goto err;
+            if (nullptr == pRight)   
+                goto err;
             *pRight = '\0';
             p++;
             pSectionName = utils::trim_string(p);
-            if (*pSectionName == '\0')    goto err;
+            if (*pSectionName == '\0')   
+                goto err;
 
             if (has_section((const char*)pSectionName)) {
-                printf("RedefInition of section %s", pSectionName);
+                printf("RedefInition of section %s\n", pSectionName);
                 goto err;
             }
 
@@ -179,9 +183,11 @@ ConfReg:
 Next:
         p = pNextLine;
     }
+    return;
     
 err:
     printf("Unexpected configure in %s(line %d): %s\n", file_name, lineno, pLine);
+    exit(-2);
 }
 
 configuration::~configuration(void)

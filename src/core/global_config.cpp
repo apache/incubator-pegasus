@@ -115,8 +115,10 @@ bool threadpool_spec::init(configuration_ptr& config, __out_param std::vector<th
             continue;
 
         std::string section_name = std::string("threadpool.") + std::string(threadpool_code::to_string(code));
-        threadpool_spec spec(threadpool_code::to_string(code));
+        threadpool_spec spec(default_spec);
+        spec.pool_code.reset(threadpool_code::from_string(threadpool_code::to_string(code), THREAD_POOL_INVALID));
         spec.name = std::string(threadpool_code::to_string(code));
+        spec.run = true;
         
         if (config->has_section(section_name.c_str()))
         {

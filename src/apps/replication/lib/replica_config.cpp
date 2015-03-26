@@ -35,6 +35,8 @@ namespace dsn { namespace replication {
 
 void replica::on_config_proposal(configuration_update_request& proposal)
 {
+    check_hashed_access();
+
     ddebug(
         "%s: on_config_proposal %s for %s:%u", 
         name(),
@@ -316,6 +318,8 @@ void replica::update_configuration_on_meta_server(config_type type, const end_po
 
 void replica::on_update_configuration_on_meta_server_reply(error_code err, message_ptr& request, message_ptr& response, std::shared_ptr<configuration_update_request> req)
 {
+    check_hashed_access();
+
     if (PS_INACTIVE != status() || _stub->is_connected() == false)
     {
         _primary_states.ReconfigurationTask = nullptr;

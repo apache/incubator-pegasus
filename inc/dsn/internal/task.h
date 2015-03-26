@@ -158,9 +158,9 @@ public:
 private:
     message_ptr   _request;
     message_ptr   _response;
+    task_worker_pool *_caller_pool;
 
-    friend class rpc_engine;
-    
+    friend class rpc_engine;    
 };
 
 typedef ::boost::intrusive_ptr<rpc_response_task> rpc_response_task_ptr;

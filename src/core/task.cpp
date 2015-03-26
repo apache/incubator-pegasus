@@ -299,8 +299,6 @@ void task::enqueue()
 
 void task::enqueue(task_worker_pool* pool)
 {
-    dassert (pool != nullptr, "pool not exist");
-
     if (spec().type == TASK_TYPE_COMPUTE)
     {
         spec().on_task_enqueue.execute(task::get_current_task(), this);
@@ -314,6 +312,12 @@ void task::enqueue(task_worker_pool* pool)
     }
     else
     {
+        dassert(pool != nullptr, "pool not exist, "
+            "must be the case where the caller is executed in io threads "
+            "which is forbidden unless you explicitly set [task.%s].fast_execution_in_network_thread = true",
+            _spec->name
+            );
+
         task_ptr this_(this);
         pool->enqueue(this_);
     }
@@ -367,6 +371,8 @@ rpc_response_task::rpc_response_task(message_ptr& request, int hash)
     dbg_dassert (TASK_TYPE_RPC_RESPONSE == spec().type, "task must be of RPC_RESPONSE type");
 
     _request = request;
+    _caller_pool = task::get_current_worker() ? 
+        task::get_current_worker()->pool() : nullptr;
 }
 
 void rpc_response_task::enqueue(error_code err, message_ptr& reply)
@@ -376,7 +382,7 @@ void rpc_response_task::enqueue(error_code err, message_ptr& reply)
 
     if (spec().on_rpc_response_enqueue.execute(this, true))
     {
-        task::enqueue();
+        task::enqueue(_caller_pool);
     }
 }
 
