@@ -540,6 +540,8 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         case PS_POTENTIAL_SECONDARY:
             break;
         case PS_INACTIVE:
+            _potential_secondary_states.Cleanup(true);
+            break;
         case PS_ERROR:
             _prepare_list->reset(_app->last_committed_decree());
             _potential_secondary_states.Cleanup(true);
