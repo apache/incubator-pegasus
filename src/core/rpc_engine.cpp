@@ -416,6 +416,10 @@ namespace dsn {
 
     void rpc_engine::reply(message_ptr& response)
     {
+        auto s = response->server_session().get();
+        if (s == nullptr)
+            return;
+
         message* msg = response.get();
         msg->seal(_message_crc_required);
 
@@ -423,9 +427,6 @@ namespace dsn {
         if (!sp->on_rpc_reply.execute(task::get_current_task(), msg, true))
             return;
                 
-        auto s = response->server_session().get();
-        dassert (s != nullptr, "rpc server session missing for sending response msg");
         s->send(response);
     }
-
 }

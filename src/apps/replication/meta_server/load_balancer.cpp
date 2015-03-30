@@ -116,7 +116,7 @@ void load_balancer::RunLB(partition_configuration& pc)
         }
     }
 
-    else if (pc.secondaries.size() < 2)
+    else if (pc.secondaries.size() + 1 < pc.max_replica_count)
     {
         proposal.type = CT_ADD_SECONDARY;
         proposal.node = FindMinimalLoadMachine(false);
@@ -151,7 +151,7 @@ void load_balancer::OnQueryDecreeAck(error_code err, std::shared_ptr<QueryPNDecr
     else
     {
         zauto_write_lock l(_state->_lock);
-        server_state::AppState& app = _state->_apps[query->partitionId.tableId];
+        server_state::AppState& app = _state->_apps[query->partitionId.tableId - 1];
         partition_configuration& ps = app.Partitions[query->partitionId.pidx];
         if (resp->lastDecree > ps.lastCommittedDecree)
         {

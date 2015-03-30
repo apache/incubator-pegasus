@@ -721,7 +721,8 @@ task_ptr replica_stub::begin_open_replica(const std::string& app_type, global_pa
         auto it2 = _closingReplicas.find(gpid);
         if (it2 != _closingReplicas.end())
         {
-            if (it2->second.first->state() == PS_INACTIVE && it2->second.first->cancel(false))
+            if (it2->second.second->status() == PS_INACTIVE 
+                && it2->second.first->cancel(false))
             {
                 replica_ptr r = it2->second.second;
                 _closingReplicas.erase(it2);

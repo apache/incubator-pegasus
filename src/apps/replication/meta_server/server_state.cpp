@@ -37,10 +37,10 @@ server_state::~server_state(void)
 void server_state::InitApp()
 {
     AppState app;
-    app.AppId = 0;
+    app.AppId = 1;
     app.AppName = "TestTable";
     app.AppType = "SimpleKV";
-    app.PartitionCount = 1;
+    app.PartitionCount = 10;
     for (int i = 0; i < app.PartitionCount; i++)
     {
         partition_configuration ps;
@@ -49,6 +49,7 @@ void server_state::InitApp()
         ps.gpid.tableId = app.AppId;
         ps.gpid.pidx = i;
         ps.lastCommittedDecree = 0;
+        ps.max_replica_count = 3;
 
         app.Partitions.push_back(ps);
     }
@@ -163,7 +164,7 @@ void server_state::OnQueryConfig(ConfigurationNodeQueryRequest& request, __out_p
 
         for (auto& p : it->second.Partitions)
         {
-            response.partitions.push_back(_apps[p.tableId].Partitions[p.pidx]);
+            response.partitions.push_back(_apps[p.tableId - 1].Partitions[p.pidx]);
         }
     }
 }
@@ -197,7 +198,7 @@ void server_state::update_configuration(configuration_update_request& request, _
 {
     zauto_write_lock l(_lock);
 
-    AppState& app = _apps[request.config.gpid.tableId];
+    AppState& app = _apps[request.config.gpid.tableId - 1];
     partition_configuration& old = app.Partitions[request.config.gpid.pidx];
     if (old.ballot + 1 == request.config.ballot)
     {

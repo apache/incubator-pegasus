@@ -403,7 +403,9 @@ bool replica::update_configuration(const partition_configuration& config)
     replica_configuration rconfig;
     ReplicaHelper::GetReplicaConfig(config, address(), rconfig);
 
-    if (rconfig.status == PS_PRIMARY && status() != PS_PRIMARY)
+    if (rconfig.status == PS_PRIMARY &&
+        (rconfig.ballot > get_ballot() || status() != PS_PRIMARY)
+        )
     {
         _primary_states.ResetMembership(config, config.primary != address());
     }
@@ -450,7 +452,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
     if (oldStatus == config.status && oldBallot == config.ballot)
         return false;
 
-    if (oldStatus == PS_ERROR && (config.status == PS_SECONDARY || config.status == PS_PRIMARY || config.status == PS_INACTIVE))
+    if (oldStatus == PS_ERROR)
     {
         ddebug(
             "%s: status change from %s @ %lld to %s @ %lld is not allowed",
@@ -463,7 +465,8 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         return false;
     }
 
-    if (oldStatus == PS_POTENTIAL_SECONDARY && (config.status == PS_ERROR || config.status == PS_INACTIVE))
+    if (oldStatus == PS_POTENTIAL_SECONDARY 
+        && (config.status == PS_ERROR || config.status == PS_INACTIVE))
     {
         if (!_potential_secondary_states.Cleanup(false))
         {

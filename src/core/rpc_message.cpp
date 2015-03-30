@@ -93,6 +93,7 @@ message::message()
     _writer = new binary_writer();
 
     memset(&_msg_header, 0, FIELD_OFFSET(message_header, from_address));
+    _msg_header.local_rpc_code = 0;
     seal(false, true);
 }
         
@@ -106,10 +107,12 @@ message::message(utils::blob bb, bool parse_hdr)
     if (parse_hdr)
     {
         read_header();
+        _msg_header.local_rpc_code = 0;
     }
     else
     {
         memset(&_msg_header, 0, message_header::serialized_size());
+        _msg_header.local_rpc_code = 0;
     }
 }
                 

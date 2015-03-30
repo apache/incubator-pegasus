@@ -94,10 +94,10 @@ namespace dsn {
             std::string            app_type;
             global_partition_id    gpid;
             int64_t                ballot;
+            int32_t                max_replica_count;
             end_point              primary;
             std::vector<end_point> secondaries;
             std::vector<end_point> dropOuts;
-            std::vector<end_point> expects;
             int64_t                lastCommittedDecree;
         };
 
@@ -354,10 +354,10 @@ namespace dsn {
             marshall(writer, val.app_type, pos);
             marshall(writer, val.gpid, pos);
             marshall(writer, val.ballot, pos);
+            marshall(writer, val.max_replica_count, pos);
             marshall(writer, val.primary, pos);
             marshall(writer, val.secondaries, pos);
             marshall(writer, val.dropOuts, pos);
-            marshall(writer, val.expects, pos);
             marshall(writer, val.lastCommittedDecree, pos);
         }
 
@@ -366,10 +366,10 @@ namespace dsn {
             unmarshall(reader, val.app_type);
             unmarshall(reader, val.gpid);
             unmarshall(reader, val.ballot);
+            unmarshall(reader, val.max_replica_count);
             unmarshall(reader, val.primary);
             unmarshall(reader, val.secondaries);
             unmarshall(reader, val.dropOuts);
-            unmarshall(reader, val.expects);
             unmarshall(reader, val.lastCommittedDecree);
         }
 
