@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
 
- * Copyright (c) 2015 Microsoft Corporation
+ * Copyright (c) 2015 Microsoft Corporation, Robust Distributed System Nucleus(rDSN)
 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -216,6 +216,7 @@ bool service_spec::init(configuration_ptr c)
     tool = config->get_string_value("core", "tool", "");
     toollets = config->get_string_value_list("core", "toollets", ',');
     port = 0;   
+    coredump_dir = config->get_string_value("core", "coredump_dir", "./coredump");
     
     std::vector<std::string> cs;
     config->get_all_keys("network", cs);

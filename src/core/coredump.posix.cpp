@@ -1,7 +1,8 @@
 /*
  * The MIT License (MIT)
 
- * Copyright (c) 2015 Microsoft Corporation, Robust Distributed System Nucleus(rDSN)
+ * Copyright (c) 2015 Microsoft Corporation
+ * Robust Distributed System Nucleus (rDSN)
 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,57 +23,29 @@
  * THE SOFTWARE.
  */
 
-# include <dsn/internal/end_point.h>
+# include <dsn/internal/logging.h>
+# include <dsn/internal/coredump.h>
 
-# ifdef _WIN32
+//#ifdef _WIN32
+#if defined(__MACH__) || defined(__linux__)
 
 
-# else
-# include <sys/socket.h>
-# include <netdb.h>
-# include <arpa/inet.h>
-# endif
-
-# include <mutex>
+# define __TITLE__ "coredump"
 
 namespace dsn {
+    namespace utils {
 
-const end_point end_point::INVALID;
+        static std::string s_dump_dir;
+        static char s_app_name[256] = "unknown";
 
-end_point::end_point(const char* str, uint16_t p)
-{
-    static std::once_flag flag;
-    static bool flag_inited = false;
-    if (!flag_inited)
-    {
-        std::call_once(flag, [&]() 
+        void coredump::init(const char* dump_dir)
         {
-#ifdef _WIN32
-            WSADATA wsaData;
-            WSAStartup(MAKEWORD(2, 2), &wsaData);
-#endif
-            flag_inited = true;
-        });
-    }
+            s_dump_dir = dump_dir;
 
-    port = p;
-    name = std::string(str);
-
-    sockaddr_in addr;
-    memset(&addr,0,sizeof(addr));
-    addr.sin_family=AF_INET;
-
-    if ((addr.sin_addr.s_addr = inet_addr(str)) == (unsigned int)(-1))
-    {
-        hostent* hp = gethostbyname(str);
-        if (hp != 0) 
-        {
-            memcpy((void*)&(addr.sin_addr.s_addr), (const void*)hp->h_addr, (size_t)hp->h_length);
+            // TODO: not implemented
         }
     }
-
-    // network order
-    ip = (uint32_t)(addr.sin_addr.s_addr);
 }
 
-} // end namespace
+# endif // #if defined(__MACH__) || defined(__linux__)
+

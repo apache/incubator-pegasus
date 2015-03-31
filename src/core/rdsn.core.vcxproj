@@ -14,6 +14,8 @@
     <ClCompile Include="admission_controller.cpp" />
     <ClCompile Include="aio_provider.cpp" />
     <ClCompile Include="configuration.cpp" />
+    <ClCompile Include="coredump.posix.cpp" />
+    <ClCompile Include="coredump.win.cpp" />
     <ClCompile Include="disk_engine.cpp" />
     <ClCompile Include="end_point.cpp" />
     <ClCompile Include="env_provider.cpp" />
@@ -40,6 +42,7 @@
     <ClCompile Include="zlocks.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\inc\dsn\internal\coredump.h" />
     <ClInclude Include="..\..\inc\dsn\internal\dsn_types.h" />
     <ClInclude Include="..\..\inc\dsn\internal\admission_controller.h" />
     <ClInclude Include="..\..\inc\dsn\internal\aio_provider.h" />

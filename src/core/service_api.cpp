@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
 
- * Copyright (c) 2015 Microsoft Corporation
+ * Copyright (c) 2015 Microsoft Corporation, Robust Distributed System Nucleus(rDSN)
 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,8 +27,10 @@
 # include "task_engine.h"
 # include "rpc_engine.h"
 # include "disk_engine.h"
+# include <dsn/internal/coredump.h>
 # include <dsn/internal/env_provider.h>
 # include <dsn/internal/factory_store.h>
+# include <boost/filesystem.hpp>
 
 using namespace dsn::tools;
 
@@ -61,6 +63,13 @@ namespace dsn { namespace service {
                 getchar();
             }
 
+            // setup coredump
+            if (!boost::filesystem::exists(spec.coredump_dir))
+            {
+                boost::filesystem::create_directory(spec.coredump_dir);
+            }
+            std::string cdir = boost::filesystem::canonical(boost::filesystem::path(spec.coredump_dir)).string();
+            utils::coredump::init(cdir.c_str());
 
             // init tools
             s_tool = utils::factory_store<tool_app>::create(spec.tool.c_str(), 0, spec.tool.c_str(), config);

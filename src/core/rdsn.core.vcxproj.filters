@@ -90,6 +90,12 @@
     <ClCompile Include="message_parser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="coredump.posix.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="coredump.win.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="rpc_engine.h">
@@ -145,5 +151,6 @@
     <ClInclude Include="..\..\inc\dsn\tool_api.h" />
     <ClInclude Include="..\..\inc\dsn\internal\message_parser.h" />
     <ClInclude Include="..\..\inc\dsn\internal\thrift_helper.h" />
+    <ClInclude Include="..\..\inc\dsn\internal\coredump.h" />
   </ItemGroup>
 </Project>

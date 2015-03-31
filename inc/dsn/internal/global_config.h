@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
 
- * Copyright (c) 2015 Microsoft Corporation
+ * Copyright (c) 2015 Microsoft Corporation, Robust Distributed System Nucleus(rDSN)
 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -70,6 +70,7 @@ struct service_spec
     std::string                  tool;
     std::list<std::string>       toollets;
     int                          port;    
+    std::string                  coredump_dir;
     
     network_conf                 network_configs;
     std::string                  aio_factory_name;
