@@ -95,7 +95,7 @@ public:
 
 public:
     virtual void signal(int count) = 0;
-    virtual bool wait(int timeout_milliseconds = INFINITE) = 0;
+    virtual bool wait(int timeout_milliseconds = TIME_MS_MAX) = 0;
     
     semaphore_provider* get_inner_provider() const { return _inner_provider; }
 

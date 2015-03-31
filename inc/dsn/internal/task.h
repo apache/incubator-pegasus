@@ -48,7 +48,7 @@ public:
 
     void                    exec_internal();    
     bool                    cancel(bool wait_until_finished);
-    bool                    wait(int timeout_milliseconds = INFINITE);
+    bool                    wait(int timeout_milliseconds = TIME_MS_MAX);
     void                    enqueue();
     void                    set_error_code(error_code err) { _error = err; }
     void                    set_delay(int delay_milliseconds = 0) { _delay_milliseconds = delay_milliseconds; }

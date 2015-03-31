@@ -160,7 +160,7 @@ void scheduler::wait_schedule(bool in_continue, bool is_continue_ready /*= false
     {
         schedule();
     }
-    s->runnable.wait(INFINITE);
+    s->runnable.wait(TIME_MS_MAX);
 }
 
 void scheduler::schedule()

@@ -76,7 +76,7 @@ public:
 public:
     virtual void signal(int count = 1) { _provider->signal(count); }
 
-    virtual bool wait(int timeout_milliseconds = INFINITE) { lock_checker::check_wait_safety();  return _provider->wait(timeout_milliseconds); }
+    virtual bool wait(int timeout_milliseconds = TIME_MS_MAX) { lock_checker::check_wait_safety();  return _provider->wait(timeout_milliseconds); }
 
 private:
     dsn::semaphore_provider *_provider;
@@ -91,7 +91,7 @@ public:
 public:
     void set();
     void reset();
-    bool wait(int timeout_milliseconds = INFINITE);
+    bool wait(int timeout_milliseconds = TIME_MS_MAX);
 
 private:
     zsemaphore        _sema;

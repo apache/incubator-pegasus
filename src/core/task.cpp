@@ -268,7 +268,8 @@ bool task::cancel(bool wait_until_finished)
         else if (wait_until_finished)
         {
             _wait_for_cancel = true;
-            wait();
+            bool r  = wait();
+            dassert(r, "wait failed, it is only possible when task runs for more than 0x0fffffff ms");
         }
         else
         {

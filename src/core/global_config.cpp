@@ -66,7 +66,7 @@ bool threadpool_spec::init(configuration_ptr& config, __out_param std::vector<th
     [threadpool.default]
     worker_count = 4
     worker_priority = THREAD_xPRIORITY_NORMAL
-    max_input_queue_length = -1
+    max_input_queue_length = 10000
     partitioned = false
     queue_aspects = xxx
     worker_aspects = xxx
@@ -78,7 +78,7 @@ bool threadpool_spec::init(configuration_ptr& config, __out_param std::vector<th
     run = true
     worker_count = 4
     worker_priority = THREAD_xPRIORITY_NORMAL
-    max_input_queue_length = -1
+    max_input_queue_length = 10000
     partitioned = false
     queue_aspects = xxx
     worker_aspects = xxx
@@ -102,7 +102,7 @@ bool threadpool_spec::init(configuration_ptr& config, __out_param std::vector<th
     
     default_spec.run = false;
     default_spec.worker_count = config->get_value<int>("threadpool.default", "worker_count", 1);
-    default_spec.max_input_queue_length = config->get_value<int>("threadpool.default", "max_input_queue_length", 10000);
+    default_spec.max_input_queue_length = config->get_value<int>("threadpool.default", "max_input_queue_length", 0xFFFFFFFFUL);
     default_spec.partitioned = config->get_value<bool>("threadpool.default", "partitioned", false);
     default_spec.queue_aspects = config->get_string_value_list("threadpool.default", "queue_aspects", ',');
     default_spec.worker_aspects = config->get_string_value_list("threadpool.default", "worker_aspects", ',');

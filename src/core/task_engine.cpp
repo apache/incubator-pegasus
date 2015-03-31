@@ -129,7 +129,7 @@ void task_worker_pool::enqueue(task_ptr& task)
                     std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 }
             }
-            else if (task->spec().type == TASK_TYPE_RPC_REQUEST && _spec.max_input_queue_length != INFINITE)
+            else if (task->spec().type == TASK_TYPE_RPC_REQUEST && _spec.max_input_queue_length != 0xFFFFFFFFUL)
             {
                 while ((uint32_t)q->count() >= _spec.max_input_queue_length)
                 {

@@ -159,7 +159,7 @@ public:
         return r;
     }
 
-    virtual T dequeue(__out_param long ct, int millieseconds = INFINITE)
+    virtual T dequeue(__out_param long ct, int millieseconds = TIME_MS_MAX)
     {
         std::unique_lock<std::mutex> l(priority_queue<T, priority_count, TQueue>::_lock);
         
@@ -169,7 +169,7 @@ public:
         }
 
         ++_wait_count;
-        if (millieseconds == INFINITE)
+        if (millieseconds == TIME_MS_MAX)
         {
             _cond.wait(l);
         }

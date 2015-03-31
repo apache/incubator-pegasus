@@ -53,8 +53,8 @@ typedef int handle_t;
 #error "unsupported platform"
 #endif
 
-# ifndef INFINITE
-# define INFINITE 0xFFFFFFFFUL
+# ifndef TIME_MS_MAX
+# define TIME_MS_MAX 0x0FFFFFFF
 # endif
 
 # ifndef FIELD_OFFSET

@@ -65,7 +65,7 @@ struct threadpool_spec
     worker_priority_t       worker_priority;
     bool                    worker_share_core;
     uint64_t                worker_affinity_mask;
-    unsigned int            max_input_queue_length; // INFINITE by default
+    unsigned int            max_input_queue_length; // 0xFFFFFFFFUL by default
     bool                    partitioned;         // false by default
     std::string             queue_factory_name;
     std::string             worker_factory_name;

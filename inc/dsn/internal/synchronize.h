@@ -105,7 +105,7 @@ public:
 
     inline bool wait()
     {
-        return wait(INFINITE);
+        return wait(TIME_MS_MAX);
     }
 
     inline bool wait(unsigned int milliseconds)

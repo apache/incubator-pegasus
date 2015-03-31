@@ -45,7 +45,7 @@ namespace tasking
         return task->cancel(wait_until_finished);
     }
 
-    inline bool wait(task_ptr& task, int timeout_milliseconds = INFINITE)
+    inline bool wait(task_ptr& task, int timeout_milliseconds = TIME_MS_MAX)
     {
         return task->wait(timeout_milliseconds);
     }
