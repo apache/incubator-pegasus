@@ -27,7 +27,7 @@
 
 namespace dsn { namespace fd {
 
-DEFINE_TASK_CODE(LPC_BEACON_CHECK, TASK_PRIORITY_HIGH, THREAD_POOL_FD_DEFAULT)
+DEFINE_TASK_CODE(LPC_BEACON_CHECK, TASK_PRIORITY_HIGH, THREAD_POOL_FD)
 
 class failure_detector_callback
 {
@@ -47,12 +47,12 @@ class failure_detector :
     public failure_detector_callback
 {
 public:
-    virtual void ping(const beacon_msg& beacon, ::dsn::service::rpc_replier<beacon_ack>& reply);
+    virtual void on_ping(const beacon_msg& beacon, ::dsn::service::rpc_replier<beacon_ack>& reply);
 
     virtual void end_ping(
         ::dsn::error_code err,
-        std::shared_ptr<beacon_msg> beacon,
-        std::shared_ptr<beacon_ack> ack);
+        std::shared_ptr<beacon_msg>& beacon,
+        std::shared_ptr<beacon_ack>& ack);
 
 public:
     int  start(
@@ -93,7 +93,7 @@ public:
     int  master_count() const { return static_cast<int>(_masters.size()); }
     
 protected:
-    void on_ping(const beacon_msg& beacon, __out_param beacon_ack& ack);
+    void on_ping_internal(const beacon_msg& beacon, __out_param beacon_ack& ack);
 
     bool is_time_greater_than(uint64_t ts, uint64_t base); 
 

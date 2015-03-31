@@ -9,7 +9,9 @@
 
 # include <dsn/internal/serialization.h>
 
-DEFINE_THREAD_POOL_CODE(THREAD_POOL_FD_DEFAULT)
+DEFINE_THREAD_POOL_CODE(THREAD_POOL_FD)
+
+
 
 namespace dsn { namespace fd {
 
@@ -51,14 +53,14 @@ class beacon_msg {
 
 void swap(beacon_msg &a, beacon_msg &b);
 
-inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param beacon_msg& val) {
-  ::dsn::utils::unmarshall(reader, val.time);
+inline void unmarshall(::dsn::binary_reader& reader, __out_param beacon_msg& val) {
+  ::dsn::unmarshall(reader, val.time);
   unmarshall(reader, val.from);
   unmarshall(reader, val.to);
 }
 
-inline void marshall(::dsn::utils::binary_writer& writer, const beacon_msg& val, uint16_t pos = 0xffff) {
-  ::dsn::utils::marshall(writer, val.time, pos);
+inline void marshall(::dsn::binary_writer& writer, const beacon_msg& val, uint16_t pos = 0xffff) {
+  ::dsn::marshall(writer, val.time, pos);
   marshall(writer, val.from, pos);
   marshall(writer, val.to, pos);
 }
@@ -100,18 +102,18 @@ class beacon_ack {
 
 void swap(beacon_ack &a, beacon_ack &b);
 
-inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param beacon_ack& val) {
-  ::dsn::utils::unmarshall(reader, val.time);
-  ::dsn::utils::unmarshall(reader, val.is_master);
+inline void unmarshall(::dsn::binary_reader& reader, __out_param beacon_ack& val) {
+  ::dsn::unmarshall(reader, val.time);
+  ::dsn::unmarshall(reader, val.is_master);
   unmarshall(reader, val.primary_node);
-  ::dsn::utils::unmarshall(reader, val.allowed);
+  ::dsn::unmarshall(reader, val.allowed);
 }
 
-inline void marshall(::dsn::utils::binary_writer& writer, const beacon_ack& val, uint16_t pos = 0xffff) {
-  ::dsn::utils::marshall(writer, val.time, pos);
-  ::dsn::utils::marshall(writer, val.is_master, pos);
+inline void marshall(::dsn::binary_writer& writer, const beacon_ack& val, uint16_t pos = 0xffff) {
+  ::dsn::marshall(writer, val.time, pos);
+  ::dsn::marshall(writer, val.is_master, pos);
   marshall(writer, val.primary_node, pos);
-  ::dsn::utils::marshall(writer, val.allowed, pos);
+  ::dsn::marshall(writer, val.allowed, pos);
 }
 
 }} // namespace

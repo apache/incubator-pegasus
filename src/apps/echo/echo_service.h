@@ -52,13 +52,13 @@ public:
             resp = "";
     }
 
-    void on_echo2(const utils::blob& req, rpc_replier<utils::blob>& reply)
+    void on_echo2(const blob& req, rpc_replier<blob>& reply)
     {
         if (!_empty_reply)
             reply(req);
         else
         {
-            utils::blob empty;
+            blob empty;
             reply(empty);
         }
     }
@@ -127,7 +127,7 @@ public:
         else
         {
             std::shared_ptr<char> buffer((char*)::malloc(_message_size));
-            std::shared_ptr<utils::blob> bb(new utils::blob(buffer, _message_size));
+            std::shared_ptr<blob> bb(new blob(buffer, _message_size));
             rpc::call_typed(_server, RPC_ECHO2, bb, this, &echo_client::on_echo_reply2, 0, 5000);
         }
     }
@@ -144,7 +144,7 @@ public:
         }
     }
 
-    void on_echo_reply(error_code err, std::shared_ptr<std::string> req, std::shared_ptr<std::string> resp)
+    void on_echo_reply(error_code err, std::shared_ptr<std::string>& req, std::shared_ptr<std::string>& resp)
     {
         if (err != ERR_SUCCESS)
         {
@@ -181,7 +181,7 @@ public:
         }        
     }
 
-    void on_echo_reply2(error_code err, std::shared_ptr<utils::blob> req, std::shared_ptr<utils::blob> resp)
+    void on_echo_reply2(error_code err, std::shared_ptr<blob>& req, std::shared_ptr<blob>& resp)
     {
         if (err != ERR_SUCCESS)
         {

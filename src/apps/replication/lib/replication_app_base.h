@@ -67,8 +67,8 @@ public:
     virtual int  compact(bool force) = 0;  // must be thread-safe
     
     // helper routines to accelerate learning
-    virtual void prepare_learning_request(__out_param utils::blob& learnRequest) {};
-    virtual int  get_learn_state(decree start, const utils::blob& learnRequest, __out_param learn_state& state) = 0;  // must be thread-safe
+    virtual void prepare_learning_request(__out_param blob& learnRequest) {};
+    virtual int  get_learn_state(decree start, const blob& learnRequest, __out_param learn_state& state) = 0;  // must be thread-safe
     virtual int  apply_learn_state(learn_state& state) = 0;  // must be thread-safe, and last_committed_decree must equal to last_durable_decree after learning
 
     virtual decree last_committed_decree() const = 0;  // must be thread-safe

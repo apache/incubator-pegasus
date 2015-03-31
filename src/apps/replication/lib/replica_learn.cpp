@@ -183,7 +183,7 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
         *itr = itr->substr(_dir.length()); 
 }
 
-void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request> req, std::shared_ptr<learn_response> resp)
+void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request>& req, std::shared_ptr<learn_response>& resp)
 {
     check_hashed_access();
 

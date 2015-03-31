@@ -214,7 +214,7 @@ int mutation_log::write_pending_mutations(bool create_new_log_when_necessary)
     auto bb = _pending_write->writer().get_buffer();
     uint64_t offset = end_offset() - bb.length();
     auto buf = bb.buffer();
-    utils::blob bb2(buf, bb.length());
+    blob bb2(buf, bb.length());
 
     task_ptr aio = _current_log_file->write_log_entry(
         bb2,
@@ -259,7 +259,7 @@ int mutation_log::write_pending_mutations(bool create_new_log_when_necessary)
     return ERR_SUCCESS;
 }
 
-void mutation_log::internal_write_callback(error_code err, uint32_t size, mutation_log::pending_callbacks_ptr callbacks, utils::blob data)
+void mutation_log::internal_write_callback(error_code err, uint32_t size, mutation_log::pending_callbacks_ptr callbacks, blob data)
 {
     for (auto it = callbacks->begin(); it != callbacks->end(); it++)
     {
@@ -288,7 +288,7 @@ int mutation_log::replay(ReplayCallback callback)
 
         _last_log_file = log;
 
-        dsn::utils::blob bb;
+        ::dsn::blob bb;
         err = log->read_next_log_entry(bb);
         if (err != ERR_SUCCESS)
         {
@@ -685,7 +685,7 @@ void log_file::close()
     }
 }
 
-int log_file::read_next_log_entry(__out_param dsn::utils::blob& bb)
+int log_file::read_next_log_entry(__out_param ::dsn::blob& bb)
 {
     dassert (_isRead, "");
 
@@ -701,8 +701,8 @@ int log_file::read_next_log_entry(__out_param dsn::utils::blob& bb)
     }
 
     message_header hdr;
-    dsn::utils::blob bb2(hdrBuffer, message_header::serialized_size());
-    dsn::utils::binary_reader reader(bb2);
+    ::dsn::blob bb2(hdrBuffer, message_header::serialized_size());
+    ::dsn::binary_reader reader(bb2);
     hdr.unmarshall(reader);
 
     if (!hdr.is_right_header((char*)hdrBuffer.get()))
@@ -728,7 +728,7 @@ int log_file::read_next_log_entry(__out_param dsn::utils::blob& bb)
 }
 
 aio_task_ptr log_file::write_log_entry(
-                utils::blob& bb,
+                blob& bb,
                 task_code evt,  // to indicate which thread pool to execute the callback
                 servicelet* callback_host,
                 aio_handler callback,

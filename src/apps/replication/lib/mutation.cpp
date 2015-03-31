@@ -40,9 +40,9 @@ mutation::~mutation()
 
 void mutation::add_client_request(message_ptr& request)
 {
-    dsn::utils::blob buffer(request->reader().get_remaining_buffer());
+    ::dsn::blob buffer(request->reader().get_remaining_buffer());
     auto buf = buffer.buffer();
-    utils::blob bb(buf, static_cast<int>(buffer.data() - buffer.buffer().get()), buffer.length());
+    blob bb(buf, static_cast<int>(buffer.data() - buffer.buffer().get()), buffer.length());
 
     client_requests.push_back(request);
     data.updates.push_back(bb);
@@ -58,7 +58,7 @@ void mutation::add_client_request(message_ptr& request)
     {        
         void * buf = malloc(it->length());
         memcpy(buf, it->data(), it->length());                              
-        dsn::utils::blob bb((const char *)buf, 0, it->length());
+        ::dsn::blob bb((const char *)buf, 0, it->length());
         message_ptr msg(new message(bb, false));
         mu->client_requests.push_back(msg);
         mu->_memorySize += msg->total_size();

@@ -112,14 +112,14 @@ struct end_point_comparor
 
 #ifndef ZION_NOT_USE_DEFAULT_SERIALIZATION
 
-inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param end_point& val) 
+inline void unmarshall(::dsn::binary_reader& reader, __out_param end_point& val) 
 {
     reader.read_pod(val.ip);
     reader.read_pod(val.port);
     reader.read(val.name);
 }
 
-inline void marshall(::dsn::utils::binary_writer& writer, const end_point& val, uint16_t pos = 0xffff) 
+inline void marshall(::dsn::binary_writer& writer, const end_point& val, uint16_t pos = 0xffff) 
 {
     writer.write_pod(val.ip, pos);
     writer.write_pod(val.port, pos);

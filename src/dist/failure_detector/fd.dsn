@@ -1,19 +1,19 @@
-include "../../dev.dsn"
+include "../../dsn.dsn"
 
 namespace cpp dsn.fd
 
 struct beacon_msg
 {
     1: i64 time;
-    2: dev.end_point from;
-    3: dev.end_point to;
+    2: dsn.end_point from;
+    3: dsn.end_point to;
 }
 
 struct beacon_ack
 {
     1: i64 time;
     2: bool is_master;
-    3: dev.end_point primary_node;
+    3: dsn.end_point primary_node;
     4: bool allowed;
 }
 

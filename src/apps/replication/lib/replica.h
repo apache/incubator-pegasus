@@ -135,7 +135,7 @@ private:
     /////////////////////////////////////////////////////////////////
     // learning    
     void init_learn(uint64_t signature = 0);
-    void on_learn_reply(error_code err, std::shared_ptr<learn_request> req, std::shared_ptr<learn_response> resp);
+    void on_learn_reply(error_code err, std::shared_ptr<learn_request>& req, std::shared_ptr<learn_response>& resp);
     void on_learn_remote_state(std::shared_ptr<learn_response> resp);
     void on_learn_remote_state_completed(int err);
     void handle_learning_error(int err);
@@ -167,7 +167,7 @@ private:
     // group check
     void init_group_check();
     void broadcast_group_check();
-    void on_group_check_reply(error_code err, std::shared_ptr<group_check_request> req, std::shared_ptr<group_check_response> resp);
+    void on_group_check_reply(error_code err, std::shared_ptr<group_check_request>& req, std::shared_ptr<group_check_response>& resp);
     
 private:
     // replica configuration, updated by update_local_configuration ONLY    

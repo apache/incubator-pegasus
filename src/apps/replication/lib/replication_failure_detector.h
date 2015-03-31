@@ -38,8 +38,8 @@ public:
 
     virtual void end_ping(
         ::dsn::error_code err,
-        std::shared_ptr<fd::beacon_msg> beacon,
-        std::shared_ptr<fd::beacon_ack> ack);
+        std::shared_ptr<fd::beacon_msg>& beacon,
+        std::shared_ptr<fd::beacon_ack>& ack);
 
      // client side
     virtual void on_master_disconnected( const std::vector<end_point>& nodes );

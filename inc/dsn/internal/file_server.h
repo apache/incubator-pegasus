@@ -43,9 +43,9 @@ namespace dsn {
             
         };
 
-        extern void marshall(::dsn::utils::binary_writer& writer, const remote_copy_request& val, uint16_t pos = 0xffff);
+        extern void marshall(::dsn::binary_writer& writer, const remote_copy_request& val, uint16_t pos = 0xffff);
 
-        extern void unmarshall(::dsn::utils::binary_reader& reader, __out_param remote_copy_request& val);
+        extern void unmarshall(::dsn::binary_reader& reader, __out_param remote_copy_request& val);
 
         class file_server 
         {

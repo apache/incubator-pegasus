@@ -142,7 +142,7 @@ void load_balancer::QueryDecree(std::shared_ptr<query_replica_decree_request> qu
     rpc::call_typed(query->node, RPC_QUERY_PN_DECREE, query, this, &load_balancer::OnQueryDecreeAck, gpid_to_hash(query->partition_id), 3000);
 }
 
-void load_balancer::OnQueryDecreeAck(error_code err, std::shared_ptr<query_replica_decree_request> query, std::shared_ptr<query_replica_decree_response> resp)
+void load_balancer::OnQueryDecreeAck(error_code err, std::shared_ptr<query_replica_decree_request>& query, std::shared_ptr<query_replica_decree_response>& resp)
 {
     if (err)
     {

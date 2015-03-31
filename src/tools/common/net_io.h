@@ -59,7 +59,7 @@ namespace dsn {
             boost::asio::io_service      &_io_service;
             boost::asio::ip::tcp::socket _socket;
             message_header               _read_msg_hdr;
-            utils::blob                  _read_buffer;
+            blob                  _read_buffer;
             end_point                    _remote_addr;
             std::shared_ptr<dsn::message_parser> _parser;
             

@@ -156,7 +156,7 @@ void replica::on_group_check(const group_check_request& request, __out_param gro
     response.learner_signature = _potential_secondary_states.LearningSignature;
 }
 
-void replica::on_group_check_reply(error_code err, std::shared_ptr<group_check_request> req, std::shared_ptr<group_check_response> resp)
+void replica::on_group_check_reply(error_code err, std::shared_ptr<group_check_request>& req, std::shared_ptr<group_check_response>& resp)
 {
     if (PS_PRIMARY != status() || req->config.ballot < get_ballot())
     {

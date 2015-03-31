@@ -137,7 +137,7 @@ namespace dsn {
             if (nullptr == msg.get())
                 return;
 
-            std::vector<utils::blob> buffers;
+            std::vector<blob> buffers;
             _parser->get_output_buffers(msg, buffers);
 
             std::vector<boost::asio::const_buffer> buffers2;

@@ -47,14 +47,14 @@ namespace dsn
         virtual message_ptr on_read(int read_length, __out_param int& read_next) = 0;
 
         // before write
-        virtual void get_output_buffers(message_ptr& msg, __out_param std::vector<utils::blob>& buffers) = 0;
+        virtual void get_output_buffers(message_ptr& msg, __out_param std::vector<blob>& buffers) = 0;
         
     protected:
         void create_new_buffer(int sz);
         void mark_read(int read_length);
 
     protected:        
-        utils::blob            _read_buffer;
+        blob            _read_buffer;
         int                    _read_buffer_occupied;
         int                    _buffer_block_size;
     };
@@ -66,7 +66,7 @@ namespace dsn
 
         virtual message_ptr on_read(int read_length, __out_param int& read_next);
 
-        virtual void get_output_buffers(message_ptr& msg, __out_param std::vector<utils::blob>& buffers)
+        virtual void get_output_buffers(message_ptr& msg, __out_param std::vector<blob>& buffers)
         {
             return msg->writer().get_buffers(buffers);
         }

@@ -57,7 +57,7 @@ public:
     virtual int  compact(bool force);
 
     // helper routines to accelerate learning
-    virtual int get_learn_state(decree start, const utils::blob& learnRequest, __out_param learn_state& state);
+    virtual int get_learn_state(decree start, const blob& learnRequest, __out_param learn_state& state);
     virtual int apply_learn_state(learn_state& state);
 
     virtual decree last_committed_decree() const { return _lastCommittedDecree; }

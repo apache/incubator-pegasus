@@ -93,7 +93,7 @@ private:
     int  create_new_log_file();
     void create_new_pending_buffer();    
     void internal_pending_write_timer(uint64_t id);
-    static void internal_write_callback(error_code err, uint32_t size, pending_callbacks_ptr callbacks, utils::blob data);
+    static void internal_write_callback(error_code err, uint32_t size, pending_callbacks_ptr callbacks, blob data);
     int  write_pending_mutations(bool create_new_log_when_necessary = true);
 
 private:    
@@ -152,14 +152,14 @@ public:
     //
     // read routines
     //
-    int read_next_log_entry(__out_param dsn::utils::blob& bb);
+    int read_next_log_entry(__out_param ::dsn::blob& bb);
 
     //
     // write routines
     //
     // return value: nullptr for error or immediate success (using ::GetLastError to get code), otherwise it is pending
     aio_task_ptr write_log_entry(
-                    utils::blob& bb,
+                    blob& bb,
                     task_code evt,  // to indicate which thread pool to execute the callback
                     servicelet* callback_host,
                     aio_handler callback,

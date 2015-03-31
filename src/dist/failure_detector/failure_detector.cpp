@@ -256,7 +256,7 @@ bool failure_detector::remove_from_allow_list( const end_point& node)
     return _allow_list.erase(node) > 0;
 }
 
-void failure_detector::on_ping(const beacon_msg& beacon, __out_param beacon_ack& ack)
+void failure_detector::on_ping_internal(const beacon_msg& beacon, __out_param beacon_ack& ack)
 {
     ack.is_master = true;
     ack.primary_node = address();
@@ -304,17 +304,17 @@ void failure_detector::on_ping(const beacon_msg& beacon, __out_param beacon_ack&
     }
 }
 
-void failure_detector::ping(const beacon_msg& beacon, ::dsn::service::rpc_replier<beacon_ack>& reply)
+void failure_detector::on_ping(const beacon_msg& beacon, ::dsn::service::rpc_replier<beacon_ack>& reply)
 {
     beacon_ack ack;
-    on_ping(beacon, ack);
+    on_ping_internal(beacon, ack);
     reply(ack);
 }
 
 void failure_detector::end_ping(
     ::dsn::error_code err,
-    std::shared_ptr<beacon_msg> beacon,
-    std::shared_ptr<beacon_ack> ack)
+    std::shared_ptr<beacon_msg>& beacon,
+    std::shared_ptr<beacon_ack>& ack)
 {
     if (err) return;
 

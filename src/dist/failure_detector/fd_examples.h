@@ -15,7 +15,7 @@ class failure_detector_service_example_impl : public failure_detector_service<fa
 {
 public:
 	// RPC_FAILURE_DETECTOR_PING
-	virtual void ping(const beacon_msg& beacon, ::dsn::service::rpc_replier<beacon_ack>& reply)
+	virtual void on_ping(const beacon_msg& beacon, ::dsn::service::rpc_replier<beacon_ack>& reply)
 	{
 		std::cout << "exec rpc handler for RPC_FAILURE_DETECTOR_PING" << std::endl;
 		beacon_ack resp;
@@ -46,7 +46,7 @@ private:
 };
 
 
-DEFINE_TASK_CODE(LPC_FD_TEST_CLIENT_TIMER, ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_FD_DEFAULT)
+DEFINE_TASK_CODE(LPC_FD_TEST_CLIENT_TIMER, ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_FD)
 
 // shared client app
 class fd_client_app : public ::dsn::service::service_app, public virtual ::dsn::service::servicelet

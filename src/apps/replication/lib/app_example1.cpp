@@ -268,9 +268,9 @@ int replication_app_example1::compact(bool force)
 }
 
 // helper routines to accelerate learning
-int replication_app_example1::get_learn_state(decree start, const utils::blob& learnRequest, __out_param learn_state& state)
+int replication_app_example1::get_learn_state(decree start, const blob& learnRequest, __out_param learn_state& state)
 {
-    dsn::utils::binary_writer writer;
+    ::dsn::binary_writer writer;
 
     zauto_lock l(_lock);
 
@@ -293,7 +293,7 @@ int replication_app_example1::get_learn_state(decree start, const utils::blob& l
     auto bb = writer.get_buffer();
     auto buf = bb.buffer();
 
-    state.meta = utils::blob(buf, static_cast<int>(bb.data() - bb.buffer().get()), bb.length());
+    state.meta = blob(buf, static_cast<int>(bb.data() - bb.buffer().get()), bb.length());
        
 
     //// Test Sample
@@ -316,9 +316,9 @@ int replication_app_example1::get_learn_state(decree start, const utils::blob& l
 
 int replication_app_example1::apply_learn_state(learn_state& state)
 {
-    utils::blob bb((const char*)state.meta.data(), 0, state.meta.length());
+    blob bb((const char*)state.meta.data(), 0, state.meta.length());
 
-    utils::binary_reader reader(bb);
+    binary_reader reader(bb);
 
     zauto_lock l(_lock);
 

@@ -270,7 +270,7 @@ namespace dsn {
             {
             }
 
-            virtual void get_output_buffers(message_ptr& msg, __out_param std::vector<utils::blob>& buffers)
+            virtual void get_output_buffers(message_ptr& msg, __out_param std::vector<blob>& buffers)
             {
                 // prepare head
                 blob bb(_write_buffer_for_header, 0, 512);

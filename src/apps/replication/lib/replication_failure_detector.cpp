@@ -57,8 +57,8 @@ end_point replication_failure_detector::find_next_meta_server(end_point current)
 
 void replication_failure_detector::end_ping(
     ::dsn::error_code err,
-    std::shared_ptr<fd::beacon_msg> beacon,
-    std::shared_ptr<fd::beacon_ack> ack)
+    std::shared_ptr<fd::beacon_msg>& beacon,
+    std::shared_ptr<fd::beacon_ack>& ack)
 {
     failure_detector::end_ping(err, beacon, ack);
 

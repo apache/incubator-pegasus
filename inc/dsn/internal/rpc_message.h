@@ -68,8 +68,8 @@ struct message_header
         return static_cast<int>(FIELD_OFFSET(message_header, from_address));
     }
 
-    void marshall(utils::binary_writer& writer);
-    void unmarshall(utils::binary_reader& reader);
+    void marshall(binary_writer& writer);
+    void unmarshall(binary_reader& reader);
     void new_rpc_id();
     
     static bool is_right_header(char* hdr);
@@ -84,7 +84,7 @@ class message : public ref_object, public extensible_object<message, 4>
 {
 public:
     message(); // write             
-    message(utils::blob bb, bool parse_hdr = true); // read 
+    message(blob bb, bool parse_hdr = true); // read 
     virtual ~message();
 
     //
@@ -96,8 +96,8 @@ public:
     //
     // routines for reader & writer
     //
-    utils::binary_reader& reader() { return *_reader; }
-    utils::binary_writer& writer() { return *_writer; }
+    binary_reader& reader() { return *_reader; }
+    binary_writer& writer() { return *_writer; }
 
     ////
     //// quick read
@@ -105,9 +105,9 @@ public:
     //template<typename T> int read(__out_param T& val) { return _reader->read(val); }
     //int read(__out_param std::string& s) { return _reader->read(s); }
     //int read(char* buffer, int sz) { return _reader->read(buffer, sz); }
-    //int read(utils::blob& blob) { return _reader->read(blob); }
-    //utils::blob get_input_buffer() const { return _reader->get_buffer(); }
-    //utils::blob get_input_remaining_buffer() const { return _reader->get_remaining_buffer(); }
+    //int read(blob& blob) { return _reader->read(blob); }
+    //blob get_input_buffer() const { return _reader->get_buffer(); }
+    //blob get_input_remaining_buffer() const { return _reader->get_remaining_buffer(); }
     //bool is_eof() const { return _reader->is_eof(); }
     //int get_remaining_size() const { return _reader->get_remaining_size(); }
     
@@ -118,10 +118,10 @@ public:
     //template<typename T> void write(const T& val, uint16_t pos = 0xffff) { return _writer->write(val, pos); }
     //void write(const std::string& val, uint16_t pos = 0xffff) { return _writer->write(val, pos); }
     //void write(const char* buffer, int sz, uint16_t pos = 0xffff) { return _writer->write(buffer, sz, pos); }
-    //void write(const utils::blob& val, uint16_t pos = 0xffff) { return _writer->write(val, pos); }
-    //void get_output_buffers(__out_param std::vector<utils::blob>& buffers) const { return _writer->get_buffers(buffers); }
+    //void write(const blob& val, uint16_t pos = 0xffff) { return _writer->write(val, pos); }
+    //void get_output_buffers(__out_param std::vector<blob>& buffers) const { return _writer->get_buffers(buffers); }
     //int  get_output_buffer_count() const { return _writer->get_buffer_count(); }
-    //utils::blob get_output_buffer() const { return _writer->get_buffer();}
+    //blob get_output_buffer() const { return _writer->get_buffer();}
     
     //
     // other routines
@@ -146,8 +146,8 @@ private:
     int                  _elapsed_timeout_milliseconds;
     rpc_server_session_ptr _server_session;
 
-    utils::binary_reader *_reader;
-    utils::binary_writer *_writer;
+    binary_reader *_reader;
+    binary_writer *_writer;
 
 protected:
     static std::atomic<uint64_t> _id;

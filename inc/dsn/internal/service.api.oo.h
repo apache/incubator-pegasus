@@ -84,28 +84,28 @@ namespace dsn {
                 );
 
             // callback type 1:
-            //  void (T::*callback)(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>)
+            //  void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)
             template<typename T, typename TRequest, typename TResponse>
             rpc_response_task_ptr call_typed(
                 const end_point& server,
                 task_code code,
                 std::shared_ptr<TRequest>& req,
                 T* context,
-                void (T::*callback)(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>),
+                void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&),
                 int request_hash = 0,
                 int timeout_milliseconds = 0,
                 int reply_hash = 0
                 );
 
             // callback type 2:
-            //  std::function<void(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>)>
+            //  std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)>
             template<typename TRequest, typename TResponse>
             rpc_response_task_ptr call_typed(
                 const end_point& server,
                 task_code code,
                 std::shared_ptr<TRequest>& req,
                 servicelet* context,
-                std::function<void(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>)> callback,
+                std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
                 int request_hash = 0,
                 int timeout_milliseconds = 0,
                 int reply_hash = 0

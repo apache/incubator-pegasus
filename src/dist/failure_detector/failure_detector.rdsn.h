@@ -15,8 +15,8 @@ namespace dsn { namespace fd {
 
 
 // define task code for svc 'failure_detector'
-DEFINE_NAMED_TASK_CODE_RPC(RPC_FAILURE_DETECTOR_PING, ping, ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_FD_DEFAULT)
-DEFINE_TASK_CODE(LPC_FAILURE_DETECTOR_CIENT_TEST_TIMER, ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_FD_DEFAULT)
+DEFINE_NAMED_TASK_CODE_RPC(RPC_FAILURE_DETECTOR_PING, ping, ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_FD)
+DEFINE_TASK_CODE(LPC_FAILURE_DETECTOR_CIENT_TEST_TIMER, ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_FD)
 
 
 // server
@@ -31,12 +31,12 @@ public:
 protected:
 	// all service handlers to be implemented further
 	// RPC_FAILURE_DETECTOR_PING
-	virtual void ping(const beacon_msg& beacon, ::dsn::service::rpc_replier<beacon_ack>& reply) = 0;
+	virtual void on_ping(const beacon_msg& beacon, ::dsn::service::rpc_replier<beacon_ack>& reply) = 0;
 
 public:
 	void open_service()
 	{
-		this->register_async_rpc_handler(RPC_FAILURE_DETECTOR_PING, "ping", &T::ping);
+		this->register_async_rpc_handler(RPC_FAILURE_DETECTOR_PING, "ping", &T::on_ping);
 	}
 
 	void close_service()
@@ -89,8 +89,8 @@ public:
 
 	virtual void end_ping(
 		::dsn::error_code err, 
-		std::shared_ptr<beacon_msg> req, 
-		std::shared_ptr<beacon_ack> resp)
+		std::shared_ptr<beacon_msg>& req, 
+		std::shared_ptr<beacon_ack>& resp)
 	{
 		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply err : " << err.to_string() << std::endl;
 		else

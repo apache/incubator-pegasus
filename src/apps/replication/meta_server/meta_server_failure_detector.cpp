@@ -100,7 +100,7 @@ bool meta_server_failure_detector::is_primary() const
     return _isPrimary;
 }
 
-void meta_server_failure_detector::ping(const fd::beacon_msg& beacon, ::dsn::service::rpc_replier<fd::beacon_ack>& reply)
+void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::service::rpc_replier<fd::beacon_ack>& reply)
 {
     fd::beacon_ack ack;
     if (!is_primary())
@@ -121,7 +121,7 @@ void meta_server_failure_detector::ping(const fd::beacon_msg& beacon, ::dsn::ser
     }
     else
     {
-        failure_detector::on_ping(beacon, ack);
+        failure_detector::on_ping_internal(beacon, ack);
         ack.primary_node = address();
     }
 

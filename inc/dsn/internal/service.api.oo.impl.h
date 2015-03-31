@@ -37,7 +37,7 @@ namespace dsn {
                     service_rpc_response_task1(
                         T* svc,
                         std::shared_ptr<TRequest>& req,
-                        void (T::*callback)(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>),
+                        void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&),
                         message_ptr& request,
                         int hash = 0
                         )
@@ -58,14 +58,15 @@ namespace dsn {
                         }
                         else
                         {
-                            (_svc->*_callback)(err, _req, nullptr);
+                            std::shared_ptr<TResponse> resp(nullptr);
+                            (_svc->*_callback)(err, _req, resp);
                         }
                     }
 
                 private:
                     T* _svc;
                     std::shared_ptr<TRequest> _req;
-                    void (T::*_callback)(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>);
+                    void (T::*_callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&);
                 };
 
                 template<typename TRequest, typename TResponse>
@@ -75,7 +76,7 @@ namespace dsn {
                     service_rpc_response_task2(
                         servicelet* svc,
                         std::shared_ptr<TRequest>& req,
-                        std::function<void(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>)>& callback,
+                        std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)>& callback,
                         message_ptr& request,
                         int hash = 0
                         )
@@ -97,7 +98,8 @@ namespace dsn {
                             }
                             else
                             {
-                                _callback(err, _req, nullptr);
+                                std::shared_ptr<TResponse> resp(nullptr);
+                                _callback(err, _req, resp);
                             }
                             _callback = nullptr;
                         }
@@ -105,7 +107,7 @@ namespace dsn {
 
                 private:
                     std::shared_ptr<TRequest> _req;
-                    std::function<void(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>)> _callback;
+                    std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> _callback;
                 };
 
                 template<typename TRequest, typename TResponse>
@@ -193,7 +195,7 @@ namespace dsn {
                 task_code code,
                 std::shared_ptr<TRequest>& req,
                 T* context,
-                void (T::*callback)(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>),
+                void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&),
                 int request_hash/* = 0*/,
                 int timeout_milliseconds /*= 0*/,
                 int reply_hash /*= 0*/
@@ -219,7 +221,7 @@ namespace dsn {
                 task_code code,
                 std::shared_ptr<TRequest>& req,
                 servicelet* context,
-                std::function<void(error_code, std::shared_ptr<TRequest>, std::shared_ptr<TResponse>)> callback,
+                std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
                 int request_hash/* = 0*/,
                 int timeout_milliseconds /*= 0*/,
                 int reply_hash /*= 0*/

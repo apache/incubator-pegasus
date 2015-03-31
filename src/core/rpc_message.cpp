@@ -83,7 +83,7 @@ message::message()
     seal(false, true);
 }
         
-message::message(utils::blob bb, bool parse_hdr)
+message::message(blob bb, bool parse_hdr)
 {
     _elapsed_timeout_milliseconds = 0;
 
@@ -177,7 +177,7 @@ void message::seal(bool fillCrc, bool is_placeholder /*= false*/)
             // compute data crc if necessary
             if (header().body_crc32 == 0)
             {
-                std::vector<utils::blob> buffers;
+                std::vector<blob> buffers;
                 _writer->get_buffers(buffers);
 
                 buffers[0] = buffers[0].range(0, buffers[0].length() - message_header::serialized_size());
@@ -208,7 +208,7 @@ void message::seal(bool fillCrc, bool is_placeholder /*= false*/)
                 header().body_crc32 = crc32;
             }
 
-            utils::blob bb = _writer->get_first_buffer();
+            blob bb = _writer->get_first_buffer();
             dassert  (bb.length() >= _msg_header.serialized_size(), "the reserved blob size for message must be greater than the header size to ensure header is contiguous");
             header().hdr_crc32 = 0;
             binary_writer writer(bb);
@@ -221,7 +221,7 @@ void message::seal(bool fillCrc, bool is_placeholder /*= false*/)
         // crc is not enabled
         else
         {
-            utils::blob bb = _writer->get_first_buffer();
+            blob bb = _writer->get_first_buffer();
             dassert  (bb.length() >= _msg_header.serialized_size(), "the reserved blob size for message must be greater than the header size to ensure header is contiguous");
             binary_writer writer(bb);
             _msg_header.marshall(writer);
@@ -234,7 +234,7 @@ bool message::is_right_header() const
     dassert  (is_read(), "message must be of read mode");
     if (_msg_header.hdr_crc32)
     {
-        utils::blob bb = _reader->get_buffer();
+        blob bb = _reader->get_buffer();
         return _msg_header.is_right_header((char*)bb.data());
     }
 
@@ -250,7 +250,7 @@ bool message::is_right_body() const
     dassert  (is_read(), "message must be of read mode");
     if (_msg_header.body_crc32)
     {
-        utils::blob bb = _reader->get_buffer();
+        blob bb = _reader->get_buffer();
         return (uint32_t)_msg_header.body_crc32 == crc32::compute((char*)bb.data() + message_header::serialized_size(), _msg_header.body_length, 0);
     }
 
