@@ -77,11 +77,11 @@ void replica::init_learn(uint64_t signature)
 
     std::shared_ptr<learn_request> request(new learn_request);
     request->gpid = get_gpid();
-    request->lastCommittedDecreeInApp = _app->last_committed_decree();
-    request->lastCommittedDecreeInPrepareList = _prepare_list->last_committed_decree();
+    request->last_committed_decree_in_app = _app->last_committed_decree();
+    request->last_committed_decree_in_prepare_list = _prepare_list->last_committed_decree();
     request->learner = address();
     request->signature = _potential_secondary_states.LearningSignature;
-    _app->prepare_learning_request(request->appSpecificLearnRequest);
+    _app->prepare_learning_request(request->app_specific_learn_request);
 
     _potential_secondary_states.LearningTask = rpc::call_typed(
         _config.primary,
@@ -113,16 +113,16 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
         return;
     }
         
-    if (request.lastCommittedDecreeInApp > last_committed_decree())
+    if (request.last_committed_decree_in_app > last_committed_decree())
     {
         ddebug(
             "%s: on_learn %s:%u, learner state is lost due to DDD, with its appCommittedDecree = %llu vs localCommitedDecree %llu",
             name(),
             request.learner.name.c_str(), static_cast<int>(request.learner.port),
-            request.lastCommittedDecreeInApp,
+            request.last_committed_decree_in_app,
             last_committed_decree()
             );
-        ((learn_request&)request).lastCommittedDecreeInApp = 0;
+        ((learn_request&)request).last_committed_decree_in_app = 0;
     }
 
     _primary_states.GetReplicaConfig(request.learner, response.config);
@@ -143,42 +143,42 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
         "%s: on_learn %s:%u with its appCommittedDecree = %llu vs localCommitedDecree %llu",
         name(),
         request.learner.name.c_str(), static_cast<int>(request.learner.port),
-        request.lastCommittedDecreeInApp,
+        request.last_committed_decree_in_app,
         last_committed_decree()
         );
     
-    response.prepareStartDecree = invalid_decree;
-    response.commitDecree = last_committed_decree();
+    response.prepare_start_decree = invalid_decree;
+    response.commit_decree = last_committed_decree();
     response.err = ERR_SUCCESS; 
 
-    if (request.lastCommittedDecreeInApp + _options.StalenessForStartPrepareForPotentialSecondary >= last_committed_decree())
+    if (request.last_committed_decree_in_app + _options.StalenessForStartPrepareForPotentialSecondary >= last_committed_decree())
     {
-        if (it->second.prepareStartDecree == invalid_decree)
+        if (it->second.prepare_start_decree == invalid_decree)
         {
-            it->second.prepareStartDecree = last_committed_decree() + 1;
+            it->second.prepare_start_decree = last_committed_decree() + 1;
 
             cleanup_preparing_mutations(true);
             replay_prepare_list();
 
             ddebug(
-                "%s: on_learn with prepareStartDecree = %llu for %s:%u",
+                "%s: on_learn with prepare_start_decree = %llu for %s:%u",
                 name(),
                 last_committed_decree() + 1,
                 request.learner.name.c_str(), static_cast<int>(request.learner.port)
             );
         }
 
-        response.prepareStartDecree = it->second.prepareStartDecree;
+        response.prepare_start_decree = it->second.prepare_start_decree;
     }
     else
     {
-        it->second.prepareStartDecree = invalid_decree;
+        it->second.prepare_start_decree = invalid_decree;
     }
 
-    decree decree = request.lastCommittedDecreeInApp + 1;
-    response.err = _app->get_learn_state(decree, request.appSpecificLearnRequest, response.state);
+    decree decree = request.last_committed_decree_in_app + 1;
+    response.err = _app->get_learn_state(decree, request.app_specific_learn_request, response.state);
         
-    response.baseLocalDir = _dir;
+    response.base_local_dir = _dir;
     for (auto itr = response.state.files.begin(); itr != response.state.files.end(); ++itr)            
         *itr = itr->substr(_dir.length()); 
 }
@@ -197,8 +197,8 @@ void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request> req,
     }
 
     ddebug(
-        "%s: on_learn_reply with err = 0x%x, prepareStartDecree = %llu, current learnState = %s",
-        name(), resp->err, resp->prepareStartDecree, enum_to_string(_potential_secondary_states.LearningState)
+        "%s: on_learn_reply with err = 0x%x, prepare_start_decree = %llu, current learnState = %s",
+        name(), resp->err, resp->prepare_start_decree, enum_to_string(_potential_secondary_states.LearningState)
         );
 
     if (resp->err != ERR_SUCCESS)
@@ -217,10 +217,10 @@ void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request> req,
         return;
     }
 
-    if (resp->prepareStartDecree != invalid_decree && _potential_secondary_states.LearningState == LearningWithoutPrepare)
+    if (resp->prepare_start_decree != invalid_decree && _potential_secondary_states.LearningState == LearningWithoutPrepare)
     {
         _potential_secondary_states.LearningState = LearningWithPrepare;
-        _prepare_list->reset(resp->prepareStartDecree - 1);
+        _prepare_list->reset(resp->prepare_start_decree - 1);
     }
 
     _potential_secondary_states.LearnRemoteFilesTask = tasking::enqueue(
@@ -244,7 +244,7 @@ void replica::on_learn_remote_state(std::shared_ptr<learn_response> resp)
                 
     if (!resp->state.files.empty())
     {
-        file::copy_remote_files(server, resp->baseLocalDir, resp->state.files, _dir, true, LPC_AIO_TEST, nullptr, nullptr);
+        file::copy_remote_files(server, resp->base_local_dir, resp->state.files, _dir, true, LPC_AIO_TEST, nullptr, nullptr);
     }
 
     if (_options.LearnForAdditionalLongSecondsForTest != 0)
@@ -277,12 +277,12 @@ void replica::on_learn_remote_state(std::shared_ptr<learn_response> resp)
                 resp->state.files.size(), _dir.c_str(), err,
                 oldDecree, _app->last_committed_decree(),
                 _app->last_durable_decree(),                
-                resp->commitDecree,
-                resp->prepareStartDecree,
+                resp->commit_decree,
+                resp->prepare_start_decree,
                 enum_to_string(_potential_secondary_states.LearningState)
                 );
 
-        if (err == ERR_SUCCESS && _app->last_committed_decree() >= resp->commitDecree)
+        if (err == ERR_SUCCESS && _app->last_committed_decree() >= resp->commit_decree)
         {
             err = _app->compact(true);
             if (err == ERR_SUCCESS)
@@ -356,10 +356,10 @@ void replica::notify_learn_completion()
     group_check_response report;
     report.gpid = get_gpid();
     report.err = ERR_SUCCESS;
-    report.lastCommittedDecreeInApp = _app->last_committed_decree();
-    report.lastCommittedDecreeInPrepareList = last_committed_decree();
-    report.learnerSignature = _potential_secondary_states.LearningSignature;
-    report.learnerState = _potential_secondary_states.LearningState;
+    report.last_committed_decree_in_app = _app->last_committed_decree();
+    report.last_committed_decree_in_prepare_list = last_committed_decree();
+    report.learner_signature = _potential_secondary_states.LearningSignature;
+    report.learner_status_ = _potential_secondary_states.LearningState;
     report.node = address();
     
     rpc::call_one_way_typed(_config.primary, RPC_LEARN_COMPLETITION_NOTIFY, report, gpid_to_hash(get_gpid()));
@@ -371,9 +371,9 @@ void replica::on_learn_completion_notification(const group_check_response& repor
     if (status() != PS_PRIMARY)
         return;
 
-    if (report.learnerState == LearningSucceeded)
+    if (report.learner_status_ == LearningSucceeded)
     {
-        handle_learning_succeeded_on_primary(report.node, report.learnerSignature);
+        handle_learning_succeeded_on_primary(report.node, report.learner_signature);
     }
 }
 
@@ -387,7 +387,7 @@ void replica::on_add_learner(const group_check_request& request)
     {
         update_local_configuration(request.config, true);
         dassert(PS_POTENTIAL_SECONDARY == status(), "");
-        init_learn(request.learnerSignature);
+        init_learn(request.learner_signature);
     }
 }
 

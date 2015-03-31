@@ -38,7 +38,7 @@ using namespace dsn::service;
 int replica::initialize_on_new(const char* app_type, global_partition_id gpid)
 {
     char buffer[256];
-    sprintf(buffer, "%u.%u.%s", gpid.tableId, gpid.pidx, app_type);
+    sprintf(buffer, "%u.%u.%s", gpid.app_id, gpid.pidx, app_type);
 
     _config.gpid = gpid;
     _dir = _stub->dir() + "/" + buffer;
@@ -80,7 +80,7 @@ int replica::initialize_on_load(const char* dir, bool renameDirOnFailure)
     char app_type[128];
     global_partition_id gpid;
     std::string name = dr.substr(pos + 1);
-    if (3 != sscanf(name.c_str(), "%u.%u.%s", &gpid.tableId, &gpid.pidx, app_type))
+    if (3 != sscanf(name.c_str(), "%u.%u.%s", &gpid.app_id, &gpid.pidx, app_type))
     {
         derror( "invalid replica dir %s", dir);
         return ERR_PATH_NOT_FOUND;
@@ -144,7 +144,7 @@ int replica::init_app_and_prepare_list(const char* app_type, bool createNew)
         _app = nullptr;
     }
 
-    sprintf(_name, "%u.%u @ %s:%u", _config.gpid.tableId, _config.gpid.pidx, address().name.c_str(), 
+    sprintf(_name, "%u.%u @ %s:%u", _config.gpid.app_id, _config.gpid.pidx, address().name.c_str(), 
         static_cast<int>(address().port));
 
     return err;
@@ -164,12 +164,12 @@ void replica::replay_mutation(mutation_ptr& mu)
 
     // prepare
     /*ddebug( 
-            "%u.%u @ %s:%u: replay mutation ballot = %llu, decree = %llu, lastCommittedDecree = %llu",
-            get_gpid().tableId, get_gpid().pidx, 
+            "%u.%u @ %s:%u: replay mutation ballot = %llu, decree = %llu, last_committed_decree = %llu",
+            get_gpid().app_id, get_gpid().pidx, 
             address().name.c_str(), static_cast<int>address().port,
             mu->data.header.ballot, 
             mu->data.header.decree,
-            mu->data.header.lastCommittedDecree
+            mu->data.header.last_committed_decree
         );*/
 
     int err = _prepare_list->prepare(mu, PS_INACTIVE);

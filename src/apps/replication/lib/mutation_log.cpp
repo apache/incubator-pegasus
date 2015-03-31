@@ -325,10 +325,10 @@ int mutation_log::replay(ReplayCallback callback)
                 dassert (nullptr != mu, "");                                
                 mu->set_logged();
 
-                if (mu->data.header.logOffset != offset)
+                if (mu->data.header.log_offset != offset)
                 {
                     derror(
-                        "offset mismatch in log entry and mutation %lld vs %lld", offset, mu->data.header.logOffset);
+                        "offset mismatch in log entry and mutation %lld vs %lld", offset, mu->data.header.log_offset);
                     return ERR_FILE_OPERATION_FAILED;
                 }
 
@@ -452,7 +452,7 @@ task_ptr mutation_log::append(mutation_ptr& mu,
     }
 
     auto oldSz = _pending_write->total_size();
-    mu->data.header.logOffset = end_offset();
+    mu->data.header.log_offset = end_offset();
     mu->write_to(_pending_write);
     _global_end_offset += _pending_write->total_size() - oldSz;
 
@@ -468,7 +468,7 @@ task_ptr mutation_log::append(mutation_ptr& mu,
     }*/
     
     // printf ("append: %llu, offset = %llu, global = %llu, pendingSize = %u\n",
-    //     mu->data.header.decree, mu->data.header.logOffset, _global_end_offset, _pending_write->total_size());
+    //     mu->data.header.decree, mu->data.header.log_offset, _global_end_offset, _pending_write->total_size());
 
     if (!_batch_write)
     {

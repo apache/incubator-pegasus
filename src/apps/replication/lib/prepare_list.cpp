@@ -70,7 +70,7 @@ int prepare_list::prepare(mutation_ptr& mu, partition_status status)
         return mutation_cache::put(mu);
 
     case PS_SECONDARY: 
-        commit(mu->data.header.lastCommittedDecree, true);
+        commit(mu->data.header.last_committed_decree, true);
         err = mutation_cache::put(mu);
         dassert (err == ERR_SUCCESS, "");
         return err;
@@ -82,7 +82,7 @@ int prepare_list::prepare(mutation_ptr& mu, partition_status status)
             if (err == ERR_CAPACITY_EXCEEDED)
             {
                 dassert (min_decree() == last_committed_decree() + 1, "");
-                dassert (mu->data.header.lastCommittedDecree > last_committed_decree(), "");
+                dassert (mu->data.header.last_committed_decree > last_committed_decree(), "");
                 commit (last_committed_decree() + 1, true);
             }
             else
@@ -93,13 +93,13 @@ int prepare_list::prepare(mutation_ptr& mu, partition_status status)
      
     case PS_INACTIVE: // only possible during init  
         err = ERR_SUCCESS;
-        if (mu->data.header.lastCommittedDecree > max_decree())
+        if (mu->data.header.last_committed_decree > max_decree())
         {
-            reset(mu->data.header.lastCommittedDecree);
+            reset(mu->data.header.last_committed_decree);
         }
-        else if (mu->data.header.lastCommittedDecree > _lastCommittedDecree)
+        else if (mu->data.header.last_committed_decree > _lastCommittedDecree)
         {
-            for (decree d = last_committed_decree() + 1; d <= mu->data.header.lastCommittedDecree; d++)
+            for (decree d = last_committed_decree() + 1; d <= mu->data.header.last_committed_decree; d++)
             {
                 _lastCommittedDecree++;   
                 if (count() == 0)
@@ -113,7 +113,7 @@ int prepare_list::prepare(mutation_ptr& mu, partition_status status)
                 }
             }
 
-            dassert (_lastCommittedDecree == mu->data.header.lastCommittedDecree, "");
+            dassert (_lastCommittedDecree == mu->data.header.last_committed_decree, "");
             sanity_check();
         }
         

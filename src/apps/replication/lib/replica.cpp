@@ -71,7 +71,7 @@ void replica::init_state()
 
     _config.ballot = 0;
     _config.gpid.pidx = 0;
-    _config.gpid.tableId = 0;
+    _config.gpid.app_id = 0;
     _config.status = PS_INACTIVE;
     _primary_states.membership.ballot = 0;
     _last_config_change_time_ms = now_ms();
@@ -178,7 +178,7 @@ mutation_ptr replica::new_mutation(decree decree)
     mu->data.header.gpid = get_gpid();
     mu->data.header.ballot = get_ballot();
     mu->data.header.decree = decree;
-    mu->data.header.logOffset = invalid_offset;
+    mu->data.header.log_offset = invalid_offset;
     return mu;
 }
 

@@ -31,7 +31,7 @@ struct remote_learner_state
 {
     uint64_t       signature;
     task_ptr      timeout_tsk;
-    decree       prepareStartDecree;
+    decree       prepare_start_decree;
 };
 
 typedef std::map<end_point, remote_learner_state, end_point_comparor> learner_map;
@@ -77,7 +77,7 @@ public:
 
 public:
     uint64_t        LearningSignature;
-    LearnerState  LearningState;
+    learner_status  LearningState;
     volatile bool LearningRoundIsRuning;
 
     task_ptr       LearningTask;

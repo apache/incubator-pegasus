@@ -48,7 +48,7 @@ int app_client_example1::KeyToPartitionIndex(const std::string& key)
 void app_client_example1::read(const std::string& key, rpc_reply_handler callback)
 {
     auto req = create_read_request(KeyToPartitionIndex(key));
-    SimpleKvRequest msg;
+    simple_kv_request msg;
     msg.op = SKV_READ;
     msg.key = key;
     
@@ -60,7 +60,7 @@ void app_client_example1::read(const std::string& key, rpc_reply_handler callbac
 void app_client_example1::Update(const std::string& key, const std::string& value, rpc_reply_handler callback)
 {
     auto req = create_write_request(KeyToPartitionIndex(key));
-    SimpleKvRequest msg;
+    simple_kv_request msg;
     msg.op = SKV_UPDATE;
     msg.key = key;
     msg.value = value;
@@ -72,7 +72,7 @@ void app_client_example1::Update(const std::string& key, const std::string& valu
 void app_client_example1::append(const std::string& key, const std::string& appendValue, rpc_reply_handler callback)
 {
     auto req = create_write_request(KeyToPartitionIndex(key));
-    SimpleKvRequest msg;
+    simple_kv_request msg;
     msg.op = SKV_APPEND;
     msg.key = key;
     msg.value = appendValue;
@@ -93,7 +93,7 @@ int app_client_example1::HandleResponse(rpc_response_task_ptr& reply, std::strin
 
         if (err == ERR_SUCCESS)
         {
-            SimpleKvResponse appResp;
+            simple_kv_response appResp;
             unmarshall(reply->get_response(), appResp);
             if (pvalue)
             {
@@ -113,7 +113,7 @@ int app_client_example1::HandleResponse(rpc_response_task_ptr& reply, std::strin
 int app_client_example1::read(const std::string& key, __out_param std::string& value)
 {
     auto req = create_read_request(KeyToPartitionIndex(key));
-    SimpleKvRequest msg;
+    simple_kv_request msg;
     msg.op = SKV_READ;
     msg.key = key;
     marshall(req, msg);
@@ -127,7 +127,7 @@ int app_client_example1::read(const std::string& key, __out_param std::string& v
 int app_client_example1::Update(const std::string& key, const std::string& value)
 {
     auto req = create_write_request(KeyToPartitionIndex(key));
-    SimpleKvRequest msg;
+    simple_kv_request msg;
     msg.op = SKV_UPDATE;
     msg.key = key;
     msg.value = value;
@@ -142,7 +142,7 @@ int app_client_example1::Update(const std::string& key, const std::string& value
 int app_client_example1::append(const std::string& key, const std::string& appendValue)
 {
     auto req = create_write_request(KeyToPartitionIndex(key));
-    SimpleKvRequest msg;
+    simple_kv_request msg;
     msg.op = SKV_APPEND;
     msg.key = key;
     msg.value = appendValue;

@@ -28,7 +28,7 @@ namespace dsn { namespace replication {
 
 mutation::mutation()
 {
-    _memorySize = sizeof(MutationHeader);
+    _memorySize = sizeof(mutation_header);
     _private0 = 0; 
     _notLogged = 1;
 }

@@ -76,26 +76,26 @@ bool meta_service::stop()
 
 void meta_service::OnMetaServiceRequest(message_ptr& msg)
 {
-    CdtMsgHeader hdr;
+    meta_msg_header hdr;
     unmarshall(msg, hdr);
 
-    CdtMsgResponseHeader rhdr;
-    bool isPrimary = _state->GetMetaServerPrimary(rhdr.PrimaryAddress);
-    if (isPrimary) isPrimary = (address() == rhdr.PrimaryAddress);
-    rhdr.Err = ERR_SUCCESS;
+    meta_response_header rhdr;
+    bool isPrimary = _state->GetMetaServerPrimary(rhdr.primary_address);
+    if (isPrimary) isPrimary = (address() == rhdr.primary_address);
+    rhdr.err = ERR_SUCCESS;
     
     message_ptr resp = msg->create_response();
 
     if (!isPrimary)
     {
-        rhdr.Err = ERR_TALK_TO_OTHERS;
+        rhdr.err = ERR_TALK_TO_OTHERS;
         
         marshall(resp, rhdr);
     }
-    else if (hdr.RpcTag == RPC_CM_QUERY_NODE_PARTITIONS)
+    else if (hdr.rpc_tag == RPC_CM_QUERY_NODE_PARTITIONS)
     {
-        ConfigurationNodeQueryRequest request;
-        ConfigurationNodeQueryResponse response;
+        configuration_node_query_request request;
+        configuration_node_query_response response;
         unmarshall(msg, request);
 
         OnQueryConfig(request, response);
@@ -104,10 +104,10 @@ void meta_service::OnMetaServiceRequest(message_ptr& msg)
         marshall(resp, response);
     }
 
-    else if (hdr.RpcTag == RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX)
+    else if (hdr.rpc_tag == RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX)
     {
-        QueryConfigurationByIndexRequest request;
-        QueryConfigurationByIndexResponse response;
+        query_configuration_by_index_request request;
+        query_configuration_by_index_response response;
         unmarshall(msg, request);
 
         DoQueryConfigurationByIndexRequest(request, response);
@@ -116,10 +116,10 @@ void meta_service::OnMetaServiceRequest(message_ptr& msg)
         marshall(resp, response);
     }
 
-    else if (hdr.RpcTag == RPC_CM_UPDATE_PARTITION_CONFIGURATION)
+    else if (hdr.rpc_tag == RPC_CM_UPDATE_PARTITION_CONFIGURATION)
     {
         configuration_update_request request;
-        ConfigurationUpdateResponse response;
+        configuration_update_response response;
         unmarshall(msg, request);
 
         update_configuration(request, response);
@@ -130,24 +130,24 @@ void meta_service::OnMetaServiceRequest(message_ptr& msg)
 
     else
     {
-        dassert (false, "unknown rpc tag %x", hdr.RpcTag);
+        dassert (false, "unknown rpc tag %x", hdr.rpc_tag);
     }
 
     rpc::reply(resp);
 }
 
 // partition server & client => meta server
-void meta_service::OnQueryConfig(ConfigurationNodeQueryRequest& request, __out_param ConfigurationNodeQueryResponse& response)
+void meta_service::OnQueryConfig(configuration_node_query_request& request, __out_param configuration_node_query_response& response)
 {
     _state->OnQueryConfig(request, response);
 }
 
-void meta_service::DoQueryConfigurationByIndexRequest(QueryConfigurationByIndexRequest& request, __out_param QueryConfigurationByIndexResponse& response)
+void meta_service::DoQueryConfigurationByIndexRequest(query_configuration_by_index_request& request, __out_param query_configuration_by_index_response& response)
 {
     _state->DoQueryConfigurationByIndexRequest(request, response);
 }
 
-void meta_service::update_configuration(configuration_update_request& request, __out_param ConfigurationUpdateResponse& response)
+void meta_service::update_configuration(configuration_update_request& request, __out_param configuration_update_response& response)
 {
     _state->update_configuration(request, response);
 }

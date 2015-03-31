@@ -42,8 +42,8 @@ public:
         const std::vector<end_point>& meta_servers, 
         const char* appServiceName, 
         int32_t appServiceId = -1,
-        int32_t coordinatorRpcCallTimeoutMillisecondsPerSend = 2000,
-        int32_t coordinatorRpcCallMaxSendCount = 3,
+        int32_t serverRpcCallTimeoutMillisecondsPerSend = 2000,
+        int32_t serverRpcCallMaxSendCount = 3,
         const end_point* pLocalAddr = nullptr);
 
     ~replication_app_client_base();
@@ -99,7 +99,7 @@ private:
         message_ptr      msg;
         rpc_response_task_ptr caller_tsk;
     };
-    // <partition index, <cdt query task, <pending msg>>>
+    // <partition index, <meta server query task, <pending msg>>>
     typedef std::map<int, std::pair<rpc_response_task_ptr, std::list<pending_message>* > > pending_messages;
     pending_messages  _pending_messages;  
 

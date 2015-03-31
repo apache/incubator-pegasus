@@ -78,8 +78,8 @@ public:
 replication_app_client_base::replication_app_client_base(const std::vector<end_point>& meta_servers, 
                                                    const char* appServiceName, 
                                                    int32_t appServiceId /*= -1*/,
-                                                   int32_t coordinatorRpcCallTimeoutMillisecondsPerSend,
-                                                   int32_t coordinatorRpcCallMaxSendCount,
+                                                   int32_t serverRpcCallTimeoutMillisecondsPerSend,
+                                                   int32_t serverRpcCallMaxSendCount,
                                                    const end_point* pLocalAddr /*= nullptr*/)
 : dsn::service::serverlet<replication_app_client_base>(std::string(appServiceName).append(".client").c_str())
 {
@@ -89,8 +89,8 @@ replication_app_client_base::replication_app_client_base(const std::vector<end_p
     _app_id = appServiceId;
     _last_contact_point = end_point::INVALID;
 
-    _meta_server_rpc_call_timeout_milliseconds_per_send = coordinatorRpcCallTimeoutMillisecondsPerSend;
-    _meta_server_rpc_call_max_send_count = coordinatorRpcCallMaxSendCount;
+    _meta_server_rpc_call_timeout_milliseconds_per_send = serverRpcCallTimeoutMillisecondsPerSend;
+    _meta_server_rpc_call_max_send_count = serverRpcCallMaxSendCount;
 
     //PerformanceCounters::init(PerfCounters_ReplicationClientBegin, PerfCounters_ReplicationClientEnd);
 }
@@ -221,14 +221,14 @@ int replication_app_client_base::send_client_message(message_ptr& msg2, rpc_resp
     error_code err = ERR_SUCCESS;
     if (msg->TargetServer == end_point::INVALID)
     {
-        err = get_address(msg->Pidx, msg->header().local_rpc_code == RPC_REPLICATION_CLIENT_WRITE, addr, gpid.tableId, msg->read_semantic);
+        err = get_address(msg->Pidx, msg->header().local_rpc_code == RPC_REPLICATION_CLIENT_WRITE, addr, gpid.app_id, msg->read_semantic);
     }
     else
     {
         if (_app_id != -1)
         {
             addr = msg->TargetServer;
-            gpid.tableId = _app_id;
+            gpid.app_id = _app_id;
         }
         else
         {
@@ -245,7 +245,7 @@ int replication_app_client_base::send_client_message(message_ptr& msg2, rpc_resp
             client_read_request req;
             req.gpid = gpid;
             req.semantic = msg->read_semantic;
-            req.versionDecree = msg->ReadSnapshotDecree;
+            req.version_decree = msg->ReadSnapshotDecree;
             
             marshall(msg2, req, msg->HeaderPlaceholderPos);   
         }
@@ -356,13 +356,13 @@ void replication_app_client_base::query_partition_configuration(int pidx)
 
     message_ptr msg = message::create_request(RPC_CM_CALL, _meta_server_rpc_call_timeout_milliseconds_per_send);
 
-    CdtMsgHeader hdr;
-    hdr.RpcTag = RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX;
+    meta_msg_header hdr;
+    hdr.rpc_tag = RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX;
     marshall(msg, hdr);
 
-    QueryConfigurationByIndexRequest req;
+    query_configuration_by_index_request req;
     req.app_name = _app_name;
-    req.parIdxes.push_back((uint32_t)pidx);
+    req.partition_indices.push_back((uint32_t)pidx);
     
     marshall(msg, req);
 
@@ -382,7 +382,7 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
 {
     if (!err)
     {
-        QueryConfigurationByIndexResponse resp;
+        query_configuration_by_index_response resp;
         unmarshall(response, resp);
         
         int err2 = resp.err;
@@ -394,12 +394,12 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
 
             if (resp.partitions.size() > 0)
             {
-                if (_app_id != -1 && _app_id != resp.partitions[0].gpid.tableId)
+                if (_app_id != -1 && _app_id != resp.partitions[0].gpid.app_id)
                 {
-                    dassert (false, "App id is changed (mostly the given app id is incorrect), local Vs remote: %u vs %u ", _app_id, resp.partitions[0].gpid.tableId);
+                    dassert (false, "App id is changed (mostly the given app id is incorrect), local Vs remote: %u vs %u ", _app_id, resp.partitions[0].gpid.app_id);
                 }
 
-                _app_id = resp.partitions[0].gpid.tableId;
+                _app_id = resp.partitions[0].gpid.app_id;
             }
 
             for (auto it = resp.partitions.begin(); it != resp.partitions.end(); it++)

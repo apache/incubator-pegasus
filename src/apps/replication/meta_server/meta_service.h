@@ -45,9 +45,9 @@ private:
     void OnMetaServiceRequest(message_ptr& request);
 
     // partition server & client => meta server
-    void OnQueryConfig(ConfigurationNodeQueryRequest& request, __out_param ConfigurationNodeQueryResponse& response);
-    void DoQueryConfigurationByIndexRequest(QueryConfigurationByIndexRequest& request, __out_param QueryConfigurationByIndexResponse& response);
-    void update_configuration(configuration_update_request& request, __out_param ConfigurationUpdateResponse& response);
+    void OnQueryConfig(configuration_node_query_request& request, __out_param configuration_node_query_response& response);
+    void DoQueryConfigurationByIndexRequest(query_configuration_by_index_request& request, __out_param query_configuration_by_index_response& response);
+    void update_configuration(configuration_update_request& request, __out_param configuration_update_response& response);
    
    
     // local timers

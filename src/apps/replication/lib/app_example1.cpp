@@ -57,7 +57,7 @@ int replication_app_example1::write(std::list<message_ptr>& requests, decree dec
     for (auto it = requests.begin(); it != requests.end(); it++)
     {
         message_ptr request = *it;
-        SimpleKvRequest msg;
+        simple_kv_request msg;
         
         unmarshall(request, msg);
 
@@ -66,11 +66,11 @@ int replication_app_example1::write(std::list<message_ptr>& requests, decree dec
         zauto_lock l(_lock);
         switch (msg.op)
         {
-        case SimpleKvOperation::SKV_UPDATE:
+        case simple_kv_operation::SKV_UPDATE:
             _store[msg.key] = msg.value;
             error = ERR_SUCCESS;
             break;
-        case SimpleKvOperation::SKV_APPEND:
+        case simple_kv_operation::SKV_APPEND:
             {
             auto it = _store.find(msg.key);
             if (it == _store.end())
@@ -92,7 +92,7 @@ int replication_app_example1::write(std::list<message_ptr>& requests, decree dec
 
         if (ackClient)
         {
-            SimpleKvResponse resp;
+            simple_kv_response resp;
             resp.err = error;
             resp.key = msg.key;
         
@@ -104,19 +104,19 @@ int replication_app_example1::write(std::list<message_ptr>& requests, decree dec
 
 void replication_app_example1::read(const client_read_request& meta, dsn::message_ptr& request)
 {
-    SimpleKvRequest msg;
+    simple_kv_request msg;
     unmarshall(request, msg);
 
-    dassert (msg.op == SimpleKvOperation::SKV_READ, "");
+    dassert (msg.op == simple_kv_operation::SKV_READ, "");
 
-    SimpleKvResponse resp;
+    simple_kv_response resp;
     resp.key = msg.key;
 
     {
     zauto_lock l(_lock);
 
     if (meta.semantic == ReadSnapshot &&
-        meta.versionDecree != last_committed_decree())
+        meta.version_decree != last_committed_decree())
     {
         resp.err = ERR_INVALID_VERSION;
     }

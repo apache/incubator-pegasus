@@ -75,13 +75,13 @@ void replica::broadcast_group_check()
         request->app_type = _primary_states.membership.app_type;
         request->node = addr;
         _primary_states.GetReplicaConfig(addr, request->config);
-        request->lastCommittedDecree = last_committed_decree();
-        request->learnerSignature = 0;
+        request->last_committed_decree = last_committed_decree();
+        request->learner_signature = 0;
         if (it->second == PS_POTENTIAL_SECONDARY)
         {
             auto it2 = _primary_states.Learners.find(it->first);
             dassert (it2 != _primary_states.Learners.end(), "");
-            request->learnerSignature = it2->second.signature;
+            request->learner_signature = it2->second.signature;
         }
 
         task_ptr caller_tsk = rpc::call_typed(
@@ -128,13 +128,13 @@ void replica::on_group_check(const group_check_request& request, __out_param gro
     case PS_INACTIVE:
         break;
     case PS_SECONDARY:
-        if (request.lastCommittedDecree > last_committed_decree())
+        if (request.last_committed_decree > last_committed_decree())
         {
-            _prepare_list->commit(request.lastCommittedDecree, true);
+            _prepare_list->commit(request.last_committed_decree, true);
         }
         break;
     case PS_POTENTIAL_SECONDARY:
-        init_learn(request.learnerSignature);
+        init_learn(request.learner_signature);
         break;
     case PS_ERROR:
         break;
@@ -150,10 +150,10 @@ void replica::on_group_check(const group_check_request& request, __out_param gro
         response.err = ERR_INVALID_STATE;
     }
 
-    response.lastCommittedDecreeInApp = _app->last_committed_decree();
-    response.lastCommittedDecreeInPrepareList = last_committed_decree();
-    response.learnerState = _potential_secondary_states.LearningState;
-    response.learnerSignature = _potential_secondary_states.LearningSignature;
+    response.last_committed_decree_in_app = _app->last_committed_decree();
+    response.last_committed_decree_in_prepare_list = last_committed_decree();
+    response.learner_status_ = _potential_secondary_states.LearningState;
+    response.learner_signature = _potential_secondary_states.LearningSignature;
 }
 
 void replica::on_group_check_reply(error_code err, std::shared_ptr<group_check_request> req, std::shared_ptr<group_check_response> resp)
@@ -174,9 +174,9 @@ void replica::on_group_check_reply(error_code err, std::shared_ptr<group_check_r
     {
         if (resp->err == ERR_SUCCESS)
         {
-            if (resp->learnerState == LearningSucceeded && req->config.status == PS_POTENTIAL_SECONDARY)
+            if (resp->learner_status_ == LearningSucceeded && req->config.status == PS_POTENTIAL_SECONDARY)
             {
-                handle_learning_succeeded_on_primary(req->node, resp->learnerSignature);
+                handle_learning_succeeded_on_primary(req->node, resp->learner_signature);
             }
         }
         else

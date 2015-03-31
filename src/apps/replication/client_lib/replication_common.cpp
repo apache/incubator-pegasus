@@ -228,7 +228,7 @@ void replication_options::sanity_check()
         replicaConfig.status = PS_SECONDARY;
         return true;
     }
-    else if (std::find(partitionConfig.dropOuts.begin(), partitionConfig.dropOuts.end(), node) != partitionConfig.dropOuts.end())
+    else if (std::find(partitionConfig.drop_outs.begin(), partitionConfig.drop_outs.end(), node) != partitionConfig.drop_outs.end())
     {
         replicaConfig.status = PS_INACTIVE;
         return true;

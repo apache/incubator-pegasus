@@ -94,7 +94,7 @@ void replica::assign_primary(configuration_update_request& proposal)
 
     proposal.config.primary = address();
     ReplicaHelper::RemoveNode(address(), proposal.config.secondaries);
-    ReplicaHelper::RemoveNode(address(), proposal.config.dropOuts);
+    ReplicaHelper::RemoveNode(address(), proposal.config.drop_outs);
 
     update_configuration_on_meta_server(CT_ASSIGN_PRIMARY, proposal.node, proposal.config);
 }
@@ -113,7 +113,7 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     dassert (proposal.config.primary == _primary_states.membership.primary, "");
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
 
-    // zy: work around for cdt bug
+    // zy: work around for meta server bug
     if (_primary_states.CheckExist(proposal.node, PS_PRIMARY)
         || _primary_states.CheckExist(proposal.node, PS_SECONDARY))
         return;
@@ -127,7 +127,7 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     }
 
     remote_learner_state state;
-    state.prepareStartDecree = invalid_decree;
+    state.prepare_start_decree = invalid_decree;
     state.signature = random64(0, (uint64_t)(-1LL));
     state.timeout_tsk = nullptr; // TODO: add timer for learner task
 
@@ -138,8 +138,8 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     request.app_type = _primary_states.membership.app_type;
     request.node = proposal.node;
     _primary_states.GetReplicaConfig(proposal.node, request.config);
-    request.lastCommittedDecree = last_committed_decree();
-    request.learnerSignature = state.signature;
+    request.last_committed_decree = last_committed_decree();
+    request.learner_signature = state.signature;
 
     rpc::call_one_way_typed(proposal.node, RPC_LEARN_ADD_LEARNER, request, gpid_to_hash(get_gpid()));
 }
@@ -155,7 +155,7 @@ void replica::upgrade_to_secondary_on_primary(const end_point& node)
     partition_configuration newConfig = _primary_states.membership;
 
     // remove from drop out if there
-    ReplicaHelper::RemoveNode(node, newConfig.dropOuts);
+    ReplicaHelper::RemoveNode(node, newConfig.drop_outs);
     // add secondary
     newConfig.secondaries.push_back(node);
 
@@ -200,7 +200,7 @@ void replica::downgrade_to_inactive_on_primary(configuration_update_request& pro
         dassert (rt, "");
     }
 
-    proposal.config.dropOuts.push_back(proposal.node);
+    proposal.config.drop_outs.push_back(proposal.node);
     update_configuration_on_meta_server(CT_DOWNGRADE_TO_INACTIVE, proposal.node, proposal.config);
 }
 
@@ -230,7 +230,7 @@ void replica::remove(configuration_update_request& proposal)
         break;
     case PS_POTENTIAL_SECONDARY:
         {
-        auto rt = ReplicaHelper::RemoveNode(proposal.node, proposal.config.dropOuts);
+        auto rt = ReplicaHelper::RemoveNode(proposal.node, proposal.config.drop_outs);
         dassert (rt, "");
         }
         break;
@@ -251,7 +251,7 @@ void replica::on_remove(const replica_configuration& request)
 
 void replica::update_configuration_on_meta_server(config_type type, const end_point& node, partition_configuration& newConfig)
 {
-    newConfig.lastCommittedDecree = last_committed_decree();
+    newConfig.last_committed_decree = last_committed_decree();
 
     if (type != CT_ASSIGN_PRIMARY)
     {
@@ -266,8 +266,8 @@ void replica::update_configuration_on_meta_server(config_type type, const end_po
     update_local_configuration_with_no_ballot_change(PS_INACTIVE);
 
     message_ptr msg = message::create_request(RPC_CM_CALL, _options.CoordinatorRpcCallTimeoutMs);
-    CdtMsgHeader hdr;
-    hdr.RpcTag = RPC_CM_UPDATE_PARTITION_CONFIGURATION;
+    meta_msg_header hdr;
+    hdr.rpc_tag = RPC_CM_UPDATE_PARTITION_CONFIGURATION;
     marshall(msg, hdr);
 
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
@@ -285,7 +285,7 @@ void replica::update_configuration_on_meta_server(config_type type, const end_po
     //if (dsn::service::system::Mode() == SM_Simulation)
     //{
     //    // always success for the time being
-    //    ConfigurationUpdateResponse resp;
+    //    configuration_update_response resp;
     //    resp.err = ERR_SUCCESS;
     //    resp.config = request->config;
 
@@ -347,7 +347,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, messa
         return;
     }
 
-    ConfigurationUpdateResponse resp;
+    configuration_update_response resp;
     unmarshall(response, resp);    
 
     ddebug(

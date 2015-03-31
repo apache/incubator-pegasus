@@ -90,7 +90,7 @@ void primary_context::ResetMembership(const partition_configuration& config, boo
         Statuses[it->first] = PS_POTENTIAL_SECONDARY;
     }
 
-    for (auto it = config.dropOuts.begin(); it != config.dropOuts.end(); it++)
+    for (auto it = config.drop_outs.begin(); it != config.drop_outs.end(); it++)
     {
         if (Statuses.find(*it) == Statuses.end())
         {
@@ -138,7 +138,7 @@ bool primary_context::CheckExist(const end_point& node, partition_status st)
     case PS_POTENTIAL_SECONDARY:
         return Learners.find(node) != Learners.end();
     case PS_INACTIVE:
-        return std::find(membership.dropOuts.begin(), membership.dropOuts.end(), node) != membership.dropOuts.end();
+        return std::find(membership.drop_outs.begin(), membership.drop_outs.end(), node) != membership.drop_outs.end();
     default:
         dassert (false, "");
         return false;

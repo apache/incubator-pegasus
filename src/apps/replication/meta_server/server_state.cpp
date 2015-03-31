@@ -46,9 +46,9 @@ void server_state::InitApp()
         partition_configuration ps;
         ps.app_type = app.AppType;
         ps.ballot = 0;
-        ps.gpid.tableId = app.AppId;
+        ps.gpid.app_id = app.AppId;
         ps.gpid.pidx = i;
-        ps.lastCommittedDecree = 0;
+        ps.last_committed_decree = 0;
         ps.max_replica_count = 3;
 
         app.Partitions.push_back(ps);
@@ -150,7 +150,7 @@ void server_state::SwitchMetaPrimary()
 }
 
 // partition server & client => meta server
-void server_state::OnQueryConfig(ConfigurationNodeQueryRequest& request, __out_param ConfigurationNodeQueryResponse& response)
+void server_state::OnQueryConfig(configuration_node_query_request& request, __out_param configuration_node_query_response& response)
 {
     zauto_read_lock l(_lock);
     auto it = _nodes.find(request.node);
@@ -164,12 +164,12 @@ void server_state::OnQueryConfig(ConfigurationNodeQueryRequest& request, __out_p
 
         for (auto& p : it->second.Partitions)
         {
-            response.partitions.push_back(_apps[p.tableId - 1].Partitions[p.pidx]);
+            response.partitions.push_back(_apps[p.app_id - 1].Partitions[p.pidx]);
         }
     }
 }
 
-void server_state::DoQueryConfigurationByIndexRequest(QueryConfigurationByIndexRequest& request, __out_param QueryConfigurationByIndexResponse& response)
+void server_state::DoQueryConfigurationByIndexRequest(query_configuration_by_index_request& request, __out_param query_configuration_by_index_response& response)
 {
     zauto_read_lock l(_lock);
 
@@ -180,7 +180,7 @@ void server_state::DoQueryConfigurationByIndexRequest(QueryConfigurationByIndexR
         {
             response.err = ERR_SUCCESS;
             AppState& app = kv;
-            for (auto& idx : request.parIdxes)
+            for (auto& idx : request.partition_indices)
             {
                 if (idx < (unsigned int)app.PartitionCount)
                 { 
@@ -194,11 +194,11 @@ void server_state::DoQueryConfigurationByIndexRequest(QueryConfigurationByIndexR
     response.err = ERR_OBJECT_NOT_FOUND;
 }
 
-void server_state::update_configuration(configuration_update_request& request, __out_param ConfigurationUpdateResponse& response)
+void server_state::update_configuration(configuration_update_request& request, __out_param configuration_update_response& response)
 {
     zauto_write_lock l(_lock);
 
-    AppState& app = _apps[request.config.gpid.tableId - 1];
+    AppState& app = _apps[request.config.gpid.app_id - 1];
     partition_configuration& old = app.Partitions[request.config.gpid.pidx];
     if (old.ballot + 1 == request.config.ballot)
     {

@@ -40,8 +40,8 @@ public:
 private:
     // meta server => partition server
     void SendConfigProposal(const end_point& node, const configuration_update_request& proposal);
-    void QueryDecree(std::shared_ptr<QueryPNDecreeRequest> query);
-    void OnQueryDecreeAck(error_code err, std::shared_ptr<QueryPNDecreeRequest> query, std::shared_ptr<QueryPNDecreeResponse> resp);
+    void QueryDecree(std::shared_ptr<query_replica_decree_request> query);
+    void OnQueryDecreeAck(error_code err, std::shared_ptr<query_replica_decree_request> query, std::shared_ptr<query_replica_decree_response> resp);
     
     void RunLB(partition_configuration& pc);
     end_point FindMinimalLoadMachine(bool primaryOnly);

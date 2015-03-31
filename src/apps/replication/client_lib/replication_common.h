@@ -54,14 +54,14 @@ struct GlobalPartitionIDComparor
 {
   bool operator()(const global_partition_id& s1, const global_partition_id& s2) const
   {
-    return s1.tableId < s2.tableId
-        || (s1.tableId == s2.tableId && s1.pidx < s2.pidx);
+    return s1.app_id < s2.app_id
+        || (s1.app_id == s2.app_id && s1.pidx < s2.pidx);
   }
 };
 
 inline int gpid_to_hash(global_partition_id gpid)
 {
-    return static_cast<int>(gpid.tableId ^ gpid.pidx);
+    return static_cast<int>(gpid.app_id ^ gpid.pidx);
 }
 
 typedef std::set<end_point, end_point_comparor> NodeSet;

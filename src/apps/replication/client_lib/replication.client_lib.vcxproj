@@ -97,6 +97,9 @@
     <ClInclude Include="replication_ds.h" />
     <ClInclude Include="rpc_replicated.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\replication.dsn" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

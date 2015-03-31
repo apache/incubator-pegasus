@@ -96,7 +96,7 @@ void replica::handle_remote_failure(partition_status st, const end_point& node, 
 
 void replica::on_meta_server_disconnected()
 {
-    ddebug( "%s: coordinator disconnected", name());
+    ddebug( "%s: meta server disconnected", name());
 
     update_local_configuration_with_no_ballot_change(PS_INACTIVE);
 }

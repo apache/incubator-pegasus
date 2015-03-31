@@ -34,40 +34,40 @@ namespace dsn {
             uint64_t id;
         };
 
-        struct CdtMsgHeader
+        struct meta_msg_header
         {
-            int32_t RpcTag;
+            int32_t rpc_tag;
         };
 
-        struct CdtMsgResponseHeader
+        struct meta_response_header
         {
-            int Err;
-            end_point PrimaryAddress;
+            int err;
+            end_point primary_address;
         };
 
         struct global_partition_id
         {
-            int32_t  tableId = -1;
+            int32_t  app_id = -1;
             int32_t  pidx = -1;
         };
 
         inline bool operator == (const global_partition_id& l, const global_partition_id& r)
         {
-            return l.tableId == r.tableId && l.pidx == r.pidx;
+            return l.app_id == r.app_id && l.pidx == r.pidx;
         }
 
-        struct MutationHeader
+        struct mutation_header
         {
             global_partition_id gpid;
             int64_t             ballot;
             int64_t             decree;
-            int64_t             logOffset;
-            int64_t             lastCommittedDecree;
+            int64_t             log_offset;
+            int64_t             last_committed_decree;
         };
 
         struct mutation_data
         {
-            MutationHeader    header;
+            mutation_header    header;
             std::list<utils::blob>  updates;
         };
 
@@ -97,8 +97,8 @@ namespace dsn {
             int32_t                max_replica_count;
             end_point              primary;
             std::vector<end_point> secondaries;
-            std::vector<end_point> dropOuts;
-            int64_t                lastCommittedDecree;
+            std::vector<end_point> drop_outs;
+            int64_t                last_committed_decree;
         };
 
         struct replica_configuration
@@ -120,14 +120,14 @@ namespace dsn {
         {
             global_partition_id gpid;
             read_semantic_t      semantic = ReadLastUpdate;
-            int64_t             versionDecree = -1;
+            int64_t             version_decree = -1;
         };
 
-        struct ClientResponse
+        struct client_response
         {
             int err = 0;
-            int32_t pendingRequestCount = 0;
-            int64_t lastCommittedDecree = 0;
+            int32_t pending_request_count = 0;
+            int64_t last_committed_decree = 0;
         };
 
         struct PrepareAck
@@ -136,8 +136,8 @@ namespace dsn {
             int          err;
             int64_t             ballot;
             int64_t             decree;
-            int64_t             lastCommittedDecreeInApp;
-            int64_t             lastCommittedDecreeInPrepareList;
+            int64_t             last_committed_decree_in_app;
+            int64_t             last_committed_decree_in_prepare_list;
         };
 
         struct learn_state
@@ -146,7 +146,7 @@ namespace dsn {
             std::vector<std::string>          files;
         };
 
-        enum LearnerState
+        enum learner_status
         {
             LearningWithoutPrepare,
             LearningWithPrepare,
@@ -155,31 +155,31 @@ namespace dsn {
             Learning_INVALID
         };
 
-        ENUM_BEGIN(LearnerState, Learning_INVALID)
+        ENUM_BEGIN(learner_status, Learning_INVALID)
             ENUM_REG(LearningWithoutPrepare)
             ENUM_REG(LearningWithPrepare)
             ENUM_REG(LearningSucceeded)
             ENUM_REG(LearningFailed)
-            ENUM_END(LearnerState)
+            ENUM_END(learner_status)
 
         struct learn_request
         {
             global_partition_id    gpid;
             end_point learner;
             uint64_t               signature;
-            int64_t                lastCommittedDecreeInApp;
-            int64_t                lastCommittedDecreeInPrepareList;
-            utils::blob                 appSpecificLearnRequest;
+            int64_t                last_committed_decree_in_app;
+            int64_t                last_committed_decree_in_prepare_list;
+            utils::blob                 app_specific_learn_request;
         };
 
         struct learn_response
         {
             int               err;
             replica_configuration    config;
-            int64_t                   commitDecree;
-            int64_t                   prepareStartDecree;
+            int64_t                   commit_decree;
+            int64_t                   prepare_start_decree;
             learn_state              state;
-            std::string                  baseLocalDir;
+            std::string                  base_local_dir;
         };
 
         struct group_check_request
@@ -187,25 +187,25 @@ namespace dsn {
             std::string                  app_type;
             end_point    node;
             replica_configuration    config;
-            int64_t                   lastCommittedDecree;
-            uint64_t                  learnerSignature;
+            int64_t                   last_committed_decree;
+            uint64_t                  learner_signature;
         };
 
         struct group_check_response
         {
             global_partition_id       gpid;
             int                err;
-            int64_t                   lastCommittedDecreeInApp;
-            int64_t                   lastCommittedDecreeInPrepareList;
-            LearnerState            learnerState = LearningFailed;
-            uint64_t                  learnerSignature;
+            int64_t                   last_committed_decree_in_app;
+            int64_t                   last_committed_decree_in_prepare_list;
+            learner_status            learner_status_ = LearningFailed;
+            uint64_t                  learner_signature;
             end_point    node;
         };
 
 
         ///////////// demo ///////////////
 
-        enum SimpleKvOperation
+        enum simple_kv_operation
         {
             SKV_NOP,
             SKV_UPDATE,
@@ -213,14 +213,14 @@ namespace dsn {
             SKV_APPEND,
         };
 
-        struct SimpleKvRequest
+        struct simple_kv_request
         {
-            SimpleKvOperation op = SKV_NOP;
+            simple_kv_operation op = SKV_NOP;
             std::string key;
             std::string value;
         };
 
-        struct SimpleKvResponse
+        struct simple_kv_response
         {
             int32_t  err;
             std::string key;
@@ -228,7 +228,7 @@ namespace dsn {
         };
 
 
-        /////////////////// coordinator messages ////////////////////
+        /////////////////// meta server messages ////////////////////
         enum config_type
         {
             CT_NONE,
@@ -238,7 +238,7 @@ namespace dsn {
             CT_DOWNGRADE_TO_INACTIVE,
             CT_REMOVE,
 
-            // not used by coordinator
+            // not used by meta server
             CT_UPGRADE_TO_SECONDARY,
         };
 
@@ -251,7 +251,7 @@ namespace dsn {
             ENUM_REG(CT_UPGRADE_TO_SECONDARY)
             ENUM_END(config_type)
 
-            // primary | secondary(upgrading) (w/ new config) => coordinator
+            // primary | secondary(upgrading) (w/ new config) => meta server
         struct configuration_update_request
         {
             partition_configuration  config;
@@ -259,56 +259,56 @@ namespace dsn {
             end_point    node;
         };
 
-        // coordinator (config mgr) => primary | secondary (downgrade) (w/ new config)
-        struct ConfigurationUpdateResponse
+        // meta server (config mgr) => primary | secondary (downgrade) (w/ new config)
+        struct configuration_update_response
         {
             int                err;
             partition_configuration  config;
         };
 
-        // proposal:  coordinator(LBM) => primary  (w/ current config)
-        struct ConfigurationProposalRequest
+        // proposal:  meta server(LBM) => primary  (w/ current config)
+        struct configuration_proposal_request
         {
             partition_configuration  config;
             config_type              type = CT_NONE;
             end_point   node;
-            bool                    isCleanData = false;
-            bool                    isUpgrade = false;
+            bool                    is_clean_data = false;
+            bool                    is_upgrade = false;
         };
 
-        // client => coordinator
-        struct ConfigurationNodeQueryRequest
+        // client => meta server
+        struct configuration_node_query_request
         {
             end_point    node;
         };
 
-        // coordinator => client
-        struct ConfigurationNodeQueryResponse
+        // meta server => client
+        struct configuration_node_query_response
         {
             int                        err;
             std::list<partition_configuration> partitions;
         };
 
 
-        struct QueryPNDecreeRequest
+        struct query_replica_decree_request
         {
-            global_partition_id                partitionId;
+            global_partition_id                partition_id;
             end_point    node;
         };
 
-        struct QueryPNDecreeResponse
+        struct query_replica_decree_response
         {
             int                 err;
-            int64_t                    lastDecree;
+            int64_t                    last_decree;
         };
 
-        struct QueryConfigurationByIndexRequest
+        struct query_configuration_by_index_request
         {
             std::string           app_name;
-            std::vector<uint32_t>   parIdxes;
+            std::vector<uint32_t>   partition_indices;
         };
 
-        struct QueryConfigurationByIndexResponse
+        struct query_configuration_by_index_response
         {
             int                           err;
             std::vector<partition_configuration> partitions;
@@ -317,23 +317,23 @@ namespace dsn {
 
 
         DEFINE_POD_SERIALIZATION(replication::ReplicationMsgHeader)
-            DEFINE_POD_SERIALIZATION(replication::CdtMsgHeader)
+            DEFINE_POD_SERIALIZATION(replication::meta_msg_header)
 
-            inline void marshall(::dsn::utils::binary_writer& writer, const CdtMsgResponseHeader& val, uint16_t pos = 0xffff)
+            inline void marshall(::dsn::utils::binary_writer& writer, const meta_response_header& val, uint16_t pos = 0xffff)
         {
-            marshall(writer, val.Err, pos);
-            marshall(writer, val.PrimaryAddress, pos);
+            marshall(writer, val.err, pos);
+            marshall(writer, val.primary_address, pos);
         }
 
-        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param CdtMsgResponseHeader& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param meta_response_header& val)
         {
-            unmarshall(reader, val.Err);
-            unmarshall(reader, val.PrimaryAddress);
+            unmarshall(reader, val.err);
+            unmarshall(reader, val.primary_address);
         }
 
         DEFINE_POD_SERIALIZATION(replication::global_partition_id)
 
-            DEFINE_POD_SERIALIZATION(replication::MutationHeader)
+            DEFINE_POD_SERIALIZATION(replication::mutation_header)
 
             inline void marshall(::dsn::utils::binary_writer& writer, const mutation_data& val, uint16_t pos = 0xffff)
         {
@@ -357,8 +357,8 @@ namespace dsn {
             marshall(writer, val.max_replica_count, pos);
             marshall(writer, val.primary, pos);
             marshall(writer, val.secondaries, pos);
-            marshall(writer, val.dropOuts, pos);
-            marshall(writer, val.lastCommittedDecree, pos);
+            marshall(writer, val.drop_outs, pos);
+            marshall(writer, val.last_committed_decree, pos);
         }
 
         inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param partition_configuration& val)
@@ -369,8 +369,8 @@ namespace dsn {
             unmarshall(reader, val.max_replica_count);
             unmarshall(reader, val.primary);
             unmarshall(reader, val.secondaries);
-            unmarshall(reader, val.dropOuts);
-            unmarshall(reader, val.lastCommittedDecree);
+            unmarshall(reader, val.drop_outs);
+            unmarshall(reader, val.last_committed_decree);
         }
 
         inline void marshall(::dsn::utils::binary_writer& writer, const replica_configuration& val, uint16_t pos = 0xffff)
@@ -393,7 +393,7 @@ namespace dsn {
 
             DEFINE_POD_SERIALIZATION(replication::client_read_request)
 
-            DEFINE_POD_SERIALIZATION(replication::ClientResponse)
+            DEFINE_POD_SERIALIZATION(replication::client_response)
 
             DEFINE_POD_SERIALIZATION(replication::PrepareAck)
 
@@ -409,44 +409,44 @@ namespace dsn {
             unmarshall(reader, val.files);
         }
 
-        DEFINE_POD_SERIALIZATION(replication::LearnerState)
+        DEFINE_POD_SERIALIZATION(replication::learner_status)
 
-            inline void marshall(::dsn::utils::binary_writer& writer, const QueryConfigurationByIndexRequest& val, uint16_t pos = 0xffff)
+            inline void marshall(::dsn::utils::binary_writer& writer, const query_configuration_by_index_request& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.app_name, pos);
-            marshall(writer, val.parIdxes, pos);
+            marshall(writer, val.partition_indices, pos);
         }
 
-        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param QueryConfigurationByIndexRequest& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param query_configuration_by_index_request& val)
         {
             unmarshall(reader, val.app_name);
-            unmarshall(reader, val.parIdxes);
+            unmarshall(reader, val.partition_indices);
         }
 
-        inline void marshall(::dsn::utils::binary_writer& writer, const QueryConfigurationByIndexResponse& val, uint16_t pos = 0xffff)
+        inline void marshall(::dsn::utils::binary_writer& writer, const query_configuration_by_index_response& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.err, pos);
             marshall(writer, val.partitions, pos);
         }
 
-        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param QueryConfigurationByIndexResponse& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param query_configuration_by_index_response& val)
         {
             unmarshall(reader, val.err);
             unmarshall(reader, val.partitions);
         }
 
 
-        DEFINE_POD_SERIALIZATION(replication::SimpleKvOperation)
+        DEFINE_POD_SERIALIZATION(replication::simple_kv_operation)
 
 
-            inline void marshall(::dsn::utils::binary_writer& writer, const SimpleKvRequest& val, uint16_t pos = 0xffff)
+            inline void marshall(::dsn::utils::binary_writer& writer, const simple_kv_request& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.op, pos);
             marshall(writer, val.key, pos);
             marshall(writer, val.value, pos);
         }
 
-        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param SimpleKvRequest& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param simple_kv_request& val)
         {
             unmarshall(reader, val.op);
             unmarshall(reader, val.key);
@@ -455,14 +455,14 @@ namespace dsn {
 
 
 
-        inline void marshall(::dsn::utils::binary_writer& writer, const SimpleKvResponse& val, uint16_t pos = 0xffff)
+        inline void marshall(::dsn::utils::binary_writer& writer, const simple_kv_response& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.err, pos);
             marshall(writer, val.key, pos);
             marshall(writer, val.value, pos);
         }
 
-        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param SimpleKvResponse& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param simple_kv_response& val)
         {
             unmarshall(reader, val.err);
             unmarshall(reader, val.key);
@@ -474,9 +474,9 @@ namespace dsn {
             marshall(writer, val.gpid, pos);
             marshall(writer, val.learner, pos);
             marshall(writer, val.signature, pos);
-            marshall(writer, val.lastCommittedDecreeInApp, pos);
-            marshall(writer, val.lastCommittedDecreeInPrepareList, pos);
-            marshall(writer, val.appSpecificLearnRequest, pos);
+            marshall(writer, val.last_committed_decree_in_app, pos);
+            marshall(writer, val.last_committed_decree_in_prepare_list, pos);
+            marshall(writer, val.app_specific_learn_request, pos);
         }
 
         inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param learn_request& val)
@@ -484,29 +484,29 @@ namespace dsn {
             unmarshall(reader, val.gpid);
             unmarshall(reader, val.learner);
             unmarshall(reader, val.signature);
-            unmarshall(reader, val.lastCommittedDecreeInApp);
-            unmarshall(reader, val.lastCommittedDecreeInPrepareList);
-            unmarshall(reader, val.appSpecificLearnRequest);
+            unmarshall(reader, val.last_committed_decree_in_app);
+            unmarshall(reader, val.last_committed_decree_in_prepare_list);
+            unmarshall(reader, val.app_specific_learn_request);
         }
 
         inline void marshall(::dsn::utils::binary_writer& writer, const learn_response& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.err, pos);
             marshall(writer, val.config, pos);
-            marshall(writer, val.commitDecree, pos);
-            marshall(writer, val.prepareStartDecree, pos);
+            marshall(writer, val.commit_decree, pos);
+            marshall(writer, val.prepare_start_decree, pos);
             marshall(writer, val.state, pos);
-            marshall(writer, val.baseLocalDir, pos);
+            marshall(writer, val.base_local_dir, pos);
         }
 
         inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param learn_response& val)
         {
             unmarshall(reader, val.err);
             unmarshall(reader, val.config);
-            unmarshall(reader, val.commitDecree);
-            unmarshall(reader, val.prepareStartDecree);
+            unmarshall(reader, val.commit_decree);
+            unmarshall(reader, val.prepare_start_decree);
             unmarshall(reader, val.state);
-            unmarshall(reader, val.baseLocalDir);
+            unmarshall(reader, val.base_local_dir);
         }
 
         inline void marshall(::dsn::utils::binary_writer& writer, const group_check_request& val, uint16_t pos = 0xffff)
@@ -514,8 +514,8 @@ namespace dsn {
             marshall(writer, val.app_type, pos);
             marshall(writer, val.node, pos);
             marshall(writer, val.config, pos);
-            marshall(writer, val.lastCommittedDecree, pos);
-            marshall(writer, val.learnerSignature, pos);
+            marshall(writer, val.last_committed_decree, pos);
+            marshall(writer, val.learner_signature, pos);
         }
 
         inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param group_check_request& val)
@@ -523,18 +523,18 @@ namespace dsn {
             unmarshall(reader, val.app_type);
             unmarshall(reader, val.node);
             unmarshall(reader, val.config);
-            unmarshall(reader, val.lastCommittedDecree);
-            unmarshall(reader, val.learnerSignature);
+            unmarshall(reader, val.last_committed_decree);
+            unmarshall(reader, val.learner_signature);
         }
 
         inline void marshall(::dsn::utils::binary_writer& writer, const group_check_response& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.gpid, pos);
             marshall(writer, val.err, pos);
-            marshall(writer, val.lastCommittedDecreeInApp, pos);
-            marshall(writer, val.lastCommittedDecreeInPrepareList, pos);
-            marshall(writer, val.learnerState, pos);
-            marshall(writer, val.learnerSignature, pos);
+            marshall(writer, val.last_committed_decree_in_app, pos);
+            marshall(writer, val.last_committed_decree_in_prepare_list, pos);
+            marshall(writer, val.learner_status_, pos);
+            marshall(writer, val.learner_signature, pos);
             marshall(writer, val.node, pos);
         }
 
@@ -542,10 +542,10 @@ namespace dsn {
         {
             unmarshall(reader, val.gpid);
             unmarshall(reader, val.err);
-            unmarshall(reader, val.lastCommittedDecreeInApp);
-            unmarshall(reader, val.lastCommittedDecreeInPrepareList);
-            unmarshall(reader, val.learnerState);
-            unmarshall(reader, val.learnerSignature);
+            unmarshall(reader, val.last_committed_decree_in_app);
+            unmarshall(reader, val.last_committed_decree_in_prepare_list);
+            unmarshall(reader, val.learner_status_);
+            unmarshall(reader, val.learner_signature);
             unmarshall(reader, val.node);
         }
 
@@ -565,49 +565,49 @@ namespace dsn {
             unmarshall(reader, val.node);
         }
 
-        inline void marshall(::dsn::utils::binary_writer& writer, const ConfigurationUpdateResponse& val, uint16_t pos = 0xffff)
+        inline void marshall(::dsn::utils::binary_writer& writer, const configuration_update_response& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.err, pos);
             marshall(writer, val.config, pos);
         }
 
-        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param ConfigurationUpdateResponse& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param configuration_update_response& val)
         {
             unmarshall(reader, val.err);
             unmarshall(reader, val.config);
         }
 
-        inline void marshall(::dsn::utils::binary_writer& writer, const QueryPNDecreeRequest& val, uint16_t pos = 0xffff)
+        inline void marshall(::dsn::utils::binary_writer& writer, const query_replica_decree_request& val, uint16_t pos = 0xffff)
         {
-            marshall(writer, val.partitionId, pos);
+            marshall(writer, val.partition_id, pos);
             marshall(writer, val.node, pos);
         }
 
-        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param QueryPNDecreeRequest& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param query_replica_decree_request& val)
         {
-            unmarshall(reader, val.partitionId);
+            unmarshall(reader, val.partition_id);
             unmarshall(reader, val.node);
         }
 
-        DEFINE_POD_SERIALIZATION(replication::QueryPNDecreeResponse)
+        DEFINE_POD_SERIALIZATION(replication::query_replica_decree_response)
 
-            inline void marshall(::dsn::utils::binary_writer& writer, const ConfigurationNodeQueryRequest& val, uint16_t pos = 0xffff)
+            inline void marshall(::dsn::utils::binary_writer& writer, const configuration_node_query_request& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.node, pos);
         }
 
-        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param ConfigurationNodeQueryRequest& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param configuration_node_query_request& val)
         {
             unmarshall(reader, val.node);
         }
 
-        inline void marshall(::dsn::utils::binary_writer& writer, const ConfigurationNodeQueryResponse& val, uint16_t pos = 0xffff)
+        inline void marshall(::dsn::utils::binary_writer& writer, const configuration_node_query_response& val, uint16_t pos = 0xffff)
         {
             marshall(writer, val.err, pos);
             marshall(writer, val.partitions, pos);
         }
 
-        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param ConfigurationNodeQueryResponse& val)
+        inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param configuration_node_query_response& val)
         {
             unmarshall(reader, val.err);
             unmarshall(reader, val.partitions);

@@ -101,7 +101,7 @@ void replica::init_prepare(mutation_ptr& mu)
         goto ErrOut;
     }
             
-    mu->data.header.lastCommittedDecree = last_committed_decree();
+    mu->data.header.last_committed_decree = last_committed_decree();
     if (mu->data.header.decree == invalid_decree)
     {
         mu->set_id(get_ballot(), _prepare_list->max_decree() + 1);
@@ -144,7 +144,7 @@ void replica::init_prepare(mutation_ptr& mu)
     count = 0;
     for (auto it = _primary_states.Learners.begin(); it != _primary_states.Learners.end(); it++)
     {
-        if (it->second.prepareStartDecree != invalid_decree && mu->data.header.decree >= it->second.prepareStartDecree)
+        if (it->second.prepare_start_decree != invalid_decree && mu->data.header.decree >= it->second.prepare_start_decree)
         {
             send_prepare_message(it->first, PS_POTENTIAL_SECONDARY, mu, _options.PrepareTimeoutMsForSecondaries, _options.PrepareMaxSendCountForSecondaries);
             count++;
@@ -153,7 +153,7 @@ void replica::init_prepare(mutation_ptr& mu)
     mu->set_left_potential_secondary_ack_count(count);
 
     // local log
-    dassert (mu->data.header.logOffset == invalid_offset, "");
+    dassert (mu->data.header.log_offset == invalid_offset, "");
     dassert (mu->log_task() == nullptr, "");
     mu->log_task() = _stub->_log->append(mu,
         LPC_WRITE_REPLICATION_LOG,
@@ -463,8 +463,8 @@ void replica::ack_prepare_message(int err, mutation_ptr& mu)
     resp.decree = mu->data.header.decree;
 
     // for PS_POTENTIAL_SECONDARY ONLY
-    resp.lastCommittedDecreeInApp = _app->last_committed_decree(); 
-    resp.lastCommittedDecreeInPrepareList = last_committed_decree();
+    resp.last_committed_decree_in_app = _app->last_committed_decree(); 
+    resp.last_committed_decree_in_prepare_list = last_committed_decree();
 
     dassert (nullptr != mu->owner_message(), "");
     reply(mu->owner_message(), resp);

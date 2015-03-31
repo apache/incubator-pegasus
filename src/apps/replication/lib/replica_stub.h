@@ -64,7 +64,7 @@ public:
     //    messages from meta server
     //
     void on_config_proposal(const configuration_update_request& proposal);
-    void on_query_decree(const QueryPNDecreeRequest& req, __out_param QueryPNDecreeResponse& resp);
+    void on_query_decree(const query_replica_decree_request& req, __out_param query_replica_decree_response& resp);
         
     //
     //    messages from peers (primary or secondary)
@@ -91,14 +91,14 @@ public:
     // 
     void init_gc_for_test();
     void set_meta_server_disconnected_for_test() { on_meta_server_disconnected(); }
-    void set_meta_server_connected_for_test(const ConfigurationNodeQueryResponse& config);
+    void set_meta_server_connected_for_test(const configuration_node_query_response& config);
 
     //
     // common routines for inquiry
     //
     const std::string& dir() const { return _dir; }
     replica_ptr get_replica(global_partition_id gpid, bool new_when_possible = false, const char* app_type = nullptr);
-    replica_ptr get_replica(int32_t tableId, int32_t partition_index);
+    replica_ptr get_replica(int32_t app_id, int32_t partition_index);
     replication_options& options() { return _options; }
     configuration_ptr config() const { return _config; }
     bool is_connected() const { return NS_Connected == _state; }

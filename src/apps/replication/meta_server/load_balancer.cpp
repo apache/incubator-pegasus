@@ -137,12 +137,12 @@ void load_balancer::SendConfigProposal(const end_point& node, const configuratio
     rpc::call_one_way_typed(node, RPC_CONFIG_PROPOSAL, proposal, gpid_to_hash(proposal.config.gpid));
 }
 
-void load_balancer::QueryDecree(std::shared_ptr<QueryPNDecreeRequest> query)
+void load_balancer::QueryDecree(std::shared_ptr<query_replica_decree_request> query)
 {
-    rpc::call_typed(query->node, RPC_QUERY_PN_DECREE, query, this, &load_balancer::OnQueryDecreeAck, gpid_to_hash(query->partitionId), 3000);
+    rpc::call_typed(query->node, RPC_QUERY_PN_DECREE, query, this, &load_balancer::OnQueryDecreeAck, gpid_to_hash(query->partition_id), 3000);
 }
 
-void load_balancer::OnQueryDecreeAck(error_code err, std::shared_ptr<QueryPNDecreeRequest> query, std::shared_ptr<QueryPNDecreeResponse> resp)
+void load_balancer::OnQueryDecreeAck(error_code err, std::shared_ptr<query_replica_decree_request> query, std::shared_ptr<query_replica_decree_response> resp)
 {
     if (err)
     {
@@ -151,11 +151,11 @@ void load_balancer::OnQueryDecreeAck(error_code err, std::shared_ptr<QueryPNDecr
     else
     {
         zauto_write_lock l(_state->_lock);
-        server_state::AppState& app = _state->_apps[query->partitionId.tableId - 1];
-        partition_configuration& ps = app.Partitions[query->partitionId.pidx];
-        if (resp->lastDecree > ps.lastCommittedDecree)
+        server_state::AppState& app = _state->_apps[query->partition_id.app_id - 1];
+        partition_configuration& ps = app.Partitions[query->partition_id.pidx];
+        if (resp->last_decree > ps.last_committed_decree)
         {
-            ps.lastCommittedDecree = resp->lastDecree;
+            ps.last_committed_decree = resp->last_decree;
         }   
     }
 }

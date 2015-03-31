@@ -66,16 +66,16 @@ static void InternalRpcReplyCallback(error_code err, message_ptr& request, messa
     end_point next_server;
     if (!err) 
     {
-        CdtMsgResponseHeader header;
+        meta_response_header header;
         unmarshall(response->reader(), header);
 
-        if (header.Err == ERR_SERVICE_NOT_ACTIVE || header.Err == ERR_BUSY)
+        if (header.err == ERR_SERVICE_NOT_ACTIVE || header.err == ERR_BUSY)
         {
 
         }
-        else if (header.Err == ERR_TALK_TO_OTHERS)
+        else if (header.err == ERR_TALK_TO_OTHERS)
         {
-            next_server = header.PrimaryAddress;
+            next_server = header.primary_address;
             err = ERR_SUCCESS;
         }
         else
