@@ -52,20 +52,18 @@ void meta_service::start()
     else
         _livenessMonitor->set_primary(false);
 
-    _livenessMonitor->init(_opts.FD_check_interval_seconds,
+    _livenessMonitor->start(
+        _opts.FD_check_interval_seconds,
         _opts.FD_beacon_interval_seconds,
         _opts.FD_lease_seconds,
         _opts.FD_grace_seconds,
         false
         );
-
-    _livenessMonitor->start();
 }
 
 bool meta_service::stop()
 {
     _livenessMonitor->stop();
-    _livenessMonitor->uninit();
     delete _livenessMonitor;
     _livenessMonitor = nullptr;
 

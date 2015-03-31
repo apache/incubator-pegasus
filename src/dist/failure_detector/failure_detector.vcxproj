@@ -83,9 +83,17 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="failure_detector.cpp" />
+    <ClCompile Include="fd_main.cpp" />
+    <ClCompile Include="fd_types.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="failure_detector.h" />
+    <ClInclude Include="failure_detector.rdsn.h" />
+    <ClInclude Include="fd_examples.h" />
+    <ClInclude Include="fd_types.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="fd.dsn" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

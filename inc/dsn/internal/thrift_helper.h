@@ -24,7 +24,7 @@
 
 # pragma once
 
-# define ZION_NOT_USE_DEFAULT_SERIALIZATION 1
+# define DSN_NOT_USE_DEFAULT_SERIALIZATION 1
 # include <dsn/internal/dsn_types.h>
 # include <dsn/internal/serialization.h>
 # include <dsn/internal/utils.h>

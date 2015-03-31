@@ -1,0 +1,23 @@
+include "../../dev.dsn"
+
+namespace cpp dsn.fd
+
+struct beacon_msg
+{
+    1: i64 time;
+    2: dev.end_point from;
+    3: dev.end_point to;
+}
+
+struct beacon_ack
+{
+    1: i64 time;
+    2: bool is_master;
+    3: dev.end_point primary_node;
+    4: bool allowed;
+}
+
+service failure_detector
+{
+	beacon_ack ping(1:beacon_msg beacon)
+}

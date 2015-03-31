@@ -28,7 +28,6 @@ namespace dsn { namespace replication {
 
 
 replication_failure_detector::replication_failure_detector(replica_stub* stub, std::vector<end_point>& meta_servers)
-    : failure_detector((stub->name() + std::string(".failure_detector")).c_str())
 {
     _stub = stub;
     _meta_servers = meta_servers;
@@ -56,9 +55,12 @@ end_point replication_failure_detector::find_next_meta_server(end_point current)
     }
 }
 
-void replication_failure_detector::on_beacon_ack(error_code err, std::shared_ptr<beacon_msg> beacon, std::shared_ptr<beacon_ack> ack)
+void replication_failure_detector::end_ping(
+    ::dsn::error_code err,
+    std::shared_ptr<fd::beacon_msg> beacon,
+    std::shared_ptr<fd::beacon_ack> ack)
 {
-    failure_detector::on_beacon_ack(err, beacon, ack);
+    failure_detector::end_ping(err, beacon, ack);
 
     zauto_lock l(_meta_lock);
     

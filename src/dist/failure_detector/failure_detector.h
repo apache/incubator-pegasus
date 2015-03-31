@@ -23,17 +23,11 @@
  */
 # pragma once
 
-# include <dsn/serverlet.h>
-
-using namespace dsn::service;
+# include "failure_detector.rdsn.h"
 
 namespace dsn { namespace fd {
 
-DEFINE_THREAD_POOL_CODE(THREAD_POOL_FAILURE_DETECTOR)
-
-DEFINE_TASK_CODE(LPC_BEACON_CHECK, TASK_PRIORITY_HIGH, THREAD_POOL_FAILURE_DETECTOR)
-
-DEFINE_TASK_CODE_RPC(RPC_BEACON, TASK_PRIORITY_HIGH, THREAD_POOL_FAILURE_DETECTOR)
+DEFINE_TASK_CODE(LPC_BEACON_CHECK, TASK_PRIORITY_HIGH, THREAD_POOL_FD_DEFAULT)
 
 class failure_detector_callback
 {
@@ -47,71 +41,27 @@ public:
     virtual void on_worker_connected( const end_point& node ) = 0;
 };
 
-class failure_detector : public serverlet<failure_detector>, public failure_detector_callback
+class failure_detector : 
+    public failure_detector_service<failure_detector>, 
+    public failure_detector_async_client, 
+    public failure_detector_callback
 {
 public:
-    failure_detector(const char* service_name)
-    : serverlet<failure_detector>(service_name)
-    {
-        _is_started = false;
-        _currentTask = nullptr;
-    }
+    virtual void ping(const beacon_msg& beacon, ::dsn::service::rpc_replier<beacon_ack>& reply);
 
-    ~failure_detector()
-    {
-    }
-
-private:
-    class master_record
-    {
-    public:
-        end_point       node;
-        uint64_t        last_send_time_for_beacon_with_ack;
-        uint64_t        next_beacon_time;
-        bool            is_alive;
-        bool            rejected;
-
-        // masters are always considered *disconnected* initially which is ok even when master thinks workers are connected
-        master_record(const end_point& n, uint64_t last_send_time_for_beacon_with_ack_, uint64_t next_beacon_time_)
-        {
-            node                    = n;
-            last_send_time_for_beacon_with_ack = last_send_time_for_beacon_with_ack_;
-            next_beacon_time        = next_beacon_time_;
-            is_alive                = false;
-            rejected                = false;
-        }
-    };
-
-    class worker_record
-    {
-    public:
-        end_point       node;
-        uint64_t        last_beacon_recv_time;
-        bool            is_alive;
-
-        // workers are always considered *connected* initially which is ok even when workers think master is disconnected
-        worker_record(const end_point& node, uint64_t last_beacon_recv_time)
-        {
-            this->node                  = node;
-            this->last_beacon_recv_time = last_beacon_recv_time;
-            is_alive                    = true;
-        }
-    };
+    virtual void end_ping(
+        ::dsn::error_code err,
+        std::shared_ptr<beacon_msg> beacon,
+        std::shared_ptr<beacon_ack> ack);
 
 public:
-
-    bool init( uint32_t check_interval_seconds,  uint32_t beacon_interval_seconds,
-               uint32_t lease_seconds,  uint32_t grace_seconds, bool use_allow_list = false) ;
-
-    bool uninit();
-
-    void on_configuration_changed(
-         uint32_t beacon_interval_seconds,
-         uint32_t lease_seconds,
-         uint32_t grace_seconds,
-         uint32_t check_interval_seconds);
-
-    int  start();
+    int  start(
+        uint32_t check_interval_seconds,
+        uint32_t beacon_interval_seconds,
+        uint32_t lease_seconds,
+        uint32_t grace_seconds,
+        bool use_allow_list = false
+        );
 
     int  stop();
 
@@ -141,27 +91,9 @@ public:
     int  worker_count() const { return static_cast<int>(_workers.size()); }
 
     int  master_count() const { return static_cast<int>(_masters.size()); }
-
-public:
-    struct beacon_msg
-    {
-        uint64_t time;
-        end_point from;
-        end_point to;
-    };
-
-    struct beacon_ack
-    {
-        uint64_t time;
-        bool is_master;
-        end_point primary_node;
-        bool allowed;
-    };
-
+    
 protected:
-    virtual void on_beacon(const beacon_msg& beacon, __out_param beacon_ack& ack);
-
-    virtual void on_beacon_ack(error_code err, std::shared_ptr<beacon_msg> beacon, std::shared_ptr<beacon_ack> ack);
+    void on_ping(const beacon_msg& beacon, __out_param beacon_ack& ack);
 
     bool is_time_greater_than(uint64_t ts, uint64_t base); 
 
@@ -170,6 +102,43 @@ protected:
 private:
     void process_all_records();
 
+private:
+    class master_record
+    {
+    public:
+        end_point       node;
+        uint64_t        last_send_time_for_beacon_with_ack;
+        uint64_t        next_beacon_time;
+        bool            is_alive;
+        bool            rejected;
+
+        // masters are always considered *disconnected* initially which is ok even when master thinks workers are connected
+        master_record(const end_point& n, uint64_t last_send_time_for_beacon_with_ack_, uint64_t next_beacon_time_)
+        {
+            node = n;
+            last_send_time_for_beacon_with_ack = last_send_time_for_beacon_with_ack_;
+            next_beacon_time = next_beacon_time_;
+            is_alive = false;
+            rejected = false;
+        }
+    };
+
+    class worker_record
+    {
+    public:
+        end_point       node;
+        uint64_t        last_beacon_recv_time;
+        bool            is_alive;
+
+        // workers are always considered *connected* initially which is ok even when workers think master is disconnected
+        worker_record(const end_point& node, uint64_t last_beacon_recv_time)
+        {
+            this->node = node;
+            this->last_beacon_recv_time = last_beacon_recv_time;
+            is_alive = true;
+        }
+    };
+
 private:    
     typedef std::map<end_point, master_record>    master_map;
     typedef std::map<end_point, worker_record>     worker_map;
@@ -177,8 +146,8 @@ private:
     // allow list are set on machine name (port can vary)
     typedef std::set<end_point>   allow_list;
 
-    mutable zlock        _lock;
-    master_map           _masters;
+    mutable service::zlock _lock;
+    master_map            _masters;
     worker_map            _workers;
 
     uint32_t             _beacon_interval_milliseconds;
@@ -186,7 +155,7 @@ private:
     uint32_t             _lease_milliseconds;
     uint32_t             _grace_milliseconds;
     bool                 _is_started;
-    task_ptr             _currentTask;
+    task_ptr             _current_task;
 
     bool                 _use_allow_list;
     allow_list           _allow_list;

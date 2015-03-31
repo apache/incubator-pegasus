@@ -27,7 +27,6 @@
 #define __TITLE__ "MetaServer.FD"
 
 meta_server_failure_detector::meta_server_failure_detector(server_state* state)
-: failure_detector("MetaServer.failure_detector")
 {
     _state = state;
     _isPrimary = false;
@@ -101,8 +100,9 @@ bool meta_server_failure_detector::is_primary() const
     return _isPrimary;
 }
 
-void meta_server_failure_detector::on_beacon(const beacon_msg& beacon, __out_param beacon_ack& ack)
+void meta_server_failure_detector::ping(const fd::beacon_msg& beacon, ::dsn::service::rpc_replier<fd::beacon_ack>& reply)
 {
+    fd::beacon_ack ack;
     if (!is_primary())
     {
         end_point master;
@@ -121,7 +121,10 @@ void meta_server_failure_detector::on_beacon(const beacon_msg& beacon, __out_par
     }
     else
     {
-        failure_detector::on_beacon(beacon, ack);
+        failure_detector::on_ping(beacon, ack);
         ack.primary_node = address();
     }
+
+    reply(ack);
 }
+

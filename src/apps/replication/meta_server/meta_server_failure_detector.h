@@ -56,7 +56,7 @@ public:
     virtual void on_worker_disconnected(const std::vector<end_point>& nodes);
     virtual void on_worker_connected(const end_point& node);
 
-    virtual void on_beacon(const beacon_msg& beacon, __out_param beacon_ack& ack);
+    virtual void ping(const fd::beacon_msg& beacon, ::dsn::service::rpc_replier<fd::beacon_ack>& reply);
 
 private:
     bool        _isPrimary;

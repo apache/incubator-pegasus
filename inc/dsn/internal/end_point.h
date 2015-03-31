@@ -24,6 +24,7 @@
 # pragma once
 
 # include <dsn/internal/dsn_types.h>
+# include <dsn/internal/utils.h>
 
 namespace dsn {
 
@@ -108,6 +109,24 @@ struct end_point_comparor
         return s1.port < s2.port || (s1.port == s2.port && s1.ip < s2.ip);
     }
 };
+
+#ifndef ZION_NOT_USE_DEFAULT_SERIALIZATION
+
+inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param end_point& val) 
+{
+    reader.read_pod(val.ip);
+    reader.read_pod(val.port);
+    reader.read(val.name);
+}
+
+inline void marshall(::dsn::utils::binary_writer& writer, const end_point& val, uint16_t pos = 0xffff) 
+{
+    writer.write_pod(val.ip, pos);
+    writer.write_pod(val.port, pos);
+    writer.write(val.name, pos);
+}
+
+#endif
 
 } // end namespace
 

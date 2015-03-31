@@ -187,14 +187,13 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
     if (_options.FD_disabled == false)
     {
         _livenessMonitor = new replication_failure_detector(this, _options.MetaServers);
-        _livenessMonitor->init(
+        _livenessMonitor->start(
             _options.FD_check_interval_seconds,
             _options.FD_beacon_interval_seconds,
             _options.FD_lease_seconds,
             _options.FD_grace_seconds
             );
         _livenessMonitor->register_master(_livenessMonitor->current_server_contact());
-        _livenessMonitor->start();
     }
     else
     {

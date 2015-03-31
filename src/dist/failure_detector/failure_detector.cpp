@@ -29,40 +29,18 @@
 
 #define __TITLE__ "failure_detector"
 
+using namespace ::dsn::service;
+
 namespace dsn { 
 namespace fd {
-    inline void marshall(::dsn::utils::binary_writer& writer, const failure_detector::beacon_msg& msg, uint16_t pos = 0xffff)
-    {
-        marshall(writer, msg.time, pos);
-        marshall(writer, msg.from, pos);
-        marshall(writer, msg.to, pos);
-    }
 
-    inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param failure_detector::beacon_msg& msg)
-    {
-        unmarshall(reader, msg.time);
-        unmarshall(reader, msg.from);
-        unmarshall(reader, msg.to);
-    }
 
-    inline void marshall(::dsn::utils::binary_writer& writer, const failure_detector::beacon_ack& msg, uint16_t pos = 0xffff)
-    {
-        marshall(writer, msg.time, pos);
-        marshall(writer, msg.is_master, pos);
-        marshall(writer, msg.primary_node, pos);
-        marshall(writer, msg.allowed, pos);
-    }
-
-    inline void unmarshall(::dsn::utils::binary_reader& reader, __out_param failure_detector::beacon_ack& msg)
-    {
-        unmarshall(reader, msg.time);
-        unmarshall(reader, msg.is_master);
-        unmarshall(reader, msg.primary_node);
-        unmarshall(reader, msg.allowed);
-    }
-
-bool failure_detector::init(uint32_t check_interval_seconds, uint32_t beacon_interval_seconds,
-                                uint32_t lease_seconds, uint32_t grace_seconds, bool use_allow_list)
+int failure_detector::start(
+    uint32_t check_interval_seconds, 
+    uint32_t beacon_interval_seconds,
+    uint32_t lease_seconds, 
+    uint32_t grace_seconds, 
+    bool use_allow_list)
 {
     _check_interval_milliseconds = check_interval_seconds * 1000;
     _beacon_interval_milliseconds = beacon_interval_seconds * 1000;
@@ -70,47 +48,35 @@ bool failure_detector::init(uint32_t check_interval_seconds, uint32_t beacon_int
     _grace_milliseconds = grace_seconds * 1000;
 
     _use_allow_list   = use_allow_list;
-    return true;
+
+    open_service();
+
+    // start periodically check job
+    _current_task = tasking::enqueue(LPC_BEACON_CHECK, this, &failure_detector::process_all_records, -1, _check_interval_milliseconds, _check_interval_milliseconds);
+
+    _is_started = true;
+    return ERR_SUCCESS;
 }
 
-bool failure_detector::uninit()
+int failure_detector::stop()
 {
-    if ( _is_started )
+    if ( _is_started == false )
     {
-        // did not stop, can not uninit
-        derror("can not uninit failure detector without stopping it first");
-        return false;
+        return ERR_SUCCESS;
     }
 
-    _lock.lock();
-    _masters.clear();
-    _workers.clear();
-    _allow_list.clear();
-    _lock.unlock();
+    _is_started = false;
 
-    return true;
+    close_service();
+
+    if (_current_task != nullptr)
+    {
+        _current_task->cancel(true);
+        _current_task = nullptr;
+    }
+
+    return ERR_SUCCESS;
 }
-
-void failure_detector::on_configuration_changed(
-     uint32_t beacon_interval_seconds,
-     uint32_t lease_seconds,
-     uint32_t grace_seconds,
-     uint32_t check_interval_seconds)
-{
-    _lock.lock();
-
-    dinfo(
-        "failure_detector configuration HotChanged, CheckInterval=%u->%u , BeaconInterval=%u->%u , LeaseInterval=%u->%u , GraceInterval=%u->%u",
-        _check_interval_milliseconds, check_interval_seconds, _beacon_interval_milliseconds, beacon_interval_seconds, _lease_milliseconds, lease_seconds, _grace_milliseconds, grace_seconds);
-
-    _check_interval_milliseconds = check_interval_seconds * 1000;
-    _beacon_interval_milliseconds = beacon_interval_seconds * 1000;
-    _lease_milliseconds = lease_seconds * 1000;
-    _grace_milliseconds = grace_seconds * 1000;
-
-    _lock.unlock();
-}
-
 
 void failure_detector::register_master(const end_point& target)
 {
@@ -121,7 +87,7 @@ void failure_detector::register_master(const end_point& target)
     master_record record(target, now, now + _beacon_interval_milliseconds);
 
     auto ret = _masters.insert(std::make_pair(target, record));
-    if ( ret.second )
+    if (ret.second)
     {
         dinfo(
             "register_rpc_handler master successfully, target machine ip [%u], port[%u]",
@@ -131,8 +97,8 @@ void failure_detector::register_master(const end_point& target)
     {
         // active the beacon again in case previously local node is not in target's allow list
         ret.first->second.rejected = false;
-        dinfo(       
-            "Master already registered, for target machine: target machine ip [%u], port[%u]",
+        dinfo(
+            "master already registered, for target machine: target machine ip [%u], port[%u]",
             target.ip, static_cast<int>(target.port));
     }
 
@@ -150,8 +116,8 @@ bool failure_detector::switch_master(const end_point& from, const end_point& to)
         {
             if (it2 != _masters.end())
             {
-                dinfo(       
-                    "Master switch, switch master from %s:%u to %s:%u failed as both are already registered",
+                dinfo(
+                    "master switch, switch master from %s:%u to %s:%u failed as both are already registered",
                     from.name.c_str(), static_cast<int>(from.port),
                     to.name.c_str(), static_cast<int>(to.port)
                     );
@@ -163,16 +129,16 @@ bool failure_detector::switch_master(const end_point& from, const end_point& to)
             _masters.insert(std::make_pair(to, it->second));
             _masters.erase(from);
 
-            dinfo(       
-                "Master switch, switch master from %s:%u to %s:%u succeeded",
+            dinfo(
+                "master switch, switch master from %s:%u to %s:%u succeeded",
                 from.name.c_str(), static_cast<int>(from.port),
                 to.name.c_str(), static_cast<int>(to.port)
                 );
         }
         else
         {
-            dinfo(       
-                "Master switch, switch master from %s:%u to %s:%u failed as the former has not been registered yet",
+            dinfo(
+                "master switch, switch master from %s:%u to %s:%u failed as the former has not been registered yet",
                 from.name.c_str(), static_cast<int>(from.port),
                 to.name.c_str(), static_cast<int>(to.port)
                 );
@@ -182,35 +148,6 @@ bool failure_detector::switch_master(const end_point& from, const end_point& to)
 
     send_beacon(to, now_ms());
     return true;
-}
-
-int failure_detector::start()
-{
-    register_rpc_handler(RPC_BEACON, "beacon_msg", &failure_detector::on_beacon);
-
-    // start periodically check job
-    _currentTask = tasking::enqueue(LPC_BEACON_CHECK, this, &failure_detector::process_all_records, -1, _check_interval_milliseconds, _check_interval_milliseconds);
-
-    _is_started = true;
-    return ERR_SUCCESS;
-}
-
-int failure_detector::stop()
-{
-    if ( _is_started == false )
-    {
-        return ERR_SUCCESS;
-    }
-
-    _is_started = false;
-
-    if (_currentTask != nullptr)
-    {
-        _currentTask->cancel(true);
-        _currentTask = nullptr;
-    }
-
-    return ERR_SUCCESS;
 }
 
 bool failure_detector::is_time_greater_than(uint64_t ts, uint64_t base)
@@ -224,10 +161,9 @@ bool failure_detector::is_time_greater_than(uint64_t ts, uint64_t base)
 
 void failure_detector::report(const end_point& node, bool is_master, bool is_connected)
 {
-    ddebug( 
-        "%s %s:%hu %sconnected", is_master ? "Master":"worker", node.name.c_str(), node.port, is_connected ? "" : "dis");
+    ddebug("%s %s:%hu %sconnected", is_master ? "master":"worker", node.name.c_str(), node.port, is_connected ? "" : "dis");
 
-    printf ("%s %s:%hu %sconnected\n", is_master ? "Master":"worker", node.name.c_str(), node.port, is_connected ? "" : "dis");    
+    printf ("%s %s:%hu %sconnected\n", is_master ? "master":"worker", node.name.c_str(), node.port, is_connected ? "" : "dis");    
 }
 
 /*
@@ -320,7 +256,7 @@ bool failure_detector::remove_from_allow_list( const end_point& node)
     return _allow_list.erase(node) > 0;
 }
 
-void failure_detector::on_beacon(const beacon_msg& beacon, __out_param beacon_ack& ack)
+void failure_detector::on_ping(const beacon_msg& beacon, __out_param beacon_ack& ack)
 {
     ack.is_master = true;
     ack.primary_node = address();
@@ -331,7 +267,7 @@ void failure_detector::on_beacon(const beacon_msg& beacon, __out_param beacon_ac
 
     uint64_t now = now_ms();
     auto node = beacon.from;
-    
+
     worker_map::iterator itr = _workers.find(node);
     if (itr == _workers.end())
     {
@@ -345,9 +281,9 @@ void failure_detector::on_beacon(const beacon_msg& beacon, __out_param beacon_ac
         // create new entry for node
         worker_record record(node, now);
         _workers.insert(std::make_pair(node, record));
-        
+
         itr = _workers.find(node);
-        dassert ( itr != _workers.end(), "cannot find the worker" );
+        dassert(itr != _workers.end(), "cannot find the worker");
 
         itr->second.is_alive = true;
 
@@ -362,13 +298,23 @@ void failure_detector::on_beacon(const beacon_msg& beacon, __out_param beacon_ac
         {
             itr->second.is_alive = true;
 
-            report(node, false, true);            
+            report(node, false, true);
             on_worker_connected(node);
         }
     }
 }
 
-void failure_detector::on_beacon_ack(error_code err, std::shared_ptr<beacon_msg> beacon, std::shared_ptr<beacon_ack> ack)
+void failure_detector::ping(const beacon_msg& beacon, ::dsn::service::rpc_replier<beacon_ack>& reply)
+{
+    beacon_ack ack;
+    on_ping(beacon, ack);
+    reply(ack);
+}
+
+void failure_detector::end_ping(
+    ::dsn::error_code err,
+    std::shared_ptr<beacon_msg> beacon,
+    std::shared_ptr<beacon_ack> ack)
 {
     if (err) return;
 
@@ -518,15 +464,11 @@ void failure_detector::send_beacon(const end_point& target, uint64_t time)
     beacon->from = address();
     beacon->to = target;
 
-    rpc::call_typed(
+    begin_ping(
         target,
-        RPC_BEACON, 
         beacon,
-        this,
-        &failure_detector::on_beacon_ack,
         0,
-        static_cast<int>(_check_interval_milliseconds),
-        0
+        static_cast<int>(_check_interval_milliseconds)
         );
 }
 

@@ -56,7 +56,7 @@ namespace dsn {
 
     namespace utils {
 
-#ifndef ZION_NOT_USE_DEFAULT_SERIALIZATION
+#ifndef DSN_NOT_USE_DEFAULT_SERIALIZATION
 
         DEFINE_POD_SERIALIZATION(bool)
             DEFINE_POD_SERIALIZATION(char)

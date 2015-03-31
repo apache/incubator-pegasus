@@ -155,6 +155,4 @@ protected:
 
 DEFINE_REF_OBJECT(message)
 
-extern void marshall(utils::binary_writer& writer, const end_point& val, uint16_t pos = 0xffff);
-extern void unmarshall(utils::binary_reader& reader, __out_param end_point& val);
 } // end namespace

@@ -35,20 +35,6 @@ using namespace dsn::utils;
 
 namespace dsn {
 
-void marshall(binary_writer& writer, const end_point& val, uint16_t pos /*= 0xffff*/)
-{
-    writer.write(val.ip, pos);
-    writer.write(val.port, pos);
-    writer.write(val.name, pos);
-}
-
-void unmarshall(binary_reader& reader, __out_param end_point& val)
-{
-    reader.read(val.ip);
-    reader.read(val.port);
-    reader.read(val.name);
-}
-
 void message_header::marshall(binary_writer& writer)
 {
     writer.write((const char*)this, serialized_size());
