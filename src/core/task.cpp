@@ -156,12 +156,15 @@ void task::exec_internal()
         // for timer
         else
         {
-            _spec->on_task_end.execute(this);
-            if (!_wait_for_cancel) 
+            if (!_wait_for_cancel)
+            {
+                _spec->on_task_end.execute(this);
                 enqueue();
+            }   
             else
             {
                 _state.compare_exchange_strong(READY_STATE, TASK_STATE_CANCELLED);
+                _spec->on_task_end.execute(this);
 
                 // signal_waiters(); [
                 // inline for performance

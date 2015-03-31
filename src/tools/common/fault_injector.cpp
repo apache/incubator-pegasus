@@ -45,6 +45,7 @@ namespace dsn {
             uint32_t        rpc_message_delay_ms_max;
             uint32_t        disk_io_delay_ms_min;
             uint32_t        disk_io_delay_ms_max;
+            uint32_t        execution_extra_delay_us_max;
             
             //// node crash
             //uint32_t        node_crash_minutes_min;
@@ -64,7 +65,12 @@ namespace dsn {
 
         static void fault_on_task_end(task* this_)
         {
-            
+            fj_opt& opt = s_fj_opts[this_->spec().code];
+            if (opt.execution_extra_delay_us_max > 0)
+            {
+                auto d = service::env::random32(0, opt.execution_extra_delay_us_max);
+                std::this_thread::sleep_for(std::chrono::microseconds(d));
+            }
         }
 
         static void fault_on_task_cancelled(task* this_)
@@ -172,7 +178,8 @@ namespace dsn {
             default_opt.rpc_message_delay_ms_max = _configuration->get_value<uint32_t>("task.default", "rpc_message_delay_ms_max", 1000);
             default_opt.disk_io_delay_ms_min = _configuration->get_value<uint32_t>("task.default", "disk_io_delay_ms_min", 1);
             default_opt.disk_io_delay_ms_max = _configuration->get_value<uint32_t>("task.default", "disk_io_delay_ms_max", 12);
-
+            default_opt.execution_extra_delay_us_max = _configuration->get_value<uint32_t>("task.default", "execution_extra_delay_us_max", 0);
+            
             for (int i = 0; i <= task_code::max_value(); i++)
             {
                 if (i == TASK_CODE_INVALID)
@@ -194,13 +201,14 @@ namespace dsn {
                 lopt.rpc_message_delay_ms_max = _configuration->get_value<uint32_t>(section_name.c_str(), "rpc_message_delay_ms_max", default_opt.rpc_message_delay_ms_max);
                 lopt.disk_io_delay_ms_min = _configuration->get_value<uint32_t>(section_name.c_str(), "disk_io_delay_ms_min", default_opt.disk_io_delay_ms_min);
                 lopt.disk_io_delay_ms_max = _configuration->get_value<uint32_t>(section_name.c_str(), "disk_io_delay_ms_max", default_opt.disk_io_delay_ms_max);
-
+                lopt.execution_extra_delay_us_max = _configuration->get_value<uint32_t>(section_name.c_str(), "execution_extra_delay_us_max", default_opt.execution_extra_delay_us_max);
+                
                 if (!lopt.fault_injection_enabled)
                     continue;
                 
                 //spec->on_task_enqueue.put_back(fault_on_task_enqueue, "fault_injector");
                 //spec->on_task_begin.put_back(fault_on_task_begin, "fault_injector");
-                //spec->on_task_end.put_back(fault_on_task_end, "fault_injector");
+                spec->on_task_end.put_back(fault_on_task_end, "fault_injector");
                 //spec->on_task_cancelled.put_back(fault_on_task_cancelled, "fault_injector");
                 //spec->on_task_wait_pre.put_back(fault_on_task_wait_pre, "fault_injector");
                 //spec->on_task_wait_post.put_back(fault_on_task_wait_post, "fault_injector");
