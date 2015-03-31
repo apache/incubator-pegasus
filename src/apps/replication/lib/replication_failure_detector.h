@@ -56,7 +56,7 @@ private:
     end_point find_next_meta_server(end_point current);
 
 private:
-    typedef std::set<end_point, end_point_comparor> end_points;
+    typedef std::set<end_point> end_points;
 
     mutable zlock             _meta_lock;
     end_point               _current_meta_server;

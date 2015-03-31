@@ -15,6 +15,16 @@ namespace dsn { namespace replication {
 
 
 // define task code for svc 'replica_s'
+DEFINE_NAMED_TASK_CODE_RPC(RPC_REPLICA_S_CLIENT_WRITE, client_write, ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION)
+DEFINE_NAMED_TASK_CODE_RPC(RPC_REPLICA_S_CLIENT_READ, client_read, ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION)
+DEFINE_NAMED_TASK_CODE_RPC(RPC_REPLICA_S_PREPARE, prepare, ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION)
+DEFINE_NAMED_TASK_CODE_RPC(RPC_REPLICA_S_CONFIG_PROPOSAL, config_proposal, ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION)
+DEFINE_NAMED_TASK_CODE_RPC(RPC_REPLICA_S_LEARN, learn, ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION)
+DEFINE_NAMED_TASK_CODE_RPC(RPC_REPLICA_S_LEARN_COMPLETION_NOTIFICATION, learn_completion_notification, ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION)
+DEFINE_NAMED_TASK_CODE_RPC(RPC_REPLICA_S_ADD_LEARNER, add_learner, ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION)
+DEFINE_NAMED_TASK_CODE_RPC(RPC_REPLICA_S_REMOVE, remove, ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION)
+DEFINE_NAMED_TASK_CODE_RPC(RPC_REPLICA_S_GROUP_CHECK, group_check, ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION)
+DEFINE_NAMED_TASK_CODE_RPC(RPC_REPLICA_S_QUERY_DECREE, query_decree, ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION)
 DEFINE_TASK_CODE(LPC_REPLICA_S_CIENT_TEST_TIMER, ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION)
 
 
@@ -29,14 +39,54 @@ public:
 
 protected:
 	// all service handlers to be implemented further
+	// RPC_REPLICA_S_CLIENT_WRITE
+	virtual void on_client_write(const client_write_request& req, ::dsn::service::rpc_replier<client_response>& reply) = 0;
+	// RPC_REPLICA_S_CLIENT_READ
+	virtual void on_client_read(const client_read_request& req, ::dsn::service::rpc_replier<client_response>& reply) = 0;
+	// RPC_REPLICA_S_PREPARE
+	virtual void on_prepare(const prepare_msg& request, ::dsn::service::rpc_replier<prepare_ack>& reply) = 0;
+	// RPC_REPLICA_S_CONFIG_PROPOSAL
+	virtual void on_config_proposal(const configuration_update_request& proposal) = 0;
+	// RPC_REPLICA_S_LEARN
+	virtual void on_learn(const learn_request& request, ::dsn::service::rpc_replier<learn_response>& reply) = 0;
+	// RPC_REPLICA_S_LEARN_COMPLETION_NOTIFICATION
+	virtual void on_learn_completion_notification(const group_check_response& report) = 0;
+	// RPC_REPLICA_S_ADD_LEARNER
+	virtual void on_add_learner(const group_check_request& request) = 0;
+	// RPC_REPLICA_S_REMOVE
+	virtual void on_remove(const replica_configuration& request) = 0;
+	// RPC_REPLICA_S_GROUP_CHECK
+	virtual void on_group_check(const group_check_request& request, ::dsn::service::rpc_replier<group_check_response>& reply) = 0;
+	// RPC_REPLICA_S_QUERY_DECREE
+	virtual void on_query_decree(const query_replica_decree_request& req, ::dsn::service::rpc_replier<query_replica_decree_response>& reply) = 0;
 
 public:
 	void open_service()
 	{
+		this->register_async_rpc_handler(RPC_REPLICA_S_CLIENT_WRITE, "client_write", &T::on_client_write);
+		this->register_async_rpc_handler(RPC_REPLICA_S_CLIENT_READ, "client_read", &T::on_client_read);
+		this->register_async_rpc_handler(RPC_REPLICA_S_PREPARE, "prepare", &T::on_prepare);
+		this->register_rpc_handler(RPC_REPLICA_S_CONFIG_PROPOSAL, "config_proposal", &T::on_config_proposal);
+		this->register_async_rpc_handler(RPC_REPLICA_S_LEARN, "learn", &T::on_learn);
+		this->register_rpc_handler(RPC_REPLICA_S_LEARN_COMPLETION_NOTIFICATION, "learn_completion_notification", &T::on_learn_completion_notification);
+		this->register_rpc_handler(RPC_REPLICA_S_ADD_LEARNER, "add_learner", &T::on_add_learner);
+		this->register_rpc_handler(RPC_REPLICA_S_REMOVE, "remove", &T::on_remove);
+		this->register_async_rpc_handler(RPC_REPLICA_S_GROUP_CHECK, "group_check", &T::on_group_check);
+		this->register_async_rpc_handler(RPC_REPLICA_S_QUERY_DECREE, "query_decree", &T::on_query_decree);
 	}
 
 	void close_service()
 	{
+		this->unregister_rpc_handler(RPC_REPLICA_S_CLIENT_WRITE);
+		this->unregister_rpc_handler(RPC_REPLICA_S_CLIENT_READ);
+		this->unregister_rpc_handler(RPC_REPLICA_S_PREPARE);
+		this->unregister_rpc_handler(RPC_REPLICA_S_CONFIG_PROPOSAL);
+		this->unregister_rpc_handler(RPC_REPLICA_S_LEARN);
+		this->unregister_rpc_handler(RPC_REPLICA_S_LEARN_COMPLETION_NOTIFICATION);
+		this->unregister_rpc_handler(RPC_REPLICA_S_ADD_LEARNER);
+		this->unregister_rpc_handler(RPC_REPLICA_S_REMOVE);
+		this->unregister_rpc_handler(RPC_REPLICA_S_GROUP_CHECK);
+		this->unregister_rpc_handler(RPC_REPLICA_S_QUERY_DECREE);
 	}
 };
 
@@ -45,6 +95,154 @@ public:
 class replica_s_client
 {
 public:
+	static ::dsn::error_code client_write(
+		const ::dsn::end_point& server, 
+		client_write_request& req, 
+		__out_param client_response& resp, 
+		int timeout_milliseconds = 0, 
+		int hash = 0)
+	{
+		::dsn::message_ptr msg = ::dsn::message::create_request(RPC_REPLICA_S_CLIENT_WRITE, timeout_milliseconds, hash);
+		marshall(msg->writer(), req);
+		auto resp_task = ::dsn::service::rpc::call(server, msg, nullptr);
+		resp_task->wait();
+		if (resp_task->error() == ::dsn::ERR_SUCCESS)
+		{
+			unmarshall(resp_task->get_response()->reader(), resp);
+		}
+		return resp_task->error();
+	}
+
+	static ::dsn::error_code client_read(
+		const ::dsn::end_point& server, 
+		client_read_request& req, 
+		__out_param client_response& resp, 
+		int timeout_milliseconds = 0, 
+		int hash = 0)
+	{
+		::dsn::message_ptr msg = ::dsn::message::create_request(RPC_REPLICA_S_CLIENT_READ, timeout_milliseconds, hash);
+		marshall(msg->writer(), req);
+		auto resp_task = ::dsn::service::rpc::call(server, msg, nullptr);
+		resp_task->wait();
+		if (resp_task->error() == ::dsn::ERR_SUCCESS)
+		{
+			unmarshall(resp_task->get_response()->reader(), resp);
+		}
+		return resp_task->error();
+	}
+
+	static ::dsn::error_code prepare(
+		const ::dsn::end_point& server, 
+		prepare_msg& request, 
+		__out_param prepare_ack& resp, 
+		int timeout_milliseconds = 0, 
+		int hash = 0)
+	{
+		::dsn::message_ptr msg = ::dsn::message::create_request(RPC_REPLICA_S_PREPARE, timeout_milliseconds, hash);
+		marshall(msg->writer(), request);
+		auto resp_task = ::dsn::service::rpc::call(server, msg, nullptr);
+		resp_task->wait();
+		if (resp_task->error() == ::dsn::ERR_SUCCESS)
+		{
+			unmarshall(resp_task->get_response()->reader(), resp);
+		}
+		return resp_task->error();
+	}
+
+	static void config_proposal(
+		const ::dsn::end_point& server, 
+		configuration_update_request& proposal, 
+		int hash = 0)
+	{
+		::dsn::message_ptr msg = ::dsn::message::create_request(RPC_REPLICA_S_CONFIG_PROPOSAL, 0, hash);
+		marshall(msg->writer(), proposal);
+		::dsn::service::rpc::call_one_way(server, msg);
+	}
+
+	static ::dsn::error_code learn(
+		const ::dsn::end_point& server, 
+		learn_request& request, 
+		__out_param learn_response& resp, 
+		int timeout_milliseconds = 0, 
+		int hash = 0)
+	{
+		::dsn::message_ptr msg = ::dsn::message::create_request(RPC_REPLICA_S_LEARN, timeout_milliseconds, hash);
+		marshall(msg->writer(), request);
+		auto resp_task = ::dsn::service::rpc::call(server, msg, nullptr);
+		resp_task->wait();
+		if (resp_task->error() == ::dsn::ERR_SUCCESS)
+		{
+			unmarshall(resp_task->get_response()->reader(), resp);
+		}
+		return resp_task->error();
+	}
+
+	static void learn_completion_notification(
+		const ::dsn::end_point& server, 
+		group_check_response& report, 
+		int hash = 0)
+	{
+		::dsn::message_ptr msg = ::dsn::message::create_request(RPC_REPLICA_S_LEARN_COMPLETION_NOTIFICATION, 0, hash);
+		marshall(msg->writer(), report);
+		::dsn::service::rpc::call_one_way(server, msg);
+	}
+
+	static void add_learner(
+		const ::dsn::end_point& server, 
+		group_check_request& request, 
+		int hash = 0)
+	{
+		::dsn::message_ptr msg = ::dsn::message::create_request(RPC_REPLICA_S_ADD_LEARNER, 0, hash);
+		marshall(msg->writer(), request);
+		::dsn::service::rpc::call_one_way(server, msg);
+	}
+
+	static void remove(
+		const ::dsn::end_point& server, 
+		replica_configuration& request, 
+		int hash = 0)
+	{
+		::dsn::message_ptr msg = ::dsn::message::create_request(RPC_REPLICA_S_REMOVE, 0, hash);
+		marshall(msg->writer(), request);
+		::dsn::service::rpc::call_one_way(server, msg);
+	}
+
+	static ::dsn::error_code group_check(
+		const ::dsn::end_point& server, 
+		group_check_request& request, 
+		__out_param group_check_response& resp, 
+		int timeout_milliseconds = 0, 
+		int hash = 0)
+	{
+		::dsn::message_ptr msg = ::dsn::message::create_request(RPC_REPLICA_S_GROUP_CHECK, timeout_milliseconds, hash);
+		marshall(msg->writer(), request);
+		auto resp_task = ::dsn::service::rpc::call(server, msg, nullptr);
+		resp_task->wait();
+		if (resp_task->error() == ::dsn::ERR_SUCCESS)
+		{
+			unmarshall(resp_task->get_response()->reader(), resp);
+		}
+		return resp_task->error();
+	}
+
+	static ::dsn::error_code query_decree(
+		const ::dsn::end_point& server, 
+		query_replica_decree_request& req, 
+		__out_param query_replica_decree_response& resp, 
+		int timeout_milliseconds = 0, 
+		int hash = 0)
+	{
+		::dsn::message_ptr msg = ::dsn::message::create_request(RPC_REPLICA_S_QUERY_DECREE, timeout_milliseconds, hash);
+		marshall(msg->writer(), req);
+		auto resp_task = ::dsn::service::rpc::call(server, msg, nullptr);
+		resp_task->wait();
+		if (resp_task->error() == ::dsn::ERR_SUCCESS)
+		{
+			unmarshall(resp_task->get_response()->reader(), resp);
+		}
+		return resp_task->error();
+	}
+
 };
 
 
@@ -53,6 +251,170 @@ class replica_s_async_client
 	: public virtual ::dsn::service::servicelet
 {
 public:
+
+	::dsn::rpc_response_task_ptr begin_client_write(
+		const ::dsn::end_point& server, 
+		std::shared_ptr<client_write_request>& req, 
+		int request_hash = 0, 
+		int timeout_milliseconds = 0, 
+		int reply_hash = 0)
+	{
+		return ::dsn::service::rpc::call_typed(server, RPC_REPLICA_S_CLIENT_WRITE, req, this, &replica_s_async_client::end_client_write, request_hash, timeout_milliseconds, reply_hash);
+	}
+
+	virtual void end_client_write(
+		::dsn::error_code err, 
+		std::shared_ptr<client_write_request>& req, 
+		std::shared_ptr<client_response>& resp)
+	{
+		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply err : " << err.to_string() << std::endl;
+		else
+		{
+			std::cout << "reply ok" << std::endl;
+		}
+	}
+
+	::dsn::rpc_response_task_ptr begin_client_read(
+		const ::dsn::end_point& server, 
+		std::shared_ptr<client_read_request>& req, 
+		int request_hash = 0, 
+		int timeout_milliseconds = 0, 
+		int reply_hash = 0)
+	{
+		return ::dsn::service::rpc::call_typed(server, RPC_REPLICA_S_CLIENT_READ, req, this, &replica_s_async_client::end_client_read, request_hash, timeout_milliseconds, reply_hash);
+	}
+
+	virtual void end_client_read(
+		::dsn::error_code err, 
+		std::shared_ptr<client_read_request>& req, 
+		std::shared_ptr<client_response>& resp)
+	{
+		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply err : " << err.to_string() << std::endl;
+		else
+		{
+			std::cout << "reply ok" << std::endl;
+		}
+	}
+
+	::dsn::rpc_response_task_ptr begin_prepare(
+		const ::dsn::end_point& server, 
+		std::shared_ptr<prepare_msg>& request, 
+		int request_hash = 0, 
+		int timeout_milliseconds = 0, 
+		int reply_hash = 0)
+	{
+		return ::dsn::service::rpc::call_typed(server, RPC_REPLICA_S_PREPARE, request, this, &replica_s_async_client::end_prepare, request_hash, timeout_milliseconds, reply_hash);
+	}
+
+	virtual void end_prepare(
+		::dsn::error_code err, 
+		std::shared_ptr<prepare_msg>& req, 
+		std::shared_ptr<prepare_ack>& resp)
+	{
+		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply err : " << err.to_string() << std::endl;
+		else
+		{
+			std::cout << "reply ok" << std::endl;
+		}
+	}
+
+	void config_proposal(
+		const ::dsn::end_point& server, 
+		configuration_update_request& proposal, 
+		int hash = 0)
+	{
+		::dsn::service::rpc::call_one_way_typed(server, RPC_REPLICA_S_CONFIG_PROPOSAL, proposal, hash);
+	}
+
+	::dsn::rpc_response_task_ptr begin_learn(
+		const ::dsn::end_point& server, 
+		std::shared_ptr<learn_request>& request, 
+		int request_hash = 0, 
+		int timeout_milliseconds = 0, 
+		int reply_hash = 0)
+	{
+		return ::dsn::service::rpc::call_typed(server, RPC_REPLICA_S_LEARN, request, this, &replica_s_async_client::end_learn, request_hash, timeout_milliseconds, reply_hash);
+	}
+
+	virtual void end_learn(
+		::dsn::error_code err, 
+		std::shared_ptr<learn_request>& req, 
+		std::shared_ptr<learn_response>& resp)
+	{
+		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply err : " << err.to_string() << std::endl;
+		else
+		{
+			std::cout << "reply ok" << std::endl;
+		}
+	}
+
+	void learn_completion_notification(
+		const ::dsn::end_point& server, 
+		group_check_response& report, 
+		int hash = 0)
+	{
+		::dsn::service::rpc::call_one_way_typed(server, RPC_REPLICA_S_LEARN_COMPLETION_NOTIFICATION, report, hash);
+	}
+
+	void add_learner(
+		const ::dsn::end_point& server, 
+		group_check_request& request, 
+		int hash = 0)
+	{
+		::dsn::service::rpc::call_one_way_typed(server, RPC_REPLICA_S_ADD_LEARNER, request, hash);
+	}
+
+	void remove(
+		const ::dsn::end_point& server, 
+		replica_configuration& request, 
+		int hash = 0)
+	{
+		::dsn::service::rpc::call_one_way_typed(server, RPC_REPLICA_S_REMOVE, request, hash);
+	}
+
+	::dsn::rpc_response_task_ptr begin_group_check(
+		const ::dsn::end_point& server, 
+		std::shared_ptr<group_check_request>& request, 
+		int request_hash = 0, 
+		int timeout_milliseconds = 0, 
+		int reply_hash = 0)
+	{
+		return ::dsn::service::rpc::call_typed(server, RPC_REPLICA_S_GROUP_CHECK, request, this, &replica_s_async_client::end_group_check, request_hash, timeout_milliseconds, reply_hash);
+	}
+
+	virtual void end_group_check(
+		::dsn::error_code err, 
+		std::shared_ptr<group_check_request>& req, 
+		std::shared_ptr<group_check_response>& resp)
+	{
+		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply err : " << err.to_string() << std::endl;
+		else
+		{
+			std::cout << "reply ok" << std::endl;
+		}
+	}
+
+	::dsn::rpc_response_task_ptr begin_query_decree(
+		const ::dsn::end_point& server, 
+		std::shared_ptr<query_replica_decree_request>& req, 
+		int request_hash = 0, 
+		int timeout_milliseconds = 0, 
+		int reply_hash = 0)
+	{
+		return ::dsn::service::rpc::call_typed(server, RPC_REPLICA_S_QUERY_DECREE, req, this, &replica_s_async_client::end_query_decree, request_hash, timeout_milliseconds, reply_hash);
+	}
+
+	virtual void end_query_decree(
+		::dsn::error_code err, 
+		std::shared_ptr<query_replica_decree_request>& req, 
+		std::shared_ptr<query_replica_decree_response>& resp)
+	{
+		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply err : " << err.to_string() << std::endl;
+		else
+		{
+			std::cout << "reply ok" << std::endl;
+		}
+	}
 
 };
 

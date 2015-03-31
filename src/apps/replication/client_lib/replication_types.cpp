@@ -9,60 +9,6 @@
 namespace dsn { namespace replication {
 
 
-ReplicationMsgHeader::~ReplicationMsgHeader() throw() {
-}
-
-
-void swap(ReplicationMsgHeader &a, ReplicationMsgHeader &b) {
-  using ::std::swap;
-  swap(a.id, b.id);
-}
-
-ReplicationMsgHeader::ReplicationMsgHeader(const ReplicationMsgHeader& other0) {
-  id = other0.id;
-}
-ReplicationMsgHeader& ReplicationMsgHeader::operator=(const ReplicationMsgHeader& other1) {
-  id = other1.id;
-  return *this;
-}
-
-meta_msg_header::~meta_msg_header() throw() {
-}
-
-
-void swap(meta_msg_header &a, meta_msg_header &b) {
-  using ::std::swap;
-  swap(a.rpc_tag, b.rpc_tag);
-}
-
-meta_msg_header::meta_msg_header(const meta_msg_header& other2) {
-  rpc_tag = other2.rpc_tag;
-}
-meta_msg_header& meta_msg_header::operator=(const meta_msg_header& other3) {
-  rpc_tag = other3.rpc_tag;
-  return *this;
-}
-
-meta_response_header::~meta_response_header() throw() {
-}
-
-
-void swap(meta_response_header &a, meta_response_header &b) {
-  using ::std::swap;
-  swap(a.err, b.err);
-  swap(a.primary_address, b.primary_address);
-}
-
-meta_response_header::meta_response_header(const meta_response_header& other4) {
-  err = other4.err;
-  primary_address = other4.primary_address;
-}
-meta_response_header& meta_response_header::operator=(const meta_response_header& other5) {
-  err = other5.err;
-  primary_address = other5.primary_address;
-  return *this;
-}
-
 global_partition_id::~global_partition_id() throw() {
 }
 
@@ -73,13 +19,13 @@ void swap(global_partition_id &a, global_partition_id &b) {
   swap(a.pidx, b.pidx);
 }
 
-global_partition_id::global_partition_id(const global_partition_id& other6) {
-  app_id = other6.app_id;
-  pidx = other6.pidx;
+global_partition_id::global_partition_id(const global_partition_id& other0) {
+  app_id = other0.app_id;
+  pidx = other0.pidx;
 }
-global_partition_id& global_partition_id::operator=(const global_partition_id& other7) {
-  app_id = other7.app_id;
-  pidx = other7.pidx;
+global_partition_id& global_partition_id::operator=(const global_partition_id& other1) {
+  app_id = other1.app_id;
+  pidx = other1.pidx;
   return *this;
 }
 
@@ -96,19 +42,19 @@ void swap(mutation_header &a, mutation_header &b) {
   swap(a.last_committed_decree, b.last_committed_decree);
 }
 
-mutation_header::mutation_header(const mutation_header& other8) {
-  gpid = other8.gpid;
-  ballot = other8.ballot;
-  decree = other8.decree;
-  log_offset = other8.log_offset;
-  last_committed_decree = other8.last_committed_decree;
+mutation_header::mutation_header(const mutation_header& other2) {
+  gpid = other2.gpid;
+  ballot = other2.ballot;
+  decree = other2.decree;
+  log_offset = other2.log_offset;
+  last_committed_decree = other2.last_committed_decree;
 }
-mutation_header& mutation_header::operator=(const mutation_header& other9) {
-  gpid = other9.gpid;
-  ballot = other9.ballot;
-  decree = other9.decree;
-  log_offset = other9.log_offset;
-  last_committed_decree = other9.last_committed_decree;
+mutation_header& mutation_header::operator=(const mutation_header& other3) {
+  gpid = other3.gpid;
+  ballot = other3.ballot;
+  decree = other3.decree;
+  log_offset = other3.log_offset;
+  last_committed_decree = other3.last_committed_decree;
   return *this;
 }
 
@@ -122,13 +68,13 @@ void swap(mutation_data &a, mutation_data &b) {
   swap(a.updates, b.updates);
 }
 
-mutation_data::mutation_data(const mutation_data& other10) {
-  header = other10.header;
-  updates = other10.updates;
+mutation_data::mutation_data(const mutation_data& other4) {
+  header = other4.header;
+  updates = other4.updates;
 }
-mutation_data& mutation_data::operator=(const mutation_data& other11) {
-  header = other11.header;
-  updates = other11.updates;
+mutation_data& mutation_data::operator=(const mutation_data& other5) {
+  header = other5.header;
+  updates = other5.updates;
   return *this;
 }
 
@@ -148,25 +94,25 @@ void swap(partition_configuration &a, partition_configuration &b) {
   swap(a.last_committed_decree, b.last_committed_decree);
 }
 
-partition_configuration::partition_configuration(const partition_configuration& other12) {
-  app_type = other12.app_type;
-  gpid = other12.gpid;
-  ballot = other12.ballot;
-  max_replica_count = other12.max_replica_count;
-  primary = other12.primary;
-  secondaries = other12.secondaries;
-  drop_outs = other12.drop_outs;
-  last_committed_decree = other12.last_committed_decree;
+partition_configuration::partition_configuration(const partition_configuration& other6) {
+  app_type = other6.app_type;
+  gpid = other6.gpid;
+  ballot = other6.ballot;
+  max_replica_count = other6.max_replica_count;
+  primary = other6.primary;
+  secondaries = other6.secondaries;
+  drop_outs = other6.drop_outs;
+  last_committed_decree = other6.last_committed_decree;
 }
-partition_configuration& partition_configuration::operator=(const partition_configuration& other13) {
-  app_type = other13.app_type;
-  gpid = other13.gpid;
-  ballot = other13.ballot;
-  max_replica_count = other13.max_replica_count;
-  primary = other13.primary;
-  secondaries = other13.secondaries;
-  drop_outs = other13.drop_outs;
-  last_committed_decree = other13.last_committed_decree;
+partition_configuration& partition_configuration::operator=(const partition_configuration& other7) {
+  app_type = other7.app_type;
+  gpid = other7.gpid;
+  ballot = other7.ballot;
+  max_replica_count = other7.max_replica_count;
+  primary = other7.primary;
+  secondaries = other7.secondaries;
+  drop_outs = other7.drop_outs;
+  last_committed_decree = other7.last_committed_decree;
   return *this;
 }
 
@@ -182,17 +128,60 @@ void swap(replica_configuration &a, replica_configuration &b) {
   swap(a.status, b.status);
 }
 
-replica_configuration::replica_configuration(const replica_configuration& other14) {
-  gpid = other14.gpid;
-  ballot = other14.ballot;
-  primary = other14.primary;
-  status = other14.status;
+replica_configuration::replica_configuration(const replica_configuration& other8) {
+  gpid = other8.gpid;
+  ballot = other8.ballot;
+  primary = other8.primary;
+  status = other8.status;
 }
-replica_configuration& replica_configuration::operator=(const replica_configuration& other15) {
-  gpid = other15.gpid;
-  ballot = other15.ballot;
-  primary = other15.primary;
-  status = other15.status;
+replica_configuration& replica_configuration::operator=(const replica_configuration& other9) {
+  gpid = other9.gpid;
+  ballot = other9.ballot;
+  primary = other9.primary;
+  status = other9.status;
+  return *this;
+}
+
+prepare_msg::~prepare_msg() throw() {
+}
+
+
+void swap(prepare_msg &a, prepare_msg &b) {
+  using ::std::swap;
+  swap(a.config, b.config);
+  swap(a.mu, b.mu);
+}
+
+prepare_msg::prepare_msg(const prepare_msg& other10) {
+  config = other10.config;
+  mu = other10.mu;
+}
+prepare_msg& prepare_msg::operator=(const prepare_msg& other11) {
+  config = other11.config;
+  mu = other11.mu;
+  return *this;
+}
+
+client_read_request2::~client_read_request2() throw() {
+}
+
+
+void swap(client_read_request2 &a, client_read_request2 &b) {
+  using ::std::swap;
+  swap(a.gpid, b.gpid);
+  swap(a.semantic, b.semantic);
+  swap(a.version_decree, b.version_decree);
+}
+
+client_read_request2::client_read_request2(const client_read_request2& other12) {
+  gpid = other12.gpid;
+  semantic = other12.semantic;
+  version_decree = other12.version_decree;
+}
+client_read_request2& client_read_request2::operator=(const client_read_request2& other13) {
+  gpid = other13.gpid;
+  semantic = other13.semantic;
+  version_decree = other13.version_decree;
   return *this;
 }
 
@@ -205,17 +194,40 @@ void swap(client_read_request &a, client_read_request &b) {
   swap(a.gpid, b.gpid);
   swap(a.semantic, b.semantic);
   swap(a.version_decree, b.version_decree);
+  swap(a.application_request, b.application_request);
 }
 
-client_read_request::client_read_request(const client_read_request& other16) {
-  gpid = other16.gpid;
-  semantic = other16.semantic;
-  version_decree = other16.version_decree;
+client_read_request::client_read_request(const client_read_request& other14) {
+  gpid = other14.gpid;
+  semantic = other14.semantic;
+  version_decree = other14.version_decree;
+  application_request = other14.application_request;
 }
-client_read_request& client_read_request::operator=(const client_read_request& other17) {
+client_read_request& client_read_request::operator=(const client_read_request& other15) {
+  gpid = other15.gpid;
+  semantic = other15.semantic;
+  version_decree = other15.version_decree;
+  application_request = other15.application_request;
+  return *this;
+}
+
+client_write_request::~client_write_request() throw() {
+}
+
+
+void swap(client_write_request &a, client_write_request &b) {
+  using ::std::swap;
+  swap(a.gpid, b.gpid);
+  swap(a.application_request, b.application_request);
+}
+
+client_write_request::client_write_request(const client_write_request& other16) {
+  gpid = other16.gpid;
+  application_request = other16.application_request;
+}
+client_write_request& client_write_request::operator=(const client_write_request& other17) {
   gpid = other17.gpid;
-  semantic = other17.semantic;
-  version_decree = other17.version_decree;
+  application_request = other17.application_request;
   return *this;
 }
 
@@ -226,27 +238,24 @@ client_response::~client_response() throw() {
 void swap(client_response &a, client_response &b) {
   using ::std::swap;
   swap(a.err, b.err);
-  swap(a.pending_request_count, b.pending_request_count);
-  swap(a.last_committed_decree, b.last_committed_decree);
+  swap(a.application_response, b.application_response);
 }
 
 client_response::client_response(const client_response& other18) {
   err = other18.err;
-  pending_request_count = other18.pending_request_count;
-  last_committed_decree = other18.last_committed_decree;
+  application_response = other18.application_response;
 }
 client_response& client_response::operator=(const client_response& other19) {
   err = other19.err;
-  pending_request_count = other19.pending_request_count;
-  last_committed_decree = other19.last_committed_decree;
+  application_response = other19.application_response;
   return *this;
 }
 
-PrepareAck::~PrepareAck() throw() {
+prepare_ack::~prepare_ack() throw() {
 }
 
 
-void swap(PrepareAck &a, PrepareAck &b) {
+void swap(prepare_ack &a, prepare_ack &b) {
   using ::std::swap;
   swap(a.gpid, b.gpid);
   swap(a.err, b.err);
@@ -256,7 +265,7 @@ void swap(PrepareAck &a, PrepareAck &b) {
   swap(a.last_committed_decree_in_prepare_list, b.last_committed_decree_in_prepare_list);
 }
 
-PrepareAck::PrepareAck(const PrepareAck& other20) {
+prepare_ack::prepare_ack(const prepare_ack& other20) {
   gpid = other20.gpid;
   err = other20.err;
   ballot = other20.ballot;
@@ -264,7 +273,7 @@ PrepareAck::PrepareAck(const PrepareAck& other20) {
   last_committed_decree_in_app = other20.last_committed_decree_in_app;
   last_committed_decree_in_prepare_list = other20.last_committed_decree_in_prepare_list;
 }
-PrepareAck& PrepareAck::operator=(const PrepareAck& other21) {
+prepare_ack& prepare_ack::operator=(const prepare_ack& other21) {
   gpid = other21.gpid;
   err = other21.err;
   ballot = other21.ballot;
@@ -468,6 +477,43 @@ simple_kv_response& simple_kv_response::operator=(const simple_kv_response& othe
   return *this;
 }
 
+meta_request_header::~meta_request_header() throw() {
+}
+
+
+void swap(meta_request_header &a, meta_request_header &b) {
+  using ::std::swap;
+  swap(a.rpc_tag, b.rpc_tag);
+}
+
+meta_request_header::meta_request_header(const meta_request_header& other36) {
+  rpc_tag = other36.rpc_tag;
+}
+meta_request_header& meta_request_header::operator=(const meta_request_header& other37) {
+  rpc_tag = other37.rpc_tag;
+  return *this;
+}
+
+meta_response_header::~meta_response_header() throw() {
+}
+
+
+void swap(meta_response_header &a, meta_response_header &b) {
+  using ::std::swap;
+  swap(a.err, b.err);
+  swap(a.primary_address, b.primary_address);
+}
+
+meta_response_header::meta_response_header(const meta_response_header& other38) {
+  err = other38.err;
+  primary_address = other38.primary_address;
+}
+meta_response_header& meta_response_header::operator=(const meta_response_header& other39) {
+  err = other39.err;
+  primary_address = other39.primary_address;
+  return *this;
+}
+
 configuration_update_request::~configuration_update_request() throw() {
 }
 
@@ -479,15 +525,15 @@ void swap(configuration_update_request &a, configuration_update_request &b) {
   swap(a.node, b.node);
 }
 
-configuration_update_request::configuration_update_request(const configuration_update_request& other36) {
-  config = other36.config;
-  type = other36.type;
-  node = other36.node;
+configuration_update_request::configuration_update_request(const configuration_update_request& other40) {
+  config = other40.config;
+  type = other40.type;
+  node = other40.node;
 }
-configuration_update_request& configuration_update_request::operator=(const configuration_update_request& other37) {
-  config = other37.config;
-  type = other37.type;
-  node = other37.node;
+configuration_update_request& configuration_update_request::operator=(const configuration_update_request& other41) {
+  config = other41.config;
+  type = other41.type;
+  node = other41.node;
   return *this;
 }
 
@@ -501,13 +547,13 @@ void swap(configuration_update_response &a, configuration_update_response &b) {
   swap(a.config, b.config);
 }
 
-configuration_update_response::configuration_update_response(const configuration_update_response& other38) {
-  err = other38.err;
-  config = other38.config;
+configuration_update_response::configuration_update_response(const configuration_update_response& other42) {
+  err = other42.err;
+  config = other42.config;
 }
-configuration_update_response& configuration_update_response::operator=(const configuration_update_response& other39) {
-  err = other39.err;
-  config = other39.config;
+configuration_update_response& configuration_update_response::operator=(const configuration_update_response& other43) {
+  err = other43.err;
+  config = other43.config;
   return *this;
 }
 
@@ -524,56 +570,96 @@ void swap(configuration_proposal_request &a, configuration_proposal_request &b) 
   swap(a.is_upgrade, b.is_upgrade);
 }
 
-configuration_proposal_request::configuration_proposal_request(const configuration_proposal_request& other40) {
-  config = other40.config;
-  type = other40.type;
-  node = other40.node;
-  is_clean_data = other40.is_clean_data;
-  is_upgrade = other40.is_upgrade;
+configuration_proposal_request::configuration_proposal_request(const configuration_proposal_request& other44) {
+  config = other44.config;
+  type = other44.type;
+  node = other44.node;
+  is_clean_data = other44.is_clean_data;
+  is_upgrade = other44.is_upgrade;
 }
-configuration_proposal_request& configuration_proposal_request::operator=(const configuration_proposal_request& other41) {
-  config = other41.config;
-  type = other41.type;
-  node = other41.node;
-  is_clean_data = other41.is_clean_data;
-  is_upgrade = other41.is_upgrade;
+configuration_proposal_request& configuration_proposal_request::operator=(const configuration_proposal_request& other45) {
+  config = other45.config;
+  type = other45.type;
+  node = other45.node;
+  is_clean_data = other45.is_clean_data;
+  is_upgrade = other45.is_upgrade;
   return *this;
 }
 
-configuration_node_query_request::~configuration_node_query_request() throw() {
+configuration_query_by_node_request::~configuration_query_by_node_request() throw() {
 }
 
 
-void swap(configuration_node_query_request &a, configuration_node_query_request &b) {
+void swap(configuration_query_by_node_request &a, configuration_query_by_node_request &b) {
   using ::std::swap;
   swap(a.node, b.node);
 }
 
-configuration_node_query_request::configuration_node_query_request(const configuration_node_query_request& other42) {
-  node = other42.node;
+configuration_query_by_node_request::configuration_query_by_node_request(const configuration_query_by_node_request& other46) {
+  node = other46.node;
 }
-configuration_node_query_request& configuration_node_query_request::operator=(const configuration_node_query_request& other43) {
-  node = other43.node;
+configuration_query_by_node_request& configuration_query_by_node_request::operator=(const configuration_query_by_node_request& other47) {
+  node = other47.node;
   return *this;
 }
 
-configuration_node_query_response::~configuration_node_query_response() throw() {
+configuration_query_by_node_response::~configuration_query_by_node_response() throw() {
 }
 
 
-void swap(configuration_node_query_response &a, configuration_node_query_response &b) {
+void swap(configuration_query_by_node_response &a, configuration_query_by_node_response &b) {
   using ::std::swap;
   swap(a.err, b.err);
   swap(a.partitions, b.partitions);
 }
 
-configuration_node_query_response::configuration_node_query_response(const configuration_node_query_response& other44) {
-  err = other44.err;
-  partitions = other44.partitions;
+configuration_query_by_node_response::configuration_query_by_node_response(const configuration_query_by_node_response& other48) {
+  err = other48.err;
+  partitions = other48.partitions;
 }
-configuration_node_query_response& configuration_node_query_response::operator=(const configuration_node_query_response& other45) {
-  err = other45.err;
-  partitions = other45.partitions;
+configuration_query_by_node_response& configuration_query_by_node_response::operator=(const configuration_query_by_node_response& other49) {
+  err = other49.err;
+  partitions = other49.partitions;
+  return *this;
+}
+
+configuration_query_by_index_request::~configuration_query_by_index_request() throw() {
+}
+
+
+void swap(configuration_query_by_index_request &a, configuration_query_by_index_request &b) {
+  using ::std::swap;
+  swap(a.app_name, b.app_name);
+  swap(a.partition_indices, b.partition_indices);
+}
+
+configuration_query_by_index_request::configuration_query_by_index_request(const configuration_query_by_index_request& other50) {
+  app_name = other50.app_name;
+  partition_indices = other50.partition_indices;
+}
+configuration_query_by_index_request& configuration_query_by_index_request::operator=(const configuration_query_by_index_request& other51) {
+  app_name = other51.app_name;
+  partition_indices = other51.partition_indices;
+  return *this;
+}
+
+configuration_query_by_index_response::~configuration_query_by_index_response() throw() {
+}
+
+
+void swap(configuration_query_by_index_response &a, configuration_query_by_index_response &b) {
+  using ::std::swap;
+  swap(a.err, b.err);
+  swap(a.partitions, b.partitions);
+}
+
+configuration_query_by_index_response::configuration_query_by_index_response(const configuration_query_by_index_response& other52) {
+  err = other52.err;
+  partitions = other52.partitions;
+}
+configuration_query_by_index_response& configuration_query_by_index_response::operator=(const configuration_query_by_index_response& other53) {
+  err = other53.err;
+  partitions = other53.partitions;
   return *this;
 }
 
@@ -583,17 +669,17 @@ query_replica_decree_request::~query_replica_decree_request() throw() {
 
 void swap(query_replica_decree_request &a, query_replica_decree_request &b) {
   using ::std::swap;
-  swap(a.partition_id, b.partition_id);
+  swap(a.gpid, b.gpid);
   swap(a.node, b.node);
 }
 
-query_replica_decree_request::query_replica_decree_request(const query_replica_decree_request& other46) {
-  partition_id = other46.partition_id;
-  node = other46.node;
+query_replica_decree_request::query_replica_decree_request(const query_replica_decree_request& other54) {
+  gpid = other54.gpid;
+  node = other54.node;
 }
-query_replica_decree_request& query_replica_decree_request::operator=(const query_replica_decree_request& other47) {
-  partition_id = other47.partition_id;
-  node = other47.node;
+query_replica_decree_request& query_replica_decree_request::operator=(const query_replica_decree_request& other55) {
+  gpid = other55.gpid;
+  node = other55.node;
   return *this;
 }
 
@@ -607,53 +693,13 @@ void swap(query_replica_decree_response &a, query_replica_decree_response &b) {
   swap(a.last_decree, b.last_decree);
 }
 
-query_replica_decree_response::query_replica_decree_response(const query_replica_decree_response& other48) {
-  err = other48.err;
-  last_decree = other48.last_decree;
+query_replica_decree_response::query_replica_decree_response(const query_replica_decree_response& other56) {
+  err = other56.err;
+  last_decree = other56.last_decree;
 }
-query_replica_decree_response& query_replica_decree_response::operator=(const query_replica_decree_response& other49) {
-  err = other49.err;
-  last_decree = other49.last_decree;
-  return *this;
-}
-
-query_configuration_by_index_request::~query_configuration_by_index_request() throw() {
-}
-
-
-void swap(query_configuration_by_index_request &a, query_configuration_by_index_request &b) {
-  using ::std::swap;
-  swap(a.app_name, b.app_name);
-  swap(a.partition_indices, b.partition_indices);
-}
-
-query_configuration_by_index_request::query_configuration_by_index_request(const query_configuration_by_index_request& other50) {
-  app_name = other50.app_name;
-  partition_indices = other50.partition_indices;
-}
-query_configuration_by_index_request& query_configuration_by_index_request::operator=(const query_configuration_by_index_request& other51) {
-  app_name = other51.app_name;
-  partition_indices = other51.partition_indices;
-  return *this;
-}
-
-query_configuration_by_index_response::~query_configuration_by_index_response() throw() {
-}
-
-
-void swap(query_configuration_by_index_response &a, query_configuration_by_index_response &b) {
-  using ::std::swap;
-  swap(a.err, b.err);
-  swap(a.partitions, b.partitions);
-}
-
-query_configuration_by_index_response::query_configuration_by_index_response(const query_configuration_by_index_response& other52) {
-  err = other52.err;
-  partitions = other52.partitions;
-}
-query_configuration_by_index_response& query_configuration_by_index_response::operator=(const query_configuration_by_index_response& other53) {
-  err = other53.err;
-  partitions = other53.partitions;
+query_replica_decree_response& query_replica_decree_response::operator=(const query_replica_decree_response& other57) {
+  err = other57.err;
+  last_decree = other57.last_decree;
   return *this;
 }
 }} // namespace

@@ -15,6 +15,9 @@ namespace dsn { namespace replication {
 
 
 // define task code for svc 'meta_s'
+DEFINE_NAMED_TASK_CODE_RPC(RPC_META_S_QUERY_CONFIGURATION_BY_NODE, query_configuration_by_node, ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION)
+DEFINE_NAMED_TASK_CODE_RPC(RPC_META_S_QUERY_CONFIGURATION_BY_INDEX, query_configuration_by_index, ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION)
+DEFINE_NAMED_TASK_CODE_RPC(RPC_META_S_UPDATE_CONFIGURATION, update_configuration, ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION)
 DEFINE_TASK_CODE(LPC_META_S_CIENT_TEST_TIMER, ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION)
 
 
@@ -29,14 +32,26 @@ public:
 
 protected:
 	// all service handlers to be implemented further
+	// RPC_META_S_QUERY_CONFIGURATION_BY_NODE
+	virtual void on_query_configuration_by_node(const configuration_query_by_node_request& query, ::dsn::service::rpc_replier<configuration_query_by_node_response>& reply) = 0;
+	// RPC_META_S_QUERY_CONFIGURATION_BY_INDEX
+	virtual void on_query_configuration_by_index(const configuration_query_by_index_request& query, ::dsn::service::rpc_replier<configuration_query_by_index_response>& reply) = 0;
+	// RPC_META_S_UPDATE_CONFIGURATION
+	virtual void on_update_configuration(const configuration_update_request& update, ::dsn::service::rpc_replier<configuration_update_response>& reply) = 0;
 
 public:
 	void open_service()
 	{
+		this->register_async_rpc_handler(RPC_META_S_QUERY_CONFIGURATION_BY_NODE, "query_configuration_by_node", &T::on_query_configuration_by_node);
+		this->register_async_rpc_handler(RPC_META_S_QUERY_CONFIGURATION_BY_INDEX, "query_configuration_by_index", &T::on_query_configuration_by_index);
+		this->register_async_rpc_handler(RPC_META_S_UPDATE_CONFIGURATION, "update_configuration", &T::on_update_configuration);
 	}
 
 	void close_service()
 	{
+		this->unregister_rpc_handler(RPC_META_S_QUERY_CONFIGURATION_BY_NODE);
+		this->unregister_rpc_handler(RPC_META_S_QUERY_CONFIGURATION_BY_INDEX);
+		this->unregister_rpc_handler(RPC_META_S_UPDATE_CONFIGURATION);
 	}
 };
 
@@ -45,6 +60,60 @@ public:
 class meta_s_client
 {
 public:
+	static ::dsn::error_code query_configuration_by_node(
+		const ::dsn::end_point& server, 
+		configuration_query_by_node_request& query, 
+		__out_param configuration_query_by_node_response& resp, 
+		int timeout_milliseconds = 0, 
+		int hash = 0)
+	{
+		::dsn::message_ptr msg = ::dsn::message::create_request(RPC_META_S_QUERY_CONFIGURATION_BY_NODE, timeout_milliseconds, hash);
+		marshall(msg->writer(), query);
+		auto resp_task = ::dsn::service::rpc::call(server, msg, nullptr);
+		resp_task->wait();
+		if (resp_task->error() == ::dsn::ERR_SUCCESS)
+		{
+			unmarshall(resp_task->get_response()->reader(), resp);
+		}
+		return resp_task->error();
+	}
+
+	static ::dsn::error_code query_configuration_by_index(
+		const ::dsn::end_point& server, 
+		configuration_query_by_index_request& query, 
+		__out_param configuration_query_by_index_response& resp, 
+		int timeout_milliseconds = 0, 
+		int hash = 0)
+	{
+		::dsn::message_ptr msg = ::dsn::message::create_request(RPC_META_S_QUERY_CONFIGURATION_BY_INDEX, timeout_milliseconds, hash);
+		marshall(msg->writer(), query);
+		auto resp_task = ::dsn::service::rpc::call(server, msg, nullptr);
+		resp_task->wait();
+		if (resp_task->error() == ::dsn::ERR_SUCCESS)
+		{
+			unmarshall(resp_task->get_response()->reader(), resp);
+		}
+		return resp_task->error();
+	}
+
+	static ::dsn::error_code update_configuration(
+		const ::dsn::end_point& server, 
+		configuration_update_request& update, 
+		__out_param configuration_update_response& resp, 
+		int timeout_milliseconds = 0, 
+		int hash = 0)
+	{
+		::dsn::message_ptr msg = ::dsn::message::create_request(RPC_META_S_UPDATE_CONFIGURATION, timeout_milliseconds, hash);
+		marshall(msg->writer(), update);
+		auto resp_task = ::dsn::service::rpc::call(server, msg, nullptr);
+		resp_task->wait();
+		if (resp_task->error() == ::dsn::ERR_SUCCESS)
+		{
+			unmarshall(resp_task->get_response()->reader(), resp);
+		}
+		return resp_task->error();
+	}
+
 };
 
 
@@ -53,6 +122,72 @@ class meta_s_async_client
 	: public virtual ::dsn::service::servicelet
 {
 public:
+
+	::dsn::rpc_response_task_ptr begin_query_configuration_by_node(
+		const ::dsn::end_point& server, 
+		std::shared_ptr<configuration_query_by_node_request>& query, 
+		int request_hash = 0, 
+		int timeout_milliseconds = 0, 
+		int reply_hash = 0)
+	{
+		return ::dsn::service::rpc::call_typed(server, RPC_META_S_QUERY_CONFIGURATION_BY_NODE, query, this, &meta_s_async_client::end_query_configuration_by_node, request_hash, timeout_milliseconds, reply_hash);
+	}
+
+	virtual void end_query_configuration_by_node(
+		::dsn::error_code err, 
+		std::shared_ptr<configuration_query_by_node_request>& req, 
+		std::shared_ptr<configuration_query_by_node_response>& resp)
+	{
+		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply err : " << err.to_string() << std::endl;
+		else
+		{
+			std::cout << "reply ok" << std::endl;
+		}
+	}
+
+	::dsn::rpc_response_task_ptr begin_query_configuration_by_index(
+		const ::dsn::end_point& server, 
+		std::shared_ptr<configuration_query_by_index_request>& query, 
+		int request_hash = 0, 
+		int timeout_milliseconds = 0, 
+		int reply_hash = 0)
+	{
+		return ::dsn::service::rpc::call_typed(server, RPC_META_S_QUERY_CONFIGURATION_BY_INDEX, query, this, &meta_s_async_client::end_query_configuration_by_index, request_hash, timeout_milliseconds, reply_hash);
+	}
+
+	virtual void end_query_configuration_by_index(
+		::dsn::error_code err, 
+		std::shared_ptr<configuration_query_by_index_request>& req, 
+		std::shared_ptr<configuration_query_by_index_response>& resp)
+	{
+		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply err : " << err.to_string() << std::endl;
+		else
+		{
+			std::cout << "reply ok" << std::endl;
+		}
+	}
+
+	::dsn::rpc_response_task_ptr begin_update_configuration(
+		const ::dsn::end_point& server, 
+		std::shared_ptr<configuration_update_request>& update, 
+		int request_hash = 0, 
+		int timeout_milliseconds = 0, 
+		int reply_hash = 0)
+	{
+		return ::dsn::service::rpc::call_typed(server, RPC_META_S_UPDATE_CONFIGURATION, update, this, &meta_s_async_client::end_update_configuration, request_hash, timeout_milliseconds, reply_hash);
+	}
+
+	virtual void end_update_configuration(
+		::dsn::error_code err, 
+		std::shared_ptr<configuration_update_request>& req, 
+		std::shared_ptr<configuration_update_response>& resp)
+	{
+		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply err : " << err.to_string() << std::endl;
+		else
+		{
+			std::cout << "reply ok" << std::endl;
+		}
+	}
 
 };
 

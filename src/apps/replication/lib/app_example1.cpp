@@ -102,7 +102,7 @@ int replication_app_example1::write(std::list<message_ptr>& requests, decree dec
     return ERR_SUCCESS;
 }
 
-void replication_app_example1::read(const client_read_request& meta, dsn::message_ptr& request)
+void replication_app_example1::read(const client_read_request2& meta, dsn::message_ptr& request)
 {
     simple_kv_request msg;
     unmarshall(request, msg);

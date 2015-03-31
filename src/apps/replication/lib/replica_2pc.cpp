@@ -390,7 +390,7 @@ void replica::on_prepare_reply(mutation_ptr& mu, partition_status targetStatus, 
     partition_status st = _primary_states.GetNodeStatus(node);
 
     // handle reply
-    PrepareAck resp;
+    prepare_ack resp;
 
     // handle error
     if (err)
@@ -456,7 +456,7 @@ void replica::on_prepare_reply(mutation_ptr& mu, partition_status targetStatus, 
 
 void replica::ack_prepare_message(int err, mutation_ptr& mu)
 {
-    PrepareAck resp;
+    prepare_ack resp;
     resp.gpid = get_gpid();
     resp.err = err;
     resp.ballot = get_ballot();

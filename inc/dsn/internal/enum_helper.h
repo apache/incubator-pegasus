@@ -30,20 +30,24 @@
 namespace dsn {
 
 // an invalid enum value must be provided so as to be the default value when parsing failed
-#define ENUM_BEGIN(type, invalid_value)    \
-    static inline enum_helper_xxx<type>* RegisterEnu_##type() {\
+#define ENUM_BEGIN2(type, name, invalid_value)    \
+    static inline enum_helper_xxx<type>* RegisterEnu_##name() {\
         enum_helper_xxx<type>* helper = new enum_helper_xxx<type>(invalid_value);
+
+#define ENUM_BEGIN(type, invalid_value) ENUM_BEGIN2(type, type, invalid_value)
 
 #define ENUM_REG(e) helper->register_enum(#e, e);
 
-#define ENUM_END(type) return helper; \
+#define ENUM_END2(type, name) return helper; \
     } \
     inline type enum_from_string(const char* s, type invalid_value) {\
-        return enum_helper_xxx<type>::instance(RegisterEnu_##type).parse(s); \
+        return enum_helper_xxx<type>::instance(RegisterEnu_##name).parse(s); \
     }\
     inline const char* enum_to_string(type val)  {\
-        return enum_helper_xxx<type>::instance(RegisterEnu_##type).to_string(val); \
+        return enum_helper_xxx<type>::instance(RegisterEnu_##name).to_string(val); \
     }
+
+#define ENUM_END(type) ENUM_END2(type, type)
 
 template<typename TEnum>
 class enum_helper_xxx

@@ -99,15 +99,12 @@ struct end_point
         return buffer;
     }
 
-    static const end_point INVALID;
-};
-
-struct end_point_comparor
-{
-    bool operator()(const end_point& s1, const end_point& s2) const
+    bool operator()(const end_point& r) const
     {
-        return s1.port < s2.port || (s1.port == s2.port && s1.ip < s2.ip);
+        return port < r.port || (port == r.port && ip < r.ip);
     }
+
+    static const end_point INVALID;
 };
 
 #ifndef ZION_NOT_USE_DEFAULT_SERIALIZATION

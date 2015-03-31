@@ -266,7 +266,7 @@ void replica::update_configuration_on_meta_server(config_type type, const end_po
     update_local_configuration_with_no_ballot_change(PS_INACTIVE);
 
     message_ptr msg = message::create_request(RPC_CM_CALL, _options.CoordinatorRpcCallTimeoutMs);
-    meta_msg_header hdr;
+    meta_request_header hdr;
     hdr.rpc_tag = RPC_CM_UPDATE_PARTITION_CONFIGURATION;
     marshall(msg, hdr);
 

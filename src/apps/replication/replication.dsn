@@ -3,22 +3,6 @@ include "../../dsn.dsn"
 
 namespace cpp dsn.replication
 
-struct ReplicationMsgHeader
-{
-    1:i64 id;
-}
-
-struct meta_msg_header
-{
-    1:i32 rpc_tag;
-}
-
-struct meta_response_header
-{
-    1:i32 err;
-    2:dsn.end_point primary_address;
-}
-
 struct global_partition_id
 {
     1:i32  app_id = -1;
@@ -70,6 +54,12 @@ struct replica_configuration
     4:partition_status    status = partition_status.PS_INACTIVE;
 }
 
+struct prepare_msg
+{
+	1:replica_configuration config;
+	2:mutation_data         mu;
+}
+
 enum read_semantic_t
 {
     ReadLastUpdate,
@@ -77,21 +67,34 @@ enum read_semantic_t
     ReadSnapshot
 }
 
-struct client_read_request
+struct client_read_request2
 {
     1:global_partition_id gpid;
     2:read_semantic_t     semantic = read_semantic_t.ReadLastUpdate;
     3:i64                 version_decree = -1;
 }
 
-struct client_response
+struct client_read_request
 {
-    1:i32 err = 0;
-    2:i32 pending_request_count = 0;
-    3:i64 last_committed_decree = 0;
+    1:global_partition_id gpid;
+    2:read_semantic_t     semantic = read_semantic_t.ReadLastUpdate;
+    3:i64                 version_decree = -1;
+	4:dsn.blob            application_request;
 }
 
-struct PrepareAck
+struct client_write_request
+{
+	1:global_partition_id gpid;
+	2:dsn.blob            application_request;
+}
+
+struct client_response
+{
+    1:i32      err = 0;
+    2:dsn.blob application_response;
+}
+
+struct prepare_ack
 {
     1:global_partition_id gpid;
     2:i32                 err;
@@ -194,6 +197,17 @@ enum config_type
     CT_UPGRADE_TO_SECONDARY,
 }
 
+struct meta_request_header
+{
+    1:i32 rpc_tag;
+}
+
+struct meta_response_header
+{
+    1:i32 err;
+    2:dsn.end_point primary_address;
+}
+
 // primary | secondary(upgrading) (w/ new config) => meta server
 struct configuration_update_request
 {
@@ -220,22 +234,33 @@ struct configuration_proposal_request
 }
 
 // client => meta server
-struct configuration_node_query_request
+struct configuration_query_by_node_request
 {
     1:dsn.end_point    node;
 }
 
 // meta server => client
-struct configuration_node_query_response
+struct configuration_query_by_node_response
 {
     1:i32                           err;
     2:list<partition_configuration> partitions;
 }
 
+struct configuration_query_by_index_request
+{
+    1:string           app_name;
+    2:list<i32>        partition_indices;
+}
+
+struct configuration_query_by_index_response
+{
+    1:i32                           err;
+    2:list<partition_configuration> partitions;
+}
 
 struct query_replica_decree_request
 {
-    1:global_partition_id partition_id;
+    1:global_partition_id gpid;
     2:dsn.end_point       node;
 }
 
@@ -245,24 +270,23 @@ struct query_replica_decree_response
     2:i64                 last_decree;
 }
 
-struct query_configuration_by_index_request
-{
-    1:string           app_name;
-    2:list<i32>        partition_indices;
-}
-
-struct query_configuration_by_index_response
-{
-    1:i32                           err;
-    2:list<partition_configuration> partitions;
-}
-
 service replica_s
 {
-	
+	client_response client_write(1:client_write_request req);
+	client_response client_read(1:client_read_request req);	
+	prepare_ack prepare(1:prepare_msg request);
+	void config_proposal(1:configuration_update_request proposal);	
+    learn_response learn(1:learn_request request);
+    void learn_completion_notification(1:group_check_response report);
+    void add_learner(1:group_check_request request);
+    void remove(1:replica_configuration request);
+    group_check_response group_check(1:group_check_request request);
+	query_replica_decree_response query_decree(1:query_replica_decree_request req);
 }
 
 service meta_s
 {
-
+	configuration_query_by_node_response query_configuration_by_node(1:configuration_query_by_node_request query);
+	configuration_query_by_index_response query_configuration_by_index(1:configuration_query_by_index_request query);
+	configuration_update_response update_configuration(1:configuration_update_request update);
 }

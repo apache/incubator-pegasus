@@ -50,7 +50,7 @@ public:
     // all return values are error code
     //
     virtual int  write(std::list<message_ptr>& requests, decree decree, bool ackClient);
-    virtual void read(const client_read_request& meta, dsn::message_ptr& request);
+    virtual void read(const client_read_request2& meta, dsn::message_ptr& request);
 
     virtual int  open(bool createNew);
     virtual int  close(bool clearState);

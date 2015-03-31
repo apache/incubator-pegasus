@@ -15,11 +15,94 @@ namespace dsn { namespace replication {
 class replica_s_service_example_impl : public replica_s_service<replica_s_service_example_impl>
 {
 public:
+	// RPC_REPLICA_S_CLIENT_WRITE
+	virtual void on_client_write(const client_write_request& req, ::dsn::service::rpc_replier<client_response>& reply)
+	{
+		std::cout << "exec rpc handler for RPC_REPLICA_S_CLIENT_WRITE" << std::endl;
+		client_response resp;
+		reply(resp);
+	}
+	// RPC_REPLICA_S_CLIENT_READ
+	virtual void on_client_read(const client_read_request& req, ::dsn::service::rpc_replier<client_response>& reply)
+	{
+		std::cout << "exec rpc handler for RPC_REPLICA_S_CLIENT_READ" << std::endl;
+		client_response resp;
+		reply(resp);
+	}
+	// RPC_REPLICA_S_PREPARE
+	virtual void on_prepare(const prepare_msg& request, ::dsn::service::rpc_replier<prepare_ack>& reply)
+	{
+		std::cout << "exec rpc handler for RPC_REPLICA_S_PREPARE" << std::endl;
+		prepare_ack resp;
+		reply(resp);
+	}
+	// RPC_REPLICA_S_CONFIG_PROPOSAL
+	virtual void on_config_proposal(const configuration_update_request& proposal)
+	{
+		std::cout << "exec rpc handler for RPC_REPLICA_S_CONFIG_PROPOSAL" << std::endl;
+	}
+	// RPC_REPLICA_S_LEARN
+	virtual void on_learn(const learn_request& request, ::dsn::service::rpc_replier<learn_response>& reply)
+	{
+		std::cout << "exec rpc handler for RPC_REPLICA_S_LEARN" << std::endl;
+		learn_response resp;
+		reply(resp);
+	}
+	// RPC_REPLICA_S_LEARN_COMPLETION_NOTIFICATION
+	virtual void on_learn_completion_notification(const group_check_response& report)
+	{
+		std::cout << "exec rpc handler for RPC_REPLICA_S_LEARN_COMPLETION_NOTIFICATION" << std::endl;
+	}
+	// RPC_REPLICA_S_ADD_LEARNER
+	virtual void on_add_learner(const group_check_request& request)
+	{
+		std::cout << "exec rpc handler for RPC_REPLICA_S_ADD_LEARNER" << std::endl;
+	}
+	// RPC_REPLICA_S_REMOVE
+	virtual void on_remove(const replica_configuration& request)
+	{
+		std::cout << "exec rpc handler for RPC_REPLICA_S_REMOVE" << std::endl;
+	}
+	// RPC_REPLICA_S_GROUP_CHECK
+	virtual void on_group_check(const group_check_request& request, ::dsn::service::rpc_replier<group_check_response>& reply)
+	{
+		std::cout << "exec rpc handler for RPC_REPLICA_S_GROUP_CHECK" << std::endl;
+		group_check_response resp;
+		reply(resp);
+	}
+	// RPC_REPLICA_S_QUERY_DECREE
+	virtual void on_query_decree(const query_replica_decree_request& req, ::dsn::service::rpc_replier<query_replica_decree_response>& reply)
+	{
+		std::cout << "exec rpc handler for RPC_REPLICA_S_QUERY_DECREE" << std::endl;
+		query_replica_decree_response resp;
+		reply(resp);
+	}
 };
 
 class meta_s_service_example_impl : public meta_s_service<meta_s_service_example_impl>
 {
 public:
+	// RPC_META_S_QUERY_CONFIGURATION_BY_NODE
+	virtual void on_query_configuration_by_node(const configuration_query_by_node_request& query, ::dsn::service::rpc_replier<configuration_query_by_node_response>& reply)
+	{
+		std::cout << "exec rpc handler for RPC_META_S_QUERY_CONFIGURATION_BY_NODE" << std::endl;
+		configuration_query_by_node_response resp;
+		reply(resp);
+	}
+	// RPC_META_S_QUERY_CONFIGURATION_BY_INDEX
+	virtual void on_query_configuration_by_index(const configuration_query_by_index_request& query, ::dsn::service::rpc_replier<configuration_query_by_index_response>& reply)
+	{
+		std::cout << "exec rpc handler for RPC_META_S_QUERY_CONFIGURATION_BY_INDEX" << std::endl;
+		configuration_query_by_index_response resp;
+		reply(resp);
+	}
+	// RPC_META_S_UPDATE_CONFIGURATION
+	virtual void on_update_configuration(const configuration_update_request& update, ::dsn::service::rpc_replier<configuration_update_response>& reply)
+	{
+		std::cout << "exec rpc handler for RPC_META_S_UPDATE_CONFIGURATION" << std::endl;
+		configuration_update_response resp;
+		reply(resp);
+	}
 };
 
 // shared server app
@@ -74,6 +157,58 @@ public:
 
 	void on_test_timer()
 	{
+		{
+			std::shared_ptr<client_write_request> req(new client_write_request());
+			_replica_s_client.begin_client_write(_server, req);
+		}
+		{
+			std::shared_ptr<client_read_request> req(new client_read_request());
+			_replica_s_client.begin_client_read(_server, req);
+		}
+		{
+			std::shared_ptr<prepare_msg> request(new prepare_msg());
+			_replica_s_client.begin_prepare(_server, request);
+		}
+		{
+			configuration_update_request proposal;
+			_replica_s_client.config_proposal(_server, proposal);
+		}
+		{
+			std::shared_ptr<learn_request> request(new learn_request());
+			_replica_s_client.begin_learn(_server, request);
+		}
+		{
+			group_check_response report;
+			_replica_s_client.learn_completion_notification(_server, report);
+		}
+		{
+			group_check_request request;
+			_replica_s_client.add_learner(_server, request);
+		}
+		{
+			replica_configuration request;
+			_replica_s_client.remove(_server, request);
+		}
+		{
+			std::shared_ptr<group_check_request> request(new group_check_request());
+			_replica_s_client.begin_group_check(_server, request);
+		}
+		{
+			std::shared_ptr<query_replica_decree_request> req(new query_replica_decree_request());
+			_replica_s_client.begin_query_decree(_server, req);
+		}
+		{
+			std::shared_ptr<configuration_query_by_node_request> query(new configuration_query_by_node_request());
+			_meta_s_client.begin_query_configuration_by_node(_server, query);
+		}
+		{
+			std::shared_ptr<configuration_query_by_index_request> query(new configuration_query_by_index_request());
+			_meta_s_client.begin_query_configuration_by_index(_server, query);
+		}
+		{
+			std::shared_ptr<configuration_update_request> update(new configuration_update_request());
+			_meta_s_client.begin_update_configuration(_server, update);
+		}
 	}
 
 private:

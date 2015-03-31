@@ -76,7 +76,7 @@ bool meta_service::stop()
 
 void meta_service::OnMetaServiceRequest(message_ptr& msg)
 {
-    meta_msg_header hdr;
+    meta_request_header hdr;
     unmarshall(msg, hdr);
 
     meta_response_header rhdr;
@@ -94,8 +94,8 @@ void meta_service::OnMetaServiceRequest(message_ptr& msg)
     }
     else if (hdr.rpc_tag == RPC_CM_QUERY_NODE_PARTITIONS)
     {
-        configuration_node_query_request request;
-        configuration_node_query_response response;
+        configuration_query_by_node_request request;
+        configuration_query_by_node_response response;
         unmarshall(msg, request);
 
         OnQueryConfig(request, response);
@@ -106,8 +106,8 @@ void meta_service::OnMetaServiceRequest(message_ptr& msg)
 
     else if (hdr.rpc_tag == RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX)
     {
-        query_configuration_by_index_request request;
-        query_configuration_by_index_response response;
+        configuration_query_by_index_request request;
+        configuration_query_by_index_response response;
         unmarshall(msg, request);
 
         DoQueryConfigurationByIndexRequest(request, response);
@@ -137,12 +137,12 @@ void meta_service::OnMetaServiceRequest(message_ptr& msg)
 }
 
 // partition server & client => meta server
-void meta_service::OnQueryConfig(configuration_node_query_request& request, __out_param configuration_node_query_response& response)
+void meta_service::OnQueryConfig(configuration_query_by_node_request& request, __out_param configuration_query_by_node_response& response)
 {
     _state->OnQueryConfig(request, response);
 }
 
-void meta_service::DoQueryConfigurationByIndexRequest(query_configuration_by_index_request& request, __out_param query_configuration_by_index_response& response)
+void meta_service::DoQueryConfigurationByIndexRequest(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response)
 {
     _state->DoQueryConfigurationByIndexRequest(request, response);
 }

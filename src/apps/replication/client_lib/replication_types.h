@@ -15,71 +15,55 @@ DEFINE_THREAD_POOL_CODE(THREAD_POOL_REPLICATION)
 
 namespace dsn { namespace replication {
 
-struct partition_status {
-  enum type {
-    PS_INACTIVE = 0,
-    PS_ERROR = 1,
-    PS_PRIMARY = 2,
-    PS_SECONDARY = 3,
-    PS_POTENTIAL_SECONDARY = 4,
-    PS_INVALID = 5
-  };
+enum partition_status {
+  PS_INACTIVE = 0,
+  PS_ERROR = 1,
+  PS_PRIMARY = 2,
+  PS_SECONDARY = 3,
+  PS_POTENTIAL_SECONDARY = 4,
+  PS_INVALID = 5
 };
 
-DEFINE_POD_SERIALIZATION(partition_status::type);
+DEFINE_POD_SERIALIZATION(partition_status);
 
-struct read_semantic_t {
-  enum type {
-    ReadLastUpdate = 0,
-    ReadOutdated = 1,
-    ReadSnapshot = 2
-  };
+enum read_semantic_t {
+  ReadLastUpdate = 0,
+  ReadOutdated = 1,
+  ReadSnapshot = 2
 };
 
-DEFINE_POD_SERIALIZATION(read_semantic_t::type);
+DEFINE_POD_SERIALIZATION(read_semantic_t);
 
-struct learner_status {
-  enum type {
-    LearningWithoutPrepare = 0,
-    LearningWithPrepare = 1,
-    LearningSucceeded = 2,
-    LearningFailed = 3,
-    Learning_INVALID = 4
-  };
+enum learner_status {
+  LearningWithoutPrepare = 0,
+  LearningWithPrepare = 1,
+  LearningSucceeded = 2,
+  LearningFailed = 3,
+  Learning_INVALID = 4
 };
 
-DEFINE_POD_SERIALIZATION(learner_status::type);
+DEFINE_POD_SERIALIZATION(learner_status);
 
-struct simple_kv_operation {
-  enum type {
-    SKV_NOP = 0,
-    SKV_UPDATE = 1,
-    SKV_READ = 2,
-    SKV_APPEND = 3
-  };
+enum simple_kv_operation {
+  SKV_NOP = 0,
+  SKV_UPDATE = 1,
+  SKV_READ = 2,
+  SKV_APPEND = 3
 };
 
-DEFINE_POD_SERIALIZATION(simple_kv_operation::type);
+DEFINE_POD_SERIALIZATION(simple_kv_operation);
 
-struct config_type {
-  enum type {
-    CT_NONE = 0,
-    CT_ASSIGN_PRIMARY = 1,
-    CT_ADD_SECONDARY = 2,
-    CT_DOWNGRADE_TO_SECONDARY = 3,
-    CT_DOWNGRADE_TO_INACTIVE = 4,
-    CT_REMOVE = 5,
-    CT_UPGRADE_TO_SECONDARY = 6
-  };
+enum config_type {
+  CT_NONE = 0,
+  CT_ASSIGN_PRIMARY = 1,
+  CT_ADD_SECONDARY = 2,
+  CT_DOWNGRADE_TO_SECONDARY = 3,
+  CT_DOWNGRADE_TO_INACTIVE = 4,
+  CT_REMOVE = 5,
+  CT_UPGRADE_TO_SECONDARY = 6
 };
 
-DEFINE_POD_SERIALIZATION(config_type::type);
-
-class ReplicationMsgHeader;
-
-class meta_msg_header;
-
-class meta_response_header;
+DEFINE_POD_SERIALIZATION(config_type);
 
 class global_partition_id;
 
@@ -91,11 +75,17 @@ class partition_configuration;
 
 class replica_configuration;
 
+class prepare_msg;
+
+class client_read_request2;
+
 class client_read_request;
+
+class client_write_request;
 
 class client_response;
 
-class PrepareAck;
+class prepare_ack;
 
 class learn_state;
 
@@ -111,136 +101,27 @@ class simple_kv_request;
 
 class simple_kv_response;
 
+class meta_request_header;
+
+class meta_response_header;
+
 class configuration_update_request;
 
 class configuration_update_response;
 
 class configuration_proposal_request;
 
-class configuration_node_query_request;
+class configuration_query_by_node_request;
 
-class configuration_node_query_response;
+class configuration_query_by_node_response;
+
+class configuration_query_by_index_request;
+
+class configuration_query_by_index_response;
 
 class query_replica_decree_request;
 
 class query_replica_decree_response;
-
-class query_configuration_by_index_request;
-
-class query_configuration_by_index_response;
-
-
-class ReplicationMsgHeader {
- public:
-
-  ReplicationMsgHeader(const ReplicationMsgHeader&);
-  ReplicationMsgHeader& operator=(const ReplicationMsgHeader&);
-  ReplicationMsgHeader() : id(0) {
-  }
-
-  virtual ~ReplicationMsgHeader() throw();
-  int64_t id;
-  bool operator == (const ReplicationMsgHeader & rhs) const
-  {
-    if (!(id == rhs.id))
-      return false;
-    return true;
-  }
-  bool operator != (const ReplicationMsgHeader &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const ReplicationMsgHeader & ) const;
-
-
-};
-
-void swap(ReplicationMsgHeader &a, ReplicationMsgHeader &b);
-
-inline void unmarshall(::dsn::binary_reader& reader, __out_param ReplicationMsgHeader& val) {
-  ::dsn::unmarshall(reader, val.id);
-}
-
-inline void marshall(::dsn::binary_writer& writer, const ReplicationMsgHeader& val, uint16_t pos = 0xffff) {
-  ::dsn::marshall(writer, val.id, pos);
-}
-
-
-class meta_msg_header {
- public:
-
-  meta_msg_header(const meta_msg_header&);
-  meta_msg_header& operator=(const meta_msg_header&);
-  meta_msg_header() : rpc_tag(0) {
-  }
-
-  virtual ~meta_msg_header() throw();
-  int32_t rpc_tag;
-  bool operator == (const meta_msg_header & rhs) const
-  {
-    if (!(rpc_tag == rhs.rpc_tag))
-      return false;
-    return true;
-  }
-  bool operator != (const meta_msg_header &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const meta_msg_header & ) const;
-
-
-};
-
-void swap(meta_msg_header &a, meta_msg_header &b);
-
-inline void unmarshall(::dsn::binary_reader& reader, __out_param meta_msg_header& val) {
-  ::dsn::unmarshall(reader, val.rpc_tag);
-}
-
-inline void marshall(::dsn::binary_writer& writer, const meta_msg_header& val, uint16_t pos = 0xffff) {
-  ::dsn::marshall(writer, val.rpc_tag, pos);
-}
-
-
-class meta_response_header {
- public:
-
-  meta_response_header(const meta_response_header&);
-  meta_response_header& operator=(const meta_response_header&);
-  meta_response_header() : err(0) {
-  }
-
-  virtual ~meta_response_header() throw();
-  int32_t err;
-   ::dsn::end_point primary_address;
-  bool operator == (const meta_response_header & rhs) const
-  {
-    if (!(err == rhs.err))
-      return false;
-    if (!(primary_address == rhs.primary_address))
-      return false;
-    return true;
-  }
-  bool operator != (const meta_response_header &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const meta_response_header & ) const;
-
-
-};
-
-void swap(meta_response_header &a, meta_response_header &b);
-
-inline void unmarshall(::dsn::binary_reader& reader, __out_param meta_response_header& val) {
-  ::dsn::unmarshall(reader, val.err);
-  unmarshall(reader, val.primary_address);
-}
-
-inline void marshall(::dsn::binary_writer& writer, const meta_response_header& val, uint16_t pos = 0xffff) {
-  ::dsn::marshall(writer, val.err, pos);
-  marshall(writer, val.primary_address, pos);
-}
 
 
 class global_partition_id {
@@ -457,8 +338,8 @@ class replica_configuration {
 
   replica_configuration(const replica_configuration&);
   replica_configuration& operator=(const replica_configuration&);
-  replica_configuration() : ballot(0), status((partition_status::type)0) {
-    status = (partition_status::type)0;
+  replica_configuration() : ballot(0), status((partition_status)0) {
+    status = (partition_status)0;
 
   }
 
@@ -466,7 +347,7 @@ class replica_configuration {
   global_partition_id gpid;
   int64_t ballot;
    ::dsn::end_point primary;
-  partition_status::type status;
+  partition_status status;
   bool operator == (const replica_configuration & rhs) const
   {
     if (!(gpid == rhs.gpid))
@@ -505,20 +386,110 @@ inline void marshall(::dsn::binary_writer& writer, const replica_configuration& 
 }
 
 
+class prepare_msg {
+ public:
+
+  prepare_msg(const prepare_msg&);
+  prepare_msg& operator=(const prepare_msg&);
+  prepare_msg() {
+  }
+
+  virtual ~prepare_msg() throw();
+  replica_configuration config;
+  mutation_data mu;
+  bool operator == (const prepare_msg & rhs) const
+  {
+    if (!(config == rhs.config))
+      return false;
+    if (!(mu == rhs.mu))
+      return false;
+    return true;
+  }
+  bool operator != (const prepare_msg &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const prepare_msg & ) const;
+
+
+};
+
+void swap(prepare_msg &a, prepare_msg &b);
+
+inline void unmarshall(::dsn::binary_reader& reader, __out_param prepare_msg& val) {
+  unmarshall(reader, val.config);
+  unmarshall(reader, val.mu);
+}
+
+inline void marshall(::dsn::binary_writer& writer, const prepare_msg& val, uint16_t pos = 0xffff) {
+  marshall(writer, val.config, pos);
+  marshall(writer, val.mu, pos);
+}
+
+
+class client_read_request2 {
+ public:
+
+  client_read_request2(const client_read_request2&);
+  client_read_request2& operator=(const client_read_request2&);
+  client_read_request2() : semantic((read_semantic_t)0), version_decree(-1LL) {
+    semantic = (read_semantic_t)0;
+
+  }
+
+  virtual ~client_read_request2() throw();
+  global_partition_id gpid;
+  read_semantic_t semantic;
+  int64_t version_decree;
+  bool operator == (const client_read_request2 & rhs) const
+  {
+    if (!(gpid == rhs.gpid))
+      return false;
+    if (!(semantic == rhs.semantic))
+      return false;
+    if (!(version_decree == rhs.version_decree))
+      return false;
+    return true;
+  }
+  bool operator != (const client_read_request2 &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const client_read_request2 & ) const;
+
+
+};
+
+void swap(client_read_request2 &a, client_read_request2 &b);
+
+inline void unmarshall(::dsn::binary_reader& reader, __out_param client_read_request2& val) {
+  unmarshall(reader, val.gpid);
+  unmarshall(reader, val.semantic);
+  ::dsn::unmarshall(reader, val.version_decree);
+}
+
+inline void marshall(::dsn::binary_writer& writer, const client_read_request2& val, uint16_t pos = 0xffff) {
+  marshall(writer, val.gpid, pos);
+  marshall(writer, val.semantic, pos);
+  ::dsn::marshall(writer, val.version_decree, pos);
+}
+
+
 class client_read_request {
  public:
 
   client_read_request(const client_read_request&);
   client_read_request& operator=(const client_read_request&);
-  client_read_request() : semantic((read_semantic_t::type)0), version_decree(-1LL) {
-    semantic = (read_semantic_t::type)0;
+  client_read_request() : semantic((read_semantic_t)0), version_decree(-1LL) {
+    semantic = (read_semantic_t)0;
 
   }
 
   virtual ~client_read_request() throw();
   global_partition_id gpid;
-  read_semantic_t::type semantic;
+  read_semantic_t semantic;
   int64_t version_decree;
+   ::dsn::blob application_request;
   bool operator == (const client_read_request & rhs) const
   {
     if (!(gpid == rhs.gpid))
@@ -526,6 +497,8 @@ class client_read_request {
     if (!(semantic == rhs.semantic))
       return false;
     if (!(version_decree == rhs.version_decree))
+      return false;
+    if (!(application_request == rhs.application_request))
       return false;
     return true;
   }
@@ -544,12 +517,55 @@ inline void unmarshall(::dsn::binary_reader& reader, __out_param client_read_req
   unmarshall(reader, val.gpid);
   unmarshall(reader, val.semantic);
   ::dsn::unmarshall(reader, val.version_decree);
+  unmarshall(reader, val.application_request);
 }
 
 inline void marshall(::dsn::binary_writer& writer, const client_read_request& val, uint16_t pos = 0xffff) {
   marshall(writer, val.gpid, pos);
   marshall(writer, val.semantic, pos);
   ::dsn::marshall(writer, val.version_decree, pos);
+  marshall(writer, val.application_request, pos);
+}
+
+
+class client_write_request {
+ public:
+
+  client_write_request(const client_write_request&);
+  client_write_request& operator=(const client_write_request&);
+  client_write_request() {
+  }
+
+  virtual ~client_write_request() throw();
+  global_partition_id gpid;
+   ::dsn::blob application_request;
+  bool operator == (const client_write_request & rhs) const
+  {
+    if (!(gpid == rhs.gpid))
+      return false;
+    if (!(application_request == rhs.application_request))
+      return false;
+    return true;
+  }
+  bool operator != (const client_write_request &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const client_write_request & ) const;
+
+
+};
+
+void swap(client_write_request &a, client_write_request &b);
+
+inline void unmarshall(::dsn::binary_reader& reader, __out_param client_write_request& val) {
+  unmarshall(reader, val.gpid);
+  unmarshall(reader, val.application_request);
+}
+
+inline void marshall(::dsn::binary_writer& writer, const client_write_request& val, uint16_t pos = 0xffff) {
+  marshall(writer, val.gpid, pos);
+  marshall(writer, val.application_request, pos);
 }
 
 
@@ -558,20 +574,17 @@ class client_response {
 
   client_response(const client_response&);
   client_response& operator=(const client_response&);
-  client_response() : err(0), pending_request_count(0), last_committed_decree(0LL) {
+  client_response() : err(0) {
   }
 
   virtual ~client_response() throw();
   int32_t err;
-  int32_t pending_request_count;
-  int64_t last_committed_decree;
+   ::dsn::blob application_response;
   bool operator == (const client_response & rhs) const
   {
     if (!(err == rhs.err))
       return false;
-    if (!(pending_request_count == rhs.pending_request_count))
-      return false;
-    if (!(last_committed_decree == rhs.last_committed_decree))
+    if (!(application_response == rhs.application_response))
       return false;
     return true;
   }
@@ -588,33 +601,31 @@ void swap(client_response &a, client_response &b);
 
 inline void unmarshall(::dsn::binary_reader& reader, __out_param client_response& val) {
   ::dsn::unmarshall(reader, val.err);
-  ::dsn::unmarshall(reader, val.pending_request_count);
-  ::dsn::unmarshall(reader, val.last_committed_decree);
+  unmarshall(reader, val.application_response);
 }
 
 inline void marshall(::dsn::binary_writer& writer, const client_response& val, uint16_t pos = 0xffff) {
   ::dsn::marshall(writer, val.err, pos);
-  ::dsn::marshall(writer, val.pending_request_count, pos);
-  ::dsn::marshall(writer, val.last_committed_decree, pos);
+  marshall(writer, val.application_response, pos);
 }
 
 
-class PrepareAck {
+class prepare_ack {
  public:
 
-  PrepareAck(const PrepareAck&);
-  PrepareAck& operator=(const PrepareAck&);
-  PrepareAck() : err(0), ballot(0), decree(0), last_committed_decree_in_app(0), last_committed_decree_in_prepare_list(0) {
+  prepare_ack(const prepare_ack&);
+  prepare_ack& operator=(const prepare_ack&);
+  prepare_ack() : err(0), ballot(0), decree(0), last_committed_decree_in_app(0), last_committed_decree_in_prepare_list(0) {
   }
 
-  virtual ~PrepareAck() throw();
+  virtual ~prepare_ack() throw();
   global_partition_id gpid;
   int32_t err;
   int64_t ballot;
   int64_t decree;
   int64_t last_committed_decree_in_app;
   int64_t last_committed_decree_in_prepare_list;
-  bool operator == (const PrepareAck & rhs) const
+  bool operator == (const prepare_ack & rhs) const
   {
     if (!(gpid == rhs.gpid))
       return false;
@@ -630,18 +641,18 @@ class PrepareAck {
       return false;
     return true;
   }
-  bool operator != (const PrepareAck &rhs) const {
+  bool operator != (const prepare_ack &rhs) const {
     return !(*this == rhs);
   }
 
-  bool operator < (const PrepareAck & ) const;
+  bool operator < (const prepare_ack & ) const;
 
 
 };
 
-void swap(PrepareAck &a, PrepareAck &b);
+void swap(prepare_ack &a, prepare_ack &b);
 
-inline void unmarshall(::dsn::binary_reader& reader, __out_param PrepareAck& val) {
+inline void unmarshall(::dsn::binary_reader& reader, __out_param prepare_ack& val) {
   unmarshall(reader, val.gpid);
   ::dsn::unmarshall(reader, val.err);
   ::dsn::unmarshall(reader, val.ballot);
@@ -650,7 +661,7 @@ inline void unmarshall(::dsn::binary_reader& reader, __out_param PrepareAck& val
   ::dsn::unmarshall(reader, val.last_committed_decree_in_prepare_list);
 }
 
-inline void marshall(::dsn::binary_writer& writer, const PrepareAck& val, uint16_t pos = 0xffff) {
+inline void marshall(::dsn::binary_writer& writer, const prepare_ack& val, uint16_t pos = 0xffff) {
   marshall(writer, val.gpid, pos);
   ::dsn::marshall(writer, val.err, pos);
   ::dsn::marshall(writer, val.ballot, pos);
@@ -884,8 +895,8 @@ class group_check_response {
 
   group_check_response(const group_check_response&);
   group_check_response& operator=(const group_check_response&);
-  group_check_response() : err(0), last_committed_decree_in_app(0), last_committed_decree_in_prepare_list(0), learner_status_((learner_status::type)3), learner_signature(0) {
-    learner_status_ = (learner_status::type)3;
+  group_check_response() : err(0), last_committed_decree_in_app(0), last_committed_decree_in_prepare_list(0), learner_status_((learner_status)3), learner_signature(0) {
+    learner_status_ = (learner_status)3;
 
   }
 
@@ -894,7 +905,7 @@ class group_check_response {
   int32_t err;
   int64_t last_committed_decree_in_app;
   int64_t last_committed_decree_in_prepare_list;
-  learner_status::type learner_status_;
+  learner_status learner_status_;
   int64_t learner_signature;
    ::dsn::end_point node;
   bool operator == (const group_check_response & rhs) const
@@ -952,13 +963,13 @@ class simple_kv_request {
 
   simple_kv_request(const simple_kv_request&);
   simple_kv_request& operator=(const simple_kv_request&);
-  simple_kv_request() : op((simple_kv_operation::type)0), key(), value() {
-    op = (simple_kv_operation::type)0;
+  simple_kv_request() : op((simple_kv_operation)0), key(), value() {
+    op = (simple_kv_operation)0;
 
   }
 
   virtual ~simple_kv_request() throw();
-  simple_kv_operation::type op;
+  simple_kv_operation op;
   std::string key;
   std::string value;
   bool operator == (const simple_kv_request & rhs) const
@@ -1041,19 +1052,96 @@ inline void marshall(::dsn::binary_writer& writer, const simple_kv_response& val
 }
 
 
+class meta_request_header {
+ public:
+
+  meta_request_header(const meta_request_header&);
+  meta_request_header& operator=(const meta_request_header&);
+  meta_request_header() : rpc_tag(0) {
+  }
+
+  virtual ~meta_request_header() throw();
+  int32_t rpc_tag;
+  bool operator == (const meta_request_header & rhs) const
+  {
+    if (!(rpc_tag == rhs.rpc_tag))
+      return false;
+    return true;
+  }
+  bool operator != (const meta_request_header &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const meta_request_header & ) const;
+
+
+};
+
+void swap(meta_request_header &a, meta_request_header &b);
+
+inline void unmarshall(::dsn::binary_reader& reader, __out_param meta_request_header& val) {
+  ::dsn::unmarshall(reader, val.rpc_tag);
+}
+
+inline void marshall(::dsn::binary_writer& writer, const meta_request_header& val, uint16_t pos = 0xffff) {
+  ::dsn::marshall(writer, val.rpc_tag, pos);
+}
+
+
+class meta_response_header {
+ public:
+
+  meta_response_header(const meta_response_header&);
+  meta_response_header& operator=(const meta_response_header&);
+  meta_response_header() : err(0) {
+  }
+
+  virtual ~meta_response_header() throw();
+  int32_t err;
+   ::dsn::end_point primary_address;
+  bool operator == (const meta_response_header & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(primary_address == rhs.primary_address))
+      return false;
+    return true;
+  }
+  bool operator != (const meta_response_header &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const meta_response_header & ) const;
+
+
+};
+
+void swap(meta_response_header &a, meta_response_header &b);
+
+inline void unmarshall(::dsn::binary_reader& reader, __out_param meta_response_header& val) {
+  ::dsn::unmarshall(reader, val.err);
+  unmarshall(reader, val.primary_address);
+}
+
+inline void marshall(::dsn::binary_writer& writer, const meta_response_header& val, uint16_t pos = 0xffff) {
+  ::dsn::marshall(writer, val.err, pos);
+  marshall(writer, val.primary_address, pos);
+}
+
+
 class configuration_update_request {
  public:
 
   configuration_update_request(const configuration_update_request&);
   configuration_update_request& operator=(const configuration_update_request&);
-  configuration_update_request() : type((config_type::type)0) {
-    type = (config_type::type)0;
+  configuration_update_request() : type((config_type)0) {
+    type = (config_type)0;
 
   }
 
   virtual ~configuration_update_request() throw();
   partition_configuration config;
-  config_type::type type;
+  config_type type;
    ::dsn::end_point node;
   bool operator == (const configuration_update_request & rhs) const
   {
@@ -1135,14 +1223,14 @@ class configuration_proposal_request {
 
   configuration_proposal_request(const configuration_proposal_request&);
   configuration_proposal_request& operator=(const configuration_proposal_request&);
-  configuration_proposal_request() : type((config_type::type)0), is_clean_data(false), is_upgrade(false) {
-    type = (config_type::type)0;
+  configuration_proposal_request() : type((config_type)0), is_clean_data(false), is_upgrade(false) {
+    type = (config_type)0;
 
   }
 
   virtual ~configuration_proposal_request() throw();
   partition_configuration config;
-  config_type::type type;
+  config_type type;
    ::dsn::end_point node;
   bool is_clean_data;
   bool is_upgrade;
@@ -1188,54 +1276,54 @@ inline void marshall(::dsn::binary_writer& writer, const configuration_proposal_
 }
 
 
-class configuration_node_query_request {
+class configuration_query_by_node_request {
  public:
 
-  configuration_node_query_request(const configuration_node_query_request&);
-  configuration_node_query_request& operator=(const configuration_node_query_request&);
-  configuration_node_query_request() {
+  configuration_query_by_node_request(const configuration_query_by_node_request&);
+  configuration_query_by_node_request& operator=(const configuration_query_by_node_request&);
+  configuration_query_by_node_request() {
   }
 
-  virtual ~configuration_node_query_request() throw();
+  virtual ~configuration_query_by_node_request() throw();
    ::dsn::end_point node;
-  bool operator == (const configuration_node_query_request & rhs) const
+  bool operator == (const configuration_query_by_node_request & rhs) const
   {
     if (!(node == rhs.node))
       return false;
     return true;
   }
-  bool operator != (const configuration_node_query_request &rhs) const {
+  bool operator != (const configuration_query_by_node_request &rhs) const {
     return !(*this == rhs);
   }
 
-  bool operator < (const configuration_node_query_request & ) const;
+  bool operator < (const configuration_query_by_node_request & ) const;
 
 
 };
 
-void swap(configuration_node_query_request &a, configuration_node_query_request &b);
+void swap(configuration_query_by_node_request &a, configuration_query_by_node_request &b);
 
-inline void unmarshall(::dsn::binary_reader& reader, __out_param configuration_node_query_request& val) {
+inline void unmarshall(::dsn::binary_reader& reader, __out_param configuration_query_by_node_request& val) {
   unmarshall(reader, val.node);
 }
 
-inline void marshall(::dsn::binary_writer& writer, const configuration_node_query_request& val, uint16_t pos = 0xffff) {
+inline void marshall(::dsn::binary_writer& writer, const configuration_query_by_node_request& val, uint16_t pos = 0xffff) {
   marshall(writer, val.node, pos);
 }
 
 
-class configuration_node_query_response {
+class configuration_query_by_node_response {
  public:
 
-  configuration_node_query_response(const configuration_node_query_response&);
-  configuration_node_query_response& operator=(const configuration_node_query_response&);
-  configuration_node_query_response() : err(0) {
+  configuration_query_by_node_response(const configuration_query_by_node_response&);
+  configuration_query_by_node_response& operator=(const configuration_query_by_node_response&);
+  configuration_query_by_node_response() : err(0) {
   }
 
-  virtual ~configuration_node_query_response() throw();
+  virtual ~configuration_query_by_node_response() throw();
   int32_t err;
   std::vector<partition_configuration>  partitions;
-  bool operator == (const configuration_node_query_response & rhs) const
+  bool operator == (const configuration_query_by_node_response & rhs) const
   {
     if (!(err == rhs.err))
       return false;
@@ -1243,23 +1331,105 @@ class configuration_node_query_response {
       return false;
     return true;
   }
-  bool operator != (const configuration_node_query_response &rhs) const {
+  bool operator != (const configuration_query_by_node_response &rhs) const {
     return !(*this == rhs);
   }
 
-  bool operator < (const configuration_node_query_response & ) const;
+  bool operator < (const configuration_query_by_node_response & ) const;
 
 
 };
 
-void swap(configuration_node_query_response &a, configuration_node_query_response &b);
+void swap(configuration_query_by_node_response &a, configuration_query_by_node_response &b);
 
-inline void unmarshall(::dsn::binary_reader& reader, __out_param configuration_node_query_response& val) {
+inline void unmarshall(::dsn::binary_reader& reader, __out_param configuration_query_by_node_response& val) {
   ::dsn::unmarshall(reader, val.err);
   unmarshall(reader, val.partitions);
 }
 
-inline void marshall(::dsn::binary_writer& writer, const configuration_node_query_response& val, uint16_t pos = 0xffff) {
+inline void marshall(::dsn::binary_writer& writer, const configuration_query_by_node_response& val, uint16_t pos = 0xffff) {
+  ::dsn::marshall(writer, val.err, pos);
+  marshall(writer, val.partitions, pos);
+}
+
+
+class configuration_query_by_index_request {
+ public:
+
+  configuration_query_by_index_request(const configuration_query_by_index_request&);
+  configuration_query_by_index_request& operator=(const configuration_query_by_index_request&);
+  configuration_query_by_index_request() : app_name() {
+  }
+
+  virtual ~configuration_query_by_index_request() throw();
+  std::string app_name;
+  std::vector<int32_t>  partition_indices;
+  bool operator == (const configuration_query_by_index_request & rhs) const
+  {
+    if (!(app_name == rhs.app_name))
+      return false;
+    if (!(partition_indices == rhs.partition_indices))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_query_by_index_request &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const configuration_query_by_index_request & ) const;
+
+
+};
+
+void swap(configuration_query_by_index_request &a, configuration_query_by_index_request &b);
+
+inline void unmarshall(::dsn::binary_reader& reader, __out_param configuration_query_by_index_request& val) {
+  ::dsn::unmarshall(reader, val.app_name);
+  unmarshall(reader, val.partition_indices);
+}
+
+inline void marshall(::dsn::binary_writer& writer, const configuration_query_by_index_request& val, uint16_t pos = 0xffff) {
+  ::dsn::marshall(writer, val.app_name, pos);
+  marshall(writer, val.partition_indices, pos);
+}
+
+
+class configuration_query_by_index_response {
+ public:
+
+  configuration_query_by_index_response(const configuration_query_by_index_response&);
+  configuration_query_by_index_response& operator=(const configuration_query_by_index_response&);
+  configuration_query_by_index_response() : err(0) {
+  }
+
+  virtual ~configuration_query_by_index_response() throw();
+  int32_t err;
+  std::vector<partition_configuration>  partitions;
+  bool operator == (const configuration_query_by_index_response & rhs) const
+  {
+    if (!(err == rhs.err))
+      return false;
+    if (!(partitions == rhs.partitions))
+      return false;
+    return true;
+  }
+  bool operator != (const configuration_query_by_index_response &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const configuration_query_by_index_response & ) const;
+
+
+};
+
+void swap(configuration_query_by_index_response &a, configuration_query_by_index_response &b);
+
+inline void unmarshall(::dsn::binary_reader& reader, __out_param configuration_query_by_index_response& val) {
+  ::dsn::unmarshall(reader, val.err);
+  unmarshall(reader, val.partitions);
+}
+
+inline void marshall(::dsn::binary_writer& writer, const configuration_query_by_index_response& val, uint16_t pos = 0xffff) {
   ::dsn::marshall(writer, val.err, pos);
   marshall(writer, val.partitions, pos);
 }
@@ -1274,11 +1444,11 @@ class query_replica_decree_request {
   }
 
   virtual ~query_replica_decree_request() throw();
-  global_partition_id partition_id;
+  global_partition_id gpid;
    ::dsn::end_point node;
   bool operator == (const query_replica_decree_request & rhs) const
   {
-    if (!(partition_id == rhs.partition_id))
+    if (!(gpid == rhs.gpid))
       return false;
     if (!(node == rhs.node))
       return false;
@@ -1296,12 +1466,12 @@ class query_replica_decree_request {
 void swap(query_replica_decree_request &a, query_replica_decree_request &b);
 
 inline void unmarshall(::dsn::binary_reader& reader, __out_param query_replica_decree_request& val) {
-  unmarshall(reader, val.partition_id);
+  unmarshall(reader, val.gpid);
   unmarshall(reader, val.node);
 }
 
 inline void marshall(::dsn::binary_writer& writer, const query_replica_decree_request& val, uint16_t pos = 0xffff) {
-  marshall(writer, val.partition_id, pos);
+  marshall(writer, val.gpid, pos);
   marshall(writer, val.node, pos);
 }
 
@@ -1344,88 +1514,6 @@ inline void unmarshall(::dsn::binary_reader& reader, __out_param query_replica_d
 inline void marshall(::dsn::binary_writer& writer, const query_replica_decree_response& val, uint16_t pos = 0xffff) {
   ::dsn::marshall(writer, val.err, pos);
   ::dsn::marshall(writer, val.last_decree, pos);
-}
-
-
-class query_configuration_by_index_request {
- public:
-
-  query_configuration_by_index_request(const query_configuration_by_index_request&);
-  query_configuration_by_index_request& operator=(const query_configuration_by_index_request&);
-  query_configuration_by_index_request() : app_name() {
-  }
-
-  virtual ~query_configuration_by_index_request() throw();
-  std::string app_name;
-  std::vector<int32_t>  partition_indices;
-  bool operator == (const query_configuration_by_index_request & rhs) const
-  {
-    if (!(app_name == rhs.app_name))
-      return false;
-    if (!(partition_indices == rhs.partition_indices))
-      return false;
-    return true;
-  }
-  bool operator != (const query_configuration_by_index_request &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const query_configuration_by_index_request & ) const;
-
-
-};
-
-void swap(query_configuration_by_index_request &a, query_configuration_by_index_request &b);
-
-inline void unmarshall(::dsn::binary_reader& reader, __out_param query_configuration_by_index_request& val) {
-  ::dsn::unmarshall(reader, val.app_name);
-  unmarshall(reader, val.partition_indices);
-}
-
-inline void marshall(::dsn::binary_writer& writer, const query_configuration_by_index_request& val, uint16_t pos = 0xffff) {
-  ::dsn::marshall(writer, val.app_name, pos);
-  marshall(writer, val.partition_indices, pos);
-}
-
-
-class query_configuration_by_index_response {
- public:
-
-  query_configuration_by_index_response(const query_configuration_by_index_response&);
-  query_configuration_by_index_response& operator=(const query_configuration_by_index_response&);
-  query_configuration_by_index_response() : err(0) {
-  }
-
-  virtual ~query_configuration_by_index_response() throw();
-  int32_t err;
-  std::vector<partition_configuration>  partitions;
-  bool operator == (const query_configuration_by_index_response & rhs) const
-  {
-    if (!(err == rhs.err))
-      return false;
-    if (!(partitions == rhs.partitions))
-      return false;
-    return true;
-  }
-  bool operator != (const query_configuration_by_index_response &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const query_configuration_by_index_response & ) const;
-
-
-};
-
-void swap(query_configuration_by_index_response &a, query_configuration_by_index_response &b);
-
-inline void unmarshall(::dsn::binary_reader& reader, __out_param query_configuration_by_index_response& val) {
-  ::dsn::unmarshall(reader, val.err);
-  unmarshall(reader, val.partitions);
-}
-
-inline void marshall(::dsn::binary_writer& writer, const query_configuration_by_index_response& val, uint16_t pos = 0xffff) {
-  ::dsn::marshall(writer, val.err, pos);
-  marshall(writer, val.partitions, pos);
 }
 
 }} // namespace

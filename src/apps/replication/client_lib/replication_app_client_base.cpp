@@ -242,7 +242,7 @@ int replication_app_client_base::send_client_message(message_ptr& msg2, rpc_resp
 
         if (msg->header().local_rpc_code == RPC_REPLICATION_CLIENT_READ)
         {
-            client_read_request req;
+            client_read_request2 req;
             req.gpid = gpid;
             req.semantic = msg->read_semantic;
             req.version_decree = msg->ReadSnapshotDecree;
@@ -356,11 +356,11 @@ void replication_app_client_base::query_partition_configuration(int pidx)
 
     message_ptr msg = message::create_request(RPC_CM_CALL, _meta_server_rpc_call_timeout_milliseconds_per_send);
 
-    meta_msg_header hdr;
+    meta_request_header hdr;
     hdr.rpc_tag = RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX;
     marshall(msg, hdr);
 
-    query_configuration_by_index_request req;
+    configuration_query_by_index_request req;
     req.app_name = _app_name;
     req.partition_indices.push_back((uint32_t)pidx);
     
@@ -382,7 +382,7 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
 {
     if (!err)
     {
-        query_configuration_by_index_response resp;
+        configuration_query_by_index_response resp;
         unmarshall(response, resp);
         
         int err2 = resp.err;

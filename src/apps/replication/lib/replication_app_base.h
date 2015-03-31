@@ -59,7 +59,7 @@ public:
     // @ackClient: when it is true, the application needs to reply to the client by invoking 
     //             rpc_response<TResponse>(request, response);
     virtual int  write(std::list<message_ptr>& requests, decree decree, bool ackClient) = 0; // single-threaded
-    virtual void read(const client_read_request& meta, message_ptr& request) = 0; // must be thread-safe
+    virtual void read(const client_read_request2& meta, message_ptr& request) = 0; // must be thread-safe
     
     
     virtual int  open(bool createNew) = 0; // singel threaded

@@ -150,7 +150,7 @@ void server_state::SwitchMetaPrimary()
 }
 
 // partition server & client => meta server
-void server_state::OnQueryConfig(configuration_node_query_request& request, __out_param configuration_node_query_response& response)
+void server_state::OnQueryConfig(configuration_query_by_node_request& request, __out_param configuration_query_by_node_response& response)
 {
     zauto_read_lock l(_lock);
     auto it = _nodes.find(request.node);
@@ -169,7 +169,7 @@ void server_state::OnQueryConfig(configuration_node_query_request& request, __ou
     }
 }
 
-void server_state::DoQueryConfigurationByIndexRequest(query_configuration_by_index_request& request, __out_param query_configuration_by_index_response& response)
+void server_state::DoQueryConfigurationByIndexRequest(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response)
 {
     zauto_read_lock l(_lock);
 

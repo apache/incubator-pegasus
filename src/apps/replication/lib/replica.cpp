@@ -94,7 +94,7 @@ replica::~replica(void)
     }
 }
 
-void replica::on_client_read(const client_read_request& meta, message_ptr& request)
+void replica::on_client_read(const client_read_request2& meta, message_ptr& request)
 {
     if (status() == PS_INACTIVE || status() == PS_POTENTIAL_SECONDARY)
     {

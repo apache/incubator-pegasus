@@ -274,7 +274,7 @@ void replica_stub::on_client_write(message_ptr& request)
 
 void replica_stub::on_client_read(message_ptr& request)
 {
-    client_read_request req;
+    client_read_request2 req;
     unmarshall(request, req);
 
     replica_ptr rep = get_replica(req.gpid);
@@ -307,7 +307,7 @@ void replica_stub::on_config_proposal(const configuration_update_request& propos
 
 void replica_stub::on_query_decree(const query_replica_decree_request& req, __out_param query_replica_decree_response& resp)
 {
-    replica_ptr rep = get_replica(req.partition_id);
+    replica_ptr rep = get_replica(req.gpid);
     if (rep != nullptr)
     {
         resp.err = ERR_SUCCESS;
@@ -340,7 +340,7 @@ void replica_stub::on_prepare(message_ptr& request)
     }
     else
     {
-        PrepareAck resp;
+        prepare_ack resp;
         resp.gpid = gpid;
         resp.err = ERR_OBJECT_NOT_FOUND;
         reply(request, resp);
@@ -434,11 +434,11 @@ void replica_stub::query_configuration()
 
     message_ptr msg = message::create_request(RPC_CM_CALL, _options.CoordinatorRpcCallTimeoutMs);
 
-    meta_msg_header hdr;
+    meta_request_header hdr;
     hdr.rpc_tag = RPC_CM_QUERY_NODE_PARTITIONS;
     marshall(msg, hdr);
 
-    configuration_node_query_request req;
+    configuration_query_by_node_request req;
     req.node = address();
     marshall(msg, req);
 
@@ -497,7 +497,7 @@ void replica_stub::on_node_query_reply(int err, message_ptr& request, message_pt
         if (_state != NS_Connected)
             return;
 
-        configuration_node_query_response resp;
+        configuration_query_by_node_response resp;
         
         unmarshall(response, resp);        
         
@@ -526,7 +526,7 @@ void replica_stub::on_node_query_reply(int err, message_ptr& request, message_pt
     }
 }
 
-void replica_stub::set_meta_server_connected_for_test(const configuration_node_query_response& resp)
+void replica_stub::set_meta_server_connected_for_test(const configuration_query_by_node_response& resp)
 {
     zauto_lock l(_replicasLock);
     dassert (_state != NS_Connected, "");
@@ -574,7 +574,7 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, global_p
 void replica_stub::remove_replica_on_meta_server(const partition_configuration& config)
 {
     message_ptr msg = message::create_request(RPC_CM_CALL, _options.CoordinatorRpcCallTimeoutMs);
-    meta_msg_header hdr;
+    meta_request_header hdr;
     hdr.rpc_tag = RPC_CM_UPDATE_PARTITION_CONFIGURATION;
     marshall(msg, hdr);
 

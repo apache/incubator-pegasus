@@ -63,7 +63,7 @@ public:
     //    requests from clients
     // 
     void on_client_write(message_ptr& request);
-    void on_client_read(const client_read_request& meta, message_ptr& request);
+    void on_client_read(const client_read_request2& meta, message_ptr& request);
 
     //
     //    messages and tools from/for meta server

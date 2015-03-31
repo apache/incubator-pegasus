@@ -64,11 +64,11 @@ inline int gpid_to_hash(global_partition_id gpid)
     return static_cast<int>(gpid.app_id ^ gpid.pidx);
 }
 
-typedef std::set<end_point, end_point_comparor> NodeSet;
-typedef std::map<end_point, int, end_point_comparor> NodeIdMap;
-typedef std::map<end_point, decree, end_point_comparor> NodeDecreeMap;
-typedef std::map<end_point, partition_status, end_point_comparor> NodeStatusMap;
-typedef std::map<end_point, task_ptr, end_point_comparor> node_tasks;
+typedef std::set<end_point> NodeSet;
+typedef std::map<end_point, int> NodeIdMap;
+typedef std::map<end_point, decree> NodeDecreeMap;
+typedef std::map<end_point, partition_status> NodeStatusMap;
+typedef std::map<end_point, task_ptr> node_tasks;
 
 class replication_options
 {
