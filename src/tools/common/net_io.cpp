@@ -59,16 +59,16 @@ namespace dsn {
                 _socket.set_option(option2);
                 _socket.get_option(option);
 
-                ddebug("boost asio send buffer size is %u, set as 16MB, now is %u",
-                    old, option.value());
+                /*ddebug("boost asio send buffer size is %u, set as 16MB, now is %u",
+                    old, option.value());*/
 
                 boost::asio::socket_base::receive_buffer_size option3, option4(16 * 1024 * 1024);
                 _socket.get_option(option3);
                 old = option3.value();
                 _socket.set_option(option4);
                 _socket.get_option(option3);
-                ddebug("boost asio recv buffer size is %u, set as 16MB, now is %u",
-                    old, option.value());
+                /*ddebug("boost asio recv buffer size is %u, set as 16MB, now is %u",
+                    old, option.value());*/
             }
         }
 

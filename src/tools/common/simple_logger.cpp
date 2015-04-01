@@ -41,9 +41,10 @@ namespace dsn {
             if (_log != nullptr)
                 fclose(_log);
 
+            _lines = 0;
             std::stringstream str;
             str << "log." << ++_index << ".txt";
-            _log = fopen(str.str().c_str(), "w+");
+            _log = fopen(str.str().c_str(), "w+");            
         }
 
         simple_logger::~simple_logger(void) 

@@ -780,7 +780,8 @@ int log_file::read_header(message_ptr& reader)
     {
         global_partition_id gpid;
         decree decree;
-        unmarshall(reader, gpid);
+        
+        reader->reader().read_pod(gpid);
         reader->reader().read(decree);
 
         _init_prepared_decrees[gpid] = decree;
@@ -808,7 +809,7 @@ int log_file::write_header(message_ptr& writer, multi_partition_decrees& initMax
     writer->writer().write(count);
     for (auto it = _init_prepared_decrees.begin(); it != _init_prepared_decrees.end(); it++)
     {
-        marshall(writer, it->first);
+        writer->writer().write_pod(it->first);
         writer->writer().write(it->second);
     }
 
