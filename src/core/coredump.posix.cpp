@@ -44,6 +44,12 @@ namespace dsn {
 
             // TODO: not implemented
         }
+
+        void coredump::write()
+        {
+            // TODO: not implemented
+            //
+        }
     }
 }
 
