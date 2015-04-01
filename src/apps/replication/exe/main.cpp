@@ -35,8 +35,10 @@
 # include "replication_app_factory.h"
 
 # include <thread>
+# include <boost/filesystem.hpp>
 
 using namespace dsn::service;
+char s_temp[512];
 
 int main(int argc, char * argv[])
 {
@@ -44,6 +46,21 @@ int main(int argc, char * argv[])
     if (argc > 1)
     {
         config = argv[1];
+    }
+
+    if (argc > 2)
+    {
+        std::string cdir = argv[2];
+        if (!boost::filesystem::exists(cdir))
+        {
+            boost::filesystem::create_directory(cdir);
+        }
+
+        auto s = boost::filesystem::current_path().string();
+        boost::filesystem::current_path(cdir);
+        
+        sprintf(s_temp, "%s\\%s", s.c_str(), config);
+        config = s_temp;
     }
 
     dsn::replication::replication_app_factory::instance().register_factory(
