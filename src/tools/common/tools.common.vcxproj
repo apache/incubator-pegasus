@@ -23,6 +23,7 @@
     <ClCompile Include="net_client_session.cpp" />
     <ClCompile Include="profiler.cpp" />
     <ClCompile Include="providers.common.cpp" />
+    <ClCompile Include="simple_logger.cpp" />
     <ClCompile Include="simple_task_queue.cpp" />
     <ClCompile Include="tracer.cpp" />
   </ItemGroup>
@@ -42,6 +43,7 @@
     <ClInclude Include="net_provider.h" />
     <ClInclude Include="net_server_session.h" />
     <ClInclude Include="net_client_session.h" />
+    <ClInclude Include="simple_logger.h" />
     <ClInclude Include="wrong_perf_counter.h" />
     <ClInclude Include="simple_task_queue.h" />
   </ItemGroup>

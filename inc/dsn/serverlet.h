@@ -33,7 +33,7 @@ namespace dsn {
         // for TRequest/TResponse, we assume that the following routines are defined:
         //    marshall(binary_writer& writer, const T& val); 
         //    unmarshall(binary_reader& reader, __out_param T& val);
-        // either in the namespace of ::dsn::utils or T
+        // either in the namespace of ::dsn or T
         // developers may write these helper functions by their own, or use tools
         // such as protocol-buffer, thrift, or bond to generate these functions automatically
         // for their TRequest and TResponse
@@ -45,11 +45,19 @@ namespace dsn {
         public:
             rpc_replier(message_ptr& request)
             {
+                _request = request;
                 _response = request->create_response();
+            }
+
+            rpc_replier(message_ptr& request, message_ptr& response)
+            {
+                _request = request;
+                _response = response;
             }
 
             rpc_replier(const rpc_replier& r)
             {
+                _request = r._request;
                 _response = r._response;
             }
 
@@ -59,7 +67,25 @@ namespace dsn {
                 rpc::reply(_response);
             }
 
+            template<typename T2, typename T2Request, typename T2Response>
+            void continue_next(
+                const TResponse& local_response,
+                T2* next_service,
+                void (T2::*handler)(const T2Request&, rpc_replier<T2Response>&)
+                );
+
+            template<typename T2, typename T2Request, typename T2Response>
+            void continue_next_async(
+                const TResponse& local_response,
+                task_code code,
+                T2* next_service,
+                void (T2::*handler)(const T2Request&, rpc_replier<T2Response>&),
+                int hash = 0,
+                int delay_milliseconds = 0
+                );
+
         private:
+            message_ptr _request;
             message_ptr _response;
         };
 
@@ -275,6 +301,82 @@ namespace dsn {
         };
 
         // ------------- inline implementation ----------------
+        template<typename TResponse> template<typename T2, typename T2Request, typename T2Response>
+        inline void rpc_replier<TResponse>::continue_next(
+            const TResponse& local_response,
+            T2* next_service,
+            void (T2::*handler)(const T2Request&, rpc_replier<T2Response>&)
+            )
+        {
+            marshall(_response->writer(), local_response);
+
+            T2Request req;
+            unmarshall(_request->reader(), req);
+
+            rpc_replier<T2Response> reply(_request, _response);
+            (next_service->*handler)(req, reply);
+        }
+
+        template<typename T, typename TRequest, typename TResponse>
+        class service_rpc_request_continue_task : public task, public service_context_manager
+        {
+        public:
+            service_rpc_request_continue_task(
+                message_ptr& request, 
+                message_ptr& response,
+                task_code code,
+                T* svc, 
+                void (T::*handler)(const TRequest&, rpc_replier<TResponse>&),
+                int hash = 0
+                )
+                : task(code, hash), service_context_manager(svc, this)
+            {
+                _handler = handler;
+                _svc = svc;
+                _request = request;
+                _response = response;
+            }
+
+            void exec()
+            {
+                TRequest req;
+                unmarshall(_request->reader(), req);
+
+                rpc_replier<TResponse> replier(_request, _response);
+                (_svc->*_handler)(req, replier);
+            }
+
+        private:
+            void (T::*_handler)(const TRequest&, rpc_replier<TResponse>&);
+            T* _svc;
+            message_ptr _request;
+            message_ptr _response;
+        };
+
+        template<typename TResponse> template<typename T2, typename T2Request, typename T2Response>
+        inline void rpc_replier<TResponse>::continue_next_async(
+            const TResponse& local_response,
+            task_code code,
+            T2* next_service,
+            void (T2::*handler)(const T2Request&, rpc_replier<T2Response>&),
+            int hash,
+            int delay_milliseconds
+            )
+        {
+            marshall(_response->writer(), local_response);
+
+            task_ptr tsk(new service_rpc_request_continue_task(
+                _request,
+                _response,
+                code,
+                next_service,
+                handler,
+                hash                
+                ));
+
+            service::tasking::enqueue(tsk, delay_milliseconds);
+        }
+
         template<typename T>
         serverlet<T>::serverlet(const char* nm)
             : _name(nm)

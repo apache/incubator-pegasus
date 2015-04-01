@@ -165,6 +165,7 @@ int mutation_log::create_new_log_file()
     auto len = logFile->write_header(_pending_write, _init_prepared_decrees, 
         static_cast<int>(_log_buffer_size_bytes));
     _global_end_offset += len;
+    dassert (_pending_write->total_size() == len + message_header::serialized_size(), "");
 
     return ERR_SUCCESS;
 }
@@ -206,11 +207,12 @@ void mutation_log::internal_pending_write_timer(uint64_t id)
 
 int mutation_log::write_pending_mutations(bool create_new_log_when_necessary)
 {
-    //dassert (_lock.IsHeldByCurrentThread(), "");
     dassert (_pending_write != nullptr, "");
     dassert (_pending_write_timer == nullptr, "");
+    dassert (_pending_write_callbacks != nullptr, "");
 
     _pending_write->seal(true);
+
     auto bb = _pending_write->writer().get_buffer();
     uint64_t offset = end_offset() - bb.length();
     auto buf = bb.buffer();
@@ -784,7 +786,10 @@ int log_file::read_header(message_ptr& reader)
         _init_prepared_decrees[gpid] = decree;
     }
 
-    return static_cast<int>(sizeof(_header) + sizeof(count) + (sizeof(global_partition_id) + sizeof(decree))*_init_prepared_decrees.size());
+    return static_cast<int>(
+        sizeof(_header) + sizeof(count) 
+        + (sizeof(global_partition_id) + sizeof(decree))*count
+        );
 }
 
 int log_file::write_header(message_ptr& writer, multi_partition_decrees& initMaxDecrees, int bufferSizeBytes)
@@ -807,7 +812,10 @@ int log_file::write_header(message_ptr& writer, multi_partition_decrees& initMax
         writer->writer().write(it->second);
     }
 
-    return static_cast<int>(sizeof(_header) + sizeof(count) + (sizeof(global_partition_id) + sizeof(decree))*_init_prepared_decrees.size());
+    return static_cast<int>(
+        sizeof(_header)+sizeof(count)
+        +(sizeof(global_partition_id)+sizeof(decree))*count
+        );
 }
 
 }} // end namespace

@@ -53,7 +53,7 @@ namespace dsn {
                 spec.perf_counter_factory_name = "dsn::tools::wrong_perf_counter";
 
             if (spec.logging_factory_name == "")
-                spec.logging_factory_name = "dsn::tools::screen_logger";
+                spec.logging_factory_name = "dsn::tools::simple_logger";
 
             if (spec.lock_factory_name == "")
                 spec.lock_factory_name = ("dsn::tools::std_lock_provider");

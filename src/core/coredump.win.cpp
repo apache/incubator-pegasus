@@ -99,9 +99,6 @@ namespace dsn {
                 {
                     sprintf(szDumpPath, "%s\\%s_%d_%d.dmp", s_dump_dir.c_str(), s_app_name, ::GetCurrentProcessId(), time(NULL));
 
-                    ddebug("write core dump to %s", szDumpPath);
-                    printf("write core dump to %s", szDumpPath);
-                    
                     // create the file
                     HANDLE hFile = ::CreateFileA(szDumpPath, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS,
                         FILE_ATTRIBUTE_NORMAL, NULL);
