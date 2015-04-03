@@ -43,10 +43,10 @@ void primary_context::Cleanup(bool cleanPendingMutations)
     GroupCheckPendingReplies.clear();
 
     // clean up reconfiguration
-    if (nullptr != ReconfigurationTask)
+    if (nullptr != reconfiguration_task)
     {
-        ReconfigurationTask->cancel(true);
-        ReconfigurationTask = nullptr;
+        reconfiguration_task->cancel(true);
+        reconfiguration_task = nullptr;
     }
 }
 

@@ -70,7 +70,7 @@ static void ResponseHandler(int err, message_ptr& request, message_ptr& response
 
 void app_client_example1_service::OnTimer()
 {
-    for (int i = 0; i < 1000; i++)
+    for (int i = 0; i < 100; i++)
     {
         _client->append("TestKey", "TestValue", ResponseHandler);
     }

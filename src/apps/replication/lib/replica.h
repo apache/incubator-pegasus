@@ -57,6 +57,7 @@ public:
     void replay_mutation(mutation_ptr& mu);
     void reset_prepare_list_after_replay();
     bool update_local_configuration_with_no_ballot_change(partition_status status);
+    void set_inactive_state_transient(bool t);
     void close();
 
     //
@@ -172,23 +173,24 @@ private:
 private:
     // replica configuration, updated by update_local_configuration ONLY    
     replica_configuration   _config;
-    uint64_t                 _last_config_change_time_ms;
+    uint64_t                _last_config_change_time_ms;
 
     // prepare list
     prepare_list*           _prepare_list;
 
     // application
-    replication_app_base*    _app;
+    replication_app_base*   _app;
 
     // constants
     replica_stub*           _stub;
-    std::string            _dir;
-    char                   _name[256]; // TableID.index @ host:port
+    std::string             _dir;
+    char                    _name[256]; // TableID.index @ host:port
     replication_options     _options;
     
     // replica status specific states
-    primary_context            _primary_states;
+    primary_context             _primary_states;
     potential_secondary_context _potential_secondary_states;
+    bool                        _inactive_is_transient; // upgrade to P/S is allowed only iff true
 };
 
 DEFINE_REF_OBJECT(replica)

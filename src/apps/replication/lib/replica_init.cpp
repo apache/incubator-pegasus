@@ -176,6 +176,14 @@ void replica::replay_mutation(mutation_ptr& mu)
     dassert (err == ERR_SUCCESS, "");
 }
 
+void replica::set_inactive_state_transient(bool t)
+{
+    if (status() == PS_INACTIVE)
+    {
+        _inactive_is_transient = t;
+    }
+}
+
 void replica::reset_prepare_list_after_replay()
 {
     if (_prepare_list->min_decree() > _app->last_committed_decree() + 1)

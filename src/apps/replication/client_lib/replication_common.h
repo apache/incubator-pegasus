@@ -78,7 +78,7 @@ public:
     std::string WorkingDir;
     uint16_t CoordinatorPort;
 
-    int32_t CoordinatorRpcCallTimeoutMs;
+    int32_t meta_server_call_timeout_ms;
     int32_t CoordinatorRpcCallMaxSendCount;
     int32_t PrepareTimeoutMsForSecondaries;
     int32_t PrepareMaxSendCountForSecondaries;

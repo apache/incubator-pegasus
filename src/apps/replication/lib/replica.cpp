@@ -59,6 +59,8 @@ replica::replica(replica_stub* stub, global_partition_id gpid, replication_optio
 
 void replica::init_state()
 {
+    _inactive_is_transient = false;
+
     _prepare_list = new prepare_list(
         0, 
         _options.StalenessForStartPrepareForPotentialSecondary,

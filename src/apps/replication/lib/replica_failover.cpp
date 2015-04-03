@@ -98,7 +98,14 @@ void replica::on_meta_server_disconnected()
 {
     ddebug( "%s: meta server disconnected", name());
 
+    auto old_status = status();
     update_local_configuration_with_no_ballot_change(PS_INACTIVE);
+
+    // make sure they can be back directly
+    if (old_status == PS_PRIMARY || old_status == PS_SECONDARY)
+    {
+        set_inactive_state_transient(true);
+    }
 }
 
 }} // namespace

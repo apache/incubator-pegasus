@@ -30,7 +30,7 @@ meta_service::meta_service(server_state* state, configuration_ptr c)
 : _state(state), serverlet("meta_service")
 {
     _balancer = nullptr;
-    _livenessMonitor = nullptr;
+    _failure_detector = nullptr;
 
     _opts.initialize(c);
 }
@@ -42,17 +42,17 @@ meta_service::~meta_service(void)
 void meta_service::start()
 {
     _balancer = new load_balancer(_state);
-    _livenessMonitor = new meta_server_failure_detector(_state);
+    _failure_detector = new meta_server_failure_detector(_state);
     register_rpc_handler(RPC_CM_CALL, "RPC_CM_CALL", &meta_service::OnMetaServiceRequest);
     _balancerTimer = tasking::enqueue(LPC_LBM_RUN, this, &meta_service::OnLoadBalancerTimer, 0, 1000, 5000);
 
     end_point primary;
     if (_state->GetMetaServerPrimary(primary) && primary == address())
-        _livenessMonitor->set_primary(true);
+        _failure_detector->set_primary(true);
     else
-        _livenessMonitor->set_primary(false);
+        _failure_detector->set_primary(false);
 
-    _livenessMonitor->start(
+    _failure_detector->start(
         _opts.FD_check_interval_seconds,
         _opts.FD_beacon_interval_seconds,
         _opts.FD_lease_seconds,
@@ -63,9 +63,9 @@ void meta_service::start()
 
 bool meta_service::stop()
 {
-    _livenessMonitor->stop();
-    delete _livenessMonitor;
-    _livenessMonitor = nullptr;
+    _failure_detector->stop();
+    delete _failure_detector;
+    _failure_detector = nullptr;
 
     _balancerTimer->cancel(true);
     unregister_rpc_handler(RPC_CM_CALL);
@@ -158,11 +158,11 @@ void meta_service::OnLoadBalancerTimer()
     end_point primary;
     if (_state->GetMetaServerPrimary(primary) && primary == address())
     {
-        _livenessMonitor->set_primary(true);
+        _failure_detector->set_primary(true);
         _balancer->run();
     }
     else
     {
-        _livenessMonitor->set_primary(false);
+        _failure_detector->set_primary(false);
     }
 }

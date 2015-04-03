@@ -65,7 +65,7 @@ public:
     node_tasks   GroupCheckPendingReplies;
 
     // reconfig
-    task_ptr     ReconfigurationTask;
+    task_ptr     reconfiguration_task;
 };
 
 

@@ -40,7 +40,7 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/, bo
 {
     _replicaStateSubscriber = subscriber;
     _isLongSubscriber = is_long_subscriber;
-    _livenessMonitor = nullptr;
+    _failure_detector = nullptr;
     _state = NS_Disconnected;
 }
 
@@ -141,6 +141,10 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
             // prevent them to be primary, secondary, etc.
             it->second->update_local_configuration_with_no_ballot_change(PS_ERROR);
         }
+        else
+        {
+            it->second->set_inactive_state_transient(true);
+        }
     }
 
     // start log serving    
@@ -186,14 +190,14 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
     dassert (NS_Disconnected == _state, "");
     if (_options.FD_disabled == false)
     {
-        _livenessMonitor = new replication_failure_detector(this, _options.MetaServers);
-        _livenessMonitor->start(
+        _failure_detector = new replication_failure_detector(this, _options.MetaServers);
+        _failure_detector->start(
             _options.FD_check_interval_seconds,
             _options.FD_beacon_interval_seconds,
             _options.FD_lease_seconds,
             _options.FD_grace_seconds
             );
-        _livenessMonitor->register_master(_livenessMonitor->current_server_contact());
+        _failure_detector->register_master(_failure_detector->current_server_contact());
     }
     else
     {
@@ -432,7 +436,7 @@ void replica_stub::query_configuration()
         _partitionConfigurationQueryTask->cancel(false);
     }
 
-    message_ptr msg = message::create_request(RPC_CM_CALL, _options.CoordinatorRpcCallTimeoutMs);
+    message_ptr msg = message::create_request(RPC_CM_CALL, _options.meta_server_call_timeout_ms);
 
     meta_request_header hdr;
     hdr.rpc_tag = RPC_CM_QUERY_NODE_PARTITIONS;
@@ -443,8 +447,8 @@ void replica_stub::query_configuration()
     marshall(msg, req);
 
     _partitionConfigurationQueryTask = rpc_replicated(
-        _livenessMonitor->current_server_contact(),
-        _livenessMonitor->get_servers(),
+        _failure_detector->current_server_contact(),
+        _failure_detector->get_servers(),
         msg,
         this,
         std::bind(&replica_stub::on_node_query_reply, this, 
@@ -573,7 +577,7 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, global_p
 
 void replica_stub::remove_replica_on_meta_server(const partition_configuration& config)
 {
-    message_ptr msg = message::create_request(RPC_CM_CALL, _options.CoordinatorRpcCallTimeoutMs);
+    message_ptr msg = message::create_request(RPC_CM_CALL, _options.meta_server_call_timeout_ms);
     meta_request_header hdr;
     hdr.rpc_tag = RPC_CM_UPDATE_PARTITION_CONFIGURATION;
     marshall(msg, hdr);
@@ -599,8 +603,8 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
     marshall(msg, *request);
 
     rpc_replicated(
-        _livenessMonitor->current_server_contact(),
-        _livenessMonitor->get_servers(),
+        _failure_detector->current_server_contact(),
+        _failure_detector->get_servers(),
         msg,
         nullptr,
         nullptr
@@ -788,7 +792,7 @@ task_ptr replica_stub::begin_close_replica(replica_ptr r)
     zauto_lock l(_replicasLock);
 
     // initialization is still ongoing
-    if (nullptr == _livenessMonitor)
+    if (nullptr == _failure_detector)
         return nullptr;
 
     if (remove_replica(r))
@@ -919,11 +923,11 @@ void replica_stub::close()
         }
     }
         
-    if (_livenessMonitor != nullptr)
+    if (_failure_detector != nullptr)
     {
-        _livenessMonitor->stop();
-        delete _livenessMonitor;
-        _livenessMonitor = nullptr;
+        _failure_detector->stop();
+        delete _failure_detector;
+        _failure_detector = nullptr;
     }
 
     if (_log != nullptr)

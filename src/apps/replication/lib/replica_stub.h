@@ -140,7 +140,7 @@ private:
     mutation_log* _log;
     std::string  _dir;
 
-    replication_failure_detector *_livenessMonitor;
+    replication_failure_detector *_failure_detector;
     volatile ReplicaNodeState  _state;
 
     // constants

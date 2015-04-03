@@ -104,7 +104,7 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     dassert(proposal.config.ballot == get_ballot(), "");
     if (status() != PS_PRIMARY)
     {
-        dassert(status() == PS_INACTIVE && _primary_states.ReconfigurationTask != nullptr, "");
+        dassert(status() == PS_INACTIVE && _primary_states.reconfiguration_task != nullptr, "");
         return;
     }   
 
@@ -264,8 +264,9 @@ void replica::update_configuration_on_meta_server(config_type type, const end_po
     // we therefore choose to disable 2pc during all reconfiguration types
     // to achieve consistency at the cost of certain write throughput
     update_local_configuration_with_no_ballot_change(PS_INACTIVE);
+    set_inactive_state_transient(true);
 
-    message_ptr msg = message::create_request(RPC_CM_CALL, _options.CoordinatorRpcCallTimeoutMs);
+    message_ptr msg = message::create_request(RPC_CM_CALL, _options.meta_server_call_timeout_ms);
     meta_request_header hdr;
     hdr.rpc_tag = RPC_CM_UPDATE_PARTITION_CONFIGURATION;
     marshall(msg, hdr);
@@ -277,46 +278,23 @@ void replica::update_configuration_on_meta_server(config_type type, const end_po
     request->node = node;
     marshall(msg, *request);
 
-    if (nullptr != _primary_states.ReconfigurationTask)
+    if (nullptr != _primary_states.reconfiguration_task)
     {
-        _primary_states.ReconfigurationTask->cancel(true);
+        _primary_states.reconfiguration_task->cancel(true);
     }
 
-    //if (dsn::service::system::Mode() == SM_Simulation)
-    //{
-    //    // always success for the time being
-    //    configuration_update_response resp;
-    //    resp.err = ERR_SUCCESS;
-    //    resp.config = request->config;
-
-    //    message_ptr msg2 = msg->create_response();
-    //    marshall(msg2, resp);
-    //    
-    //    auto bb2 = msg2->get_output_buffer();
-    //    message_ptr response(new message(bb2));
-
-    //    _primary_states.ReconfigurationTask = tasking::enqueue(
-    //        LPC_SIM_UPDATE_PARTITION_CONFIGURATION_REPLY,
-    //        std::bind(&replica::on_update_configuration_on_meta_server_reply, this, ERR_SUCCESS, msg, response, request),
-    //        gpid_to_hash(get_gpid()),
-    //        5
-    //        );
-    //}
-    //else
-    {
-        _primary_states.ReconfigurationTask = rpc_replicated(
-            _stub->_livenessMonitor->current_server_contact(),
-            _stub->_livenessMonitor->get_servers(),
-            msg,
-            this,
-            std::bind(&replica::on_update_configuration_on_meta_server_reply, this, 
-                std::placeholders::_1, 
-                std::placeholders::_2, 
-                std::placeholders::_3, 
-                request),
-            gpid_to_hash(get_gpid())
-            );
-    }
+    _primary_states.reconfiguration_task = rpc_replicated(
+        _stub->_failure_detector->current_server_contact(),
+        _stub->_failure_detector->get_servers(),
+        msg,
+        this,
+        std::bind(&replica::on_update_configuration_on_meta_server_reply, this,
+        std::placeholders::_1,
+        std::placeholders::_2,
+        std::placeholders::_3,
+        request),
+        gpid_to_hash(get_gpid())
+        );
 }
 
 
@@ -326,15 +304,15 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, messa
 
     if (PS_INACTIVE != status() || _stub->is_connected() == false)
     {
-        _primary_states.ReconfigurationTask = nullptr;
+        _primary_states.reconfiguration_task = nullptr;
         return;
     }
 
     if (err)
     {
-        _primary_states.ReconfigurationTask = rpc_replicated(
-            _stub->_livenessMonitor->current_server_contact(),
-            _stub->_livenessMonitor->get_servers(),
+        _primary_states.reconfiguration_task = rpc_replicated(
+            _stub->_failure_detector->current_server_contact(),
+            _stub->_failure_detector->get_servers(),
             request,
             this,
             std::bind(&replica::on_update_configuration_on_meta_server_reply, this, 
@@ -360,7 +338,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, messa
     
     if (resp.config.ballot < get_ballot())
     {
-        _primary_states.ReconfigurationTask = nullptr;
+        _primary_states.reconfiguration_task = nullptr;
         return;
     }        
     
@@ -393,7 +371,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, messa
     }
     
     update_configuration(resp.config);
-    _primary_states.ReconfigurationTask = nullptr;
+    _primary_states.reconfiguration_task = nullptr;
 }
 
 bool replica::update_configuration(const partition_configuration& config)
@@ -430,10 +408,10 @@ bool replica::is_same_ballot_status_change_allowed(partition_status olds, partit
         || (olds == PS_POTENTIAL_SECONDARY && news == PS_SECONDARY)
 
         // meta server come back
-        || (olds == PS_INACTIVE && news == PS_SECONDARY)
+        || (olds == PS_INACTIVE && news == PS_SECONDARY && _inactive_is_transient)
 
         // meta server come back
-        || (olds == PS_INACTIVE && news == PS_PRIMARY)
+        || (olds == PS_INACTIVE && news == PS_PRIMARY && _inactive_is_transient)
 
         // no change
         || (olds == news)
@@ -446,40 +424,61 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         || (same_ballot && config.ballot == get_ballot()), "");
     dassert (config.gpid == get_gpid(), "");
 
-    partition_status oldStatus = status();
-    ballot oldBallot = get_ballot();
+    partition_status old_status = status();
+    ballot old_ballot = get_ballot();
 
-    if (oldStatus == config.status && oldBallot == config.ballot)
+    // skip unncessary configuration change
+    if (old_status == config.status && old_ballot == config.ballot)
         return false;
 
-    if (oldStatus == PS_ERROR)
+    // skip invalid change
+    switch (old_status)
     {
-        ddebug(
-            "%s: status change from %s @ %lld to %s @ %lld is not allowed",
-            name(),
-            enum_to_string(oldStatus),
-            oldBallot,
-            enum_to_string(config.status),
-            config.ballot
-            );
-        return false;
-    }
-
-    if (oldStatus == PS_POTENTIAL_SECONDARY 
-        && (config.status == PS_ERROR || config.status == PS_INACTIVE))
-    {
-        if (!_potential_secondary_states.Cleanup(false))
+    case PS_ERROR:
         {
-            dwarn(
-                "%s: status change from %s @ %lld to %s @ %lld is not allowed coz learning remote state is still running",
+            ddebug(
+                "%s: status change from %s @ %lld to %s @ %lld is not allowed",
                 name(),
-                enum_to_string(oldStatus),
-                oldBallot,
+                enum_to_string(old_status),
+                old_ballot,
                 enum_to_string(config.status),
                 config.ballot
                 );
             return false;
         }
+        break;
+    case PS_INACTIVE:
+        if ((config.status == PS_PRIMARY || config.status == PS_SECONDARY)
+            && !_inactive_is_transient)
+        {
+            ddebug(
+                "%s: status change from %s @ %lld to %s @ %lld is not allowed when inactive state is not transient",
+                name(),
+                enum_to_string(old_status),
+                old_ballot,
+                enum_to_string(config.status),
+                config.ballot
+                );
+            return false;
+        }
+        break;
+    case PS_POTENTIAL_SECONDARY:
+        if (config.status == PS_ERROR || config.status == PS_INACTIVE)
+        {
+            if (!_potential_secondary_states.Cleanup(false))
+            {
+                dwarn(
+                    "%s: status change from %s @ %lld to %s @ %lld is not allowed coz learning remote state is still running",
+                    name(),
+                    enum_to_string(old_status),
+                    old_ballot,
+                    enum_to_string(config.status),
+                    config.ballot
+                    );
+                return false;
+            }
+        }
+        break;
     }
 
     uint64_t oldTs = _last_config_change_time_ms;
@@ -487,7 +486,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
     _last_config_change_time_ms =now_ms();
     dassert (max_prepared_decree() >= last_committed_decree(), "");
     
-    switch (oldStatus)
+    switch (old_status)
     {
     case PS_PRIMARY:
         cleanup_preparing_mutations(true);
@@ -497,7 +496,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
             replay_prepare_list();
             break;
         case PS_INACTIVE:
-            _primary_states.Cleanup(oldBallot != config.ballot);
+            _primary_states.Cleanup(old_ballot != config.ballot);
             break;
         case PS_SECONDARY:
         case PS_ERROR:
@@ -553,20 +552,24 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
             dassert (false, "invalid execution path");
         }
         break;
-    case PS_INACTIVE:
+    case PS_INACTIVE:        
         switch (config.status)
         {
         case PS_PRIMARY:
+            _inactive_is_transient = false;
             init_group_check();
             replay_prepare_list();
             break;
         case PS_SECONDARY:            
+            _inactive_is_transient = false;
             break;
         case PS_POTENTIAL_SECONDARY:
+            _inactive_is_transient = false;
             break;
         case PS_INACTIVE:
             break;
         case PS_ERROR:
+            _inactive_is_transient = false;
             break;
         default:
             dassert (false, "invalid execution path");
@@ -597,13 +600,13 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         dassert (false, "invalid execution path");
     }
 
-    if (status() != oldStatus)
+    if (status() != old_status)
     {
         ddebug(
             "%s: status change %s @ %lld => %s @ %lld, pre(%llu, %llu), app(%llu, %llu), duration=%llu ms",
             name(),
-            enum_to_string(oldStatus),
-            oldBallot,
+            enum_to_string(old_status),
+            old_ballot,
             enum_to_string(status()),
             get_ballot(),
             _prepare_list->max_decree(),
@@ -613,7 +616,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
             _last_config_change_time_ms - oldTs
             );
 
-        bool isClosing = (status() == PS_ERROR || (status() == PS_INACTIVE && get_ballot() > oldBallot));
+        bool isClosing = (status() == PS_ERROR || (status() == PS_INACTIVE && get_ballot() > old_ballot));
         _stub->notify_replica_state_update(config, isClosing);
 
         if (isClosing)
@@ -645,7 +648,7 @@ void replica::on_config_sync(const partition_configuration& config)
     ddebug( "%s: configuration sync", name());
 
     // no update during reconfiguration
-    if (nullptr != _primary_states.ReconfigurationTask)
+    if (nullptr != _primary_states.reconfiguration_task)
         return;
 
     // no outdated update

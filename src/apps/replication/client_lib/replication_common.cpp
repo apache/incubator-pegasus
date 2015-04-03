@@ -60,7 +60,7 @@ replication_options::replication_options()
     CoordinatorMachineFunctionName = "KCO";
     CoordinatorPort = 20600;
 
-    CoordinatorRpcCallTimeoutMs = 3000;
+    meta_server_call_timeout_ms = 3000;
     CoordinatorRpcCallMaxSendCount = 10;
         
     LogBufferSizeMB = 1;
@@ -160,8 +160,8 @@ void replication_options::initialize(configuration_ptr config)
     CoordinatorPort =
         config->get_value<uint16_t>("replication", "CoordinatorPort", CoordinatorPort);
 
-    CoordinatorRpcCallTimeoutMs =
-        config->get_value<uint32_t>("replication", "CoordinatorRpcCallTimeoutMs", CoordinatorRpcCallTimeoutMs);
+    meta_server_call_timeout_ms =
+        config->get_value<uint32_t>("replication", "meta_server_call_timeout_ms", meta_server_call_timeout_ms);
     CoordinatorRpcCallMaxSendCount =
         config->get_value<uint32_t>("replication", "CoordinatorRpcCallMaxSendCount", CoordinatorRpcCallMaxSendCount);
         

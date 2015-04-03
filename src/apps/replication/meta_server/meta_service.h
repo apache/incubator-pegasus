@@ -54,7 +54,7 @@ private:
     void OnLoadBalancerTimer();
 
 private:
-    meta_server_failure_detector *_livenessMonitor;
+    meta_server_failure_detector *_failure_detector;
     server_state               *_state;
     load_balancer              *_balancer;
     task_ptr                    _balancerTimer;
