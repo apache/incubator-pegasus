@@ -365,7 +365,7 @@ namespace dsn {
         {
             marshall(_response->writer(), local_response);
 
-            task_ptr tsk(new service_rpc_request_continue_task(
+            task_ptr tsk(new service_rpc_request_continue_task<T2, T2Request, T2Response>(
                 _request,
                 _response,
                 code,
