@@ -267,6 +267,102 @@ namespace dsn {
                 return rpc::call(server, msg, resp_task);
             }
 
+            template<typename TRequest, typename TResponse>
+            class layered_rpc_handler_typed : public layered_rpc_handler
+            {
+            public:
+                layered_rpc_handler_typed(
+                    std::shared_ptr<TRequest>& req,
+                    std::function<bool(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback
+                    )
+                {
+                    _req = req;
+                    _callback = callback;
+                }
+
+                virtual bool exec(
+                    error_code err,
+                    message_ptr& response)
+                {
+                    if (err == ERR_SUCCESS)
+                    {
+                        auto r = std::shared_ptr<TResponse>(new TResponse);
+                        unmarshall(response->reader(), *r);
+                        _callback(err, _req, r);
+                    }
+                }
+
+            private:
+                std::shared_ptr<TRequest> _req;
+                std::function<bool(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> _callback;
+            };
+            
+            inline layered_rpc::layered_rpc(servicelet* context, message_ptr& request, int hash)
+                : 
+                rpc_response_task(request, hash),
+                service_context_manager(context, this)
+            {
+            }
+
+            template<typename TRequest, typename TResponse>
+            inline /*static*/ layered_rpc& layered_rpc::first(
+                task_code code,
+                std::shared_ptr<TRequest>& req,
+                servicelet* context,
+                std::function<bool(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
+                int request_hash,
+                int timeout_milliseconds,
+                int reply_hash
+                )
+            {
+                message_ptr req = message::create_request(code, timeout_milliseconds, request_hash);
+                layered_rpc *lr = new layered_rpc(req, reply_hash);
+                
+                auto h = new layered_rpc_handler_typed<TRequest, TResponse>(req, callback);
+                lr->_handlers.push_back(h);
+
+                return *lr;
+            }
+
+            template<typename TRequest, typename TResponse>
+            inline layered_rpc& layered_rpc::append(
+                std::shared_ptr<TRequest>& req,
+                std::function<bool(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback
+                )
+            {
+                auto h = new layered_rpc_handler_typed<TRequest, TResponse>(req, callback);
+                lr->_handlers.push_back(h);
+            }
+
+            inline void layered_rpc::exec()
+            {
+                bool c = true;
+                for (auto& h : _handlers)
+                {
+                    if (c)
+                    {
+                        c = h->exec(error(), get_response());
+                    }
+
+                    delete h;
+                }
+                _handlers.clear();
+            }
+
+            inline rpc_response_task_ptr layered_rpc::call(const end_point& server)
+            {
+                dassert(_handlers.size() > 0, "");
+
+                auto cb = rpc_response_task_ptr(static_cast<rpc_response_task*>(this));
+                return rpc::call(server, cb->get_request(), cb);
+            }
+
+            inline layered_rpc::~layered_rpc()
+            {
+                for (auto& h : _handlers)
+                    delete h;
+                _handlers.clear();
+            }
         } // end namespace rpc
 
         namespace file

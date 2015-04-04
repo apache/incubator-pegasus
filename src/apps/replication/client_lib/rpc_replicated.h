@@ -27,6 +27,24 @@
 
 namespace dsn { namespace service {
 
+
+template<typename TRequest, typename TResponse>
+rpc_response_task_ptr rpc_replicated_typed(
+    // servers
+    const end_point& first_server,
+    const std::vector<end_point>& servers,
+    // request
+    task_code code,
+    std::shared_ptr<TRequest>& req,
+
+    // callback
+    servicelet* context,
+    std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
+    int request_hash = 0,
+    int timeout_milliseconds = 0,
+    int reply_hash = 0
+    );
+
 rpc_response_task_ptr rpc_replicated(
             const end_point& first_server,
             const std::vector<end_point>& servers, 
@@ -46,5 +64,64 @@ rpc_response_task_ptr rpc_replicated(
         servicelet* svc,
         rpc_reply_handler callback
         );
+
+// ----------------  inline implementation -------------------
+
+namespace internal_use_only
+{
+    template<typename TRequest, typename TResponse>
+    inline void rpc_replicated_callback(
+        error_code code, 
+        message_ptr& request,
+        message_ptr& response, 
+        std::shared_ptr<TRequest>& req,
+        std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback
+        )
+    {
+        std::shared_ptr<TResponse> resp(nullptr);
+        if (code == ERR_SUCCESS)
+        {
+            resp.reset(new TResponse);
+            unmarshall(request->reader(), *resp);
+        }
+        callback(code, req, resp);
+    }
+}
+
+template<typename TRequest, typename TResponse>
+inline rpc_response_task_ptr rpc_replicated_typed(
+    // servers
+    const end_point& first_server,
+    const std::vector<end_point>& servers,
+    // request
+    task_code code,
+    std::shared_ptr<TRequest>& req,
+
+    // callback
+    servicelet* context,
+    std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
+    int request_hash,
+    int timeout_milliseconds,
+    int reply_hash
+    )
+{
+    message_ptr request = message::create_request(code, timeout_milliseconds, request_hash);
+    marshall(request->writer(), req);
+
+    return rpc_replicated(
+        first_server,
+        servers,
+        request,
+        context,
+        std::bind(&internal_use_only::rpc_replicated_callback, 
+                std::placeholders::_1,
+                std::placeholders::_2,
+                std::placeholders::_3,
+                req,
+                callback
+                ),
+        reply_hash
+        );
+}
 
 }} // end namespace

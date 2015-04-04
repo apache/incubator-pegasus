@@ -72,7 +72,11 @@ public:
 class potential_secondary_context 
 {
 public:
-    potential_secondary_context() : LearningSignature(0), LearningRoundIsRuning(false) {}
+    potential_secondary_context() :
+        LearningSignature(0),
+        LearningRoundIsRuning(false),
+        LearningState(learner_status::Learning_INVALID)
+    {}
     bool Cleanup(bool force);
 
 public:

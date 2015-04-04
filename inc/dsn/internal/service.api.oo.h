@@ -134,6 +134,48 @@ namespace dsn {
                 std::function<void(error_code, message_ptr&, message_ptr&)> callback,
                 int reply_hash = 0
                 );
+
+            // multiple rpc layered using the same request and response message
+            // callback type 5:
+            //  std::function<bool(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)>
+            // return true when the system need to continue the next callback
+            class layered_rpc : public rpc_response_task, public service_context_manager
+            {
+            public:
+                layered_rpc(servicelet* context, message_ptr& request, int hash = 0);
+                virtual ~layered_rpc();
+
+                template<typename TRequest, typename TResponse>
+                static layered_rpc& first(
+                    task_code code,
+                    std::shared_ptr<TRequest>& req,
+                    servicelet* context,
+                    std::function<bool(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
+                    int request_hash = 0,
+                    int timeout_milliseconds = 0,
+                    int reply_hash = 0
+                    );
+
+                template<typename TRequest, typename TResponse>
+                layered_rpc& append(
+                    std::shared_ptr<TRequest>& req,
+                    std::function<bool(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback
+                    );
+
+                rpc_response_task_ptr call(const end_point& server);
+
+                virtual void exec();
+
+            private:
+                class layered_rpc_handler
+                {
+                public:
+                    virtual bool exec(
+                        error_code err,
+                        message_ptr& response) = 0;
+                };
+                std::list<layered_rpc_handler*> _handlers;
+            };
         }
 
         namespace file

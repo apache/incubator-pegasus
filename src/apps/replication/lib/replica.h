@@ -135,7 +135,7 @@ private:
     
     /////////////////////////////////////////////////////////////////
     // learning    
-    void init_learn(uint64_t signature = 0);
+    void init_learn(uint64_t signature);
     void on_learn_reply(error_code err, std::shared_ptr<learn_request>& req, std::shared_ptr<learn_response>& resp);
     void on_learn_remote_state(std::shared_ptr<learn_response> resp);
     void on_learn_remote_state_completed(int err);

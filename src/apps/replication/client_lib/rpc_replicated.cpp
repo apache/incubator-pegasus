@@ -28,9 +28,9 @@ using namespace dsn::replication;
 
 namespace dsn { namespace service {
 
-namespace RpcReplicatedImpl { 
+namespace rpc_replicated_impl { 
 
-struct Params
+struct params
 {
     std::vector<end_point> servers;
     servicelet* svc;
@@ -38,7 +38,7 @@ struct Params
     int reply_hash; 
 };
 
-static end_point GetNextServer(const end_point& currentServer, const std::vector<end_point>& servers)
+static end_point get_next_server(const end_point& currentServer, const std::vector<end_point>& servers)
 {
     if (currentServer == end_point::INVALID)
     {
@@ -59,7 +59,7 @@ static end_point GetNextServer(const end_point& currentServer, const std::vector
     }
 }
 
-static void InternalRpcReplyCallback(error_code err, message_ptr& request, message_ptr& response, Params* params)
+static void internal_rpc_reply_callback(error_code err, message_ptr& request, message_ptr& response, params* ps)
 {
     //printf ("%s\n", __FUNCTION__);
 
@@ -80,41 +80,41 @@ static void InternalRpcReplyCallback(error_code err, message_ptr& request, messa
         }
         else
         {
-            if (nullptr != params->callback)
+            if (nullptr != ps->callback)
             {
-                (params->callback)(err, request, response);
+                (ps->callback)(err, request, response);
             }
-            delete params;
+            delete ps;
             return;
         }
     }
 
     if (err)
     {
-        if (nullptr != params->callback)
+        if (nullptr != ps->callback)
         {
-            (params->callback)(err, request, response);
+            (ps->callback)(err, request, response);
         }
-        delete params;
+        delete ps;
         return;
     }
 
     rpc::call(
         next_server,
         request,
-        params->svc,
+        ps->svc,
         std::bind(
-            &RpcReplicatedImpl::InternalRpcReplyCallback, 
+            &rpc_replicated_impl::internal_rpc_reply_callback, 
             std::placeholders::_1, 
             std::placeholders::_2, 
             std::placeholders::_3, 
-            params),
-        params->reply_hash
+            ps),
+        ps->reply_hash
         );
 }
 
 
-} // end namespace RpcReplicatedImpl 
+} // end namespace rpc_replicated_impl 
 
 rpc_response_task_ptr rpc_replicated(
         const end_point& first_server,
@@ -130,25 +130,25 @@ rpc_response_task_ptr rpc_replicated(
     end_point first = first_server;
     if (first == end_point::INVALID)
     {
-        first = RpcReplicatedImpl::GetNextServer(first_server, servers);
+        first = rpc_replicated_impl::get_next_server(first_server, servers);
     }
 
-    RpcReplicatedImpl::Params *params = new RpcReplicatedImpl::Params;
-    params->servers = servers;
-    params->callback = callback;
-    params->reply_hash = reply_hash;
-    params->svc = svc;
+    rpc_replicated_impl::params *ps = new rpc_replicated_impl::params;
+    ps->servers = servers;
+    ps->callback = callback;
+    ps->reply_hash = reply_hash;
+    ps->svc = svc;
 
     return rpc::call(
         first,
         request,
         svc,
         std::bind(
-        &RpcReplicatedImpl::InternalRpcReplyCallback,
+        &rpc_replicated_impl::internal_rpc_reply_callback,
         std::placeholders::_1,
         std::placeholders::_2,
         std::placeholders::_3,
-        params),
+        ps),
         reply_hash
         );
 }

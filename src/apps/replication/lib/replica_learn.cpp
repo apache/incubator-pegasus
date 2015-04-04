@@ -39,10 +39,10 @@ void replica::init_learn(uint64_t signature)
     dassert (status() == PS_POTENTIAL_SECONDARY, "");
         
     // at most one learning task running
-    if (_potential_secondary_states.LearningRoundIsRuning)
+    if (_potential_secondary_states.LearningRoundIsRuning || !signature)
         return;
 
-    if (signature != 0 && signature != _potential_secondary_states.LearningSignature)
+    if (signature != _potential_secondary_states.LearningSignature)
     {
         _potential_secondary_states.Cleanup(true);
         _potential_secondary_states.LearningSignature = signature;
@@ -323,7 +323,7 @@ void replica::on_learn_remote_state_completed(int err)
     else
     {
         // continue
-        init_learn();
+        init_learn(_potential_secondary_states.LearningSignature);
     }
 }
 

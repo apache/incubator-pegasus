@@ -66,7 +66,7 @@ public:
             task_code callback_code,
             servicelet* callback_host,
             aio_handler callback,
-            int hash = -1);
+            int hash = 0);
 
     // Remove entry <gpid, decree> from m_initPreparedDecrees when a partition is removed. 
     void on_partition_removed(global_partition_id gpid);
