@@ -55,7 +55,7 @@ void replica::on_config_proposal(configuration_update_request& proposal)
             return;
         }   
     }
-
+    
     switch (proposal.type)
     {
     case CT_ASSIGN_PRIMARY:
@@ -82,7 +82,6 @@ void replica::assign_primary(configuration_update_request& proposal)
 {
     dassert (proposal.node == address(), "");
 
-    
     if (status() == PS_PRIMARY)
     {
         dwarn(
@@ -104,7 +103,7 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     dassert(proposal.config.ballot == get_ballot(), "");
     if (status() != PS_PRIMARY)
     {
-        dassert(status() == PS_INACTIVE && _primary_states.reconfiguration_task != nullptr, "");
+        dassert(status() == PS_INACTIVE, "");
         return;
     }   
 
