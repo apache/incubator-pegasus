@@ -128,7 +128,7 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     remote_learner_state state;
     state.prepare_start_decree = invalid_decree;
     state.signature = random64(0, (uint64_t)(-1LL));
-    state.timeout_tsk = nullptr; // TODO: add timer for learner task
+    state.timeout_task = nullptr; // TODO: add timer for learner task
 
     _primary_states.Learners[proposal.node] = state;
     _primary_states.Statuses[proposal.node] = PS_POTENTIAL_SECONDARY;
@@ -282,7 +282,7 @@ void replica::update_configuration_on_meta_server(config_type type, const end_po
         _primary_states.reconfiguration_task->cancel(true);
     }
 
-    _primary_states.reconfiguration_task = rpc_replicated(
+    _primary_states.reconfiguration_task = rpc::call_replicated(
         _stub->_failure_detector->current_server_contact(),
         _stub->_failure_detector->get_servers(),
         msg,
@@ -309,7 +309,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, messa
 
     if (err)
     {
-        _primary_states.reconfiguration_task = rpc_replicated(
+        _primary_states.reconfiguration_task = rpc::call_replicated(
             _stub->_failure_detector->current_server_contact(),
             _stub->_failure_detector->get_servers(),
             request,

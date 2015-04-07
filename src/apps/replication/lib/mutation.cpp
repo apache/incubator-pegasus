@@ -38,13 +38,14 @@ mutation::~mutation()
     clear_log_task();
 }
 
-void mutation::add_client_request(message_ptr& request)
+void mutation::add_client_request(task_code code, message_ptr& request)
 {
     ::dsn::blob buffer(request->reader().get_remaining_buffer());
     auto buf = buffer.buffer();
     blob bb(buf, static_cast<int>(buffer.data() - buffer.buffer().get()), buffer.length());
 
     client_requests.push_back(request);
+    request->header().client.timeout_milliseconds = static_cast<int>(code); // hack
     data.updates.push_back(bb);
     _memorySize += request->total_size();
 }

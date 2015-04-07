@@ -18,11 +18,13 @@
     <ClInclude Include="..\..\inc\dsn\internal\servicelet.h" />
     <ClInclude Include="..\..\inc\dsn\internal\thrift_helper.h" />
     <ClInclude Include="..\..\inc\dsn\serverlet.h" />
+    <ClInclude Include="..\..\inc\dsn\testlet.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="file_server.cpp" />
     <ClCompile Include="service.api.oo.impl.cpp" />
     <ClCompile Include="service.cpp" />
+    <ClCompile Include="testlet.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{F3913C07-F781-413B-91A8-259ADD82C0B1}</ProjectGuid>

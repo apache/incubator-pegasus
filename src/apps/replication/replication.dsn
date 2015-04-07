@@ -67,31 +67,23 @@ enum read_semantic_t
     ReadSnapshot
 }
 
-struct client_read_request2
+struct read_request_header
 {
     1:global_partition_id gpid;
-    2:read_semantic_t     semantic = read_semantic_t.ReadLastUpdate;
-    3:i64                 version_decree = -1;
+	2:i32                 code;
+    3:read_semantic_t     semantic = read_semantic_t.ReadLastUpdate;
+    4:i64                 version_decree = -1;
 }
 
-struct client_read_request
-{
-    1:global_partition_id gpid;
-    2:read_semantic_t     semantic = read_semantic_t.ReadLastUpdate;
-    3:i64                 version_decree = -1;
-	4:dsn.blob            application_request;
-}
-
-struct client_write_request
+struct write_request_header
 {
 	1:global_partition_id gpid;
-	2:dsn.blob            application_request;
+	2:i32                 code;
 }
 
-struct client_response
+struct rw_response_header
 {
     1:i32      err = 0;
-    2:dsn.blob application_response;
 }
 
 struct prepare_ack
@@ -157,30 +149,6 @@ struct group_check_response
     5:learner_status      learner_status_ = learner_status.LearningFailed;
     6:i64                 learner_signature;
     7:dsn.end_point       node;
-}
-
-///////////// demo ///////////////
-
-enum simple_kv_operation
-{
-    SKV_NOP,
-    SKV_UPDATE,
-    SKV_READ,
-    SKV_APPEND,
-}
-
-struct simple_kv_request
-{
-    1:simple_kv_operation op = simple_kv_operation.SKV_NOP;
-    2:string key;
-    3:string value;
-}
-
-struct simple_kv_response
-{
-    1:i32  err;
-    2:string key;
-    3:string value;
 }
 
 /////////////////// meta server messages ////////////////////
@@ -272,8 +240,8 @@ struct query_replica_decree_response
 
 service replica_s
 {
-	client_response client_write(1:client_write_request req);
-	client_response client_read(1:client_read_request req);	
+	rw_response_header client_write(1:write_request_header req);
+	rw_response_header client_read(1:read_request_header req);	
 	prepare_ack prepare(1:prepare_msg request);
 	void config_proposal(1:configuration_update_request proposal);	
     learn_response learn(1:learn_request request);

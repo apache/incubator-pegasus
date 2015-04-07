@@ -32,7 +32,7 @@
 namespace dsn { namespace replication {
 
 
-void replica::on_client_write(message_ptr& request)
+void replica::on_client_write(int code, message_ptr& request)
 {
     check_hashed_access();
 
@@ -60,7 +60,7 @@ void replica::on_client_write(message_ptr& request)
                 );    
         }
 
-        _primary_states.PendingMutation->add_client_request(request);
+        _primary_states.PendingMutation->add_client_request(code, request);
 
         if (_primary_states.PendingMutation->memory_size() >= _options.MutationMaxSizeInMB * 1024 * 1024)
         {
@@ -71,7 +71,7 @@ void replica::on_client_write(message_ptr& request)
     else
     {
         mutation_ptr mu = new_mutation(_prepare_list->max_decree() + 1);
-        mu->add_client_request(request);
+        mu->add_client_request(code, request);
         init_prepare(mu);
     }
 }

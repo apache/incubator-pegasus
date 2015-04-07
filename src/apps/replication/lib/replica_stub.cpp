@@ -261,14 +261,14 @@ void replica_stub::get_primary_replica_list(uint32_t p_tableID, std::vector<glob
 
 void replica_stub::on_client_write(message_ptr& request)
 {
-    global_partition_id gpid;
-    unmarshall(request, gpid);    
+    write_request_header hdr;
+    unmarshall(request, hdr);    
     
-    replica_ptr rep = get_replica(gpid);
+    replica_ptr rep = get_replica(hdr.gpid);
     if (rep != nullptr)
     {
         //PerformanceCounters::Increment(PerfCounters_TotalClientWriteQps, nullptr);
-        rep->on_client_write(request);
+        rep->on_client_write(hdr.code, request);
     }
     else
     {
@@ -278,7 +278,7 @@ void replica_stub::on_client_write(message_ptr& request)
 
 void replica_stub::on_client_read(message_ptr& request)
 {
-    client_read_request2 req;
+    read_request_header req;
     unmarshall(request, req);
 
     replica_ptr rep = get_replica(req.gpid);
@@ -446,7 +446,7 @@ void replica_stub::query_configuration()
     req.node = address();
     marshall(msg, req);
 
-    _partitionConfigurationQueryTask = rpc_replicated(
+    _partitionConfigurationQueryTask = rpc::call_replicated(
         _failure_detector->current_server_contact(),
         _failure_detector->get_servers(),
         msg,
@@ -602,7 +602,7 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
 
     marshall(msg, *request);
 
-    rpc_replicated(
+    rpc::call_replicated(
         _failure_detector->current_server_contact(),
         _failure_detector->get_servers(),
         msg,

@@ -96,7 +96,7 @@ replica::~replica(void)
     }
 }
 
-void replica::on_client_read(const client_read_request2& meta, message_ptr& request)
+void replica::on_client_read(const read_request_header& meta, message_ptr& request)
 {
     if (status() == PS_INACTIVE || status() == PS_POTENTIAL_SECONDARY)
     {
@@ -105,7 +105,7 @@ void replica::on_client_read(const client_read_request2& meta, message_ptr& requ
     }
 
     dassert (_app != nullptr, "");
-    _app->read(meta, request);
+    _app->dispatch_rpc_call(meta.code, request, true);
 }
 
 void replica::response_client_message(message_ptr& request, int error, decree d/* = invalid_decree*/)
@@ -125,21 +125,21 @@ void replica::execute_mutation(mutation_ptr& mu)
     {
     case PS_INACTIVE:
         if (_app->last_committed_decree() + 1 == mu->data.header.decree)
-            err = _app->WriteInternal(mu, false);
+            err = _app->write_internal(mu, false);
         break;
     case PS_PRIMARY:
     case PS_SECONDARY:
         {
         dassert (_app->last_committed_decree() + 1 == mu->data.header.decree, "");
-        bool ackClient = (status() == PS_PRIMARY);
-        if (ackClient)
+        bool ack_client = (status() == PS_PRIMARY);
+        if (ack_client)
         {
             if (mu->client_requests.size() == 0)
-                ackClient = false;
+                ack_client = false;
             else if ((*mu->client_requests.begin())->header().from_address.ip == 0)
-                ackClient = false;
+                ack_client = false;
         }
-        err = _app->WriteInternal(mu, ackClient); 
+        err = _app->write_internal(mu, ack_client); 
 
         //PerformanceCounters::Increment(PerfCounters_LocalCommitQps, nullptr);
         }
@@ -149,7 +149,7 @@ void replica::execute_mutation(mutation_ptr& mu)
         {
             if (mu->data.header.decree == _app->last_committed_decree() + 1)
             {
-                err = _app->WriteInternal(mu, false); 
+                err = _app->write_internal(mu, false); 
             }
             else
             {

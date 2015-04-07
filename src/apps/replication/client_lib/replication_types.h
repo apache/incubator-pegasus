@@ -44,15 +44,6 @@ enum learner_status {
 
 DEFINE_POD_SERIALIZATION(learner_status);
 
-enum simple_kv_operation {
-  SKV_NOP = 0,
-  SKV_UPDATE = 1,
-  SKV_READ = 2,
-  SKV_APPEND = 3
-};
-
-DEFINE_POD_SERIALIZATION(simple_kv_operation);
-
 enum config_type {
   CT_NONE = 0,
   CT_ASSIGN_PRIMARY = 1,
@@ -77,13 +68,11 @@ class replica_configuration;
 
 class prepare_msg;
 
-class client_read_request2;
+class read_request_header;
 
-class client_read_request;
+class write_request_header;
 
-class client_write_request;
-
-class client_response;
+class rw_response_header;
 
 class prepare_ack;
 
@@ -96,10 +85,6 @@ class learn_response;
 class group_check_request;
 
 class group_check_response;
-
-class simple_kv_request;
-
-class simple_kv_response;
 
 class meta_request_header;
 
@@ -427,23 +412,26 @@ inline void marshall(::dsn::binary_writer& writer, const prepare_msg& val, uint1
 }
 
 
-class client_read_request2 {
+class read_request_header {
  public:
 
-  client_read_request2(const client_read_request2&);
-  client_read_request2& operator=(const client_read_request2&);
-  client_read_request2() : semantic((read_semantic_t)0), version_decree(-1LL) {
+  read_request_header(const read_request_header&);
+  read_request_header& operator=(const read_request_header&);
+  read_request_header() : code(0), semantic((read_semantic_t)0), version_decree(-1LL) {
     semantic = (read_semantic_t)0;
 
   }
 
-  virtual ~client_read_request2() throw();
+  virtual ~read_request_header() throw();
   global_partition_id gpid;
+  int32_t code;
   read_semantic_t semantic;
   int64_t version_decree;
-  bool operator == (const client_read_request2 & rhs) const
+  bool operator == (const read_request_header & rhs) const
   {
     if (!(gpid == rhs.gpid))
+      return false;
+    if (!(code == rhs.code))
       return false;
     if (!(semantic == rhs.semantic))
       return false;
@@ -451,162 +439,106 @@ class client_read_request2 {
       return false;
     return true;
   }
-  bool operator != (const client_read_request2 &rhs) const {
+  bool operator != (const read_request_header &rhs) const {
     return !(*this == rhs);
   }
 
-  bool operator < (const client_read_request2 & ) const;
+  bool operator < (const read_request_header & ) const;
 
 
 };
 
-void swap(client_read_request2 &a, client_read_request2 &b);
+void swap(read_request_header &a, read_request_header &b);
 
-inline void unmarshall(::dsn::binary_reader& reader, __out_param client_read_request2& val) {
+inline void unmarshall(::dsn::binary_reader& reader, __out_param read_request_header& val) {
   unmarshall(reader, val.gpid);
+  ::dsn::unmarshall(reader, val.code);
   unmarshall(reader, val.semantic);
   ::dsn::unmarshall(reader, val.version_decree);
 }
 
-inline void marshall(::dsn::binary_writer& writer, const client_read_request2& val, uint16_t pos = 0xffff) {
+inline void marshall(::dsn::binary_writer& writer, const read_request_header& val, uint16_t pos = 0xffff) {
   marshall(writer, val.gpid, pos);
+  ::dsn::marshall(writer, val.code, pos);
   marshall(writer, val.semantic, pos);
   ::dsn::marshall(writer, val.version_decree, pos);
 }
 
 
-class client_read_request {
+class write_request_header {
  public:
 
-  client_read_request(const client_read_request&);
-  client_read_request& operator=(const client_read_request&);
-  client_read_request() : semantic((read_semantic_t)0), version_decree(-1LL) {
-    semantic = (read_semantic_t)0;
-
+  write_request_header(const write_request_header&);
+  write_request_header& operator=(const write_request_header&);
+  write_request_header() : code(0) {
   }
 
-  virtual ~client_read_request() throw();
+  virtual ~write_request_header() throw();
   global_partition_id gpid;
-  read_semantic_t semantic;
-  int64_t version_decree;
-   ::dsn::blob application_request;
-  bool operator == (const client_read_request & rhs) const
+  int32_t code;
+  bool operator == (const write_request_header & rhs) const
   {
     if (!(gpid == rhs.gpid))
       return false;
-    if (!(semantic == rhs.semantic))
-      return false;
-    if (!(version_decree == rhs.version_decree))
-      return false;
-    if (!(application_request == rhs.application_request))
+    if (!(code == rhs.code))
       return false;
     return true;
   }
-  bool operator != (const client_read_request &rhs) const {
+  bool operator != (const write_request_header &rhs) const {
     return !(*this == rhs);
   }
 
-  bool operator < (const client_read_request & ) const;
+  bool operator < (const write_request_header & ) const;
 
 
 };
 
-void swap(client_read_request &a, client_read_request &b);
+void swap(write_request_header &a, write_request_header &b);
 
-inline void unmarshall(::dsn::binary_reader& reader, __out_param client_read_request& val) {
+inline void unmarshall(::dsn::binary_reader& reader, __out_param write_request_header& val) {
   unmarshall(reader, val.gpid);
-  unmarshall(reader, val.semantic);
-  ::dsn::unmarshall(reader, val.version_decree);
-  unmarshall(reader, val.application_request);
+  ::dsn::unmarshall(reader, val.code);
 }
 
-inline void marshall(::dsn::binary_writer& writer, const client_read_request& val, uint16_t pos = 0xffff) {
+inline void marshall(::dsn::binary_writer& writer, const write_request_header& val, uint16_t pos = 0xffff) {
   marshall(writer, val.gpid, pos);
-  marshall(writer, val.semantic, pos);
-  ::dsn::marshall(writer, val.version_decree, pos);
-  marshall(writer, val.application_request, pos);
+  ::dsn::marshall(writer, val.code, pos);
 }
 
 
-class client_write_request {
+class rw_response_header {
  public:
 
-  client_write_request(const client_write_request&);
-  client_write_request& operator=(const client_write_request&);
-  client_write_request() {
+  rw_response_header(const rw_response_header&);
+  rw_response_header& operator=(const rw_response_header&);
+  rw_response_header() : err(0) {
   }
 
-  virtual ~client_write_request() throw();
-  global_partition_id gpid;
-   ::dsn::blob application_request;
-  bool operator == (const client_write_request & rhs) const
-  {
-    if (!(gpid == rhs.gpid))
-      return false;
-    if (!(application_request == rhs.application_request))
-      return false;
-    return true;
-  }
-  bool operator != (const client_write_request &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const client_write_request & ) const;
-
-
-};
-
-void swap(client_write_request &a, client_write_request &b);
-
-inline void unmarshall(::dsn::binary_reader& reader, __out_param client_write_request& val) {
-  unmarshall(reader, val.gpid);
-  unmarshall(reader, val.application_request);
-}
-
-inline void marshall(::dsn::binary_writer& writer, const client_write_request& val, uint16_t pos = 0xffff) {
-  marshall(writer, val.gpid, pos);
-  marshall(writer, val.application_request, pos);
-}
-
-
-class client_response {
- public:
-
-  client_response(const client_response&);
-  client_response& operator=(const client_response&);
-  client_response() : err(0) {
-  }
-
-  virtual ~client_response() throw();
+  virtual ~rw_response_header() throw();
   int32_t err;
-   ::dsn::blob application_response;
-  bool operator == (const client_response & rhs) const
+  bool operator == (const rw_response_header & rhs) const
   {
     if (!(err == rhs.err))
       return false;
-    if (!(application_response == rhs.application_response))
-      return false;
     return true;
   }
-  bool operator != (const client_response &rhs) const {
+  bool operator != (const rw_response_header &rhs) const {
     return !(*this == rhs);
   }
 
-  bool operator < (const client_response & ) const;
+  bool operator < (const rw_response_header & ) const;
 
 
 };
 
-void swap(client_response &a, client_response &b);
+void swap(rw_response_header &a, rw_response_header &b);
 
-inline void unmarshall(::dsn::binary_reader& reader, __out_param client_response& val) {
+inline void unmarshall(::dsn::binary_reader& reader, __out_param rw_response_header& val) {
   ::dsn::unmarshall(reader, val.err);
-  unmarshall(reader, val.application_response);
 }
 
-inline void marshall(::dsn::binary_writer& writer, const client_response& val, uint16_t pos = 0xffff) {
+inline void marshall(::dsn::binary_writer& writer, const rw_response_header& val, uint16_t pos = 0xffff) {
   ::dsn::marshall(writer, val.err, pos);
-  marshall(writer, val.application_response, pos);
 }
 
 
@@ -955,100 +887,6 @@ inline void marshall(::dsn::binary_writer& writer, const group_check_response& v
   marshall(writer, val.learner_status_, pos);
   ::dsn::marshall(writer, val.learner_signature, pos);
   marshall(writer, val.node, pos);
-}
-
-
-class simple_kv_request {
- public:
-
-  simple_kv_request(const simple_kv_request&);
-  simple_kv_request& operator=(const simple_kv_request&);
-  simple_kv_request() : op((simple_kv_operation)0), key(), value() {
-    op = (simple_kv_operation)0;
-
-  }
-
-  virtual ~simple_kv_request() throw();
-  simple_kv_operation op;
-  std::string key;
-  std::string value;
-  bool operator == (const simple_kv_request & rhs) const
-  {
-    if (!(op == rhs.op))
-      return false;
-    if (!(key == rhs.key))
-      return false;
-    if (!(value == rhs.value))
-      return false;
-    return true;
-  }
-  bool operator != (const simple_kv_request &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const simple_kv_request & ) const;
-
-
-};
-
-void swap(simple_kv_request &a, simple_kv_request &b);
-
-inline void unmarshall(::dsn::binary_reader& reader, __out_param simple_kv_request& val) {
-  unmarshall(reader, val.op);
-  ::dsn::unmarshall(reader, val.key);
-  ::dsn::unmarshall(reader, val.value);
-}
-
-inline void marshall(::dsn::binary_writer& writer, const simple_kv_request& val, uint16_t pos = 0xffff) {
-  marshall(writer, val.op, pos);
-  ::dsn::marshall(writer, val.key, pos);
-  ::dsn::marshall(writer, val.value, pos);
-}
-
-
-class simple_kv_response {
- public:
-
-  simple_kv_response(const simple_kv_response&);
-  simple_kv_response& operator=(const simple_kv_response&);
-  simple_kv_response() : err(0), key(), value() {
-  }
-
-  virtual ~simple_kv_response() throw();
-  int32_t err;
-  std::string key;
-  std::string value;
-  bool operator == (const simple_kv_response & rhs) const
-  {
-    if (!(err == rhs.err))
-      return false;
-    if (!(key == rhs.key))
-      return false;
-    if (!(value == rhs.value))
-      return false;
-    return true;
-  }
-  bool operator != (const simple_kv_response &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const simple_kv_response & ) const;
-
-
-};
-
-void swap(simple_kv_response &a, simple_kv_response &b);
-
-inline void unmarshall(::dsn::binary_reader& reader, __out_param simple_kv_response& val) {
-  ::dsn::unmarshall(reader, val.err);
-  ::dsn::unmarshall(reader, val.key);
-  ::dsn::unmarshall(reader, val.value);
-}
-
-inline void marshall(::dsn::binary_writer& writer, const simple_kv_response& val, uint16_t pos = 0xffff) {
-  ::dsn::marshall(writer, val.err, pos);
-  ::dsn::marshall(writer, val.key, pos);
-  ::dsn::marshall(writer, val.value, pos);
 }
 
 

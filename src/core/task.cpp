@@ -368,7 +368,8 @@ void rpc_response_task::exec()
 }
 
 rpc_response_task::rpc_response_task(message_ptr& request, int hash)
-    : task(task_spec::get(request->header().local_rpc_code)->rpc_paired_code, hash)
+    : task(task_spec::get(request->header().local_rpc_code)->rpc_paired_code, 
+           hash == 0 ? request->header().client.hash : hash)
 {
     set_error_code(ERR_IO_PENDING);
 

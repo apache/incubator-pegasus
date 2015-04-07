@@ -26,73 +26,18 @@
 
 namespace dsn { namespace replication {
 
-    using namespace ::dsn::service;
+using namespace ::dsn::service;
 
-class RepClientMessage : public message
+replication_app_client_base::replication_app_client_base(
+    const std::vector<end_point>& meta_servers, 
+    const char* app_name
+    )
 {
-public:
-    RepClientMessage() // For write Mode.            
-    {
-        Pidx = -1;
-        read_semantic = read_semantic_t::ReadOutdated;
-        ReadSnapshotDecree = invalid_decree;
-        HeaderPlaceholderPos = 0;
-
-        TargetServer = end_point::INVALID;
-
-        Callback = nullptr;
-    }
-
-    virtual ~RepClientMessage()
-    {
-    }
-
-    static RepClientMessage* CreateClientRequest(task_code rpc_code, int hash = 0)
-    {
-        RepClientMessage* msg = new RepClientMessage();
-
-        msg->header().local_rpc_code = (uint16_t)rpc_code;
-        msg->header().client.hash = hash;
-        msg->header().client.timeout_milliseconds = 0;
-
-        const char* rpcName = rpc_code.to_string();
-        strcpy(msg->header().rpc_name, rpcName);    
-
-        msg->header().id = message::new_id();
-        
-        return msg;
-    }
-    
-public:
-    int          Pidx;
-    read_semantic_t read_semantic;
-    decree       ReadSnapshotDecree;
-    uint16_t     HeaderPlaceholderPos;
-
-    uint64_t         AppSendTimeMs;
-    end_point  TargetServer;
-    
-    rpc_reply_handler Callback;
-};
-    
-replication_app_client_base::replication_app_client_base(const std::vector<end_point>& meta_servers, 
-                                                   const char* appServiceName, 
-                                                   int32_t appServiceId /*= -1*/,
-                                                   int32_t serverRpcCallTimeoutMillisecondsPerSend,
-                                                   int32_t serverRpcCallMaxSendCount,
-                                                   const end_point* pLocalAddr /*= nullptr*/)
-: dsn::service::serverlet<replication_app_client_base>(std::string(appServiceName).append(".client").c_str())
-{
-    _app_name = std::string(appServiceName);   
+    _app_name = std::string(app_name);   
     _meta_servers = meta_servers;
 
-    _app_id = appServiceId;
+    _app_id = -1;
     _last_contact_point = end_point::INVALID;
-
-    _meta_server_rpc_call_timeout_milliseconds_per_send = serverRpcCallTimeoutMillisecondsPerSend;
-    _meta_server_rpc_call_max_send_count = serverRpcCallMaxSendCount;
-
-    //PerformanceCounters::init(PerfCounters_ReplicationClientBegin, PerfCounters_ReplicationClientEnd);
 }
 
 replication_app_client_base::~replication_app_client_base()
@@ -102,180 +47,219 @@ replication_app_client_base::~replication_app_client_base()
 
 void replication_app_client_base::clear_all_pending_tasks()
 {
-    service::zauto_lock l(_lock);
-    for (auto it = _pending_messages.begin(); it != _pending_messages.end(); it++)
-    {
-        if (it->second.first != nullptr) it->second.first->cancel(false);
+    message_ptr nil(nullptr);
 
-        dbg_dassert (it->second.second != nullptr);
-        for (auto it2 = it->second.second->begin(); it2 != it->second.second->end(); it2++)
+    service::zauto_lock l(_requests_lock);
+    for (auto& pc : _pending_requests)
+    {
+        if (pc.second->query_config_task != nullptr)
+            pc.second->query_config_task->cancel(true);
+
+        for (auto& rc : pc.second->requests)
         {
-            it2->timeout_tsk->cancel(false);
+            end_request(rc, ERR_TIMEOUT, nil);
+            delete rc;
         }
-        delete it->second.second;
+        delete pc.second;
     }
-    _pending_messages.clear();
+    _pending_requests.clear();
 }
 
-message_ptr replication_app_client_base::create_write_request(int partition_index)
+
+void replication_app_client_base::on_user_request_timeout(request_context* rc)
 {
-    auto msg = RepClientMessage::CreateClientRequest(RPC_REPLICATION_CLIENT_WRITE);
-    msg->Pidx = partition_index;
-    msg->HeaderPlaceholderPos = msg->writer().write_placeholder();
-    return message_ptr(msg);
+    message_ptr nil(nullptr);
+    rc->callback_task->enqueue(ERR_TIMEOUT, nil);
 }
 
-message_ptr replication_app_client_base::create_read_request(
+DEFINE_TASK_CODE(LPC_REPLICATION_CLIENT_REQUEST_TIMEOUT, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+
+void replication_app_client_base::write_internal(
     int partition_index,
-    read_semantic_t semantic /*= ReadOutdated*/,
-    decree snapshot_decree /*= invalid_decree*/ // only used when ReadSnapshot
-    )
-{
-    auto msg = RepClientMessage::CreateClientRequest(RPC_REPLICATION_CLIENT_READ, _meta_server_rpc_call_timeout_milliseconds_per_send);
-    msg->Pidx = partition_index;
-    msg->read_semantic = semantic;
-    msg->ReadSnapshotDecree = snapshot_decree;
-    msg->HeaderPlaceholderPos = msg->writer().write_placeholder();
-    return message_ptr(msg);
-}
-
-void replication_app_client_base::set_target_app_server(message_ptr& request, const end_point& server_addr)
-{
-    RepClientMessage * msg = (RepClientMessage*)request.get();
-    msg->TargetServer = server_addr;
-}
-
-void replication_app_client_base::enqueue_pending_list(int pidx, message_ptr& userRequest, rpc_response_task_ptr& caller_tsk)
-{
-    //RepClientMessage * msg = (RepClientMessage *)userRequest.get();
-    pending_message pm;
-    pm.timeout_tsk = tasking::enqueue(
-            LPC_TEST,
-            this,
-            std::bind(&replication_app_client_base::on_user_request_timeout, this, caller_tsk),
-            0,
-            userRequest->header().client.timeout_milliseconds
-            );
-    pm.msg = userRequest;
-    pm.caller_tsk = caller_tsk;
-    
-    {
-    dsn::service::zauto_lock l(_lock);
-    auto it = _pending_messages.find(pidx);
-    if (it != _pending_messages.end())
-    {
-        dbg_dassert (it->second.second != nullptr);
-        it->second.second->push_back(pm);
-    }
-    else
-    {
-        std::list<pending_message>* msgList = new std::list<pending_message>();
-        msgList->push_back(pm);
-        _pending_messages.insert(std::make_pair(pidx, std::make_pair((rpc_response_task_ptr)nullptr, msgList)));
-    }
-    }
-}
-
-rpc_response_task_ptr replication_app_client_base::send(
-    message_ptr& request,    
-    int timeout_milliseconds,
-
-    rpc_reply_handler callback,
+    task_code code,
+    rpc_response_task_ptr callback,
     int reply_hash
     )
 {
-    RepClientMessage* msg = (RepClientMessage*)request.get();
-    msg->header().client.timeout_milliseconds = timeout_milliseconds;
+    auto rc = new request_context;
+    rc->callback_task = callback;
+    rc->header_pos = callback->get_request()->writer().write_placeholder();
+    rc->is_read = false;
+    rc->partition_index = partition_index;    
+    rc->write_header.gpid.app_id = _app_id;
+    rc->write_header.gpid.pidx = partition_index;
+    rc->write_header.code = code;
+    rc->timeout_timer = nullptr;
 
-    msg->Callback = callback;
+    rc->timeout_ts_us = now_us() + callback->get_request()->header().client.timeout_milliseconds * 1000;
 
-    rpc_reply_handler handler(nullptr);
-    if (callback != nullptr)
-    {
-        handler = std::bind(&replication_app_client_base::_internal_rpc_reply_handler, this, 
-            std::placeholders::_1, 
-            std::placeholders::_2, 
-            std::placeholders::_3);
-    }
-
-    rpc_response_task_ptr task(new rpc::internal_use_only::service_rpc_response_task4(this, handler, request, reply_hash));
-
-    int err = send_client_message(request, task, true);
-    if (err != ERR_SUCCESS)
-    {
-        //task->enqueue(nullptr, timeoutMillisecondsPerSend * maxSendCount);
-        enqueue_pending_list(msg->Pidx, request, task);
-        query_partition_configuration(msg->Pidx);
-    }
-
-    return task;
+    call(rc);
 }
 
-int replication_app_client_base::send_client_message(message_ptr& msg2, rpc_response_task_ptr& reply, bool firstTime)
-{
-    RepClientMessage* msg = (RepClientMessage*)msg2.get();
-
-    end_point addr;
-    global_partition_id gpid;
-
-    error_code err = ERR_SUCCESS;
-    if (msg->TargetServer == end_point::INVALID)
-    {
-        err = get_address(msg->Pidx, msg->header().local_rpc_code == RPC_REPLICATION_CLIENT_WRITE, addr, gpid.app_id, msg->read_semantic);
-    }
-    else
-    {
-        if (_app_id != -1)
-        {
-            addr = msg->TargetServer;
-            gpid.app_id = _app_id;
-        }
-        else
-        {
-            err = ERR_IO_PENDING; // to get appId later
-        }
-    }
-
-    if (err == ERR_SUCCESS)
-    {
-        gpid.pidx = msg->Pidx;
-
-        if (msg->header().local_rpc_code == RPC_REPLICATION_CLIENT_READ)
-        {
-            client_read_request2 req;
-            req.gpid = gpid;
-            req.semantic = msg->read_semantic;
-            req.version_decree = msg->ReadSnapshotDecree;
-            
-            marshall(msg2, req, msg->HeaderPlaceholderPos);   
-        }
-        else
-        {
-            marshall(msg2, gpid, msg->HeaderPlaceholderPos);            
-        }
-
-        msg->header().client.hash = gpid_to_hash(gpid);
-        rpc::call(addr, msg2, reply);
-    }
-    else if (!firstTime)
-    {
-        message_ptr nil(nullptr);
-        reply->enqueue(err, nil);
-    }
-    return err;
-}
-
-void replication_app_client_base::_internal_rpc_reply_handler(
-    error_code err,
-    message_ptr& request,
-    message_ptr& response
+void replication_app_client_base::read_internal(
+    int partition_index,
+    task_code code,
+    rpc_response_task_ptr callback,
+    read_semantic_t read_semantic,
+    decree snapshot_decree, // only used when ReadSnapshot        
+    int reply_hash
     )
 {
-    RepClientMessage* msg = (RepClientMessage*)request.get();
+    auto rc = new request_context;
+    rc->callback_task = callback;
+    rc->header_pos = callback->get_request()->writer().write_placeholder();
+    rc->is_read = true;
+    rc->partition_index = partition_index;
+    rc->read_header.gpid.app_id = _app_id;
+    rc->read_header.gpid.pidx = partition_index;
+    rc->read_header.code = code;
+    rc->read_header.semantic = read_semantic;
+    rc->read_header.version_decree = snapshot_decree;
+    rc->timeout_timer = nullptr;
 
+    rc->timeout_ts_us = now_us() + callback->get_request()->header().client.timeout_milliseconds * 1000;
+
+    call(rc);
+}
+
+void replication_app_client_base::end_request(request_context* request, error_code err, message_ptr& resp)
+{
+    if (request->timeout_timer == nullptr || request->timeout_timer->cancel(true))
+    {
+        request->callback_task->enqueue(err, resp);
+    }
+}
+
+void replication_app_client_base::call(request_context* request)
+{
+    auto timeout_us = static_cast<int64_t>(request->timeout_ts_us - now_us());
+    if (timeout_us < 100) // < 100us
+    {
+        message_ptr nil(nullptr);
+        end_request(request, ERR_TIMEOUT, nil);
+        delete request;
+        return;
+    }
+
+    end_point addr;
+    int app_id;
+
+    error_code err = get_address(
+        request->partition_index,
+        !request->is_read,
+        addr,
+        app_id,
+        request->read_header.semantic
+        );
+
+    // target node in cache
+    if (err == ERR_SUCCESS)
+    {
+        dbg_dassert(addr != end_point::INVALID, "");
+
+        auto& msg = request->callback_task->get_request();
+
+        if (request->is_read)
+        {
+            request->read_header.gpid.app_id = app_id;
+            marshall(msg->writer(), request->read_header, request->header_pos);
+            msg->header().client.hash = gpid_to_hash(request->read_header.gpid);
+        }
+        else
+        {
+            request->write_header.gpid.app_id = app_id;
+            marshall(msg->writer(), request->write_header, request->header_pos);
+            msg->header().client.hash = gpid_to_hash(request->write_header.gpid);
+        }
+
+        msg->header().client.timeout_milliseconds = static_cast<int>(timeout_us / 1000);
+
+        rpc::call(
+            addr,
+            msg,
+            this,
+            std::bind(
+            &replication_app_client_base::replica_rw_reply,
+            this,
+            std::placeholders::_1,
+            std::placeholders::_2,
+            std::placeholders::_3,
+            request
+            )
+            );
+    }
+
+    // target node not known
+    else
+    {
+        zauto_lock l(_requests_lock);
+
+        // init timeout timer if necessary
+        if (request->timeout_timer == nullptr)
+        {
+            request->timeout_timer = tasking::enqueue(
+                LPC_REPLICATION_CLIENT_REQUEST_TIMEOUT,
+                this,
+                std::bind(&replication_app_client_base::on_user_request_timeout, this, request),
+                0,
+                static_cast<int>(timeout_us / 1000)
+                );
+        }
+
+        // put into pending queue of querying target partition 
+        auto it = _pending_requests.find(request->partition_index);
+        if (it == _pending_requests.end())
+        {
+            auto pc = new partition_context;
+            pc->query_config_task = nullptr;
+            it = _pending_requests.insert(pending_requests::value_type(request->partition_index, pc)).first;
+        }
+
+        it->second->requests.push_back(request);
+
+        // init configuration query task if necessary
+        if (it->second->query_config_task == nullptr)
+        {
+            message_ptr msg = message::create_request(RPC_CM_CALL);
+
+            meta_request_header hdr;
+            hdr.rpc_tag = RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX;
+            marshall(msg->writer(), hdr);
+
+            configuration_query_by_index_request req;
+            req.app_name = _app_name;
+            req.partition_indices.push_back(request->partition_index);
+            marshall(msg->writer(), req);
+            
+            it->second->query_config_task = rpc::call_replicated(
+                _last_contact_point,
+                _meta_servers,
+                msg,
+
+                this,
+                std::bind(&replication_app_client_base::query_partition_configuration_reply,
+                    this, 
+                    std::placeholders::_1,
+                    std::placeholders::_2,
+                    std::placeholders::_3,
+                    request->partition_index
+                    )
+                );
+        }
+    }
+}
+
+void replication_app_client_base::replica_rw_reply(
+    error_code err,
+    message_ptr& request,
+    message_ptr& response,
+    request_context* rc
+    )
+{
     if (err != ERR_SUCCESS)
     {
-        query_partition_configuration(msg->Pidx);
+        call(rc);
+        return;
     }
     else
     {
@@ -283,31 +267,22 @@ void replication_app_client_base::_internal_rpc_reply_handler(
         response->reader().read(err2);
         if (err2 != 0)
         {
-            err = ERR_REPLICATION_FAILURE;
+            call(rc);
+            return;
         }
     }
 
-    if (msg->Callback != nullptr)
-    {
-        msg->Callback(err, request, response);
-    }
-
-    // Zhenyu: throttling control using the parameter from client response
+    end_request(rc, err, response);
+    delete rc;
 }
 
-void replication_app_client_base::on_user_request_timeout(rpc_response_task_ptr caller_tsk)
-{
-    message_ptr nil(nullptr);
-    caller_tsk->enqueue(ERR_TIMEOUT, nil);
-}
-
-error_code replication_app_client_base::get_address(int pidx, bool isWrite, __out_param end_point& addr, __out_param int& appId, read_semantic_t semantic)
+error_code replication_app_client_base::get_address(int pidx, bool is_write, __out_param end_point& addr, __out_param int& app_id, read_semantic_t semantic)
 {
     error_code err;
     partition_configuration config;
      
     {
-    zauto_lock l(_lock);
+    zauto_read_lock l(_config_lock);
     auto it = _config_cache.find(pidx);
     if (it != _config_cache.end())
     {
@@ -322,8 +297,8 @@ error_code replication_app_client_base::get_address(int pidx, bool isWrite, __ou
 
     if (err == ERR_SUCCESS)
     {
-        appId = _app_id;
-        if (isWrite)
+        app_id = _app_id;
+        if (is_write)
         {
             addr = config.primary;
         }
@@ -340,63 +315,23 @@ error_code replication_app_client_base::get_address(int pidx, bool isWrite, __ou
     return err;
 }
 
-void replication_app_client_base::query_partition_configuration(int pidx)
-{            
-    dsn::service::zauto_lock l(_lock);    
-
-    auto it = _pending_messages.find(pidx);
-    if (it != _pending_messages.end())
-    {
-        if (it->second.first != nullptr) return;
-    }
-    else
-    {
-        it = _pending_messages.insert(pending_messages::value_type(std::make_pair(pidx, std::make_pair((rpc_response_task_ptr)nullptr, new std::list<pending_message>())))).first;
-    }
-
-    message_ptr msg = message::create_request(RPC_CM_CALL, _meta_server_rpc_call_timeout_milliseconds_per_send);
-
-    meta_request_header hdr;
-    hdr.rpc_tag = RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX;
-    marshall(msg, hdr);
-
-    configuration_query_by_index_request req;
-    req.app_name = _app_name;
-    req.partition_indices.push_back((uint32_t)pidx);
-    
-    marshall(msg, req);
-
-    it->second.first = rpc_replicated(
-        _last_contact_point,
-        _meta_servers, 
-        msg,            
-        this,
-        std::bind(&replication_app_client_base::query_partition_configuration_reply, this, 
-        std::placeholders::_1, 
-        std::placeholders::_2, 
-        std::placeholders::_3, pidx)
-        );
-}
-
 void replication_app_client_base::query_partition_configuration_reply(error_code err, message_ptr& request, message_ptr& response, int pidx)
 {
     if (!err)
     {
         configuration_query_by_index_response resp;
-        unmarshall(response, resp);
-        
-        int err2 = resp.err;
-
-        if (err2 == ERR_SUCCESS) 
+        unmarshall(response->reader(), resp);
+        if (resp.err == ERR_SUCCESS)
         {
-            zauto_lock l(_lock);
+            zauto_write_lock l(_config_lock);
             _last_contact_point = response->header().from_address;
 
             if (resp.partitions.size() > 0)
             {
                 if (_app_id != -1 && _app_id != resp.partitions[0].gpid.app_id)
                 {
-                    dassert (false, "App id is changed (mostly the given app id is incorrect), local Vs remote: %u vs %u ", _app_id, resp.partitions[0].gpid.app_id);
+                    dassert(false, "app id is changed (mostly the app was removed and created with the same name), local Vs remote: %u vs %u ",
+                        _app_id, resp.partitions[0].gpid.app_id);
                 }
 
                 _app_id = resp.partitions[0].gpid.app_id;
@@ -404,51 +339,41 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
 
             for (auto it = resp.partitions.begin(); it != resp.partitions.end(); it++)
             {
-                partition_configuration& newConfig = *it;
-                auto it2 = _config_cache.find(newConfig.gpid.pidx);
+                partition_configuration& new_config = *it;
+                auto it2 = _config_cache.find(new_config.gpid.pidx);
                 if (it2 == _config_cache.end())
                 {
-                    _config_cache[newConfig.gpid.pidx] = newConfig;
+                    _config_cache[new_config.gpid.pidx] = new_config;
                 }
-                else if (it2->second.ballot < newConfig.ballot)
+                else if (it2->second.ballot < new_config.ballot)
                 {
-                    it2->second = newConfig;
+                    it2->second = new_config;
                 }
             }
         }
     }
         
     // send pending client msgs
-    std::list<pending_message> * messageList = nullptr;
+    partition_context* pc = nullptr;
     {
-        zauto_lock l(_lock);
-        auto it = _pending_messages.find(pidx);
-        if (it != _pending_messages.end())
+        zauto_lock l(_requests_lock);
+        auto it = _pending_requests.find(pidx);
+        if (it != _pending_requests.end())
         {
-            messageList = it->second.second;
-            _pending_messages.erase(pidx);
+            pc = it->second;
+            _pending_requests.erase(pidx);
         }
     }
 
-    if (messageList != nullptr)
+    if (pc != nullptr)
     {
-        for (auto itr_msg = messageList->begin(); itr_msg != messageList->end(); ++itr_msg)
-        {        
-            if (itr_msg->timeout_tsk->cancel(false))
-            {
-                if (ERR_SUCCESS == err)
-                {
-                    send_client_message(itr_msg->msg, itr_msg->caller_tsk, false);
-                }
-                else
-                {
-                    message_ptr nil;
-                    itr_msg->caller_tsk->enqueue(err, nil);
-                }
-            }
+        for (auto& req : pc->requests)
+        {   
+            call(req);
         }
+        pc->requests.clear();
+        delete pc;
     }
-    if (nullptr != messageList) delete messageList;
 }
 
 end_point replication_app_client_base::get_read_address(read_semantic_t semantic, const partition_configuration& config)
@@ -459,18 +384,18 @@ end_point replication_app_client_base::get_read_address(read_semantic_t semantic
     // readsnapshot or readoutdated, using random
     else
     {
-        bool hasPrimary = false;
+        bool has_primary = false;
         int N = static_cast<int>(config.secondaries.size());
         if (config.primary != dsn::end_point::INVALID)
         {
             N++;
-            hasPrimary = true;
+            has_primary = true;
         }
 
         if (0 == N) return config.primary;
 
         int r = random32(0, 1000) % N;
-        if (hasPrimary && r == N - 1)
+        if (has_primary && r == N - 1)
             return config.primary;
         else
             return config.secondaries[r];

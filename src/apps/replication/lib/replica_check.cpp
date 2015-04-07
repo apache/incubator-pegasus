@@ -84,7 +84,7 @@ void replica::broadcast_group_check()
             request->learner_signature = it2->second.signature;
         }
 
-        task_ptr caller_tsk = rpc::call_typed(
+        task_ptr callback_task = rpc::call_typed(
             addr,
             RPC_GROUP_CHECK,
             request,            
@@ -94,7 +94,7 @@ void replica::broadcast_group_check()
             _options.GroupCheckTimeoutMs
             );
 
-        _primary_states.GroupCheckPendingReplies[addr] = caller_tsk;
+        _primary_states.GroupCheckPendingReplies[addr] = callback_task;
 
         ddebug(
             "%s: init_group_check for %s:%u", name(), addr.name.c_str(), addr.port

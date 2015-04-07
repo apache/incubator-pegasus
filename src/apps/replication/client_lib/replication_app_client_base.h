@@ -28,82 +28,320 @@
 // all app to be replicated using this library
 // 
 
-#include "replication_common.h"
-#include <dsn/serverlet.h>
+# include "replication_common.h"
 
 namespace dsn { namespace replication {
 
-DEFINE_ERR_CODE(ERR_REPLICATION_FAILURE)
+    DEFINE_ERR_CODE(ERR_REPLICATION_FAILURE)
     
-class replication_app_client_base : public dsn::service::serverlet<replication_app_client_base>
-{    
-public:
-    replication_app_client_base(        
-        const std::vector<end_point>& meta_servers, 
-        const char* appServiceName, 
-        int32_t appServiceId = -1,
-        int32_t serverRpcCallTimeoutMillisecondsPerSend = 2000,
-        int32_t serverRpcCallMaxSendCount = 3,
-        const end_point* pLocalAddr = nullptr);
-
-    ~replication_app_client_base();
-
-    message_ptr create_write_request(
-        int partition_index
-        );
-
-    message_ptr create_read_request(        
-        int partition_index,
-        read_semantic_t semantic = ReadOutdated,
-        decree snapshot_decree = invalid_decree // only used when ReadSnapshot        
-        );
-
-    void set_target_app_server(message_ptr& request, const end_point& server_addr);
-
-    rpc_response_task_ptr send(
-        message_ptr& request,        
-        int timeout_milliseconds,
-      
-        rpc_reply_handler callback,
-        int reply_hash = 0
-        );
-
-    // get read address policy
-    virtual end_point get_read_address(read_semantic_t semantic, const partition_configuration& config);
-
-    void clear_all_pending_tasks();
-
-private:
-    void _internal_rpc_reply_handler(error_code err, message_ptr& request, message_ptr& response);
-    error_code  get_address(int pidx, bool isWrite, __out_param end_point& addr, __out_param int& appId, read_semantic_t semantic = read_semantic_t::ReadLastUpdate);
-    void query_partition_configuration(int pidx);
-    void query_partition_configuration_reply(error_code err, message_ptr& request, message_ptr& response, int pidx);
-    int  send_client_message(message_ptr& msg, rpc_response_task_ptr& reply, bool firstTime);
-    void enqueue_pending_list(int pidx, message_ptr& userRequest, rpc_response_task_ptr& caller_tsk);
-    void on_user_request_timeout(rpc_response_task_ptr caller_tsk);
-    void calculate_send_time(message_ptr& request, int &maxTime, int &maxCount);
-
-private:
-    std::string                            _app_name;
-    std::vector<end_point>               _meta_servers;
-
-    mutable dsn::service::zlock           _lock;
-    std::map<int,  partition_configuration> _config_cache;
-    int                                    _app_id;
-    end_point                            _last_contact_point;
-    
-    class pending_message
+    class replication_app_client_base : public virtual servicelet
     {
     public:
-        task_ptr         timeout_tsk;
-        message_ptr      msg;
-        rpc_response_task_ptr caller_tsk;
-    };
-    // <partition index, <meta server query task, <pending msg>>>
-    typedef std::map<int, std::pair<rpc_response_task_ptr, std::list<pending_message>* > > pending_messages;
-    pending_messages  _pending_messages;  
+        replication_app_client_base(        
+            const std::vector<end_point>& meta_servers, 
+            const char* app_name
+            );
 
-    int32_t          _meta_server_rpc_call_timeout_milliseconds_per_send;
-    int32_t          _meta_server_rpc_call_max_send_count;
-};
+        ~replication_app_client_base();
+
+        template<typename T, typename TRequest, typename TResponse>
+        rpc_response_task_ptr write(
+            int partition_index,
+            task_code code,
+            std::shared_ptr<TRequest>& req,
+
+            // callback
+            T* context,
+            void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&),
+
+            // other specific parameters   
+            int timeout_milliseconds = 0,
+            int reply_hash = 0
+            )
+        {
+            timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
+            message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds);
+            marshall(msg->writer(), *req);
+
+            auto task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task1<T, TRequest, TResponse>(
+                context,
+                req,
+                callback,
+                msg
+                );
+            write_internal(partition_index, code, task, reply_hash);
+            return task;
+        }
+        
+        template<typename TRequest, typename TResponse>
+        rpc_response_task_ptr write(
+            int partition_index,
+            task_code code,
+            std::shared_ptr<TRequest>& req,
+
+            // callback
+            servicelet* context,
+            std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
+
+            // other specific parameters   
+            int timeout_milliseconds = 0,
+            int reply_hash = 0
+            )
+        {
+            timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
+            message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds);
+            marshall(msg->writer(), *req);
+
+            auto task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task2<TRequest, TResponse>(
+                context,
+                req,
+                callback,
+                msg
+                );
+            write_internal(partition_index, code, task, reply_hash);
+            return task;
+        }
+
+        template<typename T, typename TRequest, typename TResponse>
+        rpc_response_task_ptr write(
+            int partition_index,
+            task_code code,
+            const TRequest& req,
+
+            // callback
+            T* context,
+            void (T::*callback)(error_code, const TResponse&),
+
+            // other specific parameters   
+            int timeout_milliseconds = 0,
+            int reply_hash = 0
+            )
+        {
+            timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
+            message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds);
+            marshall(msg->writer(), req);
+
+            auto task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task5<T, TResponse>(
+                context,
+                callback,
+                msg
+                );
+            write_internal(partition_index, code, task, reply_hash);
+            return task;
+        }
+
+        template<typename TRequest, typename TResponse>
+        rpc_response_task_ptr write(
+            int partition_index,
+            task_code code,
+            const TRequest& req,
+
+            // callback
+            servicelet* context,
+            std::function<void(error_code, const TResponse&)> callback,
+
+            // other specific parameters   
+            int timeout_milliseconds = 0,
+            int reply_hash = 0
+            )
+        {
+            timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
+            message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds);
+            marshall(msg->writer(), req);
+
+            auto task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task3<TResponse>(
+                context,
+                callback,
+                msg
+                );
+            write_internal(partition_index, code, task, reply_hash);
+            return task;
+        }
+
+        template<typename T, typename TRequest, typename TResponse>
+        rpc_response_task_ptr read(
+            int partition_index,
+            task_code code,
+            std::shared_ptr<TRequest>& req,
+
+            // callback
+            T* context,
+            void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&),
+
+            // other specific parameters   
+            int timeout_milliseconds = 0,
+            read_semantic_t read_semantic = ReadOutdated,
+            decree snapshot_decree = invalid_decree, // only used when ReadSnapshot        
+            int reply_hash = 0
+            )
+        {
+            timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
+            message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds);
+            marshall(msg->writer(), *req);
+
+            auto task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task1<T, TRequest, TResponse>(
+                context,
+                req,
+                callback,
+                msg
+                );
+            read_internal(partition_index, code, task, read_semantic, snapshot_decree, reply_hash);
+            return task;
+        }
+
+        template<typename TRequest, typename TResponse>
+        rpc_response_task_ptr read(
+            int partition_index,
+            task_code code,
+            std::shared_ptr<TRequest>& req,
+
+            // callback
+            servicelet* context,
+            std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
+
+            // other specific parameters   
+            int timeout_milliseconds = 0,
+            read_semantic_t read_semantic = ReadOutdated,
+            decree snapshot_decree = invalid_decree, // only used when ReadSnapshot        
+            int reply_hash = 0
+            )
+        {
+            timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
+            message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds);
+            marshall(msg->writer(), *req);
+
+            auto task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task2<TRequest, TResponse>(
+                context,
+                req,
+                callback,
+                msg
+                );
+            read_internal(partition_index, code, task, read_semantic, snapshot_decree, reply_hash);
+            return task;
+        }
+
+        template<typename T, typename TRequest, typename TResponse>
+        rpc_response_task_ptr read(
+            int partition_index,
+            task_code code,
+            const TRequest& req,
+
+            // callback
+            T* context,
+            void (T::*callback)(error_code, const TResponse&),
+
+            // other specific parameters   
+            int timeout_milliseconds = 0,
+            read_semantic_t read_semantic = ReadOutdated,
+            decree snapshot_decree = invalid_decree, // only used when ReadSnapshot        
+            int reply_hash = 0
+            )
+        {
+            timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
+            message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds);
+            marshall(msg->writer(), req);
+
+            auto task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task5<T, TResponse>(
+                context,
+                callback,
+                msg
+                );
+            read_internal(partition_index, code, task, read_semantic, snapshot_decree, reply_hash);
+            return task;
+        }
+
+        template<typename TRequest, typename TResponse>
+        rpc_response_task_ptr read(
+            int partition_index,
+            task_code code,
+            const TRequest& req,
+
+            // callback
+            servicelet* context,
+            std::function<void(error_code, const TResponse&)> callback,
+
+            // other specific parameters   
+            int timeout_milliseconds = 0,
+            read_semantic_t read_semantic = ReadOutdated,
+            decree snapshot_decree = invalid_decree, // only used when ReadSnapshot        
+            int reply_hash = 0
+            )
+        {
+            timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
+            message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds);
+            marshall(msg->writer(), req);
+
+            auto task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task3<TResponse>(
+                context,
+                callback,
+                msg
+                );
+            read_internal(partition_index, code, task, read_semantic, snapshot_decree, reply_hash);
+            return task;
+        }
+
+        // get read address policy
+        virtual end_point get_read_address(read_semantic_t semantic, const partition_configuration& config);
+
+    private:
+        void write_internal(
+            int partition_index,
+            task_code code,
+            rpc_response_task_ptr callback,
+            int reply_hash = 0
+            );
+
+        void read_internal(
+            int partition_index,
+            task_code code,
+            rpc_response_task_ptr callback,
+            read_semantic_t read_semantic = ReadOutdated,
+            decree snapshot_decree = invalid_decree, // only used when ReadSnapshot        
+            int reply_hash = 0
+            );
+
+    private:
+        std::string                             _app_name;
+        std::vector<end_point>                  _meta_servers;
+
+        mutable zrwlock                         _config_lock;
+        std::map<int,  partition_configuration> _config_cache;
+        int                                     _app_id;
+        end_point                               _last_contact_point;
+
+    private:
+        struct request_context
+        {
+            int                   partition_index;
+            rpc_response_task_ptr callback_task;
+            read_request_header   read_header;
+            write_request_header  write_header;
+            bool                  is_read;
+            uint16_t              header_pos; // write header after body is written
+            uint64_t              timeout_ts_us;
+            task_ptr              timeout_timer; // when partition config is unknown at the first place
+        };
+
+        struct partition_context
+        {
+            rpc_response_task_ptr query_config_task;
+            std::list<request_context*> requests;
+        };
+
+        typedef std::map<int, partition_context*> pending_requests;
+        
+        mutable zlock     _requests_lock;
+        pending_requests  _pending_requests;        
+
+    private:
+        void call(request_context* request);
+        error_code get_address(int pidx, bool is_write, __out_param end_point& addr, __out_param int& app_id, read_semantic_t semantic = read_semantic_t::ReadLastUpdate);
+        void on_user_request_timeout(request_context* rc);
+        void query_partition_configuration_reply(error_code err, message_ptr& request, message_ptr& response, int pidx);
+        void replica_rw_reply(error_code err, message_ptr& request, message_ptr& response, request_context* rc);
+        void end_request(request_context* request, error_code err, message_ptr& resp);
+        void clear_all_pending_tasks();
+    };
+
+
 }} // namespace

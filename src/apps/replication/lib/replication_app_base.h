@@ -53,67 +53,95 @@ public:
     // interfaces to be implemented by app
     // all return values are error code
     //
-    // application state write and read
-    // @requests: update requests ?they are batched and delivered to the application
-    // @decree: a version number that is used to align between replication and application
-    // @ackClient: when it is true, the application needs to reply to the client by invoking 
-    //             rpc_response<TResponse>(request, response);
-    virtual int  write(std::list<message_ptr>& requests, decree decree, bool ackClient) = 0; // single-threaded
-    virtual void read(const client_read_request2& meta, message_ptr& request) = 0; // must be thread-safe
+    virtual int  open(bool create_new) = 0; // singel threaded
+    virtual int  close(bool clear_state) = 0; // must be thread-safe
     
-    
-    virtual int  open(bool createNew) = 0; // singel threaded
-    virtual int  close(bool clearState) = 0; // must be thread-safe
+    // update _last_durable_decree internally
     virtual int  compact(bool force) = 0;  // must be thread-safe
     
+    //
     // helper routines to accelerate learning
+    // 
     virtual void prepare_learning_request(__out_param blob& learnRequest) {};
     virtual int  get_learn_state(decree start, const blob& learnRequest, __out_param learn_state& state) = 0;  // must be thread-safe
     virtual int  apply_learn_state(learn_state& state) = 0;  // must be thread-safe, and last_committed_decree must equal to last_durable_decree after learning
-
-    virtual decree last_committed_decree() const = 0;  // must be thread-safe
-    virtual decree last_durable_decree() const = 0;  // must be thread-safe
-
+        
 public:
     //
     // utility functions to be used by app
     //   
-    template<typename T> void rpc_response(message_ptr& request, const T& response);
-    message_ptr PrepareRpcResponse(message_ptr& request);
-    void rpc_response(message_ptr& response);
+    decree last_committed_decree() const { return _last_committed_decree; }
+    decree last_durable_decree() const  { return _last_durable_decree; }
     const std::string& dir() const {return _dir;}
+
+protected:
+    template<typename T, typename TRequest, typename TResponse> 
+    void register_async_rpc_handler(
+        task_code code,
+        const char* name,
+        void (T::*callback)(const TRequest&, rpc_replier<TResponse>&)
+        );
+
+    void unregister_rpc_handler(task_code code);
+
+private:
+    template<typename T, typename TRequest, typename TResponse>
+    void internal_rpc_handler(
+        message_ptr& request, 
+        message_ptr& response, 
+        void (T::*callback)(const TRequest&, rpc_replier<TResponse>&)
+        );
 
 private:
     // routines for replica internal usage
     friend class replica;
-    int    WriteInternal(mutation_ptr& mu, bool ackClient);
-    void   WriteReplicationResponse(message_ptr& response);
-        
+    int  write_internal(mutation_ptr& mu, bool ack_client);
+    void dispatch_rpc_call(int code, message_ptr& request, bool ack_client);
+
+protected:
+    std::atomic<decree> _last_durable_decree;
+    std::atomic<decree> _last_committed_decree;
+
 private:
     std::string _dir;
     replica*    _replica;
+    std::map<int, std::function<void(message_ptr, message_ptr)> > _handlers;
 };
 
 
 //------------------ inline implementation ---------------------
-inline message_ptr replication_app_base::PrepareRpcResponse(message_ptr& request)
+template<typename T, typename TRequest, typename TResponse>
+inline void replication_app_base::register_async_rpc_handler(
+    task_code code,
+    const char* name,
+    void (T::*callback)(const TRequest&, rpc_replier<TResponse>&)
+    )
 {
-    message_ptr resp = request->create_response();
-    WriteReplicationResponse(resp);
-    return resp;
+    _handlers[code] = std::bind(
+        &replication_app_base::internal_rpc_handler,
+        this,
+        std::placeholders::_1,
+        std::placeholders::_2,
+        callback
+        );
 }
 
-inline void replication_app_base::rpc_response(message_ptr& response)
+inline void replication_app_base::unregister_rpc_handler(task_code code)
 {
-    dsn::service::rpc::reply(response);
+    _handlers.erase(code);
 }
 
-template<typename T> 
-inline void replication_app_base::rpc_response(message_ptr& request, const T& response)
+template<typename T, typename TRequest, typename TResponse>
+inline void replication_app_base::internal_rpc_handler(
+    message_ptr& request, 
+    message_ptr& response, 
+    void (T::*callback)(const TRequest&, rpc_replier<TResponse>&))
 {
-    auto resp = PrepareRpcResponse(request);
-    marshall(resp, response);
-    rpc_response(resp);
+    TRequest req;
+    unmarshall(request->reader(), req);
+
+    rpc_replier<TResponse> replier(request, response);
+    (static_cast<T*>(this)->*callback)(req, replier);
 }
 
 }} // namespace

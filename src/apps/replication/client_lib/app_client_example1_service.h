@@ -28,6 +28,7 @@
 using namespace dsn;
 using namespace dsn::service;
 using namespace dsn::replication;
+using namespace dsn::replication::application;
 
 class app_client_example1_service : public service_app, public virtual servicelet
 {

@@ -113,6 +113,7 @@
     <ClInclude Include="replication_service_app.h" />
     <ClInclude Include="replica_context.h" />
     <ClInclude Include="replica_stub.h" />
+    <ClInclude Include="simple_kv.replicated.service.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

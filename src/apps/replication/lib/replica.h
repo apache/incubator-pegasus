@@ -63,8 +63,8 @@ public:
     //
     //    requests from clients
     // 
-    void on_client_write(message_ptr& request);
-    void on_client_read(const client_read_request2& meta, message_ptr& request);
+    void on_client_write(int code, message_ptr& request);
+    void on_client_read(const read_request_header& meta, message_ptr& request);
 
     //
     //    messages and tools from/for meta server
@@ -116,7 +116,7 @@ private:
     mutation_ptr new_mutation(decree decree);
     
     // initialization
-    int  init_app_and_prepare_list(const char* app_type, bool createNew);
+    int  init_app_and_prepare_list(const char* app_type, bool create_new);
     int  initialize_on_load(const char* dir, bool renameDirOnFailure);        
     int  initialize_on_new(const char* app_type, global_partition_id gpid);
     replica(replica_stub* stub, replication_options& options); // for replica::load(..) only

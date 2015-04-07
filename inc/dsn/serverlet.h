@@ -63,8 +63,11 @@ namespace dsn {
 
             void operator () (const TResponse& resp)
             {
-                marshall(_response->writer(), resp);
-                rpc::reply(_response);
+                if (_response != nullptr)
+                {
+                    marshall(_response->writer(), resp);
+                    rpc::reply(_response);
+                }
             }
 
             template<typename T2, typename T2Request, typename T2Response>

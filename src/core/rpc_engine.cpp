@@ -65,7 +65,7 @@ namespace dsn {
     {
         error_code sys_err = (reply != nullptr) ? reply->error() : ERR_TIMEOUT;
         rpc_response_task_ptr call;
-        task_ptr timeout_tsk;
+        task_ptr timeout_task;
         bool ret;
 
         {
@@ -74,7 +74,7 @@ namespace dsn {
             if (it != _requests.end())
             {
                 call = it->second.resp_task;
-                timeout_tsk = it->second.timeout_task;
+                timeout_task = it->second.timeout_task;
                 _requests.erase(it);
                 ret = true;
             }
@@ -86,9 +86,9 @@ namespace dsn {
 
         if (call != nullptr)
         {
-            if (timeout_tsk != task::get_current_task())
+            if (timeout_task != task::get_current_task())
             {
-                timeout_tsk->cancel(true);
+                timeout_task->cancel(true);
             }
             
             call->set_delay(delay_ms);
@@ -101,25 +101,25 @@ namespace dsn {
     void rpc_client_matcher::on_call(message_ptr& request, rpc_response_task_ptr& call, rpc_client_session_ptr& client)
     {
         message* msg = request.get();
-        task_ptr timeout_tsk;
+        task_ptr timeout_task;
         task_spec* spec = task_spec::get(msg->header().local_rpc_code);
         message_header& hdr = msg->header();
 
-        timeout_tsk = (new rpc_timeout_task(shared_from_this(), hdr.id, spec));
+        timeout_task = (new rpc_timeout_task(shared_from_this(), hdr.id, spec));
 
         {
             utils::auto_lock l(_requests_lock);
             auto pr = _requests.insert(rpc_requests::value_type(hdr.id, match_entry()));
             dassert (pr.second, "the message is already on the fly!!!");
             pr.first->second.resp_task = call;
-            pr.first->second.timeout_task = timeout_tsk;
+            pr.first->second.timeout_task = timeout_task;
             pr.first->second.client = client;
-            //{call, timeout_tsk, client }
+            //{call, timeout_task, client }
         }
 
         int timeout_milliseconds = get_timeout_ms(hdr.client.timeout_milliseconds, spec);
-        timeout_tsk->set_delay(timeout_milliseconds);
-        timeout_tsk->enqueue();
+        timeout_task->set_delay(timeout_milliseconds);
+        timeout_task->enqueue();
         msg->add_elapsed_timeout_milliseconds(timeout_milliseconds);
 
     }
@@ -157,11 +157,11 @@ namespace dsn {
         }
         else
         {
-            task_ptr timeout_tsk(new rpc_timeout_task(shared_from_this(), key, spec));
+            task_ptr timeout_task(new rpc_timeout_task(shared_from_this(), key, spec));
             int timeout_ms = get_timeout_ms(remain_time_ms, spec);
             msg->add_elapsed_timeout_milliseconds(timeout_ms);
-            timeout_tsk->set_delay(timeout_ms);
-            timeout_tsk->enqueue();
+            timeout_task->set_delay(timeout_ms);
+            timeout_task->enqueue();
 
             {
                 utils::auto_lock l(_requests_lock);
@@ -169,7 +169,7 @@ namespace dsn {
                 if (it == _requests.end())
                     return;
 
-                it->second.timeout_task = timeout_tsk;
+                it->second.timeout_task = timeout_task;
             }
 
             client->send(msg);

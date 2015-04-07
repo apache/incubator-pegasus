@@ -34,23 +34,53 @@ replication_app_base::replication_app_base(replica* replica, const replication_a
 {
     _dir = replica->dir();
     _replica = replica;
+    _last_committed_decree = 0;
+    _last_durable_decree = 0;
 }
 
-int replication_app_base::WriteInternal(mutation_ptr& mu, bool ackClient)
+int replication_app_base::write_internal(mutation_ptr& mu, bool ack_client)
 {
     dassert (mu->data.header.decree == last_committed_decree() + 1, "");
 
-    int err = write(mu->client_requests, mu->data.header.decree, ackClient);
+    int err = 0;
+    for (auto& msg : mu->client_requests)
+    {
+        dispatch_rpc_call(
+            msg->header().client.timeout_milliseconds, // hack
+            msg,
+            ack_client
+            );
+    }
 
-    //dassert (mu->data.header.decree == last_committed_decree(), "");
-
+    ++_last_committed_decree;    
     return err;
 }
 
-void replication_app_base::WriteReplicationResponse(message_ptr& response)
+void replication_app_base::dispatch_rpc_call(int code, message_ptr& request, bool ack_client)
 {
-    int err = ERR_SUCCESS;
-    response->writer().write(err);
+    auto it = _handlers.find(code);
+    if (it != _handlers.end())
+    {
+        if (ack_client)
+        {
+            message_ptr response = request->create_response();
+            int err = 0;
+            marshall(response->writer(), err);
+            it->second(request, response);
+        }
+        else
+        {
+            message_ptr response(nullptr);
+            it->second(request, response);
+        }
+    }
+    else if (ack_client)
+    {
+        message_ptr response = request->create_response();
+        error_code err = ERR_HANDLER_NOT_FOUND;
+        marshall(response->writer(), (int)err);
+        rpc::reply(response);
+    }
 }
 
 }} // end namespace

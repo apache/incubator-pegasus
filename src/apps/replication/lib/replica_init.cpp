@@ -120,7 +120,7 @@ int replica::initialize_on_load(const char* dir, bool renameDirOnFailure)
     }
 }
 
-int replica::init_app_and_prepare_list(const char* app_type, bool createNew)
+int replica::init_app_and_prepare_list(const char* app_type, bool create_new)
 {
     dassert (nullptr == _app, "");
 
@@ -131,7 +131,7 @@ int replica::init_app_and_prepare_list(const char* app_type, bool createNew)
     }
     dassert (nullptr != _app, "");
 
-    int err = _app->open(createNew);    
+    int err = _app->open(create_new);    
     if (ERR_SUCCESS == err)
     {
         dassert (_app->last_durable_decree() == _app->last_committed_decree(), "");

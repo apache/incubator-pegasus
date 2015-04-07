@@ -86,22 +86,21 @@
     <ClCompile Include="app_client_example1_service.cpp" />
     <ClCompile Include="replication_app_client_base.cpp" />
     <ClCompile Include="replication_common.cpp" />
-    <ClCompile Include="replication_main.cpp" />
     <ClCompile Include="replication_types.cpp" />
     <ClCompile Include="rpc_replicated.cpp" />
+    <ClCompile Include="simple_kv_types.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="app_client_example1.h" />
     <ClInclude Include="app_client_example1_service.h" />
     <ClInclude Include="codes.h" />
-    <ClInclude Include="meta_s.rdsn.h" />
     <ClInclude Include="replication_app_client_base.h" />
     <ClInclude Include="replication_common.h" />
     <ClInclude Include="replication_ds.h" />
-    <ClInclude Include="replication_examples.h" />
     <ClInclude Include="replication_types.h" />
-    <ClInclude Include="replica_s.rdsn.h" />
     <ClInclude Include="rpc_replicated.h" />
+    <ClInclude Include="simple_kv.replicated.client.h" />
+    <ClInclude Include="simple_kv_types.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\replication.dsn" />

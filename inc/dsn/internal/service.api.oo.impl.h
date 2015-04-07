@@ -110,7 +110,7 @@ namespace dsn {
                     std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> _callback;
                 };
 
-                template<typename TRequest, typename TResponse>
+                template<typename TResponse>
                 class service_rpc_response_task3 : public rpc_response_task, public service_context_manager
                 {
                 public:
@@ -172,6 +172,42 @@ namespace dsn {
 
                 private:
                     std::function<void(error_code, message_ptr&, message_ptr&)> _callback;
+                };
+
+
+                template<typename T, typename TResponse>
+                class service_rpc_response_task5 : public rpc_response_task, public service_context_manager
+                {
+                public:
+                    service_rpc_response_task5(
+                        T* svc,
+                        void (T::*callback)(error_code, const TResponse&),
+                        message_ptr& request,
+                        int hash = 0
+                        )
+                        : rpc_response_task(request, hash), service_context_manager(svc, this)
+                    {
+                        _svc = svc;
+                        _callback = callback;
+                    }
+
+                    virtual void on_response(error_code err, message_ptr& request, message_ptr& response)
+                    {
+                        TResponse resp;
+                        if (err == ERR_SUCCESS)
+                        {
+                            unmarshall(response->reader(), resp);
+                            (_svc->*_callback)(err, resp);
+                        }
+                        else
+                        {
+                            (_svc->*_callback)(err, resp);
+                        }
+                    }
+
+                private:
+                    T* _svc;
+                    void (T::*_callback)(error_code, const TResponse&);
                 };
             }
 
@@ -241,6 +277,30 @@ namespace dsn {
                 return rpc::call(server, msg, resp_task);
             }
 
+            template<typename T, typename TRequest, typename TResponse>
+            inline rpc_response_task_ptr call_typed(
+                const end_point& server,
+                task_code code,
+                const TRequest& req,
+                T* context,
+                void(T::*callback)(error_code, const TResponse&),
+                int request_hash/* = 0*/,
+                int timeout_milliseconds /*= 0*/,
+                int reply_hash /*= 0*/
+                )
+            {
+                message_ptr msg = message::create_request(code, timeout_milliseconds, request_hash);
+                marshall(msg->writer(), req);
+
+                rpc_response_task_ptr resp_task(new internal_use_only::service_rpc_response_task5<T, TResponse>(
+                    context,
+                    callback,
+                    msg,
+                    reply_hash
+                    ));
+
+                return rpc::call(server, msg, resp_task);
+            }
 
             template<typename TRequest, typename TResponse>
             inline rpc_response_task_ptr call_typed(
@@ -257,7 +317,7 @@ namespace dsn {
                 message_ptr msg = message::create_request(code, timeout_milliseconds, request_hash);
                 marshall(msg->writer(), req);
 
-                rpc_response_task_ptr resp_task(new internal_use_only::service_rpc_response_task3<TRequest, TResponse>(
+                rpc_response_task_ptr resp_task(new internal_use_only::service_rpc_response_task3<TResponse>(
                     context,
                     callback,
                     msg,

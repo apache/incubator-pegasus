@@ -62,16 +62,14 @@ void app_client_example1_service::stop(bool cleanup)
     }
 }
 
-
-static void ResponseHandler(int err, message_ptr& request, message_ptr& response)
-{
-
-}
-
 void app_client_example1_service::OnTimer()
 {
     for (int i = 0; i < 100; i++)
     {
-        _client->append("TestKey", "TestValue", ResponseHandler);
+        kv_pair pr;
+        pr.key = "test_key";
+        pr.value = "test_value.";
+        _client->begin_append2(pr);
     }
 }
+
