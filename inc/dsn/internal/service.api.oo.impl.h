@@ -328,7 +328,7 @@ namespace dsn {
             }
 
             template<typename TRequest, typename TResponse>
-            class layered_rpc_handler_typed : public layered_rpc_handler
+            class layered_rpc_handler_typed : public layered_rpc::layered_rpc_handler
             {
             public:
                 layered_rpc_handler_typed(
@@ -375,8 +375,8 @@ namespace dsn {
                 int reply_hash
                 )
             {
-                message_ptr req = message::create_request(code, timeout_milliseconds, request_hash);
-                layered_rpc *lr = new layered_rpc(req, reply_hash);
+                message_ptr request = message::create_request(code, timeout_milliseconds, request_hash);
+                layered_rpc *lr = new layered_rpc(context, request, reply_hash);
                 
                 auto h = new layered_rpc_handler_typed<TRequest, TResponse>(req, callback);
                 lr->_handlers.push_back(h);
@@ -391,7 +391,7 @@ namespace dsn {
                 )
             {
                 auto h = new layered_rpc_handler_typed<TRequest, TResponse>(req, callback);
-                lr->_handlers.push_back(h);
+                _handlers.push_back(h);
             }
 
             inline void layered_rpc::exec()

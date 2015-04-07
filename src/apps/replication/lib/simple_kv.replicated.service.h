@@ -11,6 +11,7 @@
 #include <dsn/serverlet.h>
 #include <iostream>
 #include "replication_app_base.h"
+#include "simple_kv.replicated.client.h"
 
 namespace dsn {
     namespace replication {
