@@ -66,7 +66,9 @@ void mutation::add_client_request(task_code code, message_ptr& request)
     }
 
     mu->_fromMessage = reader;
-    sprintf (mu->_name, "%llu.%llu", mu->data.header.ballot, mu->data.header.decree);
+    sprintf (mu->_name, "%lld.%lld", 
+            static_cast<long long int>(mu->data.header.ballot),
+            static_cast<long long int>(mu->data.header.decree));
     return mu;
 }
 
