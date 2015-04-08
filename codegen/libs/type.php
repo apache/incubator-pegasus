@@ -3,9 +3,6 @@
 // the current program
 global $_PROG;
 
-if (is_null($_PROG))
-	$_PROG = new t_program();
-
 class t_program
 {
 	var $name;
@@ -15,16 +12,18 @@ class t_program
 	var $enums;
 	var $structs;
 	var $services;
+	var $types;
 	
-	function __construct()
+	function __construct($name)
 	{
-		$this->name = "not set yet";
+		$this->name = $name;
 		$this->namespaces = array();
 		$this->includes = array();
 		$this->typedefs = array();
 		$this->enums = array();
 		$this->structs = array();
 		$this->services = array();
+		$this->types = array();
 	}
 }
 
@@ -37,6 +36,7 @@ class t_type
 	{
 		$this->program = $program;
 		$this->name = $name;
+		$_PROG->types[] = $this;
 	}
 	
 	function is_void() { return false; }
@@ -52,6 +52,7 @@ class t_typedef extends t_type
 	{
 		parent::__construct($program, $alias);
 		$this->type = $type;
+		$_PROG->typedefs[] = $this;
 	}	
 }
 
@@ -63,6 +64,7 @@ class t_enum extends t_type
 	{
 		parent::__construct($program, $name);
 		$this->values = array();
+		$_PROG->enums[] = $this;
 	}
 	
 	function add_value($name, $value)
@@ -76,14 +78,12 @@ class t_enum extends t_type
 class t_field
 {
 	var $name;
-	var $type;
-	var $value;
+	var $type_name;
 	
-	function __construct($name, $type, $value)
+	function __construct($name, $type_name)
 	{
 		$this->name = $name;
-		$this->type = $type;
-		$this->value = $value;
+		$this->type_name = $type_name;
 	}
 }
 
@@ -95,11 +95,12 @@ class t_struct extends t_type
 	{
 		parent::__construct($program, $name);
 		$this->fields = array();
+		$_PROG->structs[] = $this;
 	}
 	
-	function add_field($name, $type, $value)
+	function add_field($name, $type_name)
 	{
-		$this->fields[] = new t_field($name, $type, $value);
+		$this->fields[] = new t_field($name, $type_name);
 	}
 	
 	function is_base_type() { return false; }
@@ -120,9 +121,9 @@ class t_function
 		$this->params = array();
 	}
 	
-	function add_param($name, $type)
+	function add_param($name, $type_name)
 	{
-		$this->params[] = new t_field($name, $type, NULL);
+		$this->params[] = new t_field($name, $type_name);
 	}
 }
 
@@ -134,6 +135,7 @@ class t_service extends t_type
 	{
 		parent::__construct($program, $name);
 		$this->functions = array();
+		$_PROG->services[] = $this;
 	}
 	
 	function add_function($ret, $name)
