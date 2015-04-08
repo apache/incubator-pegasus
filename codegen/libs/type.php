@@ -1,4 +1,5 @@
-<?
+<?php
+
 // the current program
 global $_PROG;
 
