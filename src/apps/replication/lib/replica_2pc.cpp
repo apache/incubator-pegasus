@@ -42,7 +42,7 @@ void replica::on_client_write(int code, message_ptr& request)
         return;
     }
 
-    if (false == _options.RequestBatchDisabled)
+    if (false == _options.request_batch_disabled)
     {
         if (_primary_states.PendingMutation == nullptr)
         {
@@ -56,13 +56,13 @@ void replica::on_client_write(int code, message_ptr& request)
                 this,
                 std::bind(&replica::on_mutation_pending_timeout, this, _primary_states.PendingMutation),
                 gpid_to_hash(get_gpid()),
-                _options.MutationMaxPendingTimeMs
+                _options.mutation_max_pending_time_ms
                 );    
         }
 
         _primary_states.PendingMutation->add_client_request(code, request);
 
-        if (_primary_states.PendingMutation->memory_size() >= _options.MutationMaxSizeInMB * 1024 * 1024)
+        if (_primary_states.PendingMutation->memory_size() >= _options.mutation_max_size_mb * 1024 * 1024)
         {
             init_prepare(_primary_states.PendingMutation);
             _primary_states.CleanupPendingMutations();
@@ -95,7 +95,7 @@ void replica::init_prepare(mutation_ptr& mu)
     int err = ERR_SUCCESS;
     uint8_t count = 0;
 
-    if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 < _options.MutationApplyMinReplicaNumber)
+    if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 < _options.mutation_2pc_min_replica_count)
     {
         err = ERR_NOT_ENOUGH_MEMBER;
         goto ErrOut;
@@ -111,7 +111,7 @@ void replica::init_prepare(mutation_ptr& mu)
         mu->set_id(get_ballot(), mu->data.header.decree);
     }
 
-    if (mu->data.header.decree > _prepare_list->max_decree() && _prepare_list->count() >= _options.StalenessForCommit)
+    if (mu->data.header.decree > _prepare_list->max_decree() && _prepare_list->count() >= _options.staleness_for_commit)
     {
         err = ERR_CAPACITY_EXCEEDED;
         goto ErrOut;
@@ -131,14 +131,14 @@ void replica::init_prepare(mutation_ptr& mu)
     //
     // TODO: bounded staleness on secondaries
     //
-    dassert (mu->data.header.decree <= last_committed_decree() + _options.StalenessForCommit, "");
+    dassert (mu->data.header.decree <= last_committed_decree() + _options.staleness_for_commit, "");
     
     // remote prepare
     dassert (mu->remote_tasks().size() == 0, "");
     mu->set_left_secondary_ack_count((unsigned int)_primary_states.membership.secondaries.size());
     for (auto it = _primary_states.membership.secondaries.begin(); it != _primary_states.membership.secondaries.end(); it++)
     {
-        send_prepare_message(*it, PS_SECONDARY, mu, _options.PrepareTimeoutMsForSecondaries, _options.PrepareMaxSendCountForSecondaries);
+        send_prepare_message(*it, PS_SECONDARY, mu, _options.prepare_timeout_ms_for_secondaries);
     }
 
     count = 0;
@@ -146,7 +146,7 @@ void replica::init_prepare(mutation_ptr& mu)
     {
         if (it->second.prepare_start_decree != invalid_decree && mu->data.header.decree >= it->second.prepare_start_decree)
         {
-            send_prepare_message(it->first, PS_POTENTIAL_SECONDARY, mu, _options.PrepareTimeoutMsForSecondaries, _options.PrepareMaxSendCountForSecondaries);
+            send_prepare_message(it->first, PS_POTENTIAL_SECONDARY, mu, _options.prepare_timeout_ms_for_secondaries);
             count++;
         }
     }    
@@ -180,14 +180,14 @@ ErrOut:
     return;
 }
 
-void replica::send_prepare_message(const end_point& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds, int maxSendCount)
+void replica::send_prepare_message(const end_point& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds)
 {
     message_ptr msg = message::create_request(RPC_PREPARE, timeout_milliseconds, gpid_to_hash(get_gpid()));
     marshall(msg,get_gpid());
     
 
     replica_configuration rconfig;
-    _primary_states.GetReplicaConfig(status, rconfig);
+    _primary_states.get_replica_config(status, rconfig);
 
     marshall(msg, rconfig);
     mu->write_to(msg);
@@ -306,12 +306,12 @@ void replica::on_prepare(message_ptr& request)
 
     if (PS_POTENTIAL_SECONDARY == status())
     {
-        dassert (mu->data.header.decree <= last_committed_decree() + _options.StalenessForStartPrepareForPotentialSecondary, "");
+        dassert (mu->data.header.decree <= last_committed_decree() + _options.staleness_for_start_prepare_for_potential_secondary, "");
     }
     else
     {
         dassert (PS_SECONDARY == status(), "");
-        dassert (mu->data.header.decree <= last_committed_decree() + _options.StalenessForCommit, "");
+        dassert (mu->data.header.decree <= last_committed_decree() + _options.staleness_for_commit, "");
     }
     
     // write log

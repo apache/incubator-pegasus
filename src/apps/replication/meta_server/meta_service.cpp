@@ -43,20 +43,20 @@ void meta_service::start()
 {
     _balancer = new load_balancer(_state);
     _failure_detector = new meta_server_failure_detector(_state);
-    register_rpc_handler(RPC_CM_CALL, "RPC_CM_CALL", &meta_service::OnMetaServiceRequest);
-    _balancerTimer = tasking::enqueue(LPC_LBM_RUN, this, &meta_service::OnLoadBalancerTimer, 0, 1000, 5000);
+    register_rpc_handler(RPC_CM_CALL, "RPC_CM_CALL", &meta_service::on_request);
+    _balancer_timer = tasking::enqueue(LPC_LBM_RUN, this, &meta_service::on_load_balance_timer, 0, 1000, 5000);
 
     end_point primary;
-    if (_state->GetMetaServerPrimary(primary) && primary == address())
+    if (_state->get_meta_server_primary(primary) && primary == address())
         _failure_detector->set_primary(true);
     else
         _failure_detector->set_primary(false);
 
     _failure_detector->start(
-        _opts.FD_check_interval_seconds,
-        _opts.FD_beacon_interval_seconds,
-        _opts.FD_lease_seconds,
-        _opts.FD_grace_seconds,
+        _opts.fd_check_interval_seconds,
+        _opts.fd_beacon_interval_seconds,
+        _opts.fd_lease_seconds,
+        _opts.fd_grace_seconds,
         false
         );
 }
@@ -67,20 +67,20 @@ bool meta_service::stop()
     delete _failure_detector;
     _failure_detector = nullptr;
 
-    _balancerTimer->cancel(true);
+    _balancer_timer->cancel(true);
     unregister_rpc_handler(RPC_CM_CALL);
     delete _balancer;
     _balancer = nullptr;
     return true;
 }
 
-void meta_service::OnMetaServiceRequest(message_ptr& msg)
+void meta_service::on_request(message_ptr& msg)
 {
     meta_request_header hdr;
     unmarshall(msg, hdr);
 
     meta_response_header rhdr;
-    bool isPrimary = _state->GetMetaServerPrimary(rhdr.primary_address);
+    bool isPrimary = _state->get_meta_server_primary(rhdr.primary_address);
     if (isPrimary) isPrimary = (address() == rhdr.primary_address);
     rhdr.err = ERR_SUCCESS;
     
@@ -98,7 +98,7 @@ void meta_service::OnMetaServiceRequest(message_ptr& msg)
         configuration_query_by_node_response response;
         unmarshall(msg, request);
 
-        OnQueryConfig(request, response);
+        query_configuration_by_node(request, response);
 
         marshall(resp, rhdr);
         marshall(resp, response);
@@ -110,7 +110,7 @@ void meta_service::OnMetaServiceRequest(message_ptr& msg)
         configuration_query_by_index_response response;
         unmarshall(msg, request);
 
-        DoQueryConfigurationByIndexRequest(request, response);
+        query_configuration_by_index(request, response);
         
         marshall(resp, rhdr);
         marshall(resp, response);
@@ -137,14 +137,14 @@ void meta_service::OnMetaServiceRequest(message_ptr& msg)
 }
 
 // partition server & client => meta server
-void meta_service::OnQueryConfig(configuration_query_by_node_request& request, __out_param configuration_query_by_node_response& response)
+void meta_service::query_configuration_by_node(configuration_query_by_node_request& request, __out_param configuration_query_by_node_response& response)
 {
-    _state->OnQueryConfig(request, response);
+    _state->query_configuration_by_node(request, response);
 }
 
-void meta_service::DoQueryConfigurationByIndexRequest(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response)
+void meta_service::query_configuration_by_index(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response)
 {
-    _state->DoQueryConfigurationByIndexRequest(request, response);
+    _state->query_configuration_by_index(request, response);
 }
 
 void meta_service::update_configuration(configuration_update_request& request, __out_param configuration_update_response& response)
@@ -153,10 +153,10 @@ void meta_service::update_configuration(configuration_update_request& request, _
 }
 
 // local timers
-void meta_service::OnLoadBalancerTimer()
+void meta_service::on_load_balance_timer()
 {
     end_point primary;
-    if (_state->GetMetaServerPrimary(primary) && primary == address())
+    if (_state->get_meta_server_primary(primary) && primary == address())
     {
         _failure_detector->set_primary(true);
         _balancer->run();

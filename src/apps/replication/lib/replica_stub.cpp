@@ -38,8 +38,8 @@ using namespace dsn::service;
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/, bool is_long_subscriber/* = true*/)
     : serverlet("replica_stub")
 {
-    _replicaStateSubscriber = subscriber;
-    _isLongSubscriber = is_long_subscriber;
+    _replica_state_subscriber = subscriber;
+    _is_long_subscriber = is_long_subscriber;
     _failure_detector = nullptr;
     _state = NS_Disconnected;
 }
@@ -58,7 +58,7 @@ void replica_stub::initialize(configuration_ptr config, bool clear/* = false*/)
 
 void replica_stub::initialize(const replication_options& opts, configuration_ptr config, bool clear/* = false*/)
 {
-    zauto_lock l(_replicasLock);
+    zauto_lock l(_repicas_lock);
 
     _config = config;
 
@@ -67,7 +67,7 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
 
     // init dirs
     set_options(opts);
-    _dir = _options.WorkingDir;
+    _dir = _options.working_dir;
     if (clear)
     {
         boost::filesystem::remove_all(_dir);
@@ -114,7 +114,7 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
     }
 
     // init logs
-    _log = new mutation_log(opts.LogBufferSizeMB, opts.LogPendingMaxMilliseconds, opts.LogSegmentFileSizeInMB, opts.LogBatchWrite, opts.LogMaxConcurrentWriteLogEntries);
+    _log = new mutation_log(opts.log_buffer_size_mb, opts.log_pending_max_ms, opts.log_file_size_mb, opts.log_batch_write, opts.log_max_concurrent_writes);
     int err = _log->initialize(logDir.c_str());
     dassert (err == ERR_SUCCESS, "");
     
@@ -148,15 +148,15 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
     }
 
     // start log serving    
-    if (false == _options.GcDisabled)
+    if (false == _options.gc_disabled)
     {
-        _gcTimerTask = tasking::enqueue(
+        _gc_timer_task = tasking::enqueue(
             LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
             this,
             &replica_stub::on_gc,
             0,
-            random32(0, _options.GcIntervalMs),
-            _options.GcIntervalMs
+            random32(0, _options.gc_interval_ms),
+            _options.gc_interval_ms
             );
     }
 
@@ -165,7 +165,7 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
     {
         initMaxDecrees[it->second->get_gpid()] = it->second->max_prepared_decree();
     }
-    err = _log->start_write_service(initMaxDecrees, _options.StalenessForCommit);
+    err = _log->start_write_service(initMaxDecrees, _options.staleness_for_commit);
     dassert (err == ERR_SUCCESS, "");
 
     // attach replicas
@@ -174,28 +174,28 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
     replicas.clear();
 
     // start timer for configuration sync
-    if (!_options.ConfigurationSyncDisabled)
+    if (!_options.config_sync_disabled)
     {
-        _partitionConfigurationSyncTimerTask = tasking::enqueue(
+        _config_sync_timer_task = tasking::enqueue(
             LPC_QUERY_CONFIGURATION_ALL,
             this,
-            &replica_stub::query_configuration,
+            &replica_stub::query_configuration_by_node,
             0, 
-            _options.ConfigurationSyncIntervalMs,
-            _options.ConfigurationSyncIntervalMs
+            _options.config_sync_interval_ms,
+            _options.config_sync_interval_ms
             );
     }
     
     // init livenessmonitor
     dassert (NS_Disconnected == _state, "");
-    if (_options.FD_disabled == false)
+    if (_options.fd_disabled == false)
     {
-        _failure_detector = new replication_failure_detector(this, _options.MetaServers);
+        _failure_detector = new replication_failure_detector(this, _options.meta_servers);
         _failure_detector->start(
-            _options.FD_check_interval_seconds,
-            _options.FD_beacon_interval_seconds,
-            _options.FD_lease_seconds,
-            _options.FD_grace_seconds
+            _options.fd_check_interval_seconds,
+            _options.fd_beacon_interval_seconds,
+            _options.fd_lease_seconds,
+            _options.fd_grace_seconds
             );
         _failure_detector->register_master(_failure_detector->current_server_contact());
     }
@@ -216,7 +216,7 @@ void replica_stub::replay_mutation(mutation_ptr& mu, Replicas* replicas)
 
 replica_ptr replica_stub::get_replica(global_partition_id gpid, bool new_when_possible, const char* app_type)
 {
-    zauto_lock l(_replicasLock);
+    zauto_lock l(_repicas_lock);
     auto it = _replicas.find(gpid);
     if (it != _replicas.end())
         return it->second;
@@ -247,7 +247,7 @@ replica_ptr replica_stub::get_replica(int32_t app_id, int32_t partition_index)
 
 void replica_stub::get_primary_replica_list(uint32_t p_tableID, std::vector<global_partition_id>& p_repilcaList)
 {
-    zauto_lock l(_replicasLock);
+    zauto_lock l(_repicas_lock);
     for (auto it = _replicas.begin(); it != _replicas.end(); it++)
     {
         if (it->second->status() == PS_PRIMARY 
@@ -424,16 +424,16 @@ void replica_stub::on_remove(const replica_configuration& request)
     }
 }
 
-void replica_stub::query_configuration()
+void replica_stub::query_configuration_by_node()
 {
     if (_state == NS_Disconnected)
     {
         return;
     }
 
-    if (_partitionConfigurationQueryTask != nullptr)
+    if (_config_query_task != nullptr)
     {
-        _partitionConfigurationQueryTask->cancel(false);
+        _config_query_task->cancel(false);
     }
 
     message_ptr msg = message::create_request(RPC_CM_CALL, _options.meta_server_call_timeout_ms);
@@ -446,7 +446,7 @@ void replica_stub::query_configuration()
     req.node = address();
     marshall(msg, req);
 
-    _partitionConfigurationQueryTask = rpc::call_replicated(
+    _config_query_task = rpc::call_replicated(
         _failure_detector->current_server_contact(),
         _failure_detector->get_servers(),
         msg,
@@ -466,11 +466,11 @@ void replica_stub::on_meta_server_connected()
         address().name.c_str(), static_cast<int>(address().port)
         );
 
-    zauto_lock l(_replicasLock);
+    zauto_lock l(_repicas_lock);
     if (_state == NS_Disconnected)
     {
         _state = NS_Connecting;
-        query_configuration();
+        query_configuration_by_node();
     }
 }
 
@@ -483,15 +483,15 @@ void replica_stub::on_node_query_reply(int err, message_ptr& request, message_pt
 
     if (response == nullptr)
     {
-        zauto_lock l(_replicasLock);
+        zauto_lock l(_repicas_lock);
         if (_state == NS_Connecting)
         {
-            query_configuration();
+            query_configuration_by_node();
         }
     }
     else
     {
-        zauto_lock l(_replicasLock);
+        zauto_lock l(_repicas_lock);
         if (_state == NS_Connecting)
         {
             _state = NS_Connected;
@@ -532,7 +532,7 @@ void replica_stub::on_node_query_reply(int err, message_ptr& request, message_pt
 
 void replica_stub::set_meta_server_connected_for_test(const configuration_query_by_node_response& resp)
 {
-    zauto_lock l(_replicasLock);
+    zauto_lock l(_repicas_lock);
     dassert (_state != NS_Connected, "");
     _state = NS_Connected;
 
@@ -592,7 +592,7 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
     {
         request->config.primary = dsn::end_point::INVALID;        
     }
-    else if (ReplicaHelper::RemoveNode(address(), request->config.secondaries))
+    else if (replica_helper::remove_node(address(), request->config.secondaries))
     {
     }
     else
@@ -617,7 +617,7 @@ void replica_stub::on_meta_server_disconnected()
         "%s:%u: meta server disconnected",
         address().name.c_str(), static_cast<int>(address().port)
         );
-    zauto_lock l(_replicasLock);
+    zauto_lock l(_repicas_lock);
     if (NS_Disconnected == _state)
         return;
 
@@ -638,7 +638,7 @@ void replica_stub::on_meta_server_disconnected()
 void replica_stub::on_meta_server_disconnected_scatter(replica_stub_ptr this_, global_partition_id gpid)
 {
     {
-        zauto_lock l(_replicasLock);
+        zauto_lock l(_repicas_lock);
         if (_state != NS_Disconnected)
             return;
     }
@@ -659,14 +659,14 @@ void replica_stub::response_client_error(message_ptr& request, int error)
 
 void replica_stub::init_gc_for_test()
 {
-    dassert (_options.GcDisabled, "");
+    dassert (_options.gc_disabled, "");
 
-    _gcTimerTask = tasking::enqueue(
+    _gc_timer_task = tasking::enqueue(
         LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
         this,
         &replica_stub::on_gc,
         0,
-        _options.GcIntervalMs
+        _options.gc_interval_ms
         );
 }
 
@@ -674,7 +674,7 @@ void replica_stub::on_gc()
 {
     Replicas rs;
     {
-        zauto_lock l(_replicasLock);
+        zauto_lock l(_repicas_lock);
         rs = _replicas;
     }
 
@@ -696,7 +696,7 @@ void replica_stub::on_gc()
         if (name.length() > strlen(".err") && name.substr(name.length() - strlen(".err")) == ".err")
         {
             std::time_t mt = boost::filesystem::last_write_time(it->path());
-            if (mt > time(0) + _options.GcDiskErrorReplicaIntervalSeconds)
+            if (mt > time(0) + _options.gc_disk_error_replica_interval_seconds)
             {
                 boost::filesystem::remove_all(_dir + "/" + name);
             }
@@ -706,33 +706,33 @@ void replica_stub::on_gc()
 
 task_ptr replica_stub::begin_open_replica(const std::string& app_type, global_partition_id gpid, std::shared_ptr<group_check_request> req)
 {
-    _replicasLock.lock();
+    _repicas_lock.lock();
     if (_replicas.find(gpid) != _replicas.end())
     {
-        _replicasLock.unlock();
+        _repicas_lock.unlock();
         return nullptr;
     }        
 
-    auto it = _openingReplicas.find(gpid);
-    if (it != _openingReplicas.end())
+    auto it = _opening_replicas.find(gpid);
+    if (it != _opening_replicas.end())
     {
-        _replicasLock.unlock();
+        _repicas_lock.unlock();
         return nullptr;
     }
     else 
     {
-        auto it2 = _closingReplicas.find(gpid);
-        if (it2 != _closingReplicas.end())
+        auto it2 = _closing_replicas.find(gpid);
+        if (it2 != _closing_replicas.end())
         {
             if (it2->second.second->status() == PS_INACTIVE 
                 && it2->second.first->cancel(false))
             {
                 replica_ptr r = it2->second.second;
-                _closingReplicas.erase(it2);
+                _closing_replicas.erase(it2);
                 add_replica(r);
 
                 // unlock here to avoid dead lock
-                _replicasLock.unlock();
+                _repicas_lock.unlock();
 
                 ddebug( "open replica which is to be closed '%s.%u.%u'", app_type.c_str(), gpid.app_id, gpid.pidx);
 
@@ -744,7 +744,7 @@ task_ptr replica_stub::begin_open_replica(const std::string& app_type, global_pa
             }
             else 
             {
-                _replicasLock.unlock();
+                _repicas_lock.unlock();
                 dwarn( "open replica '%s.%u.%u' failed coz replica is under closing", 
                     app_type.c_str(), gpid.app_id, gpid.pidx);                
                 return nullptr;
@@ -753,8 +753,8 @@ task_ptr replica_stub::begin_open_replica(const std::string& app_type, global_pa
         else 
         {
             auto task = tasking::enqueue(LPC_OPEN_REPLICA, this, std::bind(&replica_stub::open_replica, this, app_type, gpid, req));
-            _openingReplicas[gpid] = task;
-            _replicasLock.unlock();
+            _opening_replicas[gpid] = task;
+            _repicas_lock.unlock();
             return task;
         }
     }
@@ -774,11 +774,11 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
     dassert (rep != nullptr, "");
         
     {
-        zauto_lock l(_replicasLock);
+        zauto_lock l(_repicas_lock);
         auto it = _replicas.find(gpid);
         dassert (it == _replicas.end(), "");
         add_replica(rep);
-        _openingReplicas.erase(gpid);
+        _opening_replicas.erase(gpid);
     }
 
     if (nullptr != req)
@@ -789,7 +789,7 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
 
 task_ptr replica_stub::begin_close_replica(replica_ptr r)
 {
-    zauto_lock l(_replicasLock);
+    zauto_lock l(_repicas_lock);
 
     // initialization is still ongoing
     if (nullptr == _failure_detector)
@@ -800,9 +800,9 @@ task_ptr replica_stub::begin_close_replica(replica_ptr r)
         auto task = tasking::enqueue(LPC_CLOSE_REPLICA, this, 
             std::bind(&replica_stub::close_replica, this, r), 
             0, 
-            r->status() == PS_ERROR ? 0 : _options.GcMemoryReplicaIntervalMs
+            r->status() == PS_ERROR ? 0 : _options.gc_memory_replica_interval_ms
             );
-        _closingReplicas[r->get_gpid()] = std::make_pair(task, r);
+        _closing_replicas[r->get_gpid()] = std::make_pair(task, r);
         return task;
     }
     else
@@ -818,20 +818,20 @@ void replica_stub::close_replica(replica_ptr r)
     r->close();
 
     {
-        zauto_lock l(_replicasLock);
-        _closingReplicas.erase(r->get_gpid());
+        zauto_lock l(_repicas_lock);
+        _closing_replicas.erase(r->get_gpid());
     }
 }
 
 void replica_stub::add_replica(replica_ptr r)
 {
-    zauto_lock l(_replicasLock);
+    zauto_lock l(_repicas_lock);
     _replicas[r->get_gpid()] = r;
 }
 
 bool replica_stub::remove_replica(replica_ptr r)
 {
-    zauto_lock l(_replicasLock);
+    zauto_lock l(_repicas_lock);
     if (_replicas.erase(r->get_gpid()) > 0)
     {
         return true;
@@ -842,15 +842,15 @@ bool replica_stub::remove_replica(replica_ptr r)
 
 void replica_stub::notify_replica_state_update(const replica_configuration& config, bool isClosing)
 {
-    if (nullptr != _replicaStateSubscriber)
+    if (nullptr != _replica_state_subscriber)
     {
-        if (_isLongSubscriber)
+        if (_is_long_subscriber)
         {
-            tasking::enqueue(LPC_REPLICA_STATE_CHANGE_NOTIFICATION, this, std::bind(_replicaStateSubscriber, address(), config, isClosing));
+            tasking::enqueue(LPC_REPLICA_STATE_CHANGE_NOTIFICATION, this, std::bind(_replica_state_subscriber, address(), config, isClosing));
         }
         else
         {
-            _replicaStateSubscriber(address(), config, isClosing);
+            _replica_state_subscriber(address(), config, isClosing);
         }
     }
 }
@@ -868,52 +868,52 @@ void replica_stub::open_service()
     register_rpc_handler(RPC_LEARN_ADD_LEARNER, "LearnAdd", &replica_stub::on_add_learner);
     register_rpc_handler(RPC_REMOVE_REPLICA, "remove", &replica_stub::on_remove);
     register_rpc_handler(RPC_GROUP_CHECK, "GroupCheck", &replica_stub::on_group_check);
-    register_rpc_handler(RPC_QUERY_PN_DECREE, "QueryDecree", &replica_stub::on_query_decree);
+    register_rpc_handler(RPC_QUERY_PN_DECREE, "query_decree", &replica_stub::on_query_decree);
 }
 
 void replica_stub::close()
 {
-    if (_partitionConfigurationSyncTimerTask != nullptr)
+    if (_config_sync_timer_task != nullptr)
     {
-        _partitionConfigurationSyncTimerTask->cancel(true);
-        _partitionConfigurationSyncTimerTask = nullptr;
+        _config_sync_timer_task->cancel(true);
+        _config_sync_timer_task = nullptr;
     }
 
-    if (_partitionConfigurationQueryTask != nullptr)
+    if (_config_query_task != nullptr)
     {
-        _partitionConfigurationQueryTask->cancel(true);
-        _partitionConfigurationQueryTask = nullptr;
+        _config_query_task->cancel(true);
+        _config_query_task = nullptr;
     }
     _state = NS_Disconnected;
     
-    if (_gcTimerTask != nullptr)
+    if (_gc_timer_task != nullptr)
     {
-        _gcTimerTask->cancel(true);
-        _gcTimerTask = nullptr;
+        _gc_timer_task->cancel(true);
+        _gc_timer_task = nullptr;
     }
     
     {
-        zauto_lock l(_replicasLock);    
-        while (_closingReplicas.empty() == false)
+        zauto_lock l(_repicas_lock);    
+        while (_closing_replicas.empty() == false)
         {
-            auto task = _closingReplicas.begin()->second.first;
-            _replicasLock.unlock();
+            auto task = _closing_replicas.begin()->second.first;
+            _repicas_lock.unlock();
 
             task->wait();
 
-            _replicasLock.lock();
-            _closingReplicas.erase(_closingReplicas.begin());
+            _repicas_lock.lock();
+            _closing_replicas.erase(_closing_replicas.begin());
         }
 
-        while (_openingReplicas.empty() == false)
+        while (_opening_replicas.empty() == false)
         {
-            auto task = _openingReplicas.begin()->second;
-            _replicasLock.unlock();
+            auto task = _opening_replicas.begin()->second;
+            _repicas_lock.unlock();
 
             task->cancel(true);
 
-            _replicasLock.lock();
-            _openingReplicas.erase(_openingReplicas.begin());
+            _repicas_lock.lock();
+            _opening_replicas.erase(_opening_replicas.begin());
         }
 
         while (_replicas.empty() == false)

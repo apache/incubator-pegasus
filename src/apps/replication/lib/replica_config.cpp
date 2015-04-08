@@ -92,8 +92,8 @@ void replica::assign_primary(configuration_update_request& proposal)
     }
 
     proposal.config.primary = address();
-    ReplicaHelper::RemoveNode(address(), proposal.config.secondaries);
-    ReplicaHelper::RemoveNode(address(), proposal.config.drop_outs);
+    replica_helper::remove_node(address(), proposal.config.secondaries);
+    replica_helper::remove_node(address(), proposal.config.drop_outs);
 
     update_configuration_on_meta_server(CT_ASSIGN_PRIMARY, proposal.node, proposal.config);
 }
@@ -136,7 +136,7 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     group_check_request request;
     request.app_type = _primary_states.membership.app_type;
     request.node = proposal.node;
-    _primary_states.GetReplicaConfig(proposal.node, request.config);
+    _primary_states.get_replica_config(proposal.node, request.config);
     request.last_committed_decree = last_committed_decree();
     request.learner_signature = state.signature;
 
@@ -154,7 +154,7 @@ void replica::upgrade_to_secondary_on_primary(const end_point& node)
     partition_configuration newConfig = _primary_states.membership;
 
     // remove from drop out if there
-    ReplicaHelper::RemoveNode(node, newConfig.drop_outs);
+    replica_helper::remove_node(node, newConfig.drop_outs);
     // add secondary
     newConfig.secondaries.push_back(node);
 
@@ -195,7 +195,7 @@ void replica::downgrade_to_inactive_on_primary(configuration_update_request& pro
     }
     else
     {
-        auto rt = ReplicaHelper::RemoveNode(proposal.node, proposal.config.secondaries);
+        auto rt = replica_helper::remove_node(proposal.node, proposal.config.secondaries);
         dassert (rt, "");
     }
 
@@ -223,13 +223,13 @@ void replica::remove(configuration_update_request& proposal)
         break;
     case PS_SECONDARY:
         {
-        auto rt = ReplicaHelper::RemoveNode(proposal.node, proposal.config.secondaries);
+        auto rt = replica_helper::remove_node(proposal.node, proposal.config.secondaries);
         dassert (rt, "");
         }
         break;
     case PS_POTENTIAL_SECONDARY:
         {
-        auto rt = ReplicaHelper::RemoveNode(proposal.node, proposal.config.drop_outs);
+        auto rt = replica_helper::remove_node(proposal.node, proposal.config.drop_outs);
         dassert (rt, "");
         }
         break;
@@ -360,7 +360,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, messa
             if (req->node != address())
             {
                 replica_configuration rconfig;
-                ReplicaHelper::GetReplicaConfig(resp.config, req->node, rconfig);
+                replica_helper::get_replica_config(resp.config, req->node, rconfig);
                 rpc::call_one_way_typed(req->node, RPC_REMOVE_REPLICA, rconfig, gpid_to_hash(get_gpid()));
             }
             break;
@@ -378,7 +378,7 @@ bool replica::update_configuration(const partition_configuration& config)
     dassert (config.ballot >= get_ballot(), "");
     
     replica_configuration rconfig;
-    ReplicaHelper::GetReplicaConfig(config, address(), rconfig);
+    replica_helper::get_replica_config(config, address(), rconfig);
 
     if (rconfig.status == PS_PRIMARY &&
         (rconfig.ballot > get_ballot() || status() != PS_PRIMARY)

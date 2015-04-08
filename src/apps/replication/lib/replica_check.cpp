@@ -33,7 +33,7 @@ namespace dsn { namespace replication {
 
 void replica::init_group_check()
 {
-    if (PS_PRIMARY != status() || _options.GroupCheckDisabled)
+    if (PS_PRIMARY != status() || _options.group_check_disabled)
         return;
 
     dassert (nullptr == _primary_states.GroupCheckTask, "");
@@ -43,7 +43,7 @@ void replica::init_group_check()
             &replica::broadcast_group_check,
             gpid_to_hash(get_gpid()),
             0,
-            _options.GroupCheckIntervalMs
+            _options.group_check_internal_ms
             );
 }
 
@@ -74,7 +74,7 @@ void replica::broadcast_group_check()
 
         request->app_type = _primary_states.membership.app_type;
         request->node = addr;
-        _primary_states.GetReplicaConfig(addr, request->config);
+        _primary_states.get_replica_config(addr, request->config);
         request->last_committed_decree = last_committed_decree();
         request->learner_signature = 0;
         if (it->second == PS_POTENTIAL_SECONDARY)
@@ -90,8 +90,7 @@ void replica::broadcast_group_check()
             request,            
             this,
             &replica::on_group_check_reply,
-            gpid_to_hash(get_gpid()),
-            _options.GroupCheckTimeoutMs
+            gpid_to_hash(get_gpid())
             );
 
         _primary_states.GroupCheckPendingReplies[addr] = callback_task;
@@ -189,7 +188,7 @@ void replica::on_group_check_reply(error_code err, std::shared_ptr<group_check_r
 // for testing purpose only
 void replica::send_group_check_once_for_test(int delay_milliseconds)
 {
-    dassert (_options.GroupCheckDisabled, "");
+    dassert (_options.group_check_disabled, "");
 
     _primary_states.GroupCheckTask = tasking::enqueue(
             LPC_GROUP_CHECK,

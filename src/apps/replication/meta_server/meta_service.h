@@ -42,22 +42,22 @@ public:
     bool stop();
 
 private:
-    void OnMetaServiceRequest(message_ptr& request);
+    void on_request(message_ptr& request);
 
     // partition server & client => meta server
-    void OnQueryConfig(configuration_query_by_node_request& request, __out_param configuration_query_by_node_response& response);
-    void DoQueryConfigurationByIndexRequest(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response);
+    void query_configuration_by_node(configuration_query_by_node_request& request, __out_param configuration_query_by_node_response& response);
+    void query_configuration_by_index(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response);
     void update_configuration(configuration_update_request& request, __out_param configuration_update_response& response);
    
    
     // local timers
-    void OnLoadBalancerTimer();
+    void on_load_balance_timer();
 
 private:
     meta_server_failure_detector *_failure_detector;
     server_state               *_state;
     load_balancer              *_balancer;
-    task_ptr                    _balancerTimer;
+    task_ptr                    _balancer_timer;
     replication_options         _opts;
 };
 

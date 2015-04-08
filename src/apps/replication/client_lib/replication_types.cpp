@@ -29,6 +29,13 @@ global_partition_id& global_partition_id::operator=(const global_partition_id& o
   return *this;
 }
 
+bool global_partition_id::operator <(const global_partition_id& other1) const 
+{
+    return app_id < other1.app_id 
+        || (app_id == other1.app_id && pidx < other1.pidx)
+        ;
+}
+
 mutation_header::~mutation_header() throw() {
 }
 

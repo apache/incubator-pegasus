@@ -26,13 +26,13 @@
 
 namespace dsn { namespace replication {
 
-mutation_cache::mutation_cache(decree initDecree, int maxCount)
+mutation_cache::mutation_cache(decree init_decree, int max_count)
 {
-    _maxCount = maxCount;
-    _array.resize(maxCount, nullptr);
-    _totalSizeInBytes = 0;
+    _max_count = max_count;
+    _array.resize(max_count, nullptr);
+    _total_size_bytes = 0;
 
-    reset(initDecree, false);
+    reset(init_decree, false);
 }
 
 mutation_cache::~mutation_cache()
@@ -49,23 +49,23 @@ int mutation_cache::put(mutation_ptr& mu)
         delta = 1;
         tag = 0;
     }
-    else if (decree > _endDecree)
+    else if (decree > _end_decree)
     {
-        delta = static_cast<int>(decree - _endDecree);
+        delta = static_cast<int>(decree - _end_decree);
         tag = 1;
     }
-    else if (decree < _startDecree)
+    else if (decree < _start_decree)
     {
-        delta = static_cast<int>(_startDecree - decree);
+        delta = static_cast<int>(_start_decree - decree);
         tag = -1;
     }
 
-    if (delta + _interval > _maxCount)
+    if (delta + _interval > _max_count)
     {
         return ERR_CAPACITY_EXCEEDED;
     }
 
-    int idx = ((decree - _endDecree) + _endIndex + _maxCount) % _maxCount;
+    int idx = ((decree - _end_decree) + _end_idx + _max_count) % _max_count;
     mutation_ptr old = _array[idx];
     if (old != nullptr)
     {
@@ -76,27 +76,27 @@ int mutation_cache::put(mutation_ptr& mu)
         
     // update tracking data
     _interval += delta;
-    _totalSizeInBytes += mu->memory_size();
+    _total_size_bytes += mu->memory_size();
     if (old != nullptr)
     {
-        _totalSizeInBytes -= old->memory_size();
+        _total_size_bytes -= old->memory_size();
         old = nullptr;
     }
 
     if (tag > 0)
     {
-        _endIndex = idx;
-        _endDecree = decree;
+        _end_idx = idx;
+        _end_decree = decree;
     }
     else if (tag < 0)
     {
-        _startIndex = idx;
-        _startDecree = decree;
+        _start_idx = idx;
+        _start_decree = decree;
     }
     else if (_interval == 1)
     {
-        _startIndex = _endIndex = idx;
-        _startDecree = _endDecree = decree;
+        _start_idx = _end_idx = idx;
+        _start_decree = _end_decree = decree;
     }
     return ERR_SUCCESS;
 }
@@ -105,28 +105,28 @@ mutation_ptr mutation_cache::pop_min()
 {
     if (_interval > 0)
     {
-        mutation_ptr mu = _array[_startIndex];
-        _array[_startIndex] = nullptr;
+        mutation_ptr mu = _array[_start_idx];
+        _array[_start_idx] = nullptr;
 
         _interval--;
-        _startIndex = (_startIndex + 1) % _maxCount;
+        _start_idx = (_start_idx + 1) % _max_count;
         
         if (mu != nullptr)
         {
-            _totalSizeInBytes -= mu->memory_size();
+            _total_size_bytes -= mu->memory_size();
         }
 
         if (_interval == 0)
         {
             //TODO: FIXE ME LATER
-            //dassert (_totalSizeInBytes == 0, "");
+            //dassert (_total_size_bytes == 0, "");
 
-            _endDecree = _startDecree;
-            _endIndex = _startIndex;
+            _end_decree = _start_decree;
+            _end_idx = _start_idx;
         }
         else
         {
-            _startDecree++;
+            _start_decree++;
         }
         return mu;
     }
@@ -136,26 +136,26 @@ mutation_ptr mutation_cache::pop_min()
     }
 }
 
-void mutation_cache::reset(decree initDecree, bool clearMutations)
+void mutation_cache::reset(decree init_decree, bool clear_mutations)
 {
-    _startDecree = _endDecree = initDecree;
-    _startIndex = _endIndex = 0;
+    _start_decree = _end_decree = init_decree;
+    _start_idx = _end_idx = 0;
     _interval = 0;    
-    _totalSizeInBytes = 0;
+    _total_size_bytes = 0;
 
-    if (clearMutations)
+    if (clear_mutations)
     {
-        for (int i = 0; i < _maxCount; i++)
+        for (int i = 0; i < _max_count; i++)
             _array[i] = nullptr;        
     }
 }
 
 mutation_ptr mutation_cache::get_mutation_by_decree(decree decree)
 {
-    if (decree < _startDecree || decree > _endDecree)
+    if (decree < _start_decree || decree > _end_decree)
         return nullptr;
     else
-        return _array[(_startIndex + (decree - _startDecree) + _maxCount) % _maxCount];
+        return _array[(_start_idx + (decree - _start_decree) + _max_count) % _max_count];
 }
 
 

@@ -114,7 +114,7 @@ private:
         NS_Connected
     };
 
-    void query_configuration();
+    void query_configuration_by_node();
     void on_meta_server_disconnected_scatter(replica_stub_ptr this_, global_partition_id gpid);
     void on_node_query_reply(int err, message_ptr& request, message_ptr& response);
     void on_node_query_reply_scatter(replica_stub_ptr this_, const partition_configuration& config);
@@ -129,13 +129,13 @@ private:
     void notify_replica_state_update(const replica_configuration& config, bool isClosing);
 
 private:
-    typedef std::map<global_partition_id, replica_ptr, GlobalPartitionIDComparor> Replicas;
-    typedef std::map<global_partition_id, task_ptr, GlobalPartitionIDComparor> OpeningReplicas;
-    typedef std::map<global_partition_id, std::pair<task_ptr, replica_ptr>, GlobalPartitionIDComparor> ClosingReplicas; // <close, replica>
-    zlock        _replicasLock;
+    typedef std::map<global_partition_id, replica_ptr> Replicas;
+    typedef std::map<global_partition_id, task_ptr> OpeningReplicas;
+    typedef std::map<global_partition_id, std::pair<task_ptr, replica_ptr>> ClosingReplicas; // <close, replica>
+    zlock        _repicas_lock;
     Replicas     _replicas;
-    OpeningReplicas _openingReplicas;
-    ClosingReplicas _closingReplicas;
+    OpeningReplicas _opening_replicas;
+    ClosingReplicas _closing_replicas;
     
     mutation_log* _log;
     std::string  _dir;
@@ -146,13 +146,13 @@ private:
     // constants
     replication_options                                  _options;
     configuration_ptr                    _config;
-    replica_state_subscriber                              _replicaStateSubscriber;
-    bool                                                _isLongSubscriber;
+    replica_state_subscriber                              _replica_state_subscriber;
+    bool                                                _is_long_subscriber;
     
     // temproal states
-    task_ptr      _partitionConfigurationQueryTask;
-    task_ptr      _partitionConfigurationSyncTimerTask;
-    task_ptr      _gcTimerTask;
+    task_ptr      _config_query_task;
+    task_ptr      _config_sync_timer_task;
+    task_ptr      _gc_timer_task;
 
 private:    
     friend class replica;

@@ -35,12 +35,12 @@ public:
 
 public:
     prepare_list(
-        decree initDecree, int maxCount,
+        decree init_decree, int max_count,
         mutation_committer committer);
 
     decree last_committed_decree() const { return _lastCommittedDecree; }
-    void   reset(decree initDecree);
-    void   truncate(decree initDecree);
+    void   reset(decree init_decree);
+    void   truncate(decree init_decree);
     
     //
     // for two-phase commit

@@ -63,7 +63,7 @@ namespace dsn {
 //    }
 //}
 //
-//int  BoundedQueueAdmissionController::get_syste_utilization()
+//int  BoundedQueueAdmissionController::get_system_utilization()
 //{
 //    return static_cast<int>(100.0 * static_cast<double>InQueueTaskCount() / static_cast<double>_maxTaskQueueSize);
 //}
@@ -120,7 +120,7 @@ namespace dsn {
 //    }
 //}
 //
-//int SingleRpcClassResponseTimeAdmissionController::get_syste_utilization()
+//int SingleRpcClassResponseTimeAdmissionController::get_system_utilization()
 //{
 //    return static_cast<int>(100.0 * static_cast<double>_counter->get_percentile(_percentile) / static_cast<double>_latencyThreshold100ns);
 //}

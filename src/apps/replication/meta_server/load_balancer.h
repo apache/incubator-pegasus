@@ -39,12 +39,12 @@ public:
 
 private:
     // meta server => partition server
-    void SendConfigProposal(const end_point& node, const configuration_update_request& proposal);
-    void QueryDecree(std::shared_ptr<query_replica_decree_request> query);
-    void OnQueryDecreeAck(error_code err, std::shared_ptr<query_replica_decree_request>& query, std::shared_ptr<query_replica_decree_response>& resp);
+    void send_proposal(const end_point& node, const configuration_update_request& proposal);
+    void query_decree(std::shared_ptr<query_replica_decree_request> query);
+    void on_query_decree_ack(error_code err, std::shared_ptr<query_replica_decree_request>& query, std::shared_ptr<query_replica_decree_response>& resp);
     
-    void RunLB(partition_configuration& pc);
-    end_point FindMinimalLoadMachine(bool primaryOnly);
+    void run_lb(partition_configuration& pc);
+    end_point find_minimal_load_machine(bool primaryOnly);
 
 private:
     server_state *_state;

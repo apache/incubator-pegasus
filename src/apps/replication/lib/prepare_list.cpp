@@ -29,9 +29,9 @@
 namespace dsn { namespace replication {
 
 prepare_list::prepare_list(
-        decree initDecree, int maxCount,
+        decree init_decree, int max_count,
         mutation_committer committer)
-        : mutation_cache(initDecree, maxCount)
+        : mutation_cache(init_decree, max_count)
 {
     _committer = committer;
     _lastCommittedDecree = 0;
@@ -44,19 +44,19 @@ void prepare_list::sanity_check()
         );
 }
 
-void prepare_list::reset(decree initDecree)
+void prepare_list::reset(decree init_decree)
 {
-    _lastCommittedDecree = initDecree;
-    mutation_cache::reset(initDecree, true);
+    _lastCommittedDecree = init_decree;
+    mutation_cache::reset(init_decree, true);
 }
 
-void prepare_list::truncate(decree initDecree)
+void prepare_list::truncate(decree init_decree)
 {
-    while (min_decree() <= initDecree && count() > 0)
+    while (min_decree() <= init_decree && count() > 0)
     {
         pop_min();
     }
-    _lastCommittedDecree = initDecree;
+    _lastCommittedDecree = init_decree;
 }
 
 int prepare_list::prepare(mutation_ptr& mu, partition_status status)

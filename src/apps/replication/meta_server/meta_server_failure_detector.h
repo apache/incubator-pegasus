@@ -59,7 +59,7 @@ public:
     virtual void on_ping(const fd::beacon_msg& beacon, ::dsn::service::rpc_replier<fd::beacon_ack>& reply);
 
 private:
-    bool        _isPrimary;
+    bool        _is_primary;
     server_state *_state;
 };
 

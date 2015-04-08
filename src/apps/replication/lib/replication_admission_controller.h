@@ -38,7 +38,7 @@ public:
 
 private:
     virtual bool is_task_accepted(task_ptr& task);
-    virtual int  get_syste_utilization();
+    virtual int  get_system_utilization();
 
 private:
 

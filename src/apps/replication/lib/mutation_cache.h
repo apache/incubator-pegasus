@@ -32,30 +32,30 @@ namespace dsn { namespace replication {
 class mutation_cache
 {
 public:
-    mutation_cache(decree initDecree, int maxCount);
+    mutation_cache(decree init_decree, int max_count);
     ~mutation_cache();
 
-    int         put(mutation_ptr& mu);
+    int          put(mutation_ptr& mu);
     mutation_ptr pop_min();
     mutation_ptr get_mutation_by_decree(decree decree);
-    void        reset(decree initDecree, bool clearMutations);
+    void         reset(decree init_decree, bool clear_mutations);
 
-    decree  min_decree() const { return _startDecree; } 
-    decree  max_decree() const { return _endDecree; }
-    long    total_size_in_bytes() const { return _totalSizeInBytes; }
-    int     count()     const { return _interval; }
+    decree  min_decree() const { return _start_decree; } 
+    decree  max_decree() const { return _end_decree; }
+    long    total_size_in_bytes() const { return _total_size_bytes; }
+    int     count() const { return _interval; }
 
 private:
     std::vector<mutation_ptr> _array;
-    int          _maxCount;
+    int          _max_count;
     
     int          _interval;
-    long         _totalSizeInBytes;
+    long         _total_size_bytes;
 
-    int          _startIndex;
-    int          _endIndex;
-    decree       _startDecree;
-    decree       _endDecree;
+    int          _start_idx;
+    int          _end_idx;
+    decree       _start_decree;
+    decree       _end_decree;
 };
 
 }} // namespace

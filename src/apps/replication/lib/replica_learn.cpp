@@ -90,7 +90,7 @@ void replica::init_learn(uint64_t signature)
         this,
         &replica::on_learn_reply,
         gpid_to_hash(get_gpid()),
-        _options.LearnTimeoutMs
+        _options.learn_timeout_ms
         );
 
     ddebug(
@@ -125,7 +125,7 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
         ((learn_request&)request).last_committed_decree_in_app = 0;
     }
 
-    _primary_states.GetReplicaConfig(request.learner, response.config);
+    _primary_states.get_replica_config(request.learner, response.config);
 
     auto it = _primary_states.Learners.find(request.learner);
     if (it == _primary_states.Learners.end())
@@ -151,7 +151,7 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
     response.commit_decree = last_committed_decree();
     response.err = ERR_SUCCESS; 
 
-    if (request.last_committed_decree_in_app + _options.StalenessForStartPrepareForPotentialSecondary >= last_committed_decree())
+    if (request.last_committed_decree_in_app + _options.staleness_for_start_prepare_for_potential_secondary >= last_committed_decree())
     {
         if (it->second.prepare_start_decree == invalid_decree)
         {
@@ -245,11 +245,6 @@ void replica::on_learn_remote_state(std::shared_ptr<learn_response> resp)
     if (!resp->state.files.empty())
     {
         file::copy_remote_files(server, resp->base_local_dir, resp->state.files, _dir, true, LPC_AIO_TEST, nullptr, nullptr);
-    }
-
-    if (_options.LearnForAdditionalLongSecondsForTest != 0)
-    {
-        std::this_thread::sleep_for(std::chrono::seconds(_options.LearnForAdditionalLongSecondsForTest));
     }
 
     if (err == ERR_SUCCESS)

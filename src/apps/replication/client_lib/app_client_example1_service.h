@@ -42,10 +42,10 @@ public:
     virtual void stop(bool cleanup = false) override;
 
 private:
-    void OnTimer();
+    void on_timer();
 
 private:
     app_client_example1 *_client;
-    task_ptr            _writeTimer;
+    task_ptr            _write_timer;
 };
 

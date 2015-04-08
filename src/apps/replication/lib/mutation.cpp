@@ -28,9 +28,9 @@ namespace dsn { namespace replication {
 
 mutation::mutation()
 {
-    _memorySize = sizeof(mutation_header);
+    _memory_size = sizeof(mutation_header);
     _private0 = 0; 
-    _notLogged = 1;
+    _not_logged = 1;
 }
 
 mutation::~mutation()
@@ -47,7 +47,7 @@ void mutation::add_client_request(task_code code, message_ptr& request)
     client_requests.push_back(request);
     request->header().client.timeout_milliseconds = static_cast<int>(code); // hack
     data.updates.push_back(bb);
-    _memorySize += request->total_size();
+    _memory_size += request->total_size();
 }
 
 /*static*/ mutation_ptr mutation::read_from(message_ptr& reader)
@@ -62,10 +62,10 @@ void mutation::add_client_request(task_code code, message_ptr& request)
         ::dsn::blob bb((const char *)buf, 0, it->length());
         message_ptr msg(new message(bb, false));
         mu->client_requests.push_back(msg);
-        mu->_memorySize += msg->total_size();
+        mu->_memory_size += msg->total_size();
     }
 
-    mu->_fromMessage = reader;
+    mu->_from_message = reader;
     sprintf (mu->_name, "%lld.%lld", 
             static_cast<long long int>(mu->data.header.ballot),
             static_cast<long long int>(mu->data.header.decree));
@@ -80,22 +80,22 @@ void mutation::write_to(message_ptr& writer)
 int mutation::clear_prepare_or_commit_tasks()
 {
     int c = 0;
-    for (auto it = _prepareOrCommitTasks.begin(); it != _prepareOrCommitTasks.end(); it++)
+    for (auto it = _prepare_or_commit_tasks.begin(); it != _prepare_or_commit_tasks.end(); it++)
     {
         it->second->cancel(true);
         c++;
     }
 
-    _prepareOrCommitTasks.clear();
+    _prepare_or_commit_tasks.clear();
     return c;
 }
 
 int mutation::clear_log_task()
 {
-    if (_logTask != nullptr)
+    if (_log_task != nullptr)
     {
-        _logTask->cancel(true);
-        _logTask = nullptr;
+        _log_task->cancel(true);
+        _log_task = nullptr;
         return 1;
     }
     else

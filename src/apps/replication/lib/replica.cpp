@@ -63,7 +63,7 @@ void replica::init_state()
 
     _prepare_list = new prepare_list(
         0, 
-        _options.StalenessForStartPrepareForPotentialSecondary,
+        _options.staleness_for_start_prepare_for_potential_secondary,
         std::bind(
             &replica::execute_mutation,
             this,

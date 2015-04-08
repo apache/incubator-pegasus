@@ -28,7 +28,7 @@ app_client_example1_service::app_client_example1_service(service_app_spec* s, co
 : service_app(s, c)
 {
     _client = nullptr;
-    _writeTimer = nullptr;
+    _write_timer = nullptr;
 }
 
 app_client_example1_service::~app_client_example1_service(void)
@@ -41,19 +41,19 @@ error_code app_client_example1_service::start(int argc, char** argv)
     replication_options opts;
     opts.initialize(config());
 
-    _client = new app_client_example1(opts.MetaServers);
-    _writeTimer = tasking::enqueue(LPC_TEST, this, 
-        &app_client_example1_service::OnTimer, 0, 10000, 1000);
+    _client = new app_client_example1(opts.meta_servers);
+    _write_timer = tasking::enqueue(LPC_TEST, this, 
+        &app_client_example1_service::on_timer, 0, 10000, 1000);
 
     return ERR_SUCCESS;
 }
 
 void app_client_example1_service::stop(bool cleanup)
 {
-    if (_writeTimer != nullptr)
+    if (_write_timer != nullptr)
     {
-        _writeTimer->cancel(true);
-        _writeTimer = nullptr;
+        _write_timer->cancel(true);
+        _write_timer = nullptr;
     }
 
     if (_client != nullptr)
@@ -63,9 +63,9 @@ void app_client_example1_service::stop(bool cleanup)
     }
 }
 
-void app_client_example1_service::OnTimer()
+void app_client_example1_service::on_timer()
 {
-    for (int i = 0; i < 1; i++)
+    for (int i = 0; i < 100; i++)
     {
         kv_pair pr;
         pr.key = "test_key";

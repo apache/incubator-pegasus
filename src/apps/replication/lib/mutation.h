@@ -39,25 +39,25 @@ public:
 
     // state inquery
     const char* name() const { return _name; }
-    long memory_size() const { return _memorySize; }           
-    bool is_logged() const { return _notLogged == 0; }
-    bool is_prepared() const { return _notLogged == 0; }
+    long memory_size() const { return _memory_size; }           
+    bool is_logged() const { return _not_logged == 0; }
+    bool is_prepared() const { return _not_logged == 0; }
     bool is_ready_for_commit() const { return _private0 == 0; }
-    message_ptr& owner_message() { return _fromMessage; }
-    unsigned int left_secondary_ack_count() const { return _leftSecondaryAckCount; }
-    unsigned int left_potential_secondary_ack_count() const { return _leftPotentialSecondaryAckCount; }
-    uint64_t& start_time_milliseconds() { return _startTimeMs; }
-    task_ptr& log_task() { return _logTask; }
-    node_tasks& remote_tasks() { return _prepareOrCommitTasks; }
+    message_ptr& owner_message() { return _from_message; }
+    unsigned int left_secondary_ack_count() const { return _left_secondary_ack_count; }
+    unsigned int left_potential_secondary_ack_count() const { return _left_potential_secondary_ack_count; }
+    uint64_t& start_time_milliseconds() { return _start_time_ms; }
+    task_ptr& log_task() { return _log_task; }
+    node_tasks& remote_tasks() { return _prepare_or_commit_tasks; }
 
     // state change
     void set_id(ballot b, decree c);
     void add_client_request(task_code code, message_ptr& request);
-    void set_logged() { dassert (!is_logged(), ""); _notLogged = 0; }
-    unsigned int decrease_left_secondary_ack_count() { return --_leftSecondaryAckCount; }
-    unsigned int decrease_left_potential_secondary_ack_count() { return --_leftPotentialSecondaryAckCount; }
-    void set_left_secondary_ack_count(unsigned int count) { _leftSecondaryAckCount = count; }
-    void set_left_potential_secondary_ack_count(unsigned int count) { _leftPotentialSecondaryAckCount = count; }
+    void set_logged() { dassert (!is_logged(), ""); _not_logged = 0; }
+    unsigned int decrease_left_secondary_ack_count() { return --_left_secondary_ack_count; }
+    unsigned int decrease_left_potential_secondary_ack_count() { return --_left_potential_secondary_ack_count; }
+    void set_left_secondary_ack_count(unsigned int count) { _left_secondary_ack_count = count; }
+    void set_left_potential_secondary_ack_count(unsigned int count) { _left_potential_secondary_ack_count = count; }
     int  clear_prepare_or_commit_tasks();
     int  clear_log_task();
     
@@ -74,20 +74,20 @@ private:
     {
     struct 
     {
-    unsigned int _notLogged : 1;
-    unsigned int _leftSecondaryAckCount : 7;
-    unsigned int _leftPotentialSecondaryAckCount : 8;
+    unsigned int _not_logged : 1;
+    unsigned int _left_secondary_ack_count : 7;
+    unsigned int _left_potential_secondary_ack_count : 8;
     };
     uint16_t       _private0;
     };
 
-    node_tasks    _prepareOrCommitTasks;
-    task_ptr      _logTask;
+    node_tasks    _prepare_or_commit_tasks;
+    task_ptr      _log_task;
 
-    uint64_t       _startTimeMs;
-    int          _memorySize;
+    uint64_t       _start_time_ms;
+    int          _memory_size;
 
-    message_ptr   _fromMessage;
+    message_ptr   _from_message;
     char         _name[40]; // ballot.decree
 };
 

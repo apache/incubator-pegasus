@@ -30,7 +30,7 @@ using namespace dsn;
 using namespace dsn::service;
 using namespace dsn::replication;
 
-typedef std::list<std::pair<end_point, bool>> NodeStates;
+typedef std::list<std::pair<end_point, bool>> node_states;
 
 class server_state 
 {
@@ -38,47 +38,47 @@ public:
     server_state(void);
     ~server_state(void);
 
-    void GetNodeState(__out_param NodeStates& nodes);
-    void SetNodeState(const NodeStates& nodes);
-    bool GetMetaServerPrimary(__out_param end_point& node);
+    void get_node_state(__out_param node_states& nodes);
+    void set_node_state(const node_states& nodes);
+    bool get_meta_server_primary(__out_param end_point& node);
 
-    void AddMetaNode(const end_point& node);
-    void RemoveMetaNode(const end_point& node);
-    void SwitchMetaPrimary();
+    void add_meta_node(const end_point& node);
+    void remove_meta_node(const end_point& node);
+    void switch_meta_primary();
 
     // partition server & client => meta server
-    void OnQueryConfig(configuration_query_by_node_request& request, __out_param configuration_query_by_node_response& response);
-    void DoQueryConfigurationByIndexRequest(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response);
+    void query_configuration_by_node(configuration_query_by_node_request& request, __out_param configuration_query_by_node_response& response);
+    void query_configuration_by_index(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response);
     void update_configuration(configuration_update_request& request, __out_param configuration_update_response& response);
 
 private:
-    void InitApp();
+    void init_app();
     
 private:
-    struct AppState
+    struct app_state
     {
-        std::string                  AppType;
-        std::string                  AppName;
-        int32_t                      AppId;
-        int32_t                      PartitionCount;        
-        std::vector<partition_configuration>  Partitions;
+        std::string                  app_type;
+        std::string                  app_name;
+        int32_t                      app_id;
+        int32_t                      partition_count;        
+        std::vector<partition_configuration>  partitions;
     };
 
-    struct NodeState
+    struct node_state
     {
-        bool                        IsAlive;
-        end_point                 address;
-        std::set<global_partition_id, GlobalPartitionIDComparor> Primaries;
-        std::set<global_partition_id, GlobalPartitionIDComparor> Partitions;
+        bool                          is_alive;
+        end_point                     address;
+        std::set<global_partition_id> primaries;
+        std::set<global_partition_id> partitions;
     };
 
-    zrwlock                          _lock;
-    std::map<end_point, NodeState>   _nodes;
-    std::vector<AppState>            _apps;
+    zrwlock                           _lock;
+    std::map<end_point, node_state>   _nodes;
+    std::vector<app_state>            _apps;
 
-    zrwlock                          _metaLock;
-    std::vector<end_point>         _metaServers;
-    int                              _leaderIndex;
+    zrwlock                          _meta_lock;
+    std::vector<end_point>           _meta_servers;
+    int                              _leader_index;
 
 
     friend class load_balancer;

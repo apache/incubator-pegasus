@@ -34,10 +34,10 @@ namespace dsn { namespace replication {
 
     using namespace ::dsn::service;
 
-mutation_log::mutation_log(uint32_t LogBufferSizeMB, uint32_t LogPendingMaxMilliseconds, uint32_t maxLogFileSizeInMB, bool batchWrite, int writeTaskNumber)
+mutation_log::mutation_log(uint32_t log_buffer_size_mb, uint32_t log_pending_max_ms, uint32_t maxLogFileSizeInMB, bool batchWrite, int writeTaskNumber)
 {
-    _log_buffer_size_bytes = LogBufferSizeMB * 1024 * 1024;
-    _log_pending_max_milliseconds = LogPendingMaxMilliseconds;    
+    _log_buffer_size_bytes = log_buffer_size_mb * 1024 * 1024;
+    _log_pending_max_milliseconds = log_pending_max_ms;    
     _max_log_file_size_in_bytes = ((int64_t)maxLogFileSizeInMB) * 1024L * 1024L;
     _batch_write = batchWrite;
     _write_task_number = writeTaskNumber;
@@ -150,7 +150,7 @@ int mutation_log::create_new_log_file()
     }    
 
     derror(
-        "create new log file %s", logFile->Path().c_str());
+        "create new log file %s", logFile->path().c_str());
         
     _last_file_number++;
     dassert (_log_files.find(_last_file_number) == _log_files.end(), "");
@@ -301,7 +301,7 @@ int mutation_log::replay(ReplayCallback callback)
             }
 
             derror(
-                "read log header failed for %s, err = %x", log->Path().c_str(), err);
+                "read log header failed for %s, err = %x", log->path().c_str(), err);
             break;
         }
 
@@ -349,7 +349,7 @@ int mutation_log::replay(ReplayCallback callback)
                 }
 
                 derror(
-                    "read log entry failed for %s, err = %x", log->Path().c_str(), err);
+                    "read log entry failed for %s, err = %x", log->path().c_str(), err);
                 break;
             }
             
@@ -371,7 +371,7 @@ int mutation_log::replay(ReplayCallback callback)
             break;        
     }
 
-    if (err == ERR_INVALID_DATA && offset + _last_log_file->header().logBufferSizeBytes >= end_offset())
+    if (err == ERR_INVALID_DATA && offset + _last_log_file->header().log_buffer_size_bytes >= end_offset())
     {
         // remove bad data at tail, but still we may lose data so error code remains unchanged
         _global_end_offset = offset;
@@ -384,12 +384,12 @@ int mutation_log::replay(ReplayCallback callback)
     return err;
 }
 
-int mutation_log::start_write_service(multi_partition_decrees& initMaxDecrees, int maxStalenessForCommit)
+int mutation_log::start_write_service(multi_partition_decrees& initMaxDecrees, int max_staleness_for_commit)
 {
     zauto_lock l(_lock);
 
     _init_prepared_decrees = initMaxDecrees;
-    _max_staleness_for_commit = maxStalenessForCommit;
+    _max_staleness_for_commit = max_staleness_for_commit;
     
     dassert (_current_log_file == nullptr, "");
     return create_new_log_file();
@@ -515,8 +515,8 @@ int mutation_log::garbage_collection(multi_partition_decrees& durable_decrees)
             global_partition_id gpid = it2->first;
             decree lastDurableDecree = it2->second;
         
-            auto it3 = log->InitPrepareDecrees().find(gpid);
-            if (it3 == log->InitPrepareDecrees().end())
+            auto it3 = log->init_prepare_decrees().find(gpid);
+            if (it3 == log->init_prepare_decrees().end())
             {
                 // new partition, ok to delete older logs
             }
@@ -552,11 +552,11 @@ int mutation_log::garbage_collection(multi_partition_decrees& durable_decrees)
         itr->second->close();
 
         ddebug(
-            "remove log segment %s", itr->second->Path().c_str());
+            "remove log segment %s", itr->second->path().c_str());
 
-        std::string newName = itr->second->Path() + ".removed";
+        std::string newName = itr->second->path() + ".removed";
         
-        boost::filesystem::rename(itr->second->Path().c_str(), newName.c_str());
+        boost::filesystem::rename(itr->second->path().c_str(), newName.c_str());
 
         count++;
 
@@ -566,7 +566,7 @@ int mutation_log::garbage_collection(multi_partition_decrees& durable_decrees)
         }
 
         /*
-        if (!::MoveFileExA(itr->second->Path().c_str(), nullptr, MOVEFILE_WRITE_THROUGH))
+        if (!::MoveFileExA(itr->second->path().c_str(), nullptr, MOVEFILE_WRITE_THROUGH))
         {
             int err = GetLastError();
             LogR(log_level_Error, "mutation_log::truncate error. error: %d", err);
@@ -630,7 +630,7 @@ std::map<int, log_file_ptr>& mutation_log::get_logfiles_for_test()
     return new log_file(path, hFile, index, startOffset, 0, true);
 }
 
-/*static*/ log_file_ptr log_file::create_write(const char* dir, int index, int64_t startOffset, int maxStalenessForCommit, int writeTaskNumber)
+/*static*/ log_file_ptr log_file::create_write(const char* dir, int index, int64_t startOffset, int max_staleness_for_commit, int writeTaskNumber)
 {
     char path[512]; 
     sprintf (path, "%s/log.%u.%lld", dir, index, static_cast<long long int>(startOffset));
@@ -642,43 +642,43 @@ std::map<int, log_file_ptr>& mutation_log::get_logfiles_for_test()
         return nullptr;
     }
 
-    return new log_file(path, hFile, index, startOffset, maxStalenessForCommit, false, writeTaskNumber);
+    return new log_file(path, hFile, index, startOffset, max_staleness_for_commit, false, writeTaskNumber);
 }
 
-log_file::log_file(const char* path, handle_t handle, int index, int64_t startOffset, int maxStalenessForCommit, bool isRead, int writeTaskNumber)
+log_file::log_file(const char* path, handle_t handle, int index, int64_t startOffset, int max_staleness_for_commit, bool isRead, int writeTaskNumber)
 {
-    _startOffset = startOffset;
-    _endOffset = startOffset;
+    _start_offset = startOffset;
+    _end_offset = startOffset;
     _handle = handle;
-    _isRead = isRead;
+    _is_read = isRead;
     _path = path;
     _index = index; 
     memset(&_header, 0, sizeof(_header));
-    _header.maxStalenessForCommit = maxStalenessForCommit;
-    _writeTaskItr = 0;    
-    _writeTasks.resize(writeTaskNumber);
+    _header.max_staleness_for_commit = max_staleness_for_commit;
+    _write_task_itr = 0;    
+    _write_tasks.resize(writeTaskNumber);
 
     if (isRead)
     {
         boost::filesystem::path cp(_path);
-        _endOffset += boost::filesystem::file_size(cp);
+        _end_offset += boost::filesystem::file_size(cp);
     }
 }
 
 void log_file::close()
 {
-    for (size_t itr = 0; itr < _writeTasks.size(); ++itr)
+    for (size_t itr = 0; itr < _write_tasks.size(); ++itr)
     {
-        if (_writeTasks.at(itr) != nullptr)
+        if (_write_tasks.at(itr) != nullptr)
         {            
-            _writeTasks.at(itr)->wait();
-            _writeTasks.at(itr) = nullptr;
+            _write_tasks.at(itr)->wait();
+            _write_tasks.at(itr) = nullptr;
         }
     }
 
     if (0 != _handle)
     {
-        if (_isRead)
+        if (_is_read)
             ::close((int)(_handle));
         else
             dsn::service::file::close(_handle);
@@ -689,7 +689,7 @@ void log_file::close()
 
 int log_file::read_next_log_entry(__out_param ::dsn::blob& bb)
 {
-    dassert (_isRead, "");
+    dassert (_is_read, "");
 
     std::shared_ptr<char> hdrBuffer(new char[message_header::serialized_size()]);
     
@@ -738,7 +738,7 @@ aio_task_ptr log_file::write_log_entry(
                 int hash
                 )
 {
-    dassert (!_isRead, "");
+    dassert (!_is_read, "");
     dassert (offset == end_offset(), "");
 
     auto task = file::write(
@@ -752,19 +752,19 @@ aio_task_ptr log_file::write_log_entry(
         hash
         );
     
-    _endOffset = offset + bb.length();
+    _end_offset = offset + bb.length();
 
-    //printf ("WriteBB: size = %u, startoffset = %llu, endOffset = %llu\n", bb.length(), offset, _endOffset);
+    //printf ("WriteBB: size = %u, startoffset = %llu, endOffset = %llu\n", bb.length(), offset, _end_offset);
         
     // !!! dangerous, we are in the middle of a local lock
     // we already have flow control on maximum on-the-fly prepare requests, so flow control here can be disabled
-    /*if (_writeTasks.at(_writeTaskItr) != nullptr)
+    /*if (_write_tasks.at(_write_task_itr) != nullptr)
     {
-        _writeTasks.at(_writeTaskItr)->wait();
+        _write_tasks.at(_write_task_itr)->wait();
     }
 
-    _writeTasks.at(_writeTaskItr) = task;
-    _writeTaskItr = (_writeTaskItr < static_cast<int>_writeTasks.size() - 1) ? _writeTaskItr + 1 : 0;*/
+    _write_tasks.at(_write_task_itr) = task;
+    _write_task_itr = (_write_task_itr < static_cast<int>_write_tasks.size() - 1) ? _write_task_itr + 1 : 0;*/
 
     return task;
 }
@@ -799,8 +799,8 @@ int log_file::write_header(message_ptr& writer, multi_partition_decrees& initMax
     
     _header.magic = 0xdeadbeef;
     _header.version = 0x1;
-    _header.startGlobalOffset = start_offset();
-    _header.logBufferSizeBytes = bufferSizeBytes;
+    _header.start_global_offset = start_offset();
+    _header.log_buffer_size_bytes = bufferSizeBytes;
     // staleness set in ctor
 
     writer->writer().write_pod(_header);
