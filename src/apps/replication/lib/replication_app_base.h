@@ -55,7 +55,7 @@ public:
     //
     virtual int  open(bool create_new) = 0; // singel threaded
     virtual int  close(bool clear_state) = 0; // must be thread-safe
-    
+
     // update _last_durable_decree internally
     virtual int  compact(bool force) = 0;  // must be thread-safe
     
@@ -65,7 +65,7 @@ public:
     virtual void prepare_learning_request(__out_param blob& learnRequest) {};
     virtual int  get_learn_state(decree start, const blob& learnRequest, __out_param learn_state& state) = 0;  // must be thread-safe
     virtual int  apply_learn_state(learn_state& state) = 0;  // must be thread-safe, and last_committed_decree must equal to last_durable_decree after learning
-        
+            
 public:
     //
     // utility functions to be used by app
@@ -83,7 +83,7 @@ protected:
         );
 
     void unregister_rpc_handler(task_code code);
-
+    
 private:
     template<typename T, typename TRequest, typename TResponse>
     void internal_rpc_handler(
@@ -105,7 +105,7 @@ protected:
 private:
     std::string _dir;
     replica*    _replica;
-    std::map<int, std::function<void(message_ptr, message_ptr)> > _handlers;
+    std::map<int, std::function<void(message_ptr&, message_ptr&)> > _handlers;
 };
 
 
@@ -118,7 +118,7 @@ inline void replication_app_base::register_async_rpc_handler(
     )
 {
     _handlers[code] = std::bind(
-        &replication_app_base::internal_rpc_handler,
+        &replication_app_base::internal_rpc_handler<T, TRequest, TResponse>,
         this,
         std::placeholders::_1,
         std::placeholders::_2,

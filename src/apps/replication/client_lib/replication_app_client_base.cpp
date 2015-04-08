@@ -74,7 +74,7 @@ void replication_app_client_base::on_user_request_timeout(request_context* rc)
 
 DEFINE_TASK_CODE(LPC_REPLICATION_CLIENT_REQUEST_TIMEOUT, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
-void replication_app_client_base::write_internal(
+replication_app_client_base::request_context* replication_app_client_base::create_write_context(
     int partition_index,
     task_code code,
     rpc_response_task_ptr callback,
@@ -82,21 +82,29 @@ void replication_app_client_base::write_internal(
     )
 {
     auto rc = new request_context;
-    rc->callback_task = callback;
-    rc->header_pos = callback->get_request()->writer().write_placeholder();
+    rc->callback_task = callback;    
     rc->is_read = false;
     rc->partition_index = partition_index;    
     rc->write_header.gpid.app_id = _app_id;
     rc->write_header.gpid.pidx = partition_index;
     rc->write_header.code = code;
     rc->timeout_timer = nullptr;
-
     rc->timeout_ts_us = now_us() + callback->get_request()->header().client.timeout_milliseconds * 1000;
 
-    call(rc);
+    if (rc->read_header.gpid.app_id == -1)
+    {
+        rc->header_pos = callback->get_request()->writer().write_placeholder();
+    }
+    else
+    {
+        rc->header_pos = 0xffff;
+        marshall(callback->get_request()->writer(), rc->write_header);
+    }
+
+    return rc;
 }
 
-void replication_app_client_base::read_internal(
+replication_app_client_base::request_context* replication_app_client_base::create_read_context(
     int partition_index,
     task_code code,
     rpc_response_task_ptr callback,
@@ -106,8 +114,7 @@ void replication_app_client_base::read_internal(
     )
 {
     auto rc = new request_context;
-    rc->callback_task = callback;
-    rc->header_pos = callback->get_request()->writer().write_placeholder();
+    rc->callback_task = callback;    
     rc->is_read = true;
     rc->partition_index = partition_index;
     rc->read_header.gpid.app_id = _app_id;
@@ -116,10 +123,19 @@ void replication_app_client_base::read_internal(
     rc->read_header.semantic = read_semantic;
     rc->read_header.version_decree = snapshot_decree;
     rc->timeout_timer = nullptr;
-
     rc->timeout_ts_us = now_us() + callback->get_request()->header().client.timeout_milliseconds * 1000;
 
-    call(rc);
+    if (rc->read_header.gpid.app_id == -1)
+    {
+        rc->header_pos = callback->get_request()->writer().write_placeholder();
+    }
+    else
+    {
+        rc->header_pos = 0xffff;
+        marshall(callback->get_request()->writer(), rc->read_header);
+    }
+
+    return rc;
 }
 
 void replication_app_client_base::end_request(request_context* request, error_code err, message_ptr& resp)
@@ -159,17 +175,21 @@ void replication_app_client_base::call(request_context* request)
 
         auto& msg = request->callback_task->get_request();
 
-        if (request->is_read)
+        if (request->header_pos != 0xffff)
         {
-            request->read_header.gpid.app_id = app_id;
-            marshall(msg->writer(), request->read_header, request->header_pos);
-            msg->header().client.hash = gpid_to_hash(request->read_header.gpid);
-        }
-        else
-        {
-            request->write_header.gpid.app_id = app_id;
-            marshall(msg->writer(), request->write_header, request->header_pos);
-            msg->header().client.hash = gpid_to_hash(request->write_header.gpid);
+            if (request->is_read)
+            {
+                request->read_header.gpid.app_id = app_id;
+                marshall(msg->writer(), request->read_header, request->header_pos);
+                msg->header().client.hash = gpid_to_hash(request->read_header.gpid);
+            }
+            else
+            {
+                request->write_header.gpid.app_id = app_id;
+                marshall(msg->writer(), request->write_header, request->header_pos);
+                msg->header().client.hash = gpid_to_hash(request->write_header.gpid);
+            }
+            request->header_pos = 0xffff;
         }
 
         msg->header().client.timeout_milliseconds = static_cast<int>(timeout_us / 1000);

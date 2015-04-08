@@ -40,7 +40,7 @@ void server_state::InitApp()
     app.AppId = 1;
     app.AppName = "TestTable";
     app.AppType = "SimpleKV";
-    app.PartitionCount = 10;
+    app.PartitionCount = 1;
     for (int i = 0; i < app.PartitionCount; i++)
     {
         partition_configuration ps;

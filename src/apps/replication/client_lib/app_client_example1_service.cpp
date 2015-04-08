@@ -42,7 +42,8 @@ error_code app_client_example1_service::start(int argc, char** argv)
     opts.initialize(config());
 
     _client = new app_client_example1(opts.MetaServers);
-    _writeTimer = tasking::enqueue(LPC_TEST, this, &app_client_example1_service::OnTimer, 0, 1000, 1000);
+    _writeTimer = tasking::enqueue(LPC_TEST, this, 
+        &app_client_example1_service::OnTimer, 0, 10000, 1000);
 
     return ERR_SUCCESS;
 }
@@ -64,12 +65,13 @@ void app_client_example1_service::stop(bool cleanup)
 
 void app_client_example1_service::OnTimer()
 {
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < 1; i++)
     {
         kv_pair pr;
         pr.key = "test_key";
         pr.value = "test_value.";
-        _client->begin_append2(pr);
+        _client->begin_write2(pr);
+        //_client->begin_append2(pr);
     }
 }
 
