@@ -85,9 +85,9 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
         boost::filesystem::create_directory(logDir);
     }
 
-    // init replicas
+    // init rps
     boost::filesystem::directory_iterator endtr;
-    Replicas replicas;
+    replicas rps;
 
     for (boost::filesystem::directory_iterator it(dir());
         it != endtr;
@@ -109,7 +109,7 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
                 r->last_durable_decree(),
                 name.c_str()
                 );
-            replicas[r->get_gpid()] = r;
+            rps[r->get_gpid()] = r;
         }
     }
 
@@ -119,10 +119,10 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
     dassert (err == ERR_SUCCESS, "");
     
     err = _log->replay(
-        std::bind(&replica_stub::replay_mutation, this, std::placeholders::_1, &replicas)
+        std::bind(&replica_stub::replay_mutation, this, std::placeholders::_1, &rps)
         );
     
-    for (auto it = replicas.begin(); it != replicas.end(); it++)
+    for (auto it = rps.begin(); it != rps.end(); it++)
     {
         it->second->reset_prepare_list_after_replay();
 
@@ -161,17 +161,17 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
     }
 
     multi_partition_decrees initMaxDecrees; // for log truncate
-    for (auto it = replicas.begin(); it != replicas.end(); it++)
+    for (auto it = rps.begin(); it != rps.end(); it++)
     {
         initMaxDecrees[it->second->get_gpid()] = it->second->max_prepared_decree();
     }
     err = _log->start_write_service(initMaxDecrees, _options.staleness_for_commit);
     dassert (err == ERR_SUCCESS, "");
 
-    // attach replicas
-    _replicas = replicas;
+    // attach rps
+    _replicas = rps;
 
-    replicas.clear();
+    rps.clear();
 
     // start timer for configuration sync
     if (!_options.config_sync_disabled)
@@ -205,10 +205,10 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
     }
 }
 
-void replica_stub::replay_mutation(mutation_ptr& mu, Replicas* replicas)
+void replica_stub::replay_mutation(mutation_ptr& mu, replicas* rps)
 {
-    auto it = replicas->find(mu->data.header.gpid);
-    if (it != replicas->end())
+    auto it = rps->find(mu->data.header.gpid);
+    if (it != rps->end())
     {
         it->second->replay_mutation(mu);
     }
@@ -505,7 +505,7 @@ void replica_stub::on_node_query_reply(int err, message_ptr& request, message_pt
         
         unmarshall(response, resp);        
         
-        Replicas rs = _replicas;
+        replicas rs = _replicas;
         for (auto it = resp.partitions.begin(); it != resp.partitions.end(); it++)
         {
             rs.erase(it->gpid);
@@ -517,7 +517,7 @@ void replica_stub::on_node_query_reply(int err, message_ptr& request, message_pt
                 );
         }
 
-        // for replicas not exist on meta_servers
+        // for rps not exist on meta_servers
         for (auto it = rs.begin(); it != rs.end(); it++)
         {
             tasking::enqueue(
@@ -672,7 +672,7 @@ void replica_stub::init_gc_for_test()
 
 void replica_stub::on_gc()
 {
-    Replicas rs;
+    replicas rs;
     {
         zauto_lock l(_repicas_lock);
         rs = _replicas;
@@ -686,7 +686,7 @@ void replica_stub::on_gc()
     }
     _log->garbage_collection(durable_decrees);
     
-    // gc on-disk replicas
+    // gc on-disk rps
     boost::filesystem::directory_iterator endtr;
     for (boost::filesystem::directory_iterator it(dir());
         it != endtr;

@@ -129,35 +129,36 @@ private:
     void notify_replica_state_update(const replica_configuration& config, bool isClosing);
 
 private:
-    typedef std::map<global_partition_id, replica_ptr> Replicas;
-    typedef std::map<global_partition_id, task_ptr> OpeningReplicas;
-    typedef std::map<global_partition_id, std::pair<task_ptr, replica_ptr>> ClosingReplicas; // <close, replica>
-    zlock        _repicas_lock;
-    Replicas     _replicas;
-    OpeningReplicas _opening_replicas;
-    ClosingReplicas _closing_replicas;
+    typedef std::map<global_partition_id, replica_ptr> replicas;
+    typedef std::map<global_partition_id, task_ptr> opening_replicas;
+    typedef std::map<global_partition_id, std::pair<task_ptr, replica_ptr>> closing_replicas; // <close, replica>
+
+    zlock                       _repicas_lock;
+    replicas                    _replicas;
+    opening_replicas            _opening_replicas;
+    closing_replicas            _closing_replicas;
     
-    mutation_log* _log;
-    std::string  _dir;
+    mutation_log                *_log;
+    std::string                 _dir;
 
     replication_failure_detector *_failure_detector;
-    volatile ReplicaNodeState  _state;
+    volatile ReplicaNodeState   _state;
 
     // constants
-    replication_options                                  _options;
-    configuration_ptr                    _config;
-    replica_state_subscriber                              _replica_state_subscriber;
-    bool                                                _is_long_subscriber;
+    replication_options         _options;
+    configuration_ptr           _config;
+    replica_state_subscriber    _replica_state_subscriber;
+    bool                        _is_long_subscriber;
     
     // temproal states
-    task_ptr      _config_query_task;
-    task_ptr      _config_sync_timer_task;
-    task_ptr      _gc_timer_task;
+    task_ptr                    _config_query_task;
+    task_ptr                    _config_sync_timer_task;
+    task_ptr                    _gc_timer_task;
 
 private:    
     friend class replica;
     void response_client_error(message_ptr& request, int error);
-    void replay_mutation(mutation_ptr& mu, Replicas* replicas);
+    void replay_mutation(mutation_ptr& mu, replicas* rps);
 };
 
 DEFINE_REF_OBJECT(replica_stub)

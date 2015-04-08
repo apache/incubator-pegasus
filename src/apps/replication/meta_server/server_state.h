@@ -57,11 +57,11 @@ private:
 private:
     struct app_state
     {
-        std::string                  app_type;
-        std::string                  app_name;
-        int32_t                      app_id;
-        int32_t                      partition_count;        
-        std::vector<partition_configuration>  partitions;
+        std::string                          app_type;
+        std::string                          app_name;
+        int32_t                              app_id;
+        int32_t                              partition_count;        
+        std::vector<partition_configuration> partitions;
     };
 
     struct node_state
@@ -76,10 +76,9 @@ private:
     std::map<end_point, node_state>   _nodes;
     std::vector<app_state>            _apps;
 
-    zrwlock                          _meta_lock;
-    std::vector<end_point>           _meta_servers;
-    int                              _leader_index;
-
+    zrwlock                           _meta_lock;
+    std::vector<end_point>            _meta_servers;
+    int                               _leader_index;
 
     friend class load_balancer;
 };
