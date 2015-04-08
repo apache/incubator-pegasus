@@ -191,7 +191,8 @@ namespace dsn {
 
                 // TODO: should use async write instead
                 char name[256];
-                sprintf(name, "%s/checkpoint.%llu", dir().c_str(), last_committed_decree());
+                sprintf(name, "%s/checkpoint.%lld", dir().c_str(), 
+                        static_cast<long long int>(last_committed_decree()));
                 std::ofstream os(name);
 
                 uint32_t count = (uint32_t)_store.size();

@@ -44,26 +44,26 @@ void load_balancer::run()
 
     for (size_t i = 0; i < _state->_apps.size(); i++)
     {
-        server_state::AppState& app = _state->_apps[i];
+        server_state::app_state& app = _state->_apps[i];
         
-        for (int j = 0; j < app.PartitionCount; j++)
+        for (int j = 0; j < app.partition_count; j++)
         {
-            partition_configuration& pc = app.Partitions[j];
-            RunLB(pc);
+            partition_configuration& pc = app.partitions[j];
+            run_lb(pc);
         }
     }
 }
 
-end_point load_balancer::FindMinimalLoadMachine(bool primaryOnly)
+end_point load_balancer::find_minimal_load_machine(bool primaryOnly)
 {
     std::vector<std::pair<end_point, int>> stats;
 
     for (auto it = _state->_nodes.begin(); it != _state->_nodes.end(); it++)
     {
-        if (it->second.IsAlive)
+        if (it->second.is_alive)
         {
-            stats.push_back(std::make_pair(it->first, static_cast<int>(primaryOnly ? it->second.Primaries.size()
-                : it->second.Partitions.size())));
+            stats.push_back(std::make_pair(it->first, static_cast<int>(primaryOnly ? it->second.primaries.size()
+                : it->second.partitions.size())));
         }
     }
 
@@ -93,7 +93,7 @@ end_point load_balancer::FindMinimalLoadMachine(bool primaryOnly)
     return stats[env::random32(0, candidateCount - 1)].first;
 }
 
-void load_balancer::RunLB(partition_configuration& pc)
+void load_balancer::run_lb(partition_configuration& pc)
 {
     configuration_update_request proposal;
     proposal.config = pc;
@@ -107,22 +107,22 @@ void load_balancer::RunLB(partition_configuration& pc)
         }
         else
         {
-            proposal.node = FindMinimalLoadMachine(true);
+            proposal.node = find_minimal_load_machine(true);
         }
 
         if (proposal.node != end_point::INVALID)
         {
-            SendConfigProposal(proposal.node, proposal);
+            send_proposal(proposal.node, proposal);
         }
     }
 
-    else if (pc.secondaries.size() + 1 < pc.max_replica_count)
+    else if (static_cast<int>(pc.secondaries.size()) + 1 < pc.max_replica_count)
     {
         proposal.type = CT_ADD_SECONDARY;
-        proposal.node = FindMinimalLoadMachine(false);
+        proposal.node = find_minimal_load_machine(false);
         if (proposal.node != end_point::INVALID)
         {
-            SendConfigProposal(pc.primary, proposal);
+            send_proposal(pc.primary, proposal);
         }
     }
     else
@@ -132,27 +132,27 @@ void load_balancer::RunLB(partition_configuration& pc)
 }
 
 // meta server => partition server
-void load_balancer::SendConfigProposal(const end_point& node, const configuration_update_request& proposal)
+void load_balancer::send_proposal(const end_point& node, const configuration_update_request& proposal)
 {
     rpc::call_one_way_typed(node, RPC_CONFIG_PROPOSAL, proposal, gpid_to_hash(proposal.config.gpid));
 }
 
-void load_balancer::QueryDecree(std::shared_ptr<query_replica_decree_request> query)
+void load_balancer::query_decree(std::shared_ptr<query_replica_decree_request> query)
 {
-    rpc::call_typed(query->node, RPC_QUERY_PN_DECREE, query, this, &load_balancer::OnQueryDecreeAck, gpid_to_hash(query->gpid), 3000);
+    rpc::call_typed(query->node, RPC_QUERY_PN_DECREE, query, this, &load_balancer::on_query_decree_ack, gpid_to_hash(query->gpid), 3000);
 }
 
-void load_balancer::OnQueryDecreeAck(error_code err, std::shared_ptr<query_replica_decree_request>& query, std::shared_ptr<query_replica_decree_response>& resp)
+void load_balancer::on_query_decree_ack(error_code err, std::shared_ptr<query_replica_decree_request>& query, std::shared_ptr<query_replica_decree_response>& resp)
 {
     if (err)
     {
-        tasking::enqueue(LPC_QUERY_PN_DECREE, this, std::bind(&load_balancer::QueryDecree, this, query), 0, 1000);
+        tasking::enqueue(LPC_QUERY_PN_DECREE, this, std::bind(&load_balancer::query_decree, this, query), 0, 1000);
     }
     else
     {
         zauto_write_lock l(_state->_lock);
-        server_state::AppState& app = _state->_apps[query->gpid.app_id - 1];
-        partition_configuration& ps = app.Partitions[query->gpid.pidx];
+        server_state::app_state& app = _state->_apps[query->gpid.app_id - 1];
+        partition_configuration& ps = app.partitions[query->gpid.pidx];
         if (resp->last_decree > ps.last_committed_decree)
         {
             ps.last_committed_decree = resp->last_decree;

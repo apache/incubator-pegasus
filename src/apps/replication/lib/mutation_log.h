@@ -34,7 +34,7 @@ namespace dsn { namespace replication {
 class log_file;
 typedef boost::intrusive_ptr<log_file> log_file_ptr;
 
-typedef std::map<global_partition_id, decree, GlobalPartitionIDComparor> multi_partition_decrees;
+typedef std::map<global_partition_id, decree> multi_partition_decrees;
 
 class mutation_log : public virtual servicelet
 {
@@ -46,7 +46,7 @@ public:
     //
     // ctors 
     //
-    mutation_log(uint32_t LogBufferSizeMB, uint32_t LogPendingMaxMilliseconds, uint32_t maxLogFileSizeInMB = (uint64_t) MAX_LOG_FILESIZE, bool batchWrite = true, int writeTaskNumber = 2);
+    mutation_log(uint32_t log_buffer_size_mb, uint32_t log_pending_max_ms, uint32_t maxLogFileSizeInMB = (uint64_t) MAX_LOG_FILESIZE, bool batchWrite = true, int writeTaskNumber = 2);
     virtual ~mutation_log();
     
     //
@@ -55,7 +55,7 @@ public:
     int initialize(const char* dir);
     int replay(ReplayCallback callback);
     void reset();
-    int start_write_service(multi_partition_decrees& initMaxDecrees, int maxStalenessForCommit);
+    int start_write_service(multi_partition_decrees& initMaxDecrees, int max_staleness_for_commit);
     void close();
        
     //
@@ -133,10 +133,10 @@ public:
     {
         int32_t  magic;
         int32_t  version;
-        int32_t  headerSize;
-        int32_t  maxStalenessForCommit;
-        int32_t  logBufferSizeBytes;
-        int64_t  startGlobalOffset;
+        int32_t  header_size;
+        int32_t  max_staleness_for_commit;
+        int32_t  log_buffer_size_bytes;
+        int64_t  start_global_offset;
     };
 
 public:    
@@ -146,7 +146,7 @@ public:
     // file operations
     //
     static log_file_ptr opend_read(const char* path);
-    static log_file_ptr create_write(const char* dir, int index, int64_t startOffset, int maxStalenessForCommit, int writeTaskNumber = 2);
+    static log_file_ptr create_write(const char* dir, int index, int64_t startOffset, int max_staleness_for_commit, int writeTaskNumber = 2);
     void close();
 
     //
@@ -168,28 +168,28 @@ public:
                     );
     
     // others
-    int64_t end_offset() const { return _endOffset; }
-    int64_t start_offset() const  { return _startOffset; }
+    int64_t end_offset() const { return _end_offset; }
+    int64_t start_offset() const  { return _start_offset; }
     int   index() const { return _index; }
-    const std::string& Path() const { return _path; }
-    const multi_partition_decrees& InitPrepareDecrees() { return _init_prepared_decrees; }
+    const std::string& path() const { return _path; }
+    const multi_partition_decrees& init_prepare_decrees() { return _init_prepared_decrees; }
     const log_file_header& header() const { return _header;}
 
     int  read_header(message_ptr& msg);
     int  write_header(message_ptr& msg, multi_partition_decrees& initMaxDecrees, int bufferSizeBytes);    
     
 private:
-    log_file(const char* path, handle_t handle, int index, int64_t startOffset, int maxStalenessForCommit, bool isRead, int writeTaskNumber = 2);
+    log_file(const char* path, handle_t handle, int index, int64_t startOffset, int max_staleness_for_commit, bool isRead, int writeTaskNumber = 2);
 
 protected:        
-    int64_t       _startOffset;
-    int64_t       _endOffset;
+    int64_t       _start_offset;
+    int64_t       _end_offset;
     handle_t      _handle;
-    bool        _isRead;
+    bool        _is_read;
     std::string _path;
     int         _index;
-    std::vector<aio_task_ptr>  _writeTasks;
-    int                      _writeTaskItr;    
+    std::vector<aio_task_ptr>  _write_tasks;
+    int                      _write_task_itr;    
 
     // for gc
     multi_partition_decrees _init_prepared_decrees;    

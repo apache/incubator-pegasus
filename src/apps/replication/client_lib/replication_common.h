@@ -50,15 +50,6 @@ typedef boost::intrusive_ptr<replica> replica_ptr;
 class mutation;
 typedef boost::intrusive_ptr<mutation> mutation_ptr;
 
-struct GlobalPartitionIDComparor
-{
-  bool operator()(const global_partition_id& s1, const global_partition_id& s2) const
-  {
-    return s1.app_id < s2.app_id
-        || (s1.app_id == s2.app_id && s1.pidx < s2.pidx);
-  }
-};
-
 inline int gpid_to_hash(global_partition_id gpid)
 {
     return static_cast<int>(gpid.app_id ^ gpid.pidx);
@@ -73,48 +64,39 @@ typedef std::map<end_point, task_ptr> node_tasks;
 class replication_options
 {
 public:
-    std::string MachineListFilePath;
-    std::string CoordinatorMachineFunctionName;
-    std::string WorkingDir;
-    uint16_t CoordinatorPort;
+    std::string working_dir;
+    uint16_t meta_server_port;
 
     int32_t meta_server_call_timeout_ms;
-    int32_t CoordinatorRpcCallMaxSendCount;
-    int32_t PrepareTimeoutMsForSecondaries;
-    int32_t PrepareMaxSendCountForSecondaries;
-    int32_t GroupCheckTimeoutMs;
-    int32_t GroupCheckMaxSendCount;
-    int32_t GroupCheckIntervalMs;
-    int32_t LearnTimeoutMs;
-    int32_t LearnMaxSendCount;
-    int32_t PrepareListMaxSizeInMB;
-    int32_t StalenessForCommit;
-    int32_t StalenessForStartPrepareForPotentialSecondary;
-    int32_t MutationMaxSizeInMB;
-    int32_t MutationMaxPendingTimeMs;
-    int32_t MutationApplyMinReplicaNumber;
-    bool RequestBatchDisabled;
-    bool GroupCheckDisabled;
-    int32_t GcIntervalMs;
-    bool GcDisabled;
-    int32_t GcMemoryReplicaIntervalMs;
-    int32_t GcDiskErrorReplicaIntervalSeconds;
-    bool FD_disabled;
-    std::vector<end_point> MetaServers;
-    int32_t FD_check_interval_seconds;
-    int32_t FD_beacon_interval_seconds;
-    int32_t FD_lease_seconds;
-    int32_t FD_grace_seconds;
+    int32_t prepare_timeout_ms_for_secondaries;
+    int32_t group_check_internal_ms;
+    int32_t learn_timeout_ms;
+    int32_t preapre_list_max_size_mb;
+    int32_t staleness_for_commit;
+    int32_t staleness_for_start_prepare_for_potential_secondary;
+    int32_t mutation_max_size_mb;
+    int32_t mutation_max_pending_time_ms;
+    int32_t mutation_2pc_min_replica_count;
+    bool request_batch_disabled;
+    bool group_check_disabled;
+    int32_t gc_interval_ms;
+    bool gc_disabled;
+    int32_t gc_memory_replica_interval_ms;
+    int32_t gc_disk_error_replica_interval_seconds;
+    bool fd_disabled;
+    std::vector<end_point> meta_servers;
+    int32_t fd_check_interval_seconds;
+    int32_t fd_beacon_interval_seconds;
+    int32_t fd_lease_seconds;
+    int32_t fd_grace_seconds;
 
-    int32_t LogSegmentFileSizeInMB;
-    int32_t LogBufferSizeMB;
-    int32_t LogPendingMaxMilliseconds;
-    bool    LogBatchWrite;
-    int32_t LogMaxConcurrentWriteLogEntries;
-    int32_t ConfigurationSyncIntervalMs;
-    bool    ConfigurationSyncDisabled;
-    bool    LearnUsingHttp; 
-    int32_t LearnForAdditionalLongSecondsForTest;
+    int32_t log_file_size_mb;
+    int32_t log_buffer_size_mb;
+    int32_t log_pending_max_ms;
+    bool    log_batch_write;
+    int32_t log_max_concurrent_writes;
+    int32_t config_sync_interval_ms;
+    bool    config_sync_disabled;
     
 public:
     replication_options();
@@ -122,15 +104,15 @@ public:
     ~replication_options();
 
 private:
-    void ReadMetaServers(configuration_ptr config);
+    void read_meta_servers(configuration_ptr config);
     void sanity_check();
 };
 
-class ReplicaHelper
+class replica_helper
 {
 public:
-    static bool RemoveNode(const end_point& node, __inout_param std::vector<end_point>& nodeList);
-    static bool GetReplicaConfig(const partition_configuration& partitionConfig, const end_point& node, __out_param replica_configuration& replicaConfig);
+    static bool remove_node(const end_point& node, __inout_param std::vector<end_point>& nodeList);
+    static bool get_replica_config(const partition_configuration& partitionConfig, const end_point& node, __out_param replica_configuration& replicaConfig);
 };
 
 }} // namespace

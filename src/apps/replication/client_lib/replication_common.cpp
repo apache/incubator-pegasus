@@ -28,60 +28,50 @@ namespace dsn { namespace replication {
 
 replication_options::replication_options()
 {
-    PrepareTimeoutMsForSecondaries = 1000;
-    PrepareMaxSendCountForSecondaries = 2;
-    LearnTimeoutMs = 30000;
-    LearnMaxSendCount = 3;
-    StalenessForCommit = 10;
-    StalenessForStartPrepareForPotentialSecondary = 110;
-    MutationMaxSizeInMB = 15;
-    MutationMaxPendingTimeMs = 20;
-    MutationApplyMinReplicaNumber = 1;
-    PrepareListMaxSizeInMB = 250;
-    RequestBatchDisabled = false;
-    GroupCheckIntervalMs = 100000;
-    GroupCheckMaxSendCount = 3;
-    GroupCheckTimeoutMs = 10000;
-    GroupCheckDisabled = false;
-    GcIntervalMs = 30 * 1000; // 30000 milliseconds
-    GcDisabled = false;
-    GcMemoryReplicaIntervalMs = 5 * 60 * 1000; // 5 minutes
-    GcDiskErrorReplicaIntervalSeconds = 48 * 3600 * 1000; // 48 hrs
-    LogBatchWrite = true;
-    LogMaxConcurrentWriteLogEntries = 4;
-    FD_disabled = false;
-    //_options.MetaServers = ...;
-    FD_check_interval_seconds = 5;
-    FD_beacon_interval_seconds = 3;
-    FD_lease_seconds = 10;
-    FD_grace_seconds = 15;
-    WorkingDir = "test_PartitionServer";
-    MachineListFilePath = "../MachineList.csv";
-    CoordinatorMachineFunctionName = "KCO";
-    CoordinatorPort = 20600;
+    prepare_timeout_ms_for_secondaries = 1000;
+    learn_timeout_ms = 30000;
+    staleness_for_commit = 10;
+    staleness_for_start_prepare_for_potential_secondary = 110;
+    mutation_max_size_mb = 15;
+    mutation_max_pending_time_ms = 20;
+    mutation_2pc_min_replica_count = 1;
+    preapre_list_max_size_mb = 250;
+    request_batch_disabled = false;
+    group_check_internal_ms = 100000;
+    group_check_disabled = false;
+    gc_interval_ms = 30 * 1000; // 30000 milliseconds
+    gc_disabled = false;
+    gc_memory_replica_interval_ms = 5 * 60 * 1000; // 5 minutes
+    gc_disk_error_replica_interval_seconds = 48 * 3600 * 1000; // 48 hrs
+    log_batch_write = true;
+    log_max_concurrent_writes = 4;
+    fd_disabled = false;
+    //_options.meta_servers = ...;
+    fd_check_interval_seconds = 5;
+    fd_beacon_interval_seconds = 3;
+    fd_lease_seconds = 10;
+    fd_grace_seconds = 15;
+    working_dir = ".";
+    meta_server_port = 20600;
 
     meta_server_call_timeout_ms = 3000;
-    CoordinatorRpcCallMaxSendCount = 10;
         
-    LogBufferSizeMB = 1;
-    LogPendingMaxMilliseconds = 100;
-    LogSegmentFileSizeInMB = 32;
+    log_buffer_size_mb = 1;
+    log_pending_max_ms = 100;
+    log_file_size_mb = 32;
     
-    ConfigurationSyncIntervalMs = 30000;
-    ConfigurationSyncDisabled = false;
-
-    LearnUsingHttp = false;
-    LearnForAdditionalLongSecondsForTest = 0;
+    config_sync_interval_ms = 30000;
+    config_sync_disabled = false;
 }
 
 replication_options::~replication_options()
 {
 }
 
-void replication_options::ReadMetaServers(configuration_ptr config)
+void replication_options::read_meta_servers(configuration_ptr config)
 {
-    // read MetaServers from machine list file
-    MetaServers.clear();
+    // read meta_servers from machine list file
+    meta_servers.clear();
 
     std::vector<std::string> servers;
     config->get_all_keys("replication.meta_servers", servers);
@@ -95,110 +85,91 @@ void replication_options::ReadMetaServers(configuration_ptr config)
         if (pos1 != std::string::npos)
         {
             end_point ep(s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
-            MetaServers.push_back(ep);
+            meta_servers.push_back(ep);
         }
     }
 }
 
 void replication_options::initialize(configuration_ptr config)
 {
-    PrepareTimeoutMsForSecondaries =
-        config->get_value<uint32_t>("replication", "PrepareTimeoutMsForSecondaries", PrepareTimeoutMsForSecondaries);
-    PrepareMaxSendCountForSecondaries =
-        config->get_value<uint32_t>("replication", "PrepareMaxSendCountForSecondaries", PrepareMaxSendCountForSecondaries);
-    LearnTimeoutMs =
-        config->get_value<uint32_t>("replication", "LearnTimeoutMs", LearnTimeoutMs);
-    LearnMaxSendCount =
-        config->get_value<uint32_t>("replication", "LearnMaxSendCount", LearnMaxSendCount);
-    StalenessForCommit =
-        config->get_value<uint32_t>("replication", "StalenessForCommit", StalenessForCommit);
-    StalenessForStartPrepareForPotentialSecondary =
-        config->get_value<uint32_t>("replication", "StalenessForStartPrepareForPotentialSecondary", StalenessForStartPrepareForPotentialSecondary);
-    MutationMaxSizeInMB =
-        config->get_value<uint32_t>("replication", "MutationMaxSizeInMB", MutationMaxSizeInMB);
-    MutationMaxPendingTimeMs =
-        config->get_value<uint32_t>("replication", "MutationMaxPendingTimeMs", MutationMaxPendingTimeMs);
-    MutationApplyMinReplicaNumber =
-        config->get_value<uint32_t>("replication", "MutationApplyMinReplicaNumber", MutationApplyMinReplicaNumber);
-    PrepareListMaxSizeInMB =
-        config->get_value<uint32_t>("replication", "PrepareListMaxSizeInMB", PrepareListMaxSizeInMB);
-    RequestBatchDisabled =
-        config->get_value<bool>("replication", "RequestBatchDisabled", RequestBatchDisabled);
-    GroupCheckIntervalMs =
-        config->get_value<uint32_t>("replication", "GroupCheckIntervalMs", GroupCheckIntervalMs);
-    GroupCheckMaxSendCount =
-        config->get_value<uint32_t>("replication", "GroupCheckMaxSendCount", GroupCheckMaxSendCount);
-    GroupCheckTimeoutMs =
-        config->get_value<uint32_t>("replication", "GroupCheckTimeoutMs", GroupCheckTimeoutMs);
-    GroupCheckDisabled =
-        config->get_value<bool>("replication", "GroupCheckDisabled", GroupCheckDisabled);
-    GcIntervalMs =
-        config->get_value<uint32_t>("replication", "GcIntervalMs", GcIntervalMs);
-    GcMemoryReplicaIntervalMs =
-        config->get_value<uint32_t>("replication", "GcMemoryReplicaIntervalMs", GcMemoryReplicaIntervalMs);
-    GcDiskErrorReplicaIntervalSeconds =
-        config->get_value<uint32_t>("replication", "GcDiskErrorReplicaIntervalSeconds", GcDiskErrorReplicaIntervalSeconds);
-    GcDisabled =
-        config->get_value<bool>("replication", "GcDisabled", GcDisabled);
+    prepare_timeout_ms_for_secondaries =
+        config->get_value<uint32_t>("replication", "prepare_timeout_ms_for_secondaries", prepare_timeout_ms_for_secondaries);
+    learn_timeout_ms =
+        config->get_value<uint32_t>("replication", "learn_timeout_ms", learn_timeout_ms);
+    staleness_for_commit =
+        config->get_value<uint32_t>("replication", "staleness_for_commit", staleness_for_commit);
+    staleness_for_start_prepare_for_potential_secondary =
+        config->get_value<uint32_t>("replication", "staleness_for_start_prepare_for_potential_secondary", staleness_for_start_prepare_for_potential_secondary);
+    mutation_max_size_mb =
+        config->get_value<uint32_t>("replication", "mutation_max_size_mb", mutation_max_size_mb);
+    mutation_max_pending_time_ms =
+        config->get_value<uint32_t>("replication", "mutation_max_pending_time_ms", mutation_max_pending_time_ms);
+    mutation_2pc_min_replica_count =
+        config->get_value<uint32_t>("replication", "mutation_2pc_min_replica_count", mutation_2pc_min_replica_count);
+    preapre_list_max_size_mb =
+        config->get_value<uint32_t>("replication", "preapre_list_max_size_mb", preapre_list_max_size_mb);
+    request_batch_disabled =
+        config->get_value<bool>("replication", "request_batch_disabled", request_batch_disabled);
+    group_check_internal_ms =
+        config->get_value<uint32_t>("replication", "group_check_internal_ms", group_check_internal_ms);
+    group_check_disabled =
+        config->get_value<bool>("replication", "group_check_disabled", group_check_disabled);
+    gc_interval_ms =
+        config->get_value<uint32_t>("replication", "gc_interval_ms", gc_interval_ms);
+    gc_memory_replica_interval_ms =
+        config->get_value<uint32_t>("replication", "gc_memory_replica_interval_ms", gc_memory_replica_interval_ms);
+    gc_disk_error_replica_interval_seconds =
+        config->get_value<uint32_t>("replication", "gc_disk_error_replica_interval_seconds", gc_disk_error_replica_interval_seconds);
+    gc_disabled =
+        config->get_value<bool>("replication", "gc_disabled", gc_disabled);
 
-    FD_disabled =
-        config->get_value<bool>("replication", "FD_disabled", FD_disabled);
-    //_options.MetaServers = ...;
-    FD_check_interval_seconds =
-        config->get_value<uint32_t>("replication", "FD_check_interval_seconds", FD_check_interval_seconds);
-    FD_beacon_interval_seconds =
-        config->get_value<uint32_t>("replication", "FD_beacon_interval_seconds", FD_beacon_interval_seconds);
-    FD_lease_seconds =
-        config->get_value<uint32_t>("replication", "FD_lease_seconds", FD_lease_seconds);
-    FD_grace_seconds =
-        config->get_value<uint32_t>("replication", "FD_grace_seconds", FD_grace_seconds);
-    WorkingDir = config->get_string_value("replication", "WorkingDir", WorkingDir.c_str());
+    fd_disabled =
+        config->get_value<bool>("replication", "fd_disabled", fd_disabled);
+    //_options.meta_servers = ...;
+    fd_check_interval_seconds =
+        config->get_value<uint32_t>("replication", "fd_check_interval_seconds", fd_check_interval_seconds);
+    fd_beacon_interval_seconds =
+        config->get_value<uint32_t>("replication", "fd_beacon_interval_seconds", fd_beacon_interval_seconds);
+    fd_lease_seconds =
+        config->get_value<uint32_t>("replication", "fd_lease_seconds", fd_lease_seconds);
+    fd_grace_seconds =
+        config->get_value<uint32_t>("replication", "fd_grace_seconds", fd_grace_seconds);
+    working_dir = config->get_string_value("replication", "working_dir", working_dir.c_str());
 
-    MachineListFilePath =
-        config->get_string_value("replication", "MachineListFilePath", MachineListFilePath.c_str());
-
-    CoordinatorPort =
-        config->get_value<uint16_t>("replication", "CoordinatorPort", CoordinatorPort);
+    meta_server_port =
+        config->get_value<uint16_t>("replication", "meta_server_port", meta_server_port);
 
     meta_server_call_timeout_ms =
         config->get_value<uint32_t>("replication", "meta_server_call_timeout_ms", meta_server_call_timeout_ms);
-    CoordinatorRpcCallMaxSendCount =
-        config->get_value<uint32_t>("replication", "CoordinatorRpcCallMaxSendCount", CoordinatorRpcCallMaxSendCount);
         
-    LogSegmentFileSizeInMB =
-        config->get_value<uint32_t>("replication", "LogSegmentFileSizeInMB", LogSegmentFileSizeInMB);
-    LogBufferSizeMB =
-        config->get_value<uint32_t>("replication", "LogBufferSizeMB", LogBufferSizeMB);
-    LogPendingMaxMilliseconds =
-        config->get_value<uint32_t>("replication", "LogPendingMaxMilliseconds", LogPendingMaxMilliseconds);
-    LogBatchWrite = 
-        config->get_value<bool>("replication", "LogBatchWrite", LogBatchWrite);
-    LogMaxConcurrentWriteLogEntries =
-        config->get_value<uint32_t>("replication", "LogMaxConcurrentWriteLogEntries", LogMaxConcurrentWriteLogEntries);
+    log_file_size_mb =
+        config->get_value<uint32_t>("replication", "log_file_size_mb", log_file_size_mb);
+    log_buffer_size_mb =
+        config->get_value<uint32_t>("replication", "log_buffer_size_mb", log_buffer_size_mb);
+    log_pending_max_ms =
+        config->get_value<uint32_t>("replication", "log_pending_max_ms", log_pending_max_ms);
+    log_batch_write = 
+        config->get_value<bool>("replication", "log_batch_write", log_batch_write);
+    log_max_concurrent_writes =
+        config->get_value<uint32_t>("replication", "log_max_concurrent_writes", log_max_concurrent_writes);
 
-     ConfigurationSyncDisabled =
-        config->get_value<bool>("replication", "ConfigurationSyncDisabled", ConfigurationSyncDisabled);
-    //_options.MetaServers = ...;
-    ConfigurationSyncIntervalMs =
-        config->get_value<uint32_t>("replication", "ConfigurationSyncIntervalMs", ConfigurationSyncIntervalMs);
+     config_sync_disabled =
+        config->get_value<bool>("replication", "config_sync_disabled", config_sync_disabled);
+    //_options.meta_servers = ...;
+    config_sync_interval_ms =
+        config->get_value<uint32_t>("replication", "config_sync_interval_ms", config_sync_interval_ms);
         
-    LearnUsingHttp = 
-        config->get_value<bool>("replication", "LearnUsingHttp", LearnUsingHttp);    
-    LearnForAdditionalLongSecondsForTest = 
-        config->get_value<uint32_t>("replication", "LearnForAdditionalLongSecondsForTest", LearnForAdditionalLongSecondsForTest);    
-            
-    ReadMetaServers(config);
+    read_meta_servers(config);
 
     sanity_check();
 }
 
 void replication_options::sanity_check()
 {
-    dassert (GroupCheckTimeoutMs * GroupCheckMaxSendCount < GroupCheckIntervalMs, "");
-    dassert (StalenessForStartPrepareForPotentialSecondary >= StalenessForCommit, "");
+    dassert (staleness_for_start_prepare_for_potential_secondary >= staleness_for_commit, "");
 }
    
-/*static*/ bool ReplicaHelper::RemoveNode(const end_point& node, __inout_param std::vector<end_point>& nodeList)
+/*static*/ bool replica_helper::remove_node(const end_point& node, __inout_param std::vector<end_point>& nodeList)
 {
     auto it = std::find(nodeList.begin(), nodeList.end(), node);
     if (it != nodeList.end())
@@ -212,7 +183,7 @@ void replication_options::sanity_check()
     }
 }
 
-/*static*/ bool ReplicaHelper::GetReplicaConfig(const partition_configuration& partitionConfig, const end_point& node, __out_param replica_configuration& replicaConfig)
+/*static*/ bool replica_helper::get_replica_config(const partition_configuration& partitionConfig, const end_point& node, __out_param replica_configuration& replicaConfig)
 {
     replicaConfig.gpid = partitionConfig.gpid;
     replicaConfig.primary = partitionConfig.primary;

@@ -29,7 +29,7 @@
 meta_server_failure_detector::meta_server_failure_detector(server_state* state)
 {
     _state = state;
-    _isPrimary = false;
+    _is_primary = false;
 }
 
 meta_server_failure_detector::~meta_server_failure_detector(void)
@@ -43,7 +43,7 @@ void meta_server_failure_detector::on_worker_disconnected(const std::vector<end_
         return;
     }
 
-    NodeStates states;
+    node_states states;
     for (auto& n : nodes)
     {
         states.push_back(std::make_pair(n, false));
@@ -51,7 +51,7 @@ void meta_server_failure_detector::on_worker_disconnected(const std::vector<end_
         dwarn("client expired: %s:%hu", n.name.c_str(), n.port);
     }
     
-    _state->SetNodeState(states);
+    _state->set_node_state(states);
 }
 
 void meta_server_failure_detector::on_worker_connected(const end_point& node)
@@ -61,35 +61,35 @@ void meta_server_failure_detector::on_worker_connected(const end_point& node)
         return;
     }
 
-    NodeStates states;
+    node_states states;
     states.push_back(std::make_pair(node, true));
 
     dwarn("Client reconnected",
         "Client %s:%hu", node.name.c_str(), node.port);
 
-    _state->SetNodeState(states);
+    _state->set_node_state(states);
 }
 
 bool meta_server_failure_detector::set_primary(bool isPrimary /*= false*/)
 {
     bool bRet = true;
-    if (isPrimary && !_isPrimary)
+    if (isPrimary && !_is_primary)
     {
-        NodeStates ns;
-        _state->GetNodeState(ns);
+        node_states ns;
+        _state->get_node_state(ns);
 
         for (auto& pr : ns)
         {
             register_worker(pr.first, pr.second);
         }
 
-        _isPrimary = true;
+        _is_primary = true;
     }
 
-    if (!isPrimary && _isPrimary)
+    if (!isPrimary && _is_primary)
     {
         clear_workers();
-        _isPrimary = false;
+        _is_primary = false;
     }
 
     return bRet;
@@ -97,7 +97,7 @@ bool meta_server_failure_detector::set_primary(bool isPrimary /*= false*/)
 
 bool meta_server_failure_detector::is_primary() const
 {
-    return _isPrimary;
+    return _is_primary;
 }
 
 void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::service::rpc_replier<fd::beacon_ack>& reply)
@@ -106,7 +106,7 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::
     if (!is_primary())
     {
         end_point master;
-        if (_state->GetMetaServerPrimary(master))
+        if (_state->get_meta_server_primary(master))
         {
             ack.time = beacon.time;
             ack.is_master = false;

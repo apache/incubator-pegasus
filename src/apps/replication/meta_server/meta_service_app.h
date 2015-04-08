@@ -38,7 +38,7 @@ public:
     virtual void stop(bool cleanup = false) override;
 
 private:
-    static server_state *_reliableState;
+    static server_state *_reliable_state;
     meta_service*        _service;
 };
 

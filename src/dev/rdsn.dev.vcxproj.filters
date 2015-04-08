@@ -18,7 +18,6 @@
     </ClInclude>
     <ClInclude Include="..\..\inc\dsn\internal\servicelet.h" />
     <ClInclude Include="..\..\inc\dsn\serverlet.h" />
-    <ClInclude Include="..\..\inc\dsn\testlet.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="service.cpp">
@@ -28,9 +27,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="service.api.oo.impl.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="testlet.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -44,7 +44,7 @@ bool replication_admission_controller::is_task_accepted(task_ptr& task)
     return true;
 }
 
-int  replication_admission_controller::get_syste_utilization()
+int  replication_admission_controller::get_system_utilization()
 {
     return 0;
 }

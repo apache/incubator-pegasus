@@ -64,7 +64,7 @@ int main(int argc, char * argv[])
     }
 
     dsn::replication::replication_app_factory::instance().register_factory(
-        "SimpleKV",
+        "simple_kv",
         create_simplekv_app
         );
 

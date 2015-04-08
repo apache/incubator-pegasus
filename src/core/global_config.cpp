@@ -239,7 +239,7 @@ bool service_spec::init(configuration_ptr c)
         utils::split_args(c.c_str(), ks, '.');
         if (ks.size() != 2)
         {
-            printf("invalid network specification '%s', should be similar to '%channel.%message_format'\n",
+            printf("invalid network specification '%s', should be similar to '$channel.$message_format'\n",
                 c.c_str()
                 );
             return false;
@@ -267,7 +267,7 @@ bool service_spec::init(configuration_ptr c)
         utils::split_args(s.c_str(), ks, ',');
         if (ks.size() != 2)
         {
-            printf("invalid network specification '%s', should be '%network_factory,%msg_buffer_size'\n",
+            printf("invalid network specification '%s', should be '$network_factory,$msg_buffer_size'\n",
                 s.c_str()
                 );
             return false;

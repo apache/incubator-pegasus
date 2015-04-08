@@ -66,8 +66,8 @@ namespace dsn {
                 void recover(const std::string& name, decree version);
 
             private:
-                typedef std::map<std::string, std::string> SimpleKV;
-                SimpleKV _store;
+                typedef std::map<std::string, std::string> simple_kv;
+                simple_kv _store;
                 zlock    _lock;
                 std::string _learnFileName;
             };

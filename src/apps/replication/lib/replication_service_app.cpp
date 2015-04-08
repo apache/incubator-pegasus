@@ -40,7 +40,7 @@ error_code replication_service_app::start(int argc, char** argv)
 {
     replication_options opts;
     opts.initialize(config());
-    opts.WorkingDir = "./" + name();
+    opts.working_dir = "./" + name();
     //initialize(opts, config, clear);
 
     _stub = new replica_stub();

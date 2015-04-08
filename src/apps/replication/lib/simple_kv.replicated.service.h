@@ -25,8 +25,13 @@ namespace dsn {
             public:
                 simple_kv_service(replica* replica, const replication_app_config* config)
                     : replication_app_base(replica, config)
-                {}
-                virtual ~simple_kv_service() {}
+                {
+                    open_service();
+                }
+                virtual ~simple_kv_service() 
+                {
+                    close_service();
+                }
 
             protected:
                 // all service handlers to be implemented further
