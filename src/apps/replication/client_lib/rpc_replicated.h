@@ -73,7 +73,7 @@ namespace dsn {
                     std::shared_ptr<TResponse> resp(nullptr);
                     if (code == ERR_SUCCESS)
                     {
-                        srv = response->header().from_address();
+                        srv = response->header().from_address;
                         resp.reset(new TResponse);
                         unmarshall(response->reader(), *resp);
                     }

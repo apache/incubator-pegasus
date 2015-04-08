@@ -352,6 +352,8 @@ namespace dsn {
                     }
                 }
 
+				virtual ~layered_rpc_handler_typed() { }
+
             private:
                 std::shared_ptr<TRequest> _req;
                 std::function<bool(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> _callback;

@@ -180,13 +180,14 @@ namespace dsn {
 
                 virtual void exec();
 
-            private:
+            public:
                 class layered_rpc_handler
                 {
                 public:
                     virtual bool exec(
                         error_code err,
                         message_ptr& response) = 0;
+                    virtual ~layered_rpc_handler() {}
                 };
                 std::list<layered_rpc_handler*> _handlers;
             };
