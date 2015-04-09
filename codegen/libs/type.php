@@ -100,6 +100,7 @@ class t_type
 	
 	function is_void() { return false; }
 	function is_enum() { return false; }
+	function is_alias() { return false; }
 	function is_base_type() { return true; }
 }
 
@@ -112,7 +113,9 @@ class t_typedef extends t_type
 		parent::__construct($program, $alias);
 		$this->type = $type;
 		$program->typedefs[] = $this;
-	}	
+	}
+
+	function is_alias() { return true; }	
 }
 
 class t_enum extends t_type

@@ -20,4 +20,6 @@ CALL %CODEGEN_ONE% %CODEGEN_LIBS% cpp.main.php %2 %1 > %3\%1.main.cpp
 ECHO %3\%1.main.cpp is ready
 CALL %CODEGEN_ONE% %CODEGEN_LIBS% config.php %2 %1 > %3\%1.ini
 ECHO %3\%1.ini is ready
+CALL %CODEGEN_ONE% %CODEGEN_LIBS% cpp.types.php %2 %1 > %3\%1.types.h
+ECHO %3\%1.types.h is ready
 :EOF
