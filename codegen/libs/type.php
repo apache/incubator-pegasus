@@ -25,6 +25,40 @@ class t_program
 		$this->services = array();
 		$this->types = array();
 	}
+	
+	function get_cpp_namespace_begin()
+	{
+		if (!array_key_exists("cpp", $this->namespaces))
+		{
+			return "";
+		}
+		
+		$nms = $this->namespaces["cpp"];
+		$nms = explode(".", $nms);
+		$rt = "";
+		foreach ($nms as $nm)
+		{
+			$rt .= "namespace ". $nm ." { ";
+		}
+		return $rt;
+	}
+	
+	function get_cpp_namespace_end()
+	{
+		if (!array_key_exists("cpp", $this->namespaces))
+		{
+			return "";
+		}
+		
+		$nms = $this->namespaces["cpp"];
+		$nms = explode(".", $nms);
+		$rt = "";
+		foreach ($nms as $nm)
+		{
+			$rt .= "} ";
+		}
+		return $rt;
+	}
 }
 
 class t_type
@@ -125,6 +159,25 @@ class t_function
 	{
 		$this->params[] = new t_field($name, $type_name);
 	}
+	
+	function get_first_param()
+	{
+		return $this->params[0];
+	}
+	
+	function get_rpc_code()
+	{
+		return "RPC"
+			."_". strtoupper($this->service->program->name)
+			."_". strtoupper($this->service->name) 
+			."_". strtoupper($this->name)
+			;
+	}
+	
+	function is_one_way()
+	{
+		return $this->ret == "void" || $this->ret == "VOID";
+	}
 }
 
 class t_service extends t_type
@@ -143,6 +196,15 @@ class t_service extends t_type
 		$f = new t_function($this, $ret, $name);
 		$this->functions[] = $f;
 		return $f;
+	}
+	
+	function get_test_task_code()
+	{
+		return "LPC"
+			."_". strtoupper($this->program->name)
+			."_". strtoupper($this->name) 
+			."_TEST_TIMER"
+			;
 	}
 }
 ?>
