@@ -14,6 +14,10 @@ CALL %CODEGEN_ONE% %CODEGEN_LIBS% cpp.client.php %2 %1 > %3\%1.client.h
 ECHO %3\%1.client.h is ready
 CALL %CODEGEN_ONE% %CODEGEN_LIBS% cpp.server.php %2 %1 > %3\%1.server.h
 ECHO %3\%1.server.h is ready
+CALL %CODEGEN_ONE% %CODEGEN_LIBS% cpp.replication.client.php %2 %1 > %3\%1.replication.client.h
+ECHO %3\%1.replication.client.h is ready
+CALL %CODEGEN_ONE% %CODEGEN_LIBS% cpp.replication.server.php %2 %1 > %3\%1.replication.server.h
+ECHO %3\%1.replication.server.h is ready
 CALL %CODEGEN_ONE% %CODEGEN_LIBS% cpp.app.example.php %2 %1 > %3\%1.app.example.h
 ECHO %3\%1.app.example.h is ready
 CALL %CODEGEN_ONE% %CODEGEN_LIBS% cpp.main.php %2 %1 > %3\%1.main.cpp
