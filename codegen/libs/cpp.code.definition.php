@@ -16,10 +16,11 @@ foreach ($_PROG->services as $svc)
 	{
 		echo "\tDEFINE_TASK_CODE_RPC(". $f->get_rpc_code() 
 			. ", ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)".PHP_EOL;
-	}
-	echo "\tDEFINE_TASK_CODE(". $svc->get_test_task_code() 
-		. ", ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)".PHP_EOL;
+	}	
 }
+echo "\t// test timer task code"
+echo "\tDEFINE_TASK_CODE(". $_PROG->get_test_task_code() 
+		. ", ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)".PHP_EOL;
 
 echo $_PROG->get_cpp_namespace_end().PHP_EOL;
 ?>

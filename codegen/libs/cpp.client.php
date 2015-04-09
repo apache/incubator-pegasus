@@ -22,7 +22,7 @@ public:
 	// ---------- call <?=$f->get_rpc_code()?> ------------
 <?	if ($f->is_one_way()) {?>
 	void <?=$f->name?>(
-		<?=$f->get_first_param()->type_name?>& <?=$f->get_first_param()->name?>, 
+		const <?=$f->get_first_param()->type_name?>& <?=$f->get_first_param()->name?>, 
 		int hash = 0)
 	{
 		::dsn::message_ptr msg = ::dsn::message::create_request(<?=$f->get_rpc_code()?>, 0, hash);
@@ -32,7 +32,7 @@ public:
 <?	} else { ?>
 	// - synchronous 
 	::dsn::error_code <?=$f->name?>(
-		<?=$f->get_first_param()->type_name?>& <?=$f->get_first_param()->name?>, 
+		const <?=$f->get_first_param()->type_name?>& <?=$f->get_first_param()->name?>, 
 		__out_param <?=$f->ret?>& resp, 
 		int timeout_milliseconds = 0, 
 		int hash = 0)

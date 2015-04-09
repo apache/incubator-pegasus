@@ -13,4 +13,10 @@ CALL %CODEGEN_ROOT%\gen_one.bat %CODEGEN_LIBS% cpp.client.php %2 %1 > %3\%1.clie
 ECHO %3\%1.client.h is ready
 CALL %CODEGEN_ROOT%\gen_one.bat %CODEGEN_LIBS% cpp.server.php %2 %1 > %3\%1.server.h
 ECHO %3\%1.server.h is ready
+CALL %CODEGEN_ROOT%\gen_one.bat %CODEGEN_LIBS% cpp.app.example.php %2 %1 > %3\%1.app.example.h
+ECHO %3\%1.app.example.h is ready
+CALL %CODEGEN_ROOT%\gen_one.bat %CODEGEN_LIBS% cpp.main.php %2 %1 > %3\%1.main.cpp
+ECHO %3\%1.main.cpp is ready
+CALL %CODEGEN_ROOT%\gen_one.bat %CODEGEN_LIBS% config.php %2 %1 > %3\%1.ini
+ECHO %3\%1.ini is ready
 :EOF

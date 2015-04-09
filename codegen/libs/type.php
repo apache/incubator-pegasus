@@ -26,6 +26,31 @@ class t_program
 		$this->types = array();
 	}
 	
+	function get_test_task_code()
+	{
+		return "LPC"
+			."_". strtoupper($this->name) 
+			."_TEST_TIMER"
+			;
+	}
+	
+	function get_cpp_namespace()
+	{
+		if (!array_key_exists("cpp", $this->namespaces))
+		{
+			return "";
+		}
+		
+		$nms = $this->namespaces["cpp"];
+		$nms = explode(".", $nms);
+		$rt = "::";
+		foreach ($nms as $nm)
+		{
+			$rt .= $nm ."::";
+		}
+		return $rt;
+	}
+	
 	function get_cpp_namespace_begin()
 	{
 		if (!array_key_exists("cpp", $this->namespaces))
@@ -196,15 +221,6 @@ class t_service extends t_type
 		$f = new t_function($this, $ret, $name);
 		$this->functions[] = $f;
 		return $f;
-	}
-	
-	function get_test_task_code()
-	{
-		return "LPC"
-			."_". strtoupper($this->program->name)
-			."_". strtoupper($this->name) 
-			."_TEST_TIMER"
-			;
 	}
 }
 ?>
