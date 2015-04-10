@@ -78,10 +78,7 @@ void replication_options::read_meta_servers(configuration_ptr config)
     for (auto& s : servers)
     {
         // name:port
-
-        int pos1;
-        pos1 = s.find_first_of(':');
-
+        auto pos1 = s.find_first_of(':');
         if (pos1 != std::string::npos)
         {
             end_point ep(s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
