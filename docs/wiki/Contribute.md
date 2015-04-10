@@ -7,7 +7,7 @@ The beauty of open source world is that we can benefit from each other. We are m
 
 One first contribution is to adopt rDSN to develop your distributed systems, so as to leveraging all these tools rDSN provides, or embracing the replication framework provided by rDSN. Please try and share us your feedbacks so we can continuously improving the code.
 
-Besides, we also believe that there are the following aspects that developers may easily contribute to benefit all other applications atop of rDSN. Welcome to submit pull requests and/or sending us emails for direct contribution and/or collaborations on these topics. For those stand-alone components, we can integrate their code into part of the rDSN source tree, or, we can also have dedicated wiki pages to list the URLs so people can easily find them. In both cases, developers contributing the components may need to take charge of how to react to the further issues or pull requests or anything else related to the correspondent components. 
+Besides, we also believe that there are the following aspects that developers may easily contribute to benefit all other applications atop of rDSN. Welcome to submit pull requests and/or sending us emails for direct contribution and/or collaborations on these topics. For those stand-alone components, we can integrate their code into part of the rDSN source tree, or, we can also have dedicated wiki pages to list the URLs so people can easily find them. In both cases, developers contributing the components may need to take some time to react to the further issues or pull requests or anything else related to the correspondent components. 
 
 #### More native runtime libraries
 
