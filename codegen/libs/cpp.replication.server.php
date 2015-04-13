@@ -31,15 +31,15 @@ protected:
 <? foreach ($svc->functions as $f) { ?>
 	// <?=$f->get_rpc_code()?> 
 <? 	if ($f->is_one_way()) {?>
-	virtual void on_<?=$f->name?>(const <?=$f->get_first_param()->type_name?>& <?=$f->get_first_param()->name?>)
+	virtual void on_<?=$f->name?>(const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>)
 	{
 		std::cout << "... exec <?=$f->get_rpc_code()?> ... (not implemented) " << std::endl;
 	}
 <? 	} else {?>
-	virtual void on_<?=$f->name?>(const <?=$f->get_first_param()->type_name?>& <?=$f->get_first_param()->name?>, ::dsn::service::rpc_replier<<?=$f->ret?>>& reply)
+	virtual void on_<?=$f->name?>(const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, ::dsn::service::rpc_replier<<?=$f->get_cpp_return_type()?>>& reply)
 	{
 		std::cout << "... exec <?=$f->get_rpc_code()?> ... (not implemented) " << std::endl;
-		<?=$f->ret?> resp;
+		<?=$f->get_cpp_return_type()?> resp;
 		reply(resp);
 	}
 <? 	} ?>

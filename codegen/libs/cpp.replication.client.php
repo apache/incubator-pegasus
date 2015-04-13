@@ -27,7 +27,7 @@ public:
 <?
 $keys = array();
 foreach ($svc->functions as $f)
-	$keys[$f->get_first_param()->type_name] = 1;
+	$keys[$f->get_first_param()->get_cpp_type()] = 1;
 	
 	
 foreach ($keys as $k => $v)
@@ -40,7 +40,7 @@ foreach ($keys as $k => $v)
 	// ---------- call <?=$f->get_rpc_code()?> ------------
 <?	if ($f->is_one_way()) {?>
 	void <?=$f->name?>(
-		const <?=$f->get_first_param()->type_name?>& <?=$f->get_first_param()->name?>, 
+		const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
 		int hash = 0)
 	{
 		::dsn::message_ptr msg = ::dsn::message::create_request(<?=$f->get_rpc_code()?>, 0, hash);
@@ -50,12 +50,12 @@ foreach ($keys as $k => $v)
 <?	} else { ?>
 	// - synchronous 
 	::dsn::error_code <?=$f->name?>(
-		const <?=$f->get_first_param()->type_name?>& <?=$f->get_first_param()->name?>, 
-		__out_param <?=$f->ret?>& resp, 
+		const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
+		__out_param <?=$f->get_cpp_return_type()?>& resp, 
 		int timeout_milliseconds = 0
 		)
 	{
-		auto resp_task = ::dsn::replication::replication_app_client_base::read<<?=$f->get_first_param()->type_name?>, <?=$f->ret?>>(
+		auto resp_task = ::dsn::replication::replication_app_client_base::read<<?=$f->get_first_param()->get_cpp_type()?>, <?=$f->get_cpp_return_type()?>>(
             get_partition_index(<?=$f->get_first_param()->name?>),
             <?=$f->get_rpc_code()?>,
             <?=$f->get_first_param()->name?>,
@@ -71,9 +71,9 @@ foreach ($keys as $k => $v)
 		return resp_task->error();
 	}
 	
-	// - asynchronous with on-stack <?=$f->get_first_param()->type_name?> and <?=$f->ret?> 
+	// - asynchronous with on-stack <?=$f->get_first_param()->get_cpp_type()?> and <?=$f->get_cpp_return_type()?> 
 	::dsn::rpc_response_task_ptr begin_<?=$f->name?>(
-		const <?=$f->get_first_param()->type_name?>& <?=$f->get_first_param()->name?>, 		
+		const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 		
 		int timeout_milliseconds = 0, 
 		int reply_hash = 0
 		)
@@ -91,7 +91,7 @@ foreach ($keys as $k => $v)
 
 	virtual void end_<?=$f->name?>(
 		::dsn::error_code err, 
-		const <?=$f->ret?>& resp)
+		const <?=$f->get_cpp_return_type()?>& resp)
 	{
 		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply <?=$f->get_rpc_code()?> err : " << err.to_string() << std::endl;
 		else
@@ -100,14 +100,14 @@ foreach ($keys as $k => $v)
 		}
 	}
 	
-	// - asynchronous with on-heap std::shared_ptr<<?=$f->get_first_param()->type_name?>> and std::shared_ptr<<?=$f->ret?>> 
+	// - asynchronous with on-heap std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>> and std::shared_ptr<<?=$f->get_cpp_return_type()?>> 
 	::dsn::rpc_response_task_ptr begin_<?=$f->name?>2(
-		std::shared_ptr<<?=$f->get_first_param()->type_name?>>& <?=$f->get_first_param()->name?>, 		
+		std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>>& <?=$f->get_first_param()->name?>, 		
 		int timeout_milliseconds = 0, 
 		int reply_hash = 0
 		)
 	{
-		return ::dsn::replication::replication_app_client_base::read<<?=$svc->name?>_client, <?=$f->get_first_param()->type_name?>, <?=$f->ret?>>(
+		return ::dsn::replication::replication_app_client_base::read<<?=$svc->name?>_client, <?=$f->get_first_param()->get_cpp_type()?>, <?=$f->get_cpp_return_type()?>>(
             get_partition_index(*<?=$f->get_first_param()->name?>),
             <?=$f->get_rpc_code()?>,
             <?=$f->get_first_param()->name?>,
@@ -120,8 +120,8 @@ foreach ($keys as $k => $v)
 
 	virtual void end_<?=$f->name?>2(
 		::dsn::error_code err, 
-		std::shared_ptr<<?=$f->get_first_param()->type_name?>>& <?=$f->get_first_param()->name?>, 
-		std::shared_ptr<<?=$f->ret?>>& resp)
+		std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>>& <?=$f->get_first_param()->name?>, 
+		std::shared_ptr<<?=$f->get_cpp_return_type()?>>& resp)
 	{
 		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply <?=$f->get_rpc_code()?> err : " << err.to_string() << std::endl;
 		else
