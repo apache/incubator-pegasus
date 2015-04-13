@@ -8,4 +8,4 @@ while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symli
 done
 CODEGEN_ROOT="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
-php $CODEGEN_ROOT\generate_code.php $1 $2
+php $CODEGEN_ROOT"/generate_code.php" $1 $2
