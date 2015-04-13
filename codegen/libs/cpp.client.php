@@ -22,7 +22,7 @@ public:
 	// ---------- call <?=$f->get_rpc_code()?> ------------
 <?	if ($f->is_one_way()) {?>
 	void <?=$f->name?>(
-		const <?=$f->get_first_param()->type_name?>& <?=$f->get_first_param()->name?>, 
+		const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
 		int hash = 0)
 	{
 		::dsn::message_ptr msg = ::dsn::message::create_request(<?=$f->get_rpc_code()?>, 0, hash);
@@ -32,8 +32,8 @@ public:
 <?	} else { ?>
 	// - synchronous 
 	::dsn::error_code <?=$f->name?>(
-		const <?=$f->get_first_param()->type_name?>& <?=$f->get_first_param()->name?>, 
-		__out_param <?=$f->ret?>& resp, 
+		const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
+		__out_param <?=$f->get_cpp_return_type()?>& resp, 
 		int timeout_milliseconds = 0, 
 		int hash = 0)
 	{
@@ -48,9 +48,9 @@ public:
 		return resp_task->error();
 	}
 	
-	// - asynchronous with on-stack <?=$f->get_first_param()->type_name?> and <?=$f->ret?> 
+	// - asynchronous with on-stack <?=$f->get_first_param()->get_cpp_type()?> and <?=$f->get_cpp_return_type()?> 
 	::dsn::rpc_response_task_ptr begin_<?=$f->name?>(
-		const <?=$f->get_first_param()->type_name?>& <?=$f->get_first_param()->name?>, 		
+		const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 		
 		int timeout_milliseconds = 0, 
 		int reply_hash = 0,
 		int request_hash = 0)
@@ -69,7 +69,7 @@ public:
 
 	virtual void end_<?=$f->name?>(
 		::dsn::error_code err, 
-		const <?=$f->ret?>& resp)
+		const <?=$f->get_cpp_return_type()?>& resp)
 	{
 		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply <?=$f->get_rpc_code()?> err : " << err.to_string() << std::endl;
 		else
@@ -78,9 +78,9 @@ public:
 		}
 	}
 	
-	// - asynchronous with on-heap std::shared_ptr<<?=$f->get_first_param()->type_name?>> and std::shared_ptr<<?=$f->ret?>> 
+	// - asynchronous with on-heap std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>> and std::shared_ptr<<?=$f->get_cpp_return_type()?>> 
 	::dsn::rpc_response_task_ptr begin_<?=$f->name?>2(
-		std::shared_ptr<<?=$f->get_first_param()->type_name?>>& <?=$f->get_first_param()->name?>, 		
+		std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>>& <?=$f->get_first_param()->name?>, 		
 		int timeout_milliseconds = 0, 
 		int reply_hash = 0,
 		int request_hash = 0)
@@ -99,8 +99,8 @@ public:
 
 	virtual void end_<?=$f->name?>2(
 		::dsn::error_code err, 
-		std::shared_ptr<<?=$f->get_first_param()->type_name?>>& <?=$f->get_first_param()->name?>, 
-		std::shared_ptr<<?=$f->ret?>>& resp)
+		std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>>& <?=$f->get_first_param()->name?>, 
+		std::shared_ptr<<?=$f->get_cpp_return_type()?>>& resp)
 	{
 		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply <?=$f->get_rpc_code()?> err : " << err.to_string() << std::endl;
 		else

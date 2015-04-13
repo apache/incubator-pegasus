@@ -18,7 +18,7 @@ foreach ($_PROG->services as $svc)
 			. ", ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)".PHP_EOL;
 	}	
 }
-echo "\t// test timer task code"
+echo "\t// test timer task code".PHP_EOL; 
 echo "\tDEFINE_TASK_CODE(". $_PROG->get_test_task_code() 
 		. ", ::dsn::TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)".PHP_EOL;
 

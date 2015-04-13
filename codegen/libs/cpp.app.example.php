@@ -85,7 +85,7 @@ foreach ($_PROG->services as $svc)
 	foreach ($svc->functions as $f)
 {?>
 		{
-			<?=$f->get_first_param()->type_name?> req;
+			<?=$f->get_first_param()->get_cpp_type()?> req;
 			_<?=$svc->name?>_client->begin_<?=$f->name?>(req);
 		}
 <?}	
