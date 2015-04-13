@@ -100,7 +100,7 @@ namespace dsn {
         {
             add_reference();
 
-            void* ptr = _parser->read_buffer_ptr(sz);
+            void* ptr = _parser->read_buffer_ptr((int)sz);
             int remaining = _parser->read_buffer_capacity();
 
             _socket.async_read_some(boost::asio::buffer(ptr, remaining),
@@ -116,7 +116,7 @@ namespace dsn {
                 else
                 {
                     int read_next;
-                    message_ptr msg = _parser->on_read(length, read_next);
+                    message_ptr msg = _parser->on_read((int)length, read_next);
 
                     while (msg != nullptr)
                     {
