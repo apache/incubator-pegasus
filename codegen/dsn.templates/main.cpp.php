@@ -3,8 +3,6 @@ require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
 ?>
-# pragma once
-
 // apps
 # include "<?=$file_prefix?>.app.example.h"
 
@@ -29,7 +27,7 @@ int main(int argc, char** argv)
 	dsn::tools::register_toollet<dsn::tools::fault_injector>("fault_injector");
 
 	// specify what services and tools will run in config file, then run
-	dsn::service::system::run("<?=$_PROG->name?>.ini");
+	dsn::service::system::run("config.ini");
 	::getchar();
 
 	return 0;

@@ -4,7 +4,7 @@ require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
 ?>
 
-TARGET = <?=$_PROG->name?>
+TARGET = <?=$_PROG->name?> 
 INC_EXTRA = 
 LIB_EXTRA = 
 TYPE = EXE
@@ -12,19 +12,20 @@ TYPE = EXE
 ROOT = .
 
 SYS_INC = /usr/local/include /usr/include
-SYS_LIB_DEPS_COMMON = \
+SYS_LIBS = \
 	-lpthread \
 	-lstdc++ \
 	-lboost_chrono \
 	-lboost_date_time \
 	-lboost_filesystem \
 	-lboost_regex \
-	-lboost_system 
+    -lboost_system \
+    -ldsn.tools.simulator \
+    -ldsn.tools.common \
+    -ldsn.dev \
+    -ldsn.core  
 
-BIN_DIR = $(ROOT)/bin
-LIB_EXTRA_S = $(LIB_EXTRA) dsn.core dsn.dev dsn.tools.common dsn.tools.simulator 
-LIB_EXTRA_DEPS = $(LIB_EXTRA_S:%=-l%)
-LIB_EXTRA_TARGETS = $(LIB_EXTRA_S:%=$(BIN_DIR)/lib%.a) 
+BIN_DIR = $(ROOT)
 SOURCES = $(wildcard *.cpp)
 OBJS = $(SOURCES:%.cpp=%.o)
 
@@ -36,28 +37,28 @@ ifeq (/Users/$(LOGNAME), $(HOME))  # mac
 
 	SYS_LIB = /usr/local/lib
 	SYS_LIB_DEPS = \
-		$(SYS_LIB_DEPS_COMMON)				 \
+		$(SYS_LIBS)				 \
 		-lboost_thread-mt					 
 										 
 	LD = g++							     
-	LDFLAGS = -L$(BIN_DIR) $(SYS_LIB:%= -L%) $(SYS_LIB_DEPS) $(LIB_EXTRA_DEPS) 
+	LDFLAGS = -L$(BIN_DIR) $(SYS_LIB:%= -L%) $(SYS_LIB_DEPS) 
 										 
 else # linux									 
 										 
 	SYS_LIB = /usr/lib/x86_64-linux-gnu /usr/local/lib
 	SYS_LIB_DEPS = \
-		$(SYS_LIB_DEPS_COMMON)	\
+		$(SYS_LIBS)	\
 		-lboost_thread \
 		-lrt								  
 										 
 	LIB_NONLINKED_PATH = /usr/lib/x86_64-linux-gnu
-	LIB_NONLINKED_WR = $(BIN_DIR)/libdsn.core.a					\
+	LIB_NONLINKED_WR = \
 				   $(LIB_NONLINKED_PATH)/libboost_thread.a		\
 				   $(LIB_NONLINKED_PATH)/libboost_filesystem.a	\
 				   $(LIB_NONLINKED_PATH)/librt.a
 										 
 	LD = g++ -pthread
-	LDFLAGS = -L$(BIN_DIR) $(SYS_LIB:%= -L%) $(SYS_LIB_DEPS) $(LIB_EXTRA_DEPS) $(LIB_NONLINKED_WR) 
+	LDFLAGS = -L$(BIN_DIR) $(SYS_LIB:%= -L%) $(SYS_LIB_DEPS)  $(LIB_NONLINKED_WR) 
 
 endif
 ##########
@@ -84,5 +85,4 @@ LIB: $(BIN_DIR) $(OBJS)
 EXE: $(BIN_DIR) $(OBJS) $(LIB_EXTRA_TARGETS)
 	echo building executable $(BIN_DIR)/$(TARGET) ...
 	$(LD) -o $(BIN_DIR)/$(TARGET) $(OBJS) $(LDFLAGS) 
-	cp *.ini $(BIN_DIR)/
 

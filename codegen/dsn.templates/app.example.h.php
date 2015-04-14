@@ -71,8 +71,11 @@ public:
 	{
 		_timer->cancel(true);
 <?php foreach ($_PROG->services as $svc) { ?>
-		delete _<?=$svc->name?>_client;
-		_<?=$svc->name?>_client = nullptr;
+        if (_<?=$svc->name?>_client != nullptr)
+        {
+            delete _<?=$svc->name?>_client;
+    		_<?=$svc->name?>_client = nullptr;
+        }
 <?php } ?>
 	}
 
@@ -85,8 +88,12 @@ foreach ($_PROG->services as $svc)
 	foreach ($svc->functions as $f)
 {?>
 		{
-			<?=$f->get_first_param()->get_cpp_type()?> req;
-			_<?=$svc->name?>_client->begin_<?=$f->name?>(req);
+            <?=$f->get_first_param()->get_cpp_type()?> req;
+<?php if ($f->is_one_way()) { ?>
+            _<?=$svc->name?>_client-><?=$f->name?>(req);
+<?php } else { ?>
+            _<?=$svc->name?>_client->begin_<?=$f->name?>(req);
+<?php } ?>           
 		}
 <?php }	
 }
@@ -98,7 +105,7 @@ private:
 	::dsn::end_point _server;
 	
 <?php foreach ($_PROG->services as $svc) { ?>
-	std::shared_ptr<<?=$svc->name?>_client> _<?=$svc->name?>_client;
+	<?=$svc->name?>_client *_<?=$svc->name?>_client;
 <?php } ?>
 };
 

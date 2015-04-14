@@ -5,6 +5,7 @@ $file_prefix = $argv[3];
 ?>
 # pragma once
 # include <dsn/service_api.h>
+# include "<?=$_PROG->name?>.types.h"
 
 <?php
 echo $_PROG->get_cpp_namespace_begin().PHP_EOL;

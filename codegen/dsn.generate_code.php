@@ -124,8 +124,13 @@ foreach (scandir($g_cg_libs) as $template)
 		|| $template == ".." 
 		)
 		continue;
-		
-	$output_file = $g_out_dir."/".$g_program.".".substr($template, 0, strlen($template)-4);
+
+    if ($template == "config.ini.php"
+     || $template == "makefile.php"
+       )
+    	$output_file = $g_out_dir."/".substr($template, 0, strlen($template)-4);
+    else
+	    $output_file = $g_out_dir."/".$g_program.".".substr($template, 0, strlen($template)-4);
 	$command = "php -f ".$g_cg_libs."/".$template
 				." ".$g_cg_libs."/type.php"
 				." ".$g_idl_php
