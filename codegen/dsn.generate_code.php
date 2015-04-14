@@ -23,7 +23,7 @@ global $g_idl_php;
 $g_idl = $argv[1];
 $g_out_dir = $argv[2];
 $g_cg_dir = __DIR__;
-$g_cg_libs = $g_cg_dir."/libs";
+$g_cg_libs = $g_cg_dir."/dsn.templates";
 $g_idl_type = "";
 $g_idl_post = "";
 $g_program = "";
