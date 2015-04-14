@@ -12,23 +12,22 @@ TYPE = EXE
 SYS_INC = /usr/local/include /usr/include
 SYS_LIBS = \
 	-lpthread \
-	-lstdc++ \
+    -lstdc++ \
+    -ldsn.tools.simulator \
+    -ldsn.tools.common \
+    -ldsn.dev \
+    -ldsn.core \
 	-lboost_filesystem \
 	-lboost_thread \
 	-lboost_regex \
     -lboost_system \
 	-lboost_chrono \
-	-lboost_date_time \	
-    -ldsn.tools.simulator \
-    -ldsn.tools.common \
-    -ldsn.dev \
-    -ldsn.core  
+	-lboost_date_time 
 	
 SYS_LIB_PATH = \
 	-L/usr/lib/x86_64-linux-gnu \
 	-L/usr/local/lib
 
-BIN_DIR = $(ROOT)
 SOURCES = $(wildcard *.cpp)
 OBJS = $(SOURCES:%.cpp=%.o)
 
@@ -40,23 +39,20 @@ ifeq (/Users/$(LOGNAME), $(HOME))  # mac
 	SYS_LIBS_ALL = $(SYS_LIBS) # -lboost_thread-mt 	
 else # linux	
 	LD = g++ -pthread 
-	SYS_LIBS_ALL = -lrt $(SYS_LIBS)
+	SYS_LIBS_ALL = $(SYS_LIBS) -lrt 
 endif
-LDFLAGS = -L$(BIN_DIR) $(SYS_LIBS_ALL) $(LIB_EXTRA:%= -l%)
+LDFLAGS = -L./ $(SYS_LIBS_ALL) $(LIB_EXTRA:%= -l%)
 
 AR = ar
 ARFLAGS = rv
 
-all: $(BIN_DIR) $(OBJS) $(LIB_EXTRA)
-	echo building executable $(BIN_DIR)/$(TARGET) ...
-	$(LD) -o $(BIN_DIR)/$(TARGET) $(OBJS) $(LDFLAGS) 
-
-$(BIN_DIR):
-	-mkdir $(BIN_DIR)
+all: $(OBJS) $(LIB_EXTRA)
+	echo building executable $(TARGET) ...
+	$(LD) -o $(TARGET) $(OBJS) $(LDFLAGS) 
 
 clean:
 	-rm *.o
-	-rm $(BIN_DIR)/$(TARGET)
+	-rm $(TARGET)
 
 %.o : %.cpp
 	$(CPP) -c $(CPPFLAGS) $< -o $@
