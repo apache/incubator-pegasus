@@ -7,22 +7,17 @@ function(dsn_add_library PROJ_NAME)
 	endif()
 
 	if(MSVC)
-		add_definitions(-D_CONSOLE)
 		add_definitions(-D_LIB)
 	endif()
+
 	file(GLOB PROJ_SRC "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/*.c")
 	add_library(${PROJ_NAME} STATIC ${PROJ_SRC})
-
 	install(TARGETS ${PROJ_NAME} DESTINATION lib)
 endfunction(dsn_add_library)
 
 function(dsn_add_executable PROJ_NAME INPUT_LIBS BINPLACE_FILES)
 	if(PROJ_NAME STREQUAL "")
 		message(FATAL_ERROR "Invalid project name")
-	endif()
-
-	if(MSVC)
-		add_definitions(-D_CONSOLE)
 	endif()
 
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJ_NAME}")
@@ -38,7 +33,6 @@ function(dsn_add_executable PROJ_NAME INPUT_LIBS BINPLACE_FILES)
 			POST_BUILD
 			COMMAND ${CMAKE_COMMAND} -E copy ${BF} "${BINPLACE_DIR}"
 			)
-
 		install(FILES ${MF} DESTINATION bin)
 	endforeach()
 
@@ -84,10 +78,10 @@ macro(dsn_set_compiler_flags)
 		endforeach()
 	endforeach()
 
-	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 	if(UNIX)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -std=c++11")
 	elseif(MSVC)
+		add_definitions(-D_CONSOLE)
 		add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 		add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
 		add_definitions(-D_WINSOCK_DEPRECATED_NO_WARNINGS=1)
