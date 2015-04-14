@@ -44,7 +44,7 @@ configuration::configuration(const char* file_name)
     if (len == -1 || len == 0) 
     {
         printf("Cannot get length of %s, err=%s", file_name, strerror(errno));
-        fclose(fd);
+        ::fclose(fd);
         return;
     }
 
@@ -53,8 +53,13 @@ configuration::configuration(const char* file_name)
     char* fileData = _file_data.get();
 
     ::fseek(fd, 0, SEEK_SET);
-    ::fread(fileData, len, 1, fd);
+    auto sz = ::fread(fileData, len, 1, fd);
     ::fclose(fd);
+	if (sz != (size_t)len)
+	{
+		printf("Cannot read correct data of %s, err=%s", file_name, strerror(errno));
+		return;
+	}
     ((char*)fileData)[fileLength] = '\n';
 
     //
