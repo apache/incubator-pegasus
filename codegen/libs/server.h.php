@@ -10,7 +10,7 @@ $file_prefix = $argv[3];
 
 <?=$_PROG->get_cpp_namespace_begin()?>
 
-<? foreach ($_PROG->services as $svc) { ?>
+<?php foreach ($_PROG->services as $svc) { ?>
 class <?=$svc->name?>_service 
 	: public ::dsn::service::serverlet<<?=$svc->name?>_service>
 {
@@ -20,42 +20,42 @@ public:
 
 protected:
 	// all service handlers to be implemented further
-<? foreach ($svc->functions as $f) { ?>
+<?php foreach ($svc->functions as $f) { ?>
 	// <?=$f->get_rpc_code()?> 
-<? 	if ($f->is_one_way()) {?>
+<?php 	if ($f->is_one_way()) {?>
 	virtual void on_<?=$f->name?>(const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>)
 	{
 		std::cout << "... exec <?=$f->get_rpc_code()?> ... (not implemented) " << std::endl;
 	}
-<? 	} else {?>
+<?php 	} else {?>
 	virtual void on_<?=$f->name?>(const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, ::dsn::service::rpc_replier<<?=$f->get_cpp_return_type()?>>& reply)
 	{
 		std::cout << "... exec <?=$f->get_rpc_code()?> ... (not implemented) " << std::endl;
 		<?=$f->get_cpp_return_type()?> resp;
 		reply(resp);
 	}
-<? 	} ?>
-<? } ?>
+<?php 	} ?>
+<?php } ?>
 	
 public:
 	void open_service()
 	{
-<? foreach ($svc->functions as $f) { ?>
-<? 	if ($f->is_one_way()) {?>
+<?php foreach ($svc->functions as $f) { ?>
+<?php 	if ($f->is_one_way()) {?>
 		this->register_rpc_handler(<?=$f->get_rpc_code()?>, "<?=$f->name?>", &<?=$svc->name?>_service::on_<?=$f->name?>);
-<? 	} else {?>
+<?php 	} else {?>
 		this->register_async_rpc_handler(<?=$f->get_rpc_code()?>, "<?=$f->name?>", &<?=$svc->name?>_service::on_<?=$f->name?>);
-<? 	} ?>
-<? } ?>
+<?php 	} ?>
+<?php } ?>
 	}
 
 	void close_service()
 	{
-<? foreach ($svc->functions as $f) { ?>
+<?php foreach ($svc->functions as $f) { ?>
 		this->unregister_rpc_handler(<?=$f->get_rpc_code()?>);
-<? } ?>
+<?php } ?>
 	}
 };
 
-<? } ?>
+<?php } ?>
 <?=$_PROG->get_cpp_namespace_end()?>

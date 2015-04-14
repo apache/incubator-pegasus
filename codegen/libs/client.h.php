@@ -9,7 +9,7 @@ $file_prefix = $argv[3];
 
 <?=$_PROG->get_cpp_namespace_begin()?>
 
-<? foreach ($_PROG->services as $svc) { ?>
+<?php foreach ($_PROG->services as $svc) { ?>
 class <?=$svc->name?>_client 
 	: public virtual ::dsn::service::servicelet
 {
@@ -17,10 +17,10 @@ public:
 	<?=$svc->name?>_client(const ::dsn::end_point& server) { _server = server; }
 	virtual ~<?=$svc->name?>_client() {}
 
-<? foreach ($svc->functions as $f) { ?>
+<?php foreach ($svc->functions as $f) { ?>
 
 	// ---------- call <?=$f->get_rpc_code()?> ------------
-<?	if ($f->is_one_way()) {?>
+<?php	if ($f->is_one_way()) {?>
 	void <?=$f->name?>(
 		const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
 		int hash = 0)
@@ -29,7 +29,7 @@ public:
 		marshall(msg->writer(), <?=$f->get_first_param()->name?>);
 		::dsn::service::rpc::call_one_way(_server, msg);
 	}
-<?	} else { ?>
+<?php	} else { ?>
 	// - synchronous 
 	::dsn::error_code <?=$f->name?>(
 		const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
@@ -109,12 +109,12 @@ public:
 		}
 	}
 	
-<?	}?>
-<? } ?>
+<?php	}?>
+<?php } ?>
 
 private:
 	::dsn::end_point _server;
 };
 
-<? } ?>
+<?php } ?>
 <?=$_PROG->get_cpp_namespace_end()?>

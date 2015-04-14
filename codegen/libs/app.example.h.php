@@ -18,23 +18,23 @@ public:
 
 	virtual ::dsn::error_code start(int argc, char** argv)
 	{
-<? foreach ($_PROG->services as $svc) { ?>
+<?php foreach ($_PROG->services as $svc) { ?>
 		_<?=$svc->name?>_svc.open_service();
-<? } ?>
+<?php } ?>
 		return ::dsn::ERR_SUCCESS;
 	}
 
 	virtual void stop(bool cleanup = false)
 	{
-<? foreach ($_PROG->services as $svc) { ?>
+<?php foreach ($_PROG->services as $svc) { ?>
 		_<?=$svc->name?>_svc.close_service();
-<? } ?>
+<?php } ?>
 	}
 
 private:
-<? foreach ($_PROG->services as $svc) { ?>
+<?php foreach ($_PROG->services as $svc) { ?>
 	<?=$svc->name?>_service _<?=$svc->name?>_svc;
-<? } ?>
+<?php } ?>
 };
 
 // client app example
@@ -44,9 +44,9 @@ public:
 	<?=$_PROG->name?>_client_app(::dsn::service_app_spec* s, ::dsn::configuration_ptr c) 
 		: ::dsn::service::service_app(s, c) 
 	{
-<? foreach ($_PROG->services as $svc) { ?>
+<?php foreach ($_PROG->services as $svc) { ?>
 		_<?=$svc->name?>_client = nullptr;
-<? } ?>
+<?php } ?>
 	}
 	
 	~<?=$_PROG->name?>_client_app() 
@@ -60,9 +60,9 @@ public:
 			return ::dsn::ERR_INVALID_PARAMETERS;
 
 		_server = ::dsn::end_point(argv[1], (uint16_t)atoi(argv[2]));
-<? foreach ($_PROG->services as $svc) { ?>
+<?php foreach ($_PROG->services as $svc) { ?>
 		_<?=$svc->name?>_client = new <?=$svc->name?>_client(_server);
-<? } ?>
+<?php } ?>
 		_timer = ::dsn::service::tasking::enqueue(<?=$_PROG->get_test_task_code()?>, this, &<?=$_PROG->name?>_client_app::on_test_timer, 0, 0, 1000);
 		return ::dsn::ERR_SUCCESS;
 	}
@@ -70,15 +70,15 @@ public:
 	virtual void stop(bool cleanup = false)
 	{
 		_timer->cancel(true);
-<? foreach ($_PROG->services as $svc) { ?>
+<?php foreach ($_PROG->services as $svc) { ?>
 		delete _<?=$svc->name?>_client;
 		_<?=$svc->name?>_client = nullptr;
-<? } ?>
+<?php } ?>
 	}
 
 	void on_test_timer()
 	{
-<?
+<?php
 foreach ($_PROG->services as $svc)
 {
 	echo "\t\t// test for service '". $svc->name ."'". PHP_EOL;
@@ -88,7 +88,7 @@ foreach ($_PROG->services as $svc)
 			<?=$f->get_first_param()->get_cpp_type()?> req;
 			_<?=$svc->name?>_client->begin_<?=$f->name?>(req);
 		}
-<?}	
+<?php }	
 }
 ?>
 	}
@@ -97,9 +97,9 @@ private:
 	::dsn::task_ptr _timer;
 	::dsn::end_point _server;
 	
-<? foreach ($_PROG->services as $svc) { ?>
+<?php foreach ($_PROG->services as $svc) { ?>
 	std::shared_ptr<<?=$svc->name?>_client> _<?=$svc->name?>_client;
-<? } ?>
+<?php } ?>
 };
 
 <?=$_PROG->get_cpp_namespace_end()?>
