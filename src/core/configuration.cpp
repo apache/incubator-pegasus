@@ -55,7 +55,7 @@ configuration::configuration(const char* file_name)
     ::fseek(fd, 0, SEEK_SET);
     auto sz = ::fread(fileData, len, 1, fd);
     ::fclose(fd);
-	if (sz != (size_t)len)
+	if (sz != 1)
 	{
 		printf("Cannot read correct data of %s, err=%s", file_name, strerror(errno));
 		return;
