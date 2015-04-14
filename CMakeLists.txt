@@ -21,6 +21,7 @@ function(dsn_add_executable PROJ_NAME INPUT_LIBS BINPLACE_FILES)
 	endif()
 
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJ_NAME}")
+	set(INSTALL_BINPLACE_DIR "bin/${PROJ_NAME}")
 
 	file(GLOB PROJ_SRC "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/*.c")
 	add_executable(${PROJ_NAME} ${PROJ_SRC})
@@ -33,10 +34,10 @@ function(dsn_add_executable PROJ_NAME INPUT_LIBS BINPLACE_FILES)
 			POST_BUILD
 			COMMAND ${CMAKE_COMMAND} -E copy ${BF} "${BINPLACE_DIR}"
 			)
-		install(FILES ${MF} DESTINATION bin)
+		install(FILES ${BF} DESTINATION "${INSTALL_BINPLACE_DIR}")
 	endforeach()
 
-	install(TARGETS ${PROJ_NAME} DESTINATION bin)
+	install(TARGETS ${PROJ_NAME} DESTINATION "${INSTALL_BINPLACE_DIR}")
 endfunction(dsn_add_executable)
 
 macro(dsn_check_cxx11_support)
