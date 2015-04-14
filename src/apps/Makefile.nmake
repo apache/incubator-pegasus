@@ -1,5 +1,0 @@
-DIRS = \
-	apps/echo \
-	apps/replication
-	
-!INCLUDE ../../scripts/Makefile.nmake.recursive

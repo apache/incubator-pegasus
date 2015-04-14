@@ -1,4 +1,0 @@
-TARGET=dsn.replication.lib
-INC_EXTRA = /I../client_lib /I../../../dist/failure_detector
-TYPE = LIB
-!INCLUDE ../../../../scripts/Makefile.nmake.common

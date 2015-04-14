@@ -1,4 +1,0 @@
-DIRS = \
-	dist/failure_detector
-	
-!INCLUDE ../../scripts/Makefile.nmake.recursive

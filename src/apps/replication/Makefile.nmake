@@ -1,7 +1,0 @@
-DIRS = \
-	replication/client_lib \
-	replication/meta_server \
-	replication/lib \
-	replication/exe
-	
-!INCLUDE ../../../scripts/Makefile.nmake.recursive
