@@ -1,3 +1,0 @@
-TARGET=dsn.replication.client.lib
-TYPE = LIB
-!INCLUDE ../../../../scripts/Makefile.nmake.common

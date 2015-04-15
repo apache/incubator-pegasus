@@ -1,6 +1,0 @@
-DIRS = \
-	echo \
-    replication  
-	
-include ../../scripts/makefile.recursive
-

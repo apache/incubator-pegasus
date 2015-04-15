@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1.0)
+cmake_minimum_required(VERSION 2.8.8)
 
 
 function(dsn_add_library PROJ_NAME)
@@ -7,12 +7,11 @@ function(dsn_add_library PROJ_NAME)
 	endif()
 
 	if(MSVC)
-		add_definitions(-D_CONSOLE)
 		add_definitions(-D_LIB)
 	endif()
+
 	file(GLOB PROJ_SRC "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/*.c")
 	add_library(${PROJ_NAME} STATIC ${PROJ_SRC})
-
 	install(TARGETS ${PROJ_NAME} DESTINATION lib)
 endfunction(dsn_add_library)
 
@@ -21,11 +20,8 @@ function(dsn_add_executable PROJ_NAME INPUT_LIBS BINPLACE_FILES)
 		message(FATAL_ERROR "Invalid project name")
 	endif()
 
-	if(MSVC)
-		add_definitions(-D_CONSOLE)
-	endif()
-
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJ_NAME}")
+	set(INSTALL_BINPLACE_DIR "bin/${PROJ_NAME}")
 
 	file(GLOB PROJ_SRC "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/*.c")
 	add_executable(${PROJ_NAME} ${PROJ_SRC})
@@ -38,11 +34,10 @@ function(dsn_add_executable PROJ_NAME INPUT_LIBS BINPLACE_FILES)
 			POST_BUILD
 			COMMAND ${CMAKE_COMMAND} -E copy ${BF} "${BINPLACE_DIR}"
 			)
-
-		install(FILES ${MF} DESTINATION bin)
+		install(FILES ${BF} DESTINATION "${INSTALL_BINPLACE_DIR}")
 	endforeach()
 
-	install(TARGETS ${PROJ_NAME} DESTINATION bin)
+	install(TARGETS ${PROJ_NAME} DESTINATION "${INSTALL_BINPLACE_DIR}")
 endfunction(dsn_add_executable)
 
 macro(dsn_check_cxx11_support)
@@ -84,10 +79,10 @@ macro(dsn_set_compiler_flags)
 		endforeach()
 	endforeach()
 
-	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 	if(UNIX)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -std=c++11")
 	elseif(MSVC)
+		add_definitions(-D_CONSOLE)
 		add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 		add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
 		add_definitions(-D_WINSOCK_DEPRECATED_NO_WARNINGS=1)
@@ -156,5 +151,9 @@ set(BUILD_SHARED_LIBS OFF)
 include_directories(${BOOST_INCLUDEDIR} ${CMAKE_SOURCE_DIR}/inc)
 link_directories(${BOOST_LIBRARYDIR} ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 install(DIRECTORY inc/dsn DESTINATION include)
+install(FILES "codegen/dsn.generate_code.php" DESTINATION bin)
+install(FILES "codegen/dsn.cg.bat" DESTINATION bin)
+install(FILES "codegen/dsn.cg.sh" DESTINATION bin)
+install(DIRECTORY codegen/dsn.templates DESTINATION bin)
 
 add_subdirectory(src)

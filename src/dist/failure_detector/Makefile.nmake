@@ -1,3 +1,0 @@
-TARGET=dsn.failure_detector.lib
-TYPE = LIB
-!INCLUDE ../../../scripts/Makefile.nmake.common

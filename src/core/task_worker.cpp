@@ -142,7 +142,7 @@ void task_worker::set_priority(worker_priority_t pri)
 void task_worker::set_affinity(uint64_t affinity)
 {
 # ifdef _WIN32
-    ::SetThreadAffinityMask(_thread->native_handle(), affinity);
+    ::SetThreadAffinityMask(_thread->native_handle(), static_cast<DWORD_PTR>(affinity));
 # else
 //# error "not implemented"
 # endif

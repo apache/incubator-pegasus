@@ -1,3 +1,0 @@
-TARGET=dsn.tools.common.lib
-TYPE = LIB
-!INCLUDE ../../../scripts/Makefile.nmake.common
