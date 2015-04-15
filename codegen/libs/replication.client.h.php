@@ -9,7 +9,7 @@ $file_prefix = $argv[3];
 
 <?=$_PROG->get_cpp_namespace_begin()?>
 
-<? foreach ($_PROG->services as $svc) { ?>
+<?php foreach ($_PROG->services as $svc) { ?>
 class <?=$svc->name?>_client 
 	: public ::dsn::replication::replication_app_client_base
 {
@@ -24,7 +24,7 @@ public:
 	virtual ~<?=$svc->name?>_client() {}
 	
 	// from requests to partition index
-<?
+<?php
 $keys = array();
 foreach ($svc->functions as $f)
 	$keys[$f->get_first_param()->get_cpp_type()] = 1;
@@ -35,10 +35,10 @@ foreach ($keys as $k => $v)
 	echo "\tvirtual int get_partition_index(const ".$k."& key) = 0;".PHP_EOL;
 }
 ?>
-<? foreach ($svc->functions as $f) { ?>
+<?php foreach ($svc->functions as $f) { ?>
 
 	// ---------- call <?=$f->get_rpc_code()?> ------------
-<?	if ($f->is_one_way()) {?>
+<?php if ($f->is_one_way()) {?>
 	void <?=$f->name?>(
 		const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
 		int hash = 0)
@@ -47,7 +47,7 @@ foreach ($keys as $k => $v)
 		marshall(msg->writer(), <?=$f->get_first_param()->name?>);
 		::dsn::service::rpc::call_one_way(_server, msg);
 	}
-<?	} else { ?>
+<?php	} else { ?>
 	// - synchronous 
 	::dsn::error_code <?=$f->name?>(
 		const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
@@ -130,9 +130,9 @@ foreach ($keys as $k => $v)
 		}
 	}
 	
-<?	}?>
-<? } ?>
+<?php	}?>
+<?php } ?>
 };
 
-<? } ?>
+<?php } ?>
 <?=$_PROG->get_cpp_namespace_end()?>
