@@ -30,6 +30,7 @@
 # include <dsn/internal/network.h>
 # include <dsn/internal/aio_provider.h>
 # include <dsn/internal/env_provider.h>
+# include <dsn/internal/nfs.h>
 # include <dsn/internal/zlock_provider.h>
 # include <dsn/internal/zlocks.h>
 # include <dsn/internal/message_parser.h>
@@ -93,21 +94,22 @@ public:
     static configuration_ptr config();
 };
 
-typedef task_queue*     (*task_queue_factory)(task_worker_pool*, int, task_queue*);
-typedef task_worker*    (*task_worker_factory)(task_worker_pool*, task_queue*, int, task_worker*);
+typedef task_queue*      (*task_queue_factory)(task_worker_pool*, int, task_queue*);
+typedef task_worker*     (*task_worker_factory)(task_worker_pool*, task_queue*, int, task_worker*);
 typedef admission_controller* (*admission_controller_factory)(task_queue*, const char*);
 typedef lock_provider*   (*lock_factory)(dsn::service::zlock *, lock_provider*);
 typedef rwlock_provider* (*read_write_lock_factory)(dsn::service::zrwlock *, rwlock_provider*);
 typedef semaphore_provider* (*semaphore_factory)(dsn::service::zsemaphore *, int, semaphore_provider*);
-typedef network*       (*network_factory)(rpc_engine*, network*);
-typedef aio_provider*   (*aio_factory)(disk_engine*, aio_provider*);
-typedef env_provider*   (*env_factory)(env_provider*);
-typedef message_parser* (*message_parser_factory)(int);
+typedef network*         (*network_factory)(rpc_engine*, network*);
+typedef aio_provider*    (*aio_factory)(disk_engine*, aio_provider*);
+typedef env_provider*    (*env_factory)(env_provider*);
+typedef nfs_node*        (*nfs_factory)(service_node*);
+typedef message_parser*  (*message_parser_factory)(int);
 
 typedef perf_counter*    (*perf_counter_factory)(const char *, const char *, perf_counter_type);
 typedef logging_provider* (*logging_factory)(const char*);
-typedef toollet*       (*toollet_factory)(const char*, configuration_ptr);
-typedef tool_app*       (*tool_app_factory)(const char*, configuration_ptr);
+typedef toollet*         (*toollet_factory)(const char*, configuration_ptr);
+typedef tool_app*        (*tool_app_factory)(const char*, configuration_ptr);
 
 namespace internal_use_only
 {
@@ -122,6 +124,7 @@ namespace internal_use_only
     bool register_component_provider(const char* name, env_factory f, int type);
     bool register_component_provider(const char* name, perf_counter_factory f, int type);
     bool register_component_provider(const char* name, logging_factory f, int type);
+    bool register_component_provider(const char* name, nfs_factory f, int type);
     bool register_component_provider(const char* name, message_parser_factory f, int type);
     
     bool register_toollet(const char* name, toollet_factory f, int type);

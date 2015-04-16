@@ -24,7 +24,6 @@
 
 # include <dsn/internal/servicelet.h>
 # include <dsn/internal/singleton.h>
-# include <dsn/internal/file_server.h>
 # include <iostream>
 
 namespace dsn {

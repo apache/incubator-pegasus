@@ -26,6 +26,7 @@
 # include "disk_engine.h"
 # include "rpc_engine.h"
 # include <dsn/internal/env_provider.h>
+# include <dsn/internal/nfs.h>
 # include <dsn/internal/perf_counters.h>
 # include <dsn/internal/factory_store.h>
 # include <dsn/internal/logging.h>
@@ -42,6 +43,7 @@ service_node::service_node(void)
     _computation = nullptr;
     _rpc = nullptr;
     _disk = nullptr;
+    _nfs = nullptr;
 }
 
 error_code service_node::start(const service_spec& spec)
@@ -67,9 +69,20 @@ error_code service_node::start(const service_spec& spec)
     _disk->start(aio);
     
     // init rpc engine
-    _rpc = new rpc_engine(spec.config, this);
-    
+    _rpc = new rpc_engine(spec.config, this);    
     error_code err = _rpc->start(spec, spec.port);
+    if (err != ERR_SUCCESS) return err;
+
+    // init nfs
+    if (spec.nfs_factory_name == "")
+    {
+        dwarn ("nfs not started coz no nfs_factory_name is specified, continue with no nfs");
+    }
+    else
+    {
+        _nfs = factory_store<nfs_node>::create(spec.nfs_factory_name.c_str(), PROVIDER_TYPE_MAIN, this);
+    }
+
     return err;
 }
 

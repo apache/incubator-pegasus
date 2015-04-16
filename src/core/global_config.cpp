@@ -289,6 +289,7 @@ bool service_spec::init(configuration_ptr c)
     lock_factory_name = config->get_string_value("core", "lock_factory_name", "");
     rwlock_factory_name = config->get_string_value("core", "rwlock_factory_name", "");
     semaphore_factory_name = config->get_string_value("core", "semaphore_factory_name", "");
+    nfs_factory_name = config->get_string_value("core", "nfs_factory_name", "");
 
     network_aspects = config->get_string_value_list("core", "network_aspects", ',');
     aio_aspects = config->get_string_value_list("core", "aio_aspects", ',');

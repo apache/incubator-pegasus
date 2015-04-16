@@ -24,6 +24,7 @@ public:
 	virtual ~<?=$svc->name?>_client() {}
 	
 	// from requests to partition index
+	// PLEASE DO RE-DEFINE THEM IN A SUB CLASS!!!
 <?php
 $keys = array();
 foreach ($svc->functions as $f)
@@ -32,7 +33,7 @@ foreach ($svc->functions as $f)
 	
 foreach ($keys as $k => $v)
 {
-	echo "\tvirtual int get_partition_index(const ".$k."& key) = 0;".PHP_EOL;
+	echo "\tvirtual int get_partition_index(const ".$k."& key) { return 0;};".PHP_EOL;
 }
 ?>
 <?php foreach ($svc->functions as $f) { ?>
