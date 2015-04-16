@@ -34,10 +34,10 @@ function(dsn_add_executable PROJ_NAME INPUT_LIBS BINPLACE_FILES)
 			POST_BUILD
 			COMMAND ${CMAKE_COMMAND} -E copy ${BF} "${BINPLACE_DIR}"
 			)
-		install(FILES ${BF} DESTINATION "${INSTALL_BINPLACE_DIR}")
+		#install(FILES ${BF} DESTINATION "${INSTALL_BINPLACE_DIR}")
 	endforeach()
 
-	install(TARGETS ${PROJ_NAME} DESTINATION "${INSTALL_BINPLACE_DIR}")
+	#install(TARGETS ${PROJ_NAME} DESTINATION "${INSTALL_BINPLACE_DIR}")
 endfunction(dsn_add_executable)
 
 macro(dsn_check_cxx11_support)
