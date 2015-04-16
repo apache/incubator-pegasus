@@ -90,7 +90,7 @@ switch ($g_idl_type)
 {
 case "thrift":
 	{
-		$command = "thrift --gen rdsn -out ".$g_out_dir." ".$g_idl;
+		$command = $g_cg_dir."/thrift --gen rdsn -out ".$g_out_dir." ".$g_idl;
 		echo "exec: ".$command.PHP_EOL;
 		system($command);
 		if (!file_exists($g_idl_php))
@@ -102,7 +102,7 @@ case "thrift":
 	break;
 case "proto":
 	{
-		$command = "protoc --rdsn_out=".$g_out_dir." ".$g_idl;
+		$command = $g_cg_dir."/protoc --rdsn_out=".$g_out_dir." ".$g_idl;
 		echo "exec: ".$command.PHP_EOL;
 		system($command);
 		if (!file_exists($g_idl_php))

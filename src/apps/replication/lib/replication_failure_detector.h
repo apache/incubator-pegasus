@@ -24,8 +24,7 @@
 #pragma once
 
 #include "replication_common.h"
-#include "failure_detector.h"
-
+# include <dsn/dist/failure_detector.h>
 
 namespace dsn { namespace replication {
 
@@ -36,10 +35,7 @@ public:
     replication_failure_detector(replica_stub* stub, std::vector<end_point>& meta_servers);
     ~replication_failure_detector(void);
 
-    virtual void end_ping(
-        ::dsn::error_code err,
-        std::shared_ptr<fd::beacon_msg>& beacon,
-        std::shared_ptr<fd::beacon_ack>& ack);
+    virtual void end_ping(::dsn::error_code err, const fd::beacon_ack& ack);
 
      // client side
     virtual void on_master_disconnected( const std::vector<end_point>& nodes );
@@ -58,11 +54,11 @@ private:
 private:
     typedef std::set<end_point> end_points;
 
-    mutable zlock             _meta_lock;
+    mutable zlock           _meta_lock;
     end_point               _current_meta_server;
 
     std::vector<end_point>  _meta_servers;
-    replica_stub               *_stub;
+    replica_stub            *_stub;
 };
 
 }} // end namespace

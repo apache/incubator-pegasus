@@ -4,8 +4,10 @@ require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
 ?>
 # pragma once
-# include "<?=$file_prefix?>.code.definition.h"
 # include <dsn/internal/service.api.oo.h>
+# include "<?=$file_prefix?>.code.definition.h"
+# include <iostream>
+
 
 <?=$_PROG->get_cpp_namespace_begin()?>
 

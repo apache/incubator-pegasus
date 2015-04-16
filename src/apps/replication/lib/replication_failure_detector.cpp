@@ -55,30 +55,27 @@ end_point replication_failure_detector::find_next_meta_server(end_point current)
     }
 }
 
-void replication_failure_detector::end_ping(
-    ::dsn::error_code err,
-    std::shared_ptr<fd::beacon_msg>& beacon,
-    std::shared_ptr<fd::beacon_ack>& ack)
+void replication_failure_detector::end_ping(::dsn::error_code err, const fd::beacon_ack& ack)
 {
-    failure_detector::end_ping(err, beacon, ack);
+    failure_detector::end_ping(err, ack);
 
     zauto_lock l(_meta_lock);
     
-    if (beacon->to == _current_meta_server)
+    if (ack.this_node == _current_meta_server)
     {
         if (err)
         {
-            end_point node = find_next_meta_server(beacon->to);
-            if (beacon->to != node)
+            end_point node = find_next_meta_server(ack.this_node);
+            if (ack.this_node != node)
             {
-                switch_master(beacon->to, node);
+                switch_master(ack.this_node, node);
             }
         }
-        else if (ack->is_master == false)
+        else if (ack.is_master == false)
         {
-            if (end_point::INVALID != ack->primary_node)
+            if (end_point::INVALID != ack.primary_node)
             {
-                switch_master(beacon->to, ack->primary_node);
+                switch_master(ack.this_node, ack.primary_node);
             }
         }
     }
@@ -89,16 +86,16 @@ void replication_failure_detector::end_ping(
         {
             // nothing to do
         }
-        else if (ack->is_master == false)
+        else if (ack.is_master == false)
         {
-            if (end_point::INVALID != ack->primary_node)
+            if (end_point::INVALID != ack.primary_node)
             {
-                switch_master(beacon->to, ack->primary_node);
+                switch_master(ack.this_node, ack.primary_node);
             }
         }
         else 
         {
-            _current_meta_server = beacon->to;
+            _current_meta_server = ack.this_node;
         }
     }
 }

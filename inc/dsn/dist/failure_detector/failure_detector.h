@@ -23,10 +23,12 @@
  */
 # pragma once
 
-# include "failure_detector.rdsn.h"
+# include <dsn/dist/failure_detector/fd.client.h>
+# include <dsn/dist/failure_detector/fd.server.h>
 
 namespace dsn { namespace fd {
 
+DEFINE_THREAD_POOL_CODE(THREAD_POOL_FD)
 DEFINE_TASK_CODE(LPC_BEACON_CHECK, TASK_PRIORITY_HIGH, THREAD_POOL_FD)
 
 class failure_detector_callback
@@ -42,17 +44,16 @@ public:
 };
 
 class failure_detector : 
-    public failure_detector_service<failure_detector>, 
-    public failure_detector_async_client, 
+    public failure_detector_service,
+    public failure_detector_client, 
     public failure_detector_callback
 {
 public:
+    failure_detector();
+
     virtual void on_ping(const beacon_msg& beacon, ::dsn::service::rpc_replier<beacon_ack>& reply);
 
-    virtual void end_ping(
-        ::dsn::error_code err,
-        std::shared_ptr<beacon_msg>& beacon,
-        std::shared_ptr<beacon_ack>& ack);
+    virtual void end_ping(::dsn::error_code err, const beacon_ack& ack);
 
 public:
     int  start(

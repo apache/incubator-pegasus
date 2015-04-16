@@ -33,14 +33,14 @@ foreach ($_PROG->structs as $s)
 	}
 	echo "\t};".PHP_EOL;
 	echo PHP_EOL;
-	echo "\tvoid marshall(::dsn::binary_writer& writer, const ". $s->get_cpp_name() . "& val)".PHP_EOL;
+	echo "\tinline void marshall(::dsn::binary_writer& writer, const ". $s->get_cpp_name() . "& val)".PHP_EOL;
 	echo "\t{".PHP_EOL;
 	foreach ($s->fields as $fld) {
 		echo "\t\tmarshall(writer, val." .$fld->name .");" .PHP_EOL;
 	}
 	echo "\t};".PHP_EOL;
 	echo PHP_EOL;
-	echo "\tvoid unmarshall(::dsn::binary_reader& reader, __out_param ". $s->get_cpp_name() . "& val)".PHP_EOL;
+	echo "\tinline void unmarshall(::dsn::binary_reader& reader, __out_param ". $s->get_cpp_name() . "& val)".PHP_EOL;
 	echo "\t{".PHP_EOL;
 	foreach ($s->fields as $fld) {
 		echo "\t\tunmarshall(reader, val." .$fld->name .");" .PHP_EOL;

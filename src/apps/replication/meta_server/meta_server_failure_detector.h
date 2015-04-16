@@ -23,7 +23,7 @@
  */
 #pragma once
 
-#include "failure_detector.h"
+# include <dsn/dist/failure_detector.h>
 #include "replication_common.h"
 
 using namespace dsn;

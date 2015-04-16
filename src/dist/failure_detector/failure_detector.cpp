@@ -22,7 +22,7 @@
  * THE SOFTWARE.
  */
 
-# include "failure_detector.h"
+# include <dsn/dist/failure_detector.h>
 # include <chrono>
 # include <ctime>
 # include <dsn/internal/serialization.h>
@@ -34,6 +34,12 @@ using namespace ::dsn::service;
 namespace dsn { 
 namespace fd {
 
+failure_detector::failure_detector()
+{
+    auto pool = task_spec::get(LPC_BEACON_CHECK)->pool_code;
+    task_spec::get(RPC_FD_FAILURE_DETECTOR_PING)->pool_code = pool;
+    task_spec::get(RPC_FD_FAILURE_DETECTOR_PING_ACK)->pool_code = pool;
+}
 
 int failure_detector::start(
     uint32_t check_interval_seconds, 
@@ -259,6 +265,7 @@ bool failure_detector::remove_from_allow_list( const end_point& node)
 void failure_detector::on_ping_internal(const beacon_msg& beacon, __out_param beacon_ack& ack)
 {
     ack.is_master = true;
+    ack.this_node = beacon.to;
     ack.primary_node = address();
     ack.time = beacon.time;
     ack.allowed = true;
@@ -311,15 +318,12 @@ void failure_detector::on_ping(const beacon_msg& beacon, ::dsn::service::rpc_rep
     reply(ack);
 }
 
-void failure_detector::end_ping(
-    ::dsn::error_code err,
-    std::shared_ptr<beacon_msg>& beacon,
-    std::shared_ptr<beacon_ack>& ack)
+void failure_detector::end_ping(::dsn::error_code err, const beacon_ack& ack)
 {
     if (err) return;
 
-    uint64_t beacon_send_time = ack->time;
-    auto node = beacon->to;
+    uint64_t beacon_send_time = ack.time;
+    auto node = ack.this_node;
 
     zauto_lock l(_lock);
 
@@ -336,7 +340,7 @@ void failure_detector::end_ping(
     }
 
     master_record& record = itr->second;
-    if (!ack->allowed)
+    if (!ack.allowed)
     {
         ddebug( "Server %s:%hu rejected me as i'm not in its allow list, stop sending beacon message", node.name.c_str(), node.port);
         record.rejected = true;
@@ -459,16 +463,17 @@ bool failure_detector::is_worker_connected( const end_point& node) const
 
 void failure_detector::send_beacon(const end_point& target, uint64_t time)
 {
-    std::shared_ptr<beacon_msg> beacon(new beacon_msg);
-    beacon->time = time;
-    beacon->from = address();
-    beacon->to = target;
+    beacon_msg beacon;
+    beacon.time = time;
+    beacon.from = address();
+    beacon.to = target;
 
     begin_ping(
-        target,
         beacon,
         0,
-        static_cast<int>(_check_interval_milliseconds)
+        static_cast<int>(_check_interval_milliseconds),
+        0,
+        &target
         );
 }
 
