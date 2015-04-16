@@ -78,6 +78,7 @@ struct service_spec
     std::string                  lock_factory_name;
     std::string                  rwlock_factory_name;
     std::string                  semaphore_factory_name;
+    std::string                  nfs_factory_name;
 
     std::list<std::string>       network_aspects; // applied to all network factories
     std::list<std::string>       aio_aspects;

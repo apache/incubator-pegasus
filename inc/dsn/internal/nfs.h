@@ -21,20 +21,44 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-//# include <dsn/internal/thrift_helper.h>
-# include <dsn/internal/file_server.h>
+# pragma once
 
+# include <dsn/service_api.h>
 
 namespace dsn {
-    namespace utils {
-        /*void test()
-        {
-            blob bb;
-            binary_reader reader(bb);
-            binary_reader_transport trans(reader);
 
-            int32_t v;
-            unmarshall(reader, v);
-        }*/
-    }
+    struct remote_copy_request
+    {
+        end_point   source;
+        std::string source_dir;
+        std::vector<std::string> files;
+        std::string dest_dir;
+        bool        overwrite;
+    };
+
+    struct remote_copy_response
+    {
+            
+    };
+
+    extern void marshall(::dsn::binary_writer& writer, const remote_copy_request& val, uint16_t pos = 0xffff);
+
+    extern void unmarshall(::dsn::binary_reader& reader, __out_param remote_copy_request& val);
+
+    class nfs_node
+    {
+    public:
+        template <typename T> static nfs_node* create(service_node* node)
+        {
+            return new T(node);
+        }
+
+    public:
+        nfs_node(service_node* node) : _node(node) {}
+
+        virtual void call(std::shared_ptr<remote_copy_request>& rci, aio_task_ptr& calback) = 0;
+
+    protected:
+        service_node* _node;
+    };
 }

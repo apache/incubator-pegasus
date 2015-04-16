@@ -77,6 +77,15 @@ namespace file
     extern void write(handle_t hFile, const char* buffer, int count, uint64_t offset, aio_task_ptr& callback); 
 
     extern error_code close(handle_t hFile);
+
+    extern void copy_remote_files(
+        const end_point& remote,
+        std::string& source_dir,
+        std::vector<std::string>& files,  // empty for all
+        std::string& dest_dir,
+        bool overwrite,
+        aio_task_ptr& callback
+        );
 }
 
 namespace env

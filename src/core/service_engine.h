@@ -36,6 +36,7 @@ class rpc_engine;
 class disk_engine;
 class env_provider;
 class logging_provider;
+class nfs_node;
 
 class service_node
 {
@@ -45,7 +46,8 @@ public:
     task_engine* computation() const { return _computation; }
     rpc_engine*  rpc() const { return _rpc; }
     disk_engine* disk() const { return _disk; }
-    
+    nfs_node* nfs() const { return _nfs; }
+
     error_code start(const service_spec& spec);   
 
     const std::string& identity() const { return _id; }
@@ -55,6 +57,7 @@ private:
     task_engine* _computation;
     rpc_engine*  _rpc;
     disk_engine* _disk;
+    nfs_node*    _nfs;
 };
 
 class service_engine : public utils::singleton<service_engine>
@@ -67,7 +70,7 @@ public:
     env_provider* env() const { return _env; }
     logging_provider* logging() const { return _logging; }
     service_node* get_node(uint16_t port) const;
-    
+        
     void init_before_toollets(const service_spec& spec);
     void init_after_toollets();
     void configuration_changed(configuration_ptr configuration);

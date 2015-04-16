@@ -23,7 +23,6 @@
  */
 
 # include <dsn/internal/service.api.oo.h>
-# include <dsn/internal/file_server.h>
 
 namespace dsn {
     namespace service
@@ -166,15 +165,7 @@ namespace dsn {
                 )
             {
                 aio_task_ptr tsk(new internal_use_only::service_aio_task(callback_code, context, callback, hash));
-                auto rci = new ::dsn::service::remote_copy_request();
-                rci->source = remote;
-                rci->source_dir = source_dir;
-                rci->files = files;
-                rci->dest_dir = dest_dir;
-                rci->overwrite = overwrite;
-
-                dassert(false, "not implemented yet!!!");
-
+                copy_remote_files(remote, source_dir, files, dest_dir, overwrite, tsk);
                 return tsk;
             }
         }

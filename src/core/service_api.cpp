@@ -30,6 +30,7 @@
 # include <dsn/internal/coredump.h>
 # include <dsn/internal/env_provider.h>
 # include <dsn/internal/factory_store.h>
+# include <dsn/internal/nfs.h>
 # include <boost/filesystem.hpp>
 
 using namespace dsn::tools;
@@ -248,6 +249,28 @@ namespace file
         dassert(tsk != nullptr, "this function can only be invoked inside tasks");
 
         return tsk->node()->disk()->close(hFile);
+    }
+
+    void copy_remote_files(
+        const end_point& remote,
+        std::string& source_dir,
+        std::vector<std::string>& files,  // empty for all
+        std::string& dest_dir,
+        bool overwrite,
+        aio_task_ptr& callback
+        )
+    {
+        std::shared_ptr<remote_copy_request> rci(new remote_copy_request());
+        rci->source = remote;
+        rci->source_dir = source_dir;
+        rci->files = files;
+        rci->dest_dir = dest_dir;
+        rci->overwrite = overwrite;
+
+        auto tsk = task::get_current_task();
+        dassert(tsk != nullptr, "this function can only be invoked inside tasks");
+
+        return tsk->node()->nfs()->call(rci, callback);
     }
 }
 
