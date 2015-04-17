@@ -183,9 +183,8 @@ ErrOut:
 void replica::send_prepare_message(const end_point& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds)
 {
     message_ptr msg = message::create_request(RPC_PREPARE, timeout_milliseconds, gpid_to_hash(get_gpid()));
-    marshall(msg,get_gpid());
+    marshall(msg, get_gpid());
     
-
     replica_configuration rconfig;
     _primary_states.get_replica_config(status, rconfig);
 
@@ -196,7 +195,9 @@ void replica::send_prepare_message(const end_point& addr, partition_status statu
 
     mu->remote_tasks()[addr] = rpc::call(addr, msg, 
         this,
-        std::bind(&replica::on_prepare_reply, this, mu, rconfig.status, 
+        std::bind(&replica::on_prepare_reply, 
+            this,
+            std::make_pair(mu, rconfig.status),
             std::placeholders::_1, 
             std::placeholders::_2, 
             std::placeholders::_3),
@@ -376,9 +377,12 @@ void replica::on_append_log_completed(mutation_ptr& mu, uint32_t err, uint32_t s
     }
 }
 
-void replica::on_prepare_reply(mutation_ptr& mu, partition_status targetStatus, int err, message_ptr& request, message_ptr& reply)
+void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, int err, message_ptr& request, message_ptr& reply)
 {
     check_hashed_access();
+
+    mutation_ptr& mu = pr.first;
+    partition_status targetStatus = pr.second;
 
     // skip callback for old mutations
     if (mu->data.header.ballot < get_ballot() || PS_PRIMARY != status())
