@@ -197,7 +197,7 @@ function(dsn_setup_packages)
 		dsn.tools.common
 		dsn.dev
 		dsn.core
-	)
+		)
 
 	if(UNIX AND (NOT APPLE))
 		set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} rt)
@@ -210,8 +210,9 @@ function(dsn_setup_packages)
 	)
 
 	if(DSN_BUILD_RUNTIME)
-		set(DSN_LIBS ${DSN_EXTRA_TARGETS} ${DSN_CORE_TARGETS})
+		set(DSN_LIBS ${DSN_CORE_TARGETS})
 	else()
+		######Useless#######
 		if(MSVC)
 			set(RLEXT ".lib")
 		else()
@@ -219,13 +220,15 @@ function(dsn_setup_packages)
 		endif()
 
 		foreach(RL ${DSN_EXTRA_TARGETS})
-			set(DSN_LIBS ${DSN_LIBS} "lib${RL}${RLEXT}")
+			#set(DSN_LIBS ${DSN_LIBS} "lib${RL}${RLEXT}")
 		endforeach()
 
 		foreach(RL ${DSN_CORE_TARGETS})
 			#set(DSN_LIBS ${DSN_LIBS} "lib${RL}${RLEXT}")
 		endforeach()
-		set(DSN_LIBS ${DSN_LIBS} ${DSN_CORE_TARGETS})
+		####################
+
+		set(DSN_LIBS ${DSN_CORE_TARGETS})
 	endif()
 
 	set(DSN_LIBS ${DSN_LIBS} ${DSN_SYSTEM_LIBS} CACHE STRING "rDSN libs" FORCE)
@@ -299,11 +302,6 @@ function(dsn_common_setup)
 		message(FATAL_ERROR "DSN_BUILD_RUNTIME is not defined.")
 	endif()
 
-	if(NOT DSN_BUILD_RUNTIME)
-		if (NOT EXISTS "${DSN_ROOT}/")
-			message(FATAL_ERROR "Please specify the rDSN root path.")
-		endif()
-	endif()
 	#set(BUILD_SHARED_LIBS OFF)
 	dsn_setup_version()
 	ms_check_cxx11_support()
