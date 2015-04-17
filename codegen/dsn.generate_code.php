@@ -126,7 +126,7 @@ foreach (scandir($g_cg_libs) as $template)
 		continue;
 
     if ($template == "config.ini.php"
-     || $template == "makefile.php"
+     || $template == "CMakeLists.txt.php"
        )
     	$output_file = $g_out_dir."/".substr($template, 0, strlen($template)-4);
     else
@@ -138,7 +138,7 @@ foreach (scandir($g_cg_libs) as $template)
 				." >".$output_file
 				;
 
-	echo "exec: ".$command.PHP_EOL;
+	//echo "exec: ".$command.PHP_EOL;
 	system($command);
 	if (!file_exists($output_file))
 	{
