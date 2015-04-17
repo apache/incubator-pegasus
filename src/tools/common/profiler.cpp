@@ -55,11 +55,14 @@ namespace dsn {
         // call normal task
         static void profiler_on_task_enqueue(task* caller, task* callee)
         {
-            auto& prof = s_spec_profilers[caller->spec().code];
-            if (prof.collect_call_count)
+            if (caller != nullptr)
             {
-                prof.call_counts[callee->spec().code]++;
-            }
+                auto& prof = s_spec_profilers[caller->spec().code];
+                if (prof.collect_call_count)
+                {
+                    prof.call_counts[callee->spec().code]++;
+                }
+            }            
                 
             task_ext_for_profiler::get(callee) = ::dsn::service::env::now_ns();
         }

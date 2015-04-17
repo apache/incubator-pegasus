@@ -106,11 +106,8 @@ namespace dsn {
             _socket.async_read_some(boost::asio::buffer(ptr, remaining),
                 [this](boost::system::error_code ec, std::size_t length)
             {
-                if (ec)
+                if (!!ec)
                 {
-                    /*derror("network server session read message header failed, error = %s, sz = %d",
-                        ec.message().c_str(), length
-                    );*/
                     on_failure();
                 }
                 else
@@ -150,11 +147,8 @@ namespace dsn {
             boost::asio::async_write(_socket, buffers2,
                 [this, msg](boost::system::error_code ec, std::size_t length)
             {
-                if (ec)
+                if (!!ec)
                 {
-                    /*derror("network server session write message failed, error = %s, sz = %d",
-                        ec.message().c_str(), length
-                        );*/
                     on_failure();
                 }
                 else
