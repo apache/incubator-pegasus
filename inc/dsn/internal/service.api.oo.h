@@ -179,6 +179,7 @@ namespace dsn {
                 rpc_response_task_ptr call(const end_point& server);
 
                 virtual void exec();
+                virtual void on_response(error_code err, message_ptr& request, message_ptr& response) {}
 
             public:
                 class layered_rpc_handler
