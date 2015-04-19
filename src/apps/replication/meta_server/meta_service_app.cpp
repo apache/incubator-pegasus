@@ -48,8 +48,9 @@ namespace dsn {
                 _reliable_state = new server_state();
             }
 
-            _service = new meta_service(_reliable_state, config());
-            _reliable_state->init_app(config());
+            auto cf = config();
+            _service = new meta_service(_reliable_state, cf);
+            _reliable_state->init_app(cf);
             _reliable_state->add_meta_node(_service->address());
             _service->start();
             return ERR_SUCCESS;

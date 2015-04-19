@@ -32,7 +32,7 @@ public:
 			return ::dsn::ERR_INVALID_PARAMETERS;
 
 		std::vector<::dsn::end_point> meta_servers;
-		auto& cf = ::dsn::service::service_app::config();
+		auto cf = ::dsn::service::service_app::config();
 		::dsn::replication::replication_app_client_base::load_meta_servers(cf, meta_servers);
 		
 <?php foreach ($_PROG->services as $svc) { ?>
