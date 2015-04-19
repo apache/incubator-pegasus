@@ -30,6 +30,7 @@
 # include <dsn/internal/service_app.h>
 # include "service_engine.h"
 # include "disk_engine.h"
+# include "rpc_engine.h"
 # include <dsn/internal/synchronize.h>
 
 #define __TITLE__ "task"
@@ -92,6 +93,7 @@ task::task(task_code code, int hash, service_node* node)
     _hash = hash;
     _delay_milliseconds = 0;
     _wait_for_cancel = false;
+    _is_null = false;
     
     if (node != nullptr)
     {
@@ -181,10 +183,10 @@ void task::exec_internal()
         tls_task_info.current_task = parent_task;
     }
 
-    if (!_spec->allow_inline)
+    if (!_spec->allow_inline && !_is_null)
     {
         service::lock_checker::check_dangling_lock();
-    }   
+    }
 }
 
 void task::signal_waiters()
@@ -200,7 +202,7 @@ void task::signal_waiters()
 // multiple callers may wait on this
 bool task::wait(int timeout_milliseconds)
 {
-    service::lock_checker::check_wait_safety();
+    service::lock_checker::check_wait_task(this);
 
     dassert (this != task::get_current_task(), "task cannot wait itself");
 
@@ -294,6 +296,11 @@ bool task::cancel(bool wait_until_finished)
     return ret;
 }
 
+uint16_t task::node_port() const
+{
+    return node()->rpc()->address().port;
+}
+
 void task::enqueue()
 {        
     dassert(_node != nullptr, "service node unknown for this task");
@@ -308,12 +315,15 @@ void task::enqueue(task_worker_pool* pool)
         spec().on_task_enqueue.execute(task::get_current_task(), this);
     }
 
+    // fast execution
     if (_delay_milliseconds == 0
-        && (_spec->allow_inline || _spec->fast_execution_in_network_thread)
+        && (_spec->allow_inline || _spec->fast_execution_in_network_thread || _is_null)
        )
     {
         exec_internal();
     }
+
+    // normal path
     else
     {
         dassert(pool != nullptr, "pool not exist, "
@@ -389,6 +399,12 @@ void rpc_response_task::enqueue(error_code err, message_ptr& reply)
     {
         task::enqueue(_caller_pool);
     }
+}
+
+rpc_response_task_empty::rpc_response_task_empty(message_ptr& request, int hash)
+    : rpc_response_task(request, hash)
+{
+    _is_null = true;
 }
 
 aio_task::aio_task(task_code code, int hash) 

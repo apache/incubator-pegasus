@@ -50,6 +50,7 @@ public:
     bool                    cancel(bool wait_until_finished);
     bool                    wait(int timeout_milliseconds = TIME_MS_MAX);
     void                    enqueue();
+    void                    enqueue(task_worker_pool* pool);
     void                    set_error_code(error_code err) { _error = err; }
     void                    set_delay(int delay_milliseconds = 0) { _delay_milliseconds = delay_milliseconds; }
 
@@ -61,6 +62,9 @@ public:
     int                     delay_milliseconds() const { return _delay_milliseconds; }
     error_code              error() const { return _error; }
     service_node*           node() const { return _node; }
+    uint16_t                node_port() const;
+    bool                    is_empty() const { return _is_null; }
+
     
     static task*            get_current_task();
     static uint64_t         get_current_task_id();
@@ -68,11 +72,11 @@ public:
     static void             set_current_worker(task_worker* worker);
 
 protected:
-    void                    enqueue(task_worker_pool* pool);
     void                    signal_waiters();
     void                    set_task_id(uint64_t tid) { _task_id = tid;  }
 
     mutable std::atomic<task_state> _state;
+    bool                   _is_null;
 
 private:
     uint64_t               _task_id; 
@@ -81,8 +85,6 @@ private:
     int                    _delay_milliseconds;
     error_code             _error;
     bool                   _wait_for_cancel;
-    
-private:
     task_spec              *_spec;
     service_node           *_node;
 };
@@ -147,7 +149,7 @@ class rpc_response_task : public task
 public:
     rpc_response_task(message_ptr& request, int hash = 0);
 
-    virtual void on_response(error_code err, message_ptr& request, message_ptr& response) {}
+    virtual void on_response(error_code err, message_ptr& request, message_ptr& response) = 0;
 
     void             enqueue(error_code err, message_ptr& reply);
     message_ptr&      get_request() { return _request; }
@@ -161,6 +163,14 @@ private:
     task_worker_pool *_caller_pool;
 
     friend class rpc_engine;    
+};
+
+class rpc_response_task_empty : public rpc_response_task
+{
+public:
+    rpc_response_task_empty(message_ptr& request, int hash = 0);
+
+    virtual void on_response(error_code err, message_ptr& request, message_ptr& response) {}
 };
 
 typedef ::boost::intrusive_ptr<rpc_response_task> rpc_response_task_ptr;

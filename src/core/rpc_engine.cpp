@@ -63,7 +63,9 @@ namespace dsn {
 
     bool rpc_client_matcher::on_recv_reply(uint64_t key, message_ptr& reply, int delay_ms)
     {
-        error_code sys_err = (reply != nullptr) ? reply->error() : ERR_TIMEOUT;
+        dassert(reply != nullptr, "cannot recieve an empty reply message");
+
+        error_code sys_err = reply->error();
         rpc_response_task_ptr call;
         task_ptr timeout_task;
         bool ret;
@@ -98,7 +100,42 @@ namespace dsn {
         return ret;
     }
 
-    void rpc_client_matcher::on_call(message_ptr& request, rpc_response_task_ptr& call, rpc_client_session_ptr& client)
+    void rpc_client_matcher::on_rpc_timeout(uint64_t key, task_spec* spec)
+    {
+        rpc_response_task_ptr call;
+        network* net;
+
+        {
+            utils::auto_lock l(_requests_lock);
+            auto it = _requests.find(key);
+            if (it != _requests.end())
+            {
+                call = it->second.resp_task;
+                net = it->second.net;
+                _requests.erase(it);
+            }
+            else
+            {
+                return;
+            }
+        }
+
+        message_ptr& msg = call->get_request();
+        int remain_time_ms = msg->header().client.timeout_milliseconds - msg->elapsed_timeout_milliseconds();
+
+        if (remain_time_ms <= 0)
+        {
+            message_ptr null_msg(nullptr);
+            call->enqueue(ERR_TIMEOUT, null_msg);
+        }
+        else
+        {
+            net->call(msg, call);
+        }
+    }
+
+
+    void rpc_client_matcher::on_call(message_ptr& request, rpc_response_task_ptr& call, network* net)
     {
         message* msg = request.get();
         task_ptr timeout_task;
@@ -113,11 +150,12 @@ namespace dsn {
             dassert (pr.second, "the message is already on the fly!!!");
             pr.first->second.resp_task = call;
             pr.first->second.timeout_task = timeout_task;
-            pr.first->second.client = client;
-            //{call, timeout_task, client }
+            pr.first->second.net = net;
+            //{call, timeout_task, net }
         }
 
-        int timeout_milliseconds = get_timeout_ms(hdr.client.timeout_milliseconds, spec);
+        int remain_time_ms = msg->header().client.timeout_milliseconds - msg->elapsed_timeout_milliseconds();
+        int timeout_milliseconds = get_timeout_ms(remain_time_ms, spec);
         timeout_task->set_delay(timeout_milliseconds);
         timeout_task->enqueue();
         msg->add_elapsed_timeout_milliseconds(timeout_milliseconds);
@@ -130,50 +168,6 @@ namespace dsn {
             return spec->rpc_retry_interval_milliseconds;
         else
             return timeout_ms;
-    }
-
-    void rpc_client_matcher::on_rpc_timeout(uint64_t key, task_spec* spec)
-    {
-        rpc_response_task_ptr call;
-        rpc_client_session_ptr client;
-
-        {
-            utils::auto_lock l(_requests_lock);
-            auto it = _requests.find(key);
-            if (it == _requests.end())
-                return;
-
-            call = it->second.resp_task;
-            client = it->second.client;
-        }
-
-        message_ptr& msg = call->get_request();
-        int remain_time_ms = msg->header().client.timeout_milliseconds - msg->elapsed_timeout_milliseconds();
-
-        if (remain_time_ms <= 0)
-        {
-            message_ptr reply(nullptr);
-            on_recv_reply(key, reply, 0);
-        }
-        else
-        {
-            task_ptr timeout_task(new rpc_timeout_task(shared_from_this(), key, spec));
-            int timeout_ms = get_timeout_ms(remain_time_ms, spec);
-            msg->add_elapsed_timeout_milliseconds(timeout_ms);
-            timeout_task->set_delay(timeout_ms);
-            timeout_task->enqueue();
-
-            {
-                utils::auto_lock l(_requests_lock);
-                auto it = _requests.find(key);
-                if (it == _requests.end())
-                    return;
-
-                it->second.timeout_task = timeout_task;
-            }
-
-            client->send(msg);
-        }
     }
 
     //------------------------

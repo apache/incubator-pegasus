@@ -31,6 +31,27 @@
 namespace dsn {
     namespace tools {
 
+
+        class screen_logger : public logging_provider
+        {
+        public:
+            screen_logger(const char *parameter) : logging_provider(parameter) { }
+            virtual ~screen_logger(void) { }
+
+            virtual void logv(const char *file,
+                const char *function,
+                const int line,
+                logging_level logLevel,
+                const char* title,
+                const char *fmt,
+                va_list args
+                );
+
+        private:
+            std::recursive_mutex _lock;
+        };
+
+
         class simple_logger : public logging_provider
         {
         public:

@@ -177,7 +177,7 @@ namespace rpc
 
         if (nullptr == callback)
         {
-            callback.reset(new rpc_response_task(request));
+            callback.reset(new rpc_response_task_empty(request));
         }
 
         rpc_engine* rpc = tsk->node()->rpc();

@@ -81,8 +81,8 @@ task_spec::task_spec(int code, const char* name, task_type type, threadpool_code
     // TODO: config for following values
     rpc_message_header_format = "dsn";
     rpc_message_channel = RPC_CHANNEL_TCP;
-    rpc_timeout_milliseconds = 60 * 1000; // 1 min
-    rpc_retry_interval_milliseconds = 3000;
+    rpc_timeout_milliseconds = 5 * 1000; // 5 seconds
+    rpc_retry_interval_milliseconds = 3; // 3 seconds
 }
 
 bool task_spec::init(configuration_ptr config)
