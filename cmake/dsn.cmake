@@ -284,7 +284,7 @@ endfunction(dsn_setup_link_path)
 
 function(dsn_setup_install)
 	if(DSN_BUILD_RUNTIME)
-		install(DIRECTORY inc/ DESTINATION include)
+		install(DIRECTORY include/ DESTINATION include)
 		install(DIRECTORY cmake/ DESTINATION bin)
 		install(DIRECTORY bin/dsn.templates DESTINATION bin)
 		install(FILES "bin/dsn.generate_code.php" DESTINATION bin)
@@ -300,7 +300,7 @@ function(dsn_add_pseudo_projects)
 	if(DSN_BUILD_RUNTIME AND MSVC_IDE)
 		file(GLOB_RECURSE
 			PROJ_SRC
-			"${CMAKE_SOURCE_DIR}/inc/*.h"
+			"${CMAKE_SOURCE_DIR}/include/*.h"
 			)
 		add_custom_target("dsn.include" SOURCES ${PROJ_SRC})
 	endif()
