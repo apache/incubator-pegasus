@@ -61,20 +61,22 @@ macro(ms_add_compiler_flags LANGUAGES SUFFIXES FLAGS)
 	endforeach()
 endmacro(ms_add_compiler_flags LANGUAGES SUFFIXES FLAGS)
 
-macro(ms_link_static_runtime FLAG_VAR)
+function(ms_link_static_runtime FLAG_VAR)
 	if(MSVC)
 		if(${FLAG_VAR} MATCHES "/MD")
 			string(REGEX REPLACE "/MD"  "/MT" "${FLAG_VAR}" "${${FLAG_VAR}}")
-		endif(${FLAG_VAR} MATCHES "/MD")
+			#Save persistently
+			set(${FLAG_VAR} ${${FLAG_VAR}} CACHE STRING "" FORCE)
+		endif()
 	endif()
 	#message(STATUS ${FLAG_VAR} ":" ${${FLAG_VAR}})
-endmacro(ms_link_static_runtime)
+endfunction(ms_link_static_runtime)
 
 function(ms_replace_compiler_flags REPLACE_OPTION)
 	set(SUFFIXES "")
-	if(NOT DEFINED CMAKE_CONFIGURATION_TYPES)
+	if(CMAKE_CONFIGURATION_TYPES STREQUAL "")
 		#set(SUFFIXES "_DEBUG" "_RELEASE" "_MINSIZEREL" "_RELWITHDEBINFO")
-		if(DEFINED CMAKE_BUILD_TYPE)
+		if(NOT (CMAKE_BUILD_TYPE STREQUAL ""))
 			string(TOUPPER ${CMAKE_BUILD_TYPE} SUFFIXES)
 			set(SUFFIXES "_${SUFFIXES}")
 		endif()
@@ -84,14 +86,13 @@ function(ms_replace_compiler_flags REPLACE_OPTION)
 			set(SUFFIXES ${SUFFIXES} "_${SUFFIX}")
 		endforeach()
 	endif()
+
 	foreach(SUFFIX "" ${SUFFIXES})
 		foreach(LANG C CXX)
 			set(FLAG_VAR "CMAKE_${LANG}_FLAGS${SUFFIX}")
 			if(${REPLACE_OPTION} STREQUAL "STATIC_LINK")
 				ms_link_static_runtime(${FLAG_VAR})
 			endif()
-			#Save persistently
-			set(${FLAG_VAR} ${${FLAG_VAR}} CACHE STRING "" FORCE)
 		endforeach()
 	endforeach()
 endfunction(ms_replace_compiler_flags REPLACE_OPTION)
@@ -116,7 +117,13 @@ endfunction(ms_check_cxx11_support)
 
 
 function(dsn_add_library PROJ_NAME)
-	file(GLOB_RECURSE
+	if((NOT DEFINED DSN_RECURSIVE_SRC) OR (NOT DSN_RECURSIVE_SRC))
+		set(MY_GLOB_OPTION "GLOB")
+	else()
+		set(MY_GLOB_OPTION "GLOB_RECURSE")
+	endif()
+
+	file(${MY_GLOB_OPTION}
 		PROJ_SRC
 		"${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
 		"${CMAKE_CURRENT_SOURCE_DIR}/*.c"
@@ -127,7 +134,13 @@ function(dsn_add_library PROJ_NAME)
 endfunction(dsn_add_library)
 
 function(dsn_add_executable PROJ_NAME BINPLACE_FILES)
-	file(GLOB_RECURSE
+	if((NOT DEFINED DSN_RECURSIVE_SRC) OR (NOT DSN_RECURSIVE_SRC))
+		set(MY_GLOB_OPTION "GLOB")
+	else()
+		set(MY_GLOB_OPTION "GLOB_RECURSE")
+	endif()
+
+	file(${MY_GLOB_OPTION}
 		PROJ_SRC
 		"${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
 		"${CMAKE_CURRENT_SOURCE_DIR}/*.c"
