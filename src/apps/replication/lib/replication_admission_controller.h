@@ -25,7 +25,7 @@
 
 #include <dsn/tool_api.h>
 using namespace dsn::service;
-#include "codes.h"
+#include <dsn/dist/replication.h>
 
 namespace dsn { namespace replication {
 

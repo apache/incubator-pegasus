@@ -23,7 +23,7 @@
  */
 #pragma once
 
-#include "replication_types.h"
+#include <dsn/service_api.h>
 
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_META_SERVER)
 //DEFINE_THREAD_POOL_CODE(THREAD_POOL_REPLICATION)

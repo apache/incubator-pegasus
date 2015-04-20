@@ -23,7 +23,6 @@
  */
 #include "replica.h"
 #include "mutation.h"
-#include "replication_app_base.h"
 #include "mutation_log.h"
 #include "replica_stub.h"
 

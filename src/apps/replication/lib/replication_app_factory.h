@@ -23,8 +23,7 @@
  */
 #pragma once
 
-#include "replication_app_base.h"
-
+#include <dsn/dist/replication.h>
 
 namespace dsn { namespace replication {
 

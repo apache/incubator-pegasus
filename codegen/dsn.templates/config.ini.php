@@ -58,6 +58,7 @@ allow_inline = false
 rpc_message_channel = RPC_CHANNEL_TCP
 fast_execution_in_network_thread = false
 rpc_message_header_format = dsn
+rpc_timeout_milliseconds = 5000
 
 [task.LPC_AIO_IMMEDIATE_CALLBACK]
 is_trace = false
