@@ -4,7 +4,7 @@
  * DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
  *  @generated
  */
-#include "replication_types.h"
+#include <dsn/dist/replication/replication_types.h>
 
 namespace dsn { namespace replication {
 

@@ -23,32 +23,16 @@
  */
 # pragma once
 
-# include <dsn/serverlet.h>
+# include <dsn/dist/replication.h>
 # include <string>
-# include "codes.h"
 # include "replication_ds.h"
 
 using namespace ::dsn::service;
 
 namespace dsn { namespace replication {
-
-typedef int32_t app_id;
-typedef int32_t PartitionID;
-typedef int64_t ballot;
-typedef int64_t decree;
-
-#define invalid_ballot ((ballot)-1LL)
-#define invalid_decree ((decree)-1LL)
-#define invalid_offset (-1LL)
-
+    
 class replica_stub;
 typedef boost::intrusive_ptr<replica_stub> replica_stub_ptr;
-
-class replica;
-typedef boost::intrusive_ptr<replica> replica_ptr;
-
-class mutation;
-typedef boost::intrusive_ptr<mutation> mutation_ptr;
 
 inline int gpid_to_hash(global_partition_id gpid)
 {

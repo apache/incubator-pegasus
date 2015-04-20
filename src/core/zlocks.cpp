@@ -22,8 +22,11 @@
  * THE SOFTWARE.
  */
 # include <dsn/internal/zlocks.h>
-# include "service_engine.h"
 # include <dsn/internal/factory_store.h>
+# include <dsn/internal/task.h>
+# include "service_engine.h"
+
+# define __TITLE__ "lock"
 
 using namespace dsn::utils;
 
@@ -50,6 +53,22 @@ namespace dsn { namespace service {
             {
                 dassert (false, "locks should not be hold at this point - current thread owns %u exclusive locks and %u shared locks now.",
                     zlock_exclusive_count, zlock_shared_count
+                    );
+            }
+        }
+
+        void check_wait_task(task* waitee)
+        {
+            check_wait_safety();
+
+            if (nullptr != task::get_current_task() 
+                && task::get_current_task()->spec().pool_code == waitee->spec().pool_code
+                && !waitee->is_empty()
+                )
+            {
+                dassert (false, "task %s waits for another task %s sharing the same thread pool - will lead to deadlocks easily (e.g., when worker_count = 1 or when the pool is partitioned",
+                    task::get_current_task()->spec().code.to_string(),
+                    waitee->spec().code.to_string()
                     );
             }
         }

@@ -25,7 +25,6 @@
 # include "net_provider.h"
 # include <dsn/tool/providers.common.h>
 # include "lockp.std.h"
-# include "logger.screen.h"
 # include "native_aio_provider.win.h"
 # include "native_aio_provider.posix.h"
 # include "wrong_perf_counter.h"

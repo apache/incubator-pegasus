@@ -10,7 +10,7 @@
 #include "simple_kv_types.h"
 #include <dsn/serverlet.h>
 #include <iostream>
-#include "replication_app_base.h"
+#include <dsn/dist/replication.h>
 #include "simple_kv.replicated.client.h"
 
 namespace dsn {

@@ -47,7 +47,9 @@ namespace dsn {
                 timer->async_wait([this, task, timer](const boost::system::error_code& ec) 
                 { 
                     if (!ec)
-                        this->enqueue((task_ptr&)task);
+                    {
+                        task->enqueue(this->pool());
+                    }
                     else
                     {
                         dfatal("delayed execution failed for task %s, err = %u",

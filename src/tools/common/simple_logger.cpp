@@ -22,9 +22,58 @@
 * THE SOFTWARE.
 */
 # include "simple_logger.h"
+# include <boost/lexical_cast.hpp>
+# include <boost/thread.hpp>
 
 namespace dsn {
     namespace tools {
+
+        void screen_logger::logv(const char *file,
+            const char *function,
+            const int line,
+            logging_level logLevel,
+            const char* title,
+            const char *fmt,
+            va_list args
+            )
+        {
+            utils::auto_lock l(_lock);
+            
+            task* t = task::get_current_task();
+            if (t)
+            {
+                if (nullptr != task::get_current_worker())
+                {
+                    printf("%6u.%7s.%u: ",
+                        static_cast<unsigned int>(t->node_port()),
+                        task::get_current_worker()->pool_spec().name.c_str(),
+                        task::get_current_worker()->index()
+                        );
+                }
+                else
+                {
+                    std::string tid = boost::lexical_cast<std::string>(boost::this_thread::get_id());
+
+                    printf("%6u.%7s.%s: ",
+                        static_cast<unsigned int>(t->node_port()),
+                        "io-thrd",
+                        tid.c_str()
+                        );
+                }
+            }
+            else
+            {
+                std::string tid = boost::lexical_cast<std::string>(boost::this_thread::get_id());
+                printf("%6s.%7s.%s: ",
+                    "system",
+                    "io-thrd",
+                    tid.c_str()
+                    );
+            }
+
+            vprintf(fmt, args);
+            printf("\n");
+        }
 
         simple_logger::simple_logger(const char *parameter) 
             : logging_provider(parameter) 
@@ -61,15 +110,40 @@ namespace dsn {
             va_list args
             )
         {
-            const char* wn = "unknown";
-            if (task::get_current_worker())
-            {
-                wn = (const char*)task::get_current_worker()->name().c_str();
-            }
-
             utils::auto_lock l(_lock);
          
-            fprintf(_log, "%s: ", wn);
+            task* t = task::get_current_task();
+            if (t)
+            {
+                if (nullptr != task::get_current_worker())
+                {
+                    fprintf(_log, "%6u.%7s.%u: ",
+                        static_cast<unsigned int>(t->node_port()),
+                        task::get_current_worker()->pool_spec().name.c_str(),
+                        task::get_current_worker()->index()
+                        );
+                }
+                else
+                {
+                    std::string tid = boost::lexical_cast<std::string>(boost::this_thread::get_id());
+
+                    fprintf(_log, "%6u.%7s.%s: ",
+                        static_cast<unsigned int>(t->node_port()),
+                        "io-thrd",
+                        tid.c_str()
+                        );
+                }
+            }
+            else
+            {
+                std::string tid = boost::lexical_cast<std::string>(boost::this_thread::get_id());
+                fprintf(_log, "%6s.%7s.%s: ",
+                    "system",
+                    "io-thrd",
+                    tid.c_str()
+                    );
+            }
+
             vfprintf(_log, fmt, args);
             fprintf(_log, "\n");
             if (logLevel >= log_level_ERROR)
@@ -77,7 +151,6 @@ namespace dsn {
 
             if (logLevel >= log_level_WARNING)
             {
-                printf("%s: ", wn);
                 vprintf(fmt, args);
                 printf("\n");
             }

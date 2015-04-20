@@ -24,7 +24,6 @@
 
 #include "replica.h"
 #include "mutation.h"
-#include "replication_app_base.h"
 
 #define __TITLE__ "TwoPhaseCommit"
 

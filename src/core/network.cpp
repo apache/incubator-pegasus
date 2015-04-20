@@ -38,8 +38,7 @@ namespace dsn {
     {
         if (call != nullptr)
         {
-            rpc_client_session_ptr sp = this;
-            _matcher->on_call(request, call, sp);
+            _matcher->on_call(request, call, &_net);
         }
 
         send(request);

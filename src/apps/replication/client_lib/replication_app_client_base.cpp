@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "replication_app_client_base.h"
+#include "replication_common.h"
 #include "rpc_replicated.h"
 
 namespace dsn { namespace replication {

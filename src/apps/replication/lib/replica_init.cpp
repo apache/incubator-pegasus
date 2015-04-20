@@ -22,7 +22,6 @@
  * THE SOFTWARE.
  */
 #include "replica.h"
-#include "replication_app_base.h"
 #include "mutation.h"
 #include "mutation_log.h"
 #include "replica_stub.h"

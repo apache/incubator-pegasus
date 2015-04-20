@@ -28,8 +28,10 @@
 // this library
 // 
 
-#include "replication_common.h"
-
+# include <dsn/serverlet.h>
+# include <dsn/dist/replication/replication_types.h>
+# include <dsn/dist/replication/replication_other_types.h>
+# include <dsn/dist/replication/replication.codes.h>
 
 namespace dsn { namespace replication {
 
