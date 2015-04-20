@@ -21,8 +21,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "replication_service_app.h"
 
+# include "replication_common.h"
+# include "replica_stub.h"
 
 namespace dsn { namespace replication {
 

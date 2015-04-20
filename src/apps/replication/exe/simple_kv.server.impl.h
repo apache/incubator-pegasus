@@ -23,28 +23,15 @@
  */
 #pragma once
 
-#include "simple_kv.replicated.service.h"
+#include "simple_kv.server.h"
 
 namespace dsn {
     namespace replication {
         namespace application {
-
-            extern replication_app_base* create_simplekv_app(replica* replica, configuration_ptr config);
-
-            class replication_app_example1_config : public replication_app_config
+            class simple_kv_service_impl : public simple_kv_service
             {
             public:
-                virtual bool initialize(configuration_ptr config)
-                {
-                    // TODO: read configs 
-                    return true;
-                }
-            };
-
-            class replication_app_example1 : public simple_kv_service<replication_app_example1>
-            {
-            public:
-                replication_app_example1(replica* replica, const replication_app_config* config);
+                simple_kv_service_impl(replica* replica, configuration_ptr& config);
 
                 // RPC_SIMPLE_KV_READ
                 virtual void on_read(const std::string& key, ::dsn::service::rpc_replier<std::string>& reply);

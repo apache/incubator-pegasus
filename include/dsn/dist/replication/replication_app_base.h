@@ -35,20 +35,18 @@
 
 namespace dsn { namespace replication {
 
-using namespace dsn::service;
-
-class replication_app_config
-{
-public:
-    virtual bool initialize(configuration_ptr config) = 0;
-
-    // TODO: common configs here
-};
+using namespace ::dsn::service;
 
 class replication_app_base
 {
 public:
-    replication_app_base(replica* replica, const replication_app_config* config);
+    template <typename T> static replication_app_base* create(replica* replica, configuration_ptr& config)
+    {
+        return new T(replica, config);
+    }
+	
+public:
+    replication_app_base(replica* replica, configuration_ptr& config);
     virtual ~replication_app_base() {}
 
     //
@@ -110,6 +108,14 @@ private:
     std::map<int, std::function<void(message_ptr&, message_ptr&)> > _handlers;
 };
 
+typedef replication_app_base* (*replica_app_factory)(replica*, configuration_ptr&);
+extern void register_replica_provider(replica_app_factory f, const char* name);
+
+template<typename T>
+inline void register_replica_provider(const char* name)
+{
+    register_replica_provider(&replication_app_base::template create<T>, name);
+}
 
 //------------------ inline implementation ---------------------
 template<typename T, typename TRequest, typename TResponse>

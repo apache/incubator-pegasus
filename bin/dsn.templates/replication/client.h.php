@@ -4,8 +4,9 @@ require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
 ?>
 # pragma once
+# include <dsn/dist/replication.h>
 # include "<?=$file_prefix?>.code.definition.h"
-# include "replication_app_client_base.h"
+# include <iostream>
 
 <?=$_PROG->get_cpp_namespace_begin()?>
 
@@ -79,7 +80,7 @@ foreach ($keys as $k => $v)
 		int reply_hash = 0
 		)
 	{
-		return ::dsn::replication::replication_app_client_base::read<simple_kv_client, std::string, std::string>(
+		return ::dsn::replication::replication_app_client_base::read<<?=$svc->name?>_client, <?=$f->get_first_param()->get_cpp_type()?>, <?=$f->get_cpp_return_type()?>>(
             get_partition_index(<?=$f->get_first_param()->name?>),
             <?=$f->get_rpc_code()?>, 
             <?=$f->get_first_param()->name?>,

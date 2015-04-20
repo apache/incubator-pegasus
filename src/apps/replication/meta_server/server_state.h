@@ -38,6 +38,8 @@ public:
     server_state(void);
     ~server_state(void);
 
+    void init_app(configuration_ptr& cf);
+
     void get_node_state(__out_param node_states& nodes);
     void set_node_state(const node_states& nodes);
     bool get_meta_server_primary(__out_param end_point& node);
@@ -51,9 +53,6 @@ public:
     void query_configuration_by_index(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response);
     void update_configuration(configuration_update_request& request, __out_param configuration_update_response& response);
 
-private:
-    void init_app();
-    
 private:
     struct app_state
     {

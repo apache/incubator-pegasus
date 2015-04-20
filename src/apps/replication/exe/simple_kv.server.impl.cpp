@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "app_example1.h"
+#include "simple_kv.server.impl.h"
 #include <fstream>
 #include <sstream>
 #include <boost/filesystem.hpp>
@@ -29,28 +29,15 @@
 namespace dsn {
     namespace replication {
         namespace application {
-
-            replication_app_base* create_simplekv_app(replica* replica, configuration_ptr c)
-            {
-                static replication_app_example1_config * appConfig = nullptr;
-                if (appConfig == nullptr)
-                {
-                    appConfig = new replication_app_example1_config();
-                    if (!appConfig->initialize(c))
-                        return nullptr;
-                }
-
-                return new replication_app_example1(replica, appConfig);
-            }
-
-            replication_app_example1::replication_app_example1(replica* replica, const replication_app_config* c)
-                : simple_kv_service<replication_app_example1>(replica, c)
+            
+            simple_kv_service_impl::simple_kv_service_impl(replica* replica, configuration_ptr& cf)
+                : simple_kv_service(replica, cf)
             {
                 _learnFileName.clear();
             }
 
             // RPC_SIMPLE_KV_READ
-            void replication_app_example1::on_read(const std::string& key, ::dsn::service::rpc_replier<std::string>& reply)
+            void simple_kv_service_impl::on_read(const std::string& key, ::dsn::service::rpc_replier<std::string>& reply)
             {
                 zauto_lock l(_lock);
 
@@ -66,7 +53,7 @@ namespace dsn {
             }
 
             // RPC_SIMPLE_KV_WRITE
-            void replication_app_example1::on_write(const kv_pair& pr, ::dsn::service::rpc_replier<int32_t>& reply)
+            void simple_kv_service_impl::on_write(const kv_pair& pr, ::dsn::service::rpc_replier<int32_t>& reply)
             {
                 zauto_lock l(_lock);
                 _store[pr.key] = pr.value;
@@ -75,7 +62,7 @@ namespace dsn {
             }
 
             // RPC_SIMPLE_KV_APPEND
-            void replication_app_example1::on_append(const kv_pair& pr, ::dsn::service::rpc_replier<int32_t>& reply)
+            void simple_kv_service_impl::on_append(const kv_pair& pr, ::dsn::service::rpc_replier<int32_t>& reply)
             {
                 zauto_lock l(_lock);
                 auto it = _store.find(pr.key);
@@ -87,7 +74,7 @@ namespace dsn {
                 reply(ERR_SUCCESS);
             }
             
-            int replication_app_example1::open(bool create_new)
+            int simple_kv_service_impl::open(bool create_new)
             {
                 zauto_lock l(_lock);
                 if (create_new)
@@ -102,7 +89,7 @@ namespace dsn {
                 return 0;
             }
 
-            int replication_app_example1::close(bool clear_state)
+            int simple_kv_service_impl::close(bool clear_state)
             {
                 zauto_lock l(_lock);
                 if (clear_state)
@@ -113,7 +100,7 @@ namespace dsn {
             }
 
             // checkpoint related
-            void replication_app_example1::recover()
+            void simple_kv_service_impl::recover()
             {
                 zauto_lock l(_lock);
 
@@ -144,7 +131,7 @@ namespace dsn {
                 }
             }
 
-            void replication_app_example1::recover(const std::string& name, decree version)
+            void simple_kv_service_impl::recover(const std::string& name, decree version)
             {
                 zauto_lock l(_lock);
 
@@ -180,7 +167,7 @@ namespace dsn {
                 _last_durable_decree = _last_committed_decree = version;
             }
 
-            int replication_app_example1::compact(bool force)
+            int simple_kv_service_impl::compact(bool force)
             {
                 zauto_lock l(_lock);
 
@@ -218,7 +205,7 @@ namespace dsn {
             }
 
             // helper routines to accelerate learning
-            int replication_app_example1::get_learn_state(decree start, const blob& learnRequest, __out_param learn_state& state)
+            int simple_kv_service_impl::get_learn_state(decree start, const blob& learnRequest, __out_param learn_state& state)
             {
                 ::dsn::binary_writer writer;
 
@@ -264,7 +251,7 @@ namespace dsn {
                 return ERR_SUCCESS;
             }
 
-            int replication_app_example1::apply_learn_state(learn_state& state)
+            int simple_kv_service_impl::apply_learn_state(learn_state& state)
             {
                 blob bb((const char*)state.meta.data(), 0, state.meta.length());
 

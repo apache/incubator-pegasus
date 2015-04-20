@@ -2,7 +2,7 @@
 
 function usage()
 {
-	echo "dsn.cg %name%.thrift|.proto %out_dir%".PHP_EOL;
+	echo "dsn.cg %name%.thrift|.proto %out_dir% [single|replication]".PHP_EOL;
 }
 
 if (count($argv) < 3)
@@ -19,6 +19,7 @@ global $g_idl_type;
 global $g_idl_post;
 global $g_program;
 global $g_idl_php;
+global $g_is_replicated;
 
 $g_idl = $argv[1];
 $g_out_dir = $argv[2];
@@ -28,6 +29,18 @@ $g_idl_type = "";
 $g_idl_post = "";
 $g_program = "";
 $g_idl_php = "";
+
+if (count($argv) >= 4)
+	$g_mode = $argv[3];
+else
+	$g_mode = "single";
+	
+if ($g_mode != "single" && $g_mode != "replication")
+{
+	echo "invalid mode '$g_mode'".PHP_EOL;
+	usage();
+	exit(0);
+}
 
 if (!file_exists($g_idl))
 {
@@ -117,38 +130,53 @@ default:
 	exit(0);
 }
 
-foreach (scandir($g_cg_libs) as $template)
+function generate_files_from_dir($dr)
 {
-	if ($template == "type.php" 
-		|| $template == "." 
-		|| $template == ".." 
-		)
-		continue;
-
-    if ($template == "config.ini.php"
-     || $template == "CMakeLists.txt.php"
-       )
-    	$output_file = $g_out_dir."/".substr($template, 0, strlen($template)-4);
-    else
-	    $output_file = $g_out_dir."/".$g_program.".".substr($template, 0, strlen($template)-4);
-	$command = "php -f ".$g_cg_libs."/".$template
-				." ".$g_cg_libs."/type.php"
-				." ".$g_idl_php
-				." ".$g_program
-				." >".$output_file
-				;
-
-	//echo "exec: ".$command.PHP_EOL;
-	system($command);
-	if (!file_exists($output_file))
+	global $g_cg_libs;
+	global $g_idl_php;
+	global $g_program;
+	global $g_out_dir;
+	
+	foreach (scandir($dr) as $template)
 	{
-		echo "failed to generate '".$output_file."'".PHP_EOL;
-		exit(0);
-	}
-	else
-	{
-		echo "generate '".$output_file."' successfully!".PHP_EOL;
+		if ($template == "type.php" 
+			|| $template == "." 
+			|| $template == ".." 
+			)
+			continue;
+			
+		if (is_dir($dr."/".$template))
+			continue;
+
+		if ($template == "config.ini.php"
+		 || $template == "CMakeLists.txt.php"
+		   )
+			$output_file = $g_out_dir."/".substr($template, 0, strlen($template)-4);
+		else
+			$output_file = $g_out_dir."/".$g_program.".".substr($template, 0, strlen($template)-4);
+			
+		$command = "php -f ".$dr."/".$template
+					." ".$g_cg_libs."/type.php"
+					." ".$g_idl_php
+					." ".$g_program
+					." >".$output_file
+					;
+		
+		//echo "exec: ".$command.PHP_EOL;
+		system($command);
+		if (!file_exists($output_file))
+		{
+			echo "failed to generate '".$output_file."'".PHP_EOL;
+			exit(0);
+		}
+		else
+		{
+			echo "generate '".$output_file."' successfully!".PHP_EOL;
+		}
 	}
 }
+
+generate_files_from_dir($g_cg_libs);
+generate_files_from_dir($g_cg_libs."/".$g_mode);
 
 ?>

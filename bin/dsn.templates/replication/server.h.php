@@ -4,7 +4,7 @@ require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
 ?>
 # pragma once
-# include "replication_app_base.h"
+# include <dsn/dist/replication.h>
 # include "<?=$file_prefix?>.code.definition.h"
 # include <iostream>
 
@@ -15,7 +15,7 @@ class <?=$svc->name?>_service
 	: public ::dsn::replication::replication_app_base
 {
 public:
-	<?=$svc->name?>_service(::dsn::replication::replica* replica, const ::dsn::replication::replication_app_config* config) 
+	<?=$svc->name?>_service(::dsn::replication::replica* replica, ::dsn::configuration_ptr& config) 
 		: ::dsn::replication::replication_app_base(replica, config)
 	{
 		open_service();

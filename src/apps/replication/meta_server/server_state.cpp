@@ -23,24 +23,32 @@
  */
 #include "server_state.h"
 
+# define __TITLE__ "meta.server.state"
 
 server_state::server_state(void)
 {
     _leader_index = -1;
-    init_app();
 }
 
 server_state::~server_state(void)
 {
 }
 
-void server_state::init_app()
+void server_state::init_app(configuration_ptr& cf)
 {
+    zauto_write_lock l(_lock);
+    if (_apps.size() > 0)
+        return;
+
     app_state app;
     app.app_id = 1;
-    app.app_name = "TestTable";
-    app.app_type = "simple_kv";
-    app.partition_count = 1;
+    app.app_name = cf->get_string_value("replication.app", "app_name", "");
+    dassert(app.app_name.length() > 0, "'[replication.app] app_name' not specified");
+    app.app_type = cf->get_string_value("replication.app", "app_type", "");
+    dassert(app.app_type.length() > 0, "'[replication.app] app_type' not specified");
+    app.partition_count = cf->get_value<int32_t>("replication.app", "partition_count", 1);
+
+    int32_t max_replica_count = cf->get_value<int32_t>("replication.app", "max_replica_count", 3);
     for (int i = 0; i < app.partition_count; i++)
     {
         partition_configuration ps;
@@ -49,12 +57,11 @@ void server_state::init_app()
         ps.gpid.app_id = app.app_id;
         ps.gpid.pidx = i;
         ps.last_committed_decree = 0;
-        ps.max_replica_count = 3;
+        ps.max_replica_count = max_replica_count;
 
         app.partitions.push_back(ps);
     }
-
-    zauto_write_lock l(_lock);
+    
     _apps.push_back(app);
 }
 

@@ -23,22 +23,29 @@
  */
 #pragma once
 
-#include "meta_service.h"
+#include <dsn/service_api.h>
+#include <dsn/dist/replication/replication_other_types.h>
 
-class server_state;
-class meta_service_app : public service_app
+using namespace dsn::service;
+using namespace dsn;
+
+namespace dsn { namespace replication {
+
+class replication_service_app : public dsn::service::service_app
 {
 public:
-    meta_service_app(service_app_spec* s, configuration_ptr c);
+    replication_service_app(service_app_spec* s, configuration_ptr c);
 
-    ~meta_service_app();
+    ~replication_service_app(void);
 
     virtual error_code start(int argc, char** argv) override;
 
     virtual void stop(bool cleanup = false) override;
 
 private:
-    static server_state *_reliable_state;
-    meta_service*        _service;
+    replica_stub_ptr _stub;
 };
+
+}}
+
 

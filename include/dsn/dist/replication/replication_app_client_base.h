@@ -41,6 +41,9 @@ namespace dsn { namespace replication {
     class replication_app_client_base : public virtual servicelet
     {
     public:
+        static void load_meta_servers(configuration_ptr& cf, __out_param std::vector<end_point>& servers);
+
+    public:
         replication_app_client_base(        
             const std::vector<end_point>& meta_servers, 
             const char* app_name
@@ -177,10 +180,10 @@ namespace dsn { namespace replication {
             void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&),
 
             // other specific parameters   
-            int timeout_milliseconds = 0,
+            int timeout_milliseconds = 0,            
+            int reply_hash = 0,
             read_semantic_t read_semantic = ReadOutdated,
-            decree snapshot_decree = invalid_decree, // only used when ReadSnapshot        
-            int reply_hash = 0
+            decree snapshot_decree = invalid_decree // only used when ReadSnapshot
             )
         {
             timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
@@ -210,9 +213,9 @@ namespace dsn { namespace replication {
 
             // other specific parameters   
             int timeout_milliseconds = 0,
+            int reply_hash = 0,
             read_semantic_t read_semantic = ReadOutdated,
-            decree snapshot_decree = invalid_decree, // only used when ReadSnapshot        
-            int reply_hash = 0
+            decree snapshot_decree = invalid_decree // only used when ReadSnapshot
             )
         {
             timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
@@ -242,9 +245,9 @@ namespace dsn { namespace replication {
 
             // other specific parameters   
             int timeout_milliseconds = 0,
+            int reply_hash = 0,
             read_semantic_t read_semantic = ReadOutdated,
-            decree snapshot_decree = invalid_decree, // only used when ReadSnapshot        
-            int reply_hash = 0
+            decree snapshot_decree = invalid_decree // only used when ReadSnapshot
             )
         {
             timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
@@ -273,9 +276,9 @@ namespace dsn { namespace replication {
 
             // other specific parameters   
             int timeout_milliseconds = 0,
+            int reply_hash = 0,
             read_semantic_t read_semantic = ReadOutdated,
-            decree snapshot_decree = invalid_decree, // only used when ReadSnapshot        
-            int reply_hash = 0
+            decree snapshot_decree = invalid_decree // only used when ReadSnapshot
             )
         {
             timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);

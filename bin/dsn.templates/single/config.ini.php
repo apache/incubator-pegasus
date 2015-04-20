@@ -21,7 +21,7 @@ run = true
 
 tool = simulator
 ;tool = nativerun
-toollets = tracer
+;toollets = tracer
 ;toollets = tracer, profiler, fault_injector
 pause_on_start = false
 

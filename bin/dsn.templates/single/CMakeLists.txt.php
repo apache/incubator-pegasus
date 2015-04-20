@@ -2,7 +2,7 @@
 require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
-$dsn_root = dirname(dirname(__DIR__));
+$dsn_root = dirname(dirname(dirname(__DIR__)));
 $dsn_root = str_replace('\\', '/', $dsn_root);
 ?>
 cmake_minimum_required(VERSION 2.8.8)

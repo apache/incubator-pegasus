@@ -30,9 +30,6 @@
 using namespace ::dsn::service;
 
 namespace dsn { namespace replication {
-    
-class replica_stub;
-typedef boost::intrusive_ptr<replica_stub> replica_stub_ptr;
 
 inline int gpid_to_hash(global_partition_id gpid)
 {

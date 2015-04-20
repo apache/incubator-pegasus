@@ -21,56 +21,63 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "meta_service_app.h"
+#include <dsn/dist/replication.h>
 #include "server_state.h"
+#include "meta_service.h"
 
-server_state * meta_service_app::_reliable_state = nullptr;
+namespace dsn {
+    namespace service {
 
-meta_service_app::meta_service_app(service_app_spec* s, configuration_ptr c)
-    : service_app(s, c)
-{
-    _service = nullptr;
-}
+        server_state * meta_service_app::_reliable_state = nullptr;
 
-meta_service_app::~meta_service_app()
-{
-
-}
-
-error_code meta_service_app::start(int argc, char** argv)
-{
-    if (nullptr == _reliable_state)
-    {
-        _reliable_state = new server_state();
-    }
-
-    _service = new meta_service(_reliable_state, config());
-    _reliable_state->add_meta_node(_service->address());
-    _service->start();    
-    return ERR_SUCCESS;
-}
-
-void meta_service_app::stop(bool cleanup)
-{
-    if (_reliable_state != nullptr)
-    {
-        if (_service != nullptr)
+        meta_service_app::meta_service_app(service_app_spec* s, configuration_ptr c)
+            : service_app(s, c)
         {
-            _service->stop();
-            _reliable_state->remove_meta_node(_service->address());
-            delete _service;
             _service = nullptr;
+        }
 
-            end_point primary;
-            if (!_reliable_state->get_meta_server_primary(primary))
+        meta_service_app::~meta_service_app()
+        {
+
+        }
+
+        error_code meta_service_app::start(int argc, char** argv)
+        {
+            if (nullptr == _reliable_state)
             {
-                delete _reliable_state;
-                _reliable_state = nullptr;
+                _reliable_state = new server_state();
+            }
+
+            _service = new meta_service(_reliable_state, config());
+            _reliable_state->init_app(config());
+            _reliable_state->add_meta_node(_service->address());
+            _service->start();
+            return ERR_SUCCESS;
+        }
+
+        void meta_service_app::stop(bool cleanup)
+        {
+            if (_reliable_state != nullptr)
+            {
+                if (_service != nullptr)
+                {
+                    _service->stop();
+                    _reliable_state->remove_meta_node(_service->address());
+                    delete _service;
+                    _service = nullptr;
+
+                    end_point primary;
+                    if (!_reliable_state->get_meta_server_primary(primary))
+                    {
+                        delete _reliable_state;
+                        _reliable_state = nullptr;
+                    }
+                }
+            }
+            else
+            {
+                dassert(_service == nullptr, "service must be null");
             }
         }
-    }
-    else
-    {
-        dassert (_service == nullptr, "service must be null");
     }
 }

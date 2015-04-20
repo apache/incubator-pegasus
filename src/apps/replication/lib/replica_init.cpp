@@ -25,8 +25,8 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "replica_stub.h"
-#include "replication_app_factory.h"
 #include <boost/filesystem.hpp>
+#include <dsn/internal/factory_store.h>
 
 #define __TITLE__ "init"
 
@@ -123,7 +123,7 @@ int replica::init_app_and_prepare_list(const char* app_type, bool create_new)
 {
     dassert (nullptr == _app, "");
 
-    _app = replication_app_factory::instance().create(app_type, this, _stub->config());
+    _app = ::dsn::utils::factory_store<replication_app_base>::create(app_type, PROVIDER_TYPE_MAIN, this, _stub->config());
     if (nullptr == _app)
     {
         return ERR_OBJECT_NOT_FOUND;

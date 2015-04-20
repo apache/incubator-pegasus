@@ -21,36 +21,25 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "app_client_example1.h"
+#pragma once
+
+#include "simple_kv.client.h"
 
 namespace dsn {
     namespace replication {
         namespace application {
 
-
-            app_client_example1::app_client_example1(const std::vector<end_point>& meta_servers)
-                : simple_kv_client(meta_servers, "TestTable")
+            class simple_kv_client_impl : public simple_kv_client
             {
-            }
+            public:
+                simple_kv_client_impl(const std::vector<end_point>& meta_servers);
+                ~simple_kv_client_impl(void);
 
+            protected:
+                virtual int get_partition_index(const std::string& key);
+                virtual int get_partition_index(const kv_pair& pr);
+            };
 
-            app_client_example1::~app_client_example1(void)
-            {
-
-            }
-
-            int app_client_example1::get_partition_index(const std::string& key)
-            {
-                // TODO:
-                return 0;
-            }
-
-            int app_client_example1::get_partition_index(const kv_pair& pr)
-            {
-                // TODO:
-                return 0;
-            }
         }
     }
-}
-
+}// namespace

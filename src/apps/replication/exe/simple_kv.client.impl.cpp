@@ -21,25 +21,36 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#pragma once
+#include "simple_kv.client.impl.h"
 
-#include <dsn/dist/replication.h>
+namespace dsn {
+    namespace replication {
+        namespace application {
 
-namespace dsn { namespace replication {
 
-class replication_app_factory : public dsn::utils::singleton<replication_app_factory>
-{
-public:
-    typedef std::function<replication_app_base* (replica* replica, configuration_ptr config)> replica_factory;
-    replication_app_factory(){}
+            simple_kv_client_impl::simple_kv_client_impl(const std::vector<end_point>& meta_servers)
+                : simple_kv_client(meta_servers, "simple_kv")
+            {
+            }
 
-public:
-    bool register_factory(const char* app_type, replica_factory factory);
 
-    replication_app_base* create(const char* app_type, replica* replica, configuration_ptr config);
+            simple_kv_client_impl::~simple_kv_client_impl(void)
+            {
 
-private:
-    std::map<std::string, replica_factory> _factories;
-};
+            }
 
-}} // end namespace
+            int simple_kv_client_impl::get_partition_index(const std::string& key)
+            {
+                // TODO:
+                return 0;
+            }
+
+            int simple_kv_client_impl::get_partition_index(const kv_pair& pr)
+            {
+                // TODO:
+                return 0;
+            }
+        }
+    }
+}
+

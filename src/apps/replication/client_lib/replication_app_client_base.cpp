@@ -28,6 +28,28 @@ namespace dsn { namespace replication {
 
 using namespace ::dsn::service;
 
+void replication_app_client_base::load_meta_servers(
+        configuration_ptr& cf, 
+        __out_param std::vector<end_point>& servers
+        )
+{
+    // read meta_servers from machine list file
+    servers.clear();
+
+    std::vector<std::string> server_ss;
+    cf->get_all_keys("replication.meta_servers", server_ss);
+    for (auto& s : server_ss)
+    {
+        // name:port
+        auto pos1 = s.find_first_of(':');
+        if (pos1 != std::string::npos)
+        {
+            end_point ep(s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
+            servers.push_back(ep);
+        }
+    }
+}
+
 replication_app_client_base::replication_app_client_base(
     const std::vector<end_point>& meta_servers, 
     const char* app_name

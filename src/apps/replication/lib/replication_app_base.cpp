@@ -24,12 +24,18 @@
 
 #include "replica.h"
 #include "mutation.h"
+#include <dsn/internal/factory_store.h>
 
 #define __TITLE__ "TwoPhaseCommit"
 
 namespace dsn { namespace replication {
 
-replication_app_base::replication_app_base(replica* replica, const replication_app_config* config)
+void register_replica_provider(replica_app_factory f, const char* name)
+{
+    ::dsn::utils::factory_store<replication_app_base>::register_factory(name, f, PROVIDER_TYPE_MAIN);
+}
+
+replication_app_base::replication_app_base(replica* replica, configuration_ptr& config)
 {
     _dir = replica->dir();
     _replica = replica;
