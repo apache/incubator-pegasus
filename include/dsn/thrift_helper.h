@@ -163,7 +163,7 @@ namespace dsn {
     template<typename T>
     void marshall(binary_writer& writer, const T& val)
     {
-        boost::shared_ptr<::dsn::utils::binary_writer_transport> transport(new ::dsn::utils::binary_writer_transport(writer));
+        boost::shared_ptr<::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
         marshall_base<T>(&proto, val);
     }
@@ -171,7 +171,7 @@ namespace dsn {
     template<typename T>
     void unmarshall(binary_reader& reader, __out_param T& val)
     {
-        boost::shared_ptr<::dsn::utils::binary_reader_transport> transport(new ::dsn::utils::binary_reader_transport(reader));
+        boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
         unmarshall_base<T>(&proto, val);
     }

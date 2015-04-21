@@ -8,7 +8,7 @@
 //
 // !!! WARNING: not feasible for replicated service yet!!! 
 //
-# define DSN_NOT_USE_DEFAULT_SERIALIZATION
+//# define DSN_NOT_USE_DEFAULT_SERIALIZATION
 
 # include <dsn/internal/serialization.h>
 
