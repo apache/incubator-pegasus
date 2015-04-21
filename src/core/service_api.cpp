@@ -39,6 +39,7 @@ namespace dsn { namespace service {
 
     static tool_app* s_tool = nullptr;
     static service_apps* s_apps = nullptr;
+    static bool s_init = false;
 
     class system_runner
     {
@@ -95,6 +96,8 @@ namespace dsn { namespace service {
             // init runtime
             service_engine::instance().init_after_toollets();
 
+            s_init = true;
+
             // init apps
             for (auto it = spec.app_specs.begin(); it != spec.app_specs.end(); it++)
             {
@@ -136,6 +139,11 @@ namespace system
     bool run(const char* config_file)
     {
         return ::dsn::service::system_runner::run(config_file);
+    }
+
+    bool is_ready()
+    {
+        return s_init;
     }
 }
 

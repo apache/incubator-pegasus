@@ -28,6 +28,53 @@
 namespace dsn {
     namespace tools {
 
+        static void print_header(FILE* fp)
+        {
+            uint64_t ts = 0;
+            if (::dsn::service::system::is_ready())
+                ts = ::dsn::service::env::now_us();
+
+            auto hr = static_cast<uint32_t>(ts / (60ULL * 60ULL * 1000ULL * 1000ULL) % 24);
+            auto min = static_cast<uint32_t>(ts / (60ULL * 1000ULL * 1000ULL) % 60);
+            auto sc = static_cast<uint32_t>(ts / (1000ULL * 1000ULL) % 60);
+            auto ms = static_cast<uint32_t>(ts / (1000ULL) % 1000);
+            //auto us = static_cast<uint32_t>(ts % 1000);
+
+            fprintf(fp, "%02u:%02u:%02u.%03u ", hr, min, sc, ms);
+
+            task* t = task::get_current_task();
+            if (t)
+            {
+                if (nullptr != task::get_current_worker())
+                {
+                    fprintf(fp, "%6u.%7s.%u: ",
+                        static_cast<unsigned int>(t->node_port()),
+                        task::get_current_worker()->pool_spec().name.c_str(),
+                        task::get_current_worker()->index()
+                        );
+                }
+                else
+                {
+                    std::string tid = boost::lexical_cast<std::string>(boost::this_thread::get_id());
+
+                    fprintf(fp, "%6u.%7s.%s: ",
+                        static_cast<unsigned int>(t->node_port()),
+                        "io-thrd",
+                        tid.c_str()
+                        );
+                }
+            }
+            else
+            {
+                std::string tid = boost::lexical_cast<std::string>(boost::this_thread::get_id());
+                fprintf(fp, "%6s.%7s.%s: ",
+                    "system",
+                    "io-thrd",
+                    tid.c_str()
+                    );
+            }
+        }
+
         void screen_logger::logv(const char *file,
             const char *function,
             const int line,
@@ -38,39 +85,8 @@ namespace dsn {
             )
         {
             utils::auto_lock l(_lock);
-            
-            task* t = task::get_current_task();
-            if (t)
-            {
-                if (nullptr != task::get_current_worker())
-                {
-                    printf("%6u.%7s.%u: ",
-                        static_cast<unsigned int>(t->node_port()),
-                        task::get_current_worker()->pool_spec().name.c_str(),
-                        task::get_current_worker()->index()
-                        );
-                }
-                else
-                {
-                    std::string tid = boost::lexical_cast<std::string>(boost::this_thread::get_id());
 
-                    printf("%6u.%7s.%s: ",
-                        static_cast<unsigned int>(t->node_port()),
-                        "io-thrd",
-                        tid.c_str()
-                        );
-                }
-            }
-            else
-            {
-                std::string tid = boost::lexical_cast<std::string>(boost::this_thread::get_id());
-                printf("%6s.%7s.%s: ",
-                    "system",
-                    "io-thrd",
-                    tid.c_str()
-                    );
-            }
-
+            print_header(stdout);
             vprintf(fmt, args);
             printf("\n");
         }
@@ -112,38 +128,7 @@ namespace dsn {
         {
             utils::auto_lock l(_lock);
          
-            task* t = task::get_current_task();
-            if (t)
-            {
-                if (nullptr != task::get_current_worker())
-                {
-                    fprintf(_log, "%6u.%7s.%u: ",
-                        static_cast<unsigned int>(t->node_port()),
-                        task::get_current_worker()->pool_spec().name.c_str(),
-                        task::get_current_worker()->index()
-                        );
-                }
-                else
-                {
-                    std::string tid = boost::lexical_cast<std::string>(boost::this_thread::get_id());
-
-                    fprintf(_log, "%6u.%7s.%s: ",
-                        static_cast<unsigned int>(t->node_port()),
-                        "io-thrd",
-                        tid.c_str()
-                        );
-                }
-            }
-            else
-            {
-                std::string tid = boost::lexical_cast<std::string>(boost::this_thread::get_id());
-                fprintf(_log, "%6s.%7s.%s: ",
-                    "system",
-                    "io-thrd",
-                    tid.c_str()
-                    );
-            }
-
+            print_header(_log);
             vfprintf(_log, fmt, args);
             fprintf(_log, "\n");
             if (logLevel >= log_level_ERROR)
@@ -151,6 +136,7 @@ namespace dsn {
 
             if (logLevel >= log_level_WARNING)
             {
+                print_header(stdout);
                 vprintf(fmt, args);
                 printf("\n");
             }

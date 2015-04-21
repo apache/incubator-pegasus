@@ -65,8 +65,8 @@ namespace dsn { namespace tools {
 
     private:
         end_point    _primary_address;
-        uint32_t      _minMessageDelayMicroseconds;
-        uint32_t      _maxMessageDelayMicroseconds;
+        uint32_t     _min_message_delay_microseconds;
+        uint32_t     _max_message_delay_microseconds;
     };
 
     //------------- inline implementations -------------

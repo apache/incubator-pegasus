@@ -69,7 +69,11 @@ namespace dsn { namespace replication {
             timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
             message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds);
             
-            auto task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task1<T, TRequest, TResponse>(
+            rpc_response_task_ptr task; 
+            if (callback == nullptr) 
+                task = new rpc_response_task_empty(msg); 
+            else 
+                task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task1<T, TRequest, TResponse>(
                 context,
                 req,
                 callback,
@@ -99,7 +103,11 @@ namespace dsn { namespace replication {
             timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
             message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds);
             
-            auto task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task2<TRequest, TResponse>(
+            rpc_response_task_ptr task;
+            if (callback == nullptr)
+                task = new rpc_response_task_empty(msg);
+            else
+                task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task2<TRequest, TResponse>(
                 context,
                 req,
                 callback,
@@ -129,7 +137,11 @@ namespace dsn { namespace replication {
             timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
             message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds);
             
-            auto task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task5<T, TResponse>(
+            rpc_response_task_ptr task;
+            if (callback == nullptr)
+                task = new rpc_response_task_empty(msg);
+            else
+                task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task5<T, TResponse>(
                 context,
                 callback,
                 msg
@@ -158,7 +170,11 @@ namespace dsn { namespace replication {
             timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
             message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds);
             
-            auto task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task3<TResponse>(
+            rpc_response_task_ptr task;
+            if (callback == nullptr)
+                task = new rpc_response_task_empty(msg);
+            else
+                task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task3<TResponse>(
                 context,
                 callback,
                 msg
@@ -189,7 +205,11 @@ namespace dsn { namespace replication {
             timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
             message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds);
             
-            auto task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task1<T, TRequest, TResponse>(
+            rpc_response_task_ptr task;
+            if (callback == nullptr)
+                task = new rpc_response_task_empty(msg);
+            else
+                task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task1<T, TRequest, TResponse>(
                 context,
                 req,
                 callback,
@@ -221,7 +241,11 @@ namespace dsn { namespace replication {
             timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
             message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds);
             
-            auto task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task2<TRequest, TResponse>(
+            rpc_response_task_ptr task;
+            if (callback == nullptr)
+                task = new rpc_response_task_empty(msg);
+            else
+                task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task2<TRequest, TResponse>(
                 context,
                 req,
                 callback,
@@ -253,7 +277,11 @@ namespace dsn { namespace replication {
             timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
             message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds);
             
-            auto task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task5<T, TResponse>(
+            rpc_response_task_ptr task;
+            if (callback == nullptr)
+                task = new rpc_response_task_empty(msg);
+            else
+                task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task5<T, TResponse>(
                 context,
                 callback,
                 msg
@@ -284,7 +312,11 @@ namespace dsn { namespace replication {
             timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
             message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds);
             
-            auto task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task3<TResponse>(
+            rpc_response_task_ptr task;
+            if (callback == nullptr)
+                task = new rpc_response_task_empty(msg);
+            else
+                task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task3<TResponse>(
                 context,
                 callback,
                 msg

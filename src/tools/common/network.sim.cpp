@@ -61,6 +61,9 @@ namespace dsn { namespace tools {
         }
 
         message_ptr recv_msg(new message(msg->writer().get_buffer()));
+        recv_msg->header().from_address = msg->header().from_address;
+        recv_msg->header().to_address = msg->header().to_address;
+
         server_session->on_recv_request(recv_msg, 
             recv_msg->header().from_address == recv_msg->header().to_address ?
             0 : rnet->net_delay_milliseconds()
@@ -88,6 +91,9 @@ namespace dsn { namespace tools {
         if (nullptr != client_session)
         {
             message_ptr recv_msg(new message(reply_msg->writer().get_buffer()));
+            recv_msg->header().from_address = reply_msg->header().from_address;
+            recv_msg->header().to_address = reply_msg->header().to_address;
+
             client_session->on_recv_reply(recv_msg->header().id, recv_msg,
                 recv_msg->header().from_address == recv_msg->header().to_address ?
                 0 : rnet->net_delay_milliseconds()
@@ -107,14 +113,14 @@ namespace dsn { namespace tools {
     sim_network_provider::sim_network_provider(rpc_engine* rpc, network* inner_provider)
     : network(rpc, inner_provider), _primary_address("localhost", 1)
     {
-        _minMessageDelayMicroseconds = 1;
-        _maxMessageDelayMicroseconds = 100000;
+        _min_message_delay_microseconds = 1;
+        _max_message_delay_microseconds = 100000;
 
         auto config = tool_app::get_service_spec().config;
         if (config != NULL)
         {
-            _minMessageDelayMicroseconds = config->get_value<uint32_t>("dsn.simulation", "MinMessageDelayMicroseconds", _minMessageDelayMicroseconds);
-            _maxMessageDelayMicroseconds = config->get_value<uint32_t>("dsn.simulation", "MaxMessageDelayMicroseconds", _maxMessageDelayMicroseconds);
+            _min_message_delay_microseconds = config->get_value<uint32_t>("dsn.simulation", "min_message_delay_microseconds", _min_message_delay_microseconds);
+            _max_message_delay_microseconds = config->get_value<uint32_t>("dsn.simulation", "max_message_delay_microseconds", _max_message_delay_microseconds);
         }
     }
 
@@ -130,6 +136,6 @@ namespace dsn { namespace tools {
 
     uint32_t sim_network_provider::net_delay_milliseconds() const
     {
-        return static_cast<uint32_t>(dsn::service::env::random32(_minMessageDelayMicroseconds, _maxMessageDelayMicroseconds)) / 1000;
+        return static_cast<uint32_t>(dsn::service::env::random32(_min_message_delay_microseconds, _max_message_delay_microseconds)) / 1000;
     }    
 }} // end namespace

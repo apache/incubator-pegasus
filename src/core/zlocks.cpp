@@ -61,15 +61,16 @@ namespace dsn { namespace service {
         {
             check_wait_safety();
 
-            if (nullptr != task::get_current_task() 
-                && task::get_current_task()->spec().pool_code == waitee->spec().pool_code
-                && !waitee->is_empty()
-                )
+            if (nullptr != task::get_current_task() && !waitee->is_empty())
             {
-                dassert (false, "task %s waits for another task %s sharing the same thread pool - will lead to deadlocks easily (e.g., when worker_count = 1 or when the pool is partitioned",
-                    task::get_current_task()->spec().code.to_string(),
-                    waitee->spec().code.to_string()
-                    );
+                if (TASK_TYPE_RPC_RESPONSE == waitee->spec().type ||
+                    task::get_current_task()->spec().pool_code == waitee->spec().pool_code)
+                {
+                    dassert(false, "task %s waits for another task %s sharing the same thread pool - will lead to deadlocks easily (e.g., when worker_count = 1 or when the pool is partitioned)",
+                        task::get_current_task()->spec().code.to_string(),
+                        waitee->spec().code.to_string()
+                        );
+                }
             }
         }
     }
