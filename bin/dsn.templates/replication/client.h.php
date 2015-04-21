@@ -41,13 +41,15 @@ foreach ($keys as $k => $v)
 
 	// ---------- call <?=$f->get_rpc_code()?> ------------
 <?php if ($f->is_one_way()) {?>
-	void <?=$f->name?>(
-		const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
-		int hash = 0)
+	void <?=$f->name?>(const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>)
 	{
-		::dsn::message_ptr msg = ::dsn::message::create_request(<?=$f->get_rpc_code()?>, 0, hash);
-		marshall(msg->writer(), <?=$f->get_first_param()->name?>);
-		::dsn::service::rpc::call_one_way(_server, msg);
+		::dsn::replication::replication_app_client_base::<?=$f->is_write ? "write":"read"?><<?=$f->get_first_param()->get_cpp_type()?>, <?=$f->get_cpp_return_type()?>>(
+            get_partition_index(<?=$f->get_first_param()->name?>),
+            <?=$f->get_rpc_code()?>,
+            <?=$f->get_first_param()->name?>,
+            nullptr,
+            nullptr
+            );
 	}
 <?php	} else { ?>
 	// - synchronous 
@@ -57,7 +59,7 @@ foreach ($keys as $k => $v)
 		int timeout_milliseconds = 0
 		)
 	{
-		auto resp_task = ::dsn::replication::replication_app_client_base::read<<?=$f->get_first_param()->get_cpp_type()?>, <?=$f->get_cpp_return_type()?>>(
+		auto resp_task = ::dsn::replication::replication_app_client_base::<?=$f->is_write ? "write":"read"?><<?=$f->get_first_param()->get_cpp_type()?>, <?=$f->get_cpp_return_type()?>>(
             get_partition_index(<?=$f->get_first_param()->name?>),
             <?=$f->get_rpc_code()?>,
             <?=$f->get_first_param()->name?>,
@@ -80,7 +82,7 @@ foreach ($keys as $k => $v)
 		int reply_hash = 0
 		)
 	{
-		return ::dsn::replication::replication_app_client_base::read<<?=$svc->name?>_client, <?=$f->get_first_param()->get_cpp_type()?>, <?=$f->get_cpp_return_type()?>>(
+		return ::dsn::replication::replication_app_client_base::<?=$f->is_write ? "write":"read"?><<?=$svc->name?>_client, <?=$f->get_first_param()->get_cpp_type()?>, <?=$f->get_cpp_return_type()?>>(
             get_partition_index(<?=$f->get_first_param()->name?>),
             <?=$f->get_rpc_code()?>, 
             <?=$f->get_first_param()->name?>,
@@ -109,7 +111,7 @@ foreach ($keys as $k => $v)
 		int reply_hash = 0
 		)
 	{
-		return ::dsn::replication::replication_app_client_base::read<<?=$svc->name?>_client, <?=$f->get_first_param()->get_cpp_type()?>, <?=$f->get_cpp_return_type()?>>(
+		return ::dsn::replication::replication_app_client_base::<?=$f->is_write ? "write":"read"?><<?=$svc->name?>_client, <?=$f->get_first_param()->get_cpp_type()?>, <?=$f->get_cpp_return_type()?>>(
             get_partition_index(*<?=$f->get_first_param()->name?>),
             <?=$f->get_rpc_code()?>,
             <?=$f->get_first_param()->name?>,

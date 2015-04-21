@@ -130,6 +130,33 @@ default:
 	exit(0);
 }
 
+// load annotations when they are present
+if (file_exists($g_idl.".annotations"))
+{
+	$annotations = parse_ini_file($g_idl.".annotations", true);
+	if (FALSE == $annotations)
+	{
+		echo "read annotation file $g_idl.annotations failed".PHP_EOL;
+		exit(0);
+	}
+	
+	$as = "<?php".PHP_EOL;
+	$as .= "\$_PROG->add_annotations(Array(".PHP_EOL;
+	foreach ($annotations as $s => $kvs)
+	{
+		$as .= "\t\"".$s."\" => Array(".PHP_EOL;
+		foreach($kvs as $k => $v)
+		{
+			$as .= "\t\t\"".$k."\" => \"". $v ."\",".PHP_EOL;
+		}		
+		$as .= "\t),".PHP_EOL;
+	}
+	$as .= "));".PHP_EOL;
+	$as .= "?>".PHP_EOL;
+	
+	file_put_contents($g_idl_php, $as, FILE_APPEND);
+}
+
 function generate_files_from_dir($dr)
 {
 	global $g_cg_libs;

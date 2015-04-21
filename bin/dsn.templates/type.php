@@ -13,6 +13,7 @@ class t_program
 	var $structs;
 	var $services;
 	var $types;
+	var $annotations;
 	
 	function __construct($name)
 	{
@@ -24,6 +25,7 @@ class t_program
 		$this->structs = array();
 		$this->services = array();
 		$this->types = array();
+		$this->annotations = array();
 	}
 	
 	function get_test_task_code()
@@ -93,6 +95,21 @@ class t_program
 			$rt .= "} ";
 		}
 		return $rt;
+	}
+	
+	function add_annotations($atts)
+	{
+		$this->annotations = $atts;
+		
+		foreach ($this->structs as $s)
+		{
+			$s->on_annotations();
+		}
+		
+		foreach ($this->services as $s)
+		{
+			$s->on_annotations();
+		}
 	}
 }
 
@@ -372,6 +389,11 @@ class t_struct extends t_type
 	}
 	
 	function is_base_type() { return false; }
+	
+	function on_annotations()
+	{
+		// nothing to do for now
+	}
 }
 
 class t_function
@@ -380,12 +402,14 @@ class t_function
 	var $ret;
 	var $name;
 	var $params;
+	var $is_write;
 	
 	function __construct($service, $ret, $name)
 	{
 		$this->service = $service;
 		$this->ret = $ret;
 		$this->name = $name;
+		$this->is_write = false;
 		$this->params = array();
 	}
 	
@@ -417,17 +441,39 @@ class t_function
 	{
 		return $this->ret == "void" || $this->ret == "VOID";
 	}
+	
+	function on_annotations()
+	{
+		$atts = $this->service->program->annotations;
+		
+		// service method marked as write operations, e.g.,:
+		// ; false by default
+		// [methods.write]
+		// storage.put = true
+		// storage.get = false		
+		if ($atts["methods.write"] != NULL)
+		{
+			$b = $atts["methods.write"][$this->service->name.".".$this->name];
+			if ($b != NULL && ($b == "1" || $b == 1))
+			{
+				$this->is_write = true;
+			}
+		}
+	}
 }
 
 class t_service extends t_type
 {
 	var $functions;
+	var $is_stateful;
 	
 	function __construct($program, $name)
 	{
 		parent::__construct($program, $name);
 		$this->functions = array();
-		$program->services[] = $this;
+		$this->is_stateful = false;
+		
+		$program->services[] = $this;		
 	}
 	
 	function add_function($ret, $name)
@@ -435,6 +481,33 @@ class t_service extends t_type
 		$f = new t_function($this, $ret, $name);
 		$this->functions[] = $f;
 		return $f;
+	}
+	
+	function on_annotations()
+	{
+		$atts = $this->program->annotations;
+		
+		// service marked as stateful, e.g.,:
+		// ; false by default
+		// [services.stateful]
+		// ; storage is a stateful service
+		// storage = true
+		// ; app_server is a stateless service
+		// app_server = false
+		if ($atts["services.stateful"] != NULL)
+		{
+			$b = $atts["services.stateful"][$this->name];
+			if ($b != NULL && ($b == "1" || $b == 1))
+			{
+				$this->is_stateful = true;
+			}
+		}		
+		
+		// continue for each function
+		foreach ($this->functions as $f)
+		{
+			$f->on_annotations();
+		}
 	}
 }
 ?>

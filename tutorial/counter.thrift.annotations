@@ -1,0 +1,17 @@
+; false by default
+[services.stateful]
+
+; counter is a stateful service
+counter = true
+
+; app_server is a stateless service
+app_server = false
+
+
+; false by default
+[methods.write]
+; the add method for counter service is a write operation
+counter.add = true
+; the read method for counter service is NOT a write operation
+counter.read = false	
+
