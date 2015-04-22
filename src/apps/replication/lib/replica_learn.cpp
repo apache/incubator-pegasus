@@ -38,13 +38,13 @@ void replica::init_learn(uint64_t signature)
     dassert (status() == PS_POTENTIAL_SECONDARY, "");
         
     // at most one learning task running
-    if (_potential_secondary_states.LearningRoundIsRuning || !signature)
+    if (_potential_secondary_states.learning_round_is_running || !signature)
         return;
 
-    if (signature != _potential_secondary_states.LearningSignature)
+    if (signature != _potential_secondary_states.learning_signature)
     {
-        _potential_secondary_states.Cleanup(true);
-        _potential_secondary_states.LearningSignature = signature;
+        _potential_secondary_states.cleanup(true);
+        _potential_secondary_states.learning_signature = signature;
         _potential_secondary_states.LearningState = LearningWithoutPrepare;
         _prepare_list->reset(_app->last_committed_decree());
     }
@@ -72,17 +72,17 @@ void replica::init_learn(uint64_t signature)
         }
     }
         
-    _potential_secondary_states.LearningRoundIsRuning = true;
+    _potential_secondary_states.learning_round_is_running = true;
 
     std::shared_ptr<learn_request> request(new learn_request);
     request->gpid = get_gpid();
     request->last_committed_decree_in_app = _app->last_committed_decree();
     request->last_committed_decree_in_prepare_list = _prepare_list->last_committed_decree();
     request->learner = address();
-    request->signature = _potential_secondary_states.LearningSignature;
+    request->signature = _potential_secondary_states.learning_signature;
     _app->prepare_learning_request(request->app_specific_learn_request);
 
-    _potential_secondary_states.LearningTask = rpc::call_typed(
+    _potential_secondary_states.learning_task = rpc::call_typed(
         _config.primary,
         RPC_LEARN,
         request,        
@@ -126,8 +126,8 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
 
     _primary_states.get_replica_config(request.learner, response.config);
 
-    auto it = _primary_states.Learners.find(request.learner);
-    if (it == _primary_states.Learners.end())
+    auto it = _primary_states.learners.find(request.learner);
+    if (it == _primary_states.learners.end())
     {
         response.err = (response.config.status == PS_SECONDARY ? ERR_SUCCESS : ERR_OBJECT_NOT_FOUND);
         return;
@@ -187,7 +187,7 @@ void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request>& req
     check_hashed_access();
 
     dassert (PS_POTENTIAL_SECONDARY == status(), "");
-    dassert (req->signature == _potential_secondary_states.LearningSignature, "");
+    dassert (req->signature == _potential_secondary_states.learning_signature, "");
 
     if (resp == nullptr)
     {
@@ -222,7 +222,7 @@ void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request>& req
         _prepare_list->reset(resp->prepare_start_decree - 1);
     }
 
-    _potential_secondary_states.LearnRemoteFilesTask = tasking::enqueue(
+    _potential_secondary_states.learn_remote_files_task = tasking::enqueue(
         LPC_LEARN_REMOTE_DELTA_FILES,
         this,
         std::bind(&replica::on_learn_remote_state, this, resp)        
@@ -293,7 +293,7 @@ void replica::on_learn_remote_state(std::shared_ptr<learn_response> resp)
                 resp->state.files.size(), _dir.c_str(), err);
     }    
 
-    _potential_secondary_states.LearnRemoteFilesCompletedTask = tasking::enqueue(
+    _potential_secondary_states.learn_remote_files_completed_task = tasking::enqueue(
         LPC_LEARN_REMOTE_DELTA_FILES_COMPLETED,
         this,
         std::bind(&replica::on_learn_remote_state_completed, this, err),
@@ -308,7 +308,7 @@ void replica::on_learn_remote_state_completed(int err)
     if (PS_POTENTIAL_SECONDARY != status())
         return;
 
-    _potential_secondary_states.LearningRoundIsRuning = false;
+    _potential_secondary_states.learning_round_is_running = false;
 
     if (err != ERR_SUCCESS)
     {
@@ -317,7 +317,7 @@ void replica::on_learn_remote_state_completed(int err)
     else
     {
         // continue
-        init_learn(_potential_secondary_states.LearningSignature);
+        init_learn(_potential_secondary_states.learning_signature);
     }
 }
 
@@ -332,7 +332,7 @@ void replica::handle_learning_error(int err)
         _app->last_committed_decree()
         );
 
-    _potential_secondary_states.Cleanup(true);
+    _potential_secondary_states.cleanup(true);
     _potential_secondary_states.LearningState = LearningFailed;
 
     update_local_configuration_with_no_ballot_change(PS_ERROR);
@@ -340,8 +340,8 @@ void replica::handle_learning_error(int err)
 
 void replica::handle_learning_succeeded_on_primary(const end_point& node, uint64_t learnSignature)
 {
-    auto it = _primary_states.Learners.find(node);
-    if (it != _primary_states.Learners.end() && it->second.signature == learnSignature)
+    auto it = _primary_states.learners.find(node);
+    if (it != _primary_states.learners.end() && it->second.signature == learnSignature)
         upgrade_to_secondary_on_primary(node);
 }
 
@@ -352,7 +352,7 @@ void replica::notify_learn_completion()
     report.err = ERR_SUCCESS;
     report.last_committed_decree_in_app = _app->last_committed_decree();
     report.last_committed_decree_in_prepare_list = last_committed_decree();
-    report.learner_signature = _potential_secondary_states.LearningSignature;
+    report.learner_signature = _potential_secondary_states.learning_signature;
     report.learner_status_ = _potential_secondary_states.LearningState;
     report.node = address();
     

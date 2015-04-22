@@ -73,8 +73,6 @@ std::atomic<uint64_t> message::_id(0);
 
 message::message()
 {
-    _elapsed_timeout_milliseconds = 0;            
-
     _reader = nullptr;
     _writer = new binary_writer();
 
@@ -85,8 +83,6 @@ message::message()
         
 message::message(blob bb, bool parse_hdr)
 {
-    _elapsed_timeout_milliseconds = 0;
-
     _reader = new binary_reader(bb);
     _writer = nullptr;
 
@@ -124,11 +120,13 @@ message_ptr message::create_request(task_code rpc_code, int timeout_milliseconds
     msg->header().client.hash = hash;
     if (timeout_milliseconds == 0)
     {
-        msg->header().client.timeout_milliseconds = task_spec::get(rpc_code)->rpc_timeout_milliseconds;
+        msg->header().client.timeout_ts_us = ::dsn::service::env::now_us() 
+            + static_cast<uint64_t>(task_spec::get(rpc_code)->rpc_timeout_milliseconds) * 1000ULL;
     }
     else
     {
-        msg->header().client.timeout_milliseconds = timeout_milliseconds;
+        msg->header().client.timeout_ts_us = ::dsn::service::env::now_us() 
+            + static_cast<uint64_t>(timeout_milliseconds) * 1000ULL;
     }    
 
     const char* rpcName = rpc_code.to_string();

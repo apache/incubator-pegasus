@@ -111,7 +111,6 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->write_header.gpid.pidx = partition_index;
     rc->write_header.code = code;
     rc->timeout_timer = nullptr;
-    rc->timeout_ts_us = now_us() + callback->get_request()->header().client.timeout_milliseconds * 1000;
 
     if (rc->read_header.gpid.app_id == -1)
     {
@@ -145,7 +144,6 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->read_header.semantic = read_semantic;
     rc->read_header.version_decree = snapshot_decree;
     rc->timeout_timer = nullptr;
-    rc->timeout_ts_us = now_us() + callback->get_request()->header().client.timeout_milliseconds * 1000;
 
     if (rc->read_header.gpid.app_id == -1)
     {
@@ -170,8 +168,9 @@ void replication_app_client_base::end_request(request_context* request, error_co
 
 void replication_app_client_base::call(request_context* request)
 {
-    auto timeout_us = static_cast<int64_t>(request->timeout_ts_us - now_us());
-    if (timeout_us < 100) // < 100us
+    auto& msg = request->callback_task->get_request();
+    auto nts = ::dsn::service::env::now_us();
+    if (nts + 100 >= msg->header().client.timeout_ts_us) // < 100us
     {
         message_ptr nil(nullptr);
         end_request(request, ERR_TIMEOUT, nil);
@@ -195,8 +194,6 @@ void replication_app_client_base::call(request_context* request)
     {
         dbg_dassert(addr != end_point::INVALID, "");
 
-        auto& msg = request->callback_task->get_request();
-
         if (request->header_pos != 0xffff)
         {
             if (request->is_read)
@@ -213,8 +210,6 @@ void replication_app_client_base::call(request_context* request)
             }
             request->header_pos = 0xffff;
         }
-
-        msg->header().client.timeout_milliseconds = static_cast<int>(timeout_us / 1000);
 
         rpc::call(
             addr,
@@ -244,7 +239,7 @@ void replication_app_client_base::call(request_context* request)
                 this,
                 std::bind(&replication_app_client_base::on_user_request_timeout, this, request),
                 0,
-                static_cast<int>(timeout_us / 1000)
+                static_cast<int>((msg->header().client.timeout_ts_us - nts) / 1000)
                 );
         }
 

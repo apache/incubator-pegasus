@@ -45,7 +45,7 @@ void mutation::add_client_request(task_code code, message_ptr& request)
     blob bb(buf, static_cast<int>(buffer.data() - buffer.buffer().get()), buffer.length());
 
     client_requests.push_back(request);
-    request->header().client.timeout_milliseconds = static_cast<int>(code); // hack
+    request->header().client.port = static_cast<uint16_t>(code); // hack
     data.updates.push_back(bb);
     _memory_size += request->total_size();
 }

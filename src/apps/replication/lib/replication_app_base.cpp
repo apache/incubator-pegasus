@@ -51,7 +51,7 @@ int replication_app_base::write_internal(mutation_ptr& mu, bool ack_client)
     for (auto& msg : mu->client_requests)
     {
         dispatch_rpc_call(
-            msg->header().client.timeout_milliseconds, // hack
+            static_cast<int>(msg->header().client.port), // hack
             msg,
             ack_client
             );

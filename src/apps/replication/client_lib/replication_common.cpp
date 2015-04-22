@@ -52,9 +52,6 @@ replication_options::replication_options()
     fd_lease_seconds = 10;
     fd_grace_seconds = 15;
     working_dir = ".";
-    meta_server_port = 20600;
-
-    meta_server_call_timeout_ms = 3000;
         
     log_buffer_size_mb = 1;
     log_pending_max_ms = 100;
@@ -132,13 +129,7 @@ void replication_options::initialize(configuration_ptr config)
     fd_grace_seconds =
         config->get_value<uint32_t>("replication", "fd_grace_seconds", fd_grace_seconds);
     working_dir = config->get_string_value("replication", "working_dir", working_dir.c_str());
-
-    meta_server_port =
-        config->get_value<uint16_t>("replication", "meta_server_port", meta_server_port);
-
-    meta_server_call_timeout_ms =
-        config->get_value<uint32_t>("replication", "meta_server_call_timeout_ms", meta_server_call_timeout_ms);
-        
+    
     log_file_size_mb =
         config->get_value<uint32_t>("replication", "log_file_size_mb", log_file_size_mb);
     log_buffer_size_mb =

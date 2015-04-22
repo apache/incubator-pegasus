@@ -46,9 +46,7 @@ class replication_options
 {
 public:
     std::string working_dir;
-    uint16_t meta_server_port;
 
-    int32_t meta_server_call_timeout_ms;
     int32_t prepare_timeout_ms_for_secondaries;
     int32_t group_check_internal_ms;
     int32_t learn_timeout_ms;

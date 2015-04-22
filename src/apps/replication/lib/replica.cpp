@@ -217,8 +217,8 @@ void replica::close()
     }
 
     cleanup_preparing_mutations(true);
-    _primary_states.Cleanup();
-    _potential_secondary_states.Cleanup(true);
+    _primary_states.cleanup();
+    _potential_secondary_states.cleanup(true);
 
     if (_app != nullptr)
     {

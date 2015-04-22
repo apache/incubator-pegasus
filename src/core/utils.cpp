@@ -143,6 +143,16 @@ namespace dsn {
         {
             return env_provider::get_current_physical_time_ns();
         }
+
+        void time_ms_to_string(uint64_t ts_ms, char* str)
+        {
+            auto hr = static_cast<uint32_t>(ts_ms / (60ULL * 60ULL * 1000ULL) % 24);
+            auto min = static_cast<uint32_t>(ts_ms / (60ULL * 1000ULL) % 60);
+            auto sc = static_cast<uint32_t>(ts_ms / (1000ULL) % 60);
+            auto ms = static_cast<uint32_t>(ts_ms % 1000);
+
+            sprintf(str, "%02u:%02u:%02u.%03u", hr, min, sc, ms);
+        }
     }
 }
 

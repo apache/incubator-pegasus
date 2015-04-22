@@ -39,7 +39,6 @@ public:
 private:
     friend class rpc_timeout_task;
     void on_rpc_timeout(uint64_t key, task_spec* spec);
-    int32_t get_timeout_ms(int32_t timeout_ms, task_spec* spec) const;
 
 private:
     struct match_entry

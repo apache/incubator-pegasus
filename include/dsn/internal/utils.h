@@ -239,6 +239,8 @@ namespace dsn {
         extern uint64_t get_random64_pseudo();
 
         extern uint64_t get_current_physical_time_ns();
+
+        extern void time_ms_to_string(uint64_t ts_ms, char* str);
     }
 } // end namespace dsn::utils
 

@@ -112,14 +112,14 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
 
     // zy: work around for meta server bug
-    if (_primary_states.CheckExist(proposal.node, PS_PRIMARY)
-        || _primary_states.CheckExist(proposal.node, PS_SECONDARY))
+    if (_primary_states.check_exist(proposal.node, PS_PRIMARY)
+        || _primary_states.check_exist(proposal.node, PS_SECONDARY))
         return;
 
-    dassert (!_primary_states.CheckExist(proposal.node, PS_PRIMARY), "");
-    dassert (!_primary_states.CheckExist(proposal.node, PS_SECONDARY), "");
+    dassert (!_primary_states.check_exist(proposal.node, PS_PRIMARY), "");
+    dassert (!_primary_states.check_exist(proposal.node, PS_SECONDARY), "");
 
-    if (_primary_states.Learners.find(proposal.node) != _primary_states.Learners.end())
+    if (_primary_states.learners.find(proposal.node) != _primary_states.learners.end())
     {
         return;
     }
@@ -129,8 +129,8 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     state.signature = random64(0, (uint64_t)(-1LL));
     state.timeout_task = nullptr; // TODO: add timer for learner task
 
-    _primary_states.Learners[proposal.node] = state;
-    _primary_states.Statuses[proposal.node] = PS_POTENTIAL_SECONDARY;
+    _primary_states.learners[proposal.node] = state;
+    _primary_states.statuses[proposal.node] = PS_POTENTIAL_SECONDARY;
 
     group_check_request request;
     request.app_type = _primary_states.membership.app_type;
@@ -264,7 +264,7 @@ void replica::update_configuration_on_meta_server(config_type type, const end_po
     update_local_configuration_with_no_ballot_change(PS_INACTIVE);
     set_inactive_state_transient(true);
 
-    message_ptr msg = message::create_request(RPC_CM_CALL, _options.meta_server_call_timeout_ms);
+    message_ptr msg = message::create_request(RPC_CM_CALL);
     meta_request_header hdr;
     hdr.rpc_tag = RPC_CM_UPDATE_PARTITION_CONFIGURATION;
     marshall(msg, hdr);
@@ -383,7 +383,7 @@ bool replica::update_configuration(const partition_configuration& config)
         (rconfig.ballot > get_ballot() || status() != PS_PRIMARY)
         )
     {
-        _primary_states.ResetMembership(config, config.primary != address());
+        _primary_states.reset_membership(config, config.primary != address());
     }
 
     if (config.ballot > get_ballot() ||
@@ -463,7 +463,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
     case PS_POTENTIAL_SECONDARY:
         if (config.status == PS_ERROR || config.status == PS_INACTIVE)
         {
-            if (!_potential_secondary_states.Cleanup(false))
+            if (!_potential_secondary_states.cleanup(false))
             {
                 dwarn(
                     "%s: status change from %s @ %lld to %s @ %lld is not allowed coz learning remote state is still running",
@@ -494,11 +494,11 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
             replay_prepare_list();
             break;
         case PS_INACTIVE:
-            _primary_states.Cleanup(old_ballot != config.ballot);
+            _primary_states.cleanup(old_ballot != config.ballot);
             break;
         case PS_SECONDARY:
         case PS_ERROR:
-            _primary_states.Cleanup();
+            _primary_states.cleanup();
             break;
         case PS_POTENTIAL_SECONDARY:
             dassert (false, "invalid execution path");
@@ -535,16 +535,16 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
             break;
         case PS_SECONDARY:
             _prepare_list->truncate(_app->last_committed_decree());            
-            _potential_secondary_states.Cleanup(true);
+            _potential_secondary_states.cleanup(true);
             break;
         case PS_POTENTIAL_SECONDARY:
             break;
         case PS_INACTIVE:
-            _potential_secondary_states.Cleanup(true);
+            _potential_secondary_states.cleanup(true);
             break;
         case PS_ERROR:
             _prepare_list->reset(_app->last_committed_decree());
-            _potential_secondary_states.Cleanup(true);
+            _potential_secondary_states.cleanup(true);
             break;
         default:
             dassert (false, "invalid execution path");

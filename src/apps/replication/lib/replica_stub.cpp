@@ -436,7 +436,7 @@ void replica_stub::query_configuration_by_node()
         _config_query_task->cancel(false);
     }
 
-    message_ptr msg = message::create_request(RPC_CM_CALL, _options.meta_server_call_timeout_ms);
+    message_ptr msg = message::create_request(RPC_CM_CALL);
 
     meta_request_header hdr;
     hdr.rpc_tag = RPC_CM_QUERY_NODE_PARTITIONS;
@@ -577,7 +577,7 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, global_p
 
 void replica_stub::remove_replica_on_meta_server(const partition_configuration& config)
 {
-    message_ptr msg = message::create_request(RPC_CM_CALL, _options.meta_server_call_timeout_ms);
+    message_ptr msg = message::create_request(RPC_CM_CALL);
     meta_request_header hdr;
     hdr.rpc_tag = RPC_CM_UPDATE_PARTITION_CONFIGURATION;
     marshall(msg, hdr);

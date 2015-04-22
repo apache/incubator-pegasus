@@ -35,8 +35,8 @@ void replica::init_group_check()
     if (PS_PRIMARY != status() || _options.group_check_disabled)
         return;
 
-    dassert (nullptr == _primary_states.GroupCheckTask, "");
-    _primary_states.GroupCheckTask = tasking::enqueue(
+    dassert (nullptr == _primary_states.group_check_task, "");
+    _primary_states.group_check_task = tasking::enqueue(
             LPC_GROUP_CHECK,
             this,
             &replica::broadcast_group_check,
@@ -48,22 +48,22 @@ void replica::init_group_check()
 
 void replica::broadcast_group_check()
 {
-    dassert (nullptr != _primary_states.GroupCheckTask, "");
-    if (_primary_states.GroupCheckPendingReplies.size() > 0)
+    dassert (nullptr != _primary_states.group_check_task, "");
+    if (_primary_states.group_check_pending_replies.size() > 0)
     {
         dwarn(
             "%s: %u group check replies are still pending when doing next round check",
-            name(), static_cast<int>(_primary_states.GroupCheckPendingReplies.size())
+            name(), static_cast<int>(_primary_states.group_check_pending_replies.size())
             );
 
-        for (auto it = _primary_states.GroupCheckPendingReplies.begin(); it != _primary_states.GroupCheckPendingReplies.end(); it++)
+        for (auto it = _primary_states.group_check_pending_replies.begin(); it != _primary_states.group_check_pending_replies.end(); it++)
         {
             it->second->cancel(true);
         }
-        _primary_states.GroupCheckPendingReplies.clear();
+        _primary_states.group_check_pending_replies.clear();
     }
 
-    for (auto it = _primary_states.Statuses.begin(); it != _primary_states.Statuses.end(); it++)
+    for (auto it = _primary_states.statuses.begin(); it != _primary_states.statuses.end(); it++)
     {
         if (it->first == address())
             continue;
@@ -78,8 +78,8 @@ void replica::broadcast_group_check()
         request->learner_signature = 0;
         if (it->second == PS_POTENTIAL_SECONDARY)
         {
-            auto it2 = _primary_states.Learners.find(it->first);
-            dassert (it2 != _primary_states.Learners.end(), "");
+            auto it2 = _primary_states.learners.find(it->first);
+            dassert (it2 != _primary_states.learners.end(), "");
             request->learner_signature = it2->second.signature;
         }
 
@@ -92,7 +92,7 @@ void replica::broadcast_group_check()
             gpid_to_hash(get_gpid())
             );
 
-        _primary_states.GroupCheckPendingReplies[addr] = callback_task;
+        _primary_states.group_check_pending_replies[addr] = callback_task;
 
         ddebug(
             "%s: init_group_check for %s:%u", name(), addr.name.c_str(), addr.port
@@ -151,7 +151,7 @@ void replica::on_group_check(const group_check_request& request, __out_param gro
     response.last_committed_decree_in_app = _app->last_committed_decree();
     response.last_committed_decree_in_prepare_list = last_committed_decree();
     response.learner_status_ = _potential_secondary_states.LearningState;
-    response.learner_signature = _potential_secondary_states.LearningSignature;
+    response.learner_signature = _potential_secondary_states.learning_signature;
 }
 
 void replica::on_group_check_reply(error_code err, std::shared_ptr<group_check_request>& req, std::shared_ptr<group_check_response>& resp)
@@ -161,7 +161,7 @@ void replica::on_group_check_reply(error_code err, std::shared_ptr<group_check_r
         return;
     }
 
-    auto r = _primary_states.GroupCheckPendingReplies.erase(req->node);
+    auto r = _primary_states.group_check_pending_replies.erase(req->node);
     dassert (r == 1, "");
 
     if (err)
@@ -189,7 +189,7 @@ void replica::send_group_check_once_for_test(int delay_milliseconds)
 {
     dassert (_options.group_check_disabled, "");
 
-    _primary_states.GroupCheckTask = tasking::enqueue(
+    _primary_states.group_check_task = tasking::enqueue(
             LPC_GROUP_CHECK,
             this,
             &replica::broadcast_group_check,

@@ -32,15 +32,12 @@ namespace dsn {
         {
             uint64_t ts = 0;
             if (::dsn::service::system::is_ready())
-                ts = ::dsn::service::env::now_us();
+                ts = ::dsn::service::env::now_ms();
 
-            auto hr = static_cast<uint32_t>(ts / (60ULL * 60ULL * 1000ULL * 1000ULL) % 24);
-            auto min = static_cast<uint32_t>(ts / (60ULL * 1000ULL * 1000ULL) % 60);
-            auto sc = static_cast<uint32_t>(ts / (1000ULL * 1000ULL) % 60);
-            auto ms = static_cast<uint32_t>(ts / (1000ULL) % 1000);
-            //auto us = static_cast<uint32_t>(ts % 1000);
+            char str[24];
+            ::dsn::utils::time_ms_to_string(ts, str);
 
-            fprintf(fp, "%02u:%02u:%02u.%03u ", hr, min, sc, ms);
+            fprintf(fp, "%s ", str);
 
             task* t = task::get_current_task();
             if (t)

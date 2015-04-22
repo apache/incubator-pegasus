@@ -52,18 +52,18 @@ io_service_worker_count = 2
 
 ; specification for each thread pool
 [threadpool.default]
+worker_count = 1
 
 [threadpool.THREAD_POOL_DEFAULT]
 name = default
 partitioned = false
-worker_count = 1
 max_input_queue_length = 1024
 worker_priority = THREAD_xPRIORITY_NORMAL
+worker_count = 2
 
 [threadpool.THREAD_POOL_REPLICATION]
 name = replication
 partitioned = true
-worker_count = 1
 ; max_input_queue_length = 8192
 worker_priority = THREAD_xPRIORITY_NORMAL
 
@@ -78,12 +78,20 @@ rpc_timeout_milliseconds = 5000
 
 [task.LPC_AIO_IMMEDIATE_CALLBACK]
 is_trace = false
-is_profile = false
 allow_inline = false
 
 [task.LPC_RPC_TIMEOUT]
 is_trace = false
-is_profile = false
+
+[task.RPC_FD_FAILURE_DETECTOR_PING]
+is_trace = false
+
+[task.RPC_FD_FAILURE_DETECTOR_PING_ACK]
+is_trace = false
+
+[task.LPC_BEACON_CHECK]
+is_trace = false
+
 
 [replication.meta_servers]
 localhost:34601
@@ -113,9 +121,10 @@ fd_check_interval_seconds = 5
 fd_beacon_interval_seconds = 3
 fd_lease_seconds = 14
 fd_grace_seconds = 15
-working_dir = test_PartitionServer
-meta_server_port = 20600
+working_dir = .
 log_buffer_size_mb = 1
 log_pending_max_ms = 100
 log_file_size_mb = 32
 log_batch_write = true
+
+config_sync_interval_ms = 60000

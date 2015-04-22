@@ -43,28 +43,28 @@ void replica::on_client_write(int code, message_ptr& request)
 
     if (false == _options.request_batch_disabled)
     {
-        if (_primary_states.PendingMutation == nullptr)
+        if (_primary_states.pending_mutation == nullptr)
         {
-            _primary_states.PendingMutation = new_mutation(invalid_decree);
+            _primary_states.pending_mutation = new_mutation(invalid_decree);
         }
         
-        if (_primary_states.PendingMutationTask == nullptr)
+        if (_primary_states.pending_mutation_task == nullptr)
         {
-            _primary_states.PendingMutationTask = tasking::enqueue(
+            _primary_states.pending_mutation_task = tasking::enqueue(
                 LPC_MUTATION_PENDING_TIMER,
                 this,
-                std::bind(&replica::on_mutation_pending_timeout, this, _primary_states.PendingMutation),
+                std::bind(&replica::on_mutation_pending_timeout, this, _primary_states.pending_mutation),
                 gpid_to_hash(get_gpid()),
                 _options.mutation_max_pending_time_ms
                 );    
         }
 
-        _primary_states.PendingMutation->add_client_request(code, request);
+        _primary_states.pending_mutation->add_client_request(code, request);
 
-        if (_primary_states.PendingMutation->memory_size() >= _options.mutation_max_size_mb * 1024 * 1024)
+        if (_primary_states.pending_mutation->memory_size() >= _options.mutation_max_size_mb * 1024 * 1024)
         {
-            init_prepare(_primary_states.PendingMutation);
-            _primary_states.CleanupPendingMutations();
+            init_prepare(_primary_states.pending_mutation);
+            _primary_states.do_cleanup_pending_mutations();
         }
     }
     else
@@ -79,12 +79,12 @@ void replica::on_mutation_pending_timeout(mutation_ptr& mu)
 {
     check_hashed_access();
 
-    dassert (_primary_states.PendingMutation == mu, "");
+    dassert (_primary_states.pending_mutation == mu, "");
     dassert (PS_PRIMARY == status(), "");
 
-    init_prepare(_primary_states.PendingMutation);
-    _primary_states.PendingMutation = nullptr;
-    _primary_states.PendingMutationTask = nullptr;
+    init_prepare(_primary_states.pending_mutation);
+    _primary_states.pending_mutation = nullptr;
+    _primary_states.pending_mutation_task = nullptr;
 }
 
 void replica::init_prepare(mutation_ptr& mu)
@@ -141,7 +141,7 @@ void replica::init_prepare(mutation_ptr& mu)
     }
 
     count = 0;
-    for (auto it = _primary_states.Learners.begin(); it != _primary_states.Learners.end(); it++)
+    for (auto it = _primary_states.learners.begin(); it != _primary_states.learners.end(); it++)
     {
         if (it->second.prepare_start_decree != invalid_decree && mu->data.header.decree >= it->second.prepare_start_decree)
         {
@@ -419,7 +419,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, int
         switch (targetStatus)
         {
         case PS_SECONDARY:
-            dassert (_primary_states.CheckExist(node, PS_SECONDARY), "");
+            dassert (_primary_states.check_exist(node, PS_SECONDARY), "");
             dassert (mu->left_secondary_ack_count() > 0, "");
             if (0 == mu->decrease_left_secondary_ack_count())
             {

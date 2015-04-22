@@ -30,6 +30,7 @@
 
 # include "rpc_engine.h"
 # include "service_engine.h"
+# include <dsn/service_api.h>
 # include <dsn/internal/perf_counters.h>
 # include <dsn/internal/factory_store.h>
 # include <set>
@@ -121,9 +122,10 @@ namespace dsn {
         }
 
         message_ptr& msg = call->get_request();
-        int remain_time_ms = msg->header().client.timeout_milliseconds - msg->elapsed_timeout_milliseconds();
-
-        if (remain_time_ms <= 0)
+        auto nts = ::dsn::service::env::now_us();
+        
+        // timeout already
+        if (nts >= msg->header().client.timeout_ts_us)
         {
             message_ptr null_msg(nullptr);
             call->enqueue(ERR_TIMEOUT, null_msg);
@@ -154,20 +156,15 @@ namespace dsn {
             //{call, timeout_task, net }
         }
 
-        int remain_time_ms = msg->header().client.timeout_milliseconds - msg->elapsed_timeout_milliseconds();
-        int timeout_milliseconds = get_timeout_ms(remain_time_ms, spec);
-        timeout_task->set_delay(timeout_milliseconds);
-        timeout_task->enqueue();
-        msg->add_elapsed_timeout_milliseconds(timeout_milliseconds);
+        auto nts = ::dsn::service::env::now_us();
+        auto tts = msg->header().client.timeout_ts_us;
 
-    }
-
-    int32_t rpc_client_matcher::get_timeout_ms(int32_t timeout_ms, task_spec* spec) const
-    {
+        int timeout_ms = static_cast<int>(tts > nts ? (tts - nts) : 0)/1000;
         if (timeout_ms >= spec->rpc_retry_interval_milliseconds * 2)
-            return spec->rpc_retry_interval_milliseconds;
-        else
-            return timeout_ms;
+            timeout_ms = spec->rpc_retry_interval_milliseconds;
+
+        timeout_task->set_delay(timeout_ms);
+        timeout_task->enqueue();
     }
 
     //------------------------
@@ -398,8 +395,11 @@ namespace dsn {
         {
             if (call != nullptr)
             {
+                auto nts = ::dsn::service::env::now_us();
+                int delay_ms = static_cast<int>((msg->header().client.timeout_ts_us - nts) / 1000);
+
                 message_ptr nil;
-                call->set_delay(msg->header().client.timeout_milliseconds);
+                call->set_delay(delay_ms);
                 call->enqueue(ERR_TIMEOUT, nil);
             }   
             return;

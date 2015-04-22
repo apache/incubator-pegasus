@@ -132,8 +132,12 @@ namespace dsn {
         static void tracer_on_rpc_call(task* caller, message* req, rpc_response_task* callee)
         {
             message_header& hdr = req->header();
+
+            char str[24];
+            ::dsn::utils::time_ms_to_string(hdr.client.timeout_ts_us/1000, str);
+
             ddebug(
-                "%s RPC.CALL: %s:%u => %s:%u, rpc_id = %016llx, callback_task = %016llx, timeout = %ums",
+                "%s RPC.CALL: %s:%u => %s:%u, rpc_id = %016llx, callback_task = %016llx, timeout @ %s",
                 hdr.rpc_name,
                 hdr.from_address.name.c_str(),
                 static_cast<int>(hdr.from_address.port),
@@ -141,7 +145,7 @@ namespace dsn {
                 static_cast<int>(hdr.to_address.port),
                 hdr.rpc_id,
                 callee ? callee->id() : 0,
-                hdr.client.timeout_milliseconds
+                str
                 );
         }
 
