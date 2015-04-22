@@ -48,12 +48,13 @@ private:
     void query_configuration_by_node(configuration_query_by_node_request& request, __out_param configuration_query_by_node_response& response);
     void query_configuration_by_index(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response);
     void update_configuration(configuration_update_request& request, __out_param configuration_update_response& response);
-   
-   
-    // local timers
+      
+    // load balance actions
     void on_load_balance_timer();
+    void on_config_changed(global_partition_id gpid);
 
 private:
+    friend class meta_server_failure_detector;
     meta_server_failure_detector *_failure_detector;
     server_state                 *_state;
     load_balancer                *_balancer;

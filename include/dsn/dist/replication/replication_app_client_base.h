@@ -373,14 +373,14 @@ namespace dsn { namespace replication {
     private:
         std::string                             _app_name;
         std::vector<end_point>                  _meta_servers;
-
+        
         mutable zrwlock                         _config_lock;
         std::map<int,  partition_configuration> _config_cache;
         int                                     _app_id;
         end_point                               _last_contact_point;
 
     private:
-        void call(request_context* request);
+        void call(request_context* request, bool no_delay = true);
         error_code get_address(int pidx, bool is_write, __out_param end_point& addr, __out_param int& app_id, read_semantic_t semantic = read_semantic_t::ReadLastUpdate);
         void on_user_request_timeout(request_context* rc);
         void query_partition_configuration_reply(error_code err, message_ptr& request, message_ptr& response, int pidx);

@@ -36,6 +36,7 @@ public:
     ~load_balancer();
 
     void run();
+    void run(global_partition_id gpid);
 
 private:
     // meta server => partition server

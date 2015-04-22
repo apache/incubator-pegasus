@@ -41,10 +41,10 @@ meta_service::~meta_service(void)
 
 void meta_service::start()
 {
-    _balancer = new load_balancer(_state);
+    _balancer = new load_balancer(_state);            
     _failure_detector = new meta_server_failure_detector(_state);
-    register_rpc_handler(RPC_CM_CALL, "RPC_CM_CALL", &meta_service::on_request);
     _balancer_timer = tasking::enqueue(LPC_LBM_RUN, this, &meta_service::on_load_balance_timer, 0, 1000, 5000);
+    register_rpc_handler(RPC_CM_CALL, "RPC_CM_CALL", &meta_service::on_request);
 
     end_point primary;
     if (_state->get_meta_server_primary(primary) && primary == address())
@@ -150,6 +150,8 @@ void meta_service::query_configuration_by_index(configuration_query_by_index_req
 void meta_service::update_configuration(configuration_update_request& request, __out_param configuration_update_response& response)
 {
     _state->update_configuration(request, response);
+
+    tasking::enqueue(LPC_LBM_RUN, this, std::bind(&meta_service::on_config_changed, this, request.config.gpid));
 }
 
 // local timers
@@ -160,6 +162,20 @@ void meta_service::on_load_balance_timer()
     {
         _failure_detector->set_primary(true);
         _balancer->run();
+    }
+    else
+    {
+        _failure_detector->set_primary(false);
+    }
+}
+
+void meta_service::on_config_changed(global_partition_id gpid)
+{
+    end_point primary;
+    if (_state->get_meta_server_primary(primary) && primary == address())
+    {
+        _failure_detector->set_primary(true);
+        _balancer->run(gpid);
     }
     else
     {

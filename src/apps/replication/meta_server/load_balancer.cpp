@@ -54,6 +54,13 @@ void load_balancer::run()
     }
 }
 
+void load_balancer::run(global_partition_id gpid)
+{
+    zauto_read_lock l(_state->_lock);
+    partition_configuration& pc = _state->_apps[gpid.app_id - 1].partitions[gpid.pidx];
+    run_lb(pc);
+}
+
 end_point load_balancer::find_minimal_load_machine(bool primaryOnly)
 {
     std::vector<std::pair<end_point, int>> stats;

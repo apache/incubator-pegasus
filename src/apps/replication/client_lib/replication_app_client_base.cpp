@@ -95,6 +95,7 @@ void replication_app_client_base::on_user_request_timeout(request_context* rc)
 }
 
 DEFINE_TASK_CODE(LPC_REPLICATION_CLIENT_REQUEST_TIMEOUT, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_REPLICATION_DELAY_QUERY_CONFIG, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
 replication_app_client_base::request_context* replication_app_client_base::create_write_context(
     int partition_index,
@@ -166,7 +167,7 @@ void replication_app_client_base::end_request(request_context* request, error_co
     }
 }
 
-void replication_app_client_base::call(request_context* request)
+void replication_app_client_base::call(request_context* request, bool no_delay)
 {
     auto& msg = request->callback_task->get_request();
     auto nts = ::dsn::service::env::now_us();
@@ -227,6 +228,16 @@ void replication_app_client_base::call(request_context* request)
     }
 
     // target node not known
+    else if (!no_delay)
+    {
+        // delay 1 second for further config query
+        tasking::enqueue(LPC_REPLICATION_DELAY_QUERY_CONFIG, this,
+            std::bind(&replication_app_client_base::call, this, request, true),
+            0,
+            1000
+            );
+    }
+    
     else
     {
         zauto_lock l(_requests_lock);
@@ -295,7 +306,7 @@ void replication_app_client_base::replica_rw_reply(
 {
     if (err != ERR_SUCCESS)
     {
-        call(rc);
+        call(rc, false);
         return;
     }
     else
@@ -304,7 +315,7 @@ void replication_app_client_base::replica_rw_reply(
         response->reader().read(err2);
         if (err2 != 0)
         {
-            call(rc);
+            call(rc, false);
             return;
         }
     }
@@ -406,7 +417,7 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
     {
         for (auto& req : pc->requests)
         {   
-            call(req);
+            call(req, false);
         }
         pc->requests.clear();
         delete pc;
