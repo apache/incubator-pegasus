@@ -1,0 +1,58 @@
+package PS;
+// import "proto/common.proto";
+enum Operator {
+  PLUS = 0;
+  MINUS = 1;
+  TIMES = 2;
+  DIVIDE = 3;
+  AND = 4;
+  OR = 5;
+  XOR = 6;
+}
+
+message ParameterInitConfig {
+  enum Type {
+    ZERO = 1;
+    CONSTANT = 2;
+    GAUSSIAN = 3;
+    FILE = 4;
+    CLONE = 5;
+  }
+  optional Type type = 1 [default = ZERO];
+  optional double constant = 2 [default = 1];
+  // gaussian random
+  optional double mean = 3 [default = 0];
+  optional double std = 4 [default = 1];
+  optional string file_name = 5;
+}
+
+message Timestamp {
+  required string sender = 1;
+  required int32 time = 2;
+}
+
+message TailKeyFilter {
+  optional bool insert_count = 1;
+  optional int32 query_key = 2;
+  optional bool query_value = 3;
+  optional int32 countmin_n = 4;
+  optional int32 countmin_k = 5;
+}
+
+message CallSharedPara {
+  enum Command {
+    PUSH = 1;
+    PULL = 2;
+  }
+  required Command cmd = 1;
+  optional Operator op = 2;
+
+  optional TailKeyFilter tail_filter = 3;
+
+  optional bool insert_key = 5;
+  optional bool gather = 6;
+
+  // it's a replica request
+  optional bool replica = 10;
+  repeated Timestamp backup = 11;
+}
