@@ -51,7 +51,7 @@ namespace dsn {
             auto cf = config();
             _service = new meta_service(_reliable_state, cf);
             _reliable_state->init_app(cf);
-            _reliable_state->add_meta_node(_service->address());
+            _reliable_state->add_meta_node(_service->primary_address());
             _service->start();
             return ERR_SUCCESS;
         }
@@ -63,7 +63,7 @@ namespace dsn {
                 if (_service != nullptr)
                 {
                     _service->stop();
-                    _reliable_state->remove_meta_node(_service->address());
+                    _reliable_state->remove_meta_node(_service->primary_address());
                     delete _service;
                     _service = nullptr;
 

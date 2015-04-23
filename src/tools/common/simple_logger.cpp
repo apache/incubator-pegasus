@@ -44,8 +44,8 @@ namespace dsn {
             {
                 if (nullptr != task::get_current_worker())
                 {
-                    fprintf(fp, "%6u.%7s.%u: ",
-                        static_cast<unsigned int>(t->node_port()),
+                    fprintf(fp, "%6s.%7s.%u: ",
+                        t->node_name(),
                         task::get_current_worker()->pool_spec().name.c_str(),
                         task::get_current_worker()->index()
                         );
@@ -54,8 +54,8 @@ namespace dsn {
                 {
                     std::string tid = boost::lexical_cast<std::string>(boost::this_thread::get_id());
 
-                    fprintf(fp, "%6u.%7s.%s: ",
-                        static_cast<unsigned int>(t->node_port()),
+                    fprintf(fp, "%6s.%7s.%s: ",
+                        t->node_name(),
                         "io-thrd",
                         tid.c_str()
                         );

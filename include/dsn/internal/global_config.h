@@ -33,12 +33,13 @@ namespace dsn {
 
 struct service_app_spec
 {
-    std::string name;
-    std::string type;
-    std::string arguments;
-    int         port;
-    int         delay_seconds;
-    bool        run;
+    int              id;
+    std::string      name;
+    std::string      type;
+    std::string      arguments;
+    std::vector<int> ports;
+    int              delay_seconds;
+    bool             run;
 
     service_app_spec() {}
     service_app_spec(const service_app_spec& r);
@@ -47,21 +48,24 @@ struct service_app_spec
 
 struct network_config_spec
 {
-    // [key
+    // [ key
+    int         port;
     rpc_channel channel;
-    std::string message_format;
     // ]
 
+    std::string message_format;
     std::string factory_name; 
     int         message_buffer_block_size;
 
-    network_config_spec() : channel(RPC_CHANNEL_TCP), message_buffer_block_size(0) {}
+    network_config_spec(const network_config_spec& r);
+    network_config_spec() : channel(RPC_CHANNEL_TCP) {}
+    network_config_spec(int p, rpc_channel c);
     bool operator < (const network_config_spec& r) const;
 };
 
 struct network_message_format {};
 typedef utils::customized_id_mgr<network_message_format> network_formats; //"dsn->0" "thrift->1"
-typedef std::map<network_config_spec, network_config_spec> network_conf;
+typedef std::map<network_config_spec, network_config_spec> network_conf; // port => config
 
 struct service_spec
 {
@@ -69,7 +73,6 @@ struct service_spec
 
     std::string                  tool;
     std::list<std::string>       toollets;
-    int                          port;    
     std::string                  coredump_dir;
     
     network_conf                 network_configs;
@@ -97,7 +100,8 @@ struct service_spec
     service_spec() {}
 
     bool init(configuration_ptr config);
-    void register_network(const network_config_spec& netcs, bool force);
+    bool register_network(const network_config_spec& netcs, bool force);
+    bool build_network_spec(int port);
 };
 
 enum syste_exit_type

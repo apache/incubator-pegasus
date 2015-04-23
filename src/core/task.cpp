@@ -296,9 +296,9 @@ bool task::cancel(bool wait_until_finished)
     return ret;
 }
 
-uint16_t task::node_port() const
+const char* task::node_name() const
 {
-    return node()->rpc()->address().port;
+    return node()->name();
 }
 
 void task::enqueue()

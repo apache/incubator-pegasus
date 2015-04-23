@@ -123,7 +123,7 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::
     else
     {
         failure_detector::on_ping_internal(beacon, ack);
-        ack.primary_node = address();
+        ack.primary_node = primary_address();
     }
 
     reply(ack);

@@ -65,7 +65,7 @@ void replica::broadcast_group_check()
 
     for (auto it = _primary_states.statuses.begin(); it != _primary_states.statuses.end(); it++)
     {
-        if (it->first == address())
+        if (it->first == primary_address())
             continue;
 
         end_point addr = it->first;
@@ -141,7 +141,7 @@ void replica::on_group_check(const group_check_request& request, __out_param gro
     }
     
     response.gpid = get_gpid();
-    response.node = address();
+    response.node = primary_address();
     response.err = ERR_SUCCESS;
     if (status() == PS_ERROR)
     {

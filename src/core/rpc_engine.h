@@ -61,7 +61,8 @@ public:
     //
     // management routines
     //
-    error_code start(const service_spec& spec, int port = 0);
+    error_code start(int app_id, const std::vector<int>& ports);
+    bool       start_server_port(int port);
 
     //
     // rpc registrations
@@ -78,26 +79,27 @@ public:
     //
     // information inquery
     //
-    const end_point& address() const { return _address; }
     service_node* node() const { return _node; }
+    const end_point& primary_address() const { return _local_primary_address; }
 
 private:
     friend class rpc_server_session;    
     void on_recv_request(message_ptr& msg, int delay_ms);
+    network* create_network(const network_config_spec& netcs, bool client_only);
             
 private:
     configuration_ptr                     _config;    
     service_node                          *_node;
-    std::vector<std::vector<network*>>    _networks; // std::vector<CHANNEL:std::vector<PORT>>
+    std::vector<std::vector<network*>>    _client_nets; // <format, <CHANNEL, network*>>
+    std::map<int, std::vector<network*>>  _server_nets; // <port, <CHANNEL, network*>>
     std::shared_ptr<rpc_client_matcher>   _matcher;
-
+    end_point                             _local_primary_address;
 
     typedef std::map<std::string, rpc_handler_ptr> rpc_handlers;
     rpc_handlers                  _handlers;
     utils::rw_lock                _handlers_lock;
     
     bool                          _is_running;
-    end_point                     _address;
 
     static bool                   _message_crc_required;
     static int                    _max_udp_package_size;    

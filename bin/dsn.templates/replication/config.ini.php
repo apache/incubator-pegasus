@@ -5,17 +5,17 @@ $file_prefix = $argv[3];
 ?>
 [apps.metaserver]
 name = metaserver
-type = meta
+type = metas
 arguments = 
-port = 34601
+ports = 34601
 run = true
 count = 1 
     
 [apps.replicaserver]
-name = replicaserver
+name = replica
 type = replica
 arguments =
-port = 34801
+ports = 34801
 run = true
 count = 3
 
@@ -41,14 +41,15 @@ random_seed = 2756568580
 use_given_random_seed = false
 
 [network]
-; channel.message_format = network_provider_name, buffer_block_size
-; each format will occupy a port(from app.port to app.port + 1, ...)
-;RPC_CHANNEL_TCP.dsn = dsn::tools::asio_network_provider, 65536
-;RPC_CHANNEL_UDP.dsn = dsn::tools::asio_network_provider, 65536
-;RPC_CHANNEL_TCP.thrift = dsn::tools::asio_network_provider, 65536
-;RPC_CHANNEL_UDP.thrift = dsn::tools::asio_network_provider, 65536
 ; how many network threads for network library(used by asio)
 io_service_worker_count = 2
+
+[network.34601]
+; channel = message_format, network_provider_name, buffer_block_size
+;RPC_CHANNEL_TCP = dsn,dsn::tools::asio_network_provider, 65536
+;RPC_CHANNEL_UDP = dsn,dsn::tools::asio_network_provider, 65536
+;RPC_CHANNEL_TCP = thrift,dsn::tools::asio_network_provider, 65536
+;RPC_CHANNEL_UDP = thrift,dsn::tools::asio_network_provider, 65536
 
 ; specification for each thread pool
 [threadpool.default]
@@ -71,9 +72,9 @@ worker_priority = THREAD_xPRIORITY_NORMAL
 is_trace = true
 is_profile = true
 allow_inline = false
-rpc_message_channel = RPC_CHANNEL_TCP
+rpc_call_channel = RPC_CHANNEL_TCP
 fast_execution_in_network_thread = false
-rpc_message_header_format = dsn
+rpc_call_header_format_name = dsn
 rpc_timeout_milliseconds = 5000
 
 [task.LPC_AIO_IMMEDIATE_CALLBACK]

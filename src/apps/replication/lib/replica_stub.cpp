@@ -105,7 +105,7 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
         {
             ddebug( "%u.%u @ %s:%u: load replica success with durable decree = %llu from '%s'",
                 r->get_gpid().app_id, r->get_gpid().pidx,
-                address().name.c_str(), static_cast<int>(address().port),
+                primary_address().name.c_str(), static_cast<int>(primary_address().port),
                 r->last_durable_decree(),
                 name.c_str()
                 );
@@ -129,7 +129,7 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
         derror(
             "%u.%u @ %s:%u: initialized durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
             it->first.app_id, it->first.pidx,
-            address().name.c_str(), static_cast<int>(address().port),
+            primary_address().name.c_str(), static_cast<int>(primary_address().port),
             it->second->last_durable_decree(),
             it->second->last_committed_decree(),
             it->second->max_prepared_decree(),
@@ -443,7 +443,7 @@ void replica_stub::query_configuration_by_node()
     marshall(msg, hdr);
 
     configuration_query_by_node_request req;
-    req.node = address();
+    req.node = primary_address();
     marshall(msg, req);
 
     _config_query_task = rpc::call_replicated(
@@ -463,7 +463,7 @@ void replica_stub::on_meta_server_connected()
 {
     ddebug(
         "%s:%u: meta server connected",
-        address().name.c_str(), static_cast<int>(address().port)
+        primary_address().name.c_str(), static_cast<int>(primary_address().port)
         );
 
     zauto_lock l(_repicas_lock);
@@ -478,7 +478,7 @@ void replica_stub::on_node_query_reply(int err, message_ptr& request, message_pt
 {
     ddebug(
         "%s:%u: node view replied",
-        address().name.c_str(), static_cast<int>(address().port)
+        primary_address().name.c_str(), static_cast<int>(primary_address().port)
         );
 
     if (response == nullptr)
@@ -569,7 +569,7 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, global_p
         ddebug(
             "%u.%u @ %s:%u: replica not exists on meta server, removed",
             gpid.app_id, gpid.pidx,
-            address().name.c_str(), static_cast<int>(address().port)
+            primary_address().name.c_str(), static_cast<int>(primary_address().port)
             );
         replica->update_local_configuration_with_no_ballot_change(PS_ERROR);
     }
@@ -585,14 +585,14 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
     request->config = config;
     request->config.ballot++;        
-    request->node = address();
+    request->node = primary_address();
     request->type = CT_DOWNGRADE_TO_INACTIVE;
 
-    if (address() == config.primary)
+    if (primary_address() == config.primary)
     {
         request->config.primary = dsn::end_point::INVALID;        
     }
-    else if (replica_helper::remove_node(address(), request->config.secondaries))
+    else if (replica_helper::remove_node(primary_address(), request->config.secondaries))
     {
     }
     else
@@ -615,7 +615,7 @@ void replica_stub::on_meta_server_disconnected()
 {
     ddebug(
         "%s:%u: meta server disconnected",
-        address().name.c_str(), static_cast<int>(address().port)
+        primary_address().name.c_str(), static_cast<int>(primary_address().port)
         );
     zauto_lock l(_repicas_lock);
     if (NS_Disconnected == _state)
@@ -783,7 +783,7 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
 
     if (nullptr != req)
     {
-        rpc::call_one_way_typed(address(), RPC_LEARN_ADD_LEARNER, *req, gpid_to_hash(req->config.gpid));
+        rpc::call_one_way_typed(primary_address(), RPC_LEARN_ADD_LEARNER, *req, gpid_to_hash(req->config.gpid));
     }
 }
 
@@ -846,11 +846,11 @@ void replica_stub::notify_replica_state_update(const replica_configuration& conf
     {
         if (_is_long_subscriber)
         {
-            tasking::enqueue(LPC_REPLICA_STATE_CHANGE_NOTIFICATION, this, std::bind(_replica_state_subscriber, address(), config, isClosing));
+            tasking::enqueue(LPC_REPLICA_STATE_CHANGE_NOTIFICATION, this, std::bind(_replica_state_subscriber, primary_address(), config, isClosing));
         }
         else
         {
-            _replica_state_subscriber(address(), config, isClosing);
+            _replica_state_subscriber(primary_address(), config, isClosing);
         }
     }
 }

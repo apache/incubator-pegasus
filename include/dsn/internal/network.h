@@ -78,9 +78,6 @@ namespace dsn {
         typedef std::map<end_point, rpc_server_session_ptr> server_sessions;
         server_sessions               _servers;
         utils::rw_lock                _servers_lock;
-
-    public:
-        static int max_faked_port_for_client_only_node;
     };
 
 

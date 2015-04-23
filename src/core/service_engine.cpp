@@ -38,21 +38,21 @@ using namespace dsn::utils;
 
 namespace dsn {
 
-service_node::service_node(void)
+    service_node::service_node(int app_id, const std::string& app_name)
 {
     _computation = nullptr;
     _rpc = nullptr;
     _disk = nullptr;
     _nfs = nullptr;
+    _app_id = app_id;
+    _app_name = app_name;
 }
 
-error_code service_node::start(const service_spec& spec)
+error_code service_node::start(const std::vector<int>& ports)
 {
-    char port[6];
-    sprintf(port, "%u", spec.port);
-    _id = port;
-    
-    // init task engine
+    auto& spec = service_engine::instance().spec();
+
+    // init task engine    
     _computation = new task_engine(this);
     _computation->start(spec.threadpool_specs);    
     dassert (_computation->is_started(), "task engine must be started at this point");
@@ -70,7 +70,7 @@ error_code service_node::start(const service_spec& spec)
     
     // init rpc engine
     _rpc = new rpc_engine(spec.config, this);    
-    error_code err = _rpc->start(spec, spec.port);
+    error_code err = _rpc->start(_app_id, ports);
     if (err != ERR_SUCCESS) return err;
 
     // init nfs
@@ -88,13 +88,13 @@ error_code service_node::start(const service_spec& spec)
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
-static std::map<uint16_t, service_node*>* s_nodes;
+static std::map<int, service_node*>* s_nodes;
 
 service_engine::service_engine(void)
 {
     _env = nullptr;
     _logging = nullptr;
-    s_nodes = &_engines;
+    s_nodes = &_engines_by_app_id;
 }
 
 void service_engine::init_before_toollets(const service_spec& spec)
@@ -118,22 +118,40 @@ void service_engine::init_after_toollets()
     }
 }
 
-service_node* service_engine::start_node(uint16_t port)
+service_node* service_engine::start_node(int app_id, const std::string& app_name, const std::vector<int>& ports)
 {
-    auto it = _engines.find(port);
-    if (it != _engines.end())
+    auto it = _engines_by_app_id.find(app_id);
+    if (it != _engines_by_app_id.end())
     {
         return it->second;
     }
     else
     {
-        service_spec spec = _spec;
-        spec.port = port;
+        for (auto p : ports)
+        {
+            // union to existing node if any port is shared
+            if (_engines_by_port.find(p) != _engines_by_port.end())
+            {
+                service_node* n = _engines_by_port[p];
 
-        auto node = new service_node();
-        error_code err = node->start(spec);
+                for (auto p1 : ports)
+                {
+                    if (n->rpc()->start_server_port(p1))
+                        _engines_by_port[p1] = n;
+                }
+                return n;
+            }
+        }
+        
+        auto node = new service_node(app_id, app_name);
+        error_code err = node->start(ports);
         dassert (err == 0, "service node start failed, err = %s", err.to_string());
-        _engines[node->rpc()->address().port] = node;
+        
+        _engines_by_app_id[app_id] = node;
+        for (auto p1 : ports)
+        {
+            _engines_by_port[p1] = node;
+        }
 
         return node;
     }

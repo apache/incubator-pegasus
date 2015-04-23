@@ -50,18 +50,10 @@ service_app::service_app(service_app_spec* s, configuration_ptr c)
 
         _args_ptr[i] = ((char*)_args[i].c_str());
     }
-
-    _address.port = (uint16_t)_spec.port;
 }
 
 service_app::~service_app(void)
 {
-}
-
-void service_app::set_address(const end_point& addr)
-{
-    dassert (_address.port == 0 || _address.port == addr.port, "invalid service address");
-    _address = addr;
 }
 
 void service_apps::add(service_app* app)

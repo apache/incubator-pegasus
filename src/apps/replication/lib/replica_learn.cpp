@@ -78,7 +78,7 @@ void replica::init_learn(uint64_t signature)
     request->gpid = get_gpid();
     request->last_committed_decree_in_app = _app->last_committed_decree();
     request->last_committed_decree_in_prepare_list = _prepare_list->last_committed_decree();
-    request->learner = address();
+    request->learner = primary_address();
     request->signature = _potential_secondary_states.learning_signature;
     _app->prepare_learning_request(request->app_specific_learn_request);
 
@@ -354,7 +354,7 @@ void replica::notify_learn_completion()
     report.last_committed_decree_in_prepare_list = last_committed_decree();
     report.learner_signature = _potential_secondary_states.learning_signature;
     report.learner_status_ = _potential_secondary_states.LearningState;
-    report.node = address();
+    report.node = primary_address();
     
     rpc::call_one_way_typed(_config.primary, RPC_LEARN_COMPLETITION_NOTIFY, report, gpid_to_hash(get_gpid()));
 }

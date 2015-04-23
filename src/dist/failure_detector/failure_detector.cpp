@@ -266,7 +266,7 @@ void failure_detector::on_ping_internal(const beacon_msg& beacon, __out_param be
 {
     ack.is_master = true;
     ack.this_node = beacon.to;
-    ack.primary_node = address();
+    ack.primary_node = primary_address();
     ack.time = beacon.time;
     ack.allowed = true;
 
@@ -334,7 +334,7 @@ void failure_detector::end_ping(::dsn::error_code err, const beacon_ack& ack)
     if ( itr == _masters.end() )
     {
         dwarn("Failure in process beacon ack in liveness monitor, received beacon ack without corresponding beacon record, remote node name[%s], local node name[%s]",
-            node.name.c_str(), address().name.c_str());
+            node.name.c_str(), primary_address().name.c_str());
 
         return;
     }
@@ -465,7 +465,7 @@ void failure_detector::send_beacon(const end_point& target, uint64_t time)
 {
     beacon_msg beacon;
     beacon.time = time;
-    beacon.from = address();
+    beacon.from = primary_address();
     beacon.to = target;
 
     begin_ping(

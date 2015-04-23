@@ -158,10 +158,10 @@ public:
     threadpool_code        pool_code; 
     bool                   allow_inline; // allow task executed in other thread pools or tasks
     bool                   fast_execution_in_network_thread;
-    std::string            rpc_message_header_format;
+    std::string            rpc_call_header_format_name;
 
     task_rejection_handler rejection_handler;
-    rpc_channel            rpc_message_channel;
+    rpc_channel            rpc_call_channel;
     int32_t                rpc_timeout_milliseconds;
     int32_t                rpc_retry_interval_milliseconds;
 
@@ -203,7 +203,7 @@ public:
 
 private:
     friend class rpc_engine;
-    int rpc_message_header_format_id;
+    int rpc_call_header_format;
 };
 
 } // end namespace

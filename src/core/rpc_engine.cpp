@@ -177,7 +177,8 @@ namespace dsn {
         _is_running = false;
         _message_crc_required = false;
         _max_udp_package_size = 63459; /* SO_MAX_MSG_SIZE(65507) - 2KB */
-    
+        _local_primary_address = end_point::INVALID;
+
         if (config != nullptr)
         {
             _max_udp_package_size = config->get_value<long>("network", "max_udp_package_size", _max_udp_package_size);
@@ -188,7 +189,79 @@ namespace dsn {
     //
     // management routines
     //
-    error_code rpc_engine::start(const service_spec& spec, int port/* = 0*/)
+    network* rpc_engine::create_network(const network_config_spec& netcs, bool client_only)
+    {
+        const service_spec& spec = service_engine::instance().spec();
+        auto net = utils::factory_store<network>::create(
+            netcs.factory_name.c_str(), PROVIDER_TYPE_MAIN, this, nullptr);
+        net->reset_parser(netcs.message_format, netcs.message_buffer_block_size);
+
+        for (auto it = spec.network_aspects.begin();
+            it != spec.network_aspects.end();
+            it++)
+        {
+            net = utils::factory_store<network>::create(it->c_str(), PROVIDER_TYPE_ASPECT, this, net);
+        }
+
+        // start the net
+        error_code ret = net->start(netcs.port, client_only);
+        if (ret == ERR_SUCCESS)
+        {
+            return net;
+        }
+        else
+        {
+            // mem leak, don't care as it halts the program
+            return nullptr;
+        }   
+    }
+
+    bool rpc_engine::start_server_port(int port)
+    {
+        // exsiting servers
+        if (_server_nets.find(port) != _server_nets.end())
+            return false;
+
+        std::vector<network*>* pnets;
+        std::vector<network*> nets;
+        auto pr = _server_nets.insert(std::map<int, std::vector<network*>>::value_type(port, nets));
+        pnets = &pr.first->second;
+
+        pnets->resize(rpc_channel::max_value() + 1);
+        const service_spec& spec = service_engine::instance().spec();
+        for (int i = 0; i <= rpc_channel::max_value(); i++)
+        {
+            network_config_spec cs(port, rpc_channel(rpc_channel::to_string(i)));
+            network* net = nullptr;
+
+            auto it = spec.network_configs.find(cs);
+            if (it != spec.network_configs.end())
+            {
+                net = create_network(it->second, false);
+            }
+
+            // create default when for TCP
+            else if (i == RPC_CHANNEL_TCP)
+            {
+                net = create_network(cs, false);
+            }
+
+            (*pnets)[i] = net;
+
+            // report
+            if (net)
+            {
+                dinfo("network started at port %u, channel = %s, fmt = %s ...",                    
+                    (uint32_t)port,
+                    rpc_channel::to_string(i),
+                    cs.message_format.c_str()
+                    );
+            }
+        }
+        return true;
+    }
+
+    error_code rpc_engine::start(int app_id, const std::vector<int>& ports)
     {
         if (_is_running)
         {
@@ -198,102 +271,32 @@ namespace dsn {
         // local cache for shared networks with same provider and message format and port
         std::map<std::string, network*> named_nets; // factory##fmt##port -> net
 
-        // start to create networks
-        network* net = nullptr;
-        _networks.resize(rpc_channel::max_value() + 1);
-        for (int i = 0; i <= rpc_channel::max_value(); i++)
+        // start client networks
+        bool r;
+        _client_nets.resize(network_formats::instance().max_value() + 1);
+        for (int i = 0; i <= network_formats::instance().max_value(); i++)
         {
-            auto& fmt_nets = _networks[i];
-            fmt_nets.resize(network_formats::instance().max_value() + 1);
-
-            for (int j = 0; j <= network_formats::instance().max_value(); j++)
+            std::vector<network*>& pnet = _client_nets[i];
+            pnet.resize(rpc_channel::max_value() + 1);
+            for (int j = 0; j <= rpc_channel::max_value(); j++)
             {
-                network_config_spec cs;
-                cs.channel = rpc_channel(rpc_channel::to_string(i));
-                cs.message_format = network_formats::instance().get_name(j);
-
-                // find factory and message size
-                auto itnc = spec.network_configs.find(cs);
-                if (itnc == spec.network_configs.end())
-                {
-                    dwarn("network [%s.%s] not designated, may result fault when demanded",
-                        rpc_channel::to_string(i),
-                        network_formats::instance().get_name(j)
-                        );
-                    continue;
-                }
-                std::stringstream ss;
-                ss << itnc->second.factory_name
-                    << "##"
-                    << cs.message_format
-                    << "##"
-                    << port + j
-                    ;
-                std::string nname = ss.str();
-
-                // create net                
-                if (named_nets.find(nname) != named_nets.end())
-                    net = named_nets[nname];
-                else
-                {   
-                    net = utils::factory_store<network>::create(
-                        itnc->second.factory_name.c_str(), PROVIDER_TYPE_MAIN, this, nullptr);
-                    net->reset_parser(itnc->second.message_format, itnc->second.message_buffer_block_size);
-
-                    for (auto it = spec.network_aspects.begin();
-                        it != spec.network_aspects.end();
-                        it++)
-                    {
-                        net = utils::factory_store<network>::create(it->c_str(), PROVIDER_TYPE_ASPECT, this, net);
-                    }
-                                        
-                    // start the net
-                    error_code ret = net->start(port + j, port + j <= network::max_faked_port_for_client_only_node);
-                    if (ret != ERR_SUCCESS)
-                    {
-                        return ret;
-                    }
-
-                    named_nets[nname] = net;
-                }
-
-                // put net into _networks;
-                fmt_nets[j] = net;
+                network_config_spec cs(app_id, rpc_channel(rpc_channel::to_string(j)));
+                auto net = create_network(cs, true);
+                if (!net) return ERR_NETWORK_INIT_FALED;
+                pnet[j] = net;
             }
         }
-
-        // report
-        for (int i = 0; i <= rpc_channel::max_value(); i++)
+        
+        // start server networks
+        for (auto& p : ports)
         {
-            for (int j = 0; j <= network_formats::instance().max_value(); j++)
-            {
-                auto& fmt_nets = _networks[i];
-                if (fmt_nets[j] != nullptr)
-                {
-                    if (fmt_nets[j]->address().port <= network::max_faked_port_for_client_only_node)
-                    {
-                        dinfo("network [%s.%s] started at port %u (client only) ...",
-                            rpc_channel::to_string(i),
-                            network_formats::instance().get_name(j),
-                            (uint32_t)fmt_nets[j]->address().port
-                            );
-                    }
-                    else
-                    {
-                        dinfo("network [%s.%s] started at port %u ...",
-                            rpc_channel::to_string(i),
-                            network_formats::instance().get_name(j),
-                            (uint32_t)fmt_nets[j]->address().port
-                            );
-                    }
-                }
-            }
+            r = start_server_port(p);
+            if (!r) return ERR_NETWORK_INIT_FALED;
         }
 
-        if (net)
-            _address = net->address();
-        _address.port = port;  
-    
+        _local_primary_address = _client_nets[0][0]->address();
+        _local_primary_address.port = ports.size() > 0 ? *ports.begin() : app_id;
+
         _is_running = true;
         return ERR_SUCCESS;
     }
@@ -367,22 +370,22 @@ namespace dsn {
         message* msg = request.get();
         
         auto sp = task_spec::get(msg->header().local_rpc_code);
-        if (sp->rpc_message_header_format_id == -1)
+        if (sp->rpc_call_header_format == -1)
         {
-            auto idx = network_formats::instance().get_id(sp->rpc_message_header_format.c_str());
+            auto idx = network_formats::instance().get_id(sp->rpc_call_header_format_name.c_str());
             dassert(idx != -1, "invalid message format specified '%s' for rpc '%s'",
-                sp->rpc_message_header_format.c_str(),
+                sp->rpc_call_header_format_name.c_str(),
                 sp->name                
                 );
-            sp->rpc_message_header_format_id = idx;
+            sp->rpc_call_header_format = idx;
         }
 
-        auto& named_nets = _networks[sp->rpc_message_channel];
-        network* net = named_nets[sp->rpc_message_header_format_id];
+        auto& named_nets = _client_nets[sp->rpc_call_header_format];
+        network* net = named_nets[sp->rpc_call_channel];
 
         dassert(nullptr != net, "network not present for rpc channel '%s' with format '%s' used by rpc %s",
-            sp->rpc_message_channel.to_string(),
-            sp->rpc_message_header_format.c_str(),
+            sp->rpc_call_channel.to_string(),
+            sp->rpc_call_header_format_name.c_str(),
             msg->header().rpc_name
             );
 

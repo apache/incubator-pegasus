@@ -62,7 +62,7 @@ public:
     int                     delay_milliseconds() const { return _delay_milliseconds; }
     error_code              error() const { return _error; }
     service_node*           node() const { return _node; }
-    uint16_t                node_port() const;
+    const char*             node_name() const;
     bool                    is_empty() const { return _is_null; }
 
     
@@ -136,7 +136,6 @@ struct rpc_handler_info
     task_code   code;
     std::string name;
     rpc_server_handler  *handler;
-    end_point service_address;
 
     rpc_handler_info(task_code code) : code(code) {}
     ~rpc_handler_info() { delete handler; }

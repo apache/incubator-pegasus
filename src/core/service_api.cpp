@@ -115,9 +115,8 @@ namespace dsn { namespace service {
             for (auto it = apps.begin(); it != apps.end(); it++)
             {
                 service_app* app = it->second;
-                auto node = service_engine::instance().start_node(app->address().port);
+                auto node = service_engine::instance().start_node(app->spec().id, app->name(), app->spec().ports);
                 app->set_service_node(node);
-                app->set_address(node->rpc()->address());
             }
 
             // start the tool
@@ -149,12 +148,12 @@ namespace system
 
 namespace rpc
 {
-    const end_point& get_local_address()
+    const end_point& primary_address()
     {
         auto tsk = task::get_current_task();
-        dassert (tsk != nullptr, "this function can only be invoked inside tasks");
-
-        return tsk->node()->rpc()->address();
+        dassert(tsk != nullptr, "this function can only be invoked inside tasks");
+        
+        return tsk->node()->rpc()->primary_address();
     }
 
     bool register_rpc_handler(task_code code, const char* name, rpc_server_handler* handler)
@@ -165,7 +164,6 @@ namespace rpc
         rpc_handler_ptr h(new rpc_handler_info(code));
         h->name = std::string(name);
         h->handler = handler;
-        h->service_address = tsk->node()->rpc()->address();
 
         return tsk->node()->rpc()->register_rpc_handler(h);
     }

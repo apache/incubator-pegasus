@@ -47,7 +47,7 @@ void meta_service::start()
     register_rpc_handler(RPC_CM_CALL, "RPC_CM_CALL", &meta_service::on_request);
 
     end_point primary;
-    if (_state->get_meta_server_primary(primary) && primary == address())
+    if (_state->get_meta_server_primary(primary) && primary == primary_address())
         _failure_detector->set_primary(true);
     else
         _failure_detector->set_primary(false);
@@ -81,7 +81,7 @@ void meta_service::on_request(message_ptr& msg)
 
     meta_response_header rhdr;
     bool isPrimary = _state->get_meta_server_primary(rhdr.primary_address);
-    if (isPrimary) isPrimary = (address() == rhdr.primary_address);
+    if (isPrimary) isPrimary = (primary_address() == rhdr.primary_address);
     rhdr.err = ERR_SUCCESS;
     
     message_ptr resp = msg->create_response();
@@ -158,7 +158,7 @@ void meta_service::update_configuration(configuration_update_request& request, _
 void meta_service::on_load_balance_timer()
 {
     end_point primary;
-    if (_state->get_meta_server_primary(primary) && primary == address())
+    if (_state->get_meta_server_primary(primary) && primary == primary_address())
     {
         _failure_detector->set_primary(true);
         _balancer->run();
@@ -172,7 +172,7 @@ void meta_service::on_load_balance_timer()
 void meta_service::on_config_changed(global_partition_id gpid)
 {
     end_point primary;
-    if (_state->get_meta_server_primary(primary) && primary == address())
+    if (_state->get_meta_server_primary(primary) && primary == primary_address())
     {
         _failure_detector->set_primary(true);
         _balancer->run(gpid);

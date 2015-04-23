@@ -163,39 +163,72 @@ bool threadpool_spec::init(configuration_ptr& config, __out_param std::vector<th
 
 service_app_spec::service_app_spec(const service_app_spec& r)
 {
+    id = r.id;
     name = r.name;
     type = r.type;
     arguments = r.arguments;
-    port = r.port;
+    ports = r.ports;
     delay_seconds = r.delay_seconds;
     run = r.run;
 }
 
 bool service_app_spec::init(const char* section, configuration_ptr config)
 {
+    id = 0;
     name = config->get_string_value(section, "name", "");
     type = config->get_string_value(section, "type", "");
     arguments = config->get_string_value(section, "arguments", "");
-    port = config->get_value<int>(section, "port", 0);    
+
+    ports.clear();
+    std::list<std::string> ports_str = config->get_string_value_list(section, "ports", ',');
+    for (auto& s : ports_str)
+    {
+        int p = atoi(s.c_str());
+        if (p != 0)
+        {
+            dassert(p > 1024, "specified port is either 0 (no listen port) or greater than 1024");
+            ports.push_back(p);
+        }
+    }
+    std::sort(ports.begin(), ports.end());
+
     delay_seconds = config->get_value<int>(section, "delay_seconds", 0);    
     run = config->get_value<bool>(section, "run", true);
 
     return true;
 }
 
-bool network_config_spec::operator < (const network_config_spec& r) const
+network_config_spec::network_config_spec(const network_config_spec& r)
+: channel(r.channel)
 {
-    return channel < r.channel ||
-        (channel == r.channel && message_format < r.message_format)
-        ;
+    port = r.port;
+    message_format = r.message_format;
+    factory_name = r.factory_name;
+    message_buffer_block_size = r.message_buffer_block_size;
 }
 
-void service_spec::register_network(const network_config_spec& netcs, bool force)
+network_config_spec::network_config_spec(int p, rpc_channel c)
+    : channel(c)
+{
+    port = p;
+
+    message_format = "dsn";
+    factory_name = "dsn::tools::asio_network_provider";
+    message_buffer_block_size = 65536;
+}
+
+bool network_config_spec::operator < (const network_config_spec& r) const
+{
+    return port < r.port || (port == r.port && channel < r.channel);
+}
+
+bool service_spec::register_network(const network_config_spec& netcs, bool force)
 {
     if (force)
     {
         network_configs[netcs] = netcs;
         network_formats::instance().register_id(netcs.message_format.c_str());
+        return true;
     }
     else
     {
@@ -204,7 +237,10 @@ void service_spec::register_network(const network_config_spec& netcs, bool force
         {
             network_configs[netcs] = netcs;
             network_formats::instance().register_id(netcs.message_format.c_str());
+            return true;
         }
+        else
+            return false;
     }    
 }
 
@@ -215,75 +251,8 @@ bool service_spec::init(configuration_ptr c)
     config = c;
     tool = config->get_string_value("core", "tool", "");
     toollets = config->get_string_value_list("core", "toollets", ',');
-    port = 0;   
     coredump_dir = config->get_string_value("core", "coredump_dir", "./coredump");
     
-    std::vector<std::string> cs;
-    config->get_all_keys("network", cs);
-
-    for (auto& c : cs)
-    {
-        /*
-        ;channel.message_format = network_provider_name,buffer_block_size
-        ;each format will occupy a port (from app.port to app.port+1, ...)
-        RPC_CHANNEL_TCP.dsn = dsn::tools::asio_network_provider,65536
-        RPC_CHANNEL_UDP.dsn = dsn::tools::asio_network_provider,65536
-        RPC_CHANNEL_TCP.thrift = dsn::tools::asio_network_provider,65536
-        RPC_CHANNEL_UDP.thrift = dsn::tools::asio_network_provider,65536
-        */
-
-        if (c.find("RPC_CHANNEL_") != 0)
-            continue;
-
-        std::list<std::string> ks;
-        utils::split_args(c.c_str(), ks, '.');
-        if (ks.size() != 2)
-        {
-            printf("invalid network specification '%s', should be similar to '$channel.$message_format'\n",
-                c.c_str()
-                );
-            return false;
-        }
-        
-        if (!rpc_channel::is_exist(ks.begin()->c_str()))
-        {
-            printf("invalid rpc channel type '%s', please following the example below to define new channel:"
-                "\t\tDEFINE_CUSTOMIZED_ID(rpc_channel, RPC_CHANNEL_NEW_TYPE)"
-                "currently regisered rpc channels types are:\n", ks.begin()->c_str());
-
-            for (int i = 0; i <= rpc_channel::max_value(); i++)
-            {
-                printf("\t\t%s (%u)\n", rpc_channel::to_string(i), i);
-            }
-            return false;
-        }
-
-        network_config_spec ns;
-        ns.channel = rpc_channel(ks.begin()->c_str());
-        ns.message_format = *ks.rbegin();
-        network_formats::instance().register_id(ns.message_format.c_str());
-        
-        std::string s = config->get_string_value("network", c.c_str(), "");
-        utils::split_args(s.c_str(), ks, ',');
-        if (ks.size() != 2)
-        {
-            printf("invalid network specification '%s', should be '$network_factory,$msg_buffer_size'\n",
-                s.c_str()
-                );
-            return false;
-        }
-
-        ns.factory_name = *ks.begin();
-        ns.message_buffer_block_size = atoi(ks.rbegin()->c_str());
-        if (ns.message_buffer_block_size == 0)
-        {
-            printf("invalid message buffer size specified: '%s'\n", ks.rbegin()->c_str());
-            return false;
-        }
-
-        network_configs[ns] = ns;
-    }
-
     aio_factory_name = config->get_string_value("core", "aio_factory_name", "");
     env_factory_name = config->get_string_value("core", "env_factory_name", "");
     lock_factory_name = config->get_string_value("core", "lock_factory_name", "");
@@ -311,18 +280,17 @@ bool service_spec::init(configuration_ptr c)
     // init service apps
     std::vector<std::string> allSectionNames;
     config->get_all_sections(allSectionNames);
-    int ports_per_node = network_formats::instance().max_value() + 1;
-    if (0 == ports_per_node) ports_per_node = 1;
-
+    
+    int app_id = 0;
     for (auto it = allSectionNames.begin(); it != allSectionNames.end(); it++)
     {
         if (it->substr(0, strlen("apps.")) == std::string("apps."))
         {
             service_app_spec app;
             app.init((*it).c_str(), config);
-            dassert (app.port == 0 || app.port > 1024, "specified port is either 0 (no listen port) or greater than 1024");
 
-            int lport = app.port;
+            auto ports = app.ports;            
+            auto gap = ports.size() > 0 ? (*ports.rbegin() + 1 - *ports.begin()) : 0;            
             int count = config->get_value<int>((*it).c_str(), "count", 1);
             std::string name = app.name;
             for (int i = 1; i <= count; i++)
@@ -330,23 +298,124 @@ bool service_spec::init(configuration_ptr c)
                 char buf[16];
                 sprintf(buf, ".%u", i);
                 app.name = (count > 1 ? (name + buf) : name);
+                app.id = ++app_id;
 
-                if (lport == 0)
+                // network configs
+                for (auto& p : ports)
                 {
-                    app.port = network::max_faked_port_for_client_only_node;
-                    dassert (app.port <= 1024, "faked port for client nodes only must not exceed 1024");
-                    app_specs.push_back(app);
-                    network::max_faked_port_for_client_only_node += ports_per_node;
+                    if (1 == i)
+                    {
+                        if (!build_network_spec(p))
+                            return false;
+                    }
+                    else
+                    {
+                        for (auto& cs : network_configs)
+                        {
+                            if (cs.first.port == p)
+                            {
+                                auto csc = cs.first;
+                                csc.port = p + i * gap;
+
+                                if (!register_network(csc, false))
+                                {
+                                    printf("register network configuration confliction for port %d used by %s.%d\n",
+                                        csc.port,
+                                        app.name.c_str(),
+                                        i
+                                        );
+                                    return false;
+                                }
+                            }
+                        }
+                    }
                 }
-                else
+
+                // add app
+                app_specs.push_back(app);
+
+                // for next instance
+                app.ports.clear();
+                for (auto& p : ports)
                 {
-                    app_specs.push_back(app);
-                    app.port += ports_per_node;
+                    app.ports.push_back(p + i * gap);
                 }
             }
         }
     }
 
+    return true;
+}
+
+bool service_spec::build_network_spec(int port)
+{
+    /*
+    [network.27001]
+    ;channel = message_format,network_provider_name,buffer_block_size
+    RPC_CHANNEL_TCP = dsn,dsn::tools::asio_network_provider,65536
+    RPC_CHANNEL_UDP = dsn,dsn::tools::asio_network_provider,65536
+    */
+    std::stringstream ss;
+    ss << "network." << port;
+    std::string s = ss.str();
+
+    if (!config->has_section(s.c_str()))
+    {
+        // use default settings
+        return true;
+    }
+       
+    
+    std::vector<std::string> cs;
+    config->get_all_keys(s.c_str(), cs);
+
+    for (auto& c : cs)
+    {
+        if (!rpc_channel::is_exist(c.c_str()))
+        {
+            printf("invalid rpc channel type '%s', please following the example below to define new channel:"
+                "\t\tDEFINE_CUSTOMIZED_ID(rpc_channel, RPC_CHANNEL_NEW_TYPE)"
+                "currently regisered rpc channels types are:\n", c.c_str());
+
+            for (int i = 0; i <= rpc_channel::max_value(); i++)
+            {
+                printf("\t\t%s (%u)\n", rpc_channel::to_string(i), i);
+            }
+            return false;
+        }
+
+        network_config_spec ns(port, rpc_channel(c.c_str()));
+
+        // dsn,dsn::tools::asio_network_provider,65536
+        std::list<std::string> vs;
+        std::string v = config->get_string_value(s.c_str(), c.c_str(), "");
+        utils::split_args(v.c_str(), vs, ',');
+
+        if (vs.size() != 3)
+        {
+            printf("invalid network specification '%s', should be '$message-format, $network-factory,$msg-buffer-size'\n",
+                s.c_str()
+                );
+            return false;
+        }
+
+        ns.message_format = *vs.rbegin();
+        network_formats::instance().register_id(ns.message_format.c_str());
+
+        ns.factory_name = *(++vs.begin());
+        ns.message_buffer_block_size = atoi(vs.rbegin()->c_str());
+        if (ns.message_buffer_block_size == 0)
+        {
+            printf("invalid message buffer size specified: '%s'\n", vs.rbegin()->c_str());
+            return false;
+        }
+
+        if (!register_network(ns, false))
+        {
+            printf("register network configuration confliction for port %d\n", port);
+            return false;
+        }
+    }
     return true;
 }
 

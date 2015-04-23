@@ -58,7 +58,7 @@ void replica::handle_remote_failure(partition_status st, const end_point& node, 
         );
 
     dassert (status() == PS_PRIMARY, "");
-    dassert (node != address(), "");
+    dassert(node != primary_address(), "");
 
     switch (st)
     {

@@ -53,7 +53,7 @@ namespace tasking
 
 namespace rpc
 {
-    extern const end_point& get_local_address();
+    extern const end_point& primary_address();
 
     extern bool register_rpc_handler(task_code code, const char* name, rpc_server_handler* handler);
 

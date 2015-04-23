@@ -41,19 +41,21 @@ class nfs_node;
 class service_node
 {
 public:    
-    service_node();
+    service_node(int app_id, const std::string& app_name);
     
     task_engine* computation() const { return _computation; }
     rpc_engine*  rpc() const { return _rpc; }
     disk_engine* disk() const { return _disk; }
     nfs_node* nfs() const { return _nfs; }
 
-    error_code start(const service_spec& spec);   
+    error_code start(const std::vector<int>& ports);
 
-    const std::string& identity() const { return _id; }
+    int id() const { return _app_id; }
+    const char* name() const { return _app_name.c_str(); }
     
 private:
-    std::string  _id;
+    int          _app_id;
+    std::string  _app_name;
     task_engine* _computation;
     rpc_engine*  _rpc;
     disk_engine* _disk;
@@ -69,13 +71,12 @@ public:
     const service_spec& spec() const { return _spec; }
     env_provider* env() const { return _env; }
     logging_provider* logging() const { return _logging; }
-    service_node* get_node(uint16_t port) const;
         
     void init_before_toollets(const service_spec& spec);
     void init_after_toollets();
     void configuration_changed(configuration_ptr configuration);
 
-    service_node* start_node(uint16_t port);
+    service_node* start_node(int app_id, const std::string& app_name, const std::vector<int>& ports);
 
 private:
     service_spec                    _spec;
@@ -83,18 +84,12 @@ private:
     logging_provider*               _logging;
 
     // <port, servicenode>
-    typedef std::map<uint16_t, service_node*> node_engines;
-    node_engines                    _engines;
+    typedef std::map<int, service_node*> node_engines_by_app_id;
+    typedef std::map<int, service_node*> node_engines_by_port; // multiple ports may share the same node
+    node_engines_by_app_id          _engines_by_app_id;
+    node_engines_by_port            _engines_by_port;
 };
 
 // ------------ inline impl ---------------------
-inline service_node* service_engine::get_node(uint16_t port) const
-{
-    auto it = _engines.find(port);
-    if (it != _engines.end())
-        return it->second;
-    else
-        return nullptr;
-}
 
 } // end namespace

@@ -79,7 +79,7 @@ void replica::on_config_proposal(configuration_update_request& proposal)
 
 void replica::assign_primary(configuration_update_request& proposal)
 {
-    dassert (proposal.node == address(), "");
+    dassert(proposal.node == primary_address(), "");
 
     if (status() == PS_PRIMARY)
     {
@@ -90,9 +90,9 @@ void replica::assign_primary(configuration_update_request& proposal)
         return;
     }
 
-    proposal.config.primary = address();
-    replica_helper::remove_node(address(), proposal.config.secondaries);
-    replica_helper::remove_node(address(), proposal.config.drop_outs);
+    proposal.config.primary = primary_address();
+    replica_helper::remove_node(primary_address(), proposal.config.secondaries);
+    replica_helper::remove_node(primary_address(), proposal.config.drop_outs);
 
     update_configuration_on_meta_server(CT_ASSIGN_PRIMARY, proposal.node, proposal.config);
 }
@@ -356,7 +356,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, messa
         case CT_UPGRADE_TO_SECONDARY:
             break;
         case CT_REMOVE:
-            if (req->node != address())
+            if (req->node != primary_address())
             {
                 replica_configuration rconfig;
                 replica_helper::get_replica_config(resp.config, req->node, rconfig);
@@ -377,13 +377,13 @@ bool replica::update_configuration(const partition_configuration& config)
     dassert (config.ballot >= get_ballot(), "");
     
     replica_configuration rconfig;
-    replica_helper::get_replica_config(config, address(), rconfig);
+    replica_helper::get_replica_config(config, primary_address(), rconfig);
 
     if (rconfig.status == PS_PRIMARY &&
         (rconfig.ballot > get_ballot() || status() != PS_PRIMARY)
         )
     {
-        _primary_states.reset_membership(config, config.primary != address());
+        _primary_states.reset_membership(config, config.primary != primary_address());
     }
 
     if (config.ballot > get_ballot() ||

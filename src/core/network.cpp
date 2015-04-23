@@ -85,9 +85,6 @@ namespace dsn {
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
-
-    int network::max_faked_port_for_client_only_node = 1;
-
     network::network(rpc_engine* srv, network* inner_provider)
         : _engine(srv)
     {

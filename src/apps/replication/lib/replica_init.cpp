@@ -143,8 +143,8 @@ int replica::init_app_and_prepare_list(const char* app_type, bool create_new)
         _app = nullptr;
     }
 
-    sprintf(_name, "%u.%u @ %s:%u", _config.gpid.app_id, _config.gpid.pidx, address().name.c_str(), 
-        static_cast<int>(address().port));
+    sprintf(_name, "%u.%u @ %s:%u", _config.gpid.app_id, _config.gpid.pidx, primary_address().name.c_str(),
+        static_cast<int>(primary_address().port));
 
     return err;
 }
