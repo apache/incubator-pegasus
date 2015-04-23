@@ -1,17 +1,12 @@
-; false by default
-[services.stateful]
+; annotation format
+;[type.name[[.subname]...]]
+;key = vlaue
 
-; counter is a stateful service
-counter = true
+[service.counter]
+stateful = true ; counter is a stateful service
 
-; app_server is a stateless service
-app_server = false
+[function.counter.add]
+write = true  ; counter.add is a write function
 
-
-; false by default
-[methods.write]
-; the add method for counter service is a write operation
-counter.add = true
-; the read method for counter service is NOT a write operation
-counter.read = false	
-
+[function.counter.read]
+write = false

@@ -2,9 +2,60 @@
 require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
+$idl_type = $argv[4];
 ?>
 # pragma once
+
+//
+// uncomment the following line if you want to use 
+// data encoding/decoding from the original tool instead of rDSN
+// in this case, you need to use these tools to generate
+// type files with --gen=cpp etc. options
+//
+// !!! WARNING: not feasible for replicated service yet!!! 
+//
+// # define DSN_NOT_USE_DEFAULT_SERIALIZATION
+
 # include <dsn/internal/serialization.h>
+
+# ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+
+<?php if ($idl_type == "thrift") { ?>
+# include <dsn/thrift_helper.h>
+# include "<?=$_PROG->name?>_types.h" 
+
+<?php
+echo $_PROG->get_cpp_namespace_begin().PHP_EOL;
+
+foreach ($_PROG->structs as $s) 
+{
+	echo "\t// ---------- ". $s->name . " -------------". PHP_EOL;
+	echo "\tinline void marshall(::dsn::binary_writer& writer, const ". $s->get_cpp_name() . "& val)".PHP_EOL;
+	echo "\t{".PHP_EOL;
+	echo "\t\tboost::shared_ptr<::dsn::utils::binary_writer_transport> transport(new ::dsn::utils::binary_writer_transport(writer));".PHP_EOL;
+    echo "\t\t::apache::thrift::protocol::TBinaryProtocol proto(transport);".PHP_EOL;
+	echo "\t\t::dsn::utils::marshall_rpc_args<".$s->get_cpp_name().">(&proto, val, &".$s->get_cpp_name()."::write);".PHP_EOL;
+	echo "\t};".PHP_EOL;
+	echo PHP_EOL;
+	echo "\tinline void unmarshall(::dsn::binary_reader& reader, __out_param ". $s->get_cpp_name() . "& val)".PHP_EOL;
+	echo "\t{".PHP_EOL;
+	echo "\t\tboost::shared_ptr<::dsn::utils::binary_reader_transport> transport(new ::dsn::utils::binary_reader_transport(reader));".PHP_EOL;
+    echo "\t\t::apache::thrift::protocol::TBinaryProtocol proto(transport);".PHP_EOL;
+	echo "\t\t::dsn::utils::unmarshall_rpc_args<".$s->get_cpp_name().">(&proto, val, &".$s->get_cpp_name()."::read);".PHP_EOL;
+	echo "\t};".PHP_EOL;
+	echo PHP_EOL;
+}
+
+echo $_PROG->get_cpp_namespace_end().PHP_EOL;
+?>
+
+<?php } else if ($idl_type == "proto") {?>
+# error not implemented
+<?php } else { ?>
+# error not supported idl type <?=$idl_type?> 
+<?php } ?>
+
+# else // use rDSN's data encoding/decoding
 
 <?php
 echo $_PROG->get_cpp_namespace_begin().PHP_EOL;
@@ -51,3 +102,5 @@ foreach ($_PROG->structs as $s)
 
 echo $_PROG->get_cpp_namespace_end().PHP_EOL;
 ?>
+
+#endif 

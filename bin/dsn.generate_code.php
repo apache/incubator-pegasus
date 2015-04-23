@@ -3,6 +3,8 @@
 function usage()
 {
 	echo "dsn.cg %name%.thrift|.proto %out_dir% [single|replication]".PHP_EOL;
+	echo "\tsingle - generate code for a single-node service".PHP_EOL;
+	echo "\treplication - generate code for a partitioned and replicated service".PHP_EOL;
 }
 
 if (count($argv) < 3)
@@ -163,6 +165,7 @@ function generate_files_from_dir($dr)
 	global $g_idl_php;
 	global $g_program;
 	global $g_out_dir;
+	global $g_idl_type;
 	
 	foreach (scandir($dr) as $template)
 	{
@@ -186,6 +189,7 @@ function generate_files_from_dir($dr)
 					." ".$g_cg_libs."/type.php"
 					." ".$g_idl_php
 					." ".$g_program
+					." ".$g_idl_type
 					." >".$output_file
 					;
 		

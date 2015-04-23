@@ -445,19 +445,14 @@ class t_function
 	function on_annotations()
 	{
 		$atts = $this->service->program->annotations;
-		
-		// service method marked as write operations, e.g.,:
-		// ; false by default
-		// [methods.write]
-		// storage.put = true
-		// storage.get = false		
-		if ($atts["methods.write"] != NULL)
+			
+		// [function.service.add]
+		// write = true  ; service.add is a write function
+		$key = "function.".$this->service->name.".".$this->name;
+		if ($atts[$key] != NULL)
 		{
-			$b = $atts["methods.write"][$this->service->name.".".$this->name];
-			if ($b != NULL && ($b == "1" || $b == 1))
-			{
-				$this->is_write = true;
-			}
+			$b = $atts[$key]["write"];
+			$this->is_write = ($b != NULL && ($b == "1" || $b == 1));
 		}
 	}
 }
@@ -487,20 +482,13 @@ class t_service extends t_type
 	{
 		$atts = $this->program->annotations;
 		
-		// service marked as stateful, e.g.,:
-		// ; false by default
-		// [services.stateful]
-		// ; storage is a stateful service
-		// storage = true
-		// ; app_server is a stateless service
-		// app_server = false
-		if ($atts["services.stateful"] != NULL)
+		// [service.counter]
+		// stateful = true ; counter is a stateful service
+		$key = "service.".$this->name;
+		if ($atts[$key] != NULL)
 		{
-			$b = $atts["services.stateful"][$this->name];
-			if ($b != NULL && ($b == "1" || $b == 1))
-			{
-				$this->is_stateful = true;
-			}
+			$b = $atts[$key]["stateful"];
+			$this->is_stateful = ($b != NULL && ($b == "1" || $b == 1));
 		}		
 		
 		// continue for each function

@@ -114,7 +114,7 @@ public:
 		int timeout_milliseconds = 0
 		)
 	{
-        auto resp_task = ::dsn::replication::replication_app_client_base::write<::dsn::replication::application::kv_pair, int32_t>(
+		auto resp_task = ::dsn::replication::replication_app_client_base::write<::dsn::replication::application::kv_pair, int32_t>(
             get_partition_index(pr),
             RPC_SIMPLE_KV_SIMPLE_KV_WRITE,
             pr,
@@ -137,7 +137,7 @@ public:
 		int reply_hash = 0
 		)
 	{
-        return ::dsn::replication::replication_app_client_base::write<simple_kv_client, ::dsn::replication::application::kv_pair, int32_t>(
+		return ::dsn::replication::replication_app_client_base::write<simple_kv_client, ::dsn::replication::application::kv_pair, int32_t>(
             get_partition_index(pr),
             RPC_SIMPLE_KV_SIMPLE_KV_WRITE, 
             pr,
@@ -166,7 +166,7 @@ public:
 		int reply_hash = 0
 		)
 	{
-        return ::dsn::replication::replication_app_client_base::write<simple_kv_client, ::dsn::replication::application::kv_pair, int32_t>(
+		return ::dsn::replication::replication_app_client_base::write<simple_kv_client, ::dsn::replication::application::kv_pair, int32_t>(
             get_partition_index(*pr),
             RPC_SIMPLE_KV_SIMPLE_KV_WRITE,
             pr,
@@ -198,7 +198,7 @@ public:
 		int timeout_milliseconds = 0
 		)
 	{
-        auto resp_task = ::dsn::replication::replication_app_client_base::write<::dsn::replication::application::kv_pair, int32_t>(
+		auto resp_task = ::dsn::replication::replication_app_client_base::write<::dsn::replication::application::kv_pair, int32_t>(
             get_partition_index(pr),
             RPC_SIMPLE_KV_SIMPLE_KV_APPEND,
             pr,
@@ -221,7 +221,7 @@ public:
 		int reply_hash = 0
 		)
 	{
-        return ::dsn::replication::replication_app_client_base::write<simple_kv_client, ::dsn::replication::application::kv_pair, int32_t>(
+		return ::dsn::replication::replication_app_client_base::write<simple_kv_client, ::dsn::replication::application::kv_pair, int32_t>(
             get_partition_index(pr),
             RPC_SIMPLE_KV_SIMPLE_KV_APPEND, 
             pr,
@@ -250,7 +250,7 @@ public:
 		int reply_hash = 0
 		)
 	{
-        return ::dsn::replication::replication_app_client_base::write<simple_kv_client, ::dsn::replication::application::kv_pair, int32_t>(
+		return ::dsn::replication::replication_app_client_base::write<simple_kv_client, ::dsn::replication::application::kv_pair, int32_t>(
             get_partition_index(*pr),
             RPC_SIMPLE_KV_SIMPLE_KV_APPEND,
             pr,

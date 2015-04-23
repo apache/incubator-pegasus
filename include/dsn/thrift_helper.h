@@ -24,9 +24,7 @@
 
 # pragma once
 
-# define DSN_NOT_USE_DEFAULT_SERIALIZATION 1
 # include <dsn/internal/dsn_types.h>
-# include <dsn/internal/serialization.h>
 # include <dsn/internal/utils.h>
 # include <dsn/internal/message_parser.h>
 # include <dsn/tool_api.h>
@@ -93,76 +91,6 @@ namespace dsn {
         private:
             binary_writer& _writer;
         };
-
-        template<typename T>
-        uint32_t marshall_rpc_args(
-            ::apache::thrift::protocol::TProtocol* oprot, 
-            const T& val,
-            uint32_t (*writer)(::apache::thrift::protocol::TProtocol*, const T&)
-            )
-        {
-            uint32_t xfer = 0;
-            oprot->incrementRecursionDepth();
-            xfer += oprot->writeStructBegin("rpc_message");
-
-            xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
-
-            xfer += writer(oprot, val);
-
-            xfer += oprot->writeFieldEnd();
-
-            xfer += oprot->writeFieldStop();
-            xfer += oprot->writeStructEnd();
-            oprot->decrementRecursionDepth();
-            return xfer;
-        }
-
-        template<typename T>
-        uint32_t unmarshall_rpc_args(
-            ::apache::thrift::protocol::TProtocol* iprot,
-            __out_param T& val,
-            uint32_t(*reader)(::apache::thrift::protocol::TProtocol*, T&)
-            )
-        {
-            uint32_t xfer = 0;
-            std::string fname;
-            ::apache::thrift::protocol::TType ftype;
-            int16_t fid;
-
-            xfer += iprot->readStructBegin(fname);
-
-            using ::apache::thrift::protocol::TProtocolException;
-
-
-            while (true)
-            {
-                xfer += iprot->readFieldBegin(fname, ftype, fid);
-                if (ftype == ::apache::thrift::protocol::T_STOP) {
-                    break;
-                }
-                switch (fid)
-                {
-                case 1:
-                    if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-                        xfer += reader(iprot, val);
-                    }
-                    else {
-                        xfer += iprot->skip(ftype);
-                    }
-                    break;
-                default:
-                    xfer += iprot->skip(ftype);
-                    break;
-                }
-                xfer += iprot->readFieldEnd();
-            }
-
-            xfer += iprot->readStructEnd();
-
-            iprot->readMessageEnd();
-            iprot->getTransport()->readEnd();
-            return xfer;
-        }
 
         #define DEFINE_THRIFT_BASE_TYPE_SERIALIZATION(TName, TTag, TMethod) \
             inline int write_base(::apache::thrift::protocol::TProtocol* proto, const TName& val)\
@@ -239,7 +167,6 @@ namespace dsn {
             boost::shared_ptr<::dsn::utils::binary_writer_transport> transport(new ::dsn::utils::binary_writer_transport(writer));
             ::apache::thrift::protocol::TBinaryProtocol proto(transport);
             marshall_base<T>(&proto, val);
-            //marshall_rpc_args(&proto, val, marshall_base<T>);
         }
 
         template<typename T>
@@ -248,9 +175,76 @@ namespace dsn {
             boost::shared_ptr<::dsn::utils::binary_reader_transport> transport(new ::dsn::utils::binary_reader_transport(reader));
             ::apache::thrift::protocol::TBinaryProtocol proto(transport);
             unmarshall_base<T>(&proto, val);
-            //unmarshall_rpc_args(&proto, val, unmarshall_base<T>);
         }
 
+        template<typename T>
+        uint32_t marshall_rpc_args(
+            ::apache::thrift::protocol::TProtocol* oprot,
+            const T& val,
+            uint32_t(T::*writer)(::apache::thrift::protocol::TProtocol*) const
+            )
+        {
+            uint32_t xfer = 0;
+            oprot->incrementRecursionDepth();
+            xfer += oprot->writeStructBegin("rpc_message");
+
+            xfer += oprot->writeFieldBegin("msg", ::apache::thrift::protocol::T_STRUCT, 1);
+
+            xfer += (val.*writer)(oprot);
+
+            xfer += oprot->writeFieldEnd();
+
+            xfer += oprot->writeFieldStop();
+            xfer += oprot->writeStructEnd();
+            oprot->decrementRecursionDepth();
+            return xfer;
+        }
+
+        template<typename T>
+        uint32_t unmarshall_rpc_args(
+            ::apache::thrift::protocol::TProtocol* iprot,
+            __out_param T& val,
+            uint32_t(T::*reader)(::apache::thrift::protocol::TProtocol*)
+            )
+        {
+            uint32_t xfer = 0;
+            std::string fname;
+            ::apache::thrift::protocol::TType ftype;
+            int16_t fid;
+
+            xfer += iprot->readStructBegin(fname);
+
+            using ::apache::thrift::protocol::TProtocolException;
+
+            while (true)
+            {
+                xfer += iprot->readFieldBegin(fname, ftype, fid);
+                if (ftype == ::apache::thrift::protocol::T_STOP) {
+                    break;
+                }
+                switch (fid)
+                {
+                case 1:
+                    if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                        xfer += (val.*reader)(iprot);
+                    }
+                    else {
+                        xfer += iprot->skip(ftype);
+                    }
+                    break;
+                default:
+                    xfer += iprot->skip(ftype);
+                    break;
+                }
+                xfer += iprot->readFieldEnd();
+            }
+
+            xfer += iprot->readStructEnd();
+
+            iprot->readMessageEnd();
+            iprot->getTransport()->readEnd();
+            return xfer;
+        }
 
         class thrift_binary_message_parser : public message_parser
         {
