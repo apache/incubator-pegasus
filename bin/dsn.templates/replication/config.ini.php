@@ -4,8 +4,8 @@ require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
 ?>
 [apps.metaserver]
-name = metaserver
-type = metas
+name = meta
+type = meta
 arguments = 
 ports = 34601
 run = true
