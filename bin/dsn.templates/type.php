@@ -160,7 +160,7 @@ class thelpers
 				}
 				
 				return $prog == $_PROG ? 
-					thelpers::get_cpp_name_internal($left) ?
+					thelpers::get_cpp_name_internal($left) :
 					$prog->get_cpp_namespace() . thelpers::get_cpp_name_internal($left);
 			}
 		}
