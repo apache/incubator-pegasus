@@ -389,8 +389,8 @@ namespace dsn {
             msg->header().rpc_name
             );
 
-        msg->header().client.port = net->address().port;
-        msg->header().from_address = net->address();
+        msg->header().client.port = primary_address().port;
+        msg->header().from_address = primary_address();
         msg->header().new_rpc_id();
         msg->seal(_message_crc_required);
 
