@@ -399,7 +399,7 @@ bool service_spec::build_network_spec(int port)
             return false;
         }
 
-        ns.message_format = *vs.rbegin();
+        ns.message_format = *vs.begin();
         network_formats::instance().register_id(ns.message_format.c_str());
 
         ns.factory_name = *(++vs.begin());
