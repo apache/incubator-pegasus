@@ -198,8 +198,7 @@ void scheduler::schedule()
 
             for (auto it = pEvents->begin(); it != pEvents->end(); it++)
             {
-                auto ts = task_ext::get(it->get());
-                ts->queue->enqueue(*it);
+                ::dsn::service::tasking::enqueue(*it);
             }
             delete pEvents;
             continue;
