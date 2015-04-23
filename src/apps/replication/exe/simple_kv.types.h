@@ -8,7 +8,7 @@
 //
 // !!! WARNING: not feasible for replicated service yet!!! 
 //
-// # define DSN_NOT_USE_DEFAULT_SERIALIZATION
+# define DSN_NOT_USE_DEFAULT_SERIALIZATION
 
 # include <dsn/internal/serialization.h>
 
@@ -21,16 +21,16 @@ namespace dsn { namespace replication { namespace application {
 	// ---------- kv_pair -------------
 	inline void marshall(::dsn::binary_writer& writer, const kv_pair& val)
 	{
-		boost::shared_ptr<::dsn::utils::binary_writer_transport> transport(new ::dsn::utils::binary_writer_transport(writer));
+		boost::shared_ptr<::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
 		::apache::thrift::protocol::TBinaryProtocol proto(transport);
-		::dsn::utils::marshall_rpc_args<kv_pair>(&proto, val, &kv_pair::write);
+		::dsn::marshall_rpc_args<kv_pair>(&proto, val, &kv_pair::write);
 	};
 
 	inline void unmarshall(::dsn::binary_reader& reader, __out_param kv_pair& val)
 	{
-		boost::shared_ptr<::dsn::utils::binary_reader_transport> transport(new ::dsn::utils::binary_reader_transport(reader));
+		boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
 		::apache::thrift::protocol::TBinaryProtocol proto(transport);
-		::dsn::utils::unmarshall_rpc_args<kv_pair>(&proto, val, &kv_pair::read);
+		::dsn::unmarshall_rpc_args<kv_pair>(&proto, val, &kv_pair::read);
 	};
 
 } } } 

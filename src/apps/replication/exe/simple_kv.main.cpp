@@ -26,6 +26,11 @@ int main(int argc, char** argv)
 	dsn::tools::register_toollet<dsn::tools::profiler>("profiler");
 	dsn::tools::register_toollet<dsn::tools::fault_injector>("fault_injector");
 
+    // register necessary components
+#ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+    dsn::tools::register_component_provider<::dsn::thrift_binary_message_parser>("thrift");
+#endif
+
 	// specify what services and tools will run in config file, then run
 	dsn::service::system::run("config.ini");
 	::getchar();
