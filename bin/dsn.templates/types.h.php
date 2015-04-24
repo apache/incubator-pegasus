@@ -50,7 +50,10 @@ echo $_PROG->get_cpp_namespace_end().PHP_EOL;
 ?>
 
 <?php } else if ($idl_type == "proto") {?>
-# error not implemented
+
+# include "<?=$_PROG->name?>.pb.h"
+# include <dsn/gproto_helper.h>
+
 <?php } else { ?>
 # error not supported idl type <?=$idl_type?> 
 <?php } ?>

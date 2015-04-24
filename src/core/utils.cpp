@@ -156,12 +156,15 @@ namespace dsn {
     }
 }
 
-    namespace  dsn {
+namespace  dsn 
+{
+
     binary_reader::binary_reader(blob& blob)
     {
         _blob = blob;
         _size = blob.length();
         _ptr = blob.data();
+        _remaining_size = _size;
     }
 
     int binary_reader::read(__out_param std::string& s)
@@ -193,6 +196,7 @@ namespace dsn {
         {
             blob = _blob.range(static_cast<int>(_ptr - _blob.data()), len);
             _ptr += len;
+            _remaining_size -= len;
             return len + sizeof(len);
         }
         else
@@ -208,12 +212,55 @@ namespace dsn {
         {
             memcpy((void*)buffer, _ptr, sz);
             _ptr += sz;
+            _remaining_size -= sz;
             return sz;
         }
         else
         {
             dwarn("read beyond the end of buffer");
             return 0;
+        }
+    }
+
+    bool binary_reader::next(const void** data, int* size)
+    {
+        if (get_remaining_size() > 0)
+        {
+            *data = (const void*)_ptr;
+            *size = _remaining_size;
+
+            _ptr += _remaining_size;
+            _remaining_size = 0;
+            return true;
+        }
+        else
+            return false;
+    }
+
+    bool binary_reader::backup(int count)
+    {
+        if (count <= static_cast<int>(_ptr - _blob.data()))
+        {
+            _ptr -= count;
+            _remaining_size += count;
+            return true;
+        }
+        else
+            return false;
+    }
+
+    bool binary_reader::skip(int count)
+    {
+        if (count <= get_remaining_size())
+        {
+            _ptr += count;
+            _remaining_size -= count;
+            return true;
+        }
+        else
+        {
+            dwarn("read beyond the end of buffer");
+            return false;
         }
     }
 
@@ -312,8 +359,8 @@ namespace dsn {
 
         if (pos != 0xffff)
         {
-            int remainSize = _buffers[pos].length() - _data[pos].length();
-            if (sz > remainSize)
+            int rem_size = _buffers[pos].length() - _data[pos].length();
+            if (sz > rem_size)
             {
                 int allocSize = _data[pos].length() + sz;
                 std::shared_ptr<char> ptr((char*)malloc(allocSize));
@@ -341,19 +388,19 @@ namespace dsn {
 
             pos = (uint16_t)_cur_pos;
 
-            int remainSize = _buffers[pos].length() - _data[pos].length();
-            if (remainSize >= sz)
+            int rem_size = _buffers[pos].length() - _data[pos].length();
+            if (rem_size >= sz)
             {
                 memcpy((void*)(_data[pos].data() + _data[pos].length()), buffer, (size_t)sz);
                 _data[pos]._length += sz;
             }
             else
             {
-                memcpy((void*)(_data[pos].data() + _data[pos].length()), buffer, (size_t)remainSize);
-                _data[pos]._length += remainSize;
+                memcpy((void*)(_data[pos].data() + _data[pos].length()), buffer, (size_t)rem_size);
+                _data[pos]._length += rem_size;
 
-                sz -= remainSize;
-                buffer += remainSize;
+                sz -= rem_size;
+                buffer += rem_size;
 
                 int allocSize = _reserved_size_per_buffer;
                 if (sz > allocSize)
@@ -374,6 +421,37 @@ namespace dsn {
         }
 
         _total_size += sz0;
+    }
+
+    bool binary_writer::next(void** data, int* size)
+    {
+        int sz = _buffers[_cur_pos].length() - _data[_cur_pos].length();
+        if (sz == 0)
+        {
+            std::shared_ptr<char> ptr((char*)malloc(_reserved_size_per_buffer));
+            blob bb(ptr, _reserved_size_per_buffer);
+            _buffers.push_back(bb);
+
+            bb._length = 0;
+            _data.push_back(bb);
+            ++_cur_pos;
+
+            sz = _reserved_size_per_buffer;
+        }
+
+        *size = sz;
+        *data = (void*)(_data[_cur_pos].data() + _data[_cur_pos].length());
+        _data[_cur_pos]._length += sz;
+        _total_size += sz;
+        return true;
+    }
+
+    bool binary_writer::backup(int count)
+    {
+        dassert(count <= _data[_cur_pos].length(), "currently we don't support backup before the last buffer's header");
+        _data[_cur_pos]._length -= count;
+        _total_size -= count;
+        return true;
     }
 
 } // end namespace dsn

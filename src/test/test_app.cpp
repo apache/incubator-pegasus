@@ -16,7 +16,7 @@ namespace dsn {
             return ERR_SUCCESS;
         }
 
-        void test_app::stop(bool cleanup = false)
+        void test_app::stop(bool cleanup)
         {
             
         } 

@@ -120,19 +120,23 @@ namespace dsn {
         int read(char* buffer, int sz);
         int read(blob& blob);
 
+        bool next(const void** data, int* size);
+        bool skip(int count);
+        bool backup(int count);
+
         blob get_buffer() const { return _blob; }
         blob get_remaining_buffer() const { return _blob.range(static_cast<int>(_ptr - _blob.data())); }
         bool is_eof() const { return _ptr >= _blob.data() + _size; }
         int  total_size() const { return _size; }
-        int  get_remaining_size() const { return static_cast<int>(_blob.data() + _size - _ptr); }
+        int  get_remaining_size() const { return _remaining_size; }
 
     private:
         blob        _blob;
         int         _size;
         const char* _ptr;
+        int         _remaining_size;
     };
-
-
+    
     class binary_writer
     {
     public:
@@ -156,6 +160,9 @@ namespace dsn {
         void write(const std::string& val, uint16_t pos = 0xffff);
         void write(const char* buffer, int sz, uint16_t pos = 0xffff);
         void write(const blob& val, uint16_t pos = 0xffff);
+
+        bool next(void** data, int* size);
+        bool backup(int count);
 
         void get_buffers(__out_param std::vector<blob>& buffers) const;
         int  get_buffer_count() const { return static_cast<int>(_buffers.size()); }
@@ -185,6 +192,7 @@ namespace dsn {
         {
             memcpy((void*)&val, _ptr, sizeof(T));
             _ptr += sizeof(T);
+            _remaining_size -= sizeof(T);
             return static_cast<int>(sizeof(T));
         }
         else

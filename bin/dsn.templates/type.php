@@ -120,6 +120,9 @@ class t_type
 	
 	function __construct($program, $name)
 	{
+		$names = explode(".", $name);
+		$name = $names[count($names) - 1];
+		
 		$this->program = $program;
 		$this->name = $name;
 		$program->types[] = $this;
@@ -256,7 +259,7 @@ class thelpers
 			return thelpers::get_cpp_name_internal($full_name);
 		else
 		{
-			$pos = strpos($full_name, ".");
+			$pos = strrpos($full_name, ".");
 			if (FALSE == $pos)
 				return thelpers::get_cpp_name_internal($full_name);
 			else

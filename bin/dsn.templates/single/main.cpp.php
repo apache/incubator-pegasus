@@ -2,6 +2,7 @@
 require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
+$idl_type = $argv[4];
 ?>
 // apps
 # include "<?=$file_prefix?>.app.example.h"
@@ -28,7 +29,9 @@ int main(int argc, char** argv)
 		
     // register necessary components
 #ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
+<?php if ($idl_type == "thrift" ) { ?>
     dsn::tools::register_component_provider<dsn::thrift_binary_message_parser>("thrift");
+<?php } ?>
 #endif
 
 	// specify what services and tools will run in config file, then run
