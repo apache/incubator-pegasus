@@ -34,6 +34,8 @@ namespace dsn {
                 : simple_kv_service(replica, cf)
             {
                 _learnFileName.clear();
+                _last_durable_decree = 0;
+                _last_committed_decree = 0;
             }
 
             // RPC_SIMPLE_KV_READ
@@ -205,7 +207,7 @@ namespace dsn {
             }
 
             // helper routines to accelerate learning
-            int simple_kv_service_impl::get_learn_state(decree start, const blob& learnRequest, __out_param learn_state& state)
+            int simple_kv_service_impl::get_learn_state(decree start, const blob& learn_req, __out_param learn_state& state)
             {
                 ::dsn::binary_writer writer;
 

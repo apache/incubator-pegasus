@@ -28,7 +28,6 @@ namespace dsn { namespace replication {
 
 mutation::mutation()
 {
-    _memory_size = sizeof(mutation_header);
     _private0 = 0; 
     _not_logged = 1;
 }
@@ -38,16 +37,15 @@ mutation::~mutation()
     clear_log_task();
 }
 
-void mutation::add_client_request(task_code code, message_ptr& request)
+void mutation::set_client_request(task_code code, message_ptr& request)
 {
     ::dsn::blob buffer(request->reader().get_remaining_buffer());
     auto buf = buffer.buffer();
     blob bb(buf, static_cast<int>(buffer.data() - buffer.buffer().get()), buffer.length());
 
-    client_requests.push_back(request);
+    client_request = request;
     request->header().client.port = static_cast<uint16_t>(code); // hack
     data.updates.push_back(bb);
-    _memory_size += request->total_size();
 }
 
 /*static*/ mutation_ptr mutation::read_from(message_ptr& reader)
@@ -61,8 +59,7 @@ void mutation::add_client_request(task_code code, message_ptr& request)
         memcpy(buf, it->data(), it->length());                              
         ::dsn::blob bb((const char *)buf, 0, it->length());
         message_ptr msg(new message(bb, false));
-        mu->client_requests.push_back(msg);
-        mu->_memory_size += msg->total_size();
+        mu->client_request = msg;
     }
 
     mu->_from_message = reader;

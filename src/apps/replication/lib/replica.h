@@ -124,7 +124,6 @@ private:
         
     /////////////////////////////////////////////////////////////////
     // 2pc
-    void on_mutation_pending_timeout(mutation_ptr& mu);
     void init_prepare(mutation_ptr& mu);
     void send_prepare_message(const end_point& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds);
     void on_append_log_completed(mutation_ptr& mu, uint32_t err, uint32_t size);

@@ -45,8 +45,17 @@ namespace dsn {
                 virtual int  flush(bool force);
 
                 // helper routines to accelerate learning
-                virtual int get_learn_state(decree start, const blob& learnRequest, __out_param learn_state& state);
+                virtual int get_learn_state(decree start, const blob& learn_req, __out_param learn_state& state);
                 virtual int apply_learn_state(learn_state& state);
+
+                //
+                virtual ::dsn::replication::decree last_committed_decree() const {
+                    return _last_committed_decree.load();
+                }
+                virtual ::dsn::replication::decree last_durable_decree() const {
+                    return _last_durable_decree.load();
+                }
+
 
             private:
                 void recover();
@@ -57,6 +66,9 @@ namespace dsn {
                 simple_kv _store;
                 zlock    _lock;
                 std::string _learnFileName;
+
+                std::atomic<decree> _last_committed_decree;
+                std::atomic<decree> _last_durable_decree;
             };
 
         }

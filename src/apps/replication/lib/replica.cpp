@@ -133,9 +133,9 @@ void replica::execute_mutation(mutation_ptr& mu)
         bool ack_client = (status() == PS_PRIMARY);
         if (ack_client)
         {
-            if (mu->client_requests.size() == 0)
+            if (mu->client_request == nullptr)
                 ack_client = false;
-            else if ((*mu->client_requests.begin())->header().from_address.ip == 0)
+            else if (mu->client_request->header().from_address.ip == 0)
                 ack_client = false;
         }
         err = _app->write_internal(mu, ack_client); 

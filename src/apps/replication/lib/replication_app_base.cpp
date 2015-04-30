@@ -39,8 +39,6 @@ replication_app_base::replication_app_base(replica* replica, configuration_ptr& 
 {
     _dir = replica->dir();
     _replica = replica;
-    _last_committed_decree = 0;
-    _last_durable_decree = 0;
 }
 
 int replication_app_base::write_internal(mutation_ptr& mu, bool ack_client)
@@ -48,16 +46,18 @@ int replication_app_base::write_internal(mutation_ptr& mu, bool ack_client)
     dassert (mu->data.header.decree == last_committed_decree() + 1, "");
 
     int err = 0;
-    for (auto& msg : mu->client_requests)
-    {
-        dispatch_rpc_call(
-            static_cast<int>(msg->header().client.port), // hack
-            msg,
-            ack_client
-            );
-    }
+    auto& msg = mu->client_request;
+    dispatch_rpc_call(
+        static_cast<int>(msg->header().client.port), // hack
+        msg,
+        ack_client
+        );
 
-    ++_last_committed_decree;    
+    if (0 == err)
+    {
+        dassert(mu->data.header.decree == last_committed_decree(), "");
+    }    
+
     return err;
 }
 

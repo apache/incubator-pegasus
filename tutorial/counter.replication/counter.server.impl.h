@@ -33,6 +33,12 @@ namespace dsn {
             virtual int  get_learn_state(decree start, const blob& learn_request, __out_param learn_state& state);  // must be thread-safe
             virtual int  apply_learn_state(learn_state& state);  // must be thread-safe, and last_committed_decree must equal to last_durable_decree after learning
 
+			virtual ::dsn::replication::decree last_committed_decree() const {
+				return _last_committed_decree.load();
+			}
+			virtual ::dsn::replication::decree last_durable_decree() const {
+				return _last_durable_decree.load();
+			}
         private:
             void recover();
             void recover(const std::string& name, decree version);
@@ -40,6 +46,9 @@ namespace dsn {
         private:
             ::dsn::service::zlock _lock;
             std::map<std::string, int32_t> _counters;
+			
+			std::atomic<decree> _last_committed_decree;
+			std::atomic<decree> _last_durable_decree;
         };
     }
 }

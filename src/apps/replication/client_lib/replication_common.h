@@ -53,10 +53,7 @@ public:
     int32_t preapre_list_max_size_mb;
     int32_t staleness_for_commit;
     int32_t staleness_for_start_prepare_for_potential_secondary;
-    int32_t mutation_max_size_mb;
-    int32_t mutation_max_pending_time_ms;
     int32_t mutation_2pc_min_replica_count;
-    bool request_batch_disabled;
     bool group_check_disabled;
     int32_t gc_interval_ms;
     bool gc_disabled;

@@ -41,50 +41,10 @@ void replica::on_client_write(int code, message_ptr& request)
         return;
     }
 
-    if (false == _options.request_batch_disabled)
-    {
-        if (_primary_states.pending_mutation == nullptr)
-        {
-            _primary_states.pending_mutation = new_mutation(invalid_decree);
-        }
-        
-        if (_primary_states.pending_mutation_task == nullptr)
-        {
-            _primary_states.pending_mutation_task = tasking::enqueue(
-                LPC_MUTATION_PENDING_TIMER,
-                this,
-                std::bind(&replica::on_mutation_pending_timeout, this, _primary_states.pending_mutation),
-                gpid_to_hash(get_gpid()),
-                _options.mutation_max_pending_time_ms
-                );    
-        }
+    mutation_ptr mu = new_mutation(_prepare_list->max_decree() + 1);
+    mu->set_client_request(code, request);
+    init_prepare(mu);
 
-        _primary_states.pending_mutation->add_client_request(code, request);
-
-        if (_primary_states.pending_mutation->memory_size() >= _options.mutation_max_size_mb * 1024 * 1024)
-        {
-            init_prepare(_primary_states.pending_mutation);
-            _primary_states.do_cleanup_pending_mutations();
-        }
-    }
-    else
-    {
-        mutation_ptr mu = new_mutation(_prepare_list->max_decree() + 1);
-        mu->add_client_request(code, request);
-        init_prepare(mu);
-    }
-}
-
-void replica::on_mutation_pending_timeout(mutation_ptr& mu)
-{
-    check_hashed_access();
-
-    dassert (_primary_states.pending_mutation == mu, "");
-    dassert (PS_PRIMARY == status(), "");
-
-    init_prepare(_primary_states.pending_mutation);
-    _primary_states.pending_mutation = nullptr;
-    _primary_states.pending_mutation_task = nullptr;
 }
 
 void replica::init_prepare(mutation_ptr& mu)
@@ -125,7 +85,7 @@ void replica::init_prepare(mutation_ptr& mu)
         goto ErrOut;
     }
         
-    ddebug( "%s: mutation %s init_prepare with %u client requests", name(), mu->name(), static_cast<int>(mu->client_requests.size()));
+    ddebug("%s: mutation %s init_prepare", name(), mu->name());
 
     //
     // TODO: bounded staleness on secondaries
@@ -172,10 +132,7 @@ void replica::init_prepare(mutation_ptr& mu)
     return;
 
 ErrOut:
-    for (auto it = mu->client_requests.begin(); it != mu->client_requests.end(); it++)
-    {
-        response_client_message(*it, err);
-    }
+    response_client_message(mu->client_request, err);
     return;
 }
 

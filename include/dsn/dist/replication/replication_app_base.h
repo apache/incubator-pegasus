@@ -62,16 +62,20 @@ public:
     //
     // helper routines to accelerate learning
     // 
-    virtual void prepare_learning_request(__out_param ::dsn::blob& learnRequest) {};
-    virtual int  get_learn_state(::dsn::replication::decree start, const ::dsn::blob& learnRequest, __out_param ::dsn::replication::learn_state& state) = 0;  // must be thread-safe
+    virtual void prepare_learning_request(__out_param ::dsn::blob& learn_req) {};
+    virtual int  get_learn_state(::dsn::replication::decree start, const ::dsn::blob& learn_req, __out_param ::dsn::replication::learn_state& state) = 0;  // must be thread-safe
     virtual int  apply_learn_state(::dsn::replication::learn_state& state) = 0;  // must be thread-safe, and last_committed_decree must equal to last_durable_decree after learning
+
+    //
+    // queries
+    //
+    virtual ::dsn::replication::decree last_committed_decree() const = 0;
+    virtual ::dsn::replication::decree last_durable_decree() const = 0;
             
 public:
     //
     // utility functions to be used by app
     //   
-    decree last_committed_decree() const { return _last_committed_decree; }
-    decree last_durable_decree() const  { return _last_durable_decree; }
     const std::string& dir() const {return _dir;}
 
 protected:
@@ -97,11 +101,7 @@ private:
     friend class replica;
     int  write_internal(mutation_ptr& mu, bool ack_client);
     void dispatch_rpc_call(int code, message_ptr& request, bool ack_client);
-
-protected:
-    std::atomic<decree> _last_durable_decree;
-    std::atomic<decree> _last_committed_decree;
-
+    
 private:
     std::string _dir;
     replica*    _replica;

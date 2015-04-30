@@ -42,7 +42,6 @@ public:
 
     decree  min_decree() const { return _start_decree; } 
     decree  max_decree() const { return _end_decree; }
-    long    total_size_in_bytes() const { return _total_size_bytes; }
     int     count() const { return _interval; }
 
 private:
@@ -50,7 +49,6 @@ private:
     int          _max_count;
     
     int          _interval;
-    long         _total_size_bytes;
 
     int          _start_idx;
     int          _end_idx;

@@ -30,7 +30,6 @@ mutation_cache::mutation_cache(decree init_decree, int max_count)
 {
     _max_count = max_count;
     _array.resize(max_count, nullptr);
-    _total_size_bytes = 0;
 
     reset(init_decree, false);
 }
@@ -76,10 +75,8 @@ int mutation_cache::put(mutation_ptr& mu)
         
     // update tracking data
     _interval += delta;
-    _total_size_bytes += mu->memory_size();
     if (old != nullptr)
     {
-        _total_size_bytes -= old->memory_size();
         old = nullptr;
     }
 
@@ -111,11 +108,6 @@ mutation_ptr mutation_cache::pop_min()
         _interval--;
         _start_idx = (_start_idx + 1) % _max_count;
         
-        if (mu != nullptr)
-        {
-            _total_size_bytes -= mu->memory_size();
-        }
-
         if (_interval == 0)
         {
             //TODO: FIXE ME LATER
@@ -141,7 +133,6 @@ void mutation_cache::reset(decree init_decree, bool clear_mutations)
     _start_decree = _end_decree = init_decree;
     _start_idx = _end_idx = 0;
     _interval = 0;    
-    _total_size_bytes = 0;
 
     if (clear_mutations)
     {

@@ -32,11 +32,8 @@ replication_options::replication_options()
     learn_timeout_ms = 30000;
     staleness_for_commit = 10;
     staleness_for_start_prepare_for_potential_secondary = 110;
-    mutation_max_size_mb = 15;
-    mutation_max_pending_time_ms = 20;
     mutation_2pc_min_replica_count = 1;
     preapre_list_max_size_mb = 250;
-    request_batch_disabled = false;
     group_check_internal_ms = 100000;
     group_check_disabled = false;
     gc_interval_ms = 30 * 1000; // 30000 milliseconds
@@ -94,16 +91,10 @@ void replication_options::initialize(configuration_ptr config)
         config->get_value<uint32_t>("replication", "staleness_for_commit", staleness_for_commit);
     staleness_for_start_prepare_for_potential_secondary =
         config->get_value<uint32_t>("replication", "staleness_for_start_prepare_for_potential_secondary", staleness_for_start_prepare_for_potential_secondary);
-    mutation_max_size_mb =
-        config->get_value<uint32_t>("replication", "mutation_max_size_mb", mutation_max_size_mb);
-    mutation_max_pending_time_ms =
-        config->get_value<uint32_t>("replication", "mutation_max_pending_time_ms", mutation_max_pending_time_ms);
     mutation_2pc_min_replica_count =
         config->get_value<uint32_t>("replication", "mutation_2pc_min_replica_count", mutation_2pc_min_replica_count);
     preapre_list_max_size_mb =
         config->get_value<uint32_t>("replication", "preapre_list_max_size_mb", preapre_list_max_size_mb);
-    request_batch_disabled =
-        config->get_value<bool>("replication", "request_batch_disabled", request_batch_disabled);
     group_check_internal_ms =
         config->get_value<uint32_t>("replication", "group_check_internal_ms", group_check_internal_ms);
     group_check_disabled =
