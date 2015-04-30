@@ -122,7 +122,7 @@ namespace dsn {
             _last_durable_decree = _last_committed_decree = version;
         }
 
-        int counter_service_impl::compact(bool force)
+        int counter_service_impl::flush(bool force)
         {
             zauto_lock l(_lock);
 
@@ -220,7 +220,7 @@ namespace dsn {
             _last_committed_decree = decree;
             _last_durable_decree = 0;
 
-            return compact(true);
+            return flush(true);
         }
     }
 }

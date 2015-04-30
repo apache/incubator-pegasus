@@ -25,7 +25,7 @@ namespace dsn {
             virtual int  close(bool clear_state); // must be thread-safe
 
             // update _last_durable_decree internally
-            virtual int  compact(bool force);  // must be thread-safe
+            virtual int  flush(bool force);  // must be thread-safe
 
             //
             // helper routines to accelerate learning

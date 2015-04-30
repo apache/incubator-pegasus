@@ -40,13 +40,13 @@ using namespace ::dsn::service;
 class replication_app_base
 {
 public:
-    template <typename T> static replication_app_base* create(replica* replica, configuration_ptr& config)
+    template <typename T> static replication_app_base* create(::dsn::replication::replica* replica, ::dsn::configuration_ptr& config)
     {
         return new T(replica, config);
     }
 	
 public:
-    replication_app_base(replica* replica, configuration_ptr& config);
+    replication_app_base(::dsn::replication::replica* replica, ::dsn::configuration_ptr& config);
     virtual ~replication_app_base() {}
 
     //
@@ -57,14 +57,14 @@ public:
     virtual int  close(bool clear_state) = 0; // must be thread-safe
 
     // update _last_durable_decree internally
-    virtual int  compact(bool force) = 0;  // must be thread-safe
+    virtual int  flush(bool force) = 0;  // must be thread-safe
     
     //
     // helper routines to accelerate learning
     // 
-    virtual void prepare_learning_request(__out_param blob& learnRequest) {};
-    virtual int  get_learn_state(decree start, const blob& learnRequest, __out_param learn_state& state) = 0;  // must be thread-safe
-    virtual int  apply_learn_state(learn_state& state) = 0;  // must be thread-safe, and last_committed_decree must equal to last_durable_decree after learning
+    virtual void prepare_learning_request(__out_param ::dsn::blob& learnRequest) {};
+    virtual int  get_learn_state(::dsn::replication::decree start, const ::dsn::blob& learnRequest, __out_param ::dsn::replication::learn_state& state) = 0;  // must be thread-safe
+    virtual int  apply_learn_state(::dsn::replication::learn_state& state) = 0;  // must be thread-safe, and last_committed_decree must equal to last_durable_decree after learning
             
 public:
     //

@@ -42,7 +42,7 @@ namespace dsn {
 
                 virtual int  open(bool create_new);
                 virtual int  close(bool clear_state);
-                virtual int  compact(bool force);
+                virtual int  flush(bool force);
 
                 // helper routines to accelerate learning
                 virtual int get_learn_state(decree start, const blob& learnRequest, __out_param learn_state& state);

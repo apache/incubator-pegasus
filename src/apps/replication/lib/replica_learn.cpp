@@ -278,7 +278,7 @@ void replica::on_learn_remote_state(std::shared_ptr<learn_response> resp)
 
         if (err == ERR_SUCCESS && _app->last_committed_decree() >= resp->commit_decree)
         {
-            err = _app->compact(true);
+            err = _app->flush(true);
             if (err == ERR_SUCCESS)
             {
                 dassert (_app->last_committed_decree() == _app->last_durable_decree(), "");
