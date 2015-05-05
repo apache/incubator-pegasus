@@ -35,6 +35,8 @@ namespace dsn {
 
         void split_args(const char* args, __out_param std::vector<std::string>& sargs, char splitter)
         {
+            sargs.clear();
+
             std::string v(args);
 
             int lastPos = 0;
@@ -46,7 +48,9 @@ namespace dsn {
                     std::string s = v.substr(lastPos, pos - lastPos);
                     if (s.length() > 0)
                     {
-                        sargs.push_back(s);
+                        std::string s2 = trim_string((char*)s.c_str());
+                        if (s2.length() > 0)
+                            sargs.push_back(s2);
                     }
                     lastPos = static_cast<int>(pos + 1);
                 }
@@ -55,7 +59,9 @@ namespace dsn {
                     std::string s = v.substr(lastPos);
                     if (s.length() > 0)
                     {
-                        sargs.push_back(s);
+                        std::string s2 = trim_string((char*)s.c_str());
+                        if (s2.length() > 0)
+                            sargs.push_back(s2);
                     }
                     break;
                 }

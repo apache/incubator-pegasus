@@ -34,6 +34,7 @@
 # include <dsn/internal/factory_store.h>
 # include <dsn/internal/nfs.h>
 # include <boost/filesystem.hpp>
+# include "command_manager.h"
 
 using namespace dsn::tools;
 
@@ -119,6 +120,17 @@ namespace dsn { namespace service {
                 service_app* app = it->second;
                 auto node = service_engine::instance().start_node(app->spec().id, app->name(), app->spec().ports);
                 app->set_service_node(node);
+            }
+
+            // start cli if necessary
+            if (config->get_value<bool>("core", "cli_local", true))
+            {
+                ::dsn::command_manager::instance().start_local_cli();
+            }
+
+            if (config->get_value<bool>("core", "cli_remote", true))
+            {
+                ::dsn::command_manager::instance().start_remote_cli();
             }
 
             // start the tool
