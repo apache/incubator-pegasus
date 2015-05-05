@@ -3,7 +3,7 @@
  *
  * Copyright (c) 2015 Microsoft Corporation
  * 
- * -=- Robust Distributed System Nucleus(rDSN) -=- 
+ * -=- Robust Distributed System Nucleus (rDSN) -=- 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
- # include <dsn/internal/aio_provider.h>
+# include <dsn/internal/aio_provider.h>
 # include "disk_engine.h"
 # include <dsn/internal/logging.h>
 
