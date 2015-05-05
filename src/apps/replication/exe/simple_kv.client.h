@@ -210,7 +210,7 @@ public:
             );
 	}
 
-	virtual void end_write2(
+	virtual void end_write2( 
 		::dsn::error_code err, 
 		std::shared_ptr<::dsn::replication::application::kv_pair>& pr, 
 		std::shared_ptr<int32_t>& resp)

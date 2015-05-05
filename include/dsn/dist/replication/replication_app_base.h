@@ -102,7 +102,7 @@ private:
     // routines for replica internal usage
     friend class replica;
     int  write_internal(mutation_ptr& mu, bool ack_client);
-    void dispatch_rpc_call(int code, message_ptr& request, bool ack_client);
+    int  dispatch_rpc_call(int code, message_ptr& request, bool ack_client);
     
 private:
     std::string _dir;

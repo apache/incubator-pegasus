@@ -106,7 +106,7 @@ namespace env
 
 namespace system
 {
-    extern bool run(const char* config);
+    extern bool run(const char* config, bool sleep_after_init);
     extern bool is_ready();
 
     namespace internal_use_only

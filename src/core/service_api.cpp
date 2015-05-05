@@ -35,6 +35,7 @@
 # include <dsn/internal/nfs.h>
 # include <boost/filesystem.hpp>
 # include "command_manager.h"
+# include <thread>
 
 using namespace dsn::tools;
 
@@ -47,7 +48,7 @@ namespace dsn { namespace service {
     class system_runner
     {
     public:
-        static bool run(const char* config_file)
+        static bool run(const char* config_file, bool sleep_after_init)
         {
             configuration_ptr config(new configuration(config_file));
             service_spec spec;
@@ -135,6 +136,16 @@ namespace dsn { namespace service {
 
             // start the tool
             s_tool->run();
+
+            //
+            if (sleep_after_init)
+            {
+                #ifdef max
+                #undef max
+                #endif
+                std::this_thread::sleep_for(std::chrono::hours::max());
+            }
+
             return true;
         }
     };
@@ -149,9 +160,9 @@ namespace system
         }
     }
     
-    bool run(const char* config_file)
+    bool run(const char* config_file, bool sleep_after_init)
     {
-        return ::dsn::service::system_runner::run(config_file);
+        return ::dsn::service::system_runner::run(config_file, sleep_after_init);
     }
 
     bool is_ready()

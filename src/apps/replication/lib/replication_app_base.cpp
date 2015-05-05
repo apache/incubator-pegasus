@@ -50,20 +50,15 @@ int replication_app_base::write_internal(mutation_ptr& mu, bool ack_client)
     int err = 0;
     auto& msg = mu->client_request;
     dispatch_rpc_call(
-        static_cast<int>(msg->header().client.port), // hack
+        mu->rpc_code,
         msg,
         ack_client
         );
-
-    if (0 == err)
-    {
-        dassert(mu->data.header.decree == last_committed_decree(), "");
-    }    
-
+    
     return err;
 }
 
-void replication_app_base::dispatch_rpc_call(int code, message_ptr& request, bool ack_client)
+int replication_app_base::dispatch_rpc_call(int code, message_ptr& request, bool ack_client)
 {
     auto it = _handlers.find(code);
     if (it != _handlers.end())

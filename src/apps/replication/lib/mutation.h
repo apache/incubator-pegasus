@@ -67,6 +67,7 @@ public:
 
     // data
     mutation_data  data;
+    int            rpc_code;
     message_ptr    client_request;
         
 private:

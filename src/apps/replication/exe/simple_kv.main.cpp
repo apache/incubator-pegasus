@@ -57,8 +57,6 @@ int main(int argc, char** argv)
 #endif
 
 	// specify what services and tools will run in config file, then run
-	dsn::service::system::run("config.ini");
-	::getchar();
-
+	dsn::service::system::run("config.ini", true);
 	return 0;
 }

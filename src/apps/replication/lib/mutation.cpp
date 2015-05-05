@@ -30,6 +30,7 @@ namespace dsn { namespace replication {
 
 mutation::mutation()
 {
+    rpc_code = 0;
     _private0 = 0; 
     _not_logged = 1;
 }
@@ -46,7 +47,7 @@ void mutation::set_client_request(task_code code, message_ptr& request)
     blob bb(buf, static_cast<int>(buffer.data() - buffer.buffer().get()), buffer.length());
 
     client_request = request;
-    request->header().client.port = static_cast<uint16_t>(code); // hack
+    rpc_code = code;
     data.updates.push_back(bb);
 }
 
@@ -54,6 +55,8 @@ void mutation::set_client_request(task_code code, message_ptr& request)
 {
     mutation_ptr mu(new mutation());
     unmarshall(reader, mu->data);
+
+    unmarshall(reader, mu->rpc_code);
 
     for (auto it = mu->data.updates.begin(); it != mu->data.updates.end(); it++)
     {        
@@ -74,6 +77,7 @@ void mutation::set_client_request(task_code code, message_ptr& request)
 void mutation::write_to(message_ptr& writer)
 {
     marshall(writer, data);
+    marshall(writer, rpc_code);
 }
 
 int mutation::clear_prepare_or_commit_tasks()

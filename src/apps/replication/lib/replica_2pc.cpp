@@ -46,7 +46,6 @@ void replica::on_client_write(int code, message_ptr& request)
     mutation_ptr mu = new_mutation(_prepare_list->max_decree() + 1);
     mu->set_client_request(code, request);
     init_prepare(mu);
-
 }
 
 void replica::init_prepare(mutation_ptr& mu)
