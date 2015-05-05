@@ -41,7 +41,7 @@ namespace dsn {
                 std::shared_ptr<TRequest>& req,
 
                 // callback
-                servicelet* context,
+                servicelet* owner,
                 std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&, const end_point&)> callback,
                 int request_hash = 0,
                 int timeout_milliseconds = 0,
@@ -93,7 +93,7 @@ namespace dsn {
                 std::shared_ptr<TRequest>& req,
 
                 // callback
-                servicelet* context,
+                servicelet* owner,
                 std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&, const end_point&)> callback,
                 int request_hash,
                 int timeout_milliseconds,
@@ -107,7 +107,7 @@ namespace dsn {
                     first_server,
                     servers,
                     request,
-                    context,
+                    owner,
                     std::bind(&internal_use_only::rpc_replicated_callback,
                     std::placeholders::_1,
                     std::placeholders::_2,

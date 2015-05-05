@@ -55,7 +55,7 @@ public:
 
     virtual void on_ping(const beacon_msg& beacon, ::dsn::service::rpc_replier<beacon_ack>& reply);
 
-    virtual void end_ping(::dsn::error_code err, const beacon_ack& ack);
+    virtual void end_ping(::dsn::error_code err, const beacon_ack& ack, void* context);
 
 public:
     int  start(

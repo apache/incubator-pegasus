@@ -61,7 +61,8 @@ public:
 	
 	// - asynchronous with on-stack ::dsn::fd::beacon_msg and ::dsn::fd::beacon_ack 
 	::dsn::rpc_response_task_ptr begin_ping(
-		const ::dsn::fd::beacon_msg& beacon, 		
+		const ::dsn::fd::beacon_msg& beacon, 
+        void* context,
 		int timeout_milliseconds = 0, 
 		int reply_hash = 0,
 		int request_hash = 0,
@@ -73,6 +74,7 @@ public:
 					beacon, 
 					this, 
 					&failure_detector_client::end_ping, 
+                    context,
 					request_hash, 
 					timeout_milliseconds, 
 					reply_hash
@@ -81,7 +83,8 @@ public:
 
 	virtual void end_ping(
 		::dsn::error_code err, 
-		const ::dsn::fd::beacon_ack& resp)
+		const ::dsn::fd::beacon_ack& resp,
+        void* context)
 	{
 		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_FD_FAILURE_DETECTOR_PING err : " << err.to_string() << std::endl;
 		else

@@ -65,6 +65,7 @@ foreach ($keys as $k => $v)
             <?=$f->get_first_param()->name?>,
             nullptr,
             nullptr,
+			nullptr,
             timeout_milliseconds
             );
 		resp_task->wait();
@@ -77,7 +78,8 @@ foreach ($keys as $k => $v)
 	
 	// - asynchronous with on-stack <?=$f->get_first_param()->get_cpp_type()?> and <?=$f->get_cpp_return_type()?> 
 	::dsn::rpc_response_task_ptr begin_<?=$f->name?>(
-		const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 		
+		const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>,
+		void* context = nullptr,
 		int timeout_milliseconds = 0, 
 		int reply_hash = 0
 		)
@@ -88,6 +90,7 @@ foreach ($keys as $k => $v)
             <?=$f->get_first_param()->name?>,
             this,
             &<?=$svc->name?>_client::end_<?=$f->name?>, 
+			context,
             timeout_milliseconds,
 			reply_hash
             );
@@ -95,7 +98,8 @@ foreach ($keys as $k => $v)
 
 	virtual void end_<?=$f->name?>(
 		::dsn::error_code err, 
-		const <?=$f->get_cpp_return_type()?>& resp)
+		const <?=$f->get_cpp_return_type()?>& resp,
+		void* context)
 	{
 		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply <?=$f->get_rpc_code()?> err : " << err.to_string() << std::endl;
 		else

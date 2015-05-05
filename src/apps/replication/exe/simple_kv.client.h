@@ -61,6 +61,7 @@ public:
             key,
             nullptr,
             nullptr,
+            nullptr,
             timeout_milliseconds
             );
 		resp_task->wait();
@@ -74,6 +75,7 @@ public:
 	// - asynchronous with on-stack std::string and std::string 
 	::dsn::rpc_response_task_ptr begin_read(
 		const std::string& key, 		
+        void* context = nullptr,
 		int timeout_milliseconds = 0, 
 		int reply_hash = 0
 		)
@@ -84,6 +86,7 @@ public:
             key,
             this,
             &simple_kv_client::end_read, 
+            context,
             timeout_milliseconds,
 			reply_hash
             );
@@ -91,7 +94,8 @@ public:
 
 	virtual void end_read(
 		::dsn::error_code err, 
-		const std::string& resp)
+		const std::string& resp,
+        void* context)
 	{
 		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_READ err : " << err.to_string() << std::endl;
 		else
@@ -145,6 +149,7 @@ public:
             pr,
             nullptr,
             nullptr,
+            nullptr,
             timeout_milliseconds
             );
 		resp_task->wait();
@@ -157,7 +162,8 @@ public:
 	
 	// - asynchronous with on-stack ::dsn::replication::application::kv_pair and int32_t 
 	::dsn::rpc_response_task_ptr begin_write(
-		const ::dsn::replication::application::kv_pair& pr, 		
+		const ::dsn::replication::application::kv_pair& pr, 	
+        void* context = nullptr,
 		int timeout_milliseconds = 0, 
 		int reply_hash = 0
 		)
@@ -168,6 +174,7 @@ public:
             pr,
             this,
             &simple_kv_client::end_write, 
+            context,
             timeout_milliseconds,
 			reply_hash
             );
@@ -175,7 +182,8 @@ public:
 
 	virtual void end_write(
 		::dsn::error_code err, 
-		const int32_t& resp)
+		const int32_t& resp,
+        void* context)
 	{
 		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_WRITE err : " << err.to_string() << std::endl;
 		else
@@ -229,6 +237,7 @@ public:
             pr,
             nullptr,
             nullptr,
+            nullptr,
             timeout_milliseconds
             );
 		resp_task->wait();
@@ -242,6 +251,7 @@ public:
 	// - asynchronous with on-stack ::dsn::replication::application::kv_pair and int32_t 
 	::dsn::rpc_response_task_ptr begin_append(
 		const ::dsn::replication::application::kv_pair& pr, 		
+        void* context = nullptr,
 		int timeout_milliseconds = 0, 
 		int reply_hash = 0
 		)
@@ -252,6 +262,7 @@ public:
             pr,
             this,
             &simple_kv_client::end_append, 
+            context,
             timeout_milliseconds,
 			reply_hash
             );
@@ -259,7 +270,8 @@ public:
 
 	virtual void end_append(
 		::dsn::error_code err, 
-		const int32_t& resp)
+		const int32_t& resp,
+        void* context)
 	{
 		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_APPEND err : " << err.to_string() << std::endl;
 		else

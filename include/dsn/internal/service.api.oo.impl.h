@@ -118,13 +118,15 @@ namespace dsn {
                 public:
                     service_rpc_response_task3(
                         servicelet* svc,
-                        std::function<void(error_code, const TResponse&)>& callback,
+                        std::function<void(error_code, const TResponse&, void*)>& callback,
+                        void* context,
                         message_ptr& request,
                         int hash = 0
                         )
                         : rpc_response_task(request, hash), service_context_manager(svc, this)
                     {
                         _callback = callback;
+                        _context = context;
                     }
 
                     virtual void on_response(error_code err, message_ptr& request, message_ptr& response)
@@ -135,18 +137,19 @@ namespace dsn {
                             if (err == ERR_SUCCESS)
                             {
                                 unmarshall(response->reader(), resp);
-                                _callback(err, resp);
+                                _callback(err, resp, _context);
                             }
                             else
                             {
-                                _callback(err, resp);
+                                _callback(err, resp, _context);
                             }
                             _callback = nullptr;
                         }
                     }
 
                 private:
-                    std::function<void(error_code, const TResponse&)> _callback;
+                    std::function<void(error_code, const TResponse&, void*)> _callback;
+                    void* _context;
                 };
 
                 class service_rpc_response_task4 : public rpc_response_task, public service_context_manager
@@ -183,14 +186,16 @@ namespace dsn {
                 public:
                     service_rpc_response_task5(
                         T* svc,
-                        void (T::*callback)(error_code, const TResponse&),
-                        message_ptr& request,
+                        void (T::*callback)(error_code, const TResponse&, void*),
+                        void* context,
+                        message_ptr& request,                        
                         int hash = 0
                         )
                         : rpc_response_task(request, hash), service_context_manager(svc, this)
                     {
                         _svc = svc;
                         _callback = callback;
+                        _context = context;
                     }
 
                     virtual void on_response(error_code err, message_ptr& request, message_ptr& response)
@@ -199,17 +204,18 @@ namespace dsn {
                         if (err == ERR_SUCCESS)
                         {
                             unmarshall(response->reader(), resp);
-                            (_svc->*_callback)(err, resp);
+                            (_svc->*_callback)(err, resp, _context);
                         }
                         else
                         {
-                            (_svc->*_callback)(err, resp);
+                            (_svc->*_callback)(err, resp, _context);
                         }
                     }
 
                 private:
                     T* _svc;
-                    void (T::*_callback)(error_code, const TResponse&);
+                    void* _context;
+                    void (T::*_callback)(error_code, const TResponse&, void*);
                 };
             }
 
@@ -232,7 +238,7 @@ namespace dsn {
                 const end_point& server,
                 task_code code,
                 std::shared_ptr<TRequest>& req,
-                T* context,
+                T* owner,
                 void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&),
                 int request_hash/* = 0*/,
                 int timeout_milliseconds /*= 0*/,
@@ -243,7 +249,7 @@ namespace dsn {
                 marshall(msg->writer(), *req);
 
                 rpc_response_task_ptr resp_task(new internal_use_only::service_rpc_response_task1<T, TRequest, TResponse>(
-                    context,
+                    owner,
                     req,
                     callback,
                     msg,
@@ -258,7 +264,7 @@ namespace dsn {
                 const end_point& server,
                 task_code code,
                 std::shared_ptr<TRequest>& req,
-                servicelet* context,
+                servicelet* owner,
                 std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
                 int request_hash/* = 0*/,
                 int timeout_milliseconds /*= 0*/,
@@ -269,7 +275,7 @@ namespace dsn {
                 marshall(msg->writer(), *req);
 
                 rpc_response_task_ptr resp_task(new internal_use_only::service_rpc_response_task2<TRequest, TResponse>(
-                    context,
+                    owner,
                     req,
                     callback,
                     msg,
@@ -284,8 +290,9 @@ namespace dsn {
                 const end_point& server,
                 task_code code,
                 const TRequest& req,
-                T* context,
-                void(T::*callback)(error_code, const TResponse&),
+                T* owner,
+                void(T::*callback)(error_code, const TResponse&, void*),
+                void* context,
                 int request_hash/* = 0*/,
                 int timeout_milliseconds /*= 0*/,
                 int reply_hash /*= 0*/
@@ -295,8 +302,9 @@ namespace dsn {
                 marshall(msg->writer(), req);
 
                 rpc_response_task_ptr resp_task(new internal_use_only::service_rpc_response_task5<T, TResponse>(
-                    context,
+                    owner,
                     callback,
+                    context,
                     msg,
                     reply_hash
                     ));
@@ -309,8 +317,9 @@ namespace dsn {
                 const end_point& server,
                 task_code code,
                 const TRequest& req,
-                servicelet* context,
-                std::function<void(error_code, const TResponse&)> callback,
+                servicelet* owner,
+                std::function<void(error_code, const TResponse&, void*)> callback,
+                void* context,
                 int request_hash/* = 0*/,
                 int timeout_milliseconds /*= 0*/,
                 int reply_hash /*= 0*/
@@ -320,8 +329,9 @@ namespace dsn {
                 marshall(msg->writer(), req);
 
                 rpc_response_task_ptr resp_task(new internal_use_only::service_rpc_response_task3<TResponse>(
-                    context,
+                    owner,
                     callback,
+                    context,
                     msg,
                     reply_hash
                     ));
@@ -361,10 +371,10 @@ namespace dsn {
                 std::function<bool(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> _callback;
             };
             
-            inline layered_rpc::layered_rpc(servicelet* context, message_ptr& request, int hash)
+            inline layered_rpc::layered_rpc(servicelet* owner, message_ptr& request, int hash)
                 : 
                 rpc_response_task(request, hash),
-                service_context_manager(context, this)
+                service_context_manager(owner, this)
             {
             }
 
@@ -372,7 +382,7 @@ namespace dsn {
             inline /*static*/ layered_rpc& layered_rpc::first(
                 task_code code,
                 std::shared_ptr<TRequest>& req,
-                servicelet* context,
+                servicelet* owner,
                 std::function<bool(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
                 int request_hash,
                 int timeout_milliseconds,
@@ -380,7 +390,7 @@ namespace dsn {
                 )
             {
                 message_ptr request = message::create_request(code, timeout_milliseconds, request_hash);
-                layered_rpc *lr = new layered_rpc(context, request, reply_hash);
+                layered_rpc *lr = new layered_rpc(owner, request, reply_hash);
                 
                 auto h = new layered_rpc_handler_typed<TRequest, TResponse>(req, callback);
                 lr->_handlers.push_back(h);

@@ -44,17 +44,17 @@ namespace dsn {
             template<typename T> // where T : public virtual servicelet
             inline task_ptr enqueue(
                 task_code evt,
-                T* context,
+                T* owner,
                 void (T::*callback)(),
                 int hash = 0,
                 int delay_milliseconds = 0,
                 int timer_interval_milliseconds = 0
                 )
             {
-                task_handler h = std::bind(callback, context);
+                task_handler h = std::bind(callback, owner);
                 return enqueue(
                     evt,
-                    context,
+                    owner,
                     h,
                     hash,
                     delay_milliseconds,
@@ -91,7 +91,7 @@ namespace dsn {
                 const end_point& server,
                 task_code code,
                 std::shared_ptr<TRequest>& req,
-                T* context,
+                T* owner,
                 void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&),
                 int request_hash = 0,
                 int timeout_milliseconds = 0,
@@ -105,7 +105,7 @@ namespace dsn {
                 const end_point& server,
                 task_code code,
                 std::shared_ptr<TRequest>& req,
-                servicelet* context,
+                servicelet* owner,
                 std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
                 int request_hash = 0,
                 int timeout_milliseconds = 0,
@@ -113,28 +113,30 @@ namespace dsn {
                 );
 
             // callback type 5
-            //   void (T::*)(error_code, const TResponse&);
+            //   void (T::*)(error_code, const TResponse&, void*);
             template<typename T, typename TRequest, typename TResponse>
             inline rpc_response_task_ptr call_typed(
                 const end_point& server,
                 task_code code,
                 const TRequest& req,
-                T* context,
-                void(T::*callback)(error_code, const TResponse&),
+                T* owner,
+                void(T::*callback)(error_code, const TResponse&, void*),
+                void* context,
                 int request_hash = 0,
                 int timeout_milliseconds = 0,
                 int reply_hash = 0
                 );
 
             // callback type 3:
-            //  std::function<void(error_code, const TResponse&)>
+            //  std::function<void(error_code, const TResponse&, void*)>
             template<typename TRequest, typename TResponse>
             rpc_response_task_ptr call_typed(
                 const end_point& server,
                 task_code code,
                 const TRequest& req,
-                servicelet* context,
-                std::function<void(error_code, const TResponse&)> callback,
+                servicelet* owner,
+                std::function<void(error_code, const TResponse&, void*)> callback,
+                void* context,
                 int request_hash = 0,
                 int timeout_milliseconds = 0,
                 int reply_hash = 0
@@ -145,7 +147,7 @@ namespace dsn {
             rpc_response_task_ptr call(
                 const end_point& server,
                 message_ptr& request,
-                servicelet* context,
+                servicelet* owner,
                 std::function<void(error_code, message_ptr&, message_ptr&)> callback,
                 int reply_hash = 0
                 );
@@ -157,14 +159,14 @@ namespace dsn {
             class layered_rpc : public rpc_response_task, public service_context_manager
             {
             public:
-                layered_rpc(servicelet* context, message_ptr& request, int hash = 0);
+                layered_rpc(servicelet* owner, message_ptr& request, int hash = 0);
                 virtual ~layered_rpc();
 
                 template<typename TRequest, typename TResponse>
                 static layered_rpc& first(
                     task_code code,
                     std::shared_ptr<TRequest>& req,
-                    servicelet* context,
+                    servicelet* owner,
                     std::function<bool(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
                     int request_hash = 0,
                     int timeout_milliseconds = 0,
@@ -203,7 +205,7 @@ namespace dsn {
                 int count,
                 uint64_t offset,
                 task_code callback_code,
-                servicelet* context,
+                servicelet* owner,
                 aio_handler callback,
                 int hash = 0
                 );
@@ -214,7 +216,7 @@ namespace dsn {
                 int count,
                 uint64_t offset,
                 task_code callback_code,
-                servicelet* context,
+                servicelet* owner,
                 aio_handler callback,
                 int hash = 0
                 );
@@ -226,13 +228,13 @@ namespace dsn {
                 int count,
                 uint64_t offset,
                 task_code callback_code,
-                T* context,
+                T* owner,
                 void(T::*callback)(error_code, uint32_t),
                 int hash = 0
                 )
             {
                 aio_handler h = std::bind(callback, context, std::placeholders::_1, std::placeholders::_2);
-                return read(hFile, buffer, count, offset, callback_code, context, h, hash);
+                return read(hFile, buffer, count, offset, callback_code, owner, h, hash);
             }
 
             template<typename T>
@@ -242,13 +244,13 @@ namespace dsn {
                 int count,
                 uint64_t offset,
                 task_code callback_code,
-                T* context,
+                T* owner,
                 void(T::*callback)(error_code, uint32_t),
                 int hash = 0
                 )
             {
                 aio_handler h = std::bind(callback, context, std::placeholders::_1, std::placeholders::_2);
-                return write(hFile, buffer, count, offset, callback_code, context, h, hash);
+                return write(hFile, buffer, count, offset, callback_code, owner, h, hash);
             }
 
             aio_task_ptr copy_remote_files(
@@ -258,7 +260,7 @@ namespace dsn {
                 std::string& dest_dir,
                 bool overwrite,
                 task_code callback_code,
-                servicelet* context,
+                servicelet* owner,
                 aio_handler callback,
                 int hash = 0
                 );
@@ -269,7 +271,7 @@ namespace dsn {
                 std::string& dest_dir,
                 bool overwrite,
                 task_code callback_code,
-                servicelet* context,
+                servicelet* owner,
                 aio_handler callback,
                 int hash = 0
                 )
@@ -277,7 +279,7 @@ namespace dsn {
                 std::vector<std::string> files;
                 return copy_remote_files(
                     remote, source_dir, files, dest_dir, overwrite,
-                    callback_code, context, callback, hash
+                    callback_code, owner, callback, hash
                     );
             }
         }

@@ -60,7 +60,7 @@ namespace dsn { namespace replication {
             std::shared_ptr<TRequest>& req,
 
             // callback
-            T* context,
+            T* owner,
             void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&),
 
             // other specific parameters   
@@ -76,7 +76,7 @@ namespace dsn { namespace replication {
                 task = new rpc_response_task_empty(msg); 
             else 
                 task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task1<T, TRequest, TResponse>(
-                context,
+                owner,
                 req,
                 callback,
                 msg
@@ -94,7 +94,7 @@ namespace dsn { namespace replication {
             std::shared_ptr<TRequest>& req,
 
             // callback
-            servicelet* context,
+            servicelet* owner,
             std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
 
             // other specific parameters   
@@ -110,7 +110,7 @@ namespace dsn { namespace replication {
                 task = new rpc_response_task_empty(msg);
             else
                 task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task2<TRequest, TResponse>(
-                context,
+                owner,
                 req,
                 callback,
                 msg
@@ -128,8 +128,9 @@ namespace dsn { namespace replication {
             const TRequest& req,
 
             // callback
-            T* context,
-            void (T::*callback)(error_code, const TResponse&),
+            T* owner,
+            void (T::*callback)(error_code, const TResponse&, void*),
+            void* context,
 
             // other specific parameters   
             int timeout_milliseconds = 0,
@@ -144,8 +145,9 @@ namespace dsn { namespace replication {
                 task = new rpc_response_task_empty(msg);
             else
                 task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task5<T, TResponse>(
-                context,
+                owner,
                 callback,
+                context,
                 msg
                 );
             auto rc = create_write_context(partition_index, code, task, reply_hash);
@@ -161,8 +163,9 @@ namespace dsn { namespace replication {
             const TRequest& req,
 
             // callback
-            servicelet* context,
-            std::function<void(error_code, const TResponse&)> callback,
+            servicelet* owner,
+            std::function<void(error_code, const TResponse&, void*)> callback,
+            void* context,
 
             // other specific parameters   
             int timeout_milliseconds = 0,
@@ -177,8 +180,9 @@ namespace dsn { namespace replication {
                 task = new rpc_response_task_empty(msg);
             else
                 task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task3<TResponse>(
-                context,
+                owner,
                 callback,
+                context,
                 msg
                 );
             auto rc = create_write_context(partition_index, code, task, reply_hash);
@@ -194,7 +198,7 @@ namespace dsn { namespace replication {
             std::shared_ptr<TRequest>& req,
 
             // callback
-            T* context,
+            T* owner,
             void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&),
 
             // other specific parameters   
@@ -212,7 +216,7 @@ namespace dsn { namespace replication {
                 task = new rpc_response_task_empty(msg);
             else
                 task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task1<T, TRequest, TResponse>(
-                context,
+                owner,
                 req,
                 callback,
                 msg
@@ -230,7 +234,7 @@ namespace dsn { namespace replication {
             std::shared_ptr<TRequest>& req,
 
             // callback
-            servicelet* context,
+            servicelet* owner,
             std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
 
             // other specific parameters   
@@ -248,7 +252,7 @@ namespace dsn { namespace replication {
                 task = new rpc_response_task_empty(msg);
             else
                 task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task2<TRequest, TResponse>(
-                context,
+                owner,
                 req,
                 callback,
                 msg
@@ -266,8 +270,9 @@ namespace dsn { namespace replication {
             const TRequest& req,
 
             // callback
-            T* context,
-            void (T::*callback)(error_code, const TResponse&),
+            T* owner,
+            void (T::*callback)(error_code, const TResponse&, void*),
+            void* context,
 
             // other specific parameters   
             int timeout_milliseconds = 0,
@@ -284,8 +289,9 @@ namespace dsn { namespace replication {
                 task = new rpc_response_task_empty(msg);
             else
                 task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task5<T, TResponse>(
-                context,
+                owner,
                 callback,
+                context,
                 msg
                 );
             auto rc = create_read_context(partition_index, code, task, read_semantic, snapshot_decree, reply_hash);
@@ -301,8 +307,9 @@ namespace dsn { namespace replication {
             const TRequest& req,
 
             // callback
-            servicelet* context,
-            std::function<void(error_code, const TResponse&)> callback,
+            servicelet* owner,
+            std::function<void(error_code, const TResponse&, void*)> callback,
+            void* context,
 
             // other specific parameters   
             int timeout_milliseconds = 0,
@@ -319,8 +326,9 @@ namespace dsn { namespace replication {
                 task = new rpc_response_task_empty(msg);
             else
                 task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task3<TResponse>(
-                context,
+                owner,
                 callback,
+                context,
                 msg
                 );
             auto rc = create_read_context(partition_index, code, task, read_semantic, snapshot_decree, reply_hash);

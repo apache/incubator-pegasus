@@ -57,9 +57,9 @@ end_point replication_failure_detector::find_next_meta_server(end_point current)
     }
 }
 
-void replication_failure_detector::end_ping(::dsn::error_code err, const fd::beacon_ack& ack)
+void replication_failure_detector::end_ping(::dsn::error_code err, const fd::beacon_ack& ack, void* context)
 {
-    failure_detector::end_ping(err, ack);
+    failure_detector::end_ping(err, ack, context);
 
     zauto_lock l(_meta_lock);
     

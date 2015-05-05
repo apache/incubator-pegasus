@@ -55,7 +55,8 @@ public:
 	
 	// - asynchronous with on-stack <?=$f->get_first_param()->get_cpp_type()?> and <?=$f->get_cpp_return_type()?> 
 	::dsn::rpc_response_task_ptr begin_<?=$f->name?>(
-		const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 		
+		const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
+		void* context = nullptr,
 		int timeout_milliseconds = 0, 
 		int reply_hash = 0,
 		int request_hash = 0,
@@ -66,7 +67,8 @@ public:
 					<?=$f->get_rpc_code()?>, 
 					<?=$f->get_first_param()->name?>, 
 					this, 
-					&<?=$svc->name?>_client::end_<?=$f->name?>, 
+					&<?=$svc->name?>_client::end_<?=$f->name?>,
+					context,
 					request_hash, 
 					timeout_milliseconds, 
 					reply_hash
@@ -75,7 +77,8 @@ public:
 
 	virtual void end_<?=$f->name?>(
 		::dsn::error_code err, 
-		const <?=$f->get_cpp_return_type()?>& resp)
+		const <?=$f->get_cpp_return_type()?>& resp,
+		void* context)
 	{
 		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply <?=$f->get_rpc_code()?> err : " << err.to_string() << std::endl;
 		else

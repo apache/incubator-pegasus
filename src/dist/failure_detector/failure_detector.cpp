@@ -320,7 +320,7 @@ void failure_detector::on_ping(const beacon_msg& beacon, ::dsn::service::rpc_rep
     reply(ack);
 }
 
-void failure_detector::end_ping(::dsn::error_code err, const beacon_ack& ack)
+void failure_detector::end_ping(::dsn::error_code err, const beacon_ack& ack, void* context)
 {
     if (err) return;
 
@@ -472,6 +472,7 @@ void failure_detector::send_beacon(const end_point& target, uint64_t time)
 
     begin_ping(
         beacon,
+        nullptr,
         0,
         static_cast<int>(_check_interval_milliseconds),
         0,

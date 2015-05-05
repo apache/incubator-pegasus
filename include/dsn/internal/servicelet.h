@@ -77,28 +77,28 @@ namespace dsn {
         class service_context_manager
         {
         public:
-            service_context_manager(servicelet* context, task* task)
+            service_context_manager(servicelet* owner, task* task)
             {
-                _context = context;
-                if (nullptr != _context)
+                _owner = owner;
+                if (nullptr != _owner)
                 {
-                    _id = context->add_outstanding_task(task);
+                    _id = owner->add_outstanding_task(task);
                 }
             }
 
             ~service_context_manager()
             {
-                if (nullptr != _context)
+                if (nullptr != _owner)
                 {
-                    _context->remove_outstanding_task(_id);
+                    _owner->remove_outstanding_task(_id);
                 }
             }
 
-            void clear_context() { _context = nullptr; }
+            void clear_context() { _owner = nullptr; }
 
         private:
             int _id;
-            servicelet *_context;
+            servicelet *_owner;
         };
     }
 }

@@ -96,13 +96,13 @@ namespace dsn {
             rpc_response_task_ptr call(
                 const end_point& server,
                 message_ptr& request,
-                servicelet* context,
+                servicelet* owner,
                 std::function<void(error_code, message_ptr&, message_ptr&)> callback,
                 int reply_hash /*= 0*/
                 )
             {
                 rpc_response_task_ptr resp_task(new internal_use_only::service_rpc_response_task4(
-                    context,                    
+                    owner,
                     callback,
                     request,
                     reply_hash
@@ -120,12 +120,12 @@ namespace dsn {
                 int count,
                 uint64_t offset,
                 task_code callback_code,
-                servicelet* context,
+                servicelet* owner,
                 aio_handler callback,
                 int hash /*= 0*/
                 )
             {
-                aio_task_ptr tsk(new internal_use_only::service_aio_task(callback_code, context, callback, hash));
+                aio_task_ptr tsk(new internal_use_only::service_aio_task(callback_code, owner, callback, hash));
                 read(hFile, buffer, count, offset, tsk);
                 return tsk;
             }
@@ -136,12 +136,12 @@ namespace dsn {
                 int count,
                 uint64_t offset,
                 task_code callback_code,
-                servicelet* context,
+                servicelet* owner,
                 aio_handler callback,
                 int hash /*= 0*/
                 )
             {
-                aio_task_ptr tsk(new internal_use_only::service_aio_task(callback_code, context, callback, hash));
+                aio_task_ptr tsk(new internal_use_only::service_aio_task(callback_code, owner, callback, hash));
                 write(hFile, buffer, count, offset, tsk);
                 return tsk;
             }
@@ -154,12 +154,12 @@ namespace dsn {
                 std::string& dest_dir,
                 bool overwrite,
                 task_code callback_code,
-                servicelet* context,
+                servicelet* owner,
                 aio_handler callback,
                 int hash /*= 0*/
                 )
             {
-                aio_task_ptr tsk(new internal_use_only::service_aio_task(callback_code, context, callback, hash));
+                aio_task_ptr tsk(new internal_use_only::service_aio_task(callback_code, owner, callback, hash));
                 copy_remote_files(remote, source_dir, files, dest_dir, overwrite, tsk);
                 return tsk;
             }

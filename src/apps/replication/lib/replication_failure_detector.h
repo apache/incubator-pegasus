@@ -37,7 +37,7 @@ public:
     replication_failure_detector(replica_stub* stub, std::vector<end_point>& meta_servers);
     ~replication_failure_detector(void);
 
-    virtual void end_ping(::dsn::error_code err, const fd::beacon_ack& ack);
+    virtual void end_ping(::dsn::error_code err, const fd::beacon_ack& ack, void* context);
 
      // client side
     virtual void on_master_disconnected( const std::vector<end_point>& nodes );
