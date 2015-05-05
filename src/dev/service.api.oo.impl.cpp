@@ -79,17 +79,10 @@ namespace dsn {
             {
                 task_ptr tsk;
                 if (timer_interval_milliseconds != 0)
-                {
-                    // enable timer randomization to avoid lots of timers execution simultaneously
-                    if (delay_milliseconds == 0)
-                    {
-                        delay_milliseconds = env::random32(0, timer_interval_milliseconds);
-                    }
-
-                    tsk.reset(new service_timer_task(evt, context, callback, timer_interval_milliseconds, hash));
-                }                    
+                    tsk.reset(new service_timer_task(evt, context, callback, timer_interval_milliseconds, hash));                    
                 else
                     tsk.reset(new service_task(evt, context, callback, hash));
+
                 enqueue(tsk, delay_milliseconds);
                 return tsk;
             }

@@ -341,6 +341,9 @@ timer_task::timer_task(task_code code,  uint32_t interval_milliseconds, int hash
     : task(code, hash), _interval_milliseconds(interval_milliseconds) 
 {
     dassert (TASK_TYPE_COMPUTE == spec().type, "this must be a computation type task");
+
+    // enable timer randomization to avoid lots of timers execution simultaneously
+    set_delay(::dsn::service::env::random32(0, interval_milliseconds));
 }
 
 void timer_task::exec()

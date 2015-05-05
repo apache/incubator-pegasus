@@ -102,7 +102,6 @@ private:
     bool                          _is_running;
 
     static bool                   _message_crc_required;
-    static int                    _max_udp_package_size;    
 };
 
 } // end namespace

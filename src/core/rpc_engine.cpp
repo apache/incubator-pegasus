@@ -169,21 +169,16 @@ namespace dsn {
 
     //------------------------
     /*static*/ bool rpc_engine::_message_crc_required;
-    /*static*/ int  rpc_engine::_max_udp_package_size;
 
     rpc_engine::rpc_engine(configuration_ptr config, service_node* node)
         : _config(config), _node(node)
     {
-        _is_running = false;
-        _message_crc_required = false;
-        _max_udp_package_size = 63459; /* SO_MAX_MSG_SIZE(65507) - 2KB */
-        _local_primary_address = end_point::INVALID;
+        dassert (_node != nullptr, "");
+        dassert (_config != nullptr, "");
 
-        if (config != nullptr)
-        {
-            _max_udp_package_size = config->get_value<long>("network", "max_udp_package_size", _max_udp_package_size);
-            _message_crc_required = config->get_value<bool>("network", "message_crc_required", _message_crc_required);
-        }
+        _is_running = false;
+        _local_primary_address = end_point::INVALID;
+        _message_crc_required = config->get_value<bool>("network", "message_crc_required", false);
     }
     
     //
