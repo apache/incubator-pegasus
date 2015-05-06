@@ -96,7 +96,7 @@ namespace dsn {
         }
     }
 
-    bool command_manager::run_command(const std::string& cmd, __out std::string& output)
+    bool command_manager::run_command(const std::string& cmd, __out_param std::string& output)
     {
         std::string scmd = cmd;
         std::vector<std::string> args;

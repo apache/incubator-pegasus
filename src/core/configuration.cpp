@@ -172,7 +172,7 @@ ConfReg:
             if (*pSectionName == '\0')   
                 goto err;
 
-            if (has_section((const char*)pSectionName), false) {
+            if (has_section((const char*)pSectionName, false)) {
                 printf("RedefInition of section %s\n", pSectionName);
                 goto err;
             }

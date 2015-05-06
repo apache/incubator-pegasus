@@ -233,7 +233,7 @@ namespace dsn {
                 int hash = 0
                 )
             {
-                aio_handler h = std::bind(callback, context, std::placeholders::_1, std::placeholders::_2);
+                aio_handler h = std::bind(callback, owner, std::placeholders::_1, std::placeholders::_2);
                 return read(hFile, buffer, count, offset, callback_code, owner, h, hash);
             }
 
@@ -249,7 +249,7 @@ namespace dsn {
                 int hash = 0
                 )
             {
-                aio_handler h = std::bind(callback, context, std::placeholders::_1, std::placeholders::_2);
+                aio_handler h = std::bind(callback, owner, std::placeholders::_1, std::placeholders::_2);
                 return write(hFile, buffer, count, offset, callback_code, owner, h, hash);
             }
 
