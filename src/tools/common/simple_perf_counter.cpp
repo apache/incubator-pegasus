@@ -277,6 +277,9 @@ namespace dsn {
                 _counter_impl = new perf_counter_number_percentile(section, name, type);
         }
 
-        simple_perf_counter::~simple_perf_counter(void) {}
+        simple_perf_counter::~simple_perf_counter(void) 
+        {
+            delete _counter_impl;
+        }
     }
 }
