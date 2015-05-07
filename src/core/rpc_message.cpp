@@ -156,6 +156,9 @@ message_ptr message::create_response()
 
     msg->_server_session = _server_session;
 
+    // copy extension data
+    move_to(*msg);
+
     return msg;
 }
 
