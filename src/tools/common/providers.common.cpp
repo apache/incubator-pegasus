@@ -29,7 +29,7 @@
 # include "lockp.std.h"
 # include "native_aio_provider.win.h"
 # include "native_aio_provider.posix.h"
-# include "wrong_perf_counter.h"
+# include "simple_perf_counter.h"
 # include "simple_task_queue.h"
 # include "network.sim.h"
 # include "simple_logger.h"
@@ -45,7 +45,7 @@ namespace dsn {
             register_component_provider<std_lock_provider>("dsn::tools::std_lock_provider");
             register_component_provider<std_rwlock_provider>("dsn::tools::std_rwlock_provider");
             register_component_provider<std_semaphore_provider>("dsn::tools::std_semaphore_provider");
-            register_component_provider<wrong_perf_counter>("dsn::tools::wrong_perf_counter");
+            register_component_provider<simple_perf_counter>("dsn::tools::simple_perf_counter");
             register_component_provider<asio_network_provider>("dsn::tools::asio_network_provider");
             register_component_provider<sim_network_provider>("dsn::tools::sim_network_provider");
             register_component_provider<simple_task_queue>("dsn::tools::simple_task_queue");

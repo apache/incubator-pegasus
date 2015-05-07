@@ -28,10 +28,9 @@
 
 namespace dsn { namespace service {
 
-service_app::service_app(service_app_spec* s, configuration_ptr c)
+service_app::service_app(service_app_spec* s)
 {
     _spec = *s;
-    _config = c;
 
     std::vector<std::string> args;
     utils::split_args(_spec.arguments.c_str(), args);

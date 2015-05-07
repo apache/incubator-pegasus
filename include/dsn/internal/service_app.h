@@ -38,14 +38,14 @@ namespace service {
 class service_app
 {
 public:
-    template <typename T> static service_app* create(service_app_spec* s, configuration_ptr c)
+    template <typename T> static service_app* create(service_app_spec* s)
     {
-        return new T(s, c);
+        return new T(s);
     }
 
 
 public:
-    service_app(service_app_spec* s, configuration_ptr c);
+    service_app(service_app_spec* s);
     virtual ~service_app(void);
 
     virtual error_code start(int argc, char** argv) = 0;
@@ -53,7 +53,6 @@ public:
     virtual void stop(bool cleanup = false) = 0;
 
     const service_app_spec& spec() const { return _spec; }
-    configuration_ptr config() { return _config; }
     const std::string& name() const { return _spec.name; }
     int arg_count() const { return static_cast<int>(_args.size()); }
     char** args() const { return (char**)&_args_ptr[0]; }
@@ -69,10 +68,9 @@ private:
     service_node*            _svc_node;
 
     service_app_spec         _spec;
-    configuration_ptr        _config;
 };
 
-typedef service_app* (*service_app_factory)(service_app_spec*, configuration_ptr);
+typedef service_app* (*service_app_factory)(service_app_spec*);
 
 class service_apps : public utils::singleton<service_apps>
 {

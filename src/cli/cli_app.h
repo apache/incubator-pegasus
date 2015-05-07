@@ -34,7 +34,7 @@ namespace dsn {
         class cli : public serverlet<cli>, public service_app
         {
         public:
-            cli(service_app_spec* s, configuration_ptr c);
+            cli(service_app_spec* s);
             virtual error_code start(int argc, char** argv);
             virtual void stop(bool cleanup = false);
         };

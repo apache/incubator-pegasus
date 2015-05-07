@@ -33,7 +33,7 @@ namespace dsn {
         class profiler : public toollet
         {
         public:
-            profiler(const char* name, configuration_ptr config);
+            profiler(const char* name);
             virtual void install(service_spec& spec);
         };
     }

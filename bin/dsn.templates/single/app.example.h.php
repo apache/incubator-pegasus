@@ -13,8 +13,8 @@ $file_prefix = $argv[3];
 class <?=$_PROG->name?>_server_app : public ::dsn::service::service_app
 {
 public:
-	<?=$_PROG->name?>_server_app(::dsn::service_app_spec* s, ::dsn::configuration_ptr c) 
-		: ::dsn::service::service_app(s, c) {}
+	<?=$_PROG->name?>_server_app(::dsn::service_app_spec* s) 
+		: ::dsn::service::service_app(s) {}
 
 	virtual ::dsn::error_code start(int argc, char** argv)
 	{
@@ -41,8 +41,8 @@ private:
 class <?=$_PROG->name?>_client_app : public ::dsn::service::service_app, public virtual ::dsn::service::servicelet
 {
 public:
-	<?=$_PROG->name?>_client_app(::dsn::service_app_spec* s, ::dsn::configuration_ptr c) 
-		: ::dsn::service::service_app(s, c) 
+	<?=$_PROG->name?>_client_app(::dsn::service_app_spec* s) 
+		: ::dsn::service::service_app(s) 
 	{
 <?php foreach ($_PROG->services as $svc) { ?>
 		_<?=$svc->name?>_client = nullptr;

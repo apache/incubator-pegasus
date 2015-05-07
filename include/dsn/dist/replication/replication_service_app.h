@@ -36,7 +36,7 @@ namespace dsn { namespace replication {
 class replication_service_app : public dsn::service::service_app
 {
 public:
-    replication_service_app(service_app_spec* s, configuration_ptr c);
+    replication_service_app(service_app_spec* s);
 
     ~replication_service_app(void);
 

@@ -33,7 +33,7 @@ namespace dsn {
         class fault_injector : public toollet
         {
         public:
-            fault_injector(const char* name, configuration_ptr config);
+            fault_injector(const char* name);
             virtual void install(service_spec& spec);
         };
     }

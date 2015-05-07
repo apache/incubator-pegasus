@@ -174,7 +174,7 @@ service_app_spec::service_app_spec(const service_app_spec& r)
     run = r.run;
 }
 
-bool service_app_spec::init(const char* section, configuration_ptr config)
+bool service_app_spec::init(const char* section, configuration_ptr& config)
 {
     id = 0;
     name = config->get_string_value(section, "name", "");

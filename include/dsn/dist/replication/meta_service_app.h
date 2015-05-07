@@ -36,7 +36,7 @@ namespace dsn {
         class meta_service_app : public service_app
         {
         public:
-            meta_service_app(service_app_spec* s, configuration_ptr c);
+            meta_service_app(service_app_spec* s);
 
             ~meta_service_app();
 

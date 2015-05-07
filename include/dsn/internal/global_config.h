@@ -45,7 +45,7 @@ struct service_app_spec
 
     service_app_spec() {}
     service_app_spec(const service_app_spec& r);
-    bool init(const char* section, configuration_ptr config);
+    bool init(const char* section, configuration_ptr& config);
 };
 
 struct network_config_spec

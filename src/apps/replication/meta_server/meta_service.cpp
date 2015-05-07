@@ -28,13 +28,13 @@
 #include "load_balancer.h"
 #include "meta_server_failure_detector.h"
 
-meta_service::meta_service(server_state* state, configuration_ptr c)
+meta_service::meta_service(server_state* state)
 : _state(state), serverlet("meta_service")
 {
     _balancer = nullptr;
     _failure_detector = nullptr;
 
-    _opts.initialize(c);
+    _opts.initialize(config());
 }
 
 meta_service::~meta_service(void)

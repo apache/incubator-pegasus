@@ -37,7 +37,7 @@ class meta_server_failure_detector;
 class meta_service : public serverlet<meta_service>
 {
 public:
-    meta_service(server_state* state, configuration_ptr c);
+    meta_service(server_state* state);
     ~meta_service(void);
 
     void start();

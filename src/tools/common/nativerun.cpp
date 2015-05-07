@@ -52,7 +52,7 @@ namespace dsn {
             spec.register_network(cs, false);
 
             if (spec.perf_counter_factory_name == "")
-                spec.perf_counter_factory_name = "dsn::tools::wrong_perf_counter";
+                spec.perf_counter_factory_name = "dsn::tools::simple_perf_counter";
 
             if (spec.logging_factory_name == "")
                 spec.logging_factory_name = "dsn::tools::simple_logger";

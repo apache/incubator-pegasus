@@ -29,8 +29,8 @@
 namespace dsn {
     namespace service {
 
-        cli::cli(service_app_spec* s, configuration_ptr c)
-        : service_app(s, c), serverlet<cli>("cli")
+        cli::cli(service_app_spec* s)
+        : service_app(s), serverlet<cli>("cli")
         {
 
         }

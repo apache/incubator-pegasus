@@ -169,18 +169,18 @@ namespace dsn {
             s_fj_opts = new fj_opt[task_code::max_value() + 1];
 
             fj_opt default_opt;
-            default_opt.fault_injection_enabled = _configuration->get_value<bool>("task.default", "fault_injection_enabled", true);
+            default_opt.fault_injection_enabled = config()->get_value<bool>("task.default", "fault_injection_enabled", true);
             
-            default_opt.rpc_response_drop_ratio = _configuration->get_value<double>("task.default", "rpc_response_drop_ratio", 0.0001);
-            default_opt.rpc_request_drop_ratio = _configuration->get_value<double>("task.default", "rpc_request_drop_ratio", 0.0001);
-            default_opt.disk_read_fail_ratio = _configuration->get_value<double>("task.default", "disk_read_fail_ratio", 0.0);
-            default_opt.disk_write_fail_ratio = _configuration->get_value<double>("task.default", "disk_write_fail_ratio", 0.0);
+            default_opt.rpc_response_drop_ratio = config()->get_value<double>("task.default", "rpc_response_drop_ratio", 0.0001);
+            default_opt.rpc_request_drop_ratio = config()->get_value<double>("task.default", "rpc_request_drop_ratio", 0.0001);
+            default_opt.disk_read_fail_ratio = config()->get_value<double>("task.default", "disk_read_fail_ratio", 0.0);
+            default_opt.disk_write_fail_ratio = config()->get_value<double>("task.default", "disk_write_fail_ratio", 0.0);
             
-            default_opt.rpc_message_delay_ms_min = _configuration->get_value<uint32_t>("task.default", "rpc_message_delay_ms_min", 0);
-            default_opt.rpc_message_delay_ms_max = _configuration->get_value<uint32_t>("task.default", "rpc_message_delay_ms_max", 1000);
-            default_opt.disk_io_delay_ms_min = _configuration->get_value<uint32_t>("task.default", "disk_io_delay_ms_min", 1);
-            default_opt.disk_io_delay_ms_max = _configuration->get_value<uint32_t>("task.default", "disk_io_delay_ms_max", 12);
-            default_opt.execution_extra_delay_us_max = _configuration->get_value<uint32_t>("task.default", "execution_extra_delay_us_max", 0);
+            default_opt.rpc_message_delay_ms_min = config()->get_value<uint32_t>("task.default", "rpc_message_delay_ms_min", 0);
+            default_opt.rpc_message_delay_ms_max = config()->get_value<uint32_t>("task.default", "rpc_message_delay_ms_max", 1000);
+            default_opt.disk_io_delay_ms_min = config()->get_value<uint32_t>("task.default", "disk_io_delay_ms_min", 1);
+            default_opt.disk_io_delay_ms_max = config()->get_value<uint32_t>("task.default", "disk_io_delay_ms_max", 12);
+            default_opt.execution_extra_delay_us_max = config()->get_value<uint32_t>("task.default", "execution_extra_delay_us_max", 0);
             
             for (int i = 0; i <= task_code::max_value(); i++)
             {
@@ -192,18 +192,18 @@ namespace dsn {
                 dassert (spec != nullptr, "task_spec cannot be null");
 
                 fj_opt& lopt = s_fj_opts[i];
-                lopt.fault_injection_enabled = _configuration->get_value<bool>(section_name.c_str(), "fault_injection_enabled", default_opt.fault_injection_enabled);
+                lopt.fault_injection_enabled = config()->get_value<bool>(section_name.c_str(), "fault_injection_enabled", default_opt.fault_injection_enabled);
 
-                lopt.rpc_response_drop_ratio = _configuration->get_value<double>(section_name.c_str(), "rpc_response_drop_ratio", default_opt.rpc_response_drop_ratio);
-                lopt.rpc_request_drop_ratio = _configuration->get_value<double>(section_name.c_str(), "rpc_request_drop_ratio", default_opt.rpc_request_drop_ratio);
-                lopt.disk_read_fail_ratio = _configuration->get_value<double>(section_name.c_str(), "disk_read_fail_ratio", default_opt.disk_read_fail_ratio);
-                lopt.disk_write_fail_ratio = _configuration->get_value<double>(section_name.c_str(), "disk_write_fail_ratio", default_opt.disk_write_fail_ratio);
+                lopt.rpc_response_drop_ratio = config()->get_value<double>(section_name.c_str(), "rpc_response_drop_ratio", default_opt.rpc_response_drop_ratio);
+                lopt.rpc_request_drop_ratio = config()->get_value<double>(section_name.c_str(), "rpc_request_drop_ratio", default_opt.rpc_request_drop_ratio);
+                lopt.disk_read_fail_ratio = config()->get_value<double>(section_name.c_str(), "disk_read_fail_ratio", default_opt.disk_read_fail_ratio);
+                lopt.disk_write_fail_ratio = config()->get_value<double>(section_name.c_str(), "disk_write_fail_ratio", default_opt.disk_write_fail_ratio);
 
-                lopt.rpc_message_delay_ms_min = _configuration->get_value<uint32_t>(section_name.c_str(), "rpc_message_delay_ms_min", default_opt.rpc_message_delay_ms_min);
-                lopt.rpc_message_delay_ms_max = _configuration->get_value<uint32_t>(section_name.c_str(), "rpc_message_delay_ms_max", default_opt.rpc_message_delay_ms_max);
-                lopt.disk_io_delay_ms_min = _configuration->get_value<uint32_t>(section_name.c_str(), "disk_io_delay_ms_min", default_opt.disk_io_delay_ms_min);
-                lopt.disk_io_delay_ms_max = _configuration->get_value<uint32_t>(section_name.c_str(), "disk_io_delay_ms_max", default_opt.disk_io_delay_ms_max);
-                lopt.execution_extra_delay_us_max = _configuration->get_value<uint32_t>(section_name.c_str(), "execution_extra_delay_us_max", default_opt.execution_extra_delay_us_max);
+                lopt.rpc_message_delay_ms_min = config()->get_value<uint32_t>(section_name.c_str(), "rpc_message_delay_ms_min", default_opt.rpc_message_delay_ms_min);
+                lopt.rpc_message_delay_ms_max = config()->get_value<uint32_t>(section_name.c_str(), "rpc_message_delay_ms_max", default_opt.rpc_message_delay_ms_max);
+                lopt.disk_io_delay_ms_min = config()->get_value<uint32_t>(section_name.c_str(), "disk_io_delay_ms_min", default_opt.disk_io_delay_ms_min);
+                lopt.disk_io_delay_ms_max = config()->get_value<uint32_t>(section_name.c_str(), "disk_io_delay_ms_max", default_opt.disk_io_delay_ms_max);
+                lopt.execution_extra_delay_us_max = config()->get_value<uint32_t>(section_name.c_str(), "execution_extra_delay_us_max", default_opt.execution_extra_delay_us_max);
                 
                 if (!lopt.fault_injection_enabled)
                     continue;
@@ -224,8 +224,8 @@ namespace dsn {
             }
         }
 
-        fault_injector::fault_injector(const char* name, configuration_ptr config)
-            : toollet(name, config)
+        fault_injector::fault_injector(const char* name)
+            : toollet(name)
         {
         }
     }

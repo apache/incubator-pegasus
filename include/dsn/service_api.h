@@ -108,7 +108,7 @@ namespace system
 {
     extern bool run(const char* config, bool sleep_after_init);
     extern bool is_ready();
-
+    
     namespace internal_use_only
     {
         extern bool register_service(const char* name, service_app_factory factory);
@@ -119,4 +119,7 @@ namespace system
         return internal_use_only::register_service(name, service_app::create<T>);
     }    
 }
+
+extern configuration_ptr config();
+
 }} // end namespace dsn::service

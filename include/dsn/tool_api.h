@@ -39,6 +39,7 @@
 # include <dsn/internal/logging_provider.h>
 # include <dsn/internal/perf_counters.h>
 # include <dsn/internal/logging.h>
+# include <dsn/internal/configuration.h>
 
 // other utilities
 # include <dsn/internal/service_app.h>
@@ -48,23 +49,22 @@ namespace dsn { namespace tools {
 class tool_base
 {
 public:
-    tool_base(const char* name, configuration_ptr config);
+    tool_base(const char* name);
     
 protected:
-    configuration_ptr _configuration;
-    std::string      _name;
+    std::string       _name;
 };
 
 class toollet : public tool_base
 {
 public:
-    template <typename T> static toollet* create(const char* name, configuration_ptr config)
+    template <typename T> static toollet* create(const char* name)
     {
-        return new T(name, config);
+        return new T(name);
     }
 
 public:
-    toollet(const char* name, configuration_ptr config);
+    toollet(const char* name);
 
     virtual void install(service_spec& spec) = 0;
 };
@@ -72,13 +72,13 @@ public:
 class tool_app : public tool_base
 {
 public:
-    template <typename T> static tool_app* create(const char* name, configuration_ptr c)
+    template <typename T> static tool_app* create(const char* name)
     {
-        return new T(name, c);
+        return new T(name);
     }
 
 public:
-    tool_app(const char* name, configuration_ptr c);
+    tool_app(const char* name);
    
     virtual void install(service_spec& spec) = 0;
 
@@ -93,7 +93,6 @@ public:
     virtual void stop_all_service_apps();
     
     static const service_spec& get_service_spec();
-    static configuration_ptr config();
 };
 
 typedef task_queue*      (*task_queue_factory)(task_worker_pool*, int, task_queue*);
@@ -110,8 +109,8 @@ typedef message_parser*  (*message_parser_factory)(int);
 
 typedef perf_counter*    (*perf_counter_factory)(const char *, const char *, perf_counter_type);
 typedef logging_provider* (*logging_factory)(const char*);
-typedef toollet*         (*toollet_factory)(const char*, configuration_ptr);
-typedef tool_app*        (*tool_app_factory)(const char*, configuration_ptr);
+typedef toollet*         (*toollet_factory)(const char*);
+typedef tool_app*        (*tool_app_factory)(const char*);
 
 namespace internal_use_only
 {
@@ -131,7 +130,7 @@ namespace internal_use_only
     
     bool register_toollet(const char* name, toollet_factory f, int type);
     bool register_tool(const char* name, tool_app_factory f, int type);
-    toollet* get_toollet(const char* name, int type, configuration_ptr config);
+    toollet* get_toollet(const char* name, int type);
 }
 
 extern join_point<void, const char*> syste_init;
@@ -141,7 +140,8 @@ template <typename T> bool register_component_provider(const char* name) { retur
 template <typename T> bool register_component_aspect(const char* name) { return internal_use_only::register_component_provider(name, T::template create<T>, PROVIDER_TYPE_ASPECT); }
 template <typename T> bool register_toollet(const char* name) { return internal_use_only::register_toollet(name, toollet::template create<T>, 0); }
 template <typename T> bool register_tool(const char* name) { return internal_use_only::register_tool(name, tool_app::template create<T>, 0); }
-template <typename T> T* get_toollet(const char* name) { return (T*)internal_use_only::get_toollet(name, 0, tool_app::config()); }
+template <typename T> T* get_toollet(const char* name) { return (T*)internal_use_only::get_toollet(name, 0); }
+configuration_ptr config();
 
 // --------- inline implementation -----------------------------
 

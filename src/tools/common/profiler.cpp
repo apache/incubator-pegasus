@@ -187,8 +187,8 @@ namespace dsn {
             task_ext_for_profiler::register_ext();
             message_ext_for_profiler::register_ext();
 
-            auto profile = _configuration->get_value<bool>("task.default", "is_profile", false);
-            auto collect_call_count = _configuration->get_value<bool>("task.default", "collect_call_count", false);
+            auto profile = config()->get_value<bool>("task.default", "is_profile", false);
+            auto collect_call_count = config()->get_value<bool>("task.default", "collect_call_count", false);
             
             for (int i = 0; i <= task_code::max_value(); i++)
             {
@@ -199,7 +199,7 @@ namespace dsn {
                 task_spec* spec = task_spec::get(i);
                 dassert (spec != nullptr, "task_spec cannot be null");
 
-                s_spec_profilers[i].collect_call_count = _configuration->get_value<bool>(name.c_str(), "collect_call_count", collect_call_count);
+                s_spec_profilers[i].collect_call_count = config()->get_value<bool>(name.c_str(), "collect_call_count", collect_call_count);
                 s_spec_profilers[i].call_counts = new std::atomic<int64_t>[task_code::max_value() + 1];
 
                 s_spec_profilers[i].task_queueing_time_ns = dsn::utils::perf_counters::instance().get_counter((name + std::string(".queue(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
@@ -221,7 +221,7 @@ namespace dsn {
                     s_spec_profilers[i].aio_latency_ns = dsn::utils::perf_counters::instance().get_counter((name + std::string(".latency(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
                 }
 
-                if (!_configuration->get_value<bool>(name.c_str(), "is_profile", profile))
+                if (!config()->get_value<bool>(name.c_str(), "is_profile", profile))
                     continue;
 
                 spec->on_task_enqueue.put_back(profiler_on_task_enqueue, "profiler");
@@ -242,8 +242,8 @@ namespace dsn {
             // TODO: profiling on overall rpc/network/disk io. 
         }
 
-        profiler::profiler(const char* name, configuration_ptr config)
-            : toollet(name, config)
+        profiler::profiler(const char* name)
+            : toollet(name)
         {
         }
     }

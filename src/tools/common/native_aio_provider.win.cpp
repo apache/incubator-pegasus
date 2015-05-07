@@ -139,7 +139,7 @@ handle_t native_win_aio_provider::open(const char* file_name, int oflag, int pmo
 	default:
 		// this can't happen ... all cases are covered
 		_doserrno = 0L;
-		derror("Invalid open flag\n");
+		derror("Invalid open flag");
 	}
 
 	/*

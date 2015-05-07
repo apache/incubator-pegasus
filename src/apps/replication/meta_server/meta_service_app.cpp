@@ -32,8 +32,8 @@ namespace dsn {
 
         server_state * meta_service_app::_reliable_state = nullptr;
 
-        meta_service_app::meta_service_app(service_app_spec* s, configuration_ptr c)
-            : service_app(s, c)
+        meta_service_app::meta_service_app(service_app_spec* s)
+            : service_app(s)
         {
             _service = nullptr;
         }
@@ -50,9 +50,8 @@ namespace dsn {
                 _reliable_state = new server_state();
             }
 
-            auto cf = config();
-            _service = new meta_service(_reliable_state, cf);
-            _reliable_state->init_app(cf);
+            _service = new meta_service(_reliable_state);
+            _reliable_state->init_app(config());
             _reliable_state->add_meta_node(_service->primary_address());
             _service->start();
             return ERR_SUCCESS;

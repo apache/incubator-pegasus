@@ -61,9 +61,9 @@ sim_env_provider::sim_env_provider(env_provider* inner_provider)
 {
     task_worker::on_start.put_front(on_worker_start, "sim_env_provider::on_worker_start");
 
-    if (tool_app::config()->get_value<bool>("tools.simulator", "use_given_random_seed", false))
+    if (config()->get_value<bool>("tools.simulator", "use_given_random_seed", false))
     {
-        _seed = tool_app::config()->get_value<int>("tools.simulator", "random_seed", std::rand());
+        _seed = config()->get_value<int>("tools.simulator", "random_seed", std::rand());
     }
     else
     {

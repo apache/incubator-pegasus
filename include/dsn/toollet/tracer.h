@@ -33,7 +33,7 @@ namespace dsn {
         class tracer : public toollet
         {
         public:
-            tracer(const char* name, configuration_ptr config);
+            tracer(const char* name);
             virtual void install(service_spec& spec);
         };
     }

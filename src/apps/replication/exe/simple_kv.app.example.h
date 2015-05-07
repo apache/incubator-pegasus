@@ -32,8 +32,8 @@ namespace dsn { namespace replication { namespace application {
 class simple_kv_client_app : public ::dsn::service::service_app, public virtual ::dsn::service::servicelet
 {
 public:
-	simple_kv_client_app(::dsn::service_app_spec* s, ::dsn::configuration_ptr c) 
-		: ::dsn::service::service_app(s, c) 
+	simple_kv_client_app(::dsn::service_app_spec* s) 
+		: ::dsn::service::service_app(s) 
 	{
 		_simple_kv_client = nullptr;
 	}
@@ -49,7 +49,7 @@ public:
 			return ::dsn::ERR_INVALID_PARAMETERS;
 
 		std::vector<::dsn::end_point> meta_servers;
-		auto cf = ::dsn::service::service_app::config();
+        auto cf = ::dsn::service::config();
 		::dsn::replication::replication_app_client_base::load_meta_servers(cf, meta_servers);
 		
 		_simple_kv_client = new simple_kv_client(meta_servers, argv[1]);

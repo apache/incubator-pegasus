@@ -40,8 +40,8 @@ using namespace dsn::service;
 class echo_server : public serverlet<echo_server>, public service_app
 {
 public:
-    echo_server(service_app_spec* s, configuration_ptr c)
-        : service_app(s, c), serverlet<echo_server>("echo_server")
+    echo_server(service_app_spec* s)
+        : service_app(s), serverlet<echo_server>("echo_server")
     {
         _empty_reply = config()->get_value<bool>("apps.server", "empty_reply", false);
     }
@@ -85,8 +85,8 @@ private:
 class echo_client : public serverlet<echo_client>, public service_app
 {
 public:
-    echo_client(service_app_spec* s, configuration_ptr c)
-        : service_app(s, c), serverlet<echo_client>("echo_client")
+    echo_client(service_app_spec* s)
+        : service_app(s), serverlet<echo_client>("echo_client")
     {
         _message_size = config()->get_value<int>("apps.client", "message_size", 1024);
         _concurrency = config()->get_value<int>("apps.client", "concurrency", 1);

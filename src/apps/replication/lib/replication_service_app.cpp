@@ -29,8 +29,8 @@
 
 namespace dsn { namespace replication {
 
-replication_service_app::replication_service_app(service_app_spec* s, configuration_ptr c)
-    : service_app(s, c)
+replication_service_app::replication_service_app(service_app_spec* s)
+    : service_app(s)
 {
     _stub = nullptr;
 }

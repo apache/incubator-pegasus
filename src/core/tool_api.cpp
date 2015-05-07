@@ -31,19 +31,18 @@
 
 namespace dsn { namespace tools {
 
-tool_base::tool_base(const char* name, configuration_ptr c)
+tool_base::tool_base(const char* name)
 {
-    _configuration = c;
     _name = name;
 }
 
-toollet::toollet(const char* name, configuration_ptr c)
-    : tool_base(name, c)
-{    
+toollet::toollet(const char* name)
+    : tool_base(name)
+{
 }
 
-tool_app::tool_app(const char* name, configuration_ptr c)
-    : tool_base(name, c)
+tool_app::tool_app(const char* name)
+    : tool_base(name)
 {    
 }
 
@@ -100,7 +99,7 @@ const service_spec& tool_app::get_service_spec()
     return service_engine::instance().spec();
 }
 
-configuration_ptr tool_app::config()
+configuration_ptr config()
 {
     return service_engine::instance().spec().config;
 }
@@ -185,17 +184,22 @@ namespace internal_use_only
         return dsn::utils::factory_store<message_parser>::register_factory(name, f, type);
     }
 
-    toollet* get_toollet(const char* name, int type, configuration_ptr config)
+    toollet* get_toollet(const char* name, int type)
     {
         toollet* tlt = nullptr;
         if (utils::singleton_store<std::string, toollet*>::instance().get(name, tlt))
             return tlt;
         else
         {
-            tlt = utils::factory_store<toollet>::create(name, type, name, config);
+            tlt = utils::factory_store<toollet>::create(name, type, name);
             utils::singleton_store<std::string, toollet*>::instance().put(name, tlt);
             return tlt;
         }
+    }
+
+    configuration_ptr config()
+    {
+        return ::dsn::service::config();
     }
 }
 }} // end namespace dsn::tool_api

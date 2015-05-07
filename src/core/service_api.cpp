@@ -44,22 +44,23 @@ namespace dsn { namespace service {
     static tool_app* s_tool = nullptr;
     static service_apps* s_apps = nullptr;
     static bool s_init = false;
+    static configuration_ptr s_config = nullptr;
 
     class system_runner
     {
     public:
         static bool run(const char* config_file, bool sleep_after_init)
         {
-            configuration_ptr config(new configuration(config_file));
+            s_config.reset(new configuration(config_file));
             service_spec spec;
-            if (!spec.init(config))
+            if (!spec.init(s_config))
             {
                 printf("error in config file %s, exit ...\n", config_file);
                 return false;
             }
 
             // pause when necessary
-            if (config->get_value<bool>("core", "pause_on_start", false))
+            if (s_config->get_value<bool>("core", "pause_on_start", false))
             {
 #if defined(_WIN32)
                 printf("\nPause for debugging (pid = %d)...\n", static_cast<int>(::GetCurrentProcessId()));
@@ -78,7 +79,7 @@ namespace dsn { namespace service {
             utils::coredump::init(cdir.c_str());
 
             // init tools
-            s_tool = utils::factory_store<tool_app>::create(spec.tool.c_str(), 0, spec.tool.c_str(), config);
+            s_tool = utils::factory_store<tool_app>::create(spec.tool.c_str(), 0, spec.tool.c_str());
             s_tool->install(spec);
 
             // prepare minimum necessary
@@ -87,7 +88,7 @@ namespace dsn { namespace service {
             // init toollets
             for (auto it = spec.toollets.begin(); it != spec.toollets.end(); it++)
             {
-                auto tlet = dsn::tools::internal_use_only::get_toollet(it->c_str(), 0, config);
+                auto tlet = dsn::tools::internal_use_only::get_toollet(it->c_str(), 0);
                 dassert(tlet, "toolet not found");
                 tlet->install(spec);
             }
@@ -107,7 +108,7 @@ namespace dsn { namespace service {
             {
                 if (it->run)
                 {
-                    service_app* app = utils::factory_store<service_app>::create(it->type.c_str(), 0, &(*it), config);
+                    service_app* app = utils::factory_store<service_app>::create(it->type.c_str(), 0, &(*it));
                     dassert(app != nullptr, "Cannot create service app with type name '%s'", it->type.c_str());
                     service_apps::instance().add(app);
                 }
@@ -124,12 +125,12 @@ namespace dsn { namespace service {
             }
 
             // start cli if necessary
-            if (config->get_value<bool>("core", "cli_local", true))
+            if (s_config->get_value<bool>("core", "cli_local", true))
             {
                 ::dsn::command_manager::instance().start_local_cli();
             }
 
-            if (config->get_value<bool>("core", "cli_remote", true))
+            if (s_config->get_value<bool>("core", "cli_remote", true))
             {
                 ::dsn::command_manager::instance().start_remote_cli();
             }
@@ -149,6 +150,11 @@ namespace dsn { namespace service {
             return true;
         }
     };
+
+    configuration_ptr config()
+    {
+        return s_config;
+    }
 
 namespace system
 {

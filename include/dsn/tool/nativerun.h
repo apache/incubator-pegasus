@@ -33,8 +33,8 @@ namespace dsn {
         class nativerun : public tool_app
         {
         public:
-            nativerun(const char* name, configuration_ptr c)
-                : tool_app(name, c)
+            nativerun(const char* name)
+                : tool_app(name)
             {
             }
 

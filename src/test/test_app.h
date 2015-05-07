@@ -34,7 +34,7 @@ namespace dsn {
         class test_app : public serverlet<test_app>, public service_app
         {
         public:
-            test_app(service_app_spec* s, configuration_ptr c);
+            test_app(service_app_spec* s);
             virtual error_code start(int argc, char** argv);
             virtual void stop(bool cleanup = false);
         };

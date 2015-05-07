@@ -195,7 +195,7 @@ namespace dsn {
 
         void tracer::install(service_spec& spec)
         {
-            auto trace = _configuration->get_value<bool>("task.default", "is_trace", false);
+            auto trace = config()->get_value<bool>("task.default", "is_trace", false);
 
             for (int i = 0; i <= task_code::max_value(); i++)
             {
@@ -206,52 +206,52 @@ namespace dsn {
                 task_spec* spec = task_spec::get(i);
                 dassert (spec != nullptr, "task_spec cannot be null");
 
-                if (!_configuration->get_value<bool>(section_name.c_str(), "is_trace", trace))
+                if (!config()->get_value<bool>(section_name.c_str(), "is_trace", trace))
                     continue;
 
-                if (_configuration->get_value<bool>(section_name.c_str(), "tracer::on_task_enqueue", true))
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_enqueue", true))
                     spec->on_task_enqueue.put_back(tracer_on_task_enqueue, "tracer");
 
-                if (_configuration->get_value<bool>(section_name.c_str(), "tracer::on_task_begin", true))
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_begin", true))
                     spec->on_task_begin.put_back(tracer_on_task_begin, "tracer");
 
-                if (_configuration->get_value<bool>(section_name.c_str(), "tracer::on_task_end", true))
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_end", true))
                     spec->on_task_end.put_back(tracer_on_task_end, "tracer");
 
-                if (_configuration->get_value<bool>(section_name.c_str(), "tracer::on_task_cancelled", true))
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_cancelled", true))
                     spec->on_task_cancelled.put_back(tracer_on_task_cancelled, "tracer");
 
-                //if (_configuration->get_value<bool>(section_name.c_str(), "tracer::on_task_wait_pre", true))
+                //if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_wait_pre", true))
                     //spec->on_task_wait_pre.put_back(tracer_on_task_wait_pre, "tracer");
 
-                //if (_configuration->get_value<bool>(section_name.c_str(), "tracer::on_task_wait_post", true))
+                //if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_wait_post", true))
                     //spec->on_task_wait_post.put_back(tracer_on_task_wait_post, "tracer");
 
-                //if (_configuration->get_value<bool>(section_name.c_str(), "tracer::on_task_cancel_post", true))
+                //if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_cancel_post", true))
                     //spec->on_task_cancel_post.put_back(tracer_on_task_cancel_post, "tracer");
 
-                if (_configuration->get_value<bool>(section_name.c_str(), "tracer::on_aio_call", true))
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_aio_call", true))
                     spec->on_aio_call.put_back(tracer_on_aio_call, "tracer");
 
-                if (_configuration->get_value<bool>(section_name.c_str(), "tracer::on_aio_enqueue", true))
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_aio_enqueue", true))
                     spec->on_aio_enqueue.put_back(tracer_on_aio_enqueue, "tracer");
 
-                if (_configuration->get_value<bool>(section_name.c_str(), "tracer::on_rpc_call", true))
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_rpc_call", true))
                     spec->on_rpc_call.put_back(tracer_on_rpc_call, "tracer");
 
-                if (_configuration->get_value<bool>(section_name.c_str(), "tracer::on_rpc_request_enqueue", true))
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_rpc_request_enqueue", true))
                     spec->on_rpc_request_enqueue.put_back(tracer_on_rpc_request_enqueue, "tracer");
 
-                if (_configuration->get_value<bool>(section_name.c_str(), "tracer::on_rpc_reply", true))
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_rpc_reply", true))
                     spec->on_rpc_reply.put_back(tracer_on_rpc_reply, "tracer");
 
-                if (_configuration->get_value<bool>(section_name.c_str(), "tracer::on_rpc_response_enqueue", true))
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_rpc_response_enqueue", true))
                     spec->on_rpc_response_enqueue.put_back(tracer_on_rpc_response_enqueue, "tracer");
             }
         }
 
-        tracer::tracer(const char* name, configuration_ptr config)
-            : toollet(name, config)
+        tracer::tracer(const char* name)
+            : toollet(name)
         {
         }
     }

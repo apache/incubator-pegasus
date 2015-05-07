@@ -32,8 +32,8 @@ namespace dsn { namespace tools {
 class simulator : public tool_app
 {
 public:
-    simulator(const char* name, configuration_ptr c)
-        : tool_app(name, c)
+    simulator(const char* name)
+        : tool_app(name)
     {
     }
 
