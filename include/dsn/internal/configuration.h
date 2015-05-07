@@ -63,7 +63,7 @@ public:
 
     void register_config_change_notification(config_file_change_notifier notifier);
 
-    bool has_section(const char* section);
+    bool has_section(const char* section, bool warn_if_not = true);
 
     bool has_key(const char* section, const char* key);
 
@@ -72,6 +72,9 @@ public:
     // ---------------------- commmon routines ----------------------------------
     
     template<typename T> T get_value(const char* section, const char* key, T default_value);
+
+private:
+    bool get_string_value_internal(const char* section, const char* key, const char* default_value, std::string& ov);
 
 private:
     struct conf
@@ -91,9 +94,17 @@ private:
 
 template<> inline double configuration::get_value<double>(const char* section, const char* key, double default_value)
 {
-    std::string value = get_string_value(section, key, "");
-    if (value.length() == 0)
+    std::string value;
+    if (!get_string_value_internal(section, key, "", value))
+    {
+        printf("WARNING: configuration '[%s] %s' is not defined, default value is '%lf'\n",
+            section,
+            key,
+            default_value
+            );
+
         return default_value;
+    }   
     else
     {
         return atof(value.c_str());
@@ -103,9 +114,17 @@ template<> inline double configuration::get_value<double>(const char* section, c
 
 template<> inline long long configuration::get_value<long long>(const char* section, const char* key, long long default_value)
 {
-    std::string value = get_string_value(section, key, "");
-    if (value.length() == 0)
+    std::string value;
+    if (!get_string_value_internal(section, key, "", value))
+    {
+        printf("WARNING: configuration '[%s] %s' is not defined, default value is '%lld'\n",
+            section,
+            key,
+            default_value
+            );
+
         return default_value;
+    }
     else
     {
         if (value.length() > 2 && (value.substr(0, 2) == "0x" || value.substr(0, 2) == "0X"))
@@ -121,9 +140,17 @@ template<> inline long long configuration::get_value<long long>(const char* sect
 
 template<> inline long configuration::get_value<long>(const char* section, const char* key, long default_value)
 {
-    std::string value = get_string_value(section, key, "");
-    if (value.length() == 0)
+    std::string value;
+    if (!get_string_value_internal(section, key, "", value))
+    {
+        printf("WARNING: configuration '[%s] %s' is not defined, default value is '%ld'\n",
+            section,
+            key,
+            default_value
+            );
+
         return default_value;
+    }
     else
     {
         if (value.length() > 2 && (value.substr(0, 2) == "0x" || value.substr(0, 2) == "0X"))
@@ -159,9 +186,17 @@ template<> inline unsigned short configuration::get_value<unsigned short>(const 
 
 template<> inline bool configuration::get_value<bool>(const char* section, const char* key, bool default_value)
 {
-    std::string value = get_string_value(section, key, "");
-    if (value.length() == 0)
+    std::string value;
+    if (!get_string_value_internal(section, key, "", value))
+    {
+        printf("WARNING: configuration '[%s] %s' is not defined, default value is '%s'\n",
+            section,
+            key,
+            default_value ? "true" : "false"
+            );
+
         return default_value;
+    }
     else if (strcmp(value.c_str(), "true") == 0 || strcmp(value.c_str(), "TRUE") == 0)
     {
         return true;

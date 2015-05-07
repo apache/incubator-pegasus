@@ -95,7 +95,7 @@ namespace dsn {
             perf_counter_number_percentile(const char *section, const char *name, perf_counter_type type)
                 : perf_counter(section, name, type), _tail(0)
             {
-                _counter_computation_interval_seconds = config()->get_value<int>("profiler", "counter_computation_interval_seconds", 30);
+                _counter_computation_interval_seconds = config()->get_value<int>("components.simple_perf_counter", "counter_computation_interval_seconds", 30);
 
                 _timer.reset(new boost::asio::deadline_timer(shared_io_service::instance().ios));
                 _timer->expires_from_now(boost::posix_time::seconds(_counter_computation_interval_seconds));

@@ -154,7 +154,7 @@ ConfReg:
                 cf.section = (const char*)pSectionName;
                 cf.key = (const char*)pKey;
                 cf.value = pValue;
-                cf.line = lineno;
+                cf.line = lineno; 
                 pSection->insert(std::make_pair(std::string(pKey), cf));
             }            
         }
@@ -172,7 +172,7 @@ ConfReg:
             if (*pSectionName == '\0')   
                 goto err;
 
-            if (has_section((const char*)pSectionName)) {
+            if (has_section((const char*)pSectionName), false) {
                 printf("RedefInition of section %s\n", pSectionName);
                 goto err;
             }
@@ -221,7 +221,7 @@ void configuration::get_all_keys(const char* section, std::vector<std::string>& 
     }
 }
 
-std::string configuration::get_string_value(const char* section, const char* key, const char* default_value)
+bool configuration::get_string_value_internal(const char* section, const char* key, const char* default_value, std::string& ov)
 {
     auto it = _configs.find(section);
     if (it != _configs.end())
@@ -229,18 +229,42 @@ std::string configuration::get_string_value(const char* section, const char* key
         auto it2 = it->second.find(key);
         if (it2 != it->second.end())
         {
-            return it2->second.value;
+            ov = it2->second.value;
+            return true;
         }
     }
+    ov = default_value;
+    return false;
+}
 
-    return default_value;
+std::string configuration::get_string_value(const char* section, const char* key, const char* default_value)
+{
+    std::string ov;
+    if (!get_string_value_internal(section, key, default_value, ov))
+    {
+        printf("WARNING: configuration '[%s] %s' is not defined, default value is '%s'\n",
+            section,
+            key,
+            default_value
+            );
+    }
+    return ov;
 }
 
 std::list<std::string> configuration::get_string_value_list(const char* section, const char* key, char splitter)
 {
+    std::string ov;
+    if (!get_string_value_internal(section, key, "", ov))
+    {
+        printf("WARNING: configuration '[%s] %s' is not defined, default value is '%s'\n",
+            section,
+            key,
+            ""
+            );
+    }
+
     std::list<std::string> vs;
-    std::string v = get_string_value(section, key, "");
-    utils::split_args(v.c_str(), vs, splitter);
+    utils::split_args(ov.c_str(), vs, splitter);
 
     for (auto& v : vs)
     {
@@ -254,10 +278,15 @@ void configuration::register_config_change_notification(config_file_change_notif
     dassert (false, "not implemented");
 }
 
-bool configuration::has_section(const char* section)
+bool configuration::has_section(const char* section, bool warn_if_not)
 {
     auto it = _configs.find(section);
-    return (it != _configs.end());
+    bool r = (it != _configs.end());
+    if (!r && warn_if_not)
+    {
+        printf("WARNING: configuration section '[%s]' is not defined, using default settings\n", section);
+    }
+    return r;
 }
 
 bool configuration::has_key(const char* section, const char* key)
