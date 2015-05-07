@@ -58,61 +58,118 @@ native_win_aio_provider::~native_win_aio_provider()
     }
 }
 
-handle_t native_win_aio_provider::open(const char* file_name, int flag, int pmode)
+handle_t native_win_aio_provider::open(const char* file_name, int oflag, int pmode)
 {
-    DWORD dwDesiredAccess = 0;
-    DWORD dwShareMode = FILE_SHARE_READ;
-    DWORD dwCreationDisposition = 0;
-    DWORD dwFlagsAndAttributes = FILE_FLAG_OVERLAPPED;
-        
-    if (flag & O_RDONLY)
-        dwDesiredAccess = GENERIC_READ;
-    if (flag & O_WRONLY)
-        dwDesiredAccess = GENERIC_WRITE;
-    if (flag & O_RDWR)
-        dwDesiredAccess = GENERIC_READ | GENERIC_WRITE;
+	DWORD dwDesiredAccess = 0;
+	DWORD dwShareMode = FILE_SHARE_READ;
+	DWORD dwCreationDisposition = 0;
+	DWORD dwFlagsAndAttributes = FILE_FLAG_OVERLAPPED;
 
-    if (flag & O_APPEND)
-    {
-        dassert (false, "append is not supported");
-    }
+	SECURITY_ATTRIBUTES SecurityAttributes;
 
-    if (flag & O_CREAT)
-        dwCreationDisposition |= OPEN_ALWAYS;
-    else if (flag & (O_CREAT | O_EXCL))
-        dwCreationDisposition |= CREATE_NEW;
-    if (flag & O_TRUNC)
-        dwCreationDisposition |= TRUNCATE_EXISTING;
+	SecurityAttributes.nLength = sizeof(SecurityAttributes);
+	SecurityAttributes.lpSecurityDescriptor = NULL;
 
-    
-    if (flag & O_RANDOM)
-        dwFlagsAndAttributes |= FILE_FLAG_RANDOM_ACCESS;
-    
-    HANDLE fileHandle = ::CreateFileA(file_name,
-        dwDesiredAccess,
-        dwShareMode,
-        0,
-        dwCreationDisposition,
-        dwFlagsAndAttributes,
-        0);
+	if (oflag & _O_NOINHERIT) {
+		SecurityAttributes.bInheritHandle = FALSE;
+	}
+	else {
+		SecurityAttributes.bInheritHandle = TRUE;
+	}
 
-    if (fileHandle != INVALID_HANDLE_VALUE && fileHandle != nullptr)
-    {
-        if (_iocp != ::CreateIoCompletionPort(fileHandle, _iocp, 0, 0))
-        {
-            dassert (false, "cannot associate file handle %s to io completion port, err = %x\n", file_name, ::GetLastError());
-            return nullptr;
-        }
-        else
-        {
-            return fileHandle;
-        }
-    }
-    else
-    {
-        dassert (false, "cannot create file %s, err = %x\n", file_name, ::GetLastError());
-        return nullptr;
-    }
+	/*
+	* decode the access flags
+	*/
+	switch (oflag & (_O_RDONLY | _O_WRONLY | _O_RDWR)) {
+
+	case _O_RDONLY:         /* read access */
+		dwDesiredAccess = GENERIC_READ;
+		break;
+	case _O_WRONLY:         /* write access */
+		/* giving it read access as well
+		* because in append (a, not a+), we need
+		* to read the BOM to determine the encoding
+		* (ie. ANSI, UTF8, UTF16)
+		*/
+		if ((oflag & _O_APPEND)
+			&& (oflag & (_O_WTEXT | _O_U16TEXT | _O_U8TEXT)) != 0)
+		{
+			dwDesiredAccess = GENERIC_READ | GENERIC_WRITE;
+		}
+		else
+		{
+			dwDesiredAccess = GENERIC_WRITE;
+		}
+		break;
+	case _O_RDWR:           /* read and write access */
+		dwDesiredAccess = GENERIC_READ | GENERIC_WRITE;
+		break;
+	default:                /* error, bad oflag */
+		_doserrno = 0L; /* not an OS error */
+		derror("Invalid open flag\n");
+	}
+
+	/*
+	* decode open/create method flags
+	*/
+	switch (oflag & (_O_CREAT | _O_EXCL | _O_TRUNC)) {
+	case 0:
+	case _O_EXCL:                   // ignore EXCL w/o CREAT
+		dwCreationDisposition = OPEN_EXISTING;
+		break;
+
+	case _O_CREAT:
+		dwCreationDisposition = OPEN_ALWAYS;
+		break;
+
+	case _O_CREAT | _O_EXCL:
+	case _O_CREAT | _O_TRUNC | _O_EXCL:
+		dwCreationDisposition = CREATE_NEW;
+		break;
+
+	case _O_TRUNC:
+	case _O_TRUNC | _O_EXCL:        // ignore EXCL w/o CREAT
+		dwCreationDisposition = TRUNCATE_EXISTING;
+		break;
+
+	case _O_CREAT | _O_TRUNC:
+		dwCreationDisposition = CREATE_ALWAYS;
+		break;
+
+	default:
+		// this can't happen ... all cases are covered
+		_doserrno = 0L;
+		derror("Invalid open flag\n");
+	}
+
+	/*
+	* try to open/create the file
+	*/
+	HANDLE fileHandle = ::CreateFileA(file_name,
+		dwDesiredAccess,
+		dwShareMode,
+		&SecurityAttributes,
+		dwCreationDisposition,
+		dwFlagsAndAttributes,
+		0);
+
+	if (fileHandle != INVALID_HANDLE_VALUE && fileHandle != nullptr)
+	{
+		if (_iocp != ::CreateIoCompletionPort(fileHandle, _iocp, 0, 0))
+		{
+			dassert(false, "cannot associate file handle %s to io completion port, err = %x\n", file_name, ::GetLastError());
+			return nullptr;
+		}
+		else
+		{
+			return fileHandle;
+		}
+	}
+	else
+	{
+		dassert(false, "cannot create file %s, err = %x\n", file_name, ::GetLastError());
+		return nullptr;
+	}
 }
 
 error_code native_win_aio_provider::close(handle_t hFile)
