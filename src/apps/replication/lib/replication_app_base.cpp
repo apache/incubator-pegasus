@@ -83,6 +83,8 @@ int replication_app_base::dispatch_rpc_call(int code, message_ptr& request, bool
         marshall(response->writer(), (int)err);
         rpc::reply(response);
     }
+
+    return 0;
 }
 
 }} // end namespace
