@@ -90,13 +90,13 @@ error_code service_node::start(const std::vector<int>& ports)
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
-static std::map<int, service_node*>* s_nodes;
+static service_engine* s_engine;
 
 service_engine::service_engine(void)
 {
     _env = nullptr;
     _logging = nullptr;
-    s_nodes = &_engines_by_app_id;
+    s_engine = this;
 }
 
 void service_engine::init_before_toollets(const service_spec& spec)
@@ -120,6 +120,33 @@ void service_engine::init_after_toollets()
     }
 }
 
+void service_engine::register_system_rpc_handler(task_code code, const char* name, rpc_server_handler* handler, int port /*= -1*/) // -1 for all node
+{
+    rpc_handler_ptr h(new rpc_handler_info(code));
+    h->name = std::string(name);
+    h->handler = handler;
+
+    if (port == -1)
+    {
+        for (auto& n : _engines)
+        {
+            n->rpc()->register_rpc_handler(h);
+        }
+    }
+    else
+    {
+        auto it = _engines_by_port.find(port);
+        if (it != _engines_by_port.end())
+        {
+            it->second->rpc()->register_rpc_handler(h);
+        }
+        else
+        {
+            dwarn("cannot find service node with port %d", port);
+        }
+    }
+}
+
 service_node* service_engine::start_node(int app_id, const std::string& app_name, const std::vector<int>& ports)
 {
     auto it = _engines_by_app_id.find(app_id);
@@ -136,6 +163,7 @@ service_node* service_engine::start_node(int app_id, const std::string& app_name
             {
                 service_node* n = _engines_by_port[p];
 
+                _engines_by_app_id[app_id] = n;
                 for (auto p1 : ports)
                 {
                     if (n->rpc()->start_server_port(p1))
@@ -149,6 +177,8 @@ service_node* service_engine::start_node(int app_id, const std::string& app_name
         error_code err = node->start(ports);
         dassert (err == 0, "service node start failed, err = %s", err.to_string());
         
+        _engines.insert(node);
+
         _engines_by_app_id[app_id] = node;
         for (auto p1 : ports)
         {

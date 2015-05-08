@@ -28,6 +28,7 @@
 # include <dsn/internal/command.h>
 # include <dsn/internal/synchronize.h>
 # include <dsn/internal/singleton.h>
+# include <dsn/internal/rpc_message.h>
 # include <map>
 
 namespace dsn {
@@ -38,10 +39,14 @@ namespace dsn {
         command_manager();
 
         void register_command(const std::vector<const char*>& commands, const char* help, command_handler handler);
-        bool run_command(const std::string& cmd, __out_param std::string& output);
+        bool run_command(const std::string& cmdline, __out_param std::string& output);
         void run_console();
         void start_local_cli();
         void start_remote_cli();
+        void on_remote_cli(message_ptr& request);
+
+    private:
+        bool run_command(const std::string& cmd, const std::vector<std::string>& args, __out_param std::string& output);
 
     private:
         struct command
@@ -50,7 +55,7 @@ namespace dsn {
             command_handler handler;
         };
 
-        ::dsn::utils::rw_lock          _lock;
+        ::dsn::utils::rw_lock           _lock;
         std::map<std::string, command*> _handlers;
     };
 

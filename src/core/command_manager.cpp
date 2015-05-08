@@ -28,6 +28,9 @@
 # include <thread>
 # include <dsn/internal/utils.h>
 # include <dsn/internal/logging.h>
+# include <dsn/service_api.h>
+# include <dsn/internal/serialization.h>
+# include "service_engine.h"
 
 # define __TITLE__ "command_manager"
 
@@ -96,9 +99,9 @@ namespace dsn {
         }
     }
 
-    bool command_manager::run_command(const std::string& cmd, __out_param std::string& output)
+    bool command_manager::run_command(const std::string& cmdline, __out_param std::string& output)
     {
-        std::string scmd = cmd;
+        std::string scmd = cmdline;
         std::vector<std::string> args;
         
         utils::split_args(scmd.c_str(), args, ' ');
@@ -106,28 +109,33 @@ namespace dsn {
         if (args.size() < 1)
             return false;
 
+        std::vector<std::string> args2;
+        for (size_t i = 1; i < args.size(); i++)
+        {
+            args2.push_back(args[i]);
+        }
+
+        return run_command(args[0], args2, output);
+    }
+
+    bool command_manager::run_command(const std::string& cmd, const std::vector<std::string>& args, __out_param std::string& output)
+    {
         command* h = nullptr;
         {
             utils::auto_read_lock l(_lock);
-            auto it = _handlers.find(args[0]);
+            auto it = _handlers.find(cmd);
             if (it != _handlers.end())
                 h = it->second;
         }
 
         if (h == nullptr)
         {
-            output = std::string("unknown command '") + args[0] + "'";
+            output = std::string("unknown command '") + cmd + "'";
             return false;
         }
         else
         {
-            std::vector<std::string> args2;
-            for (size_t i = 1; i < args.size(); i++)
-            {
-                args2.push_back(args[i]);
-            }
-
-            output = h->handler(args2);
+            output = h->handler(args);
             return true;
         }
     }
@@ -153,14 +161,58 @@ namespace dsn {
         new std::thread(std::bind(&command_manager::run_console, this));
     }
 
+    DEFINE_TASK_CODE_RPC(RPC_DSN_CLI_CALL, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT);
+
+    class cli_rpc_request_task : public rpc_request_task
+    {
+    public:
+        cli_rpc_request_task(message_ptr& request, service_node* node)
+            : rpc_request_task(request, node)
+        {
+        }
+
+        virtual void  exec()
+        {
+            command_manager::instance().on_remote_cli(get_request());
+        }
+    };
+
+    class cli_rpc_server_handler : public rpc_server_handler
+    {
+    public:
+        virtual rpc_request_task_ptr new_request_task(message_ptr& request, service_node* node)
+        {
+            return rpc_request_task_ptr(new cli_rpc_request_task(request, node));
+        }
+    };
+
     void command_manager::start_remote_cli()
     {
-        // TODO:
+        ::dsn::service_engine::instance().register_system_rpc_handler(RPC_DSN_CLI_CALL, "dsn.cli", new cli_rpc_server_handler());
+    }
+
+    void command_manager::on_remote_cli(message_ptr& request)
+    {
+        std::string cmd;
+        unmarshall(request->reader(), cmd);
+
+        std::vector<std::string> args;
+        unmarshall(request->reader(), args);
+
+        std::string result;
+        run_command(cmd, args, result);
+
+        auto resp = request->create_response();
+        marshall(resp->writer(), result);
+
+        ::dsn::service::rpc::reply(resp);
     }
 
     command_manager::command_manager()
     {
-        register_command({ "help", "h", "H", "Help", nullptr }, "help [command] - display help information", 
+        register_command(
+            {"help", "h", "H", "Help", nullptr}, 
+            "help [command] - display help information", 
             [this](const std::vector<std::string>& args)
             {
                 std::stringstream ss;

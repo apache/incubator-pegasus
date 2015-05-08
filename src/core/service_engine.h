@@ -30,6 +30,7 @@
 # include <dsn/internal/end_point.h>
 # include <dsn/internal/global_config.h>
 # include <dsn/internal/error_code.h>
+# include <set>
 
 namespace dsn { 
 
@@ -64,6 +65,7 @@ private:
     nfs_node*    _nfs;
 };
 
+class rpc_server_handler;
 class service_engine : public utils::singleton<service_engine>
 {
 public:
@@ -79,6 +81,7 @@ public:
     void configuration_changed(configuration_ptr configuration);
 
     service_node* start_node(int app_id, const std::string& app_name, const std::vector<int>& ports);
+    void register_system_rpc_handler(task_code code, const char* name, rpc_server_handler* handler, int port = -1); // -1 for all nodes
 
 private:
     service_spec                    _spec;
@@ -90,6 +93,7 @@ private:
     typedef std::map<int, service_node*> node_engines_by_port; // multiple ports may share the same node
     node_engines_by_app_id          _engines_by_app_id;
     node_engines_by_port            _engines_by_port;
+    std::set<service_node*>         _engines;
 };
 
 // ------------ inline impl ---------------------
