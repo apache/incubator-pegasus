@@ -48,7 +48,8 @@ namespace dsn { namespace service {
     public:
         void add(service_app* app)
         {
-            dassert(_apps.find(app->name()) == _apps.end(), "apps cannot have the same name for %s", app->name());
+            bool r = _apps.find(app->name()) == _apps.end();
+            dassert(r, "apps cannot have the same name for %s", app->name().c_str());
 
             _apps[app->name()] = app;
 
@@ -57,7 +58,7 @@ namespace dsn { namespace service {
             {
                 _apps_by_id.resize(app->id());
             }
-            dassert(_apps_by_id[app->id() - 1] == nullptr, "apps cannot have the same id %d for %s", app->id(), app->name());
+            dassert(_apps_by_id[app->id() - 1] == nullptr, "apps cannot have the same id %d for %s", app->id(), app->name().c_str());
             _apps_by_id[app->id() - 1] = app;
         }
 
