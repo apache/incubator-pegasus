@@ -25,7 +25,6 @@
  */
 
 #include <dsn/toollet/profiler.h>
-#include <dsn/service_api.h>
 
 #define __TITLE__ "toollet.profiler"
 
@@ -150,6 +149,11 @@ namespace dsn {
             message_ext_for_profiler::get(callee->get_request().get()) = now;
         }
 
+        static void profiler_on_create_response(message* req, message* resp)
+        {
+            message_ext_for_profiler::get(resp) = message_ext_for_profiler::get(req);
+        }
+
         // return true means continue, otherwise early terminate with task::set_error_code
         static void profiler_on_rpc_reply(task* caller, message* msg)
         {
@@ -235,6 +239,7 @@ namespace dsn {
                 spec->on_aio_enqueue.put_back(profiler_on_aio_enqueue, "profiler");
                 spec->on_rpc_call.put_back(profiler_on_rpc_call, "profiler");
                 spec->on_rpc_request_enqueue.put_back(profiler_on_rpc_request_enqueue, "profiler");
+                spec->on_create_response.put_back(profiler_on_create_response, "profiler");                
                 spec->on_rpc_reply.put_back(profiler_on_rpc_reply, "profiler");
                 spec->on_rpc_response_enqueue.put_back(profiler_on_rpc_response_enqueue, "profiler");
             }

@@ -50,6 +50,11 @@ public:
 
 private:
     dsn::lock_provider *_provider;
+
+private:
+    // no assignment operator
+    zlock& operator=(const zlock& source);
+    zlock(const zlock& source);
 };
 
 class zrwlock
@@ -68,6 +73,11 @@ public:
 
 private:
     dsn::rwlock_provider *_provider;
+
+private:
+    // no assignment operator
+    zrwlock& operator=(const zrwlock& source);
+    zrwlock(const zrwlock& source);
 };
 
 class zsemaphore
@@ -83,6 +93,11 @@ public:
 
 private:
     dsn::semaphore_provider *_provider;
+
+private:
+    // no assignment operator
+    zsemaphore& operator=(const zsemaphore& source);
+    zsemaphore(const zsemaphore& source);
 };
 
 class zevent
@@ -100,6 +115,11 @@ private:
     zsemaphore        _sema;
     std::atomic<bool> _signaled;
     bool              _manualReset;
+
+private:
+    // no assignment operator
+    zevent& operator=(const zevent& source);
+    zevent(const zevent& source);
 };
 
 class zauto_lock

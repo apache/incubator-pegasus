@@ -43,7 +43,7 @@ namespace dsn {
             virtual void   add(uint64_t val) { _val += val; }
             virtual void   set(uint64_t val) { dassert(false, "invalid execution flow"); }
             virtual double get_value() { return static_cast<double>(_val.load()); }
-            virtual double get_percentile(counter_percentile_type type) { return get_value(); }
+            virtual double get_percentile(counter_percentile_type type) { dassert(false, "invalid execution flow"); return 0.0; }
 
         private:
             std::atomic<uint64_t> _val;
@@ -74,7 +74,7 @@ namespace dsn {
                 _val = 0;
                 return val / interval * 1000 * 1000 * 1000;
             }
-            virtual double get_percentile(counter_percentile_type type) { return get_value(); }
+            virtual double get_percentile(counter_percentile_type type) { dassert(false, "invalid execution flow"); return 0.0; }
 
         private:
             std::atomic<uint64_t> _val;
@@ -98,7 +98,7 @@ namespace dsn {
                 _counter_computation_interval_seconds = config()->get_value<int>("components.simple_perf_counter", "counter_computation_interval_seconds", 30);
 
                 _timer.reset(new boost::asio::deadline_timer(shared_io_service::instance().ios));
-                _timer->expires_from_now(boost::posix_time::seconds(service::env::random32(0, _counter_computation_interval_seconds)));
+                _timer->expires_from_now(boost::posix_time::seconds(rand() % _counter_computation_interval_seconds + 1));
                 _timer->async_wait(std::bind(&perf_counter_number_percentile::on_timer, this, std::placeholders::_1));
             }
             

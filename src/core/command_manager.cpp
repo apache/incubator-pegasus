@@ -160,15 +160,31 @@ namespace dsn {
 
     command_manager::command_manager()
     {
-        register_command({ "help", "h", "H", "Help", nullptr }, "help", 
+        register_command({ "help", "h", "H", "Help", nullptr }, "help [command] - display help information", 
             [this](const std::vector<std::string>& args)
             {
                 std::stringstream ss;
 
-                utils::auto_read_lock l(_lock);
-                for (auto c : this->_handlers)
+                if (args.size() == 0)
                 {
-                    ss << c.first << ": " << c.second->help << std::endl;
+                    utils::auto_read_lock l(_lock);
+                    for (auto c : this->_handlers)
+                    {
+                        ss.width(6);
+                        ss << std::left << c.first << ": " << c.second->help << std::endl;
+                    }
+                }
+                else
+                {
+                    utils::auto_read_lock l(_lock);
+                    auto it = _handlers.find(args[0]);
+                    if (it == _handlers.end())
+                        ss << "cannot find command '" << args[0] << "'" << std::endl;
+                    else
+                    {
+                        ss.width(6);
+                        ss << std::left << it->first << ": " << it->second->help << std::endl;
+                    }
                 }
 
                 return ss.str();

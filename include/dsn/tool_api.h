@@ -41,9 +41,6 @@
 # include <dsn/internal/logging.h>
 # include <dsn/internal/configuration.h>
 
-// other utilities
-# include <dsn/internal/service_app.h>
-
 namespace dsn { namespace tools {
 
 class tool_base

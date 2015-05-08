@@ -63,6 +63,7 @@ task_spec::task_spec(int code, const char* name, task_type type, threadpool_code
     on_rpc_request_enqueue((std::string(name) + std::string(".rpc.request.enqueue")).c_str()),
     on_rpc_reply((std::string(name) + std::string(".rpc.reply")).c_str()), 
     on_rpc_response_enqueue((std::string(name) + std::string(".rpc.response.enqueue")).c_str()),
+    on_create_response((std::string(name) + std::string(".create.response")).c_str()),
     rpc_call_channel(RPC_CHANNEL_TCP),
     rpc_call_header_format(-1)
 {

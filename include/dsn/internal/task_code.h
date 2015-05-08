@@ -181,20 +181,17 @@ public:
     // AIO
     join_point<bool, task*, aio_task*>           on_aio_call; // return true means continue, otherwise early terminate with task::set_error_code
     join_point<void, aio_task*>                  on_aio_enqueue; // aio done, enqueue callback
-    //join_point           on_task_begin;
-    //join_point           on_task_end;
 
     // RPC_REQUEST
     join_point<bool, task*, message*, rpc_response_task*>  on_rpc_call; // return true means continue, otherwise dropped and (optionally) timedout
     join_point<void, rpc_request_task*>          on_rpc_request_enqueue;
-    //join_point           on_task_begin; 
-    //join_point           on_task_end;
     
     // RPC_RESPONSE
     join_point<bool, task*, message*>            on_rpc_reply;
     join_point<bool, rpc_response_task*>         on_rpc_response_enqueue; // response, task
-    //join_point           on_task_begin;
-    //join_point           on_task_end;
+
+    // message data flow
+    join_point<void, message*, message*>         on_create_response;
 
 public:    
     task_spec(int code, const char* name, task_type type, threadpool_code pool, int paired_code, task_priority pri);

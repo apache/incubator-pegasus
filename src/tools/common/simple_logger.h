@@ -26,7 +26,6 @@
 # pragma once
 
 # include <dsn/tool_api.h>
-# include <dsn/service_api.h>
 # include <thread>
 # include <cstdio>
 
