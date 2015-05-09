@@ -37,30 +37,81 @@
 # include "command_manager.h"
 # include <thread>
 
+# define __TITLE__ "service.api"
+
 using namespace dsn::tools;
 
 namespace dsn { namespace service {
 
-    static tool_app* s_tool = nullptr;
-    static service_apps* s_apps = nullptr;
-    static bool s_init = false;
-    static configuration_ptr s_config = nullptr;
+    class service_apps : public utils::singleton<service_apps>
+    {
+    public:
+        void add(service_app* app)
+        {
+            dassert(_apps.find(app->name()) == _apps.end(), "apps cannot have the same name for %s", app->name());
 
+            _apps[app->name()] = app;
+
+
+            if (app->id() > static_cast<int>(_apps_by_id.size()))
+            {
+                _apps_by_id.resize(app->id());
+            }
+            dassert(_apps_by_id[app->id() - 1] == nullptr, "apps cannot have the same id %d for %s", app->id(), app->name());
+            _apps_by_id[app->id() - 1] = app;
+        }
+
+        service_app* get(const char* name) const
+        {
+            auto it = _apps.find(name);
+            if (it != _apps.end())
+                return it->second;
+            else
+                return nullptr;
+        }
+
+        service_app* operator [] (int id) const
+        {
+            dassert(id >= 1 && id <= static_cast<int>(_apps_by_id.size()), "invalid app id %d", id);
+            return _apps_by_id[id - 1];
+        }
+
+        const std::map<std::string, service_app*>& get_all_apps() const { return _apps; }
+
+    private:
+        std::map<std::string, service_app*> _apps;
+        std::vector<service_app*> _apps_by_id;
+    };
+
+    static struct _all_info_
+    {
+        bool engine_ready;
+        tool_app* tool;
+        const std::map<std::string, service_app*>* apps;
+        configuration_ptr config;
+        service_engine* engine;
+    } dsn_all;
+    
     class system_runner
     {
     public:
         static bool run(const char* config_file, bool sleep_after_init)
         {
-            s_config.reset(new configuration(config_file));
+            dsn_all.engine_ready = false;
+            dsn_all.tool = nullptr;
+            dsn_all.apps = &service_apps::instance().get_all_apps();
+            dsn_all.engine = &service_engine::instance();            
+            dsn_all.config.reset(new configuration(config_file));
+            
             service_spec spec;
-            if (!spec.init(s_config))
+            if (!spec.init(dsn_all.config))
             {
                 printf("error in config file %s, exit ...\n", config_file);
                 return false;
             }
 
             // pause when necessary
-            if (s_config->get_value<bool>("core", "pause_on_start", false))
+            if (dsn_all.config->get_value<bool>("core", "pause_on_start", false))
             {
 #if defined(_WIN32)
                 printf("\nPause for debugging (pid = %d)...\n", static_cast<int>(::GetCurrentProcessId()));
@@ -79,8 +130,8 @@ namespace dsn { namespace service {
             utils::coredump::init(cdir.c_str());
 
             // init tools
-            s_tool = utils::factory_store<tool_app>::create(spec.tool.c_str(), 0, spec.tool.c_str());
-            s_tool->install(spec);
+            dsn_all.tool = utils::factory_store<tool_app>::create(spec.tool.c_str(), 0, spec.tool.c_str());
+            dsn_all.tool->install(spec);
 
             // prepare minimum necessary
             service_engine::instance().init_before_toollets(spec);
@@ -101,7 +152,7 @@ namespace dsn { namespace service {
             // init runtime
             service_engine::instance().init_after_toollets();
 
-            s_init = true;
+            dsn_all.engine_ready = true;
 
             // init apps
             for (auto it = spec.app_specs.begin(); it != spec.app_specs.end(); it++)
@@ -114,8 +165,6 @@ namespace dsn { namespace service {
                 }
             }
 
-            s_apps = &service_apps::instance();
-
             auto apps = service_apps::instance().get_all_apps();
             for (auto it = apps.begin(); it != apps.end(); it++)
             {
@@ -125,18 +174,18 @@ namespace dsn { namespace service {
             }
 
             // start cli if necessary
-            if (s_config->get_value<bool>("core", "cli_local", true))
+            if (dsn_all.config->get_value<bool>("core", "cli_local", true))
             {
                 ::dsn::command_manager::instance().start_local_cli();
             }
 
-            if (s_config->get_value<bool>("core", "cli_remote", true))
+            if (dsn_all.config->get_value<bool>("core", "cli_remote", true))
             {
                 ::dsn::command_manager::instance().start_remote_cli();
             }
 
             // start the tool
-            s_tool->run();
+            dsn_all.tool->run();
 
             //
             if (sleep_after_init)
@@ -150,12 +199,7 @@ namespace dsn { namespace service {
             return true;
         }
     };
-
-    configuration_ptr config()
-    {
-        return s_config;
-    }
-
+    
 namespace system
 {
     namespace internal_use_only 
@@ -173,7 +217,23 @@ namespace system
 
     bool is_ready()
     {
-        return s_init;
+        return dsn_all.engine_ready;
+    }
+
+
+    configuration_ptr config()
+    {
+        return dsn_all.config;
+    }
+
+    service_app* get_current_app()
+    {
+        return service_apps::instance()[task::get_current_task()->node()->id()];
+    }
+
+    const std::map<std::string, service_app*>& get_all_apps()
+    {
+        return service_apps::instance().get_all_apps();
     }
 }
 

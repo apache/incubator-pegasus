@@ -34,7 +34,7 @@ meta_service::meta_service(server_state* state)
     _balancer = nullptr;
     _failure_detector = nullptr;
 
-    _opts.initialize(config());
+    _opts.initialize(system::config());
 }
 
 meta_service::~meta_service(void)

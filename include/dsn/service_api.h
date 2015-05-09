@@ -117,9 +117,11 @@ namespace system
     template<typename T> bool register_service(const char* name)
     {
         return internal_use_only::register_service(name, service_app::create<T>);
-    }    
-}
+    }
 
-extern configuration_ptr config();
+    extern configuration_ptr config();
+    extern service_app* get_current_app();
+    extern const std::map<std::string, service_app*>& get_all_apps();
+}
 
 }} // end namespace dsn::service

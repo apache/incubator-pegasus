@@ -42,12 +42,12 @@ replication_service_app::~replication_service_app(void)
 error_code replication_service_app::start(int argc, char** argv)
 {
     replication_options opts;
-    opts.initialize(config());
+    opts.initialize(system::config());
     opts.working_dir = "./" + name();
     //initialize(opts, config, clear);
 
     _stub = new replica_stub();
-    _stub->initialize(opts, config(), true);
+    _stub->initialize(opts, system::config(), true);
     _stub->open_service();
     return ERR_SUCCESS;
 }

@@ -30,7 +30,6 @@
 # include <dsn/internal/end_point.h>
 # include <dsn/internal/global_config.h>
 # include <dsn/internal/error_code.h>
-# include <set>
 
 namespace dsn { 
 
@@ -91,9 +90,8 @@ private:
     // <port, servicenode>
     typedef std::map<int, service_node*> node_engines_by_app_id;
     typedef std::map<int, service_node*> node_engines_by_port; // multiple ports may share the same node
-    node_engines_by_app_id          _engines_by_app_id;
-    node_engines_by_port            _engines_by_port;
-    std::set<service_node*>         _engines;
+    node_engines_by_app_id          _nodes_by_app_id;
+    node_engines_by_port            _nodes_by_app_port;
 };
 
 // ------------ inline impl ---------------------

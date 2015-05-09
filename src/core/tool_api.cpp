@@ -74,7 +74,7 @@ private:
 
 void tool_app::start_all_service_apps()
 {
-    auto apps = service::service_apps::instance().get_all_apps();
+    auto apps = service::system::get_all_apps();
     for (auto it = apps.begin(); it != apps.end(); it++)
     {
         task_ptr t(new service_control_task(it->second, true));
@@ -86,7 +86,7 @@ void tool_app::start_all_service_apps()
 
 void tool_app::stop_all_service_apps()
 {
-    auto apps = service::service_apps::instance().get_all_apps();
+    auto apps = service::system::get_all_apps();
     for (auto it = apps.begin(); it != apps.end(); it++)
     {
         task_ptr t(new service_control_task(it->second, false));
@@ -199,7 +199,7 @@ namespace internal_use_only
 
     configuration_ptr config()
     {
-        return ::dsn::service::config();
+        return ::dsn::service::system::config();
     }
 }
 }} // end namespace dsn::tool_api

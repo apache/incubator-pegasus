@@ -57,18 +57,4 @@ service_app::~service_app(void)
 {
 }
 
-void service_apps::add(service_app* app)
-{
-    _apps[app->name()] = app;
-}
-    
-service_app* service_apps::get(const char* name) const
-{
-    auto it = _apps.find(name);
-    if (it != _apps.end())
-        return it->second;
-    else
-        return nullptr;
-}
-
 }} // end namespace dsn::service_api

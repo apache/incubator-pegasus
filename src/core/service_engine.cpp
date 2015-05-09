@@ -40,7 +40,7 @@ using namespace dsn::utils;
 
 namespace dsn {
 
-    service_node::service_node(int app_id, const std::string& app_name)
+service_node::service_node(int app_id, const std::string& app_name)
 {
     _computation = nullptr;
     _rpc = nullptr;
@@ -90,13 +90,10 @@ error_code service_node::start(const std::vector<int>& ports)
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
-static service_engine* s_engine;
-
 service_engine::service_engine(void)
 {
     _env = nullptr;
     _logging = nullptr;
-    s_engine = this;
 }
 
 void service_engine::init_before_toollets(const service_spec& spec)
@@ -128,15 +125,15 @@ void service_engine::register_system_rpc_handler(task_code code, const char* nam
 
     if (port == -1)
     {
-        for (auto& n : _engines)
+        for (auto& n : _nodes_by_app_id)
         {
-            n->rpc()->register_rpc_handler(h);
+            n.second->rpc()->register_rpc_handler(h);
         }
     }
     else
     {
-        auto it = _engines_by_port.find(port);
-        if (it != _engines_by_port.end())
+        auto it = _nodes_by_app_port.find(port);
+        if (it != _nodes_by_app_port.end())
         {
             it->second->rpc()->register_rpc_handler(h);
         }
@@ -149,8 +146,8 @@ void service_engine::register_system_rpc_handler(task_code code, const char* nam
 
 service_node* service_engine::start_node(int app_id, const std::string& app_name, const std::vector<int>& ports)
 {
-    auto it = _engines_by_app_id.find(app_id);
-    if (it != _engines_by_app_id.end())
+    auto it = _nodes_by_app_id.find(app_id);
+    if (it != _nodes_by_app_id.end())
     {
         return it->second;
     }
@@ -159,17 +156,24 @@ service_node* service_engine::start_node(int app_id, const std::string& app_name
         for (auto p : ports)
         {
             // union to existing node if any port is shared
-            if (_engines_by_port.find(p) != _engines_by_port.end())
+            if (_nodes_by_app_port.find(p) != _nodes_by_app_port.end())
             {
-                service_node* n = _engines_by_port[p];
+                service_node* n = _nodes_by_app_port[p];
 
-                _engines_by_app_id[app_id] = n;
-                for (auto p1 : ports)
-                {
-                    if (n->rpc()->start_server_port(p1))
-                        _engines_by_port[p1] = n;
-                }
-                return n;
+                dassert(false, "network port %d usage confliction for %s vs %s, please reconfig",
+                    p,
+                    n->name(),
+                    app_name.c_str()
+                    );
+
+                //// shared app for the same node
+                //_nodes_by_app_id[app_id] = n;
+                //for (auto p1 : ports)
+                //{
+                //    if (n->rpc()->start_server_port(p1))
+                //        _nodes_by_app_port[p1] = n;
+                //}
+                //return n;
             }
         }
         
@@ -177,12 +181,10 @@ service_node* service_engine::start_node(int app_id, const std::string& app_name
         error_code err = node->start(ports);
         dassert (err == 0, "service node start failed, err = %s", err.to_string());
         
-        _engines.insert(node);
-
-        _engines_by_app_id[app_id] = node;
+        _nodes_by_app_id[app_id] = node;
         for (auto p1 : ports)
         {
-            _engines_by_port[p1] = node;
+            _nodes_by_app_port[p1] = node;
         }
 
         return node;

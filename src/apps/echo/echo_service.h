@@ -43,7 +43,7 @@ public:
     echo_server(service_app_spec* s)
         : service_app(s), serverlet<echo_server>("echo_server")
     {
-        _empty_reply = config()->get_value<bool>("apps.server", "empty_reply", false);
+        _empty_reply = system::config()->get_value<bool>("apps.server", "empty_reply", false);
     }
 
     void on_echo(const std::string& req, __out_param std::string& resp)
@@ -88,11 +88,10 @@ public:
     echo_client(service_app_spec* s)
         : service_app(s), serverlet<echo_client>("echo_client")
     {
-        _message_size = config()->get_value<int>("apps.client", "message_size", 1024);
-        _concurrency = config()->get_value<int>("apps.client", "concurrency", 1);
-        _echo2 = config()->get_value<bool>("apps.client", "echo2", false);
+        _message_size = system::config()->get_value<int>("apps.client", "message_size", 1024);
+        _concurrency = system::config()->get_value<int>("apps.client", "concurrency", 1);
+        _echo2 = system::config()->get_value<bool>("apps.client", "echo2", false);
         
-
         _seq = 0;
         _last_report_ts_ms = now_ms();
         _recv_bytes_since_last = 0;

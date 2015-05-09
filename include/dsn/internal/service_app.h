@@ -57,6 +57,7 @@ public:
     int arg_count() const { return static_cast<int>(_args.size()); }
     char** args() const { return (char**)&_args_ptr[0]; }
     service_node* svc_node() const { return _svc_node; }
+    int id() const { return spec().id; }
 
 private:
     friend class system_runner;
@@ -66,24 +67,10 @@ private:
     std::vector<std::string> _args;
     std::vector<char*>       _args_ptr;
     service_node*            _svc_node;
-
     service_app_spec         _spec;
 };
 
 typedef service_app* (*service_app_factory)(service_app_spec*);
-
-class service_apps : public utils::singleton<service_apps>
-{
-public:
-    void add(service_app* app);
-    
-    service_app* get(const char* name) const;
-
-    const std::map<std::string, service_app*>& get_all_apps() const { return _apps; }
-
-private:
-    std::map<std::string, service_app*> _apps;
-};
 
 }} // end namespace dsn::service_api
 
