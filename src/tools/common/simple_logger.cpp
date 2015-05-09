@@ -50,7 +50,7 @@ namespace dsn {
                         t->node_name(),
                         task::get_current_worker()->pool_spec().name.c_str(),
                         task::get_current_worker()->index(),
-                        t->id()
+                        static_cast<long long unsigned int>(t->id())
                         );
                 }
                 else
@@ -61,7 +61,7 @@ namespace dsn {
                         t->node_name(),
                         "io-thrd",
                         tid.c_str(),
-                        t->id()
+                        static_cast<long long unsigned int>(t->id())
                         );
                 }
             }
@@ -127,6 +127,12 @@ namespace dsn {
             va_list args
             )
         {
+            va_list args2;
+            if (logLevel >= log_level_WARNING)
+            {
+                va_copy(args2, args);
+            }
+
             utils::auto_lock l(_lock);
          
             print_header(_log);
@@ -138,7 +144,7 @@ namespace dsn {
             if (logLevel >= log_level_WARNING)
             {
                 print_header(stdout);
-                vprintf(fmt, args);
+                vprintf(fmt, args2);
                 printf("\n");
             }
 
