@@ -461,7 +461,6 @@ namespace  dsn
         _total_size -= count;
         return true;
     }
-
 } // end namespace dsn
 
 

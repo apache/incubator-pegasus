@@ -111,6 +111,9 @@ scheduler::~scheduler(void)
 
 /*static*/ void scheduler::on_task_wait(task* waitor, task* waitee, uint32_t timeout_milliseconds)
 {
+    if (waitor == nullptr)
+        return;
+
     if (waitee->state() < task_state::TASK_STATE_FINISHED)
     {
         auto ts = task_ext::get_inited(waitee);
