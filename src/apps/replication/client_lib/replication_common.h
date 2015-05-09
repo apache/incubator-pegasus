@@ -48,21 +48,25 @@ class replication_options
 {
 public:
     std::string working_dir;
+    std::vector<end_point> meta_servers;
 
     int32_t prepare_timeout_ms_for_secondaries;
-    int32_t group_check_internal_ms;
-    int32_t learn_timeout_ms;
+    int32_t prepare_timeout_ms_for_potential_secondaries;
     int32_t preapre_list_max_size_mb;
+    
     int32_t staleness_for_commit;
     int32_t staleness_for_start_prepare_for_potential_secondary;
     int32_t mutation_2pc_min_replica_count;
-    bool group_check_disabled;
+    
+    bool    group_check_disabled;
+    int32_t group_check_internal_ms;
+
     int32_t gc_interval_ms;
-    bool gc_disabled;
+    bool    gc_disabled;
     int32_t gc_memory_replica_interval_ms;
     int32_t gc_disk_error_replica_interval_seconds;
-    bool fd_disabled;
-    std::vector<end_point> meta_servers;
+    
+    bool    fd_disabled;
     int32_t fd_check_interval_seconds;
     int32_t fd_beacon_interval_seconds;
     int32_t fd_lease_seconds;
@@ -73,6 +77,7 @@ public:
     int32_t log_pending_max_ms;
     bool    log_batch_write;
     int32_t log_max_concurrent_writes;
+
     int32_t config_sync_interval_ms;
     bool    config_sync_disabled;
     

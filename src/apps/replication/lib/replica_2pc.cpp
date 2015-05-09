@@ -106,7 +106,7 @@ void replica::init_prepare(mutation_ptr& mu)
     {
         if (it->second.prepare_start_decree != invalid_decree && mu->data.header.decree >= it->second.prepare_start_decree)
         {
-            send_prepare_message(it->first, PS_POTENTIAL_SECONDARY, mu, _options.prepare_timeout_ms_for_secondaries);
+            send_prepare_message(it->first, PS_POTENTIAL_SECONDARY, mu, _options.prepare_timeout_ms_for_potential_secondaries);
             count++;
         }
     }    

@@ -32,14 +32,14 @@
 namespace dsn {
     namespace tools{
         simple_task_queue::simple_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider)
-            : task_queue(pool, index, inner_provider), _queue("")
+            : task_queue(pool, index, inner_provider), _samples("")
         {
         }
 
         void simple_task_queue::enqueue(task_ptr& task)
         {
             if (task->delay_milliseconds() == 0)
-                _queue.enqueue(task, task->spec().priority);
+                _samples.enqueue(task, task->spec().priority);
             else
             {
                 std::shared_ptr<boost::asio::deadline_timer> timer(new boost::asio::deadline_timer(shared_io_service::instance().ios));
@@ -50,7 +50,7 @@ namespace dsn {
                 { 
                     if (!ec)
                     {
-                        task->enqueue(this->pool());
+                        task->enqueue();
                     }
                     else
                     {
@@ -64,12 +64,12 @@ namespace dsn {
         task_ptr simple_task_queue::dequeue()
         {
             int c = 0;
-            return _queue.dequeue(c);
+            return _samples.dequeue(c);
         }
 
         int      simple_task_queue::count() const
         {
-            return _queue.count();
+            return _samples.count();
         }
     }
 }

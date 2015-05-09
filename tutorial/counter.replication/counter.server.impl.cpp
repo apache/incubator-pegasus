@@ -34,8 +34,6 @@ namespace dsn {
         counter_service_impl::counter_service_impl(replica* replica, configuration_ptr& config)
             : counter_service(replica, config)
         {
-			_last_durable_decree = 0;
-			_last_committed_decree = 0;
         }
 
         void counter_service_impl::on_add(const ::dsn::example::count_op& op, ::dsn::service::rpc_replier<int32_t>& reply)

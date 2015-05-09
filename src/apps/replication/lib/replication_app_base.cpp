@@ -41,6 +41,7 @@ replication_app_base::replication_app_base(replica* replica, configuration_ptr& 
 {
     _dir = replica->dir();
     _replica = replica;
+    _last_committed_decree = _last_durable_decree = 0;
 }
 
 int replication_app_base::write_internal(mutation_ptr& mu, bool ack_client)
@@ -55,6 +56,7 @@ int replication_app_base::write_internal(mutation_ptr& mu, bool ack_client)
         ack_client
         );
     
+    ++_last_committed_decree;
     return err;
 }
 

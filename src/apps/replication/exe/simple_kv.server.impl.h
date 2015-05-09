@@ -50,15 +50,6 @@ namespace dsn {
                 virtual int get_learn_state(decree start, const blob& learn_req, __out_param learn_state& state);
                 virtual int apply_learn_state(learn_state& state);
 
-                //
-                virtual ::dsn::replication::decree last_committed_decree() const {
-                    return _last_committed_decree.load();
-                }
-                virtual ::dsn::replication::decree last_durable_decree() const {
-                    return _last_durable_decree.load();
-                }
-
-
             private:
                 void recover();
                 void recover(const std::string& name, decree version);
@@ -67,10 +58,7 @@ namespace dsn {
                 typedef std::map<std::string, std::string> simple_kv;
                 simple_kv _store;
                 zlock    _lock;
-                std::string _learnFileName;
-
-                std::atomic<decree> _last_committed_decree;
-                std::atomic<decree> _last_durable_decree;
+                std::string _learn_file_name;
             };
 
         }

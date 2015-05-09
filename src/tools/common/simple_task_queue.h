@@ -41,7 +41,7 @@ namespace dsn {
 
         private:
             typedef utils::blocking_priority_queue<task_ptr, TASK_PRIORITY_COUNT> tqueue;
-            tqueue _queue;
+            tqueue _samples;
         };
     }
 }

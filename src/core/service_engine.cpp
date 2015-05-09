@@ -165,15 +165,6 @@ service_node* service_engine::start_node(int app_id, const std::string& app_name
                     n->name(),
                     app_name.c_str()
                     );
-
-                //// shared app for the same node
-                //_nodes_by_app_id[app_id] = n;
-                //for (auto p1 : ports)
-                //{
-                //    if (n->rpc()->start_server_port(p1))
-                //        _nodes_by_app_port[p1] = n;
-                //}
-                //return n;
             }
         }
         

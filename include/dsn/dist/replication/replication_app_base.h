@@ -71,8 +71,8 @@ public:
     //
     // queries
     //
-    virtual ::dsn::replication::decree last_committed_decree() const = 0;
-    virtual ::dsn::replication::decree last_durable_decree() const = 0;
+    virtual ::dsn::replication::decree last_committed_decree() const { return _last_committed_decree.load(); }
+    virtual ::dsn::replication::decree last_durable_decree() const { return _last_durable_decree.load(); }
             
 public:
     //
@@ -108,6 +108,10 @@ private:
     std::string _dir;
     replica*    _replica;
     std::map<int, std::function<void(message_ptr&, message_ptr&)> > _handlers;
+
+protected:
+    std::atomic<decree> _last_committed_decree;
+    std::atomic<decree> _last_durable_decree;
 };
 
 typedef replication_app_base* (*replica_app_factory)(replica*, configuration_ptr&);

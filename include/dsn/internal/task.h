@@ -51,8 +51,7 @@ public:
     void                    exec_internal();    
     bool                    cancel(bool wait_until_finished);
     bool                    wait(int timeout_milliseconds = TIME_MS_MAX);
-    void                    enqueue();
-    void                    enqueue(task_worker_pool* pool);
+    virtual void            enqueue();
     void                    set_error_code(error_code err) { _error = err; }
     void                    set_delay(int delay_milliseconds = 0) { _delay_milliseconds = delay_milliseconds; }
 
@@ -75,6 +74,7 @@ public:
 
 protected:
     void                    signal_waiters();
+    void                    enqueue(task_worker_pool* pool);
     void                    set_task_id(uint64_t tid) { _task_id = tid;  }
 
     mutable std::atomic<task_state> _state;
@@ -153,8 +153,9 @@ public:
     virtual void on_response(error_code err, message_ptr& request, message_ptr& response) = 0;
 
     void             enqueue(error_code err, message_ptr& reply);
-    message_ptr&      get_request() { return _request; }
-    message_ptr&      get_response() { return _response; }
+    virtual void     enqueue() { task::enqueue(_caller_pool); } // re-enqueue after above enqueue
+    message_ptr&     get_request() { return _request; }
+    message_ptr&     get_response() { return _response; }
 
     virtual void  exec();
 

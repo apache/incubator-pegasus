@@ -179,13 +179,16 @@ private:
     // prepare list
     prepare_list*           _prepare_list;
 
+    // private log (if enabled)
+    mutation_log*           _log;
+
     // application
     replication_app_base*   _app;
 
     // constants
     replica_stub*           _stub;
     std::string             _dir;
-    char                    _name[256]; // TableID.index @ host:port
+    char                    _name[256]; // app.index @ host:port
     replication_options     _options;
     
     // replica status specific states

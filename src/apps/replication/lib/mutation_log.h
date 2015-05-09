@@ -48,7 +48,13 @@ public:
     //
     // ctors 
     //
-    mutation_log(uint32_t log_buffer_size_mb, uint32_t log_pending_max_ms, uint32_t maxLogFileSizeInMB = (uint64_t) MAX_LOG_FILESIZE, bool batchWrite = true, int writeTaskNumber = 2);
+    mutation_log(
+        uint32_t log_buffer_size_mb, 
+        uint32_t log_pending_max_ms, 
+        uint32_t max_log_file_mb = (uint64_t) MAX_LOG_FILESIZE, 
+        bool batch_write = true, 
+        int write_task_max_count = 2
+        );
     virtual ~mutation_log();
     
     //
@@ -57,7 +63,7 @@ public:
     int initialize(const char* dir);
     int replay(ReplayCallback callback);
     void reset();
-    int start_write_service(multi_partition_decrees& initMaxDecrees, int max_staleness_for_commit);
+    int  start_write_service(multi_partition_decrees& initMaxDecrees, int max_staleness_for_commit);
     void close();
        
     //
@@ -106,7 +112,7 @@ private:
     bool                      _batch_write;
 
     // write & read
-    int                       _last_file_number;
+    int                         _last_file_number;
     std::map<int, log_file_ptr> _log_files;
     log_file_ptr                _last_log_file;
     log_file_ptr                _current_log_file;
@@ -115,17 +121,17 @@ private:
     
     // gc
     multi_partition_decrees     _init_prepared_decrees;
-    int                       _max_staleness_for_commit;
+    int                         _max_staleness_for_commit;
 
     // bufferring
     uint32_t                    _log_buffer_size_bytes;
     uint32_t                    _log_pending_max_milliseconds;
     
-    message_ptr                _pending_write;
+    message_ptr                 _pending_write;
     pending_callbacks_ptr       _pending_write_callbacks;
-    task_ptr                   _pending_write_timer;
+    task_ptr                    _pending_write_timer;
     
-    int                       _write_task_number;
+    int                         _write_task_number;
 };
 
 class log_file : public ref_object
@@ -148,7 +154,7 @@ public:
     // file operations
     //
     static log_file_ptr opend_read(const char* path);
-    static log_file_ptr create_write(const char* dir, int index, int64_t startOffset, int max_staleness_for_commit, int writeTaskNumber = 2);
+    static log_file_ptr create_write(const char* dir, int index, int64_t startOffset, int max_staleness_for_commit, int write_task_max_count = 2);
     void close();
 
     //
@@ -181,17 +187,17 @@ public:
     int  write_header(message_ptr& msg, multi_partition_decrees& initMaxDecrees, int bufferSizeBytes);    
     
 private:
-    log_file(const char* path, handle_t handle, int index, int64_t startOffset, int max_staleness_for_commit, bool isRead, int writeTaskNumber = 2);
+    log_file(const char* path, handle_t handle, int index, int64_t startOffset, int max_staleness_for_commit, bool isRead, int write_task_max_count = 2);
 
 protected:        
     int64_t       _start_offset;
     int64_t       _end_offset;
     handle_t      _handle;
-    bool        _is_read;
-    std::string _path;
-    int         _index;
+    bool          _is_read;
+    std::string   _path;
+    int           _index;
     std::vector<aio_task_ptr>  _write_tasks;
-    int                      _write_task_itr;    
+    int                        _write_task_itr;    
 
     // for gc
     multi_partition_decrees _init_prepared_decrees;    

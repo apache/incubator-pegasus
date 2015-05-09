@@ -36,13 +36,13 @@ namespace dsn { namespace replication {
 
     using namespace ::dsn::service;
 
-mutation_log::mutation_log(uint32_t log_buffer_size_mb, uint32_t log_pending_max_ms, uint32_t maxLogFileSizeInMB, bool batchWrite, int writeTaskNumber)
+mutation_log::mutation_log(uint32_t log_buffer_size_mb, uint32_t log_pending_max_ms, uint32_t max_log_file_mb, bool batch_write, int write_task_max_count)
 {
     _log_buffer_size_bytes = log_buffer_size_mb * 1024 * 1024;
     _log_pending_max_milliseconds = log_pending_max_ms;    
-    _max_log_file_size_in_bytes = ((int64_t)maxLogFileSizeInMB) * 1024L * 1024L;
-    _batch_write = batchWrite;
-    _write_task_number = writeTaskNumber;
+    _max_log_file_size_in_bytes = ((int64_t)max_log_file_mb) * 1024L * 1024L;
+    _batch_write = batch_write;
+    _write_task_number = write_task_max_count;
 
     _last_file_number = 0;
     _global_start_offset = 0;
@@ -83,7 +83,7 @@ int mutation_log::initialize(const char* dir)
     //create dir if necessary
     if (!boost::filesystem::exists(dir) && !boost::filesystem::create_directory(dir))
     {
-        derror("open mutation_log: create log path failed");
+        derror ("open mutation_log: create log path failed");
         return ERR_FILE_OPERATION_FAILED;
     }
 
@@ -103,8 +103,7 @@ int mutation_log::initialize(const char* dir)
         log_file_ptr log = log_file::opend_read(fullPath.c_str());
         if (log == nullptr)
         {
-            dwarn(
-                "Skip file %s during log init", fullPath.c_str());
+            dwarn ("Skip file %s during log init", fullPath.c_str());
             continue;
         }
 
@@ -122,8 +121,7 @@ int mutation_log::initialize(const char* dir)
     {
         if (++_last_file_number != it->first)
         {
-            derror(
-                "log file missing with index %u", _last_file_number);
+            derror ("log file missing with index %u", _last_file_number);
             return ERR_OBJECT_NOT_FOUND;
         }
 
@@ -146,13 +144,11 @@ int mutation_log::create_new_log_file()
     log_file_ptr logFile = log_file::create_write(_dir.c_str(), _last_file_number + 1, _global_end_offset, _max_staleness_for_commit, _write_task_number);
     if (logFile == nullptr)
     {
-        derror(
-            "cannot create log file with index %u", _last_file_number);
+        derror ("cannot create log file with index %u", _last_file_number);
         return ERR_FILE_OPERATION_FAILED;
     }    
 
-    derror(
-        "create new log file %s", logFile->path().c_str());
+    derror ("create new log file %s", logFile->path().c_str());
         
     _last_file_number++;
     dassert (_log_files.find(_last_file_number) == _log_files.end(), "");
@@ -256,7 +252,7 @@ int mutation_log::write_pending_mutations(bool create_new_log_when_necessary)
         int ret = create_new_log_file();
         if (ERR_SUCCESS != ret)
         {
-            derror("create new log file failed, err = %d", ret);
+            derror ("create new log file failed, err = %d", ret);
         }
         return ret;
     }
@@ -313,8 +309,7 @@ int mutation_log::replay(ReplayCallback callback)
 
         if (!msg->is_right_body())
         {
-            derror(
-                        "data read crc check failed at offset %llu", offset);
+            derror("data read crc check failed at offset %llu", offset);
             return ERR_WRONG_CHECKSUM;
         }
 
@@ -331,8 +326,7 @@ int mutation_log::replay(ReplayCallback callback)
 
                 if (mu->data.header.log_offset != offset)
                 {
-                    derror(
-                        "offset mismatch in log entry and mutation %lld vs %lld", offset, mu->data.header.log_offset);
+                    derror("offset mismatch in log entry and mutation %lld vs %lld", offset, mu->data.header.log_offset);
                     return ERR_FILE_OPERATION_FAILED;
                 }
 
@@ -360,8 +354,7 @@ int mutation_log::replay(ReplayCallback callback)
 
             if (!msg->is_right_body())
             {
-                derror(
-                            "data read crc check failed at offset %llu", offset);
+                derror("data read crc check failed at offset %llu", offset);
                 return ERR_WRONG_CHECKSUM;
             }
         }
@@ -632,7 +625,7 @@ std::map<int, log_file_ptr>& mutation_log::get_logfiles_for_test()
     return new log_file(path, hFile, index, startOffset, 0, true);
 }
 
-/*static*/ log_file_ptr log_file::create_write(const char* dir, int index, int64_t startOffset, int max_staleness_for_commit, int writeTaskNumber)
+/*static*/ log_file_ptr log_file::create_write(const char* dir, int index, int64_t startOffset, int max_staleness_for_commit, int write_task_max_count)
 {
     char path[512]; 
     sprintf (path, "%s/log.%u.%lld", dir, index, static_cast<long long int>(startOffset));
@@ -644,10 +637,10 @@ std::map<int, log_file_ptr>& mutation_log::get_logfiles_for_test()
         return nullptr;
     }
 
-    return new log_file(path, hFile, index, startOffset, max_staleness_for_commit, false, writeTaskNumber);
+    return new log_file(path, hFile, index, startOffset, max_staleness_for_commit, false, write_task_max_count);
 }
 
-log_file::log_file(const char* path, handle_t handle, int index, int64_t startOffset, int max_staleness_for_commit, bool isRead, int writeTaskNumber)
+log_file::log_file(const char* path, handle_t handle, int index, int64_t startOffset, int max_staleness_for_commit, bool isRead, int write_task_max_count)
 {
     _start_offset = startOffset;
     _end_offset = startOffset;
@@ -658,7 +651,7 @@ log_file::log_file(const char* path, handle_t handle, int index, int64_t startOf
     memset(&_header, 0, sizeof(_header));
     _header.max_staleness_for_commit = max_staleness_for_commit;
     _write_task_itr = 0;    
-    _write_tasks.resize(writeTaskNumber);
+    _write_tasks.resize(write_task_max_count);
 
     if (isRead)
     {

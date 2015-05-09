@@ -37,9 +37,8 @@ namespace dsn {
                 struct params
                 {
                     std::vector<end_point> servers;
-                    servicelet* svc;
+                    rpc_response_task_ptr response_task;
                     rpc_reply_handler callback;
-                    int reply_hash;
                 };
 
                 static end_point get_next_server(const end_point& currentServer, const std::vector<end_point>& servers)
@@ -106,14 +105,7 @@ namespace dsn {
                     rpc::call(
                         next_server,
                         request,
-                        ps->svc,
-                        std::bind(
-                        &rpc_replicated_impl::internal_rpc_reply_callback,
-                        std::placeholders::_1,
-                        std::placeholders::_2,
-                        std::placeholders::_3,
-                        ps),
-                        ps->reply_hash
+                        ps->response_task
                         );
                 }
 
@@ -140,20 +132,26 @@ namespace dsn {
                 rpc_replicated_impl::params *ps = new rpc_replicated_impl::params;
                 ps->servers = servers;
                 ps->callback = callback;
-                ps->reply_hash = reply_hash;
-                ps->svc = svc;
 
-                return rpc::call(
-                    first,
-                    request,
-                    svc,
-                    std::bind(
+                std::function<void(error_code, message_ptr&, message_ptr&)> cb = std::bind(
                     &rpc_replicated_impl::internal_rpc_reply_callback,
                     std::placeholders::_1,
                     std::placeholders::_2,
                     std::placeholders::_3,
-                    ps),
+                    ps
+                    );
+
+                ps->response_task = new internal_use_only::service_rpc_response_task4(
+                    svc,
+                    cb,
+                    request,
                     reply_hash
+                    );
+
+                return rpc::call(
+                    first,
+                    request,
+                    ps->response_task
                     );
             }
         }

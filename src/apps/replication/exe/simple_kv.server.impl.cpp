@@ -35,9 +35,7 @@ namespace dsn {
             simple_kv_service_impl::simple_kv_service_impl(replica* replica, configuration_ptr& cf)
                 : simple_kv_service(replica, cf)
             {
-                _learnFileName.clear();
-                _last_durable_decree = 0;
-                _last_committed_decree = 0;
+                _learn_file_name.clear();
             }
 
             // RPC_SIMPLE_KV_READ
@@ -61,7 +59,6 @@ namespace dsn {
             {
                 zauto_lock l(_lock);
                 _store[pr.key] = pr.value;
-                _last_committed_decree++;
                 reply(ERR_SUCCESS);
             }
 
@@ -74,7 +71,6 @@ namespace dsn {
                     it->second.append(pr.value);
                 else
                     _store[pr.key] = pr.value;
-                _last_committed_decree++;
                 reply(ERR_SUCCESS);
             }
             
@@ -238,19 +234,19 @@ namespace dsn {
 
 
                 //// Test Sample
-                //if (_learnFileName.empty())
+                //if (_learn_file_name.empty())
                 //{
                 //    std::stringstream ss;                
                 //    ss << std::rand();
-                //    ss >> _learnFileName;        
-                //    _learnFileName = dir() + "/test_transfer_" + _learnFileName + ".txt";        
+                //    ss >> _learn_file_name;        
+                //    _learn_file_name = dir() + "/test_transfer_" + _learn_file_name + ".txt";        
                 //    
-                //    std::ofstream fout(_learnFileName.c_str());
+                //    std::ofstream fout(_learn_file_name.c_str());
                 //    fout << "Test by Kit" << std::endl;        
                 //    fout.close();        
                 //}
                 //
-                //state.files.push_back(_learnFileName);
+                //state.files.push_back(_learn_file_name);
 
                 return ERR_SUCCESS;
             }

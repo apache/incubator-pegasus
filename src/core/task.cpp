@@ -306,6 +306,7 @@ const char* task::node_name() const
 void task::enqueue()
 {        
     dassert(_node != nullptr, "service node unknown for this task");
+    dassert(_spec->type != TASK_TYPE_RPC_RESPONSE, "tasks with TASK_TYPE_RPC_RESPONSE type use task::enqueue(caller_pool()) instead");
     auto pool = node()->computation()->get_pool(spec().pool_code);
     enqueue(pool);
 }

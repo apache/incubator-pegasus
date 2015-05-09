@@ -90,8 +90,7 @@ void replica::init_learn(uint64_t signature)
         request,        
         this,
         &replica::on_learn_reply,
-        gpid_to_hash(get_gpid()),
-        _options.learn_timeout_ms
+        gpid_to_hash(get_gpid())
         );
 
     ddebug(

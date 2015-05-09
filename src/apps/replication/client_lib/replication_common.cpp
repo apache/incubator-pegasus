@@ -31,7 +31,7 @@ namespace dsn { namespace replication {
 replication_options::replication_options()
 {
     prepare_timeout_ms_for_secondaries = 1000;
-    learn_timeout_ms = 30000;
+    prepare_timeout_ms_for_potential_secondaries = 3000;
     staleness_for_commit = 10;
     staleness_for_start_prepare_for_potential_secondary = 110;
     mutation_2pc_min_replica_count = 1;
@@ -87,8 +87,9 @@ void replication_options::initialize(configuration_ptr config)
 {
     prepare_timeout_ms_for_secondaries =
         config->get_value<uint32_t>("replication", "prepare_timeout_ms_for_secondaries", prepare_timeout_ms_for_secondaries);
-    learn_timeout_ms =
-        config->get_value<uint32_t>("replication", "learn_timeout_ms", learn_timeout_ms);
+    prepare_timeout_ms_for_potential_secondaries = 
+        config->get_value<uint32_t>("replication", "prepare_timeout_ms_for_potential_secondaries", prepare_timeout_ms_for_potential_secondaries);
+
     staleness_for_commit =
         config->get_value<uint32_t>("replication", "staleness_for_commit", staleness_for_commit);
     staleness_for_start_prepare_for_potential_secondary =
