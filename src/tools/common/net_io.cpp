@@ -55,22 +55,32 @@ namespace dsn {
         {
             if (_socket.is_open())
             {
-                boost::asio::socket_base::send_buffer_size option, option2(16 * 1024 * 1024);
-                _socket.get_option(option);
-                int old = option.value();
-                _socket.set_option(option2);
-                _socket.get_option(option);
+                try {
+                    boost::asio::socket_base::send_buffer_size option, option2(16 * 1024 * 1024);
+                    _socket.get_option(option);
+                    int old = option.value();
+                    _socket.set_option(option2);
+                    _socket.get_option(option);
 
-                /*ddebug("boost asio send buffer size is %u, set as 16MB, now is %u",
+                    /*ddebug("boost asio send buffer size is %u, set as 16MB, now is %u",
                     old, option.value());*/
 
-                boost::asio::socket_base::receive_buffer_size option3, option4(16 * 1024 * 1024);
-                _socket.get_option(option3);
-                old = option3.value();
-                _socket.set_option(option4);
-                _socket.get_option(option3);
-                /*ddebug("boost asio recv buffer size is %u, set as 16MB, now is %u",
+                    boost::asio::socket_base::receive_buffer_size option3, option4(16 * 1024 * 1024);
+                    _socket.get_option(option3);
+                    old = option3.value();
+                    _socket.set_option(option4);
+                    _socket.get_option(option3);
+                    /*ddebug("boost asio recv buffer size is %u, set as 16MB, now is %u",
                     old, option.value());*/
+                }
+                catch (std::exception& ex)
+                {
+                    dwarn("network session %s:%d set socket option failed, err = %s",
+                        _remote_addr.to_ip_string().c_str(),
+                        static_cast<int>(_remote_addr.port),
+                        ex.what()
+                        );
+                }
             }
         }
 
