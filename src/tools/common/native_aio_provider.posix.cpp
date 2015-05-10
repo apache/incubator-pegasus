@@ -91,7 +91,7 @@ namespace dsn {
             {
                 if (err != 0)
                 {
-                    derror("file operation failed, errno = %d", err);
+                    derror("file operation failed, errno = %d", errno);
                 }
 
                 size_t bytes = aio_return(&ctx->cb); // from e.g., read or write
@@ -148,7 +148,7 @@ namespace dsn {
 
             if (r < 0)
             {
-                derror("file op faile, err = %d", r);
+                derror("file op faile, err = %d", errno);
             }
 
             if (async)
