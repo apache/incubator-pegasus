@@ -163,7 +163,7 @@ void replica::send_prepare_message(const end_point& addr, partition_status statu
         );
 
     ddebug( 
-        "%s: mutation %s send_prepare_message to %s:%u as %s", 
+        "%s: mutation %s send_prepare_message to %s:%d as %s", 
         name(), mu->name(),
         addr.name.c_str(), static_cast<int>(addr.port),
         enum_to_string(rconfig.status)
@@ -364,7 +364,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, int
         unmarshall(reply, resp);        
 
         ddebug( 
-            "%s: mutation %s on_prepare_reply from %s:%u", 
+            "%s: mutation %s on_prepare_reply from %s:%d", 
             name(), mu->name(),
             node.name.c_str(), static_cast<int>(node.port)
             );

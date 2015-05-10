@@ -139,7 +139,7 @@ void server_state::remove_meta_node(const end_point& node)
         }
     }
 
-    dassert (false, "cannot find node '%s:%u' in server state", node.name.c_str(), static_cast<int>(node.port));
+    dassert (false, "cannot find node '%s:%d' in server state", node.name.c_str(), static_cast<int>(node.port));
 }
 
 void server_state::switch_meta_primary()

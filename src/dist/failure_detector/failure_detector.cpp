@@ -125,7 +125,7 @@ bool failure_detector::switch_master(const end_point& from, const end_point& to)
             if (it2 != _masters.end())
             {
                 dinfo(
-                    "master switch, switch master from %s:%u to %s:%u failed as both are already registered",
+                    "master switch, switch master from %s:%d to %s:%d failed as both are already registered",
                     from.name.c_str(), static_cast<int>(from.port),
                     to.name.c_str(), static_cast<int>(to.port)
                     );
@@ -138,7 +138,7 @@ bool failure_detector::switch_master(const end_point& from, const end_point& to)
             _masters.erase(from);
 
             dinfo(
-                "master switch, switch master from %s:%u to %s:%u succeeded",
+                "master switch, switch master from %s:%d to %s:%d succeeded",
                 from.name.c_str(), static_cast<int>(from.port),
                 to.name.c_str(), static_cast<int>(to.port)
                 );
@@ -146,7 +146,7 @@ bool failure_detector::switch_master(const end_point& from, const end_point& to)
         else
         {
             dinfo(
-                "master switch, switch master from %s:%u to %s:%u failed as the former has not been registered yet",
+                "master switch, switch master from %s:%d to %s:%d failed as the former has not been registered yet",
                 from.name.c_str(), static_cast<int>(from.port),
                 to.name.c_str(), static_cast<int>(to.port)
                 );

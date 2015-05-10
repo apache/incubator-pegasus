@@ -53,7 +53,7 @@ namespace dsn {
             case task_type::TASK_TYPE_RPC_REQUEST:
             {
                 auto tsk = (rpc_request_task*)this_;
-                ddebug("%s EXEC BEGIN, task_id = %016llx, %s:%u => %s:%u, rpc_id = %016llx",
+                ddebug("%s EXEC BEGIN, task_id = %016llx, %s:%d => %s:%d, rpc_id = %016llx",
                     this_->spec().name,
                     this_->id(),
                     tsk->get_request()->header().from_address.name.c_str(),
@@ -67,7 +67,7 @@ namespace dsn {
             case task_type::TASK_TYPE_RPC_RESPONSE:
             {
                 auto tsk = (rpc_response_task*)this_;
-                ddebug("%s EXEC BEGIN, task_id = %016llx, %s:%u => %s:%u, rpc_id = %016llx",
+                ddebug("%s EXEC BEGIN, task_id = %016llx, %s:%d => %s:%d, rpc_id = %016llx",
                     this_->spec().name,
                     this_->id(),
                     tsk->get_request()->header().to_address.name.c_str(),
@@ -139,7 +139,7 @@ namespace dsn {
             ::dsn::utils::time_ms_to_string(hdr.client.timeout_ts_us/1000, str);
 
             ddebug(
-                "%s RPC.CALL: %s:%u => %s:%u, rpc_id = %016llx, callback_task = %016llx, timeout @ %s",
+                "%s RPC.CALL: %s:%d => %s:%d, rpc_id = %016llx, callback_task = %016llx, timeout @ %s",
                 hdr.rpc_name,
                 hdr.from_address.name.c_str(),
                 static_cast<int>(hdr.from_address.port),
@@ -153,7 +153,7 @@ namespace dsn {
 
         static void tracer_on_rpc_request_enqueue(rpc_request_task* callee)
         {
-            ddebug("%s RPC.REQUEST.ENQUEUE, task_id = %016llx, %s:%u => %s:%u, rpc_id = %016llx",
+            ddebug("%s RPC.REQUEST.ENQUEUE, task_id = %016llx, %s:%d => %s:%d, rpc_id = %016llx",
                 callee->spec().name,
                 callee->id(),
                 callee->get_request()->header().from_address.name.c_str(),
@@ -170,7 +170,7 @@ namespace dsn {
             message_header& hdr = msg->header();
 
             ddebug(
-                "%s RPC.REPLY: %s:%u => %s:%u, rpc_id = %016llx",
+                "%s RPC.REPLY: %s:%d => %s:%d, rpc_id = %016llx",
                 hdr.rpc_name,
                 hdr.from_address.name.c_str(),
                 static_cast<int>(hdr.from_address.port),
@@ -182,7 +182,7 @@ namespace dsn {
 
         static void tracer_on_rpc_response_enqueue(rpc_response_task* resp)
         {
-            ddebug("%s RPC.RESPONSE.ENQUEUE, task_id = %016llx, %s:%u => %s:%u, rpc_id = %016llx",
+            ddebug("%s RPC.RESPONSE.ENQUEUE, task_id = %016llx, %s:%d => %s:%d, rpc_id = %016llx",
                 resp->spec().name,
                 resp->id(),
                 resp->get_request()->header().to_address.name.c_str(),

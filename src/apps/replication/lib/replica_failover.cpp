@@ -52,7 +52,7 @@ void replica::handle_local_failure(int error)
 void replica::handle_remote_failure(partition_status st, const end_point& node, int error)
 {    
     ddebug(
-        "%s: handle remote failure error %u, status = %s, node = %s:%u",
+        "%s: handle remote failure error %u, status = %s, node = %s:%d",
         name(),
         error,
         enum_to_string(st),

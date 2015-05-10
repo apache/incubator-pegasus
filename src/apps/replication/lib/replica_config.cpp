@@ -39,7 +39,7 @@ void replica::on_config_proposal(configuration_update_request& proposal)
     check_hashed_access();
 
     ddebug(
-        "%s: on_config_proposal %s for %s:%u", 
+        "%s: on_config_proposal %s for %s:%d", 
         name(),
         enum_to_string(proposal.type),
         proposal.node.name.c_str(), static_cast<int>(proposal.node.port)
@@ -147,7 +147,7 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
 void replica::upgrade_to_secondary_on_primary(const end_point& node)
 {
     ddebug(
-            "%s: upgrade potential secondary %s:%u to secondary",
+            "%s: upgrade potential secondary %s:%d to secondary",
             name(),
             node.name.c_str(), static_cast<int>(node.port)
             );

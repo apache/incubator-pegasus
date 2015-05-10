@@ -145,7 +145,7 @@ int replica::init_app_and_prepare_list(const char* app_type, bool create_new)
         _app = nullptr;
     }
 
-    sprintf(_name, "%u.%u @ %s:%u", _config.gpid.app_id, _config.gpid.pidx, primary_address().name.c_str(),
+    sprintf(_name, "%u.%u @ %s:%d", _config.gpid.app_id, _config.gpid.pidx, primary_address().name.c_str(),
         static_cast<int>(primary_address().port));
 
     return err;
@@ -165,7 +165,7 @@ void replica::replay_mutation(mutation_ptr& mu)
 
     // prepare
     /*ddebug( 
-            "%u.%u @ %s:%u: replay mutation ballot = %llu, decree = %llu, last_committed_decree = %llu",
+            "%u.%u @ %s:%d: replay mutation ballot = %llu, decree = %llu, last_committed_decree = %llu",
             get_gpid().app_id, get_gpid().pidx, 
             address().name.c_str(), static_cast<int>address().port,
             mu->data.header.ballot, 

@@ -87,7 +87,7 @@ namespace dsn {
             catch (std::exception& ex)
             {
                 ex;
-                /*dwarn("network session %s:%u exits failed, err = %s",
+                /*dwarn("network session %s:%d exits failed, err = %s",
                     _remote_addr.to_ip_string().c_str(),
                     static_cast<int>_remote_addr.port,
                     ex.what()
@@ -227,7 +227,7 @@ namespace dsn {
                         _reconnect_count = 0;
                         _state = SS_CONNECTED;
 
-                        dinfo("client session %s:%u connected",
+                        dinfo("client session %s:%d connected",
                             _remote_addr.name.c_str(),
                             static_cast<int>(_remote_addr.port)
                             );

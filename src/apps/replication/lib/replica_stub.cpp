@@ -105,7 +105,7 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
         auto r = replica::load(this, name.c_str(), _options, true);
         if (r != nullptr)
         {
-            ddebug( "%u.%u @ %s:%u: load replica success with durable decree = %llu from '%s'",
+            ddebug( "%u.%u @ %s:%d: load replica success with durable decree = %llu from '%s'",
                 r->get_gpid().app_id, r->get_gpid().pidx,
                 primary_address().name.c_str(), static_cast<int>(primary_address().port),
                 r->last_durable_decree(),
@@ -129,7 +129,7 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
         it->second->reset_prepare_list_after_replay();
 
         derror(
-            "%u.%u @ %s:%u: initialized durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
+            "%u.%u @ %s:%d: initialized durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
             it->first.app_id, it->first.pidx,
             primary_address().name.c_str(), static_cast<int>(primary_address().port),
             it->second->last_durable_decree(),
@@ -464,7 +464,7 @@ void replica_stub::query_configuration_by_node()
 void replica_stub::on_meta_server_connected()
 {
     ddebug(
-        "%s:%u: meta server connected",
+        "%s:%d: meta server connected",
         primary_address().name.c_str(), static_cast<int>(primary_address().port)
         );
 
@@ -479,7 +479,7 @@ void replica_stub::on_meta_server_connected()
 void replica_stub::on_node_query_reply(int err, message_ptr& request, message_ptr& response)
 {
     ddebug(
-        "%s:%u: node view replied",
+        "%s:%d: node view replied",
         primary_address().name.c_str(), static_cast<int>(primary_address().port)
         );
 
@@ -561,7 +561,7 @@ void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_, const par
     {
 
         ddebug(
-            "%u.%u @ %s:%u: replica not exists on replica server, remove it from meta server",
+            "%u.%u @ %s:%d: replica not exists on replica server, remove it from meta server",
             config.gpid.app_id, config.gpid.pidx,
             primary_address().name.c_str(), static_cast<int>(primary_address().port)
             );
@@ -576,7 +576,7 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, global_p
     if (replica != nullptr)
     {
         ddebug(
-            "%u.%u @ %s:%u: replica not exists on meta server, removed",
+            "%u.%u @ %s:%d: replica not exists on meta server, removed",
             gpid.app_id, gpid.pidx,
             primary_address().name.c_str(), static_cast<int>(primary_address().port)
             );
@@ -623,7 +623,7 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
 void replica_stub::on_meta_server_disconnected()
 {
     ddebug(
-        "%s:%u: meta server disconnected",
+        "%s:%d: meta server disconnected",
         primary_address().name.c_str(), static_cast<int>(primary_address().port)
         );
     zauto_lock l(_repicas_lock);

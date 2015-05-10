@@ -49,7 +49,7 @@ namespace dsn { namespace tools {
         sim_network_provider* rnet = nullptr;
         if (!s_switch[task_spec::get(msg->header().local_rpc_code)->rpc_call_channel].get(msg->header().to_address, rnet))
         {
-            dwarn("cannot find destination node %s:%u in simulator", 
+            dwarn("cannot find destination node %s:%d in simulator", 
                 msg->header().to_address.name.c_str(), 
                 static_cast<int>(msg->header().to_address.port)
                 );

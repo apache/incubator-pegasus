@@ -116,7 +116,7 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
     if (request.last_committed_decree_in_app > last_committed_decree())
     {
         ddebug(
-            "%s: on_learn %s:%u, learner state is lost due to DDD, with its appCommittedDecree = %llu vs localCommitedDecree %llu",
+            "%s: on_learn %s:%d, learner state is lost due to DDD, with its appCommittedDecree = %llu vs localCommitedDecree %llu",
             name(),
             request.learner.name.c_str(), static_cast<int>(request.learner.port),
             request.last_committed_decree_in_app,
@@ -140,7 +140,7 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
     }
 
     ddebug(
-        "%s: on_learn %s:%u with its appCommittedDecree = %llu vs localCommitedDecree %llu",
+        "%s: on_learn %s:%d with its appCommittedDecree = %llu vs localCommitedDecree %llu",
         name(),
         request.learner.name.c_str(), static_cast<int>(request.learner.port),
         request.last_committed_decree_in_app,
@@ -161,7 +161,7 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
             replay_prepare_list();
 
             ddebug(
-                "%s: on_learn with prepare_start_decree = %llu for %s:%u",
+                "%s: on_learn with prepare_start_decree = %llu for %s:%d",
                 name(),
                 last_committed_decree() + 1,
                 request.learner.name.c_str(), static_cast<int>(request.learner.port)
