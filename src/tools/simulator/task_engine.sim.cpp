@@ -29,7 +29,7 @@
 namespace dsn { namespace tools {
     
 sim_task_queue::sim_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider)
-: task_queue(pool, index, inner_provider), _tasks("")
+: task_queue(pool, index, inner_provider)
 {
 }
 
@@ -37,7 +37,19 @@ void sim_task_queue::enqueue(task_ptr& task)
 {
     if (0 == task->delay_milliseconds())    
     {
-        _tasks.enqueue(task, task->spec().priority);
+        if (_tasks.size() > 0)
+        {
+            do {
+                int random_pos = ::dsn::service::env::random32(0, 1000000);
+                auto pr = _tasks.insert(std::map<uint32_t, task_ptr>::value_type(random_pos, task));
+                if (pr.second) break;
+            } while (true);
+        }
+        else
+        {
+            int random_pos = ::dsn::service::env::random32(0, 1000000);
+            _tasks.insert(std::map<uint32_t, task_ptr>::value_type(random_pos, task));
+        }
     }
     else
     {
@@ -49,20 +61,28 @@ task_ptr sim_task_queue::dequeue()
 {
     scheduler::instance().wait_schedule(false);
 
-    long c = 0;
-    return _tasks.dequeue(c);
+    if (_tasks.size() > 0)
+    {
+        task_ptr t = _tasks.begin()->second;
+        _tasks.erase(_tasks.begin());
+        return t;
+    }
+    else
+    {
+        return nullptr;
+    }
 }
 
 void sim_semaphore_provider::signal(int count)
 {
     _count += count;
     
-    while (!_waitThreads.empty() && _count > 0)
+    while (!_wait_threads.empty() && _count > 0)
     {
         --_count;
 
-        sim_worker_state* thread = _waitThreads.front();
-        _waitThreads.pop_front();
+        sim_worker_state* thread = _wait_threads.front();
+        _wait_threads.pop_front();
         thread->is_continuation_ready = true;
     }
 }
@@ -77,7 +97,7 @@ bool sim_semaphore_provider::wait(int timeout_milliseconds)
     }
     else
     {
-        _waitThreads.push_back(scheduler::task_worker_ext::get(task::get_current_worker()));
+        _wait_threads.push_back(scheduler::task_worker_ext::get(task::get_current_worker()));
         scheduler::instance().wait_schedule(true, false);
         return true;
     }

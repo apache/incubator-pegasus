@@ -49,7 +49,7 @@ namespace dsn {
             register_component_provider<asio_network_provider>("dsn::tools::asio_network_provider");
             register_component_provider<sim_network_provider>("dsn::tools::sim_network_provider");
             register_component_provider<simple_task_queue>("dsn::tools::simple_task_queue");
-            register_component_provider<dsn_message_parser>("dsn");
+            register_message_header_parser<dsn_message_parser>(NET_HDR_DSN);
 #if defined(_WIN32)
             register_component_provider<native_win_aio_provider>("dsn::tools::native_aio_provider");
 #else

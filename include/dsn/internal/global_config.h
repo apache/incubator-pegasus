@@ -55,49 +55,53 @@ struct network_config_spec
     rpc_channel channel;
     // ]
 
-    std::string message_format;
+    network_header_format hdr_format;
     std::string factory_name; 
     int         message_buffer_block_size;
 
     network_config_spec(const network_config_spec& r);
-    network_config_spec() : channel(RPC_CHANNEL_TCP) {}
+    network_config_spec() : channel(RPC_CHANNEL_TCP), hdr_format(NET_HDR_DSN) {}
     network_config_spec(int p, rpc_channel c);
     bool operator < (const network_config_spec& r) const;
 };
 
-struct network_message_format {};
-typedef utils::customized_id_mgr<network_message_format> network_formats; //"dsn->0" "thrift->1"
-typedef std::map<network_config_spec, network_config_spec> network_conf; // port => config
+struct network_config_spec_default
+{
+    std::string factory_name;
+    int         message_buffer_block_size;
+};
+
+typedef std::map<network_config_spec, network_config_spec> network_conf; // <port,channel> => config
+typedef std::map<rpc_channel, network_config_spec_default> network_default_conf; // channel => config default
 
 struct service_spec
 {
-    configuration_ptr            config;
+    configuration_ptr            config; // config file
 
-    std::string                  tool;
-    std::list<std::string>       toollets;
-    std::string                  coredump_dir;
+    std::string                  tool;   // the main tool (only 1 is allowed for a time)
+    std::list<std::string>       toollets; // toollets enabled compatible to the main tool
+    std::string                  coredump_dir; // to store core dump files
     
-    network_conf                 network_configs;
+    network_default_conf         network_default_configs; // default network configs by tools
     std::string                  aio_factory_name;
     std::string                  env_factory_name;
     std::string                  lock_factory_name;
     std::string                  rwlock_factory_name;
     std::string                  semaphore_factory_name;
     std::string                  nfs_factory_name;
+    std::string                  perf_counter_factory_name;
+    std::string                  logging_factory_name;
 
-    std::list<std::string>       network_aspects; // applied to all network factories
-    std::list<std::string>       aio_aspects;
+    std::list<std::string>       network_aspects; // toollets compatible to the above network main providers in network configs
+    std::list<std::string>       aio_aspects; // toollets compatible to main aio provider
     std::list<std::string>       env_aspects;
     std::list<std::string>       lock_aspects;
     std::list<std::string>       rwlock_aspects;
     std::list<std::string>       semaphore_aspects;
 
-    std::string                  perf_counter_factory_name;
-    std::string                  logging_factory_name;
-    
+    network_conf                  network_configs;
     std::vector<threadpool_spec>  threadpool_specs;
-
-    std::vector<service_app_spec>  app_specs;
+    std::vector<service_app_spec> app_specs;
 
     service_spec() {}
 

@@ -88,13 +88,12 @@ namespace dsn {
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     network::network(rpc_engine* srv, network* inner_provider)
-        : _engine(srv)
-    {
-        _parser_type = "dsn";
+        : _engine(srv), _parser_type(NET_HDR_DSN)
+    {   
         _message_buffer_block_size = 1024 * 64;
     }
 
-    void network::reset_parser(const std::string& name, int message_buffer_block_size)
+    void network::reset_parser(network_header_format name, int message_buffer_block_size)
     {
         _message_buffer_block_size = message_buffer_block_size;
         _parser_type = name;
@@ -112,8 +111,8 @@ namespace dsn {
 
     std::shared_ptr<message_parser> network::new_message_parser()
     {
-        message_parser * parser = utils::factory_store<message_parser>::create(_parser_type.c_str(), PROVIDER_TYPE_MAIN, _message_buffer_block_size);
-        dassert(parser, "message parser '%s' not registerd or invalid!", _parser_type.c_str());
+        message_parser * parser = utils::factory_store<message_parser>::create(_parser_type.to_string(), PROVIDER_TYPE_MAIN, _message_buffer_block_size);
+        dassert(parser, "message parser '%s' not registerd or invalid!", _parser_type.to_string());
         return std::shared_ptr<message_parser>(parser);
     }
 

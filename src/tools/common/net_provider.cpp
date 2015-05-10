@@ -38,7 +38,7 @@ namespace dsn {
             _socket.reset(new boost::asio::ip::tcp::socket(_io_service));
         }
 
-        error_code asio_network_provider::start(int port, bool client_only)
+        error_code asio_network_provider::start(rpc_channel channel, int port, bool client_only)
         {
             if (_acceptor != nullptr)
                 return ERR_SERVICE_ALREADY_RUNNING;

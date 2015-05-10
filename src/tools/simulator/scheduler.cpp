@@ -23,9 +23,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "scheduler.h"
-#include "env.sim.h"
-#include <dsn/service_api.h>
+# include "scheduler.h"
+# include "env.sim.h"
+# include <dsn/service_api.h>
+# include <set>
 
 namespace dsn { namespace tools {
 
@@ -173,39 +174,43 @@ void scheduler::schedule()
     while (true)
     {
         // run ready workers whenever possible
-        std::vector<int> readyWorkers;
+        std::vector<int> ready_workers;
         for (auto& s : _threads)
         {
             if ((s->in_continuation && s->is_continuation_ready)
                 || (!s->in_continuation && s->worker->queue()->count() > 0)
                 )
             {
-                readyWorkers.push_back(s->index);
+                ready_workers.push_back(s->index);
             }
         }
 
-        if (readyWorkers.size() > 0)
+        if (ready_workers.size() > 0)
         {
-            int i = dsn::service::env::random32(0, (uint32_t)readyWorkers.size() - 1);
-            _threads[readyWorkers[i]]->runnable.release();
+            int i = dsn::service::env::random32(0, (uint32_t)ready_workers.size() - 1);
+            _threads[ready_workers[i]]->runnable.release();
             return;
         }
 
         // otherwise, run the timed tasks
         uint64_t ts = 0;
-        auto pEvents = _wheel.pop_next_events(ts);
-        if (pEvents)
+        auto events = _wheel.pop_next_events(ts);
+        if (events)
         {
             {
                 utils::auto_lock l(_lock);
                 _time_ns = ts;
             }
 
-            for (auto it = pEvents->begin(); it != pEvents->end(); it++)
+            // randomize the events, and see
+            std::random_shuffle(events->begin(), events->end(), [](int n) { return dsn::service::env::random32(0, n - 1); });
+
+            for (auto it = events->begin(); it != events->end(); it++)
             {
                 ::dsn::service::tasking::enqueue(*it);
             }
-            delete pEvents;
+
+            delete events;
             continue;
         }
 

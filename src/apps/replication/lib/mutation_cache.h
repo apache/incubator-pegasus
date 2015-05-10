@@ -37,7 +37,7 @@ public:
     mutation_cache(decree init_decree, int max_count);
     ~mutation_cache();
 
-    int          put(mutation_ptr& mu);
+    error_code   put(mutation_ptr& mu);
     mutation_ptr pop_min();
     mutation_ptr get_mutation_by_decree(decree decree);
     void         reset(decree init_decree, bool clear_mutations);

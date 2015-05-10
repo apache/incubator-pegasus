@@ -60,17 +60,17 @@ namespace dsn {
         rpc_client_session_ptr get_client_session(const end_point& ep);
         void on_client_session_disconnected(rpc_client_session_ptr& s);
 
-        virtual error_code start(int port, bool client_only) = 0;
+        virtual error_code start(rpc_channel channel, int port, bool client_only) = 0;
         virtual const end_point& address() = 0;
         virtual rpc_client_session_ptr create_client_session(const end_point& server_addr) = 0;
 
         // used by rpc_engine only
-        void reset_parser(const std::string& name, int message_buffer_block_size);
+        void reset_parser(network_header_format name, int message_buffer_block_size);
         void call(message_ptr& request, rpc_response_task_ptr& call);
 
     protected:
         rpc_engine                    *_engine;
-        std::string                   _parser_type;
+        network_header_format         _parser_type;
         int                           _message_buffer_block_size;
         
         typedef std::map<end_point, rpc_client_session_ptr> client_sessions;

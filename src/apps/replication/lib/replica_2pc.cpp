@@ -52,7 +52,7 @@ void replica::init_prepare(mutation_ptr& mu)
 {
     dassert (PS_PRIMARY == status(), "");
 
-    int err = ERR_SUCCESS;
+    error_code err = ERR_SUCCESS;
     uint8_t count = 0;
 
     if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 < _options.mutation_2pc_min_replica_count)
@@ -126,7 +126,8 @@ void replica::init_prepare(mutation_ptr& mu)
 
     if (nullptr == mu->log_task())
     {
-        handle_local_failure(ERR_FILE_OPERATION_FAILED);
+        err = ERR_FILE_OPERATION_FAILED;
+        handle_local_failure(err);
         goto ErrOut;
     }
 

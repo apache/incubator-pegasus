@@ -23,7 +23,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "server_state.h"
+# include "server_state.h"
+# include <sstream>
 
 # define __TITLE__ "meta.server.state"
 
@@ -218,29 +219,51 @@ void server_state::update_configuration(configuration_update_request& request, _
 
         node_state& node = _nodes[request.node];
 
+        const char* type = "unknown";
         switch (request.type)
         {
         case CT_ASSIGN_PRIMARY:
             node.partitions.insert(old.gpid);
             node.primaries.insert(old.gpid);
+            type = "assign primary";
             break;
         case CT_ADD_SECONDARY:
             node.partitions.insert(old.gpid);
+            type = "add secondary";
             break;
         case CT_DOWNGRADE_TO_SECONDARY:
             node.primaries.erase(old.gpid);
+            type = "downgrade to secondary";
             break;
         case CT_DOWNGRADE_TO_INACTIVE:
         case CT_REMOVE:
             node.partitions.erase(old.gpid);
             node.primaries.erase(old.gpid);
+            type = request.type == CT_REMOVE ? "remove" : "downgrade to inactive";
             break;
         case CT_UPGRADE_TO_SECONDARY:
             node.partitions.insert(old.gpid);
+            type = "upgrade to secondary";
             break;
         default:
-            dassert (false, "invalid config type %x", static_cast<int>(request.type));
+            dassert(false, "invalid config type %x", static_cast<int>(request.type));
         }
+
+        std::stringstream cf;
+        cf << "{primary:" << request.config.primary.name << ":" << request.config.primary.port << ", secondaries = [";
+        for (auto& s : request.config.secondaries)
+        {
+            cf << s.name << ":" << s.port << ",";
+        }
+        cf << "]}";
+
+        ddebug("%d.%d metaupdateok to ballot %lld, type = %s, config = %s",
+            request.config.gpid.app_id,
+            request.config.gpid.pidx,
+            request.config.ballot,
+            type,
+            cf.str().c_str()
+            );
     }
     else
     {

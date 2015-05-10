@@ -41,7 +41,7 @@ mutation_cache::~mutation_cache()
     _array.clear();
 }
 
-int mutation_cache::put(mutation_ptr& mu)
+error_code mutation_cache::put(mutation_ptr& mu)
 {
     decree decree = mu->data.header.decree;
     int delta = 0, tag = 0;

@@ -35,12 +35,12 @@ class sim_task_queue : public task_queue
 public:
     sim_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
 
-    virtual void    enqueue(task_ptr& task);
+    virtual void     enqueue(task_ptr& task);
     virtual task_ptr dequeue();
-    virtual int      count() const { return static_cast<int>(_tasks.count()); }
+    virtual int      count() const { return static_cast<int>(_tasks.size()); }
 
 private:
-    utils::blocking_priority_queue<task_ptr, TASK_PRIORITY_COUNT> _tasks;
+    std::map<uint32_t, task_ptr> _tasks;
 };
 
 struct sim_worker_state;
@@ -58,7 +58,7 @@ public:
 
 private:
     int _count;
-    std::list<sim_worker_state*>   _waitThreads;
+    std::list<sim_worker_state*> _wait_threads;
 };
 
 }} // end namespace

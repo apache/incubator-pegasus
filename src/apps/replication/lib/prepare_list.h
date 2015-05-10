@@ -47,8 +47,8 @@ public:
     //
     // for two-phase commit
     //
-    int  prepare(mutation_ptr& mu, partition_status status); // unordered prepare
-    bool commit(decree decree, bool force); // ordered commit
+    error_code prepare(mutation_ptr& mu, partition_status status); // unordered prepare
+    bool       commit(decree decree, bool force); // ordered commit
     
 private:
     void sanity_check();

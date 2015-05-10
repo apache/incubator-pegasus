@@ -32,7 +32,8 @@
 
 namespace dsn { namespace tools {
 
-    static utils::singleton_store<end_point, sim_network_provider*> s_switch; // multiple machines connect to the same switch
+    // multiple machines connect to the same switch, 10 should be >= than rpc_channel::max_value() + 1
+    static utils::singleton_store<end_point, sim_network_provider*> s_switch[10]; 
 
     sim_client_session::sim_client_session(sim_network_provider& net, const end_point& remote_addr, std::shared_ptr<rpc_client_matcher>& matcher)
         : rpc_client_session(net, remote_addr, matcher)
@@ -46,7 +47,7 @@ namespace dsn { namespace tools {
     void sim_client_session::send(message_ptr& msg)
     {
         sim_network_provider* rnet = nullptr;
-        if (!s_switch.get(msg->header().to_address, rnet))
+        if (!s_switch[task_spec::get(msg->header().local_rpc_code)->rpc_call_channel].get(msg->header().to_address, rnet))
         {
             dwarn("cannot find destination node %s:%u in simulator", 
                 msg->header().to_address.name.c_str(), 
@@ -58,7 +59,8 @@ namespace dsn { namespace tools {
         auto server_session = rnet->get_server_session(_net.address());
         if (nullptr == server_session)
         {
-            server_session.reset(new sim_server_session(*rnet, _net.address()));
+            rpc_client_session_ptr cptr = this;
+            server_session.reset(new sim_server_session(*rnet, _net.address(), cptr));
             rnet->on_server_session_accepted(server_session);
         }
 
@@ -72,44 +74,22 @@ namespace dsn { namespace tools {
             );
     }
 
-    sim_server_session::sim_server_session(sim_network_provider& net, const end_point& remote_addr)
+    sim_server_session::sim_server_session(sim_network_provider& net, const end_point& remote_addr, rpc_client_session_ptr& client)
         : rpc_server_session(net, remote_addr)
     {
+        _client = client;
     }
 
     void sim_server_session::send(message_ptr& reply_msg)
     {
-        sim_network_provider* rnet = nullptr;
-        if (!s_switch.get(reply_msg->header().to_address, rnet))
-        {
-            dwarn("cannot find destination node %s:%u in simulator",
-                reply_msg->header().to_address.name.c_str(),
-                static_cast<int>(reply_msg->header().to_address.port)
-                );
-            return;
-        }
+        message_ptr recv_msg(new message(reply_msg->writer().get_buffer()));
+        recv_msg->header().from_address = reply_msg->header().from_address;
+        recv_msg->header().to_address = reply_msg->header().to_address;
 
-        auto client_session = rnet->get_client_session(reply_msg->header().from_address);
-        if (nullptr != client_session)
-        {
-            message_ptr recv_msg(new message(reply_msg->writer().get_buffer()));
-            recv_msg->header().from_address = reply_msg->header().from_address;
-            recv_msg->header().to_address = reply_msg->header().to_address;
-
-            client_session->on_recv_reply(recv_msg->header().id, recv_msg,
-                recv_msg->header().from_address == recv_msg->header().to_address ?
-                0 : rnet->net_delay_milliseconds()
-                );
-        }
-        else
-        {
-            dwarn("cannot find origination client for %s:%u @ %s:%u in simulator",
-                reply_msg->header().from_address.name.c_str(),
-                static_cast<int>(reply_msg->header().from_address.port),
-                reply_msg->header().to_address.name.c_str(),
-                static_cast<int>(reply_msg->header().to_address.port)
-                );
-        }
+        _client->on_recv_reply(recv_msg->header().id, recv_msg,
+            recv_msg->header().from_address == recv_msg->header().to_address ?
+            0 : (static_cast<sim_network_provider*>(&_net))->net_delay_milliseconds()
+            );
     }
 
     sim_network_provider::sim_network_provider(rpc_engine* rpc, network* inner_provider)
@@ -126,14 +106,21 @@ namespace dsn { namespace tools {
         }
     }
 
-    error_code sim_network_provider::start(int port, bool client_only)
+    error_code sim_network_provider::start(rpc_channel channel, int port, bool client_only)
     { 
-        client_only;
         _primary_address.port = port;
-        if (s_switch.put(_primary_address, this))
-            return ERR_SUCCESS;
+      
+        if (!client_only)
+        {
+            if (s_switch[channel].put(_primary_address, this))
+                return ERR_SUCCESS;
+            else
+                return ERR_ADDRESS_ALREADY_USED;
+        }
         else
-            return ERR_ADDRESS_ALREADY_USED;
+        {
+            return ERR_SUCCESS;
+        }
     }
 
     uint32_t sim_network_provider::net_delay_milliseconds() const

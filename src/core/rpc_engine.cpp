@@ -191,7 +191,7 @@ namespace dsn {
         const service_spec& spec = service_engine::instance().spec();
         auto net = utils::factory_store<network>::create(
             netcs.factory_name.c_str(), PROVIDER_TYPE_MAIN, this, nullptr);
-        net->reset_parser(netcs.message_format, netcs.message_buffer_block_size);
+        net->reset_parser(netcs.hdr_format, netcs.message_buffer_block_size);
 
         for (auto it = spec.network_aspects.begin();
             it != spec.network_aspects.end();
@@ -201,7 +201,7 @@ namespace dsn {
         }
 
         // start the net
-        error_code ret = net->start(netcs.port, client_only);
+        error_code ret = net->start(netcs.channel, netcs.port, client_only);
         if (ret == ERR_SUCCESS)
         {
             return net;
@@ -237,10 +237,16 @@ namespace dsn {
                 net = create_network(it->second, false);
             }
 
-            // create default when for TCP
-            else if (i == RPC_CHANNEL_TCP)
+            else
             {
-                net = create_network(cs, false);
+                auto it = spec.network_default_configs.find(cs.channel);
+                if (it != spec.network_default_configs.end())
+                {
+                    cs.factory_name = it->second.factory_name;
+                    cs.message_buffer_block_size = it->second.message_buffer_block_size;
+                    
+                    net = create_network(cs, false);
+                }
             }
 
             (*pnets)[i] = net;
@@ -251,7 +257,7 @@ namespace dsn {
                 dinfo("network started at port %u, channel = %s, fmt = %s ...",                    
                     (uint32_t)port,
                     rpc_channel::to_string(i),
-                    cs.message_format.c_str()
+                    cs.hdr_format.to_string()
                     );
             }
         }
@@ -270,17 +276,33 @@ namespace dsn {
 
         // start client networks
         bool r;
-        _client_nets.resize(network_formats::instance().max_value() + 1);
-        for (int i = 0; i <= network_formats::instance().max_value(); i++)
+        _client_nets.resize(network_header_format::max_value() + 1);
+
+        const service_spec& spec = service_engine::instance().spec();
+        for (int i = 0; i <= network_header_format::max_value(); i++)
         {
             std::vector<network*>& pnet = _client_nets[i];
             pnet.resize(rpc_channel::max_value() + 1);
             for (int j = 0; j <= rpc_channel::max_value(); j++)
             {
-                network_config_spec cs(app_id, rpc_channel(rpc_channel::to_string(j)));
-                auto net = create_network(cs, true);
-                if (!net) return ERR_NETWORK_INIT_FALED;
-                pnet[j] = net;
+                rpc_channel c = rpc_channel(rpc_channel::to_string(j));
+                auto it = spec.network_default_configs.find(c);
+                if (it != spec.network_default_configs.end())
+                {
+                    network_config_spec cs(app_id, c);
+
+                    cs.factory_name = it->second.factory_name;
+                    cs.message_buffer_block_size = it->second.message_buffer_block_size;
+                    cs.hdr_format = network_header_format(network_header_format::to_string(i));
+
+                    auto net = create_network(cs, true);
+                    if (!net) return ERR_NETWORK_INIT_FALED;
+                    pnet[j] = net;
+                }
+                else
+                {
+                    dwarn("network client for channel %s not registered, assuming not used further", c.to_string());
+                }
             }
         }
         
@@ -367,22 +389,12 @@ namespace dsn {
         message* msg = request.get();
         
         auto sp = task_spec::get(msg->header().local_rpc_code);
-        if (sp->rpc_call_header_format == -1)
-        {
-            auto idx = network_formats::instance().get_id(sp->rpc_call_header_format_name.c_str());
-            dassert(idx != -1, "invalid message format specified '%s' for rpc '%s'",
-                sp->rpc_call_header_format_name.c_str(),
-                sp->name                
-                );
-            sp->rpc_call_header_format = idx;
-        }
-
         auto& named_nets = _client_nets[sp->rpc_call_header_format];
         network* net = named_nets[sp->rpc_call_channel];
 
         dassert(nullptr != net, "network not present for rpc channel '%s' with format '%s' used by rpc %s",
             sp->rpc_call_channel.to_string(),
-            sp->rpc_call_header_format_name.c_str(),
+            sp->rpc_call_header_format.to_string(),
             msg->header().rpc_name
             );
 

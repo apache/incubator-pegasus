@@ -559,6 +559,13 @@ void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_, const par
     }
     else
     {
+
+        ddebug(
+            "%u.%u @ %s:%u: replica not exists on replica server, remove it from meta server",
+            config.gpid.app_id, config.gpid.pidx,
+            primary_address().name.c_str(), static_cast<int>(primary_address().port)
+            );
+
         remove_replica_on_meta_server(config);
     }
 }

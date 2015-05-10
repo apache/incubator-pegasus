@@ -218,8 +218,8 @@ namespace dsn {
                 if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_end", true))
                     spec->on_task_end.put_back(tracer_on_task_end, "tracer");
 
-                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_cancelled", true))
-                    spec->on_task_cancelled.put_back(tracer_on_task_cancelled, "tracer");
+                //if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_cancelled", true))
+                //    spec->on_task_cancelled.put_back(tracer_on_task_cancelled, "tracer");
 
                 //if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_wait_pre", true))
                     //spec->on_task_wait_pre.put_back(tracer_on_task_wait_pre, "tracer");

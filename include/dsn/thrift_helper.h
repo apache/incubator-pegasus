@@ -246,6 +246,8 @@ namespace dsn {
         return xfer;
     }
 
+    DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_THRIFT);
+
     class thrift_binary_message_parser : public message_parser
     {
     public:

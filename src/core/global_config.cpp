@@ -201,20 +201,17 @@ bool service_app_spec::init(const char* section, configuration_ptr& config)
 }
 
 network_config_spec::network_config_spec(const network_config_spec& r)
-: channel(r.channel)
+: channel(r.channel), hdr_format(r.hdr_format)
 {
     port = r.port;
-    message_format = r.message_format;
     factory_name = r.factory_name;
     message_buffer_block_size = r.message_buffer_block_size;
 }
 
 network_config_spec::network_config_spec(int p, rpc_channel c)
-    : channel(c)
+    : channel(c), hdr_format(NET_HDR_DSN)
 {
     port = p;
-
-    message_format = "dsn";
     factory_name = "dsn::tools::asio_network_provider";
     message_buffer_block_size = 65536;
 }
@@ -229,7 +226,6 @@ bool service_spec::register_network(const network_config_spec& netcs, bool force
     if (force)
     {
         network_configs[netcs] = netcs;
-        network_formats::instance().register_id(netcs.message_format.c_str());
         return true;
     }
     else
@@ -238,7 +234,6 @@ bool service_spec::register_network(const network_config_spec& netcs, bool force
         if (it == network_configs.end())
         {
             network_configs[netcs] = netcs;
-            network_formats::instance().register_id(netcs.message_format.c_str());
             return true;
         }
         else
@@ -298,7 +293,7 @@ bool service_spec::init(configuration_ptr c)
             for (int i = 1; i <= count; i++)
             {
                 char buf[16];
-                sprintf(buf, ".%u", i);
+                sprintf(buf, "%u", i);
                 app.name = (count > 1 ? (name + buf) : name);
                 app.id = ++app_id;
 
@@ -353,7 +348,7 @@ bool service_spec::build_network_spec(int port)
 {
     /*
     [network.27001]
-    ;channel = message_format,network_provider_name,buffer_block_size
+    ;channel = hdr_format,network_provider_name,buffer_block_size
     RPC_CHANNEL_TCP = dsn,dsn::tools::asio_network_provider,65536
     RPC_CHANNEL_UDP = dsn,dsn::tools::asio_network_provider,65536
     */
@@ -401,11 +396,18 @@ bool service_spec::build_network_spec(int port)
             return false;
         }
 
-        ns.message_format = *vs.begin();
-        network_formats::instance().register_id(ns.message_format.c_str());
+        if (!network_header_format::is_exist(vs.begin()->c_str()))
+        {
+            printf("invalid network specification, unkown message header format '%s'\n",
+                vs.begin()->c_str()
+                );
+            return false;
+        }
 
+        ns.hdr_format = network_header_format(vs.begin()->c_str());
         ns.factory_name = *(++vs.begin());
         ns.message_buffer_block_size = atoi(vs.rbegin()->c_str());
+        
         if (ns.message_buffer_block_size == 0)
         {
             printf("invalid message buffer size specified: '%s'\n", vs.rbegin()->c_str());

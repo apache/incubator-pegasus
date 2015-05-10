@@ -109,10 +109,17 @@ void replica::on_client_read(const read_request_header& meta, message_ptr& reque
     _app->dispatch_rpc_call(meta.code, request, true);
 }
 
-void replica::response_client_message(message_ptr& request, int error, decree d/* = invalid_decree*/)
+void replica::response_client_message(message_ptr& request, error_code error, decree d/* = invalid_decree*/)
 {
     message_ptr resp = request->create_response();
-    resp->writer().write(error);
+    int err = error.get();
+    resp->writer().write(err);
+
+    if (error != ERR_SUCCESS)
+    {
+        dwarn("handle request with rpc_id = %016llx failed, err = %s", 
+            request->header().rpc_id, error.to_string());
+    }
 
     rpc::reply(resp);
 }

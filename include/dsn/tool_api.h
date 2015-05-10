@@ -135,6 +135,8 @@ extern join_point<long, syste_exit_type, int, void*> syste_exit; // return (see 
 
 template <typename T> bool register_component_provider(const char* name) { return internal_use_only::register_component_provider(name, T::template create<T>, PROVIDER_TYPE_MAIN); }
 template <typename T> bool register_component_aspect(const char* name) { return internal_use_only::register_component_provider(name, T::template create<T>, PROVIDER_TYPE_ASPECT); }
+template <typename T> bool register_message_header_parser(network_header_format fmt) { return internal_use_only::register_component_provider(fmt.to_string(), T::template create<T>, PROVIDER_TYPE_MAIN); }
+
 template <typename T> bool register_toollet(const char* name) { return internal_use_only::register_toollet(name, toollet::template create<T>, 0); }
 template <typename T> bool register_tool(const char* name) { return internal_use_only::register_tool(name, tool_app::template create<T>, 0); }
 template <typename T> T* get_toollet(const char* name) { return (T*)internal_use_only::get_toollet(name, 0); }

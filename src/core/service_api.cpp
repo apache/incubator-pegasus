@@ -91,6 +91,7 @@ namespace dsn { namespace service {
         const std::map<std::string, service_app*>* apps;
         configuration_ptr config;
         service_engine* engine;
+        std::vector<task_spec*> task_specs;
     } dsn_all;
     
     class system_runner
@@ -103,6 +104,10 @@ namespace dsn { namespace service {
             dsn_all.apps = &service_apps::instance().get_all_apps();
             dsn_all.engine = &service_engine::instance();            
             dsn_all.config.reset(new configuration(config_file));
+            for (int i = 0; i <= task_code::max_value(); i++)
+            {
+                dsn_all.task_specs.push_back(task_spec::get(i));
+            }
             
             service_spec spec;
             if (!spec.init(dsn_all.config))

@@ -61,11 +61,11 @@ void prepare_list::truncate(decree init_decree)
     _lastCommittedDecree = init_decree;
 }
 
-int prepare_list::prepare(mutation_ptr& mu, partition_status status)
+error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
 {
     dassert (mu->data.header.decree > last_committed_decree(), "");
 
-    int err;
+    error_code err;
     switch (status)
     {
     case PS_PRIMARY:

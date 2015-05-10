@@ -65,7 +65,7 @@ task_spec::task_spec(int code, const char* name, task_type type, threadpool_code
     on_rpc_response_enqueue((std::string(name) + std::string(".rpc.response.enqueue")).c_str()),
     on_create_response((std::string(name) + std::string(".create.response")).c_str()),
     rpc_call_channel(RPC_CHANNEL_TCP),
-    rpc_call_header_format(-1)
+    rpc_call_header_format(NET_HDR_DSN)
 {
     if (paired_code != 0)
     {
@@ -82,7 +82,6 @@ task_spec::task_spec(int code, const char* name, task_type type, threadpool_code
     rejection_handler = nullptr;
 
     // TODO: config for following values
-    rpc_call_header_format_name = "dsn";
     rpc_call_channel = RPC_CHANNEL_TCP;
     rpc_timeout_milliseconds = 5 * 1000; // 5 seconds
     rpc_retry_interval_milliseconds = 3 * 1000; // 3 seconds
@@ -117,10 +116,17 @@ bool task_spec::init(configuration_ptr config)
         return false;
     }
 
+    auto fmt = config->get_string_value("task.default", "rpc_call_header_format", NET_HDR_DSN.to_string());
+    if (!network_header_format::is_exist(fmt.c_str()))
+    {
+        derror("invalid task rpc_call_header_format in [task.default]");
+        return false;
+    }
+
     default_spec.allow_inline = config->get_value<bool>("task.default", "allow_inline", false);
     default_spec.fast_execution_in_network_thread = config->get_value<bool>("task.default", "fast_execution_in_network_thread", false);    
     default_spec.rpc_call_channel = rpc_channel::from_string(cn.c_str(), RPC_CHANNEL_TCP);        
-    default_spec.rpc_call_header_format_name = config->get_string_value("task.default", "rpc_call_header_format_name", "dsn");
+    default_spec.rpc_call_header_format = network_header_format::from_string(fmt.c_str(), NET_HDR_DSN);
     default_spec.rpc_timeout_milliseconds = config->get_value<int>("task.default", "rpc_timeout_milliseconds", default_spec.rpc_timeout_milliseconds);
     default_spec.rpc_retry_interval_milliseconds = config->get_value<int>("task.default", "rpc_retry_interval_milliseconds", default_spec.rpc_retry_interval_milliseconds);
     
@@ -156,6 +162,13 @@ bool task_spec::init(configuration_ptr config)
                 return false;
             }
 
+            auto fmt = config->get_string_value(section_name.c_str(), "rpc_call_header_format", default_spec.rpc_call_header_format.to_string());
+            if (!network_header_format::is_exist(fmt.c_str()))
+            {
+                derror("invalid task rpc_call_header_format in [%s]", section_name.c_str());
+                return false;
+            }
+
             spec->pool_code.reset(pool);
             spec->priority = pri;                        
             spec->allow_inline = (spec->type != TASK_TYPE_RPC_RESPONSE
@@ -165,7 +178,7 @@ bool task_spec::init(configuration_ptr config)
                 ((spec->type == TASK_TYPE_RPC_RESPONSE || spec->type == TASK_TYPE_RPC_REQUEST)
                 && config->get_value<bool>(section_name.c_str(), "fast_execution_in_network_thread", default_spec.fast_execution_in_network_thread));
             spec->rpc_call_channel = rpc_channel::from_string(cn.c_str(), RPC_CHANNEL_TCP);
-            spec->rpc_call_header_format_name = config->get_string_value(section_name.c_str(), "rpc_call_header_format_name", default_spec.rpc_call_header_format_name.c_str());
+            spec->rpc_call_header_format = network_header_format::from_string(fmt.c_str(), NET_HDR_DSN);
             spec->rpc_timeout_milliseconds = config->get_value<int>(section_name.c_str(), "rpc_timeout_milliseconds", default_spec.rpc_timeout_milliseconds);
             spec->rpc_retry_interval_milliseconds = config->get_value<int>(section_name.c_str(), "rpc_retry_interval_milliseconds", default_spec.rpc_retry_interval_milliseconds);
         }
@@ -180,7 +193,7 @@ bool task_spec::init(configuration_ptr config)
                 ((spec->type == TASK_TYPE_RPC_RESPONSE || spec->type == TASK_TYPE_RPC_REQUEST)
                 && default_spec.fast_execution_in_network_thread);
             spec->rpc_call_channel = default_spec.rpc_call_channel;
-            spec->rpc_call_header_format_name = default_spec.rpc_call_header_format_name;
+            spec->rpc_call_header_format = default_spec.rpc_call_header_format;
             spec->rpc_timeout_milliseconds = default_spec.rpc_timeout_milliseconds;
             spec->rpc_retry_interval_milliseconds = default_spec.rpc_retry_interval_milliseconds;
         }

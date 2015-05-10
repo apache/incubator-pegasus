@@ -36,11 +36,11 @@ use_given_random_seed = false
 io_service_worker_count = 2
 
 [network.27001]
-; channel = message_format, network_provider_name, buffer_block_size
-;RPC_CHANNEL_TCP = dsn,dsn::tools::asio_network_provider, 65536
-;RPC_CHANNEL_UDP = dsn,dsn::tools::asio_network_provider, 65536
-;RPC_CHANNEL_TCP = thrift,dsn::tools::asio_network_provider, 65536
-;RPC_CHANNEL_UDP = thrift,dsn::tools::asio_network_provider, 65536
+; channel = network_header_format, network_provider_name, buffer_block_size
+;RPC_CHANNEL_TCP = NET_HDR_DSN, dsn::tools::asio_network_provider, 65536
+
+;RPC_CHANNEL_TCP = NET_HDR_THRIFT, dsn::tools::asio_network_provider, 65536
+
 
 ; specification for each thread pool
 [threadpool.default]

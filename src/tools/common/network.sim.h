@@ -42,9 +42,12 @@ namespace dsn { namespace tools {
     class sim_server_session : public rpc_server_session
     {
     public:
-        sim_server_session(sim_network_provider& net, const end_point& remote_addr);
+        sim_server_session(sim_network_provider& net, const end_point& remote_addr, rpc_client_session_ptr& client);
 
         virtual void send(message_ptr& reply_msg);
+
+    private:
+        rpc_client_session_ptr _client;
     };
 
     class sim_network_provider : public network
@@ -53,7 +56,7 @@ namespace dsn { namespace tools {
         sim_network_provider(rpc_engine* rpc, network* inner_provider);
         ~sim_network_provider(void) {}
 
-        virtual error_code start(int port, bool client_only);
+        virtual error_code start(rpc_channel channel, int port, bool client_only);
     
         virtual const end_point& address() { return _primary_address; }
 

@@ -90,6 +90,15 @@ ENUM_END(task_state)
 
 #define MAX_TASK_CODE_NAME_LENGTH 47
 
+// define network header format for RPC
+DEFINE_CUSTOMIZED_ID_TYPE(network_header_format);
+DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_DSN);
+
+// define network channel types for RPC
+DEFINE_CUSTOMIZED_ID_TYPE(rpc_channel)
+DEFINE_CUSTOMIZED_ID(rpc_channel, RPC_CHANNEL_TCP)
+DEFINE_CUSTOMIZED_ID(rpc_channel, RPC_CHANNEL_UDP)
+
 struct task_code : public dsn::utils::customized_id<task_code>
 {
     task_code(const char* xxx, task_type type, threadpool_code pool, task_priority pri, int rpcPairedCode);
@@ -133,11 +142,6 @@ private:
 
 DEFINE_TASK_CODE(TASK_CODE_INVALID, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
-// define network channel types for RPC
-DEFINE_CUSTOMIZED_ID_TYPE(rpc_channel)
-DEFINE_CUSTOMIZED_ID(rpc_channel, RPC_CHANNEL_TCP)
-DEFINE_CUSTOMIZED_ID(rpc_channel, RPC_CHANNEL_UDP)
-
 class task;
 class aio_task;
 class rpc_request_task;
@@ -160,7 +164,7 @@ public:
     threadpool_code        pool_code; 
     bool                   allow_inline; // allow task executed in other thread pools or tasks
     bool                   fast_execution_in_network_thread;
-    std::string            rpc_call_header_format_name;
+    network_header_format  rpc_call_header_format;
 
     task_rejection_handler rejection_handler;
     rpc_channel            rpc_call_channel;
@@ -199,10 +203,6 @@ public:
 public:
     static bool init(configuration_ptr config);
     void init_profiling(bool profile);
-
-private:
-    friend class rpc_engine;
-    int rpc_call_header_format;
 };
 
 } // end namespace
