@@ -47,8 +47,7 @@ namespace dsn {
 
     void logv(const char *file, const char *function, const int line, logging_level logLevel, const char* title)
     {
-        // TODO: using logging provider
-        printf ("assertion at %s:%d in %s\n", function, line, file);
+        logv(file, function, line, logLevel, title, "");
     }
 
 } // end name

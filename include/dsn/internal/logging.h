@@ -58,7 +58,11 @@ extern void logv(const char *file, const char *function, const int line, logging
 #define dwarn(...)  dlog(dsn::log_level_WARNING, __TITLE__, __VA_ARGS__)
 #define derror(...) dlog(dsn::log_level_ERROR, __TITLE__, __VA_ARGS__)
 #define dfatal(...) dlog(dsn::log_level_FATAL, __TITLE__, __VA_ARGS__)
-#define dassert(x, ...) do { if (!(x)) {dlog(dsn::log_level_FATAL, #x, __VA_ARGS__); ::dsn::utils::coredump::write(); ::abort();} } while (false)
+#define dassert(x, ...) do { if (!(x)) {                    \
+        dlog(dsn::log_level_FATAL, "assert", #x);           \
+        dlog(dsn::log_level_FATAL, "assert", __VA_ARGS__);  \
+        ::dsn::utils::coredump::write(); ::abort();         \
+    } } while (false)
 
 #ifdef _DEBUG
 #define dbg_dassert dassert

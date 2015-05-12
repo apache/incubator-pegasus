@@ -136,6 +136,7 @@ namespace dsn {
             utils::auto_lock l(_lock);
          
             print_header(_log);
+            fprintf(_log, "%s, ", title);
             vfprintf(_log, fmt, args);
             fprintf(_log, "\n");
             if (logLevel >= log_level_ERROR)
@@ -144,6 +145,7 @@ namespace dsn {
             if (logLevel >= log_level_WARNING)
             {
                 print_header(stdout);
+                printf("%s, ", title);
                 vprintf(fmt, args2);
                 printf("\n");
             }
