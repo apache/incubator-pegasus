@@ -308,22 +308,32 @@ void replication_app_client_base::replica_rw_reply(
 {
     if (err != ERR_SUCCESS)
     {
-        call(rc, false);
-        return;
+        goto Retry;
+    }
+
+    int err2;
+    response->reader().read(err2);
+
+    if (err2 != ERR_SUCCESS && err2 != ERR_HANDLER_NOT_FOUND)
+    {
+        goto Retry;
     }
     else
     {
-        int err2;
-        response->reader().read(err2);
-        if (err2 != 0)
-        {
-            call(rc, false);
-            return;
-        }
+        end_request(rc, err, response);
+        delete rc;
+    }
+    return;
+
+Retry:
+    // clear partition configuration as it could be wrong
+    {
+        zauto_write_lock l(_config_lock);
+        _config_cache.erase(rc->is_read ? rc->read_header.gpid.pidx : rc->write_header.gpid.pidx);
     }
 
-    end_request(rc, err, response);
-    delete rc;
+    // then retry
+    call(rc, false);
 }
 
 error_code replication_app_client_base::get_address(int pidx, bool is_write, __out_param end_point& addr, __out_param int& app_id, read_semantic_t semantic)
