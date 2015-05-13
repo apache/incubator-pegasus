@@ -37,6 +37,7 @@ meta_service::meta_service(server_state* state)
     _failure_detector = nullptr;
     _log = nullptr;
     _offset = 0;
+    _data_dir = ".";
 
     _opts.initialize(system::config());
 }
@@ -45,13 +46,15 @@ meta_service::~meta_service(void)
 {
 }
 
-void meta_service::start(bool clean_state)
+void meta_service::start(const char* data_dir, bool clean_state)
 {
+    _data_dir = data_dir;
+
     if (clean_state)
     {
         try {
-            boost::filesystem::remove("checkpoint");
-            boost::filesystem::remove("oplog");
+            boost::filesystem::remove(_data_dir + "/checkpoint");
+            boost::filesystem::remove(_data_dir + "/oplog");
         }
         catch (std::exception& ex)
         {
@@ -60,24 +63,30 @@ void meta_service::start(bool clean_state)
     }
     else
     {
-        if (boost::filesystem::exists("checkpoint"))
+        if (!boost::filesystem::exists(_data_dir))
         {
-            _state->load("checkpoint");
+            boost::filesystem::create_directory(_data_dir);
         }
 
-        if (boost::filesystem::exists("oplog"))
+        if (boost::filesystem::exists(_data_dir + "/checkpoint"))
         {
-            replay_log("oplog");
-            _state->save("checkpoint");
-            boost::filesystem::remove("oplog");
+            _state->load((_data_dir + "/checkpoint").c_str());
+        }
+
+        if (boost::filesystem::exists(_data_dir + "/oplog"))
+        {
+            replay_log((_data_dir + "/oplog").c_str());
+            _state->save((_data_dir + "/checkpoint").c_str());
+            boost::filesystem::remove(_data_dir + "/oplog");
         }
     }
 
-    _log = file::open("oplog", O_RDWR | O_CREAT, 0);
+    _log = file::open((_data_dir + "/oplog").c_str(), O_RDWR | O_CREAT, 0);
 
     _balancer = new load_balancer(_state);            
     _failure_detector = new meta_server_failure_detector(_state);
     _balancer_timer = tasking::enqueue(LPC_LBM_RUN, this, &meta_service::on_load_balance_timer, 0, 1000, 5000);
+    
     register_rpc_handler(RPC_CM_CALL, "RPC_CM_CALL", &meta_service::on_request);
 
     end_point primary;
@@ -217,24 +226,26 @@ void meta_service::update_configuration(message_ptr req, message_ptr resp)
 {
     auto bb = req->reader().get_remaining_buffer();
     uint64_t offset;
+    int len = bb.length() + sizeof(int32_t);
+    
+    char* buffer = (char*)malloc(len);
+    *(int32_t*)buffer = bb.length();
+    memcpy(buffer + sizeof(int32_t), bb.data(), bb.length());
 
     {
+
         zauto_lock l(_log_lock);
         offset = _offset;
-        _offset += bb.length() + sizeof(int32_t);
+        _offset += len;
 
-        // dirty hack
-        dassert(bb.buffer().get() + sizeof(int32_t) <= bb.data(), "");
-        const char* p = bb.data() - sizeof(int32_t);
-        *(int32_t*)p = bb.length();
-
-        file::write(_log, p, bb.length() + sizeof(int32_t), offset, LPC_CM_LOG_UPDATE, this,
-            std::bind(&meta_service::on_log_completed, this, std::placeholders::_1, std::placeholders::_2, req, resp));
+        file::write(_log, buffer, len, offset, LPC_CM_LOG_UPDATE, this,
+            std::bind(&meta_service::on_log_completed, this, std::placeholders::_1, std::placeholders::_2, buffer, req, resp));
     }
 }
 
-void meta_service::on_log_completed(error_code err, int size, message_ptr req, message_ptr resp)
+void meta_service::on_log_completed(error_code err, int size, char* buffer, message_ptr req, message_ptr resp)
 {
+    free(buffer);
     dassert(err == ERR_SUCCESS, "log operation failed, cannot proceed, err = %s", err.to_string());
 
     configuration_update_request request;
@@ -248,7 +259,9 @@ void meta_service::on_log_completed(error_code err, int size, message_ptr req, m
     rhdr.primary_address = primary_address();
 
     marshall(resp, rhdr);
-    marshall(resp, response);    
+    marshall(resp, response);  
+
+    rpc::reply(resp);
 }
 
 void meta_service::update_configuration(configuration_update_request& request, __out_param configuration_update_response& response)

@@ -39,7 +39,7 @@ namespace dsn {
             char str[24];
             ::dsn::utils::time_ms_to_string(ts, str);
 
-            fprintf(fp, "%s ", str);
+            fprintf(fp, "%s(%llu) ", str, ts);
 
             task* t = task::get_current_task();
             if (t)

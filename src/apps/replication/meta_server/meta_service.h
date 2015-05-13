@@ -40,7 +40,7 @@ public:
     meta_service(server_state* state);
     ~meta_service(void);
 
-    void start(bool clean_state);
+    void start(const char* data_dir, bool clean_state);
     bool stop();
 
 private:
@@ -53,7 +53,7 @@ private:
 
     // update configuration
     void update_configuration(message_ptr req, message_ptr resp);
-    void on_log_completed(error_code err, int size, message_ptr req, message_ptr resp);
+    void on_log_completed(error_code err, int size, char* buffer, message_ptr req, message_ptr resp);
     void update_configuration(configuration_update_request& request, __out_param configuration_update_response& response);
       
     // load balance actions
@@ -67,6 +67,7 @@ private:
     load_balancer                *_balancer;
     task_ptr                     _balancer_timer;
     replication_options          _opts;
+    std::string                  _data_dir;
 
     zlock                        _log_lock;
     handle_t                     _log;

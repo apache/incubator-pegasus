@@ -164,6 +164,8 @@ namespace dsn {
         int timeout_ms = static_cast<int>(tts > nts ? (tts - nts) : 0)/1000;
         if (timeout_ms >= spec->rpc_retry_interval_milliseconds * 2)
             timeout_ms = spec->rpc_retry_interval_milliseconds;
+        
+        dassert (timeout_ms > 0, "");
 
         timeout_task->set_delay(timeout_ms);
         timeout_task->enqueue();
@@ -389,6 +391,7 @@ namespace dsn {
         message* msg = request.get();
         
         auto sp = task_spec::get(msg->header().local_rpc_code);
+        auto nts_us = ::dsn::service::env::now_us();
         auto& named_nets = _client_nets[sp->rpc_call_header_format];
         network* net = named_nets[sp->rpc_call_channel];
 
@@ -401,14 +404,21 @@ namespace dsn {
         msg->header().client.port = primary_address().port;
         msg->header().from_address = primary_address();
         msg->header().new_rpc_id();
+
+        // it happens when retry the same request at the app level and timeout is not specified
+        if (msg->header().client.timeout_ts_us <= nts_us)
+        {
+            msg->header().client.timeout_ts_us = nts_us
+                + static_cast<uint64_t>(sp->rpc_timeout_milliseconds) * 1000ULL;
+        }
+        
         msg->seal(_message_crc_required);
 
         if (!sp->on_rpc_call.execute(task::get_current_task(), msg, call.get(), true))
         {
             if (call != nullptr)
             {
-                auto nts = ::dsn::service::env::now_us();
-                int delay_ms = static_cast<int>((msg->header().client.timeout_ts_us - nts) / 1000);
+                int delay_ms = static_cast<int>((msg->header().client.timeout_ts_us - nts_us) / 1000);
 
                 message_ptr nil;
                 call->set_delay(delay_ms);

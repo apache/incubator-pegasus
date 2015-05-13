@@ -310,6 +310,13 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, messa
 
     if (err)
     {
+        ddebug(
+            "%s: update configuration reply with err %s, request ballot %lld",
+            name(),
+            err.to_string(),
+            req->config.ballot
+            );
+
         _primary_states.reconfiguration_task = rpc::call_replicated(
             _stub->_failure_detector->current_server_contact(),
             _stub->_failure_detector->get_servers(),
