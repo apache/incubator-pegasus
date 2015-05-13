@@ -25,8 +25,28 @@
  */
 # include "server_state.h"
 # include <sstream>
+# include <dsn/internal/serialization.h>
 
 # define __TITLE__ "meta.server.state"
+
+void marshall(binary_writer& writer, const app_state& val, uint16_t pos = 0xffff)
+{
+    marshall(writer, val.app_type);
+    marshall(writer, val.app_name);
+    marshall(writer, val.app_id);
+    marshall(writer, val.partition_count);
+    marshall(writer, val.partitions);
+}
+
+void unmarshall(binary_reader& reader, __out_param app_state& val)
+{
+    unmarshall(reader, val.app_type);
+    unmarshall(reader, val.app_name);
+    unmarshall(reader, val.app_id);
+    unmarshall(reader, val.partition_count);
+    unmarshall(reader, val.partitions);
+}
+
 
 server_state::server_state(void)
 {
@@ -35,6 +55,72 @@ server_state::server_state(void)
 
 server_state::~server_state(void)
 {
+}
+
+
+void server_state::load(const char* chk_point)
+{
+    FILE* fp = ::fopen(chk_point, "rb");
+
+    int32_t len;
+    ::fread((void*)&len, sizeof(int32_t), 1, fp);
+
+    std::shared_ptr<char> buffer((char*)malloc(len));
+    ::fread((void*)buffer.get(), len, 1, fp);
+
+    blob bb(buffer, 0, len);
+    binary_reader reader(bb);
+    unmarshall(reader, _apps);
+
+    ::fclose(fp);
+
+    dassert(_apps.size() == 1, "");
+    auto& app = _apps[0];
+    for (int i = 0; i < app.partition_count; i++)
+    {
+        auto& ps = app.partitions[i];
+
+        if (ps.primary != end_point::INVALID)
+        {
+            _nodes[ps.primary].primaries.insert(ps.gpid);
+            _nodes[ps.primary].partitions.insert(ps.gpid);
+        }
+        
+        for (auto& ep : ps.secondaries)
+        {
+            if (ep != end_point::INVALID)
+            {
+                _nodes[ps.primary].partitions.insert(ps.gpid);
+            }
+        }
+    }
+
+    for (auto& node : _nodes)
+    {
+        node.second.address = node.first;
+        node.second.is_alive = true;
+    }
+}
+
+void server_state::save(const char* chk_point)
+{
+    binary_writer writer;
+    marshall(writer, _apps);
+
+    FILE* fp = ::fopen(chk_point, "wb+");
+
+    int32_t len = writer.total_size();
+    ::fwrite((const void*)&len, sizeof(len), 1, fp);
+
+    std::vector<blob> bbs;
+    writer.get_buffers(bbs);
+
+    for (auto& bb : bbs)
+    {
+        ::fwrite((const void*)bb.data(), bb.length(), 1, fp);
+    }
+
+    ::fclose(fp);
 }
 
 void server_state::init_app(configuration_ptr& cf)
@@ -214,6 +300,7 @@ void server_state::update_configuration(configuration_update_request& request, _
     {
         response.err = ERR_SUCCESS;
 
+        // update to new config
         old = request.config;
         response.config = request.config;
 

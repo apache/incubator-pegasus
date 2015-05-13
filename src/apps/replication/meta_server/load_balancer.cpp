@@ -46,7 +46,7 @@ void load_balancer::run()
 
     for (size_t i = 0; i < _state->_apps.size(); i++)
     {
-        server_state::app_state& app = _state->_apps[i];
+        app_state& app = _state->_apps[i];
         
         for (int j = 0; j < app.partition_count; j++)
         {
@@ -160,7 +160,7 @@ void load_balancer::on_query_decree_ack(error_code err, std::shared_ptr<query_re
     else
     {
         zauto_write_lock l(_state->_lock);
-        server_state::app_state& app = _state->_apps[query->gpid.app_id - 1];
+        app_state& app = _state->_apps[query->gpid.app_id - 1];
         partition_configuration& ps = app.partitions[query->gpid.pidx];
         if (resp->last_decree > ps.last_committed_decree)
         {

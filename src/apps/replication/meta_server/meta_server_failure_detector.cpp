@@ -72,10 +72,10 @@ void meta_server_failure_detector::on_worker_connected(const end_point& node)
     _state->set_node_state(states);
 }
 
-bool meta_server_failure_detector::set_primary(bool isPrimary /*= false*/)
+bool meta_server_failure_detector::set_primary(bool is_primary /*= false*/)
 {
     bool bRet = true;
-    if (isPrimary && !_is_primary)
+    if (is_primary && !_is_primary)
     {
         node_states ns;
         _state->get_node_state(ns);
@@ -88,7 +88,7 @@ bool meta_server_failure_detector::set_primary(bool isPrimary /*= false*/)
         _is_primary = true;
     }
 
-    if (!isPrimary && _is_primary)
+    if (!is_primary && _is_primary)
     {
         clear_workers();
         _is_primary = false;

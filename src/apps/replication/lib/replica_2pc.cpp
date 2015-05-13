@@ -434,7 +434,7 @@ void replica::ack_prepare_message(int err, mutation_ptr& mu)
     ddebug( "%s: mutation %s ack_prepare_message", name(), mu->name());
 }
 
-void replica::cleanup_preparing_mutations(bool isPrimary)
+void replica::cleanup_preparing_mutations(bool is_primary)
 {
     decree start = last_committed_decree() + 1;
     decree end = _prepare_list->max_decree();
@@ -445,7 +445,7 @@ void replica::cleanup_preparing_mutations(bool isPrimary)
         if (mu != nullptr)
         {
             int c = mu->clear_prepare_or_commit_tasks();
-            if (!isPrimary)
+            if (!is_primary)
             {
                 dassert (0 == c, "");
             }

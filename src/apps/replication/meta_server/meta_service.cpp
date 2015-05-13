@@ -27,12 +27,16 @@
 #include "server_state.h"
 #include "load_balancer.h"
 #include "meta_server_failure_detector.h"
+#include <boost/filesystem.hpp>
+#include <sys/stat.h>
 
 meta_service::meta_service(server_state* state)
 : _state(state), serverlet("meta_service")
 {
     _balancer = nullptr;
     _failure_detector = nullptr;
+    _log = nullptr;
+    _offset = 0;
 
     _opts.initialize(system::config());
 }
@@ -41,8 +45,36 @@ meta_service::~meta_service(void)
 {
 }
 
-void meta_service::start()
+void meta_service::start(bool clean_state)
 {
+    if (clean_state)
+    {
+        try {
+            boost::filesystem::remove("checkpoint");
+            boost::filesystem::remove("oplog");
+        }
+        catch (std::exception& ex)
+        {
+            ex;
+        }
+    }
+    else
+    {
+        if (boost::filesystem::exists("checkpoint"))
+        {
+            _state->load("checkpoint");
+        }
+
+        if (boost::filesystem::exists("oplog"))
+        {
+            replay_log("oplog");
+            _state->save("checkpoint");
+            boost::filesystem::remove("oplog");
+        }
+    }
+
+    _log = file::open("oplog", O_RDWR | O_CREAT, 0);
+
     _balancer = new load_balancer(_state);            
     _failure_detector = new meta_server_failure_detector(_state);
     _balancer_timer = tasking::enqueue(LPC_LBM_RUN, this, &meta_service::on_load_balance_timer, 0, 1000, 5000);
@@ -50,9 +82,21 @@ void meta_service::start()
 
     end_point primary;
     if (_state->get_meta_server_primary(primary) && primary == primary_address())
+    {
         _failure_detector->set_primary(true);
+
+        node_states nodes;
+        _state->get_node_state(nodes);
+
+        for (auto& n : nodes)
+        {
+            dassert(n.second, "");
+            _failure_detector->register_worker(n.first);
+        }
+    }   
     else
         _failure_detector->set_primary(false);
+
 
     _failure_detector->start(
         _opts.fd_check_interval_seconds,
@@ -82,13 +126,12 @@ void meta_service::on_request(message_ptr& msg)
     unmarshall(msg, hdr);
 
     meta_response_header rhdr;
-    bool isPrimary = _state->get_meta_server_primary(rhdr.primary_address);
-    if (isPrimary) isPrimary = (primary_address() == rhdr.primary_address);
+    bool is_primary = _state->get_meta_server_primary(rhdr.primary_address);
+    if (is_primary) is_primary = (primary_address() == rhdr.primary_address);
     rhdr.err = ERR_SUCCESS;
-    
-    message_ptr resp = msg->create_response();
 
-    if (!isPrimary)
+    message_ptr resp = msg->create_response();
+    if (!is_primary)
     {
         rhdr.err = ERR_TALK_TO_OTHERS;
         
@@ -118,21 +161,15 @@ void meta_service::on_request(message_ptr& msg)
         marshall(resp, response);
     }
 
-    else if (hdr.rpc_tag == RPC_CM_UPDATE_PARTITION_CONFIGURATION)
+    else  if (hdr.rpc_tag == RPC_CM_UPDATE_PARTITION_CONFIGURATION)
     {
-        configuration_update_request request;
-        configuration_update_response response;
-        unmarshall(msg, request);
-
-        update_configuration(request, response);
-        
-        marshall(resp, rhdr);
-        marshall(resp, response);
+        update_configuration(msg, resp);
+        return;
     }
-
+    
     else
     {
-        dassert (false, "unknown rpc tag %x", hdr.rpc_tag);
+        dassert(false, "unknown rpc tag %x (%s)", hdr.rpc_tag, task_code(hdr.rpc_tag).to_string());
     }
 
     rpc::reply(resp);
@@ -147,6 +184,71 @@ void meta_service::query_configuration_by_node(configuration_query_by_node_reque
 void meta_service::query_configuration_by_index(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response)
 {
     _state->query_configuration_by_index(request, response);
+}
+
+void meta_service::replay_log(const char* log)
+{
+    FILE* fp = ::fopen(log, "rb");
+
+    char buffer[4096]; // enough for holding configuration_update_request
+    while (true)
+    {
+        int32_t len;
+        if (1 != ::fread((void*)&len, sizeof(int32_t), 1, fp))
+            break;
+
+        dassert(len <= 4096, "");
+        auto r = ::fread((void*)buffer, len, 1, fp);
+        dassert(r == 1, "log is corrupted");
+
+        blob bb(buffer, 0, len);
+        binary_reader reader(bb);
+
+        configuration_update_request request;
+        configuration_update_response response;
+        unmarshall(reader, request);
+        update_configuration(request, response);
+    }
+
+    ::fclose(fp);
+}
+
+void meta_service::update_configuration(message_ptr req, message_ptr resp)
+{
+    auto bb = req->reader().get_remaining_buffer();
+    uint64_t offset;
+
+    {
+        zauto_lock l(_log_lock);
+        offset = _offset;
+        _offset += bb.length() + sizeof(int32_t);
+
+        // dirty hack
+        dassert(bb.buffer().get() + sizeof(int32_t) <= bb.data(), "");
+        const char* p = bb.data() - sizeof(int32_t);
+        *(int32_t*)p = bb.length();
+
+        file::write(_log, p, bb.length() + sizeof(int32_t), offset, LPC_CM_LOG_UPDATE, this,
+            std::bind(&meta_service::on_log_completed, this, std::placeholders::_1, std::placeholders::_2, req, resp));
+    }
+}
+
+void meta_service::on_log_completed(error_code err, int size, message_ptr req, message_ptr resp)
+{
+    dassert(err == ERR_SUCCESS, "log operation failed, cannot proceed, err = %s", err.to_string());
+
+    configuration_update_request request;
+    configuration_update_response response;
+    unmarshall(req, request);
+
+    update_configuration(request, response);
+
+    meta_response_header rhdr;
+    rhdr.err = err;
+    rhdr.primary_address = primary_address();
+
+    marshall(resp, rhdr);
+    marshall(resp, response);    
 }
 
 void meta_service::update_configuration(configuration_update_request& request, __out_param configuration_update_response& response)

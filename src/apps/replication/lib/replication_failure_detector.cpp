@@ -124,14 +124,14 @@ void replication_failure_detector::on_master_disconnected( const std::vector<end
 
 void replication_failure_detector::on_master_connected( const end_point& node)
 {
-    bool isPrimary = false;
+    bool is_primary = false;
 
     {
     zauto_lock l(_meta_lock);
-    isPrimary = (node == _current_meta_server);
+    is_primary = (node == _current_meta_server);
     }
 
-    if (isPrimary)
+    if (is_primary)
     {
         _stub->on_meta_server_connected();
     }

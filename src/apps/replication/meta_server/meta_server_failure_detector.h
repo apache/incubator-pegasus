@@ -40,7 +40,7 @@ public:
     meta_server_failure_detector(server_state* state);
     ~meta_server_failure_detector(void);
 
-    virtual bool set_primary(bool isPrimary = false);
+    virtual bool set_primary(bool is_primary = false);
     bool is_primary() const;
 
     // client side

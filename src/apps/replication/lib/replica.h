@@ -132,7 +132,7 @@ private:
     void on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, int err, message_ptr& request, message_ptr& reply);
     void do_possible_commit_on_primary(mutation_ptr& mu);    
     void ack_prepare_message(int err, mutation_ptr& mu);
-    void cleanup_preparing_mutations(bool isPrimary);
+    void cleanup_preparing_mutations(bool is_primary);
     
     /////////////////////////////////////////////////////////////////
     // learning    

@@ -40,15 +40,20 @@ public:
     meta_service(server_state* state);
     ~meta_service(void);
 
-    void start();
+    void start(bool clean_state);
     bool stop();
 
 private:
     void on_request(message_ptr& request);
+    void replay_log(const char* log);
 
     // partition server & client => meta server
     void query_configuration_by_node(configuration_query_by_node_request& request, __out_param configuration_query_by_node_response& response);
     void query_configuration_by_index(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response);
+
+    // update configuration
+    void update_configuration(message_ptr req, message_ptr resp);
+    void on_log_completed(error_code err, int size, message_ptr req, message_ptr resp);
     void update_configuration(configuration_update_request& request, __out_param configuration_update_response& response);
       
     // load balance actions
@@ -62,5 +67,9 @@ private:
     load_balancer                *_balancer;
     task_ptr                     _balancer_timer;
     replication_options          _opts;
+
+    zlock                        _log_lock;
+    handle_t                     _log;
+    uint64_t                     _offset;
 }; 
 

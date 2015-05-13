@@ -55,7 +55,7 @@ namespace dsn {
             auto cf = system::config();
             _reliable_state->init_app(cf);
             _reliable_state->add_meta_node(_service->primary_address());
-            _service->start();
+            _service->start(false);
             return ERR_SUCCESS;
         }
 

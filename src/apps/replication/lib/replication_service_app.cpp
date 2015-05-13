@@ -44,10 +44,9 @@ error_code replication_service_app::start(int argc, char** argv)
     replication_options opts;
     opts.initialize(system::config());
     opts.working_dir = "./" + name();
-    //initialize(opts, config, clear);
 
     _stub = new replica_stub();
-    _stub->initialize(opts, system::config(), true);
+    _stub->initialize(opts, system::config());
     _stub->open_service();
     return ERR_SUCCESS;
 }

@@ -34,6 +34,15 @@ using namespace dsn::replication;
 
 typedef std::list<std::pair<end_point, bool>> node_states;
 
+struct app_state
+{
+    std::string                          app_type;
+    std::string                          app_name;
+    int32_t                              app_id;
+    int32_t                              partition_count;
+    std::vector<partition_configuration> partitions;
+};
+
 class server_state 
 {
 public:
@@ -50,21 +59,15 @@ public:
     void remove_meta_node(const end_point& node);
     void switch_meta_primary();
 
+    void load(const char* chk_point);
+    void save(const char* chk_point);
+
     // partition server & client => meta server
     void query_configuration_by_node(configuration_query_by_node_request& request, __out_param configuration_query_by_node_response& response);
     void query_configuration_by_index(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response);
     void update_configuration(configuration_update_request& request, __out_param configuration_update_response& response);
 
 private:
-    struct app_state
-    {
-        std::string                          app_type;
-        std::string                          app_name;
-        int32_t                              app_id;
-        int32_t                              partition_count;        
-        std::vector<partition_configuration> partitions;
-    };
-
     struct node_state
     {
         bool                          is_alive;
