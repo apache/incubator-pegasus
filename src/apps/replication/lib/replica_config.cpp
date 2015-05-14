@@ -101,13 +101,12 @@ void replica::assign_primary(configuration_update_request& proposal)
 
 void replica::add_potential_secondary(configuration_update_request& proposal)
 {
-    dassert(proposal.config.ballot == get_ballot(), "");
     if (status() != PS_PRIMARY)
     {
-        dassert(status() == PS_INACTIVE, "");
         return;
     }   
 
+    dassert (proposal.config.ballot == get_ballot(), "");
     dassert (proposal.config.gpid == _primary_states.membership.gpid, "");
     dassert (proposal.config.app_type == _primary_states.membership.app_type, "");
     dassert (proposal.config.primary == _primary_states.membership.primary, "");

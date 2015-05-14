@@ -138,15 +138,7 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
             it->second->get_ballot()
             );
 
-        if (err != ERR_SUCCESS)
-        {
-            // prevent them to be primary, secondary, etc.
-            it->second->update_local_configuration_with_no_ballot_change(PS_ERROR);
-        }
-        else
-        {
-            it->second->set_inactive_state_transient(true);
-        }
+        it->second->set_inactive_state_transient(err == ERR_SUCCESS);
     }
 
     // start log serving    
