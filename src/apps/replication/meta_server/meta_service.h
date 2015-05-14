@@ -68,6 +68,7 @@ private:
     task_ptr                     _balancer_timer;
     replication_options          _opts;
     std::string                  _data_dir;
+    bool                         _started;
 
     zlock                        _log_lock;
     handle_t                     _log;

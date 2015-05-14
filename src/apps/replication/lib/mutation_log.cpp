@@ -630,7 +630,7 @@ std::map<int, log_file_ptr>& mutation_log::get_logfiles_for_test()
     char path[512]; 
     sprintf (path, "%s/log.%u.%lld", dir, index, static_cast<long long int>(startOffset));
     
-    handle_t hFile = dsn::service::file::open(path, O_RDWR | O_CREAT, 0);
+    handle_t hFile = dsn::service::file::open(path, O_RDWR | O_CREAT, 0666);
     if (hFile == 0)
     {
         dwarn("create log %s failed", path);

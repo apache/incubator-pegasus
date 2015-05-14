@@ -35,9 +35,10 @@ meta_service::meta_service(server_state* state)
 {
     _balancer = nullptr;
     _failure_detector = nullptr;
-    _log = nullptr;
+    _log = static_cast<handle_t>(0);
     _offset = 0;
     _data_dir = ".";
+    _started = false;
 
     _opts.initialize(system::config());
 }
@@ -81,7 +82,7 @@ void meta_service::start(const char* data_dir, bool clean_state)
         }
     }
 
-    _log = file::open((_data_dir + "/oplog").c_str(), O_RDWR | O_CREAT, 0);
+    _log = file::open((_data_dir + "/oplog").c_str(), O_RDWR | O_CREAT, 0666);
 
     _balancer = new load_balancer(_state);            
     _failure_detector = new meta_server_failure_detector(_state);
@@ -93,15 +94,6 @@ void meta_service::start(const char* data_dir, bool clean_state)
     if (_state->get_meta_server_primary(primary) && primary == primary_address())
     {
         _failure_detector->set_primary(true);
-
-        node_states nodes;
-        _state->get_node_state(nodes);
-
-        for (auto& n : nodes)
-        {
-            dassert(n.second, "");
-            _failure_detector->register_worker(n.first);
-        }
     }   
     else
         _failure_detector->set_primary(false);
@@ -114,10 +106,14 @@ void meta_service::start(const char* data_dir, bool clean_state)
         _opts.fd_grace_seconds,
         false
         );
+
+    _started = true;
 }
 
 bool meta_service::stop()
 {
+    if (!_started) return false;
+    _started = false;
     _failure_detector->stop();
     delete _failure_detector;
     _failure_detector = nullptr;
@@ -198,6 +194,7 @@ void meta_service::query_configuration_by_index(configuration_query_by_index_req
 void meta_service::replay_log(const char* log)
 {
     FILE* fp = ::fopen(log, "rb");
+    dassert (fp != nullptr, "open operation log %s failed, err = %d", log, errno);
 
     char buffer[4096]; // enough for holding configuration_update_request
     while (true)
@@ -268,7 +265,8 @@ void meta_service::update_configuration(configuration_update_request& request, _
 {
     _state->update_configuration(request, response);
 
-    tasking::enqueue(LPC_LBM_RUN, this, std::bind(&meta_service::on_config_changed, this, request.config.gpid));
+    if (_started)
+        tasking::enqueue(LPC_LBM_RUN, this, std::bind(&meta_service::on_config_changed, this, request.config.gpid));
 }
 
 // local timers
