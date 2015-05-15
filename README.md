@@ -3,7 +3,7 @@
 
 * [Installation](https://github.com/Microsoft/rDSN/wiki/Installation)
 * [Tutorial (Developers)](https://github.com/Microsoft/rDSN/wiki/Tutorial-D)
-* [Tutorial (Researcher and Tool Developers)](https://github.com/Microsoft/rDSN/wiki/Tutorial-R)
+* [Tutorial (Researchers and Tool Developers)](https://github.com/Microsoft/rDSN/wiki/Tutorial-R)
 * [Tutorial (Students)](https://github.com/Microsoft/rDSN/wiki/Tutorial-S)
 * [Principles and FAQ](https://github.com/Microsoft/rDSN/wiki/Principles)
 * [Architecture](https://github.com/Microsoft/rDSN/wiki/Architecture)
@@ -11,7 +11,7 @@
 
 ***
 
-Robust Distributed System Nucleus (rDSN) is an open framework for quickly building and managing high performance and robust distributed systems. The core is a coherent and principled design that benefits the developers, students, and researchers who are working on distributed systems in many ways (See Why and How.) Following is an incomplete list.
+Robust Distributed System Nucleus (rDSN) is an open framework for quickly building and managing high performance and robust distributed systems. The core is a coherent and principled design that benefits the developers, students, and researchers who are working on distributed systems. Following is an incomplete list.
 
 ##### Developers: a framework for quickly building and managing high performance and robust systems.
 
@@ -25,7 +25,7 @@ Robust Distributed System Nucleus (rDSN) is an open framework for quickly buildi
 * systematic test against various failures and scheduling decisions, exposing possible bugs early
 * reproduce bugs, with all nodes' state in a same process and debug without worrying about false timeouts
 * automatic task-level flow tracing and performance profiling
-* scale-out (sharding) and reliability (replication) with minor development cost
+* **automated scale-out (sharding) and reliability (replication) with minor development cost**
 * flexible deployment
 
 ##### Researchers and Tool-Oriented Developers: a tool platform which easies tool development and enables transparent integration with upper applications.
