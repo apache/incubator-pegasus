@@ -11,28 +11,27 @@
 
 ***
 
-Robust Distributed System Nucleus (rDSN) is an open framework for quickly building and managing high performance and robust distributed systems. The core is a coherent and principled design that benefits the developers, students, and researchers who are working on distributed systems. Following is an incomplete list.
+Robust Distributed System Nucleus (rDSN) is an open framework for quickly building and managing high performance and robust distributed systems. The key is a coherent and principled design that distributed systems, tools, and frameworks can be developed independently and later on integrated (almost) transparently. Following are some highlights for different audience of this framework. 
 
 ##### Developers: a framework for quickly building and managing high performance and robust systems.
 
-* basic constructs provided for distributed system development (RPC, task library, synchronization, AIO, etc.)
+* basic constructs provided for distributed system development (RPC, tasking, synchronization, etc.)
 * multiple-platform support (Linux, Windows, Mac)
-* quick prototyping via code generation with Apache Thrift and Google Protocol Buffer, extensible for others
+* quick prototyping via code generation with Thrift and Protocol Buffer, extensible for others
 * enhanced RPC library with multi-port, multi-channel, multi-language-client support
-* flexible to plugin your own low level constructs (network, logging, task queue, performance counter, etc.)
-* traditional development style with minor adjustment for holding certain principles to enable more features
-* progressive development via simple configuration to minimize reasoning space when a bug surfaces, e.g., single-thread to multiple-thread, constant message delay to variant ones, even with message lost and other failures
+* flexible to plugin your own low level constructs (network, logging, task queue, lock, etc.)
+* progressive system complexity via configuration to minimize reasoning space when a bug surfaces
 * systematic test against various failures and scheduling decisions, exposing possible bugs early
-* reproduce bugs, with all nodes' state in a same process and debug without worrying about false timeouts
-* automatic task-level flow tracing and performance profiling
-* **automated scale-out (sharding) and reliability (replication) with minor development cost**
+* reproduce bugs, with all nodes' state in one process and debug w/o worrying about false timeouts
+* automated task-level flow tracing and performance profiling
+* **automated partitioning and replication with minor development cost**
 * flexible deployment
 
-##### Researchers and Tool-Oriented Developers: a tool platform which easies tool development and enables transparent integration with upper applications.
+##### Researchers and tool-oriented developers: a tool platform which easies tool development and enables transparent integration with upper applications.
 
-* reliably expose the dependencies and non-determinisms in the upper systems to the underlying tools
+* reliably expose dependencies and non-determinisms in upper systems to the underlying tools
 * dedicated Tool API for tool and runtime policy development
-* transparent integration of the tools with the upper applications
+* transparent integration of the tools with the upper applications to make real impact
 
 ##### Students: a distributed system learning platform where you can easily simplify, understand and manipulate a system.
 
