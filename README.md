@@ -1,3 +1,16 @@
+
+## Quick Links
+
+* [Installation](https://github.com/Microsoft/rDSN/wiki/Installation)
+* [Tutorial (Developers)](https://github.com/Microsoft/rDSN/wiki/Tutorial-D)
+* [Tutorial (Researcher and Tool Developers)](https://github.com/Microsoft/rDSN/wiki/Tutorial-R)
+* [Tutorial (Students)](https://github.com/Microsoft/rDSN/wiki/Tutorial-S)
+* [Principles and FAQ](https://github.com/Microsoft/rDSN/wiki/Principles)
+* [Architecture](https://github.com/Microsoft/rDSN/wiki/Architecture)
+* [Contribute to rDSN](https://github.com/Microsoft/rDSN/wiki/Contribute)
+
+***
+
 Robust Distributed System Nucleus (rDSN) is an open framework for quickly building and managing high performance and robust distributed systems. The core is a coherent and principled design that benefits the developers, students, and researchers who are working on distributed systems in many ways (See Why and How.) Following is an incomplete list.
 
 ##### Developers: a framework for quickly building and managing high performance and robust systems.
@@ -26,16 +39,3 @@ Robust Distributed System Nucleus (rDSN) is an open framework for quickly buildi
 * progressive protocol development to align with the courses, e.g., synchronous and reliable messages first, then asynchronous and unreliable 
 * easy test, debug, and monitoring for system understanding, as with the developers
 * easy further tool development, as with the researchers
-
-***
-
-## Quick Links
-
-* [Installation](https://github.com/Microsoft/rDSN/wiki/Installation)
-* [Tutorial (Developers)](https://github.com/Microsoft/rDSN/wiki/Tutorial-D)
-* [Tutorial (Researcher and Tool Developers)](https://github.com/Microsoft/rDSN/wiki/Tutorial-R)
-* [Tutorial (Students)](https://github.com/Microsoft/rDSN/wiki/Tutorial-S)
-* [Principles and FAQ](https://github.com/Microsoft/rDSN/wiki/Principles)
-* [Architecture](https://github.com/Microsoft/rDSN/wiki/Architecture)
-* [Contribute to rDSN](https://github.com/Microsoft/rDSN/wiki/Contribute)
-
