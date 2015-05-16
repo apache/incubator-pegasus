@@ -10,7 +10,7 @@
 
 ***
 
-Robust Distributed System Nucleus (rDSN) is an open framework for quickly building and managing high performance and robust distributed systems. It is [now open source](http://research.microsoft.com/en-us/projects/rdsn/default.aspx) with the MIT license. The idea is a coherent and principled design that distributed systems, tools, and frameworks can be developed independently and later on integrated (almost) transparently. Following are some highlights for different audience of this framework.
+Robust Distributed System Nucleus (rDSN) is an open framework for quickly building and managing high performance and robust distributed systems. It is [now open source](http://research.microsoft.com/en-us/projects/rdsn/default.aspx) with the MIT license. The idea is a [coherent and principled design](https://github.com/Microsoft/rDSN/wiki/Design-Rational-and-Architecture) that distributed systems, tools, and frameworks can be developed independently and later on integrated (almost) transparently. Following are some highlights for different audience of this framework.
 
 ##### Developers: a framework for quickly building and managing high performance and robust systems.
 
