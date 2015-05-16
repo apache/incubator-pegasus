@@ -3,7 +3,7 @@
 
 * [Installation](https://github.com/Microsoft/rDSN/wiki/Installation)
 * [Tutorial](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Developers)
-* [Design Rational and Architecture](https://github.com/Microsoft/rDSN/wiki/Architecture)
+* [Design Rational and Architecture](https://github.com/Microsoft/rDSN/wiki/Design-Rational-and-Architecture)
 * [Contribute to rDSN](https://github.com/Microsoft/rDSN/wiki/Contribute)
 * [Programming Tips and FAQ](https://github.com/Microsoft/rDSN/wiki/Programming-Tips-and-FAQ)
 * [Integrated Tools, Policies and Distributed Frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools,-Policies-and-Frameworks)
