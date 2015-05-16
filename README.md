@@ -14,7 +14,6 @@ Robust Distributed System Nucleus (rDSN) is an open framework for quickly buildi
 
 ##### Developers: a framework for quickly building and managing high performance and robust systems.
 
-* basic constructs provided for distributed system development (RPC, tasking, synchronization, etc.)
 * multiple-platform support (Linux, Windows, Mac)
 * quick prototyping via code generation with Thrift and Protocol Buffer, extensible for others
 * enhanced RPC library with multi-port, multi-channel, multi-language-client support
@@ -22,9 +21,8 @@ Robust Distributed System Nucleus (rDSN) is an open framework for quickly buildi
 * progressive system complexity via configuration to minimize reasoning space when a bug surfaces
 * systematic test against various failures and scheduling decisions, exposing possible bugs early
 * reproduce bugs, with all nodes' state in one process and debug w/o worrying about false timeouts
-* automated task-level flow tracing and performance profiling
-* **automated partitioning and replication with minor development cost**
 * flexible deployment
+* **integration with [a growing set of tools and frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools,-Policies-and-Frameworks) (e.g., replication) with little or no cost**
 
 ##### Researchers and tool-oriented developers: a tool platform which easies tool development and enables transparent integration with upper applications.
 
