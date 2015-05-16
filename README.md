@@ -3,9 +3,10 @@
 
 * [Installation](https://github.com/Microsoft/rDSN/wiki/Installation)
 * [Tutorial](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Developers)
-* [Principles and FAQ](https://github.com/Microsoft/rDSN/wiki/Principles)
 * [Architecture](https://github.com/Microsoft/rDSN/wiki/Architecture)
 * [Contribute to rDSN](https://github.com/Microsoft/rDSN/wiki/Contribute)
+* [Programming Principles](https://github.com/Microsoft/rDSN/wiki/Programming-Principles)
+* [FAQ](https://github.com/Microsoft/rDSN/wiki/FAQ)
 
 ***
 
