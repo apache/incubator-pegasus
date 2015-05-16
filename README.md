@@ -6,6 +6,7 @@
 * [Architecture](https://github.com/Microsoft/rDSN/wiki/Architecture)
 * [Contribute to rDSN](https://github.com/Microsoft/rDSN/wiki/Contribute)
 * [Programming Tips and FAQ](https://github.com/Microsoft/rDSN/wiki/Programming-Tips-and-FAQ)
+* [Integrated Tools, Policies and Distributed Frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools,-Policies-and-Frameworks)
 
 ***
 
