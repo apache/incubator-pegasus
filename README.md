@@ -2,9 +2,7 @@
 ## Quick Links
 
 * [Installation](https://github.com/Microsoft/rDSN/wiki/Installation)
-* [Tutorial (Developers)](https://github.com/Microsoft/rDSN/wiki/Tutorial-D)
-* [Tutorial (Researchers and Tool Developers)](https://github.com/Microsoft/rDSN/wiki/Tutorial-R)
-* [Tutorial (Students)](https://github.com/Microsoft/rDSN/wiki/Tutorial-S)
+* [Tutorial](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Developers)
 * [Principles and FAQ](https://github.com/Microsoft/rDSN/wiki/Principles)
 * [Architecture](https://github.com/Microsoft/rDSN/wiki/Architecture)
 * [Contribute to rDSN](https://github.com/Microsoft/rDSN/wiki/Contribute)
