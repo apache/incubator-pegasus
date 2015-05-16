@@ -5,8 +5,7 @@
 * [Tutorial](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Developers)
 * [Architecture](https://github.com/Microsoft/rDSN/wiki/Architecture)
 * [Contribute to rDSN](https://github.com/Microsoft/rDSN/wiki/Contribute)
-* [Programming Principles](https://github.com/Microsoft/rDSN/wiki/Programming-Principles)
-* [FAQ](https://github.com/Microsoft/rDSN/wiki/FAQ)
+* [Programming Tips and FAQ](https://github.com/Microsoft/rDSN/wiki/Programming-Tips-and-FAQ)
 
 ***
 
