@@ -22,11 +22,7 @@ Robust Distributed System Nucleus (rDSN) is an open framework for quickly buildi
  * single executable, multiple role, multiple instance deployment
 * **built-in three-layer support from [a growing set of tools and frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools,-Policies-and-Frameworks) with little or no cost**
  * layer 1: single node tools: simulation, fault injection, tracing, profiling, replay, ...
-  * systematic test against various failures and scheduling decisions, exposing possible bugs early  
-  * reproduce bugs, with all nodes' state in one process and debug w/o worrying about false timeouts
-  * progressive system complexity via configuration to minimize reasoning space when a bug surfaces
  * layer 2: from single node to a partitioned and/or replicated service
-  * **automated replication** with minor further development cost
  * layer 3: from single service to workflow across multiple services to handle end-to-end incoming workloads (coming later)
 
 ##### Researchers and tool-oriented developers: a tool platform which easies tool development and enables transparent integration with upper applications.
