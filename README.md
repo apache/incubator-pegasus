@@ -3,8 +3,8 @@
 
 * [Installation](https://github.com/Microsoft/rDSN/wiki/Installation)
 * [Tutorial](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Developers)
+* [Built-in Tools, Runtime Policies and Distributed Frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools,-Policies-and-Frameworks)
 * [Programming Tips and FAQ](https://github.com/Microsoft/rDSN/wiki/Programming-Tips-and-FAQ)
-* [Integrated Tools, Policies and Distributed Frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools,-Policies-and-Frameworks)
 * [Design Rational and Architecture](https://github.com/Microsoft/rDSN/wiki/Design-Rational-and-Architecture)
 * [Contribute to rDSN](https://github.com/Microsoft/rDSN/wiki/Contribute)
 
@@ -12,17 +12,18 @@
 
 Robust Distributed System Nucleus (rDSN) is an open framework for quickly building and managing high performance and robust distributed systems. It is [now open source](http://research.microsoft.com/en-us/projects/rdsn/default.aspx) with the MIT license. The idea is a [coherent and principled design](https://github.com/Microsoft/rDSN/wiki/Design-Rational-and-Architecture) that distributed systems, tools, and frameworks can be developed independently and later on integrated (almost) transparently. Following are some highlights for different audience of this framework.
 
-##### Developers: a framework for quickly building and managing high performance and robust systems.
+##### Developers: a framework for quickly building and managing high performance and robust distributed systems.
 
-* multiple-platform support (Linux, Windows, Mac)
-* quick prototyping via code generation with Thrift and Protocol Buffer, extensible for others
-* enhanced RPC library with multi-port, multi-channel, multi-language-client support
-* flexible to plugin your own low level constructs (network, logging, task queue, lock, etc.)
-* progressive system complexity via configuration to minimize reasoning space when a bug surfaces
-* systematic test against various failures and scheduling decisions, exposing possible bugs early
-* reproduce bugs, with all nodes' state in one process and debug w/o worrying about false timeouts
-* flexible deployment
-* **integration with [a growing set of tools and frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools,-Policies-and-Frameworks) (e.g., replication) with little or no cost**
+* flexible programming and deployment
+ * multiple-platform support (Linux, Windows, Mac)
+ * quick prototyping via code generation with Thrift and Protocol Buffer, extensible for others
+ * enhanced RPC library with multi-port, multi-channel, multi-language-client support
+ * flexible to plugin your own low level constructs (network, logging, task queue, lock, etc.)
+ * single executable, multiple role, multiple instance deployment
+* **built-in support from [a growing set of tools and frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools,-Policies-and-Frameworks) with little or no cost**
+ * layer 1: single node tools: simulation, fault injection, tracing, profiling, replay, ...
+ * layer 2: from single node to a partitioned and replicated service: partitioning and replication with little cost
+ * layer 3: from single service to workflow across multiple services to handle end-to-end incoming workloads
 
 ##### Researchers and tool-oriented developers: a tool platform which easies tool development and enables transparent integration with upper applications.
 
