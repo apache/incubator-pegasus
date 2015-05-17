@@ -4,7 +4,7 @@ require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
 ?>
 [apps.<?=$_PROG->name?>.server]
-name = <?=$_PROG->name?>.server
+name = server
 type = <?=$_PROG->name?>_server
 arguments = 
 ports = 27001
