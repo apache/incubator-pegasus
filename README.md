@@ -36,7 +36,7 @@ Robust Distributed System Nucleus (rDSN) is an open framework for quickly buildi
 
 ##### Students: a distributed system learning platform where you can easily simplify, understand and manipulate a system.
 
-* progressive protocol development to align with the courses
+* configurable system complexity to learn step by step
  * single thread to multiple threads
  * synchronous and reliable messages to asynchronous and unreliable ones
 * easy test, debug, and monitoring for system understanding, as with the developers
