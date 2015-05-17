@@ -25,7 +25,7 @@ Robust Distributed System Nucleus (rDSN) is an open framework for quickly buildi
  * layer 2: from single node to a partitioned and/or replicated service
  * layer 3: from single service to workflow across multiple services to handle end-to-end incoming workloads (coming later)
 
-##### Researchers and tool-oriented developers: a tool platform which easies tool development and enables transparent integration with upper applications.
+##### Researchers and tool-oriented developers: a tool platform which eases tool development and enables transparent integration with upper applications.
 
 * reliably expose dependencies and non-determinisms in upper systems to the underlying tools at a semantic-rich level (i.e., task)
  * completeness made easy for tools
