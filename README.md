@@ -20,8 +20,8 @@ Robust Distributed System Nucleus (rDSN) is an open framework for quickly buildi
  * enhanced RPC library with multi-port, multi-channel, multi-language-client support
  * flexible to plugin your own low level constructs (network, logging, task queue, lock, etc.)
  * single executable, multiple role, multiple instance deployment
-* **built-in three-layer support from [a growing set of tools and frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools,-Policies-and-Frameworks) with little or no cost**
- * layer 1: single node tools: simulation, fault injection, tracing, profiling, replay, ...
+* **built-in three-layer support from [a growing set of tools and frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools,-Policies-and-Frameworks)**
+ * layer 1: single node tools and policies: simulation, fault injection, tracing, profiling, replay, throttling, ...
  * layer 2: from single node to a partitioned and/or replicated service
  * layer 3: from single service to workflow across multiple services to handle end-to-end incoming workloads (coming later)
 
