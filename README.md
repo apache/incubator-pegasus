@@ -16,10 +16,10 @@ Robust Distributed System Nucleus (rDSN) is an open framework for quickly buildi
 
 * flexible programming and deployment
  * multiple-platform support (Linux, Windows, Mac)
- * quick prototyping via code generation with Thrift and Protocol Buffer, extensible for others
- * enhanced RPC library with multi-port, multi-channel, multi-language-client support
- * flexible to plugin your own low level constructs (network, logging, task queue, lock, etc.)
- * single executable, multiple role, multiple instance deployment
+ * [quick prototyping](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Developers#step-1-write-the-service-interface-and-run) via code generation with Thrift and Protocol Buffer, extensible for others
+ * [enhanced RPC library](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Developers#step-14-connect-the-service-with-other-languages-optional) with multi-port, multi-channel, multi-language-client support
+ * flexible to [plugin your own](https://github.com/Microsoft/rDSN/wiki/Tool-API:-Component-Providers,-Join-Points,-and-State-Extensions#component-providers) low level constructs (network, logging, task queue, lock, etc.)
+ * single executable, multiple role, multiple instance [deployment](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Developers#step-3-run-with-the-native-runtime-and-deployment)
 * **built-in three-layer support from [a growing set of tools and frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools,-Policies-and-Frameworks)**
  * layer 1: single node tools and policies: simulation, fault injection, tracing, profiling, replay, throttling, ...
  * layer 2: from single node to a partitioned and/or replicated service
