@@ -20,19 +20,28 @@ Robust Distributed System Nucleus (rDSN) is an open framework for quickly buildi
  * enhanced RPC library with multi-port, multi-channel, multi-language-client support
  * flexible to plugin your own low level constructs (network, logging, task queue, lock, etc.)
  * single executable, multiple role, multiple instance deployment
-* **built-in support from [a growing set of tools and frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools,-Policies-and-Frameworks) with little or no cost**
+* **built-in three-layer support from [a growing set of tools and frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools,-Policies-and-Frameworks) with little or no cost**
  * layer 1: single node tools: simulation, fault injection, tracing, profiling, replay, ...
- * layer 2: from single node to a partitioned and replicated service: partitioning and replication with little cost
- * layer 3: from single service to workflow across multiple services to handle end-to-end incoming workloads
+  * systematic test against various failures and scheduling decisions, exposing possible bugs early  
+  * reproduce bugs, with all nodes' state in one process and debug w/o worrying about false timeouts
+  * progressive system complexity via configuration to minimize reasoning space when a bug surfaces
+ * layer 2: from single node to a partitioned and/or replicated service
+  * **automated replication** with minor further development cost
+ * layer 3: from single service to workflow across multiple services to handle end-to-end incoming workloads (coming later)
 
 ##### Researchers and tool-oriented developers: a tool platform which easies tool development and enables transparent integration with upper applications.
 
-* reliably expose dependencies and non-determinisms in upper systems to the underlying tools
+* reliably expose dependencies and non-determinisms in upper systems to the underlying tools at a semantic-rich level (i.e., task)
+ * completeness made easy for tools
+ * reduced state space for tools to handle
+ * easier to map tool results to application logic
 * dedicated Tool API for tool and runtime policy development
 * transparent integration of the tools with the upper applications to make real impact
 
 ##### Students: a distributed system learning platform where you can easily simplify, understand and manipulate a system.
 
-* progressive protocol development to align with the courses, e.g., synchronous and reliable messages first, then asynchronous and unreliable 
+* progressive protocol development to align with the courses
+ * single thread to multiple threads
+ * synchronous and reliable messages to asynchronous and unreliable ones
 * easy test, debug, and monitoring for system understanding, as with the developers
 * easy further tool development, as with the researchers
