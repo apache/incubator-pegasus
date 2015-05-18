@@ -13,10 +13,13 @@ I am a [developer](https://github.com/Microsoft/rDSN#developers-a-framework-for-
  * single executable, multiple role, multiple instance [deployment](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Developers#step-3-run-with-the-native-runtime-and-deployment)
 * **built-in three-layer support from [a growing set of tools and frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools,-Policies-and-Frameworks)**
  * Layer 1: single node tools and policies: simulation, fault injection, tracing, profiling, replay, throttling, ...
+ 
  ![rDSN-layer1](https://raw.githubusercontent.com/Microsoft/rDSN/master/resources/rdsn-layer1.jpg)
  * Layer 2: to a partitioned? and replicated? service with simple configuration and minor further development cost
+ 
  ![rDSN-layer2](https://raw.githubusercontent.com/Microsoft/rDSN/master/resources/rdsn-layer2.jpg)
  * Layer 3: compose workflow across multiple services in a declarative way to handle end-to-end incoming workloads (coming later)
+ 
  ![rDSN-layer3](https://raw.githubusercontent.com/Microsoft/rDSN/master/resources/rdsn-layer3.jpg)
 
 ##### Researchers and tool-oriented developers: a tool platform which eases tool development and enables transparent integration with upper applications.
