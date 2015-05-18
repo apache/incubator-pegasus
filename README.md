@@ -1,8 +1,4 @@
-Robust Distributed System Nucleus (rDSN) is an open framework for quickly building and managing high performance and robust distributed systems. It is [now open source](http://research.microsoft.com/en-us/projects/rdsn/default.aspx) with the MIT license. The idea is a [coherent and principled design](https://github.com/Microsoft/rDSN/wiki/Design-Rational-and-Architecture) that distributed applications, tools, and frameworks can be developed independently and later on integrated (almost) transparently. 
-
-![rDSN](https://raw.githubusercontent.com/Microsoft/rDSN/master/resources/rdsn.jpg)
-
-Following are some highlights for different audience of this framework.
+Robust Distributed System Nucleus (rDSN) is an open framework for quickly building and managing high performance and robust distributed systems. It is [now open source](http://research.microsoft.com/en-us/projects/rdsn/default.aspx) with the MIT license. The idea is a [coherent and principled design](https://github.com/Microsoft/rDSN/wiki/Design-Rational-and-Architecture) that distributed applications, tools, and frameworks can be developed independently and later on integrated (almost) transparently. Following are some highlights for different audience of this framework.
 
 ##### Developers: a framework for quickly building and managing high performance and robust distributed systems.
 
@@ -16,6 +12,7 @@ Following are some highlights for different audience of this framework.
  * layer 1: single node tools and policies: simulation, fault injection, tracing, profiling, replay, throttling, ...
  ![rDSN-layer1](https://raw.githubusercontent.com/Microsoft/rDSN/master/resources/rdsn-layer1.jpg)
  * layer 2: from single node to a partitioned and/or replicated service
+ ![rDSN-layer2](https://raw.githubusercontent.com/Microsoft/rDSN/master/resources/rdsn-layer2.jpg)
  * layer 3: from single service to workflow across multiple services to handle end-to-end incoming workloads (coming later)
 
 ##### Researchers and tool-oriented developers: a tool platform which eases tool development and enables transparent integration with upper applications.
