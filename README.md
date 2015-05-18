@@ -5,7 +5,7 @@ I am a [developer](https://github.com/Microsoft/rDSN#developers-a-framework-for-
 
 ##### Developers: a framework for quickly building and managing high performance and robust distributed systems. (see [Tutorial](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Developers))
 
-* **Built-in three-layer support from [a growing set of tools and frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools,-Policies-and-Frameworks)**
+* Built-in three-layer support from [a growing set of tools and frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools,-Policies-and-Frameworks)
  * Layer 1: single node tools and policies: simulation, fault injection, tracing, profiling, replay, throttling, ...
  
  ![rDSN-layer1](https://raw.githubusercontent.com/Microsoft/rDSN/master/resources/rdsn-layer1.jpg)
@@ -20,10 +20,9 @@ I am a [developer](https://github.com/Microsoft/rDSN#developers-a-framework-for-
  * multiple-platform support (Linux, Windows, Mac)
  * [quick prototyping](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Developers#step-1-write-the-service-interface-and-run) via code generation with Thrift and Protocol Buffer, extensible for others
  * [enhanced RPC library](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Developers#step-14-connect-the-service-with-other-languages-optional) with multi-port, multi-channel, multi-language-client support
- * highly extensible to [plugin your own](https://github.com/Microsoft/rDSN/wiki/Tool-API:-Component-Providers,-Join-Points,-and-State-Extensions#component-providers) low level constructs (network, logging, task queue, lock, etc.)
- * single executable, multiple role, multiple instance [deployment](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Developers#step-3-run-with-the-native-runtime-and-deployment)
- * more concerns, please do not hesitate to let us [know](rdsn-support@googlegroups.com)
-
+ * adapt to your own environment, or rDSN does not perform good enough? rDSN is highly extensible that you can always [plugin your own](https://github.com/Microsoft/rDSN/wiki/Tool-API:-Component-Providers,-Join-Points,-and-State-Extensions#component-providers) low level constructs (network, logging, task queue, lock, performanc counter etc.)
+ * [flexible deployment]((https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Developers#step-3-run-with-the-native-runtime-and-deployment)) - single executable, multiple roles, multiple instances
+ * more concerns, please do not hesitate to let us [know](mailto:rdsn-support@googlegroups.com)
 
 ##### Researchers and tool-oriented developers: a tool platform which eases tool development and enables transparent integration with upper applications.
 
