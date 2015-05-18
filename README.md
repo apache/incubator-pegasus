@@ -5,11 +5,11 @@ I am a [developer](https://github.com/Microsoft/rDSN#developers-a-framework-for-
 
 ##### Developers: a framework for quickly building and managing high performance and robust distributed systems. (see [Tutorial](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Developers))
 
-* flexible programming and deployment
+* programming and deployment
  * multiple-platform support (Linux, Windows, Mac)
  * [quick prototyping](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Developers#step-1-write-the-service-interface-and-run) via code generation with Thrift and Protocol Buffer, extensible for others
  * [enhanced RPC library](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Developers#step-14-connect-the-service-with-other-languages-optional) with multi-port, multi-channel, multi-language-client support
- * flexible to [plugin your own](https://github.com/Microsoft/rDSN/wiki/Tool-API:-Component-Providers,-Join-Points,-and-State-Extensions#component-providers) low level constructs (network, logging, task queue, lock, etc.)
+ * highly extensible to [plugin your own](https://github.com/Microsoft/rDSN/wiki/Tool-API:-Component-Providers,-Join-Points,-and-State-Extensions#component-providers) low level constructs (network, logging, task queue, lock, etc.)
  * single executable, multiple role, multiple instance [deployment](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Developers#step-3-run-with-the-native-runtime-and-deployment)
 * **built-in three-layer support from [a growing set of tools and frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools,-Policies-and-Frameworks)**
  * Layer 1: single node tools and policies: simulation, fault injection, tracing, profiling, replay, throttling, ...
