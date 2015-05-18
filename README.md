@@ -14,6 +14,7 @@ Following are some highlights for different audience of this framework.
  * single executable, multiple role, multiple instance [deployment](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Developers#step-3-run-with-the-native-runtime-and-deployment)
 * **built-in three-layer support from [a growing set of tools and frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools,-Policies-and-Frameworks)**
  * layer 1: single node tools and policies: simulation, fault injection, tracing, profiling, replay, throttling, ...
+ ![rDSN-layer1](https://raw.githubusercontent.com/Microsoft/rDSN/master/resources/rdsn-layer1.jpg)
  * layer 2: from single node to a partitioned and/or replicated service
  * layer 3: from single service to workflow across multiple services to handle end-to-end incoming workloads (coming later)
 
