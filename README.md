@@ -8,7 +8,7 @@ I am a [developer](https://github.com/Microsoft/rDSN#developers-a-framework-for-
 ##### Developers: a framework for quickly building and managing high performance and robust distributed systems. (see [Tutorial](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Developers))
 
 * Why should I use rDSN? [=>](https://github.com/Microsoft/rDSN#built-in-three-layer-support-from-a-growing-set-of-tools-and-frameworks)
-* Have concerns? [=>](https://github.com/Microsoft/rDSN#to-address-concerns-of-adopting-this-framework)
+* Have concerns? [=>](https://github.com/Microsoft/rDSN#quick-development-and-flexible-deployment-with-concerns-addressed)
 
 ###### Built-in three-layer support from [a growing set of tools and frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools,-Policies-and-Frameworks)
  * Layer 1: [quick development](https://github.com/Microsoft/rDSN/blob/master/README.md#to-address-concerns-of-adopting-this-framework) with single node tools and policies support: simulation, fault injection, tracing, profiling, replay, throttling, ...
