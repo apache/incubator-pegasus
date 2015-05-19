@@ -50,7 +50,7 @@ namespace dsn { namespace tools {
         rpc_client_session_ptr _client;
     };
 
-    class sim_network_provider : public network
+    class sim_network_provider : public connection_oriented_network
     {
     public:
         sim_network_provider(rpc_engine* rpc, network* inner_provider);

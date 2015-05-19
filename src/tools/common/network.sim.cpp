@@ -93,7 +93,7 @@ namespace dsn { namespace tools {
     }
 
     sim_network_provider::sim_network_provider(rpc_engine* rpc, network* inner_provider)
-    : network(rpc, inner_provider), _primary_address("localhost", 1)
+        : connection_oriented_network(rpc, inner_provider), _primary_address("localhost", 1)
     {
         _min_message_delay_microseconds = 1;
         _max_message_delay_microseconds = 100000;

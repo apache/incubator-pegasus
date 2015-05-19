@@ -32,28 +32,6 @@
 
 namespace dsn {
 
-class rpc_client_matcher : public std::enable_shared_from_this<rpc_client_matcher>
-{
-public:
-    void on_call(message_ptr& request, rpc_response_task_ptr& call, network* net);
-    bool on_recv_reply(uint64_t key, message_ptr& reply, int delay_ms);
-    
-private:
-    friend class rpc_timeout_task;
-    void on_rpc_timeout(uint64_t key, task_spec* spec);
-
-private:
-    struct match_entry
-    {
-        rpc_response_task_ptr resp_task;
-        task_ptr              timeout_task;
-        network*              net;
-    };
-    typedef std::map<uint64_t, match_entry> rpc_requests;
-    rpc_requests         _requests;
-    std::recursive_mutex _requests_lock;
-};
-
 class service_node;
 class rpc_engine
 {
