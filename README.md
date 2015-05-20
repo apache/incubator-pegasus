@@ -1,3 +1,5 @@
+### See [Wiki](https://github.com/Microsoft/rDSN/wiki) to start with ...
+
 ![rDSN](https://raw.githubusercontent.com/Microsoft/rDSN/master/resources/rdsn.jpg)
 Robust Distributed System Nucleus (rDSN) is an open framework for quickly building and managing high performance and robust distributed systems. An early version of rDSN has been used in Bing for building a distributed data service, and the system has been online and running well. Based on the feedbacks, rDSN is improved and now [made public](http://research.microsoft.com/en-us/projects/rdsn/default.aspx) with the MIT open source license. The idea is to advocate a [coherent and principled meta stack](https://github.com/Microsoft/rDSN/wiki/Design-Rational) that distributed applications, tools, and frameworks are developed independently and integrated (almost) transparently to benefit each other. Following are some highlights for different audience of this framework.
 
@@ -53,6 +55,6 @@ I am a [developer](https://github.com/Microsoft/rDSN#developers-a-framework-for-
 
 ***
 
-See [Wiki](https://github.com/Microsoft/rDSN/wiki) for more details, and please do not hesitate to contact us at rdsn-support@googlegroups.com .
+###### See [Wiki](https://github.com/Microsoft/rDSN/wiki) for more details, and please do not hesitate to contact us at rdsn-support@googlegroups.com .
 
 
