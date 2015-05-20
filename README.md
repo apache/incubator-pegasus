@@ -10,7 +10,7 @@ I am a [developer](https://github.com/Microsoft/rDSN#developers-a-framework-for-
 * Why should I use rDSN? [=>](https://github.com/Microsoft/rDSN#built-in-three-layer-support-from-a-growing-set-of-tools-and-frameworks)
 * Have concerns? [=>](https://github.com/Microsoft/rDSN#quick-development-and-flexible-deployment-with-concerns-addressed)
 
-###### Built-in three-layer support from [a growing set of tools and frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools,-Policies-and-Frameworks)
+###### Built-in three-layer meta stack for quickly building distributed systems with support from [a growing set of tools and frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools,-Policies-and-Frameworks)
  * Layer 1: [quick development](https://github.com/Microsoft/rDSN/blob/master/README.md#to-address-concerns-of-adopting-this-framework) with single node tools and policies support: simulation, fault injection, tracing, profiling, replay, throttling, ...
  
  ![rDSN-layer1](https://raw.githubusercontent.com/Microsoft/rDSN/master/resources/rdsn-layer1.jpg)
