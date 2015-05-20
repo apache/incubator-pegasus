@@ -1,21 +1,22 @@
 ![rDSN](https://raw.githubusercontent.com/Microsoft/rDSN/master/resources/rdsn.jpg)
-Robust Distributed System Nucleus (rDSN) is an open framework for quickly building and managing high performance and robust distributed systems. An early version of rDSN has been used in Bing for building a distributed data service, and the system has been online and running well. Based on the feedbacks, rDSN is improved and now [made public](http://research.microsoft.com/en-us/projects/rdsn/default.aspx) with the MIT open source license. The idea is to advocate a [coherent and principled design](https://github.com/Microsoft/rDSN/wiki/Design-Rational) that distributed applications, tools, and frameworks can be developed independently and integrated (almost) transparently to benefit each other. Following are some highlights for different audience of this framework.
+Robust Distributed System Nucleus (rDSN) is an open framework for quickly building and managing high performance and robust distributed systems. An early version of rDSN has been used in Bing for building a distributed data service, and the system has been online and running well. Based on the feedbacks, rDSN is improved and now [made public](http://research.microsoft.com/en-us/projects/rdsn/default.aspx) with the MIT open source license. The idea is to advocate a [coherent and principled meta stack](https://github.com/Microsoft/rDSN/wiki/Design-Rational) that distributed applications, tools, and frameworks are developed independently and integrated (almost) transparently to benefit each other. Following are some highlights for different audience of this framework.
 
 I am a [developer](https://github.com/Microsoft/rDSN#developers-a-framework-for-quickly-building-and-managing-high-performance-and-robust-distributed-systems-see-tutorial)  |   [researcher](https://github.com/Microsoft/rDSN#researchers-and-tool-oriented-developers-a-tool-platform-which-eases-tool-development-and-enables-transparent-integration-with-upper-applications)  |   [student](https://github.com/Microsoft/rDSN#students-a-distributed-system-learning-platform-where-you-can-easily-simplify-understand-and-manipulate-a-system-see-tutorial) =>
 
 ***
 
-##### Developers: a framework for quickly building and managing high performance and robust distributed systems. (see [Tutorial](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Developers))
+##### Developers: a framework for quickly building and managing high performance and robust distributed systems.
 
 * Why should I use rDSN? [=>](https://github.com/Microsoft/rDSN#built-in-three-layer-support-from-a-growing-set-of-tools-and-frameworks)
 * Have concerns? [=>](https://github.com/Microsoft/rDSN#quick-development-and-flexible-deployment-with-concerns-addressed)
 
-###### Built-in three-layer support from [a growing set of tools and frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools,-Policies-and-Frameworks)
- * Layer 1: [quick development](https://github.com/Microsoft/rDSN/blob/master/README.md#to-address-concerns-of-adopting-this-framework) with single node tools and policies support: simulation, fault injection, tracing, profiling, replay, throttling, ...
+###### Built-in three-layer meta stack for quickly building distributed systems with support from [a growing set of tools and frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools,-Policies-and-Frameworks)
+ * Layer 1: [quick development](https://github.com/Microsoft/rDSN#quick-development-and-flexible-deployment-with-concerns-addressed) with single node tools and policies support: simulation, fault injection, tracing, profiling, replay, throttling, ...  (see [Tutorial](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Developers))
  
  ![rDSN-layer1](https://raw.githubusercontent.com/Microsoft/rDSN/master/resources/rdsn-layer1.jpg)
  * Layer 2: to a partitioned? and replicated? service with simple configuration and minor further development cost
- 
+ (see [Tutorial](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Replication))
+
  ![rDSN-layer2](https://raw.githubusercontent.com/Microsoft/rDSN/master/resources/rdsn-layer2.jpg)
  * Layer 3: compose workflow across multiple services in a declarative way to handle end-to-end incoming workloads (coming later)
  
@@ -32,6 +33,7 @@ I am a [developer](https://github.com/Microsoft/rDSN#developers-a-framework-for-
 ***
 
 ##### Researchers and tool-oriented developers: a tool platform which eases tool development and enables transparent integration with upper applications.
+(see [Tutorial](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Tool-Development))
 
 * reliably expose dependencies and non-determinisms in upper systems to the underlying tools at a semantic-rich level (i.e., task)
  * completeness made easy for tools
@@ -42,7 +44,7 @@ I am a [developer](https://github.com/Microsoft/rDSN#developers-a-framework-for-
 
 ***
 
-##### Students: a distributed system learning platform where you can easily simplify, understand and manipulate a system. (see [Tutorial](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Developers))
+##### Students: a distributed system learning platform where you can easily simplify, understand and manipulate a system. (see [Tutorial](https://github.com/Microsoft/rDSN/wiki/A-Tutorial-for-Learning))
 
 * configurable system complexity to learn step by step
  * single thread to multiple threads
