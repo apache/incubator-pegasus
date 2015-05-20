@@ -3,17 +3,17 @@
 ![rDSN](https://raw.githubusercontent.com/Microsoft/rDSN/master/resources/rdsn.jpg)
 Robust Distributed System Nucleus (rDSN) is an open framework for quickly building and managing high performance and robust distributed systems. An early version of rDSN has been used in Bing for building a distributed data service, and the system has been online and running well. Based on the feedbacks, rDSN is improved and now [made public](http://research.microsoft.com/en-us/projects/rdsn/default.aspx) with the MIT open source license. The idea is to advocate a [coherent and principled meta stack](https://github.com/Microsoft/rDSN/wiki/Design-Rational) that distributed applications, tools, and frameworks are developed independently and integrated (almost) transparently to benefit each other. Following are some highlights for different audience of this framework.
 
-I am a [developer](https://github.com/Microsoft/rDSN#developers-a-framework-for-quickly-building-and-managing-high-performance-and-robust-distributed-systems-see-tutorial)  |   [researcher](https://github.com/Microsoft/rDSN#researchers-and-tool-oriented-developers-a-tool-platform-which-eases-tool-development-and-enables-transparent-integration-with-upper-applications-see-tutorial)  |   [student](https://github.com/Microsoft/rDSN#students-a-distributed-system-learning-platform-where-you-can-easily-simplify-understand-and-manipulate-a-system-see-tutorial) =>
+I am a [developer](https://github.com/Microsoft/rDSN/wiki/overview#developers-a-framework-for-quickly-building-and-managing-high-performance-and-robust-distributed-systems)  |   [researcher](https://github.com/Microsoft/rDSN/wiki/overview#researchers-and-tool-oriented-developers-a-tool-platform-which-eases-tool-development-and-enables-transparent-integration-with-upper-applications-see-tutorial-1-and-tutorial-2)  |   [student](https://github.com/Microsoft/rDSN/wiki/overview#students-a-distributed-system-learning-platform-where-you-can-easily-simplify-understand-and-manipulate-a-system-see-tutorial) =>
 
 ***
 
 ##### Developers: a framework for quickly building and managing high performance and robust distributed systems.
 
-* Why should I use rDSN? [=>](https://github.com/Microsoft/rDSN#built-in-three-layer-support-from-a-growing-set-of-tools-and-frameworks)
-* Have concerns? [=>](https://github.com/Microsoft/rDSN#quick-development-and-flexible-deployment-with-concerns-addressed)
+* Why should I use rDSN? [=>](https://github.com/Microsoft/rDSN/wiki/overview#built-in-three-layer-meta-stack-for-quickly-building-distributed-systems-with-support-from-a-growing-set-of-tools-and-frameworks)
+* Have concerns? [=>](https://github.com/Microsoft/rDSN/wiki/overview#quick-development-and-flexible-deployment-with-concerns-addressed)
 
 ###### Built-in three-layer meta stack for quickly building distributed systems with support from [a growing set of tools and frameworks](https://github.com/Microsoft/rDSN/wiki/Available-Tools-Policies-and-Frameworks)
- * Layer 1: [quick service development](https://github.com/Microsoft/rDSN#quick-development-and-flexible-deployment-with-concerns-addressed), plus with support from many tools and policies: simulation, fault injection, tracing, profiling, replay, throttling, ...  (see [Tutorial](https://github.com/Microsoft/rDSN/wiki/Tutorial:-Build-A-Single-Node-Counter-Service))
+ * Layer 1: [quick service development](https://github.com/Microsoft/rDSN/Wiki/Overview#quick-development-and-flexible-deployment-with-concerns-addressed), plus with support from many tools and policies: simulation, fault injection, tracing, profiling, replay, throttling, ...  (see [Tutorial](https://github.com/Microsoft/rDSN/wiki/Tutorial:-Build-A-Single-Node-Counter-Service))
  
  ![rDSN-layer1](https://raw.githubusercontent.com/Microsoft/rDSN/master/resources/rdsn-layer1.jpg)
  * Layer 2: to a partitioned? and replicated? service with simple configuration and minor further development cost
@@ -26,7 +26,7 @@ I am a [developer](https://github.com/Microsoft/rDSN#developers-a-framework-for-
 
 ###### Quick development and flexible deployment (with concerns addressed)
  * multiple-platform support (Linux, Windows, Mac)
- * [quick prototyping](https://github.com/Microsoft/rDSN/wiki/https://github.com/Microsoft/rDSN/wiki/Tutorial:-Build-A-Single-Node-Counter-Service#step-1-write-the-service-interface-and-run) via code generation with Thrift and Protocol Buffer, extensible for others
+ * Compatible code generation with Thrift and Protocol Buffer, extensible for others
  * [enhanced RPC library](https://github.com/Microsoft/rDSN/wiki/Tutorial:-Build-A-Single-Node-Counter-Service#step-14-connect-the-service-with-other-languages-optional) with multi-port, multi-channel, multi-language-client support
  * adapt to your own environment, or rDSN does not perform good enough? rDSN is highly extensible that you can always [plugin your own](https://github.com/Microsoft/rDSN/wiki/Tool-API:-Component-Providers,-Join-Points,-and-State-Extensions#component-providers) low level constructs (network, logging, task queue, lock, performanc counter etc.)
  * [flexible deployment]((https://github.com/Microsoft/rDSN/wiki/Tutorial:-Build-A-Single-Node-Counter-Service#step-3-run-with-the-native-runtime-and-deployment)) - single executable, multiple roles, multiple instances
@@ -52,6 +52,7 @@ I am a [developer](https://github.com/Microsoft/rDSN#developers-a-framework-for-
  * synchronous and reliable messages to asynchronous and unreliable ones
 * easy test, debug, and monitoring for system understanding, as with the developers
 * easy further tool development, as with the researchers
+
 
 ***
 
