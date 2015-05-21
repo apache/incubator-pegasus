@@ -2,10 +2,6 @@ I am a [developer](https://github.com/Microsoft/rDSN#developers-a-framework-for-
 
 ### See [Wiki](https://github.com/Microsoft/rDSN/wiki) for details  ...
 
-##### License and Support
-
-rDSN is provided in C++ on Windows, Linux, and Mac, with the MIT open source license. You can use the "issues" tab in github to report bugs. For non-bug issues, please send email to rdsn-support@googlegroups.com.
-
 ***
 
 ![rDSN](https://raw.githubusercontent.com/Microsoft/rDSN/master/resources/rdsn.jpg)
@@ -69,6 +65,8 @@ I am a [developer](https://github.com/Microsoft/rDSN/wiki/overview#developers-a-
 
 ***
 
-###### See [Wiki](https://github.com/Microsoft/rDSN/wiki) for more details, and please do not hesitate to contact us at rdsn-support@googlegroups.com .
 
+##### License and Support
+
+rDSN is provided in C++ on Windows, Linux, and Mac, with the MIT open source license. You can use the "issues" tab in github to report bugs. For non-bug issues, please send email to rdsn-support@googlegroups.com.
 
