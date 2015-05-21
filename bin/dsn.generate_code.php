@@ -101,11 +101,12 @@ if (!file_exists($g_out_dir))
 }
 
 // generate service definition file from input idl file using the code generation tools
+$os_name = explode(" ", php_uname())[0];
 switch ($g_idl_type)
 {
 case "thrift":
 	{
-		$command = $g_cg_dir."/thrift --gen rdsn -out ".$g_out_dir." ".$g_idl;
+		$command = $g_cg_dir."/".$os_name."/thrift --gen rdsn -out ".$g_out_dir." ".$g_idl;
 		echo "exec: ".$command.PHP_EOL;
 		system($command);
 		if (!file_exists($g_idl_php))
@@ -117,7 +118,7 @@ case "thrift":
 	break;
 case "proto":
 	{
-		$command = $g_cg_dir."/protoc --rdsn_out=".$g_out_dir." ".$g_idl;
+		$command = $g_cg_dir."/".$os_name."/protoc --rdsn_out=".$g_out_dir." ".$g_idl;
 		echo "exec: ".$command.PHP_EOL;
 		system($command);
 		if (!file_exists($g_idl_php))
