@@ -1,0 +1,69 @@
+# pragma once
+# include "nfs.client.h"
+# include <queue>
+# include <dsn/service_api.h>
+
+namespace dsn {
+	
+	struct remote_copy_request
+	{
+		end_point   source;
+		std::string source_dir;
+		std::vector<std::string> files;
+		std::string dest_dir;
+		bool        overwrite;
+		aio_task_ptr nfs_task;
+	};
+
+	struct remote_copy_response
+	{
+
+	};
+
+	extern void marshall(::dsn::binary_writer& writer, const remote_copy_request& val, uint16_t pos = 0xffff);
+
+	extern void unmarshall(::dsn::binary_reader& reader, __out_param remote_copy_request& val);
+
+	
+	namespace service { 
+
+class nfs_client_impl
+	: public ::dsn::service::nfs_client
+{
+public:
+	nfs_client_impl(const ::dsn::end_point& server) : nfs_client (server) { _server = server; }
+	nfs_client_impl() { _server = ::dsn::end_point::INVALID; }
+	virtual ~nfs_client_impl() {}
+
+	void begin_remote_copy(std::shared_ptr<remote_copy_request>& rci, aio_task_ptr nfs_task);
+
+	void end_copy(
+		::dsn::error_code err,
+		const copy_response& resp,
+		void* context);
+
+	void end_get_file_size(
+		::dsn::error_code err,
+		const ::dsn::service::get_file_size_response& resp,
+		void* context);
+
+	void internal_write_callback(error_code err, int sz, copy_request reqc)
+	{
+		if (err != ::dsn::ERR_SUCCESS)
+		{
+			derror("write file error\n");
+		}
+		reqc.nfs_task->enqueue(err, sz, reqc.nfs_task->node());
+		return;
+	}
+
+	static int _client_request_count;
+	static std::queue<copy_request*> _req_copy_file_queue;
+	
+
+private:
+	::dsn::end_point _server;
+	zlock _req_copy_file_queue_lock;
+};
+
+} } 
