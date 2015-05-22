@@ -165,7 +165,7 @@ namespace dsn {
         if (timeout_ms >= spec->rpc_retry_interval_milliseconds * 2)
             timeout_ms = spec->rpc_retry_interval_milliseconds;
         
-        dassert (timeout_ms > 0, "");
+        dassert (timeout_ms >= 0, ""); // it should be >=0
 
         timeout_task->set_delay(timeout_ms);
         timeout_task->enqueue();
