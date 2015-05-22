@@ -14,7 +14,7 @@ public:
 	virtual ~nfs_client() {}
 
 
-	// ---------- call RPC_NFS_V3_NFS_COPY ------------
+	// ---------- call RPC_NFS_COPY ------------
 	// - synchronous 
 	::dsn::error_code copy(
 		const copy_request& request, 
@@ -23,7 +23,7 @@ public:
 		int hash = 0,
 		const ::dsn::end_point *p_server_addr = nullptr)
 	{
-		::dsn::message_ptr msg = ::dsn::message::create_request(RPC_NFS_V3_NFS_COPY, timeout_milliseconds, hash);
+		::dsn::message_ptr msg = ::dsn::message::create_request(RPC_NFS_COPY, timeout_milliseconds, hash);
 		marshall(msg->writer(), request);
 		auto resp_task = ::dsn::service::rpc::call(p_server_addr ? *p_server_addr : _server, msg, nullptr);
 		resp_task->wait();
@@ -45,7 +45,7 @@ public:
 	{
 		return ::dsn::service::rpc::call_typed(
 					p_server_addr ? *p_server_addr : _server, 
-					RPC_NFS_V3_NFS_COPY, 
+					RPC_NFS_COPY, 
 					request, 
 					this, 
 					&nfs_client::end_copy,
@@ -61,10 +61,10 @@ public:
 		const copy_response& resp,
 		void* context)
 	{
-		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_NFS_V3_NFS_COPY err : " << err.to_string() << std::endl;
+		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_NFS_COPY err : " << err.to_string() << std::endl;
 		else
 		{
-			std::cout << "reply RPC_NFS_V3_NFS_COPY ok" << std::endl;
+			std::cout << "reply RPC_NFS_COPY ok" << std::endl;
 		}
 	}
 	
@@ -78,7 +78,7 @@ public:
 	{
 		return ::dsn::service::rpc::call_typed(
 					p_server_addr ? *p_server_addr : _server, 
-					RPC_NFS_V3_NFS_COPY, 
+					RPC_NFS_COPY, 
 					request, 
 					this, 
 					&nfs_client::end_copy2, 
@@ -93,15 +93,15 @@ public:
 		std::shared_ptr<copy_request>& request, 
 		std::shared_ptr<copy_response>& resp)
 	{
-		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_NFS_V3_NFS_COPY err : " << err.to_string() << std::endl;
+		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_NFS_COPY err : " << err.to_string() << std::endl;
 		else
 		{
-			std::cout << "reply RPC_NFS_V3_NFS_COPY ok" << std::endl;
+			std::cout << "reply RPC_NFS_COPY ok" << std::endl;
 		}
 	}
 	
 
-	// ---------- call RPC_NFS_V3_NFS_GET_FILE_SIZE ------------
+	// ---------- call RPC_NFS_GET_FILE_SIZE ------------
 	// - synchronous 
 	::dsn::error_code get_file_size(
 		const get_file_size_request& request, 
@@ -110,7 +110,7 @@ public:
 		int hash = 0,
 		const ::dsn::end_point *p_server_addr = nullptr)
 	{
-		::dsn::message_ptr msg = ::dsn::message::create_request(RPC_NFS_V3_NFS_GET_FILE_SIZE, timeout_milliseconds, hash);
+		::dsn::message_ptr msg = ::dsn::message::create_request(RPC_NFS_GET_FILE_SIZE, timeout_milliseconds, hash);
 		marshall(msg->writer(), request);
 		auto resp_task = ::dsn::service::rpc::call(p_server_addr ? *p_server_addr : _server, msg, nullptr);
 		resp_task->wait();
@@ -132,7 +132,7 @@ public:
 	{
 		return ::dsn::service::rpc::call_typed(
 					p_server_addr ? *p_server_addr : _server, 
-					RPC_NFS_V3_NFS_GET_FILE_SIZE, 
+					RPC_NFS_GET_FILE_SIZE, 
 					request, 
 					this, 
 					&nfs_client::end_get_file_size,
@@ -148,10 +148,10 @@ public:
 		const get_file_size_response& resp,
 		void* context)
 	{
-		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_NFS_V3_NFS_GET_FILE_SIZE err : " << err.to_string() << std::endl;
+		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_NFS_GET_FILE_SIZE err : " << err.to_string() << std::endl;
 		else
 		{
-			std::cout << "reply RPC_NFS_V3_NFS_GET_FILE_SIZE ok" << std::endl;
+			std::cout << "reply RPC_NFS_GET_FILE_SIZE ok" << std::endl;
 		}
 	}
 	
@@ -165,7 +165,7 @@ public:
 	{
 		return ::dsn::service::rpc::call_typed(
 					p_server_addr ? *p_server_addr : _server, 
-					RPC_NFS_V3_NFS_GET_FILE_SIZE, 
+					RPC_NFS_GET_FILE_SIZE, 
 					request, 
 					this, 
 					&nfs_client::end_get_file_size2, 
@@ -180,10 +180,10 @@ public:
 		std::shared_ptr<get_file_size_request>& request, 
 		std::shared_ptr<get_file_size_response>& resp)
 	{
-		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_NFS_V3_NFS_GET_FILE_SIZE err : " << err.to_string() << std::endl;
+		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_NFS_GET_FILE_SIZE err : " << err.to_string() << std::endl;
 		else
 		{
-			std::cout << "reply RPC_NFS_V3_NFS_GET_FILE_SIZE ok" << std::endl;
+			std::cout << "reply RPC_NFS_GET_FILE_SIZE ok" << std::endl;
 		}
 	}
 	

@@ -12,9 +12,9 @@ namespace dsn {
 		{
 			std::cout << ">>> on call RPC_COPY end, exec RPC_NFS_COPY" << std::endl;
 
-			std::string file_path = SERVERPATH + request.file_name;
-			std::shared_ptr<char> buf(new char[MAXBUFSIZE]);
-			blob bb(buf, MAXBUFSIZE);
+			std::string file_path = request.dst_dir + request.file_name;
+			std::shared_ptr<char> buf(new char[max_buf_size]);
+			blob bb(buf, max_buf_size);
 			handle_t hfile;
 
 			{
@@ -89,8 +89,6 @@ namespace dsn {
 
 			resp.offset = cp.offset;
 			resp.size = cp.size;
-			//std::cout << ">>> file content on server " << resp.file_content.data()[0] << std::endl;
-			//std::cout << ">>> file length on server " << cp.size << std::endl;
 			reply(resp);
 		}
 
@@ -102,11 +100,10 @@ namespace dsn {
 			get_file_size_response resp;
 			int err = ERR_SUCCESS;
 			std::vector<std::string> file_list;
-			std::string folder = SERVERPATH + request.dst_dir;
+			std::string folder = request.dst_dir;
 			if (request.file_list.size() == 0)
 			{
 				get_file_names(folder, file_list);
-				//std::cout << std::endl;
 				for (int i = 0; i < file_list.size(); i++)
 				{
 					std::cout << file_list[i] << std::endl;
@@ -122,7 +119,7 @@ namespace dsn {
 					fclose(file);
 
 					resp.size_list.push_back(size);
-					resp.file_list.push_back(file_list[i].substr(strlen(SERVERPATH), file_list[i].length()-1));
+					resp.file_list.push_back(file_list[i].substr(request.dst_dir.length(), file_list[i].length()-1));
 				}
 			}
 			else
@@ -143,18 +140,16 @@ namespace dsn {
 					fclose(file);
 
 					resp.size_list.push_back(size);
-					resp.file_list.push_back((folder + request.file_list[i]).substr(strlen(SERVERPATH), (folder + request.file_list[i]).length() - 1));
+					resp.file_list.push_back((folder + request.file_list[i]).substr(request.dst_dir.length(), (folder + request.file_list[i]).length() - 1));
 				}
 			}
 
 			resp.error = err;
-			//std::cout << ">>> file content on server " << resp.file_content.data()[0] << std::endl;
 			reply(resp);
 		}	
 
 		void nfs_service_impl::close_file()
 		{
-			//std::cout << "close file handles" << std::endl;
 			error_code err;
 			{
 				zauto_lock l(_handles_map_lock);
@@ -164,9 +159,7 @@ namespace dsn {
 
 				for (auto it = _handles_map.begin(); it != _handles_map.end();)
 				{
-					//std::cout << "file live time: " << dsn::service::env::now_ms() - it->second->stime_ms << std::endl;
-
-					if (it->second->counter == 0 && dsn::service::env::now_ms() - it->second->stime_ms > OUTOFDATE) // not opened and expired
+					if (it->second->counter == 0 && dsn::service::env::now_ms() - it->second->stime_ms > out_of_date) // not opened and expired
 					{
 						err = file::close(it->second->ht);
 						_handles_map.erase(it++);
@@ -204,7 +197,6 @@ namespace dsn {
 				else
 				{
 					file_list.push_back(folderPath + FileInfo.name);
-					//std::cout << folderPath << FileInfo.name << " ";
 				} 
 			} while (_findnext(Handle, &FileInfo) == 0);
 

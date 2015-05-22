@@ -45,9 +45,11 @@ namespace dsn {
 
 		virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task_ptr& callback)
 		{
-			_nfs_node_impl = new ::dsn::service::nfs_node_impl(rci->source);
+			_nfs_node_impl = new ::dsn::service::nfs_node_impl(rci->source, ::dsn::service::system::config());
 			_nfs_node_impl->get_nfs_client_impl()->begin_remote_copy(rci, callback);
 		}
+
+		
 
 	protected:
 		service_node* _node;

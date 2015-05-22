@@ -28,20 +28,7 @@ namespace dsn {
 			{
 				error_code resp_err;
 				resp_err.set(resp.error);
-				//std::cout << "reply RPC_NFS_COPY err : " << err.to_string() << std::endl;
 				reqc->nfs_task->enqueue(resp_err, 0, reqc->nfs_task->node());
-				/*
-				if (client_request_count < MAXREQUESTCOUNT)
-				{
-					begin_copy(*reqc, reqc);
-					client_request_count++;
-				}
-				else
-				{
-					zauto_lock l(_req_copy_file_queue_lock);
-					_req_copy_file_queue.push(reqc); // not resend here
-				}
-				*/
 				return;
 			}
 			else
@@ -54,7 +41,6 @@ namespace dsn {
 					_client_request_count++;
 				}
 			}
-			//std::cout << "*** call RPC_NFS_NFS_COPY end, return " << resp.file_content.length() << " with content " << resp.file_content.data() << " with err " << err.to_string() << std::endl;
 			std::cout << "*** call RPC_NFS_COPY end, return " << "(" << resp.offset << ", " << resp.size << ")" << " with err " << err.to_string() << std::endl;
 
 			std::string file_path = reqc->source_dir + reqc->file_name;
@@ -106,8 +92,6 @@ namespace dsn {
 
 			if (resp.error != ::dsn::ERR_SUCCESS)
 			{
-				//std::cout << "get file size err : " << err.to_string() << std::endl;
-				//begin_get_file_size(*reqc, reqc); // not resend every time 
 				error_code resp_err;
 				resp_err.set(resp.error);
 				reqc->nfs_task->enqueue(resp_err, 0, reqc->nfs_task->node());
@@ -125,8 +109,8 @@ namespace dsn {
 
 				int32_t req_offset = 0;
 				int32_t req_size;
-				if (size > MAXBUFSIZE)
-					req_size = MAXBUFSIZE;
+				if (size > max_buf_size)
+					req_size = max_buf_size;
 				else
 					req_size = size;
 
@@ -141,7 +125,7 @@ namespace dsn {
 					req->source_dir = reqc->source_dir;
 					req->nfs_task = reqc->nfs_task;
 					
-					if (_client_request_count < MAXREQUESTCOUNT)
+					if (_client_request_count < max_request_count)
 					{
 						begin_copy(*req, req);
 						_client_request_count++;
@@ -156,8 +140,8 @@ namespace dsn {
 					size -= req_size;
 					if (size <= 0)
 						break;
-					if (size > MAXBUFSIZE)
-						req_size = MAXBUFSIZE;
+					if (size > max_buf_size)
+						req_size = max_buf_size;
 					else
 						req_size = size;
 				}

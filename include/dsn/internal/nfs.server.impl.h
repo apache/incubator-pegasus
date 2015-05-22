@@ -6,7 +6,11 @@ class nfs_service_impl
 	: public ::dsn::service::nfs_service, public ::dsn::service::serverlet<nfs_service_impl>
 {
 public:
-	nfs_service_impl() : ::dsn::service::serverlet<nfs_service_impl>("nfs") {}
+	nfs_service_impl(configuration_ptr config) : ::dsn::service::serverlet<nfs_service_impl>("nfs")
+	{
+		out_of_date = config->get_value<uint32_t>("nfs", "out_of_date", out_of_date);
+		max_buf_size = config->get_value<uint32_t>("nfs", "max_buf_size", max_buf_size);
+	}
 	virtual ~nfs_service_impl() {}
 
 	struct map_value
@@ -45,6 +49,8 @@ public:
 
 private:
 	zlock _handles_map_lock;
+	uint32_t out_of_date;
+	uint32_t max_buf_size;
 };
 
 } } 

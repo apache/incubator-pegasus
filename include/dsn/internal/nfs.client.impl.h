@@ -31,7 +31,12 @@ class nfs_client_impl
 	: public ::dsn::service::nfs_client
 {
 public:
-	nfs_client_impl(const ::dsn::end_point& server) : nfs_client (server) { _server = server; }
+	nfs_client_impl(const ::dsn::end_point& server, configuration_ptr config) : nfs_client(server)
+	{ 
+		_server = server; 
+		max_buf_size = config->get_value<uint32_t>("nfs", "max_buf_size", max_buf_size);
+		max_request_count = config->get_value<uint32_t>("nfs", "max_request_count", max_request_count);
+	}
 	nfs_client_impl() { _server = ::dsn::end_point::INVALID; }
 	virtual ~nfs_client_impl() {}
 
@@ -64,6 +69,8 @@ public:
 private:
 	::dsn::end_point _server;
 	zlock _req_copy_file_queue_lock;
+	uint32_t max_buf_size;
+	uint32_t max_request_count;
 };
 
 } } 

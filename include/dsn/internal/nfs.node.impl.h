@@ -5,14 +5,14 @@ namespace dsn { namespace service {
 class nfs_node_impl
 {
 public:
-	nfs_node_impl(const ::dsn::end_point& server)
+	nfs_node_impl(const ::dsn::end_point& server, configuration_ptr config)
 	{
-		_nfs_client_impl = new nfs_client_impl(server);
+		_nfs_client_impl = new nfs_client_impl(server, config);
 	}
 
-	nfs_node_impl() 
+	nfs_node_impl(configuration_ptr config)
 	{
-		_nfs_service_impl = new nfs_service_impl();
+		_nfs_service_impl = new nfs_service_impl(config);
 	}
 
 	virtual ~nfs_node_impl() {}

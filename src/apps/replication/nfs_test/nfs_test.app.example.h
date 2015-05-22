@@ -40,7 +40,7 @@ public:
 
 	virtual ::dsn::error_code start(int argc, char** argv)
 	{
-		_nfs_node_impl = new nfs_node_impl();
+		_nfs_node_impl = new nfs_node_impl(::dsn::service::system::config());
 		_nfs_node_impl->get_nfs_service_impl()->open_service();
 		_file_timer = ::dsn::service::tasking::enqueue(LPC_NFS_FILE_CLOSE_TIMER, this, &nfs_server_app::on_file_timer, 0, 0, 1000);
 		return ::dsn::ERR_SUCCESS;
@@ -81,7 +81,7 @@ public:
 
 		_server = ::dsn::end_point(argv[1], (uint16_t)atoi(argv[2]));
 
-		_request_timer = ::dsn::service::tasking::enqueue(LPC_NFS_V3_REQUEST_TIMER, this, &nfs_client_app::on_request_timer, 0, 0, 1000);
+		_request_timer = ::dsn::service::tasking::enqueue(LPC_NFS_REQUEST_TIMER, this, &nfs_client_app::on_request_timer, 0, 0, 1000);
 
 		return ::dsn::ERR_SUCCESS;
 	}
@@ -95,7 +95,7 @@ public:
 	void on_request_timer()
 	{
 		std::string source_dir = "D:/rdsn/tutorial/nfs_v3/client/mydir/";
-		std::string dest_dir = "testdir/"; // "" is for root path
+		std::string dest_dir = "D:/rdsn/tutorial/nfs_v3/server/testdir/";
 		std::vector<std::string> files; // empty is for all
 		files.push_back("test1.txt");
 		bool overwrite = true;
@@ -109,7 +109,11 @@ public:
 	void internal_copy_callback(error_code err, uint32_t size)
 	{
 		std::cout << err.to_string() << std::endl;
-		// TODO deal with the fault
+		// TODO deal with the faults
+		if (err != ::dsn::ERR_SUCCESS)
+		{
+			// if resend the request
+		}
 	}
 private:
 	::dsn::task_ptr _timer;
