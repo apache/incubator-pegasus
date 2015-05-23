@@ -45,10 +45,13 @@ typedef HANDLE handle_t;
 #define __selectany __attribute__((weak)) extern 
 typedef int handle_t;
 
+#define O_BINARY 0
+
 #elif defined(__MACH__)
 
 #define __selectany __attribute__((weak)) extern 
 typedef int handle_t;
+#define O_BINARY 0
 
 #else
 
