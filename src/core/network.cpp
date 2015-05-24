@@ -40,10 +40,11 @@ namespace dsn {
     {
         if (call != nullptr)
         {
-            _matcher->on_call(request, call, &_net);
+            if (_matcher->on_call(request, call, &_net))
+                send(request);
         }
-
-        send(request);
+        else
+            send(request);
     }
 
     void rpc_client_session::on_disconnected()
@@ -77,7 +78,7 @@ namespace dsn {
         msg->header().to_address = _net.address();
 
         msg->server_session().reset(this);
-        return _net.engine()->on_recv_request(msg, delay_ms);
+        return _net.on_recv_request(msg, delay_ms);
     }
 
     void rpc_server_session::on_disconnected()
@@ -102,6 +103,11 @@ namespace dsn {
     service_node* network::node() const
     {
         return _engine->node();
+    }
+
+    void network::on_recv_request(message_ptr& msg, int delay_ms)
+    {
+        return _engine->on_recv_request(msg, delay_ms);
     }
     
     std::shared_ptr<rpc_client_matcher> network::new_client_matcher()

@@ -125,12 +125,12 @@ namespace dsn {
                 else
                 {
                     int read_next;
-                    message_ptr msg = _parser->on_read((int)length, read_next);
+                    message_ptr msg = _parser->get_message_on_receive((int)length, read_next);
 
                     while (msg != nullptr)
                     {
                         this->on_message_read(msg);
-                        msg = _parser->on_read(0, read_next);
+                        msg = _parser->get_message_on_receive(0, read_next);
                     }
                      
                     do_read(read_next);
@@ -147,7 +147,7 @@ namespace dsn {
                 return;
 
             std::vector<blob> buffers;
-            _parser->get_output_buffers(msg, buffers);
+            _parser->prepare_buffers_for_send(msg, buffers);
 
             std::vector<boost::asio::const_buffer> buffers2;
             for (auto& b : buffers)

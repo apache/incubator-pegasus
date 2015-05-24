@@ -88,7 +88,7 @@ namespace dsn {
     {
     }
 
-    message_ptr dsn_message_parser::on_read(int read_length, __out_param int& read_next)
+    message_ptr dsn_message_parser::get_message_on_receive(int read_length, __out_param int& read_next)
     {
         mark_read(read_length);
 

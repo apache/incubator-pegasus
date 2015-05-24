@@ -178,12 +178,6 @@ void replica::do_possible_commit_on_primary(mutation_ptr& mu)
     if (mu->is_ready_for_commit())
     {   
         _prepare_list->commit(mu->data.header.decree, false);
-
-        //PerformanceCounters::Decrement(PerfCounters_TwoPhaseCommitOngoing, nullptr);
-        //PerformanceCounters::Increment(PerfCounters_TwoPhaseCommitQps, nullptr);
-
-        //uint64_t duration =now_ms() - mu->start_time_milliseconds();
-        //PerformanceCounters::Set(PerfCounters_TwoPhaseCommitDurationMs, duration, nullptr);
     }
 }
 

@@ -43,6 +43,8 @@ namespace dsn {
             if (_acceptor != nullptr)
                 return ERR_SERVICE_ALREADY_RUNNING;
             
+            dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP, "invalid given channel %s", channel.to_string());
+
             _address = end_point(boost::asio::ip::host_name().c_str(), port);
 
             if (!client_only)

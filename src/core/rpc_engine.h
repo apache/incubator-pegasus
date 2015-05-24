@@ -41,7 +41,7 @@ public:
     //
     // management routines
     //
-    error_code start(int app_id, const std::vector<int>& ports);
+    error_code start(const service_app_spec& spec);
     bool       start_server_port(int port);
 
     //
@@ -61,12 +61,11 @@ public:
     //
     service_node* node() const { return _node; }
     const end_point& primary_address() const { return _local_primary_address; }
+    void on_recv_request(message_ptr& msg, int delay_ms);
 
 private:
-    friend class rpc_server_session;    
-    void on_recv_request(message_ptr& msg, int delay_ms);
     network* create_network(const network_config_spec& netcs, bool client_only);
-            
+
 private:
     configuration_ptr                     _config;    
     service_node                          *_node;

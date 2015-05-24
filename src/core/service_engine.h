@@ -40,17 +40,21 @@ class env_provider;
 class logging_provider;
 class nfs_node;
 
+namespace service {
+    class service_app;
+}
+
 class service_node
 {
 public:    
-    service_node(int app_id, const std::string& app_name);
+    service_node(service::service_app* app);
     
     task_engine* computation() const { return _computation; }
     rpc_engine*  rpc() const { return _rpc; }
     disk_engine* disk() const { return _disk; }
     nfs_node* nfs() const { return _nfs; }
 
-    error_code start(const std::vector<int>& ports);
+    error_code start();
 
     int id() const { return _app_id; }
     const char* name() const { return _app_name.c_str(); }
@@ -58,6 +62,7 @@ public:
 private:
     int          _app_id;
     std::string  _app_name;
+    service::service_app  *_app;
     task_engine* _computation;
     rpc_engine*  _rpc;
     disk_engine* _disk;
@@ -79,7 +84,7 @@ public:
     void init_after_toollets();
     void configuration_changed(configuration_ptr configuration);
 
-    service_node* start_node(int app_id, const std::string& app_name, const std::vector<int>& ports);
+    service_node* start_node(service::service_app* app);
     void register_system_rpc_handler(task_code code, const char* name, rpc_server_handler* handler, int port = -1); // -1 for all nodes
 
 private:

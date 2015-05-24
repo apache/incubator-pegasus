@@ -82,7 +82,11 @@ namespace dsn {
         // utilities
         //
         service_node* node() const;
-        rpc_engine* engine() const { return _engine; }
+
+        //
+        // called when network received a complete message
+        //
+        void on_recv_request(message_ptr& msg, int delay_ms);
         
         //
         // create a client matcher for matching RPC request and RPC response,
@@ -120,8 +124,9 @@ namespace dsn {
         //
         // when a two-way RPC call is made, register the requst id and the callback
         // which also registers a timer for timeout tracking
+        // - return false when no further network send is required
         //
-        void on_call(message_ptr& request, rpc_response_task_ptr& call, network* net);
+        bool on_call(message_ptr& request, rpc_response_task_ptr& call, network* net);
 
         //
         // when a RPC response is received, call this function to trigger calback

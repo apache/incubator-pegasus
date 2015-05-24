@@ -584,15 +584,10 @@ std::map<int, log_file_ptr>& mutation_log::get_logfiles_for_test()
 /*static */log_file_ptr log_file::opend_read(const char* path)
 {
     std::string pt = std::string(path);
-    auto pos = pt.find_last_of('/');
-    if (pos == std::string::npos)
-    {
-        dwarn( "Invalid log path %s", path);
-        return nullptr;
-    }
+    char splitters[] = { '\\', '/', 0 };
+    std::string name = utils::get_last_component(pt, splitters);
 
     // log.index.startOffset
-    std::string name = pt.substr(pos + 1);
     if (name.length() < strlen("log.")
         || name.substr(0, strlen("log.")) != std::string("log.")
         || (name.length() > strlen(".removed") && name.substr(name.length() - strlen(".removed")) == std::string(".removed"))
@@ -602,7 +597,7 @@ std::map<int, log_file_ptr>& mutation_log::get_logfiles_for_test()
         return nullptr;
     }
 
-    pos = name.find_first_of('.');
+    auto pos = name.find_first_of('.');
     auto pos2 = name.find_first_of('.', pos + 1);
     if (pos2 == std::string::npos)
     {
@@ -610,7 +605,7 @@ std::map<int, log_file_ptr>& mutation_log::get_logfiles_for_test()
         return nullptr;
     }
 
-    handle_t hFile = (handle_t)::open(path, O_RDONLY, 0);
+    handle_t hFile = (handle_t)::open(path, O_RDONLY | O_BINARY, 0);
 
     if (hFile == 0)
     {
@@ -630,7 +625,7 @@ std::map<int, log_file_ptr>& mutation_log::get_logfiles_for_test()
     char path[512]; 
     sprintf (path, "%s/log.%u.%lld", dir, index, static_cast<long long int>(startOffset));
     
-    handle_t hFile = dsn::service::file::open(path, O_RDWR | O_CREAT, 0666);
+    handle_t hFile = dsn::service::file::open(path, O_RDWR | O_CREAT | O_BINARY, 0666);
     if (hFile == 0)
     {
         dwarn("create log %s failed", path);
@@ -688,13 +683,23 @@ int log_file::read_next_log_entry(__out_param ::dsn::blob& bb)
 
     std::shared_ptr<char> hdrBuffer(new char[message_header::serialized_size()]);
     
-    if (message_header::serialized_size() != ::read(
+    int read_count = ::read(
         (int)(_handle),
         hdrBuffer.get(),
         message_header::serialized_size()
-        ))
+        );
+
+    if (message_header::serialized_size() != read_count)
     {
-        return ERR_FILE_OPERATION_FAILED;
+        if (read_count > 0)
+        {
+            derror("incomplete read data, size = %d vs %d", read_count, message_header::serialized_size());
+            return ERR_INVALID_DATA;
+        }
+        else
+        {
+            return ERR_HANDLE_EOF;
+        }
     }
 
     message_header hdr;
@@ -712,13 +717,16 @@ int log_file::read_next_log_entry(__out_param ::dsn::blob& bb)
     memcpy(data.get(), hdrBuffer.get(), message_header::serialized_size());
     bb.assign(data, 0, message_header::serialized_size() + hdr.body_length);
 
-    if (hdr.body_length != ::read(
-            (int)(_handle),
-            (void*)((char*)bb.data() + message_header::serialized_size()), 
-            hdr.body_length
-            ))
+    read_count = ::read(
+        (int)(_handle),
+        (void*)((char*)bb.data() + message_header::serialized_size()),
+        hdr.body_length
+        );
+
+    if (hdr.body_length != read_count)
     {
-        return ERR_FILE_OPERATION_FAILED;
+        derror("incomplete read data, size = %d vs %d", read_count, message_header::serialized_size());
+        return ERR_INVALID_DATA;
     }
     
     return ERR_SUCCESS;

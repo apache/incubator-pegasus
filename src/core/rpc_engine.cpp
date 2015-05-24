@@ -127,6 +127,7 @@ namespace dsn {
         auto nts = ::dsn::service::env::now_us();
         
         // timeout already
+        // TODO: uint64 overflow
         if (nts >= msg->header().client.timeout_ts_us)
         {
             message_ptr null_msg(nullptr);
@@ -139,7 +140,7 @@ namespace dsn {
     }
 
 
-    void rpc_client_matcher::on_call(message_ptr& request, rpc_response_task_ptr& call, network* net)
+    bool rpc_client_matcher::on_call(message_ptr& request, rpc_response_task_ptr& call, network* net)
     {
         message* msg = request.get();
         task_ptr timeout_task;
@@ -161,16 +162,21 @@ namespace dsn {
         auto nts = ::dsn::service::env::now_us();
         auto tts = msg->header().client.timeout_ts_us;
 
-        int timeout_ms = static_cast<int>(tts > nts ? (tts - nts) : 0)/1000;
-        if (timeout_ms >= spec->rpc_retry_interval_milliseconds * 2)
-            timeout_ms = spec->rpc_retry_interval_milliseconds;
-        
-        // not always true
-        // TODO: optimization for timeout_ms <= 0
-        // dassert (timeout_ms > 0, "");
+        if (tts > nts)
+        {
+            int timeout_ms = static_cast<int>(tts > nts ? (tts - nts) : 0) / 1000;
+            if (timeout_ms >= spec->rpc_retry_interval_milliseconds * 2)
+                timeout_ms = spec->rpc_retry_interval_milliseconds;
 
-        timeout_task->set_delay(timeout_ms);
-        timeout_task->enqueue();
+            timeout_task->set_delay(timeout_ms);
+            timeout_task->enqueue();
+            return true;
+        }
+        else
+        {
+            timeout_task->enqueue();
+            return false;
+        }
     }
 
     //------------------------
@@ -243,8 +249,8 @@ namespace dsn {
 
             else
             {
-                auto it = spec.network_default_configs.find(cs.channel);
-                if (it != spec.network_default_configs.end())
+                auto it = spec.network_default_client_cfs.find(cs.channel);
+                if (it != spec.network_default_client_cfs.end())
                 {
                     cs.factory_name = it->second.factory_name;
                     cs.message_buffer_block_size = it->second.message_buffer_block_size;
@@ -268,7 +274,7 @@ namespace dsn {
         return true;
     }
 
-    error_code rpc_engine::start(int app_id, const std::vector<int>& ports)
+    error_code rpc_engine::start(const service_app_spec& aspec)
     {
         if (_is_running)
         {
@@ -283,42 +289,62 @@ namespace dsn {
         _client_nets.resize(network_header_format::max_value() + 1);
 
         const service_spec& spec = service_engine::instance().spec();
+
+        // for each format
         for (int i = 0; i <= network_header_format::max_value(); i++)
         {
             std::vector<network*>& pnet = _client_nets[i];
             pnet.resize(rpc_channel::max_value() + 1);
+
+            // for each channel
             for (int j = 0; j <= rpc_channel::max_value(); j++)
             {
                 rpc_channel c = rpc_channel(rpc_channel::to_string(j));
-                auto it = spec.network_default_configs.find(c);
-                if (it != spec.network_default_configs.end())
+                std::string factory;
+                int blk_size;
+
+                auto it1 = aspec.net_client_cfs.find(c);
+                if (it1 != aspec.net_client_cfs.end())
                 {
-                    network_config_spec cs(app_id, c);
-
-                    cs.factory_name = it->second.factory_name;
-                    cs.message_buffer_block_size = it->second.message_buffer_block_size;
-                    cs.hdr_format = network_header_format(network_header_format::to_string(i));
-
-                    auto net = create_network(cs, true);
-                    if (!net) return ERR_NETWORK_INIT_FALED;
-                    pnet[j] = net;
+                    factory = it1->second.factory_name;
+                    blk_size = it1->second.message_buffer_block_size;
                 }
                 else
                 {
-                    dwarn("network client for channel %s not registered, assuming not used further", c.to_string());
+                    auto it = spec.network_default_client_cfs.find(c);
+                    if (it != spec.network_default_client_cfs.end())
+                    {
+                        factory = it->second.factory_name;
+                        blk_size = it->second.message_buffer_block_size;
+                    }
+                    else
+                    {
+                        dwarn("network client for channel %s not registered, assuming not used further", c.to_string());
+                        continue;
+                    }
                 }
+
+                network_config_spec cs(aspec.id, c);
+
+                cs.factory_name = factory;
+                cs.message_buffer_block_size = blk_size;
+                cs.hdr_format = network_header_format(network_header_format::to_string(i));
+
+                auto net = create_network(cs, true);
+                if (!net) return ERR_NETWORK_INIT_FALED;
+                pnet[j] = net;
             }
         }
         
         // start server networks
-        for (auto& p : ports)
+        for (auto& p : aspec.ports)
         {
             r = start_server_port(p);
             if (!r) return ERR_NETWORK_INIT_FALED;
         }
 
         _local_primary_address = _client_nets[0][0]->address();
-        _local_primary_address.port = ports.size() > 0 ? *ports.begin() : app_id;
+        _local_primary_address.port = aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id;
 
         _is_running = true;
         return ERR_SUCCESS;

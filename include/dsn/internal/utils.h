@@ -241,6 +241,7 @@ namespace dsn {
 
         extern void split_args(const char* args, __out_param std::vector<std::string>& sargs, char splitter = ' ');
         extern void split_args(const char* args, __out_param std::list<std::string>& sargs, char splitter = ' ');
+        extern std::string get_last_component(const std::string& input, char splitters[]);
 
         extern char* trim_string(char* s);
 

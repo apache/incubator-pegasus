@@ -70,36 +70,31 @@ public:
 
 	void on_test_timer()
 	{
-		// test for service 'simple_kv'
-		{
-			std::string req;
-			//sync:
-			std::string resp;
-			auto err = _simple_kv_client->read(req, resp);
-			std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_READ end, return " << err.to_string() << std::endl;
-			//async: 
-			//_simple_kv_client->begin_read(req);
-           
-		}
+        char buffer[20];
+        sprintf(buffer, "value.%u", env::random32(0, 100));
+
+        std::string value(buffer);
+
 		{
 			::dsn::replication::application::kv_pair req;
+            req.key = "key";
+            req.value = value;
+
 			//sync:
 			int32_t resp;
 			auto err = _simple_kv_client->write(req, resp);
-			std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_WRITE end, return " << err.to_string() << std::endl;
+			std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_WRITE end, write " << req.value << ", err = " << err.to_string() << std::endl;
 			//async: 
 			//_simple_kv_client->begin_write(req);
-           
-		}
-		{
-			::dsn::replication::application::kv_pair req;
-			//sync:
-			int32_t resp;
-			auto err = _simple_kv_client->append(req, resp);
-			std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_APPEND end, return " << err.to_string() << std::endl;
-			//async: 
-			//_simple_kv_client->begin_append(req);
-           
+
+            std::string v;
+            auto err2 = _simple_kv_client->read(req.key, v);
+            std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_READ end, read " << v << ", err = " << err2.to_string() << std::endl;
+
+            if (err == ERR_SUCCESS && err2 == ERR_SUCCESS)
+            {
+                dassert(v == value, "data is inconsistent!");
+            }
 		}
 	}
 

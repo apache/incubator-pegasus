@@ -50,11 +50,14 @@ void simulator::install(service_spec& spec)
     if (spec.env_factory_name == "")
         spec.env_factory_name = ("dsn::tools::sim_env_provider");
 
-    network_config_spec_default cs;
+    network_client_config cs;
     cs.factory_name = "dsn::tools::sim_network_provider";
     cs.message_buffer_block_size = 1024 * 64;
-    spec.network_default_configs[RPC_CHANNEL_TCP] = cs;
-    spec.network_default_configs[RPC_CHANNEL_UDP] = cs;
+    if (spec.network_default_client_cfs.find(RPC_CHANNEL_TCP) == spec.network_default_client_cfs.end())
+        spec.network_default_client_cfs[RPC_CHANNEL_TCP] = cs;
+
+    if (spec.network_default_client_cfs.find(RPC_CHANNEL_UDP) == spec.network_default_client_cfs.end())
+        spec.network_default_client_cfs[RPC_CHANNEL_UDP] = cs;
 
     if (spec.perf_counter_factory_name == "")
         spec.perf_counter_factory_name = "dsn::tools::simple_perf_counter";

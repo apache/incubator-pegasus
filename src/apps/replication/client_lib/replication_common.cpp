@@ -165,30 +165,30 @@ void replication_options::sanity_check()
     }
 }
 
-/*static*/ bool replica_helper::get_replica_config(const partition_configuration& partitionConfig, const end_point& node, __out_param replica_configuration& replicaConfig)
+/*static*/ bool replica_helper::get_replica_config(const partition_configuration& partition_config, const end_point& node, __out_param replica_configuration& replica_config)
 {
-    replicaConfig.gpid = partitionConfig.gpid;
-    replicaConfig.primary = partitionConfig.primary;
-    replicaConfig.ballot = partitionConfig.ballot;
+    replica_config.gpid = partition_config.gpid;
+    replica_config.primary = partition_config.primary;
+    replica_config.ballot = partition_config.ballot;
 
-    if (node == partitionConfig.primary)
+    if (node == partition_config.primary)
     {
-        replicaConfig.status = PS_PRIMARY;
+        replica_config.status = PS_PRIMARY;
         return true;
     }
-    else if (std::find(partitionConfig.secondaries.begin(), partitionConfig.secondaries.end(), node) != partitionConfig.secondaries.end())
+    else if (std::find(partition_config.secondaries.begin(), partition_config.secondaries.end(), node) != partition_config.secondaries.end())
     {
-        replicaConfig.status = PS_SECONDARY;
+        replica_config.status = PS_SECONDARY;
         return true;
     }
-    else if (std::find(partitionConfig.drop_outs.begin(), partitionConfig.drop_outs.end(), node) != partitionConfig.drop_outs.end())
+    else if (std::find(partition_config.drop_outs.begin(), partition_config.drop_outs.end(), node) != partition_config.drop_outs.end())
     {
-        replicaConfig.status = PS_INACTIVE;
+        replica_config.status = PS_INACTIVE;
         return true;
     }
     else
     {
-        replicaConfig.status = PS_INACTIVE;
+        replica_config.status = PS_INACTIVE;
         return false;
     }
 }

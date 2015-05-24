@@ -86,10 +86,10 @@ void meta_service::start(const char* data_dir, bool clean_state)
 
     _balancer = new load_balancer(_state);            
     _failure_detector = new meta_server_failure_detector(_state);
-    _balancer_timer = tasking::enqueue(LPC_LBM_RUN, this, &meta_service::on_load_balance_timer, 0, 1000, 5000);
+    _balancer_timer = tasking::enqueue(LPC_LBM_RUN, this, &meta_service::on_load_balance_timer, 0, 1000, 
+        _opts.fd_grace_seconds * 2000
+        );
     
-    register_rpc_handler(RPC_CM_CALL, "RPC_CM_CALL", &meta_service::on_request);
-
     end_point primary;
     if (_state->get_meta_server_primary(primary) && primary == primary_address())
     {
@@ -98,6 +98,7 @@ void meta_service::start(const char* data_dir, bool clean_state)
     else
         _failure_detector->set_primary(false);
 
+    register_rpc_handler(RPC_CM_CALL, "RPC_CM_CALL", &meta_service::on_request);
 
     _failure_detector->start(
         _opts.fd_check_interval_seconds,
@@ -106,8 +107,6 @@ void meta_service::start(const char* data_dir, bool clean_state)
         _opts.fd_grace_seconds,
         false
         );
-
-    _started = true;
 }
 
 bool meta_service::stop()
@@ -213,7 +212,11 @@ void meta_service::replay_log(const char* log)
         configuration_update_request request;
         configuration_update_response response;
         unmarshall(reader, request);
-        update_configuration(request, response);
+
+        node_states state;
+        state.push_back(std::make_pair(request.node, true));
+        _state->set_node_state(state);
+        _state->update_configuration(request, response);
     }
 
     ::fclose(fp);
@@ -221,6 +224,27 @@ void meta_service::replay_log(const char* log)
 
 void meta_service::update_configuration(message_ptr req, message_ptr resp)
 {
+    if (_state->freezed())
+    {
+        meta_response_header rhdr;
+        rhdr.err = 0;
+        rhdr.primary_address = primary_address();
+
+        configuration_update_request request;
+        configuration_update_response response;
+        
+        unmarshall(req, request);
+
+        response.err = ERR_STATE_FREEZED;
+        _state->query_configuration_by_gpid(request.config.gpid, response.config);
+
+        marshall(resp, rhdr);
+        marshall(resp, response);
+
+        rpc::reply(resp);
+        return;
+    }
+
     auto bb = req->reader().get_remaining_buffer();
     uint64_t offset;
     int len = bb.length() + sizeof(int32_t);
@@ -266,12 +290,22 @@ void meta_service::update_configuration(configuration_update_request& request, _
     _state->update_configuration(request, response);
 
     if (_started)
+    {
         tasking::enqueue(LPC_LBM_RUN, this, std::bind(&meta_service::on_config_changed, this, request.config.gpid));
+    }   
 }
 
 // local timers
 void meta_service::on_load_balance_timer()
 {
+    // first time is to activate the LB (an initial period of time is presevered for most machine to join in)
+    if (!_started)
+    {
+        _started = true;
+        _state->freeze(false);
+        return;
+    }
+
     end_point primary;
     if (_state->get_meta_server_primary(primary) && primary == primary_address())
     {

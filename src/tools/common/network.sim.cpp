@@ -108,6 +108,8 @@ namespace dsn { namespace tools {
 
     error_code sim_network_provider::start(rpc_channel channel, int port, bool client_only)
     { 
+        dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP, "invalid given channel %s", channel.to_string());
+
         _primary_address.port = port;
       
         if (!client_only)

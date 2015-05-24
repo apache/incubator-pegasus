@@ -62,7 +62,9 @@ public:
             nullptr,
             nullptr,
             nullptr,
-            timeout_milliseconds
+            timeout_milliseconds,
+            0,
+            read_semantic_t::ReadLastUpdate
             );
 		resp_task->wait();
 		if (resp_task->error() == ::dsn::ERR_SUCCESS)

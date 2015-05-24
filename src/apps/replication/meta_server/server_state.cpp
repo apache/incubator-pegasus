@@ -51,6 +51,8 @@ void unmarshall(binary_reader& reader, __out_param app_state& val)
 server_state::server_state(void)
 {
     _leader_index = -1;
+    _node_live_count = 0;
+    _freeze = true;
 }
 
 server_state::~server_state(void)
@@ -88,10 +90,8 @@ void server_state::load(const char* chk_point)
         
         for (auto& ep : ps.secondaries)
         {
-            if (ep != end_point::INVALID)
-            {
-                _nodes[ps.primary].partitions.insert(ps.gpid);
-            }
+            dassert(ep != end_point::INVALID, "");
+            _nodes[ep].partitions.insert(ps.gpid);
         }
     }
 
@@ -99,6 +99,15 @@ void server_state::load(const char* chk_point)
     {
         node.second.address = node.first;
         node.second.is_alive = true;
+        _node_live_count++;
+    }
+
+    for (auto& app : _apps)
+    {
+        for (auto& par : app.partitions)
+        {
+            check_consistency(par.gpid);
+        }
     }
 }
 
@@ -168,9 +177,19 @@ void server_state::set_node_state(const node_states& nodes)
     zauto_write_lock l(_lock);
     for (auto& itr : nodes)
     {
+        dassert(itr.first != end_point::INVALID, "");
+
         auto it = _nodes.find(itr.first);
         if (it != _nodes.end())
+        {
+            bool old = it->second.is_alive;
             it->second.is_alive = itr.second;
+            
+            if (!old && itr.second)
+                _node_live_count++;
+            else if (old && !itr.second)
+                _node_live_count--;
+        }   
         else
         {
             node_state n;
@@ -178,6 +197,9 @@ void server_state::set_node_state(const node_states& nodes)
             n.is_alive = itr.second;
 
             _nodes[itr.first] = n;
+
+            if (n.is_alive)
+                _node_live_count++;
         }
     }
 }
@@ -265,6 +287,12 @@ void server_state::query_configuration_by_node(configuration_query_by_node_reque
     }
 }
 
+void server_state::query_configuration_by_gpid(global_partition_id id, __out_param partition_configuration& config)
+{
+    zauto_read_lock l(_lock);
+    config = _apps[id.app_id - 1].partitions[id.pidx];
+}
+
 void server_state::query_configuration_by_index(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response)
 {
     zauto_read_lock l(_lock);
@@ -303,8 +331,10 @@ void server_state::update_configuration(configuration_update_request& request, _
         // update to new config
         old = request.config;
         response.config = request.config;
-
-        node_state& node = _nodes[request.node];
+        
+        auto it = _nodes.find(request.node);
+        dassert(it != _nodes.end(), "");
+        node_state& node = it->second;
 
         const char* type = "unknown";
         switch (request.type)
@@ -357,4 +387,37 @@ void server_state::update_configuration(configuration_update_request& request, _
         response.err = ERR_INVALID_VERSION;
         response.config = old;
     }
+
+#ifdef _DEBUG
+    check_consistency(request.config.gpid);
+#endif
+}
+
+void server_state::check_consistency(global_partition_id gpid)
+{
+    app_state& app = _apps[gpid.app_id - 1];
+    partition_configuration& config = app.partitions[gpid.pidx];
+
+    if (config.primary != end_point::INVALID)
+    {
+        auto it = _nodes.find(config.primary);
+        dassert(it != _nodes.end(), "");
+        dassert(it->second.primaries.find(gpid) != it->second.primaries.end(), "");
+        dassert(it->second.partitions.find(gpid) != it->second.partitions.end(), "");
+    }
+    
+    for (auto& ep : config.secondaries)
+    {
+        auto it = _nodes.find(ep);
+        dassert(it != _nodes.end(), "");
+        dassert(it->second.partitions.find(gpid) != it->second.partitions.end(), "");
+    }
+
+    int lc = 0;
+    for (auto& ep : _nodes)
+    {
+        if (ep.second.is_alive)
+            lc++;
+    }    
+    dassert(_node_live_count == lc, "");
 }
