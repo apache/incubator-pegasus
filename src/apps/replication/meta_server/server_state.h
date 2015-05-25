@@ -69,8 +69,8 @@ public:
     void update_configuration(configuration_update_request& request, __out_param configuration_update_response& response);
 
     bool freezed() const { zauto_read_lock l(_lock); return _freeze; }
-    bool freeze(bool freeze_it) { zauto_write_lock l(_lock);  auto old = _freeze; _freeze = freeze_it; return old; }
-
+    void benign_unfree();
+    
 private:
     void check_consistency(global_partition_id gpid);
 
@@ -86,7 +86,9 @@ private:
     mutable zrwlock                   _lock;
     std::map<end_point, node_state>   _nodes;
     std::vector<app_state>            _apps;
+
     int                               _node_live_count;
+    int                               _node_live_percentage_threshold_for_update;
     bool                              _freeze;
 
     mutable zrwlock                   _meta_lock;

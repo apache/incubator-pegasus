@@ -53,6 +53,7 @@ server_state::server_state(void)
     _leader_index = -1;
     _node_live_count = 0;
     _freeze = true;
+    _node_live_percentage_threshold_for_update = 75;
 }
 
 server_state::~server_state(void)
@@ -175,6 +176,9 @@ void server_state::get_node_state(__out_param node_states& nodes)
 void server_state::set_node_state(const node_states& nodes)
 {
     zauto_write_lock l(_lock);
+
+    auto old_lc = _node_live_count;
+
     for (auto& itr : nodes)
     {
         dassert(itr.first != end_point::INVALID, "");
@@ -202,6 +206,20 @@ void server_state::set_node_state(const node_states& nodes)
                 _node_live_count++;
         }
     }
+
+    if (_node_live_count != old_lc)
+    {
+        _freeze = (_node_live_count * 100 < _node_live_percentage_threshold_for_update * static_cast<int>(_nodes.size()));
+        dinfo("live replica server # changes from %d to %d, freeze = %s", old_lc, _node_live_count, _freeze ? "true":"false");
+    }
+}
+
+// used by unfree for the initial stage where machine states are all considered ALIVE but freeze = true
+void server_state::benign_unfree()
+{
+    zauto_write_lock l(_lock);
+    _freeze = (_node_live_count * 100 < _node_live_percentage_threshold_for_update * static_cast<int>(_nodes.size()));
+    dinfo("live replica server # is %d, freeze = %s", _node_live_count, _freeze ? "true" : "false");
 }
 
 bool server_state::get_meta_server_primary(__out_param end_point& node)

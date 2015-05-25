@@ -58,7 +58,7 @@ namespace dsn { namespace tools {
 
         virtual error_code start(rpc_channel channel, int port, bool client_only);
     
-        virtual const end_point& address() { return _primary_address; }
+        virtual const end_point& address() { return _address; }
 
         virtual rpc_client_session_ptr create_client_session(const end_point& server_addr)
         {
@@ -69,7 +69,7 @@ namespace dsn { namespace tools {
         uint32_t net_delay_milliseconds() const;
 
     private:
-        end_point    _primary_address;
+        end_point    _address;
         uint32_t     _min_message_delay_microseconds;
         uint32_t     _max_message_delay_microseconds;
     };

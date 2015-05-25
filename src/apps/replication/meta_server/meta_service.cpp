@@ -86,9 +86,6 @@ void meta_service::start(const char* data_dir, bool clean_state)
 
     _balancer = new load_balancer(_state);            
     _failure_detector = new meta_server_failure_detector(_state);
-    _balancer_timer = tasking::enqueue(LPC_LBM_RUN, this, &meta_service::on_load_balance_timer, 0, 1000, 
-        _opts.fd_grace_seconds * 2000
-        );
     
     end_point primary;
     if (_state->get_meta_server_primary(primary) && primary == primary_address())
@@ -99,6 +96,11 @@ void meta_service::start(const char* data_dir, bool clean_state)
         _failure_detector->set_primary(false);
 
     register_rpc_handler(RPC_CM_CALL, "RPC_CM_CALL", &meta_service::on_request);
+
+    _balancer_timer = tasking::enqueue(LPC_LBM_RUN, this, &meta_service::on_load_balance_timer, 0, 
+        _opts.fd_grace_seconds * 1000 + 1, // delay
+        10000
+        );
 
     _failure_detector->start(
         _opts.fd_check_interval_seconds,
@@ -302,7 +304,7 @@ void meta_service::on_load_balance_timer()
     if (!_started)
     {
         _started = true;
-        _state->freeze(false);
+        _state->benign_unfree();
         return;
     }
 

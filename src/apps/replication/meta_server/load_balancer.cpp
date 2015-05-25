@@ -104,6 +104,9 @@ end_point load_balancer::find_minimal_load_machine(bool primaryOnly)
 
 void load_balancer::run_lb(partition_configuration& pc)
 {
+    if (_state->freezed())
+        return;
+
     configuration_update_request proposal;
     proposal.config = pc;
 
