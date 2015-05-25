@@ -33,6 +33,7 @@ namespace dsn {
 
 configuration::configuration(const char* file_name)
 {
+    _warning = false;
     _file_name = std::string(file_name);
 
     FILE* fd = ::fopen(file_name, "rb");
@@ -172,10 +173,13 @@ ConfReg:
             if (*pSectionName == '\0')   
                 goto err;
 
-            if (has_section((const char*)pSectionName, false)) {
+            bool old = set_warning(false);
+            if (has_section((const char*)pSectionName)) {
                 printf("RedefInition of section %s\n", pSectionName);
+                set_warning(old);
                 goto err;
             }
+            set_warning(old);
 
             std::map<std::string, conf> sm;
             auto it = _configs.insert(config_map::value_type(std::string(pSectionName), sm));
@@ -242,11 +246,14 @@ std::string configuration::get_string_value(const char* section, const char* key
     std::string ov;
     if (!get_string_value_internal(section, key, default_value, ov))
     {
-        printf("WARNING: configuration '[%s] %s' is not defined, default value is '%s'\n",
-            section,
-            key,
-            default_value
-            );
+        if (_warning)
+        {
+            printf("WARNING: configuration '[%s] %s' is not defined, default value is '%s'\n",
+                section,
+                key,
+                default_value
+                );
+        }
     }
     return ov;
 }
@@ -256,11 +263,14 @@ std::list<std::string> configuration::get_string_value_list(const char* section,
     std::string ov;
     if (!get_string_value_internal(section, key, "", ov))
     {
-        printf("WARNING: configuration '[%s] %s' is not defined, default value is '%s'\n",
-            section,
-            key,
-            ""
-            );
+        if (_warning)
+        {
+            printf("WARNING: configuration '[%s] %s' is not defined, default value is '%s'\n",
+                section,
+                key,
+                ""
+                );
+        }
     }
 
     std::list<std::string> vs;
@@ -278,11 +288,11 @@ void configuration::register_config_change_notification(config_file_change_notif
     dassert (false, "not implemented");
 }
 
-bool configuration::has_section(const char* section, bool warn_if_not)
+bool configuration::has_section(const char* section)
 {
     auto it = _configs.find(section);
     bool r = (it != _configs.end());
-    if (!r && warn_if_not)
+    if (!r && _warning)
     {
         printf("WARNING: configuration section '[%s]' is not defined, using default settings\n", section);
     }

@@ -64,9 +64,6 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
 
     _config = config;
 
-    // init perf counters
-    //PerformanceCounters::init(PerfCounters_ReplicationBegin, PerfCounters_ReplicationEnd);
-
     // init dirs
     set_options(opts);
     _dir = _options.working_dir;
@@ -175,7 +172,7 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
             this,
             &replica_stub::query_configuration_by_node,
             0, 
-            _options.config_sync_interval_ms,
+            0,
             _options.config_sync_interval_ms
             );
     }
@@ -496,8 +493,10 @@ void replica_stub::on_node_query_reply(int err, message_ptr& request, message_pt
             return;
 
         configuration_query_by_node_response resp;
-        
-        unmarshall(response, resp);        
+        unmarshall(response, resp);     
+
+        if (resp.err != ERR_SUCCESS)
+            return;
         
         replicas rs = _replicas;
         for (auto it = resp.partitions.begin(); it != resp.partitions.end(); it++)

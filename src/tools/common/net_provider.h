@@ -31,7 +31,7 @@
 namespace dsn {
     namespace tools {
         
-        class asio_network_provider : public network
+        class asio_network_provider : public connection_oriented_network
         {
         public:
             asio_network_provider(rpc_engine* srv, network* inner_provider);

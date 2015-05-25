@@ -260,8 +260,8 @@ void replica::update_configuration_on_meta_server(config_type type, const end_po
 
     // disable 2pc during reconfiguration
     // it is possible to do this only for CT_DOWNGRADE_TO_SECONDARY,
-    // we therefore choose to disable 2pc during all reconfiguration types
-    // to achieve consistency at the cost of certain write throughput
+    // but we choose to disable 2pc during all reconfiguration types
+    // for simplicity at the cost of certain write throughput
     update_local_configuration_with_no_ballot_change(PS_INACTIVE);
     set_inactive_state_transient(true);
 
@@ -662,6 +662,11 @@ void replica::on_config_sync(const partition_configuration& config)
         return;
 
     update_configuration(config);
+
+    if (status() == PS_INACTIVE && !_inactive_is_transient)
+    {
+        _stub->remove_replica_on_meta_server(config);
+    }
 }
 
 void replica::replay_prepare_list()
@@ -684,6 +689,7 @@ void replica::replay_prepare_list()
 
         if (old != nullptr)
         {
+            mu->rpc_code = old->rpc_code;
             mu->data.updates = old->data.updates;
             mu->client_request = old->client_request;
 

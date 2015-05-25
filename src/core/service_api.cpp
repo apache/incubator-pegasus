@@ -175,7 +175,7 @@ namespace dsn { namespace service {
             for (auto it = apps.begin(); it != apps.end(); it++)
             {
                 service_app* app = it->second;
-                auto node = service_engine::instance().start_node(app->spec().id, app->name(), app->spec().ports);
+                auto node = service_engine::instance().start_node(app);
                 app->set_service_node(node);
             }
 

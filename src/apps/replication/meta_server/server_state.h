@@ -65,7 +65,14 @@ public:
     // partition server & client => meta server
     void query_configuration_by_node(configuration_query_by_node_request& request, __out_param configuration_query_by_node_response& response);
     void query_configuration_by_index(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response);
+    void query_configuration_by_gpid(global_partition_id id, __out_param partition_configuration& config);
     void update_configuration(configuration_update_request& request, __out_param configuration_update_response& response);
+
+    bool freezed() const { zauto_read_lock l(_lock); return _freeze; }
+    void benign_unfree();
+    
+private:
+    void check_consistency(global_partition_id gpid);
 
 private:
     struct node_state
@@ -76,11 +83,15 @@ private:
         std::set<global_partition_id> partitions;
     };
 
-    zrwlock                           _lock;
+    mutable zrwlock                   _lock;
     std::map<end_point, node_state>   _nodes;
     std::vector<app_state>            _apps;
 
-    zrwlock                           _meta_lock;
+    int                               _node_live_count;
+    int                               _node_live_percentage_threshold_for_update;
+    bool                              _freeze;
+
+    mutable zrwlock                   _meta_lock;
     std::vector<end_point>            _meta_servers;
     int                               _leader_index;
 

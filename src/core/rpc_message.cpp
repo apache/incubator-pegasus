@@ -78,7 +78,7 @@ message::message()
     _reader = nullptr;
     _writer = new binary_writer();
 
-    memset(&_msg_header, 0, FIELD_OFFSET(message_header, from_address));
+    memset(&_msg_header, 0, message_header::serialized_size());
     _msg_header.local_rpc_code = 0;
     seal(false, true);
 }
@@ -183,7 +183,7 @@ void message::seal(bool fillCrc, bool is_placeholder /*= false*/)
                 std::vector<blob> buffers;
                 _writer->get_buffers(buffers);
 
-                buffers[0] = buffers[0].range(0, buffers[0].length() - message_header::serialized_size());
+                buffers[0] = buffers[0].range(message_header::serialized_size());
 
                 uint32_t crc32 = 0;
                 uint32_t len = 0;

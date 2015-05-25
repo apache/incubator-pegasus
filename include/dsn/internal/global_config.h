@@ -33,15 +33,24 @@
 
 namespace dsn {
 
+struct network_client_config
+{
+    std::string factory_name;
+    int         message_buffer_block_size;
+};
+
+typedef std::map<rpc_channel, network_client_config> network_client_confs;
+
 struct service_app_spec
 {
-    int              id;
-    std::string      name;
-    std::string      type;
-    std::string      arguments;
-    std::vector<int> ports;
-    int              delay_seconds;
-    bool             run;
+    int                  id;
+    std::string          name;
+    std::string          type;
+    std::string          arguments;
+    std::vector<int>     ports;
+    int                  delay_seconds;
+    bool                 run;
+    network_client_confs net_client_cfs;
 
     service_app_spec() {}
     service_app_spec(const service_app_spec& r);
@@ -65,14 +74,7 @@ struct network_config_spec
     bool operator < (const network_config_spec& r) const;
 };
 
-struct network_config_spec_default
-{
-    std::string factory_name;
-    int         message_buffer_block_size;
-};
-
 typedef std::map<network_config_spec, network_config_spec> network_conf; // <port,channel> => config
-typedef std::map<rpc_channel, network_config_spec_default> network_default_conf; // channel => config default
 
 struct service_spec
 {
@@ -82,7 +84,7 @@ struct service_spec
     std::list<std::string>       toollets; // toollets enabled compatible to the main tool
     std::string                  coredump_dir; // to store core dump files
     
-    network_default_conf         network_default_configs; // default network configs by tools
+    network_client_confs         network_default_client_cfs; // default network configs by tools
     std::string                  aio_factory_name;
     std::string                  env_factory_name;
     std::string                  lock_factory_name;

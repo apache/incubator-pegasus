@@ -163,6 +163,65 @@ bool threadpool_spec::init(configuration_ptr& config, __out_param std::vector<th
     return true;
 }
 
+
+static bool build_client_network_confs(const char* section, configuration_ptr& config, __out_param network_client_confs& nss)
+{
+    nss.clear();
+
+    std::vector<std::string> keys;
+    config->get_all_keys(section, keys);
+
+    for (auto& k : keys)
+    {
+        if (rpc_channel::is_exist(k.c_str()))
+        {
+            /*
+            [network.27001]
+            ;channel = network_provider_name,buffer_block_size
+            RPC_CHANNEL_TCP = dsn::tools::asio_network_provider,65536
+            RPC_CHANNEL_UDP = dsn::tools::asio_network_provider,65536
+            */
+
+            rpc_channel ch = rpc_channel::from_string(k.c_str(), RPC_CHANNEL_TCP);
+
+            // dsn::tools::asio_network_provider,65536
+            std::list<std::string> vs;
+            std::string v = config->get_string_value(section, k.c_str(), "");
+            utils::split_args(v.c_str(), vs, ',');
+
+            if (vs.size() != 2)
+            {
+                printf("invalid client network specification '%s', should be '$network-factory,$msg-buffer-size'\n",
+                    v.c_str()
+                    );
+                return false;
+            }
+
+            if (!network_header_format::is_exist(vs.begin()->c_str()))
+            {
+                printf("invalid network specification, unkown message header format '%s'\n",
+                    vs.begin()->c_str()
+                    );
+                return false;
+            }
+
+            network_client_config ns;
+            ns.factory_name = vs.begin()->c_str();
+            ns.message_buffer_block_size = atoi(vs.rbegin()->c_str());
+
+            if (ns.message_buffer_block_size == 0)
+            {
+                printf("invalid message buffer size specified: '%s'\n", vs.rbegin()->c_str());
+                return false;
+            }
+
+            nss[ch] = ns;
+        }
+    }
+
+    return true;
+}
+
 service_app_spec::service_app_spec(const service_app_spec& r)
 {
     id = r.id;
@@ -172,6 +231,7 @@ service_app_spec::service_app_spec(const service_app_spec& r)
     ports = r.ports;
     delay_seconds = r.delay_seconds;
     run = r.run;
+    net_client_cfs = r.net_client_cfs;
 }
 
 bool service_app_spec::init(const char* section, configuration_ptr& config)
@@ -194,11 +254,12 @@ bool service_app_spec::init(const char* section, configuration_ptr& config)
     }
     std::sort(ports.begin(), ports.end());
 
-    delay_seconds = config->get_value<int>(section, "delay_seconds", 0);    
+    delay_seconds = config->get_value<int>(section, "delay_seconds", 0);
     run = config->get_value<bool>(section, "run", true);
 
-    return true;
+    return build_client_network_confs(section, config, this->net_client_cfs);
 }
+
 
 network_config_spec::network_config_spec(const network_config_spec& r)
 : channel(r.channel), hdr_format(r.hdr_format)
@@ -267,6 +328,9 @@ bool service_spec::init(configuration_ptr c)
     
     perf_counter_factory_name = config->get_string_value("core", "perf_counter_factory_name", "");
     logging_factory_name = config->get_string_value("core", "logging_factory_name", "");
+
+    // default client network confs
+    build_client_network_confs("core", config, this->network_default_client_cfs);
 
     // init thread pools
     threadpool_spec::init(config, threadpool_specs);
@@ -349,8 +413,7 @@ bool service_spec::build_network_spec(int port)
     /*
     [network.27001]
     ;channel = hdr_format,network_provider_name,buffer_block_size
-    RPC_CHANNEL_TCP = dsn,dsn::tools::asio_network_provider,65536
-    RPC_CHANNEL_UDP = dsn,dsn::tools::asio_network_provider,65536
+    RPC_CHANNEL_TCP = NET_HDR_DSN,dsn::tools::asio_network_provider,65536
     */
     std::stringstream ss;
     ss << "network." << port;
@@ -383,7 +446,7 @@ bool service_spec::build_network_spec(int port)
 
         network_config_spec ns(port, rpc_channel(c.c_str()));
 
-        // dsn,dsn::tools::asio_network_provider,65536
+        // NET_HDR_DSN,dsn::tools::asio_network_provider,65536
         std::list<std::string> vs;
         std::string v = config->get_string_value(s.c_str(), c.c_str(), "");
         utils::split_args(v.c_str(), vs, ',');
@@ -391,7 +454,7 @@ bool service_spec::build_network_spec(int port)
         if (vs.size() != 3)
         {
             printf("invalid network specification '%s', should be '$message-format, $network-factory,$msg-buffer-size'\n",
-                s.c_str()
+                v.c_str()
                 );
             return false;
         }

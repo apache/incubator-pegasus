@@ -28,6 +28,8 @@
 #include <sstream>
 #include <boost/filesystem.hpp>
 
+#define __TITLE__ "simple.kv"
+
 namespace dsn {
     namespace replication {
         namespace application {
@@ -42,7 +44,7 @@ namespace dsn {
             void simple_kv_service_impl::on_read(const std::string& key, ::dsn::service::rpc_replier<std::string>& reply)
             {
                 zauto_lock l(_lock);
-
+                
                 auto it = _store.find(key);
                 if (it == _store.end())
                 {
@@ -50,6 +52,7 @@ namespace dsn {
                 }
                 else
                 {
+                    dinfo("read %s, decree = %lld\n", it->second.c_str(), last_committed_decree());
                     reply(it->second);
                 }
             }
@@ -59,6 +62,7 @@ namespace dsn {
             {
                 zauto_lock l(_lock);
                 _store[pr.key] = pr.value;
+                dinfo("write %s, decree = %lld\n", pr.value.c_str(), last_committed_decree());
                 reply(ERR_SUCCESS);
             }
 
@@ -71,6 +75,8 @@ namespace dsn {
                     it->second.append(pr.value);
                 else
                     _store[pr.key] = pr.value;
+
+                dinfo("append %s, decree = %lld\n", pr.value.c_str(), last_committed_decree());
                 reply(ERR_SUCCESS);
             }
             

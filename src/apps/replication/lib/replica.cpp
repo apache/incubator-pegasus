@@ -115,11 +115,9 @@ void replica::response_client_message(message_ptr& request, error_code error, de
     int err = error.get();
     resp->writer().write(err);
 
-    if (error != ERR_SUCCESS)
-    {
-        dwarn("handle request with rpc_id = %016llx failed, err = %s", 
-            request->header().rpc_id, error.to_string());
-    }
+    dassert(error != ERR_SUCCESS, "");
+    dinfo("handle replication request with rpc_id = %016llx failed, err = %s",
+        request->header().rpc_id, error.to_string());
 
     rpc::reply(resp);
 }

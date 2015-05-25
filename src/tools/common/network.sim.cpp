@@ -93,7 +93,7 @@ namespace dsn { namespace tools {
     }
 
     sim_network_provider::sim_network_provider(rpc_engine* rpc, network* inner_provider)
-    : network(rpc, inner_provider), _primary_address("localhost", 1)
+        : connection_oriented_network(rpc, inner_provider), _address("localhost", 1)
     {
         _min_message_delay_microseconds = 1;
         _max_message_delay_microseconds = 100000;
@@ -108,12 +108,19 @@ namespace dsn { namespace tools {
 
     error_code sim_network_provider::start(rpc_channel channel, int port, bool client_only)
     { 
-        _primary_address.port = port;
+        dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP, "invalid given channel %s", channel.to_string());
+
+        _address = end_point(boost::asio::ip::host_name().c_str(), port);
+
+        end_point ep2 = end_point("localhost", port);
       
         if (!client_only)
         {
-            if (s_switch[channel].put(_primary_address, this))
+            if (s_switch[channel].put(_address, this))
+            {
+                s_switch[channel].put(ep2, this);
                 return ERR_SUCCESS;
+            }   
             else
                 return ERR_ADDRESS_ALREADY_USED;
         }

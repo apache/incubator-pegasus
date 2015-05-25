@@ -343,7 +343,7 @@ void task::enqueue(task_worker_pool* pool)
 timer_task::timer_task(task_code code,  uint32_t interval_milliseconds, int hash) 
     : task(code, hash), _interval_milliseconds(interval_milliseconds) 
 {
-    dassert (TASK_TYPE_COMPUTE == spec().type, "this must be a computation type task");
+    dassert (TASK_TYPE_COMPUTE == spec().type, "this must be a computation type task, please use DEFINE_TASK_CODE to define the task code");
 
     // enable timer randomization to avoid lots of timers execution simultaneously
     set_delay(::dsn::service::env::random32(0, interval_milliseconds));
@@ -369,7 +369,7 @@ rpc_request_task::rpc_request_task(message_ptr& request, service_node* node)
     _request(request)
 {
 
-    dbg_dassert (TASK_TYPE_RPC_REQUEST == spec().type, "task type must be RPC_REQUEST");
+    dbg_dassert (TASK_TYPE_RPC_REQUEST == spec().type, "task type must be RPC_REQUEST, please use DEFINE_TASK_CODE_RPC to define the task code");
 }
 
 void rpc_request_task::enqueue(service_node* node)
@@ -389,7 +389,7 @@ rpc_response_task::rpc_response_task(message_ptr& request, int hash)
 {
     set_error_code(ERR_IO_PENDING);
 
-    dbg_dassert (TASK_TYPE_RPC_RESPONSE == spec().type, "task must be of RPC_RESPONSE type");
+    dbg_dassert (TASK_TYPE_RPC_RESPONSE == spec().type, "task must be of RPC_RESPONSE type, please use DEFINE_TASK_CODE_RPC to define the request task code");
 
     _request = request;
     _caller_pool = task::get_current_worker() ? 
@@ -416,7 +416,7 @@ rpc_response_task_empty::rpc_response_task_empty(message_ptr& request, int hash)
 aio_task::aio_task(task_code code, int hash) 
     : task(code, hash)
 {
-    dassert (TASK_TYPE_AIO == spec().type, "task must be of AIO type");
+    dassert (TASK_TYPE_AIO == spec().type, "task must be of AIO type, please use DEFINE_TASK_CODE_AIO to define the task code");
     set_error_code(ERR_IO_PENDING);
 
     _aio = node()->disk()->prepare_aio_context(this);

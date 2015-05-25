@@ -289,12 +289,8 @@ void failure_detector::on_ping_internal(const beacon_msg& beacon, __out_param be
 
         // create new entry for node
         worker_record record(node, now);
+        record.is_alive = true;
         _workers.insert(std::make_pair(node, record));
-
-        itr = _workers.find(node);
-        dassert(itr != _workers.end(), "cannot find the worker");
-
-        itr->second.is_alive = true;
 
         report(node, false, true);
         on_worker_connected(node);

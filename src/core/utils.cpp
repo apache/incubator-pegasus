@@ -33,6 +33,25 @@
 namespace dsn {
     namespace utils {
 
+        std::string get_last_component(const std::string& input, char splitters[])
+        {
+            int index = -1;
+            char* s = splitters;
+
+            while (*s != 0)
+            {
+                auto pos = input.find_last_of(*s);
+                if (pos != std::string::npos && (static_cast<int>(pos) > index))
+                    index = static_cast<int>(pos);
+                s++;
+            }
+
+            if (index != -1)
+                return input.substr(index + 1);
+            else
+                return "";
+        }
+
         void split_args(const char* args, __out_param std::vector<std::string>& sargs, char splitter)
         {
             sargs.clear();

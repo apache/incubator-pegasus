@@ -266,7 +266,7 @@ namespace dsn {
         {
         }
 
-        virtual void get_output_buffers(message_ptr& msg, __out_param std::vector<blob>& buffers)
+        virtual void prepare_buffers_for_send(message_ptr& msg, __out_param std::vector<blob>& buffers)
         {
             // prepare head
             blob bb(_write_buffer_for_header, 0, 512);
@@ -314,7 +314,7 @@ namespace dsn {
             }
         }
 
-        virtual message_ptr on_read(int read_length, __out_param int& read_next)
+        virtual message_ptr get_message_on_receive(int read_length, __out_param int& read_next)
         {
             mark_read(read_length);
 

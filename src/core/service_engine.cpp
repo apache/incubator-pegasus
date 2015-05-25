@@ -33,6 +33,7 @@
 # include <dsn/internal/factory_store.h>
 # include <dsn/internal/logging.h>
 # include <dsn/tool_api.h>
+# include <dsn/internal/service_app.h>
 
 #define __TITLE__ "service_engine"
 
@@ -40,17 +41,18 @@ using namespace dsn::utils;
 
 namespace dsn {
 
-service_node::service_node(int app_id, const std::string& app_name)
+service_node::service_node(service::service_app* app)
 {
     _computation = nullptr;
     _rpc = nullptr;
     _disk = nullptr;
     _nfs = nullptr;
-    _app_id = app_id;
-    _app_name = app_name;
+    _app_id = app->id();
+    _app_name = app->name();
+    _app = app;
 }
 
-error_code service_node::start(const std::vector<int>& ports)
+error_code service_node::start()
 {
     auto& spec = service_engine::instance().spec();
 
@@ -72,7 +74,7 @@ error_code service_node::start(const std::vector<int>& ports)
     
     // init rpc engine
     _rpc = new rpc_engine(spec.config, this);    
-    error_code err = _rpc->start(_app_id, ports);
+    error_code err = _rpc->start(_app->spec());
     if (err != ERR_SUCCESS) return err;
 
     // init nfs
@@ -144,16 +146,16 @@ void service_engine::register_system_rpc_handler(task_code code, const char* nam
     }
 }
 
-service_node* service_engine::start_node(int app_id, const std::string& app_name, const std::vector<int>& ports)
+service_node* service_engine::start_node(service::service_app* app)
 {
-    auto it = _nodes_by_app_id.find(app_id);
+    auto it = _nodes_by_app_id.find(app->id());
     if (it != _nodes_by_app_id.end())
     {
         return it->second;
     }
     else
     {
-        for (auto p : ports)
+        for (auto p : app->spec().ports)
         {
             // union to existing node if any port is shared
             if (_nodes_by_app_port.find(p) != _nodes_by_app_port.end())
@@ -163,17 +165,17 @@ service_node* service_engine::start_node(int app_id, const std::string& app_name
                 dassert(false, "network port %d usage confliction for %s vs %s, please reconfig",
                     p,
                     n->name(),
-                    app_name.c_str()
+                    app->name().c_str()
                     );
             }
         }
         
-        auto node = new service_node(app_id, app_name);
-        error_code err = node->start(ports);
+        auto node = new service_node(app);
+        error_code err = node->start();
         dassert (err == 0, "service node start failed, err = %s", err.to_string());
         
-        _nodes_by_app_id[app_id] = node;
-        for (auto p1 : ports)
+        _nodes_by_app_id[app->id()] = node;
+        for (auto p1 : app->spec().ports)
         {
             _nodes_by_app_port[p1] = node;
         }

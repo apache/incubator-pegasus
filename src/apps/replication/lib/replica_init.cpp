@@ -71,16 +71,17 @@ int replica::initialize_on_new(const char* app_type, global_partition_id gpid)
 int replica::initialize_on_load(const char* dir, bool renameDirOnFailure)
 {
     std::string dr(dir);
-    auto pos = dr.find_last_of('/');
-    if (pos == std::string::npos)
+    char splitters[] = { '\\', '/', 0 };
+    std::string name = utils::get_last_component(dr, splitters);
+
+    if (name == "")
     {
-        derror( "invalid replica dir %s", dir);
+        derror("invalid replica dir %s", dir);
         return ERR_PATH_NOT_FOUND;
     }
 
     char app_type[128];
     global_partition_id gpid;
-    std::string name = dr.substr(pos + 1);
     if (3 != sscanf(name.c_str(), "%u.%u.%s", &gpid.app_id, &gpid.pidx, app_type))
     {
         derror( "invalid replica dir %s", dir);
@@ -160,7 +161,7 @@ void replica::replay_mutation(mutation_ptr& mu)
     if (mu->data.header.ballot > get_ballot())
     {
         _config.ballot = mu->data.header.ballot;
-        update_local_configuration(_config);
+        update_local_configuration(_config, true);
     }
 
     // prepare

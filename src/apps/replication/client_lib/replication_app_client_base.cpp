@@ -313,14 +313,16 @@ void replication_app_client_base::replica_rw_reply(
 
     int err2;
     response->reader().read(err2);
-
+    
     if (err2 != ERR_SUCCESS && err2 != ERR_HANDLER_NOT_FOUND)
     {
         goto Retry;
     }
     else
     {
-        end_request(rc, err, response);
+        error_code err3;
+        err3.set(err2);
+        end_request(rc, err3, response);
         delete rc;
     }
     return;

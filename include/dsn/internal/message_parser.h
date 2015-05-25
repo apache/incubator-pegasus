@@ -46,10 +46,10 @@ namespace dsn
         int read_buffer_capacity() const;
 
         // afer read, see if we can compose a message
-        virtual message_ptr on_read(int read_length, __out_param int& read_next) = 0;
+        virtual message_ptr get_message_on_receive(int read_length, __out_param int& read_next) = 0;
 
         // before write
-        virtual void get_output_buffers(message_ptr& msg, __out_param std::vector<blob>& buffers) = 0;
+        virtual void prepare_buffers_for_send(message_ptr& msg, __out_param std::vector<blob>& buffers) = 0;
         
     protected:
         void create_new_buffer(int sz);
@@ -57,8 +57,8 @@ namespace dsn
 
     protected:        
         blob            _read_buffer;
-        int                    _read_buffer_occupied;
-        int                    _buffer_block_size;
+        int             _read_buffer_occupied;
+        int             _buffer_block_size;
     };
 
     class dsn_message_parser : public message_parser
@@ -66,9 +66,9 @@ namespace dsn
     public:
         dsn_message_parser(int buffer_block_size);
 
-        virtual message_ptr on_read(int read_length, __out_param int& read_next);
+        virtual message_ptr get_message_on_receive(int read_length, __out_param int& read_next);
 
-        virtual void get_output_buffers(message_ptr& msg, __out_param std::vector<blob>& buffers)
+        virtual void prepare_buffers_for_send(message_ptr& msg, __out_param std::vector<blob>& buffers)
         {
             return msg->writer().get_buffers(buffers);
         }

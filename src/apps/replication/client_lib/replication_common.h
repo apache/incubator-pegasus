@@ -95,7 +95,7 @@ class replica_helper
 {
 public:
     static bool remove_node(const end_point& node, __inout_param std::vector<end_point>& nodeList);
-    static bool get_replica_config(const partition_configuration& partitionConfig, const end_point& node, __out_param replica_configuration& replicaConfig);
+    static bool get_replica_config(const partition_configuration& partition_config, const end_point& node, __out_param replica_configuration& replica_config);
 };
 
 }} // namespace

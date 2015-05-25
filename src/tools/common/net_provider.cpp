@@ -32,7 +32,7 @@ namespace dsn {
     namespace tools{
 
         asio_network_provider::asio_network_provider(rpc_engine* srv, network* inner_provider)
-            : network(srv, inner_provider), _io_service(shared_io_service::instance().ios)
+            : connection_oriented_network(srv, inner_provider), _io_service(shared_io_service::instance().ios)
         {
             _acceptor = nullptr;
             _socket.reset(new boost::asio::ip::tcp::socket(_io_service));
@@ -43,6 +43,8 @@ namespace dsn {
             if (_acceptor != nullptr)
                 return ERR_SERVICE_ALREADY_RUNNING;
             
+            dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP, "invalid given channel %s", channel.to_string());
+
             _address = end_point(boost::asio::ip::host_name().c_str(), port);
 
             if (!client_only)

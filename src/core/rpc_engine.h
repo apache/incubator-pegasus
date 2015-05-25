@@ -32,28 +32,6 @@
 
 namespace dsn {
 
-class rpc_client_matcher : public std::enable_shared_from_this<rpc_client_matcher>
-{
-public:
-    void on_call(message_ptr& request, rpc_response_task_ptr& call, network* net);
-    bool on_recv_reply(uint64_t key, message_ptr& reply, int delay_ms);
-    
-private:
-    friend class rpc_timeout_task;
-    void on_rpc_timeout(uint64_t key, task_spec* spec);
-
-private:
-    struct match_entry
-    {
-        rpc_response_task_ptr resp_task;
-        task_ptr              timeout_task;
-        network*              net;
-    };
-    typedef std::map<uint64_t, match_entry> rpc_requests;
-    rpc_requests         _requests;
-    std::recursive_mutex _requests_lock;
-};
-
 class service_node;
 class rpc_engine
 {
@@ -63,7 +41,7 @@ public:
     //
     // management routines
     //
-    error_code start(int app_id, const std::vector<int>& ports);
+    error_code start(const service_app_spec& spec);
     bool       start_server_port(int port);
 
     //
@@ -83,12 +61,11 @@ public:
     //
     service_node* node() const { return _node; }
     const end_point& primary_address() const { return _local_primary_address; }
+    void on_recv_request(message_ptr& msg, int delay_ms);
 
 private:
-    friend class rpc_server_session;    
-    void on_recv_request(message_ptr& msg, int delay_ms);
     network* create_network(const network_config_spec& netcs, bool client_only);
-            
+
 private:
     configuration_ptr                     _config;    
     service_node                          *_node;
