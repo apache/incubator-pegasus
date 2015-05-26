@@ -95,6 +95,11 @@ private:
     bool                                    _warning;
 };
 
+template<> inline std::string configuration::get_value<std::string>(const char* section, const char* key, std::string default_value)
+{
+    return get_string_value(section, key, default_value.c_str());
+}
+
 template<> inline double configuration::get_value<double>(const char* section, const char* key, double default_value)
 {
     std::string value;
@@ -175,6 +180,11 @@ template<> inline long configuration::get_value<long>(const char* section, const
     }
 }
 
+template<> inline unsigned long long configuration::get_value<unsigned long long>(const char* section, const char* key, unsigned long long default_value)
+{
+    return (unsigned long long)(get_value<long long>(section, key, default_value));
+}
+
 template<> inline int configuration::get_value<int>(const char* section, const char* key, int default_value)
 {
     return static_cast<int>(get_value<long>(section, key, default_value));
@@ -220,5 +230,85 @@ template<> inline bool configuration::get_value<bool>(const char* section, const
     }
 }
 
+
+# define CONFIG_BEGIN(t_struct) \
+    inline bool read_config(\
+    configuration_ptr& config, \
+    const char* section, \
+    __out_param t_struct& val, \
+    t_struct* default_value = nullptr\
+    ) \
+{
+
+# define CONFIG_END \
+    return true; \
+}
+
+// type fld = xyz
+# define CONFIG_FLD(type, fld, default_fld_value) \
+    val.fld = config->get_value<type>(section, #fld, default_value ? default_value->fld : default_fld_value);
+
+// customized_id<type> fld = xyz
+# define CONFIG_FLD_ID(type, fld) \
+{\
+    auto v = config->get_value<std::string>(section, #fld, ""); \
+    if (v == "") {    \
+        if (default_value) val.fld = default_value->fld; \
+        else {\
+            printf("enum configuration '[%s] %s' not defined", section, #fld); \
+            return false; \
+        }\
+    }\
+    else {\
+        if (!type::is_exist(v.c_str())) {\
+            printf("invalid enum configuration '[%s] %s'", section, #fld); \
+            return false; \
+        }\
+        else \
+            val.fld = type(v.c_str()); \
+    }\
+}
+
+// enum type fld = xyz
+# define CONFIG_FLD_ENUM(type, fld, default_fld_value, invalid_enum) \
+{\
+    auto v = config->get_value<std::string>(section, #fld, ""); \
+    if (v == "") {    \
+        if (default_value) val.fld = default_value->fld; \
+        else val.fld = default_fld_value; \
+    }\
+    else {\
+        auto v2 = enum_from_string(v.c_str(), invalid_enum);\
+        if (v2 == invalid_enum) {\
+            printf("invalid enum configuration '[%s] %s'", section, #fld); \
+            return false; \
+        }\
+        else \
+            val.fld = v2; \
+    }\
+}
+
+// list<customized_id<type>> fld = x,y,z
+# define CONFIG_FLD_ID_LIST(type, fld) \
+{ \
+    val.fld.clear();\
+    auto lv = config->get_string_value_list(section, #fld, ','); \
+    for (auto& v : lv) {\
+        if (!type::is_exist(v.c_str())) {\
+            printf("invalid enum configuration '[%s] %s'", section, #fld); \
+            return false; \
+        } \
+        else \
+            val.fld.push_back(type::from_string(v.c_str(), static_cast<type>(0))); \
+    } \
+    if (val.fld.size() == 0 && default_value) \
+        val.fld = default_value->fld; \
+}
+
+// list<type> fld = x,y,z
+# define CONFIG_FLD_STRING_LIST(fld) \
+    val.fld = config->get_string_value_list(section, #fld, ','); \
+    if (val.fld.size() == 0 && default_value) \
+        val.fld = default_value->fld;
 
 } // end namespace
