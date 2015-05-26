@@ -185,6 +185,12 @@ template<> inline unsigned long long configuration::get_value<unsigned long long
     return (unsigned long long)(get_value<long long>(section, key, default_value));
 }
 
+
+template<> inline unsigned long configuration::get_value<unsigned long>(const char* section, const char* key, unsigned long default_value)
+{
+    return (unsigned long)(get_value<long>(section, key, default_value));
+}
+
 template<> inline int configuration::get_value<int>(const char* section, const char* key, int default_value)
 {
     return static_cast<int>(get_value<long>(section, key, default_value));
