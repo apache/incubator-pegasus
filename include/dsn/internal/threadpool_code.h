@@ -61,7 +61,7 @@ DEFINE_THREAD_POOL_CODE(THREAD_POOL_DEFAULT)
 struct threadpool_spec
 {
     std::string             name;
-    threadpool_code          pool_code;
+    threadpool_code         pool_code;
     bool                    run;
     int                     worker_count;
     worker_priority_t       worker_priority;
@@ -83,5 +83,23 @@ struct threadpool_spec
 
     static bool init(configuration_ptr& config, __out_param std::vector<threadpool_spec>& specs);
 };
+
+CONFIG_BEGIN(threadpool_spec)
+ // CONFIG_FLD_ID(threadpool_code, pool_code) // no need to define it inside section
+    CONFIG_FLD(std::string, name, std::string(""))
+    CONFIG_FLD(bool, run, false)
+    CONFIG_FLD(int, worker_count, 2)
+    CONFIG_FLD_ENUM(worker_priority_t, worker_priority, THREAD_xPRIORITY_NORMAL, THREAD_xPRIORITY_INVALID)
+    CONFIG_FLD(bool, worker_share_core, true)
+    CONFIG_FLD(uint64_t, worker_affinity_mask, 0)
+    CONFIG_FLD(unsigned int, max_input_queue_length, 0xFFFFFFFFUL)
+    CONFIG_FLD(bool, partitioned, false)
+    CONFIG_FLD(std::string, queue_factory_name, std::string(""))
+    CONFIG_FLD(std::string, worker_factory_name, std::string(""))
+    CONFIG_FLD_STRING_LIST(queue_aspects)
+    CONFIG_FLD_STRING_LIST(worker_aspects)
+    CONFIG_FLD(std::string, admission_controller_factory_name, std::string(""))
+    CONFIG_FLD(std::string, admission_controller_arguments, std::string(""))
+CONFIG_END
 
 } // end namespace
