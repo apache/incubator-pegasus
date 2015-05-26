@@ -43,7 +43,7 @@ namespace dsn {
 			}
 			
 
-			callback_para cp = { hfile, request.file_name, bb, request.offset, request.size };
+			callback_para cp = { hfile, request.file_name, bb, request.offset, request.size};
 
 			auto task = file::read(
 				hfile,

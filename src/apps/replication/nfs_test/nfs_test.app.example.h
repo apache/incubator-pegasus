@@ -106,7 +106,7 @@ public:
 		std::string dest_dir = "D:/rdsn/tutorial/nfs_v3/server/testdir/";
 		std::vector<std::string> files; // empty is for all
 		files.push_back("C++ Primer 5th edition.pdf");
-		bool overwrite = true;
+		bool overwrite = false;
 		file::copy_remote_files(_server, source_dir, files, dest_dir, overwrite, LPC_NFS_COPY_FILE, nullptr,
 			std::bind(&nfs_client_app::internal_copy_callback,
 			this,

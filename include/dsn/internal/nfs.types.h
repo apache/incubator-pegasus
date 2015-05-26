@@ -96,6 +96,7 @@ namespace dsn { namespace service {
 		int32_t size;
 		aio_task_ptr nfs_task;
 		bool isLast;
+		bool overwrite;
 	};
 
 	inline void marshall(::dsn::binary_writer& writer, const copy_request& val)
@@ -107,6 +108,7 @@ namespace dsn { namespace service {
 		marshall(writer, val.offset);
 		marshall(writer, val.size);
 		marshall(writer, val.isLast);
+		marshall(writer, val.overwrite);
 	};
 
 	inline void unmarshall(::dsn::binary_reader& reader, __out_param copy_request& val)
@@ -118,6 +120,7 @@ namespace dsn { namespace service {
 		unmarshall(reader, val.offset);
 		unmarshall(reader, val.size);
 		unmarshall(reader, val.isLast);
+		unmarshall(reader, val.overwrite);
 	};
 
 	// ---------- copy_response -------------

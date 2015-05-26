@@ -42,6 +42,10 @@ namespace dsn {
 
 			std::string file_path = reqc->source_dir + reqc->file_name;
 
+			if (!reqc->overwrite)
+			{
+				file_path += ".conflict";
+			}
 			// create file folder if not existed
 			for (int i = 0; i < file_path.length(); i++)
 			{
@@ -121,6 +125,8 @@ namespace dsn {
 					req->dst_dir = reqc->dst_dir;
 					req->source_dir = reqc->source_dir;
 					req->nfs_task = reqc->nfs_task;
+					req->overwrite = reqc->overwrite;
+
 					if (size <= req_size)
 						req->isLast = true;
 					else
