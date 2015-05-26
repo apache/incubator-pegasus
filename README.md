@@ -1,3 +1,12 @@
+
+### Top Links
+
+ * [[Tutorial](https://github.com/Microsoft/rDSN/wiki/Tutorial:-Build-A-Single-Node-Counter-Service)] Build a counter service with built-in tools (e.g., systematic test, fault injection, bug replay, tracing)
+ * [[Tutorial](https://github.com/Microsoft/rDSN/wiki/Tutorial:-Build-A-Scalable-and-Reliable-Counter-Service)] Build a scalable and reliable counter service with built-in replication support
+ * [[Tutorial](https://github.com/Microsoft/rDSN/wiki/Tutorial:-Perfect-Failure-Detector)] Build a perfect failure detector with progressively added system complexity
+ * [[Tutorial](https://github.com/Microsoft/rDSN/wiki/Tutorial:-Plugin-A-New-Network-Implementation)] Plugin my own network implementation for higher performance
+
+
 I am a [developer](https://github.com/Microsoft/rDSN/wiki/overview#developers-a-framework-for-quickly-building-and-managing-high-performance-and-robust-distributed-systems)  |   [researcher](https://github.com/Microsoft/rDSN/wiki/overview#researchers-and-tool-oriented-developers-a-tool-platform-which-eases-tool-development-and-enables-transparent-integration-with-upper-applications-see-tutorial-1-and-tutorial-2)  |   [student](https://github.com/Microsoft/rDSN/wiki/overview#students-a-distributed-system-learning-platform-where-you-can-easily-simplify-understand-and-manipulate-a-system-see-tutorial) =>
 
 ### See [Wiki](https://github.com/Microsoft/rDSN/wiki) for details  ...
