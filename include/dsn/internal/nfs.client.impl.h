@@ -34,6 +34,7 @@ public:
 	nfs_client_impl(const ::dsn::end_point& server, configuration_ptr config) : nfs_client(server)
 	{ 
 		_server = server; 
+		_client_request_count = 0;
 		max_buf_size = config->get_value<uint32_t>("nfs", "max_buf_size", max_buf_size);
 		max_request_count = config->get_value<uint32_t>("nfs", "max_request_count", max_request_count);
 	}
@@ -57,13 +58,17 @@ public:
 		if (err != ::dsn::ERR_SUCCESS)
 		{
 			derror("write file error\n");
+			reqc.nfs_task->enqueue(err, sz, reqc.nfs_task->node());
 		}
-		reqc.nfs_task->enqueue(err, sz, reqc.nfs_task->node());
+		if (reqc.isLast)
+		{
+			reqc.nfs_task->enqueue(err, sz, reqc.nfs_task->node());
+		}
 		return;
 	}
 
-	static int _client_request_count;
-	static std::queue<copy_request*> _req_copy_file_queue;
+	int _client_request_count;
+	std::queue<copy_request*> _req_copy_file_queue;
 	
 
 private:

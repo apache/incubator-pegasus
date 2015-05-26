@@ -6,7 +6,6 @@
 
 namespace dsn { 
 	namespace service { 
-		std::map <std::string, nfs_service_impl::map_value*> nfs_service_impl::_handles_map;
 
 		void nfs_service_impl::on_copy(const ::dsn::service::copy_request& request, ::dsn::service::rpc_replier<::dsn::service::copy_response>& reply)
 		{

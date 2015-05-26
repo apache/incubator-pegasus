@@ -7,9 +7,6 @@
 namespace dsn { 
 	namespace service {
 
-		int nfs_client_impl::_client_request_count = 0;
-		std::queue<copy_request*> nfs_client_impl::_req_copy_file_queue;
-
 		void nfs_client_impl::end_copy(
 			::dsn::error_code err,
 			const copy_response& resp,
@@ -44,7 +41,7 @@ namespace dsn {
 			std::cout << "*** call RPC_NFS_COPY end, return " << "(" << resp.offset << ", " << resp.size << ")" << " with err " << err.to_string() << std::endl;
 
 			std::string file_path = reqc->source_dir + reqc->file_name;
-			
+
 			// create file folder if not existed
 			for (int i = 0; i < file_path.length(); i++)
 			{
@@ -124,6 +121,10 @@ namespace dsn {
 					req->dst_dir = reqc->dst_dir;
 					req->source_dir = reqc->source_dir;
 					req->nfs_task = reqc->nfs_task;
+					if (size <= req_size)
+						req->isLast = true;
+					else
+						req->isLast = false;
 					
 					if (_client_request_count < max_request_count)
 					{

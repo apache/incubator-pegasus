@@ -4,9 +4,6 @@
 
 
 # define __TITLE__ "nfs"
-# define MAXBUFSIZE 4096 // one round rpc buffer
-# define MAXREQUESTCOUNT 100 // for control client traffic
-# define OUTOFDATE 10000 // time for close file
 
 namespace dsn { namespace service { 
 	// define RPC task code for service 'nfs'

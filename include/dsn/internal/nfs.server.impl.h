@@ -45,7 +45,7 @@ public:
 
 	void get_file_names(std::string folderPath, std::vector<std::string>& file_list);
 
-	static std::map <std::string, map_value*> _handles_map;
+	std::map <std::string, map_value*> _handles_map;
 
 private:
 	zlock _handles_map_lock;

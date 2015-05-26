@@ -79,9 +79,11 @@ public:
 		if (argc < 2)
 			return ::dsn::ERR_INVALID_PARAMETERS;
 
+		srand((unsigned)time(0));
 		_server = ::dsn::end_point(argv[1], (uint16_t)atoi(argv[2]));
 
-		_request_timer = ::dsn::service::tasking::enqueue(LPC_NFS_REQUEST_TIMER, this, &nfs_client_app::on_request_timer, 0, 0, 1000);
+		on_request_timer();
+		//_request_timer = ::dsn::service::tasking::enqueue(LPC_NFS_REQUEST_TIMER, this, &nfs_client_app::on_request_timer, 0, 0, 1000000000);
 
 		return ::dsn::ERR_SUCCESS;
 	}
@@ -94,25 +96,49 @@ public:
 
 	void on_request_timer()
 	{
-		std::string source_dir = "D:/rdsn/tutorial/nfs_v3/client/mydir/";
+		std::string rs = "0000";
+		rs[0] = rand() % 9 + '0';
+		rs[1] = rand() % 9 + '0';
+		rs[2] = rand() % 9 + '0';
+		rs[3] = rand() % 9 + '0';
+
+		std::string source_dir = "D:/rdsn/tutorial/nfs_v3/client/mydir" + rs + "/";
 		std::string dest_dir = "D:/rdsn/tutorial/nfs_v3/server/testdir/";
 		std::vector<std::string> files; // empty is for all
-		files.push_back("test1.txt");
+		files.push_back("C++ Primer 5th edition.pdf");
 		bool overwrite = true;
 		file::copy_remote_files(_server, source_dir, files, dest_dir, overwrite, LPC_NFS_COPY_FILE, nullptr,
 			std::bind(&nfs_client_app::internal_copy_callback,
 			this,
 			std::placeholders::_1,
-			std::placeholders::_2));
+			std::placeholders::_2,
+			_server,
+			source_dir,
+			files,
+			dest_dir,
+			overwrite));
 	}
 
-	void internal_copy_callback(error_code err, uint32_t size)
+	void internal_copy_callback(error_code err, uint32_t size, ::dsn::end_point _server, std::string source_dir, std::vector<std::string> files, std::string dest_dir, bool overwrite)
 	{
 		std::cout << err.to_string() << std::endl;
 		// TODO deal with the faults
 		if (err != ::dsn::ERR_SUCCESS)
 		{
 			// if resend the request
+			if (err == ERR_TIMEOUT)
+			{
+				file::copy_remote_files(_server, source_dir, files, dest_dir, overwrite, LPC_NFS_COPY_FILE, nullptr,
+					std::bind(&nfs_client_app::internal_copy_callback,
+					this,
+					std::placeholders::_1,
+					std::placeholders::_2,
+					_server,
+					source_dir,
+					files,
+					dest_dir,
+					overwrite));
+			}
 		}
 	}
 private:
