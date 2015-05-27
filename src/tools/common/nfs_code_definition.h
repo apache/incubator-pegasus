@@ -1,6 +1,6 @@
 # pragma once
 # include <dsn/service_api.h>
-# include "nfs.types.h"
+# include "nfs_types.h"
 
 
 # define __TITLE__ "nfs"

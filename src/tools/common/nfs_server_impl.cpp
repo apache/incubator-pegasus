@@ -1,5 +1,5 @@
 # pragma once
-# include <dsn/internal/nfs.server.impl.h>
+# include "nfs_server_impl.h"
 # include <io.h>
 #include "stdlib.h"
 #include "direct.h"

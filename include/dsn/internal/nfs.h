@@ -26,11 +26,27 @@
 # pragma once
 
 # include <dsn/service_api.h>
-# include <dsn/internal/nfs.client.impl.h>
-# include <dsn/internal/nfs.server.impl.h>
-# include <dsn/internal/nfs.node.impl.h>
 
 namespace dsn {
+
+	struct remote_copy_request
+	{
+		end_point   source;
+		std::string source_dir;
+		std::vector<std::string> files;
+		std::string dest_dir;
+		bool        overwrite;
+		aio_task_ptr nfs_task;
+	};
+
+	struct remote_copy_response
+	{
+
+	};
+
+	extern void marshall(::dsn::binary_writer& writer, const remote_copy_request& val, uint16_t pos = 0xffff);
+
+	extern void unmarshall(::dsn::binary_reader& reader, __out_param remote_copy_request& val);
 
 	class nfs_node
 	{
@@ -43,16 +59,9 @@ namespace dsn {
 	public:
 		nfs_node(service_node* node) : _node(node) {}
 
-		virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task_ptr& callback)
-		{
-			_nfs_node_impl = new ::dsn::service::nfs_node_impl(rci->source, ::dsn::service::system::config());
-			_nfs_node_impl->get_nfs_client_impl()->begin_remote_copy(rci, callback);
-		}
-
-		
+		virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task_ptr& callback) = 0;
 
 	protected:
 		service_node* _node;
-		::dsn::service::nfs_node_impl* _nfs_node_impl;
 	};
 }

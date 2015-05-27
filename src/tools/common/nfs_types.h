@@ -15,7 +15,7 @@
 # ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
 
 # include <dsn/thrift_helper.h>
-# include "nfs.types.h" 
+# include "nfs_types.h" 
 
 namespace dsn { namespace service { 
 	// ---------- copy_request -------------

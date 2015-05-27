@@ -26,8 +26,9 @@
 # pragma once
 # include <dsn/dist/replication.h>
 # include <dsn/service_api.h>
-# include <dsn/internal/nfs.server.impl.h>
-# include <dsn/internal/nfs.node.impl.h>
+
+# include "nfs_node_impl.h"
+# include "nfs_server_impl.h"
 
 namespace dsn { namespace replication { namespace application { 
 
@@ -40,7 +41,7 @@ public:
 
 	virtual ::dsn::error_code start(int argc, char** argv)
 	{
-		_nfs_node_impl = new nfs_node_impl(::dsn::service::system::config());
+		_nfs_node_impl = new nfs_node_impl(::dsn::service::system::config(), NULL);
 		_nfs_node_impl->get_nfs_service_impl()->open_service();
 		_file_timer = ::dsn::service::tasking::enqueue(LPC_NFS_FILE_CLOSE_TIMER, this, &nfs_server_app::on_file_timer, 0, 0, 1000);
 		return ::dsn::ERR_SUCCESS;
@@ -79,7 +80,6 @@ public:
 		if (argc < 2)
 			return ::dsn::ERR_INVALID_PARAMETERS;
 
-		srand((unsigned)time(0));
 		_server = ::dsn::end_point(argv[1], (uint16_t)atoi(argv[2]));
 
 		on_request_timer();
@@ -96,6 +96,7 @@ public:
 
 	void on_request_timer()
 	{
+		srand((unsigned)time(0));
 		std::string rs = "0000";
 		rs[0] = rand() % 9 + '0';
 		rs[1] = rand() % 9 + '0';
@@ -106,7 +107,7 @@ public:
 		std::string dest_dir = "D:/rdsn/tutorial/nfs_v3/server/testdir/";
 		std::vector<std::string> files; // empty is for all
 		files.push_back("C++ Primer 5th edition.pdf");
-		bool overwrite = false;
+		bool overwrite = true;
 		file::copy_remote_files(_server, source_dir, files, dest_dir, overwrite, LPC_NFS_COPY_FILE, nullptr,
 			std::bind(&nfs_client_app::internal_copy_callback,
 			this,

@@ -1,32 +1,11 @@
 # pragma once
-# include "nfs.client.h"
+# include "nfs_client.h"
 # include <queue>
 # include <dsn/service_api.h>
+# include <dsn/internal/nfs.h>
 
 namespace dsn {
-	
-	struct remote_copy_request
-	{
-		end_point   source;
-		std::string source_dir;
-		std::vector<std::string> files;
-		std::string dest_dir;
-		bool        overwrite;
-		aio_task_ptr nfs_task;
-	};
-
-	struct remote_copy_response
-	{
-
-	};
-
-	extern void marshall(::dsn::binary_writer& writer, const remote_copy_request& val, uint16_t pos = 0xffff);
-
-	extern void unmarshall(::dsn::binary_reader& reader, __out_param remote_copy_request& val);
-
-	
 	namespace service { 
-
 class nfs_client_impl
 	: public ::dsn::service::nfs_client
 {

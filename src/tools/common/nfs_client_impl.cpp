@@ -1,5 +1,6 @@
 # pragma once
-# include <dsn\internal\nfs.client.impl.h>
+# include "nfs_client_impl.h"
+# include <dsn\internal\nfs.h>
 # include <queue>
 # include <io.h>
 # include <direct.h>

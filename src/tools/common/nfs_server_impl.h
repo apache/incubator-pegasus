@@ -1,5 +1,5 @@
 # pragma once
-# include "nfs.server.h"
+# include "nfs_server.h"
 
 namespace dsn { namespace service { 
 class nfs_service_impl
