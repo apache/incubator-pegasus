@@ -36,7 +36,7 @@ namespace dsn {
 		std::vector<std::string> files;
 		std::string dest_dir;
 		bool        overwrite;
-		aio_task_ptr nfs_task;
+		aio_task_ptr nfs_task; // trace task info in end_copy
 	};
 
 	struct remote_copy_response
