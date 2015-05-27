@@ -21,7 +21,7 @@ namespace dsn {
 
 				if (it == _handles_map.end()) // not found
 				{
-					hfile = file::open(file_path.c_str(), O_RDONLY, 0);
+					hfile = file::open(file_path.c_str(), O_RDONLY | O_BINARY, 0);
 					if (hfile == 0)
 					{
 						derror("file operation failed");
@@ -66,7 +66,7 @@ namespace dsn {
 		{
 			if (err != 0)
 			{
-				derror("file operation failed, err = %u", err);
+				derror("file operation failed, err = %s", err.to_string());
 			}
 
 			{
@@ -82,7 +82,9 @@ namespace dsn {
 			::dsn::service::copy_response resp;
 			resp.error = err;
 			resp.file_name = cp.file_name;
-			resp.file_content = blob(cp.bb.buffer(), 0, cp.size);
+
+            auto sptr = cp.bb.buffer();
+			resp.file_content = blob(sptr, 0, sz);
 
 			resp.offset = cp.offset;
 			resp.size = cp.size;
@@ -158,7 +160,7 @@ namespace dsn {
 						_handles_map.erase(it++);
 						if (err != 0)
 						{
-							derror("close file error: %u", err);
+							derror("close file error: %s", err.to_string());
 						}
 					}
 					else

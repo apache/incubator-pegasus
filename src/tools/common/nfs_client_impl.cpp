@@ -46,7 +46,7 @@ namespace dsn {
                 }
 
                 // write file
-                handle_t hfile = file::open(file_path.c_str(), O_RDWR | O_CREAT, 0);
+                handle_t hfile = file::open(file_path.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
 
                 auto task = file::write(
                     hfile,
