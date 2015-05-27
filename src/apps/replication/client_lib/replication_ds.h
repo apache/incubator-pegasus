@@ -26,7 +26,7 @@
 #pragma once
 
 # include <dsn/internal/enum_helper.h>
-# include <dsn/dist/replication/replication_types.h>
+# include <dsn/dist/replication/replication.types.h>
 
 namespace dsn {
     namespace replication {

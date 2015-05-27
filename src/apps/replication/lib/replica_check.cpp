@@ -152,7 +152,7 @@ void replica::on_group_check(const group_check_request& request, __out_param gro
 
     response.last_committed_decree_in_app = _app->last_committed_decree();
     response.last_committed_decree_in_prepare_list = last_committed_decree();
-    response.learner_status_ = _potential_secondary_states.LearningState;
+    response.learner_status_ = _potential_secondary_states.learning_status;
     response.learner_signature = _potential_secondary_states.learning_signature;
 }
 

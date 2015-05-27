@@ -98,8 +98,8 @@ struct prepare_ack
 
 struct learn_state
 {
-    1:dsn.blob      meta;
-    2:list<string>  files;
+    1:list<dsn.blob> meta;
+    2:list<string>   files;
 }
 
 enum learner_status

@@ -236,7 +236,7 @@ namespace dsn {
                 auto bb = writer.get_buffer();
                 auto buf = bb.buffer();
 
-                state.meta = blob(buf, static_cast<int>(bb.data() - bb.buffer().get()), bb.length());
+                state.meta.push_back(blob(buf, static_cast<int>(bb.data() - bb.buffer().get()), bb.length()));
 
 
                 //// Test Sample
@@ -259,7 +259,7 @@ namespace dsn {
 
             int simple_kv_service_impl::apply_learn_state(learn_state& state)
             {
-                blob bb((const char*)state.meta.data(), 0, state.meta.length());
+                blob bb((const char*)state.meta[0].data(), 0, state.meta[0].length());
 
                 binary_reader reader(bb);
 
