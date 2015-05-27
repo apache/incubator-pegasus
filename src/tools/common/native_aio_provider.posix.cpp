@@ -28,158 +28,6 @@
 
 #if defined(__MACH__) || defined(__linux__)
 
-#define _GNU_SOURCE		/* syscall() is not POSIX */
-
-#include <stdio.h>		/* for perror() */
-#include <unistd.h>		/* for syscall() */
-#include <sys/syscall.h>	/* for __NR_* definitions */
-#include <linux/aio_abi.h>	/* for AIO types and constants */
-#include <fcntl.h>		/* O_RDWR */
-#include <string.h>		/* memset() */
-#include <inttypes.h>	/* uint64_t */
-#include <fcntl.h>
-#include <cstdlib>
-
-#define __TITLE__ "aio.provider.posix"
-
-namespace dsn {
-	namespace tools {
-
-		native_posix_aio_provider::native_posix_aio_provider(disk_engine* disk, aio_provider* inner_provider)
-			: aio_provider(disk, inner_provider)
-		{
-		}
-
-		native_posix_aio_provider::~native_posix_aio_provider()
-		{
-		}
-
-		handle_t native_posix_aio_provider::open(const char* file_name, int flag, int pmode)
-		{
-			return (handle_t)::open(file_name, flag, pmode);
-		}
-
-		error_code native_posix_aio_provider::close(handle_t hFile)
-		{
-			// TODO: handle failure
-			::close(static_cast<int>(hFile));
-			return ERR_SUCCESS;
-		}
-
-		struct posix_disk_aio_context : public disk_aio
-		{
-			struct iocb cb;
-			aio_task*  tsk;
-			native_posix_aio_provider* this_;
-			utils::notify_event*  evt;
-			error_code err;
-			uint32_t bytes;
-		};
-
-		disk_aio_ptr native_posix_aio_provider::prepare_aio_context(aio_task* tsk)
-		{
-			auto r = new posix_disk_aio_context;
-			bzero((char*)&r->cb, sizeof(r->cb));
-			r->tsk = tsk;
-			r->evt = nullptr;
-			return disk_aio_ptr(r);
-		}
-
-		void native_posix_aio_provider::aio(aio_task_ptr& aio_tsk)
-		{
-			aio_internal(aio_tsk, true);
-		}
-
-		void aio_completed(sigval sigval)
-		{
-			auto ctx = (posix_disk_aio_context *)sigval.sival_ptr;
-
-			int err = aio_error(&ctx->cb);
-			if (err != EINPROGRESS)
-			{
-				if (err != 0)
-				{
-					derror("file operation failed, errno = %d", errno);
-				}
-
-				size_t bytes = aio_return(&ctx->cb); // from e.g., read or write
-				if (!ctx->evt)
-				{
-					aio_task_ptr aio(ctx->tsk);
-					ctx->this_->complete_io(aio, err == 0 ? ERR_SUCCESS : ERR_FILE_OPERATION_FAILED, bytes);
-				}
-				else
-				{
-					ctx->err = err == 0 ? ERR_SUCCESS : ERR_FILE_OPERATION_FAILED;
-					ctx->bytes = bytes;
-					ctx->evt->notify();
-				}
-			}
-		}
-
-		error_code native_posix_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool async, __out_param uint32_t* pbytes /*= nullptr*/) 
-		{
-			auto aio = (posix_disk_aio_context *)aio_tsk->aio().get();
-			int r;
-
-			aio->this_ = this;
-			aio->cb.aio_fildes = static_cast<int>((ssize_t)aio->file);
-			aio->cb.aio_buf = aio->buffer;
-			aio->cb.aio_nbytes = aio->buffer_size;
-			aio->cb.aio_offset = aio->file_offset;
-
-			// set up callback
-			aio->cb.aio_sigevent.sigev_notify = SIGEV_THREAD;
-			aio->cb.aio_sigevent.sigev_notify_function = aio_completed;
-			aio->cb.aio_sigevent.sigev_notify_attributes = nullptr;
-			aio->cb.aio_sigevent.sigev_value.sival_ptr = aio;
-
-			if (!async)
-			{
-				aio->evt = new utils::notify_event();
-				aio->err = ERR_SUCCESS;
-				aio->bytes = 0;
-			}
-
-			switch (aio->type)
-			{
-			case AIO_Read:
-				r = aio_read(&aio->cb);
-				break;
-			case AIO_Write:
-				r = aio_write(&aio->cb);
-				break;
-			default:
-				dassert(false, "unknown aio type %u", static_cast<int>(aio->type));
-				break;
-			}
-
-			if (r < 0)
-			{
-				derror("file op faile, err = %d", errno);
-			}
-
-			if (async)
-			{
-				return ERR_IO_PENDING;
-			}
-			else
-			{
-				aio->evt->wait();
-				delete aio->evt;
-				aio->evt = nullptr;
-				*pbytes = aio->bytes;
-				return aio->err;
-			}
-		}
-
-	}
-} // end namespace dsn::tools
-#endif
-
-/*
-#if defined(__MACH__) || defined(__linux__)
-
 #include <aio.h>
 #include <fcntl.h>
 #include <cstdlib>
@@ -261,7 +109,7 @@ namespace dsn {
             }
         }
 
-		error_code native_posix_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool async, __out_param uint32_t* pbytes *//*= nullptr*/ /*) 
+        error_code native_posix_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool async, __out_param uint32_t* pbytes /*= nullptr*/)
         {
             auto aio = (posix_disk_aio_context *)aio_tsk->aio().get();
             int r;
@@ -320,4 +168,3 @@ namespace dsn {
     }
 } // end namespace dsn::tools
 #endif
-*/
