@@ -18,9 +18,9 @@ namespace dsn {
 
 			{
 				zauto_lock l(_handles_map_lock);
-				auto it = _handles_map.find(request.file_name);
+				auto it = _handles_map.find(request.file_name); // find file handle cache first
 
-				if (it == _handles_map.end())
+				if (it == _handles_map.end()) // not found
 				{
 					hfile = file::open(file_path.c_str(), O_RDONLY, 0);
 					if (hfile == 0)
@@ -34,7 +34,7 @@ namespace dsn {
 					mv->stime_ms = dsn::service::env::now_ms();
 					_handles_map.insert(std::pair<std::string, map_value*>(request.file_name, mv));
 				}
-				else
+				else // found
 				{
 					hfile = it->second->ht;
 					it->second->counter++;
@@ -79,7 +79,6 @@ namespace dsn {
 					it->second->counter--;
 				}
 			}
-			
 
 			::dsn::service::copy_response resp;
 			resp.error = err;
@@ -100,7 +99,7 @@ namespace dsn {
 			int err = ERR_SUCCESS;
 			std::vector<std::string> file_list;
 			std::string folder = request.dst_dir;
-			if (request.file_list.size() == 0)
+			if (request.file_list.size() == 0) // return all file size in the destination file folder
 			{
 				get_file_names(folder, file_list);
 				for (int i = 0; i < file_list.size(); i++)
@@ -121,7 +120,7 @@ namespace dsn {
 					resp.file_list.push_back(file_list[i].substr(request.dst_dir.length(), file_list[i].length()-1));
 				}
 			}
-			else
+			else // return file size in the request file folder
 			{
 				for (int i = 0; i < request.file_list.size(); i++)
 				{
@@ -147,7 +146,7 @@ namespace dsn {
 			reply(resp);
 		}	
 
-		void nfs_service_impl::close_file()
+		void nfs_service_impl::close_file() // release out-of-date file handle
 		{
 			error_code err;
 			{

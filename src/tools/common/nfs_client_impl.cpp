@@ -32,9 +32,9 @@ namespace dsn {
 			else
 			{
 				std::cout << "reply RPC_NFS_COPY ok" << std::endl;
-				if (!_req_copy_file_queue.empty()) // pop a copy file request in queue to execute
+				if (!_req_copy_file_queue.empty()) // pop a copy file request to execute
 				{
-					begin_copy(*_req_copy_file_queue.front(), _req_copy_file_queue.front());
+					begin_copy(*_req_copy_file_queue.front(), _req_copy_file_queue.front()); // send request
 					_req_copy_file_queue.pop();
 					_client_request_count++;
 				}
@@ -43,12 +43,12 @@ namespace dsn {
 
 			std::string file_path = reqc->source_dir + reqc->file_name;
 
-			if (!reqc->overwrite)
+			if (!reqc->overwrite) // not overwrite
 			{
 				file_path += ".conflict";
 			}
-			// create file folder if not existed
-			for (int i = 0; i < file_path.length(); i++)
+			
+			for (int i = 0; i < file_path.length(); i++) // create file folder if not existed
 			{
 				if (file_path[i] == '/')
 				{
@@ -104,7 +104,7 @@ namespace dsn {
 				std::cout << "get file size ok" << std::endl;
 			}
 
-			for (int i = 0; i < resp.size_list.size(); i++)
+			for (int i = 0; i < resp.size_list.size(); i++) // file list
 			{
 				int32_t size = resp.size_list[i];
 				std::cout << "this file size is " << size << ", name is " << resp.file_list[i] << std::endl;
@@ -116,7 +116,7 @@ namespace dsn {
 				else
 					req_size = size;
 
-				for (;;)
+				for (;;) // send one file with multi-round rpc
 				{
 					copy_request* req = new copy_request;
 					req->source = reqc->source;
@@ -133,15 +133,15 @@ namespace dsn {
 					else
 						req->isLast = false;
 					
-					if (_client_request_count < max_request_count)
+					if (_client_request_count < max_request_count) // not exceed the max
 					{
-						begin_copy(*req, req);
+						begin_copy(*req, req); // send copy request
 						_client_request_count++;
 					}
 					else
 					{
 						zauto_lock l(_req_copy_file_queue_lock);
-						_req_copy_file_queue.push(req);
+						_req_copy_file_queue.push(req); // enqueue instead of sending it
 					}
 
 					req_offset += req_size;
@@ -166,7 +166,7 @@ namespace dsn {
 			req->overwrite = rci->overwrite;
 			req->nfs_task = nfs_task;
 
-			begin_get_file_size(*req, req);
+			begin_get_file_size(*req, req); // async copy file
 		}
 	} 
 } 
