@@ -1,66 +1,67 @@
 /*
- * The MIT License (MIT)
- *
- * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
+* The MIT License (MIT)
+*
+* Copyright (c) 2015 Microsoft Corporation
+*
+* -=- Robust Distributed System Nucleus (rDSN) -=-
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in
+* all copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+* THE SOFTWARE.
+*/
 # pragma once
 
 # include <dsn/service_api.h>
 
 namespace dsn {
 
-    struct remote_copy_request
-    {
-        end_point   source;
-        std::string source_dir;
-        std::vector<std::string> files;
-        std::string dest_dir;
-        bool        overwrite;
-    };
+	struct remote_copy_request
+	{
+		end_point   source;
+		std::string source_dir;
+		std::vector<std::string> files;
+		std::string dest_dir;
+		bool        overwrite;
+		aio_task_ptr nfs_task; // trace task info in end_copy
+	};
 
-    struct remote_copy_response
-    {
-            
-    };
+	struct remote_copy_response
+	{
 
-    extern void marshall(::dsn::binary_writer& writer, const remote_copy_request& val, uint16_t pos = 0xffff);
+	};
 
-    extern void unmarshall(::dsn::binary_reader& reader, __out_param remote_copy_request& val);
+	extern void marshall(::dsn::binary_writer& writer, const remote_copy_request& val, uint16_t pos = 0xffff);
 
-    class nfs_node
-    {
-    public:
-        template <typename T> static nfs_node* create(service_node* node)
-        {
-            return new T(node);
-        }
+	extern void unmarshall(::dsn::binary_reader& reader, __out_param remote_copy_request& val);
 
-    public:
-        nfs_node(service_node* node) : _node(node) {}
+	class nfs_node
+	{
+	public:
+		template <typename T> static nfs_node* create(service_node* node)
+		{
+			return new T(node);
+		}
 
-        virtual void call(std::shared_ptr<remote_copy_request>& rci, aio_task_ptr& calback) = 0;
+	public:
+		nfs_node(service_node* node) : _node(node) {}
 
-    protected:
-        service_node* _node;
-    };
+		virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task_ptr& callback) = 0;
+
+	protected:
+		service_node* _node;
+	};
 }
