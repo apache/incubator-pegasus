@@ -115,14 +115,16 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->write_header.code = code;
     rc->timeout_timer = nullptr;
 
-    if (rc->read_header.gpid.app_id == -1)
+    if (rc->write_header.gpid.app_id == -1)
     {
         rc->header_pos = callback->get_request()->writer().write_placeholder();
+        dbg_dassert(rc->header_pos != 0xffff, "");
     }
     else
     {
         rc->header_pos = 0xffff;
         marshall(callback->get_request()->writer(), rc->write_header);
+        callback->get_request()->header().client.hash = gpid_to_hash(rc->write_header.gpid);
     }
 
     return rc;
@@ -151,11 +153,13 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     if (rc->read_header.gpid.app_id == -1)
     {
         rc->header_pos = callback->get_request()->writer().write_placeholder();
+        dbg_dassert(rc->header_pos != 0xffff, "");
     }
     else
     {
         rc->header_pos = 0xffff;
         marshall(callback->get_request()->writer(), rc->read_header);
+        callback->get_request()->header().client.hash = gpid_to_hash(rc->read_header.gpid);
     }
 
     return rc;
@@ -196,6 +200,7 @@ void replication_app_client_base::call(request_context* request, bool no_delay)
     if (err == ERR_SUCCESS)
     {
         dbg_dassert(addr != end_point::INVALID, "");
+        dassert(app_id > 0, "");
 
         if (request->header_pos != 0xffff)
         {
@@ -211,6 +216,7 @@ void replication_app_client_base::call(request_context* request, bool no_delay)
                 marshall(msg->writer(), request->write_header, request->header_pos);
                 msg->header().client.hash = gpid_to_hash(request->write_header.gpid);
             }
+
             request->header_pos = 0xffff;
         }
 

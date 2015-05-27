@@ -146,12 +146,10 @@ void replica::execute_mutation(mutation_ptr& mu)
                 ack_client = false;
         }
         err = _app->write_internal(mu, ack_client); 
-
-        //PerformanceCounters::Increment(PerfCounters_LocalCommitQps, nullptr);
         }
         break;
     case PS_POTENTIAL_SECONDARY:
-        if (LearningSucceeded == _potential_secondary_states.LearningState)
+        if (LearningSucceeded == _potential_secondary_states.learning_status)
         {
             if (mu->data.header.decree == _app->last_committed_decree() + 1)
             {

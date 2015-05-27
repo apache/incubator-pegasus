@@ -77,13 +77,13 @@ public:
     potential_secondary_context() :
         learning_signature(0),
         learning_round_is_running(false),
-        LearningState(learner_status::Learning_INVALID)
+        learning_status(learner_status::Learning_INVALID)
     {}
     bool cleanup(bool force);
 
 public:
     uint64_t        learning_signature;
-    learner_status  LearningState;
+    learner_status  learning_status;
     volatile bool learning_round_is_running;
 
     task_ptr       learning_task;

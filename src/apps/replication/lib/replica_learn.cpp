@@ -47,12 +47,12 @@ void replica::init_learn(uint64_t signature)
     {
         _potential_secondary_states.cleanup(true);
         _potential_secondary_states.learning_signature = signature;
-        _potential_secondary_states.LearningState = LearningWithoutPrepare;
+        _potential_secondary_states.learning_status = LearningWithoutPrepare;
         _prepare_list->reset(_app->last_committed_decree());
     }
     else
     {
-        switch (_potential_secondary_states.LearningState)
+        switch (_potential_secondary_states.learning_status)
         {
         case LearningSucceeded:
             notify_learn_completion();
@@ -62,7 +62,7 @@ void replica::init_learn(uint64_t signature)
         case LearningWithPrepare:
             if (_app->last_durable_decree() >= last_committed_decree())
             {
-                _potential_secondary_states.LearningState = LearningSucceeded;
+                _potential_secondary_states.learning_status = LearningSucceeded;
                 notify_learn_completion();
                 return;
             }
@@ -99,7 +99,7 @@ void replica::init_learn(uint64_t signature)
         _app->last_committed_decree(),
         _app->last_durable_decree(),
         last_committed_decree(),
-        enum_to_string(_potential_secondary_states.LearningState)
+        enum_to_string(_potential_secondary_states.learning_status)
         );
 }
 
@@ -198,7 +198,7 @@ void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request>& req
 
     ddebug(
         "%s: on_learn_reply with err = 0x%x, prepare_start_decree = %llu, current learnState = %s",
-        name(), resp->err, resp->prepare_start_decree, enum_to_string(_potential_secondary_states.LearningState)
+        name(), resp->err, resp->prepare_start_decree, enum_to_string(_potential_secondary_states.learning_status)
         );
 
     if (resp->err != ERR_SUCCESS)
@@ -217,9 +217,9 @@ void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request>& req
         return;
     }
 
-    if (resp->prepare_start_decree != invalid_decree && _potential_secondary_states.LearningState == LearningWithoutPrepare)
+    if (resp->prepare_start_decree != invalid_decree && _potential_secondary_states.learning_status == LearningWithoutPrepare)
     {
-        _potential_secondary_states.LearningState = LearningWithPrepare;
+        _potential_secondary_states.learning_status = LearningWithPrepare;
         _prepare_list->reset(resp->prepare_start_decree - 1);
     }
 
@@ -274,7 +274,7 @@ void replica::on_learn_remote_state(std::shared_ptr<learn_response> resp)
                 _app->last_durable_decree(),                
                 resp->commit_decree,
                 resp->prepare_start_decree,
-                enum_to_string(_potential_secondary_states.LearningState)
+                enum_to_string(_potential_secondary_states.learning_status)
                 );
 
         if (err == ERR_SUCCESS && _app->last_committed_decree() >= resp->commit_decree)
@@ -334,7 +334,7 @@ void replica::handle_learning_error(int err)
         );
 
     _potential_secondary_states.cleanup(true);
-    _potential_secondary_states.LearningState = LearningFailed;
+    _potential_secondary_states.learning_status = LearningFailed;
 
     update_local_configuration_with_no_ballot_change(PS_ERROR);
 }
@@ -354,7 +354,7 @@ void replica::notify_learn_completion()
     report.last_committed_decree_in_app = _app->last_committed_decree();
     report.last_committed_decree_in_prepare_list = last_committed_decree();
     report.learner_signature = _potential_secondary_states.learning_signature;
-    report.learner_status_ = _potential_secondary_states.LearningState;
+    report.learner_status_ = _potential_secondary_states.learning_status;
     report.node = primary_address();
     
     rpc::call_one_way_typed(_config.primary, RPC_LEARN_COMPLETITION_NOTIFY, report, gpid_to_hash(get_gpid()));

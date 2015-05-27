@@ -258,7 +258,6 @@ void replica_stub::on_client_write(message_ptr& request)
     replica_ptr rep = get_replica(hdr.gpid);
     if (rep != nullptr)
     {
-        //PerformanceCounters::Increment(PerfCounters_TotalClientWriteQps, nullptr);
         rep->on_client_write(hdr.code, request);
     }
     else
@@ -275,7 +274,6 @@ void replica_stub::on_client_read(message_ptr& request)
     replica_ptr rep = get_replica(req.gpid);
     if (rep != nullptr)
     {
-        //PerformanceCounters::Increment(PerfCounters_TotalClientReadQps, nullptr);
         rep->on_client_read(req, request);
     }
     else

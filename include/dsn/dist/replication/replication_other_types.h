@@ -52,6 +52,8 @@ namespace dsn {
         class mutation;
         typedef boost::intrusive_ptr<mutation> mutation_ptr;
 
+
+
     }
 } // namespace
 

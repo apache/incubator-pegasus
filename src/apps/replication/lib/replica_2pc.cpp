@@ -220,13 +220,13 @@ void replica::on_prepare(message_ptr& request)
 
     else if (PS_POTENTIAL_SECONDARY == status())
     {
-        if (_potential_secondary_states.LearningState != LearningWithPrepare && _potential_secondary_states.LearningState != LearningSucceeded)
+        if (_potential_secondary_states.learning_status != LearningWithPrepare && _potential_secondary_states.learning_status != LearningSucceeded)
         {
             ddebug( 
                 "%s: mutation %s on_prepare to %s skipped, learnings state = %s",
                 name(), mu->name(),
                 enum_to_string(status()),
-                enum_to_string(_potential_secondary_states.LearningState)
+                enum_to_string(_potential_secondary_states.learning_status)
                 );
 
             // do not retry as there may retries later
@@ -445,7 +445,6 @@ void replica::cleanup_preparing_mutations(bool is_primary)
             }
             else
             {
-                ////PerformanceCounters::Decrement(PerfCounters_TwoPhaseCommitOngoing, nullptr);
             }
 
             mu->clear_log_task();
