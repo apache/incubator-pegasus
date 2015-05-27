@@ -50,6 +50,6 @@ int main(int argc, char** argv)
 #endif
 
 	// specify what services and tools will run in config file, then run
-	dsn::service::system::run("D:\\rdsn_git\\rDSN\\build_vs\\bin\\dsn.nfs.test\\Debug\\config.ini", true);
+	dsn::service::system::run("config.ini", true);
 	return 0;
 }

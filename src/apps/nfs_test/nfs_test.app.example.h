@@ -96,6 +96,7 @@ public:
 
 	void on_request_timer()
 	{
+		/*
 		srand((unsigned)time(0));
 		std::string rs = "0000";
 		rs[0] = rand() % 9 + '0';
@@ -105,8 +106,12 @@ public:
 
 		std::string source_dir = "D:/rdsn/tutorial/nfs_v3/client/mydir" + rs + "/";
 		std::string dest_dir = "D:/rdsn/tutorial/nfs_v3/server/testdir/";
+		*/
+
+		std::string source_dir = ""; // add your path
+		std::string dest_dir = ""; // add your path
 		std::vector<std::string> files; // empty is for all
-		files.push_back("C++ Primer 5th edition.pdf");
+		//files.push_back("C++ Primer 5th edition.pdf"); // add your files
 		bool overwrite = true;
 		file::copy_remote_files(_server, source_dir, files, dest_dir, overwrite, LPC_NFS_COPY_FILE, nullptr,
 			std::bind(&nfs_client_app::internal_copy_callback,
