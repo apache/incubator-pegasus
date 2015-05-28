@@ -1,9 +1,7 @@
-# pragma once
 # include "nfs_client_impl.h"
-# include <dsn\internal\nfs.h>
+# include <dsn/internal/nfs.h>
 # include <queue>
-# include <io.h>
-# include <direct.h>
+# include <boost/filesystem.hpp>
 
 namespace dsn { 
 	namespace service {
@@ -39,23 +37,15 @@ namespace dsn {
             {
                 std::string file_path = req->file_size_req.dst_dir + resp.file_name;
 
-                // TODO: !overwrite means failure when file already exists
-                //if (!reqc->copy_req.overwrite) // not overwrite
-                //{
-                //    file_path += ".conflict";
-                //}
-
-                for (size_t i = 0; i < file_path.length(); i++) // create file folder if not existed
+                // create directory recursively if necessary
+                boost::filesystem::path path(file_path);
+                path = path.remove_filename();                
+                if (!boost::filesystem::exists(path))
                 {
-                    if (file_path[i] == '/')
-                    {
-                        if (access(file_path.substr(0, i).c_str(), 6) == -1)
-                        {
-                            mkdir(file_path.substr(0, i).c_str());
-                        }
-                    }
+                    boost::filesystem::create_directory(path);
                 }
 
+                // write file
                 handle_t hfile = file::open(file_path.c_str(), O_RDWR | O_CREAT, 0);
 
                 auto task = file::write(

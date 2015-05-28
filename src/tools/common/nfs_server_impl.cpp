@@ -1,8 +1,7 @@
-# pragma once
 # include "nfs_server_impl.h"
-# include <io.h>
-#include "stdlib.h"
-#include "direct.h"
+# include <cstdlib>
+# include <boost/filesystem.hpp>
+# include <sys/stat.h>
 
 namespace dsn { 
 	namespace service { 
@@ -105,16 +104,12 @@ namespace dsn {
 				for (size_t i = 0; i < file_list.size(); i++)
 				{
 					std::cout << file_list[i] << std::endl;
-					FILE *file = fopen((file_list[i]).c_str(), "r");
-					if (file == NULL)
-					{
-						derror("file open error!\n");
-						err = ERR_OBJECT_NOT_FOUND;
-						break;
-					}
-					int size = _filelength(fileno(file));
-					fseek(file, 0, SEEK_SET);
-					fclose(file);
+
+                    struct stat st;
+                    ::stat(file_list[i].c_str(), &st);
+
+                    // TODO: using int64 instead as file ma
+                    int size = st.st_size;
 
 					resp.size_list.push_back(size);
                     resp.file_list.push_back(file_list[i].substr(request.source_dir.length(), file_list[i].length() - 1));
@@ -126,16 +121,16 @@ namespace dsn {
 				{
 					std::string file_path = folder + request.file_list[i];
 
-					FILE *file = fopen(file_path.c_str(), "r");
-					if (file == NULL)
-					{
-						derror("file open error!\n");
-						err = ERR_OBJECT_NOT_FOUND;
-						break;
-					}
-					int size = _filelength(fileno(file));
-					fseek(file, 0, SEEK_SET);
-					fclose(file);
+                    struct stat st;
+                    if (0 != ::stat(file_path.c_str(), &st))
+                    {
+                        derror("file open %s error!", file_path.c_str());
+                        err = ERR_OBJECT_NOT_FOUND;
+                        break;
+                    }
+
+                    // TODO: using int64 instead as file may exceed the size of 32bit
+                    int size = st.st_size;
 
 					resp.size_list.push_back(size);
                     resp.file_list.push_back((folder + request.file_list[i]).substr(request.source_dir.length(), (folder + request.file_list[i]).length() - 1));
@@ -172,34 +167,16 @@ namespace dsn {
 			}
 		}
 
-		void nfs_service_impl::get_file_names(std::string folderPath, std::vector<std::string>& file_list)
+		void nfs_service_impl::get_file_names(std::string dir, std::vector<std::string>& file_list)
 		{
-			_finddata_t FileInfo;
-			std::string strfind = folderPath + "*";
-			intptr_t Handle = _findfirst(strfind.c_str(), &FileInfo);
-
-			if (Handle == -1L)
-			{
-				std::cout << "can not match the folder path" << std::endl;
-				return;
-			}
-			do{
-				if (FileInfo.attrib & _A_SUBDIR)
-				{
-					if ((strcmp(FileInfo.name, ".") != 0) && (strcmp(FileInfo.name, "..") != 0))
-					{
-						std::string newPath = folderPath  + FileInfo.name + "/";
-						get_file_names(newPath, file_list);
-					}
-				}
-				else
-				{
-					file_list.push_back(folderPath + FileInfo.name);
-				} 
-			} while (_findnext(Handle, &FileInfo) == 0);
-
-			_findclose(Handle);
-			return;
+            boost::filesystem::recursive_directory_iterator it(dir), end;
+            for (; it != end; ++it) 
+            {
+                if (!boost::filesystem::is_directory(*it))
+                {
+                    file_list.push_back(it->path().string());
+                }
+            }
 		}
 
 	} 
