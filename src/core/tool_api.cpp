@@ -52,7 +52,7 @@ class service_control_task : public task
 {
 public:
     service_control_task(service::service_app* app, bool start)
-        : _app(app), task(LPC_CONTROL_SERVICE_APP, 0, app->svc_node()), _start(start)
+        : _app(app), task(LPC_CONTROL_SERVICE_APP, 0, app->node()), _start(start)
     {    
     }
 
@@ -60,7 +60,14 @@ public:
     {
         if (_start)
         {
-            auto err = _app->start(_app->arg_count(), _app->args());
+            error_code err;
+            if (_app->node()->nfs())
+            {
+                err = _app->node()->nfs()->start();
+                dassert(err == ERR_SUCCESS, "start nfs failed, err = %s", err.to_string());
+            }
+
+            err = _app->start(_app->arg_count(), _app->args());
             dassert (err == ERR_SUCCESS, "start app failed, err = %s", err.to_string());
         }
         else

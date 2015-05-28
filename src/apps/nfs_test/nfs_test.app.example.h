@@ -41,26 +41,19 @@ public:
 
 	virtual ::dsn::error_code start(int argc, char** argv)
 	{
-		_nfs_node_impl = new nfs_node_impl(::dsn::service::system::config(), NULL);
-		_nfs_node_impl->get_nfs_service_impl()->open_service();
-		_file_timer = ::dsn::service::tasking::enqueue(LPC_NFS_FILE_CLOSE_TIMER, this, &nfs_server_app::on_file_timer, 0, 0, 1000);
+        _nfs_node_impl = new nfs_node_impl(this->node());
+        _nfs_node_impl->start();
+		
 		return ::dsn::ERR_SUCCESS;
 	}
 
 	virtual void stop(bool cleanup = false)
 	{
-		_file_timer->cancel(true);
-		_nfs_node_impl->get_nfs_service_impl()->close_service();
+        _nfs_node_impl->stop();
 	}
-
-	void on_file_timer()
-	{
-		_nfs_node_impl->get_nfs_service_impl()->close_file();
-	}
-
+    
 private:
 	nfs_node_impl* _nfs_node_impl;
-	::dsn::task_ptr _file_timer;
 };
 
 // client app example

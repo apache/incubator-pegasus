@@ -37,7 +37,7 @@ namespace dsn {
             simple_kv_service_impl::simple_kv_service_impl(replica* replica, configuration_ptr& cf)
                 : simple_kv_service(replica, cf)
             {
-                _learn_file_name.clear();
+                _test_file_learning = true;
             }
 
             // RPC_SIMPLE_KV_READ
@@ -237,22 +237,20 @@ namespace dsn {
                 auto buf = bb.buffer();
 
                 state.meta.push_back(blob(buf, static_cast<int>(bb.data() - bb.buffer().get()), bb.length()));
+                
+                // Test Sample
+                if (_test_file_learning)
+                {
+                    std::stringstream ss;                
+                    ss << env::random32(0, 10000);
 
-
-                //// Test Sample
-                //if (_learn_file_name.empty())
-                //{
-                //    std::stringstream ss;                
-                //    ss << std::rand();
-                //    ss >> _learn_file_name;        
-                //    _learn_file_name = dir() + "/test_transfer_" + _learn_file_name + ".txt";        
-                //    
-                //    std::ofstream fout(_learn_file_name.c_str());
-                //    fout << "Test by Kit" << std::endl;        
-                //    fout.close();        
-                //}
-                //
-                //state.files.push_back(_learn_file_name);
+                    auto learn_test_file = dir() + "/test_learning_" + ss.str() + ".txt";
+                    state.files.push_back(learn_test_file);
+                    
+                    std::ofstream fout(learn_test_file.c_str());
+                    fout << "DEADBEEF" << std::endl;        
+                    fout.close();        
+                }
 
                 return ERR_SUCCESS;
             }
@@ -293,21 +291,22 @@ namespace dsn {
 
                 flush(true);
 
-
                 bool ret = true;
-                for (auto itr = state.files.begin(); itr != state.files.end(); ++itr)
-                if (itr->find("test_transfer") != std::string::npos)
+                if (_test_file_learning)
                 {
-                    std::string fn = dir() + "/" + *itr;
+                    dassert(state.files.size() == 1, "");
+                    std::string fn = dir() + "/" + state.files[0];
                     ret = boost::filesystem::exists(fn);
-                    if (!ret) break;
+                    if (ret)
+                    {
+                        std::string s;
+                        std::ifstream fin(fn.c_str());                        
+                        
+                        getline(fin, s);
+                        fin.close();
 
-                    std::ifstream fin(fn.c_str());
-                    std::string s;
-                    getline(fin, s);
-                    fin.close();
-                    ret = (s == "Test by Kit");
-                    // FileUtil::RemoveFile(fn.c_str());
+                        ret = (s == "DEADBEEF");
+                    }
                 }
 
                 if (ret) return ERR_SUCCESS;

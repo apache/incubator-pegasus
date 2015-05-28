@@ -11,9 +11,9 @@ namespace dsn {
 		{
 			std::cout << ">>> on call RPC_COPY end, exec RPC_NFS_COPY" << std::endl;
 
-			std::string file_path = request.dst_dir + request.file_name;
-			std::shared_ptr<char> buf(new char[max_buf_size]);
-			blob bb(buf, max_buf_size);
+            std::string file_path = request.source_dir + request.file_name;
+			std::shared_ptr<char> buf(new char[_opts.max_buf_size]);
+			blob bb(buf, _opts.max_buf_size);
 			handle_t hfile;
 
 			{
@@ -98,11 +98,11 @@ namespace dsn {
 			get_file_size_response resp;
 			int err = ERR_SUCCESS;
 			std::vector<std::string> file_list;
-			std::string folder = request.dst_dir;
+			std::string folder = request.source_dir;
 			if (request.file_list.size() == 0) // return all file size in the destination file folder
 			{
 				get_file_names(folder, file_list);
-				for (int i = 0; i < file_list.size(); i++)
+				for (size_t i = 0; i < file_list.size(); i++)
 				{
 					std::cout << file_list[i] << std::endl;
 					FILE *file = fopen((file_list[i]).c_str(), "r");
@@ -117,12 +117,12 @@ namespace dsn {
 					fclose(file);
 
 					resp.size_list.push_back(size);
-					resp.file_list.push_back(file_list[i].substr(request.dst_dir.length(), file_list[i].length()-1));
+                    resp.file_list.push_back(file_list[i].substr(request.source_dir.length(), file_list[i].length() - 1));
 				}
 			}
 			else // return file size in the request file folder
 			{
-				for (int i = 0; i < request.file_list.size(); i++)
+				for (size_t i = 0; i < request.file_list.size(); i++)
 				{
 					std::string file_path = folder + request.file_list[i];
 
@@ -138,7 +138,7 @@ namespace dsn {
 					fclose(file);
 
 					resp.size_list.push_back(size);
-					resp.file_list.push_back((folder + request.file_list[i]).substr(request.dst_dir.length(), (folder + request.file_list[i]).length() - 1));
+                    resp.file_list.push_back((folder + request.file_list[i]).substr(request.source_dir.length(), (folder + request.file_list[i]).length() - 1));
 				}
 			}
 
@@ -157,7 +157,7 @@ namespace dsn {
 
 				for (auto it = _handles_map.begin(); it != _handles_map.end();)
 				{
-					if (it->second->counter == 0 && dsn::service::env::now_ms() - it->second->stime_ms > out_of_date) // not opened and expired
+					if (it->second->counter == 0 && dsn::service::env::now_ms() - it->second->stime_ms > file_open_expire_time_ms) // not opened and expired
 					{
 						err = file::close(it->second->ht);
 						_handles_map.erase(it++);

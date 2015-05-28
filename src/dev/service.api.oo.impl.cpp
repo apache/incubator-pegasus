@@ -125,7 +125,10 @@ namespace dsn {
                 int hash /*= 0*/
                 )
             {
-                aio_task_ptr tsk(new internal_use_only::service_aio_task(callback_code, owner, callback, hash));
+                aio_task_ptr tsk(callback != nullptr ?
+                    static_cast<aio_task*>(new internal_use_only::service_aio_task(callback_code, owner, callback, hash))
+                    : static_cast<aio_task*>(new aio_task_empty(callback_code, hash))
+                    );
                 read(hFile, buffer, count, offset, tsk);
                 return tsk;
             }
@@ -141,7 +144,10 @@ namespace dsn {
                 int hash /*= 0*/
                 )
             {
-                aio_task_ptr tsk(new internal_use_only::service_aio_task(callback_code, owner, callback, hash));
+                aio_task_ptr tsk(callback != nullptr  ? 
+                    static_cast<aio_task*>(new internal_use_only::service_aio_task(callback_code, owner, callback, hash))
+                    : static_cast<aio_task*>(new aio_task_empty(callback_code, hash))
+                    );
                 write(hFile, buffer, count, offset, tsk);
                 return tsk;
             }
@@ -159,7 +165,10 @@ namespace dsn {
                 int hash /*= 0*/
                 )
             {
-                aio_task_ptr tsk(new internal_use_only::service_aio_task(callback_code, owner, callback, hash));
+                aio_task_ptr tsk(callback != nullptr ?
+                    static_cast<aio_task*>(new internal_use_only::service_aio_task(callback_code, owner, callback, hash))
+                    : static_cast<aio_task*>(new aio_task_empty(callback_code, hash))
+                    );
                 copy_remote_files(remote, source_dir, files, dest_dir, overwrite, tsk);
                 return tsk;
             }

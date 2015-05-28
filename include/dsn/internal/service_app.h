@@ -56,7 +56,7 @@ public:
     const std::string& name() const { return _spec.name; }
     int arg_count() const { return static_cast<int>(_args.size()); }
     char** args() const { return (char**)&_args_ptr[0]; }
-    service_node* svc_node() const { return _svc_node; }
+    service_node* node() const { return _svc_node; }
     int id() const { return spec().id; }
 
 private:

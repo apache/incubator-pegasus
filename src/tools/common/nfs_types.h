@@ -94,8 +94,7 @@ namespace dsn { namespace service {
 		std::string file_name;
 		int32_t offset;
 		int32_t size;
-		aio_task_ptr nfs_task;
-		bool isLast;
+		bool is_last;
 		bool overwrite;
 	};
 
@@ -107,7 +106,7 @@ namespace dsn { namespace service {
 		marshall(writer, val.file_name);
 		marshall(writer, val.offset);
 		marshall(writer, val.size);
-		marshall(writer, val.isLast);
+		marshall(writer, val.is_last);
 		marshall(writer, val.overwrite);
 	};
 
@@ -119,7 +118,7 @@ namespace dsn { namespace service {
 		unmarshall(reader, val.file_name);
 		unmarshall(reader, val.offset);
 		unmarshall(reader, val.size);
-		unmarshall(reader, val.isLast);
+		unmarshall(reader, val.is_last);
 		unmarshall(reader, val.overwrite);
 	};
 
@@ -159,7 +158,6 @@ namespace dsn { namespace service {
 		std::vector< std::string> file_list;
 		std::string source_dir;
 		bool overwrite;
-		aio_task_ptr nfs_task;
 	};
 
 	inline void marshall(::dsn::binary_writer& writer, const get_file_size_request& val)

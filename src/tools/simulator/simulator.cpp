@@ -74,6 +74,9 @@ void simulator::install(service_spec& spec)
     if (spec.semaphore_factory_name == "")
         spec.semaphore_factory_name = ("dsn::tools::sim_semaphore_provider");
 
+    if (spec.nfs_factory_name == "")
+        spec.nfs_factory_name = "dsn::service::nfs_node_impl";
+
     for (auto it = spec.threadpool_specs.begin(); it != spec.threadpool_specs.end(); it++)
     {
         threadpool_spec& tspec = *it;

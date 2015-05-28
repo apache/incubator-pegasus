@@ -219,6 +219,13 @@ private:
     uint32_t         _transferred_size;
 };
 
+class aio_task_empty : public aio_task
+{
+public:
+    aio_task_empty(task_code code, int hash = 0) : aio_task(code, hash) { _is_null = true;  }
+    virtual void on_completed(error_code err, uint32_t transferred_size) override {}
+};
+
 typedef ::boost::intrusive_ptr<aio_task> aio_task_ptr;
 
 } // end namespace

@@ -57,8 +57,8 @@ namespace dsn {
             private:
                 typedef std::map<std::string, std::string> simple_kv;
                 simple_kv _store;
-                zlock    _lock;
-                std::string _learn_file_name;
+                zlock     _lock;
+                bool      _test_file_learning;
             };
 
         }

@@ -244,7 +244,9 @@ void replica::on_learn_remote_state(std::shared_ptr<learn_response> resp)
                 
     if (!resp->state.files.empty())
     {
-        file::copy_remote_files(server, resp->base_local_dir, resp->state.files, _dir, true, LPC_AIO_TEST, nullptr, nullptr);
+        auto t = file::copy_remote_files(server, resp->base_local_dir, resp->state.files, _dir, true, LPC_AIO_TEST, nullptr, nullptr);
+        t->wait();
+        err = t->error();
     }
 
     if (err == ERR_SUCCESS)
