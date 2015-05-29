@@ -33,11 +33,11 @@ private:
         handle_t hfile;
         std::string file_name;
         blob bb;
-        int32_t offset;
-        int32_t size;
+		uint64_t offset;
+		uint32_t size;
     };
 
-	void internal_read_callback(error_code err, int sz, callback_para cp, ::dsn::service::rpc_replier<::dsn::service::copy_response>& reply);
+	void internal_read_callback(error_code err, uint32_t sz, callback_para cp, ::dsn::service::rpc_replier<::dsn::service::copy_response>& reply);
 
 	void close_file();
 

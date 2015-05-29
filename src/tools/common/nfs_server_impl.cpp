@@ -62,7 +62,7 @@ namespace dsn {
 				);
 		}
 
-		void nfs_service_impl::internal_read_callback(error_code err, int sz, callback_para cp, ::dsn::service::rpc_replier<::dsn::service::copy_response>& reply)
+		void nfs_service_impl::internal_read_callback(error_code err, uint32_t sz, callback_para cp, ::dsn::service::rpc_replier<::dsn::service::copy_response>& reply)
 		{
 			if (err != 0)
 			{
@@ -110,8 +110,8 @@ namespace dsn {
                     struct stat st;
                     ::stat(file_list[i].c_str(), &st);
 
-                    // TODO: using int64 instead as file ma
-                    int size = st.st_size;
+                    // TODO: using uint64 instead as file ma
+					uint64_t size = st.st_size;
 
 					resp.size_list.push_back(size);
                     resp.file_list.push_back(file_list[i].substr(request.source_dir.length(), file_list[i].length() - 1));
@@ -132,7 +132,7 @@ namespace dsn {
                     }
 
                     // TODO: using int64 instead as file may exceed the size of 32bit
-                    int size = st.st_size;
+                    uint64_t size = st.st_size;
 
 					resp.size_list.push_back(size);
                     resp.file_list.push_back((folder + request.file_list[i]).substr(request.source_dir.length(), (folder + request.file_list[i]).length() - 1));
@@ -154,7 +154,7 @@ namespace dsn {
 
 				for (auto it = _handles_map.begin(); it != _handles_map.end();)
 				{
-					if (it->second->counter == 0 && dsn::service::env::now_ms() - it->second->stime_ms > file_open_expire_time_ms) // not opened and expired
+					if (it->second->counter == 0 && dsn::service::env::now_ms() - it->second->stime_ms > _opts.file_open_expire_time_ms) // not opened and expired
 					{
 						err = file::close(it->second->ht);
 						_handles_map.erase(it++);

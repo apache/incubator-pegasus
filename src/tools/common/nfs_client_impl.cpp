@@ -31,53 +31,98 @@ namespace dsn {
             // TODO: concurrent copy is much more complicated (e.g., out-of-order file content delivery)
             // the following logic is only right when concurrent request # == 1
             //
-            dassert(_opts.max_concurrent_remote_copy_requests == 1, "");
+            // dassert(_opts.max_concurrent_remote_copy_requests == 1, "");
 
-            if (err == ::dsn::ERR_SUCCESS)
-            {
-                std::string file_path = req->file_size_req.dst_dir + resp.file_name;
+			if (err == ::dsn::ERR_SUCCESS)
+			{
+				std::string file_path = req->file_size_req.dst_dir + resp.file_name;
 
-                // create directory recursively if necessary
-                boost::filesystem::path path(file_path);
-                path = path.remove_filename();                
-                if (!boost::filesystem::exists(path))
-                {
-                    boost::filesystem::create_directory(path);
-                }
+				// create directory recursively if necessary
+				boost::filesystem::path path(file_path);
+				path = path.remove_filename();
+				if (!boost::filesystem::exists(path))
+				{
+					boost::filesystem::create_directory(path);
+				}
 
-                // write file
-                handle_t hfile = file::open(file_path.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
+				handle_t hfile;
 
-                auto task = file::write(
-                    hfile,
-                    resp.file_content.data(),
-                    resp.size,
-                    resp.offset,
-                    LPC_NFS_WRITE,
-                    nullptr,
-                    nullptr,
-                    0);
+				{
+					zauto_lock l(_handles_map_lock);
+					auto it = _handles_map.find(file_path.c_str()); // find file handle cache first
 
-                task->wait();
-                file::close(hfile);
+					if (it == _handles_map.end()) // not found
+					{
+						hfile = file::open(file_path.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
+						if (hfile == 0)
+						{
+							derror("file operation failed");
+							return;
+						}
+						file_handle_info* fh = new file_handle_info;
+						fh->ht = hfile;
+						fh->concurrent_count = 1;
+						fh->last_access_time = dsn::service::env::now_ms();
+						_handles_map.insert(std::pair<std::string, file_handle_info*>(file_path.c_str(), fh));
+					}
+					else // found
+					{
+						hfile = it->second->ht;
+						it->second->concurrent_count++;
+						it->second->last_access_time = dsn::service::env::now_ms();
+					}
+				}
 
-                err = task->error();
-            }
-
-            auto left_reqs = --req->copy_request_count;
-            if (0 == left_reqs || err != ERR_SUCCESS)
-            {
-                req->finished = true;
-                req->nfs_task->enqueue(err, 0, req->nfs_task->node());
-            }
-
-            if (0 == left_reqs)
-            {
-                delete req;
-            }
-
-            continue_copy(1);
+				auto task = file::write(
+					hfile,
+					resp.file_content.data(),
+					resp.size,
+					resp.offset,
+					LPC_NFS_WRITE,
+					nullptr,
+					std::bind(
+					&nfs_client_impl::internal_write_callback,
+					this,
+					std::placeholders::_1,
+					std::placeholders::_2,
+					file_path,
+					req
+					),
+					0);
+			}
         }
+
+		void nfs_client_impl::internal_write_callback(error_code err, uint32_t sz, ::std::string file_name, user_request* req)
+		{
+			if (err != 0)
+			{
+				derror("file operation failed, err = %s", err.to_string());
+			}
+
+			{
+				zauto_lock l(_handles_map_lock);
+				auto it = _handles_map.find(file_name);
+
+				if (it != _handles_map.end())
+				{
+					it->second->concurrent_count--;
+				}
+			}
+
+			auto left_reqs = --req->copy_request_count;
+			if (0 == left_reqs || err != ERR_SUCCESS)
+			{
+				req->finished = true;
+				req->nfs_task->enqueue(err, 0, req->nfs_task->node());
+			}
+
+			if (0 == left_reqs)
+			{
+				delete req;
+			}
+
+			continue_copy(1);
+		}
 
         void nfs_client_impl::continue_copy(int done_count)
         {
@@ -146,11 +191,11 @@ namespace dsn {
             std::cout << "get file size ok" << std::endl;
 			for (size_t i = 0; i < resp.size_list.size(); i++) // file list
 			{
-				int32_t size = resp.size_list[i];
+				uint64_t size = resp.size_list[i];
 				std::cout << "this file size is " << size << ", name is " << resp.file_list[i] << std::endl;
 
-				int32_t req_offset = 0;
-				int32_t req_size;
+				uint64_t req_offset = 0;
+				uint32_t req_size;
 				if (size > _opts.max_buf_size)
 					req_size = _opts.max_buf_size;
 				else
@@ -208,6 +253,32 @@ namespace dsn {
             req->copy_request_count = 0;
 
 			begin_get_file_size(req->file_size_req, req); // async copy file
+		}
+
+		void nfs_client_impl::close_file() // release out-of-date file handle
+		{
+			error_code err;
+			{
+				zauto_lock l(_handles_map_lock);
+
+				if (_handles_map.size() == 0)
+					return;
+
+				for (auto it = _handles_map.begin(); it != _handles_map.end();)
+				{
+					if (it->second->concurrent_count == 0 && dsn::service::env::now_ms() - it->second->last_access_time > _opts.file_open_expire_time_ms) // not opened and expired
+					{
+						err = file::close(it->second->ht);
+						_handles_map.erase(it++);
+						if (err != 0)
+						{
+							derror("close file error: %s", err.to_string());
+						}
+					}
+					else
+						it++;
+				}
+			}
 		}
 	} 
 } 
