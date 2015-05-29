@@ -21,13 +21,6 @@ namespace dsn {
             }
         };
 
-		struct file_handle_info
-		{
-			handle_t file_handle;
-			int32_t concurrent_request_count; // concurrent r/w count
-			uint64_t last_access_time; // last touch time
-		};
-
         class nfs_client_impl
 	        : public ::dsn::service::nfs_client
         {
@@ -38,23 +31,28 @@ namespace dsn {
 				std::atomic<int>       copy_request_count;
 				std::atomic<bool>      finished;
 			};
+			struct file_handle_info_on_client
+			{
+				handle_t file_handle;
+				uint32_t copy_request_count;
+			};
+
+			
 
         public:
             nfs_client_impl(const ::dsn::end_point& server, nfs_opts& opts) : nfs_client(server), _opts(opts)
 	        { 
 		        _server = server; 
-		        _concurrent_request_count = 0;
-				_file_close_timer = ::dsn::service::tasking::enqueue(LPC_NFS_FILE_CLOSE_TIMER, this, &nfs_client_impl::close_file, 0, 0, 30000);
+				_concurrent_copy_request_count = 0;
 	        }
 
             virtual ~nfs_client_impl() {}
-
-			void close_file();
 
 	        void begin_remote_copy(std::shared_ptr<remote_copy_request>& rci, aio_task_ptr nfs_task); // copy file request entry
 
 			void internal_write_callback(error_code err, uint32_t sz, ::std::string file_name, user_request* req);
 
+			std::map <std::string, file_handle_info_on_client*> _copy_request_count_map; // close judgement for each file 
         private:
 	        void end_copy(
 		        ::dsn::error_code err,
@@ -85,12 +83,11 @@ namespace dsn {
 
 	        zlock            _lock;
 			zlock _handles_map_lock;
+			zlock _copy_request_count_map_lock;
 
-	        int              _concurrent_request_count; // concurrent request count
+	        int              _concurrent_copy_request_count; // concurrent request count
             std::queue<copy_request_ex*> _req_copy_file_queue; // used to store the blocked requests
-			std::map <std::string, file_handle_info*> _handles_map; // cache file handles
-
-			::dsn::task_ptr _file_close_timer;
+			std::map <std::string, handle_t> _handles_map; // cache file handles
         };
 
     } 

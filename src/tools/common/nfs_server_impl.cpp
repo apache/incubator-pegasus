@@ -8,7 +8,7 @@ namespace dsn {
 
 		void nfs_service_impl::on_copy(const ::dsn::service::copy_request& request, ::dsn::service::rpc_replier<::dsn::service::copy_response>& reply)
 		{
-			std::cout << ">>> on call RPC_COPY end, exec RPC_NFS_COPY" << std::endl;
+			dinfo(">>> on call RPC_COPY end, exec RPC_NFS_COPY");
 
             std::string file_path = request.source_dir + request.file_name;
 			std::shared_ptr<char> buf(new char[_opts.max_buf_size]);
@@ -24,19 +24,23 @@ namespace dsn {
 					hfile = file::open(file_path.c_str(), O_RDONLY | O_BINARY, 0);
 					if (hfile == 0)
 					{
-						derror("file operation failed");
+						derror("file open failed");
+						::dsn::service::copy_response resp;
+						resp.error = ERR_OBJECT_NOT_FOUND;
+						resp.file_name = request.file_name;
+						reply(resp);
 						return;
 					}
-					file_handle_info* fh = new file_handle_info;
+					file_handle_info_on_server* fh = new file_handle_info_on_server;
 					fh->file_handle = hfile;
-					fh->concurrent_request_count = 1;
+					fh->file_access_count = 1;
 					fh->last_access_time = dsn::service::env::now_ms();
-					_handles_map.insert(std::pair<std::string, file_handle_info*>(request.file_name, fh));
+					_handles_map.insert(std::pair<std::string, file_handle_info_on_server*>(request.file_name, fh));
 				}
 				else // found
 				{
 					hfile = it->second->file_handle;
-					it->second->concurrent_request_count++;
+					it->second->file_access_count++;
 					it->second->last_access_time = dsn::service::env::now_ms();
 				}
 			}
@@ -75,7 +79,7 @@ namespace dsn {
 
 				if (it != _handles_map.end())
 				{
-					it->second->concurrent_request_count--;
+					it->second->file_access_count--;
 				}
 			}
 
@@ -94,7 +98,7 @@ namespace dsn {
 		// RPC_NFS_NEW_NFS_GET_FILE_SIZE 
 		void nfs_service_impl::on_get_file_size(const ::dsn::service::get_file_size_request& request, ::dsn::service::rpc_replier<::dsn::service::get_file_size_response>& reply)
 		{
-			std::cout << ">>> on call RPC_NFS_GET_FILE_SIZE end, exec RPC_NFS_GET_FILE_SIZE" << std::endl;
+			dinfo(">>> on call RPC_NFS_GET_FILE_SIZE end, exec RPC_NFS_GET_FILE_SIZE");
 
 			get_file_size_response resp;
 			int err = ERR_SUCCESS;
@@ -105,8 +109,6 @@ namespace dsn {
 				get_file_names(folder, file_list);
 				for (size_t i = 0; i < file_list.size(); i++)
 				{
-					std::cout << file_list[i] << std::endl;
-
                     struct stat st;
                     ::stat(file_list[i].c_str(), &st);
 
@@ -156,7 +158,7 @@ namespace dsn {
 
 				for (auto it = _handles_map.begin(); it != _handles_map.end();)
 				{
-					if (it->second->concurrent_request_count == 0 && dsn::service::env::now_ms() - it->second->last_access_time > _opts.file_open_expire_time_ms) // not opened and expired
+					if (it->second->file_access_count == 0 && dsn::service::env::now_ms() - it->second->last_access_time > _opts.file_open_expire_time_ms) // not opened and expired
 					{
 						err = file::close(it->second->file_handle);
 						_handles_map.erase(it++);

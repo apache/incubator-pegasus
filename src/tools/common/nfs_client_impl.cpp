@@ -11,7 +11,7 @@ namespace dsn {
 			const copy_response& resp,
 			void* context)
 		{	
-            std::cout << "*** call RPC_NFS_COPY end, return " << "(" << resp.offset << ", " << resp.size << ")" << " with err " << err.to_string() << std::endl;
+			dinfo("*** call RPC_NFS_COPY end, return (%d, %d) with %s", resp.offset, resp.size, err.to_string());
 
             copy_request_ex* reqc = (copy_request_ex*)context;
             if (err == ::dsn::ERR_SUCCESS)
@@ -51,27 +51,36 @@ namespace dsn {
 
 				{
 					zauto_lock l(_handles_map_lock);
-					auto it = _handles_map.find(file_path.c_str()); // find file handle cache first
+					auto it = _handles_map.find(file_path); // find file handle cache first
 
 					if (it == _handles_map.end()) // not found
 					{
 						hfile = file::open(file_path.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
 						if (hfile == 0)
 						{
-							derror("file operation failed");
+							derror("file open failed");
+							err = ERR_OBJECT_NOT_FOUND;
+							req->nfs_task->enqueue(err, 0, req->nfs_task->node());
 							return;
 						}
-						file_handle_info* fh = new file_handle_info;
-						fh->file_handle = hfile;
-						fh->concurrent_request_count = 1;
-						fh->last_access_time = dsn::service::env::now_ms();
-						_handles_map.insert(std::pair<std::string, file_handle_info*>(file_path.c_str(), fh));
+						_handles_map.insert(std::pair<std::string, handle_t>(file_path.c_str(), hfile));
+
+						{
+							zauto_lock l(_copy_request_count_map_lock);
+							auto it_copy = _copy_request_count_map.find(resp.file_name);
+							if (it_copy == _copy_request_count_map.end())
+							{
+								derror("%s should be existed in _copy_request_count_map.", file_path);
+							}
+							else
+							{
+								it_copy->second->file_handle = hfile;
+							}
+						}
 					}
 					else // found
 					{
-						hfile = it->second->file_handle;
-						it->second->concurrent_request_count++;
-						it->second->last_access_time = dsn::service::env::now_ms();
+						hfile = it->second;
 					}
 				}
 
@@ -87,7 +96,7 @@ namespace dsn {
 					this,
 					std::placeholders::_1,
 					std::placeholders::_2,
-					file_path,
+					resp.file_name,
 					req
 					),
 					0);
@@ -102,12 +111,20 @@ namespace dsn {
 			}
 
 			{
-				zauto_lock l(_handles_map_lock);
-				auto it = _handles_map.find(file_name);
-
-				if (it != _handles_map.end())
+				zauto_lock l(_copy_request_count_map_lock);
+				auto it_copy = _copy_request_count_map.find(file_name);
+				if (it_copy == _copy_request_count_map.end())
 				{
-					it->second->concurrent_request_count--;
+					derror("%s should be existed in _copy_request_count_map.", file_name);
+				}
+				else
+				{
+					it_copy->second->copy_request_count--;
+					if (it_copy->second->copy_request_count == 0)
+					{
+						file::close(it_copy->second->file_handle);
+						_copy_request_count_map.erase(it_copy);
+					}
 				}
 			}
 
@@ -116,6 +133,14 @@ namespace dsn {
 			{
 				req->finished = true;
 				req->nfs_task->enqueue(err, 0, req->nfs_task->node());
+
+				{
+					zauto_lock l(_handles_map_lock);
+					for (auto it = _handles_map.begin(); it != _handles_map.end();)
+					{
+						_handles_map.erase(it++);
+					}
+				}
 			}
 
 			if (0 == left_reqs)
@@ -131,9 +156,9 @@ namespace dsn {
             if (done_count > 0)
             {
                 zauto_lock l(_lock);
-                dassert(_concurrent_request_count >= done_count, "");
+				dassert(_concurrent_copy_request_count >= done_count, "");
 
-                _concurrent_request_count -= done_count;
+				_concurrent_copy_request_count -= done_count;
             }
 
             while (true)
@@ -144,12 +169,12 @@ namespace dsn {
                     if (_req_copy_file_queue.empty())
                         return;
 
-                    if (_concurrent_request_count >= _opts.max_concurrent_remote_copy_requests)
+					if (_concurrent_copy_request_count >= _opts.max_concurrent_remote_copy_requests)
                         return;
                     
                     req = _req_copy_file_queue.front();
                     _req_copy_file_queue.pop();
-                    ++_concurrent_request_count;
+					++_concurrent_copy_request_count;
                 }
 
                 if (req->user_req->finished)
@@ -159,8 +184,8 @@ namespace dsn {
                     delete req;
 
                     zauto_lock l(_lock);
-                    dassert(_concurrent_request_count >= 1, "");
-                    _concurrent_request_count -= 1;
+					dassert(_concurrent_copy_request_count >= 1, "");
+					_concurrent_copy_request_count -= 1;
                 }
                 else
                     begin_copy(req->copy_req, req);
@@ -190,11 +215,26 @@ namespace dsn {
 				return;
 			}
 
-            std::cout << "get file size ok" << std::endl;
 			for (size_t i = 0; i < resp.size_list.size(); i++) // file list
 			{
 				uint64_t size = resp.size_list[i];
-				std::cout << "this file size is " << size << ", name is " << resp.file_list[i] << std::endl;
+				dinfo("this file size is %d, name is %s", size, resp.file_list[i].c_str());
+
+				{
+					zauto_lock l(_copy_request_count_map_lock);
+					auto it = _copy_request_count_map.find(resp.file_list[i]);
+					if (it == _copy_request_count_map.end())
+					{
+						file_handle_info_on_client *fh = new file_handle_info_on_client;
+						fh->copy_request_count = 0;
+						_copy_request_count_map.insert(std::pair<std::string, file_handle_info_on_client*>(resp.file_list[i], fh));
+					}
+					else
+					{
+						// deplicated copy request, skip this file
+						continue;
+					}
+				}
 
 				uint64_t req_offset = 0;
 				uint32_t req_size;
@@ -207,7 +247,17 @@ namespace dsn {
 				{
                     copy_request_ex* req = new copy_request_ex;
 					req->copy_req.source = reqc->file_size_req.source;
-                    req->copy_req.file_name = resp.file_list[i];
+					req->copy_req.file_name = resp.file_list[i];
+
+					{
+						zauto_lock l(_copy_request_count_map_lock);
+						auto it = _copy_request_count_map.find(resp.file_list[i]);
+						if (it != _copy_request_count_map.end())
+						{
+							it->second->copy_request_count++;
+						}
+					}
+
                     req->copy_req.offset = req_offset;
                     req->copy_req.size = req_size;
                     req->copy_req.dst_dir = reqc->file_size_req.dst_dir;
@@ -255,32 +305,6 @@ namespace dsn {
             req->copy_request_count = 0;
 
 			begin_get_file_size(req->file_size_req, req); // async copy file
-		}
-
-		void nfs_client_impl::close_file() // release out-of-date file handle
-		{
-			error_code err;
-			{
-				zauto_lock l(_handles_map_lock);
-
-				if (_handles_map.size() == 0)
-					return;
-
-				for (auto it = _handles_map.begin(); it != _handles_map.end();)
-				{
-					if (it->second->concurrent_request_count == 0 && dsn::service::env::now_ms() - it->second->last_access_time > _opts.file_open_expire_time_ms) // not opened and expired
-					{
-						err = file::close(it->second->file_handle);
-						_handles_map.erase(it++);
-						if (err != 0)
-						{
-							derror("close file error: %s", err.to_string());
-						}
-					}
-					else
-						it++;
-				}
-			}
 		}
 	} 
 } 

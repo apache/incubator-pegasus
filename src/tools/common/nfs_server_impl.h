@@ -30,6 +30,13 @@ private:
 		uint32_t size;
     };
 
+	struct file_handle_info_on_server
+	{
+		handle_t file_handle;
+		int32_t file_access_count; // concurrent r/w count
+		uint64_t last_access_time; // last touch time
+	};
+
 	void internal_read_callback(error_code err, uint32_t sz, callback_para cp, ::dsn::service::rpc_replier<::dsn::service::copy_response>& reply);
 
 	void close_file();
@@ -40,7 +47,7 @@ private:
     nfs_opts  &_opts;
 
 	zlock _handles_map_lock;
-	std::map <std::string, file_handle_info*> _handles_map; // cache file handles
+	std::map <std::string, file_handle_info_on_server*> _handles_map; // cache file handles
 
     ::dsn::task_ptr _file_close_timer;
 };

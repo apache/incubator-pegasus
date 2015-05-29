@@ -8,7 +8,7 @@
 namespace dsn { 
     namespace service {
 
-        class nfs_node_impl : public nfs_node, public virtual serverlet<nfs_node_impl>
+        class nfs_node_impl : public nfs_node, public ::dsn::service::serverlet<nfs_node_impl>
         {
         public:
             nfs_node_impl(service_node* node)
@@ -18,6 +18,7 @@ namespace dsn {
                 _server = nullptr;
 
                 // TODO: create timer to cleanup idle clients
+				// realize in start, to do here will get a error on task enqueue
             }
 
             virtual ~nfs_node_impl(void)
@@ -54,6 +55,7 @@ namespace dsn {
             {
                 _server = new nfs_service_impl(_opts);
                 _server->open_service();
+				_client_clean_timer = ::dsn::service::tasking::enqueue(LPC_NFS_CLIENT_CLEAN_TIMER, this, &nfs_node_impl::clean_client, 0, 0, 30000);
                 return ERR_SUCCESS;
             }
 
@@ -64,6 +66,27 @@ namespace dsn {
                 _server = nullptr;
                 return ERR_SUCCESS;
             }
+
+			void clean_client()
+			{
+				{
+					zauto_lock l(_clients_lock);
+					if (_clients.size() == 0) // it is always == 0, TODO
+						return;
+
+					for (auto it = _clients.begin(); it != _clients.end();)
+					{
+						if (it->second->_copy_request_count_map.empty())
+						{
+							_clients.erase(it++);
+						}
+						else
+						{
+							it++;
+						}
+					}
+				}
+			}
     
         private:
             nfs_opts         _opts;
@@ -71,6 +94,7 @@ namespace dsn {
 
             zlock                                                  _clients_lock;
             std::map<end_point, std::shared_ptr<nfs_client_impl> > _clients;
+			::dsn::task_ptr _client_clean_timer;
         };
     } 
 } 
