@@ -86,8 +86,6 @@ namespace dsn {
 	        zlock            _lock;
 			zlock _handles_map_lock;
 
-			uint32_t file_open_expire_time_ms; // file expiration time
-
 	        int              _concurrent_request_count; // concurrent request count
             std::queue<copy_request_ex*> _req_copy_file_queue; // used to store the blocked requests
 			std::map <std::string, file_handle_info*> _handles_map; // cache file handles
