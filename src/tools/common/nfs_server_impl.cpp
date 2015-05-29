@@ -111,6 +111,7 @@ namespace dsn {
                     ::stat(file_list[i].c_str(), &st);
 
                     // TODO: using uint64 instead as file ma
+					// Done
 					uint64_t size = st.st_size;
 
 					resp.size_list.push_back(size);
@@ -132,6 +133,7 @@ namespace dsn {
                     }
 
                     // TODO: using int64 instead as file may exceed the size of 32bit
+					// Done
                     uint64_t size = st.st_size;
 
 					resp.size_list.push_back(size);

@@ -28,8 +28,10 @@ namespace dsn {
         void nfs_client_impl::write_copy(error_code err, user_request* req, const ::dsn::service::copy_response& resp)
         {
             // 
-            // TODO: concurrent copy is much more complicated (e.g., out-of-order file content delivery)
+            // concurrent copy is much more complicated (e.g., out-of-order file content delivery)
             // the following logic is only right when concurrent request # == 1
+			//
+			// test out-of-order file write is ok, lsl.
             //
             // dassert(_opts.max_concurrent_remote_copy_requests == 1, "");
 
