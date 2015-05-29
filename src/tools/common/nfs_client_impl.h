@@ -21,16 +21,16 @@ namespace dsn {
             }
         };
 
+		struct file_handle_info
+		{
+			handle_t file_handle;
+			int32_t concurrent_request_count; // concurrent r/w count
+			uint64_t last_access_time; // last touch time
+		};
+
         class nfs_client_impl
 	        : public ::dsn::service::nfs_client
         {
-			struct file_handle_info
-			{
-				handle_t ht;
-				int32_t concurrent_count; // concurrent r/w count
-				uint64_t last_access_time; // last touch time
-			};
-
 			struct user_request
 			{
 				get_file_size_request  file_size_req;
@@ -44,7 +44,7 @@ namespace dsn {
 	        { 
 		        _server = server; 
 		        _concurrent_request_count = 0;
-				_file_timer = ::dsn::service::tasking::enqueue(LPC_NFS_FILE_CLOSE_TIMER, this, &nfs_client_impl::close_file, 0, 0, 30000);
+				_file_close_timer = ::dsn::service::tasking::enqueue(LPC_NFS_FILE_CLOSE_TIMER, this, &nfs_client_impl::close_file, 0, 0, 30000);
 	        }
 
             virtual ~nfs_client_impl() {}
@@ -92,7 +92,7 @@ namespace dsn {
             std::queue<copy_request_ex*> _req_copy_file_queue; // used to store the blocked requests
 			std::map <std::string, file_handle_info*> _handles_map; // cache file handles
 
-			::dsn::task_ptr _file_timer;
+			::dsn::task_ptr _file_close_timer;
         };
 
     } 

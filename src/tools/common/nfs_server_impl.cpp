@@ -27,17 +27,17 @@ namespace dsn {
 						derror("file operation failed");
 						return;
 					}
-					map_value* mv = new map_value;
-					mv->ht = hfile;
-					mv->counter = 1;
-					mv->stime_ms = dsn::service::env::now_ms();
-					_handles_map.insert(std::pair<std::string, map_value*>(request.file_name, mv));
+					file_handle_info* fh = new file_handle_info;
+					fh->file_handle = hfile;
+					fh->concurrent_request_count = 1;
+					fh->last_access_time = dsn::service::env::now_ms();
+					_handles_map.insert(std::pair<std::string, file_handle_info*>(request.file_name, fh));
 				}
 				else // found
 				{
-					hfile = it->second->ht;
-					it->second->counter++;
-					it->second->stime_ms = dsn::service::env::now_ms();
+					hfile = it->second->file_handle;
+					it->second->concurrent_request_count++;
+					it->second->last_access_time = dsn::service::env::now_ms();
 				}
 			}
 			
@@ -75,7 +75,7 @@ namespace dsn {
 
 				if (it != _handles_map.end())
 				{
-					it->second->counter--;
+					it->second->concurrent_request_count--;
 				}
 			}
 
@@ -154,9 +154,9 @@ namespace dsn {
 
 				for (auto it = _handles_map.begin(); it != _handles_map.end();)
 				{
-					if (it->second->counter == 0 && dsn::service::env::now_ms() - it->second->stime_ms > _opts.file_open_expire_time_ms) // not opened and expired
+					if (it->second->concurrent_request_count == 0 && dsn::service::env::now_ms() - it->second->last_access_time > _opts.file_open_expire_time_ms) // not opened and expired
 					{
-						err = file::close(it->second->ht);
+						err = file::close(it->second->file_handle);
 						_handles_map.erase(it++);
 						if (err != 0)
 						{
