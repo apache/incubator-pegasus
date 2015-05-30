@@ -256,7 +256,8 @@ void meta_service::update_configuration(message_ptr req, message_ptr resp)
     *(int32_t*)buffer = bb.length();
     memcpy(buffer + sizeof(int32_t), bb.data(), bb.length());
 
-    blob bb2(std::shared_ptr<char>(buffer), 0, len);
+    auto tmp = std::shared_ptr<char>(buffer);
+    blob bb2(tmp, 0, len);
 
     auto request = std::shared_ptr<configuration_update_request>(new configuration_update_request());
     unmarshall(req, *request);
