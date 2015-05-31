@@ -53,7 +53,8 @@ private:
 
     // update configuration
     void update_configuration(message_ptr req, message_ptr resp);
-    void on_log_completed(error_code err, int size, char* buffer, message_ptr req, message_ptr resp);
+    void update_configuration(std::shared_ptr<configuration_update_request>& update);
+    void on_log_completed(error_code err, int size, blob buffer, std::shared_ptr<configuration_update_request> req, message_ptr resp);
     void update_configuration(configuration_update_request& request, __out_param configuration_update_response& response);
       
     // load balance actions

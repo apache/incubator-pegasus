@@ -218,9 +218,7 @@ void meta_service::replay_log(const char* log)
         node_states state;
         state.push_back(std::make_pair(request.node, true));
 
-        primary_set pris;
-        _state->set_node_state(state, pris);
-
+        _state->set_node_state(state, nullptr);
         _state->update_configuration(request, response);
     }
 
@@ -258,6 +256,11 @@ void meta_service::update_configuration(message_ptr req, message_ptr resp)
     *(int32_t*)buffer = bb.length();
     memcpy(buffer + sizeof(int32_t), bb.data(), bb.length());
 
+    blob bb2(std::shared_ptr<char>(buffer), 0, len);
+
+    auto request = std::shared_ptr<configuration_update_request>(new configuration_update_request());
+    unmarshall(req, *request);
+
     {
 
         zauto_lock l(_log_lock);
@@ -265,29 +268,53 @@ void meta_service::update_configuration(message_ptr req, message_ptr resp)
         _offset += len;
 
         file::write(_log, buffer, len, offset, LPC_CM_LOG_UPDATE, this,
-            std::bind(&meta_service::on_log_completed, this, std::placeholders::_1, std::placeholders::_2, buffer, req, resp));
+            std::bind(&meta_service::on_log_completed, this, 
+            std::placeholders::_1, std::placeholders::_2, bb2, request, resp));
     }
 }
 
-void meta_service::on_log_completed(error_code err, int size, char* buffer, message_ptr req, message_ptr resp)
+void meta_service::update_configuration(std::shared_ptr<configuration_update_request>& update)
 {
-    free(buffer);
+    binary_writer writer;
+    int32_t sz = 0;
+    marshall(writer, sz);
+    marshall(writer, *update);
+
+    blob bb = writer.get_buffer();
+    *(int32_t*)bb.data() = bb.length() - sizeof(int32_t);
+
+    {
+        zauto_lock l(_log_lock);
+        auto offset = _offset;
+        _offset += bb.length();
+
+        file::write(_log, bb.data(), bb.length(), offset, LPC_CM_LOG_UPDATE, this,
+            std::bind(&meta_service::on_log_completed, this,
+            std::placeholders::_1, std::placeholders::_2, bb, update, nullptr));
+    }
+}
+
+void meta_service::on_log_completed(error_code err, int size, 
+    blob buffer, 
+    std::shared_ptr<configuration_update_request> req, message_ptr resp)
+{
     dassert(err == ERR_SUCCESS, "log operation failed, cannot proceed, err = %s", err.to_string());
+    dassert(buffer.length() == size, "log size must equal to the specified buffer size");
 
-    configuration_update_request request;
-    configuration_update_response response;
-    unmarshall(req, request);
+    configuration_update_response response;    
+    update_configuration(*req, response);
 
-    update_configuration(request, response);
+    if (resp != nullptr)
+    {
+        meta_response_header rhdr;
+        rhdr.err = err;
+        rhdr.primary_address = primary_address();
 
-    meta_response_header rhdr;
-    rhdr.err = err;
-    rhdr.primary_address = primary_address();
+        marshall(resp, rhdr);
+        marshall(resp, response);
 
-    marshall(resp, rhdr);
-    marshall(resp, response);  
-
-    rpc::reply(resp);
+        rpc::reply(resp);
+    }
 }
 
 void meta_service::update_configuration(configuration_update_request& request, __out_param configuration_update_response& response)

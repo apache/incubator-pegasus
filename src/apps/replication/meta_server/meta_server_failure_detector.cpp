@@ -55,12 +55,12 @@ void meta_server_failure_detector::on_worker_disconnected(const std::vector<end_
         dwarn("client expired: %s:%hu", n.name.c_str(), n.port);
     }
     
-    primary_set pris;
-    _state->set_node_state(states, pris);
+    machine_fail_updates pris;
+    _state->set_node_state(states, &pris);
     
     for (auto& pri : pris)
     {
-        _svc->on_config_changed(pri.first);
+        _svc->update_configuration(pri.second);
     }
 }
 
@@ -77,8 +77,7 @@ void meta_server_failure_detector::on_worker_connected(const end_point& node)
     dwarn("Client reconnected",
         "Client %s:%hu", node.name.c_str(), node.port);
 
-    primary_set pris;
-    _state->set_node_state(states, pris);
+    _state->set_node_state(states, nullptr);
 }
 
 bool meta_server_failure_detector::set_primary(bool is_primary /*= false*/)

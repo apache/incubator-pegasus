@@ -43,7 +43,7 @@ struct app_state
     std::vector<partition_configuration> partitions;
 };
 
-typedef std::map<global_partition_id, end_point> primary_set;
+typedef std::map<global_partition_id, std::shared_ptr<configuration_update_request> > machine_fail_updates;
 
 class server_state 
 {
@@ -54,7 +54,7 @@ public:
     void init_app(configuration_ptr& cf);
 
     void get_node_state(__out_param node_states& nodes);
-    void set_node_state(const node_states& nodes, __out_param primary_set& pris);
+    void set_node_state(const node_states& nodes, __out_param machine_fail_updates* pris);
     bool get_meta_server_primary(__out_param end_point& node);
 
     void add_meta_node(const end_point& node);
