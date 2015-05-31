@@ -85,7 +85,7 @@ void meta_service::start(const char* data_dir, bool clean_state)
     _log = file::open((_data_dir + "/oplog").c_str(), O_RDWR | O_CREAT, 0666);
 
     _balancer = new load_balancer(_state);            
-    _failure_detector = new meta_server_failure_detector(_state);
+    _failure_detector = new meta_server_failure_detector(_state, this);
     
     end_point primary;
     if (_state->get_meta_server_primary(primary) && primary == primary_address())
@@ -217,7 +217,10 @@ void meta_service::replay_log(const char* log)
 
         node_states state;
         state.push_back(std::make_pair(request.node, true));
-        _state->set_node_state(state);
+
+        primary_set pris;
+        _state->set_node_state(state, pris);
+
         _state->update_configuration(request, response);
     }
 

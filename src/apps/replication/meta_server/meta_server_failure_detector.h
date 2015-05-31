@@ -34,10 +34,11 @@ using namespace dsn::replication;
 using namespace dsn::fd;
 
 class server_state;
+class meta_service;
 class meta_server_failure_detector : public failure_detector
 {
 public:
-    meta_server_failure_detector(server_state* state);
+    meta_server_failure_detector(server_state* state, meta_service* svc);
     ~meta_server_failure_detector(void);
 
     virtual bool set_primary(bool is_primary = false);
@@ -63,5 +64,6 @@ public:
 private:
     bool         _is_primary;
     server_state *_state;
+    meta_service *_svc;
 };
 
