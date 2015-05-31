@@ -25,12 +25,14 @@
  */
 #include "meta_server_failure_detector.h"
 #include "server_state.h"
+#include "meta_service.h"
 
 #define __TITLE__ "MetaServer.FD"
 
-meta_server_failure_detector::meta_server_failure_detector(server_state* state)
+meta_server_failure_detector::meta_server_failure_detector(server_state* state, meta_service* svc)
 {
     _state = state;
+    _svc = svc;
     _is_primary = false;
 }
 
@@ -53,7 +55,13 @@ void meta_server_failure_detector::on_worker_disconnected(const std::vector<end_
         dwarn("client expired: %s:%hu", n.name.c_str(), n.port);
     }
     
-    _state->set_node_state(states);
+    primary_set pris;
+    _state->set_node_state(states, pris);
+    
+    for (auto& pri : pris)
+    {
+        _svc->on_config_changed(pri.first);
+    }
 }
 
 void meta_server_failure_detector::on_worker_connected(const end_point& node)
@@ -69,7 +77,8 @@ void meta_server_failure_detector::on_worker_connected(const end_point& node)
     dwarn("Client reconnected",
         "Client %s:%hu", node.name.c_str(), node.port);
 
-    _state->set_node_state(states);
+    primary_set pris;
+    _state->set_node_state(states, pris);
 }
 
 bool meta_server_failure_detector::set_primary(bool is_primary /*= false*/)

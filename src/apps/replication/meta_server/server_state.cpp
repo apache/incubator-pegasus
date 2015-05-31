@@ -53,7 +53,7 @@ server_state::server_state(void)
     _leader_index = -1;
     _node_live_count = 0;
     _freeze = true;
-    _node_live_percentage_threshold_for_update = 75;
+    _node_live_percentage_threshold_for_update = 65;
 }
 
 server_state::~server_state(void)
@@ -173,12 +173,14 @@ void server_state::get_node_state(__out_param node_states& nodes)
     }
 }
 
-void server_state::set_node_state(const node_states& nodes)
+void server_state::set_node_state(const node_states& nodes, __out_param primary_set& pris)
 {
+    pris.clear();
+
     zauto_write_lock l(_lock);
 
     auto old_lc = _node_live_count;
-
+    
     for (auto& itr : nodes)
     {
         dassert(itr.first != end_point::INVALID, "");
@@ -192,7 +194,14 @@ void server_state::set_node_state(const node_states& nodes)
             if (!old && itr.second)
                 _node_live_count++;
             else if (old && !itr.second)
+            {
                 _node_live_count--;
+
+                for (auto& pri : it->second.primaries)
+                {
+                    pris[pri] = itr.first;
+                }
+            }   
         }   
         else
         {
@@ -211,6 +220,26 @@ void server_state::set_node_state(const node_states& nodes)
     {
         _freeze = (_node_live_count * 100 < _node_live_percentage_threshold_for_update * static_cast<int>(_nodes.size()));
         dinfo("live replica server # changes from %d to %d, freeze = %s", old_lc, _node_live_count, _freeze ? "true":"false");
+    }
+
+    for (auto& pri : pris)
+    {
+        app_state& app = _apps[pri.first.app_id - 1];
+        partition_configuration& old = app.partitions[pri.first.pidx];
+
+        dassert(old.primary == pri.second, "");
+
+        configuration_update_request request;
+        configuration_update_response response;
+
+        request.node = pri.second;
+        request.type = CT_DOWNGRADE_TO_INACTIVE;
+        request.config = old;
+        request.config.ballot++;
+        request.config.primary = end_point::INVALID;
+        
+        update_configuration_internal(request, response);
+        dassert(response.err == ERR_SUCCESS, "");
     }
 }
 
@@ -340,6 +369,11 @@ void server_state::update_configuration(configuration_update_request& request, _
 {
     zauto_write_lock l(_lock);
 
+    update_configuration_internal(request, response);
+}
+
+void server_state::update_configuration_internal(configuration_update_request& request, __out_param configuration_update_response& response)
+{
     app_state& app = _apps[request.config.gpid.app_id - 1];
     partition_configuration& old = app.partitions[request.config.gpid.pidx];
     if (old.ballot + 1 == request.config.ballot)
