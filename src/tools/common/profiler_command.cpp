@@ -1,5 +1,3 @@
-#pragma once
-
 #include <dsn/toollet/profiler.h>
 #include "profiler_header.h"
 
@@ -161,8 +159,8 @@ namespace dsn {
 				else
 					ss << "wrong arguments" << std::endl;
 			}
-			else if (args[0] == "cpu")
-				PROFILER_PDH::profiler_CPU(ss);
+			//else if (args[0] == "cpu")
+			//	PROFILER_PDH::profiler_CPU(ss);
 			else 
 				ss << "wrong arguments" << std::endl;
 

@@ -1,28 +1,28 @@
 /*
- * The MIT License (MIT)
- *
- * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
+* The MIT License (MIT)
+*
+* Copyright (c) 2015 Microsoft Corporation
+*
+* -=- Robust Distributed System Nucleus (rDSN) -=-
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in
+* all copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+* THE SOFTWARE.
+*/
 
 #include <dsn/toollet/profiler.h>
 #include <dsn/service_api.h>
@@ -42,15 +42,15 @@ namespace dsn {
 		task_spec_profiler* s_spec_profilers = nullptr;
 		std::map<std::string, perf_counter_ptr_type> counter_info::pointer_type;
 		counter_info* counter_info_ptr[] = {
-			new counter_info({ "queue_time", "queuing_time", "qt" },								TASK_QUEUEING_TIME_NS,				COUNTER_TYPE_NUMBER_PERCENTILES,	"QUEQING TIME", "ns"),
-			new counter_info({ "execute_time", "executing_time", "exec_time", "et" },				TASK_EXEC_TIME_NS,					COUNTER_TYPE_NUMBER_PERCENTILES,	"EXECUTING TIME", "ns"),
-			new counter_info({ "task_throughput", "throughput", "tp" },								TASK_THROUGHPUT,					COUNTER_TYPE_RATE,					"THROUGHPUT", "#/s"),
-			new counter_info({ "task_cancelled", "cancelled", "cc" },								TASK_CANCELLED,						COUNTER_TYPE_NUMBER,				"CANCELLED", "#"),
-			new counter_info({ "aio_latency", "aiol" },												AIO_LATENCY_NS,						COUNTER_TYPE_NUMBER_PERCENTILES,	"AIO LATENCY", "ns"),
-			new counter_info({ "rpc_server_latency", "rpc_slatency", "rpcsl" },						RPC_SERVER_LATENCY_NS,				COUNTER_TYPE_NUMBER_PERCENTILES,	"SERVER LATENCY", "ns"),
-			new counter_info({ "rpc_client_non_timeout_latency", "rpc_cntlatency", "rpccntl" },		RPC_CLIENT_NON_TIMEOUT_LATENCY_NS,	COUNTER_TYPE_NUMBER_PERCENTILES,	"TIMEOUT LATENCY", "ns"),
-			new counter_info({ "rpc_client_timeout_throughput", "rpc_ctthroughput", "rpccttp" },	RPC_CLIENT_TIMEOUT_THROUGHPUT,		COUNTER_TYPE_RATE,					"TOUT THROUGHPUT", "#/s")
-			 };
+			new counter_info({ "queue_time", "queuing_time", "qt" }, TASK_QUEUEING_TIME_NS, COUNTER_TYPE_NUMBER_PERCENTILES, "QUEQING TIME", "ns"),
+			new counter_info({ "execute_time", "executing_time", "exec_time", "et" }, TASK_EXEC_TIME_NS, COUNTER_TYPE_NUMBER_PERCENTILES, "EXECUTING TIME", "ns"),
+			new counter_info({ "task_throughput", "throughput", "tp" }, TASK_THROUGHPUT, COUNTER_TYPE_RATE, "THROUGHPUT", "#/s"),
+			new counter_info({ "task_cancelled", "cancelled", "cc" }, TASK_CANCELLED, COUNTER_TYPE_NUMBER, "CANCELLED", "#"),
+			new counter_info({ "aio_latency", "aiol" }, AIO_LATENCY_NS, COUNTER_TYPE_NUMBER_PERCENTILES, "AIO LATENCY", "ns"),
+			new counter_info({ "rpc_server_latency", "rpc_slatency", "rpcsl" }, RPC_SERVER_LATENCY_NS, COUNTER_TYPE_NUMBER_PERCENTILES, "SERVER LATENCY", "ns"),
+			new counter_info({ "rpc_client_non_timeout_latency", "rpc_cntlatency", "rpccntl" }, RPC_CLIENT_NON_TIMEOUT_LATENCY_NS, COUNTER_TYPE_NUMBER_PERCENTILES, "TIMEOUT LATENCY", "ns"),
+			new counter_info({ "rpc_client_timeout_throughput", "rpc_ctthroughput", "rpccttp" }, RPC_CLIENT_TIMEOUT_THROUGHPUT, COUNTER_TYPE_RATE, "TOUT THROUGHPUT", "#/s")
+		};
 
 		// call normal task
 		static void profiler_on_task_enqueue(task* caller, task* callee)
@@ -244,7 +244,7 @@ namespace dsn {
 
 			// TODO: profiling on overall rpc/network/disk io. 
 			register_command({ "p", "P", "profile", "Profile", nullptr }, "profiler", profiler_output_handler);
-			::dsn::tools::PROFILER_PDH::install();
+			//::dsn::tools::PROFILER_PDH::install();
 		}
 
 		profiler::profiler(const char* name)

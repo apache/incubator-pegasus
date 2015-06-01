@@ -1,8 +1,8 @@
 #pragma once
 #define WIN32_LEAN_AND_MEAN 
 #include <iomanip>
-#include <Pdh.h>
-#include <PDHMsg.h>
+//#include <Pdh.h>
+//#include <PDHMsg.h>
 #include "shared_io_service.h"
 
 namespace dsn {
@@ -11,7 +11,7 @@ namespace dsn {
 		const int data_width = 15;
 		const int taskname_width = 30;
 		const int call_width = 15;
-		const int pdh_calc_interval = 1;
+		//const int pdh_calc_interval = 1;
 
 		enum perf_counter_ptr_type
 		{
@@ -171,7 +171,7 @@ namespace dsn {
 			std::string none;
 		};
 		
-		class PROFILER_PDH
+		/*class PROFILER_PDH
 		{
 		public:
 			static bool install();
@@ -186,7 +186,7 @@ namespace dsn {
 			static HCOUNTER* CounterHandle_Time;
 			static PDH_STATUS status;
 			static double CounterValue_CPU;
-		};
+		};*/
 
 		struct task_spec_profiler
 		{

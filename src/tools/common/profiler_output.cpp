@@ -1,5 +1,3 @@
-#pragma once
-
 #include <iomanip>
 #include <algorithm>
 #include <dsn/toollet/profiler.h>
