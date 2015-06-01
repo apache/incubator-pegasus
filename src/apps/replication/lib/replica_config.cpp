@@ -46,7 +46,15 @@ void replica::on_config_proposal(configuration_update_request& proposal)
         );
 
     if (proposal.config.ballot < get_ballot())
+    {
+        dwarn(
+            "%s: on_config_proposal is out-dated, %lld vs %lld",
+            name(),
+            proposal.config.ballot,
+            get_ballot()
+            );
         return;
+    }   
 
     if (proposal.config.ballot > get_ballot())
     {

@@ -138,7 +138,7 @@ private:
     // learning    
     void init_learn(uint64_t signature);
     void on_learn_reply(error_code err, std::shared_ptr<learn_request>& req, std::shared_ptr<learn_response>& resp);
-    void on_learn_remote_state(std::shared_ptr<learn_response> resp);
+    void on_copy_remote_state_completed(error_code err, int size, std::shared_ptr<learn_response> resp);
     void on_learn_remote_state_completed(int err);
     void handle_learning_error(int err);
     void handle_learning_succeeded_on_primary(const end_point& node, uint64_t learnSignature);

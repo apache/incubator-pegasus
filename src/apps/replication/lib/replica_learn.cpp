@@ -187,8 +187,8 @@ void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request>& req
 {
     check_hashed_access();
 
-    dassert (PS_POTENTIAL_SECONDARY == status(), "");
-    dassert (req->signature == _potential_secondary_states.learning_signature, "");
+    dassert(PS_POTENTIAL_SECONDARY == status(), "");
+    dassert(req->signature == _potential_secondary_states.learning_signature, "");
 
     if (resp == nullptr)
     {
@@ -223,32 +223,39 @@ void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request>& req
         _prepare_list->reset(resp->prepare_start_decree - 1);
     }
 
-    _potential_secondary_states.learn_remote_files_task = tasking::enqueue(
-        LPC_LEARN_REMOTE_DELTA_FILES,
-        this,
-        std::bind(&replica::on_learn_remote_state, this, resp)        
-        );
+    if (resp->state.files.size() > 0)
+    {
+        _potential_secondary_states.learn_remote_files_task = 
+            file::copy_remote_files(resp->config.primary,
+                resp->base_local_dir,
+                resp->state.files,
+                _dir,
+                true,
+                LPC_COPY_REMOTE_DELTA_FILES,
+                this,
+                std::bind(&replica::on_copy_remote_state_completed, this,
+                std::placeholders::_1,
+                std::placeholders::_2,
+                resp)
+                );
+    }
+    else
+    {
+        _potential_secondary_states.learn_remote_files_task = tasking::enqueue(
+            LPC_LEARN_REMOTE_DELTA_FILES,
+            this,
+            std::bind(&replica::on_copy_remote_state_completed, this, ERR_SUCCESS, 0, resp)
+            );
+    }
 }
 
-void replica::on_learn_remote_state(std::shared_ptr<learn_response> resp)
-{
-    int err = ERR_SUCCESS;
-    
-    //
-    // TODO: copy files using data bus service instead
-    //    
+void replica::on_copy_remote_state_completed(error_code err2, int size, std::shared_ptr<learn_response> resp)
+{   
+    int err = err2;
     learn_state localState;
     localState.meta = resp->state.meta;
 
-    end_point& server = resp->config.primary;
-                
-    if (!resp->state.files.empty())
-    {
-        auto t = file::copy_remote_files(server, resp->base_local_dir, resp->state.files, _dir, true, LPC_AIO_TEST, nullptr, nullptr);
-        t->wait();
-        err = t->error();
-    }
-
+    end_point& server = resp->config.primary;     
     if (err == ERR_SUCCESS)
     {
         for (auto itr = resp->state.files.begin(); itr != resp->state.files.end(); ++itr)

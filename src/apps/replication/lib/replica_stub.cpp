@@ -562,7 +562,7 @@ void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_, const par
 void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, global_partition_id gpid)
 {
     replica_ptr replica = get_replica(gpid);
-    if (replica != nullptr)
+    if (replica != nullptr && replica->status() != PS_POTENTIAL_SECONDARY)
     {
         ddebug(
             "%u.%u @ %s:%d: replica not exists on meta server, removed",

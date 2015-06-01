@@ -53,7 +53,7 @@ io_service_worker_count = 2
 
 ; specification for each thread pool
 [threadpool.default]
-worker_count = 1
+worker_count = 2
 
 [threadpool.THREAD_POOL_DEFAULT]
 name = default

@@ -126,6 +126,7 @@ function(dsn_add_library PROJ_NAME)
 	file(${MY_GLOB_OPTION}
 		PROJ_SRC
 		"${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
+		"${CMAKE_CURRENT_SOURCE_DIR}/*.cc"
 		"${CMAKE_CURRENT_SOURCE_DIR}/*.c"
 		"${CMAKE_CURRENT_SOURCE_DIR}/*.h"
 		)
@@ -143,6 +144,7 @@ function(dsn_add_executable PROJ_NAME BINPLACE_FILES)
 	file(${MY_GLOB_OPTION}
 		PROJ_SRC
 		"${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
+		"${CMAKE_CURRENT_SOURCE_DIR}/*.cc"
 		"${CMAKE_CURRENT_SOURCE_DIR}/*.c"
 		"${CMAKE_CURRENT_SOURCE_DIR}/*.h"
 		)
