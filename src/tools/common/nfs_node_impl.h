@@ -18,7 +18,7 @@ namespace dsn {
                 _server = nullptr;
 
                 // TODO: create timer to cleanup idle clients
-				// realize in start, to do here will get a error on task enqueue
+				// realize in start, to do here will get an error on task enqueue
             }
 
             virtual ~nfs_node_impl(void)
