@@ -28,6 +28,8 @@
 
 namespace dsn {
 
+    logging_level logging_start_level = logging_level::log_level_INFORMATION;
+
     void logv(const char *file, const char *function, const int line, logging_level logLevel, const char* title, const char* fmt, va_list args)
     {
         logging_provider* logger = service_engine::instance().logging();
