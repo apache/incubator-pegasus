@@ -245,6 +245,9 @@ bool task::wait(int timeout_milliseconds)
     return ret;
 }
 
+//
+// return - whether the task has completed (not necessarily cancelled though)
+//
 bool task::cancel(bool wait_until_finished)
 {
     task_state READY_STATE = TASK_STATE_READY;
