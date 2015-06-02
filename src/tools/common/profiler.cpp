@@ -43,14 +43,14 @@ namespace dsn {
         task_spec_profiler* s_spec_profilers = nullptr;
         std::map<std::string, perf_counter_ptr_type> counter_info::pointer_type;
         counter_info* counter_info_ptr[] = {
-            new counter_info({ "queuing_time", "queue_time", "qt" },                                TASK_QUEUEING_TIME_NS,              COUNTER_TYPE_NUMBER_PERCENTILES,    "QUEUING(ns)",      "ns"),
-            new counter_info({ "executing_time", "execute_time", "exec_time", "et" },               TASK_EXEC_TIME_NS,                  COUNTER_TYPE_NUMBER_PERCENTILES,    "EXECUTION(ns)",    "ns"),
-            new counter_info({ "task_throughput", "throughput", "tp" },                             TASK_THROUGHPUT,                    COUNTER_TYPE_RATE,                  "THROUGHPUT(#/s)",  "#/s"),
-            new counter_info({ "task_cancelled", "cancelled", "cc" },                               TASK_CANCELLED,                     COUNTER_TYPE_NUMBER,                "CANCELLED(#)",     "#"),
-            new counter_info({ "aio_latency", "aiol" },                                             AIO_LATENCY_NS,                     COUNTER_TYPE_NUMBER_PERCENTILES,    "AIO LATENCY(ns)",  "ns"),
-            new counter_info({ "rpc_server_latency", "rpc_slatency", "rpcsl" },                     RPC_SERVER_LATENCY_NS,              COUNTER_TYPE_NUMBER_PERCENTILES,    "RPC.SERVER(ns)",   "ns"),
-            new counter_info({ "rpc_client_non_timeout_latency", "rpc_cntlatency", "rpccntl" },     RPC_CLIENT_NON_TIMEOUT_LATENCY_NS,  COUNTER_TYPE_NUMBER_PERCENTILES,    "RPC.CLIENT(ns)",   "ns"),
-            new counter_info({ "rpc_client_timeout_throughput", "rpc_ctthroughput", "rpccttp" },    RPC_CLIENT_TIMEOUT_THROUGHPUT,      COUNTER_TYPE_RATE,                  "TIMEOUT(#/s)",     "#/s")
+            new counter_info({ "queue.time", "qt" },            TASK_QUEUEING_TIME_NS,              COUNTER_TYPE_NUMBER_PERCENTILES,    "QUEUE(ns)",       "ns"),
+            new counter_info({ "exec.time", "et" },             TASK_EXEC_TIME_NS,                  COUNTER_TYPE_NUMBER_PERCENTILES,    "EXEC(ns)",        "ns"),
+            new counter_info({ "throughput", "tp" },            TASK_THROUGHPUT,                    COUNTER_TYPE_RATE,                  "THP(#/s)",        "#/s"),
+            new counter_info({ "cancelled", "cc" },             TASK_CANCELLED,                     COUNTER_TYPE_NUMBER,                "CANCEL(#)",       "#"),
+            new counter_info({ "aio.latency",  "al" },          AIO_LATENCY_NS,                     COUNTER_TYPE_NUMBER_PERCENTILES,    "AIO.LATENCY(ns)", "ns"),
+            new counter_info({ "rpc.server.latency", "rpcsl" }, RPC_SERVER_LATENCY_NS,              COUNTER_TYPE_NUMBER_PERCENTILES,    "RPC.SERVER(ns)",  "ns"),
+            new counter_info({ "rpc.client.latency", "rpccl" }, RPC_CLIENT_NON_TIMEOUT_LATENCY_NS,  COUNTER_TYPE_NUMBER_PERCENTILES,    "RPC.CLIENT(ns)",  "ns"),
+            new counter_info({ "rpc.client.timeout", "rpcto" }, RPC_CLIENT_TIMEOUT_THROUGHPUT,      COUNTER_TYPE_RATE,                  "TIMEOUT(#/s)",    "#/s")
         };
 
         // call normal task
@@ -152,6 +152,11 @@ namespace dsn {
             message_ext_for_profiler::get(callee->get_request().get()) = now;
         }
 
+        static void profiler_on_rpc_create_response(message* req, message* resp)
+        {
+            message_ext_for_profiler::get(resp) = message_ext_for_profiler::get(req);
+        }
+
         // return true means continue, otherwise early terminate with task::set_error_code
         static void profiler_on_rpc_reply(task* caller, message* msg)
         {
@@ -185,35 +190,36 @@ namespace dsn {
         void register_command_profiler()
         {
             std::stringstream tmpss;
-            std::string *tmps = new std::string();
             tmpss << "NAME:" << std::endl;
-            tmpss << "    profiler - profile the process" << std::endl;
+            tmpss << "    profiler - collect performance data" << std::endl;
             tmpss << "SYNOPSIS:" << std::endl;
-            tmpss << "  show the task call dependcy table :" << std::endl;
-            tmpss << "      p|P|profile|Profile  task|t   dependency|dep   matrix" << std::endl;
-            tmpss << "  show the task call dependcy list sortby caller/callee [restricted by caller/callee task] :" << std::endl;
-            tmpss << "      p|P|profile|Profile  task|t   dependency|dep   list[$task][caller(default)|callee]" << std::endl;
-            tmpss << "  show the task information profile[restricted by task] ::" << std::endl;
-            tmpss << "      p|P|profile|Profile  task|t   info[all | $task]:" << std::endl;
-            tmpss << "  show the top N tasks sort by counter_name:" << std::endl;
-            tmpss << "      p|P|profile|Profile  task|t   top     $N     $counter_name  [$percentile]:" << std::endl;
-            tmpss << "ARGUMENTS:" << std::endl;
-            tmpss << "  $task : e.g., RPC_ECHO" << std::endl;
-            tmpss << "  $percentile : e.g, 50 for latency at 50 % percentile, 50 (default) | 90 | 95 | 99 | 999:" << std::endl;
+            tmpss << "  show how tasks call each other with what frequency:" << std::endl;
+            tmpss << "      p|P|profile|Profile task|t dependency|dep matrix" << std::endl;
+            tmpss << "  show how tasks call each oether with list format sort by caller/callee:" << std::endl;
+            tmpss << "      p|P|profile|Profile task|t dependency|dep list [$task] [caller(default)|callee]" << std::endl;
+            tmpss << "  show performance data for specific tasks:" << std::endl;
+            tmpss << "      p|P|profile|Profile task|t info [all|$task]:" << std::endl;
+            tmpss << "  show the top N task kinds sort by counter_name:" << std::endl;
+            tmpss << "      p|P|profile|Profile task|t top $N $counter_name [$percentile]:" << std::endl;
+            tmpss << "ARGUMENTS:" << std::endl;            
+            tmpss << "  $percentile : e.g, 50 for latency at 50 percentile, 50(default)|90|95|99|999:" << std::endl;
             tmpss << "  $counter_name :" << std::endl;
             for (int i = 0; i < PREF_COUNTER_COUNT; i++)
             {
                 tmpss << "      " << std::setw(data_width) << counter_info_ptr[i]->title << " :";
-                for (int j = 0; j < counter_info_ptr[i]->keys.size(); j++)
+                for (size_t j = 0; j < counter_info_ptr[i]->keys.size(); j++)
                 {
                     tmpss << " " << counter_info_ptr[i]->keys[j];
                 }
                 tmpss << std::endl;
             }
-            *tmps = tmpss.str();
-
-            // TODO: profiling on overall rpc/network/disk io. 
-            register_command({ "p", "P", "profile", "Profile", nullptr }, tmps->c_str(), profiler_output_handler);
+            tmpss << "  $task : all task code, such as" << std::endl;
+            for (int i = 1; i < task_code::max_value() && i <= 10; i++)
+            {
+                tmpss << "      " << task_code::to_string(i) << std::endl;
+            }
+                        
+            register_command({ "p", "P", "profile", "Profile"}, "profile|Profile|p|P - performance profiling", tmpss.str().c_str(), profiler_output_handler);
         }
 
         void profiler::install(service_spec& spec)
@@ -224,7 +230,7 @@ namespace dsn {
             dassert(sizeof(counter_info_ptr) / sizeof(counter_info*) == PREF_COUNTER_COUNT, "PREF COUNTER ERROR");
 
             auto profile = config()->get_value<bool>("task.default", "is_profile", false);
-            auto collect_call_count = config()->get_value<bool>("task.default", "collect_call_count", false);
+            auto collect_call_count = config()->get_value<bool>("task.default", "collect_call_count", true);
 
             for (int i = 0; i <= task_code::max_value(); i++)
             {
@@ -271,6 +277,7 @@ namespace dsn {
                 spec->on_aio_enqueue.put_back(profiler_on_aio_enqueue, "profiler");
                 spec->on_rpc_call.put_back(profiler_on_rpc_call, "profiler");
                 spec->on_rpc_request_enqueue.put_back(profiler_on_rpc_request_enqueue, "profiler");
+                spec->on_rpc_create_response.put_back(profiler_on_rpc_create_response, "profiler");
                 spec->on_rpc_reply.put_back(profiler_on_rpc_reply, "profiler");
                 spec->on_rpc_response_enqueue.put_back(profiler_on_rpc_response_enqueue, "profiler");
             }

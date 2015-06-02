@@ -157,7 +157,7 @@ message_ptr message::create_response()
     msg->_server_session = _server_session;
 
     // join point 
-    task_spec::get(_msg_header.local_rpc_code)->on_create_response.execute(this, msg.get());
+    task_spec::get(_msg_header.local_rpc_code)->on_rpc_create_response.execute(this, msg.get());
 
     return msg;
 }

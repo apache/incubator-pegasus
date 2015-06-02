@@ -181,6 +181,7 @@ typedef ::boost::intrusive_ptr<rpc_response_task> rpc_response_task_ptr;
 
 enum aio_type
 {
+    AIO_Invalid,
     AIO_Read,
     AIO_Write
 };
@@ -198,6 +199,8 @@ public:
     // filled by frameworks
     aio_type     type;
     disk_engine *engine;
+
+    disk_aio() : type(aio_type::AIO_Invalid) {}
 };
 
 typedef ::std::shared_ptr<disk_aio> disk_aio_ptr;

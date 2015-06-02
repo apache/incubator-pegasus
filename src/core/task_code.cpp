@@ -28,6 +28,7 @@
 # include <dsn/internal/perf_counters.h>
 # include <vector>
 # include <dsn/internal/logging.h>
+# include <dsn/internal/command.h>
 
 #define __TITLE__ "task_spec"
 
@@ -63,7 +64,7 @@ task_spec::task_spec(int code, const char* name, task_type type, threadpool_code
     on_rpc_request_enqueue((std::string(name) + std::string(".rpc.request.enqueue")).c_str()),
     on_rpc_reply((std::string(name) + std::string(".rpc.reply")).c_str()), 
     on_rpc_response_enqueue((std::string(name) + std::string(".rpc.response.enqueue")).c_str()),
-    on_create_response((std::string(name) + std::string(".create.response")).c_str()),
+    on_rpc_create_response((std::string(name) + std::string("rpc.create.response")).c_str()),
     rpc_call_channel(RPC_CHANNEL_TCP),
     rpc_call_header_format(NET_HDR_DSN)
 {
@@ -198,6 +199,39 @@ bool task_spec::init(configuration_ptr config)
             spec->rpc_retry_interval_milliseconds = default_spec.rpc_retry_interval_milliseconds;
         }
     }
+
+    ::dsn::register_command("task-code", 
+        "task-code - query task code containing any given keywords",        
+        "task-code keyword1 keyword2 ...",
+        [](const std::vector<std::string>& args)
+        {
+            std::stringstream ss;
+
+            for (int code = 0; code <= task_code::max_value(); code++)
+            {
+                if (code == TASK_CODE_INVALID)
+                    continue;
+
+                std::string codes = task_code::to_string(code);
+                if (args.size() == 0)
+                {
+                    ss << "    " << codes << std::endl;
+                }
+                else
+                {
+                    for (auto& arg : args)
+                    {
+                        if (codes.find(arg.c_str()) != std::string::npos)
+                        {
+                            ss << "    " << codes << std::endl;
+                        }
+                    }
+                }
+                
+            }
+            return ss.str();
+        }
+    );
 
     return true;
 }

@@ -195,7 +195,7 @@ public:
     join_point<bool, rpc_response_task*>         on_rpc_response_enqueue; // response, task
 
     // message data flow
-    join_point<void, message*, message*>         on_create_response;
+    join_point<void, message*, message*>         on_rpc_create_response;
 
 public:    
     task_spec(int code, const char* name, task_type type, threadpool_code pool, int paired_code, task_priority pri);
