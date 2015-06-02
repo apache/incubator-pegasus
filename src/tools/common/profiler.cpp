@@ -43,14 +43,14 @@ namespace dsn {
         task_spec_profiler* s_spec_profilers = nullptr;
         std::map<std::string, perf_counter_ptr_type> counter_info::pointer_type;
         counter_info* counter_info_ptr[] = {
-            new counter_info({ "queuing_time", "queue_time", "qt" }, TASK_QUEUEING_TIME_NS, COUNTER_TYPE_NUMBER_PERCENTILES, "QUEUING(ns)", "ns"),
-            new counter_info({ "executing_time", "execute_time", "exec_time", "et" }, TASK_EXEC_TIME_NS, COUNTER_TYPE_NUMBER_PERCENTILES, "EXECUTION(ns)", "ns"),
-            new counter_info({ "task_throughput", "throughput", "tp" }, TASK_THROUGHPUT, COUNTER_TYPE_RATE, "THROUGHPUT(#/s)", "#/s"),
-            new counter_info({ "task_cancelled", "cancelled", "cc" }, TASK_CANCELLED, COUNTER_TYPE_NUMBER, "CANCELLED(#)", "#"),
-            new counter_info({ "aio_latency", "aiol" }, AIO_LATENCY_NS, COUNTER_TYPE_NUMBER_PERCENTILES, "AIO LATENCY(ns)", "ns"),
-            new counter_info({ "rpc_server_latency", "rpc_slatency", "rpcsl" }, RPC_SERVER_LATENCY_NS, COUNTER_TYPE_NUMBER_PERCENTILES, "RPC.SERVER(ns)", "ns"),
-            new counter_info({ "rpc_client_non_timeout_latency", "rpc_cntlatency", "rpccntl" }, RPC_CLIENT_NON_TIMEOUT_LATENCY_NS, COUNTER_TYPE_NUMBER_PERCENTILES, "RPC.CLIENT(ns)", "ns"),
-            new counter_info({ "rpc_client_timeout_throughput", "rpc_ctthroughput", "rpccttp" }, RPC_CLIENT_TIMEOUT_THROUGHPUT, COUNTER_TYPE_RATE, "TIMEOUT(#/s)", "#/s")
+            new counter_info({ "queuing_time", "queue_time", "qt" },                                TASK_QUEUEING_TIME_NS,              COUNTER_TYPE_NUMBER_PERCENTILES,    "QUEUING(ns)",      "ns"),
+            new counter_info({ "executing_time", "execute_time", "exec_time", "et" },               TASK_EXEC_TIME_NS,                  COUNTER_TYPE_NUMBER_PERCENTILES,    "EXECUTION(ns)",    "ns"),
+            new counter_info({ "task_throughput", "throughput", "tp" },                             TASK_THROUGHPUT,                    COUNTER_TYPE_RATE,                  "THROUGHPUT(#/s)",  "#/s"),
+            new counter_info({ "task_cancelled", "cancelled", "cc" },                               TASK_CANCELLED,                     COUNTER_TYPE_NUMBER,                "CANCELLED(#)",     "#"),
+            new counter_info({ "aio_latency", "aiol" },                                             AIO_LATENCY_NS,                     COUNTER_TYPE_NUMBER_PERCENTILES,    "AIO LATENCY(ns)",  "ns"),
+            new counter_info({ "rpc_server_latency", "rpc_slatency", "rpcsl" },                     RPC_SERVER_LATENCY_NS,              COUNTER_TYPE_NUMBER_PERCENTILES,    "RPC.SERVER(ns)",   "ns"),
+            new counter_info({ "rpc_client_non_timeout_latency", "rpc_cntlatency", "rpccntl" },     RPC_CLIENT_NON_TIMEOUT_LATENCY_NS,  COUNTER_TYPE_NUMBER_PERCENTILES,    "RPC.CLIENT(ns)",   "ns"),
+            new counter_info({ "rpc_client_timeout_throughput", "rpc_ctthroughput", "rpccttp" },    RPC_CLIENT_TIMEOUT_THROUGHPUT,      COUNTER_TYPE_RATE,                  "TIMEOUT(#/s)",     "#/s")
         };
 
         // call normal task
