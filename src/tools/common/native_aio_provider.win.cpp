@@ -167,7 +167,7 @@ handle_t native_win_aio_provider::open(const char* file_name, int oflag, int pmo
 	}
 	else
 	{
-		dassert(false, "cannot create file %s, err = %x\n", file_name, ::GetLastError());
+		derror("cannot create file %s, err = %x\n", file_name, ::GetLastError());
 		return nullptr;
 	}
 }
