@@ -33,7 +33,9 @@ namespace dsn {
         {
             auto code = task_code::from_string(name.c_str(), TASK_CODE_INVALID);
             if (code == TASK_CODE_INVALID)
+            {
                 return -2;
+            }
             return code;
         }
 
@@ -63,7 +65,9 @@ namespace dsn {
         {
             auto it = counter_info::pointer_type.find(std::string(name));
             if (it == counter_info::pointer_type.end())
+            {
                 return PREF_COUNTER_INVALID;
+            }
             return it->second;
         }
 
@@ -114,9 +118,13 @@ namespace dsn {
                         }
 
                         if ((args.size() > 4) && (args[4] == "callee"))
+                        {
                             profiler_output_dependency_list_callee(ss, id);
+                        }
                         else
+                        {
                             profiler_output_dependency_list_caller(ss, id);
+                        }
 
                         return ss.str();
 
@@ -134,7 +142,9 @@ namespace dsn {
                     }
 
                     if ((args.size() > 2) && (args[2] != "all"))
+                    {
                         id = find_task_id(args[2]);
+                    }
                     if (id == -2)
                     {
                         ss << "no such task" << std::endl;
@@ -166,7 +176,9 @@ namespace dsn {
 
                     counter_percentile_type type = COUNTER_PERCENTILE_50;
                     if ((args.size() > 4) && (find_percentail_type(args[4]) != COUNTER_PERCENTILE_INVALID))
+                    {
                         type = find_percentail_type(args[4]);
+                    }
 
                     profiler_output_top(ss, counter_type, type, num);
                 }

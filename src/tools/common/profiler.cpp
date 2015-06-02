@@ -205,7 +205,9 @@ namespace dsn {
             {
                 tmpss << "      " << std::setw(data_width) << counter_info_ptr[i]->title << " :";
                 for (int j = 0; j < counter_info_ptr[i]->keys.size(); j++)
+                {
                     tmpss << " " << counter_info_ptr[i]->keys[j];
+                }
                 tmpss << std::endl;
             }
             *tmps = tmpss.str();
