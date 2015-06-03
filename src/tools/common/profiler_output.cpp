@@ -44,7 +44,7 @@ namespace dsn {
         static const std::string percentail_counter_string[COUNTER_PERCENTILE_COUNT] = { "50%", "90%", "95%", "99%", "999%" };
         profiler_output_data_type* profiler_output_data = new profiler_output_data_type(taskname_width, data_width, call_width);
 
-        static inline bool cmp(sort_node &x, sort_node &y)
+        static inline bool cmp(const sort_node &x, const sort_node &y)
         {
             if (x.val == y.val)
             {
