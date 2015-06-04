@@ -27,8 +27,7 @@
 # include <dsn/internal/coredump.h>
 
 //#ifdef _WIN32
-#if defined(__MACH__) || defined(__linux__)
-
+# if defined(__unix__)
 
 # define __TITLE__ "coredump"
 
@@ -53,5 +52,5 @@ namespace dsn {
     }
 }
 
-# endif // #if defined(__MACH__) || defined(__linux__)
+# endif // #if defined(__unix__)
 
