@@ -26,7 +26,7 @@
 
 # include "native_aio_provider.posix.h"
 
-# if defined(__unix__)
+# if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
 
 # include <aio.h>
 # include <fcntl.h>
