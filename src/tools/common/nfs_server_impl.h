@@ -1,6 +1,7 @@
 # pragma once
 # include "nfs_server.h"
 # include "nfs_client_impl.h"
+# include <dsn/service_api.h>
 
 namespace dsn { namespace service { 
 class nfs_service_impl
@@ -10,7 +11,7 @@ public:
 	nfs_service_impl(nfs_opts& opts) : 
         ::dsn::service::serverlet<nfs_service_impl>("nfs"), _opts(opts)
 	{
-        _file_close_timer = ::dsn::service::tasking::enqueue(LPC_NFS_FILE_CLOSE_TIMER, this, &nfs_service_impl::close_file, 0, 0, 30000);
+		_file_close_timer = ::dsn::service::tasking::enqueue(LPC_NFS_FILE_CLOSE_TIMER, this, &nfs_service_impl::close_file, 0, 0, opts.file_close_time);
 	}
 	virtual ~nfs_service_impl() {}
 

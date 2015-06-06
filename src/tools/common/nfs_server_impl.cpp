@@ -8,7 +8,7 @@ namespace dsn {
 
 		void nfs_service_impl::on_copy(const ::dsn::service::copy_request& request, ::dsn::service::rpc_replier<::dsn::service::copy_response>& reply)
 		{
-			dinfo(">>> on call RPC_COPY end, exec RPC_NFS_COPY");
+			//dinfo(">>> on call RPC_COPY end, exec RPC_NFS_COPY");
 
             std::string file_path = request.source_dir + request.file_name;
 			std::shared_ptr<char> buf(new char[_opts.max_buf_size]);
@@ -98,7 +98,7 @@ namespace dsn {
 		// RPC_NFS_NEW_NFS_GET_FILE_SIZE 
 		void nfs_service_impl::on_get_file_size(const ::dsn::service::get_file_size_request& request, ::dsn::service::rpc_replier<::dsn::service::get_file_size_response>& reply)
 		{
-			dinfo(">>> on call RPC_NFS_GET_FILE_SIZE end, exec RPC_NFS_GET_FILE_SIZE");
+			//dinfo(">>> on call RPC_NFS_GET_FILE_SIZE end, exec RPC_NFS_GET_FILE_SIZE");
 
 			get_file_size_response resp;
 			int err = ERR_SUCCESS;

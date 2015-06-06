@@ -11,147 +11,240 @@ namespace dsn {
 			const copy_response& resp,
 			void* context)
 		{	
-			dinfo("*** call RPC_NFS_COPY end, return (%d, %d) with %s", resp.offset, resp.size, err.to_string());
+			//dinfo("*** call RPC_NFS_COPY end, return (%d, %d) with %s", resp.offset, resp.size, err.to_string());
+			continue_copy(1); // consume left copy request
 
             copy_request_ex* reqc = (copy_request_ex*)context;
-            if (err == ::dsn::ERR_SUCCESS)
-            {
-                error_code resp_err;
-                resp_err.set(resp.error);
-            }
 
-            write_copy(err, reqc->user_req, resp);
+			if (err == ::dsn::ERR_SUCCESS)
+			{
+				{
+					zauto_lock l(_lock);
+					auto it = _file_failure_map.find(_file_path_map[resp.file_name]);
+					if (it != _file_failure_map.end())
+						return;
+				}
+			}
+
+			if (err != ::dsn::ERR_SUCCESS)
+			{
+				{
+					zauto_lock l(_lock);
+					handle_fault(_file_path_map[reqc->copy_req.file_name], reqc->user_req, err);
+				}
+				return;
+			}
+
+			if (resp.error != ::dsn::ERR_SUCCESS)
+			{
+				{
+					zauto_lock l(_lock);
+					handle_fault(_file_path_map[reqc->copy_req.file_name], reqc->user_req, err);
+				}
+				return;
+			}
+
+            write_copy(reqc->user_req, resp);
 
             delete reqc;
 		}
 
-        void nfs_client_impl::write_copy(error_code err, user_request* req, const ::dsn::service::copy_response& resp)
+        void nfs_client_impl::write_copy(user_request* req, const ::dsn::service::copy_response& resp)
         {
             // 
             // concurrent copy is much more complicated (e.g., out-of-order file content delivery)
             // the following logic is only right when concurrent request # == 1
 			//
-			// test out-of-order file write is ok, lsl.
+			// TODO: handle concurrent out-of-order file writes, lsl. done
             //
             // dassert(_opts.max_concurrent_remote_copy_requests == 1, "");
 
-			if (err == ::dsn::ERR_SUCCESS)
+			std::string file_path = req->file_size_req.dst_dir + resp.file_name;
+
+			// create directory recursively if necessary
+			boost::filesystem::path path(file_path);
+			path = path.remove_filename();
+			if (!boost::filesystem::exists(path))
 			{
-				std::string file_path = req->file_size_req.dst_dir + resp.file_name;
-
-				// create directory recursively if necessary
-				boost::filesystem::path path(file_path);
-				path = path.remove_filename();
-				if (!boost::filesystem::exists(path))
-				{
-					boost::filesystem::create_directory(path);
-				}
-
-				handle_t hfile;
-
-				{
-					zauto_lock l(_handles_map_lock);
-					auto it = _handles_map.find(file_path); // find file handle cache first
-
-					if (it == _handles_map.end()) // not found
-					{
-						hfile = file::open(file_path.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
-						if (hfile == 0)
-						{
-							derror("file open failed");
-							err = ERR_OBJECT_NOT_FOUND;
-							req->nfs_task->enqueue(err, 0, req->nfs_task->node());
-							return;
-						}
-						_handles_map.insert(std::pair<std::string, handle_t>(file_path.c_str(), hfile));
-
-						{
-							zauto_lock l(_copy_request_count_map_lock);
-							auto it_copy = _copy_request_count_map.find(resp.file_name);
-							if (it_copy == _copy_request_count_map.end())
-							{
-								derror("%s should be existed in _copy_request_count_map.", file_path);
-							}
-							else
-							{
-								it_copy->second->file_handle = hfile;
-							}
-						}
-					}
-					else // found
-					{
-						hfile = it->second;
-					}
-				}
-
-				auto task = file::write(
-					hfile,
-					resp.file_content.data(),
-					resp.size,
-					resp.offset,
-					LPC_NFS_WRITE,
-					nullptr,
-					std::bind(
-					&nfs_client_impl::internal_write_callback,
-					this,
-					std::placeholders::_1,
-					std::placeholders::_2,
-					resp.file_name,
-					req
-					),
-					0);
-			}
-        }
-
-		void nfs_client_impl::internal_write_callback(error_code err, uint32_t sz, ::std::string file_name, user_request* req)
-		{
-			if (err != 0)
-			{
-				derror("file operation failed, err = %s", err.to_string());
+				boost::filesystem::create_directory(path);
 			}
 
+			handle_t hfile;
+
 			{
-				zauto_lock l(_copy_request_count_map_lock);
-				auto it_copy = _copy_request_count_map.find(file_name);
-				if (it_copy == _copy_request_count_map.end())
+				zauto_lock l(_lock);
+				auto it_handle = _handles_map.find(file_path); // find file handle cache first
+
+				if (it_handle == _handles_map.end()) // not found
 				{
-					derror("%s should be existed in _copy_request_count_map.", file_name);
+					hfile = file::open(file_path.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
+					if (hfile == 0)
+					{
+						derror("file open failed");
+						error_code err = ERR_OBJECT_NOT_FOUND;
+						req->nfs_task->enqueue(err, 0, req->nfs_task->node());
+						return;
+					}
+					_handles_map.insert(std::pair<std::string, handle_t>(file_path, hfile));
+				}
+				else // found
+				{
+					hfile = it_handle->second;
+				}
+			
+				auto it_resp = _resp_copy_file_map.find(file_path);
+				auto it_suc = _file_failure_map.find(file_path);
+				if (it_resp == _resp_copy_file_map.end())
+				{
+					resp_copy_file_info _resp_copy_file_info;
+
+					_resp_copy_file_info.copy_response_vector.push_back(resp);
+					_resp_copy_file_info.current_offset = 0;
+					_resp_copy_file_info.finished_count = 0;
+					_resp_copy_file_info.copy_count = _file_size_map[file_path] / _opts.max_buf_size + 1;
+					_resp_copy_file_map.insert(std::pair<std::string, resp_copy_file_info>(file_path, _resp_copy_file_info));
 				}
 				else
 				{
-					it_copy->second->copy_request_count--;
-					if (it_copy->second->copy_request_count == 0)
+					it_resp->second.copy_response_vector.push_back(resp);
+				}
+
+				::dsn::service::tasking::enqueue(
+					LPC_NFS_WRITE,
+					this,
+					std::bind(
+					&nfs_client_impl::write_file,
+					this,
+					req
+					));
+			}
+        }
+
+		void nfs_client_impl::handle_fault(std::string file_path, user_request *req, error_code err)
+		{
+			derror("%s copy error", file_path.c_str());
+
+			auto it_failure = _file_failure_map.find(file_path); // add failure map
+			if (it_failure == _file_failure_map.end())
+			{
+				_file_failure_map.insert(std::pair<std::string, error_code>(file_path, err));
+			}
+			else
+				return;
+
+			auto it_copy = _resp_copy_file_map.find(file_path); // remove copy map
+
+			if (it_copy != _resp_copy_file_map.end())
+			{
+				req->copy_request_count -= it_copy->second.copy_count;
+				req->copy_request_count += it_copy->second.finished_count;
+			}
+			else
+			{
+				req->copy_request_count -= _file_size_map[file_path] / _opts.max_buf_size + 1;
+			}
+
+			if (it_copy != _resp_copy_file_map.end())
+			{
+				_resp_copy_file_map.erase(it_copy);
+			}
+
+			if (0 == req->copy_request_count)
+			{
+				handle_finish(file_path, req, err);
+			}
+		}
+
+		void nfs_client_impl::handle_success(std::string file_path, user_request *req, error_code err)
+		{
+			auto it = _resp_copy_file_map.find(file_path);
+			it->second.finished_count++;
+
+			if (it->second.finished_count == it->second.copy_count)
+			{
+				if (boost::filesystem::exists(file_path))
+				{
+					file::close(_handles_map[file_path]);
+					_resp_copy_file_map.erase(it);
+
+					auto it = _file_failure_map.find(file_path);
+					if (it != _file_failure_map.end())
 					{
-						file::close(it_copy->second->file_handle);
-						_copy_request_count_map.erase(it_copy);
+						boost::filesystem::remove(file_path);
 					}
 				}
 			}
 
 			auto left_reqs = --req->copy_request_count;
-			if (0 == left_reqs || err != ERR_SUCCESS)
+			if (0 == left_reqs)
 			{
-				req->finished = true;
-				req->nfs_task->enqueue(err, 0, req->nfs_task->node());
+				handle_finish(file_path, req, err);
+			}
+		}
 
+		void nfs_client_impl::handle_finish(std::string file_path, user_request *req, error_code err)
+		{
+			req->finished = true;
+
+			if (_file_failure_map.empty())
+			{
+				req->nfs_task->enqueue(ERR_SUCCESS, 0, req->nfs_task->node());
+			}
+			else
+			{
+				req->nfs_task->enqueue(_file_failure_map.begin()->second, 0, req->nfs_task->node());
+			}
+
+			for (auto it = _file_failure_map.begin(); it != _file_failure_map.end();)
+			{
+				if (boost::filesystem::exists(it->first))
 				{
-					zauto_lock l(_handles_map_lock);
-					for (auto it = _handles_map.begin(); it != _handles_map.end();)
+					file::close(_handles_map[it->first]);
+					boost::filesystem::remove(it->first);
+				}
+				it++;
+				//_file_failure_map.erase(it++); // TODO: clean failure_map
+			}
+
+			for (auto it = _handles_map.begin(); it != _handles_map.end();)
+			{
+				_handles_map.erase(it++);
+			}
+
+			for (auto it = _file_size_map.begin(); it != _file_size_map.end();)
+			{
+				_file_size_map.erase(it++);
+			}
+
+			delete(req);
+			_file_size_map.clear();
+			//_file_failure_map.clear();
+			_resp_copy_file_map.clear();
+		}
+
+		void nfs_client_impl::internal_write_callback(error_code err, uint32_t sz, ::std::string file_path, user_request* req)
+		{
+			if (err != ERR_SUCCESS)
+			{
+				{
+					zauto_lock l(_lock);
+					handle_fault(file_path, req, err);
+				}
+			}
+			if (err == ERR_SUCCESS)
+			{
+				{
+					zauto_lock l(_lock);
+
+					auto it = _file_failure_map.find(file_path);
+					if (it == _file_failure_map.end())
 					{
-						_handles_map.erase(it++);
+						handle_success(file_path, req, err);
 					}
 				}
 			}
-
-			if (0 == left_reqs)
-			{
-				delete req;
-			}
-
-			continue_copy(1);
 		}
-
-        void nfs_client_impl::continue_copy(int done_count)
+		void nfs_client_impl::continue_copy(int done_count)
         {
             if (done_count > 0)
             {
@@ -167,30 +260,76 @@ namespace dsn {
                 {
                     zauto_lock l(_lock);
                     if (_req_copy_file_queue.empty())
-                        return;
+                        break;
 
 					if (_concurrent_copy_request_count >= _opts.max_concurrent_remote_copy_requests)
-                        return;
+						break;
                     
                     req = _req_copy_file_queue.front();
                     _req_copy_file_queue.pop();
 					++_concurrent_copy_request_count;
+					
+					begin_copy(req->copy_req, req);
                 }
-
-                if (req->user_req->finished)
-                {
-                    auto left_reqs = --req->user_req->copy_request_count;
-                    if (0 == left_reqs) delete req->user_req;
-                    delete req;
-
-                    zauto_lock l(_lock);
-					dassert(_concurrent_copy_request_count >= 1, "");
-					_concurrent_copy_request_count -= 1;
-                }
-                else
-                    begin_copy(req->copy_req, req);
             }
         }
+
+		void nfs_client_impl::write_file(user_request* req)
+		{
+			{
+				zauto_lock l(_lock);
+
+				copy_response resp;
+
+				for (auto it = _resp_copy_file_map.begin(); it != _resp_copy_file_map.end(); it++)
+				{
+					auto it_failure = _file_failure_map.find(it->first);
+					if (it_failure != _file_failure_map.end())
+						continue;
+
+					for (int i = 0; i < it->second.copy_response_vector.size(); i++)
+					{
+						if (it->second.copy_response_vector[i].offset == it->second.current_offset)
+						{
+							resp = it->second.copy_response_vector[i];
+							std::string tmp = resp.file_name;
+							it->second.current_offset += resp.size; // move to callback
+
+							file::write(
+								_handles_map[_file_path_map[resp.file_name]],
+								resp.file_content.data(),
+								resp.size,
+								resp.offset,
+								LPC_NFS_WRITE,
+								nullptr,
+								std::bind(
+								&nfs_client_impl::internal_write_callback,
+								this,
+								std::placeholders::_1,
+								std::placeholders::_2,
+								_file_path_map[resp.file_name],
+								req
+								),
+								0);
+							break;
+						}
+					}
+				}
+				if (_resp_copy_file_map.empty())
+					return;
+
+				::dsn::service::tasking::enqueue(
+					LPC_NFS_WRITE,
+					this,
+					std::bind(
+					&nfs_client_impl::write_file,
+					this,
+					req
+					));
+			}
+
+			
+		}
 
 		void nfs_client_impl::end_get_file_size(
 			::dsn::error_code err,
@@ -201,6 +340,7 @@ namespace dsn {
 
 			if (err != ::dsn::ERR_SUCCESS)
 			{
+				derror("remote copy request failed");
 				reqc->nfs_task->enqueue(err, 0, reqc->nfs_task->node());
                 delete reqc;
                 return;
@@ -208,6 +348,7 @@ namespace dsn {
 
 			if (resp.error != ::dsn::ERR_SUCCESS)
 			{
+				derror("remote copy request failed");
 				error_code resp_err;
 				resp_err.set(resp.error);
 				reqc->nfs_task->enqueue(resp_err, 0, reqc->nfs_task->node());
@@ -218,23 +359,23 @@ namespace dsn {
 			for (size_t i = 0; i < resp.size_list.size(); i++) // file list
 			{
 				uint64_t size = resp.size_list[i];
-				dinfo("this file size is %d, name is %s", size, resp.file_list[i].c_str());
-
 				{
-					zauto_lock l(_copy_request_count_map_lock);
-					auto it = _copy_request_count_map.find(resp.file_list[i]);
-					if (it == _copy_request_count_map.end())
+					zauto_lock l(_lock);
+					auto it_size = _file_size_map.find(reqc->file_size_req.dst_dir + resp.file_list[i]); // find file handle cache first, TODO it should be a path
+
+					if (it_size == _file_size_map.end()) // not found
 					{
-						file_handle_info_on_client *fh = new file_handle_info_on_client;
-						fh->copy_request_count = 0;
-						_copy_request_count_map.insert(std::pair<std::string, file_handle_info_on_client*>(resp.file_list[i], fh));
+						_file_size_map.insert(std::pair<std::string, uint64_t>(reqc->file_size_req.dst_dir + resp.file_list[i], size));
 					}
-					else
+
+					auto it_path = _file_path_map.find(resp.file_list[i]); // find file handle cache first, TODO it should be a path
+
+					if (it_path == _file_path_map.end()) // not found
 					{
-						// deplicated copy request, skip this file
-						continue;
+						_file_path_map.insert(std::pair<std::string, std::string>(resp.file_list[i], reqc->file_size_req.dst_dir + resp.file_list[i]));
 					}
 				}
+				//dinfo("this file size is %d, name is %s", size, resp.file_list[i].c_str());
 
 				uint64_t req_offset = 0;
 				uint32_t req_size;
@@ -248,15 +389,6 @@ namespace dsn {
                     copy_request_ex* req = new copy_request_ex;
 					req->copy_req.source = reqc->file_size_req.source;
 					req->copy_req.file_name = resp.file_list[i];
-
-					{
-						zauto_lock l(_copy_request_count_map_lock);
-						auto it = _copy_request_count_map.find(resp.file_list[i]);
-						if (it != _copy_request_count_map.end())
-						{
-							it->second->copy_request_count++;
-						}
-					}
 
                     req->copy_req.offset = req_offset;
                     req->copy_req.size = req_size;
@@ -287,7 +419,7 @@ namespace dsn {
 				}
 			}
 
-            continue_copy();
+			continue_copy();
 		}
         		
 		void nfs_client_impl::begin_remote_copy(std::shared_ptr<remote_copy_request>& rci, aio_task_ptr nfs_task)
