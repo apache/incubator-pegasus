@@ -12,7 +12,8 @@ function(ms_add_library PROJ_TYPE PROJ_NAME PROJ_SRC DO_INSTALL)
 	endif()
 
 	include_directories(${DSN_EXTRA_INCLUDEDIR})
-	add_library(${PROJ_NAME} ${PROJ_TYPE} "${PROJ_SRC}")
+	add_library(${PROJ_NAME} ${PROJ_TYPE} ${PROJ_SRC})
+
 	if(DO_INSTALL)
 		install(TARGETS ${PROJ_NAME} DESTINATION lib)
 	endif()
@@ -31,7 +32,7 @@ function(ms_add_executable PROJ_NAME PROJ_SRC INPUT_LIBS BINPLACE_FILES DO_INSTA
 	set(INSTALL_BINPLACE_DIR "bin/${PROJ_NAME}")
 
 	include_directories(${DSN_EXTRA_INCLUDEDIR})
-	add_executable(${PROJ_NAME} "${PROJ_SRC}")
+	add_executable(${PROJ_NAME} ${PROJ_SRC})
 	target_link_libraries(${PROJ_NAME} LINK_PUBLIC ${INPUT_LIBS})
 	
 	set(BINPLACE_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/")
@@ -138,6 +139,9 @@ function(dsn_add_library PROJ_NAME)
 		"${CMAKE_CURRENT_SOURCE_DIR}/*.hpp"
 		)
 	set(PROJ_SRC ${PROJ_SRC} ${DSN_EXTRA_SRC})
+    if (PROJ_SRC STREQUAL "")
+        message (FATAL "input sources cannot be empty")
+    endif()
 	ms_add_library("STATIC" ${PROJ_NAME} "${PROJ_SRC}" 1)
 endfunction(dsn_add_library)
 
@@ -158,6 +162,9 @@ function(dsn_add_executable PROJ_NAME BINPLACE_FILES)
 		)
 	set(PROJ_SRC ${PROJ_SRC} ${DSN_EXTRA_SRC})
 	set(INPUT_LIBS ${DSN_EXTRA_LIBS} ${DSN_LIBS})
+	if (PROJ_SRC STREQUAL "")
+        message (FATAL "input sources cannot be empty")
+    endif()
 	ms_add_executable(${PROJ_NAME} "${PROJ_SRC}" "${INPUT_LIBS}" "${BINPLACE_FILES}" 0)
 endfunction(dsn_add_executable PROJ_NAME BINPLACE_FILES)
 
@@ -341,8 +348,8 @@ function(dsn_common_setup)
 	dsn_setup_compiler_flags()
 	dsn_setup_packages()
 	dsn_setup_include_path()
-	dsn_setup_link_path()
 	dsn_set_output_path()
+	dsn_setup_link_path()
 	dsn_setup_install()
 endfunction(dsn_common_setup)
 
