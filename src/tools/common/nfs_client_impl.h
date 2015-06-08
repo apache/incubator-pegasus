@@ -45,12 +45,9 @@ namespace dsn {
 			{
 				uint64_t current_offset;
 				std::map<uint64_t, copy_response> copy_response_map; // map offset and response 
-				//std::vector<copy_response> copy_response_vector;
 				int finished_count;
 				int copy_count;
 			};
-
-			
 
         public:
             nfs_client_impl(const ::dsn::end_point& server, nfs_opts& opts) : nfs_client(server), _opts(opts)
