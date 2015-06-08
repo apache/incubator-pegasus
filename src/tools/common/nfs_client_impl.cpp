@@ -98,7 +98,8 @@ namespace dsn {
 				{
 					resp_copy_file_info _resp_copy_file_info;
 
-					_resp_copy_file_info.copy_response_vector.push_back(resp);
+					//_resp_copy_file_info.copy_response_vector.push_back(resp);
+					_resp_copy_file_info.copy_response_map.insert(std::pair<uint64_t, copy_response>(resp.offset, resp));
 					_resp_copy_file_info.current_offset = 0;
 					_resp_copy_file_info.finished_count = 0;
 					_resp_copy_file_info.copy_count = _file_size_map[file_path] / _opts.max_buf_size + 1;
@@ -106,11 +107,12 @@ namespace dsn {
 				}
 				else
 				{
-					it_resp->second.copy_response_vector.push_back(resp);
+					it_resp->second.copy_response_map.insert(std::pair<uint64_t, copy_response>(resp.offset, resp));
+					//it_resp->second.copy_response_vector.push_back(resp);
 				}
 
 				::dsn::service::tasking::enqueue(
-					LPC_NFS_WRITE,
+					WRITE_FILE,
 					this,
 					std::bind(
 					&nfs_client_impl::write_file,
@@ -287,6 +289,33 @@ namespace dsn {
 					if (it_failure != _file_failure_map.end())
 						continue;
 
+					auto it_response = it->second.copy_response_map.find(it->second.current_offset);
+
+					if (it_response != it->second.copy_response_map.end())
+					{
+						resp = it_response->second;
+						std::string tmp = resp.file_name;
+						it->second.current_offset += resp.size; // move to callback
+
+						file::write(
+							_handles_map[_file_path_map[resp.file_name]],
+							resp.file_content.data(),
+							resp.size,
+							resp.offset,
+							LPC_NFS_WRITE,
+							nullptr,
+							std::bind(
+							&nfs_client_impl::internal_write_callback,
+							this,
+							std::placeholders::_1,
+							std::placeholders::_2,
+							_file_path_map[resp.file_name],
+							req
+							),
+							0);
+					}
+
+					/*
 					for (int i = 0; i < it->second.copy_response_vector.size(); i++)
 					{
 						if (it->second.copy_response_vector[i].offset == it->second.current_offset)
@@ -314,12 +343,13 @@ namespace dsn {
 							break;
 						}
 					}
+					*/
 				}
 				if (_resp_copy_file_map.empty())
 					return;
 
 				::dsn::service::tasking::enqueue(
-					LPC_NFS_WRITE,
+					WRITE_FILE,
 					this,
 					std::bind(
 					&nfs_client_impl::write_file,
