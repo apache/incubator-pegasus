@@ -151,9 +151,9 @@ namespace dsn { namespace service {
             }
 
             // init provider specific system inits
-            dsn::tools::syste_init.execute(config_file);
+            dsn::tools::sys_init_before_app_created.execute(service_engine::instance().spec().config);
 
-            // TODO: register syste_exit execution
+            // TODO: register sys_exit execution
 
             // init runtime
             service_engine::instance().init_after_toollets();
@@ -218,6 +218,9 @@ namespace dsn { namespace service {
             {
                 ::dsn::command_manager::instance().start_remote_cli();
             }
+
+            // invoke customized init after apps are created
+            dsn::tools::sys_init_after_app_created.execute(service_engine::instance().spec().config);
 
             // start the tool
             dsn_all.tool->run();
@@ -470,3 +473,13 @@ namespace env
 }
 
 }} // end namespace dsn::service
+
+
+namespace dsn {
+    namespace tools {
+        tool_app* get_current_tool()
+        {
+            return ::dsn::service::dsn_all.tool;
+        }
+    }
+}

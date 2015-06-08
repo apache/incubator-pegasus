@@ -111,8 +111,9 @@ configuration_ptr config()
     return service_engine::instance().spec().config;
 }
 
-join_point<void, const char*> syste_init("system.init");
-join_point<long, syste_exit_type, int, void*> syste_exit("system.exit"); // type, error code, context (e.g., exception)
+join_point<void, configuration_ptr> sys_init_before_app_created("system.init.1");
+join_point<void, configuration_ptr> sys_init_after_app_created("system.init.2");
+join_point<long, syste_exit_type, int, void*> sys_exit("system.exit"); // type, error code, context (e.g., exception)
 
 namespace internal_use_only
 {
