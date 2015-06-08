@@ -32,6 +32,12 @@ using namespace dsn;
 using namespace dsn::service;
 using namespace dsn::replication;
 
+namespace dsn {
+    namespace replication{
+        class replication_checker;
+    }
+}
+
 typedef std::list<std::pair<end_point, bool>> node_states;
 
 struct app_state
@@ -78,6 +84,8 @@ private:
     void update_configuration_internal(configuration_update_request& request, __out_param configuration_update_response& response);
 
 private:
+    friend class ::dsn::replication::replication_checker;
+
     struct node_state
     {
         bool                          is_alive;

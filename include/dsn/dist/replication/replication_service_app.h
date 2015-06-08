@@ -45,6 +45,7 @@ public:
     virtual void stop(bool cleanup = false) override;
 
 private:
+    friend class ::dsn::replication::replication_checker;
     replica_stub_ptr _stub;
 };
 

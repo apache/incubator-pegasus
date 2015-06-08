@@ -34,6 +34,9 @@
 # include <dsn/toollet/profiler.h>
 # include <dsn/toollet/fault_injector.h>
 
+// framework specific tools
+# include <dsn/dist/replication/replication.global_check.h>
+
 int main(int argc, char** argv)
 {
 	// register replication application provider
@@ -50,6 +53,11 @@ int main(int argc, char** argv)
 	dsn::tools::register_toollet<dsn::tools::tracer>("tracer");
 	dsn::tools::register_toollet<dsn::tools::profiler>("profiler");
 	dsn::tools::register_toollet<dsn::tools::fault_injector>("fault_injector");
+    
+    dsn::tools::sys_init_after_app_created.put_back(
+        dsn::replication::install_checkers,
+        "replication.global-check"
+        );
 
     // register necessary components
 #ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION

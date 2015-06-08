@@ -33,6 +33,8 @@
 
 namespace dsn { 
 class service_node;    
+class service_control_task;
+
 namespace service {
 
 class service_app
@@ -57,17 +59,21 @@ public:
     int arg_count() const { return static_cast<int>(_args.size()); }
     char** args() const { return (char**)&_args_ptr[0]; }
     service_node* node() const { return _svc_node; }
+    const end_point& primary_address() const;
     int id() const { return spec().id; }
+    bool is_started() const { return _started; }
 
 private:
     friend class system_runner;
     void set_service_node(service_node* node) { _svc_node = node; }
         
 private:    
+    friend class ::dsn::service_control_task;
     std::vector<std::string> _args;
     std::vector<char*>       _args_ptr;
     service_node*            _svc_node;
     service_app_spec         _spec;
+    bool                     _started;
 };
 
 typedef service_app* (*service_app_factory)(service_app_spec*);

@@ -23,45 +23,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#pragma once
+# pragma once
 
-#include <dsn/tool_api.h>
+# include <dsn/internal/configuration.h>
 
-namespace dsn { namespace service { class service_app;  } }
-
-namespace dsn { namespace tools {
-
-class checker
-{
-public:
-    checker(const char* name);
-
-    virtual void check() = 0;
-
-    const std::string& name() const { return _name; }
-
-protected:
-    const std::map<std::string, ::dsn::service::service_app*>& _apps;
-
-private:
-    std::string _name;
-};
-
-class simulator : public tool_app
-{
-public:
-    simulator(const char* name)
-        : tool_app(name)
+namespace dsn {
+    namespace replication 
     {
+        void install_checkers(configuration_ptr config);
     }
-
-    void install(service_spec& s);
-    
-    virtual void run() override;
-
-    void add_checker(checker* chker);
-};
-
-// ---- inline implementation ------
-
-}} // end namespace dsn::tools
+}
