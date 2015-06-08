@@ -167,8 +167,7 @@ void scheduler::check()
 {
     for (auto& c : _checkers)
     {
-        bool r = c->check();
-        dassert(r, "checker %s failed", c->name().c_str());
+        c->check();
     }
 }
 

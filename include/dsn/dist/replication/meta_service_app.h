@@ -31,6 +31,9 @@ class server_state;
 class meta_service;
 
 namespace dsn {
+    namespace replication{
+        class replication_checker;
+    }
     namespace service {
 
         class meta_service_app : public service_app
@@ -45,6 +48,7 @@ namespace dsn {
             virtual void stop(bool cleanup = false) override;
 
         private:
+            friend class ::dsn::replication::replication_checker;
             static server_state *_reliable_state;
             meta_service*        _service;
         };
