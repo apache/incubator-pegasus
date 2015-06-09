@@ -36,7 +36,8 @@ TEST(core, binary_io)
     binary_writer writer;
     writer.write(value);
 
-    binary_reader reader(writer.get_buffer());
+    auto buf = writer.get_buffer();
+    binary_reader reader(buf);
     int value3;
     reader.read(value3);
 
@@ -54,7 +55,8 @@ TEST(core, binary_io_with_pos)
     writer.write(value);
     writer.write(value2, pos);
     
-    binary_reader reader(writer.get_buffer());
+    auto buf = writer.get_buffer();
+    binary_reader reader(buf);
     int value3, value4;
     reader.read(value3);
     reader.read(value4);
