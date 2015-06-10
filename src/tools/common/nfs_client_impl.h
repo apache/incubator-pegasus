@@ -14,6 +14,7 @@ namespace dsn {
 			int file_open_expire_time_ms;
 			int file_close_time;
 			int client_close_time;
+			int max_request_step;
 
             void init(configuration_ptr config)
             {
@@ -22,6 +23,7 @@ namespace dsn {
 				file_open_expire_time_ms = config->get_value<uint32_t>("nfs", "file_open_expire_time_ms", file_open_expire_time_ms);
 				file_close_time = config->get_value<uint32_t>("nfs", "file_close_time", file_close_time);
 				client_close_time = config->get_value<uint32_t>("nfs", "client_close_time", client_close_time);
+				max_request_step = config->get_value<uint32_t>("nfs", "client_close_time", max_request_step);
             }
         };
 
@@ -98,6 +100,7 @@ namespace dsn {
 
 			void handle_finish(std::string file_path, user_request *req, error_code err);
         
+			void garbage_collect(user_request* req);
         private:
             nfs_opts         &_opts;
 	        ::dsn::end_point _server;
@@ -105,6 +108,10 @@ namespace dsn {
 	        zlock            _lock;
 
 	        int              _concurrent_copy_request_count; // concurrent request count
+			bool			_copy_complete;
+			bool			_write_complete;
+
+			std::vector<task_ptr>	_task_ptr_list;
 
             std::queue<copy_request_ex*> _req_copy_file_queue; // store the client requests
 			std::map <std::string, handle_t> _handles_map; // cache file handles
@@ -112,6 +119,7 @@ namespace dsn {
 			std::map<std::string, uint64_t> _file_size_map; // map file name and size
 			std::map<std::string, error_code> _file_failure_map; // flag file failure info
 			std::map<std::string, std::string> _file_path_map; // map file name and path
+			std::vector<std::queue<copy_request_ex*>> _req_copy_file_vector; // store the request rpc, one file one queue
         };
 
     } 
