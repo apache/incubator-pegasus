@@ -24,11 +24,43 @@
  * THE SOFTWARE.
  */
 
-// work around for VS: cannot generate executable without source files (with input libs only)
+# include <dsn/internal/utils.h>
 
 # include <gtest/gtest.h>
 
-TEST(dummy_tests, dummy_test)
-{
+using namespace ::dsn;
+using namespace ::dsn::utils;
 
+TEST(core, binary_io)
+{
+    int value = 0xdeadbeef;
+    binary_writer writer;
+    writer.write(value);
+
+    binary_reader reader(writer.get_buffer());
+    int value3;
+    reader.read(value3);
+
+    EXPECT_TRUE(value3 == value);
 }
+
+
+TEST(core, binary_io_with_pos)
+{
+    int value = 0xdeadbeef;
+    int value2 = 0xdeadbeef + 100;
+    binary_writer writer;
+    auto pos = writer.write_placeholder();
+    
+    writer.write(value);
+    writer.write(value2, pos);
+    
+    binary_reader reader(writer.get_buffer());
+    int value3, value4;
+    reader.read(value3);
+    reader.read(value4);
+
+    EXPECT_TRUE(value3 == value2);
+    EXPECT_TRUE(value4 == value);
+}
+
