@@ -8,11 +8,8 @@ ExternalProject_Add(googletest
    #   CMAKE_ARGS -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=DebugLibs
    #            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=ReleaseLibs
    #            -DCMAKE_CXX_FLAGS=${MSVC_COMPILER_DEFS}
-   # BINARY_DIR=${} 
     CMAKE_ARGS -Dgtest_force_shared_crt=OFF
-    PREFIX "${CMAKE_CURRENT_BINARY_DIR}"
     BINARY_DIR "${PROJECT_BINARY_DIR}/lib"
-    #    SOURCE_DIR "${CMAKE_SOURCE_DIR}/ext/gtest/src"
 # Disable install step
     INSTALL_COMMAND ""
 )
