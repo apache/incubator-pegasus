@@ -26,6 +26,7 @@
 
 # include "counter.server.impl.h"
 # include <boost/filesystem.hpp>
+# include <fstream>
 
 namespace dsn {
     namespace example {
