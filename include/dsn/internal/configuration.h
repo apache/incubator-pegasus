@@ -28,6 +28,7 @@
 # include <memory>
 # include <vector>
 # include <map>
+# include <cstdio>
 # include <cstdlib>
 # include <cstring>
 # include <string>

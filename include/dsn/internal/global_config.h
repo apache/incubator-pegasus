@@ -43,8 +43,10 @@ typedef std::map<rpc_channel, network_client_config> network_client_confs;
 
 struct service_app_spec
 {
-    int                  id;
-    std::string          name;
+    int                  id;    // global for all roles
+    int                  index; // local index for the current role (1,2,3,...)
+    std::string          role;
+    std::string          name; 
     std::string          type;
     std::string          arguments;
     std::vector<int>     ports;
@@ -54,7 +56,7 @@ struct service_app_spec
 
     service_app_spec() {}
     service_app_spec(const service_app_spec& r);
-    bool init(const char* section, configuration_ptr& config);
+    bool init(const char* section, const char* role, configuration_ptr& config);
 };
 
 struct network_config_spec

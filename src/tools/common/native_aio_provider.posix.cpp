@@ -24,15 +24,15 @@
  * THE SOFTWARE.
  */
 
-#include "native_aio_provider.posix.h"
+# include "native_aio_provider.posix.h"
 
-#if defined(__MACH__) || defined(__linux__)
+# if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
 
-#include <aio.h>
-#include <fcntl.h>
-#include <cstdlib>
+# include <aio.h>
+# include <fcntl.h>
+# include <cstdlib>
 
-#define __TITLE__ "aio.provider.posix"
+# define __TITLE__ "aio.provider.posix"
 
 namespace dsn {
     namespace tools {

@@ -27,7 +27,25 @@
 
 #include <dsn/tool_api.h>
 
+namespace dsn { namespace service { class service_app;  } }
+
 namespace dsn { namespace tools {
+
+class checker
+{
+public:
+    checker(const char* name);
+
+    virtual void check() = 0;
+
+    const std::string& name() const { return _name; }
+
+protected:
+    const std::map<std::string, ::dsn::service::service_app*>& _apps;
+
+private:
+    std::string _name;
+};
 
 class simulator : public tool_app
 {
@@ -38,8 +56,12 @@ public:
     }
 
     void install(service_spec& s);
-
+    
     virtual void run() override;
+
+    void add_checker(checker* chker);
 };
+
+// ---- inline implementation ------
 
 }} // end namespace dsn::tools

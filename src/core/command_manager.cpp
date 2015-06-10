@@ -39,41 +39,27 @@ namespace dsn {
 
     void register_command(
         const std::vector<const char*>& commands, // commands, e.g., {"help", "Help", "HELP", "h", "H"}
-        const char* help, // help info for users
+        const char* help_one_line,
+        const char* help_long, // help info for users
         command_handler handler
         )
     {
-        command_manager::instance().register_command(commands, help, handler);
+        command_manager::instance().register_command(commands, help_one_line, help_long, handler);
     }
 
     void register_command(
         const char* command, // commands, e.g., "help"
-        const char* help, // help info for users
+        const char* help_one_line,
+        const char* help_long,
         command_handler handler
         )
     {
         std::vector<const char*> cmds;
         cmds.push_back(command);
-        register_command(cmds, help, handler);
+        register_command(cmds, help_one_line, help_long, handler);
     }
 
-    void register_command(
-        const char** commands, // commands, e.g., {"help", "Help", nullptr}
-        const char* help, // help info for users
-        command_handler handler
-        )
-    {
-        std::vector<const char*> cmds;
-        while (*commands != nullptr)
-        {
-            cmds.push_back(*commands);
-            commands++;
-        }
-
-        register_command(cmds, help, handler);
-    }
-
-    void command_manager::register_command(const std::vector<const char*>& commands, const char* help, command_handler handler)
+    void command_manager::register_command(const std::vector<const char*>& commands, const char* help_one_line, const char* help_long, command_handler handler)
     {
         utils::auto_write_lock l(_lock);
 
@@ -87,8 +73,11 @@ namespace dsn {
         }
 
         command* c = new command;
-        c->help = help;
+        c->commands = commands;
+        c->help_long = help_long;
+        c->help_short = help_one_line;
         c->handler = handler;
+        _commands.push_back(c);
         
         for (auto cmd : commands)
         {
@@ -211,8 +200,9 @@ namespace dsn {
     command_manager::command_manager()
     {
         register_command(
-            {"help", "h", "H", "Help", nullptr}, 
-            "help [command] - display help information", 
+            {"help", "h", "H", "Help"}, 
+            "help|Help|h|H [command] - display help information", 
+            "",
             [this](const std::vector<std::string>& args)
             {
                 std::stringstream ss;
@@ -220,10 +210,9 @@ namespace dsn {
                 if (args.size() == 0)
                 {
                     utils::auto_read_lock l(_lock);
-                    for (auto c : this->_handlers)
+                    for (auto c : this->_commands)
                     {
-                        ss.width(6);
-                        ss << std::left << c.first << ": " << c.second->help << std::endl;
+                        ss << c->help_short << std::endl;
                     }
                 }
                 else
@@ -235,7 +224,7 @@ namespace dsn {
                     else
                     {
                         ss.width(6);
-                        ss << std::left << it->first << ": " << it->second->help << std::endl;
+                        ss << std::left << it->first << ": " << it->second->help_short << std::endl << it->second->help_long << std::endl;
                     }
                 }
 

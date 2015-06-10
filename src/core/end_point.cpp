@@ -33,6 +33,11 @@
 # include <sys/socket.h>
 # include <netdb.h>
 # include <arpa/inet.h>
+
+# if defined(__FreeBSD__)
+# include <netinet/in.h>
+# endif
+
 # endif
 
 # include <mutex>
@@ -62,7 +67,7 @@ end_point::end_point(const char* str, uint16_t p)
 
     sockaddr_in addr;
     memset(&addr,0,sizeof(addr));
-    addr.sin_family=AF_INET;
+    addr.sin_family = AF_INET;
 
     if ((addr.sin_addr.s_addr = inet_addr(str)) == (unsigned int)(-1))
     {

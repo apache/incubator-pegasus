@@ -97,7 +97,7 @@ namespace dsn { namespace service {
     class system_runner
     {
     public:
-        static bool run(const char* config_file, bool sleep_after_init)
+        static bool run(const char* config_file, bool sleep_after_init, std::string& app_name, int app_index = -1)
         {
             dsn_all.engine_ready = false;
             dsn_all.tool = nullptr;
@@ -151,9 +151,9 @@ namespace dsn { namespace service {
             }
 
             // init provider specific system inits
-            dsn::tools::syste_init.execute(config_file);
+            dsn::tools::sys_init_before_app_created.execute(service_engine::instance().spec().config);
 
-            // TODO: register syste_exit execution
+            // TODO: register sys_exit execution
 
             // init runtime
             service_engine::instance().init_after_toollets();
@@ -161,22 +161,51 @@ namespace dsn { namespace service {
             dsn_all.engine_ready = true;
 
             // init apps
+            std::list<service_app*> apps;
             for (auto it = spec.app_specs.begin(); it != spec.app_specs.end(); it++)
             {
                 if (it->run)
                 {
                     service_app* app = utils::factory_store<service_app>::create(it->type.c_str(), 0, &(*it));
                     dassert(app != nullptr, "Cannot create service app with type name '%s'", it->type.c_str());
-                    service_apps::instance().add(app);
+                    apps.push_back(app);                    
                 }
             }
 
-            auto apps = service_apps::instance().get_all_apps();
             for (auto it = apps.begin(); it != apps.end(); it++)
             {
-                service_app* app = it->second;
-                auto node = service_engine::instance().start_node(app);
-                app->set_service_node(node);
+                service_app* app = *it;
+                bool create_it = false;
+                if (app_name == "")
+                    create_it = true;
+                else if (app_name == app->spec().role)
+                {
+                    if (app_index == -1)
+                        create_it = true;
+                    else
+                    {
+                        create_it = (app_index == app->spec().index);
+                    }
+                }
+                else
+                    create_it = false;
+
+                if (create_it)
+                {
+                    service_apps::instance().add(app);
+
+                    auto node = service_engine::instance().start_node(app);
+                    app->set_service_node(node);
+                }
+            }
+
+            if (service_apps::instance().get_all_apps().size() == 0)
+            {
+                printf("no app are created, usually because \n"
+                    "app_name is not specified correctly\n"
+                    "or app_index (1-based) is greater than specified count in config file\n"
+                    );
+                exit(1);
             }
 
             // start cli if necessary
@@ -189,6 +218,9 @@ namespace dsn { namespace service {
             {
                 ::dsn::command_manager::instance().start_remote_cli();
             }
+
+            // invoke customized init after apps are created
+            dsn::tools::sys_init_after_app_created.execute(service_engine::instance().spec().config);
 
             // start the tool
             dsn_all.tool->run();
@@ -204,6 +236,45 @@ namespace dsn { namespace service {
 
             return true;
         }
+
+
+        //
+        // run the system with arguments
+        //   config [app_name [app_index]]
+        // e.g., config.ini replica 1 to start the first replica as a new process
+        //       config.ini replica to start ALL replicas (count specified in config) as a new process
+        //       config.ini to start ALL apps as a new process
+        //
+        static void run(int argc, char** argv, bool sleep_after_init)
+        {
+            if (argc < 1)
+            {
+                printf("invalid options for system::run\n"
+                    "   config [app_name [app_index]]\n"
+                    "   e.g., config.ini replica 1 to start the first replica as a new process\n"
+                    "       config.ini replica to start ALL replicas (count specified in config) as a new process\n"
+                    "       config.ini to start ALL apps as a new process\n"
+                    );
+                exit(1);
+                return;
+            }
+
+            char* config = argv[0];
+            std::string app_name = "";
+            int app_index = -1;
+
+            if (argc >= 2)
+            {
+                app_name = argv[1];
+            }
+
+            if (argc >= 3)
+            {
+                app_index = atoi(argv[2]);
+            }
+
+            run(config, sleep_after_init, app_name, app_index);
+        }
     };
     
 namespace system
@@ -218,7 +289,13 @@ namespace system
     
     bool run(const char* config_file, bool sleep_after_init)
     {
-        return ::dsn::service::system_runner::run(config_file, sleep_after_init);
+        std::string name;
+        return ::dsn::service::system_runner::run(config_file, sleep_after_init, name);
+    }
+
+    void run(int argc, char** argv, bool sleep_after_init)
+    {
+        return ::dsn::service::system_runner::run(argc, argv, sleep_after_init);
     }
 
     bool is_ready()
@@ -234,7 +311,10 @@ namespace system
 
     service_app* get_current_app()
     {
-        return service_apps::instance()[task::get_current_task()->node()->id()];
+        auto tsk = task::get_current_task();
+        dassert(tsk != nullptr, "this function can only be invoked inside tasks");
+
+        return service_apps::instance()[tsk->node()->id()];
     }
 
     const std::map<std::string, service_app*>& get_all_apps()
@@ -393,3 +473,13 @@ namespace env
 }
 
 }} // end namespace dsn::service
+
+
+namespace dsn {
+    namespace tools {
+        tool_app* get_current_tool()
+        {
+            return ::dsn::service::dsn_all.tool;
+        }
+    }
+}

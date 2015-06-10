@@ -38,7 +38,7 @@ namespace dsn {
     public:
         command_manager();
 
-        void register_command(const std::vector<const char*>& commands, const char* help, command_handler handler);
+        void register_command(const std::vector<const char*>& commands, const char* help_one_line, const char* help_long, command_handler handler);
         bool run_command(const std::string& cmdline, __out_param std::string& output);
         void run_console();
         void start_local_cli();
@@ -51,12 +51,15 @@ namespace dsn {
     private:
         struct command
         {
-            const char*     help;
+            std::vector<const char*> commands;
+            std::string     help_short;
+            std::string     help_long;
             command_handler handler;
         };
 
         ::dsn::utils::rw_lock           _lock;
         std::map<std::string, command*> _handlers;
+        std::vector<command*>           _commands;
     };
 
 }

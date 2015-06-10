@@ -47,9 +47,11 @@ class tool_base
 {
 public:
     tool_base(const char* name);
+
+    const std::string& name() const { return _name; }
     
 protected:
-    std::string       _name;
+    std::string _name;
 };
 
 class toollet : public tool_base
@@ -130,8 +132,9 @@ namespace internal_use_only
     toollet* get_toollet(const char* name, int type);
 }
 
-extern join_point<void, const char*> syste_init;
-extern join_point<long, syste_exit_type, int, void*> syste_exit; // return (see SetUnhandledExceptionFilter), type, error code, context
+extern join_point<void, configuration_ptr> sys_init_before_app_created;
+extern join_point<void, configuration_ptr> sys_init_after_app_created;
+extern join_point<long, syste_exit_type, int, void*> sys_exit; // return (see SetUnhandledExceptionFilter), type, error code, context
 
 template <typename T> bool register_component_provider(const char* name) { return internal_use_only::register_component_provider(name, T::template create<T>, PROVIDER_TYPE_MAIN); }
 template <typename T> bool register_component_aspect(const char* name) { return internal_use_only::register_component_provider(name, T::template create<T>, PROVIDER_TYPE_ASPECT); }
@@ -140,6 +143,7 @@ template <typename T> bool register_message_header_parser(network_header_format 
 template <typename T> bool register_toollet(const char* name) { return internal_use_only::register_toollet(name, toollet::template create<T>, 0); }
 template <typename T> bool register_tool(const char* name) { return internal_use_only::register_tool(name, tool_app::template create<T>, 0); }
 template <typename T> T* get_toollet(const char* name) { return (T*)internal_use_only::get_toollet(name, 0); }
+tool_app* get_current_tool();
 configuration_ptr config();
 
 // --------- inline implementation -----------------------------

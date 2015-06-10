@@ -58,6 +58,8 @@ namespace dsn {
         };
 
         CONFIG_BEGIN(fj_opt)
+            CONFIG_FLD(bool, fault_injection_enabled, true)
+
             CONFIG_FLD(double, rpc_request_drop_ratio, 0.0001)
             CONFIG_FLD(double, rpc_response_drop_ratio, 0.001)
             CONFIG_FLD(double, disk_read_fail_ratio, 0.00001)

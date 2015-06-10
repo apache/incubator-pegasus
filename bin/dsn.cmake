@@ -11,7 +11,9 @@ function(ms_add_library PROJ_TYPE PROJ_NAME PROJ_SRC DO_INSTALL)
 		add_definitions(-D_LIB)
 	endif()
 
+	include_directories(${DSN_EXTRA_INCLUDEDIR})
 	add_library(${PROJ_NAME} ${PROJ_TYPE} ${PROJ_SRC})
+
 	if(DO_INSTALL)
 		install(TARGETS ${PROJ_NAME} DESTINATION lib)
 	endif()
@@ -21,10 +23,15 @@ function(ms_add_executable PROJ_NAME PROJ_SRC INPUT_LIBS BINPLACE_FILES DO_INSTA
 	if(PROJ_NAME STREQUAL "")
 		message(FATAL_ERROR "Invalid project name")
 	endif()
+	
+	if(MSVC)
+		add_definitions(-D_CONSOLE)
+	endif()
 
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJ_NAME}")
 	set(INSTALL_BINPLACE_DIR "bin/${PROJ_NAME}")
 
+	include_directories(${DSN_EXTRA_INCLUDEDIR})
 	add_executable(${PROJ_NAME} ${PROJ_SRC})
 	target_link_libraries(${PROJ_NAME} LINK_PUBLIC ${INPUT_LIBS})
 	
@@ -129,8 +136,12 @@ function(dsn_add_library PROJ_NAME)
 		"${CMAKE_CURRENT_SOURCE_DIR}/*.cc"
 		"${CMAKE_CURRENT_SOURCE_DIR}/*.c"
 		"${CMAKE_CURRENT_SOURCE_DIR}/*.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/*.hpp"
 		)
 	set(PROJ_SRC ${PROJ_SRC} ${DSN_EXTRA_SRC})
+    if (PROJ_SRC STREQUAL "")
+        message (FATAL "input sources cannot be empty")
+    endif()
 	ms_add_library("STATIC" ${PROJ_NAME} "${PROJ_SRC}" 1)
 endfunction(dsn_add_library)
 
@@ -147,9 +158,13 @@ function(dsn_add_executable PROJ_NAME BINPLACE_FILES)
 		"${CMAKE_CURRENT_SOURCE_DIR}/*.cc"
 		"${CMAKE_CURRENT_SOURCE_DIR}/*.c"
 		"${CMAKE_CURRENT_SOURCE_DIR}/*.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/*.hpp"
 		)
 	set(PROJ_SRC ${PROJ_SRC} ${DSN_EXTRA_SRC})
 	set(INPUT_LIBS ${DSN_EXTRA_LIBS} ${DSN_LIBS})
+	if (PROJ_SRC STREQUAL "")
+        message (FATAL "input sources cannot be empty")
+    endif()
 	ms_add_executable(${PROJ_NAME} "${PROJ_SRC}" "${INPUT_LIBS}" "${BINPLACE_FILES}" 0)
 endfunction(dsn_add_executable PROJ_NAME BINPLACE_FILES)
 
@@ -162,11 +177,13 @@ function(dsn_setup_compiler_flags)
 			add_compile_options(-Werror)
 		endif()
 	elseif(MSVC)
-		add_definitions(-D_CONSOLE)
 		add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+		add_definitions(-DWIN32_LEAN_AND_MEAN)		
 		add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
 		add_definitions(-D_WINSOCK_DEPRECATED_NO_WARNINGS=1)
 		add_definitions(-D_WIN32_WINNT=0x0501)
+		add_definitions(-D_UNICODE)
+		add_definitions(-DUNICODE)
 		if(DEFINED DSN_PEDANTIC)
 			add_compile_options(-WX)
 		endif()
@@ -273,7 +290,6 @@ function(dsn_setup_include_path)
 	else()
 		include_directories(${DSN_ROOT}/include)
 	endif()
-	include_directories(${DSN_EXTRA_INCLUDEDIR})
 endfunction(dsn_setup_include_path)
 
 function(dsn_setup_link_path)
@@ -282,7 +298,6 @@ function(dsn_setup_link_path)
 	else()
 		link_directories(${DSN_ROOT}/lib)
 	endif()
-	link_directories(${DSN_EXTRA_LIBRARYDIR})
 endfunction(dsn_setup_link_path)
 
 function(dsn_setup_install)
@@ -295,6 +310,8 @@ function(dsn_setup_install)
 			install(PROGRAMS "bin/dsn.cg.sh" DESTINATION bin)
 			install(PROGRAMS "bin/Linux/thrift" DESTINATION bin/Linux)
 			install(PROGRAMS "bin/Linux/protoc" DESTINATION bin/Linux)
+			install(PROGRAMS "bin/Darwin/thrift" DESTINATION bin/Darwin)
+			install(PROGRAMS "bin/Darwin/protoc" DESTINATION bin/Darwin)
 			install(PROGRAMS "bin/FreeBSD/thrift" DESTINATION bin/FreeBSD)
 			install(PROGRAMS "bin/FreeBSD/protoc" DESTINATION bin/FreeBSD)
 		endif()
@@ -306,6 +323,7 @@ function(dsn_add_pseudo_projects)
 		file(GLOB_RECURSE
 			PROJ_SRC
 			"${CMAKE_SOURCE_DIR}/include/*.h"
+			"${CMAKE_SOURCE_DIR}/include/*.hpp"
 			)
 		add_custom_target("dsn.include" SOURCES ${PROJ_SRC})
 	endif()
@@ -323,22 +341,15 @@ function(dsn_common_setup)
 	if(NOT DEFINED DSN_BUILD_RUNTIME)
 		message(FATAL_ERROR "DSN_BUILD_RUNTIME is not defined.")
 	endif()
-
-	#set(BUILD_SHARED_LIBS OFF)
+	
+	set(BUILD_SHARED_LIBS OFF)
 	dsn_setup_version()
 	ms_check_cxx11_support()
 	dsn_setup_compiler_flags()
 	dsn_setup_packages()
 	dsn_setup_include_path()
-	dsn_setup_link_path()
 	dsn_set_output_path()
+	dsn_setup_link_path()
 	dsn_setup_install()
 endfunction(dsn_common_setup)
 
-function(dsn_setup_runtime)
-	project(dsn C CXX)
-	set(DSN_BUILD_RUNTIME 1)
-	dsn_common_setup()
-	dsn_add_pseudo_projects()
-	add_subdirectory(src)
-endfunction(dsn_setup_runtime)

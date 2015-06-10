@@ -23,10 +23,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+# include <dsn/tool/simulator.h>
 # include "scheduler.h"
 # include "env.sim.h"
 # include <dsn/service_api.h>
 # include <set>
+
+# define __TITLE__ "simulator"
 
 namespace dsn { namespace tools {
 
@@ -150,6 +153,24 @@ void scheduler::add_task(task_ptr& tsk, task_queue* q)
     _wheel.add_event(now_ns() + delay, tsk);
 }
 
+checker::checker(const char* name)
+    : _name(name), _apps(::dsn::service::system::get_all_apps())
+{
+}
+
+void scheduler::add_checker(checker* chker)
+{
+    _checkers.push_back(chker);
+}
+
+void scheduler::check()
+{
+    for (auto& c : _checkers)
+    {
+        c->check();
+    }
+}
+
 void scheduler::wait_schedule(bool in_continue, bool is_continue_ready /*= false*/)
 {
     auto s = task_worker_ext::get(task::get_current_worker());
@@ -171,6 +192,8 @@ void scheduler::wait_schedule(bool in_continue, bool is_continue_ready /*= false
 
 void scheduler::schedule()
 {
+    check(); // check before schedule
+
     while (true)
     {
         // run ready workers whenever possible

@@ -26,6 +26,7 @@
 # include "simple_logger.h"
 # include <boost/lexical_cast.hpp>
 # include <boost/thread.hpp>
+# include <boost/filesystem.hpp>
 
 namespace dsn {
     namespace tools {
@@ -99,7 +100,22 @@ namespace dsn {
             _lines = 0;
             _log = nullptr;
 
+            while (true)
+            {
+                std::stringstream str;
+                str << "log." << (_index + 1) << ".txt";
+
+                if (boost::filesystem::exists(str.str()))
+                {
+                    ++_index;
+                }
+                else
+                    break;
+            }
+            
+
             create_log_file();
+
         }
 
         void simple_logger::create_log_file()
@@ -108,6 +124,7 @@ namespace dsn {
                 fclose(_log);
 
             _lines = 0;
+
             std::stringstream str;
             str << "log." << ++_index << ".txt";
             _log = fopen(str.str().c_str(), "w+");            

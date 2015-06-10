@@ -61,6 +61,7 @@ struct sim_worker_state
     }
 };
 
+class checker;
 class scheduler : public utils::singleton<scheduler>
 {
 public:
@@ -73,6 +74,7 @@ public:
     void reset();
     void add_task(task_ptr& task, task_queue* q);
     void wait_schedule(bool in_continue, bool is_continue_ready = false);
+    void add_checker(checker* chker);
     
 public:
     struct task_state_ext
@@ -94,9 +96,11 @@ private:
     uint64_t                       _time_ns;
     bool                           _running;
     std::vector<sim_worker_state*> _threads;
+    std::vector<checker*>          _checkers;
     
 private:
     void schedule();
+    void check();
 
     static void on_task_worker_create(task_worker* worker);
     static void on_task_worker_start(task_worker* worker);

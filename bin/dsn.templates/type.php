@@ -480,9 +480,14 @@ class t_function
 		// [function.service.add]
 		// write = true  ; service.add is a write function
 		$key = "function.".$this->service->name.".".$this->name;
-		if ($atts[$key] != NULL)
+		
+		if (array_key_exists($key, $atts))
 		{
-			$b = $atts[$key]["write"];
+			if (array_key_exists("write", $atts[$key]))
+				$b = $atts[$key]["write"];
+			else
+				$b = NULL;
+				
 			$this->is_write = ($b != NULL && ($b == "1" || $b == 1));
 		}
 	}
@@ -516,9 +521,14 @@ class t_service extends t_type
 		// [service.counter]
 		// stateful = true ; counter is a stateful service
 		$key = "service.".$this->name;
-		if ($atts[$key] != NULL)
+		
+		if (array_key_exists($key, $atts))
 		{
-			$b = $atts[$key]["stateful"];
+			if (array_key_exists("stateful", $atts[$key]))
+				$b = $atts[$key]["stateful"];
+			else
+				$b = NULL;
+				
 			$this->is_stateful = ($b != NULL && ($b == "1" || $b == 1));
 		}		
 		

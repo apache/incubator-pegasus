@@ -25,11 +25,14 @@
  */
 # include <dsn/internal/service_app.h>
 # include <dsn/service_api.h>
+# include "service_engine.h"
+# include "rpc_engine.h"
 
 namespace dsn { namespace service {
 
 service_app::service_app(service_app_spec* s)
 {
+    _started = false;
     _spec = *s;
 
     std::vector<std::string> args;
@@ -55,6 +58,11 @@ service_app::service_app(service_app_spec* s)
 
 service_app::~service_app(void)
 {
+}
+
+const end_point& service_app::primary_address() const
+{
+    return _svc_node->rpc()->primary_address();
 }
 
 }} // end namespace dsn::service_api

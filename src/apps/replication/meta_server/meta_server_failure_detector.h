@@ -35,6 +35,13 @@ using namespace dsn::fd;
 
 class server_state;
 class meta_service;
+
+namespace dsn {
+    namespace replication{
+        class replication_checker;
+    }
+}
+
 class meta_server_failure_detector : public failure_detector
 {
 public:
@@ -62,6 +69,8 @@ public:
     virtual void on_ping(const fd::beacon_msg& beacon, ::dsn::service::rpc_replier<fd::beacon_ack>& reply);
 
 private:
+    friend class ::dsn::replication::replication_checker;
+
     bool         _is_primary;
     server_state *_state;
     meta_service *_svc;

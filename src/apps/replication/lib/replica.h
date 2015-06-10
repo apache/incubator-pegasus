@@ -172,6 +172,8 @@ private:
     void on_group_check_reply(error_code err, std::shared_ptr<group_check_request>& req, std::shared_ptr<group_check_response>& resp);
     
 private:
+    friend class ::dsn::replication::replication_checker;
+
     // replica configuration, updated by update_local_configuration ONLY    
     replica_configuration   _config;
     uint64_t                _last_config_change_time_ms;

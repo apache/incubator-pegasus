@@ -32,7 +32,12 @@
 #include "task_engine.sim.h"
 
 namespace dsn { namespace tools {
-    
+
+void simulator::add_checker(checker* chker)
+{
+    scheduler::instance().add_checker(chker);
+}
+
 void simulator::install(service_spec& spec)
 {
     register_common_providers();

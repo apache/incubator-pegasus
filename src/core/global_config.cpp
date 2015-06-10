@@ -182,8 +182,10 @@ static bool build_client_network_confs(const char* section, configuration_ptr& c
 
 service_app_spec::service_app_spec(const service_app_spec& r)
 {
+    index = r.index;
     id = r.id;
     name = r.name;
+    role = r.role;
     type = r.type;
     arguments = r.arguments;
     ports = r.ports;
@@ -192,9 +194,11 @@ service_app_spec::service_app_spec(const service_app_spec& r)
     net_client_cfs = r.net_client_cfs;
 }
 
-bool service_app_spec::init(const char* section, configuration_ptr& config)
+bool service_app_spec::init(const char* section, const char* r, configuration_ptr& config)
 {
     id = 0;
+    index = 0;
+    role = r;
     name = config->get_string_value(section, "name", "");
     type = config->get_string_value(section, "type", "");
     arguments = config->get_string_value(section, "arguments", "");
@@ -306,7 +310,7 @@ bool service_spec::init(configuration_ptr c)
         if (it->substr(0, strlen("apps.")) == std::string("apps."))
         {
             service_app_spec app;
-            app.init((*it).c_str(), config);
+            app.init((*it).c_str(), it->substr(5).c_str(), config);
 
             auto ports = app.ports;            
             auto gap = ports.size() > 0 ? (*ports.rbegin() + 1 - *ports.begin()) : 0;            
@@ -318,6 +322,7 @@ bool service_spec::init(configuration_ptr c)
                 sprintf(buf, "%u", i);
                 app.name = (count > 1 ? (name + buf) : name);
                 app.id = ++app_id;
+                app.index = i;
 
                 // network configs
                 for (auto& p : ports)

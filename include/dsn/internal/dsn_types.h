@@ -40,18 +40,14 @@ __pragma(warning(disable:4127))
 #define __selectany __declspec(selectany) extern 
 typedef HANDLE handle_t;
 
-#elif defined(__linux__)
+# elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
 
-#define __selectany __attribute__((weak)) extern 
+# define __selectany __attribute__((weak)) extern 
 typedef int handle_t;
 
-#define O_BINARY 0
-
-#elif defined(__MACH__)
-
-#define __selectany __attribute__((weak)) extern 
-typedef int handle_t;
-#define O_BINARY 0
+# ifndef O_BINARY
+# define O_BINARY 0
+#endif
 
 #else
 

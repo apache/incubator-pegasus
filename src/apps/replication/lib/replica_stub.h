@@ -131,6 +131,7 @@ private:
     void notify_replica_state_update(const replica_configuration& config, bool isClosing);
 
 private:
+    friend class ::dsn::replication::replication_checker;
     typedef std::map<global_partition_id, replica_ptr> replicas;
     typedef std::map<global_partition_id, task_ptr> opening_replicas;
     typedef std::map<global_partition_id, std::pair<task_ptr, replica_ptr>> closing_replicas; // <close, replica>
