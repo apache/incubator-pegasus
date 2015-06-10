@@ -25,7 +25,6 @@
  */
 
 # include <dsn/internal/utils.h>
-
 # include <gtest/gtest.h>
 
 using namespace ::dsn;
@@ -63,4 +62,32 @@ TEST(core, binary_io_with_pos)
     EXPECT_TRUE(value3 == value2);
     EXPECT_TRUE(value4 == value);
 }
+
+TEST(core, split_args)
+{
+    std::string value = "a ,b, c ";
+    std::vector<std::string> sargs;
+    std::list<std::string> sargs2;
+    ::dsn::utils::split_args(value.c_str(), sargs, ',');
+    ::dsn::utils::split_args(value.c_str(), sargs2, ',');
+
+    EXPECT_EQ(sargs.size(), 3);
+    EXPECT_EQ(sargs[0], "a");
+    EXPECT_EQ(sargs[1], "b");
+    EXPECT_EQ(sargs[2], "c");
+
+    EXPECT_EQ(sargs2.size(), 3);
+    auto it = sargs2.begin();
+    EXPECT_EQ(*it++, "a");
+    EXPECT_EQ(*it++, "b");
+    EXPECT_EQ(*it++, "c");
+}
+
+TEST(core, trim_string)
+{
+    std::string value = " x x x x ";
+    auto r = trim_string((char*)value.c_str());
+    EXPECT_EQ(std::string(r), "x x x x");
+}
+
 
