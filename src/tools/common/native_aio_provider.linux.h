@@ -27,6 +27,7 @@
 
 # include <dsn/tool_api.h>
 # include <dsn/internal/synchronize.h>
+# if defined(__linux__)
 # include <queue>
 # include <stdio.h>		/* for perror() */
 # include <unistd.h>		/* for syscall() */
@@ -81,5 +82,5 @@ namespace dsn {
         };
     }
 }
-
+# endif
 
