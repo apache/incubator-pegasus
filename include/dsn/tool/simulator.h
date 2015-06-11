@@ -60,6 +60,9 @@ public:
     virtual void run() override;
 
     void add_checker(checker* chker);
+
+private:
+    static void on_system_exit(sys_exit_type st);
 };
 
 // ---- inline implementation ------

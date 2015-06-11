@@ -38,6 +38,8 @@ public:
     virtual uint64_t now_ns() const;
     virtual uint64_t random64(uint64_t min, uint64_t max);
 
+    static int seed() { return _seed; }
+
 private:
     static void on_worker_start(task_worker* worker);
     static int _seed;

@@ -3,7 +3,7 @@ require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
 ?>
-[apps.metaserver]
+[apps.meta]
 name = meta
 type = meta
 arguments = 
@@ -11,7 +11,7 @@ ports = 34601
 run = true
 count = 1 
     
-[apps.replicaserver]
+[apps.replica]
 name = replica
 type = replica
 arguments =
@@ -37,8 +37,7 @@ pause_on_start = false
 logging_factory_name = dsn::tools::screen_logger
 
 [tools.simulator]
-random_seed = 2756568580
-use_given_random_seed = false
+random_seed = 0
 
 [network]
 ; how many network threads for network library(used by asio)

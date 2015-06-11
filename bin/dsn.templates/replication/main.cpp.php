@@ -32,6 +32,6 @@ int main(int argc, char** argv)
 	dsn::tools::register_toollet<dsn::tools::fault_injector>("fault_injector");
 
 	// specify what services and tools will run in config file, then run
-	dsn::service::system::run("config.ini", true);
+	dsn::service::system::run(--argc, ++argv, true);
 	return 0;
 }

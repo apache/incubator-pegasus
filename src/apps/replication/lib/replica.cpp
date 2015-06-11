@@ -111,6 +111,9 @@ void replica::on_client_read(const read_request_header& meta, message_ptr& reque
 
 void replica::response_client_message(message_ptr& request, error_code error, decree d/* = invalid_decree*/)
 {
+    if (nullptr == request)
+        return;
+
     message_ptr resp = request->create_response();
     int err = error.get();
     resp->writer().write(err);
