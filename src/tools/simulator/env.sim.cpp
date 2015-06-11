@@ -61,13 +61,10 @@ sim_env_provider::sim_env_provider(env_provider* inner_provider)
 {
     task_worker::on_start.put_front(on_worker_start, "sim_env_provider::on_worker_start");
 
-    if (config()->get_value<bool>("tools.simulator", "use_given_random_seed", false))
+    _seed = config()->get_value<int>("tools.simulator", "random_seed", 0);
+    if (_seed == 0)
     {
-        _seed = config()->get_value<int>("tools.simulator", "random_seed", std::rand());
-    }
-    else
-    {
-        _seed = static_cast<int>(get_current_physical_time_ns());
+        _seed = static_cast<int>(get_current_physical_time_ns())  * std::rand();
     }
 
     derror("simulation.random seed for this round is %d", _seed);

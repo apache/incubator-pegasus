@@ -23,13 +23,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include <dsn/tool/simulator.h>
-#include "scheduler.h"
-#include <dsn/tool/providers.common.h>
 
-#include "diske.sim.h"
-#include "env.sim.h"
-#include "task_engine.sim.h"
+# include <dsn/tool/simulator.h>
+# include "scheduler.h"
+# include <dsn/tool/providers.common.h>
+
+# include "diske.sim.h"
+# include "env.sim.h"
+# include "task_engine.sim.h"
+# include <dsn/internal/logging.h>
+
+# define __TITLE__ "tools.simulator"
 
 namespace dsn { namespace tools {
 
@@ -92,6 +96,15 @@ void simulator::install(service_spec& spec)
         if (tspec.queue_factory_name == "")
             tspec.queue_factory_name = ("dsn::tools::sim_task_queue");
     }
+
+    sys_exit.put_back(simulator::on_system_exit, "simulator");
+}
+
+void simulator::on_system_exit(sys_exit_type st)
+{
+    derror("system exits, you can replay this process using random seed %d",        
+        sim_env_provider::seed()
+        );
 }
 
 void simulator::run()

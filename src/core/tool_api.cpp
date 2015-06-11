@@ -120,7 +120,7 @@ namespace dsn {
 
         join_point<void, configuration_ptr> sys_init_before_app_created("system.init.1");
         join_point<void, configuration_ptr> sys_init_after_app_created("system.init.2");
-        join_point<long, syste_exit_type, int, void*> sys_exit("system.exit"); // type, error code, context (e.g., exception)
+        join_point<void, sys_exit_type> sys_exit("system.exit");
 
         namespace internal_use_only
         {

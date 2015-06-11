@@ -4,6 +4,6 @@ for /l %%x in (1, 1, 10) do (
 	mkdir test-%%x
 	copy config.ini .\test-%%x
 	cd test-%%x	
-	start ..\dsn.replication.simple_kv.exe
+	start ..\dsn.replication.simple_kv.exe ..\config.ini
 	cd ..
 )

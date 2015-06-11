@@ -134,7 +134,7 @@ namespace internal_use_only
 
 extern join_point<void, configuration_ptr> sys_init_before_app_created;
 extern join_point<void, configuration_ptr> sys_init_after_app_created;
-extern join_point<long, syste_exit_type, int, void*> sys_exit; // return (see SetUnhandledExceptionFilter), type, error code, context
+extern join_point<void, sys_exit_type>     sys_exit;
 
 template <typename T> bool register_component_provider(const char* name) { return internal_use_only::register_component_provider(name, T::template create<T>, PROVIDER_TYPE_MAIN); }
 template <typename T> bool register_component_aspect(const char* name) { return internal_use_only::register_component_provider(name, T::template create<T>, PROVIDER_TYPE_ASPECT); }

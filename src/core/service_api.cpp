@@ -202,7 +202,7 @@ namespace dsn { namespace service {
             if (service_apps::instance().get_all_apps().size() == 0)
             {
                 printf("no app are created, usually because \n"
-                    "app_name is not specified correctly\n"
+                    "app_name is not specified correctly, should be 'xxx' in [apps.xxx]\n"
                     "or app_index (1-based) is greater than specified count in config file\n"
                     );
                 exit(1);

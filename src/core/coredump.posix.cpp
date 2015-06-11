@@ -25,6 +25,7 @@
  */
 # include <dsn/internal/logging.h>
 # include <dsn/internal/coredump.h>
+# include <dsn/tool_api.h>
 
 //#ifdef _WIN32
 # if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
@@ -48,6 +49,8 @@ namespace dsn {
         {
             // TODO: not implemented
             //
+
+            ::dsn::tools::sys_exit.execute(SYS_EXIT_EXCEPTION);
         }
     }
 }

@@ -25,6 +25,7 @@
  */
 # include <dsn/internal/logging.h>
 # include <dsn/internal/coredump.h>
+# include <dsn/tool_api.h>
 
 #ifdef _WIN32
 
@@ -147,9 +148,10 @@ namespace dsn {
                 derror("%s", szResult);
                 printf(szResult);
             }
+
+            ::dsn::tools::sys_exit.execute(SYS_EXIT_EXCEPTION);
             return retval;
         }
-
     }
 }
 
