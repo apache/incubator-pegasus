@@ -6,7 +6,7 @@ $idl_type = $argv[4];
 ?>
 
 # include <dsn/tool/simulator.h>
-# include "check.h"
+# include "<?=$_PROG->name?>.check.h"
 
 <?=$_PROG->get_cpp_namespace_begin()?>
 class <?=$_PROG->name?>_checker : public ::dsn::tools::checker
