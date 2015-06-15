@@ -4,15 +4,14 @@
 # include "nfs_server_impl.h"
 # include <dsn/internal/nfs.h>
 
-
 namespace dsn { 
     namespace service {
 
-        class nfs_node_impl : public nfs_node, public virtual serverlet<nfs_node_impl>
+		class nfs_node_impl : public nfs_node, public ::dsn::service::serverlet<nfs_node_impl>
         {
         public:
             nfs_node_impl(service_node* node)
-                : nfs_node(node), serverlet<nfs_node_impl>("nfs.node")
+				: nfs_node(node), serverlet<nfs_node_impl>("nfs.node")
             {
                 _opts.init(system::config());
                 _server = nullptr;
@@ -23,7 +22,6 @@ namespace dsn {
             virtual ~nfs_node_impl(void)
             {
                 stop();
-                
                 {
                     zauto_lock l(_clients_lock);
                     _clients.clear();
@@ -64,7 +62,7 @@ namespace dsn {
                 _server = nullptr;
                 return ERR_SUCCESS;
             }
-    
+
         private:
             nfs_opts         _opts;
 	        nfs_service_impl *_server;
