@@ -61,10 +61,10 @@ public:
 		const copy_response& resp,
 		void* context)
 	{
-		if (err != ::dsn::ERR_SUCCESS) dinfo("reply RPC_NFS_COPY err : %s", err.to_string());
+		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_NFS_COPY err : " << err.to_string() << std::endl;
 		else
 		{
-			dinfo("reply RPC_NFS_COPY ok");
+			std::cout << "reply RPC_NFS_COPY ok" << std::endl;
 		}
 	}
 	
@@ -93,10 +93,10 @@ public:
 		std::shared_ptr<copy_request>& request, 
 		std::shared_ptr<copy_response>& resp)
 	{
-		if (err != ::dsn::ERR_SUCCESS) dinfo("reply RPC_NFS_COPY err : %s", err.to_string());
+		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_NFS_COPY err : " << err.to_string() << std::endl;
 		else
 		{
-			dinfo("reply RPC_NFS_COPY ok");
+			std::cout << "reply RPC_NFS_COPY ok" << std::endl;
 		}
 	}
 	
@@ -148,10 +148,10 @@ public:
 		const get_file_size_response& resp,
 		void* context)
 	{
-		if (err != ::dsn::ERR_SUCCESS) dinfo("reply RPC_NFS_GET_FILE_SIZE err : ", err.to_string());
+		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_NFS_GET_FILE_SIZE err : " << err.to_string() << std::endl;
 		else
 		{
-			dinfo("reply RPC_NFS_GET_FILE_SIZE ok");
+			std::cout << "reply RPC_NFS_GET_FILE_SIZE ok" << std::endl;
 		}
 	}
 	
@@ -180,10 +180,10 @@ public:
 		std::shared_ptr<get_file_size_request>& request, 
 		std::shared_ptr<get_file_size_response>& resp)
 	{
-		if (err != ::dsn::ERR_SUCCESS) dinfo("reply RPC_NFS_GET_FILE_SIZE err : %s", err.to_string());
+		if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_NFS_GET_FILE_SIZE err : " << err.to_string() << std::endl;
 		else
 		{
-			dinfo("reply RPC_NFS_GET_FILE_SIZE ok");
+			std::cout << "reply RPC_NFS_GET_FILE_SIZE ok" << std::endl;
 		}
 	}
 	
