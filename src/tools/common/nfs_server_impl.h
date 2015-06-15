@@ -26,6 +26,7 @@ private:
     {
         handle_t hfile;
         std::string file_name;
+		std::string dst_dir;
         blob bb;
 		uint64_t offset;
 		uint32_t size;

@@ -125,8 +125,9 @@ namespace dsn { namespace service {
 	// ---------- copy_response -------------
 	struct copy_response
 	{
-		int32_t error;
+		error_code error;
 		std::string file_name;
+		std::string dst_dir;
 		blob file_content;
 		uint64_t offset;
 		uint32_t size;
@@ -136,6 +137,7 @@ namespace dsn { namespace service {
 	{
 		marshall(writer, val.error);
 		marshall(writer, val.file_name);
+		marshall(writer, val.dst_dir);
 		marshall(writer, val.file_content);
 		marshall(writer, val.offset);
 		marshall(writer, val.size);
@@ -145,6 +147,7 @@ namespace dsn { namespace service {
 	{
 		unmarshall(reader, val.error);
 		unmarshall(reader, val.file_name);
+		unmarshall(reader, val.dst_dir);
 		unmarshall(reader, val.file_content);
 		unmarshall(reader, val.offset);
 		unmarshall(reader, val.size);

@@ -46,7 +46,7 @@ namespace dsn {
 			}
 			
 
-			callback_para cp = { hfile, request.file_name, bb, request.offset, request.size};
+			callback_para cp = { hfile, request.file_name, request.dst_dir, bb, request.offset, request.size};
 
 			auto task = file::read(
 				hfile,
@@ -86,6 +86,7 @@ namespace dsn {
 			::dsn::service::copy_response resp;
 			resp.error = err;
 			resp.file_name = cp.file_name;
+			resp.dst_dir = cp.dst_dir;
 
             auto sptr = cp.bb.buffer();
 			resp.file_content = blob(sptr, 0, sz);
