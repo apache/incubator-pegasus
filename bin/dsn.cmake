@@ -32,6 +32,7 @@ function(ms_add_executable PROJ_NAME PROJ_SRC INPUT_LIBS BINPLACE_FILES DO_INSTA
 	set(INSTALL_BINPLACE_DIR "bin/${PROJ_NAME}")
 
 	include_directories(${DSN_EXTRA_INCLUDEDIR})
+    link_directories(${DSN_EXTRA_LIBRARYDIR})
 	add_executable(${PROJ_NAME} ${PROJ_SRC})
 	target_link_libraries(${PROJ_NAME} LINK_PUBLIC ${INPUT_LIBS})
 	
