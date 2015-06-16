@@ -27,6 +27,7 @@
 #include "replica.h"
 #include "mutation.h"
 #include <dsn/internal/factory_store.h>
+#include <boost/filesystem.hpp>
 
 #define __TITLE__ "TwoPhaseCommit"
 
@@ -39,9 +40,17 @@ void register_replica_provider(replica_app_factory f, const char* name)
 
 replication_app_base::replication_app_base(replica* replica, configuration_ptr& config)
 {
-    _dir = replica->dir();
+    _dir_data = replica->dir() + "/data";
+    _dir_learn = replica->dir() + "/learn";
+
     _replica = replica;
     _last_committed_decree = _last_durable_decree = 0;
+
+    if (!boost::filesystem::exists(_dir_data))
+        boost::filesystem::create_directory(_dir_data);
+
+    if (!boost::filesystem::exists(_dir_learn))
+        boost::filesystem::create_directory(_dir_learn);
 }
 
 int replication_app_base::write_internal(mutation_ptr& mu, bool ack_client)

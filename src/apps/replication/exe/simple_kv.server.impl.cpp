@@ -85,8 +85,8 @@ namespace dsn {
                 zauto_lock l(_lock);
                 if (create_new)
                 {
-                    boost::filesystem::remove_all(dir());
-                    boost::filesystem::create_directory(dir());
+                    boost::filesystem::remove_all(data_dir());
+                    boost::filesystem::create_directory(data_dir());
                 }
                 else
                 {
@@ -100,7 +100,7 @@ namespace dsn {
                 zauto_lock l(_lock);
                 if (clear_state)
                 {
-                    boost::filesystem::remove_all(dir());
+                    boost::filesystem::remove_all(data_dir());
                 }
                 return 0;
             }
@@ -115,7 +115,7 @@ namespace dsn {
                 decree maxVersion = 0;
                 std::string name;
                 boost::filesystem::directory_iterator endtr;
-                for (boost::filesystem::directory_iterator it(dir());
+                for (boost::filesystem::directory_iterator it(data_dir());
                     it != endtr;
                     ++it)
                 {
@@ -127,7 +127,7 @@ namespace dsn {
                     if (version > maxVersion)
                     {
                         maxVersion = version;
-                        name = dir() + "/" + s;
+                        name = data_dir() + "/" + s;
                     }
                 }
 
@@ -184,7 +184,7 @@ namespace dsn {
 
                 // TODO: should use async write instead
                 char name[256];
-                sprintf(name, "%s/checkpoint.%lld", dir().c_str(), 
+                sprintf(name, "%s/checkpoint.%lld", data_dir().c_str(), 
                         static_cast<long long int>(last_committed_decree()));
                 std::ofstream os(name);
 
@@ -244,7 +244,7 @@ namespace dsn {
                     std::stringstream ss;                
                     ss << env::random32(0, 10000);
 
-                    auto learn_test_file = dir() + "/test_learning_" + ss.str() + ".txt";
+                    auto learn_test_file = data_dir() + "/test_learning_" + ss.str() + ".txt";
                     state.files.push_back(learn_test_file);
                     
                     std::ofstream fout(learn_test_file.c_str());
@@ -295,7 +295,7 @@ namespace dsn {
                 if (_test_file_learning)
                 {
                     dassert(state.files.size() == 1, "");
-                    std::string fn = dir() + "/" + state.files[0];
+                    std::string fn = learn_dir() + "/" + state.files[0];
                     ret = boost::filesystem::exists(fn);
                     if (ret)
                     {
@@ -306,6 +306,10 @@ namespace dsn {
                         fin.close();
 
                         ret = (s == "DEADBEEF");
+                    }
+                    else
+                    {
+                        dassert(false, "learning file is missing");
                     }
                 }
 
