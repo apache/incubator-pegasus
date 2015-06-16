@@ -1,16 +1,16 @@
-﻿# include "nfs_client_impl.h"
+# include "nfs_client_impl.h"
 # include <dsn/internal/nfs.h>
 # include <queue>
 # include <boost/filesystem.hpp>
 
-namespace dsn { 
+namespace dsn {
 	namespace service {
 
 		void nfs_client_impl::end_copy(
 			::dsn::error_code err,
 			const copy_response& resp,
 			void* context)
-		{	
+		{
 			//dinfo("*** call RPC_NFS_COPY end, return (%d, %d) with %s", resp.offset, resp.size, err.to_string());
 			copy_request_ex* reqc = (copy_request_ex*)context;
 
@@ -47,15 +47,15 @@ namespace dsn {
 			delete reqc;
 		}
 
-        void nfs_client_impl::write_copy(user_request* req, const ::dsn::service::copy_response& resp)
-        {
-            // 
-            // concurrent copy is much more complicated (e.g., out-of-order file content delivery)
-            // the following logic is only right when concurrent request # == 1
+		void nfs_client_impl::write_copy(user_request* req, const ::dsn::service::copy_response& resp)
+		{
+			// 
+			// concurrent copy is much more complicated (e.g., out-of-order file content delivery)
+			// the following logic is only right when concurrent request # == 1
 			//
 			// TODO: handle concurrent out-of-order file writes, lsl. done
-            //
-            // dassert(_opts.max_concurrent_remote_copy_requests == 1, "");
+			//
+			// dassert(_opts.max_concurrent_remote_copy_requests == 1, "");
 
 			std::string file_path = resp.dst_dir + resp.file_name;
 
@@ -82,13 +82,14 @@ namespace dsn {
 						req->nfs_task->enqueue(err, 0, req->nfs_task->node());
 						return;
 					}
+
 					_handles_map.insert(std::pair<std::string, handle_t>(file_path, hfile));
 				}
 				else // found
 				{
 					hfile = it_handle->second;
 				}
-			
+
 				auto it_file = req->file_context_map.find(file_path);
 				dassert(it_file != req->file_context_map.end(), "it_file should be existed");
 
@@ -111,7 +112,7 @@ namespace dsn {
 				return;
 
 			write_file(req);
-        }
+		}
 
 		void nfs_client_impl::handle_fault(std::string file_path, user_request *req, error_code err)
 		{
@@ -159,11 +160,12 @@ namespace dsn {
 
 				it_file->second->resp_info->finished_count++;
 
-				if (it_file->second->resp_info->finished_count == it_file->second->resp_info->copy_count)
+				if (it_file->second->resp_info->finished_count == it_file->second->resp_info->copy_count) // file copy success
 				{
 					if (boost::filesystem::exists(file_path))
 					{
 						file::close(_handles_map[file_path]);
+						_handles_map.erase(file_path);
 						delete it_file->second->resp_info;
 						it_file->second->resp_info = NULL;
 
@@ -200,10 +202,11 @@ namespace dsn {
 				if (it_file->second->err != 0 && boost::filesystem::exists(it_file->first))
 				{
 					file::close(_handles_map[it_file->first]);
+					_handles_map.erase(it_file->first);
 					boost::filesystem::remove(it_file->first);
 				}
 			}
-			
+
 			garbage_collect(req);
 		}
 
@@ -217,9 +220,7 @@ namespace dsn {
 				}
 			}
 
-			//_handles_map.clear(); // globel variable, TODO
-
-			for (auto it_file = req->file_context_map.begin(); it_file != req->file_context_map.end(); )
+			for (auto it_file = req->file_context_map.begin(); it_file != req->file_context_map.end();)
 			{
 				if (it_file->second->resp_info != NULL)
 					delete it_file->second->resp_info;
@@ -262,17 +263,17 @@ namespace dsn {
 		}
 
 		void nfs_client_impl::continue_copy(int done_count, user_request* reqc)
-        {
-            if (done_count > 0)
-            {
+		{
+			if (done_count > 0)
+			{
 				zauto_lock l(reqc->user_req_lock);
 				dassert(_concurrent_copy_request_count >= done_count, "");
 
 				_concurrent_copy_request_count -= done_count;
-            }
+			}
 
-            copy_request* req = nullptr;
-            {
+			copy_request* req = nullptr;
+			{
 				zauto_lock l(reqc->user_req_lock);
 
 				if (!reqc->req_copy_file_vector.empty() && _concurrent_copy_request_count < _opts.max_concurrent_remote_copy_requests)
@@ -281,17 +282,19 @@ namespace dsn {
 					{
 						if (reqc->req_copy_file_vector[i].empty())
 							continue;
-						
+
 						req = reqc->req_copy_file_vector[i].front();
 
-						auto it_file = reqc->file_context_map.find(req->dst_dir+req->file_name);
+						auto it_file = reqc->file_context_map.find(req->dst_dir + req->file_name);
 						dassert(it_file != reqc->file_context_map.end(), "it_file should be existed");
+
 						if (it_file->second->err != 0) // no need to send a failed file request
 						{
 							std::queue<copy_request*> empty;
 							std::swap(reqc->req_copy_file_vector[i], empty);
 							continue;
 						}
+
 						if (it_file->second->resp_info != NULL)
 						{
 							if ((req->offset - it_file->second->resp_info->current_offset) / _opts.max_buf_size > _opts.max_request_step) // exceed request bound for one file
@@ -310,8 +313,8 @@ namespace dsn {
 						reqc->task_ptr_list.push_back(task);
 					}
 				}
-            }
-        }
+			}
+		}
 
 		void nfs_client_impl::write_file(user_request* req)
 		{
@@ -332,11 +335,12 @@ namespace dsn {
 					if (it_response != it->copy_response_map.end())
 					{
 						resp = it_response->second;
+
 						std::string tmp = resp.file_name;
 						it->current_offset += resp.size; // move to callback
 
 						task_ptr task = file::write(
-							_handles_map[resp.dst_dir+resp.file_name],
+							_handles_map[resp.dst_dir + resp.file_name],
 							resp.file_content.data(),
 							resp.size,
 							resp.offset,
@@ -362,14 +366,14 @@ namespace dsn {
 			const ::dsn::service::get_file_size_response& resp,
 			void* context)
 		{
-            user_request* reqc = (user_request*)context;
+			user_request* reqc = (user_request*)context;
 
 			if (err != ::dsn::ERR_SUCCESS)
 			{
 				derror("remote copy request failed");
 				reqc->nfs_task->enqueue(err, 0, reqc->nfs_task->node());
-                delete reqc;
-                return;
+				delete reqc;
+				return;
 			}
 
 			if (resp.error != ::dsn::ERR_SUCCESS)
@@ -378,7 +382,7 @@ namespace dsn {
 				error_code resp_err;
 				resp_err.set(resp.error);
 				reqc->nfs_task->enqueue(resp_err, 0, reqc->nfs_task->node());
-                delete reqc;
+				delete reqc;
 				return;
 			}
 
@@ -407,18 +411,18 @@ namespace dsn {
 				reqc->req_copy_file_vector.push_back(copy_request_ex_queue);
 				for (;;) // send one file with multi-round rpc
 				{
-                    copy_request* req = new copy_request;
+					copy_request* req = new copy_request;
 					req->source = reqc->file_size_req.source;
 					req->file_name = resp.file_list[i];
 
-                    req->offset = req_offset;
-                    req->size = req_size;
-                    req->dst_dir = reqc->file_size_req.dst_dir;
-                    req->source_dir = reqc->file_size_req.source_dir;
-                    req->overwrite = reqc->file_size_req.overwrite;
-                    req->is_last = (size <= req_size);
+					req->offset = req_offset;
+					req->size = req_size;
+					req->dst_dir = reqc->file_size_req.dst_dir;
+					req->source_dir = reqc->file_size_req.source_dir;
+					req->overwrite = reqc->file_size_req.overwrite;
+					req->is_last = (size <= req_size);
 
-                    reqc->copy_request_count++;
+					reqc->copy_request_count++;
 
 					{
 						zauto_lock l(reqc->user_req_lock);
@@ -427,11 +431,11 @@ namespace dsn {
 
 					req_offset += req_size;
 					size -= req_size;
-                    if (size <= 0)
-                    {
-                        dassert(size == 0, "last request must read exactly the remaing size of the file");
-                        break;
-                    }	
+					if (size <= 0)
+					{
+						dassert(size == 0, "last request must read exactly the remaing size of the file");
+						break;
+					}
 
 					if (size > _opts.max_buf_size)
 						req_size = _opts.max_buf_size;
@@ -442,22 +446,22 @@ namespace dsn {
 
 			continue_copy(0, reqc);
 		}
-        		
+
 		void nfs_client_impl::begin_remote_copy(std::shared_ptr<remote_copy_request>& rci, aio_task_ptr nfs_task)
 		{
-            dassert(_server == rci->source, "");
+			dassert(_server == rci->source, "");
 
-            user_request* req = new user_request;
-            req->file_size_req.source = rci->source;
-            req->file_size_req.dst_dir = rci->dest_dir;
-            req->file_size_req.file_list = rci->files;
-            req->file_size_req.source_dir = rci->source_dir;
-            req->file_size_req.overwrite = rci->overwrite;
-            req->nfs_task = nfs_task;
-            req->finished = false;
+			user_request* req = new user_request;
+			req->file_size_req.source = rci->source;
+			req->file_size_req.dst_dir = rci->dest_dir;
+			req->file_size_req.file_list = rci->files;
+			req->file_size_req.source_dir = rci->source_dir;
+			req->file_size_req.overwrite = rci->overwrite;
+			req->nfs_task = nfs_task;
+			req->finished = false;
 			req->copy_request_count = 0;
 
 			begin_get_file_size(req->file_size_req, req); // async copy file
 		}
-	} 
-} 
+	}
+}
