@@ -178,9 +178,9 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
     decree decree = request.last_committed_decree_in_app + 1;
     response.err = _app->get_learn_state(decree, request.app_specific_learn_request, response.state);
         
-    response.base_local_dir = _dir;
+    response.base_local_dir = _app->data_dir();
     for (auto itr = response.state.files.begin(); itr != response.state.files.end(); ++itr)            
-        *itr = itr->substr(_dir.length()); 
+        *itr = itr->substr(_app->data_dir().length());
 }
 
 void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request>& req, std::shared_ptr<learn_response>& resp)
@@ -229,7 +229,7 @@ void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request>& req
             file::copy_remote_files(resp->config.primary,
                 resp->base_local_dir,
                 resp->state.files,
-                _dir,
+                _app->learn_dir(),
                 true,
                 LPC_COPY_REMOTE_DELTA_FILES,
                 this,

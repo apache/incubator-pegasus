@@ -143,9 +143,9 @@ namespace file
     //
     extern void copy_remote_files(
         const end_point& remote,
-        std::string& source_dir,
+        const std::string& source_dir,
         std::vector<std::string>& files,  // empty for all
-        std::string& dest_dir,
+        const std::string& dest_dir,
         bool overwrite,
         aio_task_ptr& callback
         );

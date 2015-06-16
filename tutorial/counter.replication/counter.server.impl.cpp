@@ -64,8 +64,8 @@ namespace dsn {
             zauto_lock l(_lock);
             if (create_new)
             {
-                boost::filesystem::remove_all(dir());
-                boost::filesystem::create_directory(dir());
+                boost::filesystem::remove_all(data_dir());
+                boost::filesystem::create_directory(data_dir());
             }
             else
             {
@@ -79,7 +79,7 @@ namespace dsn {
             zauto_lock l(_lock);
             if (clear_state)
             {
-                boost::filesystem::remove_all(dir());
+                boost::filesystem::remove_all(data_dir());
             }
             return 0;
         }
@@ -94,7 +94,7 @@ namespace dsn {
             decree max_ver = 0;
             std::string name;
             boost::filesystem::directory_iterator end_it;
-            for (boost::filesystem::directory_iterator it(dir());
+            for (boost::filesystem::directory_iterator it(data_dir());
                 it != end_it;
                 ++it)
             {
@@ -106,7 +106,7 @@ namespace dsn {
                 if (version > max_ver)
                 {
                     max_ver = version;
-                    name = dir() + "/" + s;
+                    name = data_dir() + "/" + s;
                 }
             }
 
@@ -159,7 +159,7 @@ namespace dsn {
 
             // TODO: should use async write instead
             char name[256];
-            sprintf(name, "%s/checkpoint.%lld", dir().c_str(),
+            sprintf(name, "%s/checkpoint.%lld", data_dir().c_str(),
                 static_cast<long long int>(last_committed_decree()));
             std::ofstream os(name);
 

@@ -66,7 +66,13 @@ public:
     // 
     virtual void prepare_learning_request(__out_param ::dsn::blob& learn_req) {};
 
-    // to learn [start, infinite)
+    // 
+    // to learn [start, infinite) from remote replicas
+    //
+    // note the files in learn_state are copied from dir /replica@remote/data to dir /replica@local/learn
+    // so when apply the learned file state, make sure using learn_dir() instead of data_dir() to get the
+    // full path of the files.
+    //
     virtual int  get_learn_state(::dsn::replication::decree start, const ::dsn::blob& learn_req, __out_param ::dsn::replication::learn_state& state) = 0;  // must be thread-safe
     virtual int  apply_learn_state(::dsn::replication::learn_state& state) = 0;  // must be thread-safe, and last_committed_decree must equal to last_durable_decree after learning
 
@@ -80,7 +86,8 @@ public:
     //
     // utility functions to be used by app
     //   
-    const std::string& dir() const {return _dir;}
+    const std::string& data_dir() const { return _dir_data; }
+    const std::string& learn_dir() const { return _dir_learn; }
 
 protected:
     template<typename T, typename TRequest, typename TResponse> 
@@ -107,7 +114,8 @@ private:
     int  dispatch_rpc_call(int code, message_ptr& request, bool ack_client);
     
 private:
-    std::string _dir;
+    std::string _dir_data;
+    std::string _dir_learn;
     replica*    _replica;
     std::map<int, std::function<void(message_ptr&, message_ptr&)> > _handlers;
 
