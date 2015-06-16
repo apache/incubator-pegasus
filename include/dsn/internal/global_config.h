@@ -114,7 +114,7 @@ struct service_spec
     bool build_network_spec(int port);
 };
 
-enum syste_exit_type
+enum sys_exit_type
 {
     SYS_EXIT_NORMAL,
     SYS_EXIT_BREAK, // Ctrl-C/Break,Shutdown,LogOff, see SetConsoleCtrlHandler
@@ -123,11 +123,11 @@ enum syste_exit_type
     SYS_EXIT_INVALID
 };
 
-ENUM_BEGIN(syste_exit_type, SYS_EXIT_INVALID)
+ENUM_BEGIN(sys_exit_type, SYS_EXIT_INVALID)
     ENUM_REG(SYS_EXIT_NORMAL)
     ENUM_REG(SYS_EXIT_BREAK)
     ENUM_REG(SYS_EXIT_EXCEPTION)
-ENUM_END(syste_exit_type)
+ENUM_END(sys_exit_type)
 
 }
 

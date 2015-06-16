@@ -92,8 +92,8 @@ namespace dsn { namespace service {
 		std::string source_dir;
 		std::string dst_dir;
 		std::string file_name;
-		uint64_t offset;
-		uint32_t size;
+		int32_t offset;
+		int32_t size;
 		bool is_last;
 		bool overwrite;
 	};
@@ -129,8 +129,8 @@ namespace dsn { namespace service {
 		std::string file_name;
 		std::string dst_dir;
 		blob file_content;
-		uint64_t offset;
-		uint32_t size;
+		int32_t offset;
+		int32_t size;
 	};
 
 	inline void marshall(::dsn::binary_writer& writer, const copy_response& val)
@@ -186,7 +186,7 @@ namespace dsn { namespace service {
 	{
 		int32_t error;
 		std::vector< std::string> file_list;
-		std::vector< uint64_t> size_list;
+		std::vector< int32_t> size_list;
 	};
 
 	inline void marshall(::dsn::binary_writer& writer, const get_file_size_response& val)
