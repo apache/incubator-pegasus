@@ -46,6 +46,7 @@ void mutation::set_client_request(task_code code, message_ptr& request)
     auto buf = buffer.buffer();
     blob bb(buf, static_cast<int>(buffer.data() - buffer.buffer().get()), buffer.length());
 
+    dassert(client_request == nullptr, "batch is not supported now");
     client_request = request;
     rpc_code = code;
     data.updates.push_back(bb);
@@ -55,22 +56,18 @@ void mutation::set_client_request(task_code code, message_ptr& request)
 {
     mutation_ptr mu(new mutation());
     unmarshall(reader, mu->data);
-
     unmarshall(reader, mu->rpc_code);
 
-    for (auto it = mu->data.updates.begin(); it != mu->data.updates.end(); it++)
-    {        
-        void * buf = malloc(it->length());
-        memcpy(buf, it->data(), it->length());                              
-        ::dsn::blob bb((const char *)buf, 0, it->length());
-        message_ptr msg(new message(bb, false));
-        mu->client_request = msg;
-    }
+    dassert(mu->data.updates.size() == 1, "batch is not supported now");
+    message_ptr msg(new message(mu->data.updates[0], false));
+    mu->client_request = msg;
 
     mu->_from_message = reader;
-    sprintf (mu->_name, "%lld.%lld", 
-            static_cast<long long int>(mu->data.header.ballot),
-            static_cast<long long int>(mu->data.header.decree));
+
+    sprintf(mu->_name, "%lld.%lld",
+        static_cast<long long int>(mu->data.header.ballot),
+        static_cast<long long int>(mu->data.header.decree));
+
     return mu;
 }
 
