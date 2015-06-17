@@ -12,8 +12,9 @@ namespace dsn {
 			nfs_service_impl(nfs_opts& opts) :
 				::dsn::service::serverlet<nfs_service_impl>("nfs"), _opts(opts)
 			{
-					_file_close_timer = ::dsn::service::tasking::enqueue(LPC_NFS_FILE_CLOSE_TIMER, this, &nfs_service_impl::close_file, 0, 0, opts.file_close_time);
-				}
+			    _file_close_timer = ::dsn::service::tasking::enqueue(LPC_NFS_FILE_CLOSE_TIMER, 
+                    this, &nfs_service_impl::close_file, 0, 0, opts.file_close_timer_interval_ms_on_server);
+	        }
 			virtual ~nfs_service_impl() {}
 
 		protected:

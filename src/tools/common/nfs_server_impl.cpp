@@ -11,8 +11,8 @@ namespace dsn {
 			//dinfo(">>> on call RPC_COPY end, exec RPC_NFS_COPY");
 
 			std::string file_path = request.source_dir + request.file_name;
-			std::shared_ptr<char> buf(new char[_opts.max_buf_size]);
-			blob bb(buf, _opts.max_buf_size);
+			std::shared_ptr<char> buf(new char[_opts.nfs_copy_block_bytes]);
+			blob bb(buf, _opts.nfs_copy_block_bytes);
 			handle_t hfile;
 
 			{
@@ -159,7 +159,7 @@ namespace dsn {
 
 				for (auto it = _handles_map.begin(); it != _handles_map.end();)
 				{
-					if (it->second->file_access_count == 0 && dsn::service::env::now_ms() - it->second->last_access_time > _opts.file_open_expire_time_ms) // not opened and expired
+					if (it->second->file_access_count == 0 && dsn::service::env::now_ms() - it->second->last_access_time > _opts.file_close_expire_time_ms) // not opened and expired
 					{
 						err = file::close(it->second->file_handle);
 						_handles_map.erase(it++);

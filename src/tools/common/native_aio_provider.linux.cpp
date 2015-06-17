@@ -1,32 +1,33 @@
 /*
-* The MIT License (MIT)
-*
-* Copyright (c) 2015 Microsoft Corporation
-*
-* -=- Robust Distributed System Nucleus (rDSN) -=-
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
-*/
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Microsoft Corporation
+ * 
+ * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 
 #include "native_aio_provider.linux.h"
 
-#if defined(__MACH__) || defined(__linux__)
+#if defined(__linux__)
 
 #include <fcntl.h>
 #include <cstdlib>
@@ -39,11 +40,18 @@ namespace dsn {
 		native_linux_aio_provider::native_linux_aio_provider(disk_engine* disk, aio_provider* inner_provider)
 			: aio_provider(disk, inner_provider)
 		{
+
+            memset(&_ctx, 0, sizeof(_ctx));
+            auto ret = io_setup(128, &_ctx); // 128 concurrent events
+            dassert(ret == 0, "io_setup error, ret = %d", ret);
+
 			new std::thread(std::bind(&native_linux_aio_provider::get_event, this));
 		}
 
 		native_linux_aio_provider::~native_linux_aio_provider()
 		{
+            auto ret = io_destroy(_ctx);
+            dassert(ret == 0, "io_destroy error, ret = %d", ret);
 		}
 
 		handle_t native_linux_aio_provider::open(const char* file_name, int flag, int pmode)
@@ -76,47 +84,34 @@ namespace dsn {
 		{
 			struct io_event events[1];
 			int ret;
-			io_context_t ctx;
 			linux_disk_aio_context * aio;
 
 			while (true)
 			{
-				{
-					::dsn::service::zauto_lock l(_lock);
-					if (_ctx_q.empty())
-						continue;
-					ctx = _ctx_q.front();
-					aio = _aio_q.front();
-
-					_ctx_q.pop();
-					_aio_q.pop();
-				}
-				ret = io_getevents(ctx, 1, 1, events, NULL);
+                ret = io_getevents(_ctx, 1, 1, events, NULL);
 				if (ret > 0) // should be 1
 				{
-					for (int i = 0; i < ret; i++)
-					{
-						io_callback_t cb = (io_callback_t)events[i].data;
-						cb(ctx, &aio->cb, events[i].res, events[i].res2);
-					}
+                    dassert (ret == 1, "");
+                    linux_disk_aio_context* aio = (linux_disk_aio_context*)events[0].data;
+                    complete_aio(aio, static_cast<int>(events[0].res), static_cast<int>(events[0].res2));
 				}
-				memset(&ctx, 0, sizeof(ctx));
 			}
 		}
 
-		void native_linux_aio_provider::aio_complete(io_context_t ctx, struct iocb *this_cb, long res, long res2)
+        void native_linux_aio_provider::complete_aio(linux_disk_aio_context* aio, int res, int res2)
 		{
-			linux_disk_aio_context * aio = container_of(this_cb, linux_disk_aio_context, cb);
-
 			size_t bytes = size_t(this_cb->u.c.nbytes); // from e.g., read or write
 			if (res2 != 0)
 			{
 				derror("aio error");
 			}
+
 			if (res != bytes)
 			{
 				derror("aio bytes miss");
 			}
+
+            // TODO: error handling
 
 			if (!aio->evt)
 			{
@@ -134,25 +129,15 @@ namespace dsn {
 		error_code native_linux_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool async, __out_param uint32_t* pbytes /*= nullptr*/)
 		{
 			struct iocb *cbs[1];
-			io_context_t ctx;
 			linux_disk_aio_context * aio;
 			int ret;
-
-			memset(&ctx, 0, sizeof(ctx));
-
-			ret = io_setup(128, &ctx);
-
-			if (ret < 0)
-			{
-				derror("io_setep error!");
-			}
-
+            
 			aio = (linux_disk_aio_context *)aio_tsk->aio().get();
 
 			memset(&aio->cb, 0, sizeof(aio->cb));
 
 			aio->this_ = this;
-			aio->cb.aio_fildes = static_cast<int>((ssize_t)aio->file);
+            aio->cb.data = aio;
 
 			switch (aio->type)
 			{
@@ -173,22 +158,17 @@ namespace dsn {
 				aio->bytes = 0;
 			}
 
-			io_set_callback(&aio->cb, aio_complete);
-
 			cbs[0] = &aio->cb;
+			ret = io_submit(_ctx, 1, cbs);
 
-			{
-				::dsn::service::zauto_lock l(_lock);
-				_ctx_q.push(ctx);
-				_aio_q.push(aio);
-			}
-			ret = io_submit(ctx, 1, cbs);
 			if (ret != 1)
 			{
 				if (ret < 0)
-					derror("io_submit error");
+					derror("io_submit error, ret = %d", ret);
 				else
-					derror("could not sumbit IOs");
+					derror("could not sumbit IOs, ret = %d", ret);
+
+                // TODO: error handling
 			}
 
 			if (async)

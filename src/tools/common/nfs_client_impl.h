@@ -9,81 +9,108 @@ namespace dsn {
 
 		struct nfs_opts
 		{
-			uint32_t max_buf_size;
+			uint32_t nfs_copy_block_bytes;
 			int max_concurrent_remote_copy_requests;
-			int file_open_expire_time_ms;
-			int file_close_time;
-			int client_close_time;
-			int max_request_step;
+            int max_concurrent_local_writes;
+
+			int file_close_expire_time_ms;
+			int file_close_timer_interval_ms_on_server;
+			int max_file_copy_request_count_per_file;
 
 			void init(configuration_ptr config)
 			{
-				max_buf_size = config->get_value<uint32_t>("nfs", "max_buf_size", max_buf_size);
-				max_concurrent_remote_copy_requests = config->get_value<uint32_t>("nfs", "max_concurrent_remote_copy_requests", max_concurrent_remote_copy_requests);
-				file_open_expire_time_ms = config->get_value<uint32_t>("nfs", "file_open_expire_time_ms", file_open_expire_time_ms);
-				file_close_time = config->get_value<uint32_t>("nfs", "file_close_time", file_close_time);
-				client_close_time = config->get_value<uint32_t>("nfs", "client_close_time", client_close_time);
-				max_request_step = config->get_value<uint32_t>("nfs", "max_request_step", max_request_step); // limit each file copy speed
+				nfs_copy_block_bytes = config->get_value<uint32_t>("nfs", "nfs_copy_block_bytes", 4*1024*1024);
+				max_concurrent_remote_copy_requests = config->get_value<uint32_t>("nfs", "max_concurrent_remote_copy_requests", 100);
+                max_concurrent_local_writes = config->get_value<uint32_t>("nfs", "max_concurrent_local_writes", 5);
+				file_close_expire_time_ms = config->get_value<uint32_t>("nfs", "file_close_expire_time_ms", 3*60*1000);
+				file_close_timer_interval_ms_on_server = config->get_value<uint32_t>("nfs", "file_close_timer_interval_ms_on_server", 2*60*1000);
+				max_file_copy_request_count_per_file = config->get_value<uint32_t>("nfs", "max_file_copy_request_count_per_file", 10); // limit each file copy speed
 			}
 		};
 
 		class nfs_client_impl
 			: public ::dsn::service::nfs_client
 		{
-			struct resp_copy_file_info
-			{
-				uint64_t current_offset;
-				std::map<uint64_t, copy_response> copy_response_map; // map write offset and copy response
-				int finished_count; // when finished_count == copy_count, file copy success
-				int copy_count;
-			};
+        public:
+            struct user_request;
+            struct file_context;
+            struct copy_request_ex : public ::dsn::ref_object
+            {
+                file_context *file_ctx;
+                int           index;
+                copy_request  copy_req;                             
+                copy_response response;
+                task_ptr      remote_copy_task;
+                task_ptr      local_write_task;
+                bool          is_ready_for_write;
+                bool          is_valid;
+
+                copy_request_ex(file_context* file, int idx)
+                {
+                    file_ctx = file;
+                    index = idx;
+                    remote_copy_task = nullptr;
+                    local_write_task = nullptr;
+                    is_ready_for_write = false;
+                    is_valid = true;
+                }
+            };
 
 			struct file_context
 			{
-				uint64_t file_size;
-				error_code err;
-				resp_copy_file_info* resp_info; // store the response rpc
+                user_request  *user_req;
+
+                std::string file_name;
+				uint64_t    file_size;
+				error_code  err;
+
+                std::atomic<handle_t> file;
+                int         current_write_index;
+                int         finished_segments;
+                std::vector<boost::intrusive_ptr<copy_request_ex> > copy_requests;
+
+                file_context(user_request* req, const std::string& file_nm, uint64_t sz)
+                {
+                    user_req = req;
+                    file_name = file_nm;
+                    file_size = sz;
+                    err = ERR_IO_PENDING;
+                    file = static_cast<handle_t>(0);
+
+                    current_write_index = -1;
+                    finished_segments = 0;
+                }
 			};
 
 			struct user_request
 			{
 				zlock				   user_req_lock;
+
 				get_file_size_request  file_size_req;
 				aio_task_ptr           nfs_task;
-				std::atomic<int>       copy_request_count;
-				std::atomic<bool>      finished;
+                std::atomic<int>       finished_files;
 
-				std::vector<task_ptr>	task_ptr_list;
-				std::vector<std::queue<copy_request*>> req_copy_file_vector; // store the request rpc, one file one queue
 				std::map<std::string, file_context*> file_context_map; // map file name and file info
-			};
 
-			struct copy_request_ex
-			{
-				copy_request copy_req;
-				user_request *user_req;
+                user_request()
+                {
+                    nfs_task = nullptr;
+                    finished_files = 0;
+                }
 			};
-
-			/* used to handle write conflict, TODO*/
-			struct file_shared_info
-			{
-				handle_t ht;
-				bool is_writing;
-				int32_t user_id;
-			};
-
+                        
 		public:
-			nfs_client_impl(const ::dsn::end_point& server, nfs_opts& opts) : nfs_client(server), _opts(opts)
+			nfs_client_impl(nfs_opts& opts) : nfs_client(end_point::INVALID), _opts(opts)
 			{
-				_server = server;
 				_concurrent_copy_request_count = 0;
+                _concurrent_local_write_count = 0;
 			}
 
 			virtual ~nfs_client_impl() {}
 
 			void begin_remote_copy(std::shared_ptr<remote_copy_request>& rci, aio_task_ptr nfs_task); // copy file request entry
 
-			void internal_write_callback(error_code err, uint32_t sz, ::std::string file_name, user_request* req); // write file callback
+            void local_write_callback(error_code err, uint32_t sz, boost::intrusive_ptr<copy_request_ex> reqc); // write file callback
 
 		private:
 			void end_copy(
@@ -96,13 +123,15 @@ namespace dsn {
 				const ::dsn::service::get_file_size_response& resp,
 				void* context); // rewrite end_get_file_size function
 
-			void continue_copy(int done_count, user_request* req);
+            void continue_copy(int done_count);
 
-			void write_copy(user_request* req, const ::dsn::service::copy_response& resp);
+            void write_copy(boost::intrusive_ptr<copy_request_ex> reqc);
+
+            void continue_write();
 
 			void write_file(user_request* req);
 
-			void handle_fault(std::string file_path, user_request *req, error_code err);
+			void handle_completion(user_request *req, error_code err);
 
 			void handle_success(std::string file_path, user_request *req, error_code err);
 
@@ -112,11 +141,19 @@ namespace dsn {
 
 		private:
 			nfs_opts         &_opts;
-			::dsn::end_point _server;
 
-			int              _concurrent_copy_request_count; // record concurrent request count, need be limitted above max_concurrent_remote_copy_requests
+			std::atomic<int> _concurrent_copy_request_count; // record concurrent request count, need be limitted above max_concurrent_remote_copy_requests
+            std::atomic<int> _concurrent_local_write_count; // 
 
-			std::map <std::string, handle_t> _handles_map; // cache file handles for write op, TODO: multi user request write the same file conflict
+            zlock                            _copy_requests_lock;
+            std::queue <boost::intrusive_ptr<copy_request_ex> >    _copy_requests;
+
+            zlock                            _local_writes_lock;
+            std::queue <boost::intrusive_ptr<copy_request_ex> >    _local_writes;
 		};
+
+
+        DEFINE_REF_OBJECT(nfs_client_impl::copy_request_ex);
+
 	}
 }
