@@ -24,33 +24,32 @@
  * THE SOFTWARE.
  */
 
-# include <dsn/internal/env_provider.h>
+# include <dsn/internal/aio_provider.h>
 # include <gtest/gtest.h>
-# include "env.sim.h"
+
 
 using namespace ::dsn;
 
-void test_env(env_provider& ev)
+void test_aio(aio_provider& ap)
 {
-    uint64_t xs[] = {
-        0,
-        (uint64_t)-1LL,
-        0xdeadbeef
-        };
-
-    for (auto& x : xs)
-    {
-        auto r = ev.random64(x, x);
-        EXPECT_EQ(r, x);
-
-        r = ev.random64(x, x + 1);
-        EXPECT_TRUE(r == x || r == (x + 1));
-    }
+    
 }
 
-TEST(tools, env_native)
+TEST(tools, aio_win)
 {
-    env_provider ev(nullptr);
-    test_env(ev);
+    //env_provider ev(nullptr);
+    //test_aio(ev);
+}
+
+TEST(tools, aio_posix)
+{
+    //env_provider ev(nullptr);
+    //test_aio(ev);
+}
+
+TEST(tools, aio_linux)
+{
+    //env_provider ev(nullptr);
+    //test_aio(ev);
 }
 

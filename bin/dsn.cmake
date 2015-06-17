@@ -241,7 +241,11 @@ function(dsn_setup_packages)
 		set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} rt)
 	endif()
 	
-	set(DSN_SYSTEM_LIBS
+    if("${CMAKE_SYSTEM}" MATCHES "Linux")
+		set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} aio)
+	endif()
+	
+    set(DSN_SYSTEM_LIBS
 		${DSN_SYSTEM_LIBS}
 		${CMAKE_THREAD_LIBS_INIT}
 		${BOOST_REQUIRED_LIBS}

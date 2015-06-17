@@ -16,44 +16,25 @@ namespace dsn {
             {
                 _opts.init(system::config());
                 _server = nullptr;
-
-                // TODO: create timer to cleanup idle clients
+                _client = nullptr;
             }
 
             virtual ~nfs_node_impl(void)
             {
                 stop();
-                
-                {
-                    zauto_lock l(_clients_lock);
-                    _clients.clear();
-                }
             }
 
 	        virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task_ptr& callback) override
 	        {
-                std::shared_ptr<nfs_client_impl> client = nullptr;
-                {
-                    zauto_lock l(_clients_lock);
-                    auto it = _clients.find(rci->source);
-                    if (it == _clients.end())
-                    {
-                        client.reset(new nfs_client_impl(rci->source, _opts));
-                        _clients.insert(std::map<end_point, std::shared_ptr<nfs_client_impl> >::value_type(rci->source, client));
-                    }
-                    else
-                    {
-                        client = it->second;
-                    }
-                }
-
-		        client->begin_remote_copy(rci, callback); // copy file request entry
+		        _client->begin_remote_copy(rci, callback); // copy file request entry
 	        }
 
             virtual error_code start() override
             {
                 _server = new nfs_service_impl(_opts);
                 _server->open_service();
+
+                _client = new nfs_client_impl(_opts);
                 return ERR_SUCCESS;
             }
 
@@ -62,15 +43,17 @@ namespace dsn {
                 _server->close_service();
                 delete _server;
                 _server = nullptr;
+
+                delete _client;
+                _client = nullptr;
+
                 return ERR_SUCCESS;
             }
     
         private:
             nfs_opts         _opts;
 	        nfs_service_impl *_server;
-
-            zlock                                                  _clients_lock;
-            std::map<end_point, std::shared_ptr<nfs_client_impl> > _clients;
+            nfs_client_impl  *_client;
         };
     } 
 } 
