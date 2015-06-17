@@ -100,7 +100,7 @@ namespace dsn {
 
         void native_linux_aio_provider::complete_aio(linux_disk_aio_context* aio, int res, int res2)
 		{
-			size_t bytes = size_t(this_cb->u.c.nbytes); // from e.g., read or write
+			/*size_t bytes = size_t(this_cb->u.c.nbytes); // from e.g., read or write
 			if (res2 != 0)
 			{
 				derror("aio error");
@@ -124,6 +124,7 @@ namespace dsn {
 				aio->bytes = bytes;
 				aio->evt->notify();
 			}
+            */
 		}
 
 		error_code native_linux_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool async, __out_param uint32_t* pbytes /*= nullptr*/)
