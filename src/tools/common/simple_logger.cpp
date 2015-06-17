@@ -96,26 +96,37 @@ namespace dsn {
         simple_logger::simple_logger(const char *parameter) 
             : logging_provider(parameter) 
         {
+            _start_index = 0;
             _index = 0;
             _lines = 0;
             _log = nullptr;
 
-            while (true)
+            // check existing log files
+            boost::filesystem::directory_iterator endtr;
+            for (boost::filesystem::directory_iterator it(std::string("./"));
+                it != endtr;
+                ++it)
             {
-                std::stringstream str;
-                str << "log." << (_index + 1) << ".txt";
+                auto name = it->path().filename().string();
+                if (name.length() <= 8 ||
+                    name.substr(0, 4) != "log.")
+                    continue;
 
-                if (boost::filesystem::exists(str.str()))
-                {
-                    ++_index;
-                }
-                else
-                    break;
+                int index;
+                if (1 != sscanf(name.c_str(), "log.%d.txt", &index))
+                    continue;
+
+                if (index > _index)
+                    _index = index;
+
+                if (_start_index == 0 || index < _start_index)
+                    _start_index = index;
             }
-            
+
+            if (_start_index == 0)
+                _start_index = _index;
 
             create_log_file();
-
         }
 
         void simple_logger::create_log_file()
@@ -127,7 +138,17 @@ namespace dsn {
 
             std::stringstream str;
             str << "log." << ++_index << ".txt";
-            _log = fopen(str.str().c_str(), "w+");            
+            _log = fopen(str.str().c_str(), "w+");  
+
+            // TODO: move gc out of criticial path
+            if (_index - _start_index > 20)
+            {
+                std::stringstream str2;
+                str2 << "log." << _start_index++ << ".txt";
+                boost::filesystem::path dp = str2.str();
+                if (boost::filesystem::exists(dp))
+                    boost::filesystem::remove(dp);
+            }
         }
 
         simple_logger::~simple_logger(void) 
