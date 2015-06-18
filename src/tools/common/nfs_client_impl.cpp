@@ -16,6 +16,7 @@ namespace dsn {
             req->file_size_req.source_dir = rci->source_dir;
             req->file_size_req.overwrite = rci->overwrite;
             req->nfs_task = nfs_task;
+			req->is_finished = false;
 
             begin_get_file_size(req->file_size_req, req, 0, 0, 0, &req->file_size_req.source); // async copy file
         }
@@ -126,6 +127,11 @@ namespace dsn {
                     req = _copy_requests.front();
                     _copy_requests.pop();
 
+					if (!req->is_valid)
+					{
+						req = nullptr;
+					}
+					
 					if (req != nullptr)
 					{
 						req->add_ref();
@@ -135,9 +141,6 @@ namespace dsn {
 					{
 						--_concurrent_copy_request_count;
 					}
-
-					if (!req->is_valid)
-						req = nullptr;
 
 					if (++_concurrent_copy_request_count > _opts.max_concurrent_remote_copy_requests)
 					{
@@ -161,7 +164,10 @@ namespace dsn {
             reqc.reset((copy_request_ex*)context);
             reqc->release_ref();
 
-            dassert(reqc->remote_copy_task == task::get_current_task(), "");
+			if (reqc == nullptr || reqc->file_ctx->user_req->is_finished)
+				return;
+
+            //dassert(reqc->remote_copy_task == task::get_current_task(), "");
             reqc->remote_copy_task = nullptr;
 
             continue_copy(1);
@@ -291,7 +297,7 @@ namespace dsn {
 
         void nfs_client_impl::local_write_callback(error_code err, uint32_t sz, boost::intrusive_ptr<copy_request_ex> reqc)
         {
-            dassert(reqc->local_write_task == task::get_current_task(), "");
+            //dassert(reqc->local_write_task == task::get_current_task(), "");
 
             reqc->local_write_task = nullptr;
             --_concurrent_local_write_count;
@@ -327,6 +333,7 @@ namespace dsn {
         {
             {
                 zauto_lock l(req->user_req_lock);
+				req->is_finished = true;
                 for (auto& f : req->file_context_map)
                 {
                     for (auto& rc : f.second->copy_requests)
@@ -347,6 +354,10 @@ namespace dsn {
                     {
                         file::close(f.second->file);
                         f.second->file = static_cast<handle_t>(0);
+						if (f.second->finished_segments != (int)f.second->copy_requests.size())
+						{
+							boost::filesystem::remove(f.second->user_req->file_size_req.dst_dir + f.second->file_name);;
+						}
                     }
                     delete f.second;
                 }
@@ -354,7 +365,6 @@ namespace dsn {
                 req->file_context_map.clear();
                 req->nfs_task->enqueue(err, 0, req->nfs_task->node());
             }
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // waiting for the working process
             delete req;
 		}
 
