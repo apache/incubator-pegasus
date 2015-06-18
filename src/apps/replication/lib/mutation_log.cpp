@@ -546,28 +546,16 @@ int mutation_log::garbage_collection(multi_partition_decrees& durable_decrees)
     {
         itr->second->close();
 
-        ddebug(
-            "remove log segment %s", itr->second->path().c_str());
+        ddebug("remove log segment %s", itr->second->path().c_str());
 
-        std::string newName = itr->second->path() + ".removed";
-        
-        boost::filesystem::rename(itr->second->path().c_str(), newName.c_str());
+        boost::filesystem::remove(itr->second->path().c_str());
 
         count++;
 
         {
-        zauto_lock l(_lock);
-        _log_files.erase(itr->first);
+            zauto_lock l(_lock);
+            _log_files.erase(itr->first);
         }
-
-        /*
-        if (!::MoveFileExA(itr->second->path().c_str(), nullptr, MOVEFILE_WRITE_THROUGH))
-        {
-            int err = GetLastError();
-            LogR(log_level_Error, "mutation_log::truncate error. error: %d", err);
-            return err;
-        }
-        */
     }
 
     return count;
