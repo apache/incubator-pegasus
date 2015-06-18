@@ -204,8 +204,6 @@ void task::signal_waiters()
 // multiple callers may wait on this
 bool task::wait(int timeout_milliseconds)
 {
-    service::lock_checker::check_wait_task(this);
-
     dassert (this != task::get_current_task(), "task cannot wait itself");
 
     if (!spec().on_task_wait_pre.execute(task::get_current_task(), this, (uint32_t)timeout_milliseconds, true))
@@ -214,7 +212,10 @@ bool task::wait(int timeout_milliseconds)
         return false;
     }
 
-    if (state() >= TASK_STATE_FINISHED)
+    auto cs = state();
+    service::lock_checker::check_wait_task(this, cs == TASK_STATE_RUNNING);
+
+    if (cs >= TASK_STATE_FINISHED)
     {
         spec().on_task_wait_post.execute(task::get_current_task(), this, true);
         return true;

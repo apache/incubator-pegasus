@@ -35,7 +35,7 @@ namespace lock_checker {
     extern __thread int zlock_shared_count;
     extern void check_wait_safety();
     extern void check_dangling_lock();
-    extern void check_wait_task(task* waitee);
+    extern void check_wait_task(task* waitee, bool waitee_is_running);
 }
 
 class zlock

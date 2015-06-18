@@ -74,6 +74,7 @@ namespace dsn {
         private:
             std::recursive_mutex _lock;
             FILE* _log;
+            int _start_index;
             int _index;
             int _lines;
         };
