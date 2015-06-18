@@ -42,14 +42,10 @@ mutation::~mutation()
 
 void mutation::set_client_request(task_code code, message_ptr& request)
 {
-    ::dsn::blob buffer(request->reader().get_remaining_buffer());
-    auto buf = buffer.buffer();
-    blob bb(buf, static_cast<int>(buffer.data() - buffer.buffer().get()), buffer.length());
-
     dassert(client_request == nullptr, "batch is not supported now");
     client_request = request;
     rpc_code = code;
-    data.updates.push_back(bb);
+    data.updates.push_back(request->reader().get_remaining_buffer());
 }
 
 /*static*/ mutation_ptr mutation::read_from(message_ptr& reader)
