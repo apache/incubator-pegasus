@@ -89,6 +89,7 @@ namespace dsn {
 				get_file_size_request  file_size_req;
 				aio_task_ptr           nfs_task;
                 std::atomic<int>       finished_files;
+				bool				   is_finished;
 
 				std::map<std::string, file_context*> file_context_map; // map file name and file info
 
