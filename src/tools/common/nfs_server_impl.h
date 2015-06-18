@@ -32,6 +32,9 @@ namespace dsn {
 				blob bb;
 				uint64_t offset;
 				uint32_t size;
+                rpc_replier<copy_response> replier;
+
+                callback_para(rpc_replier<copy_response>& r) : replier(r){}
 			};
 
 			struct file_handle_info_on_server
@@ -41,7 +44,7 @@ namespace dsn {
 				uint64_t last_access_time; // last touch time
 			};
 
-			void internal_read_callback(error_code err, uint32_t sz, callback_para cp, ::dsn::service::rpc_replier<::dsn::service::copy_response>& reply);
+			void internal_read_callback(error_code err, uint32_t sz, std::shared_ptr<callback_para> cp);
 
 			void close_file();
 

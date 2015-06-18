@@ -129,7 +129,10 @@ namespace dsn {
                         _copy_requests.pop();
                     }
                     else
+                    {
+                        --_concurrent_copy_request_count;
                         break;
+                    }
                 }
 
                 {
@@ -143,16 +146,12 @@ namespace dsn {
                     {
                         req->add_ref();
                         req->remote_copy_task = begin_copy(req->copy_req, req.get(), 0, 0, 0, &req->file_ctx->user_req->file_size_req.source);
-                    }
-                    else
-                    {
-                        --_concurrent_copy_request_count;
-                    }
 
-                    if (++_concurrent_copy_request_count > _opts.max_concurrent_remote_copy_requests)
-                    {
-                        --_concurrent_copy_request_count;
-                        break;
+                        if (++_concurrent_copy_request_count > _opts.max_concurrent_remote_copy_requests)
+                        {
+                            --_concurrent_copy_request_count;
+                            break;
+                        }
                     }
                 }
             }
@@ -296,7 +295,7 @@ namespace dsn {
                 reqc->response.size,
                 reqc->response.offset,
                 LPC_NFS_WRITE,
-                nullptr,
+                this,
                 std::bind(
                     &nfs_client_impl::local_write_callback,
                         this,

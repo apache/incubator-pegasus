@@ -46,7 +46,13 @@ namespace dsn {
 			}
 
 
-			callback_para cp = { hfile, request.file_name, request.dst_dir, bb, request.offset, request.size };
+            std::shared_ptr<callback_para> cp(new callback_para(reply));
+            cp->bb = bb;
+            cp->dst_dir = request.dst_dir;
+            cp->file_name = request.file_name;
+            cp->hfile = hfile;
+            cp->offset = request.offset;
+            cp->size = request.size;
 
 			auto task = file::read(
 				hfile,
@@ -54,19 +60,18 @@ namespace dsn {
 				request.size,
 				request.offset,
 				LPC_NFS_READ,
-				nullptr,
-				std::bind(
-				&nfs_service_impl::internal_read_callback,
 				this,
-				std::placeholders::_1,
-				std::placeholders::_2,
-				cp,
-				reply
+				std::bind(
+				    &nfs_service_impl::internal_read_callback,
+				    this,
+				    std::placeholders::_1,
+				    std::placeholders::_2,
+                    cp
 				)
 				);
 		}
 
-		void nfs_service_impl::internal_read_callback(error_code err, uint32_t sz, callback_para cp, ::dsn::service::rpc_replier<::dsn::service::copy_response>& reply)
+        void nfs_service_impl::internal_read_callback(error_code err, uint32_t sz, std::shared_ptr<callback_para> cp)
 		{
 			if (err != 0)
 			{
@@ -75,7 +80,7 @@ namespace dsn {
 
 			{
 				zauto_lock l(_handles_map_lock);
-				auto it = _handles_map.find(cp.file_name);
+				auto it = _handles_map.find(cp->file_name);
 
 				if (it != _handles_map.end())
 				{
@@ -85,13 +90,13 @@ namespace dsn {
 
 			::dsn::service::copy_response resp;
 			resp.error = err;
-			resp.file_name = cp.file_name;
-			resp.dst_dir = cp.dst_dir;
-            resp.file_content = cp.bb;
-			resp.offset = cp.offset;
-			resp.size = cp.size;
+			resp.file_name = cp->file_name;
+            resp.dst_dir = cp->dst_dir;
+            resp.file_content = cp->bb;
+            resp.offset = cp->offset;
+            resp.size = cp->size;
 
-			reply(resp);
+            cp->replier(resp);
 		}
 
 		// RPC_NFS_NEW_NFS_GET_FILE_SIZE 
