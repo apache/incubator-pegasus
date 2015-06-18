@@ -87,12 +87,10 @@ namespace dsn {
 			resp.error = err;
 			resp.file_name = cp.file_name;
 			resp.dst_dir = cp.dst_dir;
-
-			auto sptr = cp.bb.buffer();
-			resp.file_content = blob(sptr, 0, sz);
-
+            resp.file_content = cp.bb;
 			resp.offset = cp.offset;
 			resp.size = cp.size;
+
 			reply(resp);
 		}
 
@@ -107,19 +105,26 @@ namespace dsn {
 			std::string folder = request.source_dir;
 			if (request.file_list.size() == 0) // return all file size in the destination file folder
 			{
-				get_file_names(folder, file_list);
-				for (size_t i = 0; i < file_list.size(); i++)
-				{
-					struct stat st;
-					::stat(file_list[i].c_str(), &st);
+                if (!::boost::filesystem::exists(folder))
+                {
+                    err = ERR_OBJECT_NOT_FOUND;
+                }
+                else
+                {
+                    get_file_names(folder, file_list);
+                    for (size_t i = 0; i < file_list.size(); i++)
+                    {
+                        struct stat st;
+                        ::stat(file_list[i].c_str(), &st);
 
-					// TODO: using uint64 instead as file ma
-					// Done
-					uint64_t size = st.st_size;
+                        // TODO: using uint64 instead as file ma
+                        // Done
+                        uint64_t size = st.st_size;
 
-					resp.size_list.push_back(size);
-					resp.file_list.push_back(file_list[i].substr(request.source_dir.length(), file_list[i].length() - 1));
-				}
+                        resp.size_list.push_back(size);
+                        resp.file_list.push_back(file_list[i].substr(request.source_dir.length(), file_list[i].length() - 1));
+                    }
+                }
 			}
 			else // return file size in the request file folder
 			{

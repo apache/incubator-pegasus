@@ -74,8 +74,8 @@ namespace dsn {
 
 					_server = ::dsn::end_point(argv[1], (uint16_t)atoi(argv[2]));
 
-					on_request_timer();
-					//_request_timer = ::dsn::service::tasking::enqueue(LPC_NFS_REQUEST_TIMER, this, &nfs_client_app::on_request_timer, 0, 0, 1000);
+					//on_request_timer();
+					_request_timer = ::dsn::service::tasking::enqueue(LPC_NFS_REQUEST_TIMER, this, &nfs_client_app::on_request_timer, 0, 0, 1000);
 
 					return ::dsn::ERR_SUCCESS;
 				}
@@ -88,23 +88,27 @@ namespace dsn {
 
 				void on_request_timer()
 				{
-					std::string source_dir = ""; // add your path
-					std::string dest_dir = ""; // add your path
+					std::string source_dir = "./src"; // add your path
+					std::string dest_dir = "./dst"; // add your path
+                    std::string dest_dir2 = "./dst2"; // add your path
 					std::vector<std::string> files; // empty is for all
 					bool overwrite = true;
 					file::copy_remote_files(_server, source_dir, files, dest_dir, overwrite, LPC_NFS_COPY_FILE, nullptr,
 						std::bind(&nfs_client_app::internal_copy_callback,
 						this,
 						std::placeholders::_1,
-						std::placeholders::_2,
-						_server,
-						source_dir,
-						files,
-						dest_dir,
-						overwrite));
+						std::placeholders::_2
+                        ));
+
+                    file::copy_remote_files(_server, source_dir, files, dest_dir2, overwrite, LPC_NFS_COPY_FILE, nullptr,
+                        std::bind(&nfs_client_app::internal_copy_callback,
+                        this,
+                        std::placeholders::_1,
+                        std::placeholders::_2
+                        ));
 				}
 
-				void internal_copy_callback(error_code err, uint32_t size, ::dsn::end_point _server, std::string source_dir, std::vector<std::string> files, std::string dest_dir, bool overwrite)
+				void internal_copy_callback(error_code err, uint32_t size)
 				{
 					if (err == ::dsn::ERR_SUCCESS)
 					{

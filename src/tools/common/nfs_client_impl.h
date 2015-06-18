@@ -44,6 +44,7 @@ namespace dsn {
                 task_ptr      local_write_task;
                 bool          is_ready_for_write;
                 bool          is_valid;
+                zlock         lock;
 
                 copy_request_ex(file_context* file, int idx)
                 {

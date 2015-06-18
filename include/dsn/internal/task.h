@@ -49,7 +49,7 @@ public:
     virtual void exec() = 0;
 
     void                    exec_internal();    
-    bool                    cancel(bool wait_until_finished);
+    bool                    cancel(bool wait_until_finished, /*out*/ bool* cancel_success = nullptr); // return whether finished
     bool                    wait(int timeout_milliseconds = TIME_MS_MAX);
     virtual void            enqueue();
     void                    set_error_code(error_code err) { _error = err; }

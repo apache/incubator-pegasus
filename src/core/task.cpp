@@ -248,13 +248,13 @@ bool task::wait(int timeout_milliseconds)
 //
 // return - whether the task has completed (not necessarily cancelled though)
 //
-bool task::cancel(bool wait_until_finished)
+bool task::cancel(bool wait_until_finished, /*out*/ bool* cancel_success /*= nullptr*/)
 {
     task_state READY_STATE = TASK_STATE_READY;
     task *current_tsk = task::get_current_task();
     bool ret = true;
     bool succ = false;
-
+    
     if (current_tsk == this)
     {
         /*dwarn(
@@ -262,6 +262,10 @@ bool task::cancel(bool wait_until_finished)
             spec().name,
             id()
             );*/
+
+        if (cancel_success)
+            *cancel_success = false;
+
         return false;
     }
     
@@ -297,6 +301,9 @@ bool task::cancel(bool wait_until_finished)
         spec().on_task_cancelled.execute(this);
         signal_waiters();
     }
+
+    if (cancel_success)
+        *cancel_success = succ;
 
     return ret;
 }

@@ -119,37 +119,42 @@ namespace dsn {
             }
 
             boost::intrusive_ptr<copy_request_ex> req = nullptr;
-			while (true)
+            while (true)
             {
-                zauto_lock l(_copy_requests_lock);
-                if (!_copy_requests.empty())
                 {
-                    req = _copy_requests.front();
-                    _copy_requests.pop();
-
-					if (!req->is_valid)
-					{
-						req = nullptr;
-					}
-					
-					if (req != nullptr)
-					{
-						req->add_ref();
-						req->remote_copy_task = begin_copy(req->copy_req, req.get(), 0, 0, 0, &req->file_ctx->user_req->file_size_req.source);
-					}
-					else
-					{
-						--_concurrent_copy_request_count;
-					}
-
-					if (++_concurrent_copy_request_count > _opts.max_concurrent_remote_copy_requests)
-					{
-						--_concurrent_copy_request_count;
-						break;
-					}
+                    zauto_lock l(_copy_requests_lock);
+                    if (!_copy_requests.empty())
+                    {
+                        req = _copy_requests.front();
+                        _copy_requests.pop();
+                    }
+                    else
+                        break;
                 }
-                else
-                    break;
+
+                {
+                    zauto_lock l(req->lock);
+                    if (!req->is_valid)
+                    {
+                        req = nullptr;
+                    }
+
+                    if (req != nullptr)
+                    {
+                        req->add_ref();
+                        req->remote_copy_task = begin_copy(req->copy_req, req.get(), 0, 0, 0, &req->file_ctx->user_req->file_size_req.source);
+                    }
+                    else
+                    {
+                        --_concurrent_copy_request_count;
+                    }
+
+                    if (++_concurrent_copy_request_count > _opts.max_concurrent_remote_copy_requests)
+                    {
+                        --_concurrent_copy_request_count;
+                        break;
+                    }
+                }
             }
         }
 
@@ -164,12 +169,6 @@ namespace dsn {
             reqc.reset((copy_request_ex*)context);
             reqc->release_ref();
 
-			if (reqc->file_ctx->user_req->is_finished)
-				return;
-
-            //dassert(reqc->remote_copy_task == task::get_current_task(), "");
-            reqc->remote_copy_task = nullptr;
-
             continue_copy(1);
 
             if (err == ERR_SUCCESS)
@@ -180,6 +179,7 @@ namespace dsn {
 			if (err != ::dsn::ERR_SUCCESS)
 			{
 				handle_completion(reqc->file_ctx->user_req, err);
+                reqc->remote_copy_task = nullptr;
 				return;
 			}
             
@@ -214,6 +214,8 @@ namespace dsn {
                 }
             }
 
+            reqc->remote_copy_task = nullptr;
+
             continue_write();
 		}
 
@@ -230,18 +232,24 @@ namespace dsn {
             boost::intrusive_ptr<copy_request_ex> reqc = nullptr;
             while (true)
             {
-                zauto_lock l(_local_writes_lock);
-                if (!_local_writes.empty())
                 {
-                    reqc = _local_writes.front();
-                    _local_writes.pop();
+                    zauto_lock l(_local_writes_lock);
+                    if (!_local_writes.empty())
+                    {
+                        reqc = _local_writes.front();
+                        _local_writes.pop();
+                    }
+                    else
+                        break;
+                }
+
+                {
+                    zauto_lock l(reqc->lock);
                     if (reqc->is_valid)
                         break;
                     else
                         reqc = nullptr;
                 }
-                else
-                    break;
             }
 
             if (nullptr == reqc)
@@ -264,8 +272,12 @@ namespace dsn {
             if (!hfile)
             {
                 zauto_lock l(reqc->file_ctx->user_req->user_req_lock);
-                hfile = file::open(file_path.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
-                reqc->file_ctx->file = hfile;
+                hfile = reqc->file_ctx->file.load();
+                if (!hfile)
+                {
+                    hfile = file::open(file_path.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
+                    reqc->file_ctx->file = hfile;
+                }
             }
             
             if (!hfile)
@@ -316,6 +328,7 @@ namespace dsn {
                 {
 					file::close(reqc->file_ctx->file);
 					reqc->file_ctx->file = static_cast<handle_t>(0);
+
                     if (++reqc->file_ctx->user_req->finished_files == (int)reqc->file_ctx->user_req->file_context_map.size())
                     {
 						completed = true;
@@ -333,38 +346,63 @@ namespace dsn {
         {
             {
                 zauto_lock l(req->user_req_lock);
-				req->is_finished = true;
-                for (auto& f : req->file_context_map)
+                if (req->is_finished)
+                    return;
+
+                req->is_finished = true;
+            }
+
+            for (auto& f : req->file_context_map)
+            {
+                for (auto& rc : f.second->copy_requests)
                 {
-                    for (auto& rc : f.second->copy_requests)
+                    auto task = rc->remote_copy_task;
+                    bool succ;
+
+                    if (task != nullptr)
                     {
-                        auto task = rc->remote_copy_task;
-                        if (task != nullptr)
-                            task->cancel(true);
+                        task->cancel(true, &succ);
+                        if (succ)
+                        {
+                            _concurrent_copy_request_count--;
+                        }
+                    }   
 
-                        task = rc->local_write_task;
-                        if (task != nullptr)
-                            task->cancel(true);
+                    task = rc->local_write_task;
+                    if (task != nullptr)
+                    {
+                        task->cancel(true, &succ);
+                        if (succ)
+                        {
+                            _concurrent_local_write_count--;
+                        }
+                    }
 
+                    {
+                        zauto_lock l(rc->lock);
                         rc->is_valid = false;
                     }
-                    f.second->copy_requests.clear();
-
-                    if (f.second->file)
-                    {
-                        file::close(f.second->file);
-                        f.second->file = static_cast<handle_t>(0);
-						if (f.second->finished_segments != (int)f.second->copy_requests.size())
-						{
-							boost::filesystem::remove(f.second->user_req->file_size_req.dst_dir + f.second->file_name);;
-						}
-                    }
-                    delete f.second;
                 }
 
-                req->file_context_map.clear();
-                req->nfs_task->enqueue(err, 0, req->nfs_task->node());
+                f.second->copy_requests.clear();
+
+                if (f.second->file)
+                {
+                    file::close(f.second->file);
+                    f.second->file = static_cast<handle_t>(0);
+
+					if (f.second->finished_segments != (int)f.second->copy_requests.size())
+					{
+						boost::filesystem::remove(f.second->user_req->file_size_req.dst_dir + f.second->file_name);
+					}
+                }
+
+                delete f.second;
             }
+
+            req->file_context_map.clear();
+            req->nfs_task->enqueue(err, 0, req->nfs_task->node());
+
             delete req;
 		}
 
