@@ -59,12 +59,12 @@ typedef int handle_t;
 # endif
 
 # ifndef FIELD_OFFSET
-# define FIELD_OFFSET(s, field)  ((size_t)&((s *)(0))->field)
+# define FIELD_OFFSET(s, field)  (((size_t)&((s *)(10))->field) - 10)
 # endif
 
 # ifndef CONTAINING_RECORD 
 # define CONTAINING_RECORD(address, type, field) \
-            ((type *)((PCHAR)(address)-(void*)(&((type *)0)->field)))
+            ((type *)((char*)(address)-FIELD_OFFSET(type, field)))
 # endif
 
 # ifndef MAX_COMPUTERNAME_LENGTH

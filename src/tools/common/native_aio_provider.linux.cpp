@@ -98,32 +98,25 @@ namespace dsn {
 			}
 		}
 
-		void native_linux_aio_provider::complete_aio(struct iocb* io, int res, int res2)
+		void native_linux_aio_provider::complete_aio(struct iocb* io, int bytes, int err)
 		{
-			int bytes = io->u.c.nbytes;
-			linux_disk_aio_context* aio = container_of(io, linux_disk_aio_context, cb);
-			if (res2 != 0)
+			linux_disk_aio_context* aio = CONTAINING_RECORD(io, linux_disk_aio_context, cb);
+			if (err != 0)
 			{
-				derror("aio error");
-			}
-
-			if (res != bytes)
-			{
-				derror("aio bytes miss");
+				derror("aio error, err = %d", err);
 			}
 
 			if (!aio->evt)
 			{
 				aio_task_ptr aio_ptr(aio->tsk);
-				aio->this_->complete_io(aio_ptr, (res2 == 0 && res == bytes) ? ERR_SUCCESS : ERR_FILE_OPERATION_FAILED, bytes);
+				aio->this_->complete_io(aio_ptr, (err == 0) ? ERR_SUCCESS : ERR_FILE_OPERATION_FAILED, bytes);
 			}
 			else
 			{
-				aio->err = (res2 == 0 && res == bytes) ? ERR_SUCCESS : ERR_FILE_OPERATION_FAILED;
+				aio->err = (err == 0) ? ERR_SUCCESS : ERR_FILE_OPERATION_FAILED;
 				aio->bytes = bytes;
 				aio->evt->notify();
 			}
-
 		}
 
 		error_code native_linux_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool async, __out_param uint32_t* pbytes /*= nullptr*/)
@@ -137,7 +130,6 @@ namespace dsn {
 			memset(&aio->cb, 0, sizeof(aio->cb));
 
 			aio->this_ = this;
-			aio->cb.data = aio;
 
 			switch (aio->type)
 			{
@@ -168,21 +160,32 @@ namespace dsn {
 				else
 					derror("could not sumbit IOs, ret = %d", ret);
 
+                if (async)
+                {
+                    complete_io(aio_tsk, ERR_FILE_OPERATION_FAILED, 0);
+                }
+                else
+                {
+                    delete aio->evt;
+                    aio->evt = nullptr;
+                }
 				return ERR_FILE_OPERATION_FAILED;
 			}
-
-			if (async)
-			{
-				return ERR_IO_PENDING;
-			}
-			else
-			{
-				aio->evt->wait();
-				delete aio->evt;
-				aio->evt = nullptr;
-				*pbytes = aio->bytes;
-				return aio->err;
-			}
+            else 
+            {
+                if (async)
+                {
+                    return ERR_IO_PENDING;
+                }
+                else
+                {
+                    aio->evt->wait();
+                    delete aio->evt;
+                    aio->evt = nullptr;
+                    *pbytes = aio->bytes;
+                    return aio->err;
+                }
+            }
 		}
 	}
 } // end namespace dsn::tools

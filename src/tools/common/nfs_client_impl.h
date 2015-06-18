@@ -130,15 +130,7 @@ namespace dsn {
 
             void continue_write();
 
-			void write_file(user_request* req);
-
 			void handle_completion(user_request *req, error_code err);
-
-			void handle_success(std::string file_path, user_request *req, error_code err);
-
-			void handle_finish(std::string file_path, user_request *req, error_code err);
-
-			void garbage_collect(user_request* req);
 
 		private:
 			nfs_opts         &_opts;

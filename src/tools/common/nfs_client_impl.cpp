@@ -164,7 +164,7 @@ namespace dsn {
             reqc.reset((copy_request_ex*)context);
             reqc->release_ref();
 
-			if (reqc == nullptr || reqc->file_ctx->user_req->is_finished)
+			if (reqc->file_ctx->user_req->is_finished)
 				return;
 
             //dassert(reqc->remote_copy_task == task::get_current_task(), "");

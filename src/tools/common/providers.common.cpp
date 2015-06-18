@@ -29,6 +29,7 @@
 # include "lockp.std.h"
 # include "native_aio_provider.win.h"
 # include "native_aio_provider.posix.h"
+# include "native_aio_provider.linux.h"
 # include "simple_perf_counter.h"
 # include "simple_task_queue.h"
 # include "network.sim.h"
@@ -53,6 +54,8 @@ namespace dsn {
             register_message_header_parser<dsn_message_parser>(NET_HDR_DSN);
 #if defined(_WIN32)
             register_component_provider<native_win_aio_provider>("dsn::tools::native_aio_provider");
+#elif defined(_LINUX)
+            register_component_provider<native_linux_aio_provider>("dsn::tools::native_aio_provider");
 #else
             register_component_provider<native_posix_aio_provider>("dsn::tools::native_aio_provider");
 #endif

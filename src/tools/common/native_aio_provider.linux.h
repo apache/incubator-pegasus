@@ -64,7 +64,7 @@ namespace dsn {
 
 		protected:
 			error_code aio_internal(aio_task_ptr& aio, bool async, __out_param uint32_t* pbytes = nullptr);
-            void complete_aio(linux_disk_aio_context* aio, int bytes, int err);
+            void complete_aio(struct iocb* io, int bytes, int err);
 			void get_event();
 
 		private:
