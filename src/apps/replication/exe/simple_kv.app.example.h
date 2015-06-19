@@ -25,6 +25,7 @@
  */
 # pragma once
 # include "simple_kv.client.h"
+# include "simple_kv.client.perf.h"
 # include "simple_kv.server.h"
 
 namespace dsn { namespace replication { namespace application { 
@@ -99,10 +100,51 @@ public:
 	}
 
 private:
-	::dsn::task_ptr _timer;
-	::dsn::end_point _server;
-	
+	::dsn::task_ptr _timer;	
 	simple_kv_client *_simple_kv_client;
 };
+
+
+class simple_kv_perf_test_client_app : public ::dsn::service::service_app, public virtual ::dsn::service::servicelet
+{
+public:
+    simple_kv_perf_test_client_app(::dsn::service_app_spec* s)
+        : ::dsn::service::service_app(s)
+    {
+        _simple_kv_client = nullptr;
+    }
+
+    ~simple_kv_perf_test_client_app()
+    {
+        stop();
+    }
+
+    virtual ::dsn::error_code start(int argc, char** argv)
+    {
+        if (argc < 2)
+            return ::dsn::ERR_INVALID_PARAMETERS;
+
+        std::vector<::dsn::end_point> meta_servers;
+        auto cf = ::dsn::service::system::config();
+        ::dsn::replication::replication_app_client_base::load_meta_servers(cf, meta_servers);
+
+        _simple_kv_client = new simple_kv_perf_test_client(meta_servers, argv[1]);
+        _simple_kv_client->start_test();
+        return ::dsn::ERR_SUCCESS;
+    }
+
+    virtual void stop(bool cleanup = false)
+    {
+        if (_simple_kv_client != nullptr)
+        {
+            delete _simple_kv_client;
+            _simple_kv_client = nullptr;
+        }
+    }
+    
+private:
+    simple_kv_perf_test_client *_simple_kv_client;
+};
+
 
 } } } 

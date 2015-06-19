@@ -5,6 +5,7 @@ $file_prefix = $argv[3];
 ?>
 # pragma once
 # include "<?=$file_prefix?>.client.h"
+# include "<?=$file_prefix?>.client.perf.h"
 # include "<?=$file_prefix?>.server.h"
 
 <?=$_PROG->get_cpp_namespace_begin()?>
@@ -88,5 +89,48 @@ private:
 	<?=$svc->name?>_client *_<?=$svc->name?>_client;
 <?php } ?>
 };
+
+<?php foreach ($_PROG->services as $svc) { ?>
+class <?=$svc->name?>_perf_test_client_app : public ::dsn::service::service_app, public virtual ::dsn::service::servicelet
+{
+public:
+    <?=$svc->name?>_perf_test_client_app(::dsn::service_app_spec* s)
+        : ::dsn::service::service_app(s)
+    {
+        _<?=$svc->name?>_client = nullptr;
+    }
+
+    ~<?=$svc->name?>_perf_test_client_app()
+    {
+        stop();
+    }
+
+    virtual ::dsn::error_code start(int argc, char** argv)
+    {
+        if (argc < 2)
+            return ::dsn::ERR_INVALID_PARAMETERS;
+
+        std::vector<::dsn::end_point> meta_servers;
+        auto cf = ::dsn::service::system::config();
+        ::dsn::replication::replication_app_client_base::load_meta_servers(cf, meta_servers);
+
+        _<?=$svc->name?>_client = new <?=$svc->name?>_perf_test_client(meta_servers, argv[1]);
+        _<?=$svc->name?>_client->start_test();
+        return ::dsn::ERR_SUCCESS;
+    }
+
+    virtual void stop(bool cleanup = false)
+    {
+        if (_<?=$svc->name?>_client != nullptr)
+        {
+            delete _<?=$svc->name?>_client;
+            _<?=$svc->name?>_client = nullptr;
+        }
+    }
+    
+private:
+    <?=$svc->name?>_perf_test_client *_<?=$svc->name?>_client;
+};
+<?php } ?>
 
 <?=$_PROG->get_cpp_namespace_end()?>

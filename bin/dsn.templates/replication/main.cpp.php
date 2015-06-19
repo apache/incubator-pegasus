@@ -23,6 +23,9 @@ int main(int argc, char** argv)
     dsn::service::system::register_service<::dsn::replication::meta_service_app>("meta");
     dsn::service::system::register_service<::dsn::replication::replication_service_app>("replica");
 	dsn::service::system::register_service<<?=$_PROG->get_cpp_namespace().$_PROG->name?>_client_app>("client");
+<?php foreach ($_PROG->services as $svc) { ?>
+	dsn::service::system::register_service<<?=$_PROG->get_cpp_namespace().$svc->name?>_perf_test_client_app>("client.<?=$svc->name?>.perf.test");
+<?php } ?>
 
 	// register all possible tools and toollets
 	dsn::tools::register_tool<dsn::tools::nativerun>("nativerun");

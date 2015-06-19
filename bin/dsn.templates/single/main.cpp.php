@@ -19,6 +19,9 @@ int main(int argc, char** argv)
 	// register all possible service apps
 	dsn::service::system::register_service<<?=$_PROG->get_cpp_namespace().$_PROG->name?>_server_app>("<?=$_PROG->name?>_server");
 	dsn::service::system::register_service<<?=$_PROG->get_cpp_namespace().$_PROG->name?>_client_app>("<?=$_PROG->name?>_client");
+<?php foreach ($_PROG->services as $svc) { ?>
+	dsn::service::system::register_service<<?=$_PROG->get_cpp_namespace().$svc->name?>_perf_test_client_app>("<?=$_PROG->name?>_client.<?=$svc->name?>.perf.test");
+<?php } ?>
 
 	// register all possible tools and toollets
 	dsn::tools::register_tool<dsn::tools::nativerun>("nativerun");
@@ -26,7 +29,7 @@ int main(int argc, char** argv)
 	dsn::tools::register_toollet<dsn::tools::tracer>("tracer");
 	dsn::tools::register_toollet<dsn::tools::profiler>("profiler");
 	dsn::tools::register_toollet<dsn::tools::fault_injector>("fault_injector");
-		
+
     // register necessary components
 #ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
 <?php if ($idl_type == "thrift" ) { ?>

@@ -16,7 +16,16 @@ type = <?=$_PROG->name?>_client
 arguments = localhost 27001
 count = 1
 run = true
-    
+
+<?php foreach ($_PROG->services as $svc) { ?>
+[apps.client.<?=$svc->name?>.perf.test]
+name = client.<?=$svc->name?>.perf
+type = <?=$_PROG->name?>_client.<?=$svc->name?>.perf.test
+arguments = localhost 27001
+count = 1
+run = false
+<?php } ?>
+
 [core]
 
 tool = simulator

@@ -46,6 +46,7 @@ int main(int argc, char** argv)
     dsn::service::system::register_service<::dsn::replication::meta_service_app>("meta");
     dsn::service::system::register_service<::dsn::replication::replication_service_app>("replica");
 	dsn::service::system::register_service<::dsn::replication::application::simple_kv_client_app>("client");
+    dsn::service::system::register_service<::dsn::replication::application::simple_kv_perf_test_client_app>("client.perf_test");
 
 	// register all possible tools and toollets
 	dsn::tools::register_tool<dsn::tools::nativerun>("nativerun");
