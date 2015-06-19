@@ -231,7 +231,7 @@ namespace dsn { namespace service {
                 #ifdef max
                 #undef max
                 #endif
-                std::this_thread::sleep_for(std::chrono::hours::max());
+                std::this_thread::sleep_for(std::chrono::seconds::max());
             }
 
             return true;
