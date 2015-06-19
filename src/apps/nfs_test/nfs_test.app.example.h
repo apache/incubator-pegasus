@@ -60,7 +60,10 @@ namespace dsn {
 			{
 			public:
 				nfs_client_app(::dsn::service_app_spec* s)
-					: ::dsn::service::service_app(s) {}
+					: ::dsn::service::service_app(s) 
+                {
+                    _req_index = 0;
+                }
 
 				~nfs_client_app()
 				{
@@ -93,31 +96,32 @@ namespace dsn {
                     std::string dest_dir2 = "./dst2"; // add your path
 					std::vector<std::string> files; // empty is for all
 					bool overwrite = true;
+                    
 					file::copy_remote_files(_server, source_dir, files, dest_dir, overwrite, LPC_NFS_COPY_FILE, nullptr,
 						std::bind(&nfs_client_app::internal_copy_callback,
 						this,
 						std::placeholders::_1,
-						std::placeholders::_2
+						std::placeholders::_2,
+                        ++_req_index
                         ));
 
-                    file::copy_remote_files(_server, source_dir, files, dest_dir2, overwrite, LPC_NFS_COPY_FILE, nullptr,
+                    /*file::copy_remote_files(_server, source_dir, files, dest_dir2, overwrite, LPC_NFS_COPY_FILE, nullptr,
                         std::bind(&nfs_client_app::internal_copy_callback,
                         this,
                         std::placeholders::_1,
                         std::placeholders::_2
-                        ));
+                        ));*/
 				}
 
-				void internal_copy_callback(error_code err, uint32_t size)
+				void internal_copy_callback(error_code err, uint32_t size, int index)
 				{
 					if (err == ::dsn::ERR_SUCCESS)
 					{
-						dinfo("copy request completed");
+						dinfo("remote file copy request %d completed", index);
 					}
 					else
 					{
-						derror("%s", err.to_string());
-						dinfo("copy request failed");
+						derror("remote file copy request %d failed, err = %s", index, err.to_string());
 					}
 				}
 			private:
@@ -125,6 +129,8 @@ namespace dsn {
 				::dsn::task_ptr _request_timer;
 
 				::dsn::end_point _server;
+                std::atomic<int> _req_index;
+
 			};
 
 		}

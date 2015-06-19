@@ -26,13 +26,13 @@ namespace dsn {
             const ::dsn::service::get_file_size_response& resp,
             void* context)
         {
-            user_request* reqc = (user_request*)context;
+            user_request* ureq = (user_request*)context;
 
             if (err != ::dsn::ERR_SUCCESS)
             {
                 derror("remote copy request failed");
-                reqc->nfs_task->enqueue(err, 0, reqc->nfs_task->node());
-                delete reqc;
+                ureq->nfs_task->enqueue(err, 0, ureq->nfs_task->node());
+                delete ureq;
                 return;
             }
 
@@ -41,8 +41,8 @@ namespace dsn {
                 derror("remote copy request failed");
                 error_code resp_err;
                 resp_err.set(resp.error);
-                reqc->nfs_task->enqueue(resp_err, 0, reqc->nfs_task->node());
-                delete reqc;
+                ureq->nfs_task->enqueue(resp_err, 0, ureq->nfs_task->node());
+                delete ureq;
                 return;
             }
 
@@ -51,9 +51,9 @@ namespace dsn {
                 file_context *filec;
                 uint64_t size = resp.size_list[i];
 
-				filec = new file_context(reqc, resp.file_list[i], resp.size_list[i]);
-                reqc->file_context_map.insert(std::pair<std::string, file_context*>(
-                    reqc->file_size_req.dst_dir + resp.file_list[i], filec));
+				filec = new file_context(ureq, resp.file_list[i], resp.size_list[i]);
+                ureq->file_context_map.insert(std::pair<std::string, file_context*>(
+                    ureq->file_size_req.dst_dir + resp.file_list[i], filec));
 
                 //dinfo("this file size is %d, name is %s", size, resp.file_list[i].c_str());
 
@@ -77,13 +77,13 @@ namespace dsn {
                         _copy_requests.push(req);
                     }
 
-                    req->copy_req.source = reqc->file_size_req.source;
+                    req->copy_req.source = ureq->file_size_req.source;
                     req->copy_req.file_name = resp.file_list[i];
                     req->copy_req.offset = req_offset;
                     req->copy_req.size = req_size;
-                    req->copy_req.dst_dir = reqc->file_size_req.dst_dir;
-                    req->copy_req.source_dir = reqc->file_size_req.source_dir;
-                    req->copy_req.overwrite = reqc->file_size_req.overwrite;
+                    req->copy_req.dst_dir = ureq->file_size_req.dst_dir;
+                    req->copy_req.source_dir = ureq->file_size_req.source_dir;
+                    req->copy_req.overwrite = ureq->file_size_req.overwrite;
                     req->copy_req.is_last = (size <= req_size);
 
                     req_offset += req_size;
@@ -309,8 +309,6 @@ namespace dsn {
         void nfs_client_impl::local_write_callback(error_code err, uint32_t sz, boost::intrusive_ptr<copy_request_ex> reqc)
         {
             //dassert(reqc->local_write_task == task::get_current_task(), "");
-
-            reqc->local_write_task = nullptr;
             --_concurrent_local_write_count;
 
             continue_write();
@@ -336,9 +334,11 @@ namespace dsn {
             }
 
             if (completed)
-            {
+            {   
                 handle_completion(reqc->file_ctx->user_req, err);
             }
+
+            reqc->local_write_task = nullptr;
         }
         
         void nfs_client_impl::handle_completion(user_request *req, error_code err)

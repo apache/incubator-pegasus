@@ -10,32 +10,25 @@ namespace dsn {
 		{
 			//dinfo(">>> on call RPC_COPY end, exec RPC_NFS_COPY");
 
-			std::string file_path = request.source_dir + request.file_name;
-			std::shared_ptr<char> buf(new char[_opts.nfs_copy_block_bytes]);
-			blob bb(buf, _opts.nfs_copy_block_bytes);
+			std::string file_path = request.source_dir + request.file_name;			
 			handle_t hfile;
 
 			{
 				zauto_lock l(_handles_map_lock);
 				auto it = _handles_map.find(request.file_name); // find file handle cache first
 
-				if (it == _handles_map.end()) // not found
-				{
-					hfile = file::open(file_path.c_str(), O_RDONLY | O_BINARY, 0);
-					if (hfile == 0)
-					{
-						derror("file open failed");
-						::dsn::service::copy_response resp;
-						resp.error = ERR_OBJECT_NOT_FOUND;
-						resp.file_name = request.file_name;
-						reply(resp);
-						return;
-					}
-					file_handle_info_on_server* fh = new file_handle_info_on_server;
-					fh->file_handle = hfile;
-					fh->file_access_count = 1;
-					fh->last_access_time = dsn::service::env::now_ms();
-					_handles_map.insert(std::pair<std::string, file_handle_info_on_server*>(request.file_name, fh));
+                if (it == _handles_map.end()) // not found
+                {
+                    hfile = file::open(file_path.c_str(), O_RDONLY | O_BINARY, 0);
+                    if (hfile)
+                    {
+                    
+                        file_handle_info_on_server* fh = new file_handle_info_on_server;
+                        fh->file_handle = hfile;
+                        fh->file_access_count = 1;
+                        fh->last_access_time = dsn::service::env::now_ms();
+                        _handles_map.insert(std::pair<std::string, file_handle_info_on_server*>(request.file_name, fh));
+                    }
 				}
 				else // found
 				{
@@ -45,6 +38,18 @@ namespace dsn {
 				}
 			}
 
+            if (hfile == 0)
+            {
+                derror("file open failed");
+                ::dsn::service::copy_response resp;
+                resp.error = ERR_OBJECT_NOT_FOUND;
+                resp.file_name = request.file_name;
+                reply(resp);
+                return;
+            }
+
+            std::shared_ptr<char> buf(new char[_opts.nfs_copy_block_bytes]);
+            blob bb(buf, _opts.nfs_copy_block_bytes);
 
             std::shared_ptr<callback_para> cp(new callback_para(reply));
             cp->bb = bb;
@@ -73,11 +78,6 @@ namespace dsn {
 
         void nfs_service_impl::internal_read_callback(error_code err, uint32_t sz, std::shared_ptr<callback_para> cp)
 		{
-			if (err != 0)
-			{
-				derror("file operation failed, err = %s", err.to_string());
-			}
-
 			{
 				zauto_lock l(_handles_map_lock);
 				auto it = _handles_map.find(cp->file_name);
@@ -160,27 +160,23 @@ namespace dsn {
 
 		void nfs_service_impl::close_file() // release out-of-date file handle
 		{
-			error_code err;
+			zauto_lock l(_handles_map_lock);
+
+			for (auto it = _handles_map.begin(); it != _handles_map.end();)
 			{
-				zauto_lock l(_handles_map_lock);
+                auto fptr = it->second;
 
-				if (_handles_map.size() == 0)
-					return;
-
-				for (auto it = _handles_map.begin(); it != _handles_map.end();)
+				if (fptr->file_access_count == 0 
+                    && dsn::service::env::now_ms() - fptr->last_access_time > _opts.file_close_expire_time_ms) // not opened and expired
 				{
-					if (it->second->file_access_count == 0 && dsn::service::env::now_ms() - it->second->last_access_time > _opts.file_close_expire_time_ms) // not opened and expired
-					{
-						err = file::close(it->second->file_handle);
-						_handles_map.erase(it++);
-						if (err != 0)
-						{
-							derror("close file error: %s", err.to_string());
-						}
-					}
-					else
-						it++;
+                    it = _handles_map.erase(it);
+
+					file::close(fptr->file_handle);
+
+                    delete fptr;
 				}
+				else
+					it++;
 			}
 		}
 
