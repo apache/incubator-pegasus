@@ -29,7 +29,7 @@ count = 2
 <?php foreach ($_PROG->services as $svc) { ?>
 [apps.client.<?=$svc->name?>.perf.test]
 name = client.<?=$svc->name?>.perf
-type = <?=$_PROG->name?>_client.<?=$svc->name?>.perf.test
+type = client.<?=$svc->name?>.perf.test
 arguments = <?=$_PROG->name?>.instance0
 count = 1
 run = false
