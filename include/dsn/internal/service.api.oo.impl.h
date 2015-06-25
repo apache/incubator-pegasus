@@ -364,7 +364,7 @@ namespace dsn {
                     }
                 }
 
-				virtual ~layered_rpc_handler_typed() { }
+                virtual ~layered_rpc_handler_typed() { }
 
             private:
                 std::shared_ptr<TRequest> _req;

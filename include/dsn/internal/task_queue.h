@@ -42,6 +42,7 @@ public:
 
 public:
     task_queue(task_worker_pool* pool, int index, task_queue* inner_provider); 
+    ~task_queue() {}
     
     virtual void     enqueue(task_ptr& task) = 0;
     virtual task_ptr dequeue() = 0;

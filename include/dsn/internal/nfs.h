@@ -29,42 +29,42 @@
 
 namespace dsn {
 
-	struct remote_copy_request
-	{
-		end_point   source;
-		std::string source_dir;
-		std::vector<std::string> files;
-		std::string dest_dir;
-		bool        overwrite;
-	};
+    struct remote_copy_request
+    {
+        end_point   source;
+        std::string source_dir;
+        std::vector<std::string> files;
+        std::string dest_dir;
+        bool        overwrite;
+    };
 
-	struct remote_copy_response
-	{
+    struct remote_copy_response
+    {
 
-	};
+    };
 
-	extern void marshall(::dsn::binary_writer& writer, const remote_copy_request& val, uint16_t pos = 0xffff);
+    extern void marshall(::dsn::binary_writer& writer, const remote_copy_request& val, uint16_t pos = 0xffff);
 
-	extern void unmarshall(::dsn::binary_reader& reader, __out_param remote_copy_request& val);
+    extern void unmarshall(::dsn::binary_reader& reader, __out_param remote_copy_request& val);
 
-	class nfs_node
-	{
-	public:
-		template <typename T> static nfs_node* create(service_node* node)
-		{
-			return new T(node);
-		}
+    class nfs_node
+    {
+    public:
+        template <typename T> static nfs_node* create(service_node* node)
+        {
+            return new T(node);
+        }
 
-	public:
-		nfs_node(service_node* node) : _node(node) {}
+    public:
+        nfs_node(service_node* node) : _node(node) {}
 
         virtual error_code start() = 0;
 
         virtual error_code stop() = 0;
 
-		virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task_ptr& callback) = 0;
+        virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task_ptr& callback) = 0;
 
-	protected:
-		service_node* _node;
-	};
+    protected:
+        service_node* _node;
+    };
 }

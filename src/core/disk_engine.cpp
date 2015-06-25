@@ -97,12 +97,11 @@ void disk_engine::start_io(aio_task_ptr& aio_tsk)
         _request_count++;
     }
 
-    aio_tsk->add_ref();
-
     // TODO: profiling, throttling here 
 
     if (aio_tsk->spec().on_aio_call.execute(task::get_current_task(), aio_tsk.get(), true))
     {
+        aio_tsk->add_ref();
         return _provider->aio(aio_tsk); 
     }
     else

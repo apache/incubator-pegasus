@@ -46,7 +46,7 @@ public:
     {
         return new T(replica, config);
     }
-	
+    
 public:
     replication_app_base(::dsn::replication::replica* replica, ::dsn::configuration_ptr& config);
     virtual ~replication_app_base() {}

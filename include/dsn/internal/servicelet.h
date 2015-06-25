@@ -86,7 +86,7 @@ namespace dsn {
                 }
             }
 
-            ~service_context_manager()
+            virtual ~service_context_manager()
             {
                 if (nullptr != _owner)
                 {

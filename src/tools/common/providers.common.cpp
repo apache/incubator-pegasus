@@ -59,7 +59,7 @@ namespace dsn {
 #else
             register_component_provider<native_posix_aio_provider>("dsn::tools::native_aio_provider");
 #endif
-			register_component_provider<::dsn::service::nfs_node_impl>("dsn::service::nfs_node_impl");
+            register_component_provider<::dsn::service::nfs_node_impl>("dsn::service::nfs_node_impl");
         }
     }
 }

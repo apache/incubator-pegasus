@@ -98,7 +98,7 @@ namespace dsn {
         {
         public:
             serverlet(const char* nm);
-            ~serverlet();
+            virtual ~serverlet();
 
         protected:
             template<typename TRequest>

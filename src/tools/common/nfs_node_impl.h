@@ -24,10 +24,10 @@ namespace dsn {
                 stop();
             }
 
-	        virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task_ptr& callback) override
-	        {
-		        _client->begin_remote_copy(rci, callback); // copy file request entry
-	        }
+            virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task_ptr& callback) override
+            {
+                _client->begin_remote_copy(rci, callback); // copy file request entry
+            }
 
             virtual error_code start() override
             {
@@ -52,7 +52,7 @@ namespace dsn {
     
         private:
             nfs_opts         _opts;
-	        nfs_service_impl *_server;
+            nfs_service_impl *_server;
             nfs_client_impl  *_client;
         };
     } 

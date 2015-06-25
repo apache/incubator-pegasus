@@ -74,7 +74,7 @@ namespace dsn {
         static LONG WINAPI TopLevelFilter(struct _EXCEPTION_POINTERS *pExceptionInfo)
         {
             LONG retval = EXCEPTION_CONTINUE_SEARCH;
-            HWND hParent = NULL;						// find a better value for your app
+            HWND hParent = NULL;                        // find a better value for your app
 
             // firstly see if dbghelp.dll is around and has the function we need
             // look next to the EXE first, as the one in System32 might be old 

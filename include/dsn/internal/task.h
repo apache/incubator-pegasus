@@ -201,6 +201,7 @@ public:
     disk_engine *engine;
 
     disk_aio() : type(aio_type::AIO_Invalid) {}
+    virtual ~disk_aio(){}
 };
 
 typedef ::std::shared_ptr<disk_aio> disk_aio_ptr;

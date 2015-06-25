@@ -30,47 +30,47 @@
 # include <dsn/internal/synchronize.h>
 # if defined(__linux__)
 # include <queue>
-# include <stdio.h>		/* for perror() */
-# include <unistd.h>		/* for syscall() */
-# include <sys/syscall.h>	/* for __NR_* definitions */
+# include <stdio.h>        /* for perror() */
+# include <unistd.h>        /* for syscall() */
+# include <sys/syscall.h>    /* for __NR_* definitions */
 # include <libaio.h>
-# include <fcntl.h>		/* O_RDWR */
-# include <string.h>		/* memset() */
-# include <inttypes.h>	/* uint64_t */
+# include <fcntl.h>        /* O_RDWR */
+# include <string.h>        /* memset() */
+# include <inttypes.h>    /* uint64_t */
 
 namespace dsn {
-	namespace tools {
+    namespace tools {
 
-		class native_linux_aio_provider : public aio_provider
-		{
-		public:
-			native_linux_aio_provider(disk_engine* disk, aio_provider* inner_provider);
-			~native_linux_aio_provider();
+        class native_linux_aio_provider : public aio_provider
+        {
+        public:
+            native_linux_aio_provider(disk_engine* disk, aio_provider* inner_provider);
+            ~native_linux_aio_provider();
 
-			virtual handle_t open(const char* file_name, int flag, int pmode);
-			virtual error_code close(handle_t hFile);
-			virtual void    aio(aio_task_ptr& aio);
-			virtual disk_aio_ptr prepare_aio_context(aio_task* tsk);
+            virtual handle_t open(const char* file_name, int flag, int pmode);
+            virtual error_code close(handle_t hFile);
+            virtual void    aio(aio_task_ptr& aio);
+            virtual disk_aio_ptr prepare_aio_context(aio_task* tsk);
 
-			struct linux_disk_aio_context : public disk_aio
-			{
-				struct iocb cb;
-				aio_task* tsk;
-				native_linux_aio_provider* this_;
-				utils::notify_event* evt;
-				error_code err;
-				uint32_t bytes;
-			};
+            struct linux_disk_aio_context : public disk_aio
+            {
+                struct iocb cb;
+                aio_task* tsk;
+                native_linux_aio_provider* this_;
+                utils::notify_event* evt;
+                error_code err;
+                uint32_t bytes;
+            };
 
-		protected:
-			error_code aio_internal(aio_task_ptr& aio, bool async, __out_param uint32_t* pbytes = nullptr);
+        protected:
+            error_code aio_internal(aio_task_ptr& aio, bool async, __out_param uint32_t* pbytes = nullptr);
             void complete_aio(struct iocb* io, int bytes, int err);
-			void get_event();
+            void get_event();
 
-		private:
+        private:
             io_context_t _ctx;
-		};
-	}
+        };
+    }
 }
 # endif
 

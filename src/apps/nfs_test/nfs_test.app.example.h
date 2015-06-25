@@ -31,77 +31,77 @@
 # include "nfs_server_impl.h"
 
 namespace dsn {
-	namespace replication {
-		namespace application {
+    namespace replication {
+        namespace application {
 
-			// server app example
-			class nfs_server_app : public ::dsn::service::service_app, public virtual ::dsn::service::servicelet
-			{
-			public:
-				nfs_server_app(::dsn::service_app_spec* s)
-					: ::dsn::service::service_app(s) {}
+            // server app example
+            class nfs_server_app : public ::dsn::service::service_app, public virtual ::dsn::service::servicelet
+            {
+            public:
+                nfs_server_app(::dsn::service_app_spec* s)
+                    : ::dsn::service::service_app(s) {}
 
-				virtual ::dsn::error_code start(int argc, char** argv)
-				{
-					return ::dsn::ERR_SUCCESS;
-				}
+                virtual ::dsn::error_code start(int argc, char** argv)
+                {
+                    return ::dsn::ERR_SUCCESS;
+                }
 
-				virtual void stop(bool cleanup = false)
-				{
-					_nfs_node_impl->stop();
-				}
+                virtual void stop(bool cleanup = false)
+                {
+                    _nfs_node_impl->stop();
+                }
 
-			private:
-				nfs_node_impl* _nfs_node_impl;
-			};
+            private:
+                nfs_node_impl* _nfs_node_impl;
+            };
 
-			// client app example
-			class nfs_client_app : public ::dsn::service::service_app, public virtual ::dsn::service::servicelet
-			{
-			public:
-				nfs_client_app(::dsn::service_app_spec* s)
-					: ::dsn::service::service_app(s) 
+            // client app example
+            class nfs_client_app : public ::dsn::service::service_app, public virtual ::dsn::service::servicelet
+            {
+            public:
+                nfs_client_app(::dsn::service_app_spec* s)
+                    : ::dsn::service::service_app(s) 
                 {
                     _req_index = 0;
                 }
 
-				~nfs_client_app()
-				{
-					stop();
-				}
+                ~nfs_client_app()
+                {
+                    stop();
+                }
 
-				virtual ::dsn::error_code start(int argc, char** argv)
-				{
-					if (argc < 2)
-						return ::dsn::ERR_INVALID_PARAMETERS;
+                virtual ::dsn::error_code start(int argc, char** argv)
+                {
+                    if (argc < 2)
+                        return ::dsn::ERR_INVALID_PARAMETERS;
 
-					_server = ::dsn::end_point(argv[1], (uint16_t)atoi(argv[2]));
+                    _server = ::dsn::end_point(argv[1], (uint16_t)atoi(argv[2]));
 
-					//on_request_timer();
-					_request_timer = ::dsn::service::tasking::enqueue(LPC_NFS_REQUEST_TIMER, this, &nfs_client_app::on_request_timer, 0, 0, 1000);
+                    //on_request_timer();
+                    _request_timer = ::dsn::service::tasking::enqueue(LPC_NFS_REQUEST_TIMER, this, &nfs_client_app::on_request_timer, 0, 0, 1000);
 
-					return ::dsn::ERR_SUCCESS;
-				}
+                    return ::dsn::ERR_SUCCESS;
+                }
 
-				virtual void stop(bool cleanup = false)
-				{
-					_timer->cancel(true);
-					_request_timer->cancel(true);
-				}
+                virtual void stop(bool cleanup = false)
+                {
+                    _timer->cancel(true);
+                    _request_timer->cancel(true);
+                }
 
-				void on_request_timer()
-				{
-					std::string source_dir = "./src"; // add your path
-					std::string dest_dir = "./dst"; // add your path
+                void on_request_timer()
+                {
+                    std::string source_dir = "./src"; // add your path
+                    std::string dest_dir = "./dst"; // add your path
                     std::string dest_dir2 = "./dst2"; // add your path
-					std::vector<std::string> files; // empty is for all
-					bool overwrite = true;
+                    std::vector<std::string> files; // empty is for all
+                    bool overwrite = true;
                     
-					file::copy_remote_files(_server, source_dir, files, dest_dir, overwrite, LPC_NFS_COPY_FILE, nullptr,
-						std::bind(&nfs_client_app::internal_copy_callback,
-						this,
-						std::placeholders::_1,
-						std::placeholders::_2,
+                    file::copy_remote_files(_server, source_dir, files, dest_dir, overwrite, LPC_NFS_COPY_FILE, nullptr,
+                        std::bind(&nfs_client_app::internal_copy_callback,
+                        this,
+                        std::placeholders::_1,
+                        std::placeholders::_2,
                         ++_req_index
                         ));
 
@@ -111,28 +111,28 @@ namespace dsn {
                         std::placeholders::_1,
                         std::placeholders::_2
                         ));*/
-				}
+                }
 
-				void internal_copy_callback(error_code err, uint32_t size, int index)
-				{
-					if (err == ::dsn::ERR_SUCCESS)
-					{
-						dinfo("remote file copy request %d completed", index);
-					}
-					else
-					{
-						derror("remote file copy request %d failed, err = %s", index, err.to_string());
-					}
-				}
-			private:
-				::dsn::task_ptr _timer;
-				::dsn::task_ptr _request_timer;
+                void internal_copy_callback(error_code err, uint32_t size, int index)
+                {
+                    if (err == ::dsn::ERR_SUCCESS)
+                    {
+                        dinfo("remote file copy request %d completed", index);
+                    }
+                    else
+                    {
+                        derror("remote file copy request %d failed, err = %s", index, err.to_string());
+                    }
+                }
+            private:
+                ::dsn::task_ptr _timer;
+                ::dsn::task_ptr _request_timer;
 
-				::dsn::end_point _server;
+                ::dsn::end_point _server;
                 std::atomic<int> _req_index;
 
-			};
+            };
 
-		}
-	}
+        }
+    }
 }

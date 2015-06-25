@@ -58,11 +58,11 @@ configuration::configuration(const char* file_name)
     ::fseek(fd, 0, SEEK_SET);
     auto sz = ::fread(fileData, len, 1, fd);
     ::fclose(fd);
-	if (sz != 1)
-	{
-		printf("Cannot read correct data of %s, err=%s", file_name, strerror(errno));
-		return;
-	}
+    if (sz != 1)
+    {
+        printf("Cannot read correct data of %s, err=%s", file_name, strerror(errno));
+        return;
+    }
     ((char*)fileData)[fileLength] = '\n';
 
     //
