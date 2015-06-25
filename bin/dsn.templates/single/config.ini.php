@@ -5,14 +5,14 @@ $file_prefix = $argv[3];
 ?>
 [apps.server]
 name = server
-type = <?=$_PROG->name?>_server
+type = server
 arguments = 
 ports = 27001
 run = true
     
 [apps.client]
 name = client
-type = <?=$_PROG->name?>_client
+type = client
 arguments = localhost 27001
 count = 1
 run = true
@@ -20,7 +20,7 @@ run = true
 <?php foreach ($_PROG->services as $svc) { ?>
 [apps.client.<?=$svc->name?>.perf.test]
 name = client.<?=$svc->name?>.perf
-type = <?=$_PROG->name?>_client.<?=$svc->name?>.perf.test
+type = client.<?=$svc->name?>.perf.test
 arguments = localhost 27001
 count = 1
 run = false
