@@ -25,7 +25,16 @@ type = client
 arguments = <?=$_PROG->name?>.instance0
 run = true
 count = 2 
-    
+
+<?php foreach ($_PROG->services as $svc) { ?>
+[apps.client.<?=$svc->name?>.perf.test]
+name = client.<?=$svc->name?>.perf
+type = client.<?=$svc->name?>.perf.test
+arguments = <?=$_PROG->name?>.instance0
+count = 1
+run = false
+<?php } ?>
+
 [core]
 
 tool = simulator

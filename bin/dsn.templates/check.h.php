@@ -11,5 +11,5 @@ $idl_type = $argv[4];
 <?=$_PROG->get_cpp_namespace_begin()?>
 
     void install_checkers(configuration_ptr config);
-	
+    
 <?=$_PROG->get_cpp_namespace_end()?>

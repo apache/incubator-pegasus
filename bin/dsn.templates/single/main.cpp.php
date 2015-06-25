@@ -16,17 +16,20 @@ $idl_type = $argv[4];
 
 int main(int argc, char** argv)
 {
-	// register all possible service apps
-	dsn::service::system::register_service<<?=$_PROG->get_cpp_namespace().$_PROG->name?>_server_app>("<?=$_PROG->name?>_server");
-	dsn::service::system::register_service<<?=$_PROG->get_cpp_namespace().$_PROG->name?>_client_app>("<?=$_PROG->name?>_client");
+    // register all possible service apps
+    dsn::service::system::register_service<<?=$_PROG->get_cpp_namespace().$_PROG->name?>_server_app>("server");
+    dsn::service::system::register_service<<?=$_PROG->get_cpp_namespace().$_PROG->name?>_client_app>("client");
+<?php foreach ($_PROG->services as $svc) { ?>
+    dsn::service::system::register_service<<?=$_PROG->get_cpp_namespace().$svc->name?>_perf_test_client_app>("client.<?=$svc->name?>.perf.test");
+<?php } ?>
 
-	// register all possible tools and toollets
-	dsn::tools::register_tool<dsn::tools::nativerun>("nativerun");
-	dsn::tools::register_tool<dsn::tools::simulator>("simulator");
-	dsn::tools::register_toollet<dsn::tools::tracer>("tracer");
-	dsn::tools::register_toollet<dsn::tools::profiler>("profiler");
-	dsn::tools::register_toollet<dsn::tools::fault_injector>("fault_injector");
-		
+    // register all possible tools and toollets
+    dsn::tools::register_tool<dsn::tools::nativerun>("nativerun");
+    dsn::tools::register_tool<dsn::tools::simulator>("simulator");
+    dsn::tools::register_toollet<dsn::tools::tracer>("tracer");
+    dsn::tools::register_toollet<dsn::tools::profiler>("profiler");
+    dsn::tools::register_toollet<dsn::tools::fault_injector>("fault_injector");
+
     // register necessary components
 #ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
 <?php if ($idl_type == "thrift" ) { ?>
@@ -34,7 +37,7 @@ int main(int argc, char** argv)
 <?php } ?>
 #endif
 
-	// specify what services and tools will run in config file, then run
-	dsn::service::system::run(--argc, ++argv, true);
-	return 0;
+    // specify what services and tools will run in config file, then run
+    dsn::service::system::run(--argc, ++argv, true);
+    return 0;
 }
