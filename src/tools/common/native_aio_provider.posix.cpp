@@ -149,19 +149,32 @@ namespace dsn {
             if (r < 0)
             {
                 derror("file op faile, err = %d", errno);
-            }
 
-            if (async)
-            {
-                return ERR_IO_PENDING;
+                if (async)
+                {
+                    complete_io(aio_tsk, ERR_FILE_OPERATION_FAILED, 0);
+                }
+                else
+                {
+                    delete aio->evt;
+                    aio->evt = nullptr;
+                }
+                return ERR_FILE_OPERATION_FAILED;
             }
-            else
+            else 
             {
-                aio->evt->wait();
-                delete aio->evt;
-                aio->evt = nullptr;
-                *pbytes = aio->bytes;
-                return aio->err;
+                if (async)
+                {
+                    return ERR_IO_PENDING;
+                }
+                else
+                {
+                    aio->evt->wait();
+                    delete aio->evt;
+                    aio->evt = nullptr;
+                    *pbytes = aio->bytes;
+                    return aio->err;
+                }
             }
         }
 

@@ -26,25 +26,25 @@
 # include <dsn/tool_api.h>
 
 namespace dsn {
-	namespace tools {
+    namespace tools {
 
-		class simple_perf_counter : public perf_counter
-		{
-		public:
+        class simple_perf_counter : public perf_counter
+        {
+        public:
             simple_perf_counter(const char *section, const char *name, perf_counter_type type);
             ~simple_perf_counter(void);
 
-			virtual void   increment() { _counter_impl->increment(); }
-			virtual void   decrement() { _counter_impl->decrement(); }
-			virtual void   add(uint64_t val) { _counter_impl->add(val); }
-			virtual void   set(uint64_t val) { _counter_impl->set(val); }
+            virtual void   increment() { _counter_impl->increment(); }
+            virtual void   decrement() { _counter_impl->decrement(); }
+            virtual void   add(uint64_t val) { _counter_impl->add(val); }
+            virtual void   set(uint64_t val) { _counter_impl->set(val); }
             virtual double get_value() { return _counter_impl->get_value(); }
             virtual double get_percentile(counter_percentile_type type) { return _counter_impl->get_percentile(type); }
 
-		private:
-			perf_counter *_counter_impl;
-		};
+        private:
+            perf_counter *_counter_impl;
+        };
 
-	}
+    }
 }
 

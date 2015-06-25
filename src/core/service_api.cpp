@@ -228,10 +228,10 @@ namespace dsn { namespace service {
             //
             if (sleep_after_init)
             {
-                #ifdef max
-                #undef max
-                #endif
-                std::this_thread::sleep_for(std::chrono::hours::max());
+                while (true)
+                {
+                    std::this_thread::sleep_for(std::chrono::hours(1));
+                }
             }
 
             return true;

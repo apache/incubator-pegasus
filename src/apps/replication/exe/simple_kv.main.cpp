@@ -39,21 +39,21 @@
 
 int main(int argc, char** argv)
 {
-	// register replication application provider
+    // register replication application provider
     dsn::replication::register_replica_provider<::dsn::replication::application::simple_kv_service_impl>("simple_kv");
 
     // register all possible services
     dsn::service::system::register_service<::dsn::replication::meta_service_app>("meta");
     dsn::service::system::register_service<::dsn::replication::replication_service_app>("replica");
 	dsn::service::system::register_service<::dsn::replication::application::simple_kv_client_app>("client");
-    dsn::service::system::register_service<::dsn::replication::application::simple_kv_perf_test_client_app>("client.perf_test");
+    dsn::service::system::register_service<::dsn::replication::application::simple_kv_perf_test_client_app>("client.perf.test");
 
-	// register all possible tools and toollets
-	dsn::tools::register_tool<dsn::tools::nativerun>("nativerun");
-	dsn::tools::register_tool<dsn::tools::simulator>("simulator");
-	dsn::tools::register_toollet<dsn::tools::tracer>("tracer");
-	dsn::tools::register_toollet<dsn::tools::profiler>("profiler");
-	dsn::tools::register_toollet<dsn::tools::fault_injector>("fault_injector");
+    // register all possible tools and toollets
+    dsn::tools::register_tool<dsn::tools::nativerun>("nativerun");
+    dsn::tools::register_tool<dsn::tools::simulator>("simulator");
+    dsn::tools::register_toollet<dsn::tools::tracer>("tracer");
+    dsn::tools::register_toollet<dsn::tools::profiler>("profiler");
+    dsn::tools::register_toollet<dsn::tools::fault_injector>("fault_injector");
     
     dsn::tools::sys_init_after_app_created.put_back(
         dsn::replication::install_checkers,
@@ -65,7 +65,7 @@ int main(int argc, char** argv)
     dsn::tools::register_component_provider<::dsn::thrift_binary_message_parser>("thrift");
 #endif
 
-	// specify what services and tools will run in config file, then run
-	dsn::service::system::run(--argc, ++argv, true);
-	return 0;
+    // specify what services and tools will run in config file, then run
+    dsn::service::system::run(--argc, ++argv, true);
+    return 0;
 }

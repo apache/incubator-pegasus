@@ -42,7 +42,7 @@
 # include <dsn/internal/configuration.h>
 
 namespace dsn { namespace tools {
-	
+    
 class tool_base
 {
 public:
