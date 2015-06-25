@@ -87,12 +87,12 @@ namespace dsn {
 
                 ++_live_rpc_count;
                 _rounds_latency_us[id - 1] = env::now_us();
-                return (void*)id;
+                return (void*)(size_t)(id);
             }
 
             void end_send_one(void* context, error_code err, std::function<void()> send_one)
             {
-                int id = (int)context;
+                int id = (int)(size_t)(context);
                 int lr = --_live_rpc_count;
                 int next = 2;
                 if (err == ERR_TIMEOUT)
