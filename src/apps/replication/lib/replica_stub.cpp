@@ -862,7 +862,7 @@ void replica_stub::open_service()
 
     register_rpc_handler(RPC_PREPARE, "prepare", &replica_stub::on_prepare);
     register_rpc_handler(RPC_LEARN, "Learn", &replica_stub::on_learn);
-    register_rpc_handler(RPC_LEARN_COMPLETITION_NOTIFY, "LearnNotify", &replica_stub::on_learn_completion_notification);
+    register_rpc_handler(RPC_LEARN_COMPLETION_NOTIFY, "LearnNotify", &replica_stub::on_learn_completion_notification);
     register_rpc_handler(RPC_LEARN_ADD_LEARNER, "LearnAdd", &replica_stub::on_add_learner);
     register_rpc_handler(RPC_REMOVE_REPLICA, "remove", &replica_stub::on_remove);
     register_rpc_handler(RPC_GROUP_CHECK, "GroupCheck", &replica_stub::on_group_check);
