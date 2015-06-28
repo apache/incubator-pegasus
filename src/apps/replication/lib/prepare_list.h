@@ -38,9 +38,10 @@ public:
 public:
     prepare_list(
         decree init_decree, int max_count,
-        mutation_committer committer);
+        mutation_committer committer,
+        bool allow_prepare_ack_before_logging);
 
-    decree last_committed_decree() const { return _lastCommittedDecree; }
+    decree last_committed_decree() const { return _last_committed_decree; }
     void   reset(decree init_decree);
     void   truncate(decree init_decree);
     
@@ -54,8 +55,9 @@ private:
     void sanity_check();
 
 private:
-    decree                   _lastCommittedDecree;    
-    mutation_committer        _committer;
+    bool                     _allow_prepare_ack_before_logging;
+    decree                   _last_committed_decree;    
+    mutation_committer       _committer;
 };
  
 }} // namespace

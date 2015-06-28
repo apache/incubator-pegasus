@@ -53,8 +53,6 @@ void replica::init_prepare(mutation_ptr& mu)
     dassert (PS_PRIMARY == status(), "");
 
     error_code err = ERR_SUCCESS;
-    uint8_t count = 0;
-
     if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 < _options.mutation_2pc_min_replica_count)
     {
         err = ERR_NOT_ENOUGH_MEMBER;
@@ -101,7 +99,7 @@ void replica::init_prepare(mutation_ptr& mu)
         send_prepare_message(*it, PS_SECONDARY, mu, _options.prepare_timeout_ms_for_secondaries);
     }
 
-    count = 0;
+    uint8_t count = 0;
     for (auto it = _primary_states.learners.begin(); it != _primary_states.learners.end(); it++)
     {
         if (it->second.prepare_start_decree != invalid_decree && mu->data.header.decree >= it->second.prepare_start_decree)
@@ -124,13 +122,7 @@ void replica::init_prepare(mutation_ptr& mu)
         gpid_to_hash(get_gpid())
         );
 
-    if (nullptr == mu->log_task())
-    {
-        err = ERR_FILE_OPERATION_FAILED;
-        handle_local_failure(err);
-        goto ErrOut;
-    }
-
+    dassert(nullptr != mu->log_task(), "");
     return;
 
 ErrOut:
@@ -247,7 +239,7 @@ void replica::on_prepare(message_ptr& request)
     {
         ddebug( "%s: mutation %s redundant prepare skipped", name(), mu->name());
 
-        if (mu2->is_prepared())
+        if (mu2->is_prepared() || _options.prepare_ack_on_secondary_before_logging_allowed)
         {
             ack_prepare_message(ERR_SUCCESS, mu);
         }
@@ -266,6 +258,12 @@ void replica::on_prepare(message_ptr& request)
         dassert (PS_SECONDARY == status(), "");
         dassert (mu->data.header.decree <= last_committed_decree() + _options.staleness_for_commit, "");
     }
+
+    // ack without logging
+    if (_options.prepare_ack_on_secondary_before_logging_allowed)
+    {
+        ack_prepare_message(err, mu);
+    }
     
     // write log
     dassert (mu->log_task() == nullptr, "");
@@ -276,12 +274,7 @@ void replica::on_prepare(message_ptr& request)
         gpid_to_hash(get_gpid())
         );
 
-    if (nullptr == mu->log_task())
-    {
-        err = ERR_FILE_OPERATION_FAILED;
-        ack_prepare_message(err, mu);
-        handle_local_failure(err);
-    }
+    dassert(mu->log_task() != nullptr, "");
 }
 
 void replica::on_append_log_completed(mutation_ptr& mu, uint32_t err, uint32_t size)
@@ -319,7 +312,11 @@ void replica::on_append_log_completed(mutation_ptr& mu, uint32_t err, uint32_t s
         {
             handle_local_failure(err);
         }
-        ack_prepare_message(err, mu);
+
+        if (!_options.prepare_ack_on_secondary_before_logging_allowed)
+        {
+            ack_prepare_message(err, mu);
+        }
         break;
     case PS_ERROR:
         break;

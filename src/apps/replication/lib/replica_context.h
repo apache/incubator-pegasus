@@ -55,7 +55,7 @@ public:
 public:
     // membership mgr, including learners
     partition_configuration membership;
-    NodeStatusMap          statuses;
+    node_statuses          statuses;
     learner_map             learners;
 
     // 2pc batching

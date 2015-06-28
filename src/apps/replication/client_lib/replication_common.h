@@ -38,10 +38,7 @@ inline int gpid_to_hash(global_partition_id gpid)
     return static_cast<int>(gpid.app_id ^ gpid.pidx);
 }
 
-typedef std::set<end_point> NodeSet;
-typedef std::map<end_point, int> NodeIdMap;
-typedef std::map<end_point, decree> NodeDecreeMap;
-typedef std::map<end_point, partition_status> NodeStatusMap;
+typedef std::map<end_point, partition_status> node_statuses;
 typedef std::map<end_point, task_ptr> node_tasks;
 
 class replication_options
@@ -53,7 +50,8 @@ public:
     int32_t prepare_timeout_ms_for_secondaries;
     int32_t prepare_timeout_ms_for_potential_secondaries;
     int32_t preapre_list_max_size_mb;
-    
+    bool    prepare_ack_on_secondary_before_logging_allowed;
+        
     int32_t staleness_for_commit;
     int32_t staleness_for_start_prepare_for_potential_secondary;
     int32_t mutation_2pc_min_replica_count;
@@ -80,7 +78,7 @@ public:
 
     int32_t config_sync_interval_ms;
     bool    config_sync_disabled;
-    
+
 public:
     replication_options();
     void initialize(configuration_ptr config);
