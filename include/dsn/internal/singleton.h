@@ -26,6 +26,7 @@
 # pragma once
 
 # include <mutex>
+# include <atomic>
 
 namespace dsn { namespace utils {
 
