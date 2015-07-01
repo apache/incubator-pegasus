@@ -53,6 +53,8 @@ void replica::init_prepare(mutation_ptr& mu)
     dassert (PS_PRIMARY == status(), "");
 
     error_code err = ERR_SUCCESS;
+    uint8_t count = 0;
+    
     if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 < _options.mutation_2pc_min_replica_count)
     {
         err = ERR_NOT_ENOUGH_MEMBER;
@@ -99,7 +101,7 @@ void replica::init_prepare(mutation_ptr& mu)
         send_prepare_message(*it, PS_SECONDARY, mu, _options.prepare_timeout_ms_for_secondaries);
     }
 
-    uint8_t count = 0;
+    count = 0;
     for (auto it = _primary_states.learners.begin(); it != _primary_states.learners.end(); it++)
     {
         if (it->second.prepare_start_decree != invalid_decree && mu->data.header.decree >= it->second.prepare_start_decree)
