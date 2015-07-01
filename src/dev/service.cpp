@@ -54,6 +54,7 @@ private:
 static service_objects* s_services = &(service_objects::instance());
 
 servicelet::servicelet()
+: _access_thread_task_code(TASK_CODE_INVALID)
 {
     _access_thread_id_inited = false;
     _last_id = 0;
@@ -107,6 +108,7 @@ void servicelet::check_hashed_access()
     {
         _access_thread_id = std::this_thread::get_id();
         _access_thread_id_inited = true;
+        _access_thread_task_code.reset(task::get_current_task()->spec().code);
     }
 }
 

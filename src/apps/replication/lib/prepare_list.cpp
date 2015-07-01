@@ -146,7 +146,7 @@ bool prepare_list::commit(decree d, bool force)
 
         mutation_ptr mu = get_mutation_by_decree(last_committed_decree() + 1);
 
-        while (mu != nullptr && mu->is_ready_for_commit())
+        while (mu != nullptr && mu->is_ready_for_commit(_allow_prepare_ack_before_logging))
         {
             _last_committed_decree++;
             _committer(mu);

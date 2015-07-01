@@ -42,7 +42,6 @@ public:
     // management routines
     //
     error_code start(const service_app_spec& spec);
-    bool       start_server_port(int port);
 
     //
     // rpc registrations
@@ -64,7 +63,7 @@ public:
     void on_recv_request(message_ptr& msg, int delay_ms);
 
 private:
-    network* create_network(const network_config_spec& netcs, bool client_only);
+    network* create_network(const network_server_config& netcs, bool client_only);
 
 private:
     configuration_ptr                     _config;    

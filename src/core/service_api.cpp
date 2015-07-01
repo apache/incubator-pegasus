@@ -134,13 +134,23 @@ namespace dsn { namespace service {
             }
             std::string cdir = boost::filesystem::canonical(boost::filesystem::path(spec.coredump_dir)).string();
             utils::coredump::init(cdir.c_str());
-
+            
             // init tools
             dsn_all.tool = utils::factory_store<tool_app>::create(spec.tool.c_str(), 0, spec.tool.c_str());
             dsn_all.tool->install(spec);
 
+            // init app specs
+            if (!spec.init_app_specs(dsn_all.config))
+            {
+                printf("error in config file %s, exit ...\n", config_file);
+                return false;
+            }
+
             // prepare minimum necessary
             service_engine::instance().init_before_toollets(spec);
+
+            // init logging
+            log_init(dsn_all.config);
 
             // init toollets
             for (auto it = spec.toollets.begin(); it != spec.toollets.end(); it++)

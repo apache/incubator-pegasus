@@ -167,8 +167,8 @@ void replica::do_possible_commit_on_primary(mutation_ptr& mu)
     dassert (_config.ballot == mu->data.header.ballot, "");
     dassert (PS_PRIMARY == status(), "");
 
-    if (mu->is_ready_for_commit())
-    {   
+    if (mu->is_ready_for_commit(_options.prepare_ack_on_secondary_before_logging_allowed))
+    {
         _prepare_list->commit(mu->data.header.decree, false);
     }
 }

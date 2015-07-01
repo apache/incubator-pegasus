@@ -35,6 +35,7 @@
 # include "network.sim.h"
 # include "simple_logger.h"
 # include "nfs_node_impl.h"
+# include "empty_aio_provider.h"
 
 namespace dsn {
     namespace tools {
@@ -59,6 +60,7 @@ namespace dsn {
 #else
             register_component_provider<native_posix_aio_provider>("dsn::tools::native_aio_provider");
 #endif
+            register_component_provider<empty_aio_provider>("dsn::tools::empty_aio_provider");            
             register_component_provider<::dsn::service::nfs_node_impl>("dsn::service::nfs_node_impl");
         }
     }

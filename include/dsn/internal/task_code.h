@@ -205,5 +205,14 @@ public:
     void init_profiling(bool profile);
 };
 
+CONFIG_BEGIN(task_spec)
+    CONFIG_FLD(bool, allow_inline, false)
+    CONFIG_FLD(bool, fast_execution_in_network_thread, false)
+    CONFIG_FLD_ID(network_header_format, rpc_call_header_format, NET_HDR_DSN)
+    CONFIG_FLD_ID(rpc_channel, rpc_call_channel, RPC_CHANNEL_TCP)
+    CONFIG_FLD(int32_t, rpc_timeout_milliseconds, 5000)
+    CONFIG_FLD(int32_t, rpc_retry_interval_milliseconds, 3000)
+CONFIG_END
+
 } // end namespace
 

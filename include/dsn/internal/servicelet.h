@@ -72,6 +72,7 @@ namespace dsn {
             std::set<task_code>            _events;
             std::thread::id                _access_thread_id;
             bool                           _access_thread_id_inited;
+            task_code                      _access_thread_task_code;
         };
 
         class service_context_manager

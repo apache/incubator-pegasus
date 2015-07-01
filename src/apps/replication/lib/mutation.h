@@ -43,7 +43,11 @@ public:
     const char* name() const { return _name; }        
     bool is_logged() const { return _not_logged == 0; }
     bool is_prepared() const { return _not_logged == 0; }
-    bool is_ready_for_commit() const { return _private0 == 0; }
+    bool is_ready_for_commit(bool commit_without_logging_allowed) const 
+    {
+        return commit_without_logging_allowed ? _left_private0 == 0 : _private0 == 0;
+    }
+
     message_ptr& owner_message() { return _from_message; }
     unsigned int left_secondary_ack_count() const { return _left_secondary_ack_count; }
     unsigned int left_potential_secondary_ack_count() const { return _left_potential_secondary_ack_count; }
@@ -73,13 +77,18 @@ public:
 private:
     union
     {
-    struct 
-    {
-    unsigned int _not_logged : 1;
-    unsigned int _left_secondary_ack_count : 7;
-    unsigned int _left_potential_secondary_ack_count : 8;
-    };
-    uint16_t       _private0;
+        struct
+        {
+            unsigned int _not_logged : 32;
+            union {
+                struct {
+                    unsigned int _left_secondary_ack_count : 16;
+                    unsigned int _left_potential_secondary_ack_count : 16;
+                };
+                unsigned int _left_private0 : 32;
+            };
+        };
+        uint64_t _private0;
     };
 
     node_tasks    _prepare_or_commit_tasks;
