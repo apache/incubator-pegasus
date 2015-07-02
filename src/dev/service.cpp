@@ -80,10 +80,7 @@ void servicelet::clear_outstanding_tasks()
             auto tcm = CONTAINING_RECORD(n, task_context_manager, _dl);
 
             tcm->_task->cancel(true);
-
-            tcm->_task->add_ref();
             tcm->_owner = nullptr;
-            tcm->_task->release_ref();
         }
         else
             break;
