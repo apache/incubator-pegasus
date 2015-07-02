@@ -26,12 +26,25 @@
 # pragma once
 
 # include <dsn/internal/dsn_types.h>
+# include <dsn/internal/logging.h>
+
+# if 0
+
 # include <mutex>
 # include <condition_variable>
 # include <boost/thread/shared_mutex.hpp>
-# include <dsn/internal/logging.h>
 
 namespace dsn { namespace utils {
+
+class ex_lock
+{
+public:
+    __inline void lock() { _lock.lock(); }
+    __inline bool try_lock() { return _lock.try_lock(); }
+    __inline void unlock() { _lock.unlock(); }
+private:
+    std::recursive_mutex _lock;
+};
 
 class rw_lock
 {
@@ -40,11 +53,9 @@ public:
     ~rw_lock() {}
 
     void lock_read() { _lock.lock_shared(); }
-    bool try_lock_read() { return _lock.try_lock_shared(); }
     void unlock_read() { _lock.unlock_shared(); }
 
     void lock_write() { _lock.lock(); }
-    bool try_lock_write() { return _lock.try_lock(); }
     void unlock_write() { _lock.unlock(); }
     
 private:
@@ -105,9 +116,9 @@ public:
         }
     }
 
-    inline bool wait()
+    inline void wait()
     {
-        return wait(TIME_MS_MAX);
+        wait(TIME_MS_MAX);
     }
 
     inline bool wait(unsigned int milliseconds)
@@ -142,40 +153,153 @@ private:
     int _waits;
 };
 
+}} // end namespace
+
+
+# else
+// using high performance versions from https://github.com/preshing/cpp11-on-multicore
+
+# include <benaphore.h>
+# include <autoresetevent.h>
+# include <rwlock.h>
+
+namespace dsn {
+    namespace utils {
+
+# if defined(_WIN32)
+        class ex_lock
+        {
+        public:
+            ex_lock() { ::InitializeCriticalSection(&_cs); }
+            ~ex_lock() { ::DeleteCriticalSection(&_cs); }
+            __inline void lock() { ::EnterCriticalSection(&_cs); }
+            __inline bool try_lock() { return ::TryEnterCriticalSection(&_cs) != 0; }
+            __inline void unlock() { ::LeaveCriticalSection(&_cs); }
+        private:
+            CRITICAL_SECTION _cs;
+        };
+# else
+        class ex_lock
+        {
+        public:
+            __inline void lock() { _lock.lock(); }
+            __inline bool try_lock() { return _lock.tryLock(); }
+            __inline void unlock() { _lock.unlock(); }
+        private:
+            RecursiveBenaphore _lock;
+        };
+# endif
+
+        class rw_lock
+        {
+        public:
+            rw_lock() { }
+            ~rw_lock() {}
+
+            __inline void lock_read() { _lock.lockReader(); }
+            __inline void unlock_read() { _lock.unlockReader(); }
+
+            __inline void lock_write() { _lock.lockWriter(); }
+            __inline void unlock_write() { _lock.unlockWriter(); }
+
+        private:
+            NonRecursiveRWLock _lock;
+        };
+
+        class notify_event
+        {
+        public:
+            __inline void notify() { _ready.signal(); }
+            __inline void wait()   { _ready.wait(); }
+            __inline bool wait_for(int milliseconds) { return _ready.wait(milliseconds); }
+
+        private:
+            AutoResetEvent _ready;
+        };
+        
+        class semaphore
+        {
+        public:
+            semaphore(int initialCount = 0)
+                : _sema(initialCount)
+            {
+            }
+
+            ~semaphore()
+            {
+            }
+
+        public:
+            inline void signal()
+            {
+                signal(1);
+            }
+
+            inline void signal(int count)
+            {
+                _sema.signal(count);
+            }
+
+            inline void wait()
+            {
+                return _sema.wait();
+            }
+
+            inline bool wait(int milliseconds)
+            {
+                return _sema.wait(milliseconds);
+            }
+
+            inline bool release()
+            {
+                _sema.signal();
+                return true;
+            }
+
+        private:
+            LightweightSemaphore _sema;
+        };
+    }
+}
+
+# endif
+
 
 //--------------------- helpers --------------------------------------
 
-class auto_lock
-{
-public:
-    auto_lock(std::recursive_mutex & lock) : _lock(&lock) { _lock->lock(); }
-    ~auto_lock() { _lock->unlock(); }
+namespace dsn {
+    namespace utils {
+        class auto_lock
+        {
+        public:
+            auto_lock(ex_lock & lock) : _lock(&lock) { _lock->lock(); }
+            ~auto_lock() { _lock->unlock(); }
 
-private:
-    std::recursive_mutex * _lock;
+        private:
+            ex_lock * _lock;
 
-    auto_lock(const auto_lock&);
-    auto_lock& operator=(const auto_lock&);
-};
+            auto_lock(const auto_lock&);
+            auto_lock& operator=(const auto_lock&);
+        };
 
-class auto_read_lock
-{
-public:
-    auto_read_lock(rw_lock & lock) : _lock(&lock) { _lock->lock_read(); }
-    ~auto_read_lock() { _lock->unlock_read(); }
+        class auto_read_lock
+        {
+        public:
+            auto_read_lock(rw_lock & lock) : _lock(&lock) { _lock->lock_read(); }
+            ~auto_read_lock() { _lock->unlock_read(); }
 
-private:
-    rw_lock * _lock;
-};
+        private:
+            rw_lock * _lock;
+        };
 
-class auto_write_lock
-{
-public:
-    auto_write_lock(rw_lock & lock) : _lock(&lock) { _lock->lock_write(); }
-    ~auto_write_lock() { _lock->unlock_write(); }
+        class auto_write_lock
+        {
+        public:
+            auto_write_lock(rw_lock & lock) : _lock(&lock) { _lock->lock_write(); }
+            ~auto_write_lock() { _lock->unlock_write(); }
 
-private:
-    rw_lock * _lock;
-};
-
-}} // end namespace
+        private:
+            rw_lock * _lock;
+        };
+    }
+}

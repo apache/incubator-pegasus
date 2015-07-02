@@ -37,7 +37,7 @@ namespace dsn {
             simple_kv_service_impl::simple_kv_service_impl(replica* replica, configuration_ptr& cf)
                 : simple_kv_service(replica, cf)
             {
-                _test_file_learning = true;
+                _test_file_learning = false;
             }
 
             // RPC_SIMPLE_KV_READ

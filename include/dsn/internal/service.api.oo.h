@@ -156,7 +156,7 @@ namespace dsn {
             // callback type 5:
             //  std::function<bool(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)>
             // return true when the system need to continue the next callback
-            class layered_rpc : public rpc_response_task, public service_context_manager
+            class layered_rpc : public rpc_response_task, public task_context_manager
             {
             public:
                 layered_rpc(servicelet* owner, message_ptr& request, int hash = 0);

@@ -126,11 +126,11 @@ namespace dsn {
         private:
             // type 1 --------------------------
             template<typename TRequest>
-            class service_rpc_request_task1 : public rpc_request_task, public service_context_manager
+            class service_rpc_request_task1 : public rpc_request_task, public task_context_manager
             {
             public:
                 service_rpc_request_task1(message_ptr& request, service_node* node, T* svc, void (T::*handler)(const TRequest&))
-                    : rpc_request_task(request, node), service_context_manager(svc, this)
+                    : rpc_request_task(request, node), task_context_manager(svc, this)
                 {
                     _handler = handler;
                     _svc = svc;
@@ -170,11 +170,11 @@ namespace dsn {
 
             // type 2 ---------------------------
             template<typename TRequest, typename TResponse>
-            class service_rpc_request_task2 : public rpc_request_task, public service_context_manager
+            class service_rpc_request_task2 : public rpc_request_task, public task_context_manager
             {
             public:
                 service_rpc_request_task2(message_ptr& request, service_node* node, T* svc, void (T::*handler)(const TRequest&, TResponse&))
-                    : rpc_request_task(request, node), service_context_manager(svc, this)
+                    : rpc_request_task(request, node), task_context_manager(svc, this)
                 {
                     _handler = handler;
                     _svc = svc;
@@ -219,11 +219,11 @@ namespace dsn {
 
             // type 3 -----------------------------------
             template<typename TRequest, typename TResponse>
-            class service_rpc_request_task3 : public rpc_request_task, public service_context_manager
+            class service_rpc_request_task3 : public rpc_request_task, public task_context_manager
             {
             public:
                 service_rpc_request_task3(message_ptr& request, service_node* node, T* svc, void (T::*handler)(const TRequest&, rpc_replier<TResponse>&))
-                    : rpc_request_task(request, node), service_context_manager(svc, this)
+                    : rpc_request_task(request, node), task_context_manager(svc, this)
                 {
                     _handler = handler;
                     _svc = svc;
@@ -264,11 +264,11 @@ namespace dsn {
             };
 
             // type 4 ------------------------------------------
-            class service_rpc_request_task4 : public rpc_request_task, public service_context_manager
+            class service_rpc_request_task4 : public rpc_request_task, public task_context_manager
             {
             public:
                 service_rpc_request_task4(message_ptr& request, service_node* node, T* svc, void (T::*handler)(message_ptr&))
-                    : rpc_request_task(request, node), service_context_manager(svc, this)
+                    : rpc_request_task(request, node), task_context_manager(svc, this)
                 {
                     _handler = handler;
                     _svc = svc;
@@ -322,7 +322,7 @@ namespace dsn {
         }
 
         template<typename T, typename TRequest, typename TResponse>
-        class service_rpc_request_continue_task : public task, public service_context_manager
+        class service_rpc_request_continue_task : public task, public task_context_manager
         {
         public:
             service_rpc_request_continue_task(
@@ -333,7 +333,7 @@ namespace dsn {
                 void (T::*handler)(const TRequest&, rpc_replier<TResponse>&),
                 int hash = 0
                 )
-                : task(code, hash), service_context_manager(svc, this)
+                : task(code, hash), task_context_manager(svc, this)
             {
                 _handler = handler;
                 _svc = svc;

@@ -67,35 +67,27 @@ servicelet::~servicelet()
     service_objects::instance().remove(this);
 }
 
-int servicelet::add_outstanding_task(task* tsk)
-{
-    std::lock_guard<std::mutex> l(_outstanding_tasks_lock);
-    int id = ++_last_id;
-    _outstanding_tasks.insert(std::map<int, task*>::value_type(id, tsk));
-    return id;
-}
-
-void servicelet::remove_outstanding_task(int id)
-{
-    std::lock_guard<std::mutex> l(_outstanding_tasks_lock);
-    auto pr = _outstanding_tasks.erase(id);
-    dassert (pr == 1, "task with local id %d is not found in the hash table", id);
-}
-
 void servicelet::clear_outstanding_tasks()
 {
-    std::lock_guard<std::mutex> l(_outstanding_tasks_lock);
-    for (auto it = _outstanding_tasks.begin(); it != _outstanding_tasks.end(); it++)
+    utils::auto_lock l(_outstanding_tasks_lock);
+    while (true)
     {
-        it->second->cancel(true);
-
-        auto sc = dynamic_cast<service_context_manager*>(it->second);
-        if (nullptr != sc)
+        auto n = _outstanding_tasks.next();
+        if (n != &_outstanding_tasks)
         {
-            sc->clear_context();
+            n->remove();
+
+            auto tcm = CONTAINING_RECORD(n, task_context_manager, _dl);
+
+            tcm->_task->cancel(true);
+
+            tcm->_task->add_ref();
+            tcm->_owner = nullptr;
+            tcm->_task->release_ref();
         }
+        else
+            break;
     }
-    _outstanding_tasks.clear();
 }
 
 void servicelet::check_hashed_access()

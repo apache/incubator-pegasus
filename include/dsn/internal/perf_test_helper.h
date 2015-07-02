@@ -61,7 +61,7 @@ namespace dsn {
                 int timeouts_ms[] = { 1, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000 };
                 int rounds = 1000;
 
-                for (size_t i = 0; i < sizeof(timeouts_ms) / sizeof(int); i++)
+                for (int i = static_cast<int>(sizeof(timeouts_ms) / sizeof(int)) - 1; i >= 0; i--)
                 {
                     perf_test_case c;
                     c.rounds = rounds;

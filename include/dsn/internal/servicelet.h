@@ -28,8 +28,8 @@
 # include <dsn/service_api.h>
 # include <set>
 # include <map>
-# include <mutex>
 # include <thread>
+# include <dsn/internal/synchronize.h>
 
 namespace dsn {
     typedef std::function<void()> task_handler;
@@ -37,7 +37,30 @@ namespace dsn {
     typedef std::function<void(error_code, message_ptr&, message_ptr&)> rpc_reply_handler;
 
     namespace service {
-        
+
+        // 
+        // many task requires a certain context to be executed
+        // task_context_manager helps manaing the context automatically
+        // for tasks so that when the context is gone, the tasks are
+        // automatically cancelled to avoid invalid context access
+        //
+        class servicelet;
+        class task_context_manager
+        {
+        public:
+            task_context_manager(servicelet* owner, task* task);
+            virtual ~task_context_manager();
+
+        private:
+            friend class servicelet;
+            task       *_task;
+            servicelet *_owner;
+
+        public:
+            // double-linked list for put into _owner
+            dlink      _dl;
+        };
+
         //
         // servicelet is the base class for RPC service and client
         // there can be multiple servicelet in the system, mostly
@@ -57,49 +80,39 @@ namespace dsn {
             static uint64_t now_ms() { return env::now_ms(); }
             
         protected:
-            friend class service_context_manager;
-
-            int  add_outstanding_task(task* tsk);
-            void remove_outstanding_task(int id);
             void clear_outstanding_tasks();
             void check_hashed_access();
 
         private:
             int                            _last_id;
-            std::map<int, task*>           _outstanding_tasks;
-            std::mutex                     _outstanding_tasks_lock;
-
             std::set<task_code>            _events;
             std::thread::id                _access_thread_id;
             bool                           _access_thread_id_inited;
             task_code                      _access_thread_task_code;
+
+            friend class task_context_manager;
+            ::dsn::utils::ex_lock          _outstanding_tasks_lock;
+            dlink                          _outstanding_tasks;
         };
 
-        class service_context_manager
+        // ------- inlined implementation ----------
+        inline task_context_manager::task_context_manager(servicelet* owner, task* task)
+            : _owner(owner), _task(task)
         {
-        public:
-            service_context_manager(servicelet* owner, task* task)
+            if (nullptr != _owner)
             {
-                _owner = owner;
-                if (nullptr != _owner)
-                {
-                    _id = owner->add_outstanding_task(task);
-                }
+                utils::auto_lock l(_owner->_outstanding_tasks_lock);
+                _dl.insert_after(&_owner->_outstanding_tasks);
             }
+        }
 
-            virtual ~service_context_manager()
+        inline task_context_manager::~task_context_manager()
+        {
+            if (nullptr != _owner)
             {
-                if (nullptr != _owner)
-                {
-                    _owner->remove_outstanding_task(_id);
-                }
+                utils::auto_lock l(_owner->_outstanding_tasks_lock);
+                _dl.remove();
             }
-
-            void clear_context() { _owner = nullptr; }
-
-        private:
-            int _id;
-            servicelet *_owner;
-        };
+        }
     }
 }

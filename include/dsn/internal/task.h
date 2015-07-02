@@ -31,6 +31,7 @@
 # include <dsn/internal/error_code.h>
 # include <dsn/internal/rpc_message.h>
 # include <dsn/internal/end_point.h>
+# include <dsn/internal/link.h>
 
 namespace dsn {
 
@@ -50,7 +51,7 @@ public:
 
     void                    exec_internal();    
     bool                    cancel(bool wait_until_finished, /*out*/ bool* cancel_success = nullptr); // return whether finished
-    bool                    wait(int timeout_milliseconds = TIME_MS_MAX);
+    bool                    wait(int timeout_milliseconds = TIME_MS_MAX, bool on_cancel = false);
     virtual void            enqueue();
     void                    set_error_code(error_code err) { _error = err; }
     void                    set_delay(int delay_milliseconds = 0) { _delay_milliseconds = delay_milliseconds; }
@@ -81,6 +82,8 @@ protected:
     bool                   _is_null;
 
 private:
+    task(const task&);
+
     uint64_t               _task_id; 
     std::atomic<void*>     _wait_event;
     int                    _hash;
@@ -89,6 +92,10 @@ private:
     bool                   _wait_for_cancel;
     task_spec              *_spec;
     service_node           *_node;
+
+public:
+    // used by task queue only
+    dlink                  _task_queue_dl;
 };
 
 DEFINE_REF_OBJECT(task)

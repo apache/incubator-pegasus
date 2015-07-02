@@ -26,37 +26,24 @@
 #pragma once
 
 # include <dsn/tool_api.h>
-# include <blockingconcurrentqueue.h>
+# include <atomic>
 
 namespace dsn {
     namespace tools {
         class hpc_task_queue : public task_queue
         {
         public:
-            hpc_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider)
-                : task_queue(pool, index, inner_provider)
-            {
-            }
+            hpc_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
 
-            virtual void     enqueue(task_ptr& task)
-            {
-                _tasks.enqueue(task);
-            }
-
-            virtual task_ptr dequeue()
-            {
-                task_ptr t;
-                _tasks.wait_dequeue(t);
-                return t;
-            }
-
-            virtual int      count() const
-            {
-                return static_cast<int>(_tasks.size_approx());
-            }
+            virtual void     enqueue(task_ptr& task);
+            virtual task_ptr dequeue();
+            virtual int      count() const { return _count.load(); }
 
         private:
-            ::moodycamel::BlockingConcurrentQueue<task_ptr> _tasks;
+            std::atomic<int> _count;
+            std::atomic<int> _counts[TASK_PRIORITY_COUNT];
+            dlink            _tasks[TASK_PRIORITY_COUNT];
+            ::dsn::utils::semaphore _sema;
         };
     }
 }

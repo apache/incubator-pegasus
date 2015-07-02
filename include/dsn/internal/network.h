@@ -148,8 +148,8 @@ namespace dsn {
             network*              net;
         };
         typedef std::map<uint64_t, match_entry> rpc_requests;
-        rpc_requests         _requests;
-        std::recursive_mutex _requests_lock;
+        rpc_requests          _requests;
+        ::dsn::utils::ex_lock _requests_lock;
     };
 
     //

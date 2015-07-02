@@ -26,6 +26,7 @@
 # include "command_manager.h"
 # include <iostream>
 # include <thread>
+# include <sstream>
 # include <dsn/internal/utils.h>
 # include <dsn/internal/logging.h>
 # include <dsn/service_api.h>

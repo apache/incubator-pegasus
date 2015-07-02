@@ -80,7 +80,7 @@ namespace dsn {
                     tspec.worker_factory_name = ("dsn::task_worker");
 
                 if (tspec.queue_factory_name == "")
-                    tspec.queue_factory_name = ("dsn::tools::hpc_task_queue");
+                    tspec.queue_factory_name = ("dsn::tools::simple_task_queue");
             }
 
         }

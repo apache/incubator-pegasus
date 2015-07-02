@@ -40,9 +40,11 @@ namespace dsn {
             char str[24];
             ::dsn::utils::time_ms_to_string(ts, str);
 
-            fprintf(fp, "%s(%llu) ", str, ts);
+            std::string tid = boost::lexical_cast<std::string>(boost::this_thread::get_id());
 
-            task* t = task::get_current_task();
+            fprintf(fp, "%s(%llu) TID=%s ", str, ts, tid.c_str());
+
+            /*task* t = task::get_current_task();
             if (t)
             {
                 if (nullptr != task::get_current_worker())
@@ -74,7 +76,7 @@ namespace dsn {
                     "io-thrd",
                     tid.c_str()
                     );
-            }
+            }*/
         }
 
         void screen_logger::logv(const char *file,

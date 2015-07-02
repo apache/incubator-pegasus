@@ -43,7 +43,7 @@ public:
 private:
     typedef std::map<uint64_t, std::vector<task_ptr>*>  Events;
     Events _events;
-    mutable std::recursive_mutex  _lock;
+    mutable ::dsn::utils::ex_lock _lock;
 };
 
 struct sim_worker_state
@@ -92,7 +92,7 @@ public:
 
 private:
     event_wheel                    _wheel;
-    mutable std::recursive_mutex   _lock;
+    mutable ::dsn::utils::ex_lock  _lock;
     uint64_t                       _time_ns;
     bool                           _running;
     std::vector<sim_worker_state*> _threads;

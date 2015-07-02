@@ -29,6 +29,7 @@
 # include <vector>
 # include <dsn/internal/logging.h>
 # include <dsn/internal/command.h>
+# include <sstream>
 
 #define __TITLE__ "task_spec"
 

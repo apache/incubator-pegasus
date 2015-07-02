@@ -59,11 +59,11 @@ namespace dsn { namespace service {
             }
         }
 
-        void check_wait_task(task* waitee, bool waitee_is_running)
+        void check_wait_task(task* waitee)
         {
             check_wait_safety();
 
-            if (!waitee_is_running && nullptr != task::get_current_task() && !waitee->is_empty())
+            if (nullptr != task::get_current_task() && !waitee->is_empty())
             {
                 if (TASK_TYPE_RPC_RESPONSE == waitee->spec().type ||
                     task::get_current_task()->spec().pool_code == waitee->spec().pool_code)
