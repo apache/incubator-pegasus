@@ -69,15 +69,15 @@ servicelet::~servicelet()
 
 void servicelet::clear_outstanding_tasks()
 {
-    utils::auto_lock l(_outstanding_tasks_lock);
     while (true)
     {
+        utils::auto_lock l(_outstanding_tasks_lock);
         auto n = _outstanding_tasks.next();
         if (n != &_outstanding_tasks)
         {
             auto tcm = CONTAINING_RECORD(n, task_context_manager, _dl);
             tcm->_task->cancel(true);
-            tcm->delete_owner(false);
+            tcm->delete_owner(true);
         }
         else
             break;

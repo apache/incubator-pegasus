@@ -52,7 +52,7 @@ namespace dsn {
             virtual ~task_context_manager();
 
         private:
-            void delete_owner(bool lock_owner);
+            void delete_owner(bool from_owner);
 
         private:
             friend class servicelet;
@@ -111,14 +111,14 @@ namespace dsn {
             }
         }
 
-        inline void task_context_manager::delete_owner(bool lock_owner)
+        inline void task_context_manager::delete_owner(bool from_owner)
         {
             if (nullptr != _owner)
             {
                 int not_deleting = 0;
                 if (_deleting_owner.compare_exchange_strong(not_deleting, 1))
                 {
-                    if (lock_owner)
+                    if (!from_owner)
                     {
                         utils::auto_lock l(_owner->_outstanding_tasks_lock);
                         _dl.remove();
@@ -141,7 +141,7 @@ namespace dsn {
 
         inline task_context_manager::~task_context_manager()
         {
-            delete_owner(true);
+            delete_owner(false);
         }
     }
 }
