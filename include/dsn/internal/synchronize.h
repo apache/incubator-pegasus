@@ -211,7 +211,16 @@ namespace dsn {
         public:
             __inline void notify() { _ready.signal(); }
             __inline void wait()   { _ready.wait(); }
-            __inline bool wait_for(int milliseconds) { return _ready.wait(milliseconds); }
+            __inline bool wait_for(int milliseconds) 
+            {
+                if (TIME_MS_MAX == milliseconds)
+                {
+                    _ready.wait();
+                    return true;
+                }
+                else
+                    return _ready.wait(milliseconds); 
+            }
 
         private:
             AutoResetEvent _ready;
@@ -247,7 +256,13 @@ namespace dsn {
 
             inline bool wait(int milliseconds)
             {
-                return _sema.wait(milliseconds);
+                if (TIME_MS_MAX == milliseconds)
+                {
+                    _sema.wait();
+                    return true;
+                }
+                else
+                    return _sema.wait(milliseconds);
             }
 
             inline bool release()
