@@ -61,28 +61,30 @@ public:
     dlink() { _next = _prev = (this); }
     dlink* next() const { return _next; }
     dlink* prev() const { return _prev; }
-    bool is_alone() const { return _next == _prev; }
+    bool is_alone() const { return _next == this; }
 
-    void insert_after(dlink* o)
+    // insert me before existing link node o [p (this) o]
+    void insert_before(dlink* o)
     {
-        auto n = _next;
+        auto p = o->_next;
         
         this->_next = o;
         o->_prev = (this);
 
-        o->_next = n;
-        n->_prev = o;        
+        p->_next = this;
+        this->_prev = p;
     }
 
-    void insert_before(dlink* o)
+    // insert me after existing link node o [o (this) n]
+    void insert_after(dlink* o)
     {
-        auto n = _prev;
+        auto n = o->_next;
 
         this->_prev = o;
-        o->_next = (this);
+        o->_next = this;
 
-        o->_prev = n;
-        n->_next = o;
+        this->_next = n;
+        n->_prev = this;
     }
 
     dlink* remove()
@@ -91,6 +93,7 @@ public:
         {
             this->_next->_prev = this->_prev;
             this->_prev->_next = this->_next;
+            _next = _prev = this;
         }
         return (this);
     }

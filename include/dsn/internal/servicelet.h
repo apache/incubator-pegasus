@@ -52,11 +52,15 @@ namespace dsn {
             virtual ~task_context_manager();
 
         private:
+            void delete_owner(bool lock_owner);
+
+        private:
             friend class servicelet;
+            
             task       *_task;
             servicelet *_owner;
-
-        public:
+            std::atomic<int> _deleting_owner;
+            
             // double-linked list for put into _owner
             dlink      _dl;
         };
@@ -99,6 +103,7 @@ namespace dsn {
         inline task_context_manager::task_context_manager(servicelet* owner, task* task)
             : _owner(owner), _task(task)
         {
+            _deleting_owner = 0;
             if (nullptr != _owner)
             {
                 utils::auto_lock l(_owner->_outstanding_tasks_lock);
@@ -106,13 +111,37 @@ namespace dsn {
             }
         }
 
-        inline task_context_manager::~task_context_manager()
+        inline void task_context_manager::delete_owner(bool lock_owner)
         {
             if (nullptr != _owner)
             {
-                utils::auto_lock l(_owner->_outstanding_tasks_lock);
-                _dl.remove();
+                int not_deleting = 0;
+                if (_deleting_owner.compare_exchange_strong(not_deleting, 1))
+                {
+                    if (lock_owner)
+                    {
+                        utils::auto_lock l(_owner->_outstanding_tasks_lock);
+                        _dl.remove();
+                    }
+                    else
+                    {
+                        _dl.remove();
+                    }
+
+                    _deleting_owner.fetch_add(1, std::memory_order_release);
+                }
+                else
+                {
+                    while (1 == _deleting_owner.load(std::memory_order_consume))
+                    {
+                    }
+                }
             }
+        }
+
+        inline task_context_manager::~task_context_manager()
+        {
+            delete_owner(true);
         }
     }
 }

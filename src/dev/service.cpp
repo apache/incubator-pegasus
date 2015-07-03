@@ -75,12 +75,9 @@ void servicelet::clear_outstanding_tasks()
         auto n = _outstanding_tasks.next();
         if (n != &_outstanding_tasks)
         {
-            n->remove();
-
             auto tcm = CONTAINING_RECORD(n, task_context_manager, _dl);
-
             tcm->_task->cancel(true);
-            tcm->_owner = nullptr;
+            tcm->delete_owner(false);
         }
         else
             break;
