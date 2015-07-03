@@ -66,7 +66,7 @@ public:
     // insert me before existing link node o [p (this) o]
     void insert_before(dlink* o)
     {
-        auto p = o->_next;
+        auto p = o->_prev;
         
         this->_next = o;
         o->_prev = (this);

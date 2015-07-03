@@ -97,7 +97,7 @@ namespace dsn {
         class serverlet : public virtual servicelet
         {
         public:
-            serverlet(const char* nm);
+            serverlet(const char* nm, int task_bucket_count = 1);
             virtual ~serverlet();
 
         protected:
@@ -382,13 +382,13 @@ namespace dsn {
         }
 
         template<typename T>
-        serverlet<T>::serverlet(const char* nm)
-            : _name(nm)
+        inline serverlet<T>::serverlet(const char* nm, int task_bucket_count)
+            : _name(nm), servicelet(task_bucket_count)
         {
         }
 
         template<typename T>
-        serverlet<T>::~serverlet()
+        inline serverlet<T>::~serverlet()
         {
         }
 

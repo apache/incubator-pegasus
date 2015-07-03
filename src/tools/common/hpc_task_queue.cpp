@@ -36,21 +36,20 @@ namespace dsn {
         {
             _count = 0;
         }
-
+        
         void hpc_task_queue::enqueue(task_ptr& task)
         {
             if (task->delay_milliseconds() == 0)
             {
-                //task->add_ref();
+                task->add_ref();
+                {
+                    utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
 
-                //int pri = task->spec().priority;
-                //LL_PUSH_BACK(task_dl, &_tasks[pri], task.get());
-
-                //// kick the consumers only when necessary
-                //if (++_count == 1)
-                //{
-                //    
-                //}
+                    task->_task_queue_dl.insert_before(&_tasks);
+                }
+                
+                _count.fetch_add(1, std::memory_order_release);
+                _sema.signal();
             }
             else
             {
@@ -75,7 +74,21 @@ namespace dsn {
 
         task_ptr hpc_task_queue::dequeue()
         {
-            return nullptr;
+            _sema.wait();
+
+            dlink *t;
+            {
+                utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
+                t = _tasks.next();
+                dassert(t != &_tasks, "");
+                t->remove();
+            }
+
+            _count.fetch_sub(1, std::memory_order_consume);
+
+            task_ptr ts = CONTAINING_RECORD(t, task, _task_queue_dl);
+            ts->release_ref();
+            return ts;
         }
     }
 }

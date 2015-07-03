@@ -71,6 +71,7 @@ public:
     static task*            get_current_task();
     static uint64_t         get_current_task_id();
     static task_worker*     get_current_worker();
+    static int              get_current_worker_index();
     static void             set_current_worker(task_worker* worker);
 
 protected:

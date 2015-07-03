@@ -53,9 +53,12 @@ private:
 
 static service_objects* s_services = &(service_objects::instance());
 
-servicelet::servicelet()
-: _access_thread_task_code(TASK_CODE_INVALID)
+servicelet::servicelet(int task_bucket_count)
+: _access_thread_task_code(TASK_CODE_INVALID), _task_bucket_count(task_bucket_count)
 {
+    _outstanding_tasks_lock = new ::dsn::utils::ex_lock_nr_spin[_task_bucket_count];
+    _outstanding_tasks = new dlink[_task_bucket_count];
+
     _access_thread_id_inited = false;
     _last_id = 0;
     service_objects::instance().add(this);
@@ -65,31 +68,37 @@ servicelet::~servicelet()
 {
     clear_outstanding_tasks();
     service_objects::instance().remove(this);
+
+    delete[] _outstanding_tasks;
+    delete[] _outstanding_tasks_lock;
 }
 
 void servicelet::clear_outstanding_tasks()
 {
-    while (true)
+    for (int i = 0; i < _task_bucket_count; i++)
     {
-        bool prepare_succ;
-        task_context_manager *tcm;
-
+        while (true)
         {
-            utils::auto_lock l(_outstanding_tasks_lock);
-            auto n = _outstanding_tasks.next();
-            if (n != &_outstanding_tasks)
+            bool prepare_succ;
+            task_context_manager *tcm;
+
             {
-                tcm = CONTAINING_RECORD(n, task_context_manager, _dl);
-                prepare_succ = tcm->delete_prepare();
+                utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_outstanding_tasks_lock[i]);
+                auto n = _outstanding_tasks[i].next();
+                if (n != &_outstanding_tasks[i])
+                {
+                    tcm = CONTAINING_RECORD(n, task_context_manager, _dl);
+                    prepare_succ = tcm->owner_delete_prepare();
+                }
+                else
+                    break; // assuming nobody is putting tasks into it anymore
             }
-            else
-                break; // assuming nobody is putting tasks into it anymore
-        }
 
-        if (prepare_succ)
-        {
-            tcm->_task->cancel(true);
-            tcm->delete_commit();
+            if (prepare_succ)
+            {
+                tcm->_task->cancel(true);
+                tcm->owner_delete_commit();
+            }
         }
     }
 }

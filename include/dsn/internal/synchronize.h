@@ -28,135 +28,6 @@
 # include <dsn/internal/dsn_types.h>
 # include <dsn/internal/logging.h>
 
-# if 0
-
-# include <mutex>
-# include <condition_variable>
-# include <boost/thread/shared_mutex.hpp>
-
-namespace dsn { namespace utils {
-
-class ex_lock
-{
-public:
-    __inline void lock() { _lock.lock(); }
-    __inline bool try_lock() { return _lock.try_lock(); }
-    __inline void unlock() { _lock.unlock(); }
-private:
-    std::recursive_mutex _lock;
-};
-
-class rw_lock
-{
-public:
-    rw_lock() { }
-    ~rw_lock() {}
-
-    void lock_read() { _lock.lock_shared(); }
-    void unlock_read() { _lock.unlock_shared(); }
-
-    void lock_write() { _lock.lock(); }
-    void unlock_write() { _lock.unlock(); }
-    
-private:
-    boost::shared_mutex _lock;
-};
-
-class notify_event
-{
-public:
-    notify_event() : _ready(false){}
-    void notify() { std::lock_guard<std::mutex> l(_lk); _ready = true; _cond.notify_all(); }
-    void wait()   { std::unique_lock<std::mutex> l(_lk); _cond.wait(l, [&]{return _ready; }); }
-    bool wait_for(int milliseconds)
-    { 
-        std::unique_lock<std::mutex> l(_lk); 
-        if (_ready)
-        {
-            return true;
-        }
-        else
-        {
-            return std::cv_status::no_timeout == _cond.wait_for(l, std::chrono::milliseconds(milliseconds));
-        }
-    }
-
-private:
-    std::mutex _lk;
-    std::condition_variable _cond;
-    bool _ready;
-};
-
-
-class semaphore
-{
-public:  
-    semaphore(int initialCount = 0)
-        : _count(initialCount), _waits(0)
-    {
-    }
-
-    ~semaphore()
-    {
-    }
-
-public:
-    inline void signal() 
-    {
-        signal(1);
-    }
-
-    inline void signal(int count)
-    {
-        std::unique_lock<std::mutex> l(_lk);
-        _count += count;
-        if (_waits > 0)
-        {
-            _cond.notify_one();
-        }
-    }
-
-    inline void wait()
-    {
-        wait(TIME_MS_MAX);
-    }
-
-    inline bool wait(unsigned int milliseconds)
-    {
-        std::unique_lock<std::mutex> l(_lk);
-        if (_count == 0)
-        {
-            _waits++;
-
-            auto r = _cond.wait_for(l, std::chrono::milliseconds(milliseconds));
-
-            _waits--;
-            if (r == std::cv_status::timeout)
-                return false;
-        }
-
-        dassert (_count > 0, "semphoare must be greater than zero");
-        _count--;
-        return true;
-    }
-
-    inline bool release()
-    {
-        signal(1);
-        return true;
-    }    
-
-private:
-    std::mutex _lk;
-    std::condition_variable _cond;
-    int _count;
-    int _waits;
-};
-
-}} // end namespace
-
-
-# else
 // using high performance versions from https://github.com/preshing/cpp11-on-multicore
 
 # include <benaphore.h>
@@ -189,6 +60,44 @@ namespace dsn {
             RecursiveBenaphore _lock;
         };
 # endif
+
+        class ex_lock_nr
+        {
+        public:
+            __inline void lock() { _lock.lock(); }
+            __inline bool try_lock() { return _lock.tryLock(); }
+            __inline void unlock() { _lock.unlock(); }
+        private:
+            NonRecursiveBenaphore _lock;
+        };
+
+        class ex_lock_nr_spin
+        {
+        public:
+            __inline void lock() 
+            {
+                while (!try_lock())
+                {
+                    while (_l.load(std::memory_order_consume) == 1)
+                    {
+                    }
+                }
+            }
+
+            __inline bool try_lock() 
+            { 
+                int not_lock = 0;
+                return _l.compare_exchange_strong(not_lock, 1);
+            }
+
+            __inline void unlock() 
+            {
+                _l.fetch_sub(1, std::memory_order_release);
+            }
+
+        private:
+            std::atomic<int> _l;
+        };
 
         class rw_lock
         {
@@ -230,7 +139,7 @@ namespace dsn {
         {
         public:
             semaphore(int initialCount = 0)
-                : _sema(initialCount)
+                : _sema(initialCount, 10)
             {
             }
 
@@ -274,24 +183,17 @@ namespace dsn {
         private:
             LightweightSemaphore _sema;
         };
-    }
-}
 
-# endif
-
-
-//--------------------- helpers --------------------------------------
-
-namespace dsn {
-    namespace utils {
+        //--------------------- helpers --------------------------------------
+        template<typename T>
         class auto_lock
         {
         public:
-            auto_lock(ex_lock & lock) : _lock(&lock) { _lock->lock(); }
+            auto_lock(T & lock) : _lock(&lock) { _lock->lock(); }
             ~auto_lock() { _lock->unlock(); }
 
         private:
-            ex_lock * _lock;
+            T * _lock;
 
             auto_lock(const auto_lock&);
             auto_lock& operator=(const auto_lock&);

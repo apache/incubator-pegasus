@@ -49,7 +49,7 @@ namespace dsn {
                 );
 
         private:
-            ::dsn::utils::ex_lock _lock;
+            ::dsn::utils::ex_lock_nr _lock;
         };
 
 
@@ -72,7 +72,7 @@ namespace dsn {
             void create_log_file();
 
         private:
-            ::dsn::utils::ex_lock _lock;
+            ::dsn::utils::ex_lock_nr _lock;
             FILE* _log;
             int _start_index;
             int _index;

@@ -74,7 +74,7 @@ namespace dsn {
         bool ret;
 
         {
-            utils::auto_lock l(_requests_lock);
+            utils::auto_lock<::dsn::utils::ex_lock_nr> l(_requests_lock);
             auto it = _requests.find(key);
             if (it != _requests.end())
             {
@@ -109,7 +109,7 @@ namespace dsn {
         network* net;
 
         {
-            utils::auto_lock l(_requests_lock);
+            utils::auto_lock<::dsn::utils::ex_lock_nr> l(_requests_lock);
             auto it = _requests.find(key);
             if (it != _requests.end())
             {
@@ -150,7 +150,7 @@ namespace dsn {
         timeout_task = (new rpc_timeout_task(shared_from_this(), hdr.id, spec));
 
         {
-            utils::auto_lock l(_requests_lock);
+            utils::auto_lock<::dsn::utils::ex_lock_nr> l(_requests_lock);
             auto pr = _requests.insert(rpc_requests::value_type(hdr.id, match_entry()));
             dassert (pr.second, "the message is already on the fly!!!");
             pr.first->second.resp_task = call;

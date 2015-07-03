@@ -35,7 +35,7 @@ namespace dsn { namespace tools {
 
 void event_wheel::add_event(uint64_t ts, task_ptr& task)
 {
-    utils::auto_lock l(_lock);
+    utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
 
     std::vector<task_ptr>* evts;
     auto itr = _events.find(ts);
@@ -53,7 +53,7 @@ void event_wheel::add_event(uint64_t ts, task_ptr& task)
 
 std::vector<task_ptr>* event_wheel::pop_next_events(__out_param uint64_t& ts)
 {
-    utils::auto_lock l(_lock);
+    utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
 
     std::vector<task_ptr>* evts = NULL;
     auto itr = _events.begin();
@@ -67,7 +67,7 @@ std::vector<task_ptr>* event_wheel::pop_next_events(__out_param uint64_t& ts)
 
 void event_wheel::clear()
 {
-    utils::auto_lock l(_lock);
+    utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
     _events.clear();
 }
 
@@ -221,7 +221,7 @@ void scheduler::schedule()
         if (events)
         {
             {
-                utils::auto_lock l(_lock);
+                utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
                 _time_ns = ts;
             }
 

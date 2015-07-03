@@ -72,6 +72,14 @@ struct
         return nullptr;
 }
 
+/*static*/ int task::get_current_worker_index()
+{
+    if (tls_task_info.magic == 0xdeadbeef)
+        return tls_task_info.worker->index();
+    else
+        return -1;
+}
+
 /*static*/ void task::set_current_worker(task_worker* worker)
 {
     if (tls_task_info.magic == 0xdeadbeef)

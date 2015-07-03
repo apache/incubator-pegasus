@@ -88,7 +88,7 @@ namespace dsn {
             va_list args
             )
         {
-            utils::auto_lock l(_lock);
+            utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
 
             print_header(stdout);
             vprintf(fmt, args);
@@ -173,7 +173,7 @@ namespace dsn {
                 va_copy(args2, args);
             }
 
-            utils::auto_lock l(_lock);
+            utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
          
             print_header(_log);
             fprintf(_log, "%s, ", title);

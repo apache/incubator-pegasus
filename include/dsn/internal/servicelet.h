@@ -30,6 +30,7 @@
 # include <map>
 # include <thread>
 # include <dsn/internal/synchronize.h>
+# include <dsn/internal/utils.h>
 
 namespace dsn {
     typedef std::function<void()> task_handler;
@@ -52,8 +53,8 @@ namespace dsn {
             virtual ~task_context_manager();
 
         private:
-            bool delete_prepare();
-            void delete_commit();
+            bool owner_delete_prepare();
+            void owner_delete_commit();
 
         private:
             friend class servicelet;
@@ -64,6 +65,7 @@ namespace dsn {
             
             // double-linked list for put into _owner
             dlink      _dl;
+            int        _dl_bucket_id;
         };
 
         //
@@ -74,7 +76,7 @@ namespace dsn {
         class servicelet
         {
         public:
-            servicelet();
+            servicelet(int task_bucket_count = 1);
             virtual ~servicelet();
 
             static end_point primary_address() { return rpc::primary_address(); }
@@ -96,32 +98,44 @@ namespace dsn {
             task_code                      _access_thread_task_code;
 
             friend class task_context_manager;
-            ::dsn::utils::ex_lock          _outstanding_tasks_lock;
-            dlink                          _outstanding_tasks;
+            const int                      _task_bucket_count;
+            ::dsn::utils::ex_lock_nr_spin  *_outstanding_tasks_lock;
+            dlink                          *_outstanding_tasks;
         };
 
         // ------- inlined implementation ----------
         inline task_context_manager::task_context_manager(servicelet* owner, task* task)
             : _owner(owner), _task(task)
         {
-            _deleting_owner = 0;
             if (nullptr != _owner)
             {
-                utils::auto_lock l(_owner->_outstanding_tasks_lock);
-                _dl.insert_after(&_owner->_outstanding_tasks);
+                _deleting_owner = 0;
+
+                auto idx = task::get_current_worker_index();
+                if (-1 != idx)
+                    _dl_bucket_id = static_cast<int>(idx % _owner->_task_bucket_count);
+                else
+                    _dl_bucket_id = static_cast<int>(::dsn::utils::get_current_tid() % _owner->_task_bucket_count);
+
+                {
+                    utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_owner->_outstanding_tasks_lock[_dl_bucket_id]);
+                    _dl.insert_after(&_owner->_outstanding_tasks[_dl_bucket_id]);
+                }
             }
         }
 
-        inline bool task_context_manager::delete_prepare()
+        inline bool task_context_manager::owner_delete_prepare()
         {
             int not_deleting = 0;
             return _deleting_owner.compare_exchange_strong(not_deleting, 1);
         }
 
-        inline void task_context_manager::delete_commit()
+        inline void task_context_manager::owner_delete_commit()
         {
-            utils::auto_lock l(_owner->_outstanding_tasks_lock);
-            _dl.remove();
+            {
+                utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_owner->_outstanding_tasks_lock[_dl_bucket_id]);
+                _dl.remove();
+            }
 
             _deleting_owner.fetch_add(1, std::memory_order_release);
         }
@@ -130,9 +144,9 @@ namespace dsn {
         {
             if (nullptr != _owner)
             {
-                if (delete_prepare())
+                if (owner_delete_prepare())
                 {
-                    delete_commit();
+                    owner_delete_commit();
                 }
                 else
                 {

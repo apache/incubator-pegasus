@@ -9,6 +9,6 @@ add_subdirectory(ext/gtest)
 add_subdirectory(ext/concurrentqueue)
 add_subdirectory(ext/HighPerfSync)
 
-include_directories(after ${HPS_INCLUDE_DIRS})
+include_directories(AFTER ${HPS_INCLUDE_DIRS})
 
 add_subdirectory(src)

@@ -41,9 +41,12 @@ namespace dsn {
 
         private:
             std::atomic<int> _count;
-            std::atomic<int> _counts[TASK_PRIORITY_COUNT];
-            dlink            _tasks[TASK_PRIORITY_COUNT];
-            ::dsn::utils::semaphore _sema;
+            
+            ::dsn::utils::ex_lock_nr _lock;
+            dlink                    _tasks;
+            ::dsn::utils::semaphore  _sema;
+            //std::atomic<int> _counts[TASK_PRIORITY_COUNT];
+            //dlink            _tasks[TASK_PRIORITY_COUNT];
         };
     }
 }
