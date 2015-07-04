@@ -151,6 +151,9 @@ namespace dsn {
                 uint32_t count;
                 is.read((char*)&count, sizeof(count));
 
+                if (is.fail())
+                    return;
+
                 for (uint32_t i = 0; i < count; i++)
                 {
                     std::string key;

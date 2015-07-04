@@ -68,6 +68,7 @@ void replica::on_config_proposal(configuration_update_request& proposal)
     switch (proposal.type)
     {
     case CT_ASSIGN_PRIMARY:
+    case CT_UPGRADE_TO_PRIMARY:
         assign_primary(proposal);
         break;
     case CT_ADD_SECONDARY:
@@ -100,11 +101,20 @@ void replica::assign_primary(configuration_update_request& proposal)
         return;
     }
 
+    if (proposal.type == CT_UPGRADE_TO_PRIMARY && status() != PS_SECONDARY)
+    {
+        dwarn(
+            "%s: invalid upgrade to primary proposal as the node is in %s",
+            name(),
+            enum_to_string(status()));
+        return;
+    }
+
     proposal.config.primary = primary_address();
     replica_helper::remove_node(primary_address(), proposal.config.secondaries);
     replica_helper::remove_node(primary_address(), proposal.config.drop_outs);
 
-    update_configuration_on_meta_server(CT_ASSIGN_PRIMARY, proposal.node, proposal.config);
+    update_configuration_on_meta_server(proposal.type, proposal.node, proposal.config);
 }
 
 void replica::add_potential_secondary(configuration_update_request& proposal)
@@ -260,7 +270,7 @@ void replica::update_configuration_on_meta_server(config_type type, const end_po
 {
     newConfig.last_committed_decree = last_committed_decree();
 
-    if (type != CT_ASSIGN_PRIMARY)
+    if (type != CT_ASSIGN_PRIMARY && type != CT_UPGRADE_TO_PRIMARY)
     {
         dassert (status() == PS_PRIMARY, "");
         dassert (newConfig.ballot == _primary_states.membership.ballot, "");
@@ -367,6 +377,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, messa
         switch (req->type)
         {
         case CT_ASSIGN_PRIMARY:
+        case CT_UPGRADE_TO_PRIMARY:
         case CT_DOWNGRADE_TO_SECONDARY:
         case CT_DOWNGRADE_TO_INACTIVE:
         case CT_UPGRADE_TO_SECONDARY:

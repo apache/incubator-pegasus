@@ -48,6 +48,7 @@ namespace dsn {
         
         ENUM_BEGIN(config_type, CT_NONE)
             ENUM_REG(CT_ASSIGN_PRIMARY)
+            ENUM_REG(CT_UPGRADE_TO_PRIMARY)
             ENUM_REG(CT_ADD_SECONDARY)
             ENUM_REG(CT_DOWNGRADE_TO_SECONDARY)
             ENUM_REG(CT_DOWNGRADE_TO_INACTIVE)

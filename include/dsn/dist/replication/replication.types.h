@@ -454,11 +454,12 @@ namespace dsn { namespace replication {
     {
         CT_NONE = 0,
         CT_ASSIGN_PRIMARY = 1,
-        CT_ADD_SECONDARY = 2,
-        CT_DOWNGRADE_TO_SECONDARY = 3,
-        CT_DOWNGRADE_TO_INACTIVE = 4,
-        CT_REMOVE = 5,
-        CT_UPGRADE_TO_SECONDARY = 6,
+        CT_UPGRADE_TO_PRIMARY = 2,
+        CT_ADD_SECONDARY = 3,
+        CT_DOWNGRADE_TO_SECONDARY = 4,
+        CT_DOWNGRADE_TO_INACTIVE = 5,
+        CT_REMOVE = 6,
+        CT_UPGRADE_TO_SECONDARY = 7,
     };
 
     DEFINE_POD_SERIALIZATION(config_type);
