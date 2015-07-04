@@ -74,6 +74,11 @@ namespace dsn {
         class ex_lock_nr_spin
         {
         public:
+            __inline ex_lock_nr_spin()
+            {
+                _l = 0;
+            }
+
             __inline void lock() 
             {
                 while (!try_lock())
