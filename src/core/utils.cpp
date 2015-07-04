@@ -29,6 +29,10 @@
 # include <dsn/internal/singleton.h>
 # include <sys/types.h>
 
+# if defined(__linux__)
+# include <sys/syscall.h>
+# endif
+
 # define __TITLE__ "dsn.utils"
 
 namespace dsn {
@@ -39,7 +43,8 @@ namespace dsn {
 # if defined(_WIN32)
             return static_cast<int>(::GetCurrentThreadId());
 # elif defined(__linux__)
-            return static_cast<int>(gettid());
+            //return static_cast<int>(gettid());
+            return static_cast<int>(syscall(SYS_gettid));
 # else
 # error not implemented yet
 # endif 
