@@ -705,6 +705,7 @@ void replica::replay_prepare_list()
         }
         else
         {
+            mu->rpc_code = RPC_REPLICATION_WRITE_EMPTY;
             ddebug(
                 "%s: emit empty mutation %s when replay prepare list",
                 name(),

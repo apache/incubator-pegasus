@@ -54,12 +54,22 @@ void mutation::set_client_request(task_code code, message_ptr& request)
     unmarshall(reader, mu->data);
     unmarshall(reader, mu->rpc_code);
 
-    dassert(mu->data.updates.size() == 1, "batch is not supported now");
-    message_ptr msg(new message(mu->data.updates[0], false));
+    // it is possible this is an emtpy mutation due to new primaries inserts empty mutations for holes
+    dassert(mu->data.updates.size() == 1 || mu->rpc_code == RPC_REPLICATION_WRITE_EMPTY, "batch is not supported now");
+    message_ptr msg;
+    if (mu->rpc_code != RPC_REPLICATION_WRITE_EMPTY)
+    {
+        msg.reset(new message(mu->data.updates[0], false));
+    }
+    else
+    {
+        blob bb;
+        msg.reset(new message(bb, false));
+    }
+
     mu->client_request = msg;
-
     mu->_from_message = reader;
-
+    
     sprintf(mu->_name, "%lld.%lld",
         static_cast<long long int>(mu->data.header.ballot),
         static_cast<long long int>(mu->data.header.decree));
@@ -69,7 +79,6 @@ void mutation::set_client_request(task_code code, message_ptr& request)
 
 void mutation::write_to(message_ptr& writer)
 {
-    dassert(data.updates.size() == 1, "batch is not supported now");
     marshall(writer, data);
     marshall(writer, rpc_code);
 }

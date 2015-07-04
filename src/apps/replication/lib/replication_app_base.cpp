@@ -58,12 +58,16 @@ int replication_app_base::write_internal(mutation_ptr& mu, bool ack_client)
     dassert (mu->data.header.decree == last_committed_decree() + 1, "");
 
     int err = 0;
-    auto& msg = mu->client_request;
-    dispatch_rpc_call(
-        mu->rpc_code,
-        msg,
-        ack_client
-        );
+    
+    if (mu->rpc_code != RPC_REPLICATION_WRITE_EMPTY)
+    {
+        auto& msg = mu->client_request;
+        err = dispatch_rpc_call(
+            mu->rpc_code,
+            msg,
+            ack_client
+            );
+    }
     
     ++_last_committed_decree;
     return err;
