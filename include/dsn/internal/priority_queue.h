@@ -161,7 +161,7 @@ public:
         return r;
     }
 
-    virtual T dequeue(__out_param long ct, int millieseconds = TIME_MS_MAX)
+    virtual T dequeue(__out_param long& ct, int millieseconds = TIME_MS_MAX)
     {
         std::unique_lock<std::mutex> l(priority_queue<T, priority_count, TQueue>::_lock);
         
