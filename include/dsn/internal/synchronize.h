@@ -30,9 +30,9 @@
 
 // using high performance versions from https://github.com/preshing/cpp11-on-multicore
 
-# include <benaphore.h>
-# include <autoresetevent.h>
-# include <rwlock.h>
+# include <dsn/ext/hpc-locks/benaphore.h>
+# include <dsn/ext/hpc-locks/autoresetevent.h>
+# include <dsn/ext/hpc-locks/rwlock.h>
 
 namespace dsn {
     namespace utils {

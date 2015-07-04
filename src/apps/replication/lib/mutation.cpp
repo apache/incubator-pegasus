@@ -69,6 +69,7 @@ void mutation::set_client_request(task_code code, message_ptr& request)
 
 void mutation::write_to(message_ptr& writer)
 {
+    dassert(data.updates.size() == 1, "batch is not supported now");
     marshall(writer, data);
     marshall(writer, rpc_code);
 }

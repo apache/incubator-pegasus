@@ -6,9 +6,4 @@ dsn_common_setup()
 dsn_add_pseudo_projects()
 
 add_subdirectory(ext/gtest)
-add_subdirectory(ext/concurrentqueue)
-add_subdirectory(ext/HighPerfSync)
-
-include_directories(AFTER ${HPS_INCLUDE_DIRS})
-
 add_subdirectory(src)
