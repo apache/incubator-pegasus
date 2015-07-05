@@ -1017,18 +1017,24 @@ namespace dsn { namespace replication {
     struct configuration_query_by_index_response
     {
         int32_t err;
+        int32_t app_id;
+        int32_t partition_count;
         std::vector< partition_configuration> partitions;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const configuration_query_by_index_response& val, uint16_t pos = 0xffff)
     {
         marshall(writer, val.err, pos);
+        marshall(writer, val.app_id, pos);
+        marshall(writer, val.partition_count, pos);
         marshall(writer, val.partitions, pos);
     };
 
     inline void unmarshall(::dsn::binary_reader& reader, __out_param configuration_query_by_index_response& val)
     {
         unmarshall(reader, val.err);
+        unmarshall(reader, val.app_id);
+        unmarshall(reader, val.partition_count);
         unmarshall(reader, val.partitions);
     };
 

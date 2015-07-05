@@ -224,7 +224,9 @@ struct configuration_query_by_index_request
 struct configuration_query_by_index_response
 {
     1:i32                           err;
-    2:list<partition_configuration> partitions;
+	2:i32                           app_id;
+	3:i32                           partition_count;
+    4:list<partition_configuration> partitions;
 }
 
 struct query_replica_decree_request

@@ -62,6 +62,8 @@ namespace dsn {
             {
                 zauto_lock l(_lock);
                 _store[pr.key] = pr.value;
+                ++_last_committed_decree;
+
                 dinfo("write %s, decree = %lld\n", pr.value.c_str(), last_committed_decree());
                 reply(ERR_SUCCESS);
             }
@@ -75,6 +77,7 @@ namespace dsn {
                     it->second.append(pr.value);
                 else
                     _store[pr.key] = pr.value;
+                ++_last_committed_decree;
 
                 dinfo("append %s, decree = %lld\n", pr.value.c_str(), last_committed_decree());
                 reply(ERR_SUCCESS);

@@ -343,6 +343,8 @@ void server_state::query_configuration_by_index(configuration_query_by_index_req
         if (kv.app_name == request.app_name)
         {
             response.err = ERR_SUCCESS;
+            response.app_id = i + 1;
+            response.partition_count = kv.partition_count;
             app_state& app = kv;
             for (auto& idx : request.partition_indices)
             {

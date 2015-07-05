@@ -106,6 +106,12 @@ void replica::on_client_read(const read_request_header& meta, message_ptr& reque
         return;
     }
 
+    if (meta.semantic == read_semantic_t::ReadLastUpdate && status() != PS_PRIMARY)
+    {
+        response_client_message(request, ERR_INVALID_STATE);
+        return;
+    }
+
     dassert (_app != nullptr, "");
     _app->dispatch_rpc_call(meta.code, request, true);
 }

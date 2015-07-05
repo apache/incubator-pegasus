@@ -68,8 +68,10 @@ int replication_app_base::write_internal(mutation_ptr& mu, bool ack_client)
             ack_client
             );
     }
-    
-    ++_last_committed_decree;
+    else
+    {
+        on_empty_write();
+    }
     return err;
 }
 
@@ -91,12 +93,9 @@ int replication_app_base::dispatch_rpc_call(int code, message_ptr& request, bool
             it->second(request, response);
         }
     }
-    else if (ack_client)
+    else
     {
-        message_ptr response = request->create_response();
-        error_code err = ERR_HANDLER_NOT_FOUND;
-        marshall(response->writer(), (int)err);
-        rpc::reply(response);
+        dassert(false, "cannot find handler for rpc code %d in %s", code, data_dir().c_str());
     }
 
     return 0;
