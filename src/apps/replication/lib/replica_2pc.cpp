@@ -347,7 +347,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, int
     dassert (mu->data.header.ballot == get_ballot(), "");
 
     end_point node = request->header().to_address;
-    partition_status st = _primary_states.GetNodeStatus(node);
+    partition_status st = _primary_states.get_node_status(node);
 
     // handle reply
     prepare_ack resp;

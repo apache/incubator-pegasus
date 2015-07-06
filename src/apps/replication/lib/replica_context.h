@@ -31,9 +31,9 @@ namespace dsn { namespace replication {
 
 struct remote_learner_state
 {
-    uint64_t       signature;
-    task_ptr      timeout_task;
-    decree       prepare_start_decree;
+    uint64_t signature;
+    task_ptr timeout_task;
+    decree   prepare_start_decree;
 };
 
 typedef std::map<end_point, remote_learner_state> learner_map;
@@ -47,15 +47,14 @@ public:
     bool get_replica_config(const end_point& node, __out_param replica_configuration& config);
     void get_replica_config(partition_status status, __out_param replica_configuration& config);
     bool check_exist(const end_point& node, partition_status status);
-    partition_status GetNodeStatus(const end_point& addr) const;
+    partition_status get_node_status(const end_point& addr) const;
 
     void do_cleanup_pending_mutations(bool clean_pending_mutations = true);
-    void CleanupGroupCheck();
     
 public:
     // membership mgr, including learners
     partition_configuration membership;
-    node_statuses          statuses;
+    node_statuses           statuses;
     learner_map             learners;
 
     // 2pc batching
@@ -68,6 +67,10 @@ public:
 
     // reconfig
     task_ptr     reconfiguration_task;
+
+    // when read lastest update, all prepared decrees must be firstly committed
+    // (possibly true on old primary) before opening read service
+    decree       last_prepare_decree_on_new_primary; 
 };
 
 
@@ -95,7 +98,7 @@ public:
 
 //---------------inline impl----------------------------------------------------------------
 
-inline partition_status primary_context::GetNodeStatus(const end_point& addr) const
+inline partition_status primary_context::get_node_status(const end_point& addr) const
 { 
     auto it = statuses.find(addr);
     return it != statuses.end()  ? it->second : PS_INACTIVE;

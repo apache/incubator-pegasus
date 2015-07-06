@@ -106,10 +106,14 @@ void replica::on_client_read(const read_request_header& meta, message_ptr& reque
         return;
     }
 
-    if (meta.semantic == read_semantic_t::ReadLastUpdate && status() != PS_PRIMARY)
+    if (meta.semantic == read_semantic_t::ReadLastUpdate)
     {
-        response_client_message(request, ERR_INVALID_STATE);
-        return;
+        if (status() != PS_PRIMARY || 
+            last_committed_decree() < _primary_states.last_prepare_decree_on_new_primary)
+        {
+            response_client_message(request, ERR_INVALID_STATE);
+            return;
+        }
     }
 
     dassert (_app != nullptr, "");

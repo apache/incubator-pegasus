@@ -575,6 +575,17 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, global_p
 
 void replica_stub::remove_replica_on_meta_server(const partition_configuration& config)
 {
+    if (config.primary != primary_address())
+    {
+        ddebug(
+            "%u.%u @ %s:%d: replica not exists on meta server, remove failed coz the current node is not primary",
+            config.gpid.app_id, config.gpid.pidx,
+            primary_address().name.c_str(), 
+            static_cast<int>(primary_address().port)
+            );
+        return;
+    }
+
     message_ptr msg = message::create_request(RPC_CM_CALL);
     meta_request_header hdr;
     hdr.rpc_tag = RPC_CM_UPDATE_PARTITION_CONFIGURATION;

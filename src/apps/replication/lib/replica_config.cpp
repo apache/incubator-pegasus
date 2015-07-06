@@ -231,7 +231,7 @@ void replica::remove(configuration_update_request& proposal)
     dassert (proposal.config.primary == _primary_states.membership.primary, "");
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
 
-    auto st = _primary_states.GetNodeStatus(proposal.node);
+    auto st = _primary_states.get_node_status(proposal.node);
 
     switch (st)
     {
@@ -375,9 +375,11 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, messa
         dassert (req->config.secondaries == resp.config.secondaries, "");
 
         switch (req->type)
-        {
-        case CT_ASSIGN_PRIMARY:
+        {        
         case CT_UPGRADE_TO_PRIMARY:
+            _primary_states.last_prepare_decree_on_new_primary = _prepare_list->max_decree();
+            break;
+        case CT_ASSIGN_PRIMARY:
         case CT_DOWNGRADE_TO_SECONDARY:
         case CT_DOWNGRADE_TO_INACTIVE:
         case CT_UPGRADE_TO_SECONDARY:
@@ -538,7 +540,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         switch (config.status)
         {
         case PS_PRIMARY:
-            init_group_check();
+            init_group_check();            
             replay_prepare_list();
             break;
         case PS_SECONDARY:
@@ -672,19 +674,22 @@ void replica::on_config_sync(const partition_configuration& config)
 {
     ddebug( "%s: configuration sync", name());
 
-    // no update during reconfiguration
-    if (nullptr != _primary_states.reconfiguration_task)
-        return;
-
     // no outdated update
     if (config.ballot < get_ballot())
         return;
 
-    update_configuration(config);
-
-    if (status() == PS_INACTIVE && !_inactive_is_transient)
+    if (status() == PS_PRIMARY || nullptr != _primary_states.reconfiguration_task)
     {
-        _stub->remove_replica_on_meta_server(config);
+        // nothing to do as pirmary always holds the truth
+    }
+    else
+    {
+        update_configuration(config);
+
+        if (config.primary == primary_address() && status() == PS_INACTIVE && !_inactive_is_transient)
+        {
+            _stub->remove_replica_on_meta_server(config);
+        }
     }
 }
 
