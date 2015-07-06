@@ -9,6 +9,7 @@
 #include <cassert>
 #include <thread>
 #include <atomic>
+#include <dsn/internal/utils.h>
 #include <dsn/ext/hpc-locks/sema.h>
 
 
@@ -59,7 +60,7 @@ class RecursiveBenaphore
 {
 private:
     std::atomic<int> m_contentionCount;
-    std::atomic<std::thread::id> m_owner;
+    std::atomic<int> m_owner;
     int m_recursion;
     DefaultSemaphoreType m_sema;
 
@@ -75,7 +76,8 @@ public:
 // GCC 4.7.2's libstdc++-v3 doesn't implement atomic_init.
 // "warning: inline function 'void std::atomic_init(std::atomic<_ITp>*, _ITp) [with _ITp = std::thread::id]' used but never defined [enabled by default]"
 // Using the constructor (above) in that case.
-        std::atomic_init(&m_owner, std::thread::id());
+        //std::atomic_init(&m_owner, std::thread::id());
+		m_owner = ::dsn::utils::get_current_tid();
 
         // If this assert fails on your system, you'll have to replace std::thread::id with a
         // more compact, platform-specific thread ID, or just comment the assert and live with
@@ -85,7 +87,8 @@ public:
 
     void lock()
     {
-        std::thread::id tid = std::this_thread::get_id();
+        //std::thread::id tid = std::this_thread::get_id();
+		auto tid = ::dsn::utils::get_current_tid();
         if (m_contentionCount.fetch_add(1, std::memory_order_acquire) > 0)
         {
             if (tid != m_owner.load(std::memory_order_relaxed))
@@ -98,7 +101,8 @@ public:
  
     bool tryLock()
     {
-        std::thread::id tid = std::this_thread::get_id();
+        //std::thread::id tid = std::this_thread::get_id();
+		auto tid = ::dsn::utils::get_current_tid();
         if (m_owner.load(std::memory_order_relaxed) == tid)
         {
             // Already inside the lock
@@ -120,10 +124,13 @@ public:
 
     void unlock()
     {
-        assert(std::this_thread::get_id() == m_owner.load(std::memory_order_relaxed));
+        //assert(std::this_thread::get_id() == m_owner.load(std::memory_order_relaxed));
+		auto tid = ::dsn::utils::get_current_tid();
+        assert(tid == m_owner.load(std::memory_order_relaxed));
         int recur = --m_recursion;
         if (recur == 0)
-            m_owner.store(std::thread::id(), std::memory_order_relaxed);
+            //m_owner.store(std::thread::id(), std::memory_order_relaxed);
+            m_owner.store(tid, std::memory_order_relaxed);
         if (m_contentionCount.fetch_sub(1, std::memory_order_release) > 1)
         {
             if (recur == 0)
