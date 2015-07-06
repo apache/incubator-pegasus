@@ -26,6 +26,7 @@
 # pragma once
 
 # include <mutex>
+# include <atomic>
 
 namespace dsn { namespace utils {
 
@@ -41,7 +42,12 @@ public:
 
         if (nullptr == _instance)
         {
-            std::call_once(flag, [&]() { _instance = new T(); });
+            std::call_once(flag, [&]() 
+            { 
+                auto tmp = new T();
+                std::atomic_thread_fence(std::memory_order::memory_order_seq_cst);
+                _instance = tmp; 
+            });
         }
         return *_instance;
     }
