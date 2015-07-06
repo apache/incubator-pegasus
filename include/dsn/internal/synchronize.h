@@ -37,19 +37,6 @@
 namespace dsn {
     namespace utils {
 
-# if defined(_WIN32)
-        class ex_lock
-        {
-        public:
-            ex_lock() { ::InitializeCriticalSection(&_cs); }
-            ~ex_lock() { ::DeleteCriticalSection(&_cs); }
-            __inline void lock() { ::EnterCriticalSection(&_cs); }
-            __inline bool try_lock() { return ::TryEnterCriticalSection(&_cs) != 0; }
-            __inline void unlock() { ::LeaveCriticalSection(&_cs); }
-        private:
-            CRITICAL_SECTION _cs;
-        };
-# else
         class ex_lock
         {
         public:
@@ -59,7 +46,6 @@ namespace dsn {
         private:
             RecursiveBenaphore _lock;
         };
-# endif
 
         class ex_lock_nr
         {
