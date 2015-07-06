@@ -366,7 +366,7 @@ void replica::notify_learn_completion()
     report.learner_status_ = _potential_secondary_states.learning_status;
     report.node = primary_address();
     
-    rpc::call_one_way_typed(_config.primary, RPC_LEARN_COMPLETITION_NOTIFY, report, gpid_to_hash(get_gpid()));
+    rpc::call_one_way_typed(_config.primary, RPC_LEARN_COMPLETION_NOTIFY, report, gpid_to_hash(get_gpid()));
 }
 
 void replica::on_learn_completion_notification(const group_check_response& report)

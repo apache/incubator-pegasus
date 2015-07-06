@@ -150,7 +150,7 @@ public:
         return r;
     }
 
-    virtual T dequeue(__out_param long ct, int millieseconds = TIME_MS_MAX)
+    virtual T dequeue(__out_param long& ct, int millieseconds = TIME_MS_MAX)
     {
         _sema.wait();
         return priority_queue<T, priority_count, TQueue>::dequeue(ct);
