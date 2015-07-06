@@ -42,7 +42,6 @@ public:
     // state inquery
     const char* name() const { return _name; }        
     bool is_logged() const { return _not_logged == 0; }
-    bool is_prepared() const { return _not_logged == 0; }
     bool is_ready_for_commit(bool commit_without_logging_allowed) const 
     {
         return commit_without_logging_allowed ? _left_private0 == 0 : _private0 == 0;

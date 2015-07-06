@@ -76,7 +76,7 @@ namespace dsn {
         class servicelet
         {
         public:
-            servicelet(int task_bucket_count = 1);
+            servicelet(int task_bucket_count = 8);
             virtual ~servicelet();
 
             static end_point primary_address() { return rpc::primary_address(); }

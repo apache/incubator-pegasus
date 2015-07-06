@@ -179,7 +179,7 @@ void replica::execute_mutation(mutation_ptr& mu)
     case PS_ERROR:
         break;
     }
-     
+    
     ddebug("TwoPhaseCommit, %s: mutation %s committed, err = %x", name(), mu->name(), err);
 
     if (err != ERR_SUCCESS)
@@ -218,7 +218,7 @@ decree replica::last_prepared_decree() const
         auto mu = _prepare_list->get_mutation_by_decree(start + 1);
         if (mu == nullptr 
             || mu->data.header.ballot < lastBallot 
-            || (!mu->is_prepared() && !_options.prepare_ack_on_secondary_before_logging_allowed)
+            || (!mu->is_logged() && !_options.prepare_ack_on_secondary_before_logging_allowed)
             )
             break;
 

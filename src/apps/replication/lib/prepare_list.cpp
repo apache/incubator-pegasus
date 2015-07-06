@@ -163,7 +163,7 @@ bool prepare_list::commit(decree d, bool force)
         {
             mutation_ptr mu = get_mutation_by_decree(d0);
             dassert (mu != nullptr && 
-                (mu->is_prepared() || _allow_prepare_ack_before_logging)
+                (mu->is_logged() || _allow_prepare_ack_before_logging)
                 , "");
 
             _last_committed_decree++;

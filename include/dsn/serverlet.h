@@ -97,7 +97,7 @@ namespace dsn {
         class serverlet : public virtual servicelet
         {
         public:
-            serverlet(const char* nm, int task_bucket_count = 1);
+            serverlet(const char* nm, int task_bucket_count = 8);
             virtual ~serverlet();
 
         protected:

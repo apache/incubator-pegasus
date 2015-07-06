@@ -112,6 +112,11 @@ void replica::init_prepare(mutation_ptr& mu)
     }    
     mu->set_left_potential_secondary_ack_count(count);
 
+    // it is possible to do commit here when logging is not required for acking prepare.
+    // however, it is only possible when replica count == 1 at this moment in the
+    // replication group, and we don't want to do this as it is too fragile now.
+    // do_possible_commit_on_primary(mu);
+
     // local log
     dassert (mu->data.header.log_offset == invalid_offset, "");
     dassert (mu->log_task() == nullptr, "");
@@ -241,7 +246,7 @@ void replica::on_prepare(message_ptr& request)
     {
         ddebug( "%s: mutation %s redundant prepare skipped", name(), mu->name());
 
-        if (mu2->is_prepared() || _options.prepare_ack_on_secondary_before_logging_allowed)
+        if (mu2->is_logged() || _options.prepare_ack_on_secondary_before_logging_allowed)
         {
             ack_prepare_message(ERR_SUCCESS, mu);
         }
