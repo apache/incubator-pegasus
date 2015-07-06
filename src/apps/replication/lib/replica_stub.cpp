@@ -287,9 +287,16 @@ void replica_stub::on_config_proposal(const configuration_update_request& propos
     if (!is_connected()) return;
 
     replica_ptr rep = get_replica(proposal.config.gpid, proposal.type == CT_ASSIGN_PRIMARY, proposal.config.app_type.c_str());
-    if (rep == nullptr && proposal.type == CT_ASSIGN_PRIMARY)
+    if (rep == nullptr)
     {
-        begin_open_replica(proposal.config.app_type, proposal.config.gpid);
+        if (proposal.type == CT_ASSIGN_PRIMARY)
+        {
+            begin_open_replica(proposal.config.app_type, proposal.config.gpid);
+        }   
+        else if (proposal.type == CT_UPGRADE_TO_PRIMARY)
+        {
+            remove_replica_on_meta_server(proposal.config);
+        }
     }
 
     if (rep != nullptr)
@@ -548,14 +555,16 @@ void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_, const par
     }
     else
     {
-
         ddebug(
             "%u.%u @ %s:%d: replica not exists on replica server, remove it from meta server",
             config.gpid.app_id, config.gpid.pidx,
             primary_address().name.c_str(), static_cast<int>(primary_address().port)
             );
 
-        remove_replica_on_meta_server(config);
+        if (config.primary == primary_address())
+        {
+            remove_replica_on_meta_server(config);
+        }
     }
 }
 
@@ -575,17 +584,6 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, global_p
 
 void replica_stub::remove_replica_on_meta_server(const partition_configuration& config)
 {
-    if (config.primary != primary_address())
-    {
-        ddebug(
-            "%u.%u @ %s:%d: replica not exists on meta server, remove failed coz the current node is not primary",
-            config.gpid.app_id, config.gpid.pidx,
-            primary_address().name.c_str(), 
-            static_cast<int>(primary_address().port)
-            );
-        return;
-    }
-
     message_ptr msg = message::create_request(RPC_CM_CALL);
     meta_request_header hdr;
     hdr.rpc_tag = RPC_CM_UPDATE_PARTITION_CONFIGURATION;
