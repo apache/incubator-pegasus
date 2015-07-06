@@ -63,7 +63,7 @@ namespace dsn {
 
         task_ptr simple_task_queue::dequeue()
         {
-            int c = 0;
+            long c = 0;
             return _samples.dequeue(c);
         }
 
