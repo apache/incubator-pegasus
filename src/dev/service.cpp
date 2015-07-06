@@ -53,8 +53,12 @@ private:
 
 static service_objects* s_services = &(service_objects::instance());
 
-servicelet::servicelet()
+servicelet::servicelet(int task_bucket_count)
+: _access_thread_task_code(TASK_CODE_INVALID), _task_bucket_count(task_bucket_count)
 {
+    _outstanding_tasks_lock = new ::dsn::utils::ex_lock_nr_spin[_task_bucket_count];
+    _outstanding_tasks = new dlink[_task_bucket_count];
+
     _access_thread_id_inited = false;
     _last_id = 0;
     service_objects::instance().add(this);
@@ -64,37 +68,39 @@ servicelet::~servicelet()
 {
     clear_outstanding_tasks();
     service_objects::instance().remove(this);
-}
 
-int servicelet::add_outstanding_task(task* tsk)
-{
-    std::lock_guard<std::mutex> l(_outstanding_tasks_lock);
-    int id = ++_last_id;
-    _outstanding_tasks.insert(std::map<int, task*>::value_type(id, tsk));
-    return id;
-}
-
-void servicelet::remove_outstanding_task(int id)
-{
-    std::lock_guard<std::mutex> l(_outstanding_tasks_lock);
-    auto pr = _outstanding_tasks.erase(id);
-    dassert (pr == 1, "task with local id %d is not found in the hash table", id);
+    delete[] _outstanding_tasks;
+    delete[] _outstanding_tasks_lock;
 }
 
 void servicelet::clear_outstanding_tasks()
 {
-    std::lock_guard<std::mutex> l(_outstanding_tasks_lock);
-    for (auto it = _outstanding_tasks.begin(); it != _outstanding_tasks.end(); it++)
+    for (int i = 0; i < _task_bucket_count; i++)
     {
-        it->second->cancel(true);
-
-        auto sc = dynamic_cast<service_context_manager*>(it->second);
-        if (nullptr != sc)
+        while (true)
         {
-            sc->clear_context();
+            bool prepare_succ;
+            task_context_manager *tcm;
+
+            {
+                utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_outstanding_tasks_lock[i]);
+                auto n = _outstanding_tasks[i].next();
+                if (n != &_outstanding_tasks[i])
+                {
+                    tcm = CONTAINING_RECORD(n, task_context_manager, _dl);
+                    prepare_succ = tcm->owner_delete_prepare();
+                }
+                else
+                    break; // assuming nobody is putting tasks into it anymore
+            }
+
+            if (prepare_succ)
+            {
+                tcm->_task->cancel(true);
+                tcm->owner_delete_commit();
+            }
         }
     }
-    _outstanding_tasks.clear();
 }
 
 void servicelet::check_hashed_access()
@@ -107,6 +113,7 @@ void servicelet::check_hashed_access()
     {
         _access_thread_id = std::this_thread::get_id();
         _access_thread_id_inited = true;
+        _access_thread_task_code.reset(task::get_current_task()->spec().code);
     }
 }
 

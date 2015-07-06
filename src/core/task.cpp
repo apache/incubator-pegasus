@@ -72,6 +72,14 @@ struct
         return nullptr;
 }
 
+/*static*/ int task::get_current_worker_index()
+{
+    if (tls_task_info.magic == 0xdeadbeef)
+        return tls_task_info.worker->index();
+    else
+        return -1;
+}
+
 /*static*/ void task::set_current_worker(task_worker* worker)
 {
     if (tls_task_info.magic == 0xdeadbeef)
@@ -202,7 +210,7 @@ void task::signal_waiters()
 }
 
 // multiple callers may wait on this
-bool task::wait(int timeout_milliseconds)
+bool task::wait(int timeout_milliseconds, bool on_cancel)
 {
     dassert (this != task::get_current_task(), "task cannot wait itself");
 
@@ -213,7 +221,10 @@ bool task::wait(int timeout_milliseconds)
     }
 
     auto cs = state();
-    service::lock_checker::check_wait_task(this, cs == TASK_STATE_RUNNING);
+    if (!on_cancel)
+    {
+        service::lock_checker::check_wait_task(this);
+    }
 
     if (cs >= TASK_STATE_FINISHED)
     {
@@ -283,7 +294,7 @@ bool task::cancel(bool wait_until_finished, /*out*/ bool* cancel_success /*= nul
         else if (wait_until_finished)
         {
             _wait_for_cancel = true;
-            bool r  = wait();
+            bool r  = wait(TIME_MS_MAX, true);
             dassert(r, "wait failed, it is only possible when task runs for more than 0x0fffffff ms");
         }
         else

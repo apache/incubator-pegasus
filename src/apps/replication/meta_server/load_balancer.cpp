@@ -112,14 +112,15 @@ void load_balancer::run_lb(partition_configuration& pc)
 
     if (pc.primary == end_point::INVALID)
     {
-        proposal.type = CT_ASSIGN_PRIMARY;
         if (pc.secondaries.size() > 0)
         {
             proposal.node = pc.secondaries[env::random32(0, static_cast<int>(pc.secondaries.size()) - 1)];
+            proposal.type = CT_UPGRADE_TO_PRIMARY;
         }
         else
         {
             proposal.node = find_minimal_load_machine(true);
+            proposal.type = CT_ASSIGN_PRIMARY;
         }
 
         if (proposal.node != end_point::INVALID)

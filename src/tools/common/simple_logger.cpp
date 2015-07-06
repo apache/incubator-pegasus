@@ -40,7 +40,9 @@ namespace dsn {
             char str[24];
             ::dsn::utils::time_ms_to_string(ts, str);
 
-            fprintf(fp, "%s(%llu) ", str, ts);
+            int tid = ::dsn::utils::get_current_tid(); 
+
+            fprintf(fp, "%s(%llu %05d)", str, static_cast<long long unsigned int>(ts), tid);
 
             task* t = task::get_current_task();
             if (t)
@@ -86,7 +88,7 @@ namespace dsn {
             va_list args
             )
         {
-            utils::auto_lock l(_lock);
+            utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
 
             print_header(stdout);
             vprintf(fmt, args);
@@ -171,7 +173,7 @@ namespace dsn {
                 va_copy(args2, args);
             }
 
-            utils::auto_lock l(_lock);
+            utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
          
             print_header(_log);
             fprintf(_log, "%s, ", title);

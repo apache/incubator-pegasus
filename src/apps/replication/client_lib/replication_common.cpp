@@ -36,6 +36,8 @@ replication_options::replication_options()
     staleness_for_start_prepare_for_potential_secondary = 110;
     mutation_2pc_min_replica_count = 1;
     preapre_list_max_size_mb = 250;
+    prepare_ack_on_secondary_before_logging_allowed = false;
+
     group_check_internal_ms = 100000;
     group_check_disabled = false;
     gc_interval_ms = 30 * 1000; // 30000 milliseconds
@@ -89,6 +91,8 @@ void replication_options::initialize(configuration_ptr config)
         config->get_value<uint32_t>("replication", "prepare_timeout_ms_for_secondaries", prepare_timeout_ms_for_secondaries);
     prepare_timeout_ms_for_potential_secondaries = 
         config->get_value<uint32_t>("replication", "prepare_timeout_ms_for_potential_secondaries", prepare_timeout_ms_for_potential_secondaries);
+    prepare_ack_on_secondary_before_logging_allowed =
+        config->get_value<bool>("replication", "prepare_ack_on_secondary_before_logging_allowed", prepare_ack_on_secondary_before_logging_allowed);
 
     staleness_for_commit =
         config->get_value<uint32_t>("replication", "staleness_for_commit", staleness_for_commit);

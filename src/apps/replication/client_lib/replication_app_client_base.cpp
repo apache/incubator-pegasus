@@ -61,6 +61,7 @@ replication_app_client_base::replication_app_client_base(
     _meta_servers = meta_servers;
 
     _app_id = -1;
+    _app_partition_count = -1;
     _last_contact_point = end_point::INVALID;
 }
 
@@ -403,6 +404,7 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
                 }
 
                 _app_id = resp.partitions[0].gpid.app_id;
+                _app_partition_count = resp.partition_count;
             }
 
             for (auto it = resp.partitions.begin(); it != resp.partitions.end(); it++)

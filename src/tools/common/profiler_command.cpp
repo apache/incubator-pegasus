@@ -76,6 +76,12 @@ namespace dsn {
             std::stringstream ss;
             int id = -1, num;
             
+            if (args.size() < 1)
+            {
+                ss << "unenough arguments" << std::endl;
+                return ss.str();
+            }
+
             if ((args[0] == "task") || (args[0] == "t"))
             {
                 if ((args[1] == "dependency") || (args[1] == "dep"))

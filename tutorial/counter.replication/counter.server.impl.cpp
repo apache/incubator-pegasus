@@ -40,6 +40,7 @@ namespace dsn {
         void counter_service_impl::on_add(const ::dsn::example::count_op& op, ::dsn::service::rpc_replier<int32_t>& reply)
         {
             zauto_lock l(_lock);
+            ++_last_committed_decree;
             auto rt = _counters[op.name] += op.operand;
             reply(rt);
         }

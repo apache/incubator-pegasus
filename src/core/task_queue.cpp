@@ -37,13 +37,5 @@ task_queue::task_queue(task_worker_pool* pool, int index, task_queue* inner_prov
     sprintf(num, "%u", index);
     _name = pool->spec().name + '.';
     _name.append(num);
-    _qps_counter = dsn::utils::perf_counters::instance().get_counter((_name + std::string(".qps")).c_str(), COUNTER_TYPE_RATE, true);
 }
-
-//void task_queue::on_dequeue(int count)
-//{
-//    _qps_counter->add((unsigned long long)count);
-//    _pool->on_dequeue(count);
-//}
-
 }

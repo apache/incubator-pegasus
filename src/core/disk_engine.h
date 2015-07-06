@@ -58,8 +58,8 @@ private:
     aio_provider    *_provider;
     service_node    *_node;
 
-    std::recursive_mutex   _lock;    
-    int            _request_count;
+    ::dsn::utils::ex_lock_nr _lock;
+    int                      _request_count;
 };
 
 } // end namespace

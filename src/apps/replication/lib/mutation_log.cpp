@@ -428,7 +428,7 @@ task_ptr mutation_log::append(mutation_ptr& mu,
 {
     zauto_lock l(_lock);
 
-    if (nullptr == _current_log_file) return nullptr;
+    dassert(nullptr != _current_log_file, "");
 
     auto it = _init_prepared_decrees.find(mu->data.header.gpid);
     if (it != _init_prepared_decrees.end())

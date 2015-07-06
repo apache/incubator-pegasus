@@ -29,6 +29,7 @@
 # include <vector>
 # include <dsn/internal/logging.h>
 # include <dsn/internal/command.h>
+# include <sstream>
 
 #define __TITLE__ "task_spec"
 
@@ -103,33 +104,8 @@ bool task_spec::init(configuration_ptr config)
     */
 
     task_spec default_spec(0, "placeholder", TASK_TYPE_COMPUTE, THREAD_POOL_DEFAULT, 0, TASK_PRIORITY_COMMON);
-    default_spec.priority = enum_from_string(config->get_string_value("task.default", "priority", "TASK_PRIORITY_COMMON").c_str(), TASK_PRIORITY_INVALID);
-    if (default_spec.priority == TASK_PRIORITY_INVALID)
-    {
-        derror("invalid task priority in [task.default]");
+    if (!read_config(config, "task.default", default_spec))
         return false;
-    }
-
-    auto cn = config->get_string_value("task.default", "rpc_call_channel", RPC_CHANNEL_TCP.to_string());
-    if (!rpc_channel::is_exist(cn.c_str()))
-    {
-        derror("invalid task rpc_call_channel in [task.default]");
-        return false;
-    }
-
-    auto fmt = config->get_string_value("task.default", "rpc_call_header_format", NET_HDR_DSN.to_string());
-    if (!network_header_format::is_exist(fmt.c_str()))
-    {
-        derror("invalid task rpc_call_header_format in [task.default]");
-        return false;
-    }
-
-    default_spec.allow_inline = config->get_value<bool>("task.default", "allow_inline", false);
-    default_spec.fast_execution_in_network_thread = config->get_value<bool>("task.default", "fast_execution_in_network_thread", false);    
-    default_spec.rpc_call_channel = rpc_channel::from_string(cn.c_str(), RPC_CHANNEL_TCP);        
-    default_spec.rpc_call_header_format = network_header_format::from_string(fmt.c_str(), NET_HDR_DSN);
-    default_spec.rpc_timeout_milliseconds = config->get_value<int>("task.default", "rpc_timeout_milliseconds", default_spec.rpc_timeout_milliseconds);
-    default_spec.rpc_retry_interval_milliseconds = config->get_value<int>("task.default", "rpc_retry_interval_milliseconds", default_spec.rpc_retry_interval_milliseconds);
     
     for (int code = 0; code <= task_code::max_value(); code++)
     {
@@ -142,6 +118,9 @@ bool task_spec::init(configuration_ptr config)
 
         if (config->has_section(section_name.c_str()))
         {
+            if (!read_config(config, section_name.c_str(), *spec, &default_spec))
+                return false;
+
             auto pool = threadpool_code::from_string(config->get_string_value(section_name.c_str(), "pool_code", spec->pool_code.to_string()).c_str(), THREAD_POOL_INVALID);
             if (pool == THREAD_POOL_INVALID)
             {
@@ -155,33 +134,15 @@ bool task_spec::init(configuration_ptr config)
                 derror("invalid priority in [%s]", section_name.c_str());
                 return false;
             }
-
-            auto cn = config->get_string_value(section_name.c_str(), "rpc_call_channel", default_spec.rpc_call_channel.to_string());
-            if (!rpc_channel::is_exist(cn.c_str()))
-            {
-                derror("invalid task rpc_call_channel in [%s]", section_name.c_str());
-                return false;
-            }
-
-            auto fmt = config->get_string_value(section_name.c_str(), "rpc_call_header_format", default_spec.rpc_call_header_format.to_string());
-            if (!network_header_format::is_exist(fmt.c_str()))
-            {
-                derror("invalid task rpc_call_header_format in [%s]", section_name.c_str());
-                return false;
-            }
-
+            
             spec->pool_code.reset(pool);
             spec->priority = pri;                        
             spec->allow_inline = (spec->type != TASK_TYPE_RPC_RESPONSE
                 && spec->type != TASK_TYPE_RPC_REQUEST
-                && config->get_value<bool>(section_name.c_str(), "allow_inline", default_spec.allow_inline));
+                && spec->allow_inline);
             spec->fast_execution_in_network_thread = 
                 ((spec->type == TASK_TYPE_RPC_RESPONSE || spec->type == TASK_TYPE_RPC_REQUEST)
-                && config->get_value<bool>(section_name.c_str(), "fast_execution_in_network_thread", default_spec.fast_execution_in_network_thread));
-            spec->rpc_call_channel = rpc_channel::from_string(cn.c_str(), RPC_CHANNEL_TCP);
-            spec->rpc_call_header_format = network_header_format::from_string(fmt.c_str(), NET_HDR_DSN);
-            spec->rpc_timeout_milliseconds = config->get_value<int>(section_name.c_str(), "rpc_timeout_milliseconds", default_spec.rpc_timeout_milliseconds);
-            spec->rpc_retry_interval_milliseconds = config->get_value<int>(section_name.c_str(), "rpc_retry_interval_milliseconds", default_spec.rpc_retry_interval_milliseconds);
+                && spec->fast_execution_in_network_thread);
         }
         else
         {

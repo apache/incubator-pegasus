@@ -37,7 +37,7 @@ namespace dsn {
             simple_kv_service_impl::simple_kv_service_impl(replica* replica, configuration_ptr& cf)
                 : simple_kv_service(replica, cf)
             {
-                _test_file_learning = true;
+                _test_file_learning = false;
             }
 
             // RPC_SIMPLE_KV_READ
@@ -62,6 +62,8 @@ namespace dsn {
             {
                 zauto_lock l(_lock);
                 _store[pr.key] = pr.value;
+                ++_last_committed_decree;
+
                 dinfo("write %s, decree = %lld\n", pr.value.c_str(), last_committed_decree());
                 reply(ERR_SUCCESS);
             }
@@ -75,6 +77,7 @@ namespace dsn {
                     it->second.append(pr.value);
                 else
                     _store[pr.key] = pr.value;
+                ++_last_committed_decree;
 
                 dinfo("append %s, decree = %lld\n", pr.value.c_str(), last_committed_decree());
                 reply(ERR_SUCCESS);
@@ -150,6 +153,9 @@ namespace dsn {
 
                 uint32_t count;
                 is.read((char*)&count, sizeof(count));
+
+                if (is.fail())
+                    return;
 
                 for (uint32_t i = 0; i < count; i++)
                 {

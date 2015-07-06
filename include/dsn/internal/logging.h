@@ -29,6 +29,8 @@
 # include <stdarg.h>
 # include <cstdlib>
 # include <dsn/internal/coredump.h>
+# include <dsn/internal/enum_helper.h>
+# include <dsn/internal/configuration.h>
 
 #ifdef _WIN32
 __pragma(warning(disable:4127))
@@ -38,14 +40,26 @@ namespace dsn {
 
 enum logging_level
 {
+    log_level_INVALID,
+
     log_level_INFORMATION,
     log_level_DEBUG,
     log_level_WARNING,
     log_level_ERROR,
-    log_level_FATAL
+    log_level_FATAL    
 };
 
+ENUM_BEGIN(logging_level, log_level_INVALID)
+    ENUM_REG(log_level_INFORMATION)
+    ENUM_REG(log_level_DEBUG)
+    ENUM_REG(log_level_WARNING)
+    ENUM_REG(log_level_ERROR)
+    ENUM_REG(log_level_FATAL)
+ENUM_END(logging_level)
+
 extern logging_level logging_start_level;
+
+extern void log_init(configuration_ptr config);
 
 extern void logv(const char *file, const char *function, const int line, logging_level logLevel, const char* title, const char* fmt, va_list args);
 

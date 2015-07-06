@@ -107,6 +107,7 @@ void task_worker_pool::enqueue(task_ptr& task)
     {
         int idx = (_spec.partitioned ? task->hash() % _queues.size() : 0);
         task_queue* q = _queues[idx];
+        //dinfo("%s pool::enqueue %s (%016llx)", _node->name(), task->spec().name, task->id());
         if (task->delay_milliseconds() == 0)
         {
             auto controller = _controllers[idx];
@@ -155,7 +156,6 @@ void task_worker_pool::enqueue(task_ptr& task)
 
             _pending_task_counter->increment();
         }
-                
         return q->enqueue(task);
     }
     else

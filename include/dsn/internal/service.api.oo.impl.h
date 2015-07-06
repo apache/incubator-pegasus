@@ -33,7 +33,7 @@ namespace dsn {
             namespace internal_use_only
             {
                 template<typename T, typename TRequest, typename TResponse>
-                class service_rpc_response_task1 : public rpc_response_task, public service_context_manager
+                class service_rpc_response_task1 : public rpc_response_task, public task_context_manager
                 {
                 public:
                     service_rpc_response_task1(
@@ -43,7 +43,7 @@ namespace dsn {
                         message_ptr& request,
                         int hash = 0
                         )
-                        : rpc_response_task(request, hash), service_context_manager(svc, this)
+                        : rpc_response_task(request, hash), task_context_manager(svc, this)
                     {
                         _svc = svc;
                         _req = req;
@@ -72,7 +72,7 @@ namespace dsn {
                 };
 
                 template<typename TRequest, typename TResponse>
-                class service_rpc_response_task2 : public rpc_response_task, public service_context_manager
+                class service_rpc_response_task2 : public rpc_response_task, public task_context_manager
                 {
                 public:
                     service_rpc_response_task2(
@@ -82,7 +82,7 @@ namespace dsn {
                         message_ptr& request,
                         int hash = 0
                         )
-                        : rpc_response_task(request, hash), service_context_manager(svc, this)
+                        : rpc_response_task(request, hash), task_context_manager(svc, this)
                     {
                         _req = req;
                         _callback = callback;
@@ -113,7 +113,7 @@ namespace dsn {
                 };
 
                 template<typename TResponse>
-                class service_rpc_response_task3 : public rpc_response_task, public service_context_manager
+                class service_rpc_response_task3 : public rpc_response_task, public task_context_manager
                 {
                 public:
                     service_rpc_response_task3(
@@ -123,7 +123,7 @@ namespace dsn {
                         message_ptr& request,
                         int hash = 0
                         )
-                        : rpc_response_task(request, hash), service_context_manager(svc, this)
+                        : rpc_response_task(request, hash), task_context_manager(svc, this)
                     {
                         _callback = callback;
                         _context = context;
@@ -152,7 +152,7 @@ namespace dsn {
                     void* _context;
                 };
 
-                class service_rpc_response_task4 : public rpc_response_task, public service_context_manager
+                class service_rpc_response_task4 : public rpc_response_task, public task_context_manager
                 {
                 public:
                     service_rpc_response_task4(
@@ -161,7 +161,7 @@ namespace dsn {
                         message_ptr& request,
                         int hash = 0
                         )
-                        : rpc_response_task(request, hash), service_context_manager(svc, this)
+                        : rpc_response_task(request, hash), task_context_manager(svc, this)
                     {
                         _callback = callback;
                     }
@@ -181,7 +181,7 @@ namespace dsn {
 
 
                 template<typename T, typename TResponse>
-                class service_rpc_response_task5 : public rpc_response_task, public service_context_manager
+                class service_rpc_response_task5 : public rpc_response_task, public task_context_manager
                 {
                 public:
                     service_rpc_response_task5(
@@ -191,7 +191,7 @@ namespace dsn {
                         message_ptr& request,                        
                         int hash = 0
                         )
-                        : rpc_response_task(request, hash), service_context_manager(svc, this)
+                        : rpc_response_task(request, hash), task_context_manager(svc, this)
                     {
                         _svc = svc;
                         _callback = callback;
@@ -374,7 +374,7 @@ namespace dsn {
             inline layered_rpc::layered_rpc(servicelet* owner, message_ptr& request, int hash)
                 : 
                 rpc_response_task(request, hash),
-                service_context_manager(owner, this)
+                task_context_manager(owner, this)
             {
             }
 
@@ -443,11 +443,11 @@ namespace dsn {
         {
             namespace internal_use_only 
             {
-                class service_aio_task : public aio_task, public service_context_manager
+                class service_aio_task : public aio_task, public task_context_manager
                 {
                 public:
                     service_aio_task(task_code code, servicelet* svc, aio_handler& handler, int hash = 0)
-                        : aio_task(code, hash), service_context_manager(svc, this)
+                        : aio_task(code, hash), task_context_manager(svc, this)
                     {
                         _handler = handler;
                     }
