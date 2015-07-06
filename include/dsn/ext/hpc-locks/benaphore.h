@@ -70,17 +70,12 @@ public:
 // "error: no viable conversion from 'std::__1::__thread_id' to '_Atomic(std::__1::__thread_id)'"
 // (Note: On Linux, as of April 11, 2015, Clang 3.7 & libc++ don't have this problem.)
 // Prefer atomic_init (below) when Apple LLVM is detected.
-#if !(defined(__llvm__) && defined(__APPLE__))
-    , m_owner(std::thread::id())
-#endif
     , m_recursion(0)
     {
 // GCC 4.7.2's libstdc++-v3 doesn't implement atomic_init.
 // "warning: inline function 'void std::atomic_init(std::atomic<_ITp>*, _ITp) [with _ITp = std::thread::id]' used but never defined [enabled by default]"
 // Using the constructor (above) in that case.
-#if (defined(__llvm__) && defined(__APPLE__))
         std::atomic_init(&m_owner, std::thread::id());
-#endif
 
         // If this assert fails on your system, you'll have to replace std::thread::id with a
         // more compact, platform-specific thread ID, or just comment the assert and live with

@@ -31,6 +31,8 @@
 
 # if defined(__linux__)
 # include <sys/syscall.h>
+# elif defined(__FreeBSD__)
+# include <sys/thr.h>
 # endif
 
 # define __TITLE__ "dsn.utils"
@@ -45,6 +47,10 @@ namespace dsn {
 # elif defined(__linux__)
             //return static_cast<int>(gettid());
             return static_cast<int>(syscall(SYS_gettid));
+# elif defined(__FreeBSD__)
+		long lwpid;
+		thr_self( &lwpid );
+		return static_cast<int>(lwpid);
 # else
 # error not implemented yet
 # endif 
