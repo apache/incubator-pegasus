@@ -48,17 +48,20 @@ namespace dsn {
                     std::vector<perf_test_suite> suits;
 
                     s.name = "simple_kv.write";
-                    s.start = [this](){this->send_one_write(); };
+                    s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_WRITE";
+                    s.send_one = [this](){this->send_one_write(); };
                     load_suite_config(s);
                     suits.push_back(s);
 
                     s.name = "simple_kv.append";
-                    s.start = [this](){this->send_one_append(); };
+                    s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_APPEND";
+                    s.send_one = [this](){this->send_one_append(); };
                     load_suite_config(s);
                     suits.push_back(s);
 
                     s.name = "simple_kv.read";
-                    s.start = [this](){this->send_one_read(); };
+                    s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_READ";
+                    s.send_one = [this](){this->send_one_read(); };
                     load_suite_config(s);
                     suits.push_back(s);
 

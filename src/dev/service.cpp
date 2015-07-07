@@ -107,11 +107,11 @@ void servicelet::check_hashed_access()
 {
     if (_access_thread_id_inited)
     {
-        dassert (std::this_thread::get_id() == _access_thread_id, "the service is assumed to be accessed by one thread only!");
+        dassert(::dsn::utils::get_current_tid() == _access_thread_id, "the service is assumed to be accessed by one thread only!");
     }
     else
     {
-        _access_thread_id = std::this_thread::get_id();
+        _access_thread_id = ::dsn::utils::get_current_tid();
         _access_thread_id_inited = true;
         _access_thread_task_code.reset(task::get_current_task()->spec().code);
     }

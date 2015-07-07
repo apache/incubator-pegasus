@@ -93,7 +93,7 @@ namespace dsn {
         private:
             int                            _last_id;
             std::set<task_code>            _events;
-            std::thread::id                _access_thread_id;
+            int                            _access_thread_id;
             bool                           _access_thread_id_inited;
             task_code                      _access_thread_task_code;
 
