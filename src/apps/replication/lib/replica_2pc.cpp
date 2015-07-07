@@ -203,7 +203,16 @@ void replica::on_prepare(message_ptr& request)
     // update configuration when necessary
     else if (rconfig.ballot > get_ballot())
     {
-        update_local_configuration(rconfig);
+        if (!update_local_configuration(rconfig))
+        {
+            ddebug(
+                "%s: mutation %s on_prepare  to %s failed as update local configuration failed",
+                name(), mu->name(),
+                enum_to_string(status())
+                );
+            ack_prepare_message(ERR_INVALID_STATE, mu);
+            return;
+        }
     }
 
     if (PS_INACTIVE == status() || PS_ERROR == status())
