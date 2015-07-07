@@ -254,6 +254,8 @@ namespace dsn {
         extern void time_ms_to_string(uint64_t ts_ms, char* str);
 
         extern int get_current_tid();
+
+		inline int get_invalid_tid() { return -1; }
     }
 } // end namespace dsn::utils
 
