@@ -42,7 +42,6 @@ public:
     // management routines
     //
     error_code start(const service_app_spec& spec);
-    bool       start_server_port(int port);
 
     //
     // rpc registrations
@@ -54,6 +53,7 @@ public:
     // rpc routines
     //
     void call(message_ptr& request, rpc_response_task_ptr& call);
+    void on_recv_request(message_ptr& msg, int delay_ms);
     static void reply(message_ptr& response);
     
     //
@@ -61,9 +61,9 @@ public:
     //
     service_node* node() const { return _node; }
     const end_point& primary_address() const { return _local_primary_address; }
-    void on_recv_request(message_ptr& msg, int delay_ms);
 
 private:
+    bool start_server_port(int port);
     network* create_network(const network_config_spec& netcs, bool client_only);
 
 private:
