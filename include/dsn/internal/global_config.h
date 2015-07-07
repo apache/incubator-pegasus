@@ -39,27 +39,9 @@ struct network_client_config
     int         message_buffer_block_size;
 };
 
-typedef std::map<rpc_channel, network_client_config> network_client_confs;
+typedef std::map<rpc_channel, network_client_config> network_client_configs;
 
-struct service_app_spec
-{
-    int                  id;    // global for all roles
-    int                  index; // local index for the current role (1,2,3,...)
-    std::string          role;
-    std::string          name; 
-    std::string          type;
-    std::string          arguments;
-    std::vector<int>     ports;
-    int                  delay_seconds;
-    bool                 run;
-    network_client_confs net_client_cfs;
-
-    service_app_spec() {}
-    service_app_spec(const service_app_spec& r);
-    bool init(const char* section, const char* role, configuration_ptr& config);
-};
-
-struct network_config_spec
+struct network_server_config
 {
     // [ key
     int         port;
@@ -67,16 +49,66 @@ struct network_config_spec
     // ]
 
     network_header_format hdr_format;
-    std::string factory_name; 
-    int         message_buffer_block_size;
+    std::string           factory_name;
+    int                   message_buffer_block_size;
 
-    network_config_spec(const network_config_spec& r);
-    network_config_spec() : channel(RPC_CHANNEL_TCP), hdr_format(NET_HDR_DSN) {}
-    network_config_spec(int p, rpc_channel c);
-    bool operator < (const network_config_spec& r) const;
+    network_server_config(const network_server_config& r);
+    network_server_config() : channel(RPC_CHANNEL_TCP), hdr_format(NET_HDR_DSN) {}
+    network_server_config(int p, rpc_channel c);
+    bool operator < (const network_server_config& r) const;
 };
 
-typedef std::map<network_config_spec, network_config_spec> network_conf; // <port,channel> => config
+// <port,channel> => config
+typedef std::map<network_server_config, network_server_config> network_server_configs;
+
+struct service_app_spec
+{
+    int                  id;    // global for all roles
+    int                  index; // local index for the current role (1,2,3,...)
+    std::string          role;
+    
+    std::string          name; 
+    std::string          type;
+    std::string          arguments;
+    std::vector<int>     ports;
+    int                  delay_seconds;
+    bool                 run;
+    int                  count; // index = 1,2,...,count
+
+    network_client_configs network_client_confs;
+    network_server_configs network_server_confs;
+
+    service_app_spec() {}
+    service_app_spec(const service_app_spec& r);
+    bool init(const char* section, 
+        const char* role, 
+        configuration_ptr& config, 
+        service_app_spec* default_value,
+        network_client_configs* default_client_nets = nullptr,
+        network_server_configs* default_server_nets = nullptr
+        );
+
+    static std::vector<int> to_ports(const std::list<std::string>& sports)
+    {
+        std::vector<int> ps;
+        for (auto& s : sports)
+        {
+            int p = atoi(s.c_str());
+            ps.push_back(p);
+        }
+        return ps;
+    }
+};
+
+CONFIG_BEGIN(service_app_spec)
+    CONFIG_FLD(std::string, name, "")
+    CONFIG_FLD(std::string, type, "")
+    CONFIG_FLD(std::string, arguments, "")
+    CONFIG_FLD_LIST_CONVERT(ports, ',', service_app_spec::to_ports)
+    CONFIG_FLD(int, delay_seconds, 0)
+    CONFIG_FLD(int, count, 1)
+    CONFIG_FLD(bool, run, true)
+CONFIG_END
 
 struct service_spec
 {
@@ -86,7 +118,6 @@ struct service_spec
     std::list<std::string>       toollets; // toollets enabled compatible to the main tool
     std::string                  coredump_dir; // to store core dump files
     
-    network_client_confs         network_default_client_cfs; // default network configs by tools
     std::string                  aio_factory_name;
     std::string                  env_factory_name;
     std::string                  lock_factory_name;
@@ -102,17 +133,37 @@ struct service_spec
     std::list<std::string>       lock_aspects;
     std::list<std::string>       rwlock_aspects;
     std::list<std::string>       semaphore_aspects;
-
-    network_conf                  network_configs;
+        
+    network_client_configs        network_default_client_cfs; // default network configed by tools
+    network_server_configs        network_default_server_cfs; // default network configed by tools
     std::vector<threadpool_spec>  threadpool_specs;
     std::vector<service_app_spec> app_specs;
 
     service_spec() {}
-
     bool init(configuration_ptr config);
-    bool register_network(const network_config_spec& netcs, bool force);
-    bool build_network_spec(int port);
+    bool init_app_specs(configuration_ptr c);
 };
+
+CONFIG_BEGIN(service_spec)
+    CONFIG_FLD(std::string, tool, "")
+    CONFIG_FLD_STRING_LIST(toollets)
+    CONFIG_FLD(std::string, coredump_dir, "./coredump")
+    CONFIG_FLD(std::string, aio_factory_name, "")
+    CONFIG_FLD(std::string, env_factory_name, "")
+    CONFIG_FLD(std::string, lock_factory_name, "")
+    CONFIG_FLD(std::string, rwlock_factory_name, "")
+    CONFIG_FLD(std::string, semaphore_factory_name, "")
+    CONFIG_FLD(std::string, nfs_factory_name, "")
+    CONFIG_FLD(std::string, perf_counter_factory_name, "")
+    CONFIG_FLD(std::string, logging_factory_name, "")
+
+    CONFIG_FLD_STRING_LIST(network_aspects)
+    CONFIG_FLD_STRING_LIST(aio_aspects)
+    CONFIG_FLD_STRING_LIST(env_aspects)
+    CONFIG_FLD_STRING_LIST(lock_aspects)
+    CONFIG_FLD_STRING_LIST(rwlock_aspects)
+    CONFIG_FLD_STRING_LIST(semaphore_aspects)
+CONFIG_END
 
 enum sys_exit_type
 {

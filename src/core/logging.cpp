@@ -30,6 +30,15 @@ namespace dsn {
 
     logging_level logging_start_level = logging_level::log_level_INFORMATION;
 
+    void log_init(configuration_ptr config)
+    {
+        logging_start_level = enum_from_string(
+            config->get_string_value("core", "logging_start_level", enum_to_string(logging_start_level)).c_str(),
+            logging_level::log_level_INVALID
+            );
+        dassert(logging_start_level != logging_level::log_level_INVALID, "invalid [core] logging_start_level specified");
+    }
+
     void logv(const char *file, const char *function, const int line, logging_level logLevel, const char* title, const char* fmt, va_list args)
     {
         logging_provider* logger = service_engine::instance().logging();

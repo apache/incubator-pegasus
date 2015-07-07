@@ -343,6 +343,8 @@ void server_state::query_configuration_by_index(configuration_query_by_index_req
         if (kv.app_name == request.app_name)
         {
             response.err = ERR_SUCCESS;
+            response.app_id = i + 1;
+            response.partition_count = kv.partition_count;
             app_state& app = kv;
             for (auto& idx : request.partition_indices)
             {
@@ -385,6 +387,7 @@ void server_state::update_configuration_internal(configuration_update_request& r
         switch (request.type)
         {
         case CT_ASSIGN_PRIMARY:
+        case CT_UPGRADE_TO_PRIMARY:
             node.partitions.insert(old.gpid);
             node.primaries.insert(old.gpid);
             type = "assign primary";

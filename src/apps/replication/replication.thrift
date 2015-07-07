@@ -156,6 +156,7 @@ enum config_type
 {
     CT_NONE,
     CT_ASSIGN_PRIMARY,
+	CT_UPGRADE_TO_PRIMARY,
     CT_ADD_SECONDARY,
     CT_DOWNGRADE_TO_SECONDARY,
     CT_DOWNGRADE_TO_INACTIVE,
@@ -223,7 +224,9 @@ struct configuration_query_by_index_request
 struct configuration_query_by_index_response
 {
     1:i32                           err;
-    2:list<partition_configuration> partitions;
+	2:i32                           app_id;
+	3:i32                           partition_count;
+    4:list<partition_configuration> partitions;
 }
 
 struct query_replica_decree_request

@@ -61,6 +61,10 @@ public:
     // update _last_durable_decree internally
     virtual int  flush(bool force) = 0;  // must be thread-safe
     
+    // replicatoin framework may emit empty write request to this app 
+    // to increase the decree(version)
+    virtual void on_empty_write() { _last_committed_decree++; }
+
     //
     // helper routines to accelerate learning
     // 

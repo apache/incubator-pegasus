@@ -454,11 +454,12 @@ namespace dsn { namespace replication {
     {
         CT_NONE = 0,
         CT_ASSIGN_PRIMARY = 1,
-        CT_ADD_SECONDARY = 2,
-        CT_DOWNGRADE_TO_SECONDARY = 3,
-        CT_DOWNGRADE_TO_INACTIVE = 4,
-        CT_REMOVE = 5,
-        CT_UPGRADE_TO_SECONDARY = 6,
+        CT_UPGRADE_TO_PRIMARY = 2,
+        CT_ADD_SECONDARY = 3,
+        CT_DOWNGRADE_TO_SECONDARY = 4,
+        CT_DOWNGRADE_TO_INACTIVE = 5,
+        CT_REMOVE = 6,
+        CT_UPGRADE_TO_SECONDARY = 7,
     };
 
     DEFINE_POD_SERIALIZATION(config_type);
@@ -1016,18 +1017,24 @@ namespace dsn { namespace replication {
     struct configuration_query_by_index_response
     {
         int32_t err;
+        int32_t app_id;
+        int32_t partition_count;
         std::vector< partition_configuration> partitions;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const configuration_query_by_index_response& val, uint16_t pos = 0xffff)
     {
         marshall(writer, val.err, pos);
+        marshall(writer, val.app_id, pos);
+        marshall(writer, val.partition_count, pos);
         marshall(writer, val.partitions, pos);
     };
 
     inline void unmarshall(::dsn::binary_reader& reader, __out_param configuration_query_by_index_response& val)
     {
         unmarshall(reader, val.err);
+        unmarshall(reader, val.app_id);
+        unmarshall(reader, val.partition_count);
         unmarshall(reader, val.partitions);
     };
 

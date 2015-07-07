@@ -27,11 +27,34 @@
 # include <dsn/internal/env_provider.h>
 # include <random>
 # include <dsn/internal/singleton.h>
+# include <sys/types.h>
+
+# if defined(__linux__)
+# include <sys/syscall.h>
+# elif defined(__FreeBSD__)
+# include <sys/thr.h>
+# endif
 
 # define __TITLE__ "dsn.utils"
 
 namespace dsn {
     namespace utils {
+
+        int get_current_tid()
+        {
+# if defined(_WIN32)
+            return static_cast<int>(::GetCurrentThreadId());
+# elif defined(__linux__)
+            //return static_cast<int>(gettid());
+            return static_cast<int>(syscall(SYS_gettid));
+# elif defined(__FreeBSD__)
+		long lwpid;
+		thr_self( &lwpid );
+		return static_cast<int>(lwpid);
+# else
+# error not implemented yet
+# endif 
+        }
 
         std::string get_last_component(const std::string& input, char splitters[])
         {

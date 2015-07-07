@@ -64,7 +64,7 @@ public:
 
 private:
     bool start_server_port(int port);
-    network* create_network(const network_config_spec& netcs, bool client_only);
+    network* create_network(const network_server_config& netcs, bool client_only);
 
 private:
     configuration_ptr                     _config;    

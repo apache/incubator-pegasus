@@ -122,7 +122,11 @@ bool threadpool_spec::init(configuration_ptr& config, __out_param std::vector<th
 }
 
 
-static bool build_client_network_confs(const char* section, configuration_ptr& config, __out_param network_client_confs& nss)
+static bool build_client_network_confs(
+    const char* section, 
+    configuration_ptr& config, 
+    __out_param network_client_configs& nss,
+    network_client_configs* default_spec)
 {
     nss.clear();
 
@@ -131,16 +135,22 @@ static bool build_client_network_confs(const char* section, configuration_ptr& c
 
     for (auto& k : keys)
     {
-        if (rpc_channel::is_exist(k.c_str()))
+        if (k.length() <= strlen("network.client."))
+            continue;
+
+        if (k.substr(0, strlen("network.client.")) != std::string("network.client."))
+            continue;
+
+        auto k2 = k.substr(strlen("network.client."));
+        if (rpc_channel::is_exist(k2.c_str()))
         {
             /*
-            [network.27001]
             ;channel = network_provider_name,buffer_block_size
-            RPC_CHANNEL_TCP = dsn::tools::asio_network_provider,65536
-            RPC_CHANNEL_UDP = dsn::tools::asio_network_provider,65536
+            network.client.RPC_CHANNEL_TCP = dsn::tools::asio_network_provider,65536
+            network.client.RPC_CHANNEL_UDP = dsn::tools::asio_network_provider,65536
             */
 
-            rpc_channel ch = rpc_channel::from_string(k.c_str(), RPC_CHANNEL_TCP);
+            rpc_channel ch = rpc_channel::from_string(k2.c_str(), RPC_CHANNEL_TCP);
 
             // dsn::tools::asio_network_provider,65536
             std::list<std::string> vs;
@@ -154,15 +164,7 @@ static bool build_client_network_confs(const char* section, configuration_ptr& c
                     );
                 return false;
             }
-
-            if (!network_header_format::is_exist(vs.begin()->c_str()))
-            {
-                printf("invalid network specification, unkown message header format '%s'\n",
-                    vs.begin()->c_str()
-                    );
-                return false;
-            }
-
+            
             network_client_config ns;
             ns.factory_name = vs.begin()->c_str();
             ns.message_buffer_block_size = atoi(vs.rbegin()->c_str());
@@ -174,6 +176,154 @@ static bool build_client_network_confs(const char* section, configuration_ptr& c
             }
 
             nss[ch] = ns;
+        }
+        else
+        {
+            printf("invalid rpc channel type: %s\n", k2.c_str());
+            return false;
+        }
+    }
+
+    if (default_spec)
+    {
+        for (auto& kv : *default_spec)
+        {
+            if (nss.find(kv.first) == nss.end())
+            {
+                nss[kv.first] = kv.second;
+            }
+        }
+    }
+
+    return true;
+}
+
+
+static bool build_server_network_confs(
+    const char* section,
+    configuration_ptr& config,
+    __out_param network_server_configs& nss,
+    network_server_configs* default_spec,
+    const std::vector<int>& ports,
+    bool is_template)
+{
+    nss.clear();
+
+    std::vector<std::string> keys;
+    config->get_all_keys(section, keys);
+
+    for (auto& k : keys)
+    {
+        if (k.length() <= strlen("network.server."))
+            continue;
+
+        if (k.substr(0, strlen("network.server.")) != std::string("network.server."))
+            continue;
+
+        auto k2 = k.substr(strlen("network.server."));
+        std::list<std::string> ks;
+        utils::split_args(k2.c_str(), ks, '.');
+        if (ks.size() != 2)
+        {
+            printf("invalid network server config '%s', should be like 'network.server.12345.RPC_CHANNEL_TCP' instead\n", k.c_str());
+            return false;
+        }
+
+        int port = atoi(ks.begin()->c_str());
+        auto k3 = *ks.rbegin();
+
+        if (is_template)
+        {
+            if (port != 0)
+            {
+                printf("invalid network server configuration '%s'\n", k.c_str());
+                printf("port must be zero in [apps.default]\n");
+                printf(" e.g., network.server.0.RPC_CHANNEL_TCP = NET_HDR_DSN, dsn::tools::asio_network_provider,65536\n");
+                return false;
+            }
+        }
+        else
+        {
+            if (std::find(ports.begin(), ports.end(), port) == ports.end())
+            {
+                continue;
+            }
+        }
+
+        if (rpc_channel::is_exist(k3.c_str()))
+        {
+            /*            
+            port = 0 for default setting in [apps.default]
+            port.channel = header_format, network_provider_name,buffer_block_size
+            network.server.port.RPC_CHANNEL_TCP = NET_HDR_DSN, dsn::tools::asio_network_provider,65536
+            network.server.port.RPC_CHANNEL_UDP = NET_HDR_DSN, dsn::tools::asio_network_provider,65536
+            */
+
+            rpc_channel ch = rpc_channel::from_string(k3.c_str(), RPC_CHANNEL_TCP);
+            network_server_config ns(port, ch);
+
+            // NET_HDR_DSN, dsn::tools::asio_network_provider,65536
+            std::list<std::string> vs;
+            std::string v = config->get_string_value(section, k.c_str(), "");
+            utils::split_args(v.c_str(), vs, ',');
+
+            if (vs.size() != 3)
+            {
+                printf("invalid network specification '%s', should be '$message-format, $network-factory,$msg-buffer-size'\n",
+                    v.c_str()
+                    );
+                return false;
+            }
+
+            if (!network_header_format::is_exist(vs.begin()->c_str()))
+            {
+                printf("invalid network specification, unkown message header format '%s'\n",
+                    vs.begin()->c_str()
+                    );
+                return false;
+            }
+
+            ns.hdr_format = network_header_format(vs.begin()->c_str());
+            ns.factory_name = *(++vs.begin());
+            ns.message_buffer_block_size = atoi(vs.rbegin()->c_str());
+
+            if (ns.message_buffer_block_size == 0)
+            {
+                printf("invalid message buffer size specified: '%s'\n", vs.rbegin()->c_str());
+                return false;
+            }
+
+            nss[ns] = ns;
+        }
+        else
+        {
+            printf("invalid rpc channel type: %s\n", k3.c_str());
+            return false;
+        }
+    }
+
+    if (default_spec)
+    {
+        for (auto& kv : *default_spec)
+        {
+            network_server_config cs = kv.second;
+            for (auto& port : ports)
+            {
+                cs.port = port;
+                if (nss.find(cs) == nss.end())
+                {
+                    nss[cs] = cs;
+                }
+            }
+
+            if (is_template)
+            {
+                cs.port = 0;
+                if (nss.find(cs) == nss.end())
+                {
+                    nss[cs] = cs;
+                }
+            }
         }
     }
 
@@ -191,39 +341,48 @@ service_app_spec::service_app_spec(const service_app_spec& r)
     ports = r.ports;
     delay_seconds = r.delay_seconds;
     run = r.run;
-    net_client_cfs = r.net_client_cfs;
+    network_client_confs = r.network_client_confs;
+    network_server_confs = r.network_server_confs;
 }
 
-bool service_app_spec::init(const char* section, const char* r, configuration_ptr& config)
+bool service_app_spec::init(
+    const char* section, 
+    const char* r, 
+    configuration_ptr& config, 
+    service_app_spec* default_value,
+    network_client_configs* default_client_nets,
+    network_server_configs* default_server_nets
+    )
 {
     id = 0;
     index = 0;
     role = r;
-    name = config->get_string_value(section, "name", "");
-    type = config->get_string_value(section, "type", "");
-    arguments = config->get_string_value(section, "arguments", "");
 
-    ports.clear();
-    std::list<std::string> ports_str = config->get_string_value_list(section, "ports", ',');
-    for (auto& s : ports_str)
-    {
-        int p = atoi(s.c_str());
-        if (p != 0)
-        {
-            dassert(p > 1024, "specified port is either 0 (no listen port) or greater than 1024");
-            ports.push_back(p);
-        }
-    }
+    if (!read_config(config, section, *this, default_value))
+        return false;
+
     std::sort(ports.begin(), ports.end());
 
-    delay_seconds = config->get_value<int>(section, "delay_seconds", 0);
-    run = config->get_value<bool>(section, "run", true);
+    if (!build_client_network_confs(
+        section,
+        config,
+        this->network_client_confs,
+        default_value ? &default_value->network_client_confs : default_client_nets
+        ))
+        return false;
 
-    return build_client_network_confs(section, config, this->net_client_cfs);
+    return build_server_network_confs(
+        section,
+        config,
+        this->network_server_confs,
+        default_value ? &default_value->network_server_confs : default_server_nets,
+        ports,
+        default_value == nullptr
+        );
 }
 
 
-network_config_spec::network_config_spec(const network_config_spec& r)
+network_server_config::network_server_config(const network_server_config& r)
 : channel(r.channel), hdr_format(r.hdr_format)
 {
     port = r.port;
@@ -231,7 +390,7 @@ network_config_spec::network_config_spec(const network_config_spec& r)
     message_buffer_block_size = r.message_buffer_block_size;
 }
 
-network_config_spec::network_config_spec(int p, rpc_channel c)
+network_server_config::network_server_config(int p, rpc_channel c)
     : channel(c), hdr_format(NET_HDR_DSN)
 {
     port = p;
@@ -239,121 +398,63 @@ network_config_spec::network_config_spec(int p, rpc_channel c)
     message_buffer_block_size = 65536;
 }
 
-bool network_config_spec::operator < (const network_config_spec& r) const
+bool network_server_config::operator < (const network_server_config& r) const
 {
     return port < r.port || (port == r.port && channel < r.channel);
 }
 
-bool service_spec::register_network(const network_config_spec& netcs, bool force)
-{
-    if (force)
-    {
-        network_configs[netcs] = netcs;
-        return true;
-    }
-    else
-    {
-        auto it = network_configs.find(netcs);
-        if (it == network_configs.end())
-        {
-            network_configs[netcs] = netcs;
-            return true;
-        }
-        else
-            return false;
-    }    
-}
-
 bool service_spec::init(configuration_ptr c)
 {
-    std::vector<std::string> poolIds;
-
     config = c;
-    tool = config->get_string_value("core", "tool", "");
-    toollets = config->get_string_value_list("core", "toollets", ',');
-    coredump_dir = config->get_string_value("core", "coredump_dir", "./coredump");
-    
-    aio_factory_name = config->get_string_value("core", "aio_factory_name", "");
-    env_factory_name = config->get_string_value("core", "env_factory_name", "");
-    lock_factory_name = config->get_string_value("core", "lock_factory_name", "");
-    rwlock_factory_name = config->get_string_value("core", "rwlock_factory_name", "");
-    semaphore_factory_name = config->get_string_value("core", "semaphore_factory_name", "");
-    nfs_factory_name = config->get_string_value("core", "nfs_factory_name", "");
 
-    network_aspects = config->get_string_value_list("core", "network_aspects", ',');
-    aio_aspects = config->get_string_value_list("core", "aio_aspects", ',');
-    env_aspects = config->get_string_value_list("core", "env_aspects", ',');
-
-    lock_aspects = config->get_string_value_list("core", "lock_aspects", ',');
-    rwlock_aspects = config->get_string_value_list("core", "rwlock_aspects", ',');
-    semaphore_aspects = config->get_string_value_list("core", "semaphore_aspects", ',');
-    
-    perf_counter_factory_name = config->get_string_value("core", "perf_counter_factory_name", "");
-    logging_factory_name = config->get_string_value("core", "logging_factory_name", "");
-
-    // default client network confs
-    build_client_network_confs("core", config, this->network_default_client_cfs);
+    // init common spec
+    if (!read_config(c, "core", *this, nullptr))
+        return false;
 
     // init thread pools
-    threadpool_spec::init(config, threadpool_specs);
+    if (!threadpool_spec::init(config, threadpool_specs))
+        return false;
 
     // init task specs
-    task_spec::init(config);
+    if (!task_spec::init(config))
+        return false;
+    
+    return true;
+}
 
+bool service_spec::init_app_specs(configuration_ptr c)
+{
     // init service apps
+    service_app_spec default_app;
+    if (!default_app.init("apps.default", "default", config, nullptr,
+        &this->network_default_client_cfs,
+        &this->network_default_server_cfs
+        ))
+        return false;
+
     std::vector<std::string> allSectionNames;
     config->get_all_sections(allSectionNames);
     
     int app_id = 0;
     for (auto it = allSectionNames.begin(); it != allSectionNames.end(); it++)
     {
-        if (it->substr(0, strlen("apps.")) == std::string("apps."))
+        if (it->substr(0, strlen("apps.")) == std::string("apps.") && *it != std::string("apps.default"))
         {
             service_app_spec app;
-            app.init((*it).c_str(), it->substr(5).c_str(), config);
+            if (!app.init((*it).c_str(), it->substr(5).c_str(), config, &default_app))
+                return false;
 
-            auto ports = app.ports;            
+            auto ports = app.ports;   
+            auto nsc = app.network_server_confs;
             auto gap = ports.size() > 0 ? (*ports.rbegin() + 1 - *ports.begin()) : 0;            
-            int count = config->get_value<int>((*it).c_str(), "count", 1);
             std::string name = app.name;
-            for (int i = 1; i <= count; i++)
+            for (int i = 1; i <= app.count; i++)
             {
                 char buf[16];
                 sprintf(buf, "%u", i);
-                app.name = (count > 1 ? (name + buf) : name);
+                app.name = (app.count > 1 ? (name + buf) : name);
                 app.id = ++app_id;
                 app.index = i;
-
-                // network configs
-                for (auto& p : ports)
-                {
-                    if (1 == i)
-                    {
-                        if (!build_network_spec(p))
-                            return false;
-                    }
-                    else
-                    {
-                        for (auto& cs : network_configs)
-                        {
-                            if (cs.first.port == p)
-                            {
-                                auto csc = cs.first;
-                                csc.port = p + i * gap;
-
-                                if (!register_network(csc, false))
-                                {
-                                    printf("register network configuration confliction for port %d used by %s.%d\n",
-                                        csc.port,
-                                        app.name.c_str(),
-                                        i
-                                        );
-                                    return false;
-                                }
-                            }
-                        }
-                    }
-                }
 
                 // add app
                 app_specs.push_back(app);
@@ -364,90 +465,18 @@ bool service_spec::init(configuration_ptr c)
                 {
                     app.ports.push_back(p + i * gap);
                 }
+
+                app.network_server_confs.clear();
+                for (auto sc : nsc)
+                {
+                    sc.second.port += i * gap;
+                    app.network_server_confs[sc.second] = sc.second;
+                }
             }
         }
     }
 
     return true;
 }
-
-bool service_spec::build_network_spec(int port)
-{
-    /*
-    [network.27001]
-    ;channel = hdr_format,network_provider_name,buffer_block_size
-    RPC_CHANNEL_TCP = NET_HDR_DSN,dsn::tools::asio_network_provider,65536
-    */
-    std::stringstream ss;
-    ss << "network." << port;
-    std::string s = ss.str();
-
-    if (!config->has_section(s.c_str()))
-    {
-        // use default settings
-        return true;
-    }
-       
-    
-    std::vector<std::string> cs;
-    config->get_all_keys(s.c_str(), cs);
-
-    for (auto& c : cs)
-    {
-        if (!rpc_channel::is_exist(c.c_str()))
-        {
-            printf("invalid rpc channel type '%s', please following the example below to define new channel:"
-                "\t\tDEFINE_CUSTOMIZED_ID(rpc_channel, RPC_CHANNEL_NEW_TYPE)"
-                "currently regisered rpc channels types are:\n", c.c_str());
-
-            for (int i = 0; i <= rpc_channel::max_value(); i++)
-            {
-                printf("\t\t%s (%u)\n", rpc_channel::to_string(i), i);
-            }
-            return false;
-        }
-
-        network_config_spec ns(port, rpc_channel(c.c_str()));
-
-        // NET_HDR_DSN,dsn::tools::asio_network_provider,65536
-        std::list<std::string> vs;
-        std::string v = config->get_string_value(s.c_str(), c.c_str(), "");
-        utils::split_args(v.c_str(), vs, ',');
-
-        if (vs.size() != 3)
-        {
-            printf("invalid network specification '%s', should be '$message-format, $network-factory,$msg-buffer-size'\n",
-                v.c_str()
-                );
-            return false;
-        }
-
-        if (!network_header_format::is_exist(vs.begin()->c_str()))
-        {
-            printf("invalid network specification, unkown message header format '%s'\n",
-                vs.begin()->c_str()
-                );
-            return false;
-        }
-
-        ns.hdr_format = network_header_format(vs.begin()->c_str());
-        ns.factory_name = *(++vs.begin());
-        ns.message_buffer_block_size = atoi(vs.rbegin()->c_str());
-        
-        if (ns.message_buffer_block_size == 0)
-        {
-            printf("invalid message buffer size specified: '%s'\n", vs.rbegin()->c_str());
-            return false;
-        }
-
-        if (!register_network(ns, false))
-        {
-            printf("register network configuration confliction for port %d\n", port);
-            return false;
-        }
-    }
-    return true;
-}
-
 
 } // end namespace dsn

@@ -54,7 +54,7 @@ void replica::init_prepare(mutation_ptr& mu)
 
     error_code err = ERR_SUCCESS;
     uint8_t count = 0;
-
+    
     if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 < _options.mutation_2pc_min_replica_count)
     {
         err = ERR_NOT_ENOUGH_MEMBER;
@@ -112,6 +112,11 @@ void replica::init_prepare(mutation_ptr& mu)
     }    
     mu->set_left_potential_secondary_ack_count(count);
 
+    // it is possible to do commit here when logging is not required for acking prepare.
+    // however, it is only possible when replica count == 1 at this moment in the
+    // replication group, and we don't want to do this as it is too fragile now.
+    // do_possible_commit_on_primary(mu);
+
     // local log
     dassert (mu->data.header.log_offset == invalid_offset, "");
     dassert (mu->log_task() == nullptr, "");
@@ -124,13 +129,7 @@ void replica::init_prepare(mutation_ptr& mu)
         gpid_to_hash(get_gpid())
         );
 
-    if (nullptr == mu->log_task())
-    {
-        err = ERR_FILE_OPERATION_FAILED;
-        handle_local_failure(err);
-        goto ErrOut;
-    }
-
+    dassert(nullptr != mu->log_task(), "");
     return;
 
 ErrOut:
@@ -175,8 +174,8 @@ void replica::do_possible_commit_on_primary(mutation_ptr& mu)
     dassert (_config.ballot == mu->data.header.ballot, "");
     dassert (PS_PRIMARY == status(), "");
 
-    if (mu->is_ready_for_commit())
-    {   
+    if (mu->is_ready_for_commit(_options.prepare_ack_on_secondary_before_logging_allowed))
+    {
         _prepare_list->commit(mu->data.header.decree, false);
     }
 }
@@ -247,7 +246,7 @@ void replica::on_prepare(message_ptr& request)
     {
         ddebug( "%s: mutation %s redundant prepare skipped", name(), mu->name());
 
-        if (mu2->is_prepared())
+        if (mu2->is_logged() || _options.prepare_ack_on_secondary_before_logging_allowed)
         {
             ack_prepare_message(ERR_SUCCESS, mu);
         }
@@ -266,6 +265,12 @@ void replica::on_prepare(message_ptr& request)
         dassert (PS_SECONDARY == status(), "");
         dassert (mu->data.header.decree <= last_committed_decree() + _options.staleness_for_commit, "");
     }
+
+    // ack without logging
+    if (_options.prepare_ack_on_secondary_before_logging_allowed)
+    {
+        ack_prepare_message(err, mu);
+    }
     
     // write log
     dassert (mu->log_task() == nullptr, "");
@@ -276,12 +281,7 @@ void replica::on_prepare(message_ptr& request)
         gpid_to_hash(get_gpid())
         );
 
-    if (nullptr == mu->log_task())
-    {
-        err = ERR_FILE_OPERATION_FAILED;
-        ack_prepare_message(err, mu);
-        handle_local_failure(err);
-    }
+    dassert(mu->log_task() != nullptr, "");
 }
 
 void replica::on_append_log_completed(mutation_ptr& mu, uint32_t err, uint32_t size)
@@ -319,7 +319,11 @@ void replica::on_append_log_completed(mutation_ptr& mu, uint32_t err, uint32_t s
         {
             handle_local_failure(err);
         }
-        ack_prepare_message(err, mu);
+
+        if (!_options.prepare_ack_on_secondary_before_logging_allowed)
+        {
+            ack_prepare_message(err, mu);
+        }
         break;
     case PS_ERROR:
         break;
@@ -343,7 +347,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, int
     dassert (mu->data.header.ballot == get_ballot(), "");
 
     end_point node = request->header().to_address;
-    partition_status st = _primary_states.GetNodeStatus(node);
+    partition_status st = _primary_states.get_node_status(node);
 
     // handle reply
     prepare_ack resp;

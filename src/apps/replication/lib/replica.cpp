@@ -69,7 +69,8 @@ void replica::init_state()
             &replica::execute_mutation,
             this,
             std::placeholders::_1
-            )
+            ),
+        _options.prepare_ack_on_secondary_before_logging_allowed
     );
 
     _config.ballot = 0;
@@ -103,6 +104,16 @@ void replica::on_client_read(const read_request_header& meta, message_ptr& reque
     {
         response_client_message(request, ERR_INVALID_STATE);
         return;
+    }
+
+    if (meta.semantic == read_semantic_t::ReadLastUpdate)
+    {
+        if (status() != PS_PRIMARY || 
+            last_committed_decree() < _primary_states.last_prepare_decree_on_new_primary)
+        {
+            response_client_message(request, ERR_INVALID_STATE);
+            return;
+        }
     }
 
     dassert (_app != nullptr, "");
@@ -172,7 +183,7 @@ void replica::execute_mutation(mutation_ptr& mu)
     case PS_ERROR:
         break;
     }
-     
+    
     ddebug("TwoPhaseCommit, %s: mutation %s committed, err = %x", name(), mu->name(), err);
 
     if (err != ERR_SUCCESS)
@@ -209,8 +220,12 @@ decree replica::last_prepared_decree() const
     while (true)
     {
         auto mu = _prepare_list->get_mutation_by_decree(start + 1);
-        if (mu == nullptr || mu->data.header.ballot < lastBallot || !mu->is_prepared())
+        if (mu == nullptr 
+            || mu->data.header.ballot < lastBallot 
+            || (!mu->is_logged() && !_options.prepare_ack_on_secondary_before_logging_allowed)
+            )
             break;
+
         start++;
         lastBallot = mu->data.header.ballot;
     }

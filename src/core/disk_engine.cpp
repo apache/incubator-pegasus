@@ -51,7 +51,7 @@ disk_engine::~disk_engine()
 
 void disk_engine::start(aio_provider* provider)
 {
-    auto_lock l(_lock);
+    auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
     if (_is_running)
         return;  
 
@@ -87,7 +87,7 @@ void disk_engine::start_io(aio_task_ptr& aio_tsk)
     aio->engine = this;
     
     {
-        auto_lock l(_lock);
+        auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
         if (!_is_running)
         {
             aio_tsk->enqueue(ERR_SERVICE_NOT_FOUND, 0, _node);
@@ -125,7 +125,7 @@ void disk_engine::complete_io(aio_task_ptr& aio, error_code err, uint32_t bytes,
     }
     
     {
-        auto_lock l(_lock);
+        auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
         _request_count--;
     }
     

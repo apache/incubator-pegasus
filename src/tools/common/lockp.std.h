@@ -36,11 +36,11 @@ public:
     std_lock_provider(dsn::service::zlock *lock, lock_provider* inner_provider) : lock_provider(lock, inner_provider) {}
 
     virtual void lock() { _lock.lock(); }
-    virtual bool try_lock() { return _lock.try_lock(); }
+    virtual bool try_lock() { return _lock.try_lock();  }
     virtual void unlock() { _lock.unlock(); }
 
 private:
-    std::recursive_mutex _lock;
+    utils::ex_lock _lock;
 };
 
 class std_rwlock_provider : public rwlock_provider
@@ -49,11 +49,9 @@ public:
     std_rwlock_provider(dsn::service::zrwlock *lock, rwlock_provider* inner_provider) : rwlock_provider(lock, inner_provider) {}
 
     virtual void lock_read() { _lock.lock_read(); }
-    virtual bool try_lock_read() { return _lock.try_lock_read(); }
     virtual void unlock_read() { _lock.unlock_read(); }
 
     virtual void lock_write() { _lock.lock_write(); }
-    virtual bool try_lock_write() { return _lock.try_lock_write(); }
     virtual void unlock_write() { _lock.unlock_write(); }
 
 private:

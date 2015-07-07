@@ -74,7 +74,7 @@ namespace dsn {
         bool ret;
 
         {
-            utils::auto_lock l(_requests_lock);
+            utils::auto_lock<::dsn::utils::ex_lock_nr> l(_requests_lock);
             auto it = _requests.find(key);
             if (it != _requests.end())
             {
@@ -109,7 +109,7 @@ namespace dsn {
         network* net;
 
         {
-            utils::auto_lock l(_requests_lock);
+            utils::auto_lock<::dsn::utils::ex_lock_nr> l(_requests_lock);
             auto it = _requests.find(key);
             if (it != _requests.end())
             {
@@ -150,7 +150,7 @@ namespace dsn {
         timeout_task = (new rpc_timeout_task(shared_from_this(), hdr.id, spec));
 
         {
-            utils::auto_lock l(_requests_lock);
+            utils::auto_lock<::dsn::utils::ex_lock_nr> l(_requests_lock);
             auto pr = _requests.insert(rpc_requests::value_type(hdr.id, match_entry()));
             dassert (pr.second, "the message is already on the fly!!!");
             pr.first->second.resp_task = call;
@@ -196,7 +196,7 @@ namespace dsn {
     //
     // management routines
     //
-    network* rpc_engine::create_network(const network_config_spec& netcs, bool client_only)
+    network* rpc_engine::create_network(const network_server_config& netcs, bool client_only)
     {
         const service_spec& spec = service_engine::instance().spec();
         auto net = utils::factory_store<network>::create(
@@ -223,57 +223,6 @@ namespace dsn {
         }   
     }
 
-    bool rpc_engine::start_server_port(int port)
-    {
-        // exsiting servers
-        if (_server_nets.find(port) != _server_nets.end())
-            return false;
-
-        std::vector<network*>* pnets;
-        std::vector<network*> nets;
-        auto pr = _server_nets.insert(std::map<int, std::vector<network*>>::value_type(port, nets));
-        pnets = &pr.first->second;
-
-        pnets->resize(rpc_channel::max_value() + 1);
-        const service_spec& spec = service_engine::instance().spec();
-        for (int i = 0; i <= rpc_channel::max_value(); i++)
-        {
-            network_config_spec cs(port, rpc_channel(rpc_channel::to_string(i)));
-            network* net = nullptr;
-
-            auto it = spec.network_configs.find(cs);
-            if (it != spec.network_configs.end())
-            {
-                net = create_network(it->second, false);
-            }
-
-            else
-            {
-                auto it = spec.network_default_client_cfs.find(cs.channel);
-                if (it != spec.network_default_client_cfs.end())
-                {
-                    cs.factory_name = it->second.factory_name;
-                    cs.message_buffer_block_size = it->second.message_buffer_block_size;
-                    
-                    net = create_network(cs, false);
-                }
-            }
-
-            (*pnets)[i] = net;
-
-            // report
-            if (net)
-            {
-                dinfo("network started at port %u, channel = %s, fmt = %s ...",                    
-                    (uint32_t)port,
-                    rpc_channel::to_string(i),
-                    cs.hdr_format.to_string()
-                    );
-            }
-        }
-        return true;
-    }
-
     error_code rpc_engine::start(const service_app_spec& aspec)
     {
         if (_is_running)
@@ -285,7 +234,6 @@ namespace dsn {
         std::map<std::string, network*> named_nets; // factory##fmt##port -> net
 
         // start client networks
-        bool r;
         _client_nets.resize(network_header_format::max_value() + 1);
 
         const service_spec& spec = service_engine::instance().spec();
@@ -303,28 +251,19 @@ namespace dsn {
                 std::string factory;
                 int blk_size;
 
-                auto it1 = aspec.net_client_cfs.find(c);
-                if (it1 != aspec.net_client_cfs.end())
+                auto it1 = aspec.network_client_confs.find(c);
+                if (it1 != aspec.network_client_confs.end())
                 {
                     factory = it1->second.factory_name;
                     blk_size = it1->second.message_buffer_block_size;
                 }
                 else
                 {
-                    auto it = spec.network_default_client_cfs.find(c);
-                    if (it != spec.network_default_client_cfs.end())
-                    {
-                        factory = it->second.factory_name;
-                        blk_size = it->second.message_buffer_block_size;
-                    }
-                    else
-                    {
-                        dwarn("network client for channel %s not registered, assuming not used further", c.to_string());
-                        continue;
-                    }
+                    dwarn("network client for channel %s not registered, assuming not used further", c.to_string());
+                    continue;
                 }
 
-                network_config_spec cs(aspec.id, c);
+                network_server_config cs(aspec.id, c);
 
                 cs.factory_name = factory;
                 cs.message_buffer_block_size = blk_size;
@@ -337,10 +276,38 @@ namespace dsn {
         }
         
         // start server networks
-        for (auto& p : aspec.ports)
+        for (auto& sp : aspec.network_server_confs)
         {
-            r = start_server_port(p);
-            if (!r) return ERR_NETWORK_INIT_FALED;
+            int port = sp.second.port;
+
+            std::vector<network*>* pnets;
+            auto it = _server_nets.find(port);
+
+            if (it == _server_nets.end())
+            {
+                std::vector<network*> nets;
+                auto pr = _server_nets.insert(std::map<int, std::vector<network*>>::value_type(port, nets));
+                pnets = &pr.first->second;
+                pnets->resize(rpc_channel::max_value() + 1);
+            }
+            else
+            {
+                pnets = &it->second;
+            }
+
+            auto net = create_network(sp.second, false);
+            if (net == nullptr)
+            {
+                return ERR_NETWORK_INIT_FALED;
+            }
+
+            (*pnets)[sp.second.channel] = net;
+
+            dinfo("network started at port %u, channel = %s, fmt = %s ...",
+                (uint32_t)port,
+                sp.second.channel.to_string(),
+                sp.second.hdr_format.to_string()
+                );
         }
 
         _local_primary_address = _client_nets[0][0]->address();

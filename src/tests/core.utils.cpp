@@ -25,6 +25,7 @@
  */
 
 # include <dsn/internal/utils.h>
+# include <dsn/internal/link.h>
 # include <gtest/gtest.h>
 
 using namespace ::dsn;
@@ -92,4 +93,32 @@ TEST(core, trim_string)
     EXPECT_EQ(std::string(r), "x x x x");
 }
 
+TEST(core, dlink)
+{
+    dlink links[10];
+    dlink hdr;
+
+    for (int i = 0; i < 10; i++)
+        links[i].insert_before(&hdr);
+
+    int count = 0;
+    dlink* p = hdr.next();
+    while (p != &hdr)
+    {
+        count++;
+        p = p->next();
+    }
+
+    EXPECT_EQ(count, 10);
+
+    p = hdr.next();
+    while (p != &hdr)
+    {
+        auto p1 = p;
+        p = p->next();
+        p1->remove();
+    }
+
+    EXPECT_TRUE(hdr.is_alone());
+}
 

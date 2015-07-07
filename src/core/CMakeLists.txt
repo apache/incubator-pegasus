@@ -1,5 +1,2 @@
-#set(proj_name dsn.core)
-#file(GLOB proj_src *.cpp)
-#add_library(${proj_name} STATIC ${proj_src})
-#install(TARGETS ${proj_name} DESTINATION lib)
 dsn_add_library(dsn.core)
+

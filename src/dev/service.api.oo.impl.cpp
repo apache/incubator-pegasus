@@ -31,11 +31,11 @@ namespace dsn {
     {
         namespace tasking
         {
-            class service_task : public task, public service_context_manager
+            class service_task : public task, public task_context_manager
             {
             public:
                 service_task(task_code code, servicelet* svc, task_handler& handler, int hash = 0)
-                    : task(code, hash), service_context_manager(svc, this)
+                    : task(code, hash), task_context_manager(svc, this)
                 {
                     _handler = handler;
                 }
@@ -55,11 +55,11 @@ namespace dsn {
                 task_handler _handler;
             };
 
-            class service_timer_task : public timer_task, public service_context_manager
+            class service_timer_task : public timer_task, public task_context_manager
             {
             public:
                 service_timer_task(task_code code, servicelet* svc, task_handler& handler, uint32_t intervalMilliseconds, int hash = 0)
-                    : timer_task(code, intervalMilliseconds, hash), service_context_manager(svc, this)
+                    : timer_task(code, intervalMilliseconds, hash), task_context_manager(svc, this)
                 {
                     _handler = handler;
                 }

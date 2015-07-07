@@ -50,14 +50,12 @@ public:
 
     const std::string & get_name() { return _name; }    
     task_worker_pool* pool() const { return _pool; }
-    perf_counter_ptr& get_qps_counter() { return _qps_counter; }
     admission_controller* controller() const { return _controller; }
     void set_controller(admission_controller* controller) { _controller = controller; }
 
 private:
     task_worker_pool*      _pool;
     std::string            _name;
-    perf_counter_ptr       _qps_counter;
     admission_controller*  _controller;
 };
 
