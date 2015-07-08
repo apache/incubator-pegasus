@@ -43,7 +43,7 @@ namespace dsn {
 
                 virtual ::dsn::error_code start(int argc, char** argv)
                 {
-                    return ::dsn::ERR_SUCCESS;
+                    return ::dsn::ERR_OK;
                 }
 
                 virtual void stop(bool cleanup = false)
@@ -80,7 +80,7 @@ namespace dsn {
                     //on_request_timer();
                     _request_timer = ::dsn::service::tasking::enqueue(LPC_NFS_REQUEST_TIMER, this, &nfs_client_app::on_request_timer, 0, 0, 1000);
 
-                    return ::dsn::ERR_SUCCESS;
+                    return ::dsn::ERR_OK;
                 }
 
                 virtual void stop(bool cleanup = false)
@@ -115,7 +115,7 @@ namespace dsn {
 
                 void internal_copy_callback(error_code err, uint32_t size, int index)
                 {
-                    if (err == ::dsn::ERR_SUCCESS)
+                    if (err == ::dsn::ERR_OK)
                     {
                         dinfo("remote file copy request %d completed", index);
                     }

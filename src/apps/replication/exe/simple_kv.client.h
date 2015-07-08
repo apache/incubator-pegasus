@@ -67,7 +67,7 @@ public:
             read_semantic_t::ReadLastUpdate
             );
         resp_task->wait();
-        if (resp_task->error() == ::dsn::ERR_SUCCESS)
+        if (resp_task->error() == ::dsn::ERR_OK)
         {
             unmarshall(resp_task->get_response()->reader(), resp);
         }
@@ -99,7 +99,7 @@ public:
         const std::string& resp,
         void* context)
     {
-        if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_READ err : " << err.to_string() << std::endl;
+        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_READ err : " << err.to_string() << std::endl;
         else
         {
             std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_READ ok" << std::endl;
@@ -129,7 +129,7 @@ public:
         std::shared_ptr<std::string>& key, 
         std::shared_ptr<std::string>& resp)
     {
-        if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_READ err : " << err.to_string() << std::endl;
+        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_READ err : " << err.to_string() << std::endl;
         else
         {
             std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_READ ok" << std::endl;
@@ -155,7 +155,7 @@ public:
             timeout_milliseconds
             );
         resp_task->wait();
-        if (resp_task->error() == ::dsn::ERR_SUCCESS)
+        if (resp_task->error() == ::dsn::ERR_OK)
         {
             unmarshall(resp_task->get_response()->reader(), resp);
         }
@@ -187,7 +187,7 @@ public:
         const int32_t& resp,
         void* context)
     {
-        if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_WRITE err : " << err.to_string() << std::endl;
+        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_WRITE err : " << err.to_string() << std::endl;
         else
         {
             std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_WRITE ok" << std::endl;
@@ -217,7 +217,7 @@ public:
         std::shared_ptr<::dsn::replication::application::kv_pair>& pr, 
         std::shared_ptr<int32_t>& resp)
     {
-        if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_WRITE err : " << err.to_string() << std::endl;
+        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_WRITE err : " << err.to_string() << std::endl;
         else
         {
             std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_WRITE ok" << std::endl;
@@ -243,7 +243,7 @@ public:
             timeout_milliseconds
             );
         resp_task->wait();
-        if (resp_task->error() == ::dsn::ERR_SUCCESS)
+        if (resp_task->error() == ::dsn::ERR_OK)
         {
             unmarshall(resp_task->get_response()->reader(), resp);
         }
@@ -275,7 +275,7 @@ public:
         const int32_t& resp,
         void* context)
     {
-        if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_APPEND err : " << err.to_string() << std::endl;
+        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_APPEND err : " << err.to_string() << std::endl;
         else
         {
             std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_APPEND ok" << std::endl;
@@ -305,7 +305,7 @@ public:
         std::shared_ptr<::dsn::replication::application::kv_pair>& pr, 
         std::shared_ptr<int32_t>& resp)
     {
-        if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_APPEND err : " << err.to_string() << std::endl;
+        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_APPEND err : " << err.to_string() << std::endl;
         else
         {
             std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_APPEND ok" << std::endl;

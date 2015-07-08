@@ -30,7 +30,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ rpc_session
+# define __TITLE__ "rpc_session"
 
 namespace dsn {
 

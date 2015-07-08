@@ -30,7 +30,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ net.boost.asio
+# define __TITLE__ "net.boost.asio"
 
 namespace dsn {
     namespace tools {

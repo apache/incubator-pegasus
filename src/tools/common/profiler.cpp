@@ -35,7 +35,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ toollet.profiler
+# define __TITLE__ "toollet.profiler"
 using namespace dsn::service;
 
 namespace dsn {

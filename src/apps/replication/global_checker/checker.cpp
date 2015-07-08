@@ -36,7 +36,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ replication.global.check
+# define __TITLE__ "replication.global.check"
 
 namespace dsn {
     namespace replication {

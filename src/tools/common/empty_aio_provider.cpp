@@ -45,12 +45,12 @@ namespace dsn {
 
         error_code empty_aio_provider::close(handle_t hFile)
         {
-            return ERR_SUCCESS;
+            return ERR_OK;
         }
 
         void empty_aio_provider::aio(aio_task_ptr& aio)
         {
-            complete_io(aio, ERR_SUCCESS, aio->aio()->buffer_size, 0);
+            complete_io(aio, ERR_OK, aio->aio()->buffer_size, 0);
         }
 
         disk_aio_ptr empty_aio_provider::prepare_aio_context(aio_task* tsk)

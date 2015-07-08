@@ -73,7 +73,7 @@ namespace dsn {
                 {
                     end_point srv = end_point::INVALID;
                     std::shared_ptr<TResponse> resp(nullptr);
-                    if (code == ERR_SUCCESS)
+                    if (code == ERR_OK)
                     {
                         srv = response->header().from_address;
                         resp.reset(new TResponse);

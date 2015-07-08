@@ -6,7 +6,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ nfs
+# define __TITLE__ "nfs"
 
 namespace dsn { namespace service { 
     // define RPC task code for service 'nfs'

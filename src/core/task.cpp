@@ -38,7 +38,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ task
+# define __TITLE__ "task"
 
 namespace dsn {
 
@@ -366,9 +366,12 @@ void task::enqueue(task_worker_pool* pool)
     // normal path
     else
     {
-        dassert(pool != nullptr, "pool not exist, "
-            "must be the case where the caller is executed in io threads "
-            "which is forbidden unless you explicitly set [task.%s].fast_execution_in_network_thread = true",
+        dassert(pool != nullptr, "pool %s not ready, and there are usually two cases: "
+            "(1). thread pool not designatd in '[%s] pools'; "
+            "(2). the caller is executed in io threads "
+            "which is forbidden unless you explicitly set [task.%s].fast_execution_in_network_thread = true",            
+            _spec->pool_code.to_string(),
+            _node->spec().config_section.c_str(),
             _spec->name
             );
 
@@ -436,7 +439,7 @@ rpc_response_task::rpc_response_task(message_ptr& request, int hash)
 void rpc_response_task::enqueue(error_code err, message_ptr& reply)
 {
     set_error_code(err);
-    _response = (err == ERR_SUCCESS ? reply : nullptr);
+    _response = (err == ERR_OK ? reply : nullptr);
 
     if (spec().on_rpc_response_enqueue.execute(this, true))
     {

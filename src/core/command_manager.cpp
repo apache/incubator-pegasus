@@ -36,7 +36,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ command_manager
+# define __TITLE__ "command_manager"
 
 namespace dsn {
 

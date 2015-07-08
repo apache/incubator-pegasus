@@ -55,7 +55,7 @@ public:
         
         _simple_kv_client = new simple_kv_client(meta_servers, argv[1]);
         _timer = ::dsn::service::tasking::enqueue(LPC_SIMPLE_KV_TEST_TIMER, this, &simple_kv_client_app::on_test_timer, 0, 0, 1000);
-        return ::dsn::ERR_SUCCESS;
+        return ::dsn::ERR_OK;
     }
 
     virtual void stop(bool cleanup = false)
@@ -92,7 +92,7 @@ public:
             auto err2 = _simple_kv_client->read(req.key, v);
             std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_READ end, read " << v << ", err = " << err2.to_string() << std::endl;
 
-            if (err == ERR_SUCCESS && err2 == ERR_SUCCESS)
+            if (err == ERR_OK && err2 == ERR_OK)
             {
                 dassert(v == value, "data is inconsistent!");
             }
@@ -130,7 +130,7 @@ public:
 
         _simple_kv_client = new simple_kv_perf_test_client(meta_servers, argv[1]);
         _simple_kv_client->start_test();
-        return ::dsn::ERR_SUCCESS;
+        return ::dsn::ERR_OK;
     }
 
     virtual void stop(bool cleanup = false)

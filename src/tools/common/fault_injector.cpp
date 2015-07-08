@@ -30,7 +30,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ toollet.fault_injector
+# define __TITLE__ "toollet.fault_injector"
 
 namespace dsn {
     namespace tools {
