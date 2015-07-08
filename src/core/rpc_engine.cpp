@@ -66,7 +66,7 @@ namespace dsn {
 
     bool rpc_client_matcher::on_recv_reply(uint64_t key, message_ptr& reply, int delay_ms)
     {
-        dassert(reply != nullptr, "cannot recieve an empty reply message");
+        dassert(reply != nullptr, "cannot receive an empty reply message");
 
         error_code sys_err = reply->error();
         rpc_response_task_ptr call;
