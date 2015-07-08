@@ -25,6 +25,8 @@
  */
 #pragma once
 
+# ifdef _WIN32
+
 # include <dsn/tool_api.h>
 # include <dsn/internal/synchronize.h>
 
@@ -52,4 +54,4 @@ namespace dsn {
     }
 }
 
-
+# endif

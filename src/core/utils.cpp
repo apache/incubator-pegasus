@@ -49,7 +49,7 @@ namespace dsn {
             return static_cast<int>(syscall(SYS_gettid));
 # elif defined(__FreeBSD__)
             long lwpid;
-            thr_self( &lwpid );
+            thr_self(&lwpid);
             return static_cast<int>(lwpid);
 # else
 # error not implemented yet
