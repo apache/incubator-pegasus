@@ -45,7 +45,7 @@ int main(int argc, char** argv)
     // register all possible services
     dsn::service::system::register_service<::dsn::replication::meta_service_app>("meta");
     dsn::service::system::register_service<::dsn::replication::replication_service_app>("replica");
-	dsn::service::system::register_service<::dsn::replication::application::simple_kv_client_app>("client");
+    dsn::service::system::register_service<::dsn::replication::application::simple_kv_client_app>("client");
     dsn::service::system::register_service<::dsn::replication::application::simple_kv_perf_test_client_app>("client.perf.test");
 
     // register all possible tools and toollets
