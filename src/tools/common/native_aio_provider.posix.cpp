@@ -94,7 +94,7 @@ namespace dsn {
             {
                 if (err != 0)
                 {
-                    derror(""file operation failed, errno = %d", errno);
+                    derror("file operation failed, errno = %d", errno);
                 }
 
                 size_t bytes = aio_return(&ctx->cb); // from e.g., read or write
