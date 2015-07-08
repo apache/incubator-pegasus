@@ -204,6 +204,14 @@ void task_worker_pool::get_runtime_info(const std::string& indent, const std::ve
             ss << indent2 << q->get_name() << " now has " << q->count() << " pending tasks" << std::endl;
         }
     }
+
+    for (auto& wk : _workers)
+    {
+        if (wk)
+        {
+            ss << indent2 << wk->index() << " (TID = " << wk->native_tid() << ") attached with queue " << wk->queue()->get_name() << std::endl;
+        }
+    }
 }
 
 task_engine::task_engine(service_node* node)
