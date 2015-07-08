@@ -46,20 +46,20 @@ namespace dsn {
     class rpc_timeout_task : public task
     {
     public:
-        rpc_timeout_task(std::shared_ptr<rpc_client_matcher> se, uint64_t id, task_spec* s) : task(LPC_RPC_TIMEOUT)
+        rpc_timeout_task(std::shared_ptr<rpc_client_matcher> matcher, uint64_t id, task_spec* spec) : task(LPC_RPC_TIMEOUT)
         {
-            _s = se;
+            _matcher = matcher;
             _id = id;
-            _spec = s;
+            _spec = spec;
         }
 
         virtual void exec()
         {
-            _s->on_rpc_timeout(_id, _spec);
+            _matcher->on_rpc_timeout(_id, _spec);
         }
 
     private:
-        std::shared_ptr<rpc_client_matcher> _s;
+        std::shared_ptr<rpc_client_matcher> _matcher;
         uint64_t     _id;
         task_spec  *_spec;
     };
@@ -68,10 +68,8 @@ namespace dsn {
     {
         dassert(reply != nullptr, "cannot receive an empty reply message");
 
-        error_code sys_err = reply->error();
         rpc_response_task_ptr call;
         task_ptr timeout_task;
-        bool ret;
 
         {
             utils::auto_lock<::dsn::utils::ex_lock_nr> l(_requests_lock);
@@ -81,11 +79,10 @@ namespace dsn {
                 call = it->second.resp_task;
                 timeout_task = it->second.timeout_task;
                 _requests.erase(it);
-                ret = true;
             }
             else
             {
-                ret = false;
+                return false;
             }
         }
 
@@ -97,10 +94,10 @@ namespace dsn {
             }
             
             call->set_delay(delay_ms);
-            call->enqueue(sys_err, reply);
+            call->enqueue(reply->error(), reply);
         }
 
-        return ret;
+        return true;
     }
 
     void rpc_client_matcher::on_rpc_timeout(uint64_t key, task_spec* spec)
