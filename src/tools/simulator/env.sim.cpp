@@ -26,7 +26,10 @@
 #include "env.sim.h"
 #include "scheduler.h"
 
-#define __TITLE__ "env.provider.simulator"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ env.provider.simulator
 
 namespace dsn { namespace tools {
 

@@ -30,7 +30,10 @@
 #include "replication_failure_detector.h"
 #include "rpc_replicated.h"
 
-#define __TITLE__ "Configuration"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ Configuration
 
 namespace dsn { namespace replication {
 
@@ -56,13 +59,22 @@ void replica::on_config_proposal(configuration_update_request& proposal)
         return;
     }   
 
+    if (_primary_states.reconfiguration_task != nullptr)
+    {
+        dinfo(
+            "%s: reconfiguration on the way, skip the incoming proposal",
+            name()
+            );
+        return;
+    }
+
     if (proposal.config.ballot > get_ballot())
     {
-        if (update_configuration(proposal.config))
+        if (!update_configuration(proposal.config))
         {
-            // is closing
+            // is closing or update failed
             return;
-        }   
+        }
     }
     
     switch (proposal.type)
@@ -456,7 +468,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
 
     // skip unncessary configuration change
     if (old_status == config.status && old_ballot == config.ballot)
-        return false;
+        return true;
 
     // skip invalid change
     switch (old_status)
@@ -650,14 +662,14 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         {
             ddebug("%s: being close ...", name());
             _stub->begin_close_replica(this);
-            return true;
+            return false;
         }
     }
     else
     {
         _stub->notify_replica_state_update(config, false);
     }
-    return false;
+    return true;
 }
 
 bool replica::update_local_configuration_with_no_ballot_change(partition_status s)

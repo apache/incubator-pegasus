@@ -34,8 +34,12 @@
 # include <dsn/internal/logging.h>
 # include <dsn/tool_api.h>
 # include <dsn/internal/service_app.h>
+# include <dsn/internal/command.h>
 
-#define __TITLE__ "service_engine"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ service_engine
 
 using namespace dsn::utils;
 
@@ -90,12 +94,26 @@ error_code service_node::start()
     return err;
 }
 
+
+void service_node::get_runtime_info(const std::string& indent, const std::vector<std::string>& args, __out_param std::stringstream& ss)
+{
+    ss << indent << name() << ":" << std::endl;
+
+    std::string indent2 = indent + "\t";
+    _computation->get_runtime_info(indent2, args, ss);
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////
 
 service_engine::service_engine(void)
 {
     _env = nullptr;
     _logging = nullptr;
+
+    ::dsn::register_command("engine", "engine - get engine internal information",
+        "engine [app-id]",
+        &service_engine::get_runtime_info
+        );
 }
 
 void service_engine::init_before_toollets(const service_spec& spec)
@@ -182,6 +200,36 @@ service_node* service_engine::start_node(service::service_app* app)
 
         return node;
     }
+}
+
+std::string service_engine::get_runtime_info(const std::vector<std::string>& args)
+{
+    std::stringstream ss;
+    if (args.size() == 0)
+    {
+        ss << "" << service_engine::instance()._nodes_by_app_id.size() << " nodes available:" << std::endl;
+        for (auto& kv : service_engine::instance()._nodes_by_app_id)
+        {
+            ss << "\t" << kv.second->id() << "." << kv.second->name() << std::endl;
+        }
+    }
+    else
+    {
+        std::string indent = "";
+        int id = atoi(args[0].c_str());
+        auto it = service_engine::instance()._nodes_by_app_id.find(id);
+        if (it != service_engine::instance()._nodes_by_app_id.end())
+        {
+            auto args2 = args;
+            args2.erase(args2.begin());
+            it->second->get_runtime_info(indent, args2, ss);
+        }
+        else
+        {
+            ss << "cannot find node with given app id";
+        }
+    }
+    return ss.str();
 }
 
 void service_engine::configuration_changed(configuration_ptr configuration)

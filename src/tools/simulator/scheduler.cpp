@@ -29,7 +29,10 @@
 # include <dsn/service_api.h>
 # include <set>
 
-# define __TITLE__ "simulator"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ simulator
 
 namespace dsn { namespace tools {
 

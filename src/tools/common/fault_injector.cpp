@@ -27,7 +27,10 @@
 #include <dsn/toollet/fault_injector.h>
 #include <dsn/service_api.h>
 
-#define __TITLE__ "toollet.fault_injector"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ toollet.fault_injector
 
 namespace dsn {
     namespace tools {
@@ -62,8 +65,8 @@ namespace dsn {
 
             CONFIG_FLD(double, rpc_request_drop_ratio, 0.0001)
             CONFIG_FLD(double, rpc_response_drop_ratio, 0.001)
-            CONFIG_FLD(double, disk_read_fail_ratio, 0.0)
-            CONFIG_FLD(double, disk_write_fail_ratio, 0.0)
+            CONFIG_FLD(double, disk_read_fail_ratio, 0.000001)
+            CONFIG_FLD(double, disk_write_fail_ratio, 0.000001)
 
             CONFIG_FLD(uint32_t, rpc_message_delay_ms_min, 0)
             CONFIG_FLD(uint32_t, rpc_message_delay_ms_max, 1000)

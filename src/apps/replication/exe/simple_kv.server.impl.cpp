@@ -28,7 +28,10 @@
 #include <sstream>
 #include <boost/filesystem.hpp>
 
-#define __TITLE__ "simple.kv"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ simple.kv
 
 namespace dsn {
     namespace replication {

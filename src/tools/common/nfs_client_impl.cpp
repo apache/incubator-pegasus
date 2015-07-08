@@ -368,11 +368,9 @@ namespace dsn {
 
                     if (err != ERR_SUCCESS)
                     {
-                        bool succ;
                         if (ctask != nullptr)
                         {
-                            ctask->cancel(true, &succ);
-                            if (succ)
+                            if (ctask->cancel(true))
                             {
                                 _concurrent_copy_request_count--;
                                 rc->release_ref();
@@ -381,8 +379,7 @@ namespace dsn {
 
                         if (wtask != nullptr)
                         {
-                            wtask->cancel(true, &succ);
-                            if (succ)
+                            if (wtask->cancel(true))
                             {
                                 _concurrent_local_write_count--;
                             }

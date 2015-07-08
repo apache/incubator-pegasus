@@ -35,7 +35,10 @@
 # include <sys/thr.h>
 # endif
 
-# define __TITLE__ "dsn.utils"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ dsn.utils
 
 namespace dsn {
     namespace utils {

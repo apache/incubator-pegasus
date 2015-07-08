@@ -26,7 +26,10 @@
 # include "net_client_session.h"
 # include <dsn/internal/logging.h>
 
-# define __TITLE__ "net.session"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ net.session
 
 namespace dsn {
     namespace tools {

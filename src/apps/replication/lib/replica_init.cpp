@@ -30,7 +30,10 @@
 #include <boost/filesystem.hpp>
 #include <dsn/internal/factory_store.h>
 
-#define __TITLE__ "init"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ init
 
 namespace dsn { namespace replication {
 

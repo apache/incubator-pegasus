@@ -68,7 +68,7 @@ extern void logv(const char *file, const char *function, const int line, logging
 extern void logv(const char *file, const char *function, const int line, logging_level logLevel, const char* title);
 } // end namespace
 
-#define dlog(level, title, ...) do {if (level >= logging_start_level) dsn::logv(__FILE__, __FUNCTION__, __LINE__, level, title, __VA_ARGS__); } while(false)
+#define dlog(level, title, ...) do {if (level >= ::dsn::logging_start_level) dsn::logv(__FILE__, __FUNCTION__, __LINE__, level, #title, __VA_ARGS__); } while(false)
 #define dinfo(...)  dlog(dsn::log_level_INFORMATION, __TITLE__, __VA_ARGS__)
 #define ddebug(...) dlog(dsn::log_level_DEBUG, __TITLE__, __VA_ARGS__)
 #define dwarn(...)  dlog(dsn::log_level_WARNING, __TITLE__, __VA_ARGS__)

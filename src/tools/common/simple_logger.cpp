@@ -35,10 +35,10 @@ namespace dsn {
         {
             uint64_t ts = 0;
             if (::dsn::service::system::is_ready())
-                ts = ::dsn::service::env::now_ms();
+                ts = ::dsn::service::env::now_ns();
 
             char str[24];
-            ::dsn::utils::time_ms_to_string(ts, str);
+            ::dsn::utils::time_ms_to_string(ts/1000000, str);
 
             int tid = ::dsn::utils::get_current_tid(); 
 

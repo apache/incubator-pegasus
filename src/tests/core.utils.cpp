@@ -117,8 +117,10 @@ TEST(core, dlink)
         auto p1 = p;
         p = p->next();
         p1->remove();
+        count--;
     }
 
     EXPECT_TRUE(hdr.is_alone());
+    EXPECT_TRUE(count == 0);
 }
 

@@ -3,7 +3,10 @@
 # include "nfs_types.h"
 
 
-# define __TITLE__ "nfs"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ nfs
 
 namespace dsn { namespace service { 
     // define RPC task code for service 'nfs'

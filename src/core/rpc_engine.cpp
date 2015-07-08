@@ -37,7 +37,10 @@
 # include <dsn/internal/factory_store.h>
 # include <set>
 
-# define __TITLE__ "rpc.engine"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ rpc.engine
 
 namespace dsn {
     

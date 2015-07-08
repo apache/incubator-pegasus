@@ -30,7 +30,10 @@
 #include <io.h>
 #endif
 
-#define __TITLE__ "mutation_log"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ mutation_log
 
 namespace dsn { namespace replication {
 
@@ -398,7 +401,9 @@ void mutation_log::close()
 
         if (nullptr != _pending_write_timer)
         {
-            if (_pending_write_timer->cancel(false))
+            bool finish;
+            _pending_write_timer->cancel(false, &finish);
+            if (finish)
             {
                 _pending_write_timer = nullptr;
                 write_pending_mutations(false);

@@ -29,7 +29,10 @@
 # include <dsn/internal/task_code.h>
 # include <dsn/internal/network.h>
 
-#define __TITLE__ "ConfigFile"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ ConfigFile
 
 namespace dsn {
 

@@ -32,7 +32,10 @@
 # include <vector>
 
 # ifndef __TITLE__
-# define __TITLE__ "perf.test.helper"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ perf.test.helper
 # endif
 
 namespace dsn {
@@ -42,16 +45,52 @@ namespace dsn {
         class perf_client_helper
         {
         protected:
+            perf_client_helper(){}
+
             struct perf_test_case
             {
-                int rounds;
-                int timeout_ms;
+                int  rounds;
+                int  timeout_ms;
+                bool concurrent;
+
+                // statistics 
+                std::atomic<int> timeout_rounds;
+                std::atomic<int> error_rounds;
+                int    succ_rounds;                
+                double succ_latency_avg_us;
+                double succ_qps;
+                int    min_latency_us;
+                int    max_latency_us;
+
+                perf_test_case& operator = (const perf_test_case& r)
+                {
+                    rounds = r.rounds;
+                    timeout_ms = r.timeout_ms;
+                    concurrent = r.concurrent;
+                    timeout_rounds.store(r.timeout_rounds.load());
+                    error_rounds.store(r.error_rounds.load());
+                    succ_rounds = r.succ_rounds;
+                    succ_latency_avg_us = r.succ_latency_avg_us;
+                    succ_qps = r.succ_qps;
+                    min_latency_us = r.min_latency_us;
+                    max_latency_us = r.max_latency_us;
+                    return *this;
+                }
+
+                perf_test_case(const perf_test_case& r)
+                {
+                    *this = r;
+                }
+
+                perf_test_case()
+                {}
             };
 
             struct perf_test_suite
             {
                 const char* name;
-                std::function<void()> start;
+                const char* config_section;
+                std::function<void()> send_one;
                 std::vector<perf_test_case> cases;
             };
 
@@ -59,13 +98,17 @@ namespace dsn {
             {
                 // TODO: load from configuration files
                 int timeouts_ms[] = { 1, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000 };
-                int rounds = 100000;
+                int rounds = ::dsn::service::system::config()->get_value<int>(
+                        s.config_section, "perf_test_rounds", 10000);
 
-                for (int i = static_cast<int>(sizeof(timeouts_ms) / sizeof(int)) - 1; i >= 0; i--)
+                int last_index = static_cast<int>(sizeof(timeouts_ms) / sizeof(int)) - 1;
+                s.cases.clear();
+                for (int i = last_index; i >= 0; i--)
                 {
                     perf_test_case c;
                     c.rounds = rounds;
                     c.timeout_ms = timeouts_ms[i];
+                    c.concurrent = (i != last_index);
                     s.cases.push_back(c);
                 }
             }
@@ -82,7 +125,7 @@ namespace dsn {
             void* prepare_send_one()
             {
                 int id = ++_rounds_req;
-                if (id > _rounds)
+                if (id > _current_case->rounds)
                     return nullptr;
 
                 ++_live_rpc_count;
@@ -94,11 +137,18 @@ namespace dsn {
             {
                 int id = (int)(size_t)(context);
                 int lr = --_live_rpc_count;
-                int next = 2;
-                if (err == ERR_TIMEOUT)
+                int next = _current_case->concurrent ? 2 : 1;
+                if (err != ERR_SUCCESS)
                 {
+                    if (err == ERR_TIMEOUT)
+                        _current_case->timeout_rounds++;
+                    else
+                        _current_case->error_rounds++;
+
                     _rounds_latency_us[id - 1] = 0;
-                    next = (lr == 0 ? 1 : 0);
+
+                    if (err == ERR_TIMEOUT)
+                        next = (lr == 0 ? 1 : 0);
                 }
                 else
                 {
@@ -106,7 +156,7 @@ namespace dsn {
                 }
 
                 // if completed
-                if (++_rounds_resp == _rounds)
+                if (++_rounds_resp == _current_case->rounds)
                 {
                     finalize_case();
                     return;
@@ -122,22 +172,43 @@ namespace dsn {
         private:
             void finalize_case()
             {
-                int non_timeouts = 0;
+                int sc = 0;
                 double sum = 0.0;
+                uint64_t lmin_us = 10000000000ULL;
+                uint64_t lmax_us = 0;
                 for (auto& t : _rounds_latency_us)
                 {
                     if (t != 0)
                     {
-                        non_timeouts++;
+                        sc++;
                         sum += static_cast<double>(t);
+
+                        if (t < lmin_us)
+                            lmin_us = t;
+                        if (t > lmax_us)
+                            lmax_us = t;
                     }
                 }
+                
+                auto& suit = _suits[_current_suit_index];
+                auto& cs = suit.cases[_current_case_index];
+                cs.succ_rounds = cs.rounds - cs.timeout_rounds - cs.error_rounds;
+                //dassert(cs.succ_rounds == sc, "cs.succ_rounds vs sc = %d vs %d", cs.succ_rounds, sc);
+
+                cs.succ_latency_avg_us = sum / (double)sc;
+                cs.succ_qps = (double)sc / ((double)(env::now_us() - _case_start_ts_us) / 1000.0 / 1000.0);
+                cs.min_latency_us = static_cast<int>(lmin_us);
+                cs.max_latency_us = static_cast<int>(lmax_us);
 
                 std::stringstream ss;
-                ss << "rpc test " << _name << " w/ target timeout " << _timeout_ms << " ms for " << _rounds
-                    << " rounds, timeout: " << (_rounds - non_timeouts)
-                    << ", non-timeout avg latency: " << sum / 1000.0 / (double)non_timeouts << " ms"
-                    << ", qps = " << (double)non_timeouts/((double)(env::now_us() - _case_start_ts_us) / 1000.0 / 1000.0) << "#/s";
+                ss << "TEST " << _name
+                    << ", timeout/err/succ: " << cs.timeout_rounds << "/" << cs.error_rounds << "/" << cs.succ_rounds
+                    << ", latency(us): " << cs.succ_latency_avg_us << "(avg), "
+                    << cs.min_latency_us << "(min), "
+                    << cs.max_latency_us << "(max)"
+                    << ", qps: " << cs.succ_qps << "#/s"
+                    << ", target timeout(ms) " << cs.timeout_ms
+                    ;
 
                 dwarn(ss.str().c_str());
 
@@ -157,8 +228,30 @@ namespace dsn {
                     _current_case_index = 0;
 
                     if (_current_suit_index >= (int)_suits.size())
+                    {
+                        std::stringstream ss;
+
+                        for (auto& s : _suits)
+                        {
+                            for (auto& cs : s.cases)
+                            {
+                                ss << "TEST " << s.name
+                                    << ", timeout/err/succ: " << cs.timeout_rounds << "/" << cs.error_rounds << "/" << cs.succ_rounds
+                                    << ", latency(us): " << cs.succ_latency_avg_us << "(avg), "
+                                    << cs.min_latency_us << "(min), "
+                                    << cs.max_latency_us << "(max)"
+                                    << ", qps: " << cs.succ_qps << "#/s"
+                                    << ", target timeout(ms) " << cs.timeout_ms
+                                    << std::endl;
+                            }
+                        }
+
+                        dwarn(ss.str().c_str());
                         return;
+                    }
                 }
+
+                std::this_thread::sleep_for(std::chrono::seconds(2));
 
                 // get next case
                 auto& suit = _suits[_current_suit_index];
@@ -167,25 +260,30 @@ namespace dsn {
                 // setup for the case
                 _name = suit.name;
                 _timeout_ms = cs.timeout_ms;
-                _rounds = cs.rounds;
+                _current_case = &cs;
+                cs.timeout_rounds = 0;
+                cs.error_rounds = 0;
                 _case_start_ts_us = env::now_us();
 
                 _live_rpc_count = 0;
                 _rounds_req = 0;
                 _rounds_resp = 0;
-                _rounds_latency_us.resize(_rounds, 0);
+                _rounds_latency_us.resize(cs.rounds, 0);
 
                 // start
-                suit.start();
+                suit.send_one();
             }
 
+        private:
+            perf_client_helper(const perf_client_helper&) = delete;
             
         protected:
             int              _timeout_ms;
 
         private:
             std::string      _name;            
-            int              _rounds;
+            perf_test_case   *_current_case;
+
             std::atomic<int> _live_rpc_count;
             std::atomic<int> _rounds_req;
             std::atomic<int> _rounds_resp;
