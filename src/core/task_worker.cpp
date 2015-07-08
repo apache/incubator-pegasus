@@ -34,7 +34,10 @@
 # endif
 
 
-# define __TITLE__ "task.worker"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ task.worker
 
 namespace dsn {
 

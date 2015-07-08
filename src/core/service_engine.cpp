@@ -35,7 +35,10 @@
 # include <dsn/tool_api.h>
 # include <dsn/internal/service_app.h>
 
-#define __TITLE__ "service_engine"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ service_engine
 
 using namespace dsn::utils;
 

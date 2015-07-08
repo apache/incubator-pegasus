@@ -33,7 +33,10 @@
 # include "server_state.h"
 # include "replication_failure_detector.h"
 
-# define __TITLE__ "replication.global.check"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ replication.global.check
 
 namespace dsn {
     namespace replication {

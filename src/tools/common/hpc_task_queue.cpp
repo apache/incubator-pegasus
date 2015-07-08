@@ -27,7 +27,10 @@
 # include "hpc_task_queue.h"
 # include "shared_io_service.h"
 
-# define __TITLE__ "task.queue.hpc"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ task.queue.hpc
 
 namespace dsn {
     namespace tools {

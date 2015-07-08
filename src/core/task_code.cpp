@@ -31,7 +31,10 @@
 # include <dsn/internal/command.h>
 # include <sstream>
 
-#define __TITLE__ "task_spec"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ task_spec
 
 namespace dsn {
 

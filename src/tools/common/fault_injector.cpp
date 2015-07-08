@@ -27,7 +27,10 @@
 #include <dsn/toollet/fault_injector.h>
 #include <dsn/service_api.h>
 
-#define __TITLE__ "toollet.fault_injector"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ toollet.fault_injector
 
 namespace dsn {
     namespace tools {

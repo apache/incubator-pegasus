@@ -35,7 +35,10 @@
 # include "rpc_engine.h"
 # include <dsn/internal/synchronize.h>
 
-#define __TITLE__ "task"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ task
 
 namespace dsn {
 

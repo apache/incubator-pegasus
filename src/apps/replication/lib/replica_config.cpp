@@ -30,7 +30,10 @@
 #include "replication_failure_detector.h"
 #include "rpc_replicated.h"
 
-#define __TITLE__ "Configuration"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ Configuration
 
 namespace dsn { namespace replication {
 

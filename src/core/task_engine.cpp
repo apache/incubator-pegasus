@@ -28,7 +28,10 @@
 # include <dsn/internal/factory_store.h>
 # include <dsn/service_api.h>
 
-#define __TITLE__ "task_engine"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ task_engine
 
 using namespace dsn::utils;
 

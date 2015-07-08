@@ -30,7 +30,10 @@
 //#ifdef _WIN32
 # if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
 
-# define __TITLE__ "coredump"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ coredump
 
 namespace dsn {
     namespace utils {

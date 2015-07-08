@@ -32,7 +32,10 @@
 # include <vector>
 
 # ifndef __TITLE__
-# define __TITLE__ "perf.test.helper"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ perf.test.helper
 # endif
 
 namespace dsn {

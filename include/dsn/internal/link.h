@@ -27,7 +27,10 @@
 
 # include <dsn/internal/logging.h>
 
-# define __TITLE__ "linklist"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ linklist
 
 class slink
 {
