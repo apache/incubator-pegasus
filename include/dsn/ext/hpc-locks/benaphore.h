@@ -69,12 +69,12 @@ public:
     : m_contentionCount(0)
     , m_recursion(0)
     {
-		m_owner = ::dsn::utils::get_invalid_tid();
+        m_owner = ::dsn::utils::get_invalid_tid();
     }
 
     void lock()
     {
-		auto tid = ::dsn::utils::get_current_tid();
+        auto tid = ::dsn::utils::get_current_tid();
         if (m_contentionCount.fetch_add(1, std::memory_order_acquire) > 0)
         {
             if (tid != m_owner.load(std::memory_order_relaxed))
@@ -87,7 +87,7 @@ public:
  
     bool tryLock()
     {
-		auto tid = ::dsn::utils::get_current_tid();
+        auto tid = ::dsn::utils::get_current_tid();
         if (m_owner.load(std::memory_order_relaxed) == tid)
         {
             // Already inside the lock
@@ -109,7 +109,7 @@ public:
 
     void unlock()
     {
-		auto tid = ::dsn::utils::get_current_tid();
+        auto tid = ::dsn::utils::get_current_tid();
         assert(tid == m_owner.load(std::memory_order_relaxed));
         int recur = --m_recursion;
         if (recur == 0)

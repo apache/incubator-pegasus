@@ -53,6 +53,7 @@ public:
     // rpc routines
     //
     void call(message_ptr& request, rpc_response_task_ptr& call);
+    void on_recv_request(message_ptr& msg, int delay_ms);
     static void reply(message_ptr& response);
     
     //
@@ -60,7 +61,6 @@ public:
     //
     service_node* node() const { return _node; }
     const end_point& primary_address() const { return _local_primary_address; }
-    void on_recv_request(message_ptr& msg, int delay_ms);
 
 private:
     network* create_network(const network_server_config& netcs, bool client_only);
@@ -70,7 +70,6 @@ private:
     service_node                          *_node;
     std::vector<std::vector<network*>>    _client_nets; // <format, <CHANNEL, network*>>
     std::map<int, std::vector<network*>>  _server_nets; // <port, <CHANNEL, network*>>
-    std::shared_ptr<rpc_client_matcher>   _matcher;
     end_point                             _local_primary_address;
 
     typedef std::map<std::string, rpc_handler_ptr> rpc_handlers;
