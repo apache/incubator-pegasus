@@ -42,6 +42,8 @@ typedef HANDLE handle_t;
 
 # elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
 
+# include <unistd.h>
+
 # define __selectany __attribute__((weak)) extern 
 typedef int handle_t;
 

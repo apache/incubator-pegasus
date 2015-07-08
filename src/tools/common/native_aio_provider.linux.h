@@ -31,7 +31,7 @@
 # if defined(__linux__)
 # include <queue>
 # include <stdio.h>        /* for perror() */
-# include <unistd.h>        /* for syscall() */
+//# include <unistd.h>        /* for syscall() */
 # include <sys/syscall.h>    /* for __NR_* definitions */
 # include <libaio.h>
 # include <fcntl.h>        /* O_RDWR */
