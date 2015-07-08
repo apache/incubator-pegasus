@@ -67,7 +67,7 @@ typedef int handle_t;
 
 # ifndef CONTAINING_RECORD 
 # define CONTAINING_RECORD(address, type, field) \
-            ((type *)((char*)(address)-FIELD_OFFSET(type, field)))
+    ((type *)((char*)(address)-FIELD_OFFSET(type, field)))
 # endif
 
 # ifndef MAX_COMPUTERNAME_LENGTH
@@ -76,7 +76,7 @@ typedef int handle_t;
 
 # ifndef ARRAYSIZE
 # define ARRAYSIZE(a) \
-	((sizeof(a) / sizeof(*(a))) / static_cast<size_t>(!(sizeof(a) % sizeof(*(a)))))
+    ((sizeof(a) / sizeof(*(a))) / static_cast<size_t>(!(sizeof(a) % sizeof(*(a)))))
 # endif
 
 # ifndef __in_param
