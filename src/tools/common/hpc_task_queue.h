@@ -40,11 +40,11 @@ namespace dsn {
             virtual int      count() const { return _count.load(); }
 
         private:
-            std::atomic<int> _count;
+            std::atomic<int>              _count;
             
-            ::dsn::utils::ex_lock_nr _lock;
-            dlink                    _tasks;
-            ::dsn::utils::semaphore  _sema;
+            ::dsn::utils::ex_lock_nr_spin _lock;
+            dlink                         _tasks;
+            ::dsn::utils::semaphore       _sema;
             //std::atomic<int> _counts[TASK_PRIORITY_COUNT];
             //dlink            _tasks[TASK_PRIORITY_COUNT];
         };

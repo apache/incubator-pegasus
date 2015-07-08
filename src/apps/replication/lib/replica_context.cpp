@@ -151,7 +151,8 @@ bool potential_secondary_context::cleanup(bool force)
 {
     if (learn_remote_files_task != nullptr)
     {
-        bool clean_remote_learning = learn_remote_files_task->cancel(false);
+        bool clean_remote_learning;
+        learn_remote_files_task->cancel(false, &clean_remote_learning);
         if (force)
         {
             learn_remote_files_task->cancel(true);

@@ -58,6 +58,7 @@ public:
     bool shared_same_worker_with_current_task(task* task) const;
     task_engine* engine() const { return _owner; }
     service_node* node() const { return _node; }
+    void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, __out_param std::stringstream& ss);
 
 private:
     threadpool_spec                    _spec;
@@ -69,7 +70,6 @@ private:
     std::vector<admission_controller*> _controllers;
 
     bool                              _is_running;
-    perf_counter_ptr  _pending_task_counter;
 };
 
 class task_engine
@@ -90,6 +90,7 @@ public:
     bool is_started() const { return _is_running; }
 
     service_node* node() const { return _node; }
+    void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, __out_param std::stringstream& ss);
     
 private:
     std::vector<task_worker_pool*> _pools;

@@ -37,7 +37,10 @@
 # include "command_manager.h"
 # include <thread>
 
-# define __TITLE__ "service.api"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ service.api
 
 using namespace dsn::tools;
 

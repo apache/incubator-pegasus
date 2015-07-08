@@ -29,7 +29,10 @@
 #include <dsn/internal/factory_store.h>
 #include <boost/filesystem.hpp>
 
-#define __TITLE__ "TwoPhaseCommit"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ TwoPhaseCommit
 
 namespace dsn { namespace replication {
 

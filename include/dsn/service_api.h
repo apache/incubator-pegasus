@@ -47,7 +47,7 @@ namespace tasking
 
     //
     // cancel a task
-    // return - whether the task has completed (not necessarily cancelled though)
+    // return - whether this cancel succeed
     //
     inline bool cancel(task_ptr& task, bool wait_until_finished)
     {

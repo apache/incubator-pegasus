@@ -214,7 +214,7 @@ private:
     }
 
 public:
-    LightweightSemaphore(int initialCount = 0, int spin_count = 10000) : m_count(initialCount), m_spin_count(spin_count)
+    LightweightSemaphore(int initialCount = 0, int spin_count = 128) : m_count(initialCount), m_spin_count(spin_count)
     {
         assert(initialCount >= 0);
     }

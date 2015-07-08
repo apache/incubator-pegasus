@@ -29,7 +29,10 @@
 
 # if defined(DSN_PLATFORM_POSIX)
 
-# define __TITLE__ "coredump"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ coredump
 
 namespace dsn {
     namespace utils {

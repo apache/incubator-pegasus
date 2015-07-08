@@ -60,6 +60,7 @@ namespace dsn {
             register_component_provider<native_win_aio_provider>("dsn::tools::native_aio_provider");
 #elif defined(__linux__)
             register_component_provider<native_linux_aio_provider>("dsn::tools::native_aio_provider");
+            register_component_provider<native_posix_aio_provider>("dsn::tools::posix_aio_provider");
 #else
             register_component_provider<native_posix_aio_provider>("dsn::tools::native_aio_provider");
 #endif

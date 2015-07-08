@@ -27,7 +27,10 @@
 # include "simple_task_queue.h"
 
 
-# define __TITLE__ "task.queue.simple"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ task.queue.simple
 
 namespace dsn {
     namespace tools{
@@ -64,7 +67,9 @@ namespace dsn {
         task_ptr simple_task_queue::dequeue()
         {
             long c = 0;
-            return _samples.dequeue(c);
+            auto t = _samples.dequeue(c);
+            dassert(t != nullptr, "dequeue does not return empty tasks");
+            return t;
         }
 
         int      simple_task_queue::count() const

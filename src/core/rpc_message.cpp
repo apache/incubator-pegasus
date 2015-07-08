@@ -33,7 +33,10 @@
 
 using namespace dsn::utils;
 
-#define __TITLE__ "message"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ message
 #define CRC_INVALID 0xdead0c2c
 
 namespace dsn {

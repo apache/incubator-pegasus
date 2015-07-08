@@ -27,7 +27,10 @@
 # include "task_engine.h"
 # include <dsn/internal/perf_counters.h>
 # include <cstdio>
-# define __TITLE__ "task_queue"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ task_queue
 
 namespace dsn {
 

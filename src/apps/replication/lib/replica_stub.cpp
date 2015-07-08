@@ -31,7 +31,10 @@
 #include "rpc_replicated.h"
 #include <boost/filesystem.hpp>
 
-#define __TITLE__ "Stub"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ Stub
 
 namespace dsn { namespace replication {
 

@@ -28,7 +28,10 @@
 #include <dsn/internal/singleton_store.h>
 #include "network.sim.h" 
 
-#define __TITLE__ "net.provider.sim"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ net.provider.sim
 
 namespace dsn { namespace tools {
 
