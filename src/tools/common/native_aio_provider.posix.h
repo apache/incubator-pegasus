@@ -25,10 +25,11 @@
  */
 #pragma once
 
-# ifdef DSN_PLATFORM_POSIX
-
 # include <dsn/tool_api.h>
 # include <dsn/internal/synchronize.h>
+
+# ifdef DSN_PLATFORM_POSIX
+
 # include <aio.h>
 # include <fcntl.h>
 

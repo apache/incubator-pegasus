@@ -24,9 +24,9 @@
  * THE SOFTWARE.
  */
 
-# ifdef DSN_PLATFORM_POSIX
-
 # include "native_aio_provider.posix.h"
+
+# ifdef DSN_PLATFORM_POSIX
 
 # include <aio.h>
 # include <fcntl.h>
