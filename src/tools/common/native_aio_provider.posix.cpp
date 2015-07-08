@@ -149,9 +149,9 @@ namespace dsn {
                 break;
             }
 
-            if (r < 0)
+            if (r != 0)
             {
-                derror("file op faile, err = %d", errno);
+                derror("file op failed, err = %d. On FreeBSD, you may need to load aio kernel module by running 'sudo kldload aio'.", errno);
 
                 if (async)
                 {
