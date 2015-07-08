@@ -30,7 +30,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ task_queue
+# define __TITLE__ "task_queue"
 
 namespace dsn {
 

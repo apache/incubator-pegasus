@@ -31,7 +31,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ simple.kv
+# define __TITLE__ "simple.kv"
 
 namespace dsn {
     namespace replication {

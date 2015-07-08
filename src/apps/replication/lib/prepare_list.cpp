@@ -29,7 +29,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ prepare_list
+# define __TITLE__ "prepare_list"
 
 namespace dsn { namespace replication {
 

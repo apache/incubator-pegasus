@@ -16,6 +16,7 @@ type = server
 arguments = 
 ports = 27001
 run = true
+pools = THREAD_POOL_DEFAULT
     
 [apps.client]
 name = client
@@ -23,6 +24,7 @@ type = client
 arguments = localhost 27001
 count = 1
 run = true
+pools = THREAD_POOL_DEFAULT
 
 <?php foreach ($_PROG->services as $svc) { ?>
 [apps.client.<?=$svc->name?>.perf.test]

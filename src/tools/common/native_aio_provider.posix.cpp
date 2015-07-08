@@ -35,7 +35,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ aio.provider.posix
+# define __TITLE__ "aio.provider.posix"
 
 namespace dsn {
     namespace tools {
@@ -94,7 +94,7 @@ namespace dsn {
             {
                 if (err != 0)
                 {
-                    derror("file operation failed, errno = %d", errno);
+                    derror(""file operation failed, errno = %d", errno);
                 }
 
                 size_t bytes = aio_return(&ctx->cb); // from e.g., read or write

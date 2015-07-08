@@ -31,7 +31,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ TwoPhaseCommit
+# define __TITLE__ "TwoPhaseCommit"
 
 namespace dsn { namespace replication {
 

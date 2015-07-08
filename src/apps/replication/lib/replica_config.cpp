@@ -33,7 +33,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ Configuration
+# define __TITLE__ "Configuration"
 
 namespace dsn { namespace replication {
 

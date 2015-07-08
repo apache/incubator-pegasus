@@ -303,7 +303,7 @@ template<> inline bool configuration::get_value<bool>(const char* section, const
             return false; \
         } \
         else \
-            val.fld.push_back(type::from_string(v.c_str(), static_cast<type>(0))); \
+            val.fld.push_back(type(v.c_str())); \
     } \
     if (val.fld.size() == 0 && default_value) \
         val.fld = default_value->fld; \

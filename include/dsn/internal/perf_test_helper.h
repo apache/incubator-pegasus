@@ -35,7 +35,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ perf.test.helper
+# define __TITLE__ "perf.test.helper"
 # endif
 
 namespace dsn {

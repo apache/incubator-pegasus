@@ -34,7 +34,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ Stub
+# define __TITLE__ "replica.stub"
 
 namespace dsn { namespace replication {
 

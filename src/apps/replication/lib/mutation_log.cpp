@@ -33,7 +33,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ mutation_log
+# define __TITLE__ "mutation_log"
 
 namespace dsn { namespace replication {
 

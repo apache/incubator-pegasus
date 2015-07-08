@@ -31,7 +31,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ GroupCheck
+# define __TITLE__ "GroupCheck"
 
 namespace dsn { namespace replication {
 

@@ -32,7 +32,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ Learn
+# define __TITLE__ "replica.learn"
 
 namespace dsn { namespace replication {
 

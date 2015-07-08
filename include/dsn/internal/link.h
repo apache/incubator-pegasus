@@ -30,7 +30,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ linklist
+# define __TITLE__ "linklist"
 
 class slink
 {

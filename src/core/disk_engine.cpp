@@ -33,7 +33,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ disk_engine
+# define __TITLE__ "disk_engine"
 
 using namespace dsn::utils;
 

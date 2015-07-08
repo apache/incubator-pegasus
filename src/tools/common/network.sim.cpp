@@ -31,7 +31,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ net.provider.sim
+# define __TITLE__ "net.provider.sim"
 
 namespace dsn { namespace tools {
 

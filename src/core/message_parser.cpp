@@ -29,7 +29,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ message.parser
+# define __TITLE__ "message.parser"
 
 namespace dsn {
 

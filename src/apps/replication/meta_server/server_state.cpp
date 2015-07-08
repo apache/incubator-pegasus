@@ -30,7 +30,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ meta.server.state
+# define __TITLE__ "meta.server.state"
 
 void marshall(binary_writer& writer, const app_state& val, uint16_t pos = 0xffff)
 {

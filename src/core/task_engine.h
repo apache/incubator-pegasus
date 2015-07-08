@@ -80,7 +80,7 @@ public:
     //
     // service management routines
     //
-    void start(const std::vector<threadpool_spec>& spec);
+    void start(const std::list<threadpool_code>& pools);
 
     //
     // task management routines

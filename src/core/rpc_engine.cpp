@@ -40,7 +40,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ rpc.engine
+# define __TITLE__ "rpc.engine"
 
 namespace dsn {
     

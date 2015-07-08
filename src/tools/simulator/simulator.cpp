@@ -36,7 +36,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ tools.simulator
+# define __TITLE__ "tools.simulator"
 
 namespace dsn { namespace tools {
 

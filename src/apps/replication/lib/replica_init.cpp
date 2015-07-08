@@ -33,7 +33,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ init
+# define __TITLE__ "replica.init"
 
 namespace dsn { namespace replication {
 

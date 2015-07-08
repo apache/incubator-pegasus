@@ -33,6 +33,10 @@
 
 namespace dsn {
 
+//
+// channel and header format are specified per task-code
+// port is specified per RPC call
+//
 struct network_client_config
 {
     std::string factory_name;
@@ -66,11 +70,12 @@ struct service_app_spec
     int                  id;    // global for all roles
     int                  index; // local index for the current role (1,2,3,...)
     std::string          role;
-    
+    std::string          config_section;
     std::string          name; 
     std::string          type;
     std::string          arguments;
     std::vector<int>     ports;
+    std::list<threadpool_code> pools;
     int                  delay_seconds;
     bool                 run;
     int                  count; // index = 1,2,...,count
@@ -105,6 +110,7 @@ CONFIG_BEGIN(service_app_spec)
     CONFIG_FLD(std::string, type, "")
     CONFIG_FLD(std::string, arguments, "")
     CONFIG_FLD_LIST_CONVERT(ports, ',', service_app_spec::to_ports)
+    CONFIG_FLD_ID_LIST(threadpool_code, pools)
     CONFIG_FLD(int, delay_seconds, 0)
     CONFIG_FLD(int, count, 1)
     CONFIG_FLD(bool, run, true)

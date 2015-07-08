@@ -29,7 +29,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ net.session
+# define __TITLE__ "net.session"
 
 namespace dsn {
     namespace tools {

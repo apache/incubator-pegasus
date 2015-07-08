@@ -32,7 +32,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ failure_detector
+# define __TITLE__ "failure_detector"
 
 using namespace ::dsn::service;
 

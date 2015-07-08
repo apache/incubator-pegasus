@@ -32,7 +32,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ coredump
+# define __TITLE__ "coredump"
 
 namespace dsn {
     namespace utils {
