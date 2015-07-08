@@ -24,13 +24,12 @@
  * THE SOFTWARE.
  */
 
+# ifdef __linux__
 
-#include "native_aio_provider.linux.h"
+# include "native_aio_provider.linux.h"
 
-#if defined(__linux__)
-
-#include <fcntl.h>
-#include <cstdlib>
+# include <fcntl.h>
+# include <cstdlib>
 
 #define __TITLE__ "aio.provider.native"
 

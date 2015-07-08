@@ -42,6 +42,9 @@ typedef HANDLE handle_t;
 
 # elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
 
+# define DSN_PLATFORM_POSIX
+# include <unistd.h>
+
 # define __selectany __attribute__((weak)) extern 
 typedef int handle_t;
 
@@ -69,6 +72,11 @@ typedef int handle_t;
 
 # ifndef MAX_COMPUTERNAME_LENGTH
 # define MAX_COMPUTERNAME_LENGTH 32
+# endif
+
+# ifndef ARRAYSIZE
+# define ARRAYSIZE(a) \
+	((sizeof(a) / sizeof(*(a))) / static_cast<size_t>(!(sizeof(a) % sizeof(*(a)))))
 # endif
 
 # ifndef __in_param

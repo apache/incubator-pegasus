@@ -26,12 +26,12 @@
 
 # pragma once
 
+# ifdef __linux__
+
 # include <dsn/tool_api.h>
 # include <dsn/internal/synchronize.h>
-# if defined(__linux__)
 # include <queue>
 # include <stdio.h>        /* for perror() */
-# include <unistd.h>        /* for syscall() */
 # include <sys/syscall.h>    /* for __NR_* definitions */
 # include <libaio.h>
 # include <fcntl.h>        /* O_RDWR */
@@ -72,5 +72,6 @@ namespace dsn {
         };
     }
 }
+
 # endif
 
