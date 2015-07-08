@@ -71,6 +71,11 @@ typedef int handle_t;
 # define MAX_COMPUTERNAME_LENGTH 32
 # endif
 
+# ifndef ARRAYSIZE
+# define ARRAYSIZE(a) \
+	((sizeof(a) / sizeof(*(a))) / static_cast<size_t>(!(sizeof(a) % sizeof(*(a)))))
+# endif
+
 # ifndef __in_param
 # define __in_param
 # endif
