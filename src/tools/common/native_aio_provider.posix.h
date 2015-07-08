@@ -25,12 +25,12 @@
  */
 #pragma once
 
+# ifdef DSN_PLATFORM_POSIX
+
 # include <dsn/tool_api.h>
 # include <dsn/internal/synchronize.h>
-# if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
 # include <aio.h>
 # include <fcntl.h>
-# endif
 
 namespace dsn {
     namespace tools {
@@ -49,11 +49,10 @@ namespace dsn {
             error_code aio_internal(aio_task_ptr& aio, bool async, __out_param uint32_t* pbytes = nullptr);
 
         private:
-# if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
             friend void aio_completed(sigval sigval);
-# endif
         };
     }
 }
 
+# endif
 

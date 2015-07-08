@@ -29,7 +29,7 @@
 #if defined(_WIN32)
 #define NATIVE_AIO_PROVIDER native_win_aio_provider
 #include "../common/native_aio_provider.win.h"
-#elif defined(_LINUX)
+#elif defined(__linux__)
 #define NATIVE_AIO_PROVIDER native_linux_aio_provider
 #include "../common/native_aio_provider.linux.h"
 #else

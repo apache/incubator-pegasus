@@ -42,6 +42,7 @@ typedef HANDLE handle_t;
 
 # elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
 
+# define DSN_PLATFORM_POSIX
 # include <unistd.h>
 
 # define __selectany __attribute__((weak)) extern 
