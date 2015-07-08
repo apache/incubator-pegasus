@@ -65,7 +65,7 @@ namespace dsn {
         {
             // TODO: handle failure
             ::close(static_cast<int>(hFile));
-            return ERR_SUCCESS;
+            return ERR_OK;
         }
 
         disk_aio_ptr native_linux_aio_provider::prepare_aio_context(aio_task* tsk)
@@ -111,11 +111,11 @@ namespace dsn {
             if (!aio->evt)
             {
                 aio_task_ptr aio_ptr(aio->tsk);
-                aio->this_->complete_io(aio_ptr, (err == 0) ? ERR_SUCCESS : ERR_FILE_OPERATION_FAILED, bytes);
+                aio->this_->complete_io(aio_ptr, (err == 0) ? ERR_OK : ERR_FILE_OPERATION_FAILED, bytes);
             }
             else
             {
-                aio->err = (err == 0) ? ERR_SUCCESS : ERR_FILE_OPERATION_FAILED;
+                aio->err = (err == 0) ? ERR_OK : ERR_FILE_OPERATION_FAILED;
                 aio->bytes = bytes;
                 aio->evt->notify();
             }
@@ -148,7 +148,7 @@ namespace dsn {
             if (!async)
             {
                 aio->evt = new utils::notify_event();
-                aio->err = ERR_SUCCESS;
+                aio->err = ERR_OK;
                 aio->bytes = 0;
             }
 

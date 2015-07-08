@@ -22,7 +22,7 @@ public:
 <?php foreach ($_PROG->services as $svc) { ?>
         _<?=$svc->name?>_svc.open_service();
 <?php } ?>
-        return ::dsn::ERR_SUCCESS;
+        return ::dsn::ERR_OK;
     }
 
     virtual void stop(bool cleanup = false)
@@ -65,7 +65,7 @@ public:
         _<?=$svc->name?>_client = new <?=$svc->name?>_client(_server);
 <?php } ?>
         _timer = ::dsn::service::tasking::enqueue(<?=$_PROG->get_test_task_code()?>, this, &<?=$_PROG->name?>_client_app::on_test_timer, 0, 0, 1000);
-        return ::dsn::ERR_SUCCESS;
+        return ::dsn::ERR_OK;
     }
 
     virtual void stop(bool cleanup = false)
@@ -139,7 +139,7 @@ public:
 
         _<?=$svc->name?>_client = new <?=$svc->name?>_perf_test_client(_server);
         _<?=$svc->name?>_client->start_test();
-        return ::dsn::ERR_SUCCESS;
+        return ::dsn::ERR_OK;
     }
 
     virtual void stop(bool cleanup = false)

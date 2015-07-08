@@ -132,7 +132,7 @@ void replica::response_client_message(message_ptr& request, error_code error, de
     int err = error.get();
     resp->writer().write(err);
 
-    dassert(error != ERR_SUCCESS, "");
+    dassert(error != ERR_OK, "");
     dinfo("handle replication request with rpc_id = %016llx failed, err = %s",
         request->header().rpc_id, error.to_string());
 
@@ -143,7 +143,7 @@ void replica::execute_mutation(mutation_ptr& mu)
 {
     dassert (nullptr != _app, "");
 
-    int err = ERR_SUCCESS;
+    int err = ERR_OK;
     switch (status())
     {
     case PS_INACTIVE:
@@ -189,7 +189,7 @@ void replica::execute_mutation(mutation_ptr& mu)
     
     ddebug("TwoPhaseCommit, %s: mutation %s committed, err = %x", name(), mu->name(), err);
 
-    if (err != ERR_SUCCESS)
+    if (err != ERR_OK)
     {
         handle_local_failure(err);
     }

@@ -79,7 +79,7 @@ namespace dsn {
                         else if (header.err == ERR_TALK_TO_OTHERS)
                         {
                             next_server = header.primary_address;
-                            err = ERR_SUCCESS;
+                            err = ERR_OK;
                         }
                         else
                         {

@@ -133,7 +133,7 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
     auto it = _primary_states.learners.find(request.learner);
     if (it == _primary_states.learners.end())
     {
-        response.err = (response.config.status == PS_SECONDARY ? ERR_SUCCESS : ERR_OBJECT_NOT_FOUND);
+        response.err = (response.config.status == PS_SECONDARY ? ERR_OK : ERR_OBJECT_NOT_FOUND);
         return;
     }
     else if (it->second.signature != request.signature)
@@ -152,7 +152,7 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
     
     response.prepare_start_decree = invalid_decree;
     response.commit_decree = last_committed_decree();
-    response.err = ERR_SUCCESS; 
+    response.err = ERR_OK; 
 
     if (request.last_committed_decree_in_app + _options.staleness_for_start_prepare_for_potential_secondary >= last_committed_decree())
     {
@@ -204,7 +204,7 @@ void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request>& req
         name(), resp->err, resp->prepare_start_decree, enum_to_string(_potential_secondary_states.learning_status)
         );
 
-    if (resp->err != ERR_SUCCESS)
+    if (resp->err != ERR_OK)
     {
         handle_learning_error(resp->err);
         return;
@@ -247,7 +247,7 @@ void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request>& req
         _potential_secondary_states.learn_remote_files_task = tasking::enqueue(
             LPC_LEARN_REMOTE_DELTA_FILES,
             this,
-            std::bind(&replica::on_copy_remote_state_completed, this, ERR_SUCCESS, 0, resp)
+            std::bind(&replica::on_copy_remote_state_completed, this, ERR_OK, 0, resp)
             );
     }
 }
@@ -259,7 +259,7 @@ void replica::on_copy_remote_state_completed(error_code err2, int size, std::sha
     localState.meta = resp->state.meta;
 
     end_point& server = resp->config.primary;     
-    if (err == ERR_SUCCESS)
+    if (err == ERR_OK)
     {
         for (auto itr = resp->state.files.begin(); itr != resp->state.files.end(); ++itr)
         {
@@ -289,10 +289,10 @@ void replica::on_copy_remote_state_completed(error_code err2, int size, std::sha
                 enum_to_string(_potential_secondary_states.learning_status)
                 );
 
-        if (err == ERR_SUCCESS && _app->last_committed_decree() >= resp->commit_decree)
+        if (err == ERR_OK && _app->last_committed_decree() >= resp->commit_decree)
         {
             err = _app->flush(true);
-            if (err == ERR_SUCCESS)
+            if (err == ERR_OK)
             {
                 dassert (_app->last_committed_decree() == _app->last_durable_decree(), "");
             }
@@ -323,7 +323,7 @@ void replica::on_learn_remote_state_completed(int err)
 
     _potential_secondary_states.learning_round_is_running = false;
 
-    if (err != ERR_SUCCESS)
+    if (err != ERR_OK)
     {
         handle_learning_error(err);
     }
@@ -362,7 +362,7 @@ void replica::notify_learn_completion()
 {
     group_check_response report;
     report.gpid = get_gpid();
-    report.err = ERR_SUCCESS;
+    report.err = ERR_OK;
     report.last_committed_decree_in_app = _app->last_committed_decree();
     report.last_committed_decree_in_prepare_list = last_committed_decree();
     report.learner_signature = _potential_secondary_states.learning_signature;

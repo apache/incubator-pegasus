@@ -52,7 +52,7 @@ namespace dsn {
 
                     virtual void on_response(error_code err, message_ptr& request, message_ptr& response)
                     {
-                        if (err == ERR_SUCCESS)
+                        if (err == ERR_OK)
                         {
                             std::shared_ptr<TResponse> resp(new TResponse);
                             unmarshall(response->reader(), *resp);
@@ -92,7 +92,7 @@ namespace dsn {
                     {
                         if (nullptr != _callback)
                         {
-                            if (err == ERR_SUCCESS)
+                            if (err == ERR_OK)
                             {
                                 std::shared_ptr<TResponse> resp(new TResponse);
                                 unmarshall(response->reader(), *resp);
@@ -134,7 +134,7 @@ namespace dsn {
                         if (nullptr != _callback)
                         {
                             TResponse resp;
-                            if (err == ERR_SUCCESS)
+                            if (err == ERR_OK)
                             {
                                 unmarshall(response->reader(), resp);
                                 _callback(err, resp, _context);
@@ -201,7 +201,7 @@ namespace dsn {
                     virtual void on_response(error_code err, message_ptr& request, message_ptr& response)
                     {
                         TResponse resp;
-                        if (err == ERR_SUCCESS)
+                        if (err == ERR_OK)
                         {
                             unmarshall(response->reader(), resp);
                             (_svc->*_callback)(err, resp, _context);
@@ -356,7 +356,7 @@ namespace dsn {
                     error_code err,
                     message_ptr& response)
                 {
-                    if (err == ERR_SUCCESS)
+                    if (err == ERR_OK)
                     {
                         auto r = std::shared_ptr<TResponse>(new TResponse);
                         unmarshall(response->reader(), *r);

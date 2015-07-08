@@ -439,7 +439,7 @@ rpc_response_task::rpc_response_task(message_ptr& request, int hash)
 void rpc_response_task::enqueue(error_code err, message_ptr& reply)
 {
     set_error_code(err);
-    _response = (err == ERR_SUCCESS ? reply : nullptr);
+    _response = (err == ERR_OK ? reply : nullptr);
 
     if (spec().on_rpc_response_enqueue.execute(this, true))
     {

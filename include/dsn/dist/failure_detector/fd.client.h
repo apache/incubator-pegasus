@@ -52,7 +52,7 @@ public:
         marshall(msg->writer(), beacon);
         auto resp_task = ::dsn::service::rpc::call(p_server_addr ? *p_server_addr : _server, msg, nullptr);
         resp_task->wait();
-        if (resp_task->error() == ::dsn::ERR_SUCCESS)
+        if (resp_task->error() == ::dsn::ERR_OK)
         {
             unmarshall(resp_task->get_response()->reader(), resp);
         }
@@ -86,7 +86,7 @@ public:
         const ::dsn::fd::beacon_ack& resp,
         void* context)
     {
-        if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_FD_FAILURE_DETECTOR_PING err : " << err.to_string() << std::endl;
+        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_FD_FAILURE_DETECTOR_PING err : " << err.to_string() << std::endl;
         else
         {
             std::cout << "reply RPC_FD_FAILURE_DETECTOR_PING ok" << std::endl;
@@ -118,7 +118,7 @@ public:
         std::shared_ptr<::dsn::fd::beacon_msg>& beacon, 
         std::shared_ptr<::dsn::fd::beacon_ack>& resp)
     {
-        if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_FD_FAILURE_DETECTOR_PING err : " << err.to_string() << std::endl;
+        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_FD_FAILURE_DETECTOR_PING err : " << err.to_string() << std::endl;
         else
         {
             std::cout << "reply RPC_FD_FAILURE_DETECTOR_PING ok" << std::endl;

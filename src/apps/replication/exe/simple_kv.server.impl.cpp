@@ -68,7 +68,7 @@ namespace dsn {
                 ++_last_committed_decree;
 
                 dinfo("write %s, decree = %lld\n", pr.value.c_str(), last_committed_decree());
-                reply(ERR_SUCCESS);
+                reply(ERR_OK);
             }
 
             // RPC_SIMPLE_KV_APPEND
@@ -83,7 +83,7 @@ namespace dsn {
                 ++_last_committed_decree;
 
                 dinfo("append %s, decree = %lld\n", pr.value.c_str(), last_committed_decree());
-                reply(ERR_SUCCESS);
+                reply(ERR_OK);
             }
             
             int simple_kv_service_impl::open(bool create_new)
@@ -188,7 +188,7 @@ namespace dsn {
 
                 if (last_committed_decree() == last_durable_decree())
                 {
-                    return ERR_SUCCESS;
+                    return ERR_OK;
                 }
 
                 // TODO: should use async write instead
@@ -216,7 +216,7 @@ namespace dsn {
                 }
 
                 _last_durable_decree = last_committed_decree();
-                return ERR_SUCCESS;
+                return ERR_OK;
             }
 
             // helper routines to accelerate learning
@@ -261,7 +261,7 @@ namespace dsn {
                     fout.close();        
                 }
 
-                return ERR_SUCCESS;
+                return ERR_OK;
             }
 
             int simple_kv_service_impl::apply_learn_state(learn_state& state)
@@ -322,7 +322,7 @@ namespace dsn {
                     }
                 }
 
-                if (ret) return ERR_SUCCESS;
+                if (ret) return ERR_OK;
                 else return ERR_LEARN_FILE_FALED;
             }
 

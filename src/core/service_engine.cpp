@@ -79,7 +79,7 @@ error_code service_node::start()
     // init rpc engine
     _rpc = new rpc_engine(spec.config, this);    
     error_code err = _rpc->start(_app->spec());
-    if (err != ERR_SUCCESS) return err;
+    if (err != ERR_OK) return err;
 
     // init nfs
     if (spec.nfs_factory_name == "")

@@ -35,7 +35,7 @@ namespace dsn {
                 _server->open_service();
 
                 _client = new nfs_client_impl(_opts);
-                return ERR_SUCCESS;
+                return ERR_OK;
             }
 
             virtual error_code stop() override
@@ -47,7 +47,7 @@ namespace dsn {
                 delete _client;
                 _client = nullptr;
 
-                return ERR_SUCCESS;
+                return ERR_OK;
             }
     
         private:

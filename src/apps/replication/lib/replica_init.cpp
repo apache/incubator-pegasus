@@ -55,14 +55,14 @@ int replica::initialize_on_new(const char* app_type, global_partition_id gpid)
     boost::filesystem::create_directory(_dir);
 
     int err = init_app_and_prepare_list(app_type, true);
-    dassert (err == ERR_SUCCESS, "");
+    dassert (err == ERR_OK, "");
     return err;
 }
 
 /*static*/ replica* replica::newr(replica_stub* stub, const char* app_type, global_partition_id gpid, replication_options& options)
 {
     replica* rep = new replica(stub, gpid, options);
-    if (ERR_SUCCESS == rep->initialize_on_new(app_type, gpid))
+    if (ERR_OK == rep->initialize_on_new(app_type, gpid))
         return rep;
     else
     {
@@ -96,7 +96,7 @@ int replica::initialize_on_load(const char* dir, bool renameDirOnFailure)
 
     int err = init_app_and_prepare_list(app_type, false);
 
-    if (ERR_SUCCESS != err && renameDirOnFailure)
+    if (ERR_OK != err && renameDirOnFailure)
     {
         // GCed later
         char newPath[256];
@@ -114,7 +114,7 @@ int replica::initialize_on_load(const char* dir, bool renameDirOnFailure)
 {
     replica* rep = new replica(stub, options);
     int err = rep->initialize_on_load(dir, renameDirOnFailure);
-    if (err != ERR_SUCCESS)
+    if (err != ERR_OK)
     {
         delete rep;
         return nullptr;
@@ -137,7 +137,7 @@ int replica::init_app_and_prepare_list(const char* app_type, bool create_new)
     dassert (nullptr != _app, "");
 
     int err = _app->open(create_new);    
-    if (ERR_SUCCESS == err)
+    if (ERR_OK == err)
     {
         dassert (_app->last_durable_decree() == _app->last_committed_decree(), "");
         _prepare_list->reset(_app->last_committed_decree());
@@ -178,7 +178,7 @@ void replica::replay_mutation(mutation_ptr& mu)
         );*/
 
     int err = _prepare_list->prepare(mu, PS_INACTIVE);
-    dassert (err == ERR_SUCCESS, "");
+    dassert (err == ERR_OK, "");
 }
 
 void replica::set_inactive_state_transient(bool t)

@@ -55,7 +55,7 @@ void replica::init_prepare(mutation_ptr& mu)
 {
     dassert (PS_PRIMARY == status(), "");
 
-    error_code err = ERR_SUCCESS;
+    error_code err = ERR_OK;
     uint8_t count = 0;
     
     if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 < _options.mutation_2pc_min_replica_count)
@@ -84,7 +84,7 @@ void replica::init_prepare(mutation_ptr& mu)
 
     // local prepare without log
     err = _prepare_list->prepare(mu, PS_PRIMARY);
-    if (err != ERR_SUCCESS)
+    if (err != ERR_OK)
     {
         goto ErrOut;
     }
@@ -248,7 +248,7 @@ void replica::on_prepare(message_ptr& request)
     dassert (rconfig.status == status(), "");    
     if (decree <= last_committed_decree())
     {
-        ack_prepare_message(ERR_SUCCESS, mu);
+        ack_prepare_message(ERR_OK, mu);
         return;
     }
     
@@ -260,13 +260,13 @@ void replica::on_prepare(message_ptr& request)
 
         if (mu2->is_logged() || _options.prepare_ack_on_secondary_before_logging_allowed)
         {
-            ack_prepare_message(ERR_SUCCESS, mu);
+            ack_prepare_message(ERR_OK, mu);
         }
         return;
     }
 
     int err = _prepare_list->prepare(mu, status());
-    dassert (err == ERR_SUCCESS, "");
+    dassert (err == ERR_OK, "");
 
     if (PS_POTENTIAL_SECONDARY == status())
     {
@@ -302,7 +302,7 @@ void replica::on_append_log_completed(mutation_ptr& mu, uint32_t err, uint32_t s
 
     ddebug( "%s: mutation %s on_append_log_completed, err = %u", name(), mu->name(), err);
 
-    if (err == ERR_SUCCESS)
+    if (err == ERR_OK)
     {
         mu->set_logged();
     }
@@ -316,7 +316,7 @@ void replica::on_append_log_completed(mutation_ptr& mu, uint32_t err, uint32_t s
     switch (status())
     {
     case PS_PRIMARY:
-        if (err == ERR_SUCCESS)
+        if (err == ERR_OK)
         {
             do_possible_commit_on_primary(mu);
         }
@@ -327,7 +327,7 @@ void replica::on_append_log_completed(mutation_ptr& mu, uint32_t err, uint32_t s
         break;
     case PS_SECONDARY:
     case PS_POTENTIAL_SECONDARY:
-        if (err != ERR_SUCCESS)
+        if (err != ERR_OK)
         {
             handle_local_failure(err);
         }
@@ -380,7 +380,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, int
             );
     }
        
-    if (resp.err == ERR_SUCCESS)
+    if (resp.err == ERR_OK)
     {
         dassert (resp.ballot == get_ballot(), "");
         dassert (resp.decree == mu->data.header.decree, "");

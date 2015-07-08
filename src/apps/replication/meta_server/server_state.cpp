@@ -321,7 +321,7 @@ void server_state::query_configuration_by_node(configuration_query_by_node_reque
     }
     else
     {
-        response.err = ERR_SUCCESS;
+        response.err = ERR_OK;
 
         for (auto& p : it->second.partitions)
         {
@@ -345,7 +345,7 @@ void server_state::query_configuration_by_index(configuration_query_by_index_req
         app_state& kv = _apps[i];
         if (kv.app_name == request.app_name)
         {
-            response.err = ERR_SUCCESS;
+            response.err = ERR_OK;
             response.app_id = i + 1;
             response.partition_count = kv.partition_count;
             app_state& app = kv;
@@ -376,7 +376,7 @@ void server_state::update_configuration_internal(configuration_update_request& r
     partition_configuration& old = app.partitions[request.config.gpid.pidx];
     if (old.ballot + 1 == request.config.ballot)
     {
-        response.err = ERR_SUCCESS;
+        response.err = ERR_OK;
 
         // update to new config
         old = request.config;

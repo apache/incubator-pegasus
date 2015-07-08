@@ -30,7 +30,7 @@ public:
         marshall(msg->writer(), c);
         auto resp_task = ::dsn::service::rpc::call(p_server_addr ? *p_server_addr : _server, msg, nullptr);
         resp_task->wait();
-        if (resp_task->error() == ::dsn::ERR_SUCCESS)
+        if (resp_task->error() == ::dsn::ERR_OK)
         {
             unmarshall(resp_task->get_response()->reader(), resp);
         }
@@ -64,7 +64,7 @@ public:
         const std::string& resp,
         void* context)
     {
-        if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_DSN_CLI_CALL err : " << err.to_string() << std::endl;
+        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_DSN_CLI_CALL err : " << err.to_string() << std::endl;
         else
         {
             std::cout << "reply RPC_DSN_CLI_CALL ok" << std::endl;
@@ -96,7 +96,7 @@ public:
         std::shared_ptr<command>& c, 
         std::shared_ptr<std::string>& resp)
     {
-        if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_DSN_CLI_CALL err : " << err.to_string() << std::endl;
+        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_DSN_CLI_CALL err : " << err.to_string() << std::endl;
         else
         {
             std::cout << "reply RPC_DSN_CLI_CALL ok" << std::endl;

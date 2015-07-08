@@ -212,7 +212,7 @@ namespace dsn {
 
         // start the net
         error_code ret = net->start(netcs.channel, netcs.port, client_only);
-        if (ret == ERR_SUCCESS)
+        if (ret == ERR_OK)
         {
             return net;
         }
@@ -314,7 +314,7 @@ namespace dsn {
         _local_primary_address.port = aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id;
 
         _is_running = true;
-        return ERR_SUCCESS;
+        return ERR_OK;
     }
     
     bool rpc_engine::register_rpc_handler(rpc_handler_ptr& handler)

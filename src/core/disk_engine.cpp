@@ -117,7 +117,7 @@ void disk_engine::complete_io(aio_task_ptr& aio, error_code err, uint32_t bytes,
 {
     // TODO: failure injection, profiling, throttling
 
-    if (err != ERR_SUCCESS)
+    if (err != ERR_OK)
     {
         dwarn(
                     "disk operation failure with code %s, err = 0x%x, aio task id = %llx",

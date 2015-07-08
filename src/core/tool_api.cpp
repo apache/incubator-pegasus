@@ -49,11 +49,11 @@ namespace dsn {
                 if (_app->node()->nfs())
                 {
                     err = _app->node()->nfs()->start();
-                    dassert(err == ERR_SUCCESS, "start nfs failed, err = %s", err.to_string());
+                    dassert(err == ERR_OK, "start nfs failed, err = %s", err.to_string());
                 }
 
                 err = _app->start(_app->arg_count(), _app->args());
-                dassert(err == ERR_SUCCESS, "start app failed, err = %s", err.to_string());
+                dassert(err == ERR_OK, "start app failed, err = %s", err.to_string());
                 _app->_started = true;
             }
             else

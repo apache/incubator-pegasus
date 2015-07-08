@@ -134,7 +134,7 @@ void meta_service::on_request(message_ptr& msg)
     meta_response_header rhdr;
     bool is_primary = _state->get_meta_server_primary(rhdr.primary_address);
     if (is_primary) is_primary = (primary_address() == rhdr.primary_address);
-    rhdr.err = ERR_SUCCESS;
+    rhdr.err = ERR_OK;
 
     message_ptr resp = msg->create_response();
     if (!is_primary)
@@ -299,7 +299,7 @@ void meta_service::on_log_completed(error_code err, int size,
     blob buffer, 
     std::shared_ptr<configuration_update_request> req, message_ptr resp)
 {
-    dassert(err == ERR_SUCCESS, "log operation failed, cannot proceed, err = %s", err.to_string());
+    dassert(err == ERR_OK, "log operation failed, cannot proceed, err = %s", err.to_string());
     dassert(buffer.length() == size, "log size must equal to the specified buffer size");
 
     configuration_update_response response;    

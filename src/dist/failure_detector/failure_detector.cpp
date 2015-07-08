@@ -66,14 +66,14 @@ int failure_detector::start(
     _current_task = tasking::enqueue(LPC_BEACON_CHECK, this, &failure_detector::process_all_records, -1, _check_interval_milliseconds, _check_interval_milliseconds);
 
     _is_started = true;
-    return ERR_SUCCESS;
+    return ERR_OK;
 }
 
 int failure_detector::stop()
 {
     if ( _is_started == false )
     {
-        return ERR_SUCCESS;
+        return ERR_OK;
     }
 
     _is_started = false;
@@ -86,7 +86,7 @@ int failure_detector::stop()
         _current_task = nullptr;
     }
 
-    return ERR_SUCCESS;
+    return ERR_OK;
 }
 
 void failure_detector::register_master(const end_point& target)

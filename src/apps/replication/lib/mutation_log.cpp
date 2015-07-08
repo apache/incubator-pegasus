@@ -131,7 +131,7 @@ int mutation_log::initialize(const char* dir)
         _global_end_offset = it->second->end_offset();
     }
     
-    return ERR_SUCCESS;
+    return ERR_OK;
 }
 
 int mutation_log::create_new_log_file()
@@ -168,7 +168,7 @@ int mutation_log::create_new_log_file()
     _global_end_offset += len;
     dassert (_pending_write->total_size() == len + message_header::serialized_size(), "");
 
-    return ERR_SUCCESS;
+    return ERR_OK;
 }
 
 void mutation_log::create_new_pending_buffer()
@@ -253,13 +253,13 @@ int mutation_log::write_pending_mutations(bool create_new_log_when_necessary)
     if (create_new_log_when_necessary && _current_log_file->end_offset() - _current_log_file->start_offset() >= _max_log_file_size_in_bytes)
     {
         int ret = create_new_log_file();
-        if (ERR_SUCCESS != ret)
+        if (ERR_OK != ret)
         {
             derror ("create new log file failed, err = %d", ret);
         }
         return ret;
     }
-    return ERR_SUCCESS;
+    return ERR_OK;
 }
 
 void mutation_log::internal_write_callback(error_code err, uint32_t size, mutation_log::pending_callbacks_ptr callbacks, blob data)
@@ -278,7 +278,7 @@ int mutation_log::replay(ReplayCallback callback)
     zauto_lock l(_lock);
 
     int64_t offset = start_offset();
-    int err = ERR_SUCCESS;
+    int err = ERR_OK;
     for (auto it = _log_files.begin(); it != _log_files.end(); it++)
     {
         log_file_ptr log = it->second;
@@ -293,11 +293,11 @@ int mutation_log::replay(ReplayCallback callback)
 
         ::dsn::blob bb;
         err = log->read_next_log_entry(bb);
-        if (err != ERR_SUCCESS)
+        if (err != ERR_OK)
         {
             if (err == ERR_HANDLE_EOF)
             {
-                err = ERR_SUCCESS;
+                err = ERR_OK;
                 continue;
             }
 
@@ -339,11 +339,11 @@ int mutation_log::replay(ReplayCallback callback)
             }
 
             err = log->read_next_log_entry(bb);
-            if (err != ERR_SUCCESS)
+            if (err != ERR_OK)
             {
                 if (err == ERR_HANDLE_EOF)
                 {
-                    err = ERR_SUCCESS;
+                    err = ERR_OK;
                     break;
                 }
 
@@ -365,7 +365,7 @@ int mutation_log::replay(ReplayCallback callback)
         log->close();
 
         // tail data corruption is checked by next file's offset checking
-        if (err != ERR_INVALID_DATA && err != ERR_SUCCESS)
+        if (err != ERR_INVALID_DATA && err != ERR_OK)
             break;        
     }
 
@@ -374,7 +374,7 @@ int mutation_log::replay(ReplayCallback callback)
         // remove bad data at tail, but still we may lose data so error code remains unchanged
         _global_end_offset = offset;
     }
-    else if (err == ERR_SUCCESS)
+    else if (err == ERR_OK)
     {
         dassert (end_offset() == offset, "");
     }
@@ -722,7 +722,7 @@ int log_file::read_next_log_entry(__out_param ::dsn::blob& bb)
         return ERR_INVALID_DATA;
     }
     
-    return ERR_SUCCESS;
+    return ERR_OK;
 }
 
 aio_task_ptr log_file::write_log_entry(

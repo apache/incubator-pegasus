@@ -379,7 +379,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, messa
     }        
     
     // post-update work items?
-    if (resp.err == ERR_SUCCESS)
+    if (resp.err == ERR_OK)
     {        
         dassert (req->config.gpid == resp.config.gpid, "");
         dassert (req->config.app_type == resp.config.app_type, "");

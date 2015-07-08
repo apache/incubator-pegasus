@@ -64,7 +64,7 @@ namespace dsn {
                 }
             }            
 
-            return ERR_SUCCESS;
+            return ERR_OK;
         }
 
         rpc_client_session_ptr asio_network_provider::create_client_session(const end_point& server_addr)

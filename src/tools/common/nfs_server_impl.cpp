@@ -105,7 +105,7 @@ namespace dsn {
             //dinfo(">>> on call RPC_NFS_GET_FILE_SIZE end, exec RPC_NFS_GET_FILE_SIZE");
 
             get_file_size_response resp;
-            int err = ERR_SUCCESS;
+            int err = ERR_OK;
             std::vector<std::string> file_list;
             std::string folder = request.source_dir;
             if (request.file_list.size() == 0) // return all file size in the destination file folder

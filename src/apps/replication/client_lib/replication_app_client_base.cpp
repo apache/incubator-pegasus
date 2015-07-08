@@ -198,7 +198,7 @@ void replication_app_client_base::call(request_context* request, bool no_delay)
         );
 
     // target node in cache
-    if (err == ERR_SUCCESS)
+    if (err == ERR_OK)
     {
         dbg_dassert(addr != end_point::INVALID, "");
         dassert(app_id > 0, "");
@@ -313,7 +313,7 @@ void replication_app_client_base::replica_rw_reply(
     request_context* rc
     )
 {
-    if (err != ERR_SUCCESS)
+    if (err != ERR_OK)
     {
         goto Retry;
     }
@@ -321,7 +321,7 @@ void replication_app_client_base::replica_rw_reply(
     int err2;
     response->reader().read(err2);
     
-    if (err2 != ERR_SUCCESS && err2 != ERR_HANDLER_NOT_FOUND)
+    if (err2 != ERR_OK && err2 != ERR_HANDLER_NOT_FOUND)
     {
         goto Retry;
     }
@@ -355,7 +355,7 @@ error_code replication_app_client_base::get_address(int pidx, bool is_write, __o
     auto it = _config_cache.find(pidx);
     if (it != _config_cache.end())
     {
-        err = ERR_SUCCESS;
+        err = ERR_OK;
         config = it->second;
     }
     else
@@ -364,7 +364,7 @@ error_code replication_app_client_base::get_address(int pidx, bool is_write, __o
     }
     }
 
-    if (err == ERR_SUCCESS)
+    if (err == ERR_OK)
     {
         app_id = _app_id;
         if (is_write)
@@ -390,7 +390,7 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
     {
         configuration_query_by_index_response resp;
         unmarshall(response->reader(), resp);
-        if (resp.err == ERR_SUCCESS)
+        if (resp.err == ERR_OK)
         {
             zauto_write_lock l(_config_lock);
             _last_contact_point = response->header().from_address;

@@ -79,7 +79,7 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
     case PS_SECONDARY: 
         commit(mu->data.header.last_committed_decree, true);
         err = mutation_cache::put(mu);
-        dassert (err == ERR_SUCCESS, "");
+        dassert (err == ERR_OK, "");
         return err;
 
     case PS_POTENTIAL_SECONDARY:
@@ -95,11 +95,11 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
             else
                 break;
         }
-        dassert (err == ERR_SUCCESS, "");
+        dassert (err == ERR_OK, "");
         return err;
      
     case PS_INACTIVE: // only possible during init  
-        err = ERR_SUCCESS;
+        err = ERR_OK;
         if (mu->data.header.last_committed_decree > max_decree())
         {
             reset(mu->data.header.last_committed_decree);
@@ -125,7 +125,7 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
         }
         
         err = mutation_cache::put(mu);
-        dassert (err == ERR_SUCCESS, "");
+        dassert (err == ERR_OK, "");
         return err;
 
     default:

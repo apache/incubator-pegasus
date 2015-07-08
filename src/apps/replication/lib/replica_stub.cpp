@@ -118,7 +118,7 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
     // init logs
     _log = new mutation_log(opts.log_buffer_size_mb, opts.log_pending_max_ms, opts.log_file_size_mb, opts.log_batch_write, opts.log_max_concurrent_writes);
     int err = _log->initialize(logDir.c_str());
-    dassert (err == ERR_SUCCESS, "");
+    dassert (err == ERR_OK, "");
     
     err = _log->replay(
         std::bind(&replica_stub::replay_mutation, this, std::placeholders::_1, &rps)
@@ -138,7 +138,7 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
             it->second->get_ballot()
             );
 
-        it->second->set_inactive_state_transient(err == ERR_SUCCESS);
+        it->second->set_inactive_state_transient(err == ERR_OK);
     }
 
     // start log serving    
@@ -160,7 +160,7 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
         initMaxDecrees[it->second->get_gpid()] = it->second->max_prepared_decree();
     }
     err = _log->start_write_service(initMaxDecrees, _options.staleness_for_commit);
-    dassert (err == ERR_SUCCESS, "");
+    dassert (err == ERR_OK, "");
 
     // attach rps
     _replicas = rps;
@@ -313,7 +313,7 @@ void replica_stub::on_query_decree(const query_replica_decree_request& req, __ou
     replica_ptr rep = get_replica(req.gpid);
     if (rep != nullptr)
     {
-        resp.err = ERR_SUCCESS;
+        resp.err = ERR_OK;
         if (PS_POTENTIAL_SECONDARY == rep->status())
         {
             resp.last_decree = 0;
@@ -367,7 +367,7 @@ void replica_stub::on_group_check(const group_check_request& request, __out_para
             *req = request;
 
             begin_open_replica(request.app_type, request.config.gpid, req);
-            response.err = ERR_SUCCESS;
+            response.err = ERR_OK;
             response.learner_signature = 0;
         }
         else
@@ -503,7 +503,7 @@ void replica_stub::on_node_query_reply(int err, message_ptr& request, message_pt
         configuration_query_by_node_response resp;
         unmarshall(response, resp);     
 
-        if (resp.err != ERR_SUCCESS)
+        if (resp.err != ERR_OK)
             return;
         
         replicas rs = _replicas;
