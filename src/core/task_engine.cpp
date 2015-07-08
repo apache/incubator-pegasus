@@ -28,7 +28,10 @@
 # include <dsn/internal/factory_store.h>
 # include <dsn/service_api.h>
 
-#define __TITLE__ "task_engine"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ task_engine
 
 using namespace dsn::utils;
 
@@ -38,7 +41,6 @@ task_worker_pool::task_worker_pool(const threadpool_spec& opts, task_engine* own
     : _spec(opts), _owner(owner), _node(owner->node())
 {
     _is_running = false;
-    _pending_task_counter = dsn::utils::perf_counters::instance().get_counter((_spec.name + std::string(".PendingTask#")).c_str(),  COUNTER_TYPE_NUMBER, true);
 }
 
 void task_worker_pool::start()
@@ -153,8 +155,6 @@ void task_worker_pool::enqueue(task_ptr& task)
                     std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 }
             }
-
-            _pending_task_counter->increment();
         }
         return q->enqueue(task);
     }
@@ -166,11 +166,6 @@ void task_worker_pool::enqueue(task_ptr& task)
             );
     }
 }
-//
-//void task_worker_pool::on_dequeue(int count)
-//{
-//    _pending_task_counter->Subtract((unsigned long long)count);
-//}
 
 bool task_worker_pool::shared_same_worker_with_current_task(task* tsk) const
 {
@@ -194,6 +189,28 @@ bool task_worker_pool::shared_same_worker_with_current_task(task* tsk) const
     else
     {
         return false;
+    }
+}
+
+void task_worker_pool::get_runtime_info(const std::string& indent, const std::vector<std::string>& args, __out_param std::stringstream& ss)
+{
+    std::string indent2 = indent + "\t";
+    ss << indent << "contains " << _workers.size() << " threads with " << _queues.size() << " queues" << std::endl;
+    
+    for (auto& q : _queues)
+    {
+        if (q)
+        {
+            ss << indent2 << q->get_name() << " now has " << q->count() << " pending tasks" << std::endl;
+        }
+    }
+
+    for (auto& wk : _workers)
+    {
+        if (wk)
+        {
+            ss << indent2 << wk->index() << " (TID = " << wk->native_tid() << ") attached with queue " << wk->queue()->get_name() << std::endl;
+        }
     }
 }
 
@@ -221,6 +238,19 @@ void task_engine::start(const std::vector<threadpool_spec>& spec)
     }
 
     _is_running = true;
+}
+
+void task_engine::get_runtime_info(const std::string& indent, const std::vector<std::string>& args, __out_param std::stringstream& ss)
+{
+    std::string indent2 = indent + "\t";
+    for (auto& p : _pools)
+    {
+        if (p)
+        {
+            ss << indent << p->spec().name << std::endl;
+            p->get_runtime_info(indent2, args, ss);
+        }
+    }
 }
 
 } // end namespace

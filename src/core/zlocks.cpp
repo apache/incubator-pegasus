@@ -28,7 +28,10 @@
 # include <dsn/internal/task.h>
 # include "service_engine.h"
 
-# define __TITLE__ "lock"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ lock
 
 using namespace dsn::utils;
 

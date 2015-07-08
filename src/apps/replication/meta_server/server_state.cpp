@@ -27,7 +27,10 @@
 # include <sstream>
 # include <dsn/internal/serialization.h>
 
-# define __TITLE__ "meta.server.state"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ meta.server.state
 
 void marshall(binary_writer& writer, const app_state& val, uint16_t pos = 0xffff)
 {

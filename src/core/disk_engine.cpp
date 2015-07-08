@@ -30,7 +30,10 @@
 # include <dsn/internal/utils.h>
 # include <dsn/service_api.h>
 
-#define __TITLE__ "disk_engine"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ disk_engine
 
 using namespace dsn::utils;
 

@@ -26,7 +26,10 @@
 
 #include <dsn/toollet/tracer.h>
 
-#define __TITLE__ "toollet.tracer"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ toollet.tracer
 
 namespace dsn {
     namespace tools {

@@ -26,7 +26,10 @@
 # include <dsn/internal/message_parser.h>
 # include <dsn/internal/logging.h>
 
-# define __TITLE__ "message.parser"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ message.parser
 
 namespace dsn {
 

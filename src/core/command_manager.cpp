@@ -33,7 +33,10 @@
 # include <dsn/internal/serialization.h>
 # include "service_engine.h"
 
-# define __TITLE__ "command_manager"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ command_manager
 
 namespace dsn {
 

@@ -36,7 +36,10 @@
 # endif
 
 
-# define __TITLE__ "task.worker"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ task.worker
 
 namespace dsn {
 
@@ -48,6 +51,7 @@ task_worker::task_worker(task_worker_pool* pool, task_queue* q, int index, task_
     _owner_pool = pool;
     _input_queue = q;
     _index = index;
+    _native_tid = ::dsn::utils::get_invalid_tid();
 
     char name[256];
     sprintf(name, "%5s.%s.%u", pool->node()->name(), pool->spec().name.c_str(), index);
@@ -207,6 +211,7 @@ void task_worker::run_internal()
 
     task::set_current_worker(this);
     
+    _native_tid = ::dsn::utils::get_current_tid();
     set_name();
     set_priority(pool_spec().worker_priority);
     
@@ -222,13 +227,13 @@ void task_worker::run_internal()
         uint64_t current_mask = pool_spec().worker_affinity_mask;
         for (int i = 0; i < _index; ++i)
         {            
-            current_mask &= current_mask - 1;
+            current_mask &= (current_mask - 1);
             if (0 == current_mask)
             {
                 current_mask = pool_spec().worker_affinity_mask;
             }
         }
-        current_mask -= current_mask & current_mask - 1;
+        current_mask -= (current_mask & (current_mask - 1));
 
         set_affinity(current_mask);
     }

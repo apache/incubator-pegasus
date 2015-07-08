@@ -28,7 +28,10 @@
 #include "mutation_log.h"
 #include "replica_stub.h"
 
-#define __TITLE__ "replica"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ replica
 
 namespace dsn { namespace replication {
 

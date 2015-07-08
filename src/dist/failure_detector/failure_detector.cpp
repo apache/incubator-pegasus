@@ -29,7 +29,10 @@
 # include <ctime>
 # include <dsn/internal/serialization.h>
 
-#define __TITLE__ "failure_detector"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ failure_detector
 
 using namespace ::dsn::service;
 

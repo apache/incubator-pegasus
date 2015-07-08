@@ -29,7 +29,10 @@
 #include "replica_stub.h"
 #include <boost/filesystem.hpp>
 
-#define __TITLE__ "Learn"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ Learn
 
 namespace dsn { namespace replication {
 

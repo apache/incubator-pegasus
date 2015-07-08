@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <dsn/toollet/profiler.h>
 #include "profiler_header.h"
+#include <iostream>
 
 namespace dsn {
     namespace tools {
@@ -153,6 +154,7 @@ namespace dsn {
             }
             ss << std::endl;
             ss << profiler_output_data->separate_line_info << std::endl;
+            
             for (int i = 0; i <= task_code::max_value(); i++)
             {
                 if ((i == TASK_CODE_INVALID) || (s_spec_profilers[i].is_profile == false))

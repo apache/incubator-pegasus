@@ -53,6 +53,7 @@ public:
     // inquery
     const std::string& name() const { return _name; }
     int index() const { return _index; }
+    int native_tid() const { return _native_tid; }
     task_worker_pool* pool() const { return _owner_pool; }
     task_queue* queue() const { return _input_queue; }
     const threadpool_spec& pool_spec() const;
@@ -60,11 +61,12 @@ public:
 
 private:
     task_worker_pool* _owner_pool;    
-    task_queue*      _input_queue;
-    int             _index;
-    std::string     _name;
-    std::thread     *_thread;
-    bool            _is_running;
+    task_queue*       _input_queue;
+    int               _index;
+    int               _native_tid;
+    std::string       _name;
+    std::thread      *_thread;
+    bool             _is_running;
     utils::notify_event _started;
 
 private:
