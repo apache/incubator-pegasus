@@ -63,7 +63,6 @@ public:
     const end_point& primary_address() const { return _local_primary_address; }
 
 private:
-    bool start_server_port(int port);
     network* create_network(const network_server_config& netcs, bool client_only);
 
 private:
