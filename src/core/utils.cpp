@@ -33,6 +33,8 @@
 # include <sys/syscall.h>
 # elif defined(__FreeBSD__)
 # include <sys/thr.h>
+# elif defined(__APPLE__)
+# include <pthread.h>
 # endif
 
 # ifdef __TITLE__
@@ -54,6 +56,8 @@ namespace dsn {
             long lwpid;
             thr_self(&lwpid);
             return static_cast<int>(lwpid);
+# elif defined(__APPLE__)
+            return static_cast<int>(pthread_mach_thread_np(pthread_self()));
 # else
 # error not implemented yet
 # endif 
