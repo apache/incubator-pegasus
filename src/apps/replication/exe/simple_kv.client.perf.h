@@ -50,18 +50,21 @@ namespace dsn {
                     s.name = "simple_kv.write";
                     s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_WRITE";
                     s.send_one = [this](){this->send_one_write(); };
+                    s.cases.clear();
                     load_suite_config(s);
                     suits.push_back(s);
 
                     s.name = "simple_kv.append";
                     s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_APPEND";
                     s.send_one = [this](){this->send_one_append(); };
+                    s.cases.clear();
                     load_suite_config(s);
                     suits.push_back(s);
 
                     s.name = "simple_kv.read";
                     s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_READ";
                     s.send_one = [this](){this->send_one_read(); };
+                    s.cases.clear();
                     load_suite_config(s);
                     suits.push_back(s);
 

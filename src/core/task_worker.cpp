@@ -174,13 +174,13 @@ void task_worker::run_internal()
         uint64_t current_mask = pool_spec().worker_affinity_mask;
         for (int i = 0; i < _index; ++i)
         {            
-            current_mask &= current_mask - 1;
+            current_mask &= (current_mask - 1);
             if (0 == current_mask)
             {
                 current_mask = pool_spec().worker_affinity_mask;
             }
         }
-        current_mask -= current_mask & current_mask - 1;
+        current_mask -= (current_mask & (current_mask - 1));
 
         set_affinity(current_mask);
     }

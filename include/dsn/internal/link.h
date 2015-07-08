@@ -25,6 +25,10 @@
  */
 # pragma once
 
+# include <dsn/internal/logging.h>
+
+# define __TITLE__ "linklist"
+
 class slink
 {
 public:
@@ -66,6 +70,7 @@ public:
     // insert me before existing link node o [p (this) o]
     void insert_before(dlink* o)
     {
+        dassert(is_alone(), "must not be linked to other list before insert");
         auto p = o->_prev;
         
         this->_next = o;

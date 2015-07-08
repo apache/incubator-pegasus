@@ -43,12 +43,13 @@ namespace dsn {
             {
                 task->add_ref();
                 {
-                    utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
+                    utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
 
                     task->_task_queue_dl.insert_before(&_tasks);
+                    _count.fetch_add(1, std::memory_order_release);
                 }
                 
-                _count.fetch_add(1, std::memory_order_release);
+                
                 _sema.signal();
             }
             else
@@ -78,13 +79,14 @@ namespace dsn {
 
             dlink *t;
             {
-                utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
+                utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
                 t = _tasks.next();
-                dassert(t != &_tasks, "");
+                dassert(t != &_tasks, "task count = %d", count());
                 t->remove();
+                _count.fetch_sub(1, std::memory_order_release);
             }
 
-            _count.fetch_sub(1, std::memory_order_consume);
+            
 
             task_ptr ts = CONTAINING_RECORD(t, task, _task_queue_dl);
             ts->release_ref();

@@ -398,7 +398,9 @@ void mutation_log::close()
 
         if (nullptr != _pending_write_timer)
         {
-            if (_pending_write_timer->cancel(false))
+            bool finish;
+            _pending_write_timer->cancel(false, &finish);
+            if (finish)
             {
                 _pending_write_timer = nullptr;
                 write_pending_mutations(false);

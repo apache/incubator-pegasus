@@ -258,13 +258,13 @@ bool task::wait(int timeout_milliseconds, bool on_cancel)
 }
 
 //
-// return - whether the task has completed (not necessarily cancelled though)
+// return - whether this cancel succeed
 //
-bool task::cancel(bool wait_until_finished, /*out*/ bool* cancel_success /*= nullptr*/)
+bool task::cancel(bool wait_until_finished, /*out*/ bool* finished /*= nullptr*/)
 {
     task_state READY_STATE = TASK_STATE_READY;
     task *current_tsk = task::get_current_task();
-    bool ret = true;
+    bool finish = false;
     bool succ = false;
     
     if (current_tsk == this)
@@ -275,8 +275,8 @@ bool task::cancel(bool wait_until_finished, /*out*/ bool* cancel_success /*= nul
             id()
             );*/
 
-        if (cancel_success)
-            *cancel_success = false;
+        if (finished)
+            *finished = false;
 
         return false;
     }
@@ -284,22 +284,34 @@ bool task::cancel(bool wait_until_finished, /*out*/ bool* cancel_success /*= nul
     if (_state.compare_exchange_strong(READY_STATE, TASK_STATE_CANCELLED))
     {
         succ = true;
+        finish = true;
     }
     else
     {
         task_state old_state = _state.load();
-        if ((old_state == TASK_STATE_CANCELLED) || (old_state == TASK_STATE_FINISHED))
+        if (old_state == TASK_STATE_CANCELLED)
         {
+            succ = false; // this cancellation fails
+            finish = true;
+        }
+        else if (old_state == TASK_STATE_FINISHED)
+        {
+            succ = false;
+            finish = true;
         }
         else if (wait_until_finished)
         {
             _wait_for_cancel = true;
             bool r  = wait(TIME_MS_MAX, true);
             dassert(r, "wait failed, it is only possible when task runs for more than 0x0fffffff ms");
+
+            succ = false;
+            finish = true;
         }
         else
         {
-            ret = false;
+            succ = false;
+            finish = false;
         }
     }
 
@@ -314,10 +326,10 @@ bool task::cancel(bool wait_until_finished, /*out*/ bool* cancel_success /*= nul
         signal_waiters();
     }
 
-    if (cancel_success)
-        *cancel_success = succ;
+    if (finished)
+        *finished = finish;
 
-    return ret;
+    return succ;
 }
 
 const char* task::node_name() const

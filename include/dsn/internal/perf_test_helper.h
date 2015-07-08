@@ -99,6 +99,7 @@ namespace dsn {
                         s.config_section, "perf_test_rounds", 10000);
 
                 int last_index = static_cast<int>(sizeof(timeouts_ms) / sizeof(int)) - 1;
+                s.cases.clear();
                 for (int i = last_index; i >= 0; i--)
                 {
                     perf_test_case c;

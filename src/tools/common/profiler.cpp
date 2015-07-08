@@ -30,6 +30,7 @@
 #include "shared_io_service.h"
 #include "profiler_header.h"
 #include <dsn/internal/command.h>
+#include <iostream>
 
 #define __TITLE__ "toollet.profiler"
 using namespace dsn::service;
@@ -263,7 +264,9 @@ namespace dsn {
                     s_spec_profilers[i].ptr[AIO_LATENCY_NS] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".latency(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
                 }
 
-                if (!config()->get_value<bool>(name.c_str(), "is_profile", profile))
+                s_spec_profilers[i].is_profile = config()->get_value<bool>(name.c_str(), "is_profile", profile);
+
+                if (!s_spec_profilers[i].is_profile)
                     continue;
 
                 spec->on_task_enqueue.put_back(profiler_on_task_enqueue, "profiler");
