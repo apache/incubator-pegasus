@@ -32,19 +32,19 @@ public:
 
     void signal()
     {
-	    // Increment m_status atomically via critical section.
-	    std::lock_guard<std::mutex> lock(m_mutex);
-	    int oldStatus = m_status;
-	    if (oldStatus == 1)
-		    return;		// Event object is already signaled.
-	    m_status++;
-	    if (oldStatus < 0)
-		    m_condition.notify_one();	// Release one waiting thread.
+        // Increment m_status atomically via critical section.
+        std::lock_guard<std::mutex> lock(m_mutex);
+        int oldStatus = m_status;
+        if (oldStatus == 1)
+            return;        // Event object is already signaled.
+        m_status++;
+        if (oldStatus < 0)
+            m_condition.notify_one();    // Release one waiting thread.
     }
 
     void wait()
     {
-	    std::unique_lock<std::mutex> lock(m_mutex);
+        std::unique_lock<std::mutex> lock(m_mutex);
         int oldStatus = m_status;
         m_status--;
         assert(oldStatus <= 1);

@@ -87,11 +87,6 @@ namespace dsn {
             }
         }
 
-        void net_io::on_failure()
-        {
-            close();
-        }
-
         void net_io::close()
         {
             try {
