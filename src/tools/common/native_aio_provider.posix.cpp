@@ -24,9 +24,9 @@
  * THE SOFTWARE.
  */
 
-# include "native_aio_provider.posix.h"
+# ifdef DSN_PLATFORM_POSIX
 
-# if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
+# include "native_aio_provider.posix.h"
 
 # include <aio.h>
 # include <fcntl.h>

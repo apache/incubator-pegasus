@@ -27,8 +27,7 @@
 # include <dsn/internal/coredump.h>
 # include <dsn/tool_api.h>
 
-//#ifdef _WIN32
-# if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
+# if defined(DSN_PLATFORM_POSIX)
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -58,5 +57,5 @@ namespace dsn {
     }
 }
 
-# endif // #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
+# endif
 
