@@ -26,10 +26,12 @@
 # include <dsn/internal/task_worker.h>
 # include "task_engine.h"
 # include <sstream>
+# include <errno.h>
 
 # ifdef _WIN32
 
-# else 
+# else
+# include <pthread.h>
 //# include <sys/prctl.h>
 # endif
 
@@ -127,22 +129,68 @@ void task_worker::set_name()
 
 void task_worker::set_priority(worker_priority_t pri)
 {
-# ifdef _WIN32
+# ifdef DSN_PLATFORM_POSIX
+    static int policy = SCHED_OTHER;
+    static int prio_max =
+    #ifdef __linux__
+        -20;
+    #else
+        sched_get_priority_max(policy);
+    #endif
+    static int prio_min =
+    #ifdef __linux__
+        19;
+    #else
+        sched_get_priority_min(policy);
+    #endif
+    static int prio_middle = ((prio_min + prio_max + 1) / 2);
+#endif
+
     static int g_thread_priority_map[] = 
     {
+# ifdef _WIN32
         THREAD_PRIORITY_LOWEST,
         THREAD_PRIORITY_BELOW_NORMAL,
         THREAD_PRIORITY_NORMAL,
         THREAD_PRIORITY_ABOVE_NORMAL,
         THREAD_PRIORITY_HIGHEST
+# elif defined(DSN_PLATFORM_POSIX)
+        prio_min,
+        (prio_min + prio_middle) / 2,
+        prio_middle,
+        (prio_middle + prio_max) / 2,
+        prio_max
+# endif
     };
 
-    C_ASSERT(ARRAYSIZE(g_thread_priority_map) == THREAD_xPRIORITY_COUNT);
+    static_assert(ARRAYSIZE(g_thread_priority_map) == THREAD_xPRIORITY_COUNT,
+        "ARRAYSIZE(g_thread_priority_map) != THREAD_xPRIORITY_COUNT");
 
-    ::SetThreadPriority(_thread->native_handle(), g_thread_priority_map[(pool_spec().worker_priority)]);
-# else
+    int prio = g_thread_priority_map[static_cast<int>(pri)];
+    bool succ = true;
+# if defined(DSN_PLATFORM_POSIX) && !defined(__linux__)
+    struct sched_param param;
+    memset(&param, 0, sizeof(struct sched_param));
+    param.sched_priority = prio;
+# endif
+    errno = 0;
+
+# ifdef _WIN32
+    succ = (::SetThreadPriority(_thread->native_handle(), prio) == TRUE);
+# elif defined(__linux__)
+    if ((nice(prio) == -1) && (errno != 0))
+    {
+        succ = false;
+    }
+# elif defined(DSN_PLATFORM_POSIX)
+    succ = (pthread_setschedparam(pthread_self(), policy, &param) == 0);
 //# error "not implemented"
 # endif
+
+    if (!succ)
+    {
+        dwarn("You may need priviledge to set thread priority. errno = %d.\n", errno);
+    }
 }
 
 void task_worker::set_affinity(uint64_t affinity)
