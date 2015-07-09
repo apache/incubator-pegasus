@@ -35,7 +35,6 @@
 # ifdef __FreeBSD__
 # include <pthread_np.h>
 # endif
-//# include <sys/prctl.h>
 # endif
 
 
@@ -125,33 +124,31 @@ void task_worker::set_name()
     {
     }
 
-# elif defined(DSN_PLATFORM_POSIX)
+# else
     auto thread_name = name()
     # ifdef __linux__
         .substr(0, (16 - 1))
     # endif
     ;
     auto tid = _thread->native_handle();
-    int ret = 0;
+    int err = 0;
     # ifdef __FreeBSD__
     pthread_set_name_np(tid, thread_name.c_str());
     # elif defined(__linux__)
-	ret = pthread_setname_np(tid, thread_name.c_str());
+    err = pthread_setname_np(tid, thread_name.c_str());
     # elif defined(__APPLE__)
-	ret = pthread_setname_np(thread_name.c_str());
+    err = pthread_setname_np(thread_name.c_str());
     # endif
-    if (ret != 0)
+    if (err != 0)
     {
-        dwarn("Fail to set pthread name. ret = %d", ret);
+        dwarn("Fail to set pthread name. ret = %d", err);
     }
-# else
-//    prctl(PR_SET_NAME, name(), 0, 0, 0)
 # endif
 }
 
 void task_worker::set_priority(worker_priority_t pri)
 {
-# ifdef DSN_PLATFORM_POSIX
+# ifndef _WIN32
     static int policy = SCHED_OTHER;
     static int prio_max =
     #ifdef __linux__
@@ -176,7 +173,7 @@ void task_worker::set_priority(worker_priority_t pri)
         THREAD_PRIORITY_NORMAL,
         THREAD_PRIORITY_ABOVE_NORMAL,
         THREAD_PRIORITY_HIGHEST
-# elif defined(DSN_PLATFORM_POSIX)
+# else
         prio_min,
         (prio_min + prio_middle) / 2,
         prio_middle,
@@ -190,12 +187,11 @@ void task_worker::set_priority(worker_priority_t pri)
 
     int prio = g_thread_priority_map[static_cast<int>(pri)];
     bool succ = true;
-# if defined(DSN_PLATFORM_POSIX) && !defined(__linux__)
+# if !defined(_WIN32) && !defined(__linux__)
     struct sched_param param;
     memset(&param, 0, sizeof(struct sched_param));
     param.sched_priority = prio;
 # endif
-    errno = 0;
 
 # ifdef _WIN32
     succ = (::SetThreadPriority(_thread->native_handle(), prio) == TRUE);
@@ -204,7 +200,7 @@ void task_worker::set_priority(worker_priority_t pri)
     {
         succ = false;
     }
-# elif defined(DSN_PLATFORM_POSIX)
+# else
     succ = (pthread_setschedparam(_thread->native_handle(), policy, &param) == 0);
 //# error "not implemented"
 # endif
