@@ -30,7 +30,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ task.queue.hpc
+# define __TITLE__ "task.queue.hpc"
 
 namespace dsn {
     namespace tools {

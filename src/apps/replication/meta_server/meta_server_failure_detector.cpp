@@ -30,7 +30,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ MetaServer.FD
+# define __TITLE__ "meta.server.FD"
 
 meta_server_failure_detector::meta_server_failure_detector(server_state* state, meta_service* svc)
 {

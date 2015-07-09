@@ -28,7 +28,7 @@ namespace dsn {
         {
             user_request* ureq = (user_request*)context;
 
-            if (err != ::dsn::ERR_SUCCESS)
+            if (err != ::dsn::ERR_OK)
             {
                 derror("remote copy request failed");
                 ureq->nfs_task->enqueue(err, 0, ureq->nfs_task->node());
@@ -36,7 +36,7 @@ namespace dsn {
                 return;
             }
 
-            if (resp.error != ::dsn::ERR_SUCCESS)
+            if (resp.error != ::dsn::ERR_OK)
             {
                 derror("remote copy request failed");
                 error_code resp_err;
@@ -165,12 +165,12 @@ namespace dsn {
 
             continue_copy(1);
             
-            if (err == ERR_SUCCESS)
+            if (err == ERR_OK)
             {
                 err = resp.error;
             }
 
-            if (err != ::dsn::ERR_SUCCESS)
+            if (err != ::dsn::ERR_OK)
             {
                 handle_completion(reqc->file_ctx->user_req, err);
                 return;
@@ -314,7 +314,7 @@ namespace dsn {
             continue_write();
 
             bool completed = false;
-            if (err != ERR_SUCCESS)
+            if (err != ERR_OK)
             {
                 completed = true;
             }
@@ -366,7 +366,7 @@ namespace dsn {
                         rc->local_write_task = nullptr;
                     }
 
-                    if (err != ERR_SUCCESS)
+                    if (err != ERR_OK)
                     {
                         if (ctask != nullptr)
                         {
@@ -407,7 +407,7 @@ namespace dsn {
             delete req;
 
             // clear out all canceled requests
-            if (err != ERR_SUCCESS)
+            if (err != ERR_OK)
             {
                 continue_copy(0);
                 continue_write();

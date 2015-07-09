@@ -35,7 +35,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ perf.test.helper
+# define __TITLE__ "perf.test.helper"
 # endif
 
 namespace dsn {
@@ -138,7 +138,7 @@ namespace dsn {
                 int id = (int)(size_t)(context);
                 int lr = --_live_rpc_count;
                 int next = _current_case->concurrent ? 2 : 1;
-                if (err != ERR_SUCCESS)
+                if (err != ERR_OK)
                 {
                     if (err == ERR_TIMEOUT)
                         _current_case->timeout_rounds++;

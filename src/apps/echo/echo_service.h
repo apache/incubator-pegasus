@@ -29,10 +29,9 @@
 # include <dsn/internal/serialization.h>
 # include <iostream>
 
-DEFINE_THREAD_POOL_CODE(THREAD_POOL_TEST)
-DEFINE_TASK_CODE(LPC_ECHO_TIMER, ::dsn::TASK_PRIORITY_HIGH, THREAD_POOL_TEST)
-DEFINE_TASK_CODE_RPC(RPC_ECHO, ::dsn::TASK_PRIORITY_HIGH, THREAD_POOL_TEST)
-DEFINE_TASK_CODE_RPC(RPC_ECHO2, ::dsn::TASK_PRIORITY_HIGH, THREAD_POOL_TEST)
+DEFINE_TASK_CODE(LPC_ECHO_TIMER, ::dsn::TASK_PRIORITY_HIGH, ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE_RPC(RPC_ECHO, ::dsn::TASK_PRIORITY_HIGH, ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE_RPC(RPC_ECHO2, ::dsn::TASK_PRIORITY_HIGH, ::dsn::THREAD_POOL_DEFAULT)
 
 using namespace dsn;
 using namespace dsn::service;
@@ -69,7 +68,7 @@ public:
     {
         register_rpc_handler(RPC_ECHO, "RPC_ECHO", &echo_server::on_echo);
         register_async_rpc_handler(RPC_ECHO2, "RPC_ECHO2", &echo_server::on_echo2);
-        return ERR_SUCCESS;
+        return ERR_OK;
     }
 
     virtual void stop(bool cleanup = false)
@@ -120,7 +119,7 @@ public:
             }
         }
         
-        return ERR_SUCCESS;
+        return ERR_OK;
     }
 
     virtual void stop(bool cleanup = false)
@@ -184,7 +183,7 @@ public:
 
     void on_echo_reply(error_code err, std::shared_ptr<std::string>& req, std::shared_ptr<std::string>& resp)
     {
-        if (err != ERR_SUCCESS)
+        if (err != ERR_OK)
         {
             bool s = false;
             std::cout << "echo err: " << err.to_string() << std::endl;
@@ -221,7 +220,7 @@ public:
 
     void on_echo_reply2(error_code err, std::shared_ptr<blob>& req, std::shared_ptr<blob>& resp)
     {
-        if (err != ERR_SUCCESS)
+        if (err != ERR_OK)
         {
             bool s = false;
             std::cout << "echo err: " << err.to_string() << std::endl;

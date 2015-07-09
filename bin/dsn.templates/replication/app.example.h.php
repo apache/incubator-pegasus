@@ -40,7 +40,7 @@ public:
         _<?=$svc->name?>_client = new <?=$svc->name?>_client(meta_servers, argv[1]);
 <?php } ?>
         _timer = ::dsn::service::tasking::enqueue(<?=$_PROG->get_test_task_code()?>, this, &<?=$_PROG->name?>_client_app::on_test_timer, 0, 0, 1000);
-        return ::dsn::ERR_SUCCESS;
+        return ::dsn::ERR_OK;
     }
 
     virtual void stop(bool cleanup = false)
@@ -116,7 +116,7 @@ public:
 
         _<?=$svc->name?>_client = new <?=$svc->name?>_perf_test_client(meta_servers, argv[1]);
         _<?=$svc->name?>_client->start_test();
-        return ::dsn::ERR_SUCCESS;
+        return ::dsn::ERR_OK;
     }
 
     virtual void stop(bool cleanup = false)

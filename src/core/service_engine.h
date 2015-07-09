@@ -60,6 +60,7 @@ public:
 
     int id() const { return _app_id; }
     const char* name() const { return _app_name.c_str(); }
+    const service_app_spec& spec() const;
     
 private:
     int          _app_id;

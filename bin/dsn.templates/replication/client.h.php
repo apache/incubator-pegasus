@@ -75,7 +75,7 @@ foreach ($keys as $k => $v)
             0<?=$f->is_write ? "":", ". PHP_EOL."\t\t\tread_semantic"?> 
             );
         resp_task->wait();
-        if (resp_task->error() == ::dsn::ERR_SUCCESS)
+        if (resp_task->error() == ::dsn::ERR_OK)
         {
             unmarshall(resp_task->get_response()->reader(), resp);
         }
@@ -107,7 +107,7 @@ foreach ($keys as $k => $v)
         const <?=$f->get_cpp_return_type()?>& resp,
         void* context)
     {
-        if (err != ::dsn::ERR_SUCCESS) std::cout << "reply <?=$f->get_rpc_code()?> err : " << err.to_string() << std::endl;
+        if (err != ::dsn::ERR_OK) std::cout << "reply <?=$f->get_rpc_code()?> err : " << err.to_string() << std::endl;
         else
         {
             std::cout << "reply <?=$f->get_rpc_code()?> ok" << std::endl;
@@ -137,7 +137,7 @@ foreach ($keys as $k => $v)
         std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>>& <?=$f->get_first_param()->name?>, 
         std::shared_ptr<<?=$f->get_cpp_return_type()?>>& resp)
     {
-        if (err != ::dsn::ERR_SUCCESS) std::cout << "reply <?=$f->get_rpc_code()?> err : " << err.to_string() << std::endl;
+        if (err != ::dsn::ERR_OK) std::cout << "reply <?=$f->get_rpc_code()?> err : " << err.to_string() << std::endl;
         else
         {
             std::cout << "reply <?=$f->get_rpc_code()?> ok" << std::endl;

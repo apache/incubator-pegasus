@@ -40,7 +40,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ service.api
+# define __TITLE__ "service.api"
 
 using namespace dsn::tools;
 

@@ -39,7 +39,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ service_engine
+# define __TITLE__ "service_engine"
 
 using namespace dsn::utils;
 
@@ -62,7 +62,7 @@ error_code service_node::start()
 
     // init task engine    
     _computation = new task_engine(this);
-    _computation->start(spec.threadpool_specs);    
+    _computation->start(_app->spec().pools);    
     dassert (_computation->is_started(), "task engine must be started at this point");
 
     // init disk engine
@@ -79,7 +79,7 @@ error_code service_node::start()
     // init rpc engine
     _rpc = new rpc_engine(spec.config, this);    
     error_code err = _rpc->start(_app->spec());
-    if (err != ERR_SUCCESS) return err;
+    if (err != ERR_OK) return err;
 
     // init nfs
     if (spec.nfs_factory_name == "")
@@ -94,6 +94,10 @@ error_code service_node::start()
     return err;
 }
 
+const service_app_spec& service_node::spec() const
+{
+    return _app->spec();
+}
 
 void service_node::get_runtime_info(const std::string& indent, const std::vector<std::string>& args, __out_param std::stringstream& ss)
 {

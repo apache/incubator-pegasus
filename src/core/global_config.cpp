@@ -32,7 +32,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ ConfigFile
+# define __TITLE__ "ConfigFile"
 
 namespace dsn {
 
@@ -46,7 +46,6 @@ threadpool_spec& threadpool_spec::operator=(const threadpool_spec& source)
 {
     name = source.name;
     pool_code.reset(source.pool_code);
-    run = source.run;
     worker_count = source.worker_count;
     worker_priority = source.worker_priority;
     worker_share_core = source.worker_share_core;
@@ -94,14 +93,10 @@ bool threadpool_spec::init(configuration_ptr& config, __out_param std::vector<th
     threadpool_spec default_spec("placeholder");
     if (false == read_config(config, "threadpool.default", default_spec, nullptr))
         return false;
-
-    default_spec.run = true;
     
+    specs.clear();
     for (int code = 0; code <= threadpool_code::max_value(); code++)
     {
-        if (code == THREAD_POOL_INVALID || code == threadpool_code::from_string("placeholder", THREAD_POOL_INVALID))
-            continue;
-
         std::string section_name = std::string("threadpool.") + std::string(threadpool_code::to_string(code));
         threadpool_spec spec(default_spec);
         if (false == read_config(config, section_name.c_str(), spec, &default_spec))
@@ -115,10 +110,7 @@ bool threadpool_spec::init(configuration_ptr& config, __out_param std::vector<th
             spec.worker_affinity_mask = (1 << std::thread::hardware_concurrency()) - 1;
         }
             
-        if (spec.run)
-        {
-            specs.push_back(spec);
-        }
+        specs.push_back(spec);
     }
 
     return true;
@@ -337,11 +329,13 @@ service_app_spec::service_app_spec(const service_app_spec& r)
 {
     index = r.index;
     id = r.id;
+    config_section = r.config_section;
     name = r.name;
     role = r.role;
     type = r.type;
     arguments = r.arguments;
     ports = r.ports;
+    pools = r.pools;
     delay_seconds = r.delay_seconds;
     run = r.run;
     network_client_confs = r.network_client_confs;
@@ -360,6 +354,7 @@ bool service_app_spec::init(
     id = 0;
     index = 0;
     role = r;
+    config_section = std::string(section);
 
     if (!read_config(config, section, *this, default_value))
         return false;

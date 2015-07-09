@@ -62,7 +62,6 @@ struct threadpool_spec
 {
     std::string             name;
     threadpool_code         pool_code;
-    bool                    run;
     int                     worker_count;
     worker_priority_t       worker_priority;
     bool                    worker_share_core;
@@ -87,7 +86,6 @@ struct threadpool_spec
 CONFIG_BEGIN(threadpool_spec)
  // CONFIG_FLD_ID(threadpool_code, pool_code) // no need to define it inside section
     CONFIG_FLD(std::string, name, std::string(""))
-    CONFIG_FLD(bool, run, false)
     CONFIG_FLD(int, worker_count, 2)
     CONFIG_FLD_ENUM(worker_priority_t, worker_priority, THREAD_xPRIORITY_NORMAL, THREAD_xPRIORITY_INVALID)
     CONFIG_FLD(bool, worker_share_core, true)

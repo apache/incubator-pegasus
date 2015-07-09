@@ -31,7 +31,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ task_engine
+# define __TITLE__ "task_engine"
 
 using namespace dsn::utils;
 
@@ -122,8 +122,7 @@ void task_worker_pool::enqueue(task_ptr& task)
                     {
                         task->spec().rejection_handler(task.get(), controller);
 
-                        dlog(log_level_DEBUG, __TITLE__,
-                                "timer_task %s (%016llx) is rejected",                            
+                        ddebug("task %s (%016llx) is rejected",                            
                                 task->spec().name,
                                 task->id()
                                 );
@@ -143,8 +142,7 @@ void task_worker_pool::enqueue(task_ptr& task)
                     {
                         task->spec().rejection_handler(task.get(), controller);
 
-                        dlog(log_level_DEBUG, __TITLE__,
-                                "task %s (%016llx) is rejected because the target queue is full",                            
+                        ddebug("task %s (%016llx) is rejected because the target queue is full",                            
                                 task->spec().name,
                                 task->id()
                                 );
@@ -220,21 +218,19 @@ task_engine::task_engine(service_node* node)
     _node = node;
 }
 
-void task_engine::start(const std::vector<threadpool_spec>& spec)
+void task_engine::start(const std::list<threadpool_code>& pools)
 {
     if (_is_running)
         return;
 
     // init pools
-    _pools.resize(threadpool_code::max_value() + 1);
-    for (auto it = spec.begin(); it != spec.end(); it++)
+    _pools.resize(threadpool_code::max_value() + 1, nullptr);
+    for (auto& p : pools)
     {
-        if ((*it).run)
-        {
-            auto workerPool = new task_worker_pool(*it, this);
-            workerPool->start();
-            _pools[workerPool->spec().pool_code] = workerPool;
-        }
+        auto& s = service_engine::instance().spec().threadpool_specs[p];
+        auto workerPool = new task_worker_pool(s, this);
+        workerPool->start();
+        _pools[p] = workerPool;
     }
 
     _is_running = true;
@@ -247,7 +243,7 @@ void task_engine::get_runtime_info(const std::string& indent, const std::vector<
     {
         if (p)
         {
-            ss << indent << p->spec().name << std::endl;
+            ss << indent << p->spec().pool_code.to_string() << std::endl;
             p->get_runtime_info(indent2, args, ss);
         }
     }

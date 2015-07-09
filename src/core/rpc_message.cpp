@@ -36,7 +36,7 @@ using namespace dsn::utils;
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ message
+# define __TITLE__ "message"
 #define CRC_INVALID 0xdead0c2c
 
 namespace dsn {
@@ -150,7 +150,7 @@ message_ptr message::create_response()
     msg->header().id = _msg_header.id;
     msg->header().rpc_id = _msg_header.rpc_id;
         
-    msg->header().server.error = ERR_SUCCESS.get();    
+    msg->header().server.error = ERR_OK.get();    
     msg->header().local_rpc_code = task_spec::get(_msg_header.local_rpc_code)->rpc_paired_code;
     
     strcpy(msg->header().rpc_name, _msg_header.rpc_name);

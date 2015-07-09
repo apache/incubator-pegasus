@@ -31,7 +31,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ net.provider.sim
+# define __TITLE__ "net.provider.sim"
 
 namespace dsn { namespace tools {
 
@@ -122,14 +122,14 @@ namespace dsn { namespace tools {
             if (s_switch[channel].put(_address, this))
             {
                 s_switch[channel].put(ep2, this);
-                return ERR_SUCCESS;
+                return ERR_OK;
             }   
             else
                 return ERR_ADDRESS_ALREADY_USED;
         }
         else
         {
-            return ERR_SUCCESS;
+            return ERR_OK;
         }
     }
 

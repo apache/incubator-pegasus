@@ -107,7 +107,7 @@ namespace dsn {
                     std::cout << "CALL " << _target.name << ":" << _target.port << " ..." << std::endl;
                     std::string result;
                     auto err = _client.call(rcmd, result, _timeout_seconds * 1000, 0, &_target);
-                    if (err == ERR_SUCCESS)
+                    if (err == ERR_OK)
                     {
                         std::cout << result << std::endl;
                     }
@@ -118,7 +118,7 @@ namespace dsn {
                     continue;
                 }
             }
-            return ERR_SUCCESS;
+            return ERR_OK;
         }
 
         void cli::stop(bool cleanup)

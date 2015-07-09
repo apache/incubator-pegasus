@@ -30,7 +30,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ task.queue.simple
+# define __TITLE__ "task.queue.simple"
 
 namespace dsn {
     namespace tools{

@@ -35,7 +35,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ aio.provider.native
+# define __TITLE__ "aio.provider.native"
 
 namespace dsn { namespace tools {
 
@@ -178,7 +178,7 @@ handle_t native_win_aio_provider::open(const char* file_name, int oflag, int pmo
 error_code native_win_aio_provider::close(handle_t hFile)
 {
     if (::CloseHandle(hFile))
-        return ERR_SUCCESS;
+        return ERR_OK;
     else
     {
         derror("close file failed, err = %x\n", ::GetLastError());
@@ -220,7 +220,7 @@ error_code native_win_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool asy
     if (!async)
     {
         aio->evt = new utils::notify_event();
-        aio->err = ERR_SUCCESS;
+        aio->err = ERR_OK;
         aio->bytes = 0;
     }
 
@@ -292,11 +292,11 @@ void native_win_aio_provider::worker()
             if (!ctx->evt)
             {
                 aio_task_ptr aio(ctx->tsk);
-                complete_io(aio, ERR_SUCCESS, dwTransLen);
+                complete_io(aio, ERR_OK, dwTransLen);
             }
             else
             {
-                ctx->err = ERR_SUCCESS;
+                ctx->err = ERR_OK;
                 ctx->bytes = dwTransLen;
                 ctx->evt->notify();
             }

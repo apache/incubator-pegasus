@@ -27,7 +27,7 @@ public:
         marshall(msg->writer(), request);
         auto resp_task = ::dsn::service::rpc::call(p_server_addr ? *p_server_addr : _server, msg, nullptr);
         resp_task->wait();
-        if (resp_task->error() == ::dsn::ERR_SUCCESS)
+        if (resp_task->error() == ::dsn::ERR_OK)
         {
             unmarshall(resp_task->get_response()->reader(), resp);
         }
@@ -61,7 +61,7 @@ public:
         const copy_response& resp,
         void* context)
     {
-        if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_NFS_COPY err : " << err.to_string() << std::endl;
+        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_NFS_COPY err : " << err.to_string() << std::endl;
         else
         {
             std::cout << "reply RPC_NFS_COPY ok" << std::endl;
@@ -93,7 +93,7 @@ public:
         std::shared_ptr<copy_request>& request, 
         std::shared_ptr<copy_response>& resp)
     {
-        if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_NFS_COPY err : " << err.to_string() << std::endl;
+        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_NFS_COPY err : " << err.to_string() << std::endl;
         else
         {
             std::cout << "reply RPC_NFS_COPY ok" << std::endl;
@@ -114,7 +114,7 @@ public:
         marshall(msg->writer(), request);
         auto resp_task = ::dsn::service::rpc::call(p_server_addr ? *p_server_addr : _server, msg, nullptr);
         resp_task->wait();
-        if (resp_task->error() == ::dsn::ERR_SUCCESS)
+        if (resp_task->error() == ::dsn::ERR_OK)
         {
             unmarshall(resp_task->get_response()->reader(), resp);
         }
@@ -148,7 +148,7 @@ public:
         const get_file_size_response& resp,
         void* context)
     {
-        if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_NFS_GET_FILE_SIZE err : " << err.to_string() << std::endl;
+        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_NFS_GET_FILE_SIZE err : " << err.to_string() << std::endl;
         else
         {
             std::cout << "reply RPC_NFS_GET_FILE_SIZE ok" << std::endl;
@@ -180,7 +180,7 @@ public:
         std::shared_ptr<get_file_size_request>& request, 
         std::shared_ptr<get_file_size_response>& resp)
     {
-        if (err != ::dsn::ERR_SUCCESS) std::cout << "reply RPC_NFS_GET_FILE_SIZE err : " << err.to_string() << std::endl;
+        if (err != ::dsn::ERR_OK) std::cout << "reply RPC_NFS_GET_FILE_SIZE err : " << err.to_string() << std::endl;
         else
         {
             std::cout << "reply RPC_NFS_GET_FILE_SIZE ok" << std::endl;

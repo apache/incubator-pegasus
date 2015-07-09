@@ -97,7 +97,7 @@ error_code mutation_cache::put(mutation_ptr& mu)
         _start_idx = _end_idx = idx;
         _start_decree = _end_decree = decree;
     }
-    return ERR_SUCCESS;
+    return ERR_OK;
 }
 
 mutation_ptr mutation_cache::pop_min()
