@@ -165,6 +165,18 @@ namespace env
     inline double   probability() { return static_cast<double>(random32(0, 1000000000)) / 1000000000.0; }
 }
 
+//
+// in case the apps need to use a dedicated memory allocator
+// e.g., when required by a replay tool to ensure deterministic memory
+// allocation/deallocation results
+//
+namespace memory
+{
+    extern void* allocate(size_t sz);
+    extern void* reallocate(void* ptr, size_t sz);
+    extern void  deallocate(void* ptr);
+}
+
 namespace system
 {
     //

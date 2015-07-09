@@ -485,6 +485,24 @@ namespace env
     }
 }
 
+namespace memory
+{
+    void* allocate(size_t sz)
+    {
+        return service_engine::instance().memory()->allocate(sz);
+    }
+
+    void* reallocate(void* ptr, size_t sz)
+    {
+        return service_engine::instance().memory()->reallocate(ptr, sz);
+    }
+
+    void  deallocate(void* ptr)
+    {
+        return service_engine::instance().memory()->deallocate(ptr);
+    }
+}
+
 }} // end namespace dsn::service
 
 

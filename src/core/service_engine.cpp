@@ -28,6 +28,7 @@
 # include "disk_engine.h"
 # include "rpc_engine.h"
 # include <dsn/internal/env_provider.h>
+# include <dsn/internal/memory_provider.h>
 # include <dsn/internal/nfs.h>
 # include <dsn/internal/perf_counters.h>
 # include <dsn/internal/factory_store.h>
@@ -113,6 +114,7 @@ service_engine::service_engine(void)
 {
     _env = nullptr;
     _logging = nullptr;
+    _memory = nullptr;
 
     ::dsn::register_command("engine", "engine - get engine internal information",
         "engine [app-id]",
@@ -126,6 +128,7 @@ void service_engine::init_before_toollets(const service_spec& spec)
 
     // init common providers (first half)
     _logging = factory_store<logging_provider>::create(spec.logging_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
+    _memory = factory_store<memory_provider>::create(spec.memory_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
     perf_counters::instance().register_factory(factory_store<perf_counter>::get_factory<perf_counter_factory>(spec.perf_counter_factory_name.c_str(), PROVIDER_TYPE_MAIN));
 }
 
