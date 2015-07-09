@@ -225,6 +225,11 @@ void task_worker::set_affinity(uint64_t affinity)
         err = static_cast<int>::GetLastError();
     }
 # else
+    # ifdef __FreeBSD__
+        # ifndef cpu_set_t
+            # define cpu_set_t cpuset_t
+        # endif
+    # endif
     cpu_set_t cpuset;
     int nr_bits = std::max(nr_cpu, static_cast<int>(sizeof(affinity) * 8));
 
