@@ -231,13 +231,18 @@ public:
             waitWithPartialSpinning();
     }
 
-
+    // Be careful! Should check the return value, and can consume iff the return value is true.
     bool wait(int timeout_milliseconds)
     {
-        if (!tryWait())
-            return m_sema.wait(timeout_milliseconds);
-        else
+        if (tryWait())
             return true;
+        int oldCount = m_count.fetch_sub(1, std::memory_order_acquire);
+        if (oldCount > 0)
+            return true;
+        if (m_sema.wait(timeout_milliseconds))
+            return true;
+        signal(); // restore the substracted count
+        return false;
     }
 
     void signal(int count = 1)
