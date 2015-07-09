@@ -32,9 +32,15 @@
 
 # else
 # include <pthread.h>
+
 # ifdef __FreeBSD__
 # include <pthread_np.h>
 # endif
+
+# ifdef __APPLE__
+# include <mach/thread_policy.h>
+# endif
+
 # endif
 
 
@@ -213,9 +219,11 @@ void task_worker::set_priority(worker_priority_t pri)
 
 void task_worker::set_affinity(uint64_t affinity)
 {
+    dassert(affinity > 0, "affinity cannot be 0.");
+
     int nr_cpu = static_cast<int>(std::thread::hardware_concurrency());
-    dassert(affinity <= ((uint64_t)1 << nr_cpu),
-        "Try to set thread affinity to a nonexistent cpu. There are %u cpus in total.", nr_cpu);
+    dassert(affinity <= (((uint64_t)1 << nr_cpu) - 1),
+        "There are %d cpus in total, while setting thread affinity to a nonexistent one.", nr_cpu);
 
     auto tid = _thread->native_handle();
     int err;
@@ -224,6 +232,15 @@ void task_worker::set_affinity(uint64_t affinity)
     {
         err = static_cast<int>::GetLastError();
     }
+# elif defined(__APPLE__)
+    thread_affinity_policy_data_t policy;
+    policy.affinity_tag = static_cast<integer_t>(affinity);
+    err = static_cast<int>(thread_policy_set(
+        static_cast<thread_t>(::dsn::utils::get_current_tid()),
+        THREAD_AFFINITY_POLICY,
+        (thread_policy_t)&policy,
+        THREAD_AFFINITY_POLICY_COUNT
+        ));
 # else
     # ifdef __FreeBSD__
         # ifndef cpu_set_t
@@ -231,7 +248,7 @@ void task_worker::set_affinity(uint64_t affinity)
         # endif
     # endif
     cpu_set_t cpuset;
-    int nr_bits = std::max(nr_cpu, static_cast<int>(sizeof(affinity) * 8));
+    int nr_bits = std::min(nr_cpu, static_cast<int>(sizeof(affinity) * 8));
 
     CPU_ZERO(&cpuset);
     for (int i = 0; i < nr_bits; i++)
