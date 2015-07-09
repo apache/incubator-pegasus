@@ -213,11 +213,36 @@ void task_worker::set_priority(worker_priority_t pri)
 
 void task_worker::set_affinity(uint64_t affinity)
 {
+    int nr_cpu = static_cast<int>(std::thread::hardware_concurrency());
+    dassert(affinity <= ((uint64_t)1 << nr_cpu),
+        "Try to set thread affinity to a nonexistent cpu. There are %u cpus in total.", nr_cpu);
+
+    auto tid = _thread->native_handle();
+    int err;
 # ifdef _WIN32
-    ::SetThreadAffinityMask(_thread->native_handle(), static_cast<DWORD_PTR>(affinity));
+    if (::SetThreadAffinityMask(tid, static_cast<DWORD_PTR>(affinity)) == 0)
+    {
+        err = static_cast<int>::GetLastError();
+    }
 # else
-//# error "not implemented"
+    cpu_set_t cpuset;
+    int nr_bits = std::max(nr_cpu, static_cast<int>(sizeof(affinity) * 8));
+
+    CPU_ZERO(&cpuset);
+    for (int i = 0; i < nr_bits; i++)
+    {
+        if ((affinity & ((uint64_t)1 << i)) != 0)
+        {
+            CPU_SET(i, &cpuset);
+        }
+    }
+    err = pthread_setaffinity_np(tid, sizeof(cpuset), &cpuset);
 # endif
+
+    if (err != 0)
+    {
+        dwarn("Fail to set thread affinity. err = %d", err);
+    }
 }
 
 void task_worker::run_internal()
