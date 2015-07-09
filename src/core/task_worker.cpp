@@ -122,6 +122,14 @@ void task_worker::set_name()
     {
     }
 
+# elif defined(DSN_PLATFORM_POSIX)
+    const size_t len = 16;
+    std::string thread_name = name().substr(0, (len - 1));
+    int ret = pthread_setname_np(_thread->native_handle(), thread_name.c_str());
+    if (ret != 0)
+    {
+        dwarn("Fail to set pthread name. ret = %d", ret);
+    }
 # else
 //    prctl(PR_SET_NAME, name(), 0, 0, 0)
 # endif
@@ -183,7 +191,7 @@ void task_worker::set_priority(worker_priority_t pri)
         succ = false;
     }
 # elif defined(DSN_PLATFORM_POSIX)
-    succ = (pthread_setschedparam(pthread_self(), policy, &param) == 0);
+    succ = (pthread_setschedparam(_thread->native_handle(), policy, &param) == 0);
 //# error "not implemented"
 # endif
 
