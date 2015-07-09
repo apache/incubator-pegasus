@@ -224,8 +224,14 @@ function(dsn_setup_packages)
 		)
 	ms_setup_boost(1 "${BOOST_PACKAGES}")
 	
+	if(UNIX)
+		set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+	endif()
 	find_package(Threads REQUIRED)
-
+	if(UNIX AND CMAKE_USE_PTHREADS_INIT)
+		add_compile_options(-pthread)
+	endif()
+		
 	set(DSN_SYSTEM_LIBS "")
 	set(DSN_CORE_LIBS "")
 	set(DSN_LIBS "")

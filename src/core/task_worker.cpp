@@ -32,6 +32,9 @@
 
 # else
 # include <pthread.h>
+# ifdef __FreeBSD__
+# include <pthread_np.h>
+# endif
 //# include <sys/prctl.h>
 # endif
 
@@ -122,6 +125,25 @@ void task_worker::set_name()
     {
     }
 
+# elif defined(DSN_PLATFORM_POSIX)
+    auto thread_name = name()
+    # ifdef __linux__
+        .substr(0, (16 - 1))
+    # endif
+    ;
+    auto tid = _thread->native_handle();
+    int ret = 0;
+    # ifdef __FreeBSD__
+    pthread_set_name_np(tid, thread_name.c_str());
+    # elif defined(__linux__)
+	ret = pthread_setname_np(tid, thread_name.c_str());
+    # elif defined(__APPLE__)
+	ret = pthread_setname_np(thread_name.c_str());
+    # endif
+    if (ret != 0)
+    {
+        dwarn("Fail to set pthread name. ret = %d", ret);
+    }
 # else
 //    prctl(PR_SET_NAME, name(), 0, 0, 0)
 # endif
@@ -183,7 +205,7 @@ void task_worker::set_priority(worker_priority_t pri)
         succ = false;
     }
 # elif defined(DSN_PLATFORM_POSIX)
-    succ = (pthread_setschedparam(pthread_self(), policy, &param) == 0);
+    succ = (pthread_setschedparam(_thread->native_handle(), policy, &param) == 0);
 //# error "not implemented"
 # endif
 
