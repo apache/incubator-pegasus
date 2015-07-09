@@ -32,6 +32,9 @@
 
 # else
 # include <pthread.h>
+# ifdef __FreeBSD__
+# include <pthread_np.h>
+# endif
 //# include <sys/prctl.h>
 # endif
 
@@ -123,9 +126,20 @@ void task_worker::set_name()
     }
 
 # elif defined(DSN_PLATFORM_POSIX)
-    const size_t len = 16;
-    std::string thread_name = name().substr(0, (len - 1));
-    int ret = pthread_setname_np(_thread->native_handle(), thread_name.c_str());
+    auto thread_name = name()
+    # ifdef __linux__
+        .substr(0, (16 - 1))
+    # endif
+    ;
+    auto tid = _thread->native_handle();
+    int ret = 0;
+    # ifdef __FreeBSD__
+    pthread_set_name_np(tid, thread_name.c_str());
+    # elif defined(__linux__)
+	ret = pthread_setname_np(tid, thread_name.c_str());
+    # elif defined(__APPLE__)
+	ret = pthread_setname_np(thread_name.c_str());
+    # endif
     if (ret != 0)
     {
         dwarn("Fail to set pthread name. ret = %d", ret);
