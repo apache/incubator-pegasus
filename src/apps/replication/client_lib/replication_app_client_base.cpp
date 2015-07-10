@@ -254,7 +254,8 @@ void replication_app_client_base::call(request_context* request, bool no_delay)
         // init timeout timer if necessary
         if (request->timeout_timer == nullptr)
         {
-            request->timeout_timer = tasking::enqueue(
+            tasking::enqueue(
+                request->timeout_timer,
                 LPC_REPLICATION_CLIENT_REQUEST_TIMEOUT,
                 this,
                 std::bind(&replication_app_client_base::on_user_request_timeout, this, request),
