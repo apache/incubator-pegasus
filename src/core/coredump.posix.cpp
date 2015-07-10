@@ -23,11 +23,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+# ifndef _WIN32
+
 # include <dsn/internal/logging.h>
 # include <dsn/internal/coredump.h>
 # include <dsn/tool_api.h>
-
-# if defined(DSN_PLATFORM_POSIX)
 
 # ifdef __TITLE__
 # undef __TITLE__

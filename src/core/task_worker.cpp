@@ -32,10 +32,15 @@
 
 # else
 # include <pthread.h>
+
 # ifdef __FreeBSD__
 # include <pthread_np.h>
 # endif
-//# include <sys/prctl.h>
+
+# ifdef __APPLE__
+# include <mach/thread_policy.h>
+# endif
+
 # endif
 
 
@@ -125,33 +130,31 @@ void task_worker::set_name()
     {
     }
 
-# elif defined(DSN_PLATFORM_POSIX)
+# else
     auto thread_name = name()
     # ifdef __linux__
         .substr(0, (16 - 1))
     # endif
     ;
     auto tid = _thread->native_handle();
-    int ret = 0;
+    int err = 0;
     # ifdef __FreeBSD__
     pthread_set_name_np(tid, thread_name.c_str());
     # elif defined(__linux__)
-	ret = pthread_setname_np(tid, thread_name.c_str());
+    err = pthread_setname_np(tid, thread_name.c_str());
     # elif defined(__APPLE__)
-	ret = pthread_setname_np(thread_name.c_str());
+    err = pthread_setname_np(thread_name.c_str());
     # endif
-    if (ret != 0)
+    if (err != 0)
     {
-        dwarn("Fail to set pthread name. ret = %d", ret);
+        dwarn("Fail to set pthread name. ret = %d", err);
     }
-# else
-//    prctl(PR_SET_NAME, name(), 0, 0, 0)
 # endif
 }
 
 void task_worker::set_priority(worker_priority_t pri)
 {
-# ifdef DSN_PLATFORM_POSIX
+# ifndef _WIN32
     static int policy = SCHED_OTHER;
     static int prio_max =
     #ifdef __linux__
@@ -176,7 +179,7 @@ void task_worker::set_priority(worker_priority_t pri)
         THREAD_PRIORITY_NORMAL,
         THREAD_PRIORITY_ABOVE_NORMAL,
         THREAD_PRIORITY_HIGHEST
-# elif defined(DSN_PLATFORM_POSIX)
+# else
         prio_min,
         (prio_min + prio_middle) / 2,
         prio_middle,
@@ -190,12 +193,11 @@ void task_worker::set_priority(worker_priority_t pri)
 
     int prio = g_thread_priority_map[static_cast<int>(pri)];
     bool succ = true;
-# if defined(DSN_PLATFORM_POSIX) && !defined(__linux__)
+# if !defined(_WIN32) && !defined(__linux__)
     struct sched_param param;
     memset(&param, 0, sizeof(struct sched_param));
     param.sched_priority = prio;
 # endif
-    errno = 0;
 
 # ifdef _WIN32
     succ = (::SetThreadPriority(_thread->native_handle(), prio) == TRUE);
@@ -204,7 +206,7 @@ void task_worker::set_priority(worker_priority_t pri)
     {
         succ = false;
     }
-# elif defined(DSN_PLATFORM_POSIX)
+# else
     succ = (pthread_setschedparam(_thread->native_handle(), policy, &param) == 0);
 //# error "not implemented"
 # endif
@@ -217,11 +219,52 @@ void task_worker::set_priority(worker_priority_t pri)
 
 void task_worker::set_affinity(uint64_t affinity)
 {
+    dassert(affinity > 0, "affinity cannot be 0.");
+
+    int nr_cpu = static_cast<int>(std::thread::hardware_concurrency());
+    dassert(affinity <= (((uint64_t)1 << nr_cpu) - 1),
+        "There are %d cpus in total, while setting thread affinity to a nonexistent one.", nr_cpu);
+
+    auto tid = _thread->native_handle();
+    int err;
 # ifdef _WIN32
-    ::SetThreadAffinityMask(_thread->native_handle(), static_cast<DWORD_PTR>(affinity));
+    if (::SetThreadAffinityMask(tid, static_cast<DWORD_PTR>(affinity)) == 0)
+    {
+        err = static_cast<int>::GetLastError();
+    }
+# elif defined(__APPLE__)
+    thread_affinity_policy_data_t policy;
+    policy.affinity_tag = static_cast<integer_t>(affinity);
+    err = static_cast<int>(thread_policy_set(
+        static_cast<thread_t>(::dsn::utils::get_current_tid()),
+        THREAD_AFFINITY_POLICY,
+        (thread_policy_t)&policy,
+        THREAD_AFFINITY_POLICY_COUNT
+        ));
 # else
-//# error "not implemented"
+    # ifdef __FreeBSD__
+        # ifndef cpu_set_t
+            # define cpu_set_t cpuset_t
+        # endif
+    # endif
+    cpu_set_t cpuset;
+    int nr_bits = std::min(nr_cpu, static_cast<int>(sizeof(affinity) * 8));
+
+    CPU_ZERO(&cpuset);
+    for (int i = 0; i < nr_bits; i++)
+    {
+        if ((affinity & ((uint64_t)1 << i)) != 0)
+        {
+            CPU_SET(i, &cpuset);
+        }
+    }
+    err = pthread_setaffinity_np(tid, sizeof(cpuset), &cpuset);
 # endif
+
+    if (err != 0)
+    {
+        dwarn("Fail to set thread affinity. err = %d", err);
+    }
 }
 
 void task_worker::run_internal()

@@ -24,9 +24,9 @@
  * THE SOFTWARE.
  */
 
-# include "native_aio_provider.posix.h"
+# ifndef _WIN32
 
-# ifdef DSN_PLATFORM_POSIX
+# include "native_aio_provider.posix.h"
 
 # include <aio.h>
 # include <fcntl.h>
@@ -183,4 +183,5 @@ namespace dsn {
 
     }
 } // end namespace dsn::tools
+
 #endif

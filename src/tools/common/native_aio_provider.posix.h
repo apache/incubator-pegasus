@@ -25,10 +25,10 @@
  */
 #pragma once
 
+# ifndef _WIN32
+
 # include <dsn/tool_api.h>
 # include <dsn/internal/synchronize.h>
-
-# ifdef DSN_PLATFORM_POSIX
 
 # include <aio.h>
 # include <fcntl.h>
