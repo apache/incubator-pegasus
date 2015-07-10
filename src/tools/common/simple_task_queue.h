@@ -35,12 +35,12 @@ namespace dsn {
         public:
             simple_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
 
-            virtual void     enqueue(task_ptr& task);
-            virtual task_ptr dequeue();
+            virtual void     enqueue(task* task);
+            virtual task*    dequeue();
             virtual int      count() const;
 
         private:
-            typedef utils::blocking_priority_queue<task_ptr, TASK_PRIORITY_COUNT> tqueue;
+            typedef utils::blocking_priority_queue<task*, TASK_PRIORITY_COUNT> tqueue;
             tqueue _samples;
         };
     }

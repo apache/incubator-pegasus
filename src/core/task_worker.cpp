@@ -274,10 +274,11 @@ void task_worker::loop()
     //try {
         while (_is_running)
         {
-            task_ptr task = q->dequeue();
+            task* task = q->dequeue();
             if (task != nullptr)
             {
                 task->exec_internal();
+                task->release_ref();
             }
         }
     /*}

@@ -35,12 +35,12 @@ class sim_task_queue : public task_queue
 public:
     sim_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
 
-    virtual void     enqueue(task_ptr& task);
-    virtual task_ptr dequeue();
+    virtual void     enqueue(task* task);
+    virtual task*    dequeue();
     virtual int      count() const { return static_cast<int>(_tasks.size()); }
 
 private:
-    std::map<uint32_t, task_ptr> _tasks;
+    std::map<uint32_t, task*> _tasks;
 };
 
 struct sim_worker_state;

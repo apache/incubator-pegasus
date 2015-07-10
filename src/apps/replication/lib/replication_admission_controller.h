@@ -39,7 +39,7 @@ public:
     ~replication_admission_controller(void);
 
 private:
-    virtual bool is_task_accepted(task_ptr& task);
+    virtual bool is_task_accepted(task* task);
     virtual int  get_system_utilization();
 
 private:

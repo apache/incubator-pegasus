@@ -101,31 +101,31 @@ void task_worker_pool::start()
     _is_running = true;
 }
 
-void task_worker_pool::enqueue(task_ptr& task)
+void task_worker_pool::enqueue(task* t)
 {
-    dassert (task->spec().pool_code == spec().pool_code || task->spec().type == TASK_TYPE_RPC_RESPONSE, "Invalid thread pool used");
+    dassert(t->spec().pool_code == spec().pool_code || t->spec().type == TASK_TYPE_RPC_RESPONSE, "Invalid thread pool used");
 
     if (_is_running)
     {
-        int idx = (_spec.partitioned ? task->hash() % _queues.size() : 0);
+        int idx = (_spec.partitioned ? t->hash() % _queues.size() : 0);
         task_queue* q = _queues[idx];
         //dinfo("%s pool::enqueue %s (%016llx)", _node->name(), task->spec().name, task->id());
-        if (task->delay_milliseconds() == 0)
+        if (t->delay_milliseconds() == 0)
         {
             auto controller = _controllers[idx];
             if (controller != nullptr)
             {
-                while (!controller->is_task_accepted(task))
+                while (!controller->is_task_accepted(t))
                 {
                     // any customized rejection handler?
-                    if (task->spec().rejection_handler != nullptr)
+                    if (t->spec().rejection_handler != nullptr)
                     {
-                        task->spec().rejection_handler(task.get(), controller);
+                        t->spec().rejection_handler(t, controller);
 
                         ddebug("task %s (%016llx) is rejected",                            
-                                task->spec().name,
-                                task->id()
-                                );
+                            t->spec().name,
+                            t->id()
+                            );
 
                         return;
                     }
@@ -133,19 +133,19 @@ void task_worker_pool::enqueue(task_ptr& task)
                     std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 }
             }
-            else if (task->spec().type == TASK_TYPE_RPC_REQUEST && _spec.max_input_queue_length != 0xFFFFFFFFUL)
+            else if (t->spec().type == TASK_TYPE_RPC_REQUEST && _spec.max_input_queue_length != 0xFFFFFFFFUL)
             {
                 while ((uint32_t)q->count() >= _spec.max_input_queue_length)
                 {
                     // any customized rejection handler?
-                    if (task->spec().rejection_handler != nullptr)
+                    if (t->spec().rejection_handler != nullptr)
                     {
-                        task->spec().rejection_handler(task.get(), controller);
+                        t->spec().rejection_handler(t, controller);
 
                         ddebug("task %s (%016llx) is rejected because the target queue is full",                            
-                                task->spec().name,
-                                task->id()
-                                );
+                            t->spec().name,
+                            t->id()
+                            );
 
                         return;
                     }
@@ -154,13 +154,16 @@ void task_worker_pool::enqueue(task_ptr& task)
                 }
             }
         }
-        return q->enqueue(task);
+
+        // add reference before adding to the queue
+        t->add_ref();
+        return q->enqueue(t);
     }
     else
     {
         dassert (false, "worker pool %s must be started before enqueue task %s",
             spec().name.c_str(),
-            task->spec().name
+            t->spec().name
             );
     }
 }

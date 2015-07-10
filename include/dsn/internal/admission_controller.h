@@ -39,7 +39,7 @@ public:
     admission_controller(task_queue* q, std::vector<std::string>& sargs) : _queue(q) {}
     ~admission_controller(void) {}
     
-    virtual bool is_task_accepted(task_ptr& task) = 0;
+    virtual bool is_task_accepted(task* task) = 0;
         
     task_queue* bound_queue() const { return _queue; }
     

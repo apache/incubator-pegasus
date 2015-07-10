@@ -25,7 +25,7 @@ public:
     {
         ::dsn::message_ptr msg = ::dsn::message::create_request(RPC_NFS_COPY, timeout_milliseconds, hash);
         marshall(msg->writer(), request);
-        auto resp_task = ::dsn::service::rpc::call(p_server_addr ? *p_server_addr : _server, msg, nullptr);
+        auto resp_task = ::dsn::service::rpc::call(p_server_addr ? *p_server_addr : _server, msg);
         resp_task->wait();
         if (resp_task->error() == ::dsn::ERR_OK)
         {
@@ -112,7 +112,7 @@ public:
     {
         ::dsn::message_ptr msg = ::dsn::message::create_request(RPC_NFS_GET_FILE_SIZE, timeout_milliseconds, hash);
         marshall(msg->writer(), request);
-        auto resp_task = ::dsn::service::rpc::call(p_server_addr ? *p_server_addr : _server, msg, nullptr);
+        auto resp_task = ::dsn::service::rpc::call(p_server_addr ? *p_server_addr : _server, msg);
         resp_task->wait();
         if (resp_task->error() == ::dsn::ERR_OK)
         {

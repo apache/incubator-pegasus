@@ -173,9 +173,9 @@ namespace dsn {
     class cli_rpc_server_handler : public rpc_server_handler
     {
     public:
-        virtual rpc_request_task_ptr new_request_task(message_ptr& request, service_node* node)
+        virtual rpc_request_task* new_request_task(message_ptr& request, service_node* node)
         {
-            return rpc_request_task_ptr(new cli_rpc_request_task(request, node));
+            return (new cli_rpc_request_task(request, node));
         }
     };
 

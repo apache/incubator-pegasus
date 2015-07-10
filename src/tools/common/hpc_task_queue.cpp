@@ -40,11 +40,10 @@ namespace dsn {
             _count = 0;
         }
         
-        void hpc_task_queue::enqueue(task_ptr& task)
+        void hpc_task_queue::enqueue(task* task)
         {
             if (task->delay_milliseconds() == 0)
             {
-                task->add_ref();
                 {
                     utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
 
@@ -72,11 +71,14 @@ namespace dsn {
                         dfatal("delayed execution failed for task %s, err = %u",
                             task->spec().name, ec.value());
                     }
+
+                    // to consume the added ref count by another task::enqueue
+                    task->release_ref();
                 });
             }
         }
 
-        task_ptr hpc_task_queue::dequeue()
+        task* hpc_task_queue::dequeue()
         {
             _sema.wait();
 
@@ -90,8 +92,7 @@ namespace dsn {
 
             _count.fetch_sub(1, std::memory_order_release);
 
-            task_ptr ts = CONTAINING_RECORD(t, task, _task_queue_dl);
-            ts->release_ref();
+            task* ts = CONTAINING_RECORD(t, task, _task_queue_dl);
             return ts;
         }
     }

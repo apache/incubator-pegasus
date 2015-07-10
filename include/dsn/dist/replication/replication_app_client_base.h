@@ -84,7 +84,7 @@ namespace dsn { namespace replication {
             auto rc = create_write_context(partition_index, code, task, reply_hash);
             marshall(msg->writer(), *req);
             call(rc);
-            return task;
+            return std::move(task);
         }
         
         template<typename TRequest, typename TResponse>
@@ -118,7 +118,7 @@ namespace dsn { namespace replication {
             auto rc = create_write_context(partition_index, code, task, reply_hash);
             marshall(msg->writer(), *req);
             call(rc);
-            return task;
+            return std::move(task);
         }
 
         template<typename T, typename TRequest, typename TResponse>
@@ -153,7 +153,7 @@ namespace dsn { namespace replication {
             auto rc = create_write_context(partition_index, code, task, reply_hash);
             marshall(msg->writer(), req);
             call(rc);
-            return task;
+            return std::move(task);
         }
 
         template<typename TRequest, typename TResponse>
@@ -188,7 +188,7 @@ namespace dsn { namespace replication {
             auto rc = create_write_context(partition_index, code, task, reply_hash);
             marshall(msg->writer(), req);
             call(rc);
-            return task;
+            return std::move(task);
         }
 
         template<typename T, typename TRequest, typename TResponse>
@@ -224,7 +224,7 @@ namespace dsn { namespace replication {
             auto rc = create_read_context(partition_index, code, task, read_semantic, snapshot_decree, reply_hash);
             marshall(msg->writer(), *req);
             call(rc);
-            return task;
+            return std::move(task);
         }
 
         template<typename TRequest, typename TResponse>
@@ -260,7 +260,7 @@ namespace dsn { namespace replication {
             auto rc = create_read_context(partition_index, code, task, read_semantic, snapshot_decree, reply_hash);
             marshall(msg->writer(), *req);
             call(rc);
-            return task;
+            return std::move(task);
         }
 
         template<typename T, typename TRequest, typename TResponse>
@@ -297,7 +297,7 @@ namespace dsn { namespace replication {
             auto rc = create_read_context(partition_index, code, task, read_semantic, snapshot_decree, reply_hash);
             marshall(msg->writer(), req);
             call(rc);
-            return task;
+            return std::move(task);
         }
 
         template<typename TRequest, typename TResponse>
@@ -334,7 +334,7 @@ namespace dsn { namespace replication {
             auto rc = create_read_context(partition_index, code, task, read_semantic, snapshot_decree, reply_hash);
             marshall(msg->writer(), req);
             call(rc);
-            return task;
+            return std::move(task);
         }
 
         // get read address policy
@@ -367,14 +367,14 @@ namespace dsn { namespace replication {
         request_context* create_write_context(
             int partition_index,
             task_code code,
-            rpc_response_task_ptr callback,
+            rpc_response_task_ptr& callback,
             int reply_hash = 0
             );
 
         request_context* create_read_context(
             int partition_index,
             task_code code,
-            rpc_response_task_ptr callback,
+            rpc_response_task_ptr& callback,
             read_semantic_t read_semantic = ReadOutdated,
             decree snapshot_decree = invalid_decree, // only used when ReadSnapshot        
             int reply_hash = 0

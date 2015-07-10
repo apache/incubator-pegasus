@@ -103,7 +103,7 @@ DEFINE_TASK_CODE(LPC_REPLICATION_DELAY_QUERY_CONFIG, TASK_PRIORITY_COMMON, THREA
 replication_app_client_base::request_context* replication_app_client_base::create_write_context(
     int partition_index,
     task_code code,
-    rpc_response_task_ptr callback,
+    rpc_response_task_ptr& callback,
     int reply_hash
     )
 {
@@ -134,7 +134,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
 replication_app_client_base::request_context* replication_app_client_base::create_read_context(
     int partition_index,
     task_code code,
-    rpc_response_task_ptr callback,
+    rpc_response_task_ptr& callback,
     read_semantic_t read_semantic,
     decree snapshot_decree, // only used when ReadSnapshot        
     int reply_hash

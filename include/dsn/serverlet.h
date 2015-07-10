@@ -158,7 +158,7 @@ namespace dsn {
                     _svc = svc;
                 }
 
-                virtual rpc_request_task_ptr new_request_task(message_ptr& request, service_node* node)
+                virtual rpc_request_task* new_request_task(message_ptr& request, service_node* node)
                 {
                     return new service_rpc_request_task1<TRequest>(request, node, _svc, _handler);
                 }
@@ -207,7 +207,7 @@ namespace dsn {
                     _svc = svc;
                 }
 
-                virtual rpc_request_task_ptr new_request_task(message_ptr& request, service_node* node)
+                virtual rpc_request_task* new_request_task(message_ptr& request, service_node* node)
                 {
                     return new service_rpc_request_task2<TRequest, TResponse>(request, node, _svc, _handler);
                 }
@@ -253,7 +253,7 @@ namespace dsn {
                     _svc = svc;
                 }
 
-                virtual rpc_request_task_ptr new_request_task(message_ptr& request, service_node* node)
+                virtual rpc_request_task* new_request_task(message_ptr& request, service_node* node)
                 {
                     return new service_rpc_request_task3<TRequest, TResponse>(request, node, _svc, _handler);
                 }
@@ -293,7 +293,7 @@ namespace dsn {
                     _svc = svc;
                 }
 
-                virtual rpc_request_task_ptr new_request_task(message_ptr& request, service_node* node)
+                virtual rpc_request_task* new_request_task(message_ptr& request, service_node* node)
                 {
                     return new service_rpc_request_task4(request, node, _svc, _handler);
                 }

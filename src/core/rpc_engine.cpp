@@ -113,7 +113,7 @@ namespace dsn {
             auto it = _requests.find(key);
             if (it != _requests.end())
             {
-                call = it->second.resp_task;
+                call = std::move(it->second.resp_task);
                 net = it->second.net;
                 _requests.erase(it);
             }
@@ -143,7 +143,7 @@ namespace dsn {
     bool rpc_client_matcher::on_call(message_ptr& request, rpc_response_task_ptr& call, network* net)
     {
         message* msg = request.get();
-        task_ptr timeout_task;
+        task* timeout_task;
         task_spec* spec = task_spec::get(msg->header().local_rpc_code);
         message_header& hdr = msg->header();
 
@@ -363,7 +363,7 @@ namespace dsn {
         if (handler != nullptr)
         {
             msg->header().local_rpc_code = (uint16_t)handler->code;
-            auto tsk = handler->handler->new_request_task(msg, node());
+            rpc_request_task_ptr tsk = handler->handler->new_request_task(msg, node());
             tsk->set_delay(delay_ms);
             tsk->enqueue(_node);
         }

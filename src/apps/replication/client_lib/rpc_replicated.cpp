@@ -148,11 +148,13 @@ namespace dsn {
                     reply_hash
                     );
 
-                return rpc::call(
+                rpc::call(
                     first,
                     request,
                     ps->response_task
                     );
+
+                return ps->response_task;
             }
         }
     }

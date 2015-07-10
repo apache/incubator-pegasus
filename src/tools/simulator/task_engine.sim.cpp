@@ -33,37 +33,37 @@ sim_task_queue::sim_task_queue(task_worker_pool* pool, int index, task_queue* in
 {
 }
 
-void sim_task_queue::enqueue(task_ptr& task)
+void sim_task_queue::enqueue(task* t)
 {
-    if (0 == task->delay_milliseconds())    
+    if (0 == t->delay_milliseconds())    
     {
         if (_tasks.size() > 0)
         {
             do {
                 int random_pos = ::dsn::service::env::random32(0, 1000000);
-                auto pr = _tasks.insert(std::map<uint32_t, task_ptr>::value_type(random_pos, task));
+                auto pr = _tasks.insert(std::map<uint32_t, task*>::value_type(random_pos, t));
                 if (pr.second) break;
             } while (true);
         }
         else
         {
             int random_pos = ::dsn::service::env::random32(0, 1000000);
-            _tasks.insert(std::map<uint32_t, task_ptr>::value_type(random_pos, task));
+            _tasks.insert(std::map<uint32_t, task*>::value_type(random_pos, t));
         }
     }
     else
     {
-        scheduler::instance().add_task(task, this);
+        scheduler::instance().add_task(t, this);
     }
 }
 
-task_ptr sim_task_queue::dequeue()
+task* sim_task_queue::dequeue()
 {
     scheduler::instance().wait_schedule(false);
 
     if (_tasks.size() > 0)
     {
-        task_ptr t = _tasks.begin()->second;
+        auto t = _tasks.begin()->second;
         _tasks.erase(_tasks.begin());
         return t;
     }

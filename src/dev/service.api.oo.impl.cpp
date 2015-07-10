@@ -86,7 +86,7 @@ namespace dsn {
                     tsk.reset(new service_task(evt, context, callback, hash));
 
                 enqueue(tsk, delay_milliseconds);
-                return tsk;
+                return std::move(tsk);
             }
         }
 
@@ -108,7 +108,8 @@ namespace dsn {
                     reply_hash
                     ));
 
-                return rpc::call(server, request, resp_task);
+                rpc::call(server, request, resp_task);
+                return std::move(resp_task);
             }
         }
 
@@ -130,7 +131,7 @@ namespace dsn {
                     : static_cast<aio_task*>(new aio_task_empty(callback_code, hash))
                     );
                 read(hFile, buffer, count, offset, tsk);
-                return tsk;
+                return std::move(tsk);
             }
 
             aio_task_ptr write(
@@ -149,7 +150,7 @@ namespace dsn {
                     : static_cast<aio_task*>(new aio_task_empty(callback_code, hash))
                     );
                 write(hFile, buffer, count, offset, tsk);
-                return tsk;
+                return std::move(tsk);
             }
 
 
@@ -170,7 +171,7 @@ namespace dsn {
                     : static_cast<aio_task*>(new aio_task_empty(callback_code, hash))
                     );
                 copy_remote_files(remote, source_dir, files, dest_dir, overwrite, tsk);
-                return tsk;
+                return std::move(tsk);
             }
         }
 
