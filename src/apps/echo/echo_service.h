@@ -113,9 +113,10 @@ public:
         }
         else if (_bench == "queue-test")
         {
+            uint64_t last_report_ts = now_ms();
             for (int i = 0; i < 16; i++)
             {
-                tasking::enqueue(LPC_ECHO_TIMER, this, std::bind(&echo_client::queue_test, this, i, 0), i, 1000);
+                tasking::enqueue(LPC_ECHO_TIMER, this, std::bind(&echo_client::queue_test, this, i, 0, last_report_ts), i, 1000);
             }
         }
         
@@ -131,7 +132,7 @@ public:
         }
     }
 
-    void queue_test(int hash, int count)
+    void queue_test(int hash, int count, uint64_t ts_ms)
     {
         if (!_test_local_queue)
         {
@@ -143,10 +144,12 @@ public:
 
         if (count % 1000000 == 0)
         {
-            std::cout << hash << " queue-test to " << count << std::endl;
+            auto nts = now_ms();
+            std::cout << (nts - ts_ms) << " ms elapsed, " <<  hash << " queue-test to " << count << std::endl;
+    //        ts_ms = nts;
         }
         
-        tasking::enqueue(LPC_ECHO_TIMER, this, std::bind(&echo_client::queue_test, this, hash, count), hash);
+        tasking::enqueue(LPC_ECHO_TIMER, this, std::bind(&echo_client::queue_test, this, hash, count, ts_ms), hash);
     }
 
     void send_one()

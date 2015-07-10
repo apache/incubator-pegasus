@@ -40,6 +40,7 @@ class disk_engine;
 class env_provider;
 class logging_provider;
 class nfs_node;
+class memory_provider;
 
 namespace service {
     class service_app;
@@ -82,6 +83,7 @@ public:
     const service_spec& spec() const { return _spec; }
     env_provider* env() const { return _env; }
     logging_provider* logging() const { return _logging; }
+    memory_provider* memory() const { return _memory; }
     static std::string get_runtime_info(const std::vector<std::string>& args);
         
     void init_before_toollets(const service_spec& spec);
@@ -95,6 +97,7 @@ private:
     service_spec                    _spec;
     env_provider*                   _env;
     logging_provider*               _logging;
+    memory_provider*                _memory;
 
     // <port, servicenode>
     typedef std::map<int, service_node*> node_engines_by_app_id;

@@ -64,7 +64,7 @@ public:
     bool is_started() const { return _started; }
 
 private:
-    friend class system_runner;
+    friend class service_app_helper;
     void set_service_node(service_node* node) { _svc_node = node; }
         
 private:    

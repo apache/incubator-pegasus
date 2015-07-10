@@ -40,8 +40,19 @@ namespace dsn {
 class task_worker;
 class task_worker_pool;
 class service_node;
+class task;
 
-class task : public ref_object, public extensible_object<task, 4>
+struct __tls_task_info__
+{
+    uint32_t     magic;
+    task         *current_task;
+    task_worker  *worker;
+    int           worker_index;
+};
+
+extern __thread struct __tls_task_info__ tls_task_info;
+
+class task : public ref_object, public extensible_object<task, 4>, public ::dsn::tools::memory::tallocator_object
 {
 public:
     task(task_code code, int hash = 0, service_node* node = nullptr);
@@ -239,5 +250,40 @@ public:
 };
 
 typedef ::boost::intrusive_ptr<aio_task> aio_task_ptr;
+
+
+// ------------------------ inline implementations --------------------
+__inline /*static*/ task* task::get_current_task()
+{
+    if (tls_task_info.magic == 0xdeadbeef)
+        return tls_task_info.current_task;
+    else
+        return nullptr;
+}
+
+__inline /*static*/ uint64_t task::get_current_task_id()
+{
+    if (tls_task_info.magic == 0xdeadbeef)
+        return tls_task_info.current_task ? tls_task_info.current_task->id() : 0;
+    else
+        return 0;
+}
+
+
+__inline /*static*/ task_worker* task::get_current_worker()
+{
+    if (tls_task_info.magic == 0xdeadbeef)
+        return tls_task_info.worker;
+    else
+        return nullptr;
+}
+
+__inline /*static*/ int task::get_current_worker_index()
+{
+    if (tls_task_info.magic == 0xdeadbeef)
+        return tls_task_info.worker_index;
+    else
+        return -1;
+}
 
 } // end namespace
