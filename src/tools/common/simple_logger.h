@@ -36,7 +36,7 @@ namespace dsn {
         class screen_logger : public logging_provider
         {
         public:
-            screen_logger(const char *parameter) : logging_provider(parameter) { }
+            screen_logger() { }
             virtual ~screen_logger(void) { }
 
             virtual void logv(const char *file,
@@ -56,7 +56,7 @@ namespace dsn {
         class simple_logger : public logging_provider
         {
         public:
-            simple_logger(const char *parameter);
+            simple_logger();
             virtual ~simple_logger(void);
 
             virtual void logv(const char *file,

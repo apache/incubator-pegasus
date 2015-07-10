@@ -28,6 +28,7 @@
 # include <dsn/internal/task.h>
 # include <dsn/internal/service_app.h>
 # include <dsn/internal/zlocks.h>
+# include <dsn/internal/callocator.h>
 
 namespace dsn { namespace service {
 
@@ -175,6 +176,11 @@ namespace memory
     extern void* allocate(size_t sz);
     extern void* reallocate(void* ptr, size_t sz);
     extern void  deallocate(void* ptr);
+
+    template <typename T>
+    using sallocator = ::dsn::callocator<T, allocate, deallocate>;
+
+    using sallocator_object = callocator_object<allocate, deallocate>;
 }
 
 namespace system

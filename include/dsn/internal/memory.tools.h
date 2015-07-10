@@ -25,27 +25,24 @@
  */
 # pragma once
 
-# include <dsn/internal/logging.h>
-# include <stdarg.h>
+# include <dsn/internal/callocator.h>
 
-namespace dsn {
-
-class logging_provider
+namespace dsn 
 {
-public:
-    template <typename T> static logging_provider* create()
+    namespace tools 
     {
-        return new T();
+        // memory allocator for runtime under service api (rDSN and all tools)
+        namespace memory
+        {
+            extern void* allocate(size_t sz);
+            extern void* reallocate(void* ptr, size_t sz);
+            extern void  deallocate(void* ptr);
+
+            template <typename T>
+            using tallocator = ::dsn::callocator<T, allocate, deallocate>;
+
+            using tallocator_object = callocator_object<allocate, deallocate>;
+        }
+
     }
-
-public:
-    logging_provider() {}
-
-    virtual ~logging_provider(void) { }
-    
-    virtual void logv(const char *file, const char *function, const int line, logging_level logLevel, const char* title, const char* fmt, va_list args) = 0;
-};
-
-
-// ----------------------- inline implementation ---------------------------------------
-} // end namespace
+}

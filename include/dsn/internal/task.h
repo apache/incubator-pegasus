@@ -41,7 +41,7 @@ class task_worker;
 class task_worker_pool;
 class service_node;
 
-class task : public ref_object, public extensible_object<task, 4>
+class task : public ref_object, public extensible_object<task, 4>, public ::dsn::tools::memory::tallocator_object
 {
 public:
     task(task_code code, int hash = 0, service_node* node = nullptr);

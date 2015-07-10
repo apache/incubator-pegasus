@@ -41,6 +41,7 @@
 # include <dsn/internal/perf_counters.h>
 # include <dsn/internal/logging.h>
 # include <dsn/internal/configuration.h>
+# include <dsn/internal/memory.tools.h>
 
 namespace dsn { namespace tools {
     
@@ -108,7 +109,7 @@ typedef nfs_node*        (*nfs_factory)(service_node*);
 typedef message_parser*  (*message_parser_factory)(int);
 
 typedef perf_counter*    (*perf_counter_factory)(const char *, const char *, perf_counter_type);
-typedef logging_provider* (*logging_factory)(const char*);
+typedef logging_provider* (*logging_factory)();
 typedef memory_provider* (*memory_factory)();
 typedef toollet*         (*toollet_factory)(const char*);
 typedef tool_app*        (*tool_app_factory)(const char*);
@@ -152,5 +153,5 @@ configuration_ptr config();
 // --------- inline implementation -----------------------------
 
 
-}} // end namespace dsn::tool_api
+}} // end namespace dsn::tools
 

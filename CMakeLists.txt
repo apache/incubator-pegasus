@@ -5,5 +5,6 @@ set(DSN_BUILD_RUNTIME 1)
 dsn_common_setup()
 dsn_add_pseudo_projects()
 
+add_subdirectory(ext/gperftools-2.4)
 add_subdirectory(ext/gtest)
 add_subdirectory(src)

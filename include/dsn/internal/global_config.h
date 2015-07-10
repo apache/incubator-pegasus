@@ -132,7 +132,8 @@ struct service_spec
     std::string                  nfs_factory_name;
     std::string                  perf_counter_factory_name;
     std::string                  logging_factory_name;
-    std::string                  memory_factory_name;
+    std::string                  memory_factory_name; // for upper applications
+    std::string                  tools_memory_factory_name; // for rDSN itself and lower tools
 
     std::list<std::string>       network_aspects; // toollets compatible to the above network main providers in network configs
     std::list<std::string>       aio_aspects; // toollets compatible to main aio provider
@@ -164,7 +165,8 @@ CONFIG_BEGIN(service_spec)
     CONFIG_FLD(std::string, perf_counter_factory_name, "")
     CONFIG_FLD(std::string, logging_factory_name, "")
     CONFIG_FLD(std::string, memory_factory_name, "")
-    
+    CONFIG_FLD(std::string, tools_memory_factory_name, "")
+
     CONFIG_FLD_STRING_LIST(network_aspects)
     CONFIG_FLD_STRING_LIST(aio_aspects)
     CONFIG_FLD_STRING_LIST(env_aspects)

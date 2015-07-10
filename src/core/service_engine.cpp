@@ -128,7 +128,7 @@ void service_engine::init_before_toollets(const service_spec& spec)
 
     // init common providers (first half)
     _logging = factory_store<logging_provider>::create(spec.logging_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
-    _memory = factory_store<memory_provider>::create(spec.memory_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
+    _memory = factory_store<memory_provider>::create(spec.memory_factory_name.c_str(), PROVIDER_TYPE_MAIN);
     perf_counters::instance().register_factory(factory_store<perf_counter>::get_factory<perf_counter_factory>(spec.perf_counter_factory_name.c_str(), PROVIDER_TYPE_MAIN));
 }
 
