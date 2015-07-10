@@ -92,13 +92,12 @@ namespace dsn {
 
             __inline bool try_lock() 
             { 
-                int not_lock = 0;
-                return _l.compare_exchange_strong(not_lock, 1);
+                return 0 == _l.exchange(1, std::memory_order_acquire);
             }
 
             __inline void unlock() 
             {
-                _l.fetch_sub(1, std::memory_order_release);
+                _l.store(0, std::memory_order_release);
             }
 
         private:

@@ -79,7 +79,7 @@ void servicelet::clear_outstanding_tasks()
     {
         while (true)
         {
-            bool prepare_succ;
+            task_context_manager::owner_delete_state prepare_state;
             task_context_manager *tcm;
 
             {
@@ -88,16 +88,21 @@ void servicelet::clear_outstanding_tasks()
                 if (n != &_outstanding_tasks[i])
                 {
                     tcm = CONTAINING_RECORD(n, task_context_manager, _dl);
-                    prepare_succ = tcm->owner_delete_prepare();
+                    prepare_state = tcm->owner_delete_prepare();
                 }
                 else
                     break; // assuming nobody is putting tasks into it anymore
             }
 
-            if (prepare_succ)
+            switch (prepare_state)
             {
+            case task_context_manager::OWNER_DELETE_NOT_LOCKED:
                 tcm->_task->cancel(true);
                 tcm->owner_delete_commit();
+                break;
+            case task_context_manager::OWNER_DELETE_LOCKED:
+            case task_context_manager::OWNER_DELETE_FINISHED:
+                break;
             }
         }
     }

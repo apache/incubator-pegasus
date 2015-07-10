@@ -132,7 +132,7 @@ public:
         }
     }
 
-    void queue_test(int hash, int count, int ts_ms)
+    void queue_test(int hash, int count, uint64_t ts_ms)
     {
         if (!_test_local_queue)
         {
@@ -144,7 +144,7 @@ public:
 
         if (count % 1000000 == 0)
         {
-            int nts = now_ms();
+            auto nts = now_ms();
             std::cout << (nts - ts_ms) << " ms elapsed, " <<  hash << " queue-test to " << count << std::endl;
     //        ts_ms = nts;
         }

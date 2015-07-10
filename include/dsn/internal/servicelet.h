@@ -53,19 +53,26 @@ namespace dsn {
             virtual ~task_context_manager();
 
         private:
-            bool owner_delete_prepare();
-            void owner_delete_commit();
-
-        private:
             friend class servicelet;
+
+            enum owner_delete_state
+            {
+                OWNER_DELETE_NOT_LOCKED = 0,
+                OWNER_DELETE_LOCKED = 1,
+                OWNER_DELETE_FINISHED = 2
+            };
             
             task       *_task;
             servicelet *_owner;
-            std::atomic<int> _deleting_owner;
+            std::atomic<owner_delete_state> _deleting_owner;
             
             // double-linked list for put into _owner
             dlink      _dl;
             int        _dl_bucket_id;
+            
+        private:
+            owner_delete_state owner_delete_prepare();
+            void               owner_delete_commit();
         };
 
         //
@@ -105,12 +112,10 @@ namespace dsn {
 
         // ------- inlined implementation ----------
         inline task_context_manager::task_context_manager(servicelet* owner, task* task)
-            : _owner(owner), _task(task)
+            : _owner(owner), _task(task), _deleting_owner(OWNER_DELETE_NOT_LOCKED)
         {
             if (nullptr != _owner)
             {
-                _deleting_owner = 0;
-
                 auto idx = task::get_current_worker_index();
                 if (-1 != idx)
                     _dl_bucket_id = static_cast<int>(idx % _owner->_task_bucket_count);
@@ -124,10 +129,9 @@ namespace dsn {
             }
         }
 
-        inline bool task_context_manager::owner_delete_prepare()
+        inline task_context_manager::owner_delete_state task_context_manager::owner_delete_prepare()
         {
-            int not_deleting = 0;
-            return _deleting_owner.compare_exchange_strong(not_deleting, 1);
+            return _deleting_owner.exchange(OWNER_DELETE_LOCKED, std::memory_order_acquire);
         }
 
         inline void task_context_manager::owner_delete_commit()
@@ -137,22 +141,26 @@ namespace dsn {
                 _dl.remove();
             }
 
-            _deleting_owner.fetch_add(1, std::memory_order_release);
+            _deleting_owner.store(OWNER_DELETE_FINISHED, std::memory_order_relaxed);
         }
 
         inline task_context_manager::~task_context_manager()
         {
             if (nullptr != _owner)
             {
-                if (owner_delete_prepare())
+                auto s = owner_delete_prepare();
+                switch (s)
                 {
+                case OWNER_DELETE_NOT_LOCKED:
                     owner_delete_commit();
-                }
-                else
-                {
-                    while (1 == _deleting_owner.load(std::memory_order_consume))
+                    break;
+                case OWNER_DELETE_LOCKED:
+                    while (OWNER_DELETE_LOCKED == _deleting_owner.load(std::memory_order_consume))
                     {
                     }
+                    break;
+                case OWNER_DELETE_FINISHED:
+                    break;
                 }
             }
         }

@@ -37,7 +37,7 @@ namespace dsn {
                 service_task(task_code code, servicelet* svc, task_handler& handler, int hash = 0)
                     : task(code, hash), task_context_manager(svc, this)
                 {
-                    _handler = handler;
+                    _handler = std::move(handler);
                 }
 
                 virtual void exec()
@@ -61,7 +61,7 @@ namespace dsn {
                 service_timer_task(task_code code, servicelet* svc, task_handler& handler, uint32_t intervalMilliseconds, int hash = 0)
                     : timer_task(code, intervalMilliseconds, hash), task_context_manager(svc, this)
                 {
-                    _handler = handler;
+                    _handler = std::move(handler);
                 }
 
                 virtual bool on_timer() { _handler(); return true; }

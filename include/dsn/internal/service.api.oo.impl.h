@@ -85,7 +85,7 @@ namespace dsn {
                         : rpc_response_task(request, hash), task_context_manager(svc, this)
                     {
                         _req = req;
-                        _callback = callback;
+                        _callback = std::move(callback);
                     }
 
                     virtual void on_response(error_code err, message_ptr& request, message_ptr& response)
@@ -125,7 +125,7 @@ namespace dsn {
                         )
                         : rpc_response_task(request, hash), task_context_manager(svc, this)
                     {
-                        _callback = callback;
+                        _callback = std::move(callback);
                         _context = context;
                     }
 
@@ -163,7 +163,7 @@ namespace dsn {
                         )
                         : rpc_response_task(request, hash), task_context_manager(svc, this)
                     {
-                        _callback = callback;
+                        _callback = std::move(callback);
                     }
 
                     virtual void on_response(error_code err, message_ptr& request, message_ptr& response)
@@ -349,7 +349,7 @@ namespace dsn {
                     )
                 {
                     _req = req;
-                    _callback = callback;
+                    _callback = std::move(callback);
                 }
 
                 virtual bool exec(
@@ -449,7 +449,7 @@ namespace dsn {
                     service_aio_task(task_code code, servicelet* svc, aio_handler& handler, int hash = 0)
                         : aio_task(code, hash), task_context_manager(svc, this)
                     {
-                        _handler = handler;
+                        _handler = std::move(handler);
                     }
 
                     virtual void on_completed(error_code err, uint32_t transferred_size)
