@@ -25,7 +25,7 @@
  */
 # pragma once
 
-# include <allocators>
+# include <memory>
 
 namespace dsn {
 
@@ -82,9 +82,7 @@ namespace dsn {
         }
 
         callocator() throw() : std::allocator<T>() { }
-        callocator(const callocator &a) throw() : std::allocator<T>(a) { }
-        template <class U>
-        callocator(const callocator<U, a, d> &a) throw() : std::allocator<T>(a) { }
+        callocator(const callocator<T, a, d> &ac) throw() : std::allocator<T>(ac) { }
         ~callocator() throw() { }
     };
 }
