@@ -196,7 +196,7 @@ namespace dsn {
 
             bool register_component_provider(const char* name, memory_factory f, int type)
             {
-                return dsn::utils::factory_store<memory_factory>::register_factory(name, f, type);
+                return dsn::utils::factory_store<memory_provider>::register_factory(name, f, type);
             }
 
             bool register_component_provider(const char* name, message_parser_factory f, int type)

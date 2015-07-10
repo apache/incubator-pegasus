@@ -162,7 +162,7 @@ namespace dsn
             }
             
             // init tool memory
-            dsn_all.memory = ::dsn::utils::factory_store<memory_provider>::create(spec.tools_memory_factory_name.c_str(), PROVIDER_TYPE_MAIN);
+            dsn_all.memory = ::dsn::utils::factory_store<::dsn::memory_provider>::create(spec.tools_memory_factory_name.c_str(), PROVIDER_TYPE_MAIN);
 
             // prepare minimum necessary
             service_engine::instance().init_before_toollets(spec);
