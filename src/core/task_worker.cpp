@@ -147,7 +147,7 @@ void task_worker::set_name()
     # endif
     if (err != 0)
     {
-        dwarn("Fail to set pthread name. ret = %d", err);
+        dwarn("Fail to set pthread name. err = %d", err);
     }
 # endif
 }
