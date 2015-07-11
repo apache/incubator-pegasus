@@ -50,7 +50,7 @@ struct message_header
     {
         struct 
         {
-            uint64_t timeout_ts_us; // target timeout stamp in us
+            int32_t  timeout_ms;
             int32_t  hash;
             uint16_t port;
         } client;

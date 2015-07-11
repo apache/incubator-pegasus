@@ -44,13 +44,13 @@ namespace dsn {
         struct perf_test_opts
         {
             int  perf_test_rounds;
-            bool concurrent;
+            bool perf_test_concurrent;
             std::vector<int> perf_test_timeouts_ms;
         };
 
         CONFIG_BEGIN(perf_test_opts)
             CONFIG_FLD(int, perf_test_rounds, 10000)
-            CONFIG_FLD(bool, concurrent, true)
+            CONFIG_FLD(bool, perf_test_concurrent, true)
             CONFIG_FLD_INT_LIST(perf_test_timeouts_ms)
         CONFIG_END
         
@@ -137,7 +137,7 @@ namespace dsn {
                     perf_test_case c;
                     c.rounds = opt.perf_test_rounds;
                     c.timeout_ms = opt.perf_test_timeouts_ms[i];
-                    c.concurrent = opt.concurrent;
+                    c.concurrent = opt.perf_test_concurrent;
                     s.cases.push_back(c);
                 }
             }

@@ -350,6 +350,7 @@ namespace dsn { namespace replication {
             bool                  is_read;
             uint16_t              header_pos; // write header after body is written
             task_ptr              timeout_timer; // when partition config is unknown at the first place
+            uint64_t              timeout_ts_us; // timeout at this timing point
         };
 
         struct partition_context

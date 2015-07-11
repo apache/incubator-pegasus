@@ -128,13 +128,11 @@ message_ptr message::create_request(task_code rpc_code, int timeout_milliseconds
     msg->header().client.hash = hash;
     if (timeout_milliseconds == 0)
     {
-        msg->header().client.timeout_ts_us = ::dsn::service::env::now_us() 
-            + static_cast<uint64_t>(task_spec::get(rpc_code)->rpc_timeout_milliseconds) * 1000ULL;
+        msg->header().client.timeout_ms = task_spec::get(rpc_code)->rpc_timeout_milliseconds;
     }
     else
     {
-        msg->header().client.timeout_ts_us = ::dsn::service::env::now_us() 
-            + static_cast<uint64_t>(timeout_milliseconds) * 1000ULL;
+        msg->header().client.timeout_ms = timeout_milliseconds;
     }    
 
     strcpy(msg->header().rpc_name, rpc_code.to_string());

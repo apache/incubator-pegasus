@@ -124,9 +124,8 @@ namespace dsn {
         //
         // when a two-way RPC call is made, register the requst id and the callback
         // which also registers a timer for timeout tracking
-        // - return false when no further network send is required
         //
-        bool on_call(message_ptr& request, rpc_response_task_ptr& call, network* net);
+        void on_call(message_ptr& request, rpc_response_task_ptr& call);
 
         //
         // when a RPC response is received, call this function to trigger calback
@@ -138,14 +137,13 @@ namespace dsn {
 
     private:
         friend class rpc_timeout_task;
-        void on_rpc_timeout(uint64_t key, task_spec* spec);
+        void on_rpc_timeout(uint64_t key);
 
     private:
         struct match_entry
         {
             rpc_response_task_ptr resp_task;
             task_ptr              timeout_task;
-            network*              net;
         };
         typedef std::map<uint64_t, match_entry> rpc_requests;
         rpc_requests             _requests;

@@ -43,11 +43,10 @@ namespace dsn {
     {
         if (call != nullptr)
         {
-            if (_matcher->on_call(request, call, &_net))
-                send(request);
+            _matcher->on_call(request, call);
         }
-        else
-            send(request);
+
+        send(request);
     }
 
     void rpc_client_session::on_disconnected()

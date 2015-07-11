@@ -115,6 +115,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->write_header.gpid.pidx = partition_index;
     rc->write_header.code = code;
     rc->timeout_timer = nullptr;
+    rc->timeout_ts_us = now_us() + callback->get_request()->header().client.timeout_ms * 1000;
 
     if (rc->write_header.gpid.app_id == -1)
     {
@@ -150,6 +151,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->read_header.semantic = read_semantic;
     rc->read_header.version_decree = snapshot_decree;
     rc->timeout_timer = nullptr;
+    rc->timeout_ts_us = now_us() + callback->get_request()->header().client.timeout_ms * 1000;
 
     if (rc->read_header.gpid.app_id == -1)
     {
@@ -176,15 +178,22 @@ void replication_app_client_base::end_request(request_context* request, error_co
 
 void replication_app_client_base::call(request_context* request, bool no_delay)
 {
-    auto& msg = request->callback_task->get_request();
-    auto nts = ::dsn::service::env::now_us();
-    if (nts + 100 >= msg->header().client.timeout_ts_us) // < 100us
+    auto nts = ::dsn::service::env::now_us();    
+    if (nts + 100 >= request->timeout_ts_us) // within 100 us
     {
         message_ptr nil(nullptr);
         end_request(request, ERR_TIMEOUT, nil);
         delete request;
         return;
     }
+ 
+    auto& msg = request->callback_task->get_request();
+    int timeout_ms;
+    if (nts + 1000 <= request->timeout_ts_us)
+        timeout_ms = 1;
+    else
+        timeout_ms = static_cast<int>(request->timeout_ts_us - nts) / 1000;
+    msg->header().client.timeout_ms = timeout_ms;
 
     end_point addr;
     int app_id;
@@ -240,6 +249,7 @@ void replication_app_client_base::call(request_context* request, bool no_delay)
     else if (!no_delay)
     {
         // delay 1 second for further config query
+        // TODO: better policies here
         tasking::enqueue(LPC_REPLICATION_DELAY_QUERY_CONFIG, this,
             std::bind(&replication_app_client_base::call, this, request, true),
             0,
@@ -260,7 +270,7 @@ void replication_app_client_base::call(request_context* request, bool no_delay)
                 this,
                 std::bind(&replication_app_client_base::on_user_request_timeout, this, request),
                 0,
-                static_cast<int>((msg->header().client.timeout_ts_us - nts) / 1000)
+                msg->header().client.timeout_ms
                 );
         }
 
