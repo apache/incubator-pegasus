@@ -104,11 +104,11 @@ namespace dsn {
             std::atomic<int> _l;
         };
 
-        class rw_lock
+        class rw_lock_nr
         {
         public:
-            rw_lock() { }
-            ~rw_lock() {}
+            rw_lock_nr() { }
+            ~rw_lock_nr() {}
 
             __inline void lock_read() { _lock.lockReader(); }
             __inline void unlock_read() { _lock.unlockReader(); }
@@ -207,21 +207,21 @@ namespace dsn {
         class auto_read_lock
         {
         public:
-            auto_read_lock(rw_lock & lock) : _lock(&lock) { _lock->lock_read(); }
+            auto_read_lock(rw_lock_nr & lock) : _lock(&lock) { _lock->lock_read(); }
             ~auto_read_lock() { _lock->unlock_read(); }
 
         private:
-            rw_lock * _lock;
+            rw_lock_nr * _lock;
         };
 
         class auto_write_lock
         {
         public:
-            auto_write_lock(rw_lock & lock) : _lock(&lock) { _lock->lock_write(); }
+            auto_write_lock(rw_lock_nr & lock) : _lock(&lock) { _lock->lock_write(); }
             ~auto_write_lock() { _lock->unlock_write(); }
 
         private:
-            rw_lock * _lock;
+            rw_lock_nr * _lock;
         };
     }
 }

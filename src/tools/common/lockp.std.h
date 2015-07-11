@@ -43,10 +43,10 @@ private:
     utils::ex_lock _lock;
 };
 
-class std_rwlock_provider : public rwlock_provider
+class std_rwlock_nr_provider : public rwlock_nr_provider
 {
 public:
-    std_rwlock_provider(dsn::service::zrwlock *lock, rwlock_provider* inner_provider) : rwlock_provider(lock, inner_provider) {}
+    std_rwlock_nr_provider(dsn::service::zrwlock_nr *lock, rwlock_nr_provider* inner_provider) : rwlock_nr_provider(lock, inner_provider) {}
 
     virtual void lock_read() { _lock.lock_read(); }
     virtual void unlock_read() { _lock.unlock_read(); }
@@ -55,7 +55,7 @@ public:
     virtual void unlock_write() { _lock.unlock_write(); }
 
 private:
-    utils::rw_lock _lock;
+    utils::rw_lock_nr _lock;
 };
 
 class std_semaphore_provider : public semaphore_provider

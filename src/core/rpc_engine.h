@@ -74,7 +74,7 @@ private:
 
     typedef std::map<std::string, rpc_handler_ptr> rpc_handlers;
     rpc_handlers                  _handlers;
-    utils::rw_lock                _handlers_lock;
+    utils::rw_lock_nr             _handlers_lock;
     
     bool                          _is_running;
 

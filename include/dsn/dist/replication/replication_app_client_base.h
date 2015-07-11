@@ -384,7 +384,7 @@ namespace dsn { namespace replication {
         std::string                             _app_name;
         std::vector<end_point>                  _meta_servers;
         
-        mutable zrwlock                         _config_lock;
+        mutable zrwlock_nr                      _config_lock;
         std::map<int,  partition_configuration> _config_cache;
         int                                     _app_id;
         int                                     _app_partition_count;

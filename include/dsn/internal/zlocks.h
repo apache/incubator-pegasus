@@ -57,11 +57,11 @@ private:
     zlock(const zlock& source);
 };
 
-class zrwlock
+class zrwlock_nr
 {
 public:
-    zrwlock();
-    ~zrwlock();
+    zrwlock_nr();
+    ~zrwlock_nr();
 
     void lock_read() { _provider->lock_read(); lock_checker::zlock_shared_count++;  }
     void unlock_read() { lock_checker::zlock_shared_count--; _provider->unlock_read(); }
@@ -70,12 +70,12 @@ public:
     void unlock_write() { lock_checker::zlock_exclusive_count--; _provider->unlock_write(); }
 
 private:
-    dsn::rwlock_provider *_provider;
+    dsn::rwlock_nr_provider *_provider;
 
 private:
     // no assignment operator
-    zrwlock& operator=(const zrwlock& source);
-    zrwlock(const zrwlock& source);
+    zrwlock_nr& operator=(const zrwlock_nr& source);
+    zrwlock_nr(const zrwlock_nr& source);
 };
 
 class zsemaphore
@@ -133,21 +133,21 @@ private:
 class zauto_read_lock
 {
 public:
-    zauto_read_lock (zrwlock & lock) : _lock(&lock) { _lock->lock_read(); }
+    zauto_read_lock (zrwlock_nr & lock) : _lock(&lock) { _lock->lock_read(); }
     ~zauto_read_lock() { _lock->unlock_read(); }
 
 private:
-    zrwlock * _lock; 
+    zrwlock_nr * _lock; 
 };
 
 class zauto_write_lock
 {
 public:
-    zauto_write_lock (zrwlock & lock) : _lock(&lock) { _lock->lock_write(); }
+    zauto_write_lock (zrwlock_nr & lock) : _lock(&lock) { _lock->lock_write(); }
     ~zauto_write_lock() { _lock->unlock_write(); }
 
 private:
-    zrwlock * _lock; 
+    zrwlock_nr * _lock; 
 };
 
 }} // end namespace dsn::service

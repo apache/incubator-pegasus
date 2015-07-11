@@ -29,7 +29,7 @@
 
 namespace dsn { namespace service {
 class zlock;
-class zrwlock;
+class zrwlock_nr;
 class zsemaphore;
 }}
 
@@ -57,17 +57,17 @@ private:
     lock_provider *_inner_provider;
 };
 
-class rwlock_provider : public extensible_object<lock_provider, 4>
+class rwlock_nr_provider : public extensible_object<lock_provider, 4>
 {
 public:
-    template <typename T> static rwlock_provider* create(dsn::service::zrwlock *lock, rwlock_provider* inner_provider)
+    template <typename T> static rwlock_nr_provider* create(dsn::service::zrwlock_nr *lock, rwlock_nr_provider* inner_provider)
     {
         return new T(lock, inner_provider);
     }
 
 public:
-    rwlock_provider(dsn::service::zrwlock *lock, rwlock_provider* inner_provider) { _inner_provider = inner_provider; }
-    virtual ~rwlock_provider() { if (nullptr != _inner_provider) delete _inner_provider; }
+    rwlock_nr_provider(dsn::service::zrwlock_nr *lock, rwlock_nr_provider* inner_provider) { _inner_provider = inner_provider; }
+    virtual ~rwlock_nr_provider() { if (nullptr != _inner_provider) delete _inner_provider; }
 
     virtual void lock_read() = 0;
     virtual void unlock_read() = 0;
@@ -75,10 +75,10 @@ public:
     virtual void lock_write() = 0;
     virtual void unlock_write() = 0;
 
-    rwlock_provider* get_inner_provider() const { return _inner_provider; }
+    rwlock_nr_provider* get_inner_provider() const { return _inner_provider; }
 
 private:
-    rwlock_provider *_inner_provider;
+    rwlock_nr_provider *_inner_provider;
 };
 
 class semaphore_provider : public extensible_object<lock_provider, 4>

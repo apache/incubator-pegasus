@@ -92,24 +92,13 @@ struct service_app_spec
         network_client_configs* default_client_nets = nullptr,
         network_server_configs* default_server_nets = nullptr
         );
-
-    static std::vector<int> to_ports(const std::list<std::string>& sports)
-    {
-        std::vector<int> ps;
-        for (auto& s : sports)
-        {
-            int p = atoi(s.c_str());
-            ps.push_back(p);
-        }
-        return ps;
-    }
 };
 
 CONFIG_BEGIN(service_app_spec)
     CONFIG_FLD(std::string, name, "")
     CONFIG_FLD(std::string, type, "")
     CONFIG_FLD(std::string, arguments, "")
-    CONFIG_FLD_LIST_CONVERT(ports, ',', service_app_spec::to_ports)
+    CONFIG_FLD_INT_LIST(ports)
     CONFIG_FLD_ID_LIST(threadpool_code, pools)
     CONFIG_FLD(int, delay_seconds, 0)
     CONFIG_FLD(int, count, 1)
@@ -127,7 +116,7 @@ struct service_spec
     std::string                  aio_factory_name;
     std::string                  env_factory_name;
     std::string                  lock_factory_name;
-    std::string                  rwlock_factory_name;
+    std::string                  rwlock_nr_factory_name;
     std::string                  semaphore_factory_name;
     std::string                  nfs_factory_name;
     std::string                  perf_counter_factory_name;
@@ -159,7 +148,7 @@ CONFIG_BEGIN(service_spec)
     CONFIG_FLD(std::string, aio_factory_name, "")
     CONFIG_FLD(std::string, env_factory_name, "")
     CONFIG_FLD(std::string, lock_factory_name, "")
-    CONFIG_FLD(std::string, rwlock_factory_name, "")
+    CONFIG_FLD(std::string, rwlock_nr_factory_name, "")
     CONFIG_FLD(std::string, semaphore_factory_name, "")
     CONFIG_FLD(std::string, nfs_factory_name, "")
     CONFIG_FLD(std::string, perf_counter_factory_name, "")

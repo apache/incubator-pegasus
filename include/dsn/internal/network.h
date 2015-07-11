@@ -179,11 +179,11 @@ namespace dsn {
     protected:
         typedef std::map<end_point, rpc_client_session_ptr> client_sessions;
         client_sessions               _clients;
-        utils::rw_lock                _clients_lock;
+        utils::rw_lock_nr             _clients_lock;
 
         typedef std::map<end_point, rpc_server_session_ptr> server_sessions;
         server_sessions               _servers;
-        utils::rw_lock                _servers_lock;
+        utils::rw_lock_nr             _servers_lock;
     };
 
     //

@@ -316,13 +316,14 @@ template<> inline bool configuration::get_value<bool>(const char* section, const
     val.fld = default_value->fld;
 
 // cb: std::list<std::string>& => fld value
-# define CONFIG_FLD_LIST_CONVERT(fld, seperator, cb) \
+# define CONFIG_FLD_INT_LIST(fld) \
    { \
-    auto lv = config->get_string_value_list(section, #fld, seperator); \
+    auto lv = config->get_string_value_list(section, #fld, ','); \
     if (lv.size() == 0 && default_value) \
         val.fld = default_value->fld; \
-    else \
-        val.fld = cb(lv);  \
+    else {\
+        for (auto& s : lv) { val.fld.push_back(atoi(s.c_str())); } \
+    }\
    }
 
 } // end namespace

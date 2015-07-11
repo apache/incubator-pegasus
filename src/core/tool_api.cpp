@@ -156,7 +156,7 @@ namespace dsn {
 
             bool register_component_provider(const char* name, read_write_lock_factory f, int type)
             {
-                return dsn::utils::factory_store<rwlock_provider>::register_factory(name, f, type);
+                return dsn::utils::factory_store<rwlock_nr_provider>::register_factory(name, f, type);
             }
 
             bool register_component_provider(const char* name, semaphore_factory f, int type)

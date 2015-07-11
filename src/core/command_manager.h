@@ -57,7 +57,7 @@ namespace dsn {
             command_handler handler;
         };
 
-        ::dsn::utils::rw_lock           _lock;
+        ::dsn::utils::rw_lock_nr        _lock;
         std::map<std::string, command*> _handlers;
         std::vector<command*>           _commands;
     };

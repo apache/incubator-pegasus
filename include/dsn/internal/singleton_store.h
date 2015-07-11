@@ -79,7 +79,7 @@ public:
 
 private:
     std::map<TKey, TValue, TCompare> _store;
-    mutable rw_lock                  _lock;
+    mutable rw_lock_nr               _lock;
 };
 
 //------------- inline implementation ----------
