@@ -162,6 +162,7 @@ namespace dsn {
         void write(const std::string& val, uint16_t pos = 0xffff);
         void write(const char* buffer, int sz, uint16_t pos = 0xffff);
         void write(const blob& val, uint16_t pos = 0xffff);
+        void write_empty(int sz, uint16_t pos = 0xffff);
 
         bool next(void** data, int* size);
         bool backup(int count);

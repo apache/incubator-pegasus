@@ -66,11 +66,6 @@ struct message_header
     end_point     to_address;
     uint16_t      local_rpc_code;
     
-    static int serialized_size()
-    {
-        return static_cast<int>(FIELD_OFFSET(message_header, from_address));
-    }
-
     void marshall(binary_writer& writer);
     void unmarshall(binary_reader& reader);
     void new_rpc_id();
@@ -81,6 +76,8 @@ struct message_header
         return ((message_header*)hdr)->body_length;
     }
 };
+
+# define MSG_HDR_SERIALIZED_SIZE (static_cast<int>(FIELD_OFFSET(message_header, from_address)))
 
 class rpc_server_session;
 class message : public ref_object, public extensible_object<message, 4>, public ::dsn::tools::memory::tallocator_object

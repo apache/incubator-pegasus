@@ -410,6 +410,70 @@ namespace  dsn
         }
     }
 
+    void binary_writer::write_empty(int sz, uint16_t pos /*= 0xffff*/)
+    {
+        int sz0 = sz;
+
+        if (pos != 0xffff)
+        {
+            int rem_size = _buffers[pos].length() - _data[pos].length();
+            if (sz > rem_size)
+            {
+                int allocSize = _data[pos].length() + sz;
+                std::shared_ptr<char> ptr((char*)malloc(allocSize));
+                blob bb(ptr, allocSize);
+
+                memcpy((void*)bb.data(), (const void*)_data[pos].data(), (size_t)_data[pos].length());
+
+                _buffers[pos] = bb;
+                _data[pos] = bb;
+            }
+            else
+            {
+                _data[pos]._length += sz;
+            }
+        }
+        else
+        {
+            if (_cur_is_placeholder)
+            {
+                create_buffer_and_writer();
+                _cur_is_placeholder = false;
+            }
+
+            pos = (uint16_t)_cur_pos;
+
+            int rem_size = _buffers[pos].length() - _data[pos].length();
+            if (rem_size >= sz)
+            {
+                _data[pos]._length += sz;
+            }
+            else
+            {
+                _data[pos]._length += rem_size;
+
+                sz -= rem_size;
+
+                int allocSize = _reserved_size_per_buffer;
+                if (sz > allocSize)
+                    allocSize = sz;
+
+                std::shared_ptr<char> ptr((char*)malloc(allocSize));
+                blob bb(ptr, allocSize);
+                _buffers.push_back(bb);
+
+                bb._length = 0;
+                _data.push_back(bb);
+
+                pos = (uint16_t)(++_cur_pos);
+
+                _data[pos]._length += sz;
+            }
+        }
+
+        _total_size += sz0;
+    }
+
     void binary_writer::write(const char* buffer, int sz, uint16_t pos /*= 0xffff*/)
     {
         int sz0 = sz;

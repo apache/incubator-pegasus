@@ -135,6 +135,7 @@ namespace dsn {
         end_point& to = request->header().to_address;
         bool new_client = false;
 
+        // TODO: thread-local client ptr cache
         {
             utils::auto_read_lock l(_clients_lock);
             auto it = _clients.find(to);

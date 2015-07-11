@@ -289,14 +289,14 @@ namespace dsn {
             // finalize
             std::vector<blob> lbuffers;
             msg->writer().get_buffers(lbuffers);
-            if (lbuffers[0].length() == message_header::serialized_size())
+            if (lbuffers[0].length() == MSG_HDR_SERIALIZED_SIZE)
             {
                 lbuffers[0] = writer.get_buffer();
                 buffers = lbuffers;
             }
             else
             {
-                dassert(lbuffers[0].length() > message_header::serialized_size(), "");
+                dassert(lbuffers[0].length() > MSG_HDR_SERIALIZED_SIZE, "");
                 buffers.resize(lbuffers.size() + 1);
                 buffers[0] = writer.get_buffer();
 
@@ -304,7 +304,7 @@ namespace dsn {
                 {
                     if (i == 0)
                     {
-                        buffers[1] = lbuffers[0].range(message_header::serialized_size());
+                        buffers[1] = lbuffers[0].range(MSG_HDR_SERIALIZED_SIZE);
                     }
                     else
                     {

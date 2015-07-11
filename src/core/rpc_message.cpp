@@ -43,12 +43,12 @@ namespace dsn {
 
 void message_header::marshall(binary_writer& writer)
 {
-    writer.write((const char*)this, serialized_size());
+    writer.write((const char*)this, MSG_HDR_SERIALIZED_SIZE);
 }
 
 void message_header::unmarshall(binary_reader& reader)
 {
-    reader.read((char*)this, serialized_size());
+    reader.read((char*)this, MSG_HDR_SERIALIZED_SIZE);
 }
 
 void message_header::new_rpc_id()
@@ -63,7 +63,7 @@ void message_header::new_rpc_id()
     {
         //dassert  (*(int32_t*)data == hdr_crc32, "HeaderCrc must be put at the beginning of the buffer");
         *(int32_t*)hdr = CRC_INVALID;
-        bool r = ((uint32_t)crc32 == crc32::compute(hdr, message_header::serialized_size(), 0));
+        bool r = ((uint32_t)crc32 == crc32::compute(hdr, MSG_HDR_SERIALIZED_SIZE, 0));
         *(int32_t*)hdr = crc32;
         return r;
     }
@@ -82,7 +82,7 @@ message::message()
     _reader = nullptr;
     _writer = new binary_writer();
 
-    memset(&_msg_header, 0, message_header::serialized_size());
+    memset(&_msg_header, 0, MSG_HDR_SERIALIZED_SIZE);
     _msg_header.hdr_crc32 = _msg_header.body_crc32 = CRC_INVALID;
     _msg_header.local_rpc_code = 0;
     seal(false, true);
@@ -100,7 +100,7 @@ message::message(blob bb, bool parse_hdr)
     }
     else
     {
-        memset(&_msg_header, 0, message_header::serialized_size());
+        memset(&_msg_header, 0, MSG_HDR_SERIALIZED_SIZE);
         _msg_header.hdr_crc32 = _msg_header.body_crc32 = CRC_INVALID;
         _msg_header.local_rpc_code = 0;
     }
@@ -170,13 +170,11 @@ void message::seal(bool fillCrc, bool is_placeholder /*= false*/)
     dassert  (!is_read(), "seal can only be applied to write mode messages");
     if (is_placeholder)
     {
-        std::string dummy;
-        dummy.resize(_msg_header.serialized_size(), '\0');
-        _writer->write((const char*)&dummy[0], _msg_header.serialized_size());
+        _writer->write_empty(MSG_HDR_SERIALIZED_SIZE);
     }
     else
     {
-        header().body_length = total_size() - message_header::serialized_size();
+        header().body_length = total_size() - MSG_HDR_SERIALIZED_SIZE;
 
         if (fillCrc)
         {
@@ -186,7 +184,7 @@ void message::seal(bool fillCrc, bool is_placeholder /*= false*/)
                 std::vector<blob> buffers;
                 _writer->get_buffers(buffers);
 
-                buffers[0] = buffers[0].range(message_header::serialized_size());
+                buffers[0] = buffers[0].range(MSG_HDR_SERIALIZED_SIZE);
 
                 uint32_t crc32 = 0;
                 uint32_t len = 0;
@@ -215,12 +213,12 @@ void message::seal(bool fillCrc, bool is_placeholder /*= false*/)
             }
 
             blob bb = _writer->get_first_buffer();
-            dassert  (bb.length() >= _msg_header.serialized_size(), "the reserved blob size for message must be greater than the header size to ensure header is contiguous");
+            dassert  (bb.length() >= MSG_HDR_SERIALIZED_SIZE, "the reserved blob size for message must be greater than the header size to ensure header is contiguous");
             header().hdr_crc32 = CRC_INVALID;
             binary_writer writer(bb);
             _msg_header.marshall(writer);
 
-            header().hdr_crc32 = crc32::compute(bb.data(), message_header::serialized_size(), 0);
+            header().hdr_crc32 = crc32::compute(bb.data(), MSG_HDR_SERIALIZED_SIZE, 0);
             *(uint32_t*)bb.data() = header().hdr_crc32;
         }
 
@@ -228,7 +226,7 @@ void message::seal(bool fillCrc, bool is_placeholder /*= false*/)
         else
         {
             blob bb = _writer->get_first_buffer();
-            dassert  (bb.length() >= _msg_header.serialized_size(), "the reserved blob size for message must be greater than the header size to ensure header is contiguous");
+            dassert  (bb.length() >= MSG_HDR_SERIALIZED_SIZE, "the reserved blob size for message must be greater than the header size to ensure header is contiguous");
             binary_writer writer(bb);
             _msg_header.marshall(writer);
         }
@@ -257,7 +255,7 @@ bool message::is_right_body() const
     if (_msg_header.body_crc32 != CRC_INVALID)
     {
         blob bb = _reader->get_buffer();
-        return (uint32_t)_msg_header.body_crc32 == crc32::compute((char*)bb.data() + message_header::serialized_size(), _msg_header.body_length, 0);
+        return (uint32_t)_msg_header.body_crc32 == crc32::compute((char*)bb.data() + MSG_HDR_SERIALIZED_SIZE, _msg_header.body_length, 0);
     }
 
     // crc is not enabled
