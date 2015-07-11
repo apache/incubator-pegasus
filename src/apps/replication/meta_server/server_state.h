@@ -49,7 +49,7 @@ struct app_state
     std::vector<partition_configuration> partitions;
 };
 
-typedef std::map<global_partition_id, std::shared_ptr<configuration_update_request> > machine_fail_updates;
+typedef std::unordered_map<global_partition_id, std::shared_ptr<configuration_update_request> > machine_fail_updates;
 
 class server_state 
 {
@@ -94,7 +94,7 @@ private:
     };
 
     mutable zrwlock_nr                   _lock;
-    std::map<end_point, node_state>   _nodes;
+    std::unordered_map<end_point, node_state>   _nodes;
     std::vector<app_state>            _apps;
 
     int                               _node_live_count;

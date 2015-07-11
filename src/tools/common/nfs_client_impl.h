@@ -92,7 +92,7 @@ namespace dsn {
                 std::atomic<int>       finished_files;
                 bool                   is_finished;
 
-                std::map<std::string, file_context*> file_context_map; // map file name and file info
+                std::unordered_map<std::string, file_context*> file_context_map; // map file name and file info
 
                 user_request()
                 {

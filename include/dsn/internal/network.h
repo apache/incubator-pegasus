@@ -145,7 +145,7 @@ namespace dsn {
             rpc_response_task_ptr resp_task;
             task_ptr              timeout_task;
         };
-        typedef std::map<uint64_t, match_entry> rpc_requests;
+        typedef std::unordered_map<uint64_t, match_entry> rpc_requests;
         rpc_requests             _requests;
         ::dsn::utils::ex_lock_nr _requests_lock;
     };
@@ -175,11 +175,11 @@ namespace dsn {
         virtual rpc_client_session_ptr create_client_session(const end_point& server_addr) = 0;
 
     protected:
-        typedef std::map<end_point, rpc_client_session_ptr> client_sessions;
+        typedef std::unordered_map<end_point, rpc_client_session_ptr> client_sessions;
         client_sessions               _clients;
         utils::rw_lock_nr             _clients_lock;
 
-        typedef std::map<end_point, rpc_server_session_ptr> server_sessions;
+        typedef std::unordered_map<end_point, rpc_server_session_ptr> server_sessions;
         server_sessions               _servers;
         utils::rw_lock_nr             _servers_lock;
     };
@@ -195,9 +195,14 @@ namespace dsn {
         void on_disconnected();
         void call(message_ptr& request, rpc_response_task_ptr& call);
         const end_point& remote_address() const { return _remote_addr; }
+        connection_oriented_network& net() const { return _net; }
+        bool is_disconnected() const { return _disconnected; }
 
         virtual void connect() = 0;
         virtual void send(message_ptr& msg) = 0;
+
+    private:
+        bool _disconnected;
 
     protected:
         connection_oriented_network         &_net;

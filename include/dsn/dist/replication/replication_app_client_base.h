@@ -359,7 +359,7 @@ namespace dsn { namespace replication {
             std::list<request_context*> requests;
         };
 
-        typedef std::map<int, partition_context*> pending_requests;
+        typedef std::unordered_map<int, partition_context*> pending_requests;
         
         mutable zlock     _requests_lock;
         pending_requests  _pending_requests;        
@@ -386,7 +386,7 @@ namespace dsn { namespace replication {
         std::vector<end_point>                  _meta_servers;
         
         mutable zrwlock_nr                      _config_lock;
-        std::map<int,  partition_configuration> _config_cache;
+        std::unordered_map<int, partition_configuration> _config_cache;
         int                                     _app_id;
         int                                     _app_partition_count;
         end_point                               _last_contact_point;

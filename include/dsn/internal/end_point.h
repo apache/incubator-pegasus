@@ -129,4 +129,14 @@ inline void marshall(::dsn::binary_writer& writer, const end_point& val, uint16_
 
 } // end namespace
 
+namespace std
+{
+    template<>
+    struct hash<::dsn::end_point> {
+        size_t operator()(const ::dsn::end_point &ep) const {
+            return std::hash<uint32_t>()(ep.ip) ^ std::hash<uint16_t>()(ep.port);
+        }
+    };
+}
+
 

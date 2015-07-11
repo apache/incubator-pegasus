@@ -36,7 +36,7 @@ namespace dsn { namespace replication {
 class log_file;
 typedef boost::intrusive_ptr<log_file> log_file_ptr;
 
-typedef std::map<global_partition_id, decree> multi_partition_decrees;
+typedef std::unordered_map<global_partition_id, decree> multi_partition_decrees;
 
 class mutation_log : public virtual servicelet
 {

@@ -37,6 +37,7 @@ namespace dsn {
     rpc_client_session::rpc_client_session(connection_oriented_network& net, const end_point& remote_addr, std::shared_ptr<rpc_client_matcher>& matcher)
         : _net(net), _remote_addr(remote_addr), _matcher(matcher)
     {
+        _disconnected = false;
     }
 
     void rpc_client_session::call(message_ptr& request, rpc_response_task_ptr& call)
@@ -51,6 +52,8 @@ namespace dsn {
 
     void rpc_client_session::on_disconnected()
     {
+        _disconnected = true;
+
         rpc_client_session_ptr sp = this;
         _net.on_client_session_disconnected(sp);
     }

@@ -132,9 +132,9 @@ private:
 
 private:
     friend class ::dsn::replication::replication_checker;
-    typedef std::map<global_partition_id, replica_ptr> replicas;
-    typedef std::map<global_partition_id, task_ptr> opening_replicas;
-    typedef std::map<global_partition_id, std::pair<task_ptr, replica_ptr>> closing_replicas; // <close, replica>
+    typedef std::unordered_map<global_partition_id, replica_ptr> replicas;
+    typedef std::unordered_map<global_partition_id, task_ptr> opening_replicas;
+    typedef std::unordered_map<global_partition_id, std::pair<task_ptr, replica_ptr>> closing_replicas; // <close, replica>
 
     zlock                       _repicas_lock;
     replicas                    _replicas;

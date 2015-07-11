@@ -121,7 +121,7 @@ private:
     std::string _dir_data;
     std::string _dir_learn;
     replica*    _replica;
-    std::map<int, std::function<void(message_ptr&, message_ptr&)> > _handlers;
+    std::unordered_map<int, std::function<void(message_ptr&, message_ptr&)> > _handlers;
 
 protected:
     std::atomic<decree> _last_committed_decree;

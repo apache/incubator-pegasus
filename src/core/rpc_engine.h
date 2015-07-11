@@ -69,10 +69,10 @@ private:
     configuration_ptr                     _config;    
     service_node                          *_node;
     std::vector<std::vector<network*>>    _client_nets; // <format, <CHANNEL, network*>>
-    std::map<int, std::vector<network*>>  _server_nets; // <port, <CHANNEL, network*>>
+    std::unordered_map<int, std::vector<network*>>  _server_nets; // <port, <CHANNEL, network*>>
     end_point                             _local_primary_address;
 
-    typedef std::map<std::string, rpc_handler_ptr> rpc_handlers;
+    typedef std::unordered_map<std::string, rpc_handler_ptr> rpc_handlers;
     rpc_handlers                  _handlers;
     utils::rw_lock_nr             _handlers_lock;
     
