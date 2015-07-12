@@ -49,7 +49,7 @@ namespace dsn {
     class rpc_timeout_task : public task
     {
     public:
-        rpc_timeout_task(std::shared_ptr<rpc_client_matcher> matcher, uint64_t id) 
+        rpc_timeout_task(rpc_client_matcher* matcher, uint64_t id) 
             : task(LPC_RPC_TIMEOUT)
         {
             _matcher = matcher;
@@ -62,9 +62,14 @@ namespace dsn {
         }
 
     private:
-        std::shared_ptr<rpc_client_matcher> _matcher;
-        uint64_t     _id;
+        rpc_client_matcher_ptr _matcher;
+        uint64_t               _id;
     };
+
+    rpc_client_matcher::~rpc_client_matcher()
+    {
+        dassert(_requests.size() == 0, "all rpc enries must be removed before the matcher ends");
+    }
 
     bool rpc_client_matcher::on_recv_reply(uint64_t key, message_ptr& reply, int delay_ms)
     {
@@ -74,12 +79,12 @@ namespace dsn {
         task_ptr timeout_task;
 
         {
-            utils::auto_lock<::dsn::utils::ex_lock_nr> l(_requests_lock);
+            utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock);
             auto it = _requests.find(key);
             if (it != _requests.end())
             {
                 call = it->second.resp_task;
-                timeout_task = it->second.timeout_task;
+                timeout_task = std::move(it->second.timeout_task);
                 _requests.erase(it);
             }
             else
@@ -107,7 +112,7 @@ namespace dsn {
         rpc_response_task_ptr call;
 
         {
-            utils::auto_lock<::dsn::utils::ex_lock_nr> l(_requests_lock);
+            utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock);
             auto it = _requests.find(key);
             if (it != _requests.end())
             {
@@ -130,10 +135,10 @@ namespace dsn {
         task* timeout_task;
         message_header& hdr = msg->header();
 
-        timeout_task = (new rpc_timeout_task(shared_from_this(), hdr.id));
+        timeout_task = (new rpc_timeout_task(this, hdr.id));
 
         {
-            utils::auto_lock<::dsn::utils::ex_lock_nr> l(_requests_lock);
+            utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock);
             auto pr = _requests.insert(rpc_requests::value_type(hdr.id, match_entry()));
             dassert (pr.second, "the message is already on the fly!!!");
             pr.first->second.resp_task = call;

@@ -150,11 +150,13 @@ namespace dsn
     class message;
     class rpc_client_session;
     class rpc_server_session;
+    class rpc_client_matcher;
 
     typedef ::boost::intrusive_ptr<task> task_ptr;
     typedef ::boost::intrusive_ptr<message> message_ptr;
     typedef ::boost::intrusive_ptr<rpc_client_session> rpc_client_session_ptr;
     typedef ::boost::intrusive_ptr<rpc_server_session> rpc_server_session_ptr;
+    typedef ::boost::intrusive_ptr<rpc_client_matcher> rpc_client_matcher_ptr;
 
     #define TOOL_TYPE_MAIN 0
     #define TOOL_TYPE_ASPECT 1

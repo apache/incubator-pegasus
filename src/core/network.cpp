@@ -34,7 +34,7 @@
 
 namespace dsn {
 
-    rpc_client_session::rpc_client_session(connection_oriented_network& net, const end_point& remote_addr, std::shared_ptr<rpc_client_matcher>& matcher)
+    rpc_client_session::rpc_client_session(connection_oriented_network& net, const end_point& remote_addr, rpc_client_matcher_ptr& matcher)
         : _net(net), _remote_addr(remote_addr), _matcher(matcher)
     {
         _disconnected = false;
@@ -115,9 +115,9 @@ namespace dsn {
         return _engine->on_recv_request(msg, delay_ms);
     }
     
-    std::shared_ptr<rpc_client_matcher> network::new_client_matcher()
+    rpc_client_matcher_ptr network::new_client_matcher()
     {
-        return std::shared_ptr<rpc_client_matcher>(new rpc_client_matcher());
+        return rpc_client_matcher_ptr(new rpc_client_matcher());
     }
 
     std::shared_ptr<message_parser> network::new_message_parser()

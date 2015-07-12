@@ -92,7 +92,7 @@ namespace dsn {
         // create a client matcher for matching RPC request and RPC response,
         // see rpc_client_matcher for details
         //
-        std::shared_ptr<rpc_client_matcher> new_client_matcher();
+        rpc_client_matcher_ptr new_client_matcher();
 
         //
         // create a message parser for
@@ -118,9 +118,11 @@ namespace dsn {
     // (3) or we have certain cases we want RPC responses from node which is not the initial target node
     //     the RPC request message is sent to. In this case, a shared rpc_engine level matcher is used.
     //
-    class rpc_client_matcher : public std::enable_shared_from_this<rpc_client_matcher>
+    class rpc_client_matcher : public ref_object
     {
     public:
+        ~rpc_client_matcher();
+
         //
         // when a two-way RPC call is made, register the requst id and the callback
         // which also registers a timer for timeout tracking
@@ -146,9 +148,11 @@ namespace dsn {
             task_ptr              timeout_task;
         };
         typedef std::unordered_map<uint64_t, match_entry> rpc_requests;
-        rpc_requests             _requests;
-        ::dsn::utils::ex_lock_nr _requests_lock;
+        rpc_requests                  _requests;
+        ::dsn::utils::ex_lock_nr_spin _requests_lock;
     };
+
+    DEFINE_REF_OBJECT(rpc_client_matcher)
 
     //
     // an incomplete network implementation for connection oriented network, e.g., TCP
@@ -190,7 +194,7 @@ namespace dsn {
     class rpc_client_session : public ref_object
     {
     public:
-        rpc_client_session(connection_oriented_network& net, const end_point& remote_addr, std::shared_ptr<rpc_client_matcher>& matcher);
+        rpc_client_session(connection_oriented_network& net, const end_point& remote_addr, rpc_client_matcher_ptr& matcher);
         bool on_recv_reply(uint64_t key, message_ptr& reply, int delay_ms);
         void on_disconnected();
         void call(message_ptr& request, rpc_response_task_ptr& call);
@@ -207,7 +211,7 @@ namespace dsn {
     protected:
         connection_oriented_network         &_net;
         end_point                           _remote_addr;
-        std::shared_ptr<rpc_client_matcher> _matcher;
+        rpc_client_matcher_ptr _matcher;
     };
 
     DEFINE_REF_OBJECT(rpc_client_session)
