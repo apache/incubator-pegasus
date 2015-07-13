@@ -25,59 +25,64 @@
  */
 # pragma once
 
-# include <dsn/tool_api.h>
-# include <thread>
-# include <cstdio>
+# include <memory>
 
 namespace dsn {
-    namespace tools {
 
+    typedef void* (*t_allocate)(size_t);
+    typedef void  (*t_deallocate)(void*);
 
-        class screen_logger : public logging_provider
+    template <t_allocate a, t_deallocate d>
+    class callocator_object
+    {
+    public:
+        void* operator new(size_t size)
         {
-        public:
-            screen_logger() { }
-            virtual ~screen_logger(void) { }
+            return a(size);
+        }
 
-            virtual void logv(const char *file,
-                const char *function,
-                const int line,
-                logging_level logLevel,
-                const char* title,
-                const char *fmt,
-                va_list args
-                );
+        void operator delete(void* p)
+        {
+            d(p);
+        }
 
-        private:
-            ::dsn::utils::ex_lock_nr _lock;
+        void* operator new[](size_t size)
+        {
+            return a(size);
+        }
+
+        void operator delete[](void* p)
+        {
+            d(p);
+        }
+    };
+
+    template <typename T, t_allocate a, t_deallocate d>
+    class callocator : public std::allocator<T>
+    {
+    public:
+        typedef size_t size_type;
+        typedef T* pointer;
+        typedef const T* const_pointer;
+
+        template<typename _Tp1>
+        struct rebind
+        {
+            typedef callocator<_Tp1, a, d> other;
         };
 
-
-        class simple_logger : public logging_provider
+        pointer allocate(size_type n, const void *hint = 0)
         {
-        public:
-            simple_logger();
-            virtual ~simple_logger(void);
+            return a(n);
+        }
 
-            virtual void logv(const char *file,
-                const char *function,
-                const int line,
-                logging_level logLevel,
-                const char* title,
-                const char *fmt,
-                va_list args
-                );
+        void deallocate(pointer p, size_type n)
+        {
+            return d(p);
+        }
 
-        private:
-            void create_log_file();
-
-        private:
-            ::dsn::utils::ex_lock_nr _lock;
-            FILE* _log;
-            int _start_index;
-            int _index;
-            int _lines;
-        };
-
-    }
+        callocator() throw() : std::allocator<T>() { }
+        callocator(const callocator<T, a, d> &ac) throw() : std::allocator<T>(ac) { }
+        ~callocator() throw() { }
+    };
 }

@@ -95,8 +95,7 @@ namespace dsn {
             printf("\n");
         }
 
-        simple_logger::simple_logger(const char *parameter) 
-            : logging_provider(parameter) 
+        simple_logger::simple_logger() 
         {
             _start_index = 0;
             _index = 0;

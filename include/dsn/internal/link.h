@@ -73,7 +73,8 @@ public:
     // insert me before existing link node o [p (this) o]
     void insert_before(dlink* o)
     {
-        dassert(is_alone(), "must not be linked to other list before insert");
+        dbg_dassert(is_alone(), "must not be linked to other list before insert");
+
         auto p = o->_prev;
         
         this->_next = o;
@@ -86,6 +87,8 @@ public:
     // insert me after existing link node o [o (this) n]
     void insert_after(dlink* o)
     {
+        dbg_dassert(is_alone(), "must not be linked to other list before insert");
+
         auto n = o->_next;
 
         this->_prev = o;

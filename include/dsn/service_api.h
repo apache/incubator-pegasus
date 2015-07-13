@@ -28,6 +28,7 @@
 # include <dsn/internal/task.h>
 # include <dsn/internal/service_app.h>
 # include <dsn/internal/zlocks.h>
+# include <dsn/internal/callocator.h>
 
 namespace dsn { namespace service {
 
@@ -163,6 +164,23 @@ namespace env
     inline uint64_t now_ms() { return now_ns() / 1000000; }
     inline uint32_t random32(uint32_t min, uint32_t max) { return static_cast<uint32_t>(random64(min, max)); }
     inline double   probability() { return static_cast<double>(random32(0, 1000000000)) / 1000000000.0; }
+}
+
+//
+// in case the apps need to use a dedicated memory allocator
+// e.g., when required by a replay tool to ensure deterministic memory
+// allocation/deallocation results
+//
+namespace memory
+{
+    extern void* allocate(size_t sz);
+    extern void* reallocate(void* ptr, size_t sz);
+    extern void  deallocate(void* ptr);
+
+    template <typename T>
+    using sallocator = ::dsn::callocator<T, allocate, deallocate>;
+
+    using sallocator_object = callocator_object<allocate, deallocate>;
 }
 
 namespace system

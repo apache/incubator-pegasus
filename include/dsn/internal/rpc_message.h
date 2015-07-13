@@ -31,6 +31,7 @@
 # include <dsn/internal/extensible_object.h>
 # include <dsn/internal/task_code.h>
 # include <dsn/internal/error_code.h>
+# include <dsn/internal/memory.tools.h>
 
 namespace dsn {
 
@@ -82,7 +83,7 @@ struct message_header
 };
 
 class rpc_server_session;
-class message : public ref_object, public extensible_object<message, 4>
+class message : public ref_object, public extensible_object<message, 4>, public ::dsn::tools::memory::tallocator_object
 {
 public:
     message(); // write             

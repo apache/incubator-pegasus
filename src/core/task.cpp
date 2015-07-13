@@ -42,57 +42,20 @@
 
 namespace dsn {
 
-static __thread
-struct 
-{ 
-    uint32_t     magic; 
-    task         *current_task;
-    task_worker  *worker;
-} tls_task_info;  
-
-/*static*/ task* task::get_current_task()
-{
-    if (tls_task_info.magic == 0xdeadbeef)
-        return tls_task_info.current_task;
-    else
-        return nullptr;
-}
-
-/*static*/ uint64_t task::get_current_task_id()
-{
-    if (tls_task_info.magic == 0xdeadbeef)
-        return tls_task_info.current_task ? tls_task_info.current_task->id() : 0;
-    else
-        return 0;
-}
-
-
-/*static*/ task_worker* task::get_current_worker()
-{
-    if (tls_task_info.magic == 0xdeadbeef)
-        return tls_task_info.worker;
-    else
-        return nullptr;
-}
-
-/*static*/ int task::get_current_worker_index()
-{
-    if (tls_task_info.magic == 0xdeadbeef)
-        return tls_task_info.worker->index();
-    else
-        return -1;
-}
+__thread struct __tls_task_info__ tls_task_info;
 
 /*static*/ void task::set_current_worker(task_worker* worker)
 {
     if (tls_task_info.magic == 0xdeadbeef)
     {
         tls_task_info.worker = worker;
+        tls_task_info.worker_index = worker ? worker->index() : -1;
     }
     else
     {
         tls_task_info.magic = 0xdeadbeef;
         tls_task_info.worker = worker;
+        tls_task_info.worker_index = worker ? worker->index() : -1;
         tls_task_info.current_task = nullptr;
     }
 }
