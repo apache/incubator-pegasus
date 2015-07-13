@@ -73,8 +73,11 @@ void replica::init_prepare(mutation_ptr& mu)
     {
         mu->set_id(get_ballot(), mu->data.header.decree);
     }
+    
+    ddebug("%s: mutation %s init_prepare", name(), mu->name());
 
-    if (mu->data.header.decree > _prepare_list->max_decree() && _prepare_list->count() >= _options.staleness_for_commit)
+    // check bounded staleness
+    if (mu->data.header.decree > last_committed_decree() + _options.staleness_for_commit)
     {
         err = ERR_CAPACITY_EXCEEDED;
         goto ErrOut;
@@ -82,19 +85,12 @@ void replica::init_prepare(mutation_ptr& mu)
  
     dassert (mu->data.header.decree > last_committed_decree(), "");
 
-    // local prepare without log
+    // local prepare
     err = _prepare_list->prepare(mu, PS_PRIMARY);
     if (err != ERR_OK)
     {
         goto ErrOut;
     }
-        
-    ddebug("%s: mutation %s init_prepare", name(), mu->name());
-
-    //
-    // TODO: bounded staleness on secondaries
-    //
-    dassert (mu->data.header.decree <= last_committed_decree() + _options.staleness_for_commit, "");
     
     // remote prepare
     dassert (mu->remote_tasks().size() == 0, "");
