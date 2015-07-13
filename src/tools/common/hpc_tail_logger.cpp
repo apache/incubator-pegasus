@@ -59,7 +59,7 @@ namespace dsn
 
         static __thread struct __tail_log_info__ s_tail_log_info;
         
-        void hpc_tail_logs_dumpper(sys_exit_type);
+        static void hpc_tail_logs_dumpper(sys_exit_type);
 
         hpc_tail_logger::hpc_tail_logger() 
         {
