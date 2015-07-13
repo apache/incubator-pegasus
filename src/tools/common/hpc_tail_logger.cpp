@@ -31,6 +31,7 @@
 # include <cstdlib>
 # include <sstream>
 # include <fstream>
+# include <iostream>
 
 namespace dsn 
 {
@@ -311,6 +312,12 @@ namespace dsn
 
             // set next write ptr
             s_tail_log_info.next_write_ptr = ptr;
+
+            // dump critical logs on screen
+            if (logLevel >= log_level_WARNING)
+            {
+                std::cout << ptr0 << std::endl;
+            }
         }
     }
 }
