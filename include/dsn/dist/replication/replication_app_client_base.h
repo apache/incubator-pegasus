@@ -340,8 +340,8 @@ namespace dsn { namespace replication {
         // get read address policy
         virtual end_point get_read_address(read_semantic_t semantic, const partition_configuration& config);
         
-    private:
-        struct request_context
+    public:
+        struct request_context : public ref_object
         {
             int                   partition_index;
             rpc_response_task_ptr callback_task;
@@ -349,14 +349,22 @@ namespace dsn { namespace replication {
             write_request_header  write_header;
             bool                  is_read;
             uint16_t              header_pos; // write header after body is written
-            task_ptr              timeout_timer; // when partition config is unknown at the first place
             uint64_t              timeout_ts_us; // timeout at this timing point
+
+            zlock                 lock; // [
+            task_ptr              timeout_timer; // when partition config is unknown at the first place            
+            task_ptr              rw_task;
+            bool                  completed;
+            // ]
         };
 
+        typedef ::boost::intrusive_ptr<request_context> request_context_ptr;
+
+    private:
         struct partition_context
         {
             rpc_response_task_ptr query_config_task;
-            std::list<request_context*> requests;
+            std::list<request_context_ptr> requests;
         };
 
         typedef std::unordered_map<int, partition_context*> pending_requests;
@@ -392,14 +400,17 @@ namespace dsn { namespace replication {
         end_point                               _last_contact_point;
 
     private:
-        void call(request_context* request, bool no_delay = true);
+        void call(request_context_ptr request, bool no_delay = true);
         error_code get_address(int pidx, bool is_write, __out_param end_point& addr, __out_param int& app_id, read_semantic_t semantic = read_semantic_t::ReadLastUpdate);
-        void on_user_request_timeout(request_context* rc);
         void query_partition_configuration_reply(error_code err, message_ptr& request, message_ptr& response, int pidx);
-        void replica_rw_reply(error_code err, message_ptr& request, message_ptr& response, request_context* rc);
-        void end_request(request_context* request, error_code err, message_ptr& resp);
+        void replica_rw_reply(error_code err, message_ptr& request, message_ptr& response, request_context_ptr& rc);
+        void end_request(request_context_ptr& request, error_code err, message_ptr& resp);
+        void on_user_request_timeout(request_context_ptr& rc);
         void clear_all_pending_tasks();
     };
+
+    DEFINE_REF_OBJECT(replication_app_client_base::request_context);
+
 #pragma pack(pop)
 
 }} // namespace
