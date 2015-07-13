@@ -233,6 +233,9 @@ namespace system
     // usually used by a tool
     //
     extern const std::map<std::string, service_app*>& get_all_apps();
+
+    // get service spec
+    extern const service_spec& spec();
 }
 
 }} // end namespace dsn::service

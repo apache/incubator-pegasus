@@ -342,6 +342,11 @@ namespace dsn
                 return ::dsn::internal_only::dsn_all.config;
             }
 
+            extern const service_spec& spec()
+            {
+                return service_engine::instance().spec();
+            }
+
             service_app* get_current_app()
             {
                 auto tsk = task::get_current_task();

@@ -30,6 +30,7 @@
 # include <dsn/internal/command.h>
 # include <cstdlib>
 # include <sstream>
+# include <fstream>
 
 namespace dsn 
 {
@@ -57,6 +58,8 @@ namespace dsn
         typedef ::dsn::utils::singleton_store<int, struct __tail_log_info__*> tail_log_manager;
 
         static __thread struct __tail_log_info__ s_tail_log_info;
+        
+        void hpc_tail_logs_dumpper(sys_exit_type);
 
         hpc_tail_logger::hpc_tail_logger() 
         {
@@ -96,10 +99,58 @@ namespace dsn
                     }
                 }
             );
+
+            ::dsn::register_command("tail-log-dump",
+                "tail-log-dump",
+                "tail-log-dump dump all tail logs to log files",
+                [this](const std::vector<std::string>& args)
+                {
+                    hpc_tail_logs_dumpper(sys_exit_type::SYS_EXIT_INVALID);
+                    return std::string("logs are dumped to coredurmp dir started with hpc_tail_logs.xxx.log");
+                }
+            );
+
+            // register system exit
+            ::dsn::tools::sys_exit.put_back(hpc_tail_logs_dumpper, "hpc_tail_log");
         }
 
         hpc_tail_logger::~hpc_tail_logger(void)
         {
+        }
+
+        static void hpc_tail_logs_dumpper(sys_exit_type)
+        {
+            uint64_t nts = ::dsn::service::env::now_ns();
+            std::stringstream log;
+            log << ::dsn::service::system::spec().coredump_dir << "/hpc_tail_logs." << nts << ".log";
+
+            std::ofstream olog(log.str().c_str());
+
+            std::vector<int> threads;
+            tail_log_manager::instance().get_all_keys(threads);
+
+            for (auto& tid : threads)
+            {
+                __tail_log_info__* log;
+                if (!tail_log_manager::instance().get(tid, log))
+                    continue;
+
+                tail_log_hdr *hdr = log->last_hdr, *tmp = log->last_hdr;
+                do
+                {
+                    if (!tmp->is_valid())
+                        break;
+                    
+                    char* llog = (char*)(tmp)-tmp->length;
+                    olog << llog << std::endl;
+
+                    // try previous log
+                    tmp = tmp->prev;
+
+                } while (tmp != nullptr && tmp != hdr);
+            }
+
+            olog.close();
         }
 
         std::string hpc_tail_logger::search(
