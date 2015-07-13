@@ -174,7 +174,6 @@ function(dsn_setup_compiler_flags)
 
 	if(UNIX)
 		add_compile_options(-std=c++11)
-		add_compile_options(-fstack-protector-all)
 		if(DEFINED DSN_PEDANTIC)
 			add_compile_options(-Werror)
 		endif()
