@@ -83,18 +83,10 @@ void replication_app_client_base::clear_all_pending_tasks()
         for (auto& rc : pc.second->requests)
         {
             end_request(rc, ERR_TIMEOUT, nil);
-            delete rc;
         }
         delete pc.second;
     }
     _pending_requests.clear();
-}
-
-
-void replication_app_client_base::on_user_request_timeout(request_context* rc)
-{
-    message_ptr nil(nullptr);
-    rc->callback_task->enqueue(ERR_TIMEOUT, nil);
 }
 
 DEFINE_TASK_CODE(LPC_REPLICATION_CLIENT_REQUEST_TIMEOUT, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
@@ -116,6 +108,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->write_header.code = code;
     rc->timeout_timer = nullptr;
     rc->timeout_ts_us = now_us() + callback->get_request()->header().client.timeout_ms * 1000;
+    rc->completed = false;
 
     if (rc->write_header.gpid.app_id == -1)
     {
@@ -152,6 +145,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->read_header.version_decree = snapshot_decree;
     rc->timeout_timer = nullptr;
     rc->timeout_ts_us = now_us() + callback->get_request()->header().client.timeout_ms * 1000;
+    rc->completed = false;
 
     if (rc->read_header.gpid.app_id == -1)
     {
@@ -168,22 +162,39 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     return rc;
 }
 
-void replication_app_client_base::end_request(request_context* request, error_code err, message_ptr& resp)
+void replication_app_client_base::on_user_request_timeout(request_context_ptr& rc)
 {
-    if (request->timeout_timer == nullptr || request->timeout_timer->cancel(true))
-    {
-        request->callback_task->enqueue(err, resp);
-    }
+    message_ptr nil(nullptr);
+    end_request(rc, ERR_TIMEOUT, nil);
 }
 
-void replication_app_client_base::call(request_context* request, bool no_delay)
+void replication_app_client_base::end_request(request_context_ptr& request, error_code err, message_ptr& resp)
 {
+    zauto_lock l(request->lock);
+    if (request->completed)
+        return;
+
+    if (err != ERR_TIMEOUT && request->timeout_timer != nullptr)
+        request->timeout_timer->cancel(false);
+
+    request->callback_task->enqueue(err, resp);
+    request->completed = true;
+}
+
+void replication_app_client_base::call(request_context_ptr request, bool no_delay)
+{
+    if (!no_delay)
+    {
+        zauto_lock l(request->lock);
+        if (request->completed)
+            return;
+    }
+
     auto nts = ::dsn::service::env::now_us();    
     if (nts + 100 >= request->timeout_ts_us) // within 100 us
     {
         message_ptr nil(nullptr);
         end_request(request, ERR_TIMEOUT, nil);
-        delete request;
         return;
     }
  
@@ -230,19 +241,22 @@ void replication_app_client_base::call(request_context* request, bool no_delay)
             request->header_pos = 0xffff;
         }
 
-        rpc::call(
-            addr,
-            msg,
-            this,
-            std::bind(
-            &replication_app_client_base::replica_rw_reply,
-            this,
-            std::placeholders::_1,
-            std::placeholders::_2,
-            std::placeholders::_3,
-            request
-            )
-            );
+        {
+            zauto_lock l(request->lock);
+            request->rw_task = rpc::call(
+                addr,
+                msg,
+                this,
+                std::bind(
+                &replication_app_client_base::replica_rw_reply,
+                this,
+                std::placeholders::_1,
+                std::placeholders::_2,
+                std::placeholders::_3,
+                request
+                )
+                );
+        }
     }
 
     // target node not known
@@ -259,21 +273,23 @@ void replication_app_client_base::call(request_context* request, bool no_delay)
     
     else
     {
-        zauto_lock l(_requests_lock);
-
-        // init timeout timer if necessary
-        if (request->timeout_timer == nullptr)
         {
-            tasking::enqueue(
-                request->timeout_timer,
-                LPC_REPLICATION_CLIENT_REQUEST_TIMEOUT,
-                this,
-                std::bind(&replication_app_client_base::on_user_request_timeout, this, request),
-                0,
-                msg->header().client.timeout_ms
-                );
+            zauto_lock l(request->lock);
+
+            // init timeout timer if necessary
+            if (request->timeout_timer == nullptr)
+            {
+                request->timeout_timer = tasking::enqueue(
+                    LPC_REPLICATION_CLIENT_REQUEST_TIMEOUT,
+                    this,
+                    std::bind(&replication_app_client_base::on_user_request_timeout, this, request),
+                    0,
+                    msg->header().client.timeout_ms
+                    );
+            }
         }
 
+        zauto_lock l(_requests_lock);
         // put into pending queue of querying target partition 
         auto it = _pending_requests.find(request->partition_index);
         if (it == _pending_requests.end())
@@ -321,7 +337,7 @@ void replication_app_client_base::replica_rw_reply(
     error_code err,
     message_ptr& request,
     message_ptr& response,
-    request_context* rc
+    request_context_ptr& rc
     )
 {
     if (err != ERR_OK)
@@ -341,7 +357,6 @@ void replication_app_client_base::replica_rw_reply(
         error_code err3;
         err3.set(err2);
         end_request(rc, err3, response);
-        delete rc;
     }
     return;
 
@@ -353,7 +368,7 @@ Retry:
     }
 
     // then retry
-    call(rc, false);
+    call(rc.get(), false);
 }
 
 error_code replication_app_client_base::get_address(int pidx, bool is_write, __out_param end_point& addr, __out_param int& app_id, read_semantic_t semantic)
@@ -450,7 +465,7 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
     {
         for (auto& req : pc->requests)
         {   
-            call(req, false);
+            call(req.get(), false);
         }
         pc->requests.clear();
         delete pc;
