@@ -176,6 +176,7 @@ namespace dsn {
 
     private:
         void create_buffer_and_writer(blob* pBuffer = nullptr);
+        void sanity_check();
 
     private:
         std::vector<blob>  _buffers;

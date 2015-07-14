@@ -378,7 +378,31 @@ namespace  dsn
 
         ++_cur_pos;
     }
-        
+
+    void binary_writer::sanity_check()
+    {
+        dassert(_cur_pos < static_cast<int>(_buffers.size()), 
+            "current position must be within the buffer array: %d vs %d", 
+            static_cast<int>(_cur_pos), 
+            static_cast<int>(_buffers.size())
+            );
+
+        dassert(_data.size() == _buffers.size(),
+            "data and buffer array must be of the same size: %d vs %d",
+            static_cast<int>(_data.size()),
+            static_cast<int>(_buffers.size())
+            );
+
+        for (size_t i = 0; i < _data.size(); i++)
+        {
+            dassert(_data[i].length() <= _buffers[i].length(),
+                "data size must not be greater than the buffer size: %d vs %d",
+                static_cast<int>(_data[i].length()),
+                static_cast<int>(_buffers[i].length())
+                );
+        }
+    }
+
     uint16_t binary_writer::write_placeholder()
     {
         if (_cur_is_placeholder)
@@ -414,6 +438,7 @@ namespace  dsn
     {
         int sz0 = sz;
 
+        sanity_check();
         if (pos != 0xffff)
         {
             int rem_size = _buffers[pos].length() - _data[pos].length();
@@ -470,6 +495,7 @@ namespace  dsn
                 _data[pos]._length += sz;
             }
         }
+        sanity_check();
 
         _total_size += sz0;
     }
@@ -477,6 +503,8 @@ namespace  dsn
     void binary_writer::write(const char* buffer, int sz, uint16_t pos /*= 0xffff*/)
     {
         int sz0 = sz;
+
+        sanity_check();
 
         if (pos != 0xffff)
         {
@@ -540,6 +568,8 @@ namespace  dsn
                 _data[pos]._length += sz;
             }
         }
+
+        sanity_check();
 
         _total_size += sz0;
     }
