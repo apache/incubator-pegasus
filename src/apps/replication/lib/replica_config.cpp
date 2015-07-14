@@ -729,7 +729,7 @@ void replica::replay_prepare_list()
             mu->data.updates = old->data.updates;
             mu->client_request = old->client_request;
 
-            dbg_dassert (mu->data.updates.size() == old->data.updates.size());
+            dbg_dassert (mu->data.updates.size() == old->data.updates.size(), "");
         }
         else
         {

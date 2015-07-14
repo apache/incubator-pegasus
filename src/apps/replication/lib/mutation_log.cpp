@@ -303,7 +303,7 @@ error_code mutation_log::replay(ReplayCallback callback)
             }
 
             derror(
-                "read log header failed for %s, err = %x", log->path().c_str(), err);
+                "read log header failed for %s, err = %s", log->path().c_str(), err.to_string());
             break;
         }
 
@@ -349,7 +349,7 @@ error_code mutation_log::replay(ReplayCallback callback)
                 }
 
                 derror(
-                    "read log entry failed for %s, err = %x", log->path().c_str(), err);
+                    "read log entry failed for %s, err = %s", log->path().c_str(), err.to_string());
                 break;
             }
             

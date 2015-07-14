@@ -145,7 +145,7 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
     }
     else
     {
-        derror( "open replica '%s' under '%s' failed, err = %x", app_type, dir().c_str(), err);
+        derror( "open replica '%s' under '%s' failed, err = %s", app_type, dir().c_str(), err.to_string());
         delete _app;
         _app = nullptr;
     }

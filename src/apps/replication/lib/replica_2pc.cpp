@@ -147,7 +147,7 @@ void replica::send_prepare_message(const end_point& addr, partition_status statu
     marshall(msg, rconfig);
     mu->write_to(msg);
 
-    dbg_dassert (mu->remote_tasks().find(addr) == mu->remote_tasks().end());
+    dbg_dassert (mu->remote_tasks().find(addr) == mu->remote_tasks().end(), "");
 
     mu->remote_tasks()[addr] = rpc::call(addr, msg, 
         this,

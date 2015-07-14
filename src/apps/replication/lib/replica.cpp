@@ -187,7 +187,7 @@ void replica::execute_mutation(mutation_ptr& mu)
         break;
     }
     
-    ddebug("TwoPhaseCommit, %s: mutation %s committed, err = %x", name(), mu->name(), err);
+    ddebug("TwoPhaseCommit, %s: mutation %s committed, err = %s", name(), mu->name(), err.to_string());
 
     if (err != ERR_OK)
     {
