@@ -129,7 +129,7 @@ void replica::response_client_message(message_ptr& request, error_code error, de
         return;
 
     message_ptr resp = request->create_response();
-    int err = error.get();
+    int err = error;
     resp->writer().write(err);
 
     dassert(error != ERR_OK, "");

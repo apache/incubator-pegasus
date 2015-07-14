@@ -35,37 +35,59 @@ struct error_code : public dsn::utils::customized_id<error_code>
     error_code(const char* name) : dsn::utils::customized_id<error_code>(name)
     {
         dassert (name, "name for an error code cannot be empty");
-        _used = false;
+# ifdef _DEBUG
+        _used = true;
+# endif
     }
 
     error_code() : dsn::utils::customized_id<error_code>(0)
     {
+# ifdef _DEBUG
         _used = true;
+# endif
     }
 
     error_code(const error_code& err) : dsn::utils::customized_id<error_code>(err)
     {
+# ifdef _DEBUG
         _used = false;
+# endif
     }
 
     error_code& operator=(const error_code& source)
     {
-        _internal_code = source.get();
+        _internal_code = source;
+# ifdef _DEBUG
         _used = false;
+# endif
         return *this;
     }
     
+# ifdef _DEBUG
     ~error_code()
     {
-        //assert (_used, "error code is not handled");
+        dassert (_used, "error code is not handled");
     }
 
-    int get() const { _used = true; return operator int(); }
-
-    void set(int err) { _internal_code = err; _used = false; }
+    operator int() const
+    {
+        _used = true;
+        return dsn::utils::customized_id<error_code>::operator int();
+    }
+# endif
+    
+    void set(int err) 
+    { 
+        _internal_code = err; 
+# ifdef _DEBUG
+        _used = false; 
+# endif
+    }
 
 private:
+# ifdef _DEBUG
     mutable bool _used;
+# endif
 };
 
 #define DEFINE_ERR_CODE(x) __selectany const ::dsn::error_code x(#x);

@@ -72,10 +72,10 @@ namespace dsn {
         DEFINE_POD_SERIALIZATION(int64_t)
         DEFINE_POD_SERIALIZATION(uint64_t)
 
-        // error_code
-        inline void marshall(::dsn::binary_writer& writer, const error_code& val, uint16_t pos = 0xffff)
+    // error_code
+    inline void marshall(::dsn::binary_writer& writer, const error_code& val, uint16_t pos = 0xffff)
     {
-        int err = val.get();
+        int err = val;
         marshall(writer, err, pos);
     }
 
