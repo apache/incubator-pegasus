@@ -410,6 +410,7 @@ namespace  dsn
             create_buffer_and_writer();
         }
         _cur_is_placeholder = true;
+        dassert(_cur_pos <= 0x0000ffff, "placeholder do not support index exceed uint16.max right now: %d", _cur_pos);
         return (uint16_t)_cur_pos;
     }
 
@@ -437,8 +438,9 @@ namespace  dsn
     void binary_writer::write_empty(int sz, uint16_t pos /*= 0xffff*/)
     {
         int sz0 = sz;
-
+# ifdef _DEBUG
         sanity_check();
+# endif
         if (pos != 0xffff)
         {
             int rem_size = _buffers[pos].length() - _data[pos].length();
@@ -466,16 +468,16 @@ namespace  dsn
                 _cur_is_placeholder = false;
             }
 
-            pos = (uint16_t)_cur_pos;
+            int pos2 = _cur_pos;
 
-            int rem_size = _buffers[pos].length() - _data[pos].length();
+            int rem_size = _buffers[pos2].length() - _data[pos2].length();
             if (rem_size >= sz)
             {
-                _data[pos]._length += sz;
+                _data[pos2]._length += sz;
             }
             else
             {
-                _data[pos]._length += rem_size;
+                _data[pos2]._length += rem_size;
 
                 sz -= rem_size;
 
@@ -490,12 +492,14 @@ namespace  dsn
                 bb._length = 0;
                 _data.push_back(bb);
 
-                pos = (uint16_t)(++_cur_pos);
+                pos2 = (++_cur_pos);
 
-                _data[pos]._length += sz;
+                _data[pos2]._length += sz;
             }
         }
+# ifdef _DEBUG
         sanity_check();
+# endif
 
         _total_size += sz0;
     }
@@ -504,7 +508,9 @@ namespace  dsn
     {
         int sz0 = sz;
 
+# ifdef _DEBUG
         sanity_check();
+# endif
 
         if (pos != 0xffff)
         {
@@ -535,21 +541,28 @@ namespace  dsn
                 _cur_is_placeholder = false;
             }
 
-            pos = (uint16_t)_cur_pos;
+            int pos2 = _cur_pos;
 
-            int rem_size = _buffers[pos].length() - _data[pos].length();
+            int rem_size = _buffers[pos2].length() - _data[pos2].length();
             if (rem_size >= sz)
             {
-                memcpy((void*)(_data[pos].data() + _data[pos].length()), buffer, (size_t)sz);
-                _data[pos]._length += sz;
+                memcpy((void*)(_data[pos2].data() + _data[pos2].length()), buffer, (size_t)sz);
+                _data[pos2]._length += sz;
             }
             else
             {
-                memcpy((void*)(_data[pos].data() + _data[pos].length()), buffer, (size_t)rem_size);
-                _data[pos]._length += rem_size;
+                if (rem_size > 0)
+                {
+                    memcpy((void*)(_data[pos2].data() + _data[pos2].length()), buffer, (size_t)rem_size);
+                    _data[pos2]._length += rem_size;
 
-                sz -= rem_size;
-                buffer += rem_size;
+                    sz -= rem_size;
+                    buffer += rem_size;
+                }
+                else
+                {
+                    dbg_dassert(rem_size == 0, "remaining size must be zero in this case: %d", rem_size);
+                }
 
                 int allocSize = _reserved_size_per_buffer;
                 if (sz > allocSize)
@@ -562,14 +575,16 @@ namespace  dsn
                 bb._length = 0;
                 _data.push_back(bb);
 
-                pos = (uint16_t)(++_cur_pos);
+                pos2 = (++_cur_pos);
 
-                memcpy((void*)(_data[pos].data() + _data[pos].length()), buffer, (size_t)sz);
-                _data[pos]._length += sz;
+                memcpy((void*)(_data[pos2].data() + _data[pos2].length()), buffer, (size_t)sz);
+                _data[pos2]._length += sz;
             }
         }
 
+# ifdef _DEBUG
         sanity_check();
+# endif
 
         _total_size += sz0;
     }

@@ -154,13 +154,10 @@ namespace dsn {
 
                 _store.clear();
 
-                uint32_t count;
+                uint64_t count;
                 is.read((char*)&count, sizeof(count));
 
-                if (is.fail())
-                    return;
-
-                for (uint32_t i = 0; i < count; i++)
+                for (uint64_t i = 0; i < count; i++)
                 {
                     std::string key;
                     std::string value;
@@ -197,7 +194,7 @@ namespace dsn {
                         static_cast<long long int>(last_committed_decree()));
                 std::ofstream os(name);
 
-                uint32_t count = (uint32_t)_store.size();
+                uint64_t count = (uint64_t)_store.size();
                 os.write((const char*)&count, (uint32_t)sizeof(count));
 
                 for (auto it = _store.begin(); it != _store.end(); it++)
@@ -233,7 +230,7 @@ namespace dsn {
 
                 dassert(_last_committed_decree >= 0, "");
 
-                int count = static_cast<int>(_store.size());
+                uint64_t count = static_cast<uint64_t>(_store.size());
                 writer.write(count);
 
                 for (auto it = _store.begin(); it != _store.end(); it++)
@@ -284,10 +281,10 @@ namespace dsn {
 
                 dassert(decree >= 0, "");
 
-                int count;
+                uint64_t count;
                 reader.read(count);
 
-                for (int i = 0; i < count; i++)
+                for (uint64_t i = 0; i < count; i++)
                 {
                     std::string key, value;
                     reader.read(key);
