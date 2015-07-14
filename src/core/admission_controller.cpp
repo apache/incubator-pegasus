@@ -53,7 +53,7 @@ namespace dsn {
 //{
 //}
 //
-//bool BoundedQueueAdmissionController::is_task_accepted(task_ptr& task)
+//bool BoundedQueueAdmissionController::is_task_accepted(task* task)
 //{
 //    if (InQueueTaskCount() < _maxTaskQueueSize || task->spec().pool->shared_same_worker_with_current_task(task))
 //    {
@@ -107,7 +107,7 @@ namespace dsn {
 //{
 //}
 //
-//bool SingleRpcClassResponseTimeAdmissionController::is_task_accepted(task_ptr& task)
+//bool SingleRpcClassResponseTimeAdmissionController::is_task_accepted(task* task)
 //{
 //    if (task->spec().type != TASK_TYPE_RPC_REQUEST 
 //        //|| task->spec().code == _rpcCode 

@@ -23,33 +23,34 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-# include "net_client_session.h"
-# include <dsn/internal/logging.h>
+#pragma once
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "net.session"
+# include <dsn/tool_api.h>
+# include <unordered_set>
 
 namespace dsn {
     namespace tools {
-        net_client_session::net_client_session(
-            asio_network_provider& net, 
-            boost::asio::ip::tcp::socket& socket,
-            const end_point& remote_addr, 
-            rpc_client_matcher_ptr& matcher,
-            std::shared_ptr<message_parser>& parser)
-            : 
-            _net(net),
-            rpc_client_session(net, remote_addr, matcher),
-            client_net_io(remote_addr, socket, parser)
-        {   
-        }
-        
-        net_client_session::~net_client_session()
+
+        class hpc_tail_logger : public logging_provider
         {
-        }
+        public:
+            hpc_tail_logger();
+            virtual ~hpc_tail_logger(void);
+
+            virtual void logv(const char *file,
+                const char *function,
+                const int line,
+                logging_level logLevel,
+                const char* title,
+                const char *fmt,
+                va_list args
+                );
+
+        private:
+            std::string search(const char* keyword, int back_seconds, int back_start_seconds, std::unordered_set<int>& target_threads);
+            
+        private:
+            int _per_thread_buffer_bytes;
+        };
     }
 }
-
-

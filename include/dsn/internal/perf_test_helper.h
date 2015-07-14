@@ -41,17 +41,44 @@
 namespace dsn {
     namespace service {
 
+        struct perf_test_opts
+        {
+            int  perf_test_rounds;
+            bool perf_test_concurrent;
+            std::vector<int> perf_test_timeouts_ms;
+        };
+
+        CONFIG_BEGIN(perf_test_opts)
+            CONFIG_FLD(int, perf_test_rounds, 10000)
+            CONFIG_FLD(bool, perf_test_concurrent, true)
+            CONFIG_FLD_INT_LIST(perf_test_timeouts_ms)
+        CONFIG_END
+        
         template<typename T>
         class perf_client_helper
         {
         protected:
-            perf_client_helper(){}
+            perf_client_helper()
+            {
+                auto cf = system::config();
+                if (!read_config(cf, "task.default", _default_opts))
+                {
+                    dassert(false, "read configuration failed for section [task.default]");
+                }
+
+                if (_default_opts.perf_test_timeouts_ms.size() == 0)
+                {
+                    const int timeouts_ms[] = { 1, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000 };
+                    for (size_t i = 0; i < sizeof(timeouts_ms) / sizeof(int); i++)
+                        _default_opts.perf_test_timeouts_ms.push_back(timeouts_ms[i]);
+                }
+            }
 
             struct perf_test_case
             {
                 int  rounds;
-                int  timeout_ms;
                 bool concurrent;
+                int  timeout_ms;
 
                 // statistics 
                 std::atomic<int> timeout_rounds;
@@ -96,19 +123,21 @@ namespace dsn {
 
             void load_suite_config(perf_test_suite& s)
             {
-                // TODO: load from configuration files
-                int timeouts_ms[] = { 1, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000 };
-                int rounds = ::dsn::service::system::config()->get_value<int>(
-                        s.config_section, "perf_test_rounds", 10000);
-
-                int last_index = static_cast<int>(sizeof(timeouts_ms) / sizeof(int)) - 1;
+                perf_test_opts opt;
+                auto cf = system::config();
+                if (!read_config(cf, s.config_section, opt, &_default_opts))
+                {
+                    dassert(false, "read configuration failed for section [%s]", s.config_section);
+                }
+                
+                int last_index = static_cast<int>(opt.perf_test_timeouts_ms.size()) - 1;
                 s.cases.clear();
                 for (int i = last_index; i >= 0; i--)
                 {
                     perf_test_case c;
-                    c.rounds = rounds;
-                    c.timeout_ms = timeouts_ms[i];
-                    c.concurrent = (i != last_index);
+                    c.rounds = opt.perf_test_rounds;
+                    c.timeout_ms = opt.perf_test_timeouts_ms[i];
+                    c.concurrent = opt.perf_test_concurrent;
                     s.cases.push_back(c);
                 }
             }
@@ -281,6 +310,7 @@ namespace dsn {
             int              _timeout_ms;
 
         private:
+            perf_test_opts   _default_opts;
             std::string      _name;            
             perf_test_case   *_current_case;
 

@@ -89,7 +89,6 @@ task_spec::task_spec(int code, const char* name, task_type type, threadpool_code
     // TODO: config for following values
     rpc_call_channel = RPC_CHANNEL_TCP;
     rpc_timeout_milliseconds = 5 * 1000; // 5 seconds
-    rpc_retry_interval_milliseconds = 3 * 1000; // 3 seconds
 }
 
 bool task_spec::init(configuration_ptr config)
@@ -160,7 +159,6 @@ bool task_spec::init(configuration_ptr config)
             spec->rpc_call_channel = default_spec.rpc_call_channel;
             spec->rpc_call_header_format = default_spec.rpc_call_header_format;
             spec->rpc_timeout_milliseconds = default_spec.rpc_timeout_milliseconds;
-            spec->rpc_retry_interval_milliseconds = default_spec.rpc_retry_interval_milliseconds;
         }
     }
 

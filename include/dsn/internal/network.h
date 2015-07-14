@@ -92,7 +92,7 @@ namespace dsn {
         // create a client matcher for matching RPC request and RPC response,
         // see rpc_client_matcher for details
         //
-        std::shared_ptr<rpc_client_matcher> new_client_matcher();
+        rpc_client_matcher_ptr new_client_matcher();
 
         //
         // create a message parser for
@@ -118,15 +118,16 @@ namespace dsn {
     // (3) or we have certain cases we want RPC responses from node which is not the initial target node
     //     the RPC request message is sent to. In this case, a shared rpc_engine level matcher is used.
     //
-    class rpc_client_matcher : public std::enable_shared_from_this<rpc_client_matcher>
+    class rpc_client_matcher : public ref_object
     {
     public:
+        ~rpc_client_matcher();
+
         //
         // when a two-way RPC call is made, register the requst id and the callback
         // which also registers a timer for timeout tracking
-        // - return false when no further network send is required
         //
-        bool on_call(message_ptr& request, rpc_response_task_ptr& call, network* net);
+        void on_call(message_ptr& request, rpc_response_task_ptr& call);
 
         //
         // when a RPC response is received, call this function to trigger calback
@@ -138,19 +139,20 @@ namespace dsn {
 
     private:
         friend class rpc_timeout_task;
-        void on_rpc_timeout(uint64_t key, task_spec* spec);
+        void on_rpc_timeout(uint64_t key);
 
     private:
         struct match_entry
         {
             rpc_response_task_ptr resp_task;
             task_ptr              timeout_task;
-            network*              net;
         };
-        typedef std::map<uint64_t, match_entry> rpc_requests;
-        rpc_requests             _requests;
-        ::dsn::utils::ex_lock_nr _requests_lock;
+        typedef std::unordered_map<uint64_t, match_entry> rpc_requests;
+        rpc_requests                  _requests;
+        ::dsn::utils::ex_lock_nr_spin _requests_lock;
     };
+
+    DEFINE_REF_OBJECT(rpc_client_matcher)
 
     //
     // an incomplete network implementation for connection oriented network, e.g., TCP
@@ -177,13 +179,13 @@ namespace dsn {
         virtual rpc_client_session_ptr create_client_session(const end_point& server_addr) = 0;
 
     protected:
-        typedef std::map<end_point, rpc_client_session_ptr> client_sessions;
+        typedef std::unordered_map<end_point, rpc_client_session_ptr> client_sessions;
         client_sessions               _clients;
-        utils::rw_lock                _clients_lock;
+        utils::rw_lock_nr             _clients_lock;
 
-        typedef std::map<end_point, rpc_server_session_ptr> server_sessions;
+        typedef std::unordered_map<end_point, rpc_server_session_ptr> server_sessions;
         server_sessions               _servers;
-        utils::rw_lock                _servers_lock;
+        utils::rw_lock_nr             _servers_lock;
     };
 
     //
@@ -192,19 +194,24 @@ namespace dsn {
     class rpc_client_session : public ref_object
     {
     public:
-        rpc_client_session(connection_oriented_network& net, const end_point& remote_addr, std::shared_ptr<rpc_client_matcher>& matcher);
+        rpc_client_session(connection_oriented_network& net, const end_point& remote_addr, rpc_client_matcher_ptr& matcher);
         bool on_recv_reply(uint64_t key, message_ptr& reply, int delay_ms);
         void on_disconnected();
         void call(message_ptr& request, rpc_response_task_ptr& call);
         const end_point& remote_address() const { return _remote_addr; }
+        connection_oriented_network& net() const { return _net; }
+        bool is_disconnected() const { return _disconnected; }
 
         virtual void connect() = 0;
         virtual void send(message_ptr& msg) = 0;
 
+    private:
+        bool _disconnected;
+
     protected:
         connection_oriented_network         &_net;
         end_point                           _remote_addr;
-        std::shared_ptr<rpc_client_matcher> _matcher;
+        rpc_client_matcher_ptr _matcher;
     };
 
     DEFINE_REF_OBJECT(rpc_client_session)

@@ -143,11 +143,11 @@ private:
     };
 
 private:    
-    typedef std::map<end_point, master_record>    master_map;
-    typedef std::map<end_point, worker_record>     worker_map;
+    typedef std::unordered_map<end_point, master_record>    master_map;
+    typedef std::unordered_map<end_point, worker_record>    worker_map;
 
     // allow list are set on machine name (port can vary)
-    typedef std::set<end_point>   allow_list;
+    typedef std::unordered_set<end_point>   allow_list;
 
     mutable service::zlock _lock;
     master_map            _masters;

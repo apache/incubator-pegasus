@@ -34,24 +34,26 @@
 
 namespace dsn {
 
-    rpc_client_session::rpc_client_session(connection_oriented_network& net, const end_point& remote_addr, std::shared_ptr<rpc_client_matcher>& matcher)
+    rpc_client_session::rpc_client_session(connection_oriented_network& net, const end_point& remote_addr, rpc_client_matcher_ptr& matcher)
         : _net(net), _remote_addr(remote_addr), _matcher(matcher)
     {
+        _disconnected = false;
     }
 
     void rpc_client_session::call(message_ptr& request, rpc_response_task_ptr& call)
     {
         if (call != nullptr)
         {
-            if (_matcher->on_call(request, call, &_net))
-                send(request);
+            _matcher->on_call(request, call);
         }
-        else
-            send(request);
+
+        send(request);
     }
 
     void rpc_client_session::on_disconnected()
     {
+        _disconnected = true;
+
         rpc_client_session_ptr sp = this;
         _net.on_client_session_disconnected(sp);
     }
@@ -113,9 +115,9 @@ namespace dsn {
         return _engine->on_recv_request(msg, delay_ms);
     }
     
-    std::shared_ptr<rpc_client_matcher> network::new_client_matcher()
+    rpc_client_matcher_ptr network::new_client_matcher()
     {
-        return std::shared_ptr<rpc_client_matcher>(new rpc_client_matcher());
+        return rpc_client_matcher_ptr(new rpc_client_matcher());
     }
 
     std::shared_ptr<message_parser> network::new_message_parser()
@@ -136,6 +138,7 @@ namespace dsn {
         end_point& to = request->header().to_address;
         bool new_client = false;
 
+        // TODO: thread-local client ptr cache
         {
             utils::auto_read_lock l(_clients_lock);
             auto it = _clients.find(to);

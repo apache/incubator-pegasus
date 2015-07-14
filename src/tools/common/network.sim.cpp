@@ -38,7 +38,7 @@ namespace dsn { namespace tools {
     // multiple machines connect to the same switch, 10 should be >= than rpc_channel::max_value() + 1
     static utils::singleton_store<end_point, sim_network_provider*> s_switch[10]; 
 
-    sim_client_session::sim_client_session(sim_network_provider& net, const end_point& remote_addr, std::shared_ptr<rpc_client_matcher>& matcher)
+    sim_client_session::sim_client_session(sim_network_provider& net, const end_point& remote_addr, rpc_client_matcher_ptr& matcher)
         : rpc_client_session(net, remote_addr, matcher)
     {}
 

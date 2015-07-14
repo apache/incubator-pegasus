@@ -166,7 +166,7 @@ int mutation_log::create_new_log_file()
     auto len = logFile->write_header(_pending_write, _init_prepared_decrees, 
         static_cast<int>(_log_buffer_size_bytes));
     _global_end_offset += len;
-    dassert (_pending_write->total_size() == len + message_header::serialized_size(), "");
+    dassert (_pending_write->total_size() == len + MSG_HDR_SERIALIZED_SIZE, "");
 
     return ERR_OK;
 }
@@ -191,8 +191,8 @@ void mutation_log::create_new_pending_buffer()
             );
     }
 
-    dassert (_pending_write->total_size() == message_header::serialized_size(), "");
-    _global_end_offset += message_header::serialized_size();
+    dassert (_pending_write->total_size() == MSG_HDR_SERIALIZED_SIZE, "");
+    _global_end_offset += MSG_HDR_SERIALIZED_SIZE;
 }
 
 void mutation_log::internal_pending_write_timer(uint64_t id)
@@ -308,7 +308,7 @@ int mutation_log::replay(ReplayCallback callback)
 
 
         message_ptr msg(new message(bb));
-        offset += message_header::serialized_size();
+        offset += MSG_HDR_SERIALIZED_SIZE;
 
         if (!msg->is_right_body())
         {
@@ -353,7 +353,7 @@ int mutation_log::replay(ReplayCallback callback)
             }
             
             msg = new message(bb);
-            offset += message_header::serialized_size();
+            offset += MSG_HDR_SERIALIZED_SIZE;
 
             if (!msg->is_right_body())
             {
@@ -674,19 +674,19 @@ int log_file::read_next_log_entry(__out_param ::dsn::blob& bb)
 {
     dassert (_is_read, "");
 
-    std::shared_ptr<char> hdrBuffer(new char[message_header::serialized_size()]);
+    std::shared_ptr<char> hdrBuffer(new char[MSG_HDR_SERIALIZED_SIZE]);
     
     int read_count = ::read(
         (int)(_handle),
         hdrBuffer.get(),
-        message_header::serialized_size()
+        MSG_HDR_SERIALIZED_SIZE
         );
 
-    if (message_header::serialized_size() != read_count)
+    if (MSG_HDR_SERIALIZED_SIZE != read_count)
     {
         if (read_count > 0)
         {
-            derror("incomplete read data, size = %d vs %d", read_count, message_header::serialized_size());
+            derror("incomplete read data, size = %d vs %d", read_count, MSG_HDR_SERIALIZED_SIZE);
             return ERR_INVALID_DATA;
         }
         else
@@ -696,7 +696,7 @@ int log_file::read_next_log_entry(__out_param ::dsn::blob& bb)
     }
 
     message_header hdr;
-    ::dsn::blob bb2(hdrBuffer, message_header::serialized_size());
+    ::dsn::blob bb2(hdrBuffer, MSG_HDR_SERIALIZED_SIZE);
     ::dsn::binary_reader reader(bb2);
     hdr.unmarshall(reader);
 
@@ -706,19 +706,19 @@ int log_file::read_next_log_entry(__out_param ::dsn::blob& bb)
         return ERR_INVALID_DATA;
     }
 
-    std::shared_ptr<char> data(new char[message_header::serialized_size() + hdr.body_length]);
-    memcpy(data.get(), hdrBuffer.get(), message_header::serialized_size());
-    bb.assign(data, 0, message_header::serialized_size() + hdr.body_length);
+    std::shared_ptr<char> data(new char[MSG_HDR_SERIALIZED_SIZE + hdr.body_length]);
+    memcpy(data.get(), hdrBuffer.get(), MSG_HDR_SERIALIZED_SIZE);
+    bb.assign(data, 0, MSG_HDR_SERIALIZED_SIZE + hdr.body_length);
 
     read_count = ::read(
         (int)(_handle),
-        (void*)((char*)bb.data() + message_header::serialized_size()),
+        (void*)((char*)bb.data() + MSG_HDR_SERIALIZED_SIZE),
         hdr.body_length
         );
 
     if (hdr.body_length != read_count)
     {
-        derror("incomplete read data, size = %d vs %d", read_count, message_header::serialized_size());
+        derror("incomplete read data, size = %d vs %d", read_count, MSG_HDR_SERIALIZED_SIZE);
         return ERR_INVALID_DATA;
     }
     

@@ -49,23 +49,27 @@ namespace dsn {
     class rpc_timeout_task : public task
     {
     public:
-        rpc_timeout_task(std::shared_ptr<rpc_client_matcher> matcher, uint64_t id, task_spec* spec) : task(LPC_RPC_TIMEOUT)
+        rpc_timeout_task(rpc_client_matcher* matcher, uint64_t id) 
+            : task(LPC_RPC_TIMEOUT)
         {
             _matcher = matcher;
             _id = id;
-            _spec = spec;
         }
 
         virtual void exec()
         {
-            _matcher->on_rpc_timeout(_id, _spec);
+            _matcher->on_rpc_timeout(_id);
         }
 
     private:
-        std::shared_ptr<rpc_client_matcher> _matcher;
-        uint64_t     _id;
-        task_spec  *_spec;
+        rpc_client_matcher_ptr _matcher;
+        uint64_t               _id;
     };
+
+    rpc_client_matcher::~rpc_client_matcher()
+    {
+        dassert(_requests.size() == 0, "all rpc enries must be removed before the matcher ends");
+    }
 
     bool rpc_client_matcher::on_recv_reply(uint64_t key, message_ptr& reply, int delay_ms)
     {
@@ -75,12 +79,12 @@ namespace dsn {
         task_ptr timeout_task;
 
         {
-            utils::auto_lock<::dsn::utils::ex_lock_nr> l(_requests_lock);
+            utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock);
             auto it = _requests.find(key);
             if (it != _requests.end())
             {
                 call = it->second.resp_task;
-                timeout_task = it->second.timeout_task;
+                timeout_task = std::move(it->second.timeout_task);
                 _requests.erase(it);
             }
             else
@@ -103,18 +107,16 @@ namespace dsn {
         return true;
     }
 
-    void rpc_client_matcher::on_rpc_timeout(uint64_t key, task_spec* spec)
+    void rpc_client_matcher::on_rpc_timeout(uint64_t key)
     {
         rpc_response_task_ptr call;
-        network* net;
 
         {
-            utils::auto_lock<::dsn::utils::ex_lock_nr> l(_requests_lock);
+            utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock);
             auto it = _requests.find(key);
             if (it != _requests.end())
             {
-                call = it->second.resp_task;
-                net = it->second.net;
+                call = std::move(it->second.resp_task);
                 _requests.erase(it);
             }
             else
@@ -123,60 +125,28 @@ namespace dsn {
             }
         }
 
-        message_ptr& msg = call->get_request();
-        auto nts = ::dsn::service::env::now_us();
-        
-        // timeout already
-        // TODO: uint64 overflow
-        if (nts >= msg->header().client.timeout_ts_us)
-        {
-            message_ptr null_msg(nullptr);
-            call->enqueue(ERR_TIMEOUT, null_msg);
-        }
-        else
-        {
-            net->call(msg, call);
-        }
+        message_ptr null_msg(nullptr);
+        call->enqueue(ERR_TIMEOUT, null_msg);
     }
-
-
-    bool rpc_client_matcher::on_call(message_ptr& request, rpc_response_task_ptr& call, network* net)
+    
+    void rpc_client_matcher::on_call(message_ptr& request, rpc_response_task_ptr& call)
     {
         message* msg = request.get();
-        task_ptr timeout_task;
-        task_spec* spec = task_spec::get(msg->header().local_rpc_code);
+        task* timeout_task;
         message_header& hdr = msg->header();
 
-        timeout_task = (new rpc_timeout_task(shared_from_this(), hdr.id, spec));
+        timeout_task = (new rpc_timeout_task(this, hdr.id));
 
         {
-            utils::auto_lock<::dsn::utils::ex_lock_nr> l(_requests_lock);
+            utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock);
             auto pr = _requests.insert(rpc_requests::value_type(hdr.id, match_entry()));
             dassert (pr.second, "the message is already on the fly!!!");
             pr.first->second.resp_task = call;
             pr.first->second.timeout_task = timeout_task;
-            pr.first->second.net = net;
-            //{call, timeout_task, net }
         }
 
-        auto nts = ::dsn::service::env::now_us();
-        auto tts = msg->header().client.timeout_ts_us;
-
-        if (tts > nts)
-        {
-            int timeout_ms = static_cast<int>(tts > nts ? (tts - nts) : 0) / 1000;
-            if (timeout_ms >= spec->rpc_retry_interval_milliseconds * 2)
-                timeout_ms = spec->rpc_retry_interval_milliseconds;
-
-            timeout_task->set_delay(timeout_ms);
-            timeout_task->enqueue();
-            return true;
-        }
-        else
-        {
-            timeout_task->enqueue();
-            return false;
-        }
+        timeout_task->set_delay(msg->header().client.timeout_ms);
+        timeout_task->enqueue();
     }
 
     //------------------------
@@ -363,7 +333,7 @@ namespace dsn {
         if (handler != nullptr)
         {
             msg->header().local_rpc_code = (uint16_t)handler->code;
-            auto tsk = handler->handler->new_request_task(msg, node());
+            rpc_request_task_ptr tsk = handler->handler->new_request_task(msg, node());
             tsk->set_delay(delay_ms);
             tsk->enqueue(_node);
         }
@@ -399,24 +369,14 @@ namespace dsn {
         msg->header().client.port = primary_address().port;
         msg->header().from_address = primary_address();
         msg->header().new_rpc_id();
-
-        // it happens when retry the same request at the app level and timeout is not specified
-        if (msg->header().client.timeout_ts_us <= nts_us)
-        {
-            msg->header().client.timeout_ts_us = nts_us
-                + static_cast<uint64_t>(sp->rpc_timeout_milliseconds) * 1000ULL;
-        }
-        
         msg->seal(_message_crc_required);
 
         if (!sp->on_rpc_call.execute(task::get_current_task(), msg, call.get(), true))
         {
             if (call != nullptr)
             {
-                int delay_ms = static_cast<int>((msg->header().client.timeout_ts_us - nts_us) / 1000);
-
                 message_ptr nil;
-                call->set_delay(delay_ms);
+                call->set_delay(msg->header().client.timeout_ms);
                 call->enqueue(ERR_TIMEOUT, nil);
             }   
             return;

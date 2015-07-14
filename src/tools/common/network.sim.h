@@ -33,7 +33,7 @@ namespace dsn { namespace tools {
     class sim_client_session : public rpc_client_session
     {
     public:
-        sim_client_session(sim_network_provider& net, const end_point& remote_addr, std::shared_ptr<rpc_client_matcher>& matcher);
+        sim_client_session(sim_network_provider& net, const end_point& remote_addr, rpc_client_matcher_ptr& matcher);
 
         virtual void connect();
         virtual void send(message_ptr& msg);

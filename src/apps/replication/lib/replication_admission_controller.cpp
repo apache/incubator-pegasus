@@ -36,9 +36,9 @@ replication_admission_controller::~replication_admission_controller(void)
 {
 }
 
-bool replication_admission_controller::is_task_accepted(task_ptr& task)
+bool replication_admission_controller::is_task_accepted(task* t)
 {
-    if (task->code() != RPC_REPLICATION_CLIENT_WRITE && task->code() != RPC_REPLICATION_CLIENT_READ)
+    if (t->code() != RPC_REPLICATION_CLIENT_WRITE && t->code() != RPC_REPLICATION_CLIENT_READ)
         return true;
 
     // read latency 

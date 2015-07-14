@@ -88,6 +88,7 @@ rpc_call_channel = RPC_CHANNEL_TCP
 fast_execution_in_network_thread = false
 rpc_call_header_format_name = dsn
 rpc_timeout_milliseconds = 5000
+perf_test_rounds = 10000
 
 [task.LPC_AIO_IMMEDIATE_CALLBACK]
 is_trace = false

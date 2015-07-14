@@ -35,8 +35,8 @@ namespace dsn {
         public:
             hpc_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
 
-            virtual void     enqueue(task_ptr& task);
-            virtual task_ptr dequeue();
+            virtual void     enqueue(task* task);
+            virtual task*    dequeue();
             virtual int      count() const { return _count.load(); }
 
         private:

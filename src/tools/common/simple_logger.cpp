@@ -24,7 +24,6 @@
  * THE SOFTWARE.
  */
 # include "simple_logger.h"
-# include <boost/lexical_cast.hpp>
 # include <boost/thread.hpp>
 # include <boost/filesystem.hpp>
 
@@ -58,23 +57,20 @@ namespace dsn {
                 }
                 else
                 {
-                    std::string tid = boost::lexical_cast<std::string>(boost::this_thread::get_id());
-
-                    fprintf(fp, "%6s.%7s.%s.%016llx: ",
+                    fprintf(fp, "%6s.%7s.%05d.%016llx: ",
                         t->node_name(),
                         "io-thrd",
-                        tid.c_str(),
+                        tid,
                         static_cast<long long unsigned int>(t->id())
                         );
                 }
             }
             else
             {
-                std::string tid = boost::lexical_cast<std::string>(boost::this_thread::get_id());
-                fprintf(fp, "%6s.%7s.%s: ",
+                fprintf(fp, "%6s.%7s.%05d: ",
                     "system",
                     "io-thrd",
-                    tid.c_str()
+                    tid
                     );
             }
         }

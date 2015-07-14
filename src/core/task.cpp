@@ -338,8 +338,7 @@ void task::enqueue(task_worker_pool* pool)
             _spec->name
             );
 
-        task_ptr this_(this);
-        pool->enqueue(this_);
+        pool->enqueue(this);
     }
 }
 

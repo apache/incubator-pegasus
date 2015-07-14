@@ -256,7 +256,8 @@ namespace dsn {
                     reply_hash
                     ));
 
-                return rpc::call(server, msg, resp_task);
+                rpc::call(server, msg, resp_task);
+                return std::move(resp_task);
             }
 
             template<typename TRequest, typename TResponse>
@@ -282,7 +283,8 @@ namespace dsn {
                     reply_hash
                     ));
 
-                return rpc::call(server, msg, resp_task);
+                rpc::call(server, msg, resp_task);
+                return std::move(resp_task);
             }
 
             template<typename T, typename TRequest, typename TResponse>
@@ -309,7 +311,8 @@ namespace dsn {
                     reply_hash
                     ));
 
-                return rpc::call(server, msg, resp_task);
+                rpc::call(server, msg, resp_task);
+                return std::move(resp_task);
             }
 
             template<typename TRequest, typename TResponse>
@@ -336,7 +339,8 @@ namespace dsn {
                     reply_hash
                     ));
 
-                return rpc::call(server, msg, resp_task);
+                rpc::call(server, msg, resp_task);
+                return std::move(resp_task);
             }
 
             template<typename TRequest, typename TResponse>
@@ -428,7 +432,8 @@ namespace dsn {
                 dassert(_handlers.size() > 0, "");
 
                 auto cb = rpc_response_task_ptr(static_cast<rpc_response_task*>(this));
-                return rpc::call(server, cb->get_request(), cb);
+                rpc::call(server, cb->get_request(), cb);
+                return std::move(cb);
             }
 
             inline layered_rpc::~layered_rpc()

@@ -57,3 +57,13 @@ namespace dsn {
         ENUM_END(config_type)
     }
 } // end namespace dsn::replication
+
+namespace std
+{
+    template<>
+    struct hash<::dsn::replication::global_partition_id> {
+        size_t operator()(const ::dsn::replication::global_partition_id &gpid) const {
+            return std::hash<int>()(gpid.app_id) ^ std::hash<int>()(gpid.pidx);
+        }
+    };
+}

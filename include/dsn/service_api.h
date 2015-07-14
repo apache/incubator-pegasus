@@ -93,11 +93,10 @@ namespace rpc
 
     //
     // call a RPC
-    //  -when callback is empty, we assume callers will invoke return::wait() 
-    //  to perform a synchronous rpc call
-    //  -to invoke a one way rpc call, use call_one_way below
+    //   developers can always call callback::wait for synchronous calls
     //
-    extern rpc_response_task_ptr call(const end_point& server, message_ptr& request, rpc_response_task_ptr callback = nullptr);
+    extern void                  call(const end_point& server, message_ptr& request, rpc_response_task_ptr& callback);
+    extern rpc_response_task_ptr call(const end_point& server, message_ptr& request); // return callback
 
     //
     // one way RPC call, no need to expect a return response value
@@ -234,6 +233,9 @@ namespace system
     // usually used by a tool
     //
     extern const std::map<std::string, service_app*>& get_all_apps();
+
+    // get service spec
+    extern const service_spec& spec();
 }
 
 }} // end namespace dsn::service

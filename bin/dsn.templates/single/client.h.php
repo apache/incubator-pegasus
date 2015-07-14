@@ -44,7 +44,7 @@ public:
     {
         ::dsn::message_ptr msg = ::dsn::message::create_request(<?=$f->get_rpc_code()?>, timeout_milliseconds, hash);
         marshall(msg->writer(), <?=$f->get_first_param()->name?>);
-        auto resp_task = ::dsn::service::rpc::call(p_server_addr ? *p_server_addr : _server, msg, nullptr);
+        auto resp_task = ::dsn::service::rpc::call(p_server_addr ? *p_server_addr : _server, msg);
         resp_task->wait();
         if (resp_task->error() == ::dsn::ERR_OK)
         {

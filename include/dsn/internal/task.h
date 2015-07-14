@@ -148,7 +148,7 @@ typedef ::boost::intrusive_ptr<rpc_request_task> rpc_request_task_ptr;
 class rpc_server_handler
 {
 public:
-    virtual rpc_request_task_ptr new_request_task(message_ptr& request, service_node* node) = 0;
+    virtual rpc_request_task* new_request_task(message_ptr& request, service_node* node) = 0;
     virtual ~rpc_server_handler(){}
 };
 

@@ -54,7 +54,7 @@ namespace dsn {
             nfs_opts  &_opts;
 
             zlock _handles_map_lock;
-            std::map <std::string, file_handle_info_on_server*> _handles_map; // cache file handles
+            std::unordered_map <std::string, file_handle_info_on_server*> _handles_map; // cache file handles
 
             ::dsn::task_ptr _file_close_timer;
         };

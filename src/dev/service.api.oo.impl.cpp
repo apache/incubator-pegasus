@@ -70,6 +70,28 @@ namespace dsn {
                 task_handler _handler;
             };
 
+            // sometimes we need to have task given BFORE the task has been enqueued 
+            // to ensure a happens-before relationship to avoid race
+            void enqueue(
+                __out_param task_ptr& task,
+                task_code evt,
+                servicelet *context,
+                task_handler callback,
+                int hash/* = 0*/,
+                int delay_milliseconds/* = 0*/,
+                int timer_interval_milliseconds/* = 0*/
+                )
+            {
+                task_ptr tsk;
+                if (timer_interval_milliseconds != 0)
+                    tsk.reset(new service_timer_task(evt, context, callback, timer_interval_milliseconds, hash));
+                else
+                    tsk.reset(new service_task(evt, context, callback, hash));
+
+                task = tsk;
+                enqueue(tsk, delay_milliseconds);
+            }
+
             task_ptr enqueue(
                 task_code evt,
                 servicelet *context,
@@ -86,7 +108,7 @@ namespace dsn {
                     tsk.reset(new service_task(evt, context, callback, hash));
 
                 enqueue(tsk, delay_milliseconds);
-                return tsk;
+                return std::move(tsk);
             }
         }
 
@@ -108,7 +130,8 @@ namespace dsn {
                     reply_hash
                     ));
 
-                return rpc::call(server, request, resp_task);
+                rpc::call(server, request, resp_task);
+                return std::move(resp_task);
             }
         }
 
@@ -130,7 +153,7 @@ namespace dsn {
                     : static_cast<aio_task*>(new aio_task_empty(callback_code, hash))
                     );
                 read(hFile, buffer, count, offset, tsk);
-                return tsk;
+                return std::move(tsk);
             }
 
             aio_task_ptr write(
@@ -149,7 +172,7 @@ namespace dsn {
                     : static_cast<aio_task*>(new aio_task_empty(callback_code, hash))
                     );
                 write(hFile, buffer, count, offset, tsk);
-                return tsk;
+                return std::move(tsk);
             }
 
 
@@ -170,7 +193,7 @@ namespace dsn {
                     : static_cast<aio_task*>(new aio_task_empty(callback_code, hash))
                     );
                 copy_remote_files(remote, source_dir, files, dest_dir, overwrite, tsk);
-                return tsk;
+                return std::move(tsk);
             }
         }
 

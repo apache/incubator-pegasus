@@ -38,8 +38,8 @@ inline int gpid_to_hash(global_partition_id gpid)
     return static_cast<int>(gpid.app_id ^ gpid.pidx);
 }
 
-typedef std::map<end_point, partition_status> node_statuses;
-typedef std::map<end_point, task_ptr> node_tasks;
+typedef std::unordered_map<end_point, partition_status> node_statuses;
+typedef std::unordered_map<end_point, task_ptr> node_tasks;
 
 class replication_options
 {

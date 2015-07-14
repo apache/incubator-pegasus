@@ -49,7 +49,7 @@ struct app_state
     std::vector<partition_configuration> partitions;
 };
 
-typedef std::map<global_partition_id, std::shared_ptr<configuration_update_request> > machine_fail_updates;
+typedef std::unordered_map<global_partition_id, std::shared_ptr<configuration_update_request> > machine_fail_updates;
 
 class server_state 
 {
@@ -76,8 +76,7 @@ public:
     void query_configuration_by_gpid(global_partition_id id, __out_param partition_configuration& config);
     void update_configuration(configuration_update_request& request, __out_param configuration_update_response& response);
 
-    bool freezed() const { zauto_read_lock l(_lock); return _freeze; }
-    void benign_unfree();
+    bool freezed() const { return _freeze.load(); }
     
 private:
     void check_consistency(global_partition_id gpid);
@@ -94,15 +93,15 @@ private:
         std::set<global_partition_id> partitions;
     };
 
-    mutable zrwlock                   _lock;
-    std::map<end_point, node_state>   _nodes;
+    mutable zrwlock_nr                   _lock;
+    std::unordered_map<end_point, node_state>   _nodes;
     std::vector<app_state>            _apps;
 
     int                               _node_live_count;
     int                               _node_live_percentage_threshold_for_update;
-    bool                              _freeze;
+    std::atomic<bool>                 _freeze;
 
-    mutable zrwlock                   _meta_lock;
+    mutable zrwlock_nr                   _meta_lock;
     std::vector<end_point>            _meta_servers;
     int                               _leader_index;
 

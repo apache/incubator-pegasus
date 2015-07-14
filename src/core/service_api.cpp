@@ -342,6 +342,11 @@ namespace dsn
                 return ::dsn::internal_only::dsn_all.config;
             }
 
+            extern const service_spec& spec()
+            {
+                return service_engine::instance().spec();
+            }
+
             service_app* get_current_app()
             {
                 auto tsk = task::get_current_task();
@@ -386,20 +391,27 @@ namespace dsn
                 return tsk->node()->rpc()->unregister_rpc_handler(code);
             }
 
-            rpc_response_task_ptr call(const end_point& server, message_ptr& request, rpc_response_task_ptr callback)
+            void call(const end_point& server, message_ptr& request, rpc_response_task_ptr& callback)
             {
                 auto tsk = task::get_current_task();
                 dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
-                if (nullptr == callback)
-                {
-                    callback.reset(new rpc_response_task_empty(request));
-                }
+                dassert(nullptr != callback, "callback cannot be empty");
 
                 rpc_engine* rpc = tsk->node()->rpc();
                 request->header().to_address = server;
                 rpc->call(request, callback);
-                return callback;
+            }
+
+            rpc_response_task_ptr call(const end_point& server, message_ptr& request)
+            {
+                auto tsk = task::get_current_task();
+                dassert(tsk != nullptr, "this function can only be invoked inside tasks");
+
+                rpc_response_task_ptr callback(new rpc_response_task_empty(request));
+                rpc_engine* rpc = tsk->node()->rpc();
+                request->header().to_address = server;
+                rpc->call(request, callback);
+                return std::move(callback);
             }
 
             void call_one_way(const end_point& server, message_ptr& request)

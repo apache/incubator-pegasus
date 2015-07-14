@@ -30,6 +30,11 @@
 #include <boost/filesystem.hpp>
 #include <sys/stat.h>
 
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "meta.service"
+
 meta_service::meta_service(server_state* state)
 : _state(state), serverlet("meta_service")
 {
@@ -49,6 +54,8 @@ meta_service::~meta_service(void)
 
 void meta_service::start(const char* data_dir, bool clean_state)
 {
+    dassert(!_started, "meta service is already started");
+
     _data_dir = data_dir;
 
     if (clean_state)
@@ -97,6 +104,8 @@ void meta_service::start(const char* data_dir, bool clean_state)
 
     register_rpc_handler(RPC_CM_CALL, "RPC_CM_CALL", &meta_service::on_request);
 
+    // make sure the delay is larger than fd.grace to ensure 
+    // all machines are in the correct state (assuming connected initially)
     _balancer_timer = tasking::enqueue(LPC_LBM_RUN, this, &meta_service::on_load_balance_timer, 0, 
         _opts.fd_grace_seconds * 1000 + 1, // delay
         10000
@@ -109,6 +118,8 @@ void meta_service::start(const char* data_dir, bool clean_state)
         _opts.fd_grace_seconds,
         false
         );
+
+    _started = true;
 }
 
 bool meta_service::stop()
@@ -135,6 +146,12 @@ void meta_service::on_request(message_ptr& msg)
     bool is_primary = _state->get_meta_server_primary(rhdr.primary_address);
     if (is_primary) is_primary = (primary_address() == rhdr.primary_address);
     rhdr.err = ERR_OK;
+
+    dinfo("recv meta request %s from %s:%d", 
+        task_code::to_string(hdr.rpc_tag),
+        msg->header().from_address.name.c_str(),
+        static_cast<int>(msg->header().from_address.port)
+        );
 
     message_ptr resp = msg->create_response();
     if (!is_primary)
@@ -331,13 +348,8 @@ void meta_service::update_configuration(configuration_update_request& request, _
 // local timers
 void meta_service::on_load_balance_timer()
 {
-    // first time is to activate the LB (an initial period of time is presevered for most machine to join in)
-    if (!_started)
-    {
-        _started = true;
-        _state->benign_unfree();
+    if (_state->freezed())
         return;
-    }
 
     end_point primary;
     if (_state->get_meta_server_primary(primary) && primary == primary_address())

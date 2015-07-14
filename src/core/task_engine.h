@@ -50,7 +50,7 @@ public:
     void start();    
 
     // task procecessing
-    void enqueue(task_ptr& task);
+    void enqueue(task* task);
     void on_dequeue(int count);
 
     // inquery

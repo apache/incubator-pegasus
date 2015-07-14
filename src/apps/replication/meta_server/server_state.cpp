@@ -239,14 +239,6 @@ void server_state::set_node_state(const node_states& nodes, __out_param machine_
     }
 }
 
-// used by unfree for the initial stage where machine states are all considered ALIVE but freeze = true
-void server_state::benign_unfree()
-{
-    zauto_write_lock l(_lock);
-    _freeze = (_node_live_count * 100 < _node_live_percentage_threshold_for_update * static_cast<int>(_nodes.size()));
-    dinfo("live replica server # is %d, freeze = %s", _node_live_count, _freeze ? "true" : "false");
-}
-
 bool server_state::get_meta_server_primary(__out_param end_point& node)
 {
     zauto_read_lock l(_meta_lock);

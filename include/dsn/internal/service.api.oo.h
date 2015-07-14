@@ -41,6 +41,18 @@ namespace dsn {
                 int timer_interval_milliseconds = 0
                 );
 
+            // sometimes we need to have task given BFORE the task has been enqueued 
+            // to ensure a happens-before relationship to avoid race
+            void enqueue(
+                __out_param task_ptr& task,
+                task_code evt,
+                servicelet *context,
+                task_handler callback,
+                int hash = 0,
+                int delay_milliseconds = 0,
+                int timer_interval_milliseconds = 0
+                );
+
             template<typename T> // where T : public virtual servicelet
             inline task_ptr enqueue(
                 task_code evt,
