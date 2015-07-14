@@ -169,7 +169,7 @@ void replica::on_group_check_reply(error_code err, std::shared_ptr<group_check_r
     auto r = _primary_states.group_check_pending_replies.erase(req->node);
     dassert (r == 1, "");
 
-    if (err)
+    if (err != ERR_OK)
     {
         handle_remote_failure(req->config.status, req->node, err);
     }

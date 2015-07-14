@@ -476,8 +476,9 @@ void replica_stub::on_meta_server_connected()
 void replica_stub::on_node_query_reply(error_code err, message_ptr& request, message_ptr& response)
 {
     ddebug(
-        "%s:%d: node view replied",
-        primary_address().name.c_str(), static_cast<int>(primary_address().port)
+        "%s:%d: node view replied, err = %s",
+        primary_address().name.c_str(), static_cast<int>(primary_address().port),
+        err.to_string()
         );
 
     if (response == nullptr)

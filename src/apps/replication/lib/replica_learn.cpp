@@ -193,9 +193,9 @@ void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request>& req
     dassert(PS_POTENTIAL_SECONDARY == status(), "");
     dassert(req->signature == _potential_secondary_states.learning_signature, "");
 
-    if (resp == nullptr)
+    if (err != ERR_OK)
     {
-        handle_learning_error(ERR_TIMEOUT);
+        handle_learning_error(err);
         return;
     }
 

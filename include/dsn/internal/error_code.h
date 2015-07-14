@@ -51,6 +51,7 @@ struct error_code : public dsn::utils::customized_id<error_code>
     {
 # ifdef _DEBUG
         _used = false;
+        err._used = true;
 # endif
     }
 
@@ -59,8 +60,23 @@ struct error_code : public dsn::utils::customized_id<error_code>
         _internal_code = source;
 # ifdef _DEBUG
         _used = false;
+        source._used = true;
 # endif
         return *this;
+    }
+
+    bool operator == (const error_code& r)
+    {
+# ifdef _DEBUG
+        _used = true;
+        r._used = true;
+# endif
+        return _internal_code == r._internal_code;
+    }
+
+    bool operator != (const error_code& r)
+    {
+        return !(*this == r);
     }
     
 # ifdef _DEBUG
@@ -74,6 +90,12 @@ struct error_code : public dsn::utils::customized_id<error_code>
         _used = true;
         return dsn::utils::customized_id<error_code>::operator int();
     }
+
+    const char* to_string() const
+    {
+        _used = true;
+        return dsn::utils::customized_id<error_code>::to_string();
+    }
 # endif
     
     void set(int err) 
@@ -81,6 +103,13 @@ struct error_code : public dsn::utils::customized_id<error_code>
         _internal_code = err; 
 # ifdef _DEBUG
         _used = false; 
+# endif
+    }
+
+    void end_use_chain_tracking()
+    {
+# ifdef _DEBUG
+        _used = true;
 # endif
     }
 

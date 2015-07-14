@@ -170,7 +170,9 @@ function(dsn_add_executable PROJ_NAME BINPLACE_FILES)
 endfunction(dsn_add_executable PROJ_NAME BINPLACE_FILES)
 
 function(dsn_setup_compiler_flags)
-	set_directory_properties(PROPERTIES COMPILE_DEFINITIONS_DEBUG "_DEBUG")
+    if(UNIX)
+		set_directory_properties(PROPERTIES COMPILE_DEFINITIONS_DEBUG "_DEBUG")
+	endif()
 	ms_replace_compiler_flags("STATIC_LINK")
 
 	if(UNIX)
