@@ -462,8 +462,11 @@ task_ptr mutation_log::append(mutation_ptr& mu,
     {
         if ((uint32_t)_pending_write->total_size() >= _log_buffer_size_bytes)
         {
-            if (nullptr != _pending_write_timer 
-                && _pending_write_timer->cancel(false))
+            if (nullptr == _pending_write_timer)
+            {
+                write_pending_mutations();
+            }   
+            else if (_pending_write_timer->cancel(false))
             {
                 _pending_write_timer = nullptr;
                 write_pending_mutations();
