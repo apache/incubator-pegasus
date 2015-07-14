@@ -39,7 +39,7 @@ namespace dsn { namespace replication {
 
 using namespace dsn::service;
 
-int replica::initialize_on_new(const char* app_type, global_partition_id gpid)
+error_code replica::initialize_on_new(const char* app_type, global_partition_id gpid)
 {
     char buffer[256];
     sprintf(buffer, "%u.%u.%s", gpid.app_id, gpid.pidx, app_type);
@@ -54,7 +54,7 @@ int replica::initialize_on_new(const char* app_type, global_partition_id gpid)
 
     boost::filesystem::create_directory(_dir);
 
-    int err = init_app_and_prepare_list(app_type, true);
+    error_code err = init_app_and_prepare_list(app_type, true);
     dassert (err == ERR_OK, "");
     return err;
 }
@@ -71,7 +71,7 @@ int replica::initialize_on_new(const char* app_type, global_partition_id gpid)
     }
 }
 
-int replica::initialize_on_load(const char* dir, bool renameDirOnFailure)
+error_code replica::initialize_on_load(const char* dir, bool renameDirOnFailure)
 {
     std::string dr(dir);
     char splitters[] = { '\\', '/', 0 };
@@ -94,7 +94,7 @@ int replica::initialize_on_load(const char* dir, bool renameDirOnFailure)
     _config.gpid = gpid;
     _dir = dr;
 
-    int err = init_app_and_prepare_list(app_type, false);
+    error_code err = init_app_and_prepare_list(app_type, false);
 
     if (ERR_OK != err && renameDirOnFailure)
     {
@@ -113,7 +113,7 @@ int replica::initialize_on_load(const char* dir, bool renameDirOnFailure)
 /*static*/ replica* replica::load(replica_stub* stub, const char* dir, replication_options& options, bool renameDirOnFailure)
 {
     replica* rep = new replica(stub, options);
-    int err = rep->initialize_on_load(dir, renameDirOnFailure);
+    error_code err = rep->initialize_on_load(dir, renameDirOnFailure);
     if (err != ERR_OK)
     {
         delete rep;
@@ -125,7 +125,7 @@ int replica::initialize_on_load(const char* dir, bool renameDirOnFailure)
     }
 }
 
-int replica::init_app_and_prepare_list(const char* app_type, bool create_new)
+error_code replica::init_app_and_prepare_list(const char* app_type, bool create_new)
 {
     dassert (nullptr == _app, "");
 
@@ -136,7 +136,8 @@ int replica::init_app_and_prepare_list(const char* app_type, bool create_new)
     }
     dassert (nullptr != _app, "");
 
-    int err = _app->open(create_new);    
+    int lerr = _app->open(create_new);
+    error_code err = lerr == 0 ? ERR_OK : ERR_LOCAL_APP_FAILURE;
     if (ERR_OK == err)
     {
         dassert (_app->last_durable_decree() == _app->last_committed_decree(), "");
@@ -177,7 +178,7 @@ void replica::replay_mutation(mutation_ptr& mu)
             mu->data.header.last_committed_decree
         );*/
 
-    int err = _prepare_list->prepare(mu, PS_INACTIVE);
+    error_code err = _prepare_list->prepare(mu, PS_INACTIVE);
     dassert (err == ERR_OK, "");
 }
 

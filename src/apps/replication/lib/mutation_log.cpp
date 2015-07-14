@@ -79,7 +79,7 @@ void mutation_log::reset()
     _log_files.clear();
 }
 
-int mutation_log::initialize(const char* dir)
+error_code mutation_log::initialize(const char* dir)
 {
     zauto_lock l(_lock);
 
@@ -134,7 +134,7 @@ int mutation_log::initialize(const char* dir)
     return ERR_OK;
 }
 
-int mutation_log::create_new_log_file()
+error_code mutation_log::create_new_log_file()
 {
     //dassert (_lock.IsHeldByCurrentThread(), "");
 
@@ -206,7 +206,7 @@ void mutation_log::internal_pending_write_timer(uint64_t id)
     write_pending_mutations();
 }
 
-int mutation_log::write_pending_mutations(bool create_new_log_when_necessary)
+error_code mutation_log::write_pending_mutations(bool create_new_log_when_necessary)
 {
     dassert (_pending_write != nullptr, "");
     dassert (_pending_write_timer == nullptr, "");
@@ -252,13 +252,14 @@ int mutation_log::write_pending_mutations(bool create_new_log_when_necessary)
 
     if (create_new_log_when_necessary && _current_log_file->end_offset() - _current_log_file->start_offset() >= _max_log_file_size_in_bytes)
     {
-        int ret = create_new_log_file();
+        error_code ret = create_new_log_file();
         if (ERR_OK != ret)
         {
-            derror ("create new log file failed, err = %d", ret);
+            derror ("create new log file failed, err = %s", ret.to_string());
         }
         return ret;
     }
+
     return ERR_OK;
 }
 
@@ -273,12 +274,12 @@ void mutation_log::internal_write_callback(error_code err, uint32_t size, mutati
 /*
 TODO: when there is a log error, the server cannot contain any primary or secondary any more!
 */
-int mutation_log::replay(ReplayCallback callback)
+error_code mutation_log::replay(ReplayCallback callback)
 {
     zauto_lock l(_lock);
 
     int64_t offset = start_offset();
-    int err = ERR_OK;
+    error_code err = ERR_OK;
     for (auto it = _log_files.begin(); it != _log_files.end(); it++)
     {
         log_file_ptr log = it->second;
@@ -382,7 +383,7 @@ int mutation_log::replay(ReplayCallback callback)
     return err;
 }
 
-int mutation_log::start_write_service(multi_partition_decrees& initMaxDecrees, int max_staleness_for_commit)
+error_code mutation_log::start_write_service(multi_partition_decrees& initMaxDecrees, int max_staleness_for_commit)
 {
     zauto_lock l(_lock);
 
@@ -670,7 +671,7 @@ void log_file::close()
     }
 }
 
-int log_file::read_next_log_entry(__out_param ::dsn::blob& bb)
+error_code log_file::read_next_log_entry(__out_param::dsn::blob& bb)
 {
     dassert (_is_read, "");
 

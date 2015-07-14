@@ -184,7 +184,9 @@ void replica::on_group_check_reply(error_code err, std::shared_ptr<group_check_r
         }
         else
         {
-            handle_remote_failure(req->config.status, req->node, resp->err);
+            error_code lerr;
+            lerr.set(resp->err);
+            handle_remote_failure(req->config.status, req->node, lerr);
         }
     }
 }

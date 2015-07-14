@@ -60,10 +60,10 @@ public:
     //
     // initialization
     //
-    int initialize(const char* dir);
-    int replay(ReplayCallback callback);
+    error_code initialize(const char* dir);
+    error_code replay(ReplayCallback callback);
     void reset();
-    int  start_write_service(multi_partition_decrees& initMaxDecrees, int max_staleness_for_commit);
+    error_code start_write_service(multi_partition_decrees& initMaxDecrees, int max_staleness_for_commit);
     void close();
        
     //
@@ -87,8 +87,8 @@ public:
     //
     //    other inquiry routines
     const std::string& dir() const {return _dir;}
-    int64_t              end_offset() const { return _global_end_offset; }
-    int64_t              start_offset() const { return _global_start_offset; }
+    int64_t            end_offset() const { return _global_end_offset; }
+    int64_t            start_offset() const { return _global_start_offset; }
 
     std::map<int, log_file_ptr>& get_logfiles_for_test();
 
@@ -98,16 +98,16 @@ private:
     //
     typedef std::shared_ptr<std::list<aio_task_ptr>> pending_callbacks_ptr;
 
-    int  create_new_log_file();
+    error_code create_new_log_file();
     void create_new_pending_buffer();    
     void internal_pending_write_timer(uint64_t id);
     static void internal_write_callback(error_code err, uint32_t size, pending_callbacks_ptr callbacks, blob data);
-    int  write_pending_mutations(bool create_new_log_when_necessary = true);
+    error_code write_pending_mutations(bool create_new_log_when_necessary = true);
 
 private:    
     
     zlock                     _lock;
-    int64_t                     _max_log_file_size_in_bytes;            
+    int64_t                   _max_log_file_size_in_bytes;            
     std::string               _dir;    
     bool                      _batch_write;
 
@@ -160,7 +160,7 @@ public:
     //
     // read routines
     //
-    int read_next_log_entry(__out_param ::dsn::blob& bb);
+    error_code read_next_log_entry(__out_param::dsn::blob& bb);
 
     //
     // write routines
@@ -183,8 +183,8 @@ public:
     const multi_partition_decrees& init_prepare_decrees() { return _init_prepared_decrees; }
     const log_file_header& header() const { return _header;}
 
-    int  read_header(message_ptr& msg);
-    int  write_header(message_ptr& msg, multi_partition_decrees& initMaxDecrees, int bufferSizeBytes);    
+    int read_header(message_ptr& msg);
+    int write_header(message_ptr& msg, multi_partition_decrees& initMaxDecrees, int bufferSizeBytes);
     
 private:
     log_file(const char* path, handle_t handle, int index, int64_t startOffset, int max_staleness_for_commit, bool isRead, int write_task_max_count = 2);

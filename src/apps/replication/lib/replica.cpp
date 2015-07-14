@@ -143,7 +143,7 @@ void replica::execute_mutation(mutation_ptr& mu)
 {
     dassert (nullptr != _app, "");
 
-    int err = ERR_OK;
+    error_code err = ERR_OK;
     switch (status())
     {
     case PS_INACTIVE:

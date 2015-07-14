@@ -43,6 +43,7 @@ void register_replica_provider(replica_app_factory f, const char* name)
 
 replication_app_base::replication_app_base(replica* replica, configuration_ptr& config)
 {
+    _physical_error = ERR_OK;
     _dir_data = replica->dir() + "/data";
     _dir_learn = replica->dir() + "/learn";
 
@@ -56,16 +57,14 @@ replication_app_base::replication_app_base(replica* replica, configuration_ptr& 
         boost::filesystem::create_directory(_dir_learn);
 }
 
-int replication_app_base::write_internal(mutation_ptr& mu, bool ack_client)
+error_code replication_app_base::write_internal(mutation_ptr& mu, bool ack_client)
 {
     dassert (mu->data.header.decree == last_committed_decree() + 1, "");
-
-    int err = 0;
     
     if (mu->rpc_code != RPC_REPLICATION_WRITE_EMPTY)
     {
         auto& msg = mu->client_request;
-        err = dispatch_rpc_call(
+        dispatch_rpc_call(
             mu->rpc_code,
             msg,
             ack_client
@@ -75,10 +74,16 @@ int replication_app_base::write_internal(mutation_ptr& mu, bool ack_client)
     {
         on_empty_write();
     }
-    return err;
+
+    if (_physical_error != 0)
+    {
+        derror("physical error %d occurs in replication local app %s", _physical_error, data_dir().c_str());
+    }
+
+    return _physical_error == 0 ? ERR_OK : ERR_LOCAL_APP_FAILURE;
 }
 
-int replication_app_base::dispatch_rpc_call(int code, message_ptr& request, bool ack_client)
+void replication_app_base::dispatch_rpc_call(int code, message_ptr& request, bool ack_client)
 {
     auto it = _handlers.find(code);
     if (it != _handlers.end())
@@ -86,8 +91,10 @@ int replication_app_base::dispatch_rpc_call(int code, message_ptr& request, bool
         if (ack_client)
         {
             message_ptr response = request->create_response();
-            int err = 0;
+
+            int err = 0; // replication layer error
             marshall(response->writer(), err);
+
             it->second(request, response);
         }
         else
@@ -100,8 +107,6 @@ int replication_app_base::dispatch_rpc_call(int code, message_ptr& request, bool
     {
         dassert(false, "cannot find handler for rpc code %d in %s", code, data_dir().c_str());
     }
-
-    return 0;
 }
 
 }} // end namespace

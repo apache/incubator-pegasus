@@ -117,7 +117,7 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
 
     // init logs
     _log = new mutation_log(opts.log_buffer_size_mb, opts.log_pending_max_ms, opts.log_file_size_mb, opts.log_batch_write, opts.log_max_concurrent_writes);
-    int err = _log->initialize(logDir.c_str());
+    error_code err = _log->initialize(logDir.c_str());
     dassert (err == ERR_OK, "");
     
     err = _log->replay(
@@ -473,7 +473,7 @@ void replica_stub::on_meta_server_connected()
     }
 }
 
-void replica_stub::on_node_query_reply(int err, message_ptr& request, message_ptr& response)
+void replica_stub::on_node_query_reply(error_code err, message_ptr& request, message_ptr& response)
 {
     ddebug(
         "%s:%d: node view replied",

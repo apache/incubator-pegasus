@@ -206,7 +206,9 @@ void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request>& req
 
     if (resp->err != ERR_OK)
     {
-        handle_learning_error(resp->err);
+        error_code err;
+        err.set(resp->err);
+        handle_learning_error(err);
         return;
     }
 
@@ -254,13 +256,12 @@ void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request>& req
 
 void replica::on_copy_remote_state_completed(error_code err2, int size, std::shared_ptr<learn_response> resp)
 {   
-    int err = err2;
     learn_state localState;
     localState.meta = resp->state.meta;
-
     end_point& server = resp->config.primary;     
-    if (err == ERR_OK)
+    if (err2 == ERR_OK)
     {
+        int err = 0;
         for (auto itr = resp->state.files.begin(); itr != resp->state.files.end(); ++itr)
         {
             std::string file;
@@ -297,24 +298,33 @@ void replica::on_copy_remote_state_completed(error_code err2, int size, std::sha
                 dassert (_app->last_committed_decree() == _app->last_durable_decree(), "");
             }
         }
+
+        // translate to general error code
+        if (err != ERR_OK)
+        {
+            err2 = ERR_LOCAL_APP_FAILURE;
+        }
     } 
     else 
     {
         derror(
-                "%s: Transfer %d files to %s failed, err = %d",
+                "%s: transfer %d files to %s failed, err = %s",
                 name(),
-                resp->state.files.size(), _dir.c_str(), err);
+                static_cast<int>(resp->state.files.size()), 
+                _dir.c_str(), 
+                err2.to_string()
+                );
     }    
 
     _potential_secondary_states.learn_remote_files_completed_task = tasking::enqueue(
         LPC_LEARN_REMOTE_DELTA_FILES_COMPLETED,
         this,
-        std::bind(&replica::on_learn_remote_state_completed, this, err),
+        std::bind(&replica::on_learn_remote_state_completed, this, err2),
         gpid_to_hash(get_gpid())
         );
 }
 
-void replica::on_learn_remote_state_completed(int err)
+void replica::on_learn_remote_state_completed(error_code err)
 {
     check_hashed_access();
     
@@ -334,14 +344,14 @@ void replica::on_learn_remote_state_completed(int err)
     }
 }
 
-void replica::handle_learning_error(int err)
+void replica::handle_learning_error(error_code err)
 {
     check_hashed_access();
 
     dwarn(
-        "%s: learning failed with err = 0x%X, LastCommitted = %lld",
+        "%s: learning failed with err = %s, LastCommitted = %lld",
         name(),
-        err,
+        err.to_string(),
         _app->last_committed_decree()
         );
 

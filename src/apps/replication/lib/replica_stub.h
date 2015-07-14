@@ -118,7 +118,7 @@ private:
 
     void query_configuration_by_node();
     void on_meta_server_disconnected_scatter(replica_stub_ptr this_, global_partition_id gpid);
-    void on_node_query_reply(int err, message_ptr& request, message_ptr& response);
+    void on_node_query_reply(error_code err, message_ptr& request, message_ptr& response);
     void on_node_query_reply_scatter(replica_stub_ptr this_, const partition_configuration& config);
     void on_node_query_reply_scatter2(replica_stub_ptr this_, global_partition_id gpid);
     void remove_replica_on_meta_server(const partition_configuration& config);

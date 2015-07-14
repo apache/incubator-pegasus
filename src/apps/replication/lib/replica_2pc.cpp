@@ -261,7 +261,7 @@ void replica::on_prepare(message_ptr& request)
         return;
     }
 
-    int err = _prepare_list->prepare(mu, status());
+    error_code err = _prepare_list->prepare(mu, status());
     dassert (err == ERR_OK, "");
 
     if (PS_POTENTIAL_SECONDARY == status())
@@ -292,11 +292,11 @@ void replica::on_prepare(message_ptr& request)
     dassert(mu->log_task() != nullptr, "");
 }
 
-void replica::on_append_log_completed(mutation_ptr& mu, uint32_t err, uint32_t size)
+void replica::on_append_log_completed(mutation_ptr& mu, error_code err, uint32_t size)
 {
     check_hashed_access();
 
-    ddebug( "%s: mutation %s on_append_log_completed, err = %u", name(), mu->name(), err);
+    ddebug( "%s: mutation %s on_append_log_completed, err = %s", name(), mu->name(), err.to_string());
 
     if (err == ERR_OK)
     {
@@ -341,7 +341,7 @@ void replica::on_append_log_completed(mutation_ptr& mu, uint32_t err, uint32_t s
     }
 }
 
-void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, int err, message_ptr& request, message_ptr& reply)
+void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, error_code err, message_ptr& request, message_ptr& reply)
 {
     check_hashed_access();
 
@@ -418,11 +418,14 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, int
                 do_possible_commit_on_primary(mu);
             }
         }
-        handle_remote_failure(st, node, resp.err);
+
+        error_code lerr;
+        lerr.set(resp.err);
+        handle_remote_failure(st, node, lerr);
     }
 }
 
-void replica::ack_prepare_message(int err, mutation_ptr& mu)
+void replica::ack_prepare_message(error_code err, mutation_ptr& mu)
 {
     prepare_ack resp;
     resp.gpid = get_gpid();

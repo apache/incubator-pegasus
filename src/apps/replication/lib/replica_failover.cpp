@@ -35,12 +35,12 @@
 
 namespace dsn { namespace replication {
 
-void replica::handle_local_failure(int error)
+void replica::handle_local_failure(error_code error)
 {
     ddebug(
-        "%s: handle local failure error %x, status = %s",
+        "%s: handle local failure error %s, status = %s",
         name(),
-        error,
+        error.to_string(),
         enum_to_string(status())
         );
     
@@ -52,12 +52,12 @@ void replica::handle_local_failure(int error)
     update_local_configuration_with_no_ballot_change(PS_ERROR);
 }
 
-void replica::handle_remote_failure(partition_status st, const end_point& node, int error)
+void replica::handle_remote_failure(partition_status st, const end_point& node, error_code error)
 {    
     ddebug(
-        "%s: handle remote failure error %u, status = %s, node = %s:%d",
+        "%s: handle remote failure error %s, status = %s, node = %s:%d",
         name(),
-        error,
+        error.to_string(),
         enum_to_string(st),
         node.name.c_str(), static_cast<int>(node.port)
         );
