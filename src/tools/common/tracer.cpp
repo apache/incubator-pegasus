@@ -36,9 +36,10 @@ namespace dsn {
 
         static void tracer_on_task_enqueue(task* caller, task* callee)
         {
-            ddebug("%s ENQUEUE, task_id = %016llx",
+            ddebug("%s ENQUEUE, task_id = %016llx, delay = %d ms",
                 callee->spec().name,
-                callee->id()
+                callee->id(),
+                callee->delay_milliseconds()
                 );
         }
 
