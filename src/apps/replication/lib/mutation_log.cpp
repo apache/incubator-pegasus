@@ -454,9 +454,10 @@ task_ptr mutation_log::append(mutation_ptr& mu,
     
     _pending_write_callbacks->push_back(tsk);
 
+    error_code err = ERR_OK;
     if (!_batch_write)
     {
-        write_pending_mutations();
+        err = write_pending_mutations();
     }
     else
     {
@@ -464,12 +465,12 @@ task_ptr mutation_log::append(mutation_ptr& mu,
         {
             if (nullptr == _pending_write_timer)
             {
-                write_pending_mutations();
+                err = write_pending_mutations();
             }   
             else if (_pending_write_timer->cancel(false))
             {
                 _pending_write_timer = nullptr;
-                write_pending_mutations();
+                err = write_pending_mutations();
             }
         }
 
@@ -485,6 +486,8 @@ task_ptr mutation_log::append(mutation_ptr& mu,
         }
     }   
 
+    dassert(err == ERR_OK, "write pending mutation failed, err = %s", err.to_string());
+
     return tsk;
 }
 
@@ -494,7 +497,7 @@ void mutation_log::on_partition_removed(global_partition_id gpid)
     _init_prepared_decrees.erase(gpid);
 }
 
-int mutation_log::garbage_collection(multi_partition_decrees& durable_decrees)
+int mutation_log::garbage_collection(multi_partition_decrees& durable_decrees, multi_partition_decrees& max_seen_decrees)
 {
     std::map<int, log_file_ptr> files;
     std::map<int, log_file_ptr>::reverse_iterator itr;
@@ -514,6 +517,12 @@ int mutation_log::garbage_collection(multi_partition_decrees& durable_decrees)
         {
             global_partition_id gpid = it2->first;
             decree lastDurableDecree = it2->second;
+
+            auto it4 = max_seen_decrees.find(gpid);
+            dassert(it4 != max_seen_decrees.end(), "");
+
+            decree max_seen_decree = it4->second;
+            dassert(max_seen_decree >= lastDurableDecree, "");
         
             auto it3 = log->init_prepare_decrees().find(gpid);
             if (it3 == log->init_prepare_decrees().end())
@@ -523,7 +532,9 @@ int mutation_log::garbage_collection(multi_partition_decrees& durable_decrees)
             else
             {
                 decree initPrepareDecree = it3->second;
-                decree maxPrepareDecreeBeforeThis = initPrepareDecree;
+                decree maxPrepareDecreeBeforeThis = initPrepareDecree + _max_staleness_for_commit;
+                if (maxPrepareDecreeBeforeThis > max_seen_decree)
+                    maxPrepareDecreeBeforeThis = max_seen_decree;
                 
                 // when all possible decress are covered by durable decress
                 if (lastDurableDecree >= maxPrepareDecreeBeforeThis)
@@ -664,7 +675,10 @@ void log_file::close()
         if (_is_read)
             ::close((int)(_handle));
         else
-            dsn::service::file::close(_handle);
+        {
+            auto err = dsn::service::file::close(_handle);
+            dassert(err == ERR_OK, "file::close failed, err = %s", err.to_string());
+        }
 
         _handle = 0;
     }

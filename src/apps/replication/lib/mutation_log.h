@@ -82,7 +82,7 @@ public:
     //
     //  garbage collection logs that are already covered by durable state on disk, return deleted log segment count
     //
-    int garbage_collection(multi_partition_decrees& durable_decrees);
+    int garbage_collection(multi_partition_decrees& durable_decrees, multi_partition_decrees& max_seen_decrees);
 
     //
     //    other inquiry routines
