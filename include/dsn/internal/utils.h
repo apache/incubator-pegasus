@@ -162,6 +162,7 @@ namespace dsn {
         void write(const bool& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
 
         void write(const error_code& val, uint16_t pos = 0xffff) { int err = val.get();  write_pod(err, pos); }
+        void write(const char val[], uint16_t pos = 0xffff) { write((const char*)val, static_cast<int>(sizeof(val)/sizeof(char)), pos); }
         void write(const std::string& val, uint16_t pos = 0xffff);
         void write(const char* buffer, int sz, uint16_t pos = 0xffff);
         void write(const blob& val, uint16_t pos = 0xffff);

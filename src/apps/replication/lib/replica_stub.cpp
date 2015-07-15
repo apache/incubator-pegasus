@@ -485,7 +485,8 @@ void replica_stub::on_node_query_reply(error_code err, message_ptr& request, mes
         "%s:%d: node view replied, err = %s",
         primary_address().name.c_str(), static_cast<int>(primary_address().port),
         err.to_string()
-        );
+        );    
+    err.end_tracking();
 
     if (response == nullptr)
     {

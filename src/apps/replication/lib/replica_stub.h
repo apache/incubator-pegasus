@@ -109,7 +109,7 @@ public:
     void get_primary_replica_list(uint32_t p_tableID, std::vector<global_partition_id>& p_repilcaList);
 
 private:    
-    enum ReplicaNodeState
+    enum replica_node_state
     {
         NS_Disconnected,
         NS_Connecting,
@@ -145,7 +145,7 @@ private:
     std::string                 _dir;
 
     replication_failure_detector *_failure_detector;
-    volatile ReplicaNodeState   _state;
+    volatile replica_node_state   _state;
 
     // constants
     replication_options         _options;

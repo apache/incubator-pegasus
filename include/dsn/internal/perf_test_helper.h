@@ -31,26 +31,26 @@
 # include <atomic>
 # include <vector>
 
-# ifndef __TITLE__
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
 # define __TITLE__ "perf.test.helper"
-# endif
 
 namespace dsn {
     namespace service {
 
         struct perf_test_opts
         {
-            int  perf_test_rounds;
-            bool perf_test_concurrent;
+            int  perf_test_rounds;            
+            bool perf_test_concurrent;            
+            std::vector<int> perf_test_payload_bytes;
             std::vector<int> perf_test_timeouts_ms;
         };
 
         CONFIG_BEGIN(perf_test_opts)
-            CONFIG_FLD(int, perf_test_rounds, 10000)
+            CONFIG_FLD(int, perf_test_rounds, 10000)            
             CONFIG_FLD(bool, perf_test_concurrent, true)
+            CONFIG_FLD_INT_LIST(perf_test_payload_bytes)
             CONFIG_FLD_INT_LIST(perf_test_timeouts_ms)
         CONFIG_END
         
@@ -72,11 +72,19 @@ namespace dsn {
                     for (size_t i = 0; i < sizeof(timeouts_ms) / sizeof(int); i++)
                         _default_opts.perf_test_timeouts_ms.push_back(timeouts_ms[i]);
                 }
+
+                if (_default_opts.perf_test_payload_bytes.size() == 0)
+                {
+                    const int payload_bytes[] = { 1, 1024, 1024*1024 };
+                    for (size_t i = 0; i < sizeof(payload_bytes) / sizeof(int); i++)
+                        _default_opts.perf_test_payload_bytes.push_back(payload_bytes[i]);
+                }
             }
 
             struct perf_test_case
             {
                 int  rounds;
+                int  payload_bytes;
                 bool concurrent;
                 int  timeout_ms;
 
@@ -92,8 +100,10 @@ namespace dsn {
                 perf_test_case& operator = (const perf_test_case& r)
                 {
                     rounds = r.rounds;
+                    payload_bytes = r.payload_bytes;
                     timeout_ms = r.timeout_ms;
                     concurrent = r.concurrent;
+
                     timeout_rounds.store(r.timeout_rounds.load());
                     error_rounds.store(r.error_rounds.load());
                     succ_rounds = r.succ_rounds;
@@ -117,7 +127,7 @@ namespace dsn {
             {
                 const char* name;
                 const char* config_section;
-                std::function<void()> send_one;
+                std::function<void(int)> send_one;
                 std::vector<perf_test_case> cases;
             };
 
@@ -129,16 +139,20 @@ namespace dsn {
                 {
                     dassert(false, "read configuration failed for section [%s]", s.config_section);
                 }
-                
-                int last_index = static_cast<int>(opt.perf_test_timeouts_ms.size()) - 1;
+
                 s.cases.clear();
-                for (int i = last_index; i >= 0; i--)
+                for (auto& bytes : opt.perf_test_payload_bytes)
                 {
-                    perf_test_case c;
-                    c.rounds = opt.perf_test_rounds;
-                    c.timeout_ms = opt.perf_test_timeouts_ms[i];
-                    c.concurrent = opt.perf_test_concurrent;
-                    s.cases.push_back(c);
+                    int last_index = static_cast<int>(opt.perf_test_timeouts_ms.size()) - 1;                    
+                    for (int i = last_index; i >= 0; i--)
+                    {
+                        perf_test_case c;
+                        c.rounds = opt.perf_test_rounds;
+                        c.payload_bytes = bytes;
+                        c.timeout_ms = opt.perf_test_timeouts_ms[i];
+                        c.concurrent = opt.perf_test_concurrent;
+                        s.cases.push_back(c);
+                    }
                 }
             }
 
@@ -162,7 +176,7 @@ namespace dsn {
                 return (void*)(size_t)(id);
             }
 
-            void end_send_one(void* context, error_code err, std::function<void()> send_one)
+            void end_send_one(void* context, error_code err)
             {
                 int id = (int)(size_t)(context);
                 int lr = --_live_rpc_count;
@@ -194,7 +208,7 @@ namespace dsn {
                 // conincontinue further waves
                 for (int i = 0; i < next; i++)
                 {
-                    send_one();
+                    _suits[_current_suit_index].send_one(_current_case->payload_bytes);
                 }
             }
             
@@ -231,12 +245,13 @@ namespace dsn {
 
                 std::stringstream ss;
                 ss << "TEST " << _name
-                    << ", timeout/err/succ: " << cs.timeout_rounds << "/" << cs.error_rounds << "/" << cs.succ_rounds
+                    << ", tmo/err/suc(#): " << cs.timeout_rounds << "/" << cs.error_rounds << "/" << cs.succ_rounds
                     << ", latency(us): " << cs.succ_latency_avg_us << "(avg), "
                     << cs.min_latency_us << "(min), "
                     << cs.max_latency_us << "(max)"
                     << ", qps: " << cs.succ_qps << "#/s"
-                    << ", target timeout(ms) " << cs.timeout_ms
+                    << ", timeout(ms) " << cs.timeout_ms
+                    << ", payload(byte) " << cs.payload_bytes
                     ;
 
                 dwarn(ss.str().c_str());
@@ -300,7 +315,7 @@ namespace dsn {
                 _rounds_latency_us.resize(cs.rounds, 0);
 
                 // start
-                suit.send_one();
+                suit.send_one(_current_case->payload_bytes);
             }
 
         private:
