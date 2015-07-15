@@ -155,7 +155,7 @@ namespace dsn {
 
             if (last_committed_decree() == last_durable_decree())
             {
-                return ERR_OK;
+                return 0;
             }
 
             // TODO: should use async write instead
@@ -178,7 +178,7 @@ namespace dsn {
             }
 
             _last_durable_decree = last_committed_decree();
-            return ERR_OK;
+            return 0;
         }
 
         // helper routines to accelerate learning
@@ -209,7 +209,7 @@ namespace dsn {
 
             state.meta.push_back(blob(buf, static_cast<int>(bb.data() - bb.buffer().get()), bb.length()));
 
-            return ERR_OK;
+            return 0;
         }
 
         int counter_service_impl::apply_learn_state(learn_state& state)

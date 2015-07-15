@@ -58,7 +58,7 @@ public:
     virtual void end_ping(::dsn::error_code err, const beacon_ack& ack, void* context);
 
 public:
-    int  start(
+    error_code start(
         uint32_t check_interval_seconds,
         uint32_t beacon_interval_seconds,
         uint32_t lease_seconds,
@@ -66,7 +66,7 @@ public:
         bool use_allow_list = false
         );
 
-    int  stop();
+    error_code stop();
 
     void register_master(const end_point& target);
 

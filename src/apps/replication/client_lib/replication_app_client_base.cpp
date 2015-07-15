@@ -347,16 +347,15 @@ void replication_app_client_base::replica_rw_reply(
 
     int err2;
     response->reader().read(err2);
+    err.set(err2);
     
-    if (err2 != ERR_OK && err2 != ERR_HANDLER_NOT_FOUND)
+    if (err != ERR_OK && err != ERR_HANDLER_NOT_FOUND)
     {
         goto Retry;
     }
     else
     {
-        error_code err3;
-        err3.set(err2);
-        end_request(rc, err3, response);
+        end_request(rc, err, response);
     }
     return;
 
@@ -412,7 +411,7 @@ error_code replication_app_client_base::get_address(int pidx, bool is_write, __o
 
 void replication_app_client_base::query_partition_configuration_reply(error_code err, message_ptr& request, message_ptr& response, int pidx)
 {
-    if (!err)
+    if (err == ERR_OK)
     {
         configuration_query_by_index_response resp;
         unmarshall(response->reader(), resp);

@@ -154,7 +154,7 @@ namespace dsn {
                 }
             }
 
-            resp.error = err;
+            resp.error = err.get();
             reply(resp);
         }
 

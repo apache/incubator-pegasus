@@ -62,7 +62,7 @@ error_code replica::initialize_on_new(const char* app_type, global_partition_id 
 /*static*/ replica* replica::newr(replica_stub* stub, const char* app_type, global_partition_id gpid, replication_options& options)
 {
     replica* rep = new replica(stub, gpid, options);
-    if (ERR_OK == rep->initialize_on_new(app_type, gpid))
+    if (rep->initialize_on_new(app_type, gpid) == ERR_OK)
         return rep;
     else
     {
@@ -96,7 +96,7 @@ error_code replica::initialize_on_load(const char* dir, bool renameDirOnFailure)
 
     error_code err = init_app_and_prepare_list(app_type, false);
 
-    if (ERR_OK != err && renameDirOnFailure)
+    if (err != ERR_OK && renameDirOnFailure)
     {
         // GCed later
         char newPath[256];
@@ -137,15 +137,15 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
     dassert (nullptr != _app, "");
 
     int lerr = _app->open(create_new);
-    error_code err = lerr == 0 ? ERR_OK : ERR_LOCAL_APP_FAILURE;
-    if (ERR_OK == err)
+    error_code err = (lerr == 0 ? ERR_OK : ERR_LOCAL_APP_FAILURE);
+    if (err == ERR_OK)
     {
         dassert (_app->last_durable_decree() == _app->last_committed_decree(), "");
         _prepare_list->reset(_app->last_committed_decree());
     }
     else
     {
-        derror( "open replica '%s' under '%s' failed, err = %s", app_type, dir().c_str(), err.to_string());
+        derror( "open replica '%s' under '%s' failed, error = %d", app_type, dir().c_str(), lerr);
         delete _app;
         _app = nullptr;
     }

@@ -43,7 +43,7 @@ void register_replica_provider(replica_app_factory f, const char* name)
 
 replication_app_base::replication_app_base(replica* replica, configuration_ptr& config)
 {
-    _physical_error = ERR_OK;
+    _physical_error = 0;
     _dir_data = replica->dir() + "/data";
     _dir_learn = replica->dir() + "/learn";
 

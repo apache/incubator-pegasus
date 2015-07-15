@@ -60,7 +60,7 @@ public:
 <?php
 foreach ($_PROG->services as $svc)
 {
-    echo "\t\t// test for service '". $svc->name ."'". PHP_EOL;
+    echo "        // test for service '". $svc->name ."'". PHP_EOL;
     foreach ($svc->functions as $f)
 {?>
         {

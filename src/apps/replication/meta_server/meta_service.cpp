@@ -111,13 +111,15 @@ void meta_service::start(const char* data_dir, bool clean_state)
         10000
         );
 
-    _failure_detector->start(
+    auto err = _failure_detector->start(
         _opts.fd_check_interval_seconds,
         _opts.fd_beacon_interval_seconds,
         _opts.fd_lease_seconds,
         _opts.fd_grace_seconds,
         false
         );
+
+    dassert(err == ERR_OK, "FD start failed, err = %s", err.to_string());
 
     _started = true;
 }
@@ -187,6 +189,7 @@ void meta_service::on_request(message_ptr& msg)
     else  if (hdr.rpc_tag == RPC_CM_UPDATE_PARTITION_CONFIGURATION)
     {
         update_configuration(msg, resp);
+        rhdr.err.end_tracking();
         return;
     }
     
@@ -237,6 +240,7 @@ void meta_service::replay_log(const char* log)
 
         _state->set_node_state(state, nullptr);
         _state->update_configuration(request, response);
+        response.err.end_tracking();
     }
 
     ::fclose(fp);
@@ -247,7 +251,7 @@ void meta_service::update_configuration(message_ptr req, message_ptr resp)
     if (_state->freezed())
     {
         meta_response_header rhdr;
-        rhdr.err = 0;
+        rhdr.err = ERR_OK;
         rhdr.primary_address = primary_address();
 
         configuration_update_request request;

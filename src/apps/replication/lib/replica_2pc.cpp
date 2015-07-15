@@ -361,7 +361,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
     prepare_ack resp;
 
     // handle error
-    if (err)
+    if (err != ERR_OK)
     {
         resp.err = err;
     }
@@ -419,9 +419,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
             }
         }
 
-        error_code lerr;
-        lerr.set(resp.err);
-        handle_remote_failure(st, node, lerr);
+        handle_remote_failure(st, node, resp.err);
     }
 }
 

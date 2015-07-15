@@ -46,7 +46,7 @@ failure_detector::failure_detector()
     task_spec::get(RPC_FD_FAILURE_DETECTOR_PING_ACK)->pool_code = pool;
 }
 
-int failure_detector::start(
+error_code failure_detector::start(
     uint32_t check_interval_seconds, 
     uint32_t beacon_interval_seconds,
     uint32_t lease_seconds, 
@@ -69,7 +69,7 @@ int failure_detector::start(
     return ERR_OK;
 }
 
-int failure_detector::stop()
+error_code failure_detector::stop()
 {
     if ( _is_started == false )
     {
@@ -321,7 +321,7 @@ void failure_detector::on_ping(const beacon_msg& beacon, ::dsn::service::rpc_rep
 
 void failure_detector::end_ping(::dsn::error_code err, const beacon_ack& ack, void* context)
 {
-    if (err) return;
+    if (err != ERR_OK) return;
 
     uint64_t beacon_send_time = ack.time;
     auto node = ack.this_node;

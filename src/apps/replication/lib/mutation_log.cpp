@@ -244,7 +244,7 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
     if (create_new_log_when_necessary && _current_log_file->end_offset() - _current_log_file->start_offset() >= _max_log_file_size_in_bytes)
     {
         error_code ret = create_new_log_file();
-        if (ERR_OK != ret)
+        if (ret != ERR_OK)
         {
             derror ("create new log file failed, err = %s", ret.to_string());
         }

@@ -85,12 +85,6 @@ struct error_code : public dsn::utils::customized_id<error_code>
         dassert (_used, "error code is not handled");
     }
 
-    operator int() const
-    {
-        _used = true;
-        return dsn::utils::customized_id<error_code>::operator int();
-    }
-
     const char* to_string() const
     {
         _used = true;
@@ -106,11 +100,28 @@ struct error_code : public dsn::utils::customized_id<error_code>
 # endif
     }
 
-    void end_use_chain_tracking()
+    int  get() const
     {
 # ifdef _DEBUG
         _used = true;
 # endif
+        return _internal_code;
+    }
+
+    void end_tracking() const
+    {
+# ifdef _DEBUG
+        _used = true;
+# endif
+    }
+
+private:
+    operator int() const
+    {
+# ifdef _DEBUG
+        _used = true;
+# endif
+        return dsn::utils::customized_id<error_code>::operator int();
     }
 
 private:
@@ -133,6 +144,7 @@ DEFINE_ERR_CODE(ERR_TALK_TO_OTHERS)
 DEFINE_ERR_CODE(ERR_OBJECT_NOT_FOUND)
 DEFINE_ERR_CODE(ERR_HANDLER_NOT_FOUND)
 DEFINE_ERR_CODE(ERR_LEARN_FILE_FALED)
+DEFINE_ERR_CODE(ERR_GET_LEARN_STATE_FALED)
 DEFINE_ERR_CODE(ERR_INVALID_VERSION)
 DEFINE_ERR_CODE(ERR_INVALID_PARAMETERS)
 DEFINE_ERR_CODE(ERR_CAPACITY_EXCEEDED)

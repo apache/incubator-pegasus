@@ -75,7 +75,7 @@ namespace dsn {
     // error_code
     inline void marshall(::dsn::binary_writer& writer, const error_code& val, uint16_t pos = 0xffff)
     {
-        int err = val;
+        int err = val.get();
         marshall(writer, err, pos);
     }
 

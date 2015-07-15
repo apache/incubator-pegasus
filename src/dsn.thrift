@@ -11,3 +11,8 @@ struct end_point
 struct blob
 {
 }
+
+// place holder
+struct error_code
+{
+}

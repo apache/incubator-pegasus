@@ -129,8 +129,7 @@ void replica::response_client_message(message_ptr& request, error_code error, de
         return;
 
     message_ptr resp = request->create_response();
-    int err = error;
-    resp->writer().write(err);
+    resp->writer().write(error);
 
     dassert(error != ERR_OK, "");
     dinfo("handle replication request with rpc_id = %016llx failed, err = %s",

@@ -157,7 +157,7 @@ void load_balancer::query_decree(std::shared_ptr<query_replica_decree_request> q
 
 void load_balancer::on_query_decree_ack(error_code err, std::shared_ptr<query_replica_decree_request>& query, std::shared_ptr<query_replica_decree_response>& resp)
 {
-    if (err)
+    if (err != ERR_OK)
     {
         tasking::enqueue(LPC_QUERY_PN_DECREE, this, std::bind(&load_balancer::query_decree, this, query), 0, 1000);
     }

@@ -161,7 +161,7 @@ void task::exec_internal()
     else
     {
         // task cancelled, so
-        _error.end_use_chain_tracking();
+        _error.end_tracking();
     }
 
     if (!_spec->allow_inline && !_is_null)

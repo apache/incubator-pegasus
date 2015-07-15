@@ -185,12 +185,14 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
     if (_options.fd_disabled == false)
     {
         _failure_detector = new replication_failure_detector(this, _options.meta_servers);
-        _failure_detector->start(
+        err = _failure_detector->start(
             _options.fd_check_interval_seconds,
             _options.fd_beacon_interval_seconds,
             _options.fd_lease_seconds,
             _options.fd_grace_seconds
             );
+        dassert(err == ERR_OK, "FD start failed, err = %s", err.to_string());
+
         _failure_detector->register_master(_failure_detector->current_server_contact());
     }
     else
@@ -265,7 +267,7 @@ void replica_stub::on_client_write(message_ptr& request)
     }
     else
     {
-        response_client_error(request, ERR_OBJECT_NOT_FOUND);
+        response_client_error(request, ERR_OBJECT_NOT_FOUND.get());
     }
 }
 
@@ -281,7 +283,7 @@ void replica_stub::on_client_read(message_ptr& request)
     }
     else
     {
-        response_client_error(request, ERR_OBJECT_NOT_FOUND);
+        response_client_error(request, ERR_OBJECT_NOT_FOUND.get());
     }
 }
 
@@ -396,6 +398,10 @@ void replica_stub::on_learn_completion_notification(const group_check_response& 
     if (rep != nullptr)
     {
         rep->on_learn_completion_notification(report);
+    }
+    else
+    {
+        report.err.end_tracking();
     }
 }
 
