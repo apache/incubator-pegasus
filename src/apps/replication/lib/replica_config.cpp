@@ -366,9 +366,9 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, messa
     unmarshall(response, resp);    
 
     ddebug(
-        "%s: update configuration reply with err %x, ballot %lld, local %lld",
+        "%s: update configuration reply with err %s, ballot %lld, local %lld",
         name(),
-        resp.err,
+        resp.err.to_string(),
         resp.config.ballot,
         get_ballot()
         );
