@@ -230,7 +230,7 @@ void task_worker::set_affinity(uint64_t affinity)
 # ifdef _WIN32
     if (::SetThreadAffinityMask(tid, static_cast<DWORD_PTR>(affinity)) == 0)
     {
-        err = static_cast<int>::GetLastError();
+        err = static_cast<int>(::GetLastError());
     }
 # elif defined(__APPLE__)
     thread_affinity_policy_data_t policy;

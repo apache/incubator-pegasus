@@ -245,12 +245,13 @@ namespace dsn {
 
                 std::stringstream ss;
                 ss << "TEST " << _name
-                    << ", timeout/err/succ: " << cs.timeout_rounds << "/" << cs.error_rounds << "/" << cs.succ_rounds
+                    << ", tmo/err/suc(#): " << cs.timeout_rounds << "/" << cs.error_rounds << "/" << cs.succ_rounds
                     << ", latency(us): " << cs.succ_latency_avg_us << "(avg), "
                     << cs.min_latency_us << "(min), "
                     << cs.max_latency_us << "(max)"
                     << ", qps: " << cs.succ_qps << "#/s"
-                    << ", target timeout(ms) " << cs.timeout_ms
+                    << ", timeout(ms) " << cs.timeout_ms
+                    << ", payload(byte) " << cs.payload_bytes
                     ;
 
                 dwarn(ss.str().c_str());
