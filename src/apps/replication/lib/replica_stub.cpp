@@ -117,7 +117,7 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
 
     // init logs
     _log = new mutation_log(opts.log_buffer_size_mb, opts.log_pending_max_ms, opts.log_file_size_mb, opts.log_batch_write, opts.log_max_concurrent_writes);
-    int err = _log->initialize(logDir.c_str());
+    error_code err = _log->initialize(logDir.c_str());
     dassert (err == ERR_OK, "");
     
     err = _log->replay(
@@ -185,12 +185,14 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
     if (_options.fd_disabled == false)
     {
         _failure_detector = new replication_failure_detector(this, _options.meta_servers);
-        _failure_detector->start(
+        err = _failure_detector->start(
             _options.fd_check_interval_seconds,
             _options.fd_beacon_interval_seconds,
             _options.fd_lease_seconds,
             _options.fd_grace_seconds
             );
+        dassert(err == ERR_OK, "FD start failed, err = %s", err.to_string());
+
         _failure_detector->register_master(_failure_detector->current_server_contact());
     }
     else
@@ -265,7 +267,7 @@ void replica_stub::on_client_write(message_ptr& request)
     }
     else
     {
-        response_client_error(request, ERR_OBJECT_NOT_FOUND);
+        response_client_error(request, ERR_OBJECT_NOT_FOUND.get());
     }
 }
 
@@ -281,7 +283,7 @@ void replica_stub::on_client_read(message_ptr& request)
     }
     else
     {
-        response_client_error(request, ERR_OBJECT_NOT_FOUND);
+        response_client_error(request, ERR_OBJECT_NOT_FOUND.get());
     }
 }
 
@@ -397,6 +399,10 @@ void replica_stub::on_learn_completion_notification(const group_check_response& 
     {
         rep->on_learn_completion_notification(report);
     }
+    else
+    {
+        report.err.end_tracking();
+    }
 }
 
 void replica_stub::on_add_learner(const group_check_request& request)
@@ -473,11 +479,12 @@ void replica_stub::on_meta_server_connected()
     }
 }
 
-void replica_stub::on_node_query_reply(int err, message_ptr& request, message_ptr& response)
+void replica_stub::on_node_query_reply(error_code err, message_ptr& request, message_ptr& response)
 {
     ddebug(
-        "%s:%d: node view replied",
-        primary_address().name.c_str(), static_cast<int>(primary_address().port)
+        "%s:%d: node view replied, err = %s",
+        primary_address().name.c_str(), static_cast<int>(primary_address().port),
+        err.to_string()
         );
 
     if (response == nullptr)

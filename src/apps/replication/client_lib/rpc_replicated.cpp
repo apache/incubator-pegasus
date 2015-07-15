@@ -67,8 +67,10 @@ namespace dsn {
                     //printf ("%s\n", __FUNCTION__);
 
                     end_point next_server;
-                    if (!err)
+                    if (nullptr != response)
                     {
+                        err.end_tracking();
+
                         meta_response_header header;
                         unmarshall(response->reader(), header);
 
@@ -92,7 +94,7 @@ namespace dsn {
                         }
                     }
 
-                    if (err)
+                    if (err != ERR_OK)
                     {
                         if (nullptr != ps->callback)
                         {

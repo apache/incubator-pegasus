@@ -334,10 +334,11 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, messa
     if (PS_INACTIVE != status() || _stub->is_connected() == false)
     {
         _primary_states.reconfiguration_task = nullptr;
+        err.end_tracking();
         return;
     }
 
-    if (err)
+    if (err != ERR_OK)
     {
         ddebug(
             "%s: update configuration reply with err %s, request ballot %lld",
@@ -729,7 +730,7 @@ void replica::replay_prepare_list()
             mu->data.updates = old->data.updates;
             mu->client_request = old->client_request;
 
-            dbg_dassert (mu->data.updates.size() == old->data.updates.size());
+            dbg_dassert (mu->data.updates.size() == old->data.updates.size(), "");
         }
         else
         {

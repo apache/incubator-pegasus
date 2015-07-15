@@ -65,7 +65,7 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
     
     if (ack.this_node == _current_meta_server)
     {
-        if (err)
+        if (err != ERR_OK)
         {
             end_point node = find_next_meta_server(ack.this_node);
             if (ack.this_node != node)
@@ -84,7 +84,7 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
 
     else
     {
-        if (err)
+        if (err != ERR_OK)
         {
             // nothing to do
         }

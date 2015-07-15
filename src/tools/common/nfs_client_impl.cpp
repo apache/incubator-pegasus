@@ -36,7 +36,8 @@ namespace dsn {
                 return;
             }
 
-            if (resp.error != ::dsn::ERR_OK)
+            err.set(resp.error);
+            if (err != ::dsn::ERR_OK)
             {
                 derror("remote copy request failed");
                 error_code resp_err;

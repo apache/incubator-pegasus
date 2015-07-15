@@ -29,20 +29,20 @@ echo $_PROG->get_cpp_namespace_begin().PHP_EOL;
 
 foreach ($_PROG->structs as $s) 
 {
-    echo "\t// ---------- ". $s->name . " -------------". PHP_EOL;
-    echo "\tinline void marshall(::dsn::binary_writer& writer, const ". $s->get_cpp_name() . "& val, uint16_t pos = 0xffff)".PHP_EOL;
-    echo "\t{".PHP_EOL;
-    echo "\t\tboost::shared_ptr<::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));".PHP_EOL;
-    echo "\t\t::apache::thrift::protocol::TBinaryProtocol proto(transport);".PHP_EOL;
-    echo "\t\t::dsn::marshall_rpc_args<".$s->get_cpp_name().">(&proto, val, &".$s->get_cpp_name()."::write);".PHP_EOL;
-    echo "\t};".PHP_EOL;
+    echo "    // ---------- ". $s->name . " -------------". PHP_EOL;
+    echo "    inline void marshall(::dsn::binary_writer& writer, const ". $s->get_cpp_name() . "& val, uint16_t pos = 0xffff)".PHP_EOL;
+    echo "    {".PHP_EOL;
+    echo "        boost::shared_ptr<::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));".PHP_EOL;
+    echo "        ::apache::thrift::protocol::TBinaryProtocol proto(transport);".PHP_EOL;
+    echo "        ::dsn::marshall_rpc_args<".$s->get_cpp_name().">(&proto, val, &".$s->get_cpp_name()."::write);".PHP_EOL;
+    echo "    };".PHP_EOL;
     echo PHP_EOL;
-    echo "\tinline void unmarshall(::dsn::binary_reader& reader, __out_param ". $s->get_cpp_name() . "& val)".PHP_EOL;
-    echo "\t{".PHP_EOL;
-    echo "\t\tboost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));".PHP_EOL;
-    echo "\t\t::apache::thrift::protocol::TBinaryProtocol proto(transport);".PHP_EOL;
-    echo "\t\t::dsn::unmarshall_rpc_args<".$s->get_cpp_name().">(&proto, val, &".$s->get_cpp_name()."::read);".PHP_EOL;
-    echo "\t};".PHP_EOL;
+    echo "    inline void unmarshall(::dsn::binary_reader& reader, __out_param ". $s->get_cpp_name() . "& val)".PHP_EOL;
+    echo "    {".PHP_EOL;
+    echo "        boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));".PHP_EOL;
+    echo "        ::apache::thrift::protocol::TBinaryProtocol proto(transport);".PHP_EOL;
+    echo "        ::dsn::unmarshall_rpc_args<".$s->get_cpp_name().">(&proto, val, &".$s->get_cpp_name()."::read);".PHP_EOL;
+    echo "    };".PHP_EOL;
     echo PHP_EOL;
 }
 
@@ -65,41 +65,41 @@ echo $_PROG->get_cpp_namespace_begin().PHP_EOL;
 
 foreach ($_PROG->enums as $em) 
 {
-    echo "\t// ---------- ". $em->name . " -------------". PHP_EOL;
-    echo "\tenum ". $em->get_cpp_name() .PHP_EOL;
-    echo "\t{".PHP_EOL;
+    echo "    // ---------- ". $em->name . " -------------". PHP_EOL;
+    echo "    enum ". $em->get_cpp_name() .PHP_EOL;
+    echo "    {".PHP_EOL;
     foreach ($em->values as $k => $v) {
-        echo "\t\t". $k . " = " .$v ."," .PHP_EOL;
+        echo "        ". $k . " = " .$v ."," .PHP_EOL;
     }
-    echo "\t};".PHP_EOL;
+    echo "    };".PHP_EOL;
     echo PHP_EOL;
-    echo "\tDEFINE_POD_SERIALIZATION(". $em->get_cpp_name() .");".PHP_EOL;
+    echo "    DEFINE_POD_SERIALIZATION(". $em->get_cpp_name() .");".PHP_EOL;
     echo PHP_EOL;
 }
 
 foreach ($_PROG->structs as $s) 
 {
-    echo "\t// ---------- ". $s->name . " -------------". PHP_EOL;
-    echo "\tstruct ". $s->get_cpp_name() .PHP_EOL;
-    echo "\t{".PHP_EOL;
+    echo "    // ---------- ". $s->name . " -------------". PHP_EOL;
+    echo "    struct ". $s->get_cpp_name() .PHP_EOL;
+    echo "    {".PHP_EOL;
     foreach ($s->fields as $fld) {
-        echo "\t\t". $fld->get_cpp_type() . " " .$fld->name .";" .PHP_EOL;
+        echo "        ". $fld->get_cpp_type() . " " .$fld->name .";" .PHP_EOL;
     }
-    echo "\t};".PHP_EOL;
+    echo "    };".PHP_EOL;
     echo PHP_EOL;
-    echo "\tinline void marshall(::dsn::binary_writer& writer, const ". $s->get_cpp_name() . "& val, uint16_t pos = 0xffff)".PHP_EOL;
-    echo "\t{".PHP_EOL;
+    echo "    inline void marshall(::dsn::binary_writer& writer, const ". $s->get_cpp_name() . "& val, uint16_t pos = 0xffff)".PHP_EOL;
+    echo "    {".PHP_EOL;
     foreach ($s->fields as $fld) {
-        echo "\t\tmarshall(writer, val." .$fld->name .", pos);" .PHP_EOL;
+        echo "        marshall(writer, val." .$fld->name .", pos);" .PHP_EOL;
     }
-    echo "\t};".PHP_EOL;
+    echo "    };".PHP_EOL;
     echo PHP_EOL;
-    echo "\tinline void unmarshall(::dsn::binary_reader& reader, __out_param ". $s->get_cpp_name() . "& val)".PHP_EOL;
-    echo "\t{".PHP_EOL;
+    echo "    inline void unmarshall(::dsn::binary_reader& reader, __out_param ". $s->get_cpp_name() . "& val)".PHP_EOL;
+    echo "    {".PHP_EOL;
     foreach ($s->fields as $fld) {
-        echo "\t\tunmarshall(reader, val." .$fld->name .");" .PHP_EOL;
+        echo "        unmarshall(reader, val." .$fld->name .");" .PHP_EOL;
     }
-    echo "\t};".PHP_EOL;
+    echo "    };".PHP_EOL;
     echo PHP_EOL;
 }
 

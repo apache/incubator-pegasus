@@ -83,13 +83,13 @@ struct write_request_header
 
 struct rw_response_header
 {
-    1:i32      err = 0;
+    1:dsn.error_code     err;
 }
 
 struct prepare_ack
 {
     1:global_partition_id gpid;
-    2:i32                 err;
+    2:dsn.error_code      err;
     3:i64                 ballot;
     4:i64                 decree;
     5:i64                 last_committed_decree_in_app;
@@ -123,7 +123,7 @@ struct learn_request
 
 struct learn_response
 {
-    1:i32                   err;
+    1:dsn.error_code        err;
     2:replica_configuration config;
     3:i64                   commit_decree;
     4:i64                   prepare_start_decree;
@@ -143,7 +143,7 @@ struct group_check_request
 struct group_check_response
 {
     1:global_partition_id gpid;
-    2:i32                 err;
+    2:dsn.error_code      err;
     3:i64                 last_committed_decree_in_app;
     4:i64                 last_committed_decree_in_prepare_list;
     5:learner_status      learner_status_ = learner_status.LearningFailed;
@@ -173,8 +173,8 @@ struct meta_request_header
 
 struct meta_response_header
 {
-    1:i32 err;
-    2:dsn.end_point primary_address;
+    1:dsn.error_code err;
+    2:dsn.end_point  primary_address;
 }
 
 // primary | secondary(upgrading) (w/ new config) => meta server
@@ -188,7 +188,7 @@ struct configuration_update_request
 // meta server (config mgr) => primary | secondary (downgrade) (w/ new config)
 struct configuration_update_response
 {
-    1:i32                      err;
+    1:dsn.error_code           err;
     2:partition_configuration  config;
 }
 
@@ -211,7 +211,7 @@ struct configuration_query_by_node_request
 // meta server => client
 struct configuration_query_by_node_response
 {
-    1:i32                           err;
+    1:dsn.error_code                err;
     2:list<partition_configuration> partitions;
 }
 
@@ -223,7 +223,7 @@ struct configuration_query_by_index_request
 
 struct configuration_query_by_index_response
 {
-    1:i32                           err;
+    1:dsn.error_code                err;
 	2:i32                           app_id;
 	3:i32                           partition_count;
     4:list<partition_configuration> partitions;
@@ -237,7 +237,7 @@ struct query_replica_decree_request
 
 struct query_replica_decree_response
 {
-    1:i32                 err;
+    1:dsn.error_code      err;
     2:i64                 last_decree;
 }
 

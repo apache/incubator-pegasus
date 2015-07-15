@@ -79,7 +79,7 @@ void mutation_log::reset()
     _log_files.clear();
 }
 
-int mutation_log::initialize(const char* dir)
+error_code mutation_log::initialize(const char* dir)
 {
     zauto_lock l(_lock);
 
@@ -134,7 +134,7 @@ int mutation_log::initialize(const char* dir)
     return ERR_OK;
 }
 
-int mutation_log::create_new_log_file()
+error_code mutation_log::create_new_log_file()
 {
     //dassert (_lock.IsHeldByCurrentThread(), "");
 
@@ -180,17 +180,6 @@ void mutation_log::create_new_pending_buffer()
     _pending_write = message::create_request(RPC_PREPARE, _log_pending_max_milliseconds);
     _pending_write_callbacks.reset(new std::list<aio_task_ptr>);
 
-    if (_batch_write)
-    {
-        _pending_write_timer = tasking::enqueue(
-            LPC_MUTATION_LOG_PENDING_TIMER,
-            this,
-            std::bind(&mutation_log::internal_pending_write_timer, this, _pending_write->header().id),
-            -1, 
-            _log_pending_max_milliseconds
-            );
-    }
-
     dassert (_pending_write->total_size() == MSG_HDR_SERIALIZED_SIZE, "");
     _global_end_offset += MSG_HDR_SERIALIZED_SIZE;
 }
@@ -203,14 +192,16 @@ void mutation_log::internal_pending_write_timer(uint64_t id)
     dassert (task::get_current_task() == _pending_write_timer, "");
 
     _pending_write_timer = nullptr;
-    write_pending_mutations();
+    auto err = write_pending_mutations();
+    dassert(err == ERR_OK, "write_pending_mutations failed, err = %s", err.to_string());
 }
 
-int mutation_log::write_pending_mutations(bool create_new_log_when_necessary)
+error_code mutation_log::write_pending_mutations(bool create_new_log_when_necessary)
 {
     dassert (_pending_write != nullptr, "");
     dassert (_pending_write_timer == nullptr, "");
     dassert (_pending_write_callbacks != nullptr, "");
+    dassert(_pending_write_callbacks->size() > 0, "");
 
     _pending_write->seal(true);
 
@@ -252,13 +243,14 @@ int mutation_log::write_pending_mutations(bool create_new_log_when_necessary)
 
     if (create_new_log_when_necessary && _current_log_file->end_offset() - _current_log_file->start_offset() >= _max_log_file_size_in_bytes)
     {
-        int ret = create_new_log_file();
-        if (ERR_OK != ret)
+        error_code ret = create_new_log_file();
+        if (ret != ERR_OK)
         {
-            derror ("create new log file failed, err = %d", ret);
+            derror ("create new log file failed, err = %s", ret.to_string());
         }
         return ret;
     }
+
     return ERR_OK;
 }
 
@@ -273,12 +265,12 @@ void mutation_log::internal_write_callback(error_code err, uint32_t size, mutati
 /*
 TODO: when there is a log error, the server cannot contain any primary or secondary any more!
 */
-int mutation_log::replay(ReplayCallback callback)
+error_code mutation_log::replay(ReplayCallback callback)
 {
     zauto_lock l(_lock);
 
     int64_t offset = start_offset();
-    int err = ERR_OK;
+    error_code err = ERR_OK;
     for (auto it = _log_files.begin(); it != _log_files.end(); it++)
     {
         log_file_ptr log = it->second;
@@ -302,7 +294,7 @@ int mutation_log::replay(ReplayCallback callback)
             }
 
             derror(
-                "read log header failed for %s, err = %x", log->path().c_str(), err);
+                "read log header failed for %s, err = %s", log->path().c_str(), err.to_string());
             break;
         }
 
@@ -348,7 +340,7 @@ int mutation_log::replay(ReplayCallback callback)
                 }
 
                 derror(
-                    "read log entry failed for %s, err = %x", log->path().c_str(), err);
+                    "read log entry failed for %s, err = %s", log->path().c_str(), err.to_string());
                 break;
             }
             
@@ -382,7 +374,7 @@ int mutation_log::replay(ReplayCallback callback)
     return err;
 }
 
-int mutation_log::start_write_service(multi_partition_decrees& initMaxDecrees, int max_staleness_for_commit)
+error_code mutation_log::start_write_service(multi_partition_decrees& initMaxDecrees, int max_staleness_for_commit)
 {
     zauto_lock l(_lock);
 
@@ -462,28 +454,36 @@ task_ptr mutation_log::append(mutation_ptr& mu,
     
     _pending_write_callbacks->push_back(tsk);
 
-    /*if (dsn::service::spec().traceOptions.PathTracing)
-    {
-        ddebug( 
-            "BATCHTHROUGH mutation write with io callback DstTaskId = %016llx", task->TaskId()
-                );
-    }*/
-    
-    // printf ("append: %llu, offset = %llu, global = %llu, pendingSize = %u\n",
-    //     mu->data.header.decree, mu->data.header.log_offset, _global_end_offset, _pending_write->total_size());
-
     if (!_batch_write)
     {
         write_pending_mutations();
     }
-    else if ((uint32_t)_pending_write->total_size() >= _log_buffer_size_bytes)
+    else
     {
-        if (_pending_write_timer->cancel(false))
+        if ((uint32_t)_pending_write->total_size() >= _log_buffer_size_bytes)
         {
-            _pending_write_timer = nullptr;
-            write_pending_mutations();
+            if (nullptr == _pending_write_timer)
+            {
+                write_pending_mutations();
+            }   
+            else if (_pending_write_timer->cancel(false))
+            {
+                _pending_write_timer = nullptr;
+                write_pending_mutations();
+            }
         }
-    }
+
+        else if (nullptr == _pending_write_timer)
+        {
+            _pending_write_timer = tasking::enqueue(
+                LPC_MUTATION_LOG_PENDING_TIMER,
+                this,
+                std::bind(&mutation_log::internal_pending_write_timer, this, _pending_write->header().id),
+                -1,
+                _log_pending_max_milliseconds
+                );
+        }
+    }   
 
     return tsk;
 }
@@ -670,7 +670,7 @@ void log_file::close()
     }
 }
 
-int log_file::read_next_log_entry(__out_param ::dsn::blob& bb)
+error_code log_file::read_next_log_entry(__out_param::dsn::blob& bb)
 {
     dassert (_is_read, "");
 

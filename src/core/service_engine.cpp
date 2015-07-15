@@ -197,7 +197,7 @@ service_node* service_engine::start_node(service::service_app* app)
         
         auto node = new service_node(app);
         error_code err = node->start();
-        dassert (err == 0, "service node start failed, err = %s", err.to_string());
+        dassert (err == ERR_OK, "service node start failed, err = %s", err.to_string());
         
         _nodes_by_app_id[app->id()] = node;
         for (auto p1 : app->spec().ports)

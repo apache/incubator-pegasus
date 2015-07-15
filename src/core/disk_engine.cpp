@@ -120,9 +120,9 @@ void disk_engine::complete_io(aio_task_ptr& aio, error_code err, uint32_t bytes,
     if (err != ERR_OK)
     {
         dwarn(
-                    "disk operation failure with code %s, err = 0x%x, aio task id = %llx",
+                    "disk operation failure with code %s, err = %s, aio task id = %llx",
                     aio->spec().name,
-                    err.get(),
+                    err.to_string(),
                     aio->id()
                     );
     }

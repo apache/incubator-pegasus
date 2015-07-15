@@ -27,6 +27,7 @@
 
 # include <dsn/internal/dsn_types.h>
 # include <dsn/internal/logging.h>
+# include <dsn/internal/error_code.h>
 
 namespace dsn {
 
@@ -118,6 +119,7 @@ namespace dsn {
         int read(__out_param uint64_t& val) { return read_pod(val); }
         int read(__out_param bool& val) { return read_pod(val); }
 
+        int read(__out_param error_code& err) { int val; int ret = read_pod(val); err.set(val); return ret; }
         int read(__out_param std::string& s);
         int read(char* buffer, int sz);
         int read(blob& blob);
@@ -159,6 +161,7 @@ namespace dsn {
         void write(const uint64_t& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
         void write(const bool& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
 
+        void write(const error_code& val, uint16_t pos = 0xffff) { int err = val.get();  write_pod(err, pos); }
         void write(const std::string& val, uint16_t pos = 0xffff);
         void write(const char* buffer, int sz, uint16_t pos = 0xffff);
         void write(const blob& val, uint16_t pos = 0xffff);

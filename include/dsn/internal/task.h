@@ -191,7 +191,7 @@ class rpc_response_task_empty : public rpc_response_task
 public:
     rpc_response_task_empty(message_ptr& request, int hash = 0);
 
-    virtual void on_response(error_code err, message_ptr& request, message_ptr& response) {}
+    virtual void on_response(error_code err, message_ptr& request, message_ptr& response) { err.end_tracking(); }
 };
 
 typedef ::boost::intrusive_ptr<rpc_response_task> rpc_response_task_ptr;

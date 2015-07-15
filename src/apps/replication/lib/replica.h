@@ -119,9 +119,9 @@ private:
     mutation_ptr new_mutation(decree decree);
     
     // initialization
-    int  init_app_and_prepare_list(const char* app_type, bool create_new);
-    int  initialize_on_load(const char* dir, bool renameDirOnFailure);        
-    int  initialize_on_new(const char* app_type, global_partition_id gpid);
+    error_code init_app_and_prepare_list(const char* app_type, bool create_new);
+    error_code initialize_on_load(const char* dir, bool renameDirOnFailure);
+    error_code initialize_on_new(const char* app_type, global_partition_id gpid);
     replica(replica_stub* stub, replication_options& options); // for replica::load(..) only
     replica(replica_stub* stub, global_partition_id gpid, replication_options& options); // for replica::newr(...) only
         
@@ -129,10 +129,10 @@ private:
     // 2pc
     void init_prepare(mutation_ptr& mu);
     void send_prepare_message(const end_point& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds);
-    void on_append_log_completed(mutation_ptr& mu, uint32_t err, uint32_t size);
-    void on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, int err, message_ptr& request, message_ptr& reply);
+    void on_append_log_completed(mutation_ptr& mu, error_code err, uint32_t size);
+    void on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, error_code err, message_ptr& request, message_ptr& reply);
     void do_possible_commit_on_primary(mutation_ptr& mu);    
-    void ack_prepare_message(int err, mutation_ptr& mu);
+    void ack_prepare_message(error_code err, mutation_ptr& mu);
     void cleanup_preparing_mutations(bool is_primary);
     
     /////////////////////////////////////////////////////////////////
@@ -140,15 +140,15 @@ private:
     void init_learn(uint64_t signature);
     void on_learn_reply(error_code err, std::shared_ptr<learn_request>& req, std::shared_ptr<learn_response>& resp);
     void on_copy_remote_state_completed(error_code err, int size, std::shared_ptr<learn_response> resp);
-    void on_learn_remote_state_completed(int err);
-    void handle_learning_error(int err);
+    void on_learn_remote_state_completed(error_code err);
+    void handle_learning_error(error_code err);
     void handle_learning_succeeded_on_primary(const end_point& node, uint64_t learnSignature);
     void notify_learn_completion();
         
     /////////////////////////////////////////////////////////////////
     // failure handling    
-    void handle_local_failure(int error);
-    void handle_remote_failure(partition_status status, const end_point& node, int error);
+    void handle_local_failure(error_code error);
+    void handle_remote_failure(partition_status status, const end_point& node, error_code error);
 
     /////////////////////////////////////////////////////////////////
     // reconfiguration

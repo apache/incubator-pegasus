@@ -92,6 +92,10 @@ public:
     //   
     const std::string& data_dir() const { return _dir_data; }
     const std::string& learn_dir() const { return _dir_learn; }
+    //
+    // set physical error (e.g., disk error) so that the app is dropped by replication later
+    //
+    void set_physical_error(int err) { _physical_error = err; }
 
 protected:
     template<typename T, typename TRequest, typename TResponse> 
@@ -114,14 +118,15 @@ private:
 private:
     // routines for replica internal usage
     friend class replica;
-    int  write_internal(mutation_ptr& mu, bool ack_client);
-    int  dispatch_rpc_call(int code, message_ptr& request, bool ack_client);
+    error_code write_internal(mutation_ptr& mu, bool ack_client);
+    void       dispatch_rpc_call(int code, message_ptr& request, bool ack_client);
     
 private:
     std::string _dir_data;
     std::string _dir_learn;
     replica*    _replica;
     std::unordered_map<int, std::function<void(message_ptr&, message_ptr&)> > _handlers;
+    int         _physical_error; // physical error (e.g., io error) indicates the app needs to be dropped
 
 protected:
     std::atomic<decree> _last_committed_decree;

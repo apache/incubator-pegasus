@@ -158,6 +158,11 @@ void task::exec_internal()
         
         tls_task_info.current_task = parent_task;
     }
+    else
+    {
+        // task cancelled, so
+        _error.end_tracking();
+    }
 
     if (!_spec->allow_inline && !_is_null)
     {

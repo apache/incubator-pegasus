@@ -35,37 +35,99 @@ struct error_code : public dsn::utils::customized_id<error_code>
     error_code(const char* name) : dsn::utils::customized_id<error_code>(name)
     {
         dassert (name, "name for an error code cannot be empty");
-        _used = false;
+# ifdef _DEBUG
+        _used = true;
+# endif
     }
 
     error_code() : dsn::utils::customized_id<error_code>(0)
     {
+# ifdef _DEBUG
         _used = true;
+# endif
     }
 
     error_code(const error_code& err) : dsn::utils::customized_id<error_code>(err)
     {
+# ifdef _DEBUG
         _used = false;
+        err._used = true;
+# endif
     }
 
     error_code& operator=(const error_code& source)
     {
-        _internal_code = source.get();
+        _internal_code = source;
+# ifdef _DEBUG
         _used = false;
+        source._used = true;
+# endif
         return *this;
     }
-    
-    ~error_code()
+
+    bool operator == (const error_code& r)
     {
-        //assert (_used, "error code is not handled");
+# ifdef _DEBUG
+        _used = true;
+        r._used = true;
+# endif
+        return _internal_code == r._internal_code;
     }
 
-    int get() const { _used = true; return operator int(); }
+    bool operator != (const error_code& r)
+    {
+        return !(*this == r);
+    }
+    
+# ifdef _DEBUG
+    ~error_code()
+    {
+        dassert (_used, "error code is not handled");
+    }
 
-    void set(int err) { _internal_code = err; _used = false; }
+    const char* to_string() const
+    {
+        _used = true;
+        return dsn::utils::customized_id<error_code>::to_string();
+    }
+# endif
+    
+    void set(int err) 
+    { 
+        _internal_code = err; 
+# ifdef _DEBUG
+        _used = false; 
+# endif
+    }
+
+    int  get() const
+    {
+# ifdef _DEBUG
+        _used = true;
+# endif
+        return _internal_code;
+    }
+
+    void end_tracking() const
+    {
+# ifdef _DEBUG
+        _used = true;
+# endif
+    }
 
 private:
+    operator int() const
+    {
+# ifdef _DEBUG
+        _used = true;
+# endif
+        return dsn::utils::customized_id<error_code>::operator int();
+    }
+
+private:
+# ifdef _DEBUG
     mutable bool _used;
+# endif
 };
 
 #define DEFINE_ERR_CODE(x) __selectany const ::dsn::error_code x(#x);
@@ -82,6 +144,7 @@ DEFINE_ERR_CODE(ERR_TALK_TO_OTHERS)
 DEFINE_ERR_CODE(ERR_OBJECT_NOT_FOUND)
 DEFINE_ERR_CODE(ERR_HANDLER_NOT_FOUND)
 DEFINE_ERR_CODE(ERR_LEARN_FILE_FALED)
+DEFINE_ERR_CODE(ERR_GET_LEARN_STATE_FALED)
 DEFINE_ERR_CODE(ERR_INVALID_VERSION)
 DEFINE_ERR_CODE(ERR_INVALID_PARAMETERS)
 DEFINE_ERR_CODE(ERR_CAPACITY_EXCEEDED)
@@ -96,6 +159,7 @@ DEFINE_ERR_CODE(ERR_PATH_NOT_FOUND)
 DEFINE_ERR_CODE(ERR_PATH_ALREADY_EXIST)
 DEFINE_ERR_CODE(ERR_ADDRESS_ALREADY_USED)
 DEFINE_ERR_CODE(ERR_STATE_FREEZED)
+DEFINE_ERR_CODE(ERR_LOCAL_APP_FAILURE)
 
 } // end namespace
 

@@ -668,7 +668,7 @@ namespace dsn { namespace replication {
     // ---------- rw_response_header -------------
     struct rw_response_header
     {
-        int32_t err;
+        ::dsn::error_code err;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const rw_response_header& val, uint16_t pos = 0xffff)
@@ -685,7 +685,7 @@ namespace dsn { namespace replication {
     struct prepare_ack
     {
         global_partition_id gpid;
-        int32_t err;
+        ::dsn::error_code err;
         int64_t ballot;
         int64_t decree;
         int64_t last_committed_decree_in_app;
@@ -765,7 +765,7 @@ namespace dsn { namespace replication {
     // ---------- learn_response -------------
     struct learn_response
     {
-        int32_t err;
+        ::dsn::error_code err;
         replica_configuration config;
         int64_t commit_decree;
         int64_t prepare_start_decree;
@@ -825,7 +825,7 @@ namespace dsn { namespace replication {
     struct group_check_response
     {
         global_partition_id gpid;
-        int32_t err;
+        ::dsn::error_code err;
         int64_t last_committed_decree_in_app;
         int64_t last_committed_decree_in_prepare_list;
         learner_status learner_status_;
@@ -874,7 +874,7 @@ namespace dsn { namespace replication {
     // ---------- meta_response_header -------------
     struct meta_response_header
     {
-        int32_t err;
+        ::dsn::error_code err;
         ::dsn::end_point primary_address;
     };
 
@@ -915,7 +915,7 @@ namespace dsn { namespace replication {
     // ---------- configuration_update_response -------------
     struct configuration_update_response
     {
-        int32_t err;
+        ::dsn::error_code err;
         partition_configuration config;
     };
 
@@ -978,7 +978,7 @@ namespace dsn { namespace replication {
     // ---------- configuration_query_by_node_response -------------
     struct configuration_query_by_node_response
     {
-        int32_t err;
+        ::dsn::error_code err;
         std::vector< partition_configuration> partitions;
     };
 
@@ -1016,7 +1016,7 @@ namespace dsn { namespace replication {
     // ---------- configuration_query_by_index_response -------------
     struct configuration_query_by_index_response
     {
-        int32_t err;
+        ::dsn::error_code err;
         int32_t app_id;
         int32_t partition_count;
         std::vector< partition_configuration> partitions;
@@ -1060,7 +1060,7 @@ namespace dsn { namespace replication {
     // ---------- query_replica_decree_response -------------
     struct query_replica_decree_response
     {
-        int32_t err;
+        ::dsn::error_code err;
         int64_t last_decree;
     };
 

@@ -28,9 +28,9 @@ public:
 
 <?php foreach ($svc->functions as $f) { ?>
         s.name = "<?=$svc->name?>.<?=$f->name?>";
-		s.config_section = "task.<?=$f->get_rpc_code()?>";
+        s.config_section = "task.<?=$f->get_rpc_code()?>";
         s.send_one = [this](){this->send_one_<?=$f->name?>(); };
-		s.cases.clear();
+        s.cases.clear();
         load_suite_config(s);
         suits.push_back(s);
         
