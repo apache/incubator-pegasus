@@ -49,21 +49,21 @@ namespace dsn {
 
                     s.name = "simple_kv.write";
                     s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_WRITE";
-                    s.send_one = [this](){this->send_one_write(); };
+                    s.send_one = [this](int payload_bytes){this->send_one_write(payload_bytes); };
                     s.cases.clear();
                     load_suite_config(s);
                     suits.push_back(s);
 
                     s.name = "simple_kv.append";
                     s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_APPEND";
-                    s.send_one = [this](){this->send_one_append(); };
+                    s.send_one = [this](int payload_bytes){this->send_one_append(payload_bytes); };
                     s.cases.clear();
                     load_suite_config(s);
                     suits.push_back(s);
 
                     s.name = "simple_kv.read";
                     s.config_section = "task.RPC_SIMPLE_KV_SIMPLE_KV_READ";
-                    s.send_one = [this](){this->send_one_read(); };
+                    s.send_one = [this](int payload_bytes){this->send_one_read(payload_bytes); };
                     s.cases.clear();
                     load_suite_config(s);
                     suits.push_back(s);
@@ -81,7 +81,7 @@ namespace dsn {
                     return (int)env::random32(0, 7);
                 }
                                 
-                void send_one_read()
+                void send_one_read(int payload_bytes)
                 {
                     void* ctx = prepare_send_one();
                     if (!ctx)
@@ -100,10 +100,10 @@ namespace dsn {
                     const std::string& resp,
                     void* context) override
                 {
-                    end_send_one(context, err, [this](){ send_one_read();});
+                    end_send_one(context, err);
                 }
 
-                void send_one_write()
+                void send_one_write(int payload_bytes)
                 {
                     void* ctx = prepare_send_one();
                     if (!ctx)
@@ -125,10 +125,10 @@ namespace dsn {
                     const int32_t& resp,
                     void* context) override
                 {
-                    end_send_one(context, err, [this](){ send_one_write(); });
+                    end_send_one(context, err);
                 }
 
-                void send_one_append()
+                void send_one_append(int payload_bytes)
                 {
                     void* ctx = prepare_send_one();
                     if (!ctx)
@@ -150,7 +150,7 @@ namespace dsn {
                     const int32_t& resp,
                     void* context) override
                 {
-                    end_send_one(context, err, [this](){ send_one_append(); });
+                    end_send_one(context, err);
                 }
             };
         }

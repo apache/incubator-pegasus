@@ -172,7 +172,10 @@ void replication_app_client_base::end_request(request_context_ptr& request, erro
 {
     zauto_lock l(request->lock);
     if (request->completed)
+    {
+        err.end_tracking();
         return;
+    }
 
     if (err != ERR_TIMEOUT && request->timeout_timer != nullptr)
         request->timeout_timer->cancel(false);

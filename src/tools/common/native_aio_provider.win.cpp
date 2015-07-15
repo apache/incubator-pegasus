@@ -206,7 +206,8 @@ disk_aio_ptr native_win_aio_provider::prepare_aio_context(aio_task* tsk)
 
 void native_win_aio_provider::aio(aio_task_ptr& aio_tsk)
 {
-    aio_internal(aio_tsk, true);
+    auto err = aio_internal(aio_tsk, true);
+    err.end_tracking();
 }
 
 error_code native_win_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool async, __out_param uint32_t* pbytes /*= nullptr*/)
