@@ -182,13 +182,15 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
     int lerr = _app->get_learn_state(decree, request.app_specific_learn_request, response.state);
     if (lerr != 0)
     {
+        response.err = ERR_GET_LEARN_STATE_FALED;
         derror("%s get learn state failed, error = %d", dir().c_str(), lerr);
     }
-    response.err = (lerr == 0 ? ERR_OK : ERR_GET_LEARN_STATE_FALED);
-        
-    response.base_local_dir = _app->data_dir();
-    for (auto itr = response.state.files.begin(); itr != response.state.files.end(); ++itr)            
-        *itr = itr->substr(_app->data_dir().length());
+    else
+    {
+        response.base_local_dir = _app->data_dir();
+        for (auto itr = response.state.files.begin(); itr != response.state.files.end(); ++itr)
+            *itr = itr->substr(_app->data_dir().length());
+    }
 }
 
 void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request>& req, std::shared_ptr<learn_response>& resp)

@@ -68,7 +68,7 @@ public:
     //
     // helper routines to accelerate learning
     // 
-    virtual void prepare_learning_request(__out_param ::dsn::blob& learn_req) {};
+    virtual void prepare_learning_request(__out_param ::dsn::blob& learn_req) {}
 
     // 
     // to learn [start, infinite) from remote replicas
