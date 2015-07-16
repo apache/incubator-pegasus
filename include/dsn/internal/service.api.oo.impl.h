@@ -464,6 +464,10 @@ namespace dsn {
                             _handler(err, transferred_size);
                             _handler = nullptr;
                         }
+                        else
+                        {
+                            err.end_tracking();
+                        }
                     }
 
                 private:

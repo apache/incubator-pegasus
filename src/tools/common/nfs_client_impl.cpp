@@ -178,6 +178,7 @@ namespace dsn {
             }
             
             reqc->response = resp;
+            reqc->response.error.end_tracking(); // always ERR_OK
             reqc->is_ready_for_write = true;
 
             auto& fc = reqc->file_ctx;
@@ -324,7 +325,8 @@ namespace dsn {
                 zauto_lock l(reqc->file_ctx->user_req->user_req_lock);
                 if (++reqc->file_ctx->finished_segments == (int)reqc->file_ctx->copy_requests.size())
                 {
-                    file::close(reqc->file_ctx->file);
+                    auto err = file::close(reqc->file_ctx->file);
+                    dassert(err == ERR_OK, "file::close failed, err = %s", err.to_string());
                     reqc->file_ctx->file = static_cast<handle_t>(0);
                     reqc->file_ctx->copy_requests.clear();
 
@@ -390,7 +392,9 @@ namespace dsn {
                                 
                 if (f.second->file)
                 {
-                    file::close(f.second->file);
+                    auto err2 = file::close(f.second->file);
+                    dassert(err2 == ERR_OK, "file::close failed, err = %s", err2.to_string()); 
+
                     f.second->file = static_cast<handle_t>(0);
 
                     if (f.second->finished_segments != (int)f.second->copy_requests.size())

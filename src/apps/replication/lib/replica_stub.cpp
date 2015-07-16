@@ -697,12 +697,13 @@ void replica_stub::on_gc()
     }
 
     // gc log
-    multi_partition_decrees durable_decrees;
+    multi_partition_decrees durable_decrees, max_seen_decrees;
     for (auto it = rs.begin(); it != rs.end(); it++)
     {
         durable_decrees[it->first] = it->second->last_durable_decree();
+        max_seen_decrees[it->first] = it->second->max_prepared_decree();
     }
-    _log->garbage_collection(durable_decrees);
+    _log->garbage_collection(durable_decrees, max_seen_decrees);
     
     // gc on-disk rps
     boost::filesystem::directory_iterator endtr;

@@ -106,10 +106,8 @@ void meta_service::start(const char* data_dir, bool clean_state)
 
     // make sure the delay is larger than fd.grace to ensure 
     // all machines are in the correct state (assuming connected initially)
-    _balancer_timer = tasking::enqueue(LPC_LBM_RUN, this, &meta_service::on_load_balance_timer, 0, 
-        _opts.fd_grace_seconds * 1000 + 1, // delay
-        10000
-        );
+    tasking::enqueue(LPC_LBM_START, this, &meta_service::on_load_balance_start, 0, 
+        _opts.fd_grace_seconds * 1000);
 
     auto err = _failure_detector->start(
         _opts.fd_check_interval_seconds,
@@ -132,11 +130,26 @@ bool meta_service::stop()
     delete _failure_detector;
     _failure_detector = nullptr;
 
-    _balancer_timer->cancel(true);
+    if (_balancer_timer == nullptr)
+    {
+        _balancer_timer->cancel(true);
+    }
     unregister_rpc_handler(RPC_CM_CALL);
     delete _balancer;
     _balancer = nullptr;
     return true;
+}
+
+void meta_service::on_load_balance_start()
+{
+    dassert(_balancer_timer == nullptr, "");
+
+    _state->unfree_if_possible_on_start();
+    _balancer_timer = tasking::enqueue(LPC_LBM_RUN, this, &meta_service::on_load_balance_timer, 
+        0,
+        1,
+        10000
+        );
 }
 
 void meta_service::on_request(message_ptr& msg)

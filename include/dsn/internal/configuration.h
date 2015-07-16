@@ -149,7 +149,7 @@ template<> inline long long configuration::get_value<long long>(const char* sect
             return v;
         }
         else
-            return (long long)(atol(value.c_str()));
+            return atoll(value.c_str());
     }
 }
 
