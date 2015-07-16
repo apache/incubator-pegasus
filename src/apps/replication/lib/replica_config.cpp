@@ -141,12 +141,6 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     dassert (proposal.config.app_type == _primary_states.membership.app_type, "");
     dassert (proposal.config.primary == _primary_states.membership.primary, "");
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
-
-    // zy: work around for meta server bug
-    if (_primary_states.check_exist(proposal.node, PS_PRIMARY)
-        || _primary_states.check_exist(proposal.node, PS_SECONDARY))
-        return;
-
     dassert (!_primary_states.check_exist(proposal.node, PS_PRIMARY), "");
     dassert (!_primary_states.check_exist(proposal.node, PS_SECONDARY), "");
 

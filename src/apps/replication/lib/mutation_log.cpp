@@ -525,8 +525,12 @@ int mutation_log::garbage_collection(multi_partition_decrees& durable_decrees, m
             dassert(it4 != max_seen_decrees.end(), "");
 
             decree max_seen_decree = it4->second;
-            dassert(max_seen_decree >= lastDurableDecree, "");
-        
+            if (max_seen_decree < lastDurableDecree)
+            {
+                // learn after last prepare, therefore it is ok to delete logs
+                continue;
+            }
+
             auto it3 = log->init_prepare_decrees().find(gpid);
             if (it3 == log->init_prepare_decrees().end())
             {
