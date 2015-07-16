@@ -129,7 +129,7 @@ namespace dsn {
                     if (s.substr(0, strlen("checkpoint.")) != std::string("checkpoint."))
                         continue;
 
-                    decree version = atol(s.substr(strlen("checkpoint.")).c_str());
+                    decree version = static_cast<decree>(atoll(s.substr(strlen("checkpoint.")).c_str()));
                     if (version > maxVersion)
                     {
                         maxVersion = version;

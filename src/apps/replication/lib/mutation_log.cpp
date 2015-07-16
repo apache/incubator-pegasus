@@ -136,8 +136,6 @@ error_code mutation_log::initialize(const char* dir)
 
 error_code mutation_log::create_new_log_file()
 {
-    //dassert (_lock.IsHeldByCurrentThread(), "");
-
     if (_current_log_file != nullptr)
     {
         _last_log_file = _current_log_file;
@@ -309,6 +307,11 @@ error_code mutation_log::replay(ReplayCallback callback)
         }
 
         offset += log->read_header(msg);
+        if (!log->is_right_header())
+        {
+            derror("log header for '%s' is invalid", log->path().c_str());
+            return ERR_FILE_OPERATION_FAILED;
+        }
 
         while (true)
         {
@@ -619,7 +622,7 @@ std::map<int, log_file_ptr>& mutation_log::get_logfiles_for_test()
 
     
     int index = atoi(name.substr(pos + 1, pos2 - pos - 1).c_str());
-    int64_t startOffset = atol(name.substr(pos2 + 1).c_str());
+    int64_t startOffset = static_cast<int64_t>(atoll(name.substr(pos2 + 1).c_str()));
     
     return new log_file(path, hFile, index, startOffset, 0, true);
 }
@@ -688,11 +691,12 @@ error_code log_file::read_next_log_entry(__out_param::dsn::blob& bb)
 {
     dassert (_is_read, "");
 
-    std::shared_ptr<char> hdrBuffer(new char[MSG_HDR_SERIALIZED_SIZE]);
+    char hdr_buffer[MSG_HDR_SERIALIZED_SIZE];
+    message_header hdr;
     
     int read_count = ::read(
         (int)(_handle),
-        hdrBuffer.get(),
+        hdr_buffer,
         MSG_HDR_SERIALIZED_SIZE
         );
 
@@ -708,20 +712,19 @@ error_code log_file::read_next_log_entry(__out_param::dsn::blob& bb)
             return ERR_HANDLE_EOF;
         }
     }
-
-    message_header hdr;
-    ::dsn::blob bb2(hdrBuffer, MSG_HDR_SERIALIZED_SIZE);
+        
+    ::dsn::blob bb2(hdr_buffer, 0, MSG_HDR_SERIALIZED_SIZE);
     ::dsn::binary_reader reader(bb2);
     hdr.unmarshall(reader);
 
-    if (!hdr.is_right_header((char*)hdrBuffer.get()))
+    if (!hdr.is_right_header((char*)hdr_buffer))
     {
         derror("invalid data header");
         return ERR_INVALID_DATA;
     }
 
     std::shared_ptr<char> data(new char[MSG_HDR_SERIALIZED_SIZE + hdr.body_length]);
-    memcpy(data.get(), hdrBuffer.get(), MSG_HDR_SERIALIZED_SIZE);
+    memcpy(data.get(), hdr_buffer, MSG_HDR_SERIALIZED_SIZE);
     bb.assign(data, 0, MSG_HDR_SERIALIZED_SIZE + hdr.body_length);
 
     read_count = ::read(
@@ -801,6 +804,12 @@ int log_file::read_header(message_ptr& reader)
         sizeof(_header) + sizeof(count) 
         + (sizeof(global_partition_id) + sizeof(decree))*count
         );
+}
+
+bool log_file::is_right_header() const
+{
+    return _header.magic == 0xdeadbeef &&
+        _header.start_global_offset == _start_offset;
 }
 
 int log_file::write_header(message_ptr& writer, multi_partition_decrees& initMaxDecrees, int bufferSizeBytes)
