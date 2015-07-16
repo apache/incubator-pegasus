@@ -133,7 +133,9 @@ void load_balancer::run_lb(partition_configuration& pc)
     {
         proposal.type = CT_ADD_SECONDARY;
         proposal.node = find_minimal_load_machine(false);
-        if (proposal.node != end_point::INVALID)
+		if (proposal.node != end_point::INVALID && 
+			proposal.node != pc.primary &&
+			std::find(pc.secondaries.begin(), pc.secondaries.end(), proposal.node) == pc.secondaries.end())
         {
             send_proposal(pc.primary, proposal);
         }
