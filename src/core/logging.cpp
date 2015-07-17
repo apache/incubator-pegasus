@@ -24,11 +24,21 @@
  * THE SOFTWARE.
  */
 # include <dsn/internal/logging_provider.h>
+# include <dsn/tool_api.h>
 # include "service_engine.h"
 
 namespace dsn {
 
     logging_level logging_start_level = logging_level::log_level_INFORMATION;
+
+    static void log_on_sys_exit(sys_exit_type)
+    {
+        logging_provider* logger = service_engine::instance().logging();
+        if (logger != nullptr)
+        {
+            logger->flush();
+        }
+    }
 
     void log_init(configuration_ptr config)
     {
@@ -37,6 +47,9 @@ namespace dsn {
             logging_level::log_level_INVALID
             );
         dassert(logging_start_level != logging_level::log_level_INVALID, "invalid [core] logging_start_level specified");
+
+        // register log flush on exit
+        ::dsn::tools::sys_exit.put_back(log_on_sys_exit, "log.flush");
     }
 
     void logv(const char *file, const char *function, const int line, logging_level logLevel, const char* title, const char* fmt, va_list args)

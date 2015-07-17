@@ -41,7 +41,7 @@ namespace dsn {
 
             int tid = ::dsn::utils::get_current_tid(); 
 
-            fprintf(fp, "%s(%llu %05d)", str, static_cast<long long unsigned int>(ts), tid);
+            fprintf(fp, "%s (%llu %05d) ", str, static_cast<long long unsigned int>(ts), tid);
 
             task* t = task::get_current_task();
             if (t)
@@ -89,6 +89,11 @@ namespace dsn {
             print_header(stdout);
             vprintf(fmt, args);
             printf("\n");
+        }
+
+        void screen_logger::flush()
+        {
+            ::fflush(stdout);
         }
 
         simple_logger::simple_logger() 
@@ -151,6 +156,11 @@ namespace dsn {
         simple_logger::~simple_logger(void) 
         { 
             fclose(_log);
+        }
+
+        void simple_logger::flush()
+        {
+            ::fflush(_log);
         }
 
         void simple_logger::logv(const char *file,

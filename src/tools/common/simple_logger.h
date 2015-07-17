@@ -48,6 +48,8 @@ namespace dsn {
                 va_list args
                 );
 
+            virtual void flush();
+
         private:
             ::dsn::utils::ex_lock_nr _lock;
         };
@@ -67,6 +69,8 @@ namespace dsn {
                 const char *fmt,
                 va_list args
                 );
+
+            virtual void flush();
 
         private:
             void create_log_file();

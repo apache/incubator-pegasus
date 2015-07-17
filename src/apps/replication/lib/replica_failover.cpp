@@ -55,11 +55,11 @@ void replica::handle_local_failure(error_code error)
 void replica::handle_remote_failure(partition_status st, const end_point& node, error_code error)
 {    
     derror(
-        "%s: handle remote failure error %s, status = %s, node = %s:%d",
+        "%s: handle remote failure error %s, status = %s, node = %s:%hu",
         name(),
         error.to_string(),
         enum_to_string(st),
-        node.name.c_str(), static_cast<int>(node.port)
+        node.name.c_str(), node.port
         );
     error.end_tracking();
 

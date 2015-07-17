@@ -341,10 +341,10 @@ namespace dsn {
         {
             // TODO: warning about this msg
             dwarn(
-                "recv unknown message with type %s from %s:%d",
+                "recv unknown message with type %s from %s:%hu",
                 msg->header().rpc_name,
                 msg->header().from_address.name.c_str(),
-                static_cast<int>(msg->header().from_address.port)
+                msg->header().from_address.port
                 );
         }
 

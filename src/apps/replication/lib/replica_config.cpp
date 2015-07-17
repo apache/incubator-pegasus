@@ -42,10 +42,10 @@ void replica::on_config_proposal(configuration_update_request& proposal)
     check_hashed_access();
 
     ddebug(
-        "%s: on_config_proposal %s for %s:%d", 
+        "%s: on_config_proposal %s for %s:%hu", 
         name(),
         enum_to_string(proposal.type),
-        proposal.node.name.c_str(), static_cast<int>(proposal.node.port)
+        proposal.node.name.c_str(), proposal.node.port
         );
 
     if (proposal.config.ballot < get_ballot())
@@ -170,9 +170,9 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
 void replica::upgrade_to_secondary_on_primary(const end_point& node)
 {
     ddebug(
-            "%s: upgrade potential secondary %s:%d to secondary",
+            "%s: upgrade potential secondary %s:%hu to secondary",
             name(),
-            node.name.c_str(), static_cast<int>(node.port)
+            node.name.c_str(), node.port
             );
 
     partition_configuration newConfig = _primary_states.membership;

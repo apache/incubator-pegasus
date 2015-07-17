@@ -147,15 +147,18 @@ namespace dsn {
             {
                 zauto_lock l(_lock);
 
-                std::ifstream is(name.c_str());
+                std::ifstream is(name.c_str(), std::ios::binary);
                 if (!is.is_open())
                     return;
-
-
+                
                 _store.clear();
 
                 uint64_t count;
+                int magic;
+                
                 is.read((char*)&count, sizeof(count));
+                is.read((char*)&magic, sizeof(magic)); 
+                dassert(magic == 0xdeadbeef, "invalid checkpoint");
 
                 for (uint64_t i = 0; i < count; i++)
                 {
@@ -192,10 +195,13 @@ namespace dsn {
                 char name[256];
                 sprintf(name, "%s/checkpoint.%lld", data_dir().c_str(), 
                         static_cast<long long int>(last_committed_decree()));
-                std::ofstream os(name);
+                std::ofstream os(name, std::ios::binary);
 
                 uint64_t count = (uint64_t)_store.size();
+                int magic = 0xdeadbeef;
+                
                 os.write((const char*)&count, (uint32_t)sizeof(count));
+                os.write((const char*)&magic, (uint32_t)sizeof(magic));
 
                 for (auto it = _store.begin(); it != _store.end(); it++)
                 {

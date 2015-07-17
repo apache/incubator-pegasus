@@ -162,10 +162,10 @@ void meta_service::on_request(message_ptr& msg)
     if (is_primary) is_primary = (primary_address() == rhdr.primary_address);
     rhdr.err = ERR_OK;
 
-    dinfo("recv meta request %s from %s:%d", 
+    dinfo("recv meta request %s from %s:%hu", 
         task_code::to_string(hdr.rpc_tag),
         msg->header().from_address.name.c_str(),
-        static_cast<int>(msg->header().from_address.port)
+        msg->header().from_address.port
         );
 
     message_ptr resp = msg->create_response();
@@ -349,6 +349,10 @@ void meta_service::on_log_completed(error_code err, int size,
         marshall(resp, response);
 
         rpc::reply(resp);
+    }
+    else
+    {
+        err.end_tracking();
     }
 }
 

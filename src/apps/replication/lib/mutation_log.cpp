@@ -149,7 +149,7 @@ error_code mutation_log::create_new_log_file()
         return ERR_FILE_OPERATION_FAILED;
     }    
 
-    derror ("create new log file %s", logFile->path().c_str());
+    dinfo ("create new log file %s", logFile->path().c_str());
         
     _last_file_number++;
     dassert (_log_files.find(_last_file_number) == _log_files.end(), "");
@@ -244,7 +244,7 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
         error_code ret = create_new_log_file();
         if (ret != ERR_OK)
         {
-            derror ("create new log file failed, err = %s", ret.to_string());
+            dinfo ("create new log file failed, err = %s", ret.to_string());
         }
         return ret;
     }
@@ -263,7 +263,7 @@ void mutation_log::internal_write_callback(error_code err, uint32_t size, mutati
 /*
 TODO: when there is a log error, the server cannot contain any primary or secondary any more!
 */
-error_code mutation_log::replay(ReplayCallback callback)
+error_code mutation_log::replay(replay_callback callback)
 {
     zauto_lock l(_lock);
 

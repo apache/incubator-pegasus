@@ -26,10 +26,10 @@
 #include "load_balancer.h"
 #include <algorithm>
 
-bool MachineLoadComp(const std::pair<end_point, int>& l, const std::pair<end_point, int>& r)
-{
-    return l.second < r.second;
-}
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "load.balancer"
 
 load_balancer::load_balancer(server_state* state)
 : _state(state), serverlet<load_balancer>("load_balancer")
@@ -81,25 +81,23 @@ end_point load_balancer::find_minimal_load_machine(bool primaryOnly)
     {
         return l.second < r.second;
     });
-    
-    //std::sort(stats.begin(), stats.end(), MachineLoadComp);
 
     if (stats.empty())
     {
         return end_point::INVALID;
     }
 
-    int candidateCount = 1;
+    int candidate_count = 1;
     int val = stats[0].second;
 
     for (size_t i = 1; i < stats.size(); i++)
     {
         if (stats[i].second > val)
             break;
-        candidateCount++;
+        candidate_count++;
     }
 
-    return stats[env::random32(0, candidateCount - 1)].first;
+    return stats[env::random32(0, candidate_count - 1)].first;
 }
 
 void load_balancer::run_lb(partition_configuration& pc)
@@ -133,9 +131,9 @@ void load_balancer::run_lb(partition_configuration& pc)
     {
         proposal.type = CT_ADD_SECONDARY;
         proposal.node = find_minimal_load_machine(false);
-		if (proposal.node != end_point::INVALID && 
-			proposal.node != pc.primary &&
-			std::find(pc.secondaries.begin(), pc.secondaries.end(), proposal.node) == pc.secondaries.end())
+        if (proposal.node != end_point::INVALID && 
+            proposal.node != pc.primary &&
+            std::find(pc.secondaries.begin(), pc.secondaries.end(), proposal.node) == pc.secondaries.end())
         {
             send_proposal(pc.primary, proposal);
         }
@@ -149,6 +147,13 @@ void load_balancer::run_lb(partition_configuration& pc)
 // meta server => partition server
 void load_balancer::send_proposal(const end_point& node, const configuration_update_request& proposal)
 {
+    dinfo("send proposal %s of %s:%hu, current ballot = %lld", 
+        enum_to_string(proposal.type),
+        proposal.node.name.c_str(),
+        proposal.node.port,
+        proposal.config.ballot
+        );
+
     rpc::call_one_way_typed(node, RPC_CONFIG_PROPOSAL, proposal, gpid_to_hash(proposal.config.gpid));
 }
 
