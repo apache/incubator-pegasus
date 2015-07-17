@@ -116,6 +116,7 @@ namespace dsn {
                 }
             }
         }
+        
         void split_args(const char* args, __out_param std::list<std::string>& sargs, char splitter)
         {
             sargs.clear();
@@ -149,6 +150,16 @@ namespace dsn {
                     break;
                 }
             }
+        }
+
+        std::string replace_string(std::string subject, const std::string& search, const std::string& replace) 
+        {
+            size_t pos = 0;
+            while ((pos = subject.find(search, pos)) != std::string::npos) {
+                subject.replace(pos, search.length(), replace);
+                pos += replace.length();
+            }
+            return subject;
         }
 
         char* trim_string(char* s)

@@ -376,9 +376,6 @@ void server_state::update_configuration_internal(configuration_update_request& r
     if (old.ballot + 1 == request.config.ballot)
     {
         response.err = ERR_OK;
-
-        // update to new config
-        old = request.config;
         response.config = request.config;
         
         auto it = _nodes.find(request.node);
@@ -432,6 +429,9 @@ void server_state::update_configuration_internal(configuration_update_request& r
         default:
             dassert(false, "invalid config type %x", static_cast<int>(request.type));
         }
+        
+        // update to new config
+        old = request.config;
 
         std::stringstream cf;
         cf << "{primary:" << request.config.primary.name << ":" << request.config.primary.port << ", secondaries = [";

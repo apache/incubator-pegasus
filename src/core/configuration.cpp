@@ -31,7 +31,13 @@
 
 namespace dsn {
 
-configuration::configuration(const char* file_name)
+
+// arguments: k1=v1;k2=v2;k3=v3; ...
+// e.g.,
+//    port = %port%
+//    timeout = %timeout%
+// arguments: port=23466;timeout=1000
+configuration::configuration(const char* file_name, const char* arguments)
 {
     _warning = false;
     _file_name = std::string(file_name);
@@ -51,20 +57,41 @@ configuration::configuration(const char* file_name)
         return;
     }
 
-    int fileLength = len;
-    _file_data.reset((char*)malloc(len+1));
-    char* fileData = _file_data.get();
+    int file_length = len;
+    _file_data.resize(len + 1);
+    char* fdata = (char*)_file_data.c_str();
 
     ::fseek(fd, 0, SEEK_SET);
-    auto sz = ::fread(fileData, len, 1, fd);
+    auto sz = ::fread(fdata, len, 1, fd);
     ::fclose(fd);
     if (sz != 1)
     {
         printf("Cannot read correct data of %s, err=%s", file_name, strerror(errno));
         return;
     }
-    ((char*)fileData)[fileLength] = '\n';
+    ((char*)fdata)[file_length] = '\n';
 
+
+    // replace data with arguments
+    if (arguments != nullptr)
+    {
+        std::list<std::string> argkvs;
+        utils::split_args(arguments, argkvs, ';');
+        for (auto& kv : argkvs)
+        {
+            std::list<std::string> vs;
+            utils::split_args(kv.c_str(), vs, '=');
+            if (vs.size() != 2)
+            {
+                printf("invalid configuration argument: '%s' in '%s'\n", kv.c_str(), arguments);
+                return;
+            }
+
+            std::string key = std::string("%") + *vs.begin() + std::string("%");
+            std::string value = *vs.rbegin();
+            _file_data = utils::replace_string(_file_data, key, value);
+        }
+    }
     //
     // parse mapped file and build conf map
     //
@@ -73,8 +100,8 @@ configuration::configuration(const char* file_name)
     int lineno = 0;
     unsigned int indexInSection = 0;
 
-    p = (char*)fileData;
-    pEnd = p + fileLength;
+    p = (char*)fdata;
+    pEnd = p + file_length;
 
     while (p < pEnd) {
         //
