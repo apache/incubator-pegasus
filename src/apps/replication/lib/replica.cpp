@@ -93,12 +93,6 @@ replica::~replica(void)
         delete _prepare_list;
         _prepare_list = nullptr;
     }
-
-    if (nullptr != _app)
-    {
-        delete _app;
-        _app = nullptr;
-    }
 }
 
 void replica::on_client_read(const read_request_header& meta, message_ptr& request)
@@ -251,6 +245,8 @@ void replica::close()
     if (_app != nullptr)
     {
         _app->close(false);
+        delete _app;
+        _app = nullptr;
     }
 }
 

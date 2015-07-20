@@ -118,13 +118,12 @@ void meta_service::start(const char* data_dir, bool clean_state)
         );
 
     dassert(err == ERR_OK, "FD start failed, err = %s", err.to_string());
-
-    _started = true;
 }
 
 bool meta_service::stop()
 {
-    if (!_started) return false;
+    if (!_started || _balancer_timer == nullptr) return false;
+
     _started = false;
     _failure_detector->stop();
     delete _failure_detector;
@@ -150,6 +149,8 @@ void meta_service::on_load_balance_start()
         1,
         10000
         );
+
+    _started = true;
 }
 
 void meta_service::on_request(message_ptr& msg)
@@ -171,8 +172,12 @@ void meta_service::on_request(message_ptr& msg)
     message_ptr resp = msg->create_response();
     if (!is_primary)
     {
-        rhdr.err = ERR_TALK_TO_OTHERS;
-        
+        rhdr.err = ERR_TALK_TO_OTHERS;        
+        marshall(resp, rhdr);
+    }
+    else if (!_started)
+    {
+        rhdr.err = ERR_SERVICE_NOT_ACTIVE;
         marshall(resp, rhdr);
     }
     else if (hdr.rpc_tag == RPC_CM_QUERY_NODE_PARTITIONS)

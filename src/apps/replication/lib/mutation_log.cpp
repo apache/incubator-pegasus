@@ -205,25 +205,24 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
 
     auto bb = _pending_write->writer().get_buffer();
     uint64_t offset = end_offset() - bb.length();
-    auto buf = bb.buffer();
-    blob bb2(buf, bb.length());
 
+    dassert(*(int*)bb.data() != 0, "");
     task_ptr aio = _current_log_file->write_log_entry(
-        bb2,
+        bb,
         LPC_AIO_IMMEDIATE_CALLBACK,
         this,
         std::bind(
             &mutation_log::internal_write_callback, 
             std::placeholders::_1, 
             std::placeholders::_2, 
-            _pending_write_callbacks, bb2),
+            _pending_write_callbacks, bb),
         offset,
         -1
         );    
     
     if (aio == nullptr)
     {
-        internal_write_callback(ERR_FILE_OPERATION_FAILED, 0, _pending_write_callbacks, bb2);
+        internal_write_callback(ERR_FILE_OPERATION_FAILED, 0, _pending_write_callbacks, bb);
     }
     else
     {

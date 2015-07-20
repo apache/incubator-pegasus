@@ -128,17 +128,34 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
     {
         it->second->reset_prepare_list_after_replay();
 
-        derror(
-            "%u.%u @ %s:%hu: initialized durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
-            it->first.app_id, it->first.pidx,
-            primary_address().name.c_str(), primary_address().port,
-            it->second->last_durable_decree(),
-            it->second->last_committed_decree(),
-            it->second->max_prepared_decree(),
-            it->second->get_ballot()
-            );
+        if (err == ERR_OK)
+        {
+            derror(
+                "%u.%u @ %s:%hu: initialized, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
+                it->first.app_id, it->first.pidx,
+                primary_address().name.c_str(), primary_address().port,
+                it->second->last_durable_decree(),
+                it->second->last_committed_decree(),
+                it->second->max_prepared_decree(),
+                it->second->get_ballot()
+                );
 
-        it->second->set_inactive_state_transient(err == ERR_OK);
+            it->second->set_inactive_state_transient(true);
+        }
+        else
+        {
+            derror(
+                "%u.%u @ %s:%hu: initialized with log error, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
+                it->first.app_id, it->first.pidx,
+                primary_address().name.c_str(), primary_address().port,
+                it->second->last_durable_decree(),
+                it->second->last_committed_decree(),
+                it->second->max_prepared_decree(),
+                it->second->get_ballot()
+                );
+
+            it->second->set_inactive_state_transient(false);
+        }
     }
 
     // start log serving    

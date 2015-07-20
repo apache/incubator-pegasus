@@ -257,7 +257,7 @@ namespace dsn
                 ts = ::dsn::service::env::now_ns();
             char str[24];
             ::dsn::utils::time_ms_to_string(ts / 1000000, str);            
-            auto wn = sprintf(ptr, "%s (%llu %05d) ", str, static_cast<long long unsigned int>(ts), tid);
+            auto wn = sprintf(ptr, "%s (%llu %04x) ", str, static_cast<long long unsigned int>(ts), tid);
             ptr += wn;
             capacity -= wn;
 

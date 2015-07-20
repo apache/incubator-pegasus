@@ -416,8 +416,11 @@ void server_state::update_configuration_internal(configuration_update_request& r
             dassert(old.primary == request.node || 
                 std::find(old.secondaries.begin(), old.secondaries.end(), request.node) != old.secondaries.end(), "");
 # endif
-            node.partitions.erase(old.gpid);
-            node.primaries.erase(old.gpid);
+            if (request.node == old.primary)
+            {
+                node.primaries.erase(old.gpid);
+            }
+            node.partitions.erase(old.gpid);            
             break;
         case CT_UPGRADE_TO_SECONDARY:
 # ifdef _DEBUG

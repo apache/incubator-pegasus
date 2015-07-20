@@ -693,9 +693,14 @@ void replica::on_config_sync(const partition_configuration& config)
     {
         update_configuration(config);
 
-        if (config.primary == primary_address() && status() == PS_INACTIVE && !_inactive_is_transient)
+        if (status() == PS_INACTIVE && !_inactive_is_transient)
         {
-            _stub->remove_replica_on_meta_server(config);
+            if (config.primary == primary_address() // dead primary
+                || config.primary == end_point::INVALID // primary is dead (otherwise let primary remove this)
+                )
+            {
+                _stub->remove_replica_on_meta_server(config);
+            }
         }
     }
 }
@@ -730,9 +735,9 @@ void replica::replay_prepare_list()
         {
             mu->rpc_code = RPC_REPLICATION_WRITE_EMPTY;
             ddebug(
-                "%s: emit empty mutation %s when replay prepare list",
+                "%s: emit empty mutation %lld when replay prepare list",
                 name(),
-                mu->name()
+                decree
                 );
         }
 
