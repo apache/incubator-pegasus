@@ -93,12 +93,6 @@ replica::~replica(void)
         delete _prepare_list;
         _prepare_list = nullptr;
     }
-
-    if (nullptr != _app)
-    {
-        delete _app;
-        _app = nullptr;
-    }
 }
 
 void replica::on_client_read(const read_request_header& meta, message_ptr& request)
@@ -126,7 +120,10 @@ void replica::on_client_read(const read_request_header& meta, message_ptr& reque
 void replica::response_client_message(message_ptr& request, error_code error, decree d/* = invalid_decree*/)
 {
     if (nullptr == request)
+    {
+        error.end_tracking();
         return;
+    }   
 
     message_ptr resp = request->create_response();
     resp->writer().write(error);
@@ -248,6 +245,8 @@ void replica::close()
     if (_app != nullptr)
     {
         _app->close(false);
+        delete _app;
+        _app = nullptr;
     }
 }
 

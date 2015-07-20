@@ -60,7 +60,7 @@ namespace dsn
 
         static __thread struct __tail_log_info__ s_tail_log_info;
         
-        static void hpc_tail_logs_dumpper(sys_exit_type);
+        static void hpc_tail_logs_dumpper();
 
         hpc_tail_logger::hpc_tail_logger() 
         {
@@ -106,20 +106,22 @@ namespace dsn
                 "tail-log-dump dump all tail logs to log files",
                 [this](const std::vector<std::string>& args)
                 {
-                    hpc_tail_logs_dumpper(sys_exit_type::SYS_EXIT_INVALID);
+                    hpc_tail_logs_dumpper();
                     return std::string("logs are dumped to coredurmp dir started with hpc_tail_logs.xxx.log");
                 }
             );
-
-            // register system exit
-            ::dsn::tools::sys_exit.put_back(hpc_tail_logs_dumpper, "hpc_tail_log");
         }
 
         hpc_tail_logger::~hpc_tail_logger(void)
         {
         }
 
-        static void hpc_tail_logs_dumpper(sys_exit_type)
+        void hpc_tail_logger::flush()
+        {
+            hpc_tail_logs_dumpper();
+        }
+
+        static void hpc_tail_logs_dumpper()
         {
             uint64_t nts = ::dsn::service::env::now_ns();
             std::stringstream log;
@@ -255,7 +257,7 @@ namespace dsn
                 ts = ::dsn::service::env::now_ns();
             char str[24];
             ::dsn::utils::time_ms_to_string(ts / 1000000, str);            
-            auto wn = sprintf(ptr, "%s(%llu %05d)", str, static_cast<long long unsigned int>(ts), tid);
+            auto wn = sprintf(ptr, "%s (%llu %04x) ", str, static_cast<long long unsigned int>(ts), tid);
             ptr += wn;
             capacity -= wn;
 

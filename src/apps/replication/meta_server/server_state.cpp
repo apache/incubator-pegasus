@@ -289,7 +289,7 @@ void server_state::remove_meta_node(const end_point& node)
         }
     }
 
-    dassert (false, "cannot find node '%s:%d' in server state", node.name.c_str(), static_cast<int>(node.port));
+    dassert (false, "cannot find node '%s:%hu' in server state", node.name.c_str(), node.port);
 }
 
 void server_state::switch_meta_primary()
@@ -376,45 +376,65 @@ void server_state::update_configuration_internal(configuration_update_request& r
     if (old.ballot + 1 == request.config.ballot)
     {
         response.err = ERR_OK;
-
-        // update to new config
-        old = request.config;
         response.config = request.config;
         
         auto it = _nodes.find(request.node);
         dassert(it != _nodes.end(), "");
         node_state& node = it->second;
 
-        const char* type = "unknown";
         switch (request.type)
         {
         case CT_ASSIGN_PRIMARY:
-        case CT_UPGRADE_TO_PRIMARY:
+# ifdef _DEBUG
+            dassert(old.primary != request.node, "");
+            dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end(), "");
+# endif
             node.partitions.insert(old.gpid);
             node.primaries.insert(old.gpid);
-            type = "assign primary";
+            break; 
+        case CT_UPGRADE_TO_PRIMARY:
+# ifdef _DEBUG
+            dassert(old.primary != request.node, "");
+            dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) != old.secondaries.end(), "");
+# endif
+            node.partitions.insert(old.gpid);
+            node.primaries.insert(old.gpid);
             break;
         case CT_ADD_SECONDARY:
-            node.partitions.insert(old.gpid);
-            type = "add secondary";
+            dassert(false, "invalid execution flow");
             break;
         case CT_DOWNGRADE_TO_SECONDARY:
+# ifdef _DEBUG
+            dassert(old.primary == request.node, "");
+            dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end(), "");
+# endif
             node.primaries.erase(old.gpid);
-            type = "downgrade to secondary";
             break;
         case CT_DOWNGRADE_TO_INACTIVE:
         case CT_REMOVE:
-            node.partitions.erase(old.gpid);
-            node.primaries.erase(old.gpid);
-            type = request.type == CT_REMOVE ? "remove" : "downgrade to inactive";
+# ifdef _DEBUG
+            dassert(old.primary == request.node || 
+                std::find(old.secondaries.begin(), old.secondaries.end(), request.node) != old.secondaries.end(), "");
+# endif
+            if (request.node == old.primary)
+            {
+                node.primaries.erase(old.gpid);
+            }
+            node.partitions.erase(old.gpid);            
             break;
         case CT_UPGRADE_TO_SECONDARY:
+# ifdef _DEBUG
+            dassert(old.primary != request.node, "");
+            dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end(), "");
+# endif
             node.partitions.insert(old.gpid);
-            type = "upgrade to secondary";
             break;
         default:
             dassert(false, "invalid config type %x", static_cast<int>(request.type));
         }
+        
+        // update to new config
+        old = request.config;
 
         std::stringstream cf;
         cf << "{primary:" << request.config.primary.name << ":" << request.config.primary.port << ", secondaries = [";
@@ -428,7 +448,7 @@ void server_state::update_configuration_internal(configuration_update_request& r
             request.config.gpid.app_id,
             request.config.gpid.pidx,
             request.config.ballot,
-            type,
+            enum_to_string(request.type),
             cf.str().c_str()
             );
     }

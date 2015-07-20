@@ -42,7 +42,7 @@ class mutation_log : public virtual servicelet
 {
 public:
     // mutationPtr
-    typedef std::function<void (mutation_ptr&)> ReplayCallback;
+    typedef std::function<void (mutation_ptr&)> replay_callback;
 
 public:
     //
@@ -61,7 +61,7 @@ public:
     // initialization
     //
     error_code initialize(const char* dir);
-    error_code replay(ReplayCallback callback);
+    error_code replay(replay_callback callback);
     void reset();
     error_code start_write_service(multi_partition_decrees& initMaxDecrees, int max_staleness_for_commit);
     void close();

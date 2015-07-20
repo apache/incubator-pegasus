@@ -50,7 +50,12 @@ public:
     }
 
 public:
-    configuration(const char* file_name);
+    // arguments: k1=v1;k2=v2;k3=v3; ...
+    // e.g.,
+    //    port = %port%
+    //    timeout = %timeout%
+    // arguments: port=23466;timeout=1000
+    configuration(const char* file_name, const char* arguments = nullptr);
 
     ~configuration(void);
 
@@ -92,7 +97,7 @@ private:
     std::string                             _file_name;
     config_map                              _configs;
     std::list<config_file_change_notifier>  _notifiers;
-    std::shared_ptr<char>                   _file_data;
+    std::string                             _file_data;
     bool                                    _warning;
 };
 

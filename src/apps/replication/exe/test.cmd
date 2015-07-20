@@ -1,9 +1,14 @@
 echo OFF
-for /l %%x in (1, 1, 10) do (
+mkdir test
+copy /Y *.ini .\test
+copy /Y *.exe .\test
+copy /Y *.pdb .\test
+copy /Y *.cmd .\test
+	
+for /l %%x in (1, 1, 40) do (
 	echo start test instance %%x 
 	mkdir test-%%x
-	copy config.ini .\test-%%x
 	cd test-%%x	
-	start ..\dsn.replication.simple_kv.exe ..\config.ini
+	start "test-%%x" /LOW ../test/dsn.replication.simple_kv.exe ../test/config.ini
 	cd ..
 )

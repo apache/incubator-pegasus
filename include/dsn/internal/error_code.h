@@ -82,7 +82,13 @@ struct error_code : public dsn::utils::customized_id<error_code>
 # ifdef _DEBUG
     ~error_code()
     {
-        dassert (_used, "error code is not handled");
+        // in cases where error code is std::bind-ed as task callbacks,
+        // and when tasks are cancelled, it is difficult to end track them on cancel
+        // therefore we change derror to dwarn
+        if (!_used)
+        {
+            dlog(log_level_WARNING, "error-code", "error code is not handled");
+        }
     }
 
     const char* to_string() const

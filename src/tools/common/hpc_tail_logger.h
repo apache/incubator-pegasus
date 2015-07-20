@@ -46,6 +46,8 @@ namespace dsn {
                 va_list args
                 );
 
+            virtual void flush();
+
         private:
             std::string search(const char* keyword, int back_seconds, int back_start_seconds, std::unordered_set<int>& target_threads);
             

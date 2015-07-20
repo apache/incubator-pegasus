@@ -149,7 +149,7 @@ error_code mutation_log::create_new_log_file()
         return ERR_FILE_OPERATION_FAILED;
     }    
 
-    derror ("create new log file %s", logFile->path().c_str());
+    dinfo ("create new log file %s", logFile->path().c_str());
         
     _last_file_number++;
     dassert (_log_files.find(_last_file_number) == _log_files.end(), "");
@@ -205,25 +205,24 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
 
     auto bb = _pending_write->writer().get_buffer();
     uint64_t offset = end_offset() - bb.length();
-    auto buf = bb.buffer();
-    blob bb2(buf, bb.length());
 
+    dassert(*(int*)bb.data() != 0, "");
     task_ptr aio = _current_log_file->write_log_entry(
-        bb2,
+        bb,
         LPC_AIO_IMMEDIATE_CALLBACK,
         this,
         std::bind(
             &mutation_log::internal_write_callback, 
             std::placeholders::_1, 
             std::placeholders::_2, 
-            _pending_write_callbacks, bb2),
+            _pending_write_callbacks, bb),
         offset,
         -1
         );    
     
     if (aio == nullptr)
     {
-        internal_write_callback(ERR_FILE_OPERATION_FAILED, 0, _pending_write_callbacks, bb2);
+        internal_write_callback(ERR_FILE_OPERATION_FAILED, 0, _pending_write_callbacks, bb);
     }
     else
     {
@@ -244,7 +243,7 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
         error_code ret = create_new_log_file();
         if (ret != ERR_OK)
         {
-            derror ("create new log file failed, err = %s", ret.to_string());
+            dinfo ("create new log file failed, err = %s", ret.to_string());
         }
         return ret;
     }
@@ -263,7 +262,7 @@ void mutation_log::internal_write_callback(error_code err, uint32_t size, mutati
 /*
 TODO: when there is a log error, the server cannot contain any primary or secondary any more!
 */
-error_code mutation_log::replay(ReplayCallback callback)
+error_code mutation_log::replay(replay_callback callback)
 {
     zauto_lock l(_lock);
 
@@ -525,8 +524,12 @@ int mutation_log::garbage_collection(multi_partition_decrees& durable_decrees, m
             dassert(it4 != max_seen_decrees.end(), "");
 
             decree max_seen_decree = it4->second;
-            dassert(max_seen_decree >= lastDurableDecree, "");
-        
+            if (max_seen_decree < lastDurableDecree)
+            {
+                // learn after last prepare, therefore it is ok to delete logs
+                continue;
+            }
+
             auto it3 = log->init_prepare_decrees().find(gpid);
             if (it3 == log->init_prepare_decrees().end())
             {
