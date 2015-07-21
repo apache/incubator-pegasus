@@ -33,8 +33,8 @@ extern "C" {
 
     # define DSN_API 
 
-    # define MAX_TASK_CODE_NAME_LENGTH 47
-    # define MAX_END_POINT_NAME_LENGTH 31
+    # define MAX_TASK_CODE_NAME_LENGTH 48
+    # define MAX_END_POINT_NAME_LENGTH 16
 
     //------------------------------------------------------------------------------
     //
@@ -127,7 +127,7 @@ extern "C" {
     {
         uint32_t ip;
         uint16_t port;
-        char     name[MAX_END_POINT_NAME_LENGTH + 1];
+        char     name[MAX_END_POINT_NAME_LENGTH];
     } dsn_endpoint_t;
     
     // end point utilities
@@ -148,7 +148,7 @@ extern "C" {
         int32_t       version;
         uint64_t      id;
         uint64_t      rpc_id;
-        char          rpc_name[MAX_TASK_CODE_NAME_LENGTH + 1];
+        char          rpc_name[MAX_TASK_CODE_NAME_LENGTH];
 
         // info from client => server
         union

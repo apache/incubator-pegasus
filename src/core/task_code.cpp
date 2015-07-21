@@ -79,8 +79,8 @@ task_spec::task_spec(int code, const char* name, dsn_task_type_t type, threadpoo
     }
 
     dassert (
-        strlen(name) <= MAX_TASK_CODE_NAME_LENGTH, 
-        "task code name '%s' is too long: length must not be larger than MAX_TASK_CODE_NAME_LENGTH (%u)", 
+        strlen(name) < MAX_TASK_CODE_NAME_LENGTH, 
+        "task code name '%s' is too long: length must be smaller than MAX_TASK_CODE_NAME_LENGTH (%u)", 
         name, MAX_TASK_CODE_NAME_LENGTH
         );
 

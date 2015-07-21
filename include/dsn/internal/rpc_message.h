@@ -43,7 +43,7 @@ struct message_header
     int32_t       version;
     uint64_t      id;
     uint64_t      rpc_id;
-    char          rpc_name[MAX_TASK_CODE_NAME_LENGTH + 1];
+    char          rpc_name[MAX_TASK_CODE_NAME_LENGTH];
 
     // info from client => server
     union

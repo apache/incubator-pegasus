@@ -136,7 +136,7 @@ message_ptr message::create_request(task_code rpc_code, int timeout_milliseconds
         hdr.client.timeout_ms = timeout_milliseconds;
     }    
 
-    strcpy(hdr.rpc_name, rpc_code.to_string());
+    strncpy(hdr.rpc_name, rpc_code.to_string(), sizeof(hdr.rpc_name));
 
     hdr.id = message::new_id();
     
@@ -159,8 +159,8 @@ message_ptr message::create_response()
     hdr.server.error = ERR_OK.get();
     hdr.local_rpc_code = task_spec::get(_msg_header.local_rpc_code)->rpc_paired_code;
     
-    strcpy(hdr.rpc_name, _msg_header.rpc_name);
-    strcat(hdr.rpc_name, "_ACK");
+    strncpy(hdr.rpc_name, _msg_header.rpc_name, sizeof(hdr.rpc_name));
+    strncat(hdr.rpc_name, "_ACK", sizeof(hdr.rpc_name));
 
     hdr.from_address = _msg_header.to_address;
     hdr.to_address = _msg_header.from_address;

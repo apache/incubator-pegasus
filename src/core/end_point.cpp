@@ -61,8 +61,7 @@ DSN_API void dsn_build_end_point(dsn_endpoint_t* ep, const char* host, uint16_t 
     }
     
     ep->port = port;
-    strncpy(ep->name, host, MAX_END_POINT_NAME_LENGTH + 1);
-    ep->name[MAX_END_POINT_NAME_LENGTH] = '\0';
+    strncpy(ep->name, host, sizeof(ep->name));
     
     sockaddr_in addr;
     memset(&addr,0,sizeof(addr));

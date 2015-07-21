@@ -355,7 +355,7 @@ namespace dsn {
                 auto msg_bb = _read_buffer.range(hdr_sz, msg_sz);
                 message_ptr msg = new message(msg_bb, false);
                 msg->header().id = msg->header().rpc_id = rseqid;
-                strcpy(msg->header().rpc_name, fname.c_str());
+                strncpy(msg->header().rpc_name, fname.c_str(), sizeof(msg->header().rpc_name));
                 msg->header().body_length = msg_sz;
 
                 _read_buffer = _read_buffer.range(msg_sz + hdr_sz);
