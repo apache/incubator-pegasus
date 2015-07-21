@@ -86,7 +86,7 @@ namespace dsn {
             servicelet(int task_bucket_count = 8);
             virtual ~servicelet();
 
-            static dsn_endpoint_t primary_address() { return rpc::primary_address(); }
+            static dsn_address_t primary_address() { return rpc::primary_address(); }
             static uint32_t random32(uint32_t min, uint32_t max) { return env::random32(min, max); }
             static uint64_t random64(uint64_t min, uint64_t max) { return env::random64(min, max); }
             static uint64_t now_ns() { return env::now_ns(); }

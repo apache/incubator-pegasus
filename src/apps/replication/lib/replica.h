@@ -128,7 +128,7 @@ private:
     /////////////////////////////////////////////////////////////////
     // 2pc
     void init_prepare(mutation_ptr& mu);
-    void send_prepare_message(const dsn_endpoint_t& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds);
+    void send_prepare_message(const dsn_address_t& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds);
     void on_append_log_completed(mutation_ptr& mu, error_code err, uint32_t size);
     void on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, error_code err, message_ptr& request, message_ptr& reply);
     void do_possible_commit_on_primary(mutation_ptr& mu);    
@@ -142,23 +142,23 @@ private:
     void on_copy_remote_state_completed(error_code err, int size, std::shared_ptr<learn_response> resp);
     void on_learn_remote_state_completed(error_code err);
     void handle_learning_error(error_code err);
-    void handle_learning_succeeded_on_primary(const dsn_endpoint_t& node, uint64_t learnSignature);
+    void handle_learning_succeeded_on_primary(const dsn_address_t& node, uint64_t learnSignature);
     void notify_learn_completion();
         
     /////////////////////////////////////////////////////////////////
     // failure handling    
     void handle_local_failure(error_code error);
-    void handle_remote_failure(partition_status status, const dsn_endpoint_t& node, error_code error);
+    void handle_remote_failure(partition_status status, const dsn_address_t& node, error_code error);
 
     /////////////////////////////////////////////////////////////////
     // reconfiguration
     void assign_primary(configuration_update_request& proposal);
     void add_potential_secondary(configuration_update_request& proposal);
-    void upgrade_to_secondary_on_primary(const dsn_endpoint_t& node);
+    void upgrade_to_secondary_on_primary(const dsn_address_t& node);
     void downgrade_to_secondary_on_primary(configuration_update_request& proposal);
     void downgrade_to_inactive_on_primary(configuration_update_request& proposal);
     void remove(configuration_update_request& proposal);
-    void update_configuration_on_meta_server(config_type type, const dsn_endpoint_t& node, partition_configuration& newConfig);
+    void update_configuration_on_meta_server(config_type type, const dsn_address_t& node, partition_configuration& newConfig);
     void on_update_configuration_on_meta_server_reply(error_code err, message_ptr& request, message_ptr& response, std::shared_ptr<configuration_update_request> req);
     void replay_prepare_list();
     bool is_same_ballot_status_change_allowed(partition_status olds, partition_status news);

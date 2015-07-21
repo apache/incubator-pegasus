@@ -43,7 +43,7 @@ meta_server_failure_detector::~meta_server_failure_detector(void)
 {
 }
 
-void meta_server_failure_detector::on_worker_disconnected(const std::vector<dsn_endpoint_t>& nodes)
+void meta_server_failure_detector::on_worker_disconnected(const std::vector<dsn_address_t>& nodes)
 {
     if (!is_primary())
     {
@@ -73,7 +73,7 @@ void meta_server_failure_detector::on_worker_disconnected(const std::vector<dsn_
     }
 }
 
-void meta_server_failure_detector::on_worker_connected(const dsn_endpoint_t& node)
+void meta_server_failure_detector::on_worker_connected(const dsn_address_t& node)
 {
     if (!is_primary())
     {
@@ -125,7 +125,7 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::
     ack.this_node = beacon.to;
     if (!is_primary())
     {
-        dsn_endpoint_t master;
+        dsn_address_t master;
         if (_state->get_meta_server_primary(master))
         {
             ack.time = beacon.time;

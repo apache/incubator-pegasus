@@ -34,7 +34,7 @@ class simple_kv_client
 {
 public:
     simple_kv_client(
-        const std::vector<dsn_endpoint_t>& meta_servers,
+        const std::vector<dsn_address_t>& meta_servers,
         const char* app_name)
         : ::dsn::replication::replication_app_client_base(meta_servers, app_name) 
     {

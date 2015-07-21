@@ -38,14 +38,14 @@ inline int gpid_to_hash(global_partition_id gpid)
     return static_cast<int>(gpid.app_id ^ gpid.pidx);
 }
 
-typedef std::unordered_map<dsn_endpoint_t, partition_status> node_statuses;
-typedef std::unordered_map<dsn_endpoint_t, task_ptr> node_tasks;
+typedef std::unordered_map<dsn_address_t, partition_status> node_statuses;
+typedef std::unordered_map<dsn_address_t, task_ptr> node_tasks;
 
 class replication_options
 {
 public:
     std::string working_dir;
-    std::vector<dsn_endpoint_t> meta_servers;
+    std::vector<dsn_address_t> meta_servers;
 
     int32_t prepare_timeout_ms_for_secondaries;
     int32_t prepare_timeout_ms_for_potential_secondaries;
@@ -92,8 +92,8 @@ private:
 class replica_helper
 {
 public:
-    static bool remove_node(const dsn_endpoint_t& node, __inout_param std::vector<dsn_endpoint_t>& nodeList);
-    static bool get_replica_config(const partition_configuration& partition_config, const dsn_endpoint_t& node, __out_param replica_configuration& replica_config);
+    static bool remove_node(const dsn_address_t& node, __inout_param std::vector<dsn_address_t>& nodeList);
+    static bool get_replica_config(const partition_configuration& partition_config, const dsn_address_t& node, __out_param replica_configuration& replica_config);
 };
 
 }} // namespace

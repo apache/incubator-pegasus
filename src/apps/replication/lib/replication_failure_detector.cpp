@@ -29,7 +29,7 @@
 namespace dsn { namespace replication {
 
 
-replication_failure_detector::replication_failure_detector(replica_stub* stub, std::vector<dsn_endpoint_t>& meta_servers)
+replication_failure_detector::replication_failure_detector(replica_stub* stub, std::vector<dsn_address_t>& meta_servers)
 {
     _stub = stub;
     _meta_servers = meta_servers;
@@ -41,7 +41,7 @@ replication_failure_detector::~replication_failure_detector(void)
 
 }
 
-dsn_endpoint_t replication_failure_detector::find_next_meta_server(dsn_endpoint_t current)
+dsn_address_t replication_failure_detector::find_next_meta_server(dsn_address_t current)
 {
     if (dsn_endpoint_invalid == current)
         return _meta_servers[random32(0, 100) % _meta_servers.size()];
@@ -67,7 +67,7 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
     {
         if (err != ERR_OK)
         {
-            dsn_endpoint_t node = find_next_meta_server(ack.this_node);
+            dsn_address_t node = find_next_meta_server(ack.this_node);
             if (ack.this_node != node)
             {
                 switch_master(ack.this_node, node);
@@ -103,7 +103,7 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
 }
 
 // client side
-void replication_failure_detector::on_master_disconnected( const std::vector<dsn_endpoint_t>& nodes )
+void replication_failure_detector::on_master_disconnected( const std::vector<dsn_address_t>& nodes )
 {
     bool primaryDisconnected = false;
 
@@ -122,7 +122,7 @@ void replication_failure_detector::on_master_disconnected( const std::vector<dsn
     }
 }
 
-void replication_failure_detector::on_master_connected( const dsn_endpoint_t& node)
+void replication_failure_detector::on_master_connected( const dsn_address_t& node)
 {
     bool is_primary = false;
 

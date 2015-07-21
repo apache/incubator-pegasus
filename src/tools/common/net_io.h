@@ -36,7 +36,7 @@ namespace dsn {
         class net_io
         {
         public:
-            net_io(const dsn_endpoint_t& remote_addr,
+            net_io(const dsn_address_t& remote_addr,
                 boost::asio::ip::tcp::socket& socket,
                 std::shared_ptr<dsn::message_parser>& parser);
             virtual ~net_io();
@@ -60,7 +60,7 @@ namespace dsn {
 
             boost::asio::io_service      &_io_service;
             boost::asio::ip::tcp::socket _socket;
-            dsn_endpoint_t                    _remote_addr;
+            dsn_address_t                    _remote_addr;
             std::shared_ptr<dsn::message_parser> _parser;
             
             // TODO: expose the queue to be customizable
@@ -71,7 +71,7 @@ namespace dsn {
         class client_net_io : public net_io
         {
         public:
-            client_net_io(const dsn_endpoint_t& remote_addr,
+            client_net_io(const dsn_address_t& remote_addr,
                 boost::asio::ip::tcp::socket& socket,
                 std::shared_ptr<dsn::message_parser>& parser);
 

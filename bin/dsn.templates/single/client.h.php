@@ -16,8 +16,8 @@ class <?=$svc->name?>_client
     : public virtual ::dsn::service::servicelet
 {
 public:
-    <?=$svc->name?>_client(const dsn_endpoint_t& server) { _server = server; }
-    <?=$svc->name?>_client() { _server = dsn_endpoint_t::INVALID; }
+    <?=$svc->name?>_client(const dsn_address_t& server) { _server = server; }
+    <?=$svc->name?>_client() { _server = dsn_address_t::INVALID; }
     virtual ~<?=$svc->name?>_client() {}
 
 <?php foreach ($svc->functions as $f) { ?>
@@ -27,7 +27,7 @@ public:
     void <?=$f->name?>(
         const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
         int hash = 0,
-        const dsn_endpoint_t *p_server_addr = nullptr)
+        const dsn_address_t *p_server_addr = nullptr)
     {
         ::dsn::message_ptr msg = ::dsn::message::create_request(<?=$f->get_rpc_code()?>, 0, hash);
         marshall(msg->writer(), <?=$f->get_first_param()->name?>);
@@ -40,7 +40,7 @@ public:
         __out_param <?=$f->get_cpp_return_type()?>& resp, 
         int timeout_milliseconds = 0, 
         int hash = 0,
-        const dsn_endpoint_t *p_server_addr = nullptr)
+        const dsn_address_t *p_server_addr = nullptr)
     {
         ::dsn::message_ptr msg = ::dsn::message::create_request(<?=$f->get_rpc_code()?>, timeout_milliseconds, hash);
         marshall(msg->writer(), <?=$f->get_first_param()->name?>);
@@ -60,7 +60,7 @@ public:
         int timeout_milliseconds = 0, 
         int reply_hash = 0,
         int request_hash = 0,
-        const dsn_endpoint_t *p_server_addr = nullptr)
+        const dsn_address_t *p_server_addr = nullptr)
     {
         return ::dsn::service::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
@@ -93,7 +93,7 @@ public:
         int timeout_milliseconds = 0, 
         int reply_hash = 0,
         int request_hash = 0,
-        const dsn_endpoint_t *p_server_addr = nullptr)
+        const dsn_address_t *p_server_addr = nullptr)
     {
         return ::dsn::service::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
@@ -123,7 +123,7 @@ public:
 <?php } ?>
 
 private:
-    dsn_endpoint_t _server;
+    dsn_address_t _server;
 };
 
 <?php } ?>

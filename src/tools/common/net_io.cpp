@@ -36,7 +36,7 @@ namespace dsn {
     namespace tools {
 
         net_io::net_io(
-            const dsn_endpoint_t& remote_addr,
+            const dsn_address_t& remote_addr,
             boost::asio::ip::tcp::socket& socket,
             std::shared_ptr<dsn::message_parser>& parser
             )
@@ -182,7 +182,7 @@ namespace dsn {
 
         // ------------------------------------------------------------
         
-        client_net_io::client_net_io(const dsn_endpoint_t& remote_addr,
+        client_net_io::client_net_io(const dsn_address_t& remote_addr,
             boost::asio::ip::tcp::socket& socket,
             std::shared_ptr<dsn::message_parser>& parser)
             :

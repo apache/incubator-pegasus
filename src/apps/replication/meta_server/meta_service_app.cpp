@@ -70,7 +70,7 @@ namespace dsn {
                     delete _service;
                     _service = nullptr;
 
-                    dsn_endpoint_t primary;
+                    dsn_address_t primary;
                     if (!_reliable_state->get_meta_server_primary(primary))
                     {
                         delete _reliable_state;

@@ -101,7 +101,7 @@ void primary_context::reset_membership(const partition_configuration& config, bo
     }
 }
 
-bool primary_context::get_replica_config(const dsn_endpoint_t& node, __out_param replica_configuration& config)
+bool primary_context::get_replica_config(const dsn_address_t& node, __out_param replica_configuration& config)
 {
     config.gpid = membership.gpid;
     config.primary = membership.primary;  
@@ -129,7 +129,7 @@ void primary_context::get_replica_config(partition_status st, __out_param replic
     config.status = st;
 }
 
-bool primary_context::check_exist(const dsn_endpoint_t& node, partition_status st)
+bool primary_context::check_exist(const dsn_address_t& node, partition_status st)
 {
     switch (st)
     {

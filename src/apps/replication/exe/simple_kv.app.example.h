@@ -49,7 +49,7 @@ public:
         if (argc < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        std::vector<dsn_endpoint_t> meta_servers;
+        std::vector<dsn_address_t> meta_servers;
         auto cf = ::dsn::service::system::config();
         ::dsn::replication::replication_app_client_base::load_meta_servers(cf, meta_servers);
         
@@ -124,7 +124,7 @@ public:
         if (argc < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        std::vector<dsn_endpoint_t> meta_servers;
+        std::vector<dsn_address_t> meta_servers;
         auto cf = ::dsn::service::system::config();
         ::dsn::replication::replication_app_client_base::load_meta_servers(cf, meta_servers);
 

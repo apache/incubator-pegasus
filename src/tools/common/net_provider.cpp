@@ -67,7 +67,7 @@ namespace dsn {
             return ERR_OK;
         }
 
-        rpc_client_session_ptr asio_network_provider::create_client_session(const dsn_endpoint_t& server_addr)
+        rpc_client_session_ptr asio_network_provider::create_client_session(const dsn_address_t& server_addr)
         {
             auto matcher = new_client_matcher();
             auto parser = new_message_parser();
@@ -82,7 +82,7 @@ namespace dsn {
             {
                 if (!ec)
                 {
-                    dsn_endpoint_t client_addr;
+                    dsn_address_t client_addr;
                     client_addr.ip = htonl(_socket->remote_endpoint().address().to_v4().to_ulong());
                     client_addr.port = _socket->remote_endpoint().port();
 

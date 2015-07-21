@@ -62,8 +62,8 @@ struct message_header
     };
 
     // local fields - no need to be transmitted
-    dsn_endpoint_t     from_address;
-    dsn_endpoint_t     to_address;
+    dsn_address_t     from_address;
+    dsn_address_t     to_address;
     uint16_t      local_rpc_code;
     
     void marshall(binary_writer& writer);

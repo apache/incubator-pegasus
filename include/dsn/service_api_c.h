@@ -60,10 +60,10 @@ extern "C" {
     extern DSN_API const char* dsn_error_to_string(dsn_error_t err);
 
     extern DSN_API dsn_threadpool_code_t dsn_threadpool_register(const char* name);
-    extern DSN_API const char* dsn_threadpool_to_string(dsn_threadpool_code_t pool_code);
+    extern DSN_API const char*           dsn_threadpool_to_string(dsn_threadpool_code_t pool_code);
 
     extern DSN_API dsn_task_code_t dsn_task_code_register(const char* name, dsn_task_type_t type, dsn_threadpool_code_t pool);
-    extern DSN_API const char* dsn_task_code_to_string(dsn_task_code_t code);
+    extern DSN_API const char*     dsn_task_code_to_string(dsn_task_code_t code);
     
     //------------------------------------------------------------------------------
     //
@@ -123,16 +123,16 @@ extern "C" {
     // rpc
     //
     //------------------------------------------------------------------------------
-    typedef struct dsn_endpoint_t
+    typedef struct dsn_address_t
     {
         uint32_t ip;
         uint16_t port;
         char     name[MAX_END_POINT_NAME_LENGTH];
-    } dsn_endpoint_t;
+    } dsn_address_t;
     
     // end point utilities
-    extern DSN_API dsn_endpoint_t dsn_endpoint_invalid;
-    extern DSN_API void           dsn_build_end_point(dsn_endpoint_t* ep, const char* host, uint16_t port);
+    extern DSN_API dsn_address_t dsn_endpoint_invalid;
+    extern DSN_API void          dsn_build_end_point(dsn_address_t* ep, const char* host, uint16_t port);
 
     typedef struct dsn_buffer_t
     {
@@ -167,9 +167,9 @@ extern "C" {
         };
 
         // local fields - no need to be transmitted
-        dsn_endpoint_t from_address;
-        dsn_endpoint_t to_address;
-        uint16_t       local_rpc_code;
+        dsn_address_t from_address;
+        dsn_address_t to_address;
+        uint16_t      local_rpc_code;
     } dsn_message_header;
 
     # define DSN_MSG_HDR_SERIALIZED_SIZE \
@@ -207,13 +207,13 @@ extern "C" {
     typedef void(*dsn_rpc_request_handler_t)(dsn_message_t*, dsn_param_t);
     typedef void(*dsn_rpc_response_handler_t)(dsn_error_t, dsn_message_t*, dsn_message_t*, dsn_param_t);    
     
-    extern DSN_API dsn_endpoint_t dsn_rpc_primary_address();
-    extern DSN_API bool           dsn_rpc_register_handler(dsn_task_code_t code, const char* name, dsn_rpc_request_handler_t cb, dsn_param_t param);
-    extern DSN_API bool           dsn_rpc_unregiser_handler(dsn_task_code_t code);
-    extern DSN_API void           dsn_rpc_reply(dsn_message_t* response, dsn_rpc_async_callback_t cb, dsn_param_t param);
-    extern DSN_API dsn_task_t     dsn_rpc_call(dsn_endpoint_t server, dsn_message_t* request, dsn_rpc_response_handler_t cb, dsn_param_t param);
-    extern DSN_API dsn_task_t     dsn_rpc_call2(dsn_endpoint_t server, dsn_message_t* request, dsn_rpc_async_callback_t cb, dsn_param_t param);
-    extern DSN_API void           dsn_rpc_call_one_way(dsn_endpoint_t server, dsn_message_t* request, dsn_rpc_async_callback_t cb, dsn_param_t param);
+    extern DSN_API dsn_address_t dsn_rpc_primary_address();
+    extern DSN_API bool          dsn_rpc_register_handler(dsn_task_code_t code, const char* name, dsn_rpc_request_handler_t cb, dsn_param_t param);
+    extern DSN_API bool          dsn_rpc_unregiser_handler(dsn_task_code_t code);
+    extern DSN_API void          dsn_rpc_reply(dsn_message_t* response, dsn_rpc_async_callback_t cb, dsn_param_t param);
+    extern DSN_API dsn_task_t    dsn_rpc_call(dsn_address_t server, dsn_message_t* request, dsn_rpc_response_handler_t cb, dsn_param_t param);
+    extern DSN_API dsn_task_t    dsn_rpc_call2(dsn_address_t server, dsn_message_t* request, dsn_rpc_async_callback_t cb, dsn_param_t param);
+    extern DSN_API void          dsn_rpc_call_one_way(dsn_address_t server, dsn_message_t* request, dsn_rpc_async_callback_t cb, dsn_param_t param);
 
     //------------------------------------------------------------------------------
     //
@@ -227,8 +227,8 @@ extern "C" {
     extern DSN_API dsn_task_t   dsn_file_task_create(dsn_task_code_t task, file_callback_t cb, dsn_param_t param, int hash);
     extern DSN_API void         dsn_file_read(dsn_handle_t file, char* buffer, int count, uint64_t offset, dsn_task_t cb);
     extern DSN_API void         dsn_file_write(dsn_handle_t file, const char* buffer, int count, uint64_t offset, dsn_task_t cb);
-    extern DSN_API void         dsn_file_copy_remote_directory(dsn_endpoint_t remote, const char* source_dir, const char* dest_dir, bool overwrite, dsn_task_t cb);
-    extern DSN_API void         dsn_file_copy_remote_files(dsn_endpoint_t remote, const char** source_files, const char* dest_dir, bool overwrite, dsn_task_t cb);
+    extern DSN_API void         dsn_file_copy_remote_directory(dsn_address_t remote, const char* source_dir, const char* dest_dir, bool overwrite, dsn_task_t cb);
+    extern DSN_API void         dsn_file_copy_remote_files(dsn_address_t remote, const char** source_files, const char* dest_dir, bool overwrite, dsn_task_t cb);
 
     //------------------------------------------------------------------------------
     //

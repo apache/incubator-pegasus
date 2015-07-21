@@ -41,7 +41,7 @@ namespace dsn {
 
         private:
             cli_client      _client;
-            dsn_endpoint_t  _target;
+            dsn_address_t  _target;
             int             _timeout_seconds;
         };
     }

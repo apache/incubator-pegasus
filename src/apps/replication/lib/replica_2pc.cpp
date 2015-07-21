@@ -136,7 +136,7 @@ ErrOut:
     return;
 }
 
-void replica::send_prepare_message(const dsn_endpoint_t& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds)
+void replica::send_prepare_message(const dsn_address_t& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds)
 {
     message_ptr msg = message::create_request(RPC_PREPARE, timeout_milliseconds, gpid_to_hash(get_gpid()));
     marshall(msg, get_gpid());
@@ -354,7 +354,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
     
     dassert (mu->data.header.ballot == get_ballot(), "");
 
-    dsn_endpoint_t node = request->header().to_address;
+    dsn_address_t node = request->header().to_address;
     partition_status st = _primary_states.get_node_status(node);
 
     // handle reply

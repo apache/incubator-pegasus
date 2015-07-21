@@ -32,7 +32,7 @@ using namespace ::dsn::service;
 
 void replication_app_client_base::load_meta_servers(
         configuration_ptr& cf, 
-        __out_param std::vector<dsn_endpoint_t>& servers
+        __out_param std::vector<dsn_address_t>& servers
         )
 {
     // read meta_servers from machine list file
@@ -46,7 +46,7 @@ void replication_app_client_base::load_meta_servers(
         auto pos1 = s.find_first_of(':');
         if (pos1 != std::string::npos)
         {
-            dsn_endpoint_t ep;
+            dsn_address_t ep;
             dsn_build_end_point(&ep, s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
             servers.push_back(ep);
         }
@@ -54,7 +54,7 @@ void replication_app_client_base::load_meta_servers(
 }
 
 replication_app_client_base::replication_app_client_base(
-    const std::vector<dsn_endpoint_t>& meta_servers, 
+    const std::vector<dsn_address_t>& meta_servers, 
     const char* app_name
     )
 {
@@ -210,7 +210,7 @@ void replication_app_client_base::call(request_context_ptr request, bool no_dela
         timeout_ms = static_cast<int>(request->timeout_ts_us - nts) / 1000;
     msg->header().client.timeout_ms = timeout_ms;
 
-    dsn_endpoint_t addr;
+    dsn_address_t addr;
     int app_id;
 
     error_code err = get_address(
@@ -374,7 +374,7 @@ Retry:
     call(rc.get(), false);
 }
 
-error_code replication_app_client_base::get_address(int pidx, bool is_write, __out_param dsn_endpoint_t& addr, __out_param int& app_id, read_semantic_t semantic)
+error_code replication_app_client_base::get_address(int pidx, bool is_write, __out_param dsn_address_t& addr, __out_param int& app_id, read_semantic_t semantic)
 {
     error_code err;
     partition_configuration config;
@@ -475,7 +475,7 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
     }
 }
 
-dsn_endpoint_t replication_app_client_base::get_read_address(read_semantic_t semantic, const partition_configuration& config)
+dsn_address_t replication_app_client_base::get_read_address(read_semantic_t semantic, const partition_configuration& config)
 {
     if (semantic == read_semantic_t::ReadLastUpdate)
         return config.primary;

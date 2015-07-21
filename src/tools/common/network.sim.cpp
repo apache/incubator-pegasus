@@ -36,9 +36,9 @@
 namespace dsn { namespace tools {
 
     // multiple machines connect to the same switch, 10 should be >= than rpc_channel::max_value() + 1
-    static utils::singleton_store<dsn_endpoint_t, sim_network_provider*> s_switch[10]; 
+    static utils::singleton_store<dsn_address_t, sim_network_provider*> s_switch[10]; 
 
-    sim_client_session::sim_client_session(sim_network_provider& net, const dsn_endpoint_t& remote_addr, rpc_client_matcher_ptr& matcher)
+    sim_client_session::sim_client_session(sim_network_provider& net, const dsn_address_t& remote_addr, rpc_client_matcher_ptr& matcher)
         : rpc_client_session(net, remote_addr, matcher)
     {}
 
@@ -77,7 +77,7 @@ namespace dsn { namespace tools {
             );
     }
 
-    sim_server_session::sim_server_session(sim_network_provider& net, const dsn_endpoint_t& remote_addr, rpc_client_session_ptr& client)
+    sim_server_session::sim_server_session(sim_network_provider& net, const dsn_address_t& remote_addr, rpc_client_session_ptr& client)
         : rpc_server_session(net, remote_addr)
     {
         _client = client;
@@ -117,7 +117,7 @@ namespace dsn { namespace tools {
 
         dsn_build_end_point(&_address, boost::asio::ip::host_name().c_str(), port);
 
-        dsn_endpoint_t ep2;
+        dsn_address_t ep2;
         dsn_build_end_point(&ep2, "localhost", port);
       
         if (!client_only)

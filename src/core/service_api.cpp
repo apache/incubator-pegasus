@@ -390,7 +390,7 @@ namespace dsn
 
         namespace rpc
         {
-            const dsn_endpoint_t& primary_address()
+            const dsn_address_t& primary_address()
             {
                 auto tsk = task::get_current_task();
                 dassert(tsk != nullptr, "this function can only be invoked inside tasks");
@@ -418,7 +418,7 @@ namespace dsn
                 return tsk->node()->rpc()->unregister_rpc_handler(code);
             }
 
-            void call(const dsn_endpoint_t& server, message_ptr& request, rpc_response_task_ptr& callback)
+            void call(const dsn_address_t& server, message_ptr& request, rpc_response_task_ptr& callback)
             {
                 auto tsk = task::get_current_task();
                 dassert(tsk != nullptr, "this function can only be invoked inside tasks");
@@ -429,7 +429,7 @@ namespace dsn
                 rpc->call(request, callback);
             }
 
-            rpc_response_task_ptr call(const dsn_endpoint_t& server, message_ptr& request)
+            rpc_response_task_ptr call(const dsn_address_t& server, message_ptr& request)
             {
                 auto tsk = task::get_current_task();
                 dassert(tsk != nullptr, "this function can only be invoked inside tasks");
@@ -441,7 +441,7 @@ namespace dsn
                 return std::move(callback);
             }
 
-            void call_one_way(const dsn_endpoint_t& server, message_ptr& request)
+            void call_one_way(const dsn_address_t& server, message_ptr& request)
             {
                 auto tsk = task::get_current_task();
                 dassert(tsk != nullptr, "this function can only be invoked inside tasks");
@@ -507,7 +507,7 @@ namespace dsn
             }
 
             void copy_remote_files(
-                const dsn_endpoint_t& remote,
+                const dsn_address_t& remote,
                 const std::string& source_dir,
                 std::vector<std::string>& files,  // empty for all
                 const std::string& dest_dir,

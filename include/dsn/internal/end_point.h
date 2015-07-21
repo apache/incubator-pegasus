@@ -33,14 +33,14 @@ namespace dsn {
 
 #ifndef ZION_NOT_USE_DEFAULT_SERIALIZATION
 
-inline void unmarshall(::dsn::binary_reader& reader, __out_param dsn_endpoint_t& val) 
+inline void unmarshall(::dsn::binary_reader& reader, __out_param dsn_address_t& val) 
 {
     reader.read_pod(val.ip);
     reader.read_pod(val.port);
     reader.read((char*)val.name, (int)sizeof(val.name));
 }
 
-inline void marshall(::dsn::binary_writer& writer, const dsn_endpoint_t& val, uint16_t pos = 0xffff) 
+inline void marshall(::dsn::binary_writer& writer, const dsn_address_t& val, uint16_t pos = 0xffff) 
 {
     writer.write_pod(val.ip, pos);
     writer.write_pod(val.port, pos);
@@ -54,24 +54,24 @@ inline void marshall(::dsn::binary_writer& writer, const dsn_endpoint_t& val, ui
 namespace std
 {
     template<>
-    struct hash<dsn_endpoint_t> {
-        size_t operator()(const dsn_endpoint_t &ep) const {
+    struct hash<dsn_address_t> {
+        size_t operator()(const dsn_address_t &ep) const {
             return std::hash<uint32_t>()(ep.ip) ^ std::hash<uint16_t>()(ep.port);
         }
     };
 }
 
-inline bool operator == (const dsn_endpoint_t& l, const dsn_endpoint_t& r)
+inline bool operator == (const dsn_address_t& l, const dsn_address_t& r)
 {
     return l.ip == r.ip && l.port == r.port;
 }
 
-inline bool operator != (const dsn_endpoint_t& l, const dsn_endpoint_t& r)
+inline bool operator != (const dsn_address_t& l, const dsn_address_t& r)
 {
     return !(l == r);
 }
 
-inline bool operator < (const dsn_endpoint_t& l, const dsn_endpoint_t& r)
+inline bool operator < (const dsn_address_t& l, const dsn_address_t& r)
 {
     return l.ip < r.ip || (l.ip == r.ip && l.port < r.port);
 }

@@ -261,7 +261,7 @@ void replica::on_copy_remote_state_completed(error_code err2, int size, std::sha
 {   
     learn_state localState;
     localState.meta = resp->state.meta;
-    dsn_endpoint_t& server = resp->config.primary;     
+    dsn_address_t& server = resp->config.primary;     
     if (err2 == ERR_OK)
     {
         for (auto itr = resp->state.files.begin(); itr != resp->state.files.end(); ++itr)
@@ -363,7 +363,7 @@ void replica::handle_learning_error(error_code err)
     update_local_configuration_with_no_ballot_change(PS_ERROR);
 }
 
-void replica::handle_learning_succeeded_on_primary(const dsn_endpoint_t& node, uint64_t learnSignature)
+void replica::handle_learning_succeeded_on_primary(const dsn_address_t& node, uint64_t learnSignature)
 {
     auto it = _primary_states.learners.find(node);
     if (it != _primary_states.learners.end() && it->second.signature == learnSignature)

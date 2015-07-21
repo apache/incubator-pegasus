@@ -34,7 +34,7 @@
 
 namespace dsn {
 
-    rpc_client_session::rpc_client_session(connection_oriented_network& net, const dsn_endpoint_t& remote_addr, rpc_client_matcher_ptr& matcher)
+    rpc_client_session::rpc_client_session(connection_oriented_network& net, const dsn_address_t& remote_addr, rpc_client_matcher_ptr& matcher)
         : _net(net), _remote_addr(remote_addr), _matcher(matcher)
     {
         _disconnected = false;
@@ -71,7 +71,7 @@ namespace dsn {
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    rpc_server_session::rpc_server_session(connection_oriented_network& net, const dsn_endpoint_t& remote_addr)
+    rpc_server_session::rpc_server_session(connection_oriented_network& net, const dsn_address_t& remote_addr)
         : _remote_addr(remote_addr), _net(net)
     {
     }
@@ -135,7 +135,7 @@ namespace dsn {
     void connection_oriented_network::call(message_ptr& request, rpc_response_task_ptr& call)
     {
         rpc_client_session_ptr client = nullptr;
-        dsn_endpoint_t& to = request->header().to_address;
+        dsn_address_t& to = request->header().to_address;
         bool new_client = false;
 
         // TODO: thread-local client ptr cache
@@ -172,7 +172,7 @@ namespace dsn {
         client->call(request, call);
     }
 
-    rpc_server_session_ptr connection_oriented_network::get_server_session(const dsn_endpoint_t& ep)
+    rpc_server_session_ptr connection_oriented_network::get_server_session(const dsn_address_t& ep)
     {
         utils::auto_read_lock l(_servers_lock);
         auto it = _servers.find(ep);
@@ -210,7 +210,7 @@ namespace dsn {
         }
     }
 
-    rpc_client_session_ptr connection_oriented_network::get_client_session(const dsn_endpoint_t& ep)
+    rpc_client_session_ptr connection_oriented_network::get_client_session(const dsn_address_t& ep)
     {
         utils::auto_read_lock l(_clients_lock);
         auto it = _clients.find(ep);

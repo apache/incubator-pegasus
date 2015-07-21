@@ -59,7 +59,7 @@ public:
     int arg_count() const { return static_cast<int>(_args.size()); }
     char** args() const { return (char**)&_args_ptr[0]; }
     service_node* node() const { return _svc_node; }
-    const dsn_endpoint_t& primary_address() const;
+    const dsn_address_t& primary_address() const;
     int id() const { return spec().id; }
     bool is_started() const { return _started; }
 

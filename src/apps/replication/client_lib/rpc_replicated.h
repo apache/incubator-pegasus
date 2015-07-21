@@ -34,23 +34,23 @@ namespace dsn {
             template<typename TRequest, typename TResponse>
             rpc_response_task_ptr call_typed_replicated(
                 // servers
-                const dsn_endpoint_t& first_server,
-                const std::vector<dsn_endpoint_t>& servers,
+                const dsn_address_t& first_server,
+                const std::vector<dsn_address_t>& servers,
                 // request
                 task_code code,
                 std::shared_ptr<TRequest>& req,
 
                 // callback
                 servicelet* owner,
-                std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&, const dsn_endpoint_t&)> callback,
+                std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&, const dsn_address_t&)> callback,
                 int request_hash = 0,
                 int timeout_milliseconds = 0,
                 int reply_hash = 0
                 );
 
             rpc_response_task_ptr call_replicated(
-                const dsn_endpoint_t& first_server,
-                const std::vector<dsn_endpoint_t>& servers,
+                const dsn_address_t& first_server,
+                const std::vector<dsn_address_t>& servers,
                 message_ptr& request,
 
                 // reply
@@ -68,10 +68,10 @@ namespace dsn {
                     message_ptr& request,
                     message_ptr& response,
                     std::shared_ptr<TRequest>& req,
-                    std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&, const dsn_endpoint_t&)> callback
+                    std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&, const dsn_address_t&)> callback
                     )
                 {
-                    dsn_endpoint_t srv = dsn_endpoint_invalid;
+                    dsn_address_t srv = dsn_endpoint_invalid;
                     std::shared_ptr<TResponse> resp(nullptr);
                     if (code == ERR_OK)
                     {
@@ -86,15 +86,15 @@ namespace dsn {
             template<typename TRequest, typename TResponse>
             inline rpc_response_task_ptr call_typed_replicated(
                 // servers
-                const dsn_endpoint_t& first_server,
-                const std::vector<dsn_endpoint_t>& servers,
+                const dsn_address_t& first_server,
+                const std::vector<dsn_address_t>& servers,
                 // request
                 task_code code,
                 std::shared_ptr<TRequest>& req,
 
                 // callback
                 servicelet* owner,
-                std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&, const dsn_endpoint_t&)> callback,
+                std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&, const dsn_address_t&)> callback,
                 int request_hash,
                 int timeout_milliseconds,
                 int reply_hash

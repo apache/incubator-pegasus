@@ -12,7 +12,7 @@ class cli_client
     : public virtual ::dsn::service::servicelet
 {
 public:
-    cli_client(const dsn_endpoint_t& server) { _server = server; }
+    cli_client(const dsn_address_t& server) { _server = server; }
     cli_client() { _server = dsn_endpoint_invalid; }
     virtual ~cli_client() {}
 
@@ -24,7 +24,7 @@ public:
         __out_param std::string& resp, 
         int timeout_milliseconds = 0, 
         int hash = 0,
-        const dsn_endpoint_t *p_server_addr = nullptr)
+        const dsn_address_t *p_server_addr = nullptr)
     {
         ::dsn::message_ptr msg = ::dsn::message::create_request(RPC_DSN_CLI_CALL, timeout_milliseconds, hash);
         marshall(msg->writer(), c);
@@ -44,7 +44,7 @@ public:
         int timeout_milliseconds = 0, 
         int reply_hash = 0,
         int request_hash = 0,
-        const dsn_endpoint_t *p_server_addr = nullptr)
+        const dsn_address_t *p_server_addr = nullptr)
     {
         return ::dsn::service::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
@@ -77,7 +77,7 @@ public:
         int timeout_milliseconds = 0, 
         int reply_hash = 0,
         int request_hash = 0,
-        const dsn_endpoint_t *p_server_addr = nullptr)
+        const dsn_address_t *p_server_addr = nullptr)
     {
         return ::dsn::service::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
@@ -105,7 +105,7 @@ public:
     
 
 private:
-    dsn_endpoint_t _server;
+    dsn_address_t _server;
 };
 
 } 

@@ -60,7 +60,7 @@ service_app::~service_app(void)
 {
 }
 
-const dsn_endpoint_t& service_app::primary_address() const
+const dsn_address_t& service_app::primary_address() const
 {
     return _svc_node->rpc()->primary_address();
 }

@@ -63,9 +63,9 @@ void load_balancer::run(global_partition_id gpid)
     run_lb(pc);
 }
 
-dsn_endpoint_t load_balancer::find_minimal_load_machine(bool primaryOnly)
+dsn_address_t load_balancer::find_minimal_load_machine(bool primaryOnly)
 {
-    std::vector<std::pair<dsn_endpoint_t, int>> stats;
+    std::vector<std::pair<dsn_address_t, int>> stats;
 
     for (auto it = _state->_nodes.begin(); it != _state->_nodes.end(); it++)
     {
@@ -77,7 +77,7 @@ dsn_endpoint_t load_balancer::find_minimal_load_machine(bool primaryOnly)
     }
 
     
-    std::sort(stats.begin(), stats.end(), [](const std::pair<dsn_endpoint_t, int>& l, const std::pair<dsn_endpoint_t, int>& r)
+    std::sort(stats.begin(), stats.end(), [](const std::pair<dsn_address_t, int>& l, const std::pair<dsn_address_t, int>& r)
     {
         return l.second < r.second;
     });
@@ -145,7 +145,7 @@ void load_balancer::run_lb(partition_configuration& pc)
 }
 
 // meta server => partition server
-void load_balancer::send_proposal(const dsn_endpoint_t& node, const configuration_update_request& proposal)
+void load_balancer::send_proposal(const dsn_address_t& node, const configuration_update_request& proposal)
 {
     dinfo("send proposal %s of %s:%hu, current ballot = %lld", 
         enum_to_string(proposal.type),

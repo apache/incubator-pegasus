@@ -222,7 +222,7 @@ namespace dsn {
             // ------------- inline implementation ----------------
             template<typename TRequest>
             inline void call_one_way_typed(
-                const dsn_endpoint_t& server,
+                const dsn_address_t& server,
                 task_code code,
                 const TRequest& req,
                 int hash
@@ -235,7 +235,7 @@ namespace dsn {
 
             template<typename T, typename TRequest, typename TResponse>
             inline rpc_response_task_ptr call_typed(
-                const dsn_endpoint_t& server,
+                const dsn_address_t& server,
                 task_code code,
                 std::shared_ptr<TRequest>& req,
                 T* owner,
@@ -262,7 +262,7 @@ namespace dsn {
 
             template<typename TRequest, typename TResponse>
             inline rpc_response_task_ptr call_typed(
-                const dsn_endpoint_t& server,
+                const dsn_address_t& server,
                 task_code code,
                 std::shared_ptr<TRequest>& req,
                 servicelet* owner,
@@ -289,7 +289,7 @@ namespace dsn {
 
             template<typename T, typename TRequest, typename TResponse>
             inline rpc_response_task_ptr call_typed(
-                const dsn_endpoint_t& server,
+                const dsn_address_t& server,
                 task_code code,
                 const TRequest& req,
                 T* owner,
@@ -317,7 +317,7 @@ namespace dsn {
 
             template<typename TRequest, typename TResponse>
             inline rpc_response_task_ptr call_typed(
-                const dsn_endpoint_t& server,
+                const dsn_address_t& server,
                 task_code code,
                 const TRequest& req,
                 servicelet* owner,
@@ -427,7 +427,7 @@ namespace dsn {
                 _handlers.clear();
             }
 
-            inline rpc_response_task_ptr layered_rpc::call(const dsn_endpoint_t& server)
+            inline rpc_response_task_ptr layered_rpc::call(const dsn_address_t& server)
             {
                 dassert(_handlers.size() > 0, "");
 

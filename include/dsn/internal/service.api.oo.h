@@ -90,7 +90,7 @@ namespace dsn {
             // no callback
             template<typename TRequest>
             void call_one_way_typed(
-                const dsn_endpoint_t& server,
+                const dsn_address_t& server,
                 task_code code,
                 const TRequest& req,
                 int hash = 0
@@ -100,7 +100,7 @@ namespace dsn {
             //  void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)
             template<typename T, typename TRequest, typename TResponse>
             rpc_response_task_ptr call_typed(
-                const dsn_endpoint_t& server,
+                const dsn_address_t& server,
                 task_code code,
                 std::shared_ptr<TRequest>& req,
                 T* owner,
@@ -114,7 +114,7 @@ namespace dsn {
             //  std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)>
             template<typename TRequest, typename TResponse>
             rpc_response_task_ptr call_typed(
-                const dsn_endpoint_t& server,
+                const dsn_address_t& server,
                 task_code code,
                 std::shared_ptr<TRequest>& req,
                 servicelet* owner,
@@ -128,7 +128,7 @@ namespace dsn {
             //   void (T::*)(error_code, const TResponse&, void*);
             template<typename T, typename TRequest, typename TResponse>
             inline rpc_response_task_ptr call_typed(
-                const dsn_endpoint_t& server,
+                const dsn_address_t& server,
                 task_code code,
                 const TRequest& req,
                 T* owner,
@@ -143,7 +143,7 @@ namespace dsn {
             //  std::function<void(error_code, const TResponse&, void*)>
             template<typename TRequest, typename TResponse>
             rpc_response_task_ptr call_typed(
-                const dsn_endpoint_t& server,
+                const dsn_address_t& server,
                 task_code code,
                 const TRequest& req,
                 servicelet* owner,
@@ -157,7 +157,7 @@ namespace dsn {
             // callback type 4:
             //  std::function<void(error_code, message_ptr&, message_ptr&)>
             rpc_response_task_ptr call(
-                const dsn_endpoint_t& server,
+                const dsn_address_t& server,
                 message_ptr& request,
                 servicelet* owner,
                 std::function<void(error_code, message_ptr&, message_ptr&)> callback,
@@ -191,7 +191,7 @@ namespace dsn {
                     std::function<bool(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback
                     );
 
-                rpc_response_task_ptr call(const dsn_endpoint_t& server);
+                rpc_response_task_ptr call(const dsn_address_t& server);
 
                 virtual void exec();
                 virtual void on_response(error_code err, message_ptr& request, message_ptr& response) {}
@@ -266,7 +266,7 @@ namespace dsn {
             }
 
             aio_task_ptr copy_remote_files(
-                const dsn_endpoint_t& remote,
+                const dsn_address_t& remote,
                 const std::string& source_dir,
                 std::vector<std::string>& files,  // empty for all
                 const std::string& dest_dir,
@@ -278,7 +278,7 @@ namespace dsn {
                 );
 
             inline aio_task_ptr copy_remote_directory(
-                const dsn_endpoint_t& remote,
+                const dsn_address_t& remote,
                 const std::string& source_dir,
                 const std::string& dest_dir,
                 bool overwrite,

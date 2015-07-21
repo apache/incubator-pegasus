@@ -31,8 +31,8 @@ namespace dsn { namespace fd {
     struct beacon_msg
     {
         int64_t time;
-        dsn_endpoint_t from;
-        dsn_endpoint_t to;
+        dsn_address_t from;
+        dsn_address_t to;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const beacon_msg& val)
@@ -53,8 +53,8 @@ namespace dsn { namespace fd {
     struct beacon_ack
     {
         int64_t time;
-        dsn_endpoint_t this_node;
-        dsn_endpoint_t primary_node;
+        dsn_address_t this_node;
+        dsn_address_t primary_node;
         bool is_master;
         bool allowed;
     };

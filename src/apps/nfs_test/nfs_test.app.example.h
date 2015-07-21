@@ -128,7 +128,7 @@ namespace dsn {
                 ::dsn::task_ptr _timer;
                 ::dsn::task_ptr _request_timer;
 
-                dsn_endpoint_t _server;
+                dsn_address_t _server;
                 std::atomic<int> _req_index;
 
             };

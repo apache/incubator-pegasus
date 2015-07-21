@@ -94,7 +94,7 @@ void meta_service::start(const char* data_dir, bool clean_state)
     _balancer = new load_balancer(_state);            
     _failure_detector = new meta_server_failure_detector(_state, this);
     
-    dsn_endpoint_t primary;
+    dsn_address_t primary;
     if (_state->get_meta_server_primary(primary) && primary == primary_address())
     {
         _failure_detector->set_primary(true);
@@ -377,7 +377,7 @@ void meta_service::on_load_balance_timer()
     if (_state->freezed())
         return;
 
-    dsn_endpoint_t primary;
+    dsn_address_t primary;
     if (_state->get_meta_server_primary(primary) && primary == primary_address())
     {
         _failure_detector->set_primary(true);
@@ -391,7 +391,7 @@ void meta_service::on_load_balance_timer()
 
 void meta_service::on_config_changed(global_partition_id gpid)
 {
-    dsn_endpoint_t primary;
+    dsn_address_t primary;
     if (_state->get_meta_server_primary(primary) && primary == primary_address())
     {
         _failure_detector->set_primary(true);

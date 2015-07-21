@@ -73,7 +73,7 @@ void replica::broadcast_group_check()
         if (it->first == primary_address())
             continue;
 
-        dsn_endpoint_t addr = it->first;
+        dsn_address_t addr = it->first;
         std::shared_ptr<group_check_request> request(new group_check_request);
 
         request->app_type = _primary_states.membership.app_type;

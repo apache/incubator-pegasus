@@ -167,7 +167,7 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     rpc::call_one_way_typed(proposal.node, RPC_LEARN_ADD_LEARNER, request, gpid_to_hash(get_gpid()));
 }
 
-void replica::upgrade_to_secondary_on_primary(const dsn_endpoint_t& node)
+void replica::upgrade_to_secondary_on_primary(const dsn_address_t& node)
 {
     ddebug(
             "%s: upgrade potential secondary %s:%hu to secondary",
@@ -272,7 +272,7 @@ void replica::on_remove(const replica_configuration& request)
     update_local_configuration(request);
 }
 
-void replica::update_configuration_on_meta_server(config_type type, const dsn_endpoint_t& node, partition_configuration& newConfig)
+void replica::update_configuration_on_meta_server(config_type type, const dsn_address_t& node, partition_configuration& newConfig)
 {
     newConfig.last_committed_decree = last_committed_decree();
 

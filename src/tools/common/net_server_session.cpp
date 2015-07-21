@@ -38,7 +38,7 @@ namespace dsn {
     namespace tools {
         net_server_session::net_server_session(
             asio_network_provider& net, 
-            const dsn_endpoint_t& remote_addr,
+            const dsn_address_t& remote_addr,
             boost::asio::ip::tcp::socket& socket,
             std::shared_ptr<message_parser>& parser
             )

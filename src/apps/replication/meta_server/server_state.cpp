@@ -246,7 +246,7 @@ void server_state::unfree_if_possible_on_start()
     dinfo("live replica server # is %d, freeze = %s", _node_live_count, _freeze ? "true" : "false");
 }
 
-bool server_state::get_meta_server_primary(__out_param dsn_endpoint_t& node)
+bool server_state::get_meta_server_primary(__out_param dsn_address_t& node)
 {
     zauto_read_lock l(_meta_lock);
     if (-1 == _leader_index)
@@ -258,7 +258,7 @@ bool server_state::get_meta_server_primary(__out_param dsn_endpoint_t& node)
     }
 }
 
-void server_state::add_meta_node(const dsn_endpoint_t& node)
+void server_state::add_meta_node(const dsn_address_t& node)
 {
     zauto_write_lock l(_meta_lock);
     
@@ -267,7 +267,7 @@ void server_state::add_meta_node(const dsn_endpoint_t& node)
         _leader_index = 0;
 }
 
-void server_state::remove_meta_node(const dsn_endpoint_t& node)
+void server_state::remove_meta_node(const dsn_address_t& node)
 {
     zauto_write_lock l(_meta_lock);
     

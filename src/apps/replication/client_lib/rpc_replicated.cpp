@@ -36,12 +36,12 @@ namespace dsn {
 
                 struct params
                 {
-                    std::vector<dsn_endpoint_t> servers;
+                    std::vector<dsn_address_t> servers;
                     rpc_response_task_ptr response_task;
                     rpc_reply_handler callback;
                 };
 
-                static dsn_endpoint_t get_next_server(const dsn_endpoint_t& currentServer, const std::vector<dsn_endpoint_t>& servers)
+                static dsn_address_t get_next_server(const dsn_address_t& currentServer, const std::vector<dsn_address_t>& servers)
                 {
                     if (currentServer == dsn_endpoint_invalid)
                     {
@@ -66,7 +66,7 @@ namespace dsn {
                 {
                     //printf ("%s\n", __FUNCTION__);
 
-                    dsn_endpoint_t next_server;
+                    dsn_address_t next_server;
                     if (nullptr != response)
                     {
                         err.end_tracking();
@@ -115,8 +115,8 @@ namespace dsn {
             } // end namespace rpc_replicated_impl 
 
             rpc_response_task_ptr call_replicated(
-                const dsn_endpoint_t& first_server,
-                const std::vector<dsn_endpoint_t>& servers,
+                const dsn_address_t& first_server,
+                const std::vector<dsn_address_t>& servers,
                 message_ptr& request,
 
                 // reply
@@ -125,7 +125,7 @@ namespace dsn {
                 int reply_hash
                 )
             {
-                dsn_endpoint_t first = first_server;
+                dsn_address_t first = first_server;
                 if (first == dsn_endpoint_invalid)
                 {
                     first = rpc_replicated_impl::get_next_server(first_server, servers);

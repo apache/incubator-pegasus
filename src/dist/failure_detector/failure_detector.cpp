@@ -89,7 +89,7 @@ error_code failure_detector::stop()
     return ERR_OK;
 }
 
-void failure_detector::register_master(const dsn_endpoint_t& target)
+void failure_detector::register_master(const dsn_address_t& target)
 {
     uint64_t now = now_ms();
 
@@ -116,7 +116,7 @@ void failure_detector::register_master(const dsn_endpoint_t& target)
     send_beacon(target, now_ms());
 }
 
-bool failure_detector::switch_master(const dsn_endpoint_t& from, const dsn_endpoint_t& to)
+bool failure_detector::switch_master(const dsn_address_t& from, const dsn_address_t& to)
 {
     {
         zauto_lock l(_lock);
@@ -170,7 +170,7 @@ bool failure_detector::is_time_greater_than(uint64_t ts, uint64_t base)
         return false;
 }
 
-void failure_detector::report(const dsn_endpoint_t& node, bool is_master, bool is_connected)
+void failure_detector::report(const dsn_address_t& node, bool is_master, bool is_connected)
 {
     ddebug("%s %s:%hu %sconnected", is_master ? "master":"worker", node.name, node.port, is_connected ? "" : "dis");
 
@@ -199,7 +199,7 @@ void failure_detector::process_all_records()
 
     zauto_lock l(_lock);
 
-    std::vector<dsn_endpoint_t> expire;
+    std::vector<dsn_address_t> expire;
     uint64_t now =now_ms();
 
     master_map::iterator itr = _masters.begin();
@@ -255,13 +255,13 @@ void failure_detector::process_all_records()
     }
 }
 
-void failure_detector::add_allow_list( const dsn_endpoint_t& node)
+void failure_detector::add_allow_list( const dsn_address_t& node)
 {
     zauto_lock l(_lock);
     _allow_list.insert(node);
 }
 
-bool failure_detector::remove_from_allow_list( const dsn_endpoint_t& node)
+bool failure_detector::remove_from_allow_list( const dsn_address_t& node)
 {
     zauto_lock l(_lock);
     return _allow_list.erase(node) > 0;
@@ -367,7 +367,7 @@ void failure_detector::end_ping(::dsn::error_code err, const beacon_ack& ack, vo
     }
 }
 
-bool failure_detector::unregister_master(const dsn_endpoint_t & node)
+bool failure_detector::unregister_master(const dsn_address_t & node)
 {
     zauto_lock l(_lock);
 
@@ -390,7 +390,7 @@ bool failure_detector::unregister_master(const dsn_endpoint_t & node)
     return ret;
 }
 
-bool failure_detector::is_master_connected( const dsn_endpoint_t& node) const
+bool failure_detector::is_master_connected( const dsn_address_t& node) const
 {
     zauto_lock l(_lock);
     auto it = _masters.find(node);
@@ -400,7 +400,7 @@ bool failure_detector::is_master_connected( const dsn_endpoint_t& node) const
         return false;
 }
 
-void failure_detector::register_worker( const dsn_endpoint_t& target, bool is_connected)
+void failure_detector::register_worker( const dsn_address_t& target, bool is_connected)
 {
     uint64_t now = now_ms();
 
@@ -424,7 +424,7 @@ void failure_detector::register_worker( const dsn_endpoint_t& target, bool is_co
     }
 }
 
-bool failure_detector::unregister_worker(const dsn_endpoint_t& node)
+bool failure_detector::unregister_worker(const dsn_address_t& node)
 {
     zauto_lock l(_lock);
 
@@ -452,7 +452,7 @@ void failure_detector::clear_workers()
     _workers.clear();
 }
 
-bool failure_detector::is_worker_connected( const dsn_endpoint_t& node) const
+bool failure_detector::is_worker_connected( const dsn_address_t& node) const
 {
     zauto_lock l(_lock);
     auto it = _workers.find(node);
@@ -462,7 +462,7 @@ bool failure_detector::is_worker_connected( const dsn_endpoint_t& node) const
         return false;
 }
 
-void failure_detector::send_beacon(const dsn_endpoint_t& target, uint64_t time)
+void failure_detector::send_beacon(const dsn_address_t& target, uint64_t time)
 {
     beacon_msg beacon;
     beacon.time = time;

@@ -266,7 +266,7 @@ private:
 
     std::string _bench;
     bool _test_local_queue;
-    dsn_endpoint_t _server;
+    dsn_address_t _server;
     int _seq;
     int _message_size;
     int _concurrency;
