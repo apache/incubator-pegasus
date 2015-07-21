@@ -25,6 +25,7 @@
  */
 # pragma once
 
+# include <dsn/service_api_c.h>
 # include <dsn/internal/utils.h>
 # include <dsn/internal/threadpool_code.h>
 # include <dsn/internal/enum_helper.h>
@@ -35,25 +36,6 @@
 # include <dsn/internal/extensible_object.h>
 
 namespace dsn {
-
-enum task_type
-{    
-    TASK_TYPE_RPC_REQUEST,
-    TASK_TYPE_RPC_RESPONSE,
-    TASK_TYPE_COMPUTE,
-    TASK_TYPE_AIO,
-    TASK_TYPE_CONTINUATION,
-    TASK_TYPE_COUNT,
-    TASK_TYPE_INVALID,
-};
-
-ENUM_BEGIN(task_type, TASK_TYPE_INVALID)    
-    ENUM_REG(TASK_TYPE_RPC_REQUEST)
-    ENUM_REG(TASK_TYPE_RPC_RESPONSE)
-    ENUM_REG(TASK_TYPE_COMPUTE)
-    ENUM_REG(TASK_TYPE_AIO)
-    ENUM_REG(TASK_TYPE_CONTINUATION)
-ENUM_END(task_type)
 
 enum task_priority
 {
@@ -88,8 +70,6 @@ ENUM_BEGIN(task_state, TASK_STATE_INVALID)
     ENUM_REG(TASK_STATE_CANCELLED)
 ENUM_END(task_state)
 
-#define MAX_TASK_CODE_NAME_LENGTH 47
-
 // define network header format for RPC
 DEFINE_CUSTOMIZED_ID_TYPE(network_header_format);
 DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_DSN);
@@ -101,7 +81,7 @@ DEFINE_CUSTOMIZED_ID(rpc_channel, RPC_CHANNEL_UDP)
 
 struct task_code : public dsn::utils::customized_id<task_code>
 {
-    task_code(const char* xxx, task_type type, threadpool_code pool, task_priority pri, int rpcPairedCode);
+    task_code(const char* xxx, dsn_task_type_t type, threadpool_code pool, task_priority pri, int rpcPairedCode);
 
     task_code(const task_code& source) 
         : dsn::utils::customized_id<task_code>(source) 
@@ -122,17 +102,17 @@ private:
 };
 
 // task code with explicit name
-#define DEFINE_NAMED_TASK_CODE(x, name, priority, pool) __selectany const dsn::task_code x(#name, dsn::TASK_TYPE_COMPUTE, pool, priority, 0);
-#define DEFINE_NAMED_TASK_CODE_AIO(x, name, priority, pool) __selectany const dsn::task_code x(#name, dsn::TASK_TYPE_AIO, pool, priority, 0);
+#define DEFINE_NAMED_TASK_CODE(x, name, priority, pool) __selectany const dsn::task_code x(#name, TASK_TYPE_COMPUTE, pool, priority, 0);
+#define DEFINE_NAMED_TASK_CODE_AIO(x, name, priority, pool) __selectany const dsn::task_code x(#name, TASK_TYPE_AIO, pool, priority, 0);
 
 // RPC between client and server, usually use different pools for server and client callbacks
 #define DEFINE_NAMED_TASK_CODE_RPC(x, name, priority, pool) \
-    __selectany const dsn::task_code x##_ACK(#name"_ACK", dsn::TASK_TYPE_RPC_RESPONSE, pool, priority, 0); \
-    __selectany const dsn::task_code x(#name, dsn::TASK_TYPE_RPC_REQUEST, pool, priority, x##_ACK);
+    __selectany const dsn::task_code x##_ACK(#name"_ACK", TASK_TYPE_RPC_RESPONSE, pool, priority, 0); \
+    __selectany const dsn::task_code x(#name, TASK_TYPE_RPC_REQUEST, pool, priority, x##_ACK);
 
 #define DEFINE_NAMED_TASK_CODE_RPC_PRIVATE(x, name, priority, pool) \
-    static const dsn::task_code x##_ACK(#name"_ACK", dsn::TASK_TYPE_RPC_RESPONSE, pool, priority, 0); \
-    static const dsn::task_code x(#name, dsn::TASK_TYPE_RPC_REQUEST, pool, priority, x##_ACK);
+    static const dsn::task_code x##_ACK(#name"_ACK", TASK_TYPE_RPC_RESPONSE, pool, priority, 0); \
+    static const dsn::task_code x(#name, TASK_TYPE_RPC_REQUEST, pool, priority, x##_ACK);
 
 // auto name version
 #define DEFINE_TASK_CODE(x, priority, pool) DEFINE_NAMED_TASK_CODE(x, x, priority, pool)
@@ -157,7 +137,7 @@ public:
 
 public:
     task_code              code;
-    task_type              type;
+    dsn_task_type_t        type;
     const char*            name;    
     task_code              rpc_paired_code;
     task_priority          priority;
@@ -197,7 +177,7 @@ public:
     join_point<void, message*, message*>         on_rpc_create_response;
 
 public:    
-    task_spec(int code, const char* name, task_type type, threadpool_code pool, int paired_code, task_priority pri);
+    task_spec(int code, const char* name, dsn_task_type_t type, threadpool_code pool, int paired_code, task_priority pri);
     
 public:
     static bool init(configuration_ptr config);

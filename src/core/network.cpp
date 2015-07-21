@@ -34,7 +34,7 @@
 
 namespace dsn {
 
-    rpc_client_session::rpc_client_session(connection_oriented_network& net, const end_point& remote_addr, rpc_client_matcher_ptr& matcher)
+    rpc_client_session::rpc_client_session(connection_oriented_network& net, const dsn_endpoint_t& remote_addr, rpc_client_matcher_ptr& matcher)
         : _net(net), _remote_addr(remote_addr), _matcher(matcher)
     {
         _disconnected = false;
@@ -71,7 +71,7 @@ namespace dsn {
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    rpc_server_session::rpc_server_session(connection_oriented_network& net, const end_point& remote_addr)
+    rpc_server_session::rpc_server_session(connection_oriented_network& net, const dsn_endpoint_t& remote_addr)
         : _remote_addr(remote_addr), _net(net)
     {
     }
@@ -135,7 +135,7 @@ namespace dsn {
     void connection_oriented_network::call(message_ptr& request, rpc_response_task_ptr& call)
     {
         rpc_client_session_ptr client = nullptr;
-        end_point& to = request->header().to_address;
+        dsn_endpoint_t& to = request->header().to_address;
         bool new_client = false;
 
         // TODO: thread-local client ptr cache
@@ -172,7 +172,7 @@ namespace dsn {
         client->call(request, call);
     }
 
-    rpc_server_session_ptr connection_oriented_network::get_server_session(const end_point& ep)
+    rpc_server_session_ptr connection_oriented_network::get_server_session(const dsn_endpoint_t& ep)
     {
         utils::auto_read_lock l(_servers_lock);
         auto it = _servers.find(ep);
@@ -181,7 +181,7 @@ namespace dsn {
 
     void connection_oriented_network::on_server_session_accepted(rpc_server_session_ptr& s)
     {
-        dinfo("server session %s:%hu accepted", s->remote_address().name.c_str(), s->remote_address().port);
+        dinfo("server session %s:%hu accepted", s->remote_address().name, s->remote_address().port);
 
         utils::auto_write_lock l(_servers_lock);
         _servers.insert(server_sessions::value_type(s->remote_address(), s));
@@ -204,13 +204,13 @@ namespace dsn {
         if (r)
         {
             dinfo("server session %s:%hu disconnected", 
-                s->remote_address().name.c_str(),
+                s->remote_address().name,
                 s->remote_address().port
                 );
         }
     }
 
-    rpc_client_session_ptr connection_oriented_network::get_client_session(const end_point& ep)
+    rpc_client_session_ptr connection_oriented_network::get_client_session(const dsn_endpoint_t& ep)
     {
         utils::auto_read_lock l(_clients_lock);
         auto it = _clients.find(ep);
@@ -232,7 +232,7 @@ namespace dsn {
 
         if (r)
         {
-            dinfo("client session %s:%hu disconnected", s->remote_address().name.c_str(), 
+            dinfo("client session %s:%hu disconnected", s->remote_address().name, 
                 s->remote_address().port
                 );
         }

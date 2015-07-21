@@ -36,7 +36,7 @@ namespace dsn {
     namespace tools {
 
         net_io::net_io(
-            const end_point& remote_addr,
+            const dsn_endpoint_t& remote_addr,
             boost::asio::ip::tcp::socket& socket,
             std::shared_ptr<dsn::message_parser>& parser
             )
@@ -78,8 +78,8 @@ namespace dsn {
                 }
                 catch (std::exception& ex)
                 {
-                    dwarn("network session %s:%hu set socket option failed, err = %s",
-                        _remote_addr.to_ip_string().c_str(),
+                    dwarn("network session %x:%hu set socket option failed, err = %s",
+                        _remote_addr.ip,
                         _remote_addr.port,
                         ex.what()
                         );
@@ -182,7 +182,7 @@ namespace dsn {
 
         // ------------------------------------------------------------
         
-        client_net_io::client_net_io(const end_point& remote_addr,
+        client_net_io::client_net_io(const dsn_endpoint_t& remote_addr,
             boost::asio::ip::tcp::socket& socket,
             std::shared_ptr<dsn::message_parser>& parser)
             :
@@ -236,7 +236,7 @@ namespace dsn {
                         _state = SS_CONNECTED;
 
                         dinfo("client session %s:%hu connected",
-                            _remote_addr.name.c_str(),
+                            _remote_addr.name,
                             _remote_addr.port
                             );
 

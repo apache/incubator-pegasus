@@ -28,6 +28,7 @@
 # include <dsn/internal/task.h>
 # include <dsn/internal/synchronize.h>
 # include <dsn/internal/message_parser.h>
+# include <dsn/internal/end_point.h>
 
 namespace dsn {
 
@@ -66,7 +67,7 @@ namespace dsn {
         //
         // the named address (when client_only is true)
         //
-        virtual const end_point& address() = 0;
+        virtual const dsn_endpoint_t& address() = 0;
 
         //
         // this is where the upper rpc engine calls down for a RPC call
@@ -164,26 +165,26 @@ namespace dsn {
         virtual ~connection_oriented_network() {}
 
         // server session management
-        rpc_server_session_ptr get_server_session(const end_point& ep);
+        rpc_server_session_ptr get_server_session(const dsn_endpoint_t& ep);
         void on_server_session_accepted(rpc_server_session_ptr& s);
         void on_server_session_disconnected(rpc_server_session_ptr& s);
 
         // client session management
-        rpc_client_session_ptr get_client_session(const end_point& ep);
+        rpc_client_session_ptr get_client_session(const dsn_endpoint_t& ep);
         void on_client_session_disconnected(rpc_client_session_ptr& s);
 
         // called upon RPC call, rpc client session is created on demand
         virtual void call(message_ptr& request, rpc_response_task_ptr& call);
 
         // to be defined
-        virtual rpc_client_session_ptr create_client_session(const end_point& server_addr) = 0;
+        virtual rpc_client_session_ptr create_client_session(const dsn_endpoint_t& server_addr) = 0;
 
     protected:
-        typedef std::unordered_map<end_point, rpc_client_session_ptr> client_sessions;
+        typedef std::unordered_map<dsn_endpoint_t, rpc_client_session_ptr> client_sessions;
         client_sessions               _clients;
         utils::rw_lock_nr             _clients_lock;
 
-        typedef std::unordered_map<end_point, rpc_server_session_ptr> server_sessions;
+        typedef std::unordered_map<dsn_endpoint_t, rpc_server_session_ptr> server_sessions;
         server_sessions               _servers;
         utils::rw_lock_nr             _servers_lock;
     };
@@ -194,11 +195,11 @@ namespace dsn {
     class rpc_client_session : public ref_object
     {
     public:
-        rpc_client_session(connection_oriented_network& net, const end_point& remote_addr, rpc_client_matcher_ptr& matcher);
+        rpc_client_session(connection_oriented_network& net, const dsn_endpoint_t& remote_addr, rpc_client_matcher_ptr& matcher);
         bool on_recv_reply(uint64_t key, message_ptr& reply, int delay_ms);
         void on_disconnected();
         void call(message_ptr& request, rpc_response_task_ptr& call);
-        const end_point& remote_address() const { return _remote_addr; }
+        const dsn_endpoint_t& remote_address() const { return _remote_addr; }
         connection_oriented_network& net() const { return _net; }
         bool is_disconnected() const { return _disconnected; }
 
@@ -210,7 +211,7 @@ namespace dsn {
 
     protected:
         connection_oriented_network         &_net;
-        end_point                           _remote_addr;
+        dsn_endpoint_t                       _remote_addr;
         rpc_client_matcher_ptr _matcher;
     };
 
@@ -222,16 +223,16 @@ namespace dsn {
     class rpc_server_session : public ref_object
     {
     public:
-        rpc_server_session(connection_oriented_network& net, const end_point& remote_addr);
+        rpc_server_session(connection_oriented_network& net, const dsn_endpoint_t& remote_addr);
         void on_recv_request(message_ptr& msg, int delay_ms);
         void on_disconnected();
-        const end_point& remote_address() const { return _remote_addr; }
+        const dsn_endpoint_t& remote_address() const { return _remote_addr; }
 
         virtual void send(message_ptr& reply_msg) = 0;
 
     protected:
         connection_oriented_network&   _net;
-        end_point                      _remote_addr;
+        dsn_endpoint_t                 _remote_addr;
     };
 
     DEFINE_REF_OBJECT(rpc_server_session)

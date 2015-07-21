@@ -31,7 +31,7 @@ namespace dsn {
 
     struct remote_copy_request
     {
-        end_point   source;
+        dsn_endpoint_t   source;
         std::string source_dir;
         std::vector<std::string> files;
         std::string dest_dir;

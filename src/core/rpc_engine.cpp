@@ -159,7 +159,7 @@ namespace dsn {
         dassert (_config != nullptr, "");
 
         _is_running = false;
-        _local_primary_address = end_point::INVALID;
+        _local_primary_address = dsn_endpoint_invalid;
         _message_crc_required = config->get_value<bool>("network", "message_crc_required", false);
     }
     
@@ -343,7 +343,7 @@ namespace dsn {
             dwarn(
                 "recv unknown message with type %s from %s:%hu",
                 msg->header().rpc_name,
-                msg->header().from_address.name.c_str(),
+                msg->header().from_address.name,
                 msg->header().from_address.port
                 );
         }

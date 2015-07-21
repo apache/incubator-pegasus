@@ -83,7 +83,7 @@ foreach ($_PROG->services as $svc)
 
 private:
     ::dsn::task_ptr _timer;
-    ::dsn::end_point _server;
+    dsn_endpoint_t _server;
     
 <?php foreach ($_PROG->services as $svc) { ?>
     <?=$svc->name?>_client *_<?=$svc->name?>_client;

@@ -121,7 +121,7 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
         ddebug(
             "%s: on_learn %s:%hu, learner state is lost due to DDD, with its appCommittedDecree = %llu vs localCommitedDecree %llu",
             name(),
-            request.learner.name.c_str(), request.learner.port,
+            request.learner.name, request.learner.port,
             request.last_committed_decree_in_app,
             last_committed_decree()
             );
@@ -145,7 +145,7 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
     ddebug(
         "%s: on_learn %s:%hu with its appCommittedDecree = %llu vs localCommitedDecree %llu",
         name(),
-        request.learner.name.c_str(), request.learner.port,
+        request.learner.name, request.learner.port,
         request.last_committed_decree_in_app,
         last_committed_decree()
         );
@@ -167,7 +167,7 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
                 "%s: on_learn with prepare_start_decree = %llu for %s:%hu",
                 name(),
                 last_committed_decree() + 1,
-                request.learner.name.c_str(), request.learner.port
+                request.learner.name, request.learner.port
             );
         }
 
@@ -261,7 +261,7 @@ void replica::on_copy_remote_state_completed(error_code err2, int size, std::sha
 {   
     learn_state localState;
     localState.meta = resp->state.meta;
-    end_point& server = resp->config.primary;     
+    dsn_endpoint_t& server = resp->config.primary;     
     if (err2 == ERR_OK)
     {
         for (auto itr = resp->state.files.begin(); itr != resp->state.files.end(); ++itr)
@@ -363,7 +363,7 @@ void replica::handle_learning_error(error_code err)
     update_local_configuration_with_no_ballot_change(PS_ERROR);
 }
 
-void replica::handle_learning_succeeded_on_primary(const end_point& node, uint64_t learnSignature)
+void replica::handle_learning_succeeded_on_primary(const dsn_endpoint_t& node, uint64_t learnSignature)
 {
     auto it = _primary_states.learners.find(node);
     if (it != _primary_states.learners.end() && it->second.signature == learnSignature)

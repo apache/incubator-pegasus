@@ -42,11 +42,9 @@
 
 # include <mutex>
 
-namespace dsn {
+DSN_API dsn_endpoint_t dsn_endpoint_invalid = {0, 0, "invalid"};
 
-const end_point end_point::INVALID;
-
-end_point::end_point(const char* str, uint16_t p)
+DSN_API void dsn_build_end_point(dsn_endpoint_t* ep, const char* host, uint16_t port)
 {
     static std::once_flag flag;
     static bool flag_inited = false;
@@ -61,25 +59,24 @@ end_point::end_point(const char* str, uint16_t p)
             flag_inited = true;
         });
     }
-
-    port = p;
-    name = std::string(str);
-
+    
+    ep->port = port;
+    strncpy(ep->name, host, MAX_END_POINT_NAME_LENGTH + 1);
+    ep->name[MAX_END_POINT_NAME_LENGTH] = '\0';
+    
     sockaddr_in addr;
     memset(&addr,0,sizeof(addr));
     addr.sin_family = AF_INET;
-
-    if ((addr.sin_addr.s_addr = inet_addr(str)) == (unsigned int)(-1))
+    
+    if ((addr.sin_addr.s_addr = inet_addr(host)) == (unsigned int)(-1))
     {
-        hostent* hp = gethostbyname(str);
+        hostent* hp = gethostbyname(host);
         if (hp != 0) 
         {
             memcpy((void*)&(addr.sin_addr.s_addr), (const void*)hp->h_addr, (size_t)hp->h_length);
         }
     }
-
+    
     // network order
-    ip = (uint32_t)(addr.sin_addr.s_addr);
+    ep->ip = (uint32_t)(addr.sin_addr.s_addr);
 }
-
-} // end namespace

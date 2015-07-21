@@ -63,9 +63,9 @@ void load_balancer::run(global_partition_id gpid)
     run_lb(pc);
 }
 
-end_point load_balancer::find_minimal_load_machine(bool primaryOnly)
+dsn_endpoint_t load_balancer::find_minimal_load_machine(bool primaryOnly)
 {
-    std::vector<std::pair<end_point, int>> stats;
+    std::vector<std::pair<dsn_endpoint_t, int>> stats;
 
     for (auto it = _state->_nodes.begin(); it != _state->_nodes.end(); it++)
     {
@@ -77,14 +77,14 @@ end_point load_balancer::find_minimal_load_machine(bool primaryOnly)
     }
 
     
-    std::sort(stats.begin(), stats.end(), [](const std::pair<end_point, int>& l, const std::pair<end_point, int>& r)
+    std::sort(stats.begin(), stats.end(), [](const std::pair<dsn_endpoint_t, int>& l, const std::pair<dsn_endpoint_t, int>& r)
     {
         return l.second < r.second;
     });
 
     if (stats.empty())
     {
-        return end_point::INVALID;
+        return dsn_endpoint_invalid;
     }
 
     int candidate_count = 1;
@@ -108,7 +108,7 @@ void load_balancer::run_lb(partition_configuration& pc)
     configuration_update_request proposal;
     proposal.config = pc;
 
-    if (pc.primary == end_point::INVALID)
+    if (pc.primary == dsn_endpoint_invalid)
     {
         if (pc.secondaries.size() > 0)
         {
@@ -121,7 +121,7 @@ void load_balancer::run_lb(partition_configuration& pc)
             proposal.type = CT_ASSIGN_PRIMARY;
         }
 
-        if (proposal.node != end_point::INVALID)
+        if (proposal.node != dsn_endpoint_invalid)
         {
             send_proposal(proposal.node, proposal);
         }
@@ -131,7 +131,7 @@ void load_balancer::run_lb(partition_configuration& pc)
     {
         proposal.type = CT_ADD_SECONDARY;
         proposal.node = find_minimal_load_machine(false);
-        if (proposal.node != end_point::INVALID && 
+        if (proposal.node != dsn_endpoint_invalid && 
             proposal.node != pc.primary &&
             std::find(pc.secondaries.begin(), pc.secondaries.end(), proposal.node) == pc.secondaries.end())
         {
@@ -145,11 +145,11 @@ void load_balancer::run_lb(partition_configuration& pc)
 }
 
 // meta server => partition server
-void load_balancer::send_proposal(const end_point& node, const configuration_update_request& proposal)
+void load_balancer::send_proposal(const dsn_endpoint_t& node, const configuration_update_request& proposal)
 {
     dinfo("send proposal %s of %s:%hu, current ballot = %lld", 
         enum_to_string(proposal.type),
-        proposal.node.name.c_str(),
+        proposal.node.name,
         proposal.node.port,
         proposal.config.ballot
         );

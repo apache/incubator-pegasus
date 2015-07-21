@@ -38,7 +38,7 @@
 
 namespace dsn {
 
-task_code::task_code(const char* xxx, task_type type, threadpool_code pool, task_priority pri, int rpcPairedCode) 
+task_code::task_code(const char* xxx, dsn_task_type_t type, threadpool_code pool, task_priority pri, int rpcPairedCode) 
     : dsn::utils::customized_id<task_code>(xxx)
 {
     if (!dsn::utils::singleton_vector_store<task_spec*, nullptr>::instance().contains(*this))
@@ -53,7 +53,7 @@ task_spec* task_spec::get(int code)
     return dsn::utils::singleton_vector_store<task_spec*, nullptr>::instance().get(code);
 }
 
-task_spec::task_spec(int code, const char* name, task_type type, threadpool_code pool, int paired_code, task_priority pri)
+task_spec::task_spec(int code, const char* name, dsn_task_type_t type, threadpool_code pool, int paired_code, task_priority pri)
     : code(code), name(name), type(type), pool_code(pool), rpc_paired_code(paired_code), priority(pri),
     on_task_enqueue((std::string(name) + std::string(".enqueue")).c_str()), 
     on_task_begin((std::string(name) + std::string(".begin")).c_str()), 

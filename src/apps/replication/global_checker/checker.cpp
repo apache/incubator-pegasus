@@ -105,8 +105,8 @@ namespace dsn {
                 auto meta = meta_leader();
                 if (!meta) return;
 
-                std::unordered_map<global_partition_id, end_point> primaries_from_meta_server;
-                std::unordered_map<global_partition_id, end_point> primaries_from_replica_servers;
+                std::unordered_map<global_partition_id, dsn_endpoint_t> primaries_from_meta_server;
+                std::unordered_map<global_partition_id, dsn_endpoint_t> primaries_from_replica_servers;
 
                 for (auto& app : meta->_reliable_state->_apps)
                 {
@@ -127,7 +127,7 @@ namespace dsn {
                         if (r.second->status() == PS_PRIMARY)
                         {
                             auto pr = primaries_from_replica_servers.insert(
-                                std::unordered_map<global_partition_id, end_point>::value_type(r.first, rs->primary_address())
+                                std::unordered_map<global_partition_id, dsn_endpoint_t>::value_type(r.first, rs->primary_address())
                                 );
                             dassert(pr.second, "only one primary can exist for one partition");
 

@@ -116,7 +116,7 @@ namespace dsn {
         {        
 
             rpc_response_task_ptr call(
-                const end_point& server,
+                const dsn_endpoint_t& server,
                 message_ptr& request,
                 servicelet* owner,
                 std::function<void(error_code, message_ptr&, message_ptr&)> callback,
@@ -177,7 +177,7 @@ namespace dsn {
 
 
             aio_task_ptr copy_remote_files(
-                const end_point& remote,
+                const dsn_endpoint_t& remote,
                 const std::string& source_dir,
                 std::vector<std::string>& files,  // empty for all
                 const std::string& dest_dir,

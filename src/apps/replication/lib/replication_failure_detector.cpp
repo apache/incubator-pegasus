@@ -29,7 +29,7 @@
 namespace dsn { namespace replication {
 
 
-replication_failure_detector::replication_failure_detector(replica_stub* stub, std::vector<end_point>& meta_servers)
+replication_failure_detector::replication_failure_detector(replica_stub* stub, std::vector<dsn_endpoint_t>& meta_servers)
 {
     _stub = stub;
     _meta_servers = meta_servers;
@@ -41,9 +41,9 @@ replication_failure_detector::~replication_failure_detector(void)
 
 }
 
-end_point replication_failure_detector::find_next_meta_server(end_point current)
+dsn_endpoint_t replication_failure_detector::find_next_meta_server(dsn_endpoint_t current)
 {
-    if (end_point::INVALID == current)
+    if (dsn_endpoint_invalid == current)
         return _meta_servers[random32(0, 100) % _meta_servers.size()];
     else
     {
@@ -67,7 +67,7 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
     {
         if (err != ERR_OK)
         {
-            end_point node = find_next_meta_server(ack.this_node);
+            dsn_endpoint_t node = find_next_meta_server(ack.this_node);
             if (ack.this_node != node)
             {
                 switch_master(ack.this_node, node);
@@ -75,7 +75,7 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
         }
         else if (ack.is_master == false)
         {
-            if (end_point::INVALID != ack.primary_node)
+            if (dsn_endpoint_invalid != ack.primary_node)
             {
                 switch_master(ack.this_node, ack.primary_node);
             }
@@ -90,7 +90,7 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
         }
         else if (ack.is_master == false)
         {
-            if (end_point::INVALID != ack.primary_node)
+            if (dsn_endpoint_invalid != ack.primary_node)
             {
                 switch_master(ack.this_node, ack.primary_node);
             }
@@ -103,7 +103,7 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
 }
 
 // client side
-void replication_failure_detector::on_master_disconnected( const std::vector<end_point>& nodes )
+void replication_failure_detector::on_master_disconnected( const std::vector<dsn_endpoint_t>& nodes )
 {
     bool primaryDisconnected = false;
 
@@ -122,7 +122,7 @@ void replication_failure_detector::on_master_disconnected( const std::vector<end
     }
 }
 
-void replication_failure_detector::on_master_connected( const end_point& node)
+void replication_failure_detector::on_master_connected( const dsn_endpoint_t& node)
 {
     bool is_primary = false;
 

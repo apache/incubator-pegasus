@@ -253,16 +253,16 @@ namespace dsn {
                 s_spec_profilers[i].ptr[TASK_THROUGHPUT] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".qps")).c_str(), COUNTER_TYPE_RATE, true);
                 s_spec_profilers[i].ptr[TASK_CANCELLED] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".cancelled#")).c_str(), COUNTER_TYPE_NUMBER, true);
 
-                if (spec->type == task_type::TASK_TYPE_RPC_REQUEST)
+                if (spec->type == dsn_task_type_t::TASK_TYPE_RPC_REQUEST)
                 {
                     s_spec_profilers[i].ptr[RPC_SERVER_LATENCY_NS] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".latency.server")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
                 }
-                else if (spec->type == task_type::TASK_TYPE_RPC_RESPONSE)
+                else if (spec->type == dsn_task_type_t::TASK_TYPE_RPC_RESPONSE)
                 {
                     s_spec_profilers[i].ptr[RPC_CLIENT_NON_TIMEOUT_LATENCY_NS] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".latency.client(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
                     s_spec_profilers[i].ptr[RPC_CLIENT_TIMEOUT_THROUGHPUT] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".timeout.qps")).c_str(), COUNTER_TYPE_RATE, true);
                 }
-                else if (spec->type == task_type::TASK_TYPE_AIO)
+                else if (spec->type == dsn_task_type_t::TASK_TYPE_AIO)
                 {
                     s_spec_profilers[i].ptr[AIO_LATENCY_NS] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".latency(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
                 }

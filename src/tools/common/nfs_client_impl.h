@@ -100,7 +100,7 @@ namespace dsn {
             };
                         
         public:
-            nfs_client_impl(nfs_opts& opts) : nfs_client(end_point::INVALID), _opts(opts)
+            nfs_client_impl(nfs_opts& opts) : nfs_client(dsn_endpoint_invalid), _opts(opts)
             {
                 _concurrent_copy_request_count = 0;
                 _concurrent_local_write_count = 0;

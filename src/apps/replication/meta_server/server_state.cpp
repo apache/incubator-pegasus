@@ -86,7 +86,7 @@ void server_state::load(const char* chk_point)
     {
         auto& ps = app.partitions[i];
 
-        if (ps.primary != end_point::INVALID)
+        if (ps.primary != dsn_endpoint_invalid)
         {
             _nodes[ps.primary].primaries.insert(ps.gpid);
             _nodes[ps.primary].partitions.insert(ps.gpid);
@@ -94,7 +94,7 @@ void server_state::load(const char* chk_point)
         
         for (auto& ep : ps.secondaries)
         {
-            dassert(ep != end_point::INVALID, "");
+            dassert(ep != dsn_endpoint_invalid, "");
             _nodes[ep].partitions.insert(ps.gpid);
         }
     }
@@ -184,7 +184,7 @@ void server_state::set_node_state(const node_states& nodes, __out_param machine_
     
     for (auto& itr : nodes)
     {
-        dassert(itr.first != end_point::INVALID, "");
+        dassert(itr.first != dsn_endpoint_invalid, "");
 
         auto it = _nodes.find(itr.first);
         if (it != _nodes.end())
@@ -212,7 +212,7 @@ void server_state::set_node_state(const node_states& nodes, __out_param machine_
                         request->type = CT_DOWNGRADE_TO_INACTIVE;
                         request->config = old;
                         request->config.ballot++;
-                        request->config.primary = end_point::INVALID;
+                        request->config.primary = dsn_endpoint_invalid;
 
                         (*pris)[pri] = request;
                     }
@@ -246,7 +246,7 @@ void server_state::unfree_if_possible_on_start()
     dinfo("live replica server # is %d, freeze = %s", _node_live_count, _freeze ? "true" : "false");
 }
 
-bool server_state::get_meta_server_primary(__out_param end_point& node)
+bool server_state::get_meta_server_primary(__out_param dsn_endpoint_t& node)
 {
     zauto_read_lock l(_meta_lock);
     if (-1 == _leader_index)
@@ -258,7 +258,7 @@ bool server_state::get_meta_server_primary(__out_param end_point& node)
     }
 }
 
-void server_state::add_meta_node(const end_point& node)
+void server_state::add_meta_node(const dsn_endpoint_t& node)
 {
     zauto_write_lock l(_meta_lock);
     
@@ -267,7 +267,7 @@ void server_state::add_meta_node(const end_point& node)
         _leader_index = 0;
 }
 
-void server_state::remove_meta_node(const end_point& node)
+void server_state::remove_meta_node(const dsn_endpoint_t& node)
 {
     zauto_write_lock l(_meta_lock);
     
@@ -289,7 +289,7 @@ void server_state::remove_meta_node(const end_point& node)
         }
     }
 
-    dassert (false, "cannot find node '%s:%hu' in server state", node.name.c_str(), node.port);
+    dassert (false, "cannot find node '%s:%hu' in server state", node.name, node.port);
 }
 
 void server_state::switch_meta_primary()
@@ -468,7 +468,7 @@ void server_state::check_consistency(global_partition_id gpid)
     app_state& app = _apps[gpid.app_id - 1];
     partition_configuration& config = app.partitions[gpid.pidx];
 
-    if (config.primary != end_point::INVALID)
+    if (config.primary != dsn_endpoint_invalid)
     {
         auto it = _nodes.find(config.primary);
         dassert(it != _nodes.end(), "");

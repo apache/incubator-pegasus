@@ -136,7 +136,7 @@ ErrOut:
     return;
 }
 
-void replica::send_prepare_message(const end_point& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds)
+void replica::send_prepare_message(const dsn_endpoint_t& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds)
 {
     message_ptr msg = message::create_request(RPC_PREPARE, timeout_milliseconds, gpid_to_hash(get_gpid()));
     marshall(msg, get_gpid());
@@ -163,7 +163,7 @@ void replica::send_prepare_message(const end_point& addr, partition_status statu
     ddebug( 
         "%s: mutation %s send_prepare_message to %s:%hu as %s", 
         name(), mu->name(),
-        addr.name.c_str(), addr.port,
+        addr.name, addr.port,
         enum_to_string(rconfig.status)
         );
 }
@@ -354,7 +354,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
     
     dassert (mu->data.header.ballot == get_ballot(), "");
 
-    end_point node = request->header().to_address;
+    dsn_endpoint_t node = request->header().to_address;
     partition_status st = _primary_states.get_node_status(node);
 
     // handle reply
@@ -372,7 +372,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
         ddebug( 
             "%s: mutation %s on_prepare_reply from %s:%hu", 
             name(), mu->name(),
-            node.name.c_str(), node.port
+            node.name, node.port
             );
     }
        

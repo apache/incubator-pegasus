@@ -70,7 +70,7 @@ namespace rpc
     // first listening address for the current node
     // !!! must invoked inside task to know the current node
     //
-    extern const end_point& primary_address();
+    extern const dsn_endpoint_t& primary_address();
 
     //
     // register a rpc handler for the given code, usually invoked
@@ -95,13 +95,13 @@ namespace rpc
     // call a RPC
     //   developers can always call callback::wait for synchronous calls
     //
-    extern void                  call(const end_point& server, message_ptr& request, rpc_response_task_ptr& callback);
-    extern rpc_response_task_ptr call(const end_point& server, message_ptr& request); // return callback
+    extern void                  call(const dsn_endpoint_t& server, message_ptr& request, rpc_response_task_ptr& callback);
+    extern rpc_response_task_ptr call(const dsn_endpoint_t& server, message_ptr& request); // return callback
 
     //
     // one way RPC call, no need to expect a return response value
     //
-    extern void call_one_way(const end_point& server, message_ptr& request);
+    extern void call_one_way(const dsn_endpoint_t& server, message_ptr& request);
 }
 
 namespace file
@@ -142,7 +142,7 @@ namespace file
     //  - callback: invoked when all files are copied to local, or any error happens in the process
     //
     extern void copy_remote_files(
-        const end_point& remote,
+        const dsn_endpoint_t& remote,
         const std::string& source_dir,
         std::vector<std::string>& files,  // empty for all
         const std::string& dest_dir,

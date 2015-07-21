@@ -34,8 +34,8 @@ class failure_detector_client
     : public virtual ::dsn::service::servicelet
 {
 public:
-    failure_detector_client(const ::dsn::end_point& server) { _server = server; }
-    failure_detector_client() { _server = ::dsn::end_point::INVALID; }
+    failure_detector_client(const dsn_endpoint_t& server) { _server = server; }
+    failure_detector_client() { _server = dsn_endpoint_invalid; }
     virtual ~failure_detector_client() {}
 
 
@@ -46,7 +46,7 @@ public:
         __out_param ::dsn::fd::beacon_ack& resp, 
         int timeout_milliseconds = 0, 
         int hash = 0,
-        const ::dsn::end_point *p_server_addr = nullptr)
+        const dsn_endpoint_t *p_server_addr = nullptr)
     {
         ::dsn::message_ptr msg = ::dsn::message::create_request(RPC_FD_FAILURE_DETECTOR_PING, timeout_milliseconds, hash);
         marshall(msg->writer(), beacon);
@@ -66,7 +66,7 @@ public:
         int timeout_milliseconds = 0, 
         int reply_hash = 0,
         int request_hash = 0,
-        const ::dsn::end_point *p_server_addr = nullptr)
+        const dsn_endpoint_t *p_server_addr = nullptr)
     {
         return ::dsn::service::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
@@ -99,7 +99,7 @@ public:
         int timeout_milliseconds = 0, 
         int reply_hash = 0,
         int request_hash = 0,
-        const ::dsn::end_point *p_server_addr = nullptr)
+        const dsn_endpoint_t *p_server_addr = nullptr)
     {
         return ::dsn::service::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
@@ -127,7 +127,7 @@ public:
     
 
 private:
-    ::dsn::end_point _server;
+    dsn_endpoint_t _server;
 };
 
 } } 

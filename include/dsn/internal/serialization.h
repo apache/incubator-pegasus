@@ -99,8 +99,8 @@ namespace dsn {
     }
 
     // end point
-    //extern inline void marshall(::dsn::binary_writer& writer, const end_point& val, uint16_t pos = 0xffff);
-    //extern inline void unmarshall(::dsn::binary_reader& reader, __out_param end_point& val);
+    //extern inline void marshall(::dsn::binary_writer& writer, const dsn_endpoint_t& val, uint16_t pos = 0xffff);
+    //extern inline void unmarshall(::dsn::binary_reader& reader, __out_param dsn_endpoint_t& val);
 
     // blob
     inline void marshall(::dsn::binary_writer& writer, const blob& val, uint16_t pos = 0xffff)

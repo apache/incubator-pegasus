@@ -124,38 +124,46 @@ message::~message()
 message_ptr message::create_request(task_code rpc_code, int timeout_milliseconds, int hash)
 {
     message_ptr msg(new message());
-    msg->header().local_rpc_code = (uint16_t)rpc_code;
-    msg->header().client.hash = hash;
+    auto& hdr = msg->header();
+    hdr.local_rpc_code = (uint16_t)rpc_code;
+    hdr.client.hash = hash;
     if (timeout_milliseconds == 0)
     {
-        msg->header().client.timeout_ms = task_spec::get(rpc_code)->rpc_timeout_milliseconds;
+        hdr.client.timeout_ms = task_spec::get(rpc_code)->rpc_timeout_milliseconds;
     }
     else
     {
-        msg->header().client.timeout_ms = timeout_milliseconds;
+        hdr.client.timeout_ms = timeout_milliseconds;
     }    
 
-    strcpy(msg->header().rpc_name, rpc_code.to_string());
+    strcpy(hdr.rpc_name, rpc_code.to_string());
 
-    msg->header().id = message::new_id();
+    hdr.id = message::new_id();
+    
+    hdr.from_address.name[0] = '\0';
+    hdr.from_address.port = 0; 
+    hdr.to_address.name[0] = '\0';    
+    hdr.to_address.port = 0;
+
     return msg;
 }
         
 message_ptr message::create_response()
 {
     message_ptr msg(new message());
+    auto& hdr = msg->header();
 
-    msg->header().id = _msg_header.id;
-    msg->header().rpc_id = _msg_header.rpc_id;
+    hdr.id = _msg_header.id;
+    hdr.rpc_id = _msg_header.rpc_id;
         
-    msg->header().server.error = ERR_OK.get();
-    msg->header().local_rpc_code = task_spec::get(_msg_header.local_rpc_code)->rpc_paired_code;
+    hdr.server.error = ERR_OK.get();
+    hdr.local_rpc_code = task_spec::get(_msg_header.local_rpc_code)->rpc_paired_code;
     
-    strcpy(msg->header().rpc_name, _msg_header.rpc_name);
-    strcat(msg->header().rpc_name, "_ACK");
+    strcpy(hdr.rpc_name, _msg_header.rpc_name);
+    strcat(hdr.rpc_name, "_ACK");
 
-    msg->header().from_address = _msg_header.to_address;
-    msg->header().to_address = _msg_header.from_address;
+    hdr.from_address = _msg_header.to_address;
+    hdr.to_address = _msg_header.from_address;
 
     msg->_server_session = _server_session;
 

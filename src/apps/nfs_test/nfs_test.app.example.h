@@ -75,7 +75,7 @@ namespace dsn {
                     if (argc < 2)
                         return ::dsn::ERR_INVALID_PARAMETERS;
 
-                    _server = ::dsn::end_point(argv[1], (uint16_t)atoi(argv[2]));
+                    dsn_build_end_point(&_server, argv[1], (uint16_t)atoi(argv[2]));
 
                     //on_request_timer();
                     _request_timer = ::dsn::service::tasking::enqueue(LPC_NFS_REQUEST_TIMER, this, &nfs_client_app::on_request_timer, 0, 0, 1000);
@@ -128,7 +128,7 @@ namespace dsn {
                 ::dsn::task_ptr _timer;
                 ::dsn::task_ptr _request_timer;
 
-                ::dsn::end_point _server;
+                dsn_endpoint_t _server;
                 std::atomic<int> _req_index;
 
             };

@@ -43,11 +43,11 @@ namespace dsn { namespace replication {
     class replication_app_client_base : public virtual servicelet
     {
     public:
-        static void load_meta_servers(configuration_ptr& cf, __out_param std::vector<end_point>& servers);
+        static void load_meta_servers(configuration_ptr& cf, __out_param std::vector<dsn_endpoint_t>& servers);
 
     public:
         replication_app_client_base(        
-            const std::vector<end_point>& meta_servers, 
+            const std::vector<dsn_endpoint_t>& meta_servers, 
             const char* app_name
             );
 
@@ -338,7 +338,7 @@ namespace dsn { namespace replication {
         }
 
         // get read address policy
-        virtual end_point get_read_address(read_semantic_t semantic, const partition_configuration& config);
+        virtual dsn_endpoint_t get_read_address(read_semantic_t semantic, const partition_configuration& config);
         
     public:
         struct request_context : public ref_object
@@ -391,17 +391,17 @@ namespace dsn { namespace replication {
 
     private:
         std::string                             _app_name;
-        std::vector<end_point>                  _meta_servers;
+        std::vector<dsn_endpoint_t>                  _meta_servers;
         
         mutable zrwlock_nr                      _config_lock;
         std::unordered_map<int, partition_configuration> _config_cache;
         int                                     _app_id;
         int                                     _app_partition_count;
-        end_point                               _last_contact_point;
+        dsn_endpoint_t                               _last_contact_point;
 
     private:
         void call(request_context_ptr request, bool no_delay = true);
-        error_code get_address(int pidx, bool is_write, __out_param end_point& addr, __out_param int& app_id, read_semantic_t semantic = read_semantic_t::ReadLastUpdate);
+        error_code get_address(int pidx, bool is_write, __out_param dsn_endpoint_t& addr, __out_param int& app_id, read_semantic_t semantic = read_semantic_t::ReadLastUpdate);
         void query_partition_configuration_reply(error_code err, message_ptr& request, message_ptr& response, int pidx);
         void replica_rw_reply(error_code err, message_ptr& request, message_ptr& response, request_context_ptr& rc);
         void end_request(request_context_ptr& request, error_code err, message_ptr& resp);

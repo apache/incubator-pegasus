@@ -89,7 +89,9 @@ namespace dsn {
                         std::string machine = args[1];
                         int port = atoi(args[2].c_str());
                         _timeout_seconds = atoi(args[3].c_str());
-                        _target = end_point(machine.c_str(), port);
+
+                        dsn_build_end_point(&_target, machine.c_str(), port);
+
                         std::cout << "remote target is set to " << machine << ":" << port << ", timeout = " << _timeout_seconds << " seconds" <<std::endl;
                         continue;
                     }

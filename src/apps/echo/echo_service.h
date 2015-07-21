@@ -105,7 +105,7 @@ public:
         if (argc < 3)
             return ERR_INVALID_PARAMETERS;
 
-        _server = end_point(argv[1], (uint16_t)atoi(argv[2]));
+        dsn_build_end_point(&_server, argv[1], (uint16_t)atoi(argv[2]));
 
         if (_bench == "echo")
         {
@@ -266,7 +266,7 @@ private:
 
     std::string _bench;
     bool _test_local_queue;
-    end_point _server;
+    dsn_endpoint_t _server;
     int _seq;
     int _message_size;
     int _concurrency;

@@ -36,7 +36,7 @@ struct remote_learner_state
     decree   prepare_start_decree;
 };
 
-typedef std::unordered_map<end_point, remote_learner_state> learner_map;
+typedef std::unordered_map<dsn_endpoint_t, remote_learner_state> learner_map;
 
 class primary_context
 {
@@ -44,10 +44,10 @@ public:
     void cleanup(bool clean_pending_mutations = true);
        
     void reset_membership(const partition_configuration& config, bool clear_learners);
-    bool get_replica_config(const end_point& node, __out_param replica_configuration& config);
+    bool get_replica_config(const dsn_endpoint_t& node, __out_param replica_configuration& config);
     void get_replica_config(partition_status status, __out_param replica_configuration& config);
-    bool check_exist(const end_point& node, partition_status status);
-    partition_status get_node_status(const end_point& addr) const;
+    bool check_exist(const dsn_endpoint_t& node, partition_status status);
+    partition_status get_node_status(const dsn_endpoint_t& addr) const;
 
     void do_cleanup_pending_mutations(bool clean_pending_mutations = true);
     
@@ -98,7 +98,7 @@ public:
 
 //---------------inline impl----------------------------------------------------------------
 
-inline partition_status primary_context::get_node_status(const end_point& addr) const
+inline partition_status primary_context::get_node_status(const dsn_endpoint_t& addr) const
 { 
     auto it = statuses.find(addr);
     return it != statuses.end()  ? it->second : PS_INACTIVE;

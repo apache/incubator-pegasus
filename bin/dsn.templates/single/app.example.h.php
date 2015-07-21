@@ -60,7 +60,7 @@ public:
         if (argc < 3)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        _server = ::dsn::end_point(argv[1], (uint16_t)atoi(argv[2]));
+        dsn_build_end_point(&_server, argv[1], (uint16_t)atoi(argv[2]));
 <?php foreach ($_PROG->services as $svc) { ?>
         _<?=$svc->name?>_client = new <?=$svc->name?>_client(_server);
 <?php } ?>
@@ -108,7 +108,7 @@ foreach ($_PROG->services as $svc)
 
 private:
     ::dsn::task_ptr _timer;
-    ::dsn::end_point _server;
+    dsn_endpoint_t _server;
     
 <?php foreach ($_PROG->services as $svc) { ?>
     <?=$svc->name?>_client *_<?=$svc->name?>_client;
@@ -135,7 +135,7 @@ public:
         if (argc < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        _server = ::dsn::end_point(argv[1], (uint16_t)atoi(argv[2]));
+        dsn_build_end_point(&_server, argv[1], (uint16_t)atoi(argv[2]));
 
         _<?=$svc->name?>_client = new <?=$svc->name?>_perf_test_client(_server);
         _<?=$svc->name?>_client->start_test();
@@ -153,7 +153,7 @@ public:
     
 private:
     <?=$svc->name?>_perf_test_client *_<?=$svc->name?>_client;
-    ::dsn::end_point _server;
+    dsn_endpoint_t _server;
 };
 <?php } ?>
 

@@ -36,7 +36,7 @@ namespace dsn {
         net_client_session::net_client_session(
             asio_network_provider& net, 
             boost::asio::ip::tcp::socket& socket,
-            const end_point& remote_addr, 
+            const dsn_endpoint_t& remote_addr, 
             rpc_client_matcher_ptr& matcher,
             std::shared_ptr<message_parser>& parser)
             : 

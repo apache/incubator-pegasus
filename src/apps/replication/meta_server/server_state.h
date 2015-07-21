@@ -38,7 +38,7 @@ namespace dsn {
     }
 }
 
-typedef std::list<std::pair<end_point, bool>> node_states;
+typedef std::list<std::pair<dsn_endpoint_t, bool>> node_states;
 
 struct app_state
 {
@@ -61,10 +61,10 @@ public:
 
     void get_node_state(__out_param node_states& nodes);
     void set_node_state(const node_states& nodes, __out_param machine_fail_updates* pris);
-    bool get_meta_server_primary(__out_param end_point& node);
+    bool get_meta_server_primary(__out_param dsn_endpoint_t& node);
 
-    void add_meta_node(const end_point& node);
-    void remove_meta_node(const end_point& node);
+    void add_meta_node(const dsn_endpoint_t& node);
+    void remove_meta_node(const dsn_endpoint_t& node);
     void switch_meta_primary();
 
     void load(const char* chk_point);
@@ -88,21 +88,21 @@ private:
     struct node_state
     {
         bool                          is_alive;
-        end_point                     address;
+        dsn_endpoint_t                address;
         std::set<global_partition_id> primaries;
         std::set<global_partition_id> partitions;
     };
 
     mutable zrwlock_nr                   _lock;
-    std::unordered_map<end_point, node_state>   _nodes;
+    std::unordered_map<dsn_endpoint_t, node_state>   _nodes;
     std::vector<app_state>            _apps;
 
     int                               _node_live_count;
     int                               _node_live_percentage_threshold_for_update;
     std::atomic<bool>                 _freeze;
 
-    mutable zrwlock_nr                   _meta_lock;
-    std::vector<end_point>            _meta_servers;
+    mutable zrwlock_nr                _meta_lock;
+    std::vector<dsn_endpoint_t>       _meta_servers;
     int                               _leader_index;
 
     friend class load_balancer;

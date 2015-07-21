@@ -40,9 +40,9 @@ namespace dsn {
             virtual void stop(bool cleanup = false);
 
         private:
-            cli_client _client;
-            end_point  _target;
-            int        _timeout_seconds;
+            cli_client      _client;
+            dsn_endpoint_t  _target;
+            int             _timeout_seconds;
         };
     }
 }

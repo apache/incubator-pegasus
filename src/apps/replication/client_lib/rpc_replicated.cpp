@@ -36,14 +36,14 @@ namespace dsn {
 
                 struct params
                 {
-                    std::vector<end_point> servers;
+                    std::vector<dsn_endpoint_t> servers;
                     rpc_response_task_ptr response_task;
                     rpc_reply_handler callback;
                 };
 
-                static end_point get_next_server(const end_point& currentServer, const std::vector<end_point>& servers)
+                static dsn_endpoint_t get_next_server(const dsn_endpoint_t& currentServer, const std::vector<dsn_endpoint_t>& servers)
                 {
-                    if (currentServer == end_point::INVALID)
+                    if (currentServer == dsn_endpoint_invalid)
                     {
                         return servers[env::random32(0, static_cast<int>(servers.size()) * 13) % static_cast<int>(servers.size())];
                     }
@@ -66,7 +66,7 @@ namespace dsn {
                 {
                     //printf ("%s\n", __FUNCTION__);
 
-                    end_point next_server;
+                    dsn_endpoint_t next_server;
                     if (nullptr != response)
                     {
                         err.end_tracking();
@@ -115,8 +115,8 @@ namespace dsn {
             } // end namespace rpc_replicated_impl 
 
             rpc_response_task_ptr call_replicated(
-                const end_point& first_server,
-                const std::vector<end_point>& servers,
+                const dsn_endpoint_t& first_server,
+                const std::vector<dsn_endpoint_t>& servers,
                 message_ptr& request,
 
                 // reply
@@ -125,8 +125,8 @@ namespace dsn {
                 int reply_hash
                 )
             {
-                end_point first = first_server;
-                if (first == end_point::INVALID)
+                dsn_endpoint_t first = first_server;
+                if (first == dsn_endpoint_invalid)
                 {
                     first = rpc_replicated_impl::get_next_server(first_server, servers);
                 }
