@@ -164,7 +164,7 @@ error_code mutation_log::create_new_log_file()
     auto len = logFile->write_header(_pending_write, _init_prepared_decrees, 
         static_cast<int>(_log_buffer_size_bytes));
     _global_end_offset += len;
-    dassert (_pending_write->total_size() == len + MSG_HDR_SERIALIZED_SIZE, "");
+    dassert (_pending_write->total_size() == len + DSN_MSG_HDR_SERIALIZED_SIZE, "");
 
     return ERR_OK;
 }
@@ -178,8 +178,8 @@ void mutation_log::create_new_pending_buffer()
     _pending_write = message::create_request(RPC_PREPARE, _log_pending_max_milliseconds);
     _pending_write_callbacks.reset(new std::list<aio_task_ptr>);
 
-    dassert (_pending_write->total_size() == MSG_HDR_SERIALIZED_SIZE, "");
-    _global_end_offset += MSG_HDR_SERIALIZED_SIZE;
+    dassert (_pending_write->total_size() == DSN_MSG_HDR_SERIALIZED_SIZE, "");
+    _global_end_offset += DSN_MSG_HDR_SERIALIZED_SIZE;
 }
 
 void mutation_log::internal_pending_write_timer(uint64_t id)
@@ -297,7 +297,7 @@ error_code mutation_log::replay(replay_callback callback)
 
 
         message_ptr msg(new message(bb));
-        offset += MSG_HDR_SERIALIZED_SIZE;
+        offset += DSN_MSG_HDR_SERIALIZED_SIZE;
 
         if (!msg->is_right_body())
         {
@@ -347,7 +347,7 @@ error_code mutation_log::replay(replay_callback callback)
             }
             
             msg = new message(bb);
-            offset += MSG_HDR_SERIALIZED_SIZE;
+            offset += DSN_MSG_HDR_SERIALIZED_SIZE;
 
             if (!msg->is_right_body())
             {
@@ -615,7 +615,7 @@ std::map<int, log_file_ptr>& mutation_log::get_logfiles_for_test()
         return nullptr;
     }
 
-    handle_t hFile = (handle_t)::open(path, O_RDONLY | O_BINARY, 0);
+    dsn_handle_t hFile = (dsn_handle_t)::open(path, O_RDONLY | O_BINARY, 0);
 
     if (hFile == 0)
     {
@@ -635,7 +635,7 @@ std::map<int, log_file_ptr>& mutation_log::get_logfiles_for_test()
     char path[512]; 
     sprintf (path, "%s/log.%u.%lld", dir, index, static_cast<long long int>(startOffset));
     
-    handle_t hFile = dsn::service::file::open(path, O_RDWR | O_CREAT | O_BINARY, 0666);
+    dsn_handle_t hFile = dsn::service::file::open(path, O_RDWR | O_CREAT | O_BINARY, 0666);
     if (hFile == 0)
     {
         dwarn("create log %s failed", path);
@@ -645,7 +645,7 @@ std::map<int, log_file_ptr>& mutation_log::get_logfiles_for_test()
     return new log_file(path, hFile, index, startOffset, max_staleness_for_commit, false, write_task_max_count);
 }
 
-log_file::log_file(const char* path, handle_t handle, int index, int64_t startOffset, int max_staleness_for_commit, bool isRead, int write_task_max_count)
+log_file::log_file(const char* path, dsn_handle_t handle, int index, int64_t startOffset, int max_staleness_for_commit, bool isRead, int write_task_max_count)
 {
     _start_offset = startOffset;
     _end_offset = startOffset;
@@ -694,20 +694,20 @@ error_code log_file::read_next_log_entry(__out_param::dsn::blob& bb)
 {
     dassert (_is_read, "");
 
-    char hdr_buffer[MSG_HDR_SERIALIZED_SIZE];
-    message_header hdr;
+    char hdr_buffer[DSN_MSG_HDR_SERIALIZED_SIZE];
+    dsn_message_header hdr;
     
     int read_count = ::read(
         (int)(_handle),
         hdr_buffer,
-        MSG_HDR_SERIALIZED_SIZE
+        DSN_MSG_HDR_SERIALIZED_SIZE
         );
 
-    if (MSG_HDR_SERIALIZED_SIZE != read_count)
+    if (DSN_MSG_HDR_SERIALIZED_SIZE != read_count)
     {
         if (read_count > 0)
         {
-            derror("incomplete read data, size = %d vs %d", read_count, MSG_HDR_SERIALIZED_SIZE);
+            derror("incomplete read data, size = %d vs %d", read_count, DSN_MSG_HDR_SERIALIZED_SIZE);
             return ERR_INVALID_DATA;
         }
         else
@@ -716,29 +716,29 @@ error_code log_file::read_next_log_entry(__out_param::dsn::blob& bb)
         }
     }
         
-    ::dsn::blob bb2(hdr_buffer, 0, MSG_HDR_SERIALIZED_SIZE);
+    ::dsn::blob bb2(hdr_buffer, 0, DSN_MSG_HDR_SERIALIZED_SIZE);
     ::dsn::binary_reader reader(bb2);
-    hdr.unmarshall(reader);
+    dsn_message_header_helper::unmarshall(&hdr, reader);
 
-    if (!hdr.is_right_header((char*)hdr_buffer))
+    if (!dsn_message_header_helper::is_right_header((char*)hdr_buffer))
     {
         derror("invalid data header");
         return ERR_INVALID_DATA;
     }
 
-    std::shared_ptr<char> data(new char[MSG_HDR_SERIALIZED_SIZE + hdr.body_length]);
-    memcpy(data.get(), hdr_buffer, MSG_HDR_SERIALIZED_SIZE);
-    bb.assign(data, 0, MSG_HDR_SERIALIZED_SIZE + hdr.body_length);
+    std::shared_ptr<char> data(new char[DSN_MSG_HDR_SERIALIZED_SIZE + hdr.body_length]);
+    memcpy(data.get(), hdr_buffer, DSN_MSG_HDR_SERIALIZED_SIZE);
+    bb.assign(data, 0, DSN_MSG_HDR_SERIALIZED_SIZE + hdr.body_length);
 
     read_count = ::read(
         (int)(_handle),
-        (void*)((char*)bb.data() + MSG_HDR_SERIALIZED_SIZE),
+        (void*)((char*)bb.data() + DSN_MSG_HDR_SERIALIZED_SIZE),
         hdr.body_length
         );
 
     if (hdr.body_length != read_count)
     {
-        derror("incomplete read data, size = %d vs %d", read_count, MSG_HDR_SERIALIZED_SIZE);
+        derror("incomplete read data, size = %d vs %d", read_count, DSN_MSG_HDR_SERIALIZED_SIZE);
         return ERR_INVALID_DATA;
     }
     

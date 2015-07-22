@@ -99,9 +99,9 @@ public:
 typedef task_queue*      (*task_queue_factory)(task_worker_pool*, int, task_queue*);
 typedef task_worker*     (*task_worker_factory)(task_worker_pool*, task_queue*, int, task_worker*);
 typedef admission_controller* (*admission_controller_factory)(task_queue*, const char*);
-typedef lock_provider*   (*lock_factory)(dsn::service::zlock *, lock_provider*);
-typedef rwlock_nr_provider* (*read_write_lock_factory)(dsn::service::zrwlock_nr *, rwlock_nr_provider*);
-typedef semaphore_provider* (*semaphore_factory)(dsn::service::zsemaphore *, int, semaphore_provider*);
+typedef lock_provider*   (*lock_factory)(lock_provider*);
+typedef rwlock_nr_provider* (*read_write_lock_factory)(rwlock_nr_provider*);
+typedef semaphore_provider* (*semaphore_factory)(int, semaphore_provider*);
 typedef network*         (*network_factory)(rpc_engine*, network*);
 typedef aio_provider*    (*aio_factory)(disk_engine*, aio_provider*);
 typedef env_provider*    (*env_factory)(env_provider*);

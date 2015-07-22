@@ -38,14 +38,12 @@ __pragma(warning(disable:4127))
 
 #define __thread __declspec(thread)
 #define __selectany __declspec(selectany) extern 
-typedef HANDLE handle_t;
 
 # elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
 
 # include <unistd.h>
 
 # define __selectany __attribute__((weak)) extern 
-typedef int handle_t;
 
 # ifndef O_BINARY
 # define O_BINARY 0

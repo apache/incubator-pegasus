@@ -11,7 +11,7 @@ namespace dsn {
             //dinfo(">>> on call RPC_COPY end, exec RPC_NFS_COPY");
 
             std::string file_path = request.source_dir + request.file_name;            
-            handle_t hfile;
+            dsn_handle_t hfile;
 
             {
                 zauto_lock l(_handles_map_lock);

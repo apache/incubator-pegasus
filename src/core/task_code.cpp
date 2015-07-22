@@ -79,9 +79,9 @@ task_spec::task_spec(int code, const char* name, dsn_task_type_t type, threadpoo
     }
 
     dassert (
-        strlen(name) < MAX_TASK_CODE_NAME_LENGTH, 
-        "task code name '%s' is too long: length must be smaller than MAX_TASK_CODE_NAME_LENGTH (%u)", 
-        name, MAX_TASK_CODE_NAME_LENGTH
+        strlen(name) < DSN_MAX_TASK_CODE_NAME_LENGTH, 
+        "task code name '%s' is too long: length must be smaller than DSN_MAX_TASK_CODE_NAME_LENGTH (%u)", 
+        name, DSN_MAX_TASK_CODE_NAME_LENGTH
         );
 
     rejection_handler = nullptr;
@@ -143,7 +143,7 @@ bool task_spec::init(configuration_ptr config)
                 && spec->type != TASK_TYPE_RPC_REQUEST
                 && spec->allow_inline);
             spec->fast_execution_in_network_thread = 
-                ((spec->type == TASK_TYPE_RPC_RESPONSE || spec->type == TASK_TYPE_RPC_REQUEST)
+                (spec->type <= TASK_TYPE_RPC_REQUEST
                 && spec->fast_execution_in_network_thread);
         }
         else
@@ -154,7 +154,7 @@ bool task_spec::init(configuration_ptr config)
                 && default_spec.allow_inline
                 );
             spec->fast_execution_in_network_thread =
-                ((spec->type == TASK_TYPE_RPC_RESPONSE || spec->type == TASK_TYPE_RPC_REQUEST)
+                (spec->type <= TASK_TYPE_RPC_REQUEST
                 && default_spec.fast_execution_in_network_thread);
             spec->rpc_call_channel = default_spec.rpc_call_channel;
             spec->rpc_call_header_format = default_spec.rpc_call_header_format;

@@ -55,6 +55,9 @@ public:
     void call(message_ptr& request, rpc_response_task_ptr& call);
     void on_recv_request(message_ptr& msg, int delay_ms);
     static void reply(message_ptr& response);
+
+    void call(message_ptr& request, rpc_response_task_ptr& call, dsn_msg_callback_t cb, dsn_param_t param);
+    static void reply(message_ptr& response, dsn_msg_callback_t cb, dsn_param_t param);
     
     //
     // information inquery

@@ -262,7 +262,7 @@ namespace dsn {
                 boost::filesystem::create_directories(path);
             }
 
-            handle_t hfile = reqc->file_ctx->file.load();
+            dsn_handle_t hfile = reqc->file_ctx->file.load();
             if (!hfile)
             {
                 zauto_lock l(reqc->file_ctx->user_req->user_req_lock);
@@ -327,7 +327,7 @@ namespace dsn {
                 {
                     auto err = file::close(reqc->file_ctx->file);
                     dassert(err == ERR_OK, "file::close failed, err = %s", err.to_string());
-                    reqc->file_ctx->file = static_cast<handle_t>(0);
+                    reqc->file_ctx->file = static_cast<dsn_handle_t>(0);
                     reqc->file_ctx->copy_requests.clear();
 
                     if (++reqc->file_ctx->user_req->finished_files == (int)reqc->file_ctx->user_req->file_context_map.size())
@@ -395,7 +395,7 @@ namespace dsn {
                     auto err2 = file::close(f.second->file);
                     dassert(err2 == ERR_OK, "file::close failed, err = %s", err2.to_string()); 
 
-                    f.second->file = static_cast<handle_t>(0);
+                    f.second->file = static_cast<dsn_handle_t>(0);
 
                     if (f.second->finished_segments != (int)f.second->copy_requests.size())
                     {

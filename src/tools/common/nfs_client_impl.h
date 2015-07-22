@@ -64,7 +64,7 @@ namespace dsn {
                 std::string file_name;
                 uint64_t    file_size;
 
-                std::atomic<handle_t> file;
+                std::atomic<dsn_handle_t> file;
                 int         current_write_index;
                 int         finished_segments;
                 std::vector<boost::intrusive_ptr<copy_request_ex> > copy_requests;
@@ -74,7 +74,7 @@ namespace dsn {
                     user_req = req;
                     file_name = file_nm;
                     file_size = sz;
-                    file = static_cast<handle_t>(0);
+                    file = static_cast<dsn_handle_t>(0);
 
                     current_write_index = -1;
                     finished_segments = 0;

@@ -35,49 +35,16 @@
 
 namespace dsn {
 
-struct message_header
-{    
-    int32_t       hdr_crc32;
-    int32_t       body_crc32;
-    int32_t       body_length;
-    int32_t       version;
-    uint64_t      id;
-    uint64_t      rpc_id;
-    char          rpc_name[MAX_TASK_CODE_NAME_LENGTH];
-
-    // info from client => server
-    union
-    {
-        struct 
-        {
-            int32_t  timeout_ms;
-            int32_t  hash;
-            uint16_t port;
-        } client;
-
-        struct 
-        {
-            int32_t  error;
-        } server;
-    };
-
-    // local fields - no need to be transmitted
-    dsn_address_t     from_address;
-    dsn_address_t     to_address;
-    uint16_t      local_rpc_code;
-    
-    void marshall(binary_writer& writer);
-    void unmarshall(binary_reader& reader);
-    void new_rpc_id();
-    
+struct dsn_message_header_helper
+{
+    static void marshall(dsn_message_header* hdr, binary_writer& writer);
+    static void unmarshall(dsn_message_header* hdr, binary_reader& reader);   
     static bool is_right_header(char* hdr);
-    static int get_body_length(char* hdr)
+    static int  get_body_length(char* hdr)
     {
-        return ((message_header*)hdr)->body_length;
+        return ((dsn_message_header*)hdr)->body_length;
     }
 };
-
-# define MSG_HDR_SERIALIZED_SIZE (static_cast<int>(FIELD_OFFSET(message_header, from_address)))
 
 class rpc_server_session;
 class message : public ref_object, public extensible_object<message, 4>, public ::dsn::tools::memory::tallocator_object
@@ -103,20 +70,24 @@ public:
     // meta info
     //
     void seal(bool fillCrc, bool is_placeholder = false);
-    message_header& header() { return _msg_header; }
+    dsn_message_header& header() { return _msg.hdr; }
     int  total_size() const { return is_read() ? _reader->total_size() : _writer->total_size(); }
     bool is_read() const { return _reader != nullptr; }
-    error_code error() const { error_code ec; ec.set(_msg_header.server.error); return ec; }
+    error_code error() const { error_code ec; ec.set(_msg.hdr.server.error); return ec; }
     bool is_right_header() const;
     bool is_right_body() const;
     static uint64_t new_id() { return ++_id; }
     rpc_server_session_ptr& server_session() { return _server_session; }
+    dsn_message_t* c_msg() { return &_msg; }
+    static message* from_c_msg(dsn_message_t* msg) {
+        return CONTAINING_RECORD(msg, message, _msg);
+    }
 
 private:            
     void read_header();
 
 private:
-    message_header         _msg_header;    
+    dsn_message_t          _msg;
     binary_reader          *_reader;
     binary_writer          *_writer;
     rpc_server_session_ptr _server_session;

@@ -68,7 +68,7 @@ namespace dsn { namespace service {
 
             if (nullptr != task::get_current_task() && !waitee->is_empty())
             {
-                if (TASK_TYPE_RPC_RESPONSE == waitee->spec().type ||
+                if (waitee->spec().type <= TASK_TYPE_RPC_MSG_SENT ||
                     task::get_current_task()->spec().pool_code == waitee->spec().pool_code)
                 {
                     dassert(false, "task %s waits for another task %s sharing the same thread pool - will lead to deadlocks easily (e.g., when worker_count = 1 or when the pool is partitioned)",
@@ -82,14 +82,14 @@ namespace dsn { namespace service {
 
 zlock::zlock(void)
 {
-    lock_provider* last = factory_store<lock_provider>::create(service_engine::instance().spec().lock_factory_name.c_str(), PROVIDER_TYPE_MAIN, this, nullptr);
+    lock_provider* last = factory_store<lock_provider>::create(service_engine::instance().spec().lock_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
 
     // TODO: perf opt by saving the func ptrs somewhere
     for (auto it = service_engine::instance().spec().lock_aspects.begin();
         it != service_engine::instance().spec().lock_aspects.end();
         it++)
     {
-        last = factory_store<lock_provider>::create(it->c_str(), PROVIDER_TYPE_ASPECT, this, last);
+        last = factory_store<lock_provider>::create(it->c_str(), PROVIDER_TYPE_ASPECT, last);
     }
 
     _provider = last;
@@ -103,14 +103,14 @@ zlock::~zlock(void)
 
 zrwlock_nr::zrwlock_nr(void)
 {
-    rwlock_nr_provider* last = factory_store<rwlock_nr_provider>::create(service_engine::instance().spec().rwlock_nr_factory_name.c_str(), PROVIDER_TYPE_MAIN, this, nullptr);
+    rwlock_nr_provider* last = factory_store<rwlock_nr_provider>::create(service_engine::instance().spec().rwlock_nr_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
 
     // TODO: perf opt by saving the func ptrs somewhere
-    for (auto it = service_engine::instance().spec().rwlock_aspects.begin();
-        it != service_engine::instance().spec().rwlock_aspects.end();
+    for (auto it = service_engine::instance().spec().rwlock_nr_aspects.begin();
+        it != service_engine::instance().spec().rwlock_nr_aspects.end();
         it++)
     {
-        last = factory_store<rwlock_nr_provider>::create(it->c_str(), PROVIDER_TYPE_ASPECT, this, last);
+        last = factory_store<rwlock_nr_provider>::create(it->c_str(), PROVIDER_TYPE_ASPECT, last);
     }
 
     _provider = last;
@@ -123,14 +123,14 @@ zrwlock_nr::~zrwlock_nr(void)
 
 zsemaphore::zsemaphore(int initialCount)
 {
-    semaphore_provider* last = factory_store<semaphore_provider>::create(service_engine::instance().spec().semaphore_factory_name.c_str(), PROVIDER_TYPE_MAIN, this, initialCount, nullptr);
+    semaphore_provider* last = factory_store<semaphore_provider>::create(service_engine::instance().spec().semaphore_factory_name.c_str(), PROVIDER_TYPE_MAIN, initialCount, nullptr);
 
     // TODO: perf opt by saving the func ptrs somewhere
     for (auto it = service_engine::instance().spec().semaphore_aspects.begin();
         it != service_engine::instance().spec().semaphore_aspects.end();
         it++)
     {
-        last = factory_store<semaphore_provider>::create(it->c_str(), PROVIDER_TYPE_ASPECT, this, initialCount, last);
+        last = factory_store<semaphore_provider>::create(it->c_str(), PROVIDER_TYPE_ASPECT, initialCount, last);
     }
 
     _provider = last;

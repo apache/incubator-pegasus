@@ -26,7 +26,7 @@ namespace dsn {
         private:
             struct callback_para
             {
-                handle_t hfile;
+                dsn_handle_t hfile;
                 std::string file_name;
                 std::string dst_dir;
                 blob bb;
@@ -39,7 +39,7 @@ namespace dsn {
 
             struct file_handle_info_on_server
             {
-                handle_t file_handle;
+                dsn_handle_t file_handle;
                 int32_t file_access_count; // concurrent r/w count
                 uint64_t last_access_time; // last touch time
             };

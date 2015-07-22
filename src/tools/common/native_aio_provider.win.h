@@ -38,8 +38,8 @@ namespace dsn {
             native_win_aio_provider(disk_engine* disk, aio_provider* inner_provider);
             ~native_win_aio_provider();
 
-            virtual handle_t open(const char* file_name, int flag, int pmode);
-            virtual error_code close(handle_t hFile);
+            virtual dsn_handle_t open(const char* file_name, int flag, int pmode);
+            virtual error_code close(dsn_handle_t hFile);
             virtual void    aio(aio_task_ptr& aio);            
             virtual disk_aio_ptr prepare_aio_context(aio_task* tsk);
 
@@ -49,7 +49,7 @@ namespace dsn {
         private:
             void worker();
             std::thread *_worker_thr;
-            handle_t    _iocp;
+            HANDLE       _iocp;
         };
     }
 }

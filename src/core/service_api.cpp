@@ -460,7 +460,7 @@ namespace dsn
 
         namespace file
         {
-            handle_t open(const char* file_name, int flag, int pmode)
+            dsn_handle_t open(const char* file_name, int flag, int pmode)
             {
                 auto tsk = task::get_current_task();
                 dassert(tsk != nullptr, "this function can only be invoked inside tasks");
@@ -468,7 +468,7 @@ namespace dsn
                 return tsk->node()->disk()->open(file_name, flag, pmode);
             }
 
-            void read(handle_t hFile, char* buffer, int count, uint64_t offset, aio_task_ptr& callback)
+            void read(dsn_handle_t hFile, char* buffer, int count, uint64_t offset, aio_task_ptr& callback)
             {
                 auto tsk = task::get_current_task();
                 dassert(tsk != nullptr, "this function can only be invoked inside tasks");
@@ -483,7 +483,7 @@ namespace dsn
                 tsk->node()->disk()->read(callback);
             }
 
-            void write(handle_t hFile, const char* buffer, int count, uint64_t offset, aio_task_ptr& callback)
+            void write(dsn_handle_t hFile, const char* buffer, int count, uint64_t offset, aio_task_ptr& callback)
             {
                 auto tsk = task::get_current_task();
                 dassert(tsk != nullptr, "this function can only be invoked inside tasks");
@@ -498,7 +498,7 @@ namespace dsn
                 tsk->node()->disk()->write(callback);
             }
 
-            error_code close(handle_t hFile)
+            error_code close(dsn_handle_t hFile)
             {
                 auto tsk = task::get_current_task();
                 dassert(tsk != nullptr, "this function can only be invoked inside tasks");

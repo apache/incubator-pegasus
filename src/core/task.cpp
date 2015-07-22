@@ -330,7 +330,8 @@ const char* task::node_name() const
 void task::enqueue()
 {        
     dassert(_node != nullptr, "service node unknown for this task");
-    dassert(_spec->type != TASK_TYPE_RPC_RESPONSE, "tasks with TASK_TYPE_RPC_RESPONSE type use task::enqueue(caller_pool()) instead");
+    dassert(_spec->type != TASK_TYPE_RPC_RESPONSE && _spec->type != TASK_TYPE_RPC_MSG_SENT, 
+        "tasks with TASK_TYPE_RPC_RESPONSE or TASK_TYPE_RPC_MSG_SENT type use task::enqueue(caller_pool()) instead");
     auto pool = node()->computation()->get_pool(spec().pool_code);
     enqueue(pool);
 }
@@ -379,9 +380,9 @@ void timer_task::exec()
 {
     task_state RUNNING_STATE = TASK_STATE_RUNNING;
     
-    bool conti = on_timer();
+    on_timer();
 
-    if (conti && _interval_milliseconds > 0)
+    if (_interval_milliseconds > 0)
     {
         if (_state.compare_exchange_strong(RUNNING_STATE, TASK_STATE_READY))
         {
@@ -437,6 +438,19 @@ rpc_response_task_empty::rpc_response_task_empty(message_ptr& request, int hash)
     : rpc_response_task(request, hash)
 {
     _is_null = true;
+}
+
+rpc_msg_sent_task::rpc_msg_sent_task(task_code code, message_ptr& msg, dsn_msg_callback_t cb, dsn_param_t param, int hash)
+    : task(code, hash)
+{
+    set_error_code(ERR_IO_PENDING);
+
+    dbg_dassert(TASK_TYPE_RPC_MSG_SENT == spec().type, "task must be of TASK_TYPE_RPC_MSG_SENT type");
+
+    _msg = msg;
+    _caller_pool = task::get_current_worker()->pool();
+    _cb = cb;
+    _param = param;
 }
 
 aio_task::aio_task(task_code code, int hash) 

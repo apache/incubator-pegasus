@@ -110,7 +110,7 @@ namespace file
     // open a file with the given flag and permission mode
     // - example: open(path, O_RDWR | O_CREAT | O_BINARY, 0666);
     //
-    extern handle_t open(const char* file_name, int flag, int pmode = 0666);
+    extern dsn_handle_t open(const char* file_name, int flag, int pmode = 0666);
 
     //
     // asynchonous read with callback invoked when the read operation is completed
@@ -120,17 +120,17 @@ namespace file
     //    auto err = callback->error();
     //    auto size = callback->get_transferred_size();
     //
-    extern void read(handle_t hFile, char* buffer, int count, uint64_t offset, aio_task_ptr& callback);
+    extern void read(dsn_handle_t hFile, char* buffer, int count, uint64_t offset, aio_task_ptr& callback);
 
     //
     // asynchronous write, similar to read above
     //
-    extern void write(handle_t hFile, const char* buffer, int count, uint64_t offset, aio_task_ptr& callback); 
+    extern void write(dsn_handle_t hFile, const char* buffer, int count, uint64_t offset, aio_task_ptr& callback); 
 
     //
     // close the file handle
     //
-    extern error_code close(handle_t hFile);
+    extern error_code close(dsn_handle_t hFile);
 
     //
     // copy remote files to local

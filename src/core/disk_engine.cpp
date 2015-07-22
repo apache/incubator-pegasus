@@ -62,12 +62,12 @@ void disk_engine::start(aio_provider* provider)
     _is_running = true;
 }
 
-handle_t disk_engine::open(const char* file_name, int flag, int pmode)
+dsn_handle_t disk_engine::open(const char* file_name, int flag, int pmode)
 {            
     return _provider->open(file_name, flag, pmode);
 }
 
-error_code disk_engine::close(handle_t hFile)
+error_code disk_engine::close(dsn_handle_t hFile)
 {
     return _provider->close(hFile);
 }

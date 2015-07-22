@@ -47,8 +47,8 @@ struct sim_worker_state;
 class sim_semaphore_provider : public semaphore_provider
 {
 public:  
-    sim_semaphore_provider(dsn::service::zsemaphore *sema, int initialCount, semaphore_provider *inner_provider)
-        : semaphore_provider(sema, initialCount, inner_provider), _count(initialCount)
+    sim_semaphore_provider(int initialCount, semaphore_provider *inner_provider)
+        : semaphore_provider(initialCount, inner_provider), _count(initialCount)
     {
     }
 

@@ -95,10 +95,10 @@ namespace dsn {
     {
         mark_read(read_length);
 
-        if (_read_buffer_occupied >= MSG_HDR_SERIALIZED_SIZE)
+        if (_read_buffer_occupied >= DSN_MSG_HDR_SERIALIZED_SIZE)
         {            
-            int msg_sz = MSG_HDR_SERIALIZED_SIZE +
-                message_header::get_body_length((char*)_read_buffer.data());
+            int msg_sz = DSN_MSG_HDR_SERIALIZED_SIZE +
+                dsn_message_header_helper::get_body_length((char*)_read_buffer.data());
 
             // msg done
             if (_read_buffer_occupied >= msg_sz)
@@ -110,7 +110,7 @@ namespace dsn {
 
                 _read_buffer = _read_buffer.range(msg_sz);
                 _read_buffer_occupied -= msg_sz;
-                read_next = MSG_HDR_SERIALIZED_SIZE;
+                read_next = DSN_MSG_HDR_SERIALIZED_SIZE;
                 return msg;
             }
             else
@@ -122,7 +122,7 @@ namespace dsn {
 
         else
         {
-            read_next = MSG_HDR_SERIALIZED_SIZE - _read_buffer_occupied;
+            read_next = DSN_MSG_HDR_SERIALIZED_SIZE - _read_buffer_occupied;
             return nullptr;
         }
     }

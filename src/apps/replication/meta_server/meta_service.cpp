@@ -40,7 +40,7 @@ meta_service::meta_service(server_state* state)
 {
     _balancer = nullptr;
     _failure_detector = nullptr;
-    _log = static_cast<handle_t>(0);
+    _log = static_cast<dsn_handle_t>(0);
     _offset = 0;
     _data_dir = ".";
     _started = false;

@@ -49,12 +49,12 @@ namespace dsn {
         {
         }
 
-        handle_t native_posix_aio_provider::open(const char* file_name, int flag, int pmode)
+        dsn_handle_t native_posix_aio_provider::open(const char* file_name, int flag, int pmode)
         {
-            return (handle_t)::open(file_name, flag, pmode);
+            return (dsn_handle_t)::open(file_name, flag, pmode);
         }
 
-        error_code native_posix_aio_provider::close(handle_t hFile)
+        error_code native_posix_aio_provider::close(dsn_handle_t hFile)
         {
             // TODO: handle failure
             ::close(static_cast<int>(hFile));

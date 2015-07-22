@@ -112,18 +112,60 @@ public:
 
 DEFINE_REF_OBJECT(task)
 
+
+class task_c : public task
+{
+public:
+    task_c(task_code code, dsn_task_callback_t cb, dsn_param_t param, int hash = 0, service_node* node = nullptr)
+        : task(code, hash, node)
+    {
+        _cb = cb;
+        _param = param;
+    }
+
+    virtual void exec() override
+    {
+        _cb(_param);
+    }
+
+private:
+    dsn_task_callback_t _cb;
+    dsn_param_t         _param;
+};
+
+
 //----------------- timer task -------------------------------------------------------
 
 class timer_task : public task
 {
 public:
-    timer_task(task_code code,  uint32_t interval_milliseconds, int hash = 0);
+    timer_task(task_code code, uint32_t interval_milliseconds, int hash = 0);
     void exec();
 
-    virtual bool on_timer() = 0;
+    virtual void on_timer() = 0;
 
 private:
     uint32_t _interval_milliseconds;
+};
+
+class timer_task_c : public timer_task
+{
+public:
+    timer_task_c(task_code code, dsn_task_callback_t cb, dsn_param_t param, uint32_t interval_milliseconds, int hash = 0)
+        : timer_task(code, interval_milliseconds, hash)
+    {
+        _cb = cb;
+        _param = param;
+    }
+
+    virtual void on_timer() override
+    {
+        _cb(_param);
+    }
+
+private:
+    dsn_task_callback_t _cb;
+    dsn_param_t         _param;
 };
 
 //----------------- rpc task -------------------------------------------------------
@@ -150,6 +192,41 @@ class rpc_server_handler
 public:
     virtual rpc_request_task* new_request_task(message_ptr& request, service_node* node) = 0;
     virtual ~rpc_server_handler(){}
+};
+
+class rpc_request_task_c : public rpc_request_task
+{
+public:
+    rpc_request_task_c(message_ptr& request, dsn_rpc_request_handler_t h, service_node* node)
+        : rpc_request_task(request, node)
+    {
+        _handler = h;
+    }
+
+    virtual void exec() override
+    {
+        _handler(_request->c_msg());
+    }
+
+private:
+    dsn_rpc_request_handler_t _handler;
+};
+
+class rpc_server_handler_c : public rpc_server_handler
+{
+public:
+    rpc_server_handler_c(dsn_rpc_request_handler_t h)
+        : _handler(h)
+    {
+    }
+
+    virtual rpc_request_task* new_request_task(message_ptr& request, service_node* node) override
+    {
+        return new rpc_request_task_c(request, _handler, node);
+    }
+
+private:
+    dsn_rpc_request_handler_t _handler;
 };
 
 struct rpc_handler_info
@@ -194,7 +271,49 @@ public:
     virtual void on_response(error_code err, message_ptr& request, message_ptr& response) { err.end_tracking(); }
 };
 
+class rpc_response_task_c : public rpc_response_task
+{
+public:
+    rpc_response_task_c(message_ptr& request, dsn_rpc_response_handler_t cb, dsn_param_t param, int hash = 0) 
+        : rpc_response_task(request, hash)
+    {
+        _cb = cb;
+        _param = param;
+    }
+
+    virtual void on_response(error_code err, message_ptr& request, message_ptr& response)
+    {
+        _cb(err.get(), request->c_msg(), response == nullptr ? nullptr : response->c_msg(), _param);
+    }
+
+private:
+    dsn_rpc_response_handler_t _cb;
+    dsn_param_t _param;
+};
+
 typedef ::boost::intrusive_ptr<rpc_response_task> rpc_response_task_ptr;
+
+
+class rpc_msg_sent_task : public task
+{
+public:
+    rpc_msg_sent_task(task_code code, message_ptr& msg, dsn_msg_callback_t cb, dsn_param_t param, int hash = 0);
+
+    virtual void enqueue() { task::enqueue(_caller_pool); } // re-enqueue after above enqueue
+    
+    virtual void  exec()
+    {
+        _cb(error().get(), _msg->c_msg(), _param);
+    }
+
+private:
+    message_ptr   _msg;
+    task_worker_pool *_caller_pool;
+    dsn_msg_callback_t _cb;
+    dsn_param_t _param;
+
+    friend class rpc_engine;
+};
 
 //------------------------- disk AIO task ---------------------------------------------------
 
@@ -210,7 +329,7 @@ class disk_aio
 {
 public:    
     // filled by apps
-    handle_t     file;
+    dsn_handle_t     file;
     void*        buffer;
     uint32_t     buffer_size;    
     uint64_t     file_offset;
@@ -247,6 +366,26 @@ class aio_task_empty : public aio_task
 public:
     aio_task_empty(task_code code, int hash = 0) : aio_task(code, hash) { _is_null = true;  }
     virtual void on_completed(error_code err, uint32_t transferred_size) override {}
+};
+
+class aio_task_c : public aio_task
+{
+public:
+    aio_task_c(task_code code, dsn_file_callback_t cb, dsn_param_t param, int hash = 0)
+        : aio_task(code, hash)
+    { 
+        _cb = cb;
+        _param = param;
+    }
+
+    virtual void on_completed(error_code err, uint32_t transferred_size) override 
+    {
+        _cb(err.get(), static_cast<size_t>(transferred_size), _param);
+    }
+
+private:
+    dsn_file_callback_t _cb;
+    dsn_param_t _param;
 };
 
 typedef ::boost::intrusive_ptr<aio_task> aio_task_ptr;

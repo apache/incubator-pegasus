@@ -41,29 +41,24 @@ using namespace dsn::utils;
 
 namespace dsn {
 
-void message_header::marshall(binary_writer& writer)
+void dsn_message_header_helper::marshall(dsn_message_header* hdr, binary_writer& writer)
 {
-    writer.write((const char*)this, MSG_HDR_SERIALIZED_SIZE);
+    writer.write((const char*)hdr, DSN_MSG_HDR_SERIALIZED_SIZE);
 }
 
-void message_header::unmarshall(binary_reader& reader)
+void dsn_message_header_helper::unmarshall(dsn_message_header* hdr, binary_reader& reader)
 {
-    reader.read((char*)this, MSG_HDR_SERIALIZED_SIZE);
+    reader.read((char*)hdr, DSN_MSG_HDR_SERIALIZED_SIZE);
 }
 
-void message_header::new_rpc_id()
-{
-    rpc_id = get_random64();
-}
-
-/*static*/ bool message_header::is_right_header(char* hdr)
+/*static*/ bool dsn_message_header_helper::is_right_header(char* hdr)
 {
     int32_t crc32 = *(int32_t*)hdr;
     if (crc32 != CRC_INVALID)
     {
         //dassert  (*(int32_t*)data == hdr_crc32, "HeaderCrc must be put at the beginning of the buffer");
         *(int32_t*)hdr = CRC_INVALID;
-        bool r = ((uint32_t)crc32 == crc32::compute(hdr, MSG_HDR_SERIALIZED_SIZE, 0));
+        bool r = ((uint32_t)crc32 == crc32::compute(hdr, DSN_MSG_HDR_SERIALIZED_SIZE, 0));
         *(int32_t*)hdr = crc32;
         return r;
     }
@@ -82,9 +77,8 @@ message::message()
     _reader = nullptr;
     _writer = new binary_writer();
 
-    memset(&_msg_header, 0, MSG_HDR_SERIALIZED_SIZE);
-    _msg_header.hdr_crc32 = _msg_header.body_crc32 = CRC_INVALID;
-    _msg_header.local_rpc_code = 0;
+    memset(&_msg, 0, sizeof(_msg));
+    _msg.hdr.hdr_crc32 = _msg.hdr.body_crc32 = CRC_INVALID;
     seal(false, true);
 }
         
@@ -96,13 +90,12 @@ message::message(blob bb, bool parse_hdr)
     if (parse_hdr)
     {
         read_header();
-        _msg_header.local_rpc_code = 0;
+        _msg.hdr.local_rpc_code = 0;
     }
     else
     {
-        memset(&_msg_header, 0, MSG_HDR_SERIALIZED_SIZE);
-        _msg_header.hdr_crc32 = _msg_header.body_crc32 = CRC_INVALID;
-        _msg_header.local_rpc_code = 0;
+        memset(&_msg, 0, sizeof(_msg));
+        _msg.hdr.hdr_crc32 = _msg.hdr.body_crc32 = CRC_INVALID;
     }
 }
                 
@@ -153,22 +146,22 @@ message_ptr message::create_response()
     message_ptr msg(new message());
     auto& hdr = msg->header();
 
-    hdr.id = _msg_header.id;
-    hdr.rpc_id = _msg_header.rpc_id;
+    hdr.id = _msg.hdr.id;
+    hdr.rpc_id = _msg.hdr.rpc_id;
         
     hdr.server.error = ERR_OK.get();
-    hdr.local_rpc_code = task_spec::get(_msg_header.local_rpc_code)->rpc_paired_code;
+    hdr.local_rpc_code = task_spec::get(_msg.hdr.local_rpc_code)->rpc_paired_code;
     
-    strncpy(hdr.rpc_name, _msg_header.rpc_name, sizeof(hdr.rpc_name));
+    strncpy(hdr.rpc_name, _msg.hdr.rpc_name, sizeof(hdr.rpc_name));
     strncat(hdr.rpc_name, "_ACK", sizeof(hdr.rpc_name));
 
-    hdr.from_address = _msg_header.to_address;
-    hdr.to_address = _msg_header.from_address;
+    hdr.from_address = _msg.hdr.to_address;
+    hdr.to_address = _msg.hdr.from_address;
 
     msg->_server_session = _server_session;
 
     // join point 
-    task_spec::get(_msg_header.local_rpc_code)->on_rpc_create_response.execute(this, msg.get());
+    task_spec::get(_msg.hdr.local_rpc_code)->on_rpc_create_response.execute(this, msg.get());
 
     return msg;
 }
@@ -178,11 +171,11 @@ void message::seal(bool fillCrc, bool is_placeholder /*= false*/)
     dassert  (!is_read(), "seal can only be applied to write mode messages");
     if (is_placeholder)
     {
-        _writer->write_empty(MSG_HDR_SERIALIZED_SIZE);
+        _writer->write_empty(DSN_MSG_HDR_SERIALIZED_SIZE);
     }
     else
     {
-        header().body_length = total_size() - MSG_HDR_SERIALIZED_SIZE;
+        header().body_length = total_size() - DSN_MSG_HDR_SERIALIZED_SIZE;
 
         if (fillCrc)
         {
@@ -192,7 +185,7 @@ void message::seal(bool fillCrc, bool is_placeholder /*= false*/)
                 std::vector<blob> buffers;
                 _writer->get_buffers(buffers);
 
-                buffers[0] = buffers[0].range(MSG_HDR_SERIALIZED_SIZE);
+                buffers[0] = buffers[0].range(DSN_MSG_HDR_SERIALIZED_SIZE);
 
                 uint32_t crc32 = 0;
                 uint32_t len = 0;
@@ -221,12 +214,12 @@ void message::seal(bool fillCrc, bool is_placeholder /*= false*/)
             }
 
             blob bb = _writer->get_first_buffer();
-            dassert  (bb.length() >= MSG_HDR_SERIALIZED_SIZE, "the reserved blob size for message must be greater than the header size to ensure header is contiguous");
+            dassert  (bb.length() >= DSN_MSG_HDR_SERIALIZED_SIZE, "the reserved blob size for message must be greater than the header size to ensure header is contiguous");
             header().hdr_crc32 = CRC_INVALID;
             binary_writer writer(bb);
-            _msg_header.marshall(writer);
+            dsn_message_header_helper::marshall(&_msg.hdr, writer);
 
-            header().hdr_crc32 = crc32::compute(bb.data(), MSG_HDR_SERIALIZED_SIZE, 0);
+            header().hdr_crc32 = crc32::compute(bb.data(), DSN_MSG_HDR_SERIALIZED_SIZE, 0);
             *(uint32_t*)bb.data() = header().hdr_crc32;
         }
 
@@ -234,9 +227,9 @@ void message::seal(bool fillCrc, bool is_placeholder /*= false*/)
         else
         {
             blob bb = _writer->get_first_buffer();
-            dassert  (bb.length() >= MSG_HDR_SERIALIZED_SIZE, "the reserved blob size for message must be greater than the header size to ensure header is contiguous");
+            dassert  (bb.length() >= DSN_MSG_HDR_SERIALIZED_SIZE, "the reserved blob size for message must be greater than the header size to ensure header is contiguous");
             binary_writer writer(bb);
-            _msg_header.marshall(writer);
+            dsn_message_header_helper::marshall(&_msg.hdr, writer);
         }
     }
 }
@@ -244,10 +237,10 @@ void message::seal(bool fillCrc, bool is_placeholder /*= false*/)
 bool message::is_right_header() const
 {
     dassert  (is_read(), "message must be of read mode");
-    if (_msg_header.hdr_crc32 != CRC_INVALID)
+    if (_msg.hdr.hdr_crc32 != CRC_INVALID)
     {
         blob bb = _reader->get_buffer();
-        return _msg_header.is_right_header((char*)bb.data());
+        return dsn_message_header_helper::is_right_header((char*)bb.data());
     }
 
     // crc is not enabled
@@ -260,10 +253,10 @@ bool message::is_right_header() const
 bool message::is_right_body() const
 {
     dassert  (is_read(), "message must be of read mode");
-    if (_msg_header.body_crc32 != CRC_INVALID)
+    if (_msg.hdr.body_crc32 != CRC_INVALID)
     {
         blob bb = _reader->get_buffer();
-        return (uint32_t)_msg_header.body_crc32 == crc32::compute((char*)bb.data() + MSG_HDR_SERIALIZED_SIZE, _msg_header.body_length, 0);
+        return (uint32_t)_msg.hdr.body_crc32 == crc32::compute((char*)bb.data() + DSN_MSG_HDR_SERIALIZED_SIZE, _msg.hdr.body_length, 0);
     }
 
     // crc is not enabled
@@ -276,7 +269,7 @@ bool message::is_right_body() const
 void message::read_header()
 {
     dassert  (is_read(), "message must be of read mode");
-    _msg_header.unmarshall(*_reader);
+    dsn_message_header_helper::unmarshall(&_msg.hdr, *_reader);
 }
 
 } // end namespace dsn

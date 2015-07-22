@@ -61,7 +61,7 @@ native_win_aio_provider::~native_win_aio_provider()
     }
 }
 
-handle_t native_win_aio_provider::open(const char* file_name, int oflag, int pmode)
+dsn_handle_t native_win_aio_provider::open(const char* file_name, int oflag, int pmode)
 {
     DWORD dwDesiredAccess = 0;
     DWORD dwShareMode = FILE_SHARE_READ;
@@ -161,23 +161,23 @@ handle_t native_win_aio_provider::open(const char* file_name, int oflag, int pmo
         if (_iocp != ::CreateIoCompletionPort(fileHandle, _iocp, 0, 0))
         {
             dassert(false, "cannot associate file handle %s to io completion port, err = %x\n", file_name, ::GetLastError());
-            return nullptr;
+            return 0;
         }
         else
         {
-            return fileHandle;
+            return (dsn_handle_t)(fileHandle);
         }
     }
     else
     {
         derror("cannot create file %s, err = %x\n", file_name, ::GetLastError());
-        return nullptr;
+        return 0;
     }
 }
 
-error_code native_win_aio_provider::close(handle_t hFile)
+error_code native_win_aio_provider::close(dsn_handle_t hFile)
 {
-    if (::CloseHandle(hFile))
+    if (::CloseHandle((HANDLE)(hFile)))
         return ERR_OK;
     else
     {
@@ -228,10 +228,10 @@ error_code native_win_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool asy
     switch (aio->type)
     {
     case AIO_Read:
-        r = ::ReadFile(aio->file, aio->buffer, aio->buffer_size, NULL, &aio->olp);
+        r = ::ReadFile((HANDLE)aio->file, aio->buffer, aio->buffer_size, NULL, &aio->olp);
         break;
     case AIO_Write:
-        r = ::WriteFile(aio->file, aio->buffer, aio->buffer_size, NULL, &aio->olp);
+        r = ::WriteFile((HANDLE)aio->file, aio->buffer, aio->buffer_size, NULL, &aio->olp);
         break;
     default:
         dassert (false, "unknown aio type %u", static_cast<int>(aio->type));

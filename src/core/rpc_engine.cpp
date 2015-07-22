@@ -133,7 +133,7 @@ namespace dsn {
     {
         message* msg = request.get();
         task* timeout_task;
-        message_header& hdr = msg->header();
+        dsn_message_header& hdr = msg->header();
 
         timeout_task = (new rpc_timeout_task(this, hdr.id));
 
@@ -368,7 +368,7 @@ namespace dsn {
 
         msg->header().client.port = primary_address().port;
         msg->header().from_address = primary_address();
-        msg->header().new_rpc_id();
+        msg->header().rpc_id = utils::get_random64();
         msg->seal(_message_crc_required);
 
         if (!sp->on_rpc_call.execute(task::get_current_task(), msg, call.get(), true))

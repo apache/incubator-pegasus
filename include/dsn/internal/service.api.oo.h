@@ -212,7 +212,7 @@ namespace dsn {
         namespace file
         {
             aio_task_ptr read(
-                handle_t hFile,
+                dsn_handle_t hFile,
                 char* buffer,
                 int count,
                 uint64_t offset,
@@ -223,7 +223,7 @@ namespace dsn {
                 );
 
             aio_task_ptr write(
-                handle_t hFile,
+                dsn_handle_t hFile,
                 const char* buffer,
                 int count,
                 uint64_t offset,
@@ -235,7 +235,7 @@ namespace dsn {
 
             template<typename T>
             inline aio_task_ptr read(
-                handle_t hFile,
+                dsn_handle_t hFile,
                 char* buffer,
                 int count,
                 uint64_t offset,
@@ -251,7 +251,7 @@ namespace dsn {
 
             template<typename T>
             inline aio_task_ptr write(
-                handle_t hFile,
+                dsn_handle_t hFile,
                 const char* buffer,
                 int count,
                 uint64_t offset,

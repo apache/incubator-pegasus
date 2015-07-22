@@ -82,7 +82,7 @@ private:
     bool                         _started;
 
     zlock                        _log_lock;
-    handle_t                     _log;
+    dsn_handle_t                     _log;
     uint64_t                     _offset;
 }; 
 

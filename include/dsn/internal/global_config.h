@@ -128,7 +128,7 @@ struct service_spec
     std::list<std::string>       aio_aspects; // toollets compatible to main aio provider
     std::list<std::string>       env_aspects;
     std::list<std::string>       lock_aspects;
-    std::list<std::string>       rwlock_aspects;
+    std::list<std::string>       rwlock_nr_aspects;
     std::list<std::string>       semaphore_aspects;
         
     network_client_configs        network_default_client_cfs; // default network configed by tools
@@ -160,7 +160,7 @@ CONFIG_BEGIN(service_spec)
     CONFIG_FLD_STRING_LIST(aio_aspects)
     CONFIG_FLD_STRING_LIST(env_aspects)
     CONFIG_FLD_STRING_LIST(lock_aspects)
-    CONFIG_FLD_STRING_LIST(rwlock_aspects)
+    CONFIG_FLD_STRING_LIST(rwlock_nr_aspects)
     CONFIG_FLD_STRING_LIST(semaphore_aspects)
 CONFIG_END
 

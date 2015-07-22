@@ -56,12 +56,12 @@ namespace dsn {
             dassert(ret == 0, "io_destroy error, ret = %d", ret);
         }
 
-        handle_t native_linux_aio_provider::open(const char* file_name, int flag, int pmode)
+        dsn_handle_t native_linux_aio_provider::open(const char* file_name, int flag, int pmode)
         {
-            return (handle_t)::open(file_name, flag, pmode);
+            return (dsn_handle_t)::open(file_name, flag, pmode);
         }
 
-        error_code native_linux_aio_provider::close(handle_t hFile)
+        error_code native_linux_aio_provider::close(dsn_handle_t hFile)
         {
             // TODO: handle failure
             ::close(static_cast<int>(hFile));

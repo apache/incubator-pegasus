@@ -82,6 +82,20 @@ namespace dsn {
                     );
             }
                 break;
+            case dsn_task_type_t::TASK_TYPE_RPC_MSG_SENT:
+            {
+                auto tsk = (rpc_response_task*)this_;
+                ddebug("%s EXEC BEGIN, task_id = %016llx, %s:%hu => %s:%hu, rpc_id = %016llx",
+                    this_->spec().name,
+                    this_->id(),
+                    tsk->get_request()->header().to_address.name,
+                    tsk->get_request()->header().to_address.port,
+                    tsk->get_request()->header().from_address.name,
+                    tsk->get_request()->header().from_address.port,
+                    tsk->get_request()->header().rpc_id
+                    );
+            }
+            break;
             }
         }
 
@@ -137,7 +151,7 @@ namespace dsn {
         // return true means continue, otherwise early terminate with task::set_error_code
         static void tracer_on_rpc_call(task* caller, message* req, rpc_response_task* callee)
         {
-            message_header& hdr = req->header();
+            dsn_message_header& hdr = req->header();
             ddebug(
                 "%s RPC.CALL: %s:%hu => %s:%hu, rpc_id = %016llx, callback_task = %016llx, timeout = %d ms",
                 hdr.rpc_name,
@@ -167,7 +181,7 @@ namespace dsn {
         // return true means continue, otherwise early terminate with task::set_error_code
         static void tracer_on_rpc_reply(task* caller, message* msg)
         {
-            message_header& hdr = msg->header();
+            dsn_message_header& hdr = msg->header();
 
             ddebug(
                 "%s RPC.REPLY: %s:%hu => %s:%hu, rpc_id = %016llx",

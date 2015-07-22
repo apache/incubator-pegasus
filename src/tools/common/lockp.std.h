@@ -33,7 +33,7 @@ namespace dsn { namespace tools {
 class std_lock_provider : public lock_provider
 {
 public:
-    std_lock_provider(dsn::service::zlock *lock, lock_provider* inner_provider) : lock_provider(lock, inner_provider) {}
+    std_lock_provider( lock_provider* inner_provider) : lock_provider(inner_provider) {}
 
     virtual void lock() { _lock.lock(); }
     virtual bool try_lock() { return _lock.try_lock();  }
@@ -46,7 +46,7 @@ private:
 class std_rwlock_nr_provider : public rwlock_nr_provider
 {
 public:
-    std_rwlock_nr_provider(dsn::service::zrwlock_nr *lock, rwlock_nr_provider* inner_provider) : rwlock_nr_provider(lock, inner_provider) {}
+    std_rwlock_nr_provider(rwlock_nr_provider* inner_provider) : rwlock_nr_provider(inner_provider) {}
 
     virtual void lock_read() { _lock.lock_read(); }
     virtual void unlock_read() { _lock.unlock_read(); }
@@ -61,8 +61,8 @@ private:
 class std_semaphore_provider : public semaphore_provider
 {
 public:  
-    std_semaphore_provider(dsn::service::zsemaphore *sema, int initialCount, semaphore_provider *inner_provider)
-        : semaphore_provider(sema, initialCount, inner_provider), _sema(initialCount)
+    std_semaphore_provider(int initialCount, semaphore_provider *inner_provider)
+        : semaphore_provider(initialCount, inner_provider), _sema(initialCount)
     {
     }
 

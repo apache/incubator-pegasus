@@ -64,7 +64,7 @@ namespace dsn {
                     _handler = std::move(handler);
                 }
 
-                virtual bool on_timer() { _handler(); return true; }
+                virtual void on_timer() { _handler();}
 
             private:
                 task_handler _handler;
@@ -138,7 +138,7 @@ namespace dsn {
         namespace file
         {
             aio_task_ptr read(
-                handle_t hFile,
+                dsn_handle_t hFile,
                 char* buffer,
                 int count,
                 uint64_t offset,
@@ -157,7 +157,7 @@ namespace dsn {
             }
 
             aio_task_ptr write(
-                handle_t hFile,
+                dsn_handle_t hFile,
                 const char* buffer,
                 int count,
                 uint64_t offset,

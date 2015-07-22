@@ -38,12 +38,12 @@ namespace dsn {
         {
         }
 
-        handle_t empty_aio_provider::open(const char* file_name, int flag, int pmode)
+        dsn_handle_t empty_aio_provider::open(const char* file_name, int flag, int pmode)
         {
-            return (handle_t)(size_t)(1);
+            return (dsn_handle_t)(size_t)(1);
         }
 
-        error_code empty_aio_provider::close(handle_t hFile)
+        error_code empty_aio_provider::close(dsn_handle_t hFile)
         {
             return ERR_OK;
         }
