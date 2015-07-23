@@ -42,9 +42,9 @@
 
 # include <mutex>
 
-DSN_API dsn_address_t dsn_endpoint_invalid = {0, 0, "invalid"};
+DSN_API dsn_address_t dsn_address_invalid = {0, 0, "invalid"};
 
-DSN_API void dsn_build_end_point(dsn_address_t* ep, const char* host, uint16_t port)
+DSN_API void dsn_address_build(dsn_address_t* ep, const char* host, uint16_t port)
 {
     static std::once_flag flag;
     static bool flag_inited = false;

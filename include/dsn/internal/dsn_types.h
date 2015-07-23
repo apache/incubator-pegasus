@@ -131,7 +131,7 @@ namespace dsn
                 delete this;
         }
     };
-
+    
 #define DEFINE_REF_OBJECT(T) \
     static void intrusive_ptr_add_ref(T* obj) \
     { \
@@ -141,8 +141,8 @@ namespace dsn
     { \
         if (--obj->ref_counter == 0) \
             delete obj; \
-    } 
-
+    }
+    
     class task;
     class message;
     class rpc_client_session;

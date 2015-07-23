@@ -292,7 +292,7 @@ void replica::on_prepare(message_ptr& request)
     dassert(mu->log_task() != nullptr, "");
 }
 
-void replica::on_append_log_completed(mutation_ptr& mu, error_code err, uint32_t size)
+void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t size)
 {
     check_hashed_access();
 

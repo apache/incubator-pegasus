@@ -196,7 +196,7 @@ void replica::downgrade_to_secondary_on_primary(configuration_update_request& pr
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
     dassert (proposal.node == proposal.config.primary, "");
 
-    proposal.config.primary = dsn_endpoint_invalid;
+    proposal.config.primary = dsn_address_invalid;
     proposal.config.secondaries.push_back(proposal.node);
 
     update_configuration_on_meta_server(CT_DOWNGRADE_TO_SECONDARY, proposal.node, proposal.config);
@@ -215,7 +215,7 @@ void replica::downgrade_to_inactive_on_primary(configuration_update_request& pro
 
     if (proposal.node == proposal.config.primary)
     {
-        proposal.config.primary = dsn_endpoint_invalid;
+        proposal.config.primary = dsn_address_invalid;
     }
     else
     {
@@ -243,7 +243,7 @@ void replica::remove(configuration_update_request& proposal)
     {
     case PS_PRIMARY:
         dassert (proposal.config.primary == proposal.node, "");
-        proposal.config.primary = dsn_endpoint_invalid;
+        proposal.config.primary = dsn_address_invalid;
         break;
     case PS_SECONDARY:
         {
@@ -696,7 +696,7 @@ void replica::on_config_sync(const partition_configuration& config)
         if (status() == PS_INACTIVE && !_inactive_is_transient)
         {
             if (config.primary == primary_address() // dead primary
-                || config.primary == dsn_endpoint_invalid // primary is dead (otherwise let primary remove this)
+                || config.primary == dsn_address_invalid // primary is dead (otherwise let primary remove this)
                 )
             {
                 _stub->remove_replica_on_meta_server(config);

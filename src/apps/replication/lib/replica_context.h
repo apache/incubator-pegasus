@@ -58,15 +58,15 @@ public:
     learner_map             learners;
 
     // 2pc batching
-    mutation_ptr pending_mutation;
-    task_ptr     pending_mutation_task;
+    mutation_ptr                   pending_mutation;
+    dsn::service::cpp_task_ptr     pending_mutation_task;
 
     // group check
-    task_ptr     group_check_task;
-    node_tasks   group_check_pending_replies;
+    dsn::service::cpp_task_ptr     group_check_task;
+    node_tasks                     group_check_pending_replies;
 
     // reconfig
-    task_ptr     reconfiguration_task;
+    dsn::service::cpp_task_ptr     reconfiguration_task;
 
     // when read lastest update, all prepared decrees must be firstly committed
     // (possibly true on old primary) before opening read service
@@ -89,9 +89,9 @@ public:
     learner_status  learning_status;
     volatile bool learning_round_is_running;
 
-    task_ptr       learning_task;
-    task_ptr       learn_remote_files_task;
-    task_ptr       learn_remote_files_completed_task;
+    ::dsn::service::cpp_task_ptr       learning_task;
+    ::dsn::service::cpp_task_ptr       learn_remote_files_task;
+    ::dsn::service::cpp_task_ptr       learn_remote_files_completed_task;
 
 
 };

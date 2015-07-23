@@ -257,7 +257,7 @@ void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request>& req
     }
 }
 
-void replica::on_copy_remote_state_completed(error_code err2, int size, std::shared_ptr<learn_response> resp)
+void replica::on_copy_remote_state_completed(error_code err2, size_t size, std::shared_ptr<learn_response> resp)
 {   
     learn_state localState;
     localState.meta = resp->state.meta;

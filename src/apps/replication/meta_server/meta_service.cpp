@@ -334,7 +334,7 @@ void meta_service::update_configuration(std::shared_ptr<configuration_update_req
     }
 }
 
-void meta_service::on_log_completed(error_code err, int size, 
+void meta_service::on_log_completed(error_code err, size_t size,
     blob buffer, 
     std::shared_ptr<configuration_update_request> req, message_ptr resp)
 {

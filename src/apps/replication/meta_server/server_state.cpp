@@ -86,7 +86,7 @@ void server_state::load(const char* chk_point)
     {
         auto& ps = app.partitions[i];
 
-        if (ps.primary != dsn_endpoint_invalid)
+        if (ps.primary != dsn_address_invalid)
         {
             _nodes[ps.primary].primaries.insert(ps.gpid);
             _nodes[ps.primary].partitions.insert(ps.gpid);
@@ -94,7 +94,7 @@ void server_state::load(const char* chk_point)
         
         for (auto& ep : ps.secondaries)
         {
-            dassert(ep != dsn_endpoint_invalid, "");
+            dassert(ep != dsn_address_invalid, "");
             _nodes[ep].partitions.insert(ps.gpid);
         }
     }
@@ -184,7 +184,7 @@ void server_state::set_node_state(const node_states& nodes, __out_param machine_
     
     for (auto& itr : nodes)
     {
-        dassert(itr.first != dsn_endpoint_invalid, "");
+        dassert(itr.first != dsn_address_invalid, "");
 
         auto it = _nodes.find(itr.first);
         if (it != _nodes.end())
@@ -212,7 +212,7 @@ void server_state::set_node_state(const node_states& nodes, __out_param machine_
                         request->type = CT_DOWNGRADE_TO_INACTIVE;
                         request->config = old;
                         request->config.ballot++;
-                        request->config.primary = dsn_endpoint_invalid;
+                        request->config.primary = dsn_address_invalid;
 
                         (*pris)[pri] = request;
                     }
@@ -468,7 +468,7 @@ void server_state::check_consistency(global_partition_id gpid)
     app_state& app = _apps[gpid.app_id - 1];
     partition_configuration& config = app.partitions[gpid.pidx];
 
-    if (config.primary != dsn_endpoint_invalid)
+    if (config.primary != dsn_address_invalid)
     {
         auto it = _nodes.find(config.primary);
         dassert(it != _nodes.end(), "");

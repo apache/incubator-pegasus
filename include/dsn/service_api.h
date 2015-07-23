@@ -141,14 +141,14 @@ namespace file
     //  - overwrite: whether to overwrite the local file if it already exsits, error otherwise
     //  - callback: invoked when all files are copied to local, or any error happens in the process
     //
-    extern void copy_remote_files(
-        const dsn_address_t& remote,
-        const std::string& source_dir,
-        std::vector<std::string>& files,  // empty for all
-        const std::string& dest_dir,
-        bool overwrite,
-        aio_task_ptr& callback
-        );
+    //extern void copy_remote_files(
+    //    const dsn_address_t& remote,
+    //    const std::string& source_dir,
+    //    std::vector<std::string>& files,  // empty for all
+    //    const std::string& dest_dir,
+    //    bool overwrite,
+    //    aio_task_ptr& callback
+    //    );
 }
 
 namespace env

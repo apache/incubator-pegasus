@@ -100,12 +100,12 @@ public:
 protected:
     template<typename T, typename TRequest, typename TResponse> 
     void register_async_rpc_handler(
-        task_code code,
+        dsn_task_code_t code,
         const char* name,
         void (T::*callback)(const TRequest&, rpc_replier<TResponse>&)
         );
 
-    void unregister_rpc_handler(task_code code);
+    void unregister_rpc_handler(dsn_task_code_t code);
     
 private:
     template<typename T, typename TRequest, typename TResponse>
@@ -145,7 +145,7 @@ inline void register_replica_provider(const char* name)
 //------------------ inline implementation ---------------------
 template<typename T, typename TRequest, typename TResponse>
 inline void replication_app_base::register_async_rpc_handler(
-    task_code code,
+    dsn_task_code_t code,
     const char* name,
     void (T::*callback)(const TRequest&, rpc_replier<TResponse>&)
     )
@@ -159,7 +159,7 @@ inline void replication_app_base::register_async_rpc_handler(
         );
 }
 
-inline void replication_app_base::unregister_rpc_handler(task_code code)
+inline void replication_app_base::unregister_rpc_handler(dsn_task_code_t code)
 {
     _handlers.erase(code);
 }

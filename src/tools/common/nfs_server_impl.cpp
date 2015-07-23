@@ -76,7 +76,7 @@ namespace dsn {
                 );
         }
 
-        void nfs_service_impl::internal_read_callback(error_code err, uint32_t sz, std::shared_ptr<callback_para> cp)
+        void nfs_service_impl::internal_read_callback(error_code err, size_t sz, std::shared_ptr<callback_para> cp)
         {
             {
                 zauto_lock l(_handles_map_lock);

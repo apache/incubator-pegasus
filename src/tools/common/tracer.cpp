@@ -82,20 +82,6 @@ namespace dsn {
                     );
             }
                 break;
-            case dsn_task_type_t::TASK_TYPE_RPC_MSG_SENT:
-            {
-                auto tsk = (rpc_response_task*)this_;
-                ddebug("%s EXEC BEGIN, task_id = %016llx, %s:%hu => %s:%hu, rpc_id = %016llx",
-                    this_->spec().name,
-                    this_->id(),
-                    tsk->get_request()->header().to_address.name,
-                    tsk->get_request()->header().to_address.port,
-                    tsk->get_request()->header().from_address.name,
-                    tsk->get_request()->header().from_address.port,
-                    tsk->get_request()->header().rpc_id
-                    );
-            }
-            break;
             }
         }
 

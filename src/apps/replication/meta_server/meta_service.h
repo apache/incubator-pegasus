@@ -61,7 +61,7 @@ private:
     // update configuration
     void update_configuration(message_ptr req, message_ptr resp);
     void update_configuration(std::shared_ptr<configuration_update_request>& update);
-    void on_log_completed(error_code err, int size, blob buffer, std::shared_ptr<configuration_update_request> req, message_ptr resp);
+    void on_log_completed(error_code err, size_t size, blob buffer, std::shared_ptr<configuration_update_request> req, message_ptr resp);
     void update_configuration(configuration_update_request& request, __out_param configuration_update_response& response);
       
     // load balance actions
@@ -76,7 +76,7 @@ private:
     meta_server_failure_detector *_failure_detector;
     server_state                 *_state;
     load_balancer                *_balancer;
-    task_ptr                     _balancer_timer;
+    dsn::service::cpp_task_ptr   _balancer_timer;
     replication_options          _opts;
     std::string                  _data_dir;
     bool                         _started;

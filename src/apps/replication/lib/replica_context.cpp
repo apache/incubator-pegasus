@@ -76,7 +76,7 @@ void primary_context::reset_membership(const partition_configuration& config, bo
 
     membership = config;
 
-    if (membership.primary != dsn_endpoint_invalid)
+    if (membership.primary != dsn_address_invalid)
     {
         statuses[membership.primary] = PS_PRIMARY;
     }

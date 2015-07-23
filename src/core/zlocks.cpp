@@ -68,7 +68,7 @@ namespace dsn { namespace service {
 
             if (nullptr != task::get_current_task() && !waitee->is_empty())
             {
-                if (waitee->spec().type <= TASK_TYPE_RPC_MSG_SENT ||
+                if (waitee->spec().type == TASK_TYPE_RPC_RESPONSE ||
                     task::get_current_task()->spec().pool_code == waitee->spec().pool_code)
                 {
                     dassert(false, "task %s waits for another task %s sharing the same thread pool - will lead to deadlocks easily (e.g., when worker_count = 1 or when the pool is partitioned)",

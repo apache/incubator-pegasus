@@ -625,7 +625,7 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
 
     if (primary_address() == config.primary)
     {
-        request->config.primary = dsn_endpoint_invalid;        
+        request->config.primary = dsn_address_invalid;        
     }
     else if (replica_helper::remove_node(primary_address(), request->config.secondaries))
     {
@@ -740,7 +740,7 @@ void replica_stub::on_gc()
     }
 }
 
-task_ptr replica_stub::begin_open_replica(const std::string& app_type, global_partition_id gpid, std::shared_ptr<group_check_request> req)
+::dsn::service::cpp_task_ptr replica_stub::begin_open_replica(const std::string& app_type, global_partition_id gpid, std::shared_ptr<group_check_request> req)
 {
     _repicas_lock.lock();
     if (_replicas.find(gpid) != _replicas.end())
@@ -823,7 +823,7 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
     }
 }
 
-task_ptr replica_stub::begin_close_replica(replica_ptr r)
+::dsn::service::cpp_task_ptr replica_stub::begin_close_replica(replica_ptr r)
 {
     zauto_lock l(_repicas_lock);
 

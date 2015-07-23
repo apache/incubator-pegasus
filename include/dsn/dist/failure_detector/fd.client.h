@@ -35,7 +35,7 @@ class failure_detector_client
 {
 public:
     failure_detector_client(const dsn_address_t& server) { _server = server; }
-    failure_detector_client() { _server = dsn_endpoint_invalid; }
+    failure_detector_client() { _server = dsn_address_invalid; }
     virtual ~failure_detector_client() {}
 
 
@@ -60,7 +60,7 @@ public:
     }
     
     // - asynchronous with on-stack ::dsn::fd::beacon_msg and ::dsn::fd::beacon_ack 
-    ::dsn::rpc_response_task_ptr begin_ping(
+    ::dsn::service::cpp_task_ptr begin_ping(
         const ::dsn::fd::beacon_msg& beacon, 
         void* context,
         int timeout_milliseconds = 0, 
@@ -94,7 +94,7 @@ public:
     }
     
     // - asynchronous with on-heap std::shared_ptr<::dsn::fd::beacon_msg> and std::shared_ptr<::dsn::fd::beacon_ack> 
-    ::dsn::rpc_response_task_ptr begin_ping2(
+    ::dsn::service::cpp_task_ptr begin_ping2(
         std::shared_ptr<::dsn::fd::beacon_msg>& beacon,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0,

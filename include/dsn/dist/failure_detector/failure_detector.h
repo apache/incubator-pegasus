@@ -158,7 +158,7 @@ private:
     uint32_t             _lease_milliseconds;
     uint32_t             _grace_milliseconds;
     bool                 _is_started;
-    task_ptr             _current_task;
+    ::dsn::service::cpp_task_ptr _current_task;
 
     bool                 _use_allow_list;
     allow_list           _allow_list;

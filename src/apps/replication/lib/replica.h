@@ -129,7 +129,7 @@ private:
     // 2pc
     void init_prepare(mutation_ptr& mu);
     void send_prepare_message(const dsn_address_t& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds);
-    void on_append_log_completed(mutation_ptr& mu, error_code err, uint32_t size);
+    void on_append_log_completed(mutation_ptr& mu, error_code err, size_t size);
     void on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, error_code err, message_ptr& request, message_ptr& reply);
     void do_possible_commit_on_primary(mutation_ptr& mu);    
     void ack_prepare_message(error_code err, mutation_ptr& mu);
@@ -139,7 +139,7 @@ private:
     // learning    
     void init_learn(uint64_t signature);
     void on_learn_reply(error_code err, std::shared_ptr<learn_request>& req, std::shared_ptr<learn_response>& resp);
-    void on_copy_remote_state_completed(error_code err, int size, std::shared_ptr<learn_response> resp);
+    void on_copy_remote_state_completed(error_code err, size_t size, std::shared_ptr<learn_response> resp);
     void on_learn_remote_state_completed(error_code err);
     void handle_learning_error(error_code err);
     void handle_learning_succeeded_on_primary(const dsn_address_t& node, uint64_t learnSignature);

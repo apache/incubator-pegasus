@@ -45,7 +45,7 @@ namespace dsn {
             
             dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP, "invalid given channel %s", channel.to_string());
 
-            dsn_build_end_point(&_address, boost::asio::ip::host_name().c_str(), port);
+            dsn_address_build(&_address, boost::asio::ip::host_name().c_str(), port);
 
             if (!client_only)
             {

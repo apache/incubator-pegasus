@@ -93,7 +93,11 @@ task::task(task_code code, int hash, service_node* node)
         tls_task_id.node_pool_thread_ids = ((uint64_t)(uint8_t)_node->id()) << (64 - 8); // high 8 bits for node id
         tls_task_id.node_pool_thread_ids |= ((uint64_t)(uint8_t)(int)_spec->pool_code) << (64 - 8 - 8); // next 8 bits for pool id
         auto worker_idx = task::get_current_worker_index();
-        if (worker_idx == -1) worker_idx = ::dsn::utils::get_current_tid();
+        if (worker_idx == -1)
+        {
+            worker_idx = ::dsn::utils::get_current_tid();
+            // tls_task_info.worker_index = worker_idx;
+        }
         tls_task_id.node_pool_thread_ids |= ((uint64_t)(uint16_t)worker_idx) << 32; // next 16 bits for thread id
 
         tls_task_id.last_task_id = 0;
@@ -330,8 +334,8 @@ const char* task::node_name() const
 void task::enqueue()
 {        
     dassert(_node != nullptr, "service node unknown for this task");
-    dassert(_spec->type != TASK_TYPE_RPC_RESPONSE && _spec->type != TASK_TYPE_RPC_MSG_SENT, 
-        "tasks with TASK_TYPE_RPC_RESPONSE or TASK_TYPE_RPC_MSG_SENT type use task::enqueue(caller_pool()) instead");
+    dassert(_spec->type != TASK_TYPE_RPC_RESPONSE,
+        "tasks with TASK_TYPE_RPC_RESPONSE type use task::enqueue(caller_pool()) instead");
     auto pool = node()->computation()->get_pool(spec().pool_code);
     enqueue(pool);
 }
@@ -440,19 +444,6 @@ rpc_response_task_empty::rpc_response_task_empty(message_ptr& request, int hash)
     _is_null = true;
 }
 
-rpc_msg_sent_task::rpc_msg_sent_task(task_code code, message_ptr& msg, dsn_msg_callback_t cb, dsn_param_t param, int hash)
-    : task(code, hash)
-{
-    set_error_code(ERR_IO_PENDING);
-
-    dbg_dassert(TASK_TYPE_RPC_MSG_SENT == spec().type, "task must be of TASK_TYPE_RPC_MSG_SENT type");
-
-    _msg = msg;
-    _caller_pool = task::get_current_worker()->pool();
-    _cb = cb;
-    _param = param;
-}
-
 aio_task::aio_task(task_code code, int hash) 
     : task(code, hash)
 {
@@ -467,7 +458,7 @@ void aio_task::exec()
     on_completed(error(), _transferred_size);
 }
 
-void aio_task::enqueue(error_code err, uint32_t transferred_size, service_node* node)
+void aio_task::enqueue(error_code err, size_t transferred_size, service_node* node)
 {
     set_error_code(err);
     _transferred_size = transferred_size;

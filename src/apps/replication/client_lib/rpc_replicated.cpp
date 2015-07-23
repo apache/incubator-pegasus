@@ -37,13 +37,17 @@ namespace dsn {
                 struct params
                 {
                     std::vector<dsn_address_t> servers;
-                    rpc_response_task_ptr response_task;
                     rpc_reply_handler callback;
+
+                    // internal callback contexts
+                    std::function<void(error_code, message_ptr&, message_ptr&)> internal_cb;
+                    servicelet* svc;
+                    int         reply_hash;
                 };
 
                 static dsn_address_t get_next_server(const dsn_address_t& currentServer, const std::vector<dsn_address_t>& servers)
                 {
-                    if (currentServer == dsn_endpoint_invalid)
+                    if (currentServer == dsn_address_invalid)
                     {
                         return servers[env::random32(0, static_cast<int>(servers.size()) * 13) % static_cast<int>(servers.size())];
                     }
@@ -104,17 +108,13 @@ namespace dsn {
                         return;
                     }
 
-                    rpc::call(
-                        next_server,
-                        request,
-                        ps->response_task
-                        );
+                    rpc::call(next_server, request, ps->svc, ps->internal_cb, ps->reply_hash);
                 }
 
 
             } // end namespace rpc_replicated_impl 
 
-            rpc_response_task_ptr call_replicated(
+            dsn::service::cpp_task_ptr call_replicated(
                 const dsn_address_t& first_server,
                 const std::vector<dsn_address_t>& servers,
                 message_ptr& request,
@@ -126,7 +126,7 @@ namespace dsn {
                 )
             {
                 dsn_address_t first = first_server;
-                if (first == dsn_endpoint_invalid)
+                if (first == dsn_address_invalid)
                 {
                     first = rpc_replicated_impl::get_next_server(first_server, servers);
                 }
@@ -135,28 +135,17 @@ namespace dsn {
                 ps->servers = servers;
                 ps->callback = callback;
 
-                std::function<void(error_code, message_ptr&, message_ptr&)> cb = std::bind(
+                ps->internal_cb = std::bind(
                     &rpc_replicated_impl::internal_rpc_reply_callback,
                     std::placeholders::_1,
                     std::placeholders::_2,
                     std::placeholders::_3,
                     ps
                     );
+                ps->svc = svc;
+                ps->reply_hash = reply_hash;
 
-                ps->response_task = new internal_use_only::service_rpc_response_task4(
-                    svc,
-                    cb,
-                    request,
-                    reply_hash
-                    );
-
-                rpc::call(
-                    first,
-                    request,
-                    ps->response_task
-                    );
-
-                return ps->response_task;
+                return rpc::call(first, request, ps->svc, ps->internal_cb, ps->reply_hash);
             }
         }
     }

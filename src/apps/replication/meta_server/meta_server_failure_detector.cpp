@@ -136,7 +136,7 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::
         {
             ack.time = beacon.time;
             ack.is_master = false;
-            ack.primary_node =  dsn_endpoint_invalid;
+            ack.primary_node =  dsn_address_invalid;
         }
     }
     else

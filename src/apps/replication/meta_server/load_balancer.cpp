@@ -84,7 +84,7 @@ dsn_address_t load_balancer::find_minimal_load_machine(bool primaryOnly)
 
     if (stats.empty())
     {
-        return dsn_endpoint_invalid;
+        return dsn_address_invalid;
     }
 
     int candidate_count = 1;
@@ -108,7 +108,7 @@ void load_balancer::run_lb(partition_configuration& pc)
     configuration_update_request proposal;
     proposal.config = pc;
 
-    if (pc.primary == dsn_endpoint_invalid)
+    if (pc.primary == dsn_address_invalid)
     {
         if (pc.secondaries.size() > 0)
         {
@@ -121,7 +121,7 @@ void load_balancer::run_lb(partition_configuration& pc)
             proposal.type = CT_ASSIGN_PRIMARY;
         }
 
-        if (proposal.node != dsn_endpoint_invalid)
+        if (proposal.node != dsn_address_invalid)
         {
             send_proposal(proposal.node, proposal);
         }
@@ -131,7 +131,7 @@ void load_balancer::run_lb(partition_configuration& pc)
     {
         proposal.type = CT_ADD_SECONDARY;
         proposal.node = find_minimal_load_machine(false);
-        if (proposal.node != dsn_endpoint_invalid && 
+        if (proposal.node != dsn_address_invalid && 
             proposal.node != pc.primary &&
             std::find(pc.secondaries.begin(), pc.secondaries.end(), proposal.node) == pc.secondaries.end())
         {

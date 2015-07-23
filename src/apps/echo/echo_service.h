@@ -28,6 +28,7 @@
 # include <dsn/serverlet.h>
 # include <dsn/internal/serialization.h>
 # include <iostream>
+# include <dsn/service_api.h>
 
 DEFINE_TASK_CODE(LPC_ECHO_TIMER, ::dsn::TASK_PRIORITY_HIGH, ::dsn::THREAD_POOL_DEFAULT)
 DEFINE_TASK_CODE_RPC(RPC_ECHO, ::dsn::TASK_PRIORITY_HIGH, ::dsn::THREAD_POOL_DEFAULT)
@@ -105,7 +106,7 @@ public:
         if (argc < 3)
             return ERR_INVALID_PARAMETERS;
 
-        dsn_build_end_point(&_server, argv[1], (uint16_t)atoi(argv[2]));
+        dsn_address_build(&_server, argv[1], (uint16_t)atoi(argv[2]));
 
         if (_bench == "echo")
         {
@@ -271,5 +272,5 @@ private:
     int _message_size;
     int _concurrency;
     bool _echo2;
-    task_ptr _timer;
+    dsn::service::cpp_task_ptr _timer;
 };

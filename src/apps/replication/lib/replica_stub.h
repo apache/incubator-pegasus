@@ -122,9 +122,9 @@ private:
     void on_node_query_reply_scatter(replica_stub_ptr this_, const partition_configuration& config);
     void on_node_query_reply_scatter2(replica_stub_ptr this_, global_partition_id gpid);
     void remove_replica_on_meta_server(const partition_configuration& config);
-    task_ptr begin_open_replica(const std::string& app_type, global_partition_id gpid, std::shared_ptr<group_check_request> req = nullptr);
+    ::dsn::service::cpp_task_ptr begin_open_replica(const std::string& app_type, global_partition_id gpid, std::shared_ptr<group_check_request> req = nullptr);
     void    open_replica(const std::string app_type, global_partition_id gpid, std::shared_ptr<group_check_request> req);
-    task_ptr begin_close_replica(replica_ptr r);
+    ::dsn::service::cpp_task_ptr begin_close_replica(replica_ptr r);
     void close_replica(replica_ptr r);
     void add_replica(replica_ptr r);
     bool remove_replica(replica_ptr r);
@@ -133,8 +133,8 @@ private:
 private:
     friend class ::dsn::replication::replication_checker;
     typedef std::unordered_map<global_partition_id, replica_ptr> replicas;
-    typedef std::unordered_map<global_partition_id, task_ptr> opening_replicas;
-    typedef std::unordered_map<global_partition_id, std::pair<task_ptr, replica_ptr>> closing_replicas; // <close, replica>
+    typedef std::unordered_map<global_partition_id, ::dsn::service::cpp_task_ptr> opening_replicas;
+    typedef std::unordered_map<global_partition_id, std::pair<::dsn::service::cpp_task_ptr, replica_ptr>> closing_replicas; // <close, replica>
 
     zlock                       _repicas_lock;
     replicas                    _replicas;
@@ -154,9 +154,9 @@ private:
     bool                        _is_long_subscriber;
     
     // temproal states
-    task_ptr                    _config_query_task;
-    task_ptr                    _config_sync_timer_task;
-    task_ptr                    _gc_timer_task;
+    ::dsn::service::cpp_task_ptr _config_query_task;
+    ::dsn::service::cpp_task_ptr _config_sync_timer_task;
+    ::dsn::service::cpp_task_ptr _gc_timer_task;
 
 private:    
     friend class replica;

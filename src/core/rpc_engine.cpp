@@ -159,7 +159,7 @@ namespace dsn {
         dassert (_config != nullptr, "");
 
         _is_running = false;
-        _local_primary_address = dsn_endpoint_invalid;
+        _local_primary_address = dsn_address_invalid;
         _message_crc_required = config->get_value<bool>("network", "message_crc_required", false);
     }
     

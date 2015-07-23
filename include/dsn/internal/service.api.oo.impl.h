@@ -32,211 +32,257 @@ namespace dsn {
         {
             namespace internal_use_only
             {
-                template<typename T, typename TRequest, typename TResponse>
-                class service_rpc_response_task1 : public rpc_response_task, public task_context_manager
+                template<typename TRequest, typename TResponse, typename TCallback, typename TService>
+                void on_rpc_response1(TService* svc, TCallback cb, std::shared_ptr<TRequest>& req, ::dsn::error_code err, message_ptr& request, message_ptr& response)
                 {
-                public:
-                    service_rpc_response_task1(
-                        T* svc,
-                        std::shared_ptr<TRequest>& req,
-                        void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&),
-                        message_ptr& request,
-                        int hash = 0
-                        )
-                        : rpc_response_task(request, hash), task_context_manager(svc, this)
+                    if (err == ERR_OK)
                     {
-                        _svc = svc;
-                        _req = req;
-                        _callback = callback;
+                        std::shared_ptr<TResponse> resp(new TResponse);
+                        unmarshall(response->reader(), *resp);
+                        (svc->*cb)(err, req, resp);
                     }
-
-                    virtual void on_response(error_code err, message_ptr& request, message_ptr& response)
+                    else
                     {
-                        if (err == ERR_OK)
-                        {
-                            std::shared_ptr<TResponse> resp(new TResponse);
-                            unmarshall(response->reader(), *resp);
-                            (_svc->*_callback)(err, _req, resp);
-                        }
-                        else
-                        {
-                            std::shared_ptr<TResponse> resp(nullptr);
-                            (_svc->*_callback)(err, _req, resp);
-                        }
+                        std::shared_ptr<TResponse> resp(nullptr);
+                        (svc->*cb)(err, req, resp);
                     }
+                }
 
-                private:
-                    T* _svc;
-                    std::shared_ptr<TRequest> _req;
-                    void (T::*_callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&);
-                };
+                template<typename TRequest, typename TResponse, typename TCallback>
+                void on_rpc_response2(TCallback& cb, std::shared_ptr<TRequest>& req, ::dsn::error_code err, message_ptr& request, message_ptr& response)
+                {
+                    if (err == ERR_OK)
+                    {
+                        std::shared_ptr<TResponse> resp(new TResponse);
+                        unmarshall(response->reader(), *resp);
+                        cb(err, req, resp);
+                    }
+                    else
+                    {
+                        std::shared_ptr<TResponse> resp(nullptr);
+                        cb(err, req, resp);
+                    }
+                }
+                
+                template<typename TResponse, typename TCallback, typename TService>
+                void on_rpc_response3(TService* svc, TCallback cb, void* param, ::dsn::error_code err, message_ptr& request, message_ptr& response)
+                {
+                    TResponse resp;
+                    if (err == ERR_OK)
+                    {
+                        unmarshall(response->reader(), resp);
+                        (svc->*cb)(err, resp, param);
+                    }
+                    else
+                    {
+                        (svc->*cb)(err, resp, param);
+                    }
+                }
+
+                template<typename TResponse, typename TCallback>
+                void on_rpc_response4(TCallback& cb, void* param, ::dsn::error_code err, message_ptr& request, message_ptr& response)
+                {
+                    TResponse resp;
+                    if (err == ERR_OK)
+                    {
+                        unmarshall(response->reader(), resp);
+                        cb(err, resp, param);
+                    }
+                    else
+                    {
+                        cb(err, resp, param);
+                    }
+                }
+
+                template<typename T, typename TRequest, typename TResponse>
+                inline cpp_task_ptr create_rpc_call(
+                    message_ptr& msg,
+                    std::shared_ptr<TRequest>& req,
+                    T* owner,
+                    void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&),
+                    int request_hash/* = 0*/,
+                    int timeout_milliseconds /*= 0*/,
+                    int reply_hash /*= 0*/
+                    )
+                {
+                    rpc_reply_handler cb = std::bind(
+                        &internal_use_only::on_rpc_response1<
+                            TRequest, 
+                            TResponse, 
+                            void (T::*)(::dsn::error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&), 
+                            T>,
+                        owner,
+                        callback,
+                        req,
+                        std::placeholders::_1,
+                        std::placeholders::_2,
+                        std::placeholders::_3
+                        );
+
+                    auto task = new cpp_dev_task<rpc_reply_handler>(cb);
+
+                    auto t = dsn_rpc_create(
+                                msg->c_msg(), 
+                                cpp_dev_task<rpc_reply_handler >::exec_rcp_response,
+                                (void*)task,
+                                reply_hash
+                                );
+                    task->set_task_info(t, (servicelet*)owner);                
+                    return task;
+                }
 
                 template<typename TRequest, typename TResponse>
-                class service_rpc_response_task2 : public rpc_response_task, public task_context_manager
+                inline cpp_task_ptr create_rpc_call(
+                    message_ptr& msg,
+                    std::shared_ptr<TRequest>& req,
+                    servicelet* owner,
+                    std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)>& callback,
+                    int request_hash/* = 0*/,
+                    int timeout_milliseconds /*= 0*/,
+                    int reply_hash /*= 0*/
+                    )
                 {
-                public:
-                    service_rpc_response_task2(
-                        servicelet* svc,
-                        std::shared_ptr<TRequest>& req,
-                        std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)>& callback,
-                        message_ptr& request,
-                        int hash = 0
-                        )
-                        : rpc_response_task(request, hash), task_context_manager(svc, this)
-                    {
-                        _req = req;
-                        _callback = std::move(callback);
-                    }
+                    rpc_reply_handler cb = std::bind(
+                        &internal_use_only::on_rpc_response2<
+                            TRequest,
+                            TResponse,
+                            std::function<void(::dsn::error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)>,
+                            >,
+                        callback,
+                        req,
+                        std::placeholders::_1,
+                        std::placeholders::_2,
+                        std::placeholders::_3
+                        );
 
-                    virtual void on_response(error_code err, message_ptr& request, message_ptr& response)
-                    {
-                        if (nullptr != _callback)
-                        {
-                            if (err == ERR_OK)
-                            {
-                                std::shared_ptr<TResponse> resp(new TResponse);
-                                unmarshall(response->reader(), *resp);
-                                _callback(err, _req, resp);
-                            }
-                            else
-                            {
-                                std::shared_ptr<TResponse> resp(nullptr);
-                                _callback(err, _req, resp);
-                            }
-                            _callback = nullptr;
-                        }
-                    }
+                    auto task = new cpp_dev_task<rpc_reply_handler>(cb);
 
-                private:
-                    std::shared_ptr<TRequest> _req;
-                    std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> _callback;
-                };
-
-                template<typename TResponse>
-                class service_rpc_response_task3 : public rpc_response_task, public task_context_manager
-                {
-                public:
-                    service_rpc_response_task3(
-                        servicelet* svc,
-                        std::function<void(error_code, const TResponse&, void*)>& callback,
-                        void* context,
-                        message_ptr& request,
-                        int hash = 0
-                        )
-                        : rpc_response_task(request, hash), task_context_manager(svc, this)
-                    {
-                        _callback = std::move(callback);
-                        _context = context;
-                    }
-
-                    virtual void on_response(error_code err, message_ptr& request, message_ptr& response)
-                    {
-                        if (nullptr != _callback)
-                        {
-                            TResponse resp;
-                            if (err == ERR_OK)
-                            {
-                                unmarshall(response->reader(), resp);
-                                _callback(err, resp, _context);
-                            }
-                            else
-                            {
-                                _callback(err, resp, _context);
-                            }
-                            _callback = nullptr;
-                        }
-                    }
-
-                private:
-                    std::function<void(error_code, const TResponse&, void*)> _callback;
-                    void* _context;
-                };
-
-                class service_rpc_response_task4 : public rpc_response_task, public task_context_manager
-                {
-                public:
-                    service_rpc_response_task4(
-                        servicelet* svc,
-                        std::function<void(error_code, message_ptr&, message_ptr&)>& callback,
-                        message_ptr& request,
-                        int hash = 0
-                        )
-                        : rpc_response_task(request, hash), task_context_manager(svc, this)
-                    {
-                        _callback = std::move(callback);
-                    }
-
-                    virtual void on_response(error_code err, message_ptr& request, message_ptr& response)
-                    {
-                        if (nullptr != _callback)
-                        {
-                            _callback(err, request, response);
-                            _callback = nullptr;
-                        }
-                    }
-
-                private:
-                    std::function<void(error_code, message_ptr&, message_ptr&)> _callback;
-                };
-
+                    auto t = dsn_rpc_create(
+                        msg->c_msg(),
+                        cpp_dev_task<rpc_reply_handler >::exec_rcp_response,
+                        (void*)task,
+                        reply_hash
+                        );
+                    task->set_task_info(t, (servicelet*)owner);
+                    return task;
+                }
 
                 template<typename T, typename TResponse>
-                class service_rpc_response_task5 : public rpc_response_task, public task_context_manager
+                inline cpp_task_ptr create_rpc_call(
+                    message_ptr& msg,
+                    T* owner,
+                    void(T::*callback)(error_code, const TResponse&, void*),
+                    void* context,
+                    int request_hash/* = 0*/,
+                    int timeout_milliseconds /*= 0*/,
+                    int reply_hash /*= 0*/
+                    )
                 {
-                public:
-                    service_rpc_response_task5(
-                        T* svc,
-                        void (T::*callback)(error_code, const TResponse&, void*),
-                        void* context,
-                        message_ptr& request,                        
-                        int hash = 0
-                        )
-                        : rpc_response_task(request, hash), task_context_manager(svc, this)
-                    {
-                        _svc = svc;
-                        _callback = callback;
-                        _context = context;
-                    }
+                    rpc_reply_handler cb = std::bind(
+                        &internal_use_only::on_rpc_response3<
+                            TResponse,
+                            void(T::*)(::dsn::error_code, const TResponse&, void*),
+                            T>,
+                        owner,
+                        callback,
+                        context,
+                        std::placeholders::_1,
+                        std::placeholders::_2,
+                        std::placeholders::_3
+                        );
 
-                    virtual void on_response(error_code err, message_ptr& request, message_ptr& response)
-                    {
-                        TResponse resp;
-                        if (err == ERR_OK)
-                        {
-                            unmarshall(response->reader(), resp);
-                            (_svc->*_callback)(err, resp, _context);
-                        }
-                        else
-                        {
-                            (_svc->*_callback)(err, resp, _context);
-                        }
-                    }
+                    auto task = new cpp_dev_task<rpc_reply_handler>(cb);
 
-                private:
-                    T* _svc;
-                    void* _context;
-                    void (T::*_callback)(error_code, const TResponse&, void*);
-                };
+                    auto t = dsn_rpc_create(
+                        msg->c_msg(),
+                        cpp_dev_task<rpc_reply_handler >::exec_rcp_response,
+                        (void*)task,
+                        reply_hash
+                        );
+                    task->set_task_info(t, (servicelet*)owner);
+                    return task;
+                }
+
+                template<typename TResponse>
+                inline cpp_task_ptr create_rpc_call(
+                    message_ptr& msg,
+                    servicelet* owner,
+                    std::function<void(error_code, const TResponse&, void*)>& callback,
+                    void* context,
+                    int request_hash/* = 0*/,
+                    int timeout_milliseconds /*= 0*/,
+                    int reply_hash /*= 0*/
+                    )
+                {
+                    rpc_reply_handler cb = std::bind(
+                        &internal_use_only::on_rpc_response4<
+                            TResponse,
+                            std::function<void(::dsn::error_code, const TResponse&, void*)>
+                            >,
+                        callback,
+                        context,
+                        std::placeholders::_1,
+                        std::placeholders::_2,
+                        std::placeholders::_3
+                        );
+
+                    auto task = new cpp_dev_task<rpc_reply_handler>(cb);
+
+                    auto t = dsn_rpc_create(
+                        msg->c_msg(),
+                        cpp_dev_task<rpc_reply_handler >::exec_rcp_response,
+                        (void*)task,
+                        reply_hash
+                        );
+                    task->set_task_info(t, (servicelet*)owner);
+                    return task;
+                }
             }
 
             // ------------- inline implementation ----------------
             template<typename TRequest>
             inline void call_one_way_typed(
                 const dsn_address_t& server,
-                task_code code,
+                dsn_task_code_t code,
                 const TRequest& req,
                 int hash
                 )
             {
                 message_ptr msg = message::create_request(code, 0, hash);
                 marshall(msg->writer(), req);
-                rpc::call_one_way(server, msg);
+                dsn_rpc_call_one_way(server, msg->c_msg());
+            }
+
+            template<typename TRequest>
+            ::dsn::error_code call_typed_wait(
+                /*out*/ message_ptr* response,
+                const dsn_address_t& server,
+                dsn_task_code_t code,
+                const TRequest& req,
+                int hash,
+                int timeout_milliseconds /*= 0*/
+                )
+            {
+                message_ptr msg = message::create_request(code, timeout_milliseconds, hash);
+                marshall(msg->writer(), req);
+                auto resp = dsn_rpc_call_wait(server, msg->c_msg());
+                if (resp != nullptr)
+                {
+                    if (response)
+                        *response = message::from_c_msg(resp);
+                    else
+                        dsn_rpc_release_message(resp);
+
+                    return ::dsn::ERR_OK;
+                }
+                else
+                    return ::dsn::ERR_TIMEOUT;
             }
 
             template<typename T, typename TRequest, typename TResponse>
-            inline rpc_response_task_ptr call_typed(
+            inline cpp_task_ptr call_typed(
                 const dsn_address_t& server,
-                task_code code,
+                dsn_task_code_t code,
                 std::shared_ptr<TRequest>& req,
                 T* owner,
                 void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&),
@@ -248,22 +294,17 @@ namespace dsn {
                 message_ptr msg = message::create_request(code, timeout_milliseconds, request_hash);
                 marshall(msg->writer(), *req);
 
-                rpc_response_task_ptr resp_task(new internal_use_only::service_rpc_response_task1<T, TRequest, TResponse>(
-                    owner,
-                    req,
-                    callback,
-                    msg,
-                    reply_hash
-                    ));
-
-                rpc::call(server, msg, resp_task);
-                return std::move(resp_task);
+                auto t = internal_use_only::create_rpc_call<T, TRequest, TResponse>(
+                    msg, req, owner, callback, request_hash, timeout_milliseconds, reply_hash);
+               
+                dsn_rpc_call(server, t->native_handle());
+                return t;
             }
 
             template<typename TRequest, typename TResponse>
-            inline rpc_response_task_ptr call_typed(
+            inline cpp_task_ptr call_typed(
                 const dsn_address_t& server,
-                task_code code,
+                dsn_task_code_t code,
                 std::shared_ptr<TRequest>& req,
                 servicelet* owner,
                 std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
@@ -275,22 +316,17 @@ namespace dsn {
                 message_ptr msg = message::create_request(code, timeout_milliseconds, request_hash);
                 marshall(msg->writer(), *req);
 
-                rpc_response_task_ptr resp_task(new internal_use_only::service_rpc_response_task2<TRequest, TResponse>(
-                    owner,
-                    req,
-                    callback,
-                    msg,
-                    reply_hash
-                    ));
+                auto t = internal_use_only::create_rpc_call<TRequest, TResponse>(
+                    msg, req, owner, callback, request_hash, timeout_milliseconds, reply_hash);
 
-                rpc::call(server, msg, resp_task);
-                return std::move(resp_task);
+                dsn_rpc_call(server, t->native_handle());
+                return t;
             }
 
             template<typename T, typename TRequest, typename TResponse>
-            inline rpc_response_task_ptr call_typed(
+            inline cpp_task_ptr call_typed(
                 const dsn_address_t& server,
-                task_code code,
+                dsn_task_code_t code,
                 const TRequest& req,
                 T* owner,
                 void(T::*callback)(error_code, const TResponse&, void*),
@@ -303,22 +339,17 @@ namespace dsn {
                 message_ptr msg = message::create_request(code, timeout_milliseconds, request_hash);
                 marshall(msg->writer(), req);
 
-                rpc_response_task_ptr resp_task(new internal_use_only::service_rpc_response_task5<T, TResponse>(
-                    owner,
-                    callback,
-                    context,
-                    msg,
-                    reply_hash
-                    ));
+                auto t = internal_use_only::create_rpc_call<T, TResponse>(
+                    msg, owner, callback, context, request_hash, timeout_milliseconds, reply_hash);
 
-                rpc::call(server, msg, resp_task);
-                return std::move(resp_task);
+                dsn_rpc_call(server, t->native_handle());
+                return t;
             }
 
             template<typename TRequest, typename TResponse>
-            inline rpc_response_task_ptr call_typed(
+            inline cpp_task_ptr call_typed(
                 const dsn_address_t& server,
-                task_code code,
+                dsn_task_code_t code,
                 const TRequest& req,
                 servicelet* owner,
                 std::function<void(error_code, const TResponse&, void*)> callback,
@@ -331,151 +362,14 @@ namespace dsn {
                 message_ptr msg = message::create_request(code, timeout_milliseconds, request_hash);
                 marshall(msg->writer(), req);
 
-                rpc_response_task_ptr resp_task(new internal_use_only::service_rpc_response_task3<TResponse>(
-                    owner,
-                    callback,
-                    context,
-                    msg,
-                    reply_hash
-                    ));
+                auto t = internal_use_only::create_rpc_call<TResponse>(
+                    msg, owner, callback, context, request_hash, timeout_milliseconds, reply_hash);
 
-                rpc::call(server, msg, resp_task);
-                return std::move(resp_task);
+                dsn_rpc_call(server, t->native_handle());
+                return t;
             }
 
-            template<typename TRequest, typename TResponse>
-            class layered_rpc_handler_typed : public layered_rpc::layered_rpc_handler
-            {
-            public:
-                layered_rpc_handler_typed(
-                    std::shared_ptr<TRequest>& req,
-                    std::function<bool(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback
-                    )
-                {
-                    _req = req;
-                    _callback = std::move(callback);
-                }
-
-                virtual bool exec(
-                    error_code err,
-                    message_ptr& response)
-                {
-                    if (err == ERR_OK)
-                    {
-                        auto r = std::shared_ptr<TResponse>(new TResponse);
-                        unmarshall(response->reader(), *r);
-                        _callback(err, _req, r);
-                    }
-                }
-
-                virtual ~layered_rpc_handler_typed() { }
-
-            private:
-                std::shared_ptr<TRequest> _req;
-                std::function<bool(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> _callback;
-            };
-            
-            inline layered_rpc::layered_rpc(servicelet* owner, message_ptr& request, int hash)
-                : 
-                rpc_response_task(request, hash),
-                task_context_manager(owner, this)
-            {
-            }
-
-            template<typename TRequest, typename TResponse>
-            inline /*static*/ layered_rpc& layered_rpc::first(
-                task_code code,
-                std::shared_ptr<TRequest>& req,
-                servicelet* owner,
-                std::function<bool(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
-                int request_hash,
-                int timeout_milliseconds,
-                int reply_hash
-                )
-            {
-                message_ptr request = message::create_request(code, timeout_milliseconds, request_hash);
-                layered_rpc *lr = new layered_rpc(owner, request, reply_hash);
-                
-                auto h = new layered_rpc_handler_typed<TRequest, TResponse>(req, callback);
-                lr->_handlers.push_back(h);
-
-                return *lr;
-            }
-
-            template<typename TRequest, typename TResponse>
-            inline layered_rpc& layered_rpc::append(
-                std::shared_ptr<TRequest>& req,
-                std::function<bool(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback
-                )
-            {
-                auto h = new layered_rpc_handler_typed<TRequest, TResponse>(req, callback);
-                _handlers.push_back(h);
-            }
-
-            inline void layered_rpc::exec()
-            {
-                bool c = true;
-                for (auto& h : _handlers)
-                {
-                    if (c)
-                    {
-                        c = h->exec(error(), get_response());
-                    }
-
-                    delete h;
-                }
-                _handlers.clear();
-            }
-
-            inline rpc_response_task_ptr layered_rpc::call(const dsn_address_t& server)
-            {
-                dassert(_handlers.size() > 0, "");
-
-                auto cb = rpc_response_task_ptr(static_cast<rpc_response_task*>(this));
-                rpc::call(server, cb->get_request(), cb);
-                return std::move(cb);
-            }
-
-            inline layered_rpc::~layered_rpc()
-            {
-                for (auto& h : _handlers)
-                    delete h;
-                _handlers.clear();
-            }
         } // end namespace rpc
-
-        namespace file
-        {
-            namespace internal_use_only 
-            {
-                class service_aio_task : public aio_task, public task_context_manager
-                {
-                public:
-                    service_aio_task(task_code code, servicelet* svc, aio_handler& handler, int hash = 0)
-                        : aio_task(code, hash), task_context_manager(svc, this)
-                    {
-                        _handler = std::move(handler);
-                    }
-
-                    virtual void on_completed(error_code err, uint32_t transferred_size)
-                    {
-                        if (_handler != nullptr)
-                        {
-                            _handler(err, transferred_size);
-                            _handler = nullptr;
-                        }
-                        else
-                        {
-                            err.end_tracking();
-                        }
-                    }
-
-                private:
-                    aio_handler _handler;
-                };
-
-            }
-        }
 
     } // end namespace service
 } // end namespace

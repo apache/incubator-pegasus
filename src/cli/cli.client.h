@@ -13,7 +13,7 @@ class cli_client
 {
 public:
     cli_client(const dsn_address_t& server) { _server = server; }
-    cli_client() { _server = dsn_endpoint_invalid; }
+    cli_client() { _server = dsn_address_invalid; }
     virtual ~cli_client() {}
 
 
@@ -26,19 +26,19 @@ public:
         int hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-        ::dsn::message_ptr msg = ::dsn::message::create_request(RPC_DSN_CLI_CALL, timeout_milliseconds, hash);
-        marshall(msg->writer(), c);
-        auto resp_task = ::dsn::service::rpc::call(p_server_addr ? *p_server_addr : _server, msg);
-        resp_task->wait();
-        if (resp_task->error() == ::dsn::ERR_OK)
+        message_ptr response;
+        auto err = ::dsn::service::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
+            RPC_DSN_CLI_CALL, c, hash, timeout_milliseconds);
+        if (err == ::dsn::ERR_OK)
         {
-            unmarshall(resp_task->get_response()->reader(), resp);
+            unmarshall(response->reader(), resp);
         }
-        return resp_task->error();
+        
+        return err;
     }
     
     // - asynchronous with on-stack command and std::string 
-    ::dsn::rpc_response_task_ptr begin_call(
+    ::dsn::service::cpp_task_ptr begin_call(
         const command& c, 
         void* context = nullptr,
         int timeout_milliseconds = 0, 
@@ -72,7 +72,7 @@ public:
     }
     
     // - asynchronous with on-heap std::shared_ptr<command> and std::shared_ptr<std::string> 
-    ::dsn::rpc_response_task_ptr begin_call2(
+    ::dsn::service::cpp_task_ptr begin_call2(
         std::shared_ptr<command>& c,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0,

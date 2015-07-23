@@ -43,7 +43,7 @@ replication_failure_detector::~replication_failure_detector(void)
 
 dsn_address_t replication_failure_detector::find_next_meta_server(dsn_address_t current)
 {
-    if (dsn_endpoint_invalid == current)
+    if (dsn_address_invalid == current)
         return _meta_servers[random32(0, 100) % _meta_servers.size()];
     else
     {
@@ -75,7 +75,7 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
         }
         else if (ack.is_master == false)
         {
-            if (dsn_endpoint_invalid != ack.primary_node)
+            if (dsn_address_invalid != ack.primary_node)
             {
                 switch_master(ack.this_node, ack.primary_node);
             }
@@ -90,7 +90,7 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
         }
         else if (ack.is_master == false)
         {
-            if (dsn_endpoint_invalid != ack.primary_node)
+            if (dsn_address_invalid != ack.primary_node)
             {
                 switch_master(ack.this_node, ack.primary_node);
             }

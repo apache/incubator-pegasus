@@ -43,12 +43,8 @@ extern "C" {
     //------------------------------------------------------------------------------
     enum dsn_task_type_t
     {
+        TASK_TYPE_RPC_REQUEST, 
         TASK_TYPE_RPC_RESPONSE,
-        TASK_TYPE_RPC_MSG_SENT, // request or response sent finished.
-                                // except request send with *dsn_rpc_call*
-                                // see RPC section below for details
-        TASK_TYPE_RPC_REQUEST,
-
         TASK_TYPE_COMPUTE,
         TASK_TYPE_AIO,
         TASK_TYPE_CONTINUATION,
@@ -81,17 +77,17 @@ extern "C" {
     //
     //------------------------------------------------------------------------------
     typedef void* dsn_task_t;
-    typedef void* dsn_param_t;
-    typedef void(*dsn_task_callback_t)(dsn_param_t);
+    typedef void(*dsn_task_callback_t)(void*);
 
-    extern DSN_API dsn_task_t dsn_task_create(dsn_task_code_t code, dsn_task_callback_t cb, dsn_param_t param, int hash, int delay_milliseconds);
-    extern DSN_API dsn_task_t dsn_task_timer_create(dsn_task_code_t code, dsn_task_callback_t cb, dsn_param_t param, int hash, int interval_milliseconds, int delay_milliseconds);
-    extern DSN_API void       dsn_task_close(dsn_task_t task);
-    extern DSN_API void       dsn_task_enqueue(dsn_task_t task);
-    extern DSN_API bool       dsn_task_cancel(dsn_task_t task, bool wait_until_finished);
-    extern DSN_API bool       dsn_task_cancel2(dsn_task_t task, bool wait_until_finished, /*out*/ bool* finished);
-    extern DSN_API bool       dsn_task_wait(dsn_task_t task); 
-    extern DSN_API bool       dsn_task_wait_timeout(dsn_task_t task, int timeout_milliseconds);
+    extern DSN_API void        dsn_task_close(dsn_task_t task);
+    extern DSN_API dsn_task_t  dsn_task_create(dsn_task_code_t code, dsn_task_callback_t cb, void* param, int hash);
+    extern DSN_API dsn_task_t  dsn_task_create_timer(dsn_task_code_t code, dsn_task_callback_t cb, void* param, int hash, int interval_milliseconds);
+    extern DSN_API void        dsn_task_call(dsn_task_t task, int delay_milliseconds);
+    extern DSN_API bool        dsn_task_cancel(dsn_task_t task, bool wait_until_finished);
+    extern DSN_API bool        dsn_task_cancel2(dsn_task_t task, bool wait_until_finished, /*out*/ bool* finished);
+    extern DSN_API bool        dsn_task_wait(dsn_task_t task); 
+    extern DSN_API bool        dsn_task_wait_timeout(dsn_task_t task, int timeout_milliseconds);
+    extern DSN_API dsn_error_t dsn_task_error(dsn_task_t task);
 
     //------------------------------------------------------------------------------
     //
@@ -171,18 +167,19 @@ extern "C" {
     # define DSN_MSG_HDR_SERIALIZED_SIZE \
         (static_cast<int>((((size_t)&((dsn_message_header *)(10))->from_address) - 10)))
 
-    typedef struct dsn_message_t
-    {
-        dsn_message_header hdr;
-        int                buffer_count; // <= 64
-        dsn_buffer_t       buffers[64];
-    } dsn_message_t;
+    typedef struct dsn_message_t dsn_message_t;
+    typedef void* (*dsn_buffer_allocator)(size_t size);
+    typedef void(*dsn_buffer_deallocator)(void* buffer);
+    typedef void(*dsn_rpc_request_handler_t)(dsn_message_t*, void*);
+    typedef void(*dsn_rpc_response_handler_t)(dsn_error_t, dsn_message_t*, dsn_message_t*, void*);
 
-    typedef dsn_buffer_t(*dsn_buffer_allocator)(size_t size);
-    typedef void(*dsn_buffer_deallocator)(dsn_buffer_t buffer);
-    typedef void(*dsn_msg_callback_t)(dsn_error_t, dsn_message_t*, dsn_param_t);
-    typedef void(*dsn_rpc_request_handler_t)(dsn_message_t*);
-    typedef void(*dsn_rpc_response_handler_t)(dsn_error_t, dsn_message_t*, dsn_message_t*, dsn_param_t);
+    struct dsn_message_t
+    {
+        dsn_message_header     hdr;
+        int                    buffer_count; // <= 64
+        dsn_buffer_t           buffers[64];
+        dsn_buffer_deallocator deallocator;
+    };
 
     //
     // rpc message and internal buffer management in rDSN
@@ -192,74 +189,67 @@ extern "C" {
     //      between app and rDSN network stack, and across many RPC calls;
     //    * Flexibility: customizable buffer allocation and deallocation.
     //     
-    // Steps:
-    // (1). rpc client call *dsn_rpc_create_request* to get *request* msg on 
-    //      client, attach the buffers to the *request->buffers*, and call
-    //      (A) RPC client calls (*dsn_rpc_callXXX*);
-    // (2). if (A) is a one-way-call (*dsn_rpc_call_one_way*) or two-way-call
-    //      w/o rpc ack callback (*dsn_rpc_call2*),  
-    //      then a *dsn_msg_callback_t* is specified, which is executed when
-    //      the request is sent (for one-way-call) or request is acked 
-    //      (for two-way-call). Inside this callback upper apps can either 
-    //      (I).detatch the buffers and call *dsn_rpc_release_message*; or,
-    //      (II). reuse the request message (and inside buffers), by calling
-    //      further RPC calls;
-    // (3). if (A) is a two-way-call w/ rpc callback (*dsn_rpc_call*), then 
-    //      a *dsn_rpc_response_handler_t*, which is executed when the response
-    //      message is ready or the RPC call time-outs. Inside this call upper
-    //      apps can do the same as above for the first *dsn_message_t* param
-    //      which is the request message (second *dsn_message_t* is handled in 
-    //      the next step (4));
-    // (4). rDSN also internally creates RPC messages upon message arrival over
-    //      the network, which uses an app-registered *dsn_buffer_allocator* to
-    //      allocates the buffers for these messages. The type of the messages
-    //      depends on whether receiving happens on RPC client (*response*)
-    //      or server (*request*). In both cases, if the apps are able to deal
-    //      with them (messages not dropped by rDSN or rpc is not time-out), the
-    //      apps are in charge of calling *dsn_rpc_release_message*, but they 
-    //      don't need to detach the buffers as they are deallocated when the 
-    //      message is released by rDSN implicitly using app-registerd
-    //      *deallocator*. If the apps are not getting the chance, rDSN will 
-    //      handles it automatically using app-registered *deallocator*;
-    // (5). On rpc server when the app deals with the rpc requests, they may call
-    //      *dsn_rpc_create_response*, attaches the buffers,  and uses 
-    //      *dsn_rpc_reply* to send the response message. In this case, 
-    //      a *dsn_msg_callback_t* is specified and appsare in charge of detaching
-    //      the buffers as well as releasing the message as they have done before
-    //      in (2). 
+    // Buffer management:
+    //    * buffers in send messages are allocated and set by upper apps, 
+    //      together with *dsn_message_t::dealloator*;
+    //    * buffers in recv messages are allocated by rDSN using allocators
+    //      specified by *dsn_rpc_set_buffer_management* or using ::malloc;
+    //    * buffers in dsn_message_t is deallocated 
+    //     (by calling *dsn_message_t::dealloator* or using default deallocator
+    //      as specified by *dsn_rpc_set_buffer_management* or using ::free),
+    //      when the hosting message is released. Since customizable deallocator
+    //      is allowed, it is possible to reuse the buffers across messages.
+    //
+    // Message management:
+    //    * send messages are created by upper apps calling *dsn_rpc_create_xxx";
+    //    * recv messages are allocated by rDSN implicitly;
+    //    * for messages visible to upper app callbacks (i.e., rpc request handler
+    //      *dsn_rpc_request_handler_t* on rpc server and rpc response handler 
+    //      *dsn_rpc_response_handler_t*, upper apps in charge of calling
+    //      *dsn_rpc_release_message* to release the messages, in case they want to
+    //      reuse the message for other purposes, e.g., forwarding it to others;
+    //      for other cases, rDSN call it automatically (e.g. for all sent messages
+    //      or recved but time-out messages).
     //
 
-    // rpc utilities
-    extern DSN_API dsn_address_t  dsn_endpoint_invalid;
+    // rpc address utilities
+    extern DSN_API dsn_address_t  dsn_address_invalid;
+    extern DSN_API void           dsn_address_build(/*out*/ dsn_address_t* ep, const char* host, uint16_t port);
     extern DSN_API dsn_address_t  dsn_rpc_primary_address();
-    extern DSN_API void           dsn_build_end_point(dsn_address_t* ep, const char* host, uint16_t port);
+    
+    // rpc message and buffer management
     extern DSN_API dsn_message_t* dsn_rpc_create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, int hash);
     extern DSN_API dsn_message_t* dsn_rpc_create_response(dsn_message_t* request);
     extern DSN_API void           dsn_rpc_release_message(dsn_message_t* msg);
-    extern DSN_API void           dsn_rpc_ctrl_buffer_management(dsn_buffer_allocator allocator, dsn_buffer_deallocator deallocator);
-
+    extern DSN_API void           dsn_rpc_set_buffer_management(dsn_buffer_allocator allocator, dsn_buffer_deallocator deallocator);
+    
     // rpc calls
-    extern DSN_API bool          dsn_rpc_register_handler(dsn_task_code_t code, const char* name, dsn_rpc_request_handler_t cb);
-    extern DSN_API bool          dsn_rpc_unregiser_handler(dsn_task_code_t code);    
-    extern DSN_API dsn_task_t    dsn_rpc_call(dsn_address_t server, dsn_message_t* request, dsn_rpc_response_handler_t cb, dsn_param_t param);
-    extern DSN_API dsn_task_t    dsn_rpc_call2(dsn_address_t server, dsn_message_t* request, dsn_msg_callback_t cb, dsn_param_t param);
-    extern DSN_API void          dsn_rpc_call_one_way(dsn_address_t server, dsn_message_t* request, dsn_msg_callback_t cb, dsn_param_t param);
-    extern DSN_API void          dsn_rpc_reply(dsn_message_t* response, dsn_msg_callback_t cb, dsn_param_t param);
+    extern DSN_API bool           dsn_rpc_register_handler(dsn_task_code_t code, const char* name, dsn_rpc_request_handler_t cb, void* param);
+    extern DSN_API void*          dsn_rpc_unregiser_handler(dsn_task_code_t code);   // return void* param on registration  
+    extern DSN_API dsn_task_t     dsn_rpc_create(dsn_message_t* request, dsn_rpc_response_handler_t cb, void* param, int reply_hash);
+    extern DSN_API void           dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call);
+    extern DSN_API dsn_message_t* dsn_rpc_call_wait(dsn_address_t server, dsn_message_t* request);
+    extern DSN_API void           dsn_rpc_call_one_way(dsn_address_t server, dsn_message_t* request);
+    extern DSN_API void           dsn_rpc_reply(dsn_message_t* response);
+    extern DSN_API dsn_message_t* dsn_rpc_get_response(dsn_task_t rpc_call);
+    extern DSN_API void           dsn_rpc_enqueue_response(dsn_task_t rpc_call, dsn_error_t err, dsn_message_t* response);
 
     //------------------------------------------------------------------------------
     //
     // file operations
     //
     //------------------------------------------------------------------------------
-    typedef void(*dsn_file_callback_t)(dsn_error_t, size_t, dsn_param_t);
+    typedef void(*dsn_file_callback_t)(dsn_error_t, size_t, void*);
 
     extern DSN_API dsn_handle_t dsn_file_open(const char* file_name, int flag, int pmode);
     extern DSN_API void         dsn_file_close(dsn_handle_t file);
-    extern DSN_API dsn_task_t   dsn_file_task_create(dsn_task_code_t code, dsn_file_callback_t cb, dsn_param_t param, int hash);
+    extern DSN_API dsn_task_t   dsn_file_create_callback_task(dsn_task_code_t code, dsn_file_callback_t cb, void* param, int hash);
     extern DSN_API void         dsn_file_read(dsn_handle_t file, char* buffer, int count, uint64_t offset, dsn_task_t cb);
     extern DSN_API void         dsn_file_write(dsn_handle_t file, const char* buffer, int count, uint64_t offset, dsn_task_t cb);
     extern DSN_API void         dsn_file_copy_remote_directory(dsn_address_t remote, const char* source_dir, const char* dest_dir, bool overwrite, dsn_task_t cb);
-    extern DSN_API void         dsn_file_copy_remote_files(dsn_address_t remote, const char** source_files, const char* dest_dir, bool overwrite, dsn_task_t cb);
+    extern DSN_API void         dsn_file_copy_remote_files(dsn_address_t remote, const char* source_dir, const char** source_files, const char* dest_dir, bool overwrite, dsn_task_t cb);
+    extern DSN_API size_t       dsn_file_get_io_size(dsn_task_t cb_task);
+    extern DSN_API void         dsn_file_task_enqueue(dsn_task_t cb_task, dsn_error_t err, size_t size);
 
     //------------------------------------------------------------------------------
     //
@@ -268,6 +258,11 @@ extern "C" {
     //------------------------------------------------------------------------------
     extern DSN_API uint64_t dsn_env_now_ns();
     extern DSN_API uint64_t dsn_env_random64(uint64_t min, uint64_t max); // [min, max]
+
+    inline uint64_t dsn_env_now_us() { return dsn_env_now_ns() / 1000; }
+    inline uint64_t dsn_env_now_ms() { return dsn_env_now_ns() / 1000000; }
+    inline uint32_t dsn_env_random32(uint32_t min, uint32_t max) { return static_cast<uint32_t>(dsn_env_random64(min, max)); }
+    inline double   dsn_env_probability() { return static_cast<double>(dsn_env_random64(0, 1000000000)) / 1000000000.0; }
 
     //------------------------------------------------------------------------------
     //

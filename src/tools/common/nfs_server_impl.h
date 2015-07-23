@@ -44,7 +44,7 @@ namespace dsn {
                 uint64_t last_access_time; // last touch time
             };
 
-            void internal_read_callback(error_code err, uint32_t sz, std::shared_ptr<callback_para> cp);
+            void internal_read_callback(error_code err, size_t sz, std::shared_ptr<callback_para> cp);
 
             void close_file();
 
@@ -56,7 +56,7 @@ namespace dsn {
             zlock _handles_map_lock;
             std::unordered_map <std::string, file_handle_info_on_server*> _handles_map; // cache file handles
 
-            ::dsn::task_ptr _file_close_timer;
+            ::dsn::service::cpp_task_ptr _file_close_timer;
         };
 
     }

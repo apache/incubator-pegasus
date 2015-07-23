@@ -25,17 +25,22 @@
  */
 # pragma once
 
-# include <dsn/service_api.h>
+# include <dsn/service_api_c.h>
+# include <dsn/internal/dsn_types.h>
+# include <dsn/internal/rpc_message.h>
 # include <set>
 # include <map>
 # include <thread>
 # include <dsn/internal/synchronize.h>
 # include <dsn/internal/utils.h>
+# include <dsn/internal/link.h>
 
-namespace dsn {
+namespace dsn 
+{
     typedef std::function<void()> task_handler;
-    typedef std::function<void(error_code, uint32_t)> aio_handler;
+    typedef std::function<void(error_code, size_t)> aio_handler;
     typedef std::function<void(error_code, message_ptr&, message_ptr&)> rpc_reply_handler;
+    typedef std::function<void(message_ptr&)> rpc_request_handler;
 
     namespace service {
 
@@ -49,8 +54,9 @@ namespace dsn {
         class task_context_manager
         {
         public:
-            task_context_manager(servicelet* owner, task* task);
-            virtual ~task_context_manager();
+            task_context_manager() : _owner(nullptr) {}
+            virtual ~task_context_manager(); 
+            void init(servicelet* owner, dsn_task_t task);      
 
         private:
             friend class servicelet;
@@ -62,7 +68,7 @@ namespace dsn {
                 OWNER_DELETE_FINISHED = 2
             };
             
-            task       *_task;
+            dsn_task_t  _task;
             servicelet *_owner;
             std::atomic<owner_delete_state> _deleting_owner;
             
@@ -83,15 +89,15 @@ namespace dsn {
         class servicelet
         {
         public:
-            servicelet(int task_bucket_count = 8);
+            servicelet(int task_bucket_count = 13);
             virtual ~servicelet();
 
-            static dsn_address_t primary_address() { return rpc::primary_address(); }
-            static uint32_t random32(uint32_t min, uint32_t max) { return env::random32(min, max); }
-            static uint64_t random64(uint64_t min, uint64_t max) { return env::random64(min, max); }
-            static uint64_t now_ns() { return env::now_ns(); }
-            static uint64_t now_us() { return env::now_us(); }
-            static uint64_t now_ms() { return env::now_ms(); }
+            static dsn_address_t primary_address() { return dsn_rpc_primary_address(); }
+            static uint32_t random32(uint32_t min, uint32_t max) { return dsn_env_random32(min, max); }
+            static uint64_t random64(uint64_t min, uint64_t max) { return dsn_env_random64(min, max); }
+            static uint64_t now_ns() { return dsn_env_now_ns(); }
+            static uint64_t now_us() { return dsn_env_now_us(); }
+            static uint64_t now_ms() { return dsn_env_now_ms(); }
             
         protected:
             void clear_outstanding_tasks();
@@ -99,10 +105,9 @@ namespace dsn {
 
         private:
             int                            _last_id;
-            std::set<task_code>            _events;
+            std::set<dsn_task_code_t>      _events;
             int                            _access_thread_id;
             bool                           _access_thread_id_inited;
-            task_code                      _access_thread_task_code;
 
             friend class task_context_manager;
             const int                      _task_bucket_count;
@@ -110,18 +115,148 @@ namespace dsn {
             dlink                          *_outstanding_tasks;
         };
 
-        // ------- inlined implementation ----------
-        inline task_context_manager::task_context_manager(servicelet* owner, task* task)
-            : _owner(owner), _task(task), _deleting_owner(OWNER_DELETE_NOT_LOCKED)
+        //
+        // basic cpp task wrapper
+        // which manages the task handle
+        // and the interaction with task context manager, servicelet
+        //
+        
+        class cpp_dev_task_base : public ::dsn::ref_object
         {
+        public:
+            cpp_dev_task_base()
+            {
+                _task = 0;
+                add_ref();
+            }
+
+            virtual ~cpp_dev_task_base()
+            {
+                dsn_task_close(_task); 
+            }
+
+            void set_task_info(dsn_task_t t, servicelet* svc)
+            {
+                _task = t;
+                _manager.init(svc, t);
+            }
+
+            dsn_task_t native_handle() { return _task; }
+                        
+            bool cancel(bool wait_until_finished, bool* finished = nullptr)
+            {
+                bool r = dsn_task_cancel2(_task, wait_until_finished, finished);
+                if (r)
+                {
+                    release_ref();
+                }
+                return r;
+            }
+
+            bool wait()
+            {
+                return dsn_task_wait(_task);
+            }
+
+            bool wait(int timeout_millieseconds)
+            {
+                return dsn_task_wait_timeout(_task, timeout_millieseconds);
+            }
+
+            ::dsn::error_code error()
+            {
+                ::dsn::error_code err2;
+                err2.set(dsn_task_error(_task));
+                return err2;
+            }
+            
+            size_t io_size()
+            {
+                return dsn_file_get_io_size(_task);
+            }
+            
+            void enqueue_aio(error_code err, size_t size)
+            {
+                dsn_file_task_enqueue(_task, err.get(), size);
+            }
+
+            ::dsn::message_ptr response()
+            {
+                auto msg = dsn_rpc_get_response(_task);
+                return msg ? ::dsn::message::from_c_msg(msg) : nullptr;
+            }
+
+            void enqueue_rpc_response(error_code err, ::dsn::message_ptr resp)
+            {
+                dsn_rpc_enqueue_response(_task, err.get(), resp ? resp->c_msg() : nullptr);
+            }
+
+        private:
+            dsn_task_t           _task;
+            task_context_manager _manager;
+        };
+
+        DEFINE_REF_OBJECT(cpp_dev_task_base)
+        typedef ::boost::intrusive_ptr<cpp_dev_task_base> cpp_task_ptr;
+
+        template<typename THandler>
+        class cpp_dev_task : public cpp_dev_task_base
+        {
+        public:
+            cpp_dev_task(THandler& h, bool is_timer) : _handler(h), _is_timer(is_timer)
+            {
+            }
+
+            cpp_dev_task(THandler& h) : _handler(h)
+            {
+            }
+
+            static void exec(void* task)
+            {
+                cpp_dev_task* t = (cpp_dev_task*)task;
+                t->_handler();
+                if (!t->_is_timer)
+                {
+                    t->release_ref();
+                }
+            }
+
+            static void exec_rcp_response(dsn_error_t err, dsn_message_t* req, dsn_message_t* resp, void* task)
+            {
+                cpp_dev_task* t = (cpp_dev_task*)task;
+                ::dsn::message_ptr req1 = ::dsn::message::from_c_msg(req);
+                ::dsn::message_ptr resp1 = ::dsn::message::from_c_msg(resp);
+                error_code err2;
+                err2.set(err);
+                t->_handler(err2, req1, resp1);
+                t->release_ref();
+            }
+
+            static void exec_aio(dsn_error_t err, size_t sz, void* task)
+            {
+                cpp_dev_task* t = (cpp_dev_task*)task;
+                error_code err2;
+                err2.set(err);
+                t->_handler(err2, sz);
+                t->release_ref();
+            }
+            
+        private:
+            bool                 _is_timer;
+            THandler             _handler;
+        };
+
+
+        // ------- inlined implementation ----------
+        inline void task_context_manager::init(servicelet* owner, dsn_task_t task)
+        {
+            _owner = owner;
+            _task = task;
+            _deleting_owner = OWNER_DELETE_NOT_LOCKED;
+
             if (nullptr != _owner)
             {
-                auto idx = task::get_current_worker_index();
-                if (-1 != idx)
-                    _dl_bucket_id = static_cast<int>(idx % _owner->_task_bucket_count);
-                else
-                    _dl_bucket_id = static_cast<int>(::dsn::utils::get_current_tid() % _owner->_task_bucket_count);
-
+                _dl_bucket_id = static_cast<int>(::dsn::utils::get_current_tid() % _owner->_task_bucket_count);
                 {
                     utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_owner->_outstanding_tasks_lock[_dl_bucket_id]);
                     _dl.insert_after(&_owner->_outstanding_tasks[_dl_bucket_id]);

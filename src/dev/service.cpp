@@ -54,7 +54,7 @@ private:
 static service_objects* s_services = &(service_objects::instance());
 
 servicelet::servicelet(int task_bucket_count)
-: _access_thread_task_code(TASK_CODE_INVALID), _task_bucket_count(task_bucket_count)
+: _task_bucket_count(task_bucket_count)
 {
     _outstanding_tasks_lock = new ::dsn::utils::ex_lock_nr_spin[_task_bucket_count];
     _outstanding_tasks = new dlink[_task_bucket_count];
@@ -97,7 +97,7 @@ void servicelet::clear_outstanding_tasks()
             switch (prepare_state)
             {
             case task_context_manager::OWNER_DELETE_NOT_LOCKED:
-                tcm->_task->cancel(true);
+                dsn_task_cancel(tcm->_task, true);
                 tcm->owner_delete_commit();
                 break;
             case task_context_manager::OWNER_DELETE_LOCKED:
@@ -118,7 +118,6 @@ void servicelet::check_hashed_access()
     {
         _access_thread_id = ::dsn::utils::get_current_tid();
         _access_thread_id_inited = true;
-        _access_thread_task_code.reset(task::get_current_task()->spec().code);
     }
 }
 

@@ -7,7 +7,7 @@ namespace dsn {
     namespace service {
 
 
-        void nfs_client_impl::begin_remote_copy(std::shared_ptr<remote_copy_request>& rci, aio_task_ptr nfs_task)
+        void nfs_client_impl::begin_remote_copy(std::shared_ptr<remote_copy_request>& rci, aio_task_ptr& nfs_task)
         {
             user_request* req = new user_request();
             req->file_size_req.source = rci->source;
@@ -305,7 +305,7 @@ namespace dsn {
             }
         }
 
-        void nfs_client_impl::local_write_callback(error_code err, uint32_t sz, boost::intrusive_ptr<copy_request_ex> reqc)
+        void nfs_client_impl::local_write_callback(error_code err, size_t sz, boost::intrusive_ptr<copy_request_ex> reqc)
         {
             //dassert(reqc->local_write_task == task::get_current_task(), "");
             --_concurrent_local_write_count;
@@ -358,7 +358,7 @@ namespace dsn {
                 
                 for (auto& rc : f.second->copy_requests)
                 {
-                    task_ptr ctask, wtask;
+                    ::dsn::service::cpp_task_ptr ctask, wtask;
                     {
                         zauto_lock l(rc->lock);
                         rc->is_valid = false;

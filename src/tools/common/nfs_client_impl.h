@@ -40,8 +40,8 @@ namespace dsn {
                 int           index;
                 copy_request  copy_req;                             
                 copy_response response;
-                task_ptr      remote_copy_task;
-                task_ptr      local_write_task;
+                ::dsn::service::cpp_task_ptr remote_copy_task;
+                ::dsn::service::cpp_task_ptr local_write_task;
                 bool          is_ready_for_write;
                 bool          is_valid;
                 zlock         lock;
@@ -100,7 +100,7 @@ namespace dsn {
             };
                         
         public:
-            nfs_client_impl(nfs_opts& opts) : nfs_client(dsn_endpoint_invalid), _opts(opts)
+            nfs_client_impl(nfs_opts& opts) : nfs_client(dsn_address_invalid), _opts(opts)
             {
                 _concurrent_copy_request_count = 0;
                 _concurrent_local_write_count = 0;
@@ -108,9 +108,9 @@ namespace dsn {
 
             virtual ~nfs_client_impl() {}
 
-            void begin_remote_copy(std::shared_ptr<remote_copy_request>& rci, aio_task_ptr nfs_task); // copy file request entry
+            void begin_remote_copy(std::shared_ptr<remote_copy_request>& rci, aio_task_ptr& nfs_task); // copy file request entry
 
-            void local_write_callback(error_code err, uint32_t sz, boost::intrusive_ptr<copy_request_ex> reqc); // write file callback
+            void local_write_callback(error_code err, size_t sz, boost::intrusive_ptr<copy_request_ex> reqc); // write file callback
 
         private:
             void end_copy(

@@ -31,169 +31,131 @@ namespace dsn {
     {
         namespace tasking
         {
-            class service_task : public task, public task_context_manager
-            {
-            public:
-                service_task(task_code code, servicelet* svc, task_handler& handler, int hash = 0)
-                    : task(code, hash), task_context_manager(svc, this)
-                {
-                    _handler = std::move(handler);
-                }
-
-                virtual void exec()
-                {
-                    if (nullptr != _handler)
-                    {
-                        _handler();
-                        _handler = nullptr;
-                    }
-                }
-
-                //task_handler& handler() { return _handler; }
-
-            private:
-                task_handler _handler;
-            };
-
-            class service_timer_task : public timer_task, public task_context_manager
-            {
-            public:
-                service_timer_task(task_code code, servicelet* svc, task_handler& handler, uint32_t intervalMilliseconds, int hash = 0)
-                    : timer_task(code, intervalMilliseconds, hash), task_context_manager(svc, this)
-                {
-                    _handler = std::move(handler);
-                }
-
-                virtual void on_timer() { _handler();}
-
-            private:
-                task_handler _handler;
-            };
-
-            // sometimes we need to have task given BFORE the task has been enqueued 
-            // to ensure a happens-before relationship to avoid race
-            void enqueue(
-                __out_param task_ptr& task,
-                task_code evt,
-                servicelet *context,
-                task_handler callback,
-                int hash/* = 0*/,
-                int delay_milliseconds/* = 0*/,
-                int timer_interval_milliseconds/* = 0*/
-                )
-            {
-                task_ptr tsk;
-                if (timer_interval_milliseconds != 0)
-                    tsk.reset(new service_timer_task(evt, context, callback, timer_interval_milliseconds, hash));
-                else
-                    tsk.reset(new service_task(evt, context, callback, hash));
-
-                task = tsk;
-                enqueue(tsk, delay_milliseconds);
-            }
-
-            task_ptr enqueue(
-                task_code evt,
+            cpp_task_ptr enqueue(
+                dsn_task_code_t evt,
                 servicelet *context,
                 task_handler callback,
                 int hash /*= 0*/,
                 int delay_milliseconds /*= 0*/,
                 int timer_interval_milliseconds /*= 0*/
                 )
-            {
-                task_ptr tsk;
+            {                
+                dsn_task_t t;
+                auto tsk = new cpp_dev_task<task_handler>(callback, timer_interval_milliseconds != 0);
+                
                 if (timer_interval_milliseconds != 0)
-                    tsk.reset(new service_timer_task(evt, context, callback, timer_interval_milliseconds, hash));                    
+                { 
+                    t = dsn_task_create_timer(evt, cpp_dev_task<task_handler>::exec, tsk, hash, timer_interval_milliseconds);
+                }   
                 else
-                    tsk.reset(new service_task(evt, context, callback, hash));
+                {
+                    t = dsn_task_create(evt, cpp_dev_task<task_handler>::exec, tsk, hash);
+                }
 
-                enqueue(tsk, delay_milliseconds);
-                return std::move(tsk);
+                tsk->set_task_info(t, context);
+
+                dsn_task_call(t, delay_milliseconds);
+                return tsk;
             }
         }
 
         namespace rpc
-        {        
-
-            rpc_response_task_ptr call(
+        {   
+            cpp_task_ptr call(
                 const dsn_address_t& server,
                 message_ptr& request,
                 servicelet* owner,
-                std::function<void(error_code, message_ptr&, message_ptr&)> callback,
-                int reply_hash /*= 0*/
+                rpc_reply_handler callback,
+                int reply_hash
                 )
             {
-                rpc_response_task_ptr resp_task(new internal_use_only::service_rpc_response_task4(
-                    owner,
-                    callback,
-                    request,
+                auto tsk = new cpp_dev_task<rpc_reply_handler >(callback);
+                auto t = dsn_rpc_create(
+                    request->c_msg(),
+                    cpp_dev_task<rpc_reply_handler >::exec_rcp_response,
+                    (void*)tsk,
                     reply_hash
-                    ));
+                    );
+                tsk->set_task_info(t, (servicelet*)owner);
+                dsn_rpc_call(server, t);
 
-                rpc::call(server, request, resp_task);
-                return std::move(resp_task);
+                return tsk;
             }
         }
 
         namespace file
         {
-            aio_task_ptr read(
+            cpp_task_ptr read(
                 dsn_handle_t hFile,
                 char* buffer,
                 int count,
                 uint64_t offset,
-                task_code callback_code,
+                dsn_task_code_t callback_code,
                 servicelet* owner,
                 aio_handler callback,
                 int hash /*= 0*/
                 )
             {
-                aio_task_ptr tsk(callback != nullptr ?
-                    static_cast<aio_task*>(new internal_use_only::service_aio_task(callback_code, owner, callback, hash))
-                    : static_cast<aio_task*>(new aio_task_empty(callback_code, hash))
-                    );
-                read(hFile, buffer, count, offset, tsk);
-                return std::move(tsk);
+                auto tsk = new cpp_dev_task<aio_handler>(callback);
+                dsn_task_t t = dsn_file_create_callback_task(callback_code, cpp_dev_task<aio_handler>::exec_aio, tsk, hash);
+                tsk->set_task_info(t, owner);
+
+                dsn_file_read(hFile, buffer, count, offset, t);
+                return tsk;
             }
 
-            aio_task_ptr write(
+            cpp_task_ptr write(
                 dsn_handle_t hFile,
                 const char* buffer,
                 int count,
                 uint64_t offset,
-                task_code callback_code,
+                dsn_task_code_t callback_code,
                 servicelet* owner,
                 aio_handler callback,
                 int hash /*= 0*/
                 )
             {
-                aio_task_ptr tsk(callback != nullptr  ? 
-                    static_cast<aio_task*>(new internal_use_only::service_aio_task(callback_code, owner, callback, hash))
-                    : static_cast<aio_task*>(new aio_task_empty(callback_code, hash))
-                    );
-                write(hFile, buffer, count, offset, tsk);
-                return std::move(tsk);
+                auto tsk = new cpp_dev_task<aio_handler>(callback);
+                dsn_task_t t = dsn_file_create_callback_task(callback_code, cpp_dev_task<aio_handler>::exec_aio, tsk, hash);
+                tsk->set_task_info(t, owner);
+
+                dsn_file_write(hFile, buffer, count, offset, t);
+                return tsk;
             }
 
 
-            aio_task_ptr copy_remote_files(
+            cpp_task_ptr copy_remote_files(
                 const dsn_address_t& remote,
                 const std::string& source_dir,
                 std::vector<std::string>& files,  // empty for all
                 const std::string& dest_dir,
                 bool overwrite,
-                task_code callback_code,
+                dsn_task_code_t callback_code,
                 servicelet* owner,
                 aio_handler callback,
                 int hash /*= 0*/
                 )
             {
-                aio_task_ptr tsk(callback != nullptr ?
-                    static_cast<aio_task*>(new internal_use_only::service_aio_task(callback_code, owner, callback, hash))
-                    : static_cast<aio_task*>(new aio_task_empty(callback_code, hash))
-                    );
-                copy_remote_files(remote, source_dir, files, dest_dir, overwrite, tsk);
-                return std::move(tsk);
+                auto tsk = new cpp_dev_task<aio_handler>(callback);
+                dsn_task_t t = dsn_file_create_callback_task(callback_code, cpp_dev_task<aio_handler>::exec_aio, tsk, hash);
+                tsk->set_task_info(t, owner);
+
+                if (files.empty())
+                {
+                    dsn_file_copy_remote_directory(remote, source_dir.c_str(), dest_dir.c_str(), overwrite, t);
+                }
+                else
+                {
+                    const char** ptr = (const char**)alloca(sizeof(const char*) * (files.size() + 1));
+                    for (auto& f : files)
+                    {
+                        *ptr++ = f.c_str();
+                    }
+                    *ptr = nullptr;
+
+                    dsn_file_copy_remote_files(remote, source_dir.c_str(), ptr, dest_dir.c_str(), overwrite, t);
+                }
+                return tsk;
             }
         }
 

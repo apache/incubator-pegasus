@@ -80,7 +80,7 @@ void replication_options::read_meta_servers(configuration_ptr config)
         if (pos1 != std::string::npos)
         {
             dsn_address_t ep;
-            dsn_build_end_point(&ep, s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
+            dsn_address_build(&ep, s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
             meta_servers.push_back(ep);
         }
     }

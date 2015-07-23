@@ -143,7 +143,7 @@ bool task_spec::init(configuration_ptr config)
                 && spec->type != TASK_TYPE_RPC_REQUEST
                 && spec->allow_inline);
             spec->fast_execution_in_network_thread = 
-                (spec->type <= TASK_TYPE_RPC_REQUEST
+                (spec->type <= TASK_TYPE_RPC_RESPONSE
                 && spec->fast_execution_in_network_thread);
         }
         else
@@ -154,7 +154,7 @@ bool task_spec::init(configuration_ptr config)
                 && default_spec.allow_inline
                 );
             spec->fast_execution_in_network_thread =
-                (spec->type <= TASK_TYPE_RPC_REQUEST
+                (spec->type <= TASK_TYPE_RPC_RESPONSE
                 && default_spec.fast_execution_in_network_thread);
             spec->rpc_call_channel = default_spec.rpc_call_channel;
             spec->rpc_call_header_format = default_spec.rpc_call_header_format;

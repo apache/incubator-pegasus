@@ -47,7 +47,7 @@ void replication_app_client_base::load_meta_servers(
         if (pos1 != std::string::npos)
         {
             dsn_address_t ep;
-            dsn_build_end_point(&ep, s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
+            dsn_address_build(&ep, s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
             servers.push_back(ep);
         }
     }
@@ -63,7 +63,7 @@ replication_app_client_base::replication_app_client_base(
 
     _app_id = -1;
     _app_partition_count = -1;
-    _last_contact_point = dsn_endpoint_invalid;
+    _last_contact_point = dsn_address_invalid;
 }
 
 replication_app_client_base::~replication_app_client_base()
@@ -96,11 +96,13 @@ DEFINE_TASK_CODE(LPC_REPLICATION_DELAY_QUERY_CONFIG, TASK_PRIORITY_COMMON, THREA
 replication_app_client_base::request_context* replication_app_client_base::create_write_context(
     int partition_index,
     task_code code,
-    rpc_response_task_ptr& callback,
+    ::dsn::message_ptr& request,
+    ::dsn::service::cpp_task_ptr& callback,
     int reply_hash
     )
 {
     auto rc = new request_context;
+    rc->request = request;
     rc->callback_task = callback;    
     rc->is_read = false;
     rc->partition_index = partition_index;    
@@ -108,19 +110,19 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->write_header.gpid.pidx = partition_index;
     rc->write_header.code = code;
     rc->timeout_timer = nullptr;
-    rc->timeout_ts_us = now_us() + callback->get_request()->header().client.timeout_ms * 1000;
+    rc->timeout_ts_us = now_us() + request->header().client.timeout_ms * 1000;
     rc->completed = false;
 
     if (rc->write_header.gpid.app_id == -1)
     {
-        rc->header_pos = callback->get_request()->writer().write_placeholder();
+        rc->header_pos = request->writer().write_placeholder();
         dbg_dassert(rc->header_pos != 0xffff, "");
     }
     else
     {
         rc->header_pos = 0xffff;
-        marshall(callback->get_request()->writer(), rc->write_header);
-        callback->get_request()->header().client.hash = gpid_to_hash(rc->write_header.gpid);
+        marshall(request->writer(), rc->write_header);
+        request->header().client.hash = gpid_to_hash(rc->write_header.gpid);
     }
 
     return rc;
@@ -129,13 +131,15 @@ replication_app_client_base::request_context* replication_app_client_base::creat
 replication_app_client_base::request_context* replication_app_client_base::create_read_context(
     int partition_index,
     task_code code,
-    rpc_response_task_ptr& callback,
+    ::dsn::message_ptr& request,
+    ::dsn::service::cpp_task_ptr& callback,
     read_semantic_t read_semantic,
     decree snapshot_decree, // only used when ReadSnapshot        
     int reply_hash
     )
 {
     auto rc = new request_context;
+    rc->request = request;
     rc->callback_task = callback;    
     rc->is_read = true;
     rc->partition_index = partition_index;
@@ -145,19 +149,19 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->read_header.semantic = read_semantic;
     rc->read_header.version_decree = snapshot_decree;
     rc->timeout_timer = nullptr;
-    rc->timeout_ts_us = now_us() + callback->get_request()->header().client.timeout_ms * 1000;
+    rc->timeout_ts_us = now_us() + request->header().client.timeout_ms * 1000;
     rc->completed = false;
 
     if (rc->read_header.gpid.app_id == -1)
     {
-        rc->header_pos = callback->get_request()->writer().write_placeholder();
+        rc->header_pos = request->writer().write_placeholder();
         dbg_dassert(rc->header_pos != 0xffff, "");
     }
     else
     {
         rc->header_pos = 0xffff;
-        marshall(callback->get_request()->writer(), rc->read_header);
-        callback->get_request()->header().client.hash = gpid_to_hash(rc->read_header.gpid);
+        marshall(request->writer(), rc->read_header);
+        request->header().client.hash = gpid_to_hash(rc->read_header.gpid);
     }
 
     return rc;
@@ -181,7 +185,7 @@ void replication_app_client_base::end_request(request_context_ptr& request, erro
     if (err != ERR_TIMEOUT && request->timeout_timer != nullptr)
         request->timeout_timer->cancel(false);
 
-    request->callback_task->enqueue(err, resp);
+    request->callback_task->enqueue_rpc_response(err, resp);
     request->completed = true;
 }
 
@@ -202,7 +206,7 @@ void replication_app_client_base::call(request_context_ptr request, bool no_dela
         return;
     }
  
-    auto& msg = request->callback_task->get_request();
+    auto& msg = request->request;
     int timeout_ms;
     if (nts + 1000 > request->timeout_ts_us)
         timeout_ms = 1;
@@ -224,7 +228,7 @@ void replication_app_client_base::call(request_context_ptr request, bool no_dela
     // target node in cache
     if (err == ERR_OK)
     {
-        dbg_dassert(addr != dsn_endpoint_invalid, "");
+        dbg_dassert(addr != dsn_address_invalid, "");
         dassert(app_id > 0, "");
 
         if (request->header_pos != 0xffff)
@@ -405,7 +409,7 @@ error_code replication_app_client_base::get_address(int pidx, bool is_write, __o
             addr = get_read_address(semantic, config);
         }
 
-        if (dsn_endpoint_invalid == addr)
+        if (dsn_address_invalid == addr)
         {
             err = ERR_IO_PENDING;
         }
@@ -485,7 +489,7 @@ dsn_address_t replication_app_client_base::get_read_address(read_semantic_t sema
     {
         bool has_primary = false;
         int N = static_cast<int>(config.secondaries.size());
-        if (config.primary != dsn_endpoint_invalid)
+        if (config.primary != dsn_address_invalid)
         {
             N++;
             has_primary = true;

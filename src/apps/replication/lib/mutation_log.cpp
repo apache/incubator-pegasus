@@ -176,7 +176,7 @@ void mutation_log::create_new_pending_buffer()
     dassert (_pending_write_timer == nullptr, "");
 
     _pending_write = message::create_request(RPC_PREPARE, _log_pending_max_milliseconds);
-    _pending_write_callbacks.reset(new std::list<aio_task_ptr>);
+    _pending_write_callbacks.reset(new std::list<::dsn::service::cpp_task_ptr>);
 
     dassert (_pending_write->total_size() == DSN_MSG_HDR_SERIALIZED_SIZE, "");
     _global_end_offset += DSN_MSG_HDR_SERIALIZED_SIZE;
@@ -187,7 +187,6 @@ void mutation_log::internal_pending_write_timer(uint64_t id)
     zauto_lock l(_lock);
     dassert (nullptr != _pending_write, "");
     dassert (_pending_write->header().id == id, "");
-    dassert (task::get_current_task() == _pending_write_timer, "");
 
     _pending_write_timer = nullptr;
     auto err = write_pending_mutations();
@@ -207,7 +206,7 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
     uint64_t offset = end_offset() - bb.length();
 
     dassert(*(int*)bb.data() != 0, "");
-    task_ptr aio = _current_log_file->write_log_entry(
+    auto aio = _current_log_file->write_log_entry(
         bb,
         LPC_AIO_IMMEDIATE_CALLBACK,
         this,
@@ -255,7 +254,7 @@ void mutation_log::internal_write_callback(error_code err, uint32_t size, mutati
 {
     for (auto it = callbacks->begin(); it != callbacks->end(); it++)
     {
-        (*it)->enqueue(err, size, nullptr);
+        (*it)->enqueue_aio(err, size);
     }
 }
 
@@ -419,7 +418,7 @@ void mutation_log::close()
     }
 }
 
-task_ptr mutation_log::append(mutation_ptr& mu, 
+::dsn::service::cpp_task_ptr mutation_log::append(mutation_ptr& mu,
                         task_code callback_code,
                         servicelet* callback_host,
                         aio_handler callback,
@@ -452,8 +451,10 @@ task_ptr mutation_log::append(mutation_ptr& mu,
     mu->write_to(_pending_write);
     _global_end_offset += _pending_write->total_size() - oldSz;
 
-    aio_task_ptr tsk(new file::internal_use_only::service_aio_task(callback_code, callback_host, callback, hash));
-    
+    auto tsk = new cpp_dev_task<aio_handler>(callback);
+    dsn_task_t t = dsn_file_create_callback_task(callback_code, cpp_dev_task<aio_handler>::exec_aio, tsk, hash);
+    tsk->set_task_info(t, callback_host);
+
     _pending_write_callbacks->push_back(tsk);
 
     error_code err = ERR_OK;
@@ -745,7 +746,7 @@ error_code log_file::read_next_log_entry(__out_param::dsn::blob& bb)
     return ERR_OK;
 }
 
-aio_task_ptr log_file::write_log_entry(
+::dsn::service::cpp_task_ptr log_file::write_log_entry(
                 blob& bb,
                 task_code evt,  // to indicate which thread pool to execute the callback
                 servicelet* callback_host,

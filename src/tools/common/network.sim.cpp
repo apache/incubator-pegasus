@@ -98,7 +98,7 @@ namespace dsn { namespace tools {
     sim_network_provider::sim_network_provider(rpc_engine* rpc, network* inner_provider)
         : connection_oriented_network(rpc, inner_provider)
     {
-        dsn_build_end_point(&_address, "localhost", 1);
+        dsn_address_build(&_address, "localhost", 1);
 
         _min_message_delay_microseconds = 1;
         _max_message_delay_microseconds = 100000;
@@ -115,10 +115,10 @@ namespace dsn { namespace tools {
     { 
         dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP, "invalid given channel %s", channel.to_string());
 
-        dsn_build_end_point(&_address, boost::asio::ip::host_name().c_str(), port);
+        dsn_address_build(&_address, boost::asio::ip::host_name().c_str(), port);
 
         dsn_address_t ep2;
-        dsn_build_end_point(&ep2, "localhost", port);
+        dsn_address_build(&ep2, "localhost", port);
       
         if (!client_only)
         {
