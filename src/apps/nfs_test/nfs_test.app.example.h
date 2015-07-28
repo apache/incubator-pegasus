@@ -121,8 +121,8 @@ namespace dsn {
                     }
                 }
             private:
-                ::dsn::service::cpp_task_ptr _timer;
-                ::dsn::service::cpp_task_ptr _request_timer;
+                ::dsn::cpp_task_ptr _timer;
+                ::dsn::cpp_task_ptr _request_timer;
 
                 dsn_address_t _server;
                 std::atomic<int> _req_index;

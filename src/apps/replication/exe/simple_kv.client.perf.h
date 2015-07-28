@@ -25,14 +25,14 @@
  */
 # pragma once
 # include "simple_kv.client.h"
-# include <dsn/internal/perf_test_helper.h>
 
 namespace dsn {
     namespace replication {
         namespace application {
 
             class simple_kv_perf_test_client
-                : public simple_kv_client, public ::dsn::service::perf_client_helper<simple_kv_perf_test_client>
+                : public simple_kv_client, 
+                  public ::dsn::service::perf_client_helper<simple_kv_perf_test_client>
             {
             public:
                 simple_kv_perf_test_client(

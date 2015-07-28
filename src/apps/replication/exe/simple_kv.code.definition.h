@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 # pragma once
-# include <dsn/cpp/servicelet.h>
+# include <dsn/service_api_cpp.h>
 # include "simple_kv.types.h"
 
 namespace dsn { namespace replication { namespace application { 

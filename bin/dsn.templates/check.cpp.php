@@ -8,7 +8,7 @@ $idl_type = $argv[4];
 # include <dsn/tool/simulator.h>
 # include "<?=$_PROG->name?>.check.h"
 
-<?=$_PROG->get_cpp_namespace_begin()?>
+<?=$_PROG->get_cpp_namespace_begin()?> 
 class <?=$_PROG->name?>_checker : public ::dsn::tools::checker
 {
 public:
@@ -17,8 +17,10 @@ public:
         for (auto& app : _apps)
         {
             // TODO: identify your own type of service apps
-            //auto meta = dynamic_cast<meta_service_app *>(app.second);
-            //if (meta != nullptr) _meta_servers.push_back(meta);
+            //if (app.second.type == "meta")
+			//{
+			//	_meta_servers.push_back((meta_service_app*)app.second.app_context_ptr);
+			//}
         }
     }
 

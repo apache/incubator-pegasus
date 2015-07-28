@@ -101,7 +101,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     int partition_index,
     dsn_task_code_t code,
     dsn_message_t request,
-    ::dsn::service::cpp_task_ptr& callback,
+    ::dsn::cpp_task_ptr& callback,
     int timeout_milliseconds,
     int reply_hash
     )
@@ -139,7 +139,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     int partition_index,
     dsn_task_code_t code,
     dsn_message_t request,
-    ::dsn::service::cpp_task_ptr& callback,
+    ::dsn::cpp_task_ptr& callback,
     int timeout_milliseconds,
     read_semantic_t read_semantic,
     decree snapshot_decree, // only used when ReadSnapshot        

@@ -295,10 +295,10 @@ void meta_service::update_configuration(dsn_message_t req, dsn_message_t resp)
     dsn_msg_read_commit(req, 0); // commit 0 so we can read again
 
     uint64_t offset;
-    int len = sz + sizeof(int32_t);
+    int len = (int)sz + sizeof(int32_t);
     
     char* buffer = (char*)malloc(len);
-    *(int32_t*)buffer = sz;
+    *(int32_t*)buffer = (int)sz;
     memcpy(buffer + sizeof(int32_t), ptr, sz);
 
     auto tmp = std::shared_ptr<char>(buffer);

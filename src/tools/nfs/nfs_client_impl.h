@@ -39,8 +39,8 @@ namespace dsn {
                 int           index;
                 copy_request  copy_req;                             
                 copy_response response;
-                ::dsn::service::cpp_task_ptr remote_copy_task;
-                ::dsn::service::cpp_task_ptr local_write_task;
+                ::dsn::cpp_task_ptr remote_copy_task;
+                ::dsn::cpp_task_ptr local_write_task;
                 bool          is_ready_for_write;
                 bool          is_valid;
                 zlock         lock;

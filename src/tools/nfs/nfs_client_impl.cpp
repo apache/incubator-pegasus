@@ -356,7 +356,7 @@ namespace dsn {
                 
                 for (auto& rc : f.second->copy_requests)
                 {
-                    ::dsn::service::cpp_task_ptr ctask, wtask;
+                    ::dsn::cpp_task_ptr ctask, wtask;
                     {
                         zauto_lock l(rc->lock);
                         rc->is_valid = false;

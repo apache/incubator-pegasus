@@ -29,6 +29,7 @@
 # include <sstream>
 # include <atomic>
 # include <vector>
+# include <dsn/internal/configuration.h>
 
 # ifdef __TITLE__
 # undef __TITLE__

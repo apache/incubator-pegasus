@@ -50,7 +50,7 @@ public:
     dsn_message_t owner_message() { return _from_message; }
     unsigned int left_secondary_ack_count() const { return _left_secondary_ack_count; }
     unsigned int left_potential_secondary_ack_count() const { return _left_potential_secondary_ack_count; }
-    ::dsn::service::cpp_task_ptr& log_task() { return _log_task; }
+    ::dsn::cpp_task_ptr& log_task() { return _log_task; }
     node_tasks& remote_tasks() { return _prepare_or_commit_tasks; }
 
     // state change
@@ -91,7 +91,7 @@ private:
     };
 
     node_tasks    _prepare_or_commit_tasks;
-    ::dsn::service::cpp_task_ptr _log_task;
+    ::dsn::cpp_task_ptr _log_task;
 
     dsn_message_t _from_message;
     char          _name[40]; // ballot.decree

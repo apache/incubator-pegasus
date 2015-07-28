@@ -33,7 +33,7 @@ public:
     }
     
     // - asynchronous with on-stack copy_request and copy_response 
-    ::dsn::service::cpp_task_ptr begin_copy(
+    ::dsn::cpp_task_ptr begin_copy(
         const copy_request& request, 
         void* context = nullptr,
         int timeout_milliseconds = 0, 
@@ -67,7 +67,7 @@ public:
     }
     
     // - asynchronous with on-heap std::shared_ptr<copy_request> and std::shared_ptr<copy_response> 
-    ::dsn::service::cpp_task_ptr begin_copy2(
+    ::dsn::cpp_task_ptr begin_copy2(
         std::shared_ptr<copy_request>& request,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0,
@@ -119,7 +119,7 @@ public:
     }
     
     // - asynchronous with on-stack get_file_size_request and get_file_size_response 
-    ::dsn::service::cpp_task_ptr begin_get_file_size(
+    ::dsn::cpp_task_ptr begin_get_file_size(
         const get_file_size_request& request, 
         void* context = nullptr,
         int timeout_milliseconds = 0, 
@@ -153,7 +153,7 @@ public:
     }
     
     // - asynchronous with on-heap std::shared_ptr<get_file_size_request> and std::shared_ptr<get_file_size_response> 
-    ::dsn::service::cpp_task_ptr begin_get_file_size2(
+    ::dsn::cpp_task_ptr begin_get_file_size2(
         std::shared_ptr<get_file_size_request>& request,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0,

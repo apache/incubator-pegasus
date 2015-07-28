@@ -16,7 +16,7 @@ class <?=$svc->name?>_client
 {
 public:
     <?=$svc->name?>_client(
-        const std::vector<end_point>& meta_servers,
+        const std::vector<dsn_address_t>& meta_servers,
         const char* app_name)
         : ::dsn::replication::replication_app_client_base(meta_servers, app_name) 
     {
@@ -77,13 +77,13 @@ foreach ($keys as $k => $v)
         resp_task->wait();
         if (resp_task->error() == ::dsn::ERR_OK)
         {
-            unmarshall(resp_task->get_response()->reader(), resp);
+            ::unmarshall(resp_task->response(), resp);
         }
         return resp_task->error();
     }
     
     // - asynchronous with on-stack <?=$f->get_first_param()->get_cpp_type()?> and <?=$f->get_cpp_return_type()?> 
-    ::dsn::rpc_response_task_ptr begin_<?=$f->name?>(
+    ::dsn::cpp_task_ptr begin_<?=$f->name?>(
         const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>,
         void* context = nullptr,
         int timeout_milliseconds = 0, 
@@ -115,7 +115,7 @@ foreach ($keys as $k => $v)
     }
     
     // - asynchronous with on-heap std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>> and std::shared_ptr<<?=$f->get_cpp_return_type()?>> 
-    ::dsn::rpc_response_task_ptr begin_<?=$f->name?>2(
+    ::dsn::cpp_task_ptr begin_<?=$f->name?>2(
         std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>>& <?=$f->get_first_param()->name?>,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0<?=$f->is_write ? "":", ". PHP_EOL."        ::dsn::replication::read_semantic_t read_semantic = ::dsn::replication::read_semantic_t::ReadLastUpdate"?> 

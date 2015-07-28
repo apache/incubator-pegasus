@@ -98,7 +98,7 @@ public:
     }
 
 private:
-    ::dsn::service::cpp_task_ptr _timer;
+    ::dsn::cpp_task_ptr _timer;
     simple_kv_client *_simple_kv_client;
 };
 

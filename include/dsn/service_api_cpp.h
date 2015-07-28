@@ -34,3 +34,4 @@
 # include <dsn/cpp/service.api.oo.h>
 # include <dsn/cpp/service_app.h>
 # include <dsn/cpp/address.h>
+# include <dsn/cpp/perf_test_helper.h>

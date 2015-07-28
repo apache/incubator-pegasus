@@ -4,7 +4,6 @@ require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
 ?>
 # pragma once
-# include <dsn/serverlet.h>
 # include "<?=$file_prefix?>.code.definition.h"
 # include <iostream>
 

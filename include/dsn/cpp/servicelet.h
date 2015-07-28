@@ -43,6 +43,12 @@ namespace dsn
     typedef std::function<void(error_code, dsn_message_t, dsn_message_t)> rpc_reply_handler;
     typedef std::function<void(dsn_message_t)> rpc_request_handler;
 
+    namespace service
+    {
+        class cpp_dev_task_base;
+    }
+    typedef ::boost::intrusive_ptr<::dsn::service::cpp_dev_task_base> cpp_task_ptr;
+
     namespace service {
 
         // 
@@ -194,8 +200,7 @@ namespace dsn
             task_context_manager _manager;
         };
 
-        DEFINE_REF_OBJECT(cpp_dev_task_base)
-        typedef ::boost::intrusive_ptr<cpp_dev_task_base> cpp_task_ptr;
+        DEFINE_REF_OBJECT(cpp_dev_task_base)        
 
         template<typename THandler>
         class cpp_dev_task : public cpp_dev_task_base

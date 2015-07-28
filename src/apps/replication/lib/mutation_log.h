@@ -88,7 +88,7 @@ public:
     // log mutation
     //
     // return value: nullptr for error
-    ::dsn::service::cpp_task_ptr append(mutation_ptr& mu,
+    ::dsn::cpp_task_ptr append(mutation_ptr& mu,
             dsn_task_code_t callback_code,
             servicelet* callback_host,
             aio_handler callback,
@@ -114,7 +114,7 @@ private:
     //
     //  internal helpers
     //
-    typedef std::shared_ptr<std::list<::dsn::service::cpp_task_ptr>> pending_callbacks_ptr;
+    typedef std::shared_ptr<std::list<::dsn::cpp_task_ptr>> pending_callbacks_ptr;
 
     error_code create_new_log_file();
     void create_new_pending_buffer();    
@@ -147,7 +147,7 @@ private:
     
     std::shared_ptr<binary_writer> _pending_write;
     pending_callbacks_ptr          _pending_write_callbacks;
-    ::dsn::service::cpp_task_ptr   _pending_write_timer;
+    ::dsn::cpp_task_ptr   _pending_write_timer;
     
     int                         _write_task_number;
 };
@@ -173,7 +173,7 @@ public:
     // write routines
     //
     // return value: nullptr for error or immediate success (using ::GetLastError to get code), otherwise it is pending
-    ::dsn::service::cpp_task_ptr write_log_entry(
+    ::dsn::cpp_task_ptr write_log_entry(
                     blob& bb,
                     dsn_task_code_t evt,  // to indicate which thread pool to execute the callback
                     servicelet* callback_host,
@@ -204,7 +204,7 @@ protected:
     bool          _is_read;
     std::string   _path;
     int           _index;
-    std::vector<::dsn::service::cpp_task_ptr>  _write_tasks;
+    std::vector<::dsn::cpp_task_ptr>  _write_tasks;
     int                        _write_task_itr;    
 
     // for gc

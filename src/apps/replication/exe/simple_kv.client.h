@@ -75,7 +75,7 @@ public:
     }
     
     // - asynchronous with on-stack std::string and std::string 
-    ::dsn::service::cpp_task_ptr begin_read(
+    ::dsn::cpp_task_ptr begin_read(
         const std::string& key,         
         void* context = nullptr,
         int timeout_milliseconds = 0, 
@@ -107,7 +107,7 @@ public:
     }
     
     // - asynchronous with on-heap std::shared_ptr<std::string> and std::shared_ptr<std::string> 
-    ::dsn::service::cpp_task_ptr begin_read2(
+    ::dsn::cpp_task_ptr begin_read2(
         std::shared_ptr<std::string>& key,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0
@@ -163,7 +163,7 @@ public:
     }
     
     // - asynchronous with on-stack ::dsn::replication::application::kv_pair and int32_t 
-    ::dsn::service::cpp_task_ptr begin_write(
+    ::dsn::cpp_task_ptr begin_write(
         const ::dsn::replication::application::kv_pair& pr,     
         void* context = nullptr,
         int timeout_milliseconds = 0, 
@@ -195,7 +195,7 @@ public:
     }
     
     // - asynchronous with on-heap std::shared_ptr<::dsn::replication::application::kv_pair> and std::shared_ptr<int32_t> 
-    ::dsn::service::cpp_task_ptr begin_write2(
+    ::dsn::cpp_task_ptr begin_write2(
         std::shared_ptr<::dsn::replication::application::kv_pair>& pr,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0
@@ -251,7 +251,7 @@ public:
     }
     
     // - asynchronous with on-stack ::dsn::replication::application::kv_pair and int32_t 
-    ::dsn::service::cpp_task_ptr begin_append(
+    ::dsn::cpp_task_ptr begin_append(
         const ::dsn::replication::application::kv_pair& pr,         
         void* context = nullptr,
         int timeout_milliseconds = 0, 
@@ -283,7 +283,7 @@ public:
     }
     
     // - asynchronous with on-heap std::shared_ptr<::dsn::replication::application::kv_pair> and std::shared_ptr<int32_t> 
-    ::dsn::service::cpp_task_ptr begin_append2(
+    ::dsn::cpp_task_ptr begin_append2(
         std::shared_ptr<::dsn::replication::application::kv_pair>& pr,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0

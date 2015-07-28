@@ -88,7 +88,7 @@ void replica::broadcast_group_check()
             request->learner_signature = it2->second.signature;
         }
 
-        dsn::service::cpp_task_ptr callback_task = rpc::call_typed(
+        dsn::cpp_task_ptr callback_task = rpc::call_typed(
             addr,
             RPC_GROUP_CHECK,
             request,            

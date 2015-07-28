@@ -62,7 +62,7 @@ public:
     }
     
     // - asynchronous with on-stack ::dsn::fd::beacon_msg and ::dsn::fd::beacon_ack 
-    ::dsn::service::cpp_task_ptr begin_ping(
+    ::dsn::cpp_task_ptr begin_ping(
         const ::dsn::fd::beacon_msg& beacon, 
         void* context,
         int timeout_milliseconds = 0, 
@@ -96,7 +96,7 @@ public:
     }
     
     // - asynchronous with on-heap std::shared_ptr<::dsn::fd::beacon_msg> and std::shared_ptr<::dsn::fd::beacon_ack> 
-    ::dsn::service::cpp_task_ptr begin_ping2(
+    ::dsn::cpp_task_ptr begin_ping2(
         std::shared_ptr<::dsn::fd::beacon_msg>& beacon,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0,

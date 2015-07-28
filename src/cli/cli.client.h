@@ -39,7 +39,7 @@ public:
     }
     
     // - asynchronous with on-stack command and std::string 
-    ::dsn::service::cpp_task_ptr begin_call(
+    ::dsn::cpp_task_ptr begin_call(
         const command& c, 
         void* context = nullptr,
         int timeout_milliseconds = 0, 
@@ -73,7 +73,7 @@ public:
     }
     
     // - asynchronous with on-heap std::shared_ptr<command> and std::shared_ptr<std::string> 
-    ::dsn::service::cpp_task_ptr begin_call2(
+    ::dsn::cpp_task_ptr begin_call2(
         std::shared_ptr<command>& c,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0,

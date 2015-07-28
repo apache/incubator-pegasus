@@ -32,8 +32,8 @@ namespace dsn {
     namespace example {
 
 
-        counter_service_impl::counter_service_impl(replica* replica, configuration_ptr& config)
-            : counter_service(replica, config)
+        counter_service_impl::counter_service_impl(replica* replica)
+            : counter_service(replica)
         {
         }
 

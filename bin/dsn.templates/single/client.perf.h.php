@@ -6,7 +6,6 @@ $file_prefix = $argv[3];
 # pragma once
 
 # include "<?=$file_prefix?>.client.h"
-# include <dsn/internal/perf_test_helper.h>
 
 <?=$_PROG->get_cpp_namespace_begin()?>
 <?php foreach ($_PROG->services as $svc) { ?>

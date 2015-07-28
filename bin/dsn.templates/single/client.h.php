@@ -4,7 +4,6 @@ require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
 ?>
 # pragma once
-# include <dsn/internal/service.api.oo.h>
 # include "<?=$file_prefix?>.code.definition.h"
 # include <iostream>
 
@@ -17,7 +16,7 @@ class <?=$svc->name?>_client
 {
 public:
     <?=$svc->name?>_client(const dsn_address_t& server) { _server = server; }
-    <?=$svc->name?>_client() { _server = dsn_address_t::INVALID; }
+    <?=$svc->name?>_client() { _server = dsn_address_invalid; }
     virtual ~<?=$svc->name?>_client() {}
 
 <?php foreach ($svc->functions as $f) { ?>
@@ -29,9 +28,8 @@ public:
         int hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-        ::dsn::message_ptr msg = ::dsn::message::create_request(<?=$f->get_rpc_code()?>, 0, hash);
-        marshall(msg->writer(), <?=$f->get_first_param()->name?>);
-        ::dsn::service::rpc::call_one_way(p_server_addr ? *p_server_addr : _server, msg);
+        ::dsn::service::rpc::call_one_way_typed(p_server_addr ? *p_server_addr : _server, 
+			<?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash);
     }
 <?php    } else { ?>
     // - synchronous 
@@ -42,19 +40,18 @@ public:
         int hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-        ::dsn::message_ptr msg = ::dsn::message::create_request(<?=$f->get_rpc_code()?>, timeout_milliseconds, hash);
-        marshall(msg->writer(), <?=$f->get_first_param()->name?>);
-        auto resp_task = ::dsn::service::rpc::call(p_server_addr ? *p_server_addr : _server, msg);
-        resp_task->wait();
-        if (resp_task->error() == ::dsn::ERR_OK)
+		dsn_message_t response;
+        auto err = ::dsn::service::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
+            <?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash, timeout_milliseconds);
+        if (err == ::dsn::ERR_OK)
         {
-            unmarshall(resp_task->get_response()->reader(), resp);
+            ::unmarshall(response, resp);
         }
-        return resp_task->error();
+        return err;
     }
     
     // - asynchronous with on-stack <?=$f->get_first_param()->get_cpp_type()?> and <?=$f->get_cpp_return_type()?> 
-    ::dsn::rpc_response_task_ptr begin_<?=$f->name?>(
+    ::dsn::cpp_task_ptr begin_<?=$f->name?>(
         const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
         void* context = nullptr,
         int timeout_milliseconds = 0, 
@@ -88,7 +85,7 @@ public:
     }
     
     // - asynchronous with on-heap std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>> and std::shared_ptr<<?=$f->get_cpp_return_type()?>> 
-    ::dsn::rpc_response_task_ptr begin_<?=$f->name?>2(
+    ::dsn::cpp_task_ptr begin_<?=$f->name?>2(
         std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>>& <?=$f->get_first_param()->name?>,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0,

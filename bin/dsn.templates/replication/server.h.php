@@ -15,8 +15,8 @@ class <?=$svc->name?>_service
     : public ::dsn::replication::replication_app_base
 {
 public:
-    <?=$svc->name?>_service(::dsn::replication::replica* replica, ::dsn::configuration_ptr& config) 
-        : ::dsn::replication::replication_app_base(replica, config)
+    <?=$svc->name?>_service(::dsn::replication::replica* replica) 
+        : ::dsn::replication::replication_app_base(replica)
     {
         open_service();
     }

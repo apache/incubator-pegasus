@@ -245,5 +245,5 @@ private:
     int _seq;
     int _message_size;
     int _concurrency;
-    dsn::service::cpp_task_ptr _timer;
+    dsn::cpp_task_ptr _timer;
 };

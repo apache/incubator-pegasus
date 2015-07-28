@@ -76,7 +76,7 @@ private:
     meta_server_failure_detector *_failure_detector;
     server_state                 *_state;
     load_balancer                *_balancer;
-    dsn::service::cpp_task_ptr   _balancer_timer;
+    dsn::cpp_task_ptr   _balancer_timer;
     replication_options          _opts;
     std::string                  _data_dir;
     bool                         _started;

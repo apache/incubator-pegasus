@@ -114,7 +114,7 @@ namespace dsn {
 
             } // end namespace rpc_replicated_impl 
 
-            dsn::service::cpp_task_ptr call_replicated(
+            dsn::cpp_task_ptr call_replicated(
                 const dsn_address_t& first_server,
                 const std::vector<dsn_address_t>& servers,
                 dsn_message_t request,

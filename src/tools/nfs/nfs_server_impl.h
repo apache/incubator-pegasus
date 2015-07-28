@@ -55,7 +55,7 @@ namespace dsn {
             zlock _handles_map_lock;
             std::unordered_map <std::string, file_handle_info_on_server*> _handles_map; // cache file handles
 
-            ::dsn::service::cpp_task_ptr _file_close_timer;
+            ::dsn::cpp_task_ptr _file_close_timer;
         };
 
     }

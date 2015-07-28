@@ -55,7 +55,7 @@ namespace dsn { namespace replication {
         ~replication_app_client_base();
 
         template<typename T, typename TRequest, typename TResponse>
-        ::dsn::service::cpp_task_ptr write(
+        ::dsn::cpp_task_ptr write(
             int partition_index,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
@@ -89,7 +89,7 @@ namespace dsn { namespace replication {
         }
         
         template<typename TRequest, typename TResponse>
-        ::dsn::service::cpp_task_ptr write(
+        ::dsn::cpp_task_ptr write(
             int partition_index,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
@@ -123,7 +123,7 @@ namespace dsn { namespace replication {
         }
 
         template<typename T, typename TRequest, typename TResponse>
-        ::dsn::service::cpp_task_ptr write(
+        ::dsn::cpp_task_ptr write(
             int partition_index,
             dsn_task_code_t code,
             const TRequest& req,
@@ -157,7 +157,7 @@ namespace dsn { namespace replication {
         }
 
         template<typename TRequest, typename TResponse>
-        ::dsn::service::cpp_task_ptr write(
+        ::dsn::cpp_task_ptr write(
             int partition_index,
             dsn_task_code_t code,
             const TRequest& req,
@@ -192,7 +192,7 @@ namespace dsn { namespace replication {
         }
 
         template<typename T, typename TRequest, typename TResponse>
-        ::dsn::service::cpp_task_ptr read(
+        ::dsn::cpp_task_ptr read(
             int partition_index,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
@@ -228,7 +228,7 @@ namespace dsn { namespace replication {
         }
 
         template<typename TRequest, typename TResponse>
-        ::dsn::service::cpp_task_ptr read(
+        ::dsn::cpp_task_ptr read(
             int partition_index,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
@@ -264,7 +264,7 @@ namespace dsn { namespace replication {
         }
 
         template<typename T, typename TRequest, typename TResponse>
-        ::dsn::service::cpp_task_ptr read(
+        ::dsn::cpp_task_ptr read(
             int partition_index,
             dsn_task_code_t code,
             const TRequest& req,
@@ -301,7 +301,7 @@ namespace dsn { namespace replication {
         }
 
         template<typename TRequest, typename TResponse>
-        ::dsn::service::cpp_task_ptr read(
+        ::dsn::cpp_task_ptr read(
             int partition_index,
             dsn_task_code_t code,
             const TRequest& req,
@@ -344,7 +344,7 @@ namespace dsn { namespace replication {
         struct request_context : public ref_object
         {
             int                   partition_index;
-            ::dsn::service::cpp_task_ptr callback_task;
+            ::dsn::cpp_task_ptr callback_task;
             read_request_header   read_header;
             write_request_header  write_header;
             bool                  is_read;
@@ -354,8 +354,8 @@ namespace dsn { namespace replication {
             dsn_message_t         request;
 
             zlock                      lock; // [
-            dsn::service::cpp_task_ptr timeout_timer; // when partition config is unknown at the first place            
-            dsn::service::cpp_task_ptr rw_task;
+            dsn::cpp_task_ptr timeout_timer; // when partition config is unknown at the first place            
+            dsn::cpp_task_ptr rw_task;
             bool                       completed;
             // ]
         };
@@ -365,7 +365,7 @@ namespace dsn { namespace replication {
     private:
         struct partition_context
         {
-            dsn::service::cpp_task_ptr     query_config_task;
+            dsn::cpp_task_ptr     query_config_task;
             std::list<request_context_ptr> requests;
         };
 
@@ -379,7 +379,7 @@ namespace dsn { namespace replication {
             int partition_index,
             dsn_task_code_t code,
             dsn_message_t request,
-            ::dsn::service::cpp_task_ptr& callback,
+            ::dsn::cpp_task_ptr& callback,
             int timeout_ms,
             int reply_hash = 0
             );
@@ -388,7 +388,7 @@ namespace dsn { namespace replication {
             int partition_index,
             dsn_task_code_t code,
             dsn_message_t request,
-            ::dsn::service::cpp_task_ptr& callback,
+            ::dsn::cpp_task_ptr& callback,
             int timeout_ms,
             read_semantic_t read_semantic = ReadOutdated,
             decree snapshot_decree = invalid_decree, // only used when ReadSnapshot        

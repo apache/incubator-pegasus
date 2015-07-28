@@ -32,7 +32,7 @@ namespace dsn {
             namespace rpc {
 
             template<typename TRequest, typename TResponse>
-            dsn::service::cpp_task_ptr call_typed_replicated(
+            dsn::cpp_task_ptr call_typed_replicated(
                 // servers
                 const dsn_address_t& first_server,
                 const std::vector<dsn_address_t>& servers,
@@ -48,7 +48,7 @@ namespace dsn {
                 int reply_hash = 0
                 );
 
-            dsn::service::cpp_task_ptr call_replicated(
+            dsn::cpp_task_ptr call_replicated(
                 const dsn_address_t& first_server,
                 const std::vector<dsn_address_t>& servers,
                 dsn_message_t request,
@@ -84,7 +84,7 @@ namespace dsn {
             }
 
             template<typename TRequest, typename TResponse>
-            inline dsn::service::cpp_task_ptr call_typed_replicated(
+            inline dsn::cpp_task_ptr call_typed_replicated(
                 // servers
                 const dsn_address_t& first_server,
                 const std::vector<dsn_address_t>& servers,
