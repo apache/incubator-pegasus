@@ -26,7 +26,6 @@
 
 # include <dsn/tool/simulator.h>
 # include "scheduler.h"
-# include <dsn/tool/providers.common.h>
 
 # include "diske.sim.h"
 # include "env.sim.h"
@@ -45,9 +44,7 @@ void simulator::add_checker(checker* chker)
 }
 
 void simulator::install(service_spec& spec)
-{
-    register_common_providers();
-    
+{   
     register_component_provider<sim_aio_provider>("dsn::tools::sim_aio_provider");
     register_component_provider<sim_env_provider>("dsn::tools::sim_env_provider");
     register_component_provider<sim_task_queue>("dsn::tools::sim_task_queue");

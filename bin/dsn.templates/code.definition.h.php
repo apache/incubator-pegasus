@@ -12,7 +12,7 @@ echo $_PROG->get_cpp_namespace_begin().PHP_EOL;
 
 foreach ($_PROG->services as $svc)
 {
-	echo "    // define your own thread pool using DEFINE_THREAD_POOL_CODE(xxx)". PHP_EOL;	
+    echo "    // define your own thread pool using DEFINE_THREAD_POOL_CODE(xxx)". PHP_EOL;    
     echo "    // define RPC task code for service '". $svc->name ."'". PHP_EOL;
     foreach ($svc->functions as $f)
     {

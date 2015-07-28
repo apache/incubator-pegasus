@@ -26,7 +26,7 @@
 # pragma once
 
 # include <dsn/service_api_c.h>
-# include <dsn/internal/utils.h>
+# include <dsn/cpp/utils.h>
 # include <dsn/internal/enum_helper.h>
 # include <dsn/internal/perf_counter.h>
 # include <dsn/internal/customizable_id.h>

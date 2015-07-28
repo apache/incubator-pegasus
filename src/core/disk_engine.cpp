@@ -26,7 +26,7 @@
 # include "disk_engine.h"
 # include <dsn/internal/perf_counters.h>
 # include <dsn/internal/aio_provider.h>
-# include <dsn/internal/utils.h>
+# include <dsn/cpp/utils.h>
 
 # ifdef __TITLE__
 # undef __TITLE__

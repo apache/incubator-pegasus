@@ -27,7 +27,7 @@
 
 # include <dsn/service_api_c.h>
 # include <string>
-# include <dsn/internal/utils.h>
+# include <dsn/cpp/utils.h>
 # include <dsn/internal/task.h>
 
 namespace dsn {

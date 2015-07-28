@@ -25,7 +25,7 @@
  */
 # include <dsn/internal/configuration.h>
 # include <cassert>
-# include <dsn/internal/utils.h>
+# include <dsn/cpp/utils.h>
 # include <errno.h>
 
 namespace dsn {

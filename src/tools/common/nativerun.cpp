@@ -24,15 +24,12 @@
  * THE SOFTWARE.
  */
 #include <dsn/tool/nativerun.h>
-#include <dsn/tool/providers.common.h>
 
 namespace dsn {
     namespace tools {
 
         void nativerun::install(service_spec& spec)
         {
-            register_common_providers();
-            
             if (spec.aio_factory_name == "")
             {
                 spec.aio_factory_name = ("dsn::tools::native_aio_provider");

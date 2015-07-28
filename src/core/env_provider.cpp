@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 # include <dsn/internal/env_provider.h>
-# include <dsn/internal/utils.h>
+# include <dsn/cpp/utils.h>
 # include <chrono>
 
 namespace dsn {

@@ -26,7 +26,7 @@
 
 # include "hpc_tail_logger.h"
 # include <dsn/internal/singleton_store.h>
-# include <dsn/internal/utils.h>
+# include <dsn/cpp/utils.h>
 # include <dsn/internal/command.h>
 # include <cstdlib>
 # include <sstream>

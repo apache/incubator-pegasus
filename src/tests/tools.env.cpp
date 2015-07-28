@@ -29,28 +29,28 @@
 # include "env.sim.h"
 
 using namespace ::dsn;
-
-void test_env(env_provider& ev)
-{
-    uint64_t xs[] = {
-        0,
-        (uint64_t)-1LL,
-        0xdeadbeef
-        };
-
-    for (auto& x : xs)
-    {
-        auto r = ev.random64(x, x);
-        EXPECT_EQ(r, x);
-
-        r = ev.random64(x, x + 1);
-        EXPECT_TRUE(r == x || r == (x + 1));
-    }
-}
-
-TEST(tools, env_native)
-{
-    env_provider ev(nullptr);
-    test_env(ev);
-}
+//
+//void test_env(env_provider& ev)
+//{
+//    uint64_t xs[] = {
+//        0,
+//        (uint64_t)-1LL,
+//        0xdeadbeef
+//        };
+//
+//    for (auto& x : xs)
+//    {
+//        auto r = ev.random64(x, x);
+//        EXPECT_EQ(r, x);
+//
+//        r = ev.random64(x, x + 1);
+//        EXPECT_TRUE(r == x || r == (x + 1));
+//    }
+//}
+//
+//TEST(tools, env_native)
+//{
+//    env_provider ev(nullptr);
+//    test_env(ev);
+//}
 

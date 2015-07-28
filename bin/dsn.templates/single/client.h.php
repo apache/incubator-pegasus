@@ -29,7 +29,7 @@ public:
         const dsn_address_t *p_server_addr = nullptr)
     {
         ::dsn::service::rpc::call_one_way_typed(p_server_addr ? *p_server_addr : _server, 
-			<?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash);
+            <?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash);
     }
 <?php    } else { ?>
     // - synchronous 
@@ -40,7 +40,7 @@ public:
         int hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-		dsn_message_t response;
+        dsn_message_t response;
         auto err = ::dsn::service::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
             <?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash, timeout_milliseconds);
         if (err == ::dsn::ERR_OK)

@@ -158,7 +158,14 @@ void scheduler::add_task(task* tsk, task_queue* q)
 checker::checker(const char* name)
     : _name(name)
 {
-    _apps = get_all_apps();
+    _apps.resize(100);
+    int count = dsn_get_all_apps(&_apps[0], 100);
+    _apps.resize(count);
+
+    if (count > 100)
+    {
+        dsn_get_all_apps(&_apps[0], 100);
+    }
 }
 
 void scheduler::add_checker(checker* chker)

@@ -25,7 +25,7 @@
  */
 
 # include <dsn/dist/replication/replication.global_check.h>
-# include <dsn/tool/simulator.h>
+# include <dsn/tool/global_checker.h>
 # include "replica.h"
 # include "replica_stub.h"
 # include "meta_service.h"
@@ -48,13 +48,13 @@ namespace dsn {
             {
                 for (auto& app : _apps)
                 {
-                    if (app.second.type == "meta")
+                    if (0 == strcmp(app.type, "meta"))
                     {
-                        _meta_servers.push_back((meta_service_app*)app.second.app_context_ptr);
+                        _meta_servers.push_back((meta_service_app*)app.app_context_ptr);
                     }
-                    else if (app.second.type == "replica")
+                    else if (0 == strcmp(app.type, "replica"))
                     {
-                        _replica_servers.push_back((replication_service_app*)app.second.app_context_ptr);
+                        _replica_servers.push_back((replication_service_app*)app.app_context_ptr);
                     }
                 }
             }
@@ -211,13 +211,13 @@ namespace dsn {
             std::vector<replication_service_app*> _replica_servers;
         };
 
-        void install_checkers(configuration_ptr config)
+        void install_checkers()
         {
-            auto sim = dynamic_cast<::dsn::tools::simulator*>(::dsn::tools::get_current_tool());
-            if (nullptr == sim)
-                return;
-
-            sim->add_checker(new replication_checker("replication.global-checker"));
+            dsn_register_app_checker(
+                "replication.global-checker",
+                ::dsn::tools::checker::create<replication_checker>,
+                ::dsn::tools::checker::apply
+                );
         }
     }
 }

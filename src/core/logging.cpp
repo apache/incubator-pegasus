@@ -29,7 +29,7 @@
 # include "service_engine.h"
 # include <dsn/cpp/auto_code.h>
 
-dsn_log_level_t dsn_log_start_level = dsn_log_level_t::LOG_LEVEL_INFORMATION;
+DSN_API dsn_log_level_t dsn_log_start_level = dsn_log_level_t::LOG_LEVEL_INFORMATION;
 
 static void log_on_sys_exit(::dsn::sys_exit_type)
 {
@@ -40,7 +40,7 @@ static void log_on_sys_exit(::dsn::sys_exit_type)
     }
 }
 
-void dsn_log_init()
+DSN_API void dsn_log_init()
 {
     dsn_log_start_level = enum_from_string(
         dsn_config_get_value_string("core", "log_start_level", enum_to_string(dsn_log_start_level)),
@@ -53,7 +53,7 @@ void dsn_log_init()
     ::dsn::tools::sys_exit.put_back(log_on_sys_exit, "log.flush");
 }
 
-void dsn_logv(const char *file, const char *function, const int line, dsn_log_level_t logLevel, const char* title, const char* fmt, va_list args)
+DSN_API void dsn_logv(const char *file, const char *function, const int line, dsn_log_level_t logLevel, const char* title, const char* fmt, va_list args)
 {
     ::dsn::logging_provider* logger = ::dsn::service_engine::instance().logging();
     if (logger != nullptr)
@@ -62,7 +62,7 @@ void dsn_logv(const char *file, const char *function, const int line, dsn_log_le
     }        
 }
 
-void dsn_logf(const char *file, const char *function, const int line, dsn_log_level_t logLevel, const char* title, const char* fmt, ...)
+DSN_API void dsn_logf(const char *file, const char *function, const int line, dsn_log_level_t logLevel, const char* title, const char* fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
@@ -70,7 +70,7 @@ void dsn_logf(const char *file, const char *function, const int line, dsn_log_le
     va_end(ap);
 }
 
-void dsn_log(const char *file, const char *function, const int line, dsn_log_level_t logLevel, const char* title)
+DSN_API void dsn_log(const char *file, const char *function, const int line, dsn_log_level_t logLevel, const char* title)
 {
     dsn_logf(file, function, line, logLevel, title, "");
 }

@@ -144,23 +144,6 @@ namespace dsn {
             return service_engine::instance().spec();
         }
 
-        apps get_all_apps()
-        {
-            apps as2;
-            auto as = service_engine::instance().get_all_nodes();
-            for (auto& kv : as)
-            {
-                app_info info;
-                info.app_context_ptr = kv.second->get_app_context_ptr();
-                info.app_id = kv.second->id();
-                info.name = kv.second->spec().name;
-                info.type = kv.second->spec().type;
-
-                as2[info.name] = info;
-            }
-            return as2;
-        }
-
         join_point<void, configuration_ptr> sys_init_before_app_created("system.init.1");
         join_point<void, configuration_ptr> sys_init_after_app_created("system.init.2");
         join_point<void, sys_exit_type> sys_exit("system.exit");

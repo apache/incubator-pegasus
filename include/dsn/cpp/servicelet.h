@@ -28,8 +28,8 @@
 # include <dsn/service_api_c.h>
 # include <dsn/internal/dsn_types.h>
 # include <dsn/internal/synchronize.h>
-# include <dsn/internal/utils.h>
 # include <dsn/internal/link.h>
+# include <dsn/cpp/utils.h>
 # include <dsn/cpp/msg_binary_io.h>
 # include <dsn/cpp/zlocks.h>
 # include <set>

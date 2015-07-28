@@ -100,8 +100,6 @@ namespace dsn {
                     std::shared_ptr<TRequest>& req,
                     T* owner,
                     void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&),
-                    int request_hash/* = 0*/,
-                    int timeout_milliseconds /*= 0*/,
                     int reply_hash /*= 0*/
                     )
                 {
@@ -137,8 +135,6 @@ namespace dsn {
                     std::shared_ptr<TRequest>& req,
                     servicelet* owner,
                     std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)>& callback,
-                    int request_hash/* = 0*/,
-                    int timeout_milliseconds /*= 0*/,
                     int reply_hash /*= 0*/
                     )
                 {
@@ -173,8 +169,6 @@ namespace dsn {
                     T* owner,
                     void(T::*callback)(error_code, const TResponse&, void*),
                     void* context,
-                    int request_hash/* = 0*/,
-                    int timeout_milliseconds /*= 0*/,
                     int reply_hash /*= 0*/
                     )
                 {
@@ -209,8 +203,6 @@ namespace dsn {
                     servicelet* owner,
                     std::function<void(error_code, const TResponse&, void*)>& callback,
                     void* context,
-                    int request_hash/* = 0*/,
-                    int timeout_milliseconds /*= 0*/,
                     int reply_hash /*= 0*/
                     )
                 {
@@ -296,7 +288,7 @@ namespace dsn {
                 ::marshall(msg, *req);
 
                 auto t = internal_use_only::create_rpc_call<T, TRequest, TResponse>(
-                    msg, req, owner, callback, request_hash, timeout_milliseconds, reply_hash);
+                    msg, req, owner, callback, reply_hash);
                
                 dsn_rpc_call(server, t->native_handle());
                 return t;
@@ -318,7 +310,7 @@ namespace dsn {
                 marshall(msg, *req);
 
                 auto t = internal_use_only::create_rpc_call<TRequest, TResponse>(
-                    msg, req, owner, callback, request_hash, timeout_milliseconds, reply_hash);
+                    msg, req, owner, callback, reply_hash);
 
                 dsn_rpc_call(server, t->native_handle());
                 return t;
@@ -341,7 +333,7 @@ namespace dsn {
                 ::marshall(msg, req);
 
                 auto t = internal_use_only::create_rpc_call<T, TResponse>(
-                    msg, owner, callback, context, request_hash, timeout_milliseconds, reply_hash);
+                    msg, owner, callback, context, reply_hash);
 
                 dsn_rpc_call(server, t->native_handle());
                 return t;
@@ -364,7 +356,7 @@ namespace dsn {
                 marshall(msg, req);
 
                 auto t = internal_use_only::create_rpc_call<TResponse>(
-                    msg, owner, callback, context, request_hash, timeout_milliseconds, reply_hash);
+                    msg, owner, callback, context, reply_hash);
 
                 dsn_rpc_call(server, t->native_handle());
                 return t;

@@ -888,3 +888,25 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
     return true;
 }
 
+DSN_API int dsn_register_app_checker(const char* name, dsn_checker_create create, dsn_checker_apply apply)
+{
+    return 0;
+}
+
+DSN_API int dsn_get_all_apps(dsn_app_info* info_buffer, int count)
+{
+    auto& as = ::dsn::service_engine::instance().get_all_nodes();
+    int i = 0;
+    for (auto& kv : as)
+    {
+        if (i >= count)
+            return (int)as.size();
+
+        dsn_app_info& info = info_buffer[i++];
+        info.app_context_ptr = kv.second->get_app_context_ptr();
+        info.app_id = kv.second->id();
+        strncpy(info.name, kv.second->spec().name.c_str(), sizeof(info.name));
+        strncpy(info.type, kv.second->spec().type.c_str(), sizeof(info.type));
+    }
+    return i + 1;
+}

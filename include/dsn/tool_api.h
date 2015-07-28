@@ -150,18 +150,6 @@ configuration_ptr config();
 const service_spec& spec();
 bool is_engine_ready();
 
-typedef struct app_info
-{
-    void*       app_context_ptr; // returned by app registered **create**
-    int         app_id;
-    std::string type; // upon registration 
-    std::string name;
-} app_info;
-
-typedef std::map<std::string, app_info> apps; // name => app_info
-
-apps get_all_apps();
-
 // --------- inline implementation -----------------------------
 
 

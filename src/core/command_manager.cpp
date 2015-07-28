@@ -27,7 +27,7 @@
 # include <iostream>
 # include <thread>
 # include <sstream>
-# include <dsn/internal/utils.h>
+# include <dsn/cpp/utils.h>
 # include <dsn/cpp/serialization.h>
 # include <dsn/cpp/msg_binary_io.h>
 # include "service_engine.h"

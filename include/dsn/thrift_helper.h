@@ -25,8 +25,7 @@
  */
 # pragma once
 
-# include <dsn/internal/dsn_types.h>
-# include <dsn/internal/utils.h>
+# include <dsn/service_api_cpp.h>
 # include <dsn/internal/message_parser.h>
 # include <dsn/tool_api.h>
 

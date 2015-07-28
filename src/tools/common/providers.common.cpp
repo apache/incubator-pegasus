@@ -26,7 +26,6 @@
 
 # include "net_provider.h"
 # include <dsn/tool/providers.common.h>
-# include <dsn/tool/nfs_node_simple.h>
 # include "lockp.std.h"
 # include "native_aio_provider.win.h"
 # include "native_aio_provider.posix.h"
@@ -68,7 +67,6 @@ namespace dsn {
             register_component_provider<native_posix_aio_provider>("dsn::tools::native_aio_provider");
 #endif
             register_component_provider<empty_aio_provider>("dsn::tools::empty_aio_provider");            
-            register_component_provider<::dsn::service::nfs_node_simple>("dsn::service::nfs_node_simple");
         }
     }
 }

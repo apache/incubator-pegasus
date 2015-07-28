@@ -26,7 +26,7 @@
 # pragma once
 # include <dsn/dist/replication.h>
 # include <dsn/tool/nfs_node_simple.h>
-# include "nfs_server_impl.h"
+# include "nfs_code_definition.h"
 
 namespace dsn {
     namespace replication {

@@ -12,8 +12,8 @@ $file_prefix = $argv[3];
 
 // client app example
 class <?=$_PROG->name?>_client_app : 
-	public ::dsn::service_app<<?=$_PROG->name?>_client_app>,
-	public virtual ::dsn::service::servicelet
+    public ::dsn::service_app<<?=$_PROG->name?>_client_app>,
+    public virtual ::dsn::service::servicelet
 {
 public:
     <?=$_PROG->name?>_client_app()
@@ -92,8 +92,8 @@ private:
 
 <?php foreach ($_PROG->services as $svc) { ?>
 class <?=$svc->name?>_perf_test_client_app : 
-	public ::dsn::service_app<<?=$svc->name?>_perf_test_client_app>,
-	public virtual ::dsn::service::servicelet
+    public ::dsn::service_app<<?=$svc->name?>_perf_test_client_app>,
+    public virtual ::dsn::service::servicelet
 {
 public:
     <?=$svc->name?>_perf_test_client_app()

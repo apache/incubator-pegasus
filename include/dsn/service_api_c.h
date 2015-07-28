@@ -31,12 +31,25 @@
 extern "C" {
 # endif
 
-# define DSN_API 
+# if defined(DSN_IN_CORE)
+    # if defined(_WIN32)
+    # define DSN_API __declspec(dllexport)
+    # else
+    # define DSN_API __attribute__((visibility("default")))
+    # endif
+# else
+    # if defined(_WIN32)
+    # define DSN_API __declspec(dllimport)
+    # else
+    # define DSN_API
+    # endif
+# endif
 
 # define DSN_MAX_TASK_CODE_NAME_LENGTH 48
 # define DSN_MAX_ADDRESS_NAME_LENGTH 16
 # define DSN_MAX_BUFFER_COUNT_IN_MESSAGE 64
 # define DSN_INVALID_HASH 0xdeadbeef
+# define DSN_MAX_APP_TYPE_NAME_LENGTH 32
 
 //------------------------------------------------------------------------------
 //
@@ -47,8 +60,18 @@ typedef int dsn_error_t;
 typedef void* (*dsn_app_create)(); // return app_context
 typedef dsn_error_t(*dsn_app_start)(void*, int, char**); // void* app_context, int argc, char** argv
 typedef void(*dsn_app_destroy)(void*, bool); // void* app_context, bool cleanup
+typedef struct dsn_app_info
+{
+    void* app_context_ptr; // returned by dsn_app_create
+    int   app_id;
+    char  type[DSN_MAX_APP_TYPE_NAME_LENGTH]; // upon registration 
+    char  name[DSN_MAX_APP_TYPE_NAME_LENGTH];
+} dsn_app_info;
+typedef void* (*dsn_checker_create)(const char*, dsn_app_info*, int); //name, input app-info/count
+typedef void(*dsn_checker_apply)(void*);
 
 extern DSN_API bool dsn_register_app_role(const char* type_name, dsn_app_create create, dsn_app_start start, dsn_app_destroy destroy);
+extern DSN_API int  dsn_register_app_checker(const char* name, dsn_checker_create create, dsn_checker_apply apply);
 extern DSN_API bool dsn_run_config(const char* config, bool sleep_after_init);
 
 //
@@ -209,6 +232,7 @@ extern DSN_API dsn_message_t dsn_msg_create_request(dsn_task_code_t rpc_code, in
 extern DSN_API dsn_message_t dsn_msg_create_response(dsn_message_t request);
 extern DSN_API void          dsn_msg_release(dsn_message_t msg); 
 extern DSN_API void          dsn_msg_update_request(dsn_message_t msg, int timeout_milliseconds, int hash);
+extern DSN_API void          dsn_msg_query_request(dsn_message_t msg, int* ptimeout_milliseconds, int* phash);
 extern DSN_API void          dsn_msg_write_next(dsn_message_t msg, /*out*/ void** ptr, /*out*/ size_t* size, size_t min_size);
 extern DSN_API void          dsn_msg_write_commit(dsn_message_t msg, size_t size);
 extern DSN_API bool          dsn_msg_read_next(dsn_message_t msg, /*out*/ void** ptr, /*out*/ size_t* size);

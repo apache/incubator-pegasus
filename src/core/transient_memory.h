@@ -26,7 +26,7 @@
 #pragma once
 
 # include <dsn/internal/dsn_types.h>
-# include <dsn/internal/utils.h>
+# include <dsn/cpp/utils.h>
 # include <dsn/service_api_c.h>
 
 namespace dsn 

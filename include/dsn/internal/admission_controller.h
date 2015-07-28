@@ -26,7 +26,7 @@
 # pragma once
 
 # include <dsn/internal/task_queue.h>
-# include <dsn/internal/utils.h>
+# include <dsn/cpp/utils.h>
 
 namespace dsn {
 

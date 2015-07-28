@@ -51,6 +51,13 @@ DSN_API void dsn_msg_update_request(dsn_message_t msg, int timeout_milliseconds,
     if (DSN_INVALID_HASH != hash) msg2->header->client.hash = hash;
 }
 
+DSN_API void dsn_msg_query_request(dsn_message_t msg, int* ptimeout_milliseconds, int* phash)
+{
+    auto msg2 = (::dsn::message_ex*)msg;
+    if (ptimeout_milliseconds) *ptimeout_milliseconds = msg2->header->client.timeout_ms;
+    if (phash) *phash = msg2->header->client.timeout_ms;
+}
+
 DSN_API dsn_message_t dsn_msg_create_response(dsn_message_t request)
 {
     auto msg = ((::dsn::message_ex*)request)->create_response();

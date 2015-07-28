@@ -123,8 +123,7 @@ function(ms_check_cxx11_support)
     endif()
 endfunction(ms_check_cxx11_support)
 
-
-function(dsn_add_library PROJ_NAME)
+function(dsn_add_library_ex PROJ_NAME PROJ_TYPE)
     if((NOT DEFINED DSN_RECURSIVE_SRC) OR (NOT DSN_RECURSIVE_SRC))
         set(MY_GLOB_OPTION "GLOB")
     else()
@@ -143,8 +142,19 @@ function(dsn_add_library PROJ_NAME)
     if (PROJ_SRC STREQUAL "")
         message (FATAL "input sources cannot be empty")
     endif()
-    ms_add_library("STATIC" ${PROJ_NAME} "${PROJ_SRC}" 1)
+    if ((NOT DEFINED PROJ_TYPE) OR (${PROJ_TYPE} STREQUAL ""))
+        set(PROJ_TYPE "STATIC")
+    endif()
+    ms_add_library(${PROJ_TYPE} ${PROJ_NAME} "${PROJ_SRC}" 1)
+endfunction(dsn_add_library_ex)
+
+function(dsn_add_library PROJ_NAME)
+    dsn_add_library_ex(${PROJ_NAME} "STATIC")
 endfunction(dsn_add_library)
+
+function(dsn_add_dynamic_library PROJ_NAME)
+    dsn_add_library_ex(${PROJ_NAME} "SHARED")
+endfunction(dsn_add_dynamic_library)
 
 function(dsn_add_executable PROJ_NAME BINPLACE_FILES)
     if((NOT DEFINED DSN_RECURSIVE_SRC) OR (NOT DSN_RECURSIVE_SRC))
@@ -188,7 +198,7 @@ function(dsn_setup_compiler_flags)
         add_definitions(-D_WIN32_WINNT=0x0501)
         add_definitions(-D_UNICODE)
         add_definitions(-DUNICODE)
-		add_compile_options(-MP)
+        add_compile_options(-MP)
         if(DEFINED DSN_PEDANTIC)
             add_compile_options(-WX)
         endif()
@@ -241,9 +251,6 @@ function(dsn_setup_packages)
     set(DSN_LIBS "")
     set(DSN_CORE_TARGETS
         dsn.failure_detector
-        dsn.tools.nfs
-		dsn.tools.simulator
-        dsn.tools.common
         dsn.dev.cpp
         dsn.core
         )

@@ -26,7 +26,7 @@
 # include <dsn/service_api_c.h>
 # include <dsn/internal/task.h>
 # include <dsn/internal/env_provider.h>
-# include <dsn/internal/utils.h>
+# include <dsn/cpp/utils.h>
 # include <dsn/internal/synchronize.h>
 
 # include "task_engine.h"

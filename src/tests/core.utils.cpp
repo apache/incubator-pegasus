@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-# include <dsn/internal/utils.h>
+# include <dsn/cpp/utils.h>
 # include <dsn/internal/link.h>
 # include <gtest/gtest.h>
 

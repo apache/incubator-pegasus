@@ -25,25 +25,10 @@
  */
 #pragma once
 
-#include <dsn/tool_api.h>
+# include <dsn/tool_api.h>
+# include <dsn/tool/global_checker.h>
 
 namespace dsn { namespace tools {
-
-class checker
-{
-public:
-    checker(const char* name);
-
-    virtual void check() = 0;
-
-    const std::string& name() const { return _name; }
-
-protected:
-    apps _apps;
-
-private:
-    std::string _name;
-};
 
 class simulator : public tool_app
 {
