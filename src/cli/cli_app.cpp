@@ -30,8 +30,7 @@
 namespace dsn {
     namespace service {
 
-        cli::cli(service_app_spec* s)
-        : service_app(s)
+        cli::cli()
         {
             _timeout_seconds = 10; // 10 seconds by default
         }

@@ -25,9 +25,9 @@
  */
 # include <dsn/internal/global_config.h>
 # include <thread>
-# include <dsn/internal/logging.h>
-# include <dsn/internal/task_code.h>
+# include <dsn/internal/task_spec.h>
 # include <dsn/internal/network.h>
+# include <dsn/internal/singleton_store.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -36,100 +36,21 @@
 
 namespace dsn {
 
-threadpool_spec::threadpool_spec(const threadpool_spec& source)
-    : pool_code(source.pool_code)
-{
-    *this = source;
-}
-
-threadpool_spec& threadpool_spec::operator=(const threadpool_spec& source)
-{
-    name = source.name;
-    pool_code.reset(source.pool_code);
-    worker_count = source.worker_count;
-    worker_priority = source.worker_priority;
-    worker_share_core = source.worker_share_core;
-    worker_affinity_mask = source.worker_affinity_mask;
-    max_input_queue_length = source.max_input_queue_length;
-    partitioned = source.partitioned;
-    
-    queue_factory_name = source.queue_factory_name;
-    worker_factory_name = source.worker_factory_name;
-    queue_aspects = source.queue_aspects;
-    worker_aspects = source.worker_aspects;
-
-    admission_controller_factory_name = source.admission_controller_factory_name;
-    admission_controller_arguments = source.admission_controller_arguments;
-
-    return *this;
-}
-
-bool threadpool_spec::init(configuration_ptr& config, __out_param std::vector<threadpool_spec>& specs)
-{
-    /*
-    [threadpool.default]
-    worker_count = 4
-    worker_priority = THREAD_xPRIORITY_NORMAL
-    max_input_queue_length = 10000
-    partitioned = false
-    queue_aspects = xxx
-    worker_aspects = xxx
-    admission_controller_factory_name = xxx
-    admission_controller_arguments = xxx
-
-    [threadpool.THREAD_POOL_REPLICATION]
-    name = Thr.replication
-    run = true
-    worker_count = 4
-    worker_priority = THREAD_xPRIORITY_NORMAL
-    max_input_queue_length = 10000
-    partitioned = false
-    queue_aspects = xxx
-    worker_aspects = xxx
-    admission_controller_factory_name = xxx
-    admission_controller_arguments = xxx
-    */
-
-    threadpool_spec default_spec("placeholder");
-    if (false == read_config(config, "threadpool.default", default_spec, nullptr))
-        return false;
-    
-    specs.clear();
-    for (int code = 0; code <= threadpool_code::max_value(); code++)
-    {
-        std::string section_name = std::string("threadpool.") + std::string(threadpool_code::to_string(code));
-        threadpool_spec spec(default_spec);
-        if (false == read_config(config, section_name.c_str(), spec, &default_spec))
-            return false;
-
-        spec.pool_code.reset(threadpool_code::from_string(threadpool_code::to_string(code), THREAD_POOL_INVALID));
-        if ("" == spec.name) spec.name = std::string(threadpool_code::to_string(code));
-
-        if (false == spec.worker_share_core && 0 == spec.worker_affinity_mask)
-        {
-            spec.worker_affinity_mask = (1 << std::thread::hardware_concurrency()) - 1;
-        }
-            
-        specs.push_back(spec);
-    }
-
-    return true;
-}
-
-
 static bool build_client_network_confs(
     const char* section, 
-    configuration_ptr& config, 
     __out_param network_client_configs& nss,
     network_client_configs* default_spec)
 {
     nss.clear();
 
-    std::vector<std::string> keys;
-    config->get_all_keys(section, keys);
+    const char* keys[128];
+    int kcapacity = 128;
+    int kcount = dsn_config_get_all_keys(section, keys, &kcapacity);
+    dassert(kcount <= 128, "");
 
-    for (auto& k : keys)
+    for (int i = 0; i < kcapacity; i++)
     {
+        std::string k = keys[i];
         if (k.length() <= strlen("network.client."))
             continue;
 
@@ -149,7 +70,7 @@ static bool build_client_network_confs(
 
             // dsn::tools::asio_network_provider,65536
             std::list<std::string> vs;
-            std::string v = config->get_string_value(section, k.c_str(), "");
+            std::string v = dsn_config_get_value_string(section, k.c_str(), "");
             utils::split_args(v.c_str(), vs, ',');
 
             if (vs.size() != 2)
@@ -196,7 +117,6 @@ static bool build_client_network_confs(
 
 static bool build_server_network_confs(
     const char* section,
-    configuration_ptr& config,
     __out_param network_server_configs& nss,
     network_server_configs* default_spec,
     const std::vector<int>& ports,
@@ -204,11 +124,14 @@ static bool build_server_network_confs(
 {
     nss.clear();
 
-    std::vector<std::string> keys;
-    config->get_all_keys(section, keys);
+    const char* keys[128];
+    int kcapacity = 128;
+    int kcount = dsn_config_get_all_keys(section, keys, &kcapacity);
+    dassert(kcount <= 128, "");
 
-    for (auto& k : keys)
+    for (int i = 0; i < kcapacity; i++)
     {
+        std::string k = keys[i];
         if (k.length() <= strlen("network.server."))
             continue;
 
@@ -259,7 +182,7 @@ static bool build_server_network_confs(
 
             // NET_HDR_DSN, dsn::tools::asio_network_provider,65536
             std::list<std::string> vs;
-            std::string v = config->get_string_value(section, k.c_str(), "");
+            std::string v = dsn_config_get_value_string(section, k.c_str(), "");
             utils::split_args(v.c_str(), vs, ',');
 
             if (vs.size() != 3)
@@ -345,7 +268,6 @@ service_app_spec::service_app_spec(const service_app_spec& r)
 bool service_app_spec::init(
     const char* section, 
     const char* r, 
-    configuration_ptr& config, 
     service_app_spec* default_value,
     network_client_configs* default_client_nets,
     network_server_configs* default_server_nets
@@ -353,30 +275,31 @@ bool service_app_spec::init(
 {
     id = 0;
     index = 0;
-    role = r;
+    name = r;
     config_section = std::string(section);
 
-    if (!read_config(config, section, *this, default_value))
+    if (!read_config(section, *this, default_value))
         return false;
 
     std::sort(ports.begin(), ports.end());
 
     if (!build_client_network_confs(
         section,
-        config,
         this->network_client_confs,
         default_value ? &default_value->network_client_confs : default_client_nets
         ))
         return false;
 
-    return build_server_network_confs(
+    if (!build_server_network_confs(
         section,
-        config,
         this->network_server_confs,
         default_value ? &default_value->network_server_confs : default_server_nets,
         ports,
         default_value == nullptr
-        );
+        ))
+        return false;
+
+    return true;
 }
 
 
@@ -401,30 +324,28 @@ bool network_server_config::operator < (const network_server_config& r) const
     return port < r.port || (port == r.port && channel < r.channel);
 }
 
-bool service_spec::init(configuration_ptr c)
+bool service_spec::init()
 {
-    config = c;
-
     // init common spec
-    if (!read_config(c, "core", *this, nullptr))
+    if (!read_config("core", *this, nullptr))
         return false;
 
     // init thread pools
-    if (!threadpool_spec::init(config, threadpool_specs))
+    if (!threadpool_spec::init(threadpool_specs))
         return false;
 
     // init task specs
-    if (!task_spec::init(config))
+    if (!task_spec::init())
         return false;
     
     return true;
 }
 
-bool service_spec::init_app_specs(configuration_ptr c)
+bool service_spec::init_app_specs()
 {
     // init service apps
     service_app_spec default_app;
-    if (!default_app.init("apps.default", "default", config, nullptr,
+    if (!default_app.init("apps.default", "default", nullptr,
         &this->network_default_client_cfs,
         &this->network_default_server_cfs
         ))
@@ -439,8 +360,18 @@ bool service_spec::init_app_specs(configuration_ptr c)
         if (it->substr(0, strlen("apps.")) == std::string("apps.") && *it != std::string("apps.default"))
         {
             service_app_spec app;
-            if (!app.init((*it).c_str(), it->substr(5).c_str(), config, &default_app))
+            if (!app.init((*it).c_str(), it->substr(5).c_str(), &default_app))
                 return false;
+
+            auto& store = ::dsn::utils::singleton_store<std::string, ::dsn::service_app_role>::instance();
+            ::dsn::service_app_role role;
+            if (!store.get(app.type, role))
+            {
+                printf("service type '%s' not registered\n", app.type.c_str());
+                return false;
+            }
+
+            app.role = role;
 
             auto ports = app.ports;   
             auto nsc = app.network_server_confs;

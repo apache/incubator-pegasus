@@ -26,23 +26,23 @@
 
 #pragma once
 
-# include <dsn/serverlet.h>
+# include <dsn/cpp/serverlet.h>
 # include "cli.client.h"
 
 namespace dsn {
     namespace service {
 
-        class cli : public service_app
+        class cli : public service_app<cli>
         {
         public:
-            cli(service_app_spec* s);
-            virtual error_code start(int argc, char** argv);
+            cli();
+            virtual ::dsn::error_code start(int argc, char** argv);
             virtual void stop(bool cleanup = false);
 
         private:
-            cli_client      _client;
+            cli_client     _client;
             dsn_address_t  _target;
-            int             _timeout_seconds;
+            int            _timeout_seconds;
         };
     }
 }

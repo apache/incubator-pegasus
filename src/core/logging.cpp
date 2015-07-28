@@ -23,55 +23,54 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+# include <dsn/service_api_c.h>
 # include <dsn/internal/logging_provider.h>
 # include <dsn/tool_api.h>
 # include "service_engine.h"
+# include <dsn/cpp/auto_code.h>
 
-namespace dsn {
+dsn_log_level_t dsn_log_start_level = dsn_log_level_t::LOG_LEVEL_INFORMATION;
 
-    logging_level logging_start_level = logging_level::log_level_INFORMATION;
-
-    static void log_on_sys_exit(sys_exit_type)
+static void log_on_sys_exit(::dsn::sys_exit_type)
+{
+    ::dsn::logging_provider* logger = ::dsn::service_engine::instance().logging();
+    if (logger != nullptr)
     {
-        logging_provider* logger = service_engine::instance().logging();
-        if (logger != nullptr)
-        {
-            logger->flush();
-        }
+        logger->flush();
     }
+}
 
-    void log_init(configuration_ptr config)
+void dsn_log_init()
+{
+    dsn_log_start_level = enum_from_string(
+        dsn_config_get_value_string("core", "log_start_level", enum_to_string(dsn_log_start_level)),
+        dsn_log_level_t::LOG_LEVEL_INVALID
+        );
+
+    dassert(dsn_log_start_level != dsn_log_level_t::LOG_LEVEL_INVALID, "invalid [core] log_start_level specified");
+
+    // register log flush on exit
+    ::dsn::tools::sys_exit.put_back(log_on_sys_exit, "log.flush");
+}
+
+void dsn_logv(const char *file, const char *function, const int line, dsn_log_level_t logLevel, const char* title, const char* fmt, va_list args)
+{
+    ::dsn::logging_provider* logger = ::dsn::service_engine::instance().logging();
+    if (logger != nullptr)
     {
-        logging_start_level = enum_from_string(
-            config->get_string_value("core", "logging_start_level", enum_to_string(logging_start_level)).c_str(),
-            logging_level::log_level_INVALID
-            );
-        dassert(logging_start_level != logging_level::log_level_INVALID, "invalid [core] logging_start_level specified");
+        logger->dsn_logv(file, function, line, logLevel, title, fmt, args);
+    }        
+}
 
-        // register log flush on exit
-        ::dsn::tools::sys_exit.put_back(log_on_sys_exit, "log.flush");
-    }
+void dsn_logf(const char *file, const char *function, const int line, dsn_log_level_t logLevel, const char* title, const char* fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    dsn_logv(file, function, line, logLevel, title, fmt, ap);
+    va_end(ap);
+}
 
-    void logv(const char *file, const char *function, const int line, logging_level logLevel, const char* title, const char* fmt, va_list args)
-    {
-        logging_provider* logger = service_engine::instance().logging();
-        if (logger != nullptr)
-        {
-            logger->logv(file, function, line, logLevel, title, fmt, args);
-        }        
-    }
-
-    void logv(const char *file, const char *function, const int line, logging_level logLevel, const char* title, const char* fmt, ...)
-    {
-        va_list ap;
-        va_start(ap, fmt);
-        logv(file, function, line, logLevel, title, fmt, ap);
-        va_end(ap);
-    }
-
-    void logv(const char *file, const char *function, const int line, logging_level logLevel, const char* title)
-    {
-        logv(file, function, line, logLevel, title, "");
-    }
-
-} // end name
+void dsn_log(const char *file, const char *function, const int line, dsn_log_level_t logLevel, const char* title)
+{
+    dsn_logf(file, function, line, logLevel, title, "");
+}

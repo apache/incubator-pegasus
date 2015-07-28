@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 #include <boost/asio.hpp>
-#include <dsn/service_api.h>
+#include <dsn/service_api_c.h>
 #include <dsn/internal/singleton_store.h>
 #include "network.sim.h" 
 
@@ -47,14 +47,32 @@ namespace dsn { namespace tools {
         // nothing to do
     }
 
-    void sim_client_session::send(message_ptr& msg)
+    static message_ex* virtual_send_message(message_ex* msg)
+    {
+        std::shared_ptr<char> buffer((char*)malloc(msg->header->body_length + sizeof(message_header)));
+        char* tmp = buffer.get();
+
+        for (auto& buf : msg->buffers)
+        {
+            memcpy((void*)tmp, (const void*)buf.data(), (size_t)buf.length());
+            tmp += buf.length();
+        }
+
+        blob bb(buffer, 0, msg->header->body_length + sizeof(message_header));
+        message_ex* recv_msg = message_ex::create_receive_message(bb);
+        recv_msg->from_address = msg->from_address;
+        recv_msg->to_address = msg->to_address;
+        return recv_msg;
+    }
+
+    void sim_client_session::send(message_ex* msg)
     {
         sim_network_provider* rnet = nullptr;
-        if (!s_switch[task_spec::get(msg->header().local_rpc_code)->rpc_call_channel].get(msg->header().to_address, rnet))
+        if (!s_switch[task_spec::get(msg->local_rpc_code)->rpc_call_channel].get(msg->to_address, rnet))
         {
             dwarn("cannot find destination node %s:%hu in simulator", 
-                msg->header().to_address.name, 
-                msg->header().to_address.port
+                msg->to_address.name, 
+                msg->to_address.port
                 );
             return;
         }
@@ -67,12 +85,10 @@ namespace dsn { namespace tools {
             rnet->on_server_session_accepted(server_session);
         }
 
-        message_ptr recv_msg(new message(msg->writer().get_buffer()));
-        recv_msg->header().from_address = msg->header().from_address;
-        recv_msg->header().to_address = msg->header().to_address;
+        message_ex* recv_msg = virtual_send_message(msg);
 
         server_session->on_recv_request(recv_msg, 
-            recv_msg->header().from_address == recv_msg->header().to_address ?
+            recv_msg->from_address == recv_msg->to_address ?
             0 : rnet->net_delay_milliseconds()
             );
     }
@@ -83,14 +99,12 @@ namespace dsn { namespace tools {
         _client = client;
     }
 
-    void sim_server_session::send(message_ptr& reply_msg)
+    void sim_server_session::send(message_ex* reply_msg)
     {
-        message_ptr recv_msg(new message(reply_msg->writer().get_buffer()));
-        recv_msg->header().from_address = reply_msg->header().from_address;
-        recv_msg->header().to_address = reply_msg->header().to_address;
+        message_ex* recv_msg = virtual_send_message(reply_msg);
 
-        _client->on_recv_reply(recv_msg->header().id, recv_msg,
-            recv_msg->header().from_address == recv_msg->header().to_address ?
+        _client->on_recv_reply(recv_msg->header->id, recv_msg,
+            recv_msg->from_address == recv_msg->to_address ?
             0 : (static_cast<sim_network_provider*>(&_net))->net_delay_milliseconds()
             );
     }
@@ -138,6 +152,6 @@ namespace dsn { namespace tools {
 
     uint32_t sim_network_provider::net_delay_milliseconds() const
     {
-        return static_cast<uint32_t>(dsn::service::env::random32(_min_message_delay_microseconds, _max_message_delay_microseconds)) / 1000;
+        return static_cast<uint32_t>(dsn_random32(_min_message_delay_microseconds, _max_message_delay_microseconds)) / 1000;
     }    
 }} // end namespace

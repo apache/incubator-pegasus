@@ -50,8 +50,8 @@ public:
     //
     // initialization
     //
-    void initialize(const replication_options& opts, configuration_ptr config, bool clear = false);
-    void initialize(configuration_ptr config, bool clear = false);
+    void initialize(const replication_options& opts, bool clear = false);
+    void initialize(bool clear = false);
     void set_options(const replication_options& opts) { _options = opts; }
     void open_service();
     void close();
@@ -59,8 +59,8 @@ public:
     //
     //    requests from clients
     //
-    void on_client_write(message_ptr& request);
-    void on_client_read(message_ptr& request);
+    void on_client_write(dsn_message_t request);
+    void on_client_read(dsn_message_t request);
 
     //
     //    messages from meta server
@@ -74,7 +74,7 @@ public:
     //        - commit
     //        - learn
     //
-    void on_prepare(message_ptr& request);    
+    void on_prepare(dsn_message_t request);    
     void on_learn(const learn_request& request, __out_param learn_response& response);
     void on_learn_completion_notification(const group_check_response& report);
     void on_add_learner(const group_check_request& request);
@@ -102,7 +102,6 @@ public:
     replica_ptr get_replica(global_partition_id gpid, bool new_when_possible = false, const char* app_type = nullptr);
     replica_ptr get_replica(int32_t app_id, int32_t partition_index);
     replication_options& options() { return _options; }
-    configuration_ptr config() const { return _config; }
     bool is_connected() const { return NS_Connected == _state; }
 
     // p_tableID = MAX_UInt32 for replica of all tables.
@@ -118,7 +117,7 @@ private:
 
     void query_configuration_by_node();
     void on_meta_server_disconnected_scatter(replica_stub_ptr this_, global_partition_id gpid);
-    void on_node_query_reply(error_code err, message_ptr& request, message_ptr& response);
+    void on_node_query_reply(error_code err, dsn_message_t request, dsn_message_t response);
     void on_node_query_reply_scatter(replica_stub_ptr this_, const partition_configuration& config);
     void on_node_query_reply_scatter2(replica_stub_ptr this_, global_partition_id gpid);
     void remove_replica_on_meta_server(const partition_configuration& config);
@@ -149,7 +148,6 @@ private:
 
     // constants
     replication_options         _options;
-    configuration_ptr           _config;
     replica_state_subscriber    _replica_state_subscriber;
     bool                        _is_long_subscriber;
     
@@ -160,7 +158,7 @@ private:
 
 private:    
     friend class replica;
-    void response_client_error(message_ptr& request, int error);
+    void response_client_error(dsn_message_t request, int error);
     void replay_mutation(mutation_ptr& mu, replicas* rps);
 };
 

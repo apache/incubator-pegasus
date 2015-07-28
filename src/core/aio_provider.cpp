@@ -25,7 +25,6 @@
  */
 # include <dsn/internal/aio_provider.h>
 # include "disk_engine.h"
-# include <dsn/internal/logging.h>
 
 namespace dsn {
 

@@ -32,7 +32,6 @@
 
 # include "rpc_engine.h"
 # include "service_engine.h"
-# include <dsn/service_api.h>
 # include <dsn/internal/perf_counters.h>
 # include <dsn/internal/factory_store.h>
 # include <set>
@@ -71,7 +70,7 @@ namespace dsn {
         dassert(_requests.size() == 0, "all rpc enries must be removed before the matcher ends");
     }
 
-    bool rpc_client_matcher::on_recv_reply(uint64_t key, message_ptr& reply, int delay_ms)
+    bool rpc_client_matcher::on_recv_reply(uint64_t key, message_ex* reply, int delay_ms)
     {
         dassert(reply != nullptr, "cannot receive an empty reply message");
 
@@ -125,15 +124,13 @@ namespace dsn {
             }
         }
 
-        message_ptr null_msg(nullptr);
-        call->enqueue(ERR_TIMEOUT, null_msg);
+        call->enqueue(ERR_TIMEOUT, nullptr);
     }
     
-    void rpc_client_matcher::on_call(message_ptr& request, rpc_response_task_ptr& call)
+    void rpc_client_matcher::on_call(message_ex* request, rpc_response_task_ptr& call)
     {
-        message* msg = request.get();
         task* timeout_task;
-        dsn_message_header& hdr = msg->header();
+        message_header& hdr = *request->header;
 
         timeout_task = (new rpc_timeout_task(this, hdr.id));
 
@@ -145,7 +142,7 @@ namespace dsn {
             pr.first->second.timeout_task = timeout_task;
         }
 
-        timeout_task->set_delay(msg->header().client.timeout_ms);
+        timeout_task->set_delay(hdr.client.timeout_ms);
         timeout_task->enqueue();
     }
 
@@ -289,51 +286,54 @@ namespace dsn {
     
     bool rpc_engine::register_rpc_handler(rpc_handler_ptr& handler)
     {
+        auto name = std::string(dsn_task_code_to_string(handler->code));
+
         utils::auto_write_lock l(_handlers_lock);
-        auto it = _handlers.find(handler->code.to_string());
+        auto it = _handlers.find(name);
         auto it2 = _handlers.find(handler->name);
         if (it == _handlers.end() && it2 == _handlers.end())
         {
-            _handlers[handler->code.to_string()] = handler;
+            _handlers[name] = handler;
             _handlers[handler->name] = handler;
             return true;
         }
         else
         {
-            dassert(false, "rpc registration confliction for '%s'", handler->code.to_string());
+            dassert(false, "rpc registration confliction for '%s'", name.c_str());
             return false;
         }
     }
 
-    bool rpc_engine::unregister_rpc_handler(task_code rpc_code)
+    rpc_handler_ptr rpc_engine::unregister_rpc_handler(dsn_task_code_t rpc_code)
     {
         utils::auto_write_lock l(_handlers_lock);
-        auto it = _handlers.find(rpc_code.to_string());
+        auto it = _handlers.find(dsn_task_code_to_string(rpc_code));
         if (it == _handlers.end())
-            return false;
+            return nullptr;
 
+        auto ret = it->second;
         std::string name = it->second->name;
         _handlers.erase(it);
         _handlers.erase(name);
-        return true;
+
+        return ret;
     }
 
-    void rpc_engine::on_recv_request(message_ptr& msg, int delay_ms)
+    void rpc_engine::on_recv_request(message_ex* msg, int delay_ms)
     {
-        rpc_handler_ptr handler;
+        rpc_request_task* tsk = nullptr;
         {
             utils::auto_read_lock l(_handlers_lock);
-            auto it = _handlers.find(msg->header().rpc_name);
+            auto it = _handlers.find(msg->header->rpc_name);
             if (it != _handlers.end())
             {
-                handler = it->second;
+                msg->local_rpc_code = (uint16_t)it->second->code;
+                tsk = new rpc_request_task(msg, it->second, _node);                
             }
         }
 
-        if (handler != nullptr)
+        if (tsk != nullptr)
         {
-            msg->header().local_rpc_code = (uint16_t)handler->code;
-            rpc_request_task_ptr tsk = handler->handler->new_request_task(msg, node());
             tsk->set_delay(delay_ms);
             tsk->enqueue(_node);
         }
@@ -342,42 +342,39 @@ namespace dsn {
             // TODO: warning about this msg
             dwarn(
                 "recv unknown message with type %s from %s:%hu",
-                msg->header().rpc_name,
-                msg->header().from_address.name,
-                msg->header().from_address.port
+                msg->header->rpc_name,
+                msg->from_address.name,
+                msg->from_address.port
                 );
         }
-
-        //counters.RpcServerQps->increment();
     }
 
-    void rpc_engine::call(message_ptr& request, rpc_response_task_ptr& call)
+    void rpc_engine::call(message_ex* request, rpc_response_task_ptr& call)
     {
-        message* msg = request.get();
-        
-        auto sp = task_spec::get(msg->header().local_rpc_code);
-        auto nts_us = ::dsn::service::env::now_us();
+        auto sp = task_spec::get(request->local_rpc_code);
+        auto nts_us = dsn_now_us();
         auto& named_nets = _client_nets[sp->rpc_call_header_format];
         network* net = named_nets[sp->rpc_call_channel];
+        auto& hdr = *request->header;
 
         dassert(nullptr != net, "network not present for rpc channel '%s' with format '%s' used by rpc %s",
             sp->rpc_call_channel.to_string(),
             sp->rpc_call_header_format.to_string(),
-            msg->header().rpc_name
+            hdr.rpc_name
             );
 
-        msg->header().client.port = primary_address().port;
-        msg->header().from_address = primary_address();
-        msg->header().rpc_id = utils::get_random64();
-        msg->seal(_message_crc_required);
+        hdr.client.port = primary_address().port;
+        hdr.rpc_id = utils::get_random64();
+        request->from_address = primary_address();
 
-        if (!sp->on_rpc_call.execute(task::get_current_task(), msg, call.get(), true))
+        request->seal(_message_crc_required);
+
+        if (!sp->on_rpc_call.execute(task::get_current_task(), request, call.get(), true))
         {
             if (call != nullptr)
             {
-                message_ptr nil;
-                call->set_delay(msg->header().client.timeout_ms);
-                call->enqueue(ERR_TIMEOUT, nil);
+                call->set_delay(hdr.client.timeout_ms);
+                call->enqueue(ERR_TIMEOUT, nullptr);
             }   
             return;
         }
@@ -385,17 +382,16 @@ namespace dsn {
         net->call(request, call);
     }
 
-    void rpc_engine::reply(message_ptr& response)
+    void rpc_engine::reply(message_ex* response)
     {
-        auto s = response->server_session().get();
+        auto s = response->server_session.get();
         if (s == nullptr)
             return;
 
-        message* msg = response.get();
-        msg->seal(_message_crc_required);
+        response->seal(_message_crc_required);
 
-        auto sp = task_spec::get(msg->header().local_rpc_code);
-        if (!sp->on_rpc_reply.execute(task::get_current_task(), msg, true))
+        auto sp = task_spec::get(response->local_rpc_code);
+        if (!sp->on_rpc_reply.execute(task::get_current_task(), response, true))
             return;
                 
         s->send(response);

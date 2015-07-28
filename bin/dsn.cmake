@@ -241,9 +241,10 @@ function(dsn_setup_packages)
     set(DSN_LIBS "")
     set(DSN_CORE_TARGETS
         dsn.failure_detector
-        dsn.tools.simulator
+        dsn.tools.nfs
+		dsn.tools.simulator
         dsn.tools.common
-        dsn.dev
+        dsn.dev.cpp
         dsn.core
         )
 

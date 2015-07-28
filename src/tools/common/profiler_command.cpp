@@ -31,7 +31,7 @@ namespace dsn {
     namespace tools {
         static int find_task_id(const std::string &name)
         {
-            auto code = task_code::from_string(name.c_str(), TASK_CODE_INVALID);
+            auto code = dsn_task_code_from_string(name.c_str(), TASK_CODE_INVALID);
             if (code == TASK_CODE_INVALID)
             {
                 return -2;

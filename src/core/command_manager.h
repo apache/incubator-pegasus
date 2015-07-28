@@ -43,7 +43,7 @@ namespace dsn {
         void run_console();
         void start_local_cli();
         void start_remote_cli();
-        void on_remote_cli(message_ptr& request);
+        void on_remote_cli(dsn_message_t req);
 
     private:
         bool run_command(const std::string& cmd, const std::vector<std::string>& args, __out_param std::string& output);

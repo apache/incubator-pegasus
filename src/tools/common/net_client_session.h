@@ -46,11 +46,11 @@ namespace dsn {
             ~net_client_session();
 
             virtual void connect() { return client_net_io::connect(); }
-            virtual void send(message_ptr& msg) { return write(msg); }
+            virtual void send(message_ex* msg) { return write(msg); }
             virtual void on_closed() { return on_disconnected(); }
-            virtual void on_message_read(message_ptr& msg)
+            virtual void on_message_read(message_ex* msg)
             {
-                on_recv_reply(msg->header().id, msg, 0);
+                on_recv_reply(msg->header->id, msg, 0);
             }
             virtual void add_reference() { add_ref(); }
             virtual void release_reference() { release_ref(); }

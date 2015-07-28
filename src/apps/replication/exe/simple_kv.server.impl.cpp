@@ -37,8 +37,8 @@ namespace dsn {
     namespace replication {
         namespace application {
             
-            simple_kv_service_impl::simple_kv_service_impl(replica* replica, configuration_ptr& cf)
-                : simple_kv_service(replica, cf)
+            simple_kv_service_impl::simple_kv_service_impl(replica* replica)
+                : simple_kv_service(replica)
             {
                 _test_file_learning = false;
             }
@@ -254,7 +254,7 @@ namespace dsn {
                 if (_test_file_learning)
                 {
                     std::stringstream ss;                
-                    ss << env::random32(0, 10000);
+                    ss << dsn_random32(0, 10000);
 
                     auto learn_test_file = data_dir() + "/test_learning_" + ss.str() + ".txt";
                     state.files.push_back(learn_test_file);

@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 # include <dsn/internal/message_parser.h>
-# include <dsn/internal/logging.h>
+# include <dsn/service_api_c.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -91,26 +91,26 @@ namespace dsn {
     {
     }
 
-    message_ptr dsn_message_parser::get_message_on_receive(int read_length, __out_param int& read_next)
+    message_ex* dsn_message_parser::get_message_on_receive(int read_length, __out_param int& read_next)
     {
         mark_read(read_length);
 
-        if (_read_buffer_occupied >= DSN_MSG_HDR_SERIALIZED_SIZE)
+        if (_read_buffer_occupied >= sizeof(message_header))
         {            
-            int msg_sz = DSN_MSG_HDR_SERIALIZED_SIZE +
-                dsn_message_header_helper::get_body_length((char*)_read_buffer.data());
+            int msg_sz = sizeof(message_header) +
+                message_ex::get_body_length((char*)_read_buffer.data());
 
             // msg done
             if (_read_buffer_occupied >= msg_sz)
             {
                 auto msg_bb = _read_buffer.range(0, msg_sz);
-                message_ptr msg = new message(msg_bb, true);
+                message_ex* msg = message_ex::create_receive_message(msg_bb);
 
                 dassert(msg->is_right_header() && msg->is_right_body(), "");
 
                 _read_buffer = _read_buffer.range(msg_sz);
                 _read_buffer_occupied -= msg_sz;
-                read_next = DSN_MSG_HDR_SERIALIZED_SIZE;
+                read_next = sizeof(message_header);
                 return msg;
             }
             else
@@ -122,8 +122,18 @@ namespace dsn {
 
         else
         {
-            read_next = DSN_MSG_HDR_SERIALIZED_SIZE - _read_buffer_occupied;
+            read_next = sizeof(message_header) - _read_buffer_occupied;
             return nullptr;
         }
     }
+
+    void dsn_message_parser::prepare_buffers_on_send(message_ex* msg, __out_param std::vector<send_buf>& buffers)
+    {
+        buffers.clear();
+        for (auto& buf : msg->buffers)
+        {
+            buffers.push_back(send_buf{(void*)buf.data(), (size_t)buf.length()});
+        }
+    }
+
 }

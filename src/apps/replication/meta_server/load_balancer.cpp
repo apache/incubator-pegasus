@@ -97,7 +97,7 @@ dsn_address_t load_balancer::find_minimal_load_machine(bool primaryOnly)
         candidate_count++;
     }
 
-    return stats[env::random32(0, candidate_count - 1)].first;
+    return stats[dsn_random32(0, candidate_count - 1)].first;
 }
 
 void load_balancer::run_lb(partition_configuration& pc)
@@ -112,7 +112,7 @@ void load_balancer::run_lb(partition_configuration& pc)
     {
         if (pc.secondaries.size() > 0)
         {
-            proposal.node = pc.secondaries[env::random32(0, static_cast<int>(pc.secondaries.size()) - 1)];
+            proposal.node = pc.secondaries[dsn_random32(0, static_cast<int>(pc.secondaries.size()) - 1)];
             proposal.type = CT_UPGRADE_TO_PRIMARY;
         }
         else

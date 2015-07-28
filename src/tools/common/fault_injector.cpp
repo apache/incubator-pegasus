@@ -25,7 +25,7 @@
  */
 
 #include <dsn/toollet/fault_injector.h>
-#include <dsn/service_api.h>
+#include <dsn/service_api_c.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -61,24 +61,24 @@ namespace dsn {
         };
 
         CONFIG_BEGIN(fj_opt)
-            CONFIG_FLD(bool, fault_injection_enabled, true)
+            CONFIG_FLD(bool, bool, fault_injection_enabled, true)
 
-            CONFIG_FLD(double, rpc_request_drop_ratio, 0.0001)
-            CONFIG_FLD(double, rpc_response_drop_ratio, 0.001)
-            CONFIG_FLD(double, disk_read_fail_ratio, 0.000001)
-            CONFIG_FLD(double, disk_write_fail_ratio, 0.000001)
+            CONFIG_FLD(double, double, rpc_request_drop_ratio, 0.0001)
+            CONFIG_FLD(double, double, rpc_response_drop_ratio, 0.001)
+            CONFIG_FLD(double, double, disk_read_fail_ratio, 0.000001)
+            CONFIG_FLD(double, double, disk_write_fail_ratio, 0.000001)
 
-            CONFIG_FLD(uint32_t, rpc_message_delay_ms_min, 0)
-            CONFIG_FLD(uint32_t, rpc_message_delay_ms_max, 1000)
-            CONFIG_FLD(uint32_t, disk_io_delay_ms_min, 1)
-            CONFIG_FLD(uint32_t, disk_io_delay_ms_max, 12)
-            CONFIG_FLD(uint32_t, execution_extra_delay_us_max, 0)
+            CONFIG_FLD(uint32_t, uint64, rpc_message_delay_ms_min, 0)
+            CONFIG_FLD(uint32_t, uint64, rpc_message_delay_ms_max, 1000)
+            CONFIG_FLD(uint32_t, uint64, disk_io_delay_ms_min, 1)
+            CONFIG_FLD(uint32_t, uint64, disk_io_delay_ms_max, 12)
+            CONFIG_FLD(uint32_t, uint64, execution_extra_delay_us_max, 0)
 
-            CONFIG_FLD(uint32_t, node_crash_minutes_min, 40)
-            CONFIG_FLD(uint32_t, node_crash_minutes_max, 60)
-            CONFIG_FLD(uint32_t, node_crash_minutes_recover_min, 1)
-            CONFIG_FLD(uint32_t, node_crash_minutes_recover_max, 4)
-            CONFIG_FLD(bool, node_crashed, false)
+            CONFIG_FLD(uint32_t, uint64, node_crash_minutes_min, 40)
+            CONFIG_FLD(uint32_t, uint64, node_crash_minutes_max, 60)
+            CONFIG_FLD(uint32_t, uint64, node_crash_minutes_recover_min, 1)
+            CONFIG_FLD(uint32_t, uint64, node_crash_minutes_recover_max, 4)
+            CONFIG_FLD(bool, bool, node_crashed, false)
         CONFIG_END
         
         static fj_opt* s_fj_opts = nullptr;
@@ -97,7 +97,7 @@ namespace dsn {
             fj_opt& opt = s_fj_opts[this_->spec().code];
             if (opt.execution_extra_delay_us_max > 0)
             {
-                auto d = service::env::random32(0, opt.execution_extra_delay_us_max);
+                auto d = dsn_random32(0, opt.execution_extra_delay_us_max);
                 std::this_thread::sleep_for(std::chrono::microseconds(d));
             }
         }
@@ -127,14 +127,14 @@ namespace dsn {
             switch (callee->aio()->type)
             {
             case AIO_Read:
-                if (service::env::probability() < s_fj_opts[callee->spec().code].disk_read_fail_ratio)
+                if (dsn_probability() < s_fj_opts[callee->spec().code].disk_read_fail_ratio)
                 {
                     callee->set_error_code(ERR_FILE_OPERATION_FAILED);
                     return false;
                 }
                 break;
             case AIO_Write:
-                if (service::env::probability() < s_fj_opts[callee->spec().code].disk_write_fail_ratio)
+                if (dsn_probability() < s_fj_opts[callee->spec().code].disk_write_fail_ratio)
                 {
                     callee->set_error_code(ERR_FILE_OPERATION_FAILED);
                     return false;
@@ -148,14 +148,14 @@ namespace dsn {
         static void fault_on_aio_enqueue(aio_task* this_)
         {
             fj_opt& opt = s_fj_opts[this_->spec().code];
-            this_->set_delay(service::env::random32(opt.disk_io_delay_ms_min, opt.disk_io_delay_ms_max));
+            this_->set_delay(dsn_random32(opt.disk_io_delay_ms_min, opt.disk_io_delay_ms_max));
         }
 
         // return true means continue, otherwise early terminate with task::set_error_code
-        static bool fault_on_rpc_call(task* caller, message* req, rpc_response_task* callee)
+        static bool fault_on_rpc_call(task* caller, message_ex* req, rpc_response_task* callee)
         {
-            fj_opt& opt = s_fj_opts[req->header().local_rpc_code];
-            if (service::env::probability() < opt.rpc_request_drop_ratio)
+            fj_opt& opt = s_fj_opts[req->local_rpc_code];
+            if (dsn_probability() < opt.rpc_request_drop_ratio)
             {
                 return false;
             }
@@ -168,14 +168,14 @@ namespace dsn {
         static void fault_on_rpc_request_enqueue(rpc_request_task* callee)
         {
             fj_opt& opt = s_fj_opts[callee->spec().code];
-            callee->set_delay(service::env::random32(opt.rpc_message_delay_ms_min, opt.rpc_message_delay_ms_max));
+            callee->set_delay(dsn_random32(opt.rpc_message_delay_ms_min, opt.rpc_message_delay_ms_max));
         }
 
         // return true means continue, otherwise early terminate with task::set_error_code
-        static bool fault_on_rpc_reply(task* caller, message* msg)
+        static bool fault_on_rpc_reply(task* caller, message_ex* msg)
         {
-            fj_opt& opt = s_fj_opts[msg->header().local_rpc_code];
-            if (service::env::probability() < opt.rpc_response_drop_ratio)
+            fj_opt& opt = s_fj_opts[msg->local_rpc_code];
+            if (dsn_probability() < opt.rpc_response_drop_ratio)
             {
                 return false;
             }
@@ -188,27 +188,26 @@ namespace dsn {
         static void fault_on_rpc_response_enqueue(rpc_response_task* resp)
         {
             fj_opt& opt = s_fj_opts[resp->spec().code];
-            resp->set_delay(service::env::random32(opt.rpc_message_delay_ms_min, opt.rpc_message_delay_ms_max));
+            resp->set_delay(dsn_random32(opt.rpc_message_delay_ms_min, opt.rpc_message_delay_ms_max));
         }
 
         void fault_injector::install(service_spec& spec)
         {
-            s_fj_opts = new fj_opt[task_code::max_value() + 1];
-            auto cf = config();
+            s_fj_opts = new fj_opt[dsn_task_code_max() + 1];
             fj_opt default_opt;
-            read_config(cf, "task.default", default_opt);
+            read_config("task.default", default_opt);
 
-            for (int i = 0; i <= task_code::max_value(); i++)
+            for (int i = 0; i <= dsn_task_code_max(); i++)
             {
                 if (i == TASK_CODE_INVALID)
                     continue;
 
-                std::string section_name = std::string("task.") + std::string(task_code::to_string(i));
+                std::string section_name = std::string("task.") + std::string(dsn_task_code_to_string(i));
                 task_spec* spec = task_spec::get(i);
                 dassert (spec != nullptr, "task_spec cannot be null");
 
                 fj_opt& lopt = s_fj_opts[i];
-                read_config(cf, section_name.c_str(), lopt, &default_opt);
+                read_config(section_name.c_str(), lopt, &default_opt);
 
                 if (!lopt.fault_injection_enabled)
                     continue;

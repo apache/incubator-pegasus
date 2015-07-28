@@ -47,7 +47,7 @@ public:
         return commit_without_logging_allowed ? _left_private0 == 0 : _private0 == 0;
     }
 
-    message_ptr& owner_message() { return _from_message; }
+    dsn_message_t owner_message() { return _from_message; }
     unsigned int left_secondary_ack_count() const { return _left_secondary_ack_count; }
     unsigned int left_potential_secondary_ack_count() const { return _left_potential_secondary_ack_count; }
     ::dsn::service::cpp_task_ptr& log_task() { return _log_task; }
@@ -55,7 +55,7 @@ public:
 
     // state change
     void set_id(ballot b, decree c);
-    void set_client_request(task_code code, message_ptr& request);
+    void set_client_request(dsn_task_code_t code, dsn_message_t request);
     void set_logged() { dassert (!is_logged(), ""); _not_logged = 0; }
     unsigned int decrease_left_secondary_ack_count() { return --_left_secondary_ack_count; }
     unsigned int decrease_left_potential_secondary_ack_count() { return --_left_potential_secondary_ack_count; }
@@ -65,13 +65,13 @@ public:
     int  clear_log_task();
     
     // reader & writer
-    static mutation_ptr read_from(message_ptr& reader);
-    void write_to(message_ptr& writer);
+    static mutation_ptr read_from(binary_reader& reader);
+    void write_to(binary_writer& writer);
 
     // data
     mutation_data  data;
     int            rpc_code;
-    message_ptr    client_request;
+    dsn_message_t  client_request;
         
 private:
     union
@@ -93,7 +93,7 @@ private:
     node_tasks    _prepare_or_commit_tasks;
     ::dsn::service::cpp_task_ptr _log_task;
 
-    message_ptr   _from_message;
+    dsn_message_t _from_message;
     char          _name[40]; // ballot.decree
 };
 

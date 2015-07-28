@@ -36,8 +36,8 @@ using namespace dsn::service;
 int main(int argc, char * argv[])
 {
     // register all possible services
-    dsn::service::system::register_service<echo_client>("echo_client_app");
-    dsn::service::system::register_service<echo_server>("echo_server_app");
+    dsn::register_app<echo_client>("echo_client_app");
+    dsn::register_app<echo_server>("echo_server_app");
 
     // register all possible tools and toollets
     dsn::tools::register_tool<dsn::tools::nativerun>("nativerun");
@@ -47,6 +47,6 @@ int main(int argc, char * argv[])
     dsn::tools::register_toollet<dsn::tools::fault_injector>("fault_injector");
         
     // specify what services and tools will run in config file, then run
-    dsn::service::system::run("config.ini", true);
+    dsn_run_config("config.ini", true);
     return 0;
 }

@@ -90,7 +90,7 @@ public:
     }
 
 public:  
-    semaphore_provider(int initialCount, semaphore_provider* inner_provider) { _inner_provider = inner_provider; }
+    semaphore_provider(int initial_count, semaphore_provider* inner_provider) { _inner_provider = inner_provider; }
     virtual ~semaphore_provider() { if (nullptr != _inner_provider) delete _inner_provider; }
 
 public:

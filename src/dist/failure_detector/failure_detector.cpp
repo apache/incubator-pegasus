@@ -27,7 +27,6 @@
 # include <dsn/dist/failure_detector.h>
 # include <chrono>
 # include <ctime>
-# include <dsn/internal/serialization.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -41,9 +40,10 @@ namespace fd {
 
 failure_detector::failure_detector()
 {
-    auto pool = task_spec::get(LPC_BEACON_CHECK)->pool_code;
-    task_spec::get(RPC_FD_FAILURE_DETECTOR_PING)->pool_code = pool;
-    task_spec::get(RPC_FD_FAILURE_DETECTOR_PING_ACK)->pool_code = pool;
+    dsn_threadpool_code_t pool;
+    dsn_task_code_query(LPC_BEACON_CHECK, nullptr, nullptr, &pool);
+    dsn_task_code_set_threadpool(RPC_FD_FAILURE_DETECTOR_PING, pool);
+    dsn_task_code_set_threadpool(RPC_FD_FAILURE_DETECTOR_PING_ACK, pool);
 }
 
 error_code failure_detector::start(

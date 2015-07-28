@@ -24,7 +24,6 @@
  * THE SOFTWARE.
  */
 # include <dsn/internal/configuration.h>
-# include <dsn/internal/logging.h>
 # include <cassert>
 # include <dsn/internal/utils.h>
 # include <errno.h>
@@ -45,7 +44,9 @@ configuration::configuration(const char* file_name, const char* arguments)
     FILE* fd = ::fopen(file_name, "rb");
     if (fd == nullptr) 
     {
-        printf("Cannot open file %s, err=%s", file_name, strerror(errno));
+        char cdir[FILENAME_MAX];
+        getcwd_(cdir, sizeof(cdir));
+        printf("Cannot open file %s in %s, err=%s", file_name, cdir, strerror(errno));
         return;
     }
     ::fseek(fd, 0, SEEK_END);
@@ -240,19 +241,19 @@ void configuration::get_all_sections(std::vector<std::string>& sections)
     }
 }
 
-void configuration::get_all_keys(const char* section, std::vector<std::string>& keys)
+void configuration::get_all_keys(const char* section, std::vector<const char*>& keys)
 {
     auto it = _configs.find(section);
     if (it != _configs.end())
     {
         for (auto it2 = it->second.begin(); it2 != it->second.end(); it2++)
         {
-            keys.push_back(it2->first);
+            keys.push_back(it2->first.c_str());
         }
     }
 }
 
-bool configuration::get_string_value_internal(const char* section, const char* key, const char* default_value, std::string& ov)
+bool configuration::get_string_value_internal(const char* section, const char* key, const char* default_value, const char** ov)
 {
     auto it = _configs.find(section);
     if (it != _configs.end())
@@ -260,18 +261,18 @@ bool configuration::get_string_value_internal(const char* section, const char* k
         auto it2 = it->second.find(key);
         if (it2 != it->second.end())
         {
-            ov = it2->second.value;
+            *ov = it2->second.value;
             return true;
         }
     }
-    ov = default_value;
+    *ov = default_value;
     return false;
 }
 
-std::string configuration::get_string_value(const char* section, const char* key, const char* default_value)
+const char* configuration::get_string_value(const char* section, const char* key, const char* default_value)
 {
-    std::string ov;
-    if (!get_string_value_internal(section, key, default_value, ov))
+    const char* ov;
+    if (!get_string_value_internal(section, key, default_value, &ov))
     {
         if (_warning)
         {
@@ -287,8 +288,8 @@ std::string configuration::get_string_value(const char* section, const char* key
 
 std::list<std::string> configuration::get_string_value_list(const char* section, const char* key, char splitter)
 {
-    std::string ov;
-    if (!get_string_value_internal(section, key, "", ov))
+    const char* ov;
+    if (!get_string_value_internal(section, key, "", &ov))
     {
         if (_warning)
         {
@@ -301,7 +302,7 @@ std::list<std::string> configuration::get_string_value_list(const char* section,
     }
 
     std::list<std::string> vs;
-    utils::split_args(ov.c_str(), vs, splitter);
+    utils::split_args(ov, vs, splitter);
 
     for (auto& v : vs)
     {

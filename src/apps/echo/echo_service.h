@@ -25,25 +25,22 @@
  */
 # pragma once
 
-# include <dsn/serverlet.h>
-# include <dsn/internal/serialization.h>
+# include <dsn/service_api_cpp.h>
 # include <iostream>
-# include <dsn/service_api.h>
 
-DEFINE_TASK_CODE(LPC_ECHO_TIMER, ::dsn::TASK_PRIORITY_HIGH, ::dsn::THREAD_POOL_DEFAULT)
-DEFINE_TASK_CODE_RPC(RPC_ECHO, ::dsn::TASK_PRIORITY_HIGH, ::dsn::THREAD_POOL_DEFAULT)
-DEFINE_TASK_CODE_RPC(RPC_ECHO2, ::dsn::TASK_PRIORITY_HIGH, ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_ECHO_TIMER, TASK_PRIORITY_HIGH, ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE_RPC(RPC_ECHO, TASK_PRIORITY_HIGH, ::dsn::THREAD_POOL_DEFAULT)
 
 using namespace dsn;
 using namespace dsn::service;
 
-class echo_server : public serverlet<echo_server>, public service_app
+class echo_server : public serverlet<echo_server>, public service_app<echo_server>
 {
 public:
-    echo_server(service_app_spec* s)
-        : service_app(s), serverlet<echo_server>("echo_server")
+    echo_server()
+        : serverlet<echo_server>("echo_server")
     {
-        _empty_reply = system::config()->get_value<bool>("apps.server", "empty_reply", false);
+        _empty_reply = dsn_config_get_value_bool("apps.server", "empty_reply", false);
     }
 
     void on_echo(const std::string& req, __out_param std::string& resp)
@@ -54,45 +51,31 @@ public:
             resp = "";
     }
 
-    void on_echo2(const blob& req, rpc_replier<blob>& reply)
-    {
-        if (!_empty_reply)
-            reply(req);
-        else
-        {
-            blob empty;
-            reply(empty);
-        }
-    }
-
-    virtual error_code start(int argc, char** argv)
+    virtual ::dsn::error_code start(int argc, char** argv)
     {
         register_rpc_handler(RPC_ECHO, "RPC_ECHO", &echo_server::on_echo);
-        register_async_rpc_handler(RPC_ECHO2, "RPC_ECHO2", &echo_server::on_echo2);
         return ERR_OK;
     }
 
     virtual void stop(bool cleanup = false)
     {
         unregister_rpc_handler(RPC_ECHO);
-        unregister_rpc_handler(RPC_ECHO2);
     }
 
 private:
     bool _empty_reply;
 };
 
-class echo_client : public serverlet<echo_client>, public service_app
+class echo_client : public serverlet<echo_client>, public service_app<echo_client>
 {
 public:
-    echo_client(service_app_spec* s)
-        : service_app(s), servicelet(8), serverlet<echo_client>("echo_client")
+    echo_client()
+        : servicelet(8), serverlet<echo_client>("echo_client")
     {
-        _message_size = system::config()->get_value<int>("apps.client", "message_size", 1024);
-        _concurrency = system::config()->get_value<int>("apps.client", "concurrency", 1);
-        _echo2 = system::config()->get_value<bool>("apps.client", "echo2", false);
-        _bench = system::config()->get_string_value("apps.client", "bench", "echo");
-        _test_local_queue = system::config()->get_value<bool>("apps.client", "queue-test-local", false);
+        _message_size = (int)dsn_config_get_value_uint64("apps.client", "message_size", 1024);
+        _concurrency = (int)dsn_config_get_value_uint64("apps.client", "concurrency", 1);
+        _bench = dsn_config_get_value_string("apps.client", "bench", "echo");
+        _test_local_queue = dsn_config_get_value_bool("apps.client", "queue-test-local", false);
         
         _seq = 0;
         _last_report_ts_ms = now_ms();
@@ -101,7 +84,7 @@ public:
         _timer = nullptr;
     }
 
-    virtual error_code start(int argc, char** argv)
+    virtual ::dsn::error_code start(int argc, char** argv)
     {
         if (argc < 3)
             return ERR_INVALID_PARAMETERS;
@@ -158,19 +141,10 @@ public:
         char buf[120];
         sprintf(buf, "%u", ++_seq);
 
-        if (!_echo2)
-        {
-            std::shared_ptr<std::string> req(new std::string("hi, dsn "));
-            *req = req->append(buf);
-            req->resize(_message_size);
-            rpc::call_typed(_server, RPC_ECHO, req, this, &echo_client::on_echo_reply, 0, 5000);
-        }
-        else
-        {
-            std::shared_ptr<char> buffer((char*)::malloc(_message_size));
-            std::shared_ptr<blob> bb(new blob(buffer, _message_size));
-            rpc::call_typed(_server, RPC_ECHO2, bb, this, &echo_client::on_echo_reply2, 0, 5000);
-        }
+        std::shared_ptr<std::string> req(new std::string("hi, dsn "));
+        *req = req->append(buf);
+        req->resize(_message_size);
+        rpc::call_typed(_server, RPC_ECHO, req, this, &echo_client::on_echo_reply, 0, 5000);
     }
 
     void on_echo_timer()
@@ -271,6 +245,5 @@ private:
     int _seq;
     int _message_size;
     int _concurrency;
-    bool _echo2;
     dsn::service::cpp_task_ptr _timer;
 };

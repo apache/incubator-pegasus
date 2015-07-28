@@ -41,7 +41,7 @@ void register_replica_provider(replica_app_factory f, const char* name)
     ::dsn::utils::factory_store<replication_app_base>::register_factory(name, f, PROVIDER_TYPE_MAIN);
 }
 
-replication_app_base::replication_app_base(replica* replica, configuration_ptr& config)
+replication_app_base::replication_app_base(replica* replica)
 {
     _physical_error = 0;
     _dir_data = replica->dir() + "/data";
@@ -83,23 +83,21 @@ error_code replication_app_base::write_internal(mutation_ptr& mu, bool ack_clien
     return _physical_error == 0 ? ERR_OK : ERR_LOCAL_APP_FAILURE;
 }
 
-void replication_app_base::dispatch_rpc_call(int code, message_ptr& request, bool ack_client)
+void replication_app_base::dispatch_rpc_call(int code, dsn_message_t request, bool ack_client)
 {
     auto it = _handlers.find(code);
     if (it != _handlers.end())
     {
         if (ack_client)
         {
-            message_ptr response = request->create_response();
-
+            dsn_message_t response = dsn_msg_create_response(request);
             int err = 0; // replication layer error
-            marshall(response->writer(), err);
-
+            ::marshall(response, err);
             it->second(request, response);
         }
         else
         {
-            message_ptr response(nullptr);
+            dsn_message_t response(nullptr);
             it->second(request, response);
         }
     }

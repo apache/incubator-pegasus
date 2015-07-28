@@ -40,15 +40,21 @@ mutation::~mutation()
     clear_log_task();
 }
 
-void mutation::set_client_request(task_code code, message_ptr& request)
+void mutation::set_client_request(dsn_task_code_t code, dsn_message_t request)
 {
     dassert(client_request == nullptr, "batch is not supported now");
     client_request = request;
     rpc_code = code;
-    data.updates.push_back(request->reader().get_remaining_buffer());
+
+    void* ptr;
+    size_t size;
+    bool r = dsn_msg_read_next(request, &ptr, &size);
+    dassert(r, "payload is not present");
+    blob buffer((char*)ptr, 0, (int)size);
+    data.updates.push_back(buffer);
 }
 
-/*static*/ mutation_ptr mutation::read_from(message_ptr& reader)
+/*static*/ mutation_ptr mutation::read_from(binary_reader& reader)
 {
     mutation_ptr mu(new mutation());
     unmarshall(reader, mu->data);
@@ -56,19 +62,9 @@ void mutation::set_client_request(task_code code, message_ptr& request)
 
     // it is possible this is an emtpy mutation due to new primaries inserts empty mutations for holes
     dassert(mu->data.updates.size() == 1 || mu->rpc_code == RPC_REPLICATION_WRITE_EMPTY, "batch is not supported now");
-    message_ptr msg;
-    if (mu->rpc_code != RPC_REPLICATION_WRITE_EMPTY)
-    {
-        msg.reset(new message(mu->data.updates[0], false));
-    }
-    else
-    {
-        blob bb;
-        msg.reset(new message(bb, false));
-    }
 
-    mu->client_request = msg;
-    mu->_from_message = reader;
+    mu->client_request = nullptr;
+    mu->_from_message = nullptr;
     
     sprintf(mu->_name, "%lld.%lld",
         static_cast<long long int>(mu->data.header.ballot),
@@ -77,7 +73,7 @@ void mutation::set_client_request(task_code code, message_ptr& request)
     return mu;
 }
 
-void mutation::write_to(message_ptr& writer)
+void mutation::write_to(binary_writer& writer)
 {
     marshall(writer, data);
     marshall(writer, rpc_code);

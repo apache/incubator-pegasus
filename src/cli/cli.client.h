@@ -1,5 +1,5 @@
 # pragma once
-# include <dsn/internal/service.api.oo.h>
+# include <dsn/cpp/service.api.oo.h>
 # include "cli.types.h"
 # include <iostream>
 
@@ -26,12 +26,13 @@ public:
         int hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-        message_ptr response;
+        dsn_message_t response;
         auto err = ::dsn::service::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
             RPC_DSN_CLI_CALL, c, hash, timeout_milliseconds);
         if (err == ::dsn::ERR_OK)
         {
-            unmarshall(response->reader(), resp);
+            msg_binary_reader reader(response);
+            unmarshall(reader, resp);
         }
         
         return err;

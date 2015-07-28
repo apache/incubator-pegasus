@@ -30,7 +30,7 @@
 // this library
 // 
 
-# include <dsn/serverlet.h>
+# include <dsn/cpp/serverlet.h>
 # include <dsn/dist/replication/replication.types.h>
 # include <dsn/dist/replication/replication_other_types.h>
 # include <dsn/dist/replication/replication.codes.h>
@@ -42,13 +42,13 @@ using namespace ::dsn::service;
 class replication_app_base
 {
 public:
-    template <typename T> static replication_app_base* create(::dsn::replication::replica* replica, ::dsn::configuration_ptr& config)
+    template <typename T> static replication_app_base* create(::dsn::replication::replica* replica)
     {
-        return new T(replica, config);
+        return new T(replica);
     }
     
 public:
-    replication_app_base(::dsn::replication::replica* replica, ::dsn::configuration_ptr& config);
+    replication_app_base(::dsn::replication::replica* replica);
     virtual ~replication_app_base() {}
 
     //
@@ -110,8 +110,8 @@ protected:
 private:
     template<typename T, typename TRequest, typename TResponse>
     void internal_rpc_handler(
-        message_ptr& request, 
-        message_ptr& response, 
+        dsn_message_t request, 
+        dsn_message_t response, 
         void (T::*callback)(const TRequest&, rpc_replier<TResponse>&)
         );
 
@@ -119,13 +119,13 @@ private:
     // routines for replica internal usage
     friend class replica;
     error_code write_internal(mutation_ptr& mu, bool ack_client);
-    void       dispatch_rpc_call(int code, message_ptr& request, bool ack_client);
+    void       dispatch_rpc_call(int code, dsn_message_t request, bool ack_client);
     
 private:
     std::string _dir_data;
     std::string _dir_learn;
     replica*    _replica;
-    std::unordered_map<int, std::function<void(message_ptr&, message_ptr&)> > _handlers;
+    std::unordered_map<int, std::function<void(dsn_message_t, dsn_message_t)> > _handlers;
     int         _physical_error; // physical error (e.g., io error) indicates the app needs to be dropped
 
 protected:
@@ -133,7 +133,7 @@ protected:
     std::atomic<decree> _last_durable_decree;
 };
 
-typedef replication_app_base* (*replica_app_factory)(replica*, configuration_ptr&);
+typedef replication_app_base* (*replica_app_factory)(replica*);
 extern void register_replica_provider(replica_app_factory f, const char* name);
 
 template<typename T>
@@ -166,12 +166,12 @@ inline void replication_app_base::unregister_rpc_handler(dsn_task_code_t code)
 
 template<typename T, typename TRequest, typename TResponse>
 inline void replication_app_base::internal_rpc_handler(
-    message_ptr& request, 
-    message_ptr& response, 
+    dsn_message_t request, 
+    dsn_message_t response, 
     void (T::*callback)(const TRequest&, rpc_replier<TResponse>&))
 {
     TRequest req;
-    unmarshall(request->reader(), req);
+    ::unmarshall(request, req);
 
     rpc_replier<TResponse> replier(request, response);
     (static_cast<T*>(this)->*callback)(req, replier);

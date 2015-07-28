@@ -24,7 +24,6 @@
  * THE SOFTWARE.
  */
 # include "net_io.h"
-# include <dsn/internal/logging.h>
 # include "shared_io_service.h"
 
 # ifdef __TITLE__
@@ -123,7 +122,7 @@ namespace dsn {
                 else
                 {
                     int read_next;
-                    message_ptr msg = _parser->get_message_on_receive((int)length, read_next);
+                    message_ex* msg = _parser->get_message_on_receive((int)length, read_next);
 
                     while (msg != nullptr)
                     {
@@ -141,16 +140,17 @@ namespace dsn {
         void net_io::do_write()
         {
             auto msg = _sq.peek();
-            if (nullptr == msg.get())
+            if (nullptr == msg)
                 return;
 
-            std::vector<blob> buffers;
-            _parser->prepare_buffers_for_send(msg, buffers);
+            // make sure header is already in the buffer
+            std::vector<dsn_message_parser::send_buf> buffers;
+            _parser->prepare_buffers_on_send(msg, buffers);
 
             std::vector<boost::asio::const_buffer> buffers2;
-            for (auto& b : buffers)
+            for (auto& bb: buffers)
             {
-                buffers2.push_back(boost::asio::const_buffer(b.data(), b.length()));
+                buffers2.push_back(boost::asio::const_buffer(bb.buf, bb.sz));
             }
 
             add_reference();
@@ -165,7 +165,7 @@ namespace dsn {
                 {
                     auto smsg = _sq.dequeue_peeked();
                     dassert(smsg == msg, "sent msg must be the first msg in send queue");
-                    //dinfo("network message sent, rpc_id = %016llx", msg->header().rpc_id);
+                    //dinfo("network message sent, rpc_id = %016llx", msg->header->rpc_id);
 
                     do_write();
                 }
@@ -174,9 +174,9 @@ namespace dsn {
             });
         }
 
-        void net_io::write(message_ptr& msg)
+        void net_io::write(message_ex* msg)
         {
-            _sq.enqueue(msg, task_spec::get(msg->header().local_rpc_code)->priority);
+            _sq.enqueue(msg, task_spec::get(msg->local_rpc_code)->priority);
             do_write();
         }
 
@@ -192,9 +192,9 @@ namespace dsn {
         {
         }
 
-        void client_net_io::write(message_ptr& msg)
+        void client_net_io::write(message_ex* msg)
         {
-            _sq.enqueue(msg, task_spec::get(msg->header().local_rpc_code)->priority);
+            _sq.enqueue(msg, task_spec::get(msg->local_rpc_code)->priority);
 
             // not connected
             if (SS_CONNECTED != _state)

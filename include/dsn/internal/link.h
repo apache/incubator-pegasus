@@ -25,7 +25,7 @@
  */
 # pragma once
 
-# include <dsn/internal/logging.h>
+# include <dsn/service_api_c.h>
 
 # ifdef __TITLE__
 # undef __TITLE__

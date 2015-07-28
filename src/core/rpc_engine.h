@@ -41,20 +41,20 @@ public:
     //
     // management routines
     //
-    error_code start(const service_app_spec& spec);
+    ::dsn::error_code start(const service_app_spec& spec);
 
     //
     // rpc registrations
     //
-    bool register_rpc_handler(rpc_handler_ptr& handler);
-    bool unregister_rpc_handler(task_code rpc_code) ;    
+    bool  register_rpc_handler(rpc_handler_ptr& handler);
+    rpc_handler_ptr unregister_rpc_handler(dsn_task_code_t rpc_code);
 
     //
     // rpc routines
     //
-    void call(message_ptr& request, rpc_response_task_ptr& call);
-    void on_recv_request(message_ptr& msg, int delay_ms);
-    static void reply(message_ptr& response);
+    void call(message_ex* request, rpc_response_task_ptr& call);
+    void on_recv_request(message_ex* msg, int delay_ms);
+    static void reply(message_ex* response);
 
     //
     // information inquery

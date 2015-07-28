@@ -26,7 +26,7 @@
 
 #include <iomanip>
 #include <dsn/toollet/profiler.h>
-#include <dsn/service_api.h>
+#include <dsn/service_api_c.h>
 #include "shared_io_service.h"
 #include "profiler_header.h"
 #include <dsn/internal/command.h>
@@ -42,7 +42,7 @@ namespace dsn {
     namespace tools {
 
         typedef uint64_extension_helper<task> task_ext_for_profiler;
-        typedef uint64_extension_helper<message> message_ext_for_profiler;
+        typedef uint64_extension_helper<message_ex> message_ext_for_profiler;
 
         task_spec_profiler* s_spec_profilers = nullptr;
         std::map<std::string, perf_counter_ptr_type> counter_info::pointer_type;
@@ -70,13 +70,13 @@ namespace dsn {
                 }
             }
 
-            task_ext_for_profiler::get(callee) = ::dsn::service::env::now_ns();
+            task_ext_for_profiler::get(callee) = dsn_now_ns();
         }
 
         static void profiler_on_task_begin(task* this_)
         {
             uint64_t& qts = task_ext_for_profiler::get(this_);
-            uint64_t now = ::dsn::service::env::now_ns();
+            uint64_t now = dsn_now_ns();
             s_spec_profilers[this_->spec().code].ptr[TASK_QUEUEING_TIME_NS]->set(now - qts);
             qts = now;
 
@@ -85,7 +85,7 @@ namespace dsn {
         static void profiler_on_task_end(task* this_)
         {
             uint64_t qts = task_ext_for_profiler::get(this_);
-            uint64_t now = ::dsn::service::env::now_ns();
+            uint64_t now = dsn_now_ns();
             s_spec_profilers[this_->spec().code].ptr[TASK_EXEC_TIME_NS]->set(now - qts);
             s_spec_profilers[this_->spec().code].ptr[TASK_THROUGHPUT]->increment();
         }
@@ -120,66 +120,66 @@ namespace dsn {
             }
 
             // time disk io starts
-            task_ext_for_profiler::get(callee) = ::dsn::service::env::now_ns();
+            task_ext_for_profiler::get(callee) = dsn_now_ns();
         }
 
         static void profiler_on_aio_enqueue(aio_task* this_)
         {
             uint64_t& ats = task_ext_for_profiler::get(this_);
-            uint64_t now = ::dsn::service::env::now_ns();
+            uint64_t now = dsn_now_ns();
 
             s_spec_profilers[this_->spec().code].ptr[AIO_LATENCY_NS]->set(now - ats);
             ats = now;
         }
 
         // return true means continue, otherwise early terminate with task::set_error_code
-        static void profiler_on_rpc_call(task* caller, message* req, rpc_response_task* callee)
+        static void profiler_on_rpc_call(task* caller, message_ex* req, rpc_response_task* callee)
         {
             auto& prof = s_spec_profilers[caller->spec().code];
             if (prof.collect_call_count)
             {
-                prof.call_counts[req->header().local_rpc_code]++;
+                prof.call_counts[req->local_rpc_code]++;
             }
 
             // time rpc starts
             if (nullptr != callee)
             {
-                task_ext_for_profiler::get(callee) = ::dsn::service::env::now_ns();
+                task_ext_for_profiler::get(callee) = dsn_now_ns();
             }
 
         }
 
         static void profiler_on_rpc_request_enqueue(rpc_request_task* callee)
         {
-            uint64_t now = ::dsn::service::env::now_ns();
+            uint64_t now = dsn_now_ns();
             task_ext_for_profiler::get(callee) = now;
-            message_ext_for_profiler::get(callee->get_request().get()) = now;
+            message_ext_for_profiler::get(callee->get_request()) = now;
         }
 
-        static void profiler_on_rpc_create_response(message* req, message* resp)
+        static void profiler_on_rpc_create_response(message_ex* req, message_ex* resp)
         {
             message_ext_for_profiler::get(resp) = message_ext_for_profiler::get(req);
         }
 
         // return true means continue, otherwise early terminate with task::set_error_code
-        static void profiler_on_rpc_reply(task* caller, message* msg)
+        static void profiler_on_rpc_reply(task* caller, message_ex* msg)
         {
             auto& prof = s_spec_profilers[caller->spec().code];
             if (prof.collect_call_count)
             {
-                prof.call_counts[msg->header().local_rpc_code]++;
+                prof.call_counts[msg->local_rpc_code]++;
             }
 
             uint64_t qts = message_ext_for_profiler::get(msg);
-            uint64_t now = ::dsn::service::env::now_ns();
-            auto code = task_spec::get(msg->header().local_rpc_code)->rpc_paired_code;
+            uint64_t now = dsn_now_ns();
+            auto code = task_spec::get(msg->local_rpc_code)->rpc_paired_code;
             s_spec_profilers[code].ptr[RPC_SERVER_LATENCY_NS]->set(now - qts);
         }
 
         static void profiler_on_rpc_response_enqueue(rpc_response_task* resp)
         {
             uint64_t& cts = task_ext_for_profiler::get(resp);
-            uint64_t now = ::dsn::service::env::now_ns();
+            uint64_t now = dsn_now_ns();
             if (resp->get_response() != nullptr)
             {
                 s_spec_profilers[resp->spec().code].ptr[RPC_CLIENT_NON_TIMEOUT_LATENCY_NS]->set(now - cts);
@@ -218,9 +218,9 @@ namespace dsn {
                 tmpss << std::endl;
             }
             tmpss << "  $task : all task code, such as" << std::endl;
-            for (int i = 1; i < task_code::max_value() && i <= 10; i++)
+            for (int i = 1; i < dsn_task_code_max() && i <= 10; i++)
             {
-                tmpss << "      " << task_code::to_string(i) << std::endl;
+                tmpss << "      " << dsn_task_code_to_string(i) << std::endl;
             }
                         
             register_command({ "p", "P", "profile", "Profile"}, "profile|Profile|p|P - performance profiling", tmpss.str().c_str(), profiler_output_handler);
@@ -228,7 +228,7 @@ namespace dsn {
 
         void profiler::install(service_spec& spec)
         {
-            s_spec_profilers = new task_spec_profiler[task_code::max_value() + 1];
+            s_spec_profilers = new task_spec_profiler[dsn_task_code_max() + 1];
             task_ext_for_profiler::register_ext();
             message_ext_for_profiler::register_ext();
             dassert(sizeof(counter_info_ptr) / sizeof(counter_info*) == PREF_COUNTER_COUNT, "PREF COUNTER ERROR");
@@ -236,17 +236,17 @@ namespace dsn {
             auto profile = config()->get_value<bool>("task.default", "is_profile", false);
             auto collect_call_count = config()->get_value<bool>("task.default", "collect_call_count", true);
 
-            for (int i = 0; i <= task_code::max_value(); i++)
+            for (int i = 0; i <= dsn_task_code_max(); i++)
             {
                 if (i == TASK_CODE_INVALID)
                     continue;
 
-                std::string name = std::string("task.") + std::string(task_code::to_string(i));
+                std::string name = std::string("task.") + std::string(dsn_task_code_to_string(i));
                 task_spec* spec = task_spec::get(i);
                 dassert(spec != nullptr, "task_spec cannot be null");
 
                 s_spec_profilers[i].collect_call_count = config()->get_value<bool>(name.c_str(), "collect_call_count", collect_call_count);
-                s_spec_profilers[i].call_counts = new std::atomic<int64_t>[task_code::max_value() + 1];
+                s_spec_profilers[i].call_counts = new std::atomic<int64_t>[dsn_task_code_max() + 1];
 
                 s_spec_profilers[i].ptr[TASK_QUEUEING_TIME_NS] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".queue(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
                 s_spec_profilers[i].ptr[TASK_EXEC_TIME_NS] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".exec(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);

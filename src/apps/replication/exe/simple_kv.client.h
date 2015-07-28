@@ -69,7 +69,7 @@ public:
         resp_task->wait();
         if (resp_task->error() == ::dsn::ERR_OK)
         {
-            unmarshall(resp_task->response()->reader(), resp);
+            ::unmarshall(resp_task->response(), resp);
         }
         return resp_task->error();
     }
@@ -157,7 +157,7 @@ public:
         resp_task->wait();
         if (resp_task->error() == ::dsn::ERR_OK)
         {
-            unmarshall(resp_task->response()->reader(), resp);
+            ::unmarshall(resp_task->response(), resp);
         }
         return resp_task->error();
     }
@@ -245,7 +245,7 @@ public:
         resp_task->wait();
         if (resp_task->error() == ::dsn::ERR_OK)
         {
-            unmarshall(resp_task->response()->reader(), resp);
+            ::unmarshall(resp_task->response(), resp);
         }
         return resp_task->error();
     }

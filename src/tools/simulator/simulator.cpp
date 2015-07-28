@@ -31,7 +31,6 @@
 # include "diske.sim.h"
 # include "env.sim.h"
 # include "task_engine.sim.h"
-# include <dsn/internal/logging.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -100,7 +99,7 @@ void simulator::install(service_spec& spec)
         spec.semaphore_factory_name = ("dsn::tools::sim_semaphore_provider");
 
     if (spec.nfs_factory_name == "")
-        spec.nfs_factory_name = "dsn::service::nfs_node_impl";
+        spec.nfs_factory_name = "dsn::service::nfs_node_simple";
 
     for (auto it = spec.threadpool_specs.begin(); it != spec.threadpool_specs.end(); it++)
     {

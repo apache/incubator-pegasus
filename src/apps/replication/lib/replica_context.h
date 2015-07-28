@@ -32,7 +32,7 @@ namespace dsn { namespace replication {
 struct remote_learner_state
 {
     uint64_t signature;
-    task_ptr timeout_task;
+    ::dsn::service::cpp_task_ptr timeout_task;
     decree   prepare_start_decree;
 };
 

@@ -289,17 +289,22 @@ void replica::update_configuration_on_meta_server(config_type type, const dsn_ad
     update_local_configuration_with_no_ballot_change(PS_INACTIVE);
     set_inactive_state_transient(true);
 
-    message_ptr msg = message::create_request(RPC_CM_CALL);
+    dsn_message_t msg = dsn_msg_create_request(RPC_CM_CALL, 0, 0);
+    
     meta_request_header hdr;
     hdr.rpc_tag = RPC_CM_UPDATE_PARTITION_CONFIGURATION;
-    marshall(msg, hdr);
 
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
     request->config = newConfig;
-    request->config.ballot++;    
+    request->config.ballot++;
     request->type = type;
     request->node = node;
-    marshall(msg, *request);
+
+    {
+        msg_binary_writer writer(msg);
+        marshall(writer, hdr);
+        marshall(writer, *request);
+    }
 
     if (nullptr != _primary_states.reconfiguration_task)
     {
@@ -321,7 +326,7 @@ void replica::update_configuration_on_meta_server(config_type type, const dsn_ad
 }
 
 
-void replica::on_update_configuration_on_meta_server_reply(error_code err, message_ptr& request, message_ptr& response, std::shared_ptr<configuration_update_request> req)
+void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_message_t request, dsn_message_t response, std::shared_ptr<configuration_update_request> req)
 {
     check_hashed_access();
 
@@ -357,7 +362,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, messa
     }
 
     configuration_update_response resp;
-    unmarshall(response, resp);    
+    ::unmarshall(response, resp);
 
     ddebug(
         "%s: update configuration reply with err %s, ballot %lld, local %lld",

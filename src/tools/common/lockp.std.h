@@ -61,8 +61,8 @@ private:
 class std_semaphore_provider : public semaphore_provider
 {
 public:  
-    std_semaphore_provider(int initialCount, semaphore_provider *inner_provider)
-        : semaphore_provider(initialCount, inner_provider), _sema(initialCount)
+    std_semaphore_provider(int initial_count, semaphore_provider *inner_provider)
+        : semaphore_provider(initial_count, inner_provider), _sema(initial_count)
     {
     }
 

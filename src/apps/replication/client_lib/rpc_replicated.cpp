@@ -40,7 +40,7 @@ namespace dsn {
                     rpc_reply_handler callback;
 
                     // internal callback contexts
-                    std::function<void(error_code, message_ptr&, message_ptr&)> internal_cb;
+                    std::function<void(error_code, dsn_message_t, dsn_message_t)> internal_cb;
                     servicelet* svc;
                     int         reply_hash;
                 };
@@ -49,7 +49,7 @@ namespace dsn {
                 {
                     if (currentServer == dsn_address_invalid)
                     {
-                        return servers[env::random32(0, static_cast<int>(servers.size()) * 13) % static_cast<int>(servers.size())];
+                        return servers[dsn_random32(0, static_cast<int>(servers.size()) * 13) % static_cast<int>(servers.size())];
                     }
                     else
                     {
@@ -61,12 +61,12 @@ namespace dsn {
                         }
                         else
                         {
-                            return servers[env::random32(0, static_cast<int>(servers.size()) * 13) % static_cast<int>(servers.size())];
+                            return servers[dsn_random32(0, static_cast<int>(servers.size()) * 13) % static_cast<int>(servers.size())];
                         }
                     }
                 }
 
-                static void internal_rpc_reply_callback(error_code err, message_ptr& request, message_ptr& response, params* ps)
+                static void internal_rpc_reply_callback(error_code err, dsn_message_t request, dsn_message_t response, params* ps)
                 {
                     //printf ("%s\n", __FUNCTION__);
 
@@ -76,7 +76,7 @@ namespace dsn {
                         err.end_tracking();
 
                         meta_response_header header;
-                        unmarshall(response->reader(), header);
+                        ::unmarshall(response, header);
 
                         if (header.err == ERR_SERVICE_NOT_ACTIVE || header.err == ERR_BUSY)
                         {
@@ -117,7 +117,7 @@ namespace dsn {
             dsn::service::cpp_task_ptr call_replicated(
                 const dsn_address_t& first_server,
                 const std::vector<dsn_address_t>& servers,
-                message_ptr& request,
+                dsn_message_t request,
 
                 // reply
                 servicelet* svc,

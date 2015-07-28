@@ -26,9 +26,9 @@
 # pragma once
 
 # include <string>
+# include <dsn/service_api_c.h>
 # include <dsn/internal/configuration.h>
-# include <dsn/internal/threadpool_code.h>
-# include <dsn/internal/task_code.h>
+# include <dsn/internal/task_spec.h>
 # include <map>
 
 namespace dsn {
@@ -65,20 +65,30 @@ struct network_server_config
 // <port,channel> => config
 typedef std::map<network_server_config, network_server_config> network_server_configs;
 
+typedef struct service_app_role
+{
+    std::string   name; // type name
+    dsn_app_create create;
+    dsn_app_start start;
+    dsn_app_destroy destroy;
+
+} service_app_role;
+
 struct service_app_spec
 {
     int                  id;    // global for all roles
     int                  index; // local index for the current role (1,2,3,...)
-    std::string          role;
-    std::string          config_section;
-    std::string          name; 
-    std::string          type;
+    std::string          config_section; //[apps.$role]
+    std::string          name;  // $role.$count
+    std::string          type;  // registered type_name
     std::string          arguments;
     std::vector<int>     ports;
-    std::list<threadpool_code> pools;
+    std::list<dsn_threadpool_code_t> pools;
     int                  delay_seconds;
     bool                 run;
     int                  count; // index = 1,2,...,count
+
+    service_app_role     role;
 
     network_client_configs network_client_confs;
     network_server_configs network_server_confs;
@@ -87,7 +97,6 @@ struct service_app_spec
     service_app_spec(const service_app_spec& r);
     bool init(const char* section, 
         const char* role, 
-        configuration_ptr& config, 
         service_app_spec* default_value,
         network_client_configs* default_client_nets = nullptr,
         network_server_configs* default_server_nets = nullptr
@@ -95,14 +104,13 @@ struct service_app_spec
 };
 
 CONFIG_BEGIN(service_app_spec)
-    CONFIG_FLD(std::string, name, "")
-    CONFIG_FLD(std::string, type, "")
-    CONFIG_FLD(std::string, arguments, "")
+    CONFIG_FLD_STRING(type, "")
+    CONFIG_FLD_STRING(arguments, "")
     CONFIG_FLD_INT_LIST(ports)
-    CONFIG_FLD_ID_LIST(threadpool_code, pools)
-    CONFIG_FLD(int, delay_seconds, 0)
-    CONFIG_FLD(int, count, 1)
-    CONFIG_FLD(bool, run, true)
+    CONFIG_FLD_ID_LIST(threadpool_code2, pools)
+    CONFIG_FLD(int, uint64, delay_seconds, 0)
+    CONFIG_FLD(int, uint64, count, 1)
+    CONFIG_FLD(bool, bool, run, true)
 CONFIG_END
 
 struct service_spec
@@ -137,24 +145,24 @@ struct service_spec
     std::vector<service_app_spec> app_specs;
 
     service_spec() {}
-    bool init(configuration_ptr config);
-    bool init_app_specs(configuration_ptr c);
+    bool init();
+    bool init_app_specs();
 };
 
 CONFIG_BEGIN(service_spec)
-    CONFIG_FLD(std::string, tool, "")
+    CONFIG_FLD_STRING(tool, "")
     CONFIG_FLD_STRING_LIST(toollets)
-    CONFIG_FLD(std::string, coredump_dir, "./coredump")
-    CONFIG_FLD(std::string, aio_factory_name, "")
-    CONFIG_FLD(std::string, env_factory_name, "")
-    CONFIG_FLD(std::string, lock_factory_name, "")
-    CONFIG_FLD(std::string, rwlock_nr_factory_name, "")
-    CONFIG_FLD(std::string, semaphore_factory_name, "")
-    CONFIG_FLD(std::string, nfs_factory_name, "")
-    CONFIG_FLD(std::string, perf_counter_factory_name, "")
-    CONFIG_FLD(std::string, logging_factory_name, "")
-    CONFIG_FLD(std::string, memory_factory_name, "")
-    CONFIG_FLD(std::string, tools_memory_factory_name, "")
+    CONFIG_FLD_STRING(coredump_dir, "./coredump")
+    CONFIG_FLD_STRING(aio_factory_name, "")
+    CONFIG_FLD_STRING(env_factory_name, "")
+    CONFIG_FLD_STRING(lock_factory_name, "")
+    CONFIG_FLD_STRING(rwlock_nr_factory_name, "")
+    CONFIG_FLD_STRING(semaphore_factory_name, "")
+    CONFIG_FLD_STRING(nfs_factory_name, "")
+    CONFIG_FLD_STRING(perf_counter_factory_name, "")
+    CONFIG_FLD_STRING(logging_factory_name, "")
+    CONFIG_FLD_STRING(memory_factory_name, "")
+    CONFIG_FLD_STRING(tools_memory_factory_name, "")
 
     CONFIG_FLD_STRING_LIST(network_aspects)
     CONFIG_FLD_STRING_LIST(aio_aspects)

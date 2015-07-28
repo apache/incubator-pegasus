@@ -27,9 +27,8 @@
 
 # include <dsn/internal/dsn_types.h>
 # include <dsn/internal/singleton.h>
-# include <dsn/internal/end_point.h>
 # include <dsn/internal/global_config.h>
-# include <dsn/internal/error_code.h>
+# include <dsn/cpp/auto_code.h>
 # include <sstream>
 
 namespace dsn { 
@@ -42,14 +41,10 @@ class logging_provider;
 class nfs_node;
 class memory_provider;
 
-namespace service {
-    class service_app;
-}
-
 class service_node
 {
 public:    
-    service_node(service::service_app* app);
+    service_node(service_app_spec& app_spec, void* app_context);
     
     task_engine* computation() const { return _computation; }
     rpc_engine*  rpc() const { return _rpc; }
@@ -57,23 +52,23 @@ public:
     nfs_node* nfs() const { return _nfs; }
     void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, __out_param std::stringstream& ss);
 
-    error_code start();
+    ::dsn::error_code start();
 
-    int id() const { return _app_id; }
-    const char* name() const { return _app_name.c_str(); }
-    const service_app_spec& spec() const;
+    int id() const { return _app_spec.id; }
+    const char* name() const { return _app_spec.name.c_str(); }
+    const service_app_spec& spec() const { return _app_spec;  }
+    void* get_app_context_ptr() const { return _app_context_ptr; }
     
 private:
-    int          _app_id;
-    std::string  _app_name;
-    service::service_app  *_app;
-    task_engine* _computation;
-    rpc_engine*  _rpc;
-    disk_engine* _disk;
-    nfs_node*    _nfs;
+    void*            _app_context_ptr; // app start returns this value and used by app stop
+    service_app_spec _app_spec;
+    task_engine*     _computation;
+    rpc_engine*      _rpc;
+    disk_engine*     _disk;
+    nfs_node*        _nfs;
 };
 
-class rpc_server_handler;
+typedef std::map<int, service_node*> service_nodes_by_app_id;
 class service_engine : public utils::singleton<service_engine>
 {
 public:
@@ -88,21 +83,21 @@ public:
         
     void init_before_toollets(const service_spec& spec);
     void init_after_toollets();
-    void configuration_changed(configuration_ptr configuration);
+    void configuration_changed();
 
-    service_node* start_node(service::service_app* app);
-    void register_system_rpc_handler(task_code code, const char* name, rpc_server_handler* handler, int port = -1); // -1 for all nodes
-    
+    service_node* start_node(service_app_spec& app_spec);
+    void register_system_rpc_handler(dsn_task_code_t code, const char* name, dsn_rpc_request_handler_t cb, void* param, int port = -1); // -1 for all nodes
+    const service_nodes_by_app_id& get_all_nodes() const { return _nodes_by_app_id; }
+
 private:
     service_spec                    _spec;
     env_provider*                   _env;
     logging_provider*               _logging;
     memory_provider*                _memory;
 
-    // <port, servicenode>
-    typedef std::map<int, service_node*> node_engines_by_app_id;
+    // <port, servicenode>    
     typedef std::map<int, service_node*> node_engines_by_port; // multiple ports may share the same node
-    node_engines_by_app_id          _nodes_by_app_id;
+    service_nodes_by_app_id         _nodes_by_app_id;
     node_engines_by_port            _nodes_by_app_port;
 };
 

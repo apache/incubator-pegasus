@@ -26,7 +26,6 @@
 
 # include "net_server_session.h"
 # include "shared_io_service.h"
-# include <dsn/internal/logging.h>
 # include <dsn/internal/message_parser.h>
 
 # ifdef __TITLE__

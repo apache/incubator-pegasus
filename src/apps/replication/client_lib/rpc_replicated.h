@@ -25,7 +25,7 @@
  */
 #pragma once
 
-#include <dsn/serverlet.h>
+#include <dsn/cpp/serverlet.h>
 
 namespace dsn {
     namespace service {
@@ -37,7 +37,7 @@ namespace dsn {
                 const dsn_address_t& first_server,
                 const std::vector<dsn_address_t>& servers,
                 // request
-                task_code code,
+                dsn_task_code_t code,
                 std::shared_ptr<TRequest>& req,
 
                 // callback
@@ -51,7 +51,7 @@ namespace dsn {
             dsn::service::cpp_task_ptr call_replicated(
                 const dsn_address_t& first_server,
                 const std::vector<dsn_address_t>& servers,
-                message_ptr& request,
+                dsn_message_t request,
 
                 // reply
                 servicelet* svc,
@@ -65,8 +65,8 @@ namespace dsn {
                 template<typename TRequest, typename TResponse>
                 inline void rpc_replicated_callback(
                     error_code code,
-                    message_ptr& request,
-                    message_ptr& response,
+                    dsn_message_t request,
+                    dsn_message_t response,
                     std::shared_ptr<TRequest>& req,
                     std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&, const dsn_address_t&)> callback
                     )
@@ -75,7 +75,7 @@ namespace dsn {
                     std::shared_ptr<TResponse> resp(nullptr);
                     if (code == ERR_OK)
                     {
-                        srv = response->header().from_address;
+                        dsn_msg_from_address(response, &srv);
                         resp.reset(new TResponse);
                         unmarshall(response->reader(), *resp);
                     }
@@ -89,7 +89,7 @@ namespace dsn {
                 const dsn_address_t& first_server,
                 const std::vector<dsn_address_t>& servers,
                 // request
-                task_code code,
+                dsn_task_code_t code,
                 std::shared_ptr<TRequest>& req,
 
                 // callback
@@ -100,7 +100,7 @@ namespace dsn {
                 int reply_hash
                 )
             {
-                message_ptr request = message::create_request(code, timeout_milliseconds, request_hash);
+                dsn_message_t request = dsn_msg_create_request(code, timeout_milliseconds, request_hash);
                 marshall(request->writer(), *req);
 
                 return call_replicated(

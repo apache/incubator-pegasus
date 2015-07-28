@@ -23,9 +23,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-# include <dsn/internal/logging.h>
-# include <dsn/internal/coredump.h>
 # include <dsn/tool_api.h>
+# include "coredump.h"
 
 #ifdef _WIN32
 

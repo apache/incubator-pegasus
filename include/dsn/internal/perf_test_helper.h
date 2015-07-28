@@ -25,8 +25,7 @@
  */
 # pragma once
 
-# include <dsn/service_api.h>
-# include <dsn/internal/logging.h>
+# include <dsn/service_api_cpp.h>
 # include <sstream>
 # include <atomic>
 # include <vector>
@@ -48,8 +47,8 @@ namespace dsn {
         };
 
         CONFIG_BEGIN(perf_test_opts)
-            CONFIG_FLD(int, perf_test_rounds, 10000)            
-            CONFIG_FLD(bool, perf_test_concurrent, true)
+            CONFIG_FLD(int, uint64, perf_test_rounds, 10000)            
+            CONFIG_FLD(bool, bool, perf_test_concurrent, true)
             CONFIG_FLD_INT_LIST(perf_test_payload_bytes)
             CONFIG_FLD_INT_LIST(perf_test_timeouts_ms)
         CONFIG_END
@@ -60,8 +59,7 @@ namespace dsn {
         protected:
             perf_client_helper()
             {
-                auto cf = system::config();
-                if (!read_config(cf, "task.default", _default_opts))
+                if (!read_config("task.default", _default_opts))
                 {
                     dassert(false, "read configuration failed for section [task.default]");
                 }
@@ -134,8 +132,7 @@ namespace dsn {
             void load_suite_config(perf_test_suite& s)
             {
                 perf_test_opts opt;
-                auto cf = system::config();
-                if (!read_config(cf, s.config_section, opt, &_default_opts))
+                if (!read_config(s.config_section, opt, &_default_opts))
                 {
                     dassert(false, "read configuration failed for section [%s]", s.config_section);
                 }
@@ -172,7 +169,7 @@ namespace dsn {
                     return nullptr;
 
                 ++_live_rpc_count;
-                _rounds_latency_us[id - 1] = env::now_us();
+                _rounds_latency_us[id - 1] = dsn_now_us();
                 return (void*)(size_t)(id);
             }
 
@@ -195,7 +192,7 @@ namespace dsn {
                 }
                 else
                 {
-                    _rounds_latency_us[id - 1] = env::now_us() - _rounds_latency_us[id - 1];
+                    _rounds_latency_us[id - 1] = dsn_now_us() - _rounds_latency_us[id - 1];
                 }
 
                 // if completed
@@ -239,7 +236,7 @@ namespace dsn {
                 //dassert(cs.succ_rounds == sc, "cs.succ_rounds vs sc = %d vs %d", cs.succ_rounds, sc);
 
                 cs.succ_latency_avg_us = sum / (double)sc;
-                cs.succ_qps = (double)sc / ((double)(env::now_us() - _case_start_ts_us) / 1000.0 / 1000.0);
+                cs.succ_qps = (double)sc / ((double)(dsn_now_us() - _case_start_ts_us) / 1000.0 / 1000.0);
                 cs.min_latency_us = static_cast<int>(lmin_us);
                 cs.max_latency_us = static_cast<int>(lmax_us);
 
@@ -307,7 +304,7 @@ namespace dsn {
                 _current_case = &cs;
                 cs.timeout_rounds = 0;
                 cs.error_rounds = 0;
-                _case_start_ts_us = env::now_us();
+                _case_start_ts_us = dsn_now_us();
 
                 _live_rpc_count = 0;
                 _rounds_req = 0;

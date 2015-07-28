@@ -33,7 +33,7 @@ namespace dsn {
             class simple_kv_service_impl : public simple_kv_service
             {
             public:
-                simple_kv_service_impl(replica* replica, configuration_ptr& config);
+                simple_kv_service_impl(replica* replica);
 
                 // RPC_SIMPLE_KV_READ
                 virtual void on_read(const std::string& key, ::dsn::service::rpc_replier<std::string>& reply);

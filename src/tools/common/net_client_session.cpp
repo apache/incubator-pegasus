@@ -24,7 +24,6 @@
  * THE SOFTWARE.
  */
 # include "net_client_session.h"
-# include <dsn/internal/logging.h>
 
 # ifdef __TITLE__
 # undef __TITLE__

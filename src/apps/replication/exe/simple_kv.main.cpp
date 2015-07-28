@@ -43,10 +43,10 @@ int main(int argc, char** argv)
     dsn::replication::register_replica_provider<::dsn::replication::application::simple_kv_service_impl>("simple_kv");
 
     // register all possible services
-    dsn::service::system::register_service<::dsn::replication::meta_service_app>("meta");
-    dsn::service::system::register_service<::dsn::replication::replication_service_app>("replica");
-    dsn::service::system::register_service<::dsn::replication::application::simple_kv_client_app>("client");
-    dsn::service::system::register_service<::dsn::replication::application::simple_kv_perf_test_client_app>("client.perf.test");
+    dsn::register_app<::dsn::replication::meta_service_app>("meta");
+    dsn::register_app<::dsn::replication::replication_service_app>("replica");
+    dsn::register_app<::dsn::replication::application::simple_kv_client_app>("client");
+    dsn::register_app<::dsn::replication::application::simple_kv_perf_test_client_app>("client.perf.test");
 
     // register all possible tools and toollets
     dsn::tools::register_tool<dsn::tools::nativerun>("nativerun");
@@ -66,6 +66,6 @@ int main(int argc, char** argv)
 #endif
 
     // specify what services and tools will run in config file, then run
-    dsn::service::system::run(--argc, ++argv, true);
+    dsn_run(--argc, ++argv, true);
     return 0;
 }

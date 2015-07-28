@@ -30,11 +30,10 @@
 
 namespace dsn { namespace replication { namespace application { 
 // client app example
-class simple_kv_client_app : public ::dsn::service::service_app, public virtual ::dsn::service::servicelet
+class simple_kv_client_app : public ::dsn::service_app<simple_kv_client_app>, public virtual ::dsn::service::servicelet
 {
 public:
-    simple_kv_client_app(::dsn::service_app_spec* s) 
-        : ::dsn::service::service_app(s) 
+    simple_kv_client_app()
     {
         _simple_kv_client = nullptr;
     }
@@ -50,8 +49,7 @@ public:
             return ::dsn::ERR_INVALID_PARAMETERS;
 
         std::vector<dsn_address_t> meta_servers;
-        auto cf = ::dsn::service::system::config();
-        ::dsn::replication::replication_app_client_base::load_meta_servers(cf, meta_servers);
+        ::dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
         
         _simple_kv_client = new simple_kv_client(meta_servers, argv[1]);
         _timer = ::dsn::service::tasking::enqueue(LPC_SIMPLE_KV_TEST_TIMER, this, &simple_kv_client_app::on_test_timer, 0, 0, 1000);
@@ -72,7 +70,7 @@ public:
     void on_test_timer()
     {
         char buffer[20];
-        sprintf(buffer, "value.%u", env::random32(0, 100));
+        sprintf(buffer, "value.%u", dsn_random32(0, 100));
 
         std::string value(buffer);
 
@@ -105,11 +103,10 @@ private:
 };
 
 
-class simple_kv_perf_test_client_app : public ::dsn::service::service_app, public virtual ::dsn::service::servicelet
+class simple_kv_perf_test_client_app : public ::dsn::service_app<simple_kv_perf_test_client_app>, public virtual ::dsn::service::servicelet
 {
 public:
-    simple_kv_perf_test_client_app(::dsn::service_app_spec* s)
-        : ::dsn::service::service_app(s)
+    simple_kv_perf_test_client_app()
     {
         _simple_kv_client = nullptr;
     }
@@ -125,8 +122,7 @@ public:
             return ::dsn::ERR_INVALID_PARAMETERS;
 
         std::vector<dsn_address_t> meta_servers;
-        auto cf = ::dsn::service::system::config();
-        ::dsn::replication::replication_app_client_base::load_meta_servers(cf, meta_servers);
+        ::dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
 
         _simple_kv_client = new simple_kv_perf_test_client(meta_servers, argv[1]);
         _simple_kv_client->start_test();

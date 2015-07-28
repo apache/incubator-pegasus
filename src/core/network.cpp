@@ -40,7 +40,7 @@ namespace dsn {
         _disconnected = false;
     }
 
-    void rpc_client_session::call(message_ptr& request, rpc_response_task_ptr& call)
+    void rpc_client_session::call(message_ex* request, rpc_response_task_ptr& call)
     {
         if (call != nullptr)
         {
@@ -58,12 +58,12 @@ namespace dsn {
         _net.on_client_session_disconnected(sp);
     }
 
-    bool rpc_client_session::on_recv_reply(uint64_t key, message_ptr& reply, int delay_ms)
+    bool rpc_client_session::on_recv_reply(uint64_t key, message_ex* reply, int delay_ms)
     {
         if (reply != nullptr)
         {
-            reply->header().from_address = remote_address();
-            reply->header().to_address = _net.address();
+            reply->from_address = remote_address();
+            reply->to_address = _net.address();
         }
 
         return _matcher->on_recv_reply(key, reply, delay_ms);
@@ -76,13 +76,13 @@ namespace dsn {
     {
     }
 
-    void rpc_server_session::on_recv_request(message_ptr& msg, int delay_ms)
+    void rpc_server_session::on_recv_request(message_ex* msg, int delay_ms)
     {
-        msg->header().from_address = remote_address();
-        msg->header().from_address.port = msg->header().client.port;
-        msg->header().to_address = _net.address();
+        msg->from_address = remote_address();
+        msg->from_address.port = msg->header->client.port;
+        msg->to_address = _net.address();
 
-        msg->server_session().reset(this);
+        msg->server_session.reset(this);
         return _net.on_recv_request(msg, delay_ms);
     }
 
@@ -110,7 +110,7 @@ namespace dsn {
         return _engine->node();
     }
 
-    void network::on_recv_request(message_ptr& msg, int delay_ms)
+    void network::on_recv_request(message_ex* msg, int delay_ms)
     {
         return _engine->on_recv_request(msg, delay_ms);
     }
@@ -132,10 +132,10 @@ namespace dsn {
     {
     }
 
-    void connection_oriented_network::call(message_ptr& request, rpc_response_task_ptr& call)
+    void connection_oriented_network::call(message_ex* request, rpc_response_task_ptr& call)
     {
         rpc_client_session_ptr client = nullptr;
-        dsn_address_t& to = request->header().to_address;
+        dsn_address_t& to = request->to_address;
         bool new_client = false;
 
         // TODO: thread-local client ptr cache

@@ -37,10 +37,10 @@ namespace dsn {
             hpc_tail_logger();
             virtual ~hpc_tail_logger(void);
 
-            virtual void logv(const char *file,
+            virtual void dsn_logv(const char *file,
                 const char *function,
                 const int line,
-                logging_level logLevel,
+                dsn_log_level_t logLevel,
                 const char* title,
                 const char *fmt,
                 va_list args

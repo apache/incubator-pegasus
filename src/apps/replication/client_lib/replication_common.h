@@ -81,11 +81,11 @@ public:
 
 public:
     replication_options();
-    void initialize(configuration_ptr config);
+    void initialize();
     ~replication_options();
 
 private:
-    void read_meta_servers(configuration_ptr config);
+    void read_meta_servers();
     void sanity_check();
 };
 

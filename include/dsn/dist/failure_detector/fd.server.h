@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 # pragma once
-# include <dsn/serverlet.h>
+# include <dsn/cpp/serverlet.h>
 # include <dsn/dist/failure_detector/fd.code.definition.h>
 # include <iostream>
 

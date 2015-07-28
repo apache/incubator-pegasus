@@ -72,7 +72,7 @@ namespace dsn {
 //
 ////------------------------------ SingleRpcClassResponseTimeAdmissionController ----------------------------------------------------------------
 //
-////      args: task_code PercentileType LatencyThreshold100ns(from task create to end in local process)
+////      args: dsn_task_code_t PercentileType LatencyThreshold100ns(from task create to end in local process)
 ////
 //
 //SingleRpcClassResponseTimeAdmissionController::SingleRpcClassResponseTimeAdmissionController(task_queue* q, std::vector<std::string>& sargs)

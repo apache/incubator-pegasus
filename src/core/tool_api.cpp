@@ -24,10 +24,9 @@
  * THE SOFTWARE.
  */
 # include <dsn/tool_api.h>
-# include <dsn/internal/service_app.h>
-# include "service_engine.h"
 # include <dsn/internal/factory_store.h>
 # include <dsn/internal/singleton_store.h>
+# include "service_engine.h"
 
 namespace dsn { 
 
@@ -36,36 +35,58 @@ namespace dsn {
     class service_control_task : public task
     {
     public:
-        service_control_task(service::service_app* app, bool start)
-            : _app(app), task(LPC_CONTROL_SERVICE_APP, 0, app->node()), _start(start)
+        service_control_task(service_node* node, bool start, bool cleanup = false)
+            : _node(node), task(LPC_CONTROL_SERVICE_APP, 0, node), _start(start), _cleanup(cleanup)
         {
         }
 
         void exec()
         {
+            auto& sp = _node->spec();
+
             if (_start)
             {
                 error_code err;
-                if (_app->node()->nfs())
+                if (_node->nfs())
                 {
-                    err = _app->node()->nfs()->start();
+                    err = _node->nfs()->start();
                     dassert(err == ERR_OK, "start nfs failed, err = %s", err.to_string());
                 }
+                
+                std::vector<std::string> args;
+                std::vector<char*> args_ptr;
+                utils::split_args(sp.arguments.c_str(), args);
 
-                err = _app->start(_app->arg_count(), _app->args());
+                int argc = static_cast<int>(args.size()) + 1;
+                args_ptr.resize(argc);
+                args.resize(argc);
+                for (int i = argc - 1; i >= 0; i--)
+                {
+                    if (0 == i)
+                    {
+                        args[0] = sp.name;
+                    }
+                    else
+                    {
+                        args[i] = args[i - 1];
+                    }
+
+                    args_ptr[i] = ((char*)args[i].c_str());
+                }
+
+                err = sp.role.start(_node->get_app_context_ptr(), argc, &args_ptr[0]);
                 dassert(err == ERR_OK, "start app failed, err = %s", err.to_string());
-                _app->_started = true;
             }
             else
             {
-                _app->stop();
-                _app->_started = false;
+                sp.role.destroy(_node->get_app_context_ptr(), _cleanup);
             }
         }
 
     private:
-        service::service_app* _app;
-        bool     _start; // false for stop
+        service_node* _node;
+        bool          _start; // false for stop
+        bool          _cleanup; // for stop
     };
 
 
@@ -86,24 +107,24 @@ namespace dsn {
         {
         }
 
-        void tool_app::start_all_service_apps()
+        void tool_app::start_all_apps()
         {
-            auto apps = service::system::get_all_apps();
-            for (auto it = apps.begin(); it != apps.end(); it++)
+            auto apps = service_engine::instance().get_all_nodes();
+            for (auto& kv : apps)
             {
-                task_ptr t(new service_control_task(it->second, true));
-                t->set_delay(1000 * it->second->spec().delay_seconds);
+                task_ptr t(new service_control_task(kv.second, true));
+                t->set_delay(1000 * kv.second->spec().delay_seconds);
                 t->enqueue();
             }
         }
 
 
-        void tool_app::stop_all_service_apps()
+        void tool_app::stop_all_apps(bool cleanup)
         {
-            auto apps = service::system::get_all_apps();
-            for (auto it = apps.begin(); it != apps.end(); it++)
+            auto apps = service_engine::instance().get_all_nodes();
+            for (auto& kv : apps)
             {
-                task_ptr t(new service_control_task(it->second, false));
+                task_ptr t(new service_control_task(kv.second, false, cleanup));
                 t->enqueue();
             }
         }
@@ -116,6 +137,28 @@ namespace dsn {
         configuration_ptr config()
         {
             return service_engine::instance().spec().config;
+        }
+
+        const service_spec& spec()
+        {
+            return service_engine::instance().spec();
+        }
+
+        apps get_all_apps()
+        {
+            apps as2;
+            auto as = service_engine::instance().get_all_nodes();
+            for (auto& kv : as)
+            {
+                app_info info;
+                info.app_context_ptr = kv.second->get_app_context_ptr();
+                info.app_id = kv.second->id();
+                info.name = kv.second->spec().name;
+                info.type = kv.second->spec().type;
+
+                as2[info.name] = info;
+            }
+            return as2;
         }
 
         join_point<void, configuration_ptr> sys_init_before_app_created("system.init.1");
@@ -215,11 +258,6 @@ namespace dsn {
                     utils::singleton_store<std::string, toollet*>::instance().put(name, tlt);
                     return tlt;
                 }
-            }
-
-            configuration_ptr config()
-            {
-                return ::dsn::service::system::config();
             }
         }
     }

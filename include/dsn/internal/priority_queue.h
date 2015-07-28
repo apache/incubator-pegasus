@@ -27,8 +27,8 @@
 
 #include <queue>
 #include <cassert>
-#include <dsn/internal/logging.h>
 #include <dsn/internal/synchronize.h>
+# include <dsn/service_api_c.h>
 
 namespace dsn { namespace utils {
 

@@ -25,9 +25,7 @@
 */
 # pragma once
 # include <dsn/dist/replication.h>
-# include <dsn/service_api.h>
-
-# include "nfs_node_impl.h"
+# include <dsn/tool/nfs_node_simple.h>
 # include "nfs_server_impl.h"
 
 namespace dsn {
@@ -35,11 +33,10 @@ namespace dsn {
         namespace application {
 
             // server app example
-            class nfs_server_app : public ::dsn::service::service_app, public virtual ::dsn::service::servicelet
+            class nfs_server_app : public ::dsn::service_app<nfs_server_app>, public virtual ::dsn::service::servicelet
             {
             public:
-                nfs_server_app(::dsn::service_app_spec* s)
-                    : ::dsn::service::service_app(s) {}
+                nfs_server_app(){}
 
                 virtual ::dsn::error_code start(int argc, char** argv)
                 {
@@ -52,15 +49,14 @@ namespace dsn {
                 }
 
             private:
-                nfs_node_impl* _nfs_node_impl;
+                nfs_node_simple* _nfs_node_impl;
             };
 
             // client app example
-            class nfs_client_app : public ::dsn::service::service_app, public virtual ::dsn::service::servicelet
+            class nfs_client_app : public ::dsn::service_app<nfs_client_app>, public virtual ::dsn::service::servicelet
             {
             public:
-                nfs_client_app(::dsn::service_app_spec* s)
-                    : ::dsn::service::service_app(s) 
+                nfs_client_app()
                 {
                     _req_index = 0;
                 }

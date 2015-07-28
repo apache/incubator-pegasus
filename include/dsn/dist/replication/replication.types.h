@@ -10,7 +10,7 @@
 //
 // # define DSN_NOT_USE_DEFAULT_SERIALIZATION
 
-# include <dsn/internal/serialization.h>
+# include <dsn/service_api_cpp.h>
 
 # ifdef DSN_NOT_USE_DEFAULT_SERIALIZATION
 

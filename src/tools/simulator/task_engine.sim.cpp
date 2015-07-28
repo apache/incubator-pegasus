@@ -40,14 +40,14 @@ void sim_task_queue::enqueue(task* t)
         if (_tasks.size() > 0)
         {
             do {
-                int random_pos = ::dsn::service::env::random32(0, 1000000);
+                int random_pos = dsn_random32(0, 1000000);
                 auto pr = _tasks.insert(std::map<uint32_t, task*>::value_type(random_pos, t));
                 if (pr.second) break;
             } while (true);
         }
         else
         {
-            int random_pos = ::dsn::service::env::random32(0, 1000000);
+            int random_pos = dsn_random32(0, 1000000);
             _tasks.insert(std::map<uint32_t, task*>::value_type(random_pos, t));
         }
     }

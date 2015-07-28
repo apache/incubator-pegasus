@@ -36,7 +36,7 @@ namespace dsn { namespace tools {
         sim_client_session(sim_network_provider& net, const dsn_address_t& remote_addr, rpc_client_matcher_ptr& matcher);
 
         virtual void connect();
-        virtual void send(message_ptr& msg);
+        virtual void send(message_ex* msg);
     };
 
     class sim_server_session : public rpc_server_session
@@ -44,7 +44,7 @@ namespace dsn { namespace tools {
     public:
         sim_server_session(sim_network_provider& net, const dsn_address_t& remote_addr, rpc_client_session_ptr& client);
 
-        virtual void send(message_ptr& reply_msg);
+        virtual void send(message_ex* reply_msg);
 
     private:
         rpc_client_session_ptr _client;

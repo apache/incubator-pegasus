@@ -34,8 +34,8 @@
 
 int main(int argc, char** argv)
 {
-    dsn::service::system::register_service<::dsn::replication::application::nfs_client_app>("client");
-    dsn::service::system::register_service<::dsn::replication::application::nfs_server_app>("server");
+    dsn::register_app<::dsn::replication::application::nfs_client_app>("client");
+    dsn::register_app<::dsn::replication::application::nfs_server_app>("server");
 
     // register all possible tools and toollets
     dsn::tools::register_tool<dsn::tools::nativerun>("nativerun");
@@ -50,6 +50,6 @@ int main(int argc, char** argv)
 #endif
 
     // specify what services and tools will run in config file, then run
-    dsn::service::system::run("config.ini", true);
+    dsn_run_config("config.ini", true);
     return 0;
 }

@@ -33,8 +33,8 @@ class simple_kv_service
     : public ::dsn::replication::replication_app_base
 {
 public:
-    simple_kv_service(::dsn::replication::replica* replica, ::dsn::configuration_ptr& config) 
-        : ::dsn::replication::replication_app_base(replica, config)
+    simple_kv_service(::dsn::replication::replica* replica) 
+        : ::dsn::replication::replication_app_base(replica)
     {
         open_service();
     }

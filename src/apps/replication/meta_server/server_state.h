@@ -57,7 +57,7 @@ public:
     server_state(void);
     ~server_state(void);
 
-    void init_app(configuration_ptr& cf);
+    void init_app();
 
     void get_node_state(__out_param node_states& nodes);
     void set_node_state(const node_states& nodes, __out_param machine_fail_updates* pris);

@@ -28,7 +28,7 @@
 # include <dsn/internal/task.h>
 # include <dsn/internal/synchronize.h>
 # include <dsn/internal/message_parser.h>
-# include <dsn/internal/end_point.h>
+# include <dsn/cpp/address.h>
 
 namespace dsn {
 
@@ -77,7 +77,7 @@ namespace dsn {
         //   call - the RPC response callback task to be invoked either timeout or response is received
         //          null when this is a one-way RPC call.
         //
-        virtual void call(message_ptr& request, rpc_response_task_ptr& call) = 0;
+        virtual void call(message_ex* request, rpc_response_task_ptr& call) = 0;
 
         //
         // utilities
@@ -87,7 +87,7 @@ namespace dsn {
         //
         // called when network received a complete message
         //
-        void on_recv_request(message_ptr& msg, int delay_ms);
+        void on_recv_request(message_ex* msg, int delay_ms);
         
         //
         // create a client matcher for matching RPC request and RPC response,
@@ -128,7 +128,7 @@ namespace dsn {
         // when a two-way RPC call is made, register the requst id and the callback
         // which also registers a timer for timeout tracking
         //
-        void on_call(message_ptr& request, rpc_response_task_ptr& call);
+        void on_call(message_ex* request, rpc_response_task_ptr& call);
 
         //
         // when a RPC response is received, call this function to trigger calback
@@ -136,7 +136,7 @@ namespace dsn {
         //  reply - rpc response message
         //  delay_ms - sometimes we want to delay the delivery of the message for certain purposes
         //
-        bool on_recv_reply(uint64_t key, message_ptr& reply, int delay_ms);
+        bool on_recv_reply(uint64_t key, message_ex* reply, int delay_ms);
 
     private:
         friend class rpc_timeout_task;
@@ -174,7 +174,7 @@ namespace dsn {
         void on_client_session_disconnected(rpc_client_session_ptr& s);
 
         // called upon RPC call, rpc client session is created on demand
-        virtual void call(message_ptr& request, rpc_response_task_ptr& call);
+        virtual void call(message_ex* request, rpc_response_task_ptr& call);
 
         // to be defined
         virtual rpc_client_session_ptr create_client_session(const dsn_address_t& server_addr) = 0;
@@ -196,15 +196,15 @@ namespace dsn {
     {
     public:
         rpc_client_session(connection_oriented_network& net, const dsn_address_t& remote_addr, rpc_client_matcher_ptr& matcher);
-        bool on_recv_reply(uint64_t key, message_ptr& reply, int delay_ms);
+        bool on_recv_reply(uint64_t key, message_ex* reply, int delay_ms);
         void on_disconnected();
-        void call(message_ptr& request, rpc_response_task_ptr& call);
+        void call(message_ex* request, rpc_response_task_ptr& call);
         const dsn_address_t& remote_address() const { return _remote_addr; }
         connection_oriented_network& net() const { return _net; }
         bool is_disconnected() const { return _disconnected; }
 
         virtual void connect() = 0;
-        virtual void send(message_ptr& msg) = 0;
+        virtual void send(message_ex* msg) = 0;
 
     private:
         bool _disconnected;
@@ -224,11 +224,11 @@ namespace dsn {
     {
     public:
         rpc_server_session(connection_oriented_network& net, const dsn_address_t& remote_addr);
-        void on_recv_request(message_ptr& msg, int delay_ms);
+        void on_recv_request(message_ex* msg, int delay_ms);
         void on_disconnected();
         const dsn_address_t& remote_address() const { return _remote_addr; }
 
-        virtual void send(message_ptr& reply_msg) = 0;
+        virtual void send(message_ex* reply_msg) = 0;
 
     protected:
         connection_oriented_network&   _net;

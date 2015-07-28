@@ -48,11 +48,14 @@ namespace dsn {
             {
                 for (auto& app : _apps)
                 {
-                    auto meta = dynamic_cast<meta_service_app *>(app.second);
-                    if (meta != nullptr) _meta_servers.push_back(meta);
-
-                    auto rs = dynamic_cast<replication_service_app *>(app.second);
-                    if (rs != nullptr) _replica_servers.push_back(rs);
+                    if (app.second.type == "meta")
+                    {
+                        _meta_servers.push_back((meta_service_app*)app.second.app_context_ptr);
+                    }
+                    else if (app.second.type == "replica")
+                    {
+                        _replica_servers.push_back((replication_service_app*)app.second.app_context_ptr);
+                    }
                 }
             }
 

@@ -95,7 +95,7 @@ replica::~replica(void)
     }
 }
 
-void replica::on_client_read(const read_request_header& meta, message_ptr& request)
+void replica::on_client_read(const read_request_header& meta, dsn_message_t request)
 {
     if (status() == PS_INACTIVE || status() == PS_POTENTIAL_SECONDARY)
     {
@@ -117,7 +117,7 @@ void replica::on_client_read(const read_request_header& meta, message_ptr& reque
     _app->dispatch_rpc_call(meta.code, request, true);
 }
 
-void replica::response_client_message(message_ptr& request, error_code error, decree d/* = invalid_decree*/)
+void replica::response_client_message(dsn_message_t request, error_code error, decree d/* = invalid_decree*/)
 {
     if (nullptr == request)
     {
@@ -125,14 +125,7 @@ void replica::response_client_message(message_ptr& request, error_code error, de
         return;
     }   
 
-    message_ptr resp = request->create_response();
-    resp->writer().write(error);
-
-    dassert(error != ERR_OK, "");
-    dinfo("handle replication request with rpc_id = %016llx failed, err = %s",
-        request->header().rpc_id, error.to_string());
-
-    rpc::reply(resp);
+    reply(request, error);
 }
 
 void replica::execute_mutation(mutation_ptr& mu)
@@ -155,8 +148,8 @@ void replica::execute_mutation(mutation_ptr& mu)
         {
             if (mu->client_request == nullptr)
                 ack_client = false;
-            else if (mu->client_request->header().from_address.ip == 0)
-                ack_client = false;
+            /*else if (mu->client_request->header().from_address.ip == 0)
+                ack_client = false;*/
         }
         err = _app->write_internal(mu, ack_client); 
         }

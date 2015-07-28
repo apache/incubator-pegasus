@@ -123,9 +123,9 @@ namespace dsn
 
         static void hpc_tail_logs_dumpper()
         {
-            uint64_t nts = ::dsn::service::env::now_ns();
+            uint64_t nts = dsn_now_ns();
             std::stringstream log;
-            log << ::dsn::service::system::spec().coredump_dir << "/hpc_tail_logs." << nts << ".log";
+            log << ::dsn::tools::spec().coredump_dir << "/hpc_tail_logs." << nts << ".log";
 
             std::ofstream olog(log.str().c_str());
 
@@ -160,7 +160,7 @@ namespace dsn
             const char* keyword, int back_seconds, int back_start_seconds, 
             std::unordered_set<int>& target_threads)
         {
-            uint64_t nts = ::dsn::service::env::now_ns();
+            uint64_t nts = dsn_now_ns();
             uint64_t start = nts - static_cast<uint64_t>(back_seconds)* 1000 * 1000;
             uint64_t end = nts - static_cast<uint64_t>(back_start_seconds)* 1000 * 1000;
 
@@ -220,10 +220,10 @@ namespace dsn
             return std::move(ss.str());
         }
 
-        void hpc_tail_logger::logv(const char *file,
+        void hpc_tail_logger::dsn_logv(const char *file,
             const char *function,
             const int line,
-            logging_level logLevel,
+            dsn_log_level_t logLevel,
             const char* title,
             const char *fmt,
             va_list args
@@ -253,8 +253,8 @@ namespace dsn
             // print verbose log header    
             uint64_t ts = 0;
             int tid = ::dsn::utils::get_current_tid();
-            if (::dsn::service::system::is_ready())
-                ts = ::dsn::service::env::now_ns();
+            if (::dsn::tools::is_engine_ready())
+                ts = dsn_now_ns();
             char str[24];
             ::dsn::utils::time_ms_to_string(ts / 1000000, str);            
             auto wn = sprintf(ptr, "%s (%llu %04x) ", str, static_cast<long long unsigned int>(ts), tid);
@@ -316,7 +316,7 @@ namespace dsn
             s_tail_log_info.next_write_ptr = ptr;
 
             // dump critical logs on screen
-            if (logLevel >= log_level_WARNING)
+            if (logLevel >= LOG_LEVEL_WARNING)
             {
                 std::cout << ptr0 << std::endl;
             }

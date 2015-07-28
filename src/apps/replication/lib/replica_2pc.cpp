@@ -36,7 +36,7 @@
 namespace dsn { namespace replication {
 
 
-void replica::on_client_write(int code, message_ptr& request)
+void replica::on_client_write(int code, dsn_message_t request)
 {
     check_hashed_access();
 
@@ -138,15 +138,17 @@ ErrOut:
 
 void replica::send_prepare_message(const dsn_address_t& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds)
 {
-    message_ptr msg = message::create_request(RPC_PREPARE, timeout_milliseconds, gpid_to_hash(get_gpid()));
-    marshall(msg, get_gpid());
-    
+    dsn_message_t msg = dsn_msg_create_request(RPC_PREPARE, timeout_milliseconds, gpid_to_hash(get_gpid()));
     replica_configuration rconfig;
     _primary_states.get_replica_config(status, rconfig);
 
-    marshall(msg, rconfig);
-    mu->write_to(msg);
-
+    {
+        msg_binary_writer writer(msg);
+        marshall(writer, get_gpid());
+        marshall(writer, rconfig);
+        mu->write_to(writer);
+    }
+    
     dbg_dassert (mu->remote_tasks().find(addr) == mu->remote_tasks().end(), "");
 
     mu->remote_tasks()[addr] = rpc::call(addr, msg, 
@@ -179,14 +181,19 @@ void replica::do_possible_commit_on_primary(mutation_ptr& mu)
     }
 }
 
-void replica::on_prepare(message_ptr& request)
+void replica::on_prepare(dsn_message_t request)
 {
     check_hashed_access();
 
     replica_configuration rconfig;
-    unmarshall(request, rconfig);    
+    mutation_ptr mu;
 
-    mutation_ptr mu = mutation::read_from(request);
+    {
+        msg_binary_reader reader(request);
+        unmarshall(reader, rconfig);
+        mu = mutation::read_from(reader);
+    }
+
     decree decree = mu->data.header.decree;
 
     ddebug( "%s: mutation %s on_prepare", name(), mu->name());
@@ -341,7 +348,7 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
     }
 }
 
-void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, error_code err, message_ptr& request, message_ptr& reply)
+void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, error_code err, dsn_message_t request, dsn_message_t reply)
 {
     check_hashed_access();
 
@@ -354,7 +361,8 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
     
     dassert (mu->data.header.ballot == get_ballot(), "");
 
-    dsn_address_t node = request->header().to_address;
+    dsn_address_t node;
+    dsn_msg_to_address(request, &node);
     partition_status st = _primary_states.get_node_status(node);
 
     // handle reply
@@ -367,7 +375,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
     }
     else
     {
-        unmarshall(reply, resp);        
+        ::unmarshall(reply, resp);
 
         ddebug( 
             "%s: mutation %s on_prepare_reply from %s:%hu", 

@@ -29,8 +29,8 @@
 
 namespace dsn { namespace replication {
 
-replication_service_app::replication_service_app(service_app_spec* s)
-    : service_app(s)
+replication_service_app::replication_service_app()
+    : service_app()
 {
     _stub = nullptr;
 }
@@ -42,11 +42,11 @@ replication_service_app::~replication_service_app(void)
 error_code replication_service_app::start(int argc, char** argv)
 {
     replication_options opts;
-    opts.initialize(system::config());
-    opts.working_dir = "./" + name();
+    opts.initialize();
+    opts.working_dir = std::string("./") + argv[0];
 
     _stub = new replica_stub();
-    _stub->initialize(opts, system::config());
+    _stub->initialize(opts);
     _stub->open_service();
     return ERR_OK;
 }

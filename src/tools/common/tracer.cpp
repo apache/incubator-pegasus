@@ -37,7 +37,7 @@ namespace dsn {
         static void tracer_on_task_enqueue(task* caller, task* callee)
         {
             ddebug("%s ENQUEUE, task_id = %016llx, delay = %d ms",
-                callee->spec().name,
+                callee->spec().name.c_str(),
                 callee->id(),
                 callee->delay_milliseconds()
                 );
@@ -50,7 +50,7 @@ namespace dsn {
             case dsn_task_type_t::TASK_TYPE_COMPUTE:
             case dsn_task_type_t::TASK_TYPE_AIO:
                 ddebug("%s EXEC BEGIN, task_id = %016llx",
-                    this_->spec().name,
+                    this_->spec().name.c_str(),
                     this_->id()
                     );
                 break;
@@ -58,13 +58,13 @@ namespace dsn {
             {
                 auto tsk = (rpc_request_task*)this_;
                 ddebug("%s EXEC BEGIN, task_id = %016llx, %s:%hu => %s:%hu, rpc_id = %016llx",
-                    this_->spec().name,
+                    this_->spec().name.c_str(),
                     this_->id(),
-                    tsk->get_request()->header().from_address.name,
-                    tsk->get_request()->header().from_address.port,
-                    tsk->get_request()->header().to_address.name,
-                    tsk->get_request()->header().to_address.port,
-                    tsk->get_request()->header().rpc_id
+                    tsk->get_request()->from_address.name,
+                    tsk->get_request()->from_address.port,
+                    tsk->get_request()->to_address.name,
+                    tsk->get_request()->to_address.port,
+                    tsk->get_request()->header->rpc_id
                     );
             }
                 break;
@@ -72,13 +72,13 @@ namespace dsn {
             {
                 auto tsk = (rpc_response_task*)this_;
                 ddebug("%s EXEC BEGIN, task_id = %016llx, %s:%hu => %s:%hu, rpc_id = %016llx",
-                    this_->spec().name,
+                    this_->spec().name.c_str(),
                     this_->id(),
-                    tsk->get_request()->header().to_address.name,
-                    tsk->get_request()->header().to_address.port,
-                    tsk->get_request()->header().from_address.name,
-                    tsk->get_request()->header().from_address.port,
-                    tsk->get_request()->header().rpc_id
+                    tsk->get_request()->to_address.name,
+                    tsk->get_request()->to_address.port,
+                    tsk->get_request()->from_address.name,
+                    tsk->get_request()->from_address.port,
+                    tsk->get_request()->header->rpc_id
                     );
             }
                 break;
@@ -88,7 +88,7 @@ namespace dsn {
         static void tracer_on_task_end(task* this_)
         {
             ddebug("%s EXEC END, task_id = %016llx, err = %s",
-                this_->spec().name,
+                this_->spec().name.c_str(),
                 this_->id(),
                 this_->error().to_string()
                 );
@@ -97,7 +97,7 @@ namespace dsn {
         static void tracer_on_task_cancelled(task* this_)
         {
             ddebug("%s CANCELLED, task_id = %016llx",
-                this_->spec().name,
+                this_->spec().name.c_str(),
                 this_->id()
                 );
         }
@@ -121,7 +121,7 @@ namespace dsn {
         static void tracer_on_aio_call(task* caller, aio_task* callee)
         {
             ddebug("%s AIO.CALL, task_id = %016llx",
-                callee->spec().name,
+                callee->spec().name.c_str(),
                 callee->id()
                 );
         }
@@ -129,22 +129,22 @@ namespace dsn {
         static void tracer_on_aio_enqueue(aio_task* this_)
         {
             ddebug("%s AIO.ENQUEUE, task_id = %016llx",
-                this_->spec().name,
+                this_->spec().name.c_str(),
                 this_->id()
                 );
         }
 
         // return true means continue, otherwise early terminate with task::set_error_code
-        static void tracer_on_rpc_call(task* caller, message* req, rpc_response_task* callee)
+        static void tracer_on_rpc_call(task* caller, message_ex* req, rpc_response_task* callee)
         {
-            dsn_message_header& hdr = req->header();
+            message_header& hdr = *req->header;
             ddebug(
                 "%s RPC.CALL: %s:%hu => %s:%hu, rpc_id = %016llx, callback_task = %016llx, timeout = %d ms",
                 hdr.rpc_name,
-                hdr.from_address.name,
-                hdr.from_address.port,
-                hdr.to_address.name,
-                hdr.to_address.port,
+                req->from_address.name,
+                req->from_address.port,
+                req->to_address.name,
+                req->to_address.port,
                 hdr.rpc_id,
                 callee ? callee->id() : 0,
                 hdr.client.timeout_ms
@@ -154,28 +154,28 @@ namespace dsn {
         static void tracer_on_rpc_request_enqueue(rpc_request_task* callee)
         {
             ddebug("%s RPC.REQUEST.ENQUEUE, task_id = %016llx, %s:%hu => %s:%hu, rpc_id = %016llx",
-                callee->spec().name,
+                callee->spec().name.c_str(),
                 callee->id(),
-                callee->get_request()->header().from_address.name,
-                callee->get_request()->header().from_address.port,
-                callee->get_request()->header().to_address.name,
-                callee->get_request()->header().to_address.port,
-                callee->get_request()->header().rpc_id
+                callee->get_request()->from_address.name,
+                callee->get_request()->from_address.port,
+                callee->get_request()->to_address.name,
+                callee->get_request()->to_address.port,
+                callee->get_request()->header->rpc_id
                 );
         }
 
         // return true means continue, otherwise early terminate with task::set_error_code
-        static void tracer_on_rpc_reply(task* caller, message* msg)
+        static void tracer_on_rpc_reply(task* caller, message_ex* msg)
         {
-            dsn_message_header& hdr = msg->header();
+            message_header& hdr = *msg->header;
 
             ddebug(
                 "%s RPC.REPLY: %s:%hu => %s:%hu, rpc_id = %016llx",
                 hdr.rpc_name,
-                hdr.from_address.name,
-                hdr.from_address.port,
-                hdr.to_address.name,
-                hdr.to_address.port,
+                msg->from_address.name,
+                msg->from_address.port,
+                msg->to_address.name,
+                msg->to_address.port,
                 hdr.rpc_id
                 );
         }
@@ -183,13 +183,13 @@ namespace dsn {
         static void tracer_on_rpc_response_enqueue(rpc_response_task* resp)
         {
             ddebug("%s RPC.RESPONSE.ENQUEUE, task_id = %016llx, %s:%hu => %s:%hu, rpc_id = %016llx",
-                resp->spec().name,
+                resp->spec().name.c_str(),
                 resp->id(),
-                resp->get_request()->header().to_address.name,
-                resp->get_request()->header().to_address.port,
-                resp->get_request()->header().from_address.name,
-                resp->get_request()->header().from_address.port,
-                resp->get_request()->header().rpc_id
+                resp->get_request()->to_address.name,
+                resp->get_request()->to_address.port,
+                resp->get_request()->from_address.name,
+                resp->get_request()->from_address.port,
+                resp->get_request()->header->rpc_id
                 );
         }
 
@@ -197,12 +197,12 @@ namespace dsn {
         {
             auto trace = config()->get_value<bool>("task.default", "is_trace", false);
 
-            for (int i = 0; i <= task_code::max_value(); i++)
+            for (int i = 0; i <= dsn_task_code_max(); i++)
             {
                 if (i == TASK_CODE_INVALID)
                     continue;
 
-                std::string section_name = std::string("task.") + std::string(task_code::to_string(i));
+                std::string section_name = std::string("task.") + std::string(dsn_task_code_to_string(i));
                 task_spec* spec = task_spec::get(i);
                 dassert (spec != nullptr, "task_spec cannot be null");
 

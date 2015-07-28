@@ -54,18 +54,16 @@ replica_stub::~replica_stub(void)
     close();
 }
 
-void replica_stub::initialize(configuration_ptr config, bool clear/* = false*/)
+void replica_stub::initialize(bool clear/* = false*/)
 {
     replication_options opts;
-    opts.initialize(config);
-    initialize(opts, config, clear);
+    opts.initialize();
+    initialize(opts, clear);
 }
 
-void replica_stub::initialize(const replication_options& opts, configuration_ptr config, bool clear/* = false*/)
+void replica_stub::initialize(const replication_options& opts, bool clear/* = false*/)
 {
     zauto_lock l(_repicas_lock);
-
-    _config = config;
 
     // init dirs
     set_options(opts);
@@ -272,10 +270,10 @@ void replica_stub::get_primary_replica_list(uint32_t p_tableID, std::vector<glob
     }
 }
 
-void replica_stub::on_client_write(message_ptr& request)
+void replica_stub::on_client_write(dsn_message_t request)
 {
     write_request_header hdr;
-    unmarshall(request, hdr);    
+    ::unmarshall(request, hdr);    
     
     replica_ptr rep = get_replica(hdr.gpid);
     if (rep != nullptr)
@@ -288,10 +286,10 @@ void replica_stub::on_client_write(message_ptr& request)
     }
 }
 
-void replica_stub::on_client_read(message_ptr& request)
+void replica_stub::on_client_read(dsn_message_t request)
 {
     read_request_header req;
-    unmarshall(request, req);
+    ::unmarshall(request, req);
 
     replica_ptr rep = get_replica(req.gpid);
     if (rep != nullptr)
@@ -351,10 +349,10 @@ void replica_stub::on_query_decree(const query_replica_decree_request& req, __ou
     }
 }
 
-void replica_stub::on_prepare(message_ptr& request)
+void replica_stub::on_prepare(dsn_message_t request)
 {
     global_partition_id gpid;
-    unmarshall(request, gpid);    
+    ::unmarshall(request, gpid);    
     replica_ptr rep = get_replica(gpid);
     if (rep != nullptr)
     {
@@ -458,15 +456,15 @@ void replica_stub::query_configuration_by_node()
         _config_query_task->cancel(false);
     }
 
-    message_ptr msg = message::create_request(RPC_CM_CALL);
+    dsn_message_t msg = dsn_msg_create_request(RPC_CM_CALL, 0, 0);
 
     meta_request_header hdr;
     hdr.rpc_tag = RPC_CM_QUERY_NODE_PARTITIONS;
-    marshall(msg, hdr);
+    ::marshall(msg, hdr);
 
     configuration_query_by_node_request req;
     req.node = primary_address();
-    marshall(msg, req);
+    ::marshall(msg, req);
 
     _config_query_task = rpc::call_replicated(
         _failure_detector->current_server_contact(),
@@ -496,7 +494,7 @@ void replica_stub::on_meta_server_connected()
     }
 }
 
-void replica_stub::on_node_query_reply(error_code err, message_ptr& request, message_ptr& response)
+void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, dsn_message_t response)
 {
     ddebug(
         "%s:%hu: node view replied, err = %s",
@@ -526,7 +524,7 @@ void replica_stub::on_node_query_reply(error_code err, message_ptr& request, mes
             return;
 
         configuration_query_by_node_response resp;
-        unmarshall(response, resp);     
+        ::unmarshall(response, resp);     
 
         if (resp.err != ERR_OK)
             return;
@@ -612,10 +610,10 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, global_p
 
 void replica_stub::remove_replica_on_meta_server(const partition_configuration& config)
 {
-    message_ptr msg = message::create_request(RPC_CM_CALL);
+    dsn_message_t msg = dsn_msg_create_request(RPC_CM_CALL, 0, 0);
     meta_request_header hdr;
     hdr.rpc_tag = RPC_CM_UPDATE_PARTITION_CONFIGURATION;
-    marshall(msg, hdr);
+    ::marshall(msg, hdr);
 
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
     request->config = config;
@@ -635,7 +633,7 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
         return;
     }
 
-    marshall(msg, *request);
+    ::marshall(msg, *request);
 
     rpc::call_replicated(
         _failure_detector->current_server_contact(),
@@ -685,11 +683,9 @@ void replica_stub::on_meta_server_disconnected_scatter(replica_stub_ptr this_, g
     }
 }
 
-void replica_stub::response_client_error(message_ptr& request, int error)
+void replica_stub::response_client_error(dsn_message_t request, int error)
 {
-    message_ptr resp = request->create_response();
-    resp->writer().write(error);
-    rpc::reply(resp);
+    reply(request, error);
 }
 
 void replica_stub::init_gc_for_test()

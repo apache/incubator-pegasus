@@ -25,7 +25,7 @@
  */
 # pragma once
 
-# include <dsn/internal/logging.h>
+# include <dsn/service_api_c.h>
 # include <dsn/internal/utils.h>
 # include <vector>
 # include <atomic>

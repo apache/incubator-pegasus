@@ -26,8 +26,7 @@
 # pragma once
 
 # include <dsn/internal/dsn_types.h>
-# include <dsn/internal/logging.h>
-# include <dsn/internal/error_code.h>
+# include <dsn/cpp/auto_code.h>
 
 namespace dsn {
 
@@ -60,11 +59,21 @@ namespace dsn {
             _length = (length);
         }
 
+        void assign(const char* buffer, int offset, int length)
+        {
+            _holder = nullptr;
+            _buffer = buffer;
+            _data = buffer + offset;
+            _length = (length);
+        }
+
         const char* data() const { return _data; }
 
         int   length() const { return _length; }
 
         std::shared_ptr<char> buffer() { return _holder; }
+
+        const char* buffer_ptr() { return _holder.get(); }
 
         blob range(int offset) const
         {
@@ -105,7 +114,12 @@ namespace dsn {
     class binary_reader
     {
     public:
+        // given bb on ctor
         binary_reader(blob& blob);
+
+        // or delayed init
+        binary_reader() {}
+        void init(blob& bb);
 
         template<typename T> int read_pod(__out_param T& val);
         template<typename T> int read(__out_param T& val) { dassert(false, "read of this type is not implemented"); return 0; }
@@ -119,7 +133,7 @@ namespace dsn {
         int read(__out_param uint64_t& val) { return read_pod(val); }
         int read(__out_param bool& val) { return read_pod(val); }
 
-        int read(__out_param error_code& err) { int val; int ret = read_pod(val); err.set(val); return ret; }
+        int read(__out_param error_code& err) { int val; int ret = read_pod(val); err = val; return ret; }
         int read(__out_param std::string& s);
         int read(char* buffer, int sz);
         int read(blob& blob);
@@ -144,7 +158,7 @@ namespace dsn {
     class binary_writer
     {
     public:
-        binary_writer(int reservedBufferSize = 0);
+        binary_writer(int reserved_buffer_size = 0);
         binary_writer(blob& buffer);
         ~binary_writer();
 
@@ -181,6 +195,10 @@ namespace dsn {
         void create_buffer_and_writer(blob* pBuffer = nullptr);
         void sanity_check();
 
+    protected:
+        // bb may have large space than size
+        virtual void create_new_buffer(size_t size, /*out*/blob& bb);
+
     private:
         std::vector<blob>  _buffers;
         std::vector<blob>  _data;
@@ -204,7 +222,7 @@ namespace dsn {
         }
         else
         {
-            dlog(::dsn::logging_level::log_level_WARNING, "dsn.utils", "read beyond the end of buffer");
+            dlog(dsn_log_level_t::LOG_LEVEL_WARNING, "dsn.utils", "read beyond the end of buffer");
             return 0;
         }
     }

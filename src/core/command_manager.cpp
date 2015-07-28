@@ -28,9 +28,8 @@
 # include <thread>
 # include <sstream>
 # include <dsn/internal/utils.h>
-# include <dsn/internal/logging.h>
-# include <dsn/service_api.h>
-# include <dsn/internal/serialization.h>
+# include <dsn/cpp/serialization.h>
+# include <dsn/cpp/msg_binary_io.h>
 # include "service_engine.h"
 
 # ifdef __TITLE__
@@ -156,49 +155,33 @@ namespace dsn {
 
     DEFINE_TASK_CODE_RPC(RPC_DSN_CLI_CALL, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT);
 
-    class cli_rpc_request_task : public rpc_request_task
+    void remote_cli_handler(dsn_message_t req, void*)
     {
-    public:
-        cli_rpc_request_task(message_ptr& request, service_node* node)
-            : rpc_request_task(request, node)
-        {
-        }
-
-        virtual void  exec()
-        {
-            command_manager::instance().on_remote_cli(get_request());
-        }
-    };
-
-    class cli_rpc_server_handler : public rpc_server_handler
-    {
-    public:
-        virtual rpc_request_task* new_request_task(message_ptr& request, service_node* node)
-        {
-            return (new cli_rpc_request_task(request, node));
-        }
-    };
+        command_manager::instance().on_remote_cli(req);
+    }
 
     void command_manager::start_remote_cli()
     {
-        ::dsn::service_engine::instance().register_system_rpc_handler(RPC_DSN_CLI_CALL, "dsn.cli", new cli_rpc_server_handler());
+        ::dsn::service_engine::instance().register_system_rpc_handler(RPC_DSN_CLI_CALL, "dsn.cli", remote_cli_handler, nullptr);
     }
 
-    void command_manager::on_remote_cli(message_ptr& request)
+    void command_manager::on_remote_cli(dsn_message_t req)
     {
+        auto msg = (message_ex*)req;
+        msg_binary_reader reader(msg);
+
         std::string cmd;
-        unmarshall(request->reader(), cmd);
+        unmarshall(reader, cmd);
 
         std::vector<std::string> args;
-        unmarshall(request->reader(), args);
+        unmarshall(reader, args);
 
         std::string result;
         run_command(cmd, args, result);
 
-        auto resp = request->create_response();
-        marshall(resp->writer(), result);
-
-        ::dsn::service::rpc::reply(resp);
+        auto resp = dsn_msg_create_response(req);
+        ::marshall(resp, result);
+        dsn_rpc_reply(resp);
     }
 
     command_manager::command_manager()

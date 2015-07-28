@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 # include <dsn/internal/join_point.h>
-# include <dsn/internal/logging.h>
+# include <dsn/service_api_c.h>
 
 namespace dsn
 {

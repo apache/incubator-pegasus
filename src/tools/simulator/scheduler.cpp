@@ -26,7 +26,6 @@
 # include <dsn/tool/simulator.h>
 # include "scheduler.h"
 # include "env.sim.h"
-# include <dsn/service_api.h>
 # include <set>
 
 # ifdef __TITLE__
@@ -83,7 +82,7 @@ scheduler::scheduler(void)
     task_worker::on_create.put_back(on_task_worker_create, "simulation.on_task_worker_create");
     task_worker::on_start.put_back(on_task_worker_start, "simulation.on_task_worker_start");
         
-    for (int i = 0; i <= task_code::max_value(); i++)
+    for (int i = 0; i <= dsn_task_code_max(); i++)
     {
         task_spec::get(i)->on_task_wait_pre.put_back(scheduler::on_task_wait, "simulation.on_task_wait");
         task_spec::get(i)->on_task_end.put_back(scheduler::on_task_end, "simulation.on_task_end");
@@ -157,8 +156,9 @@ void scheduler::add_task(task* tsk, task_queue* q)
 }
 
 checker::checker(const char* name)
-    : _name(name), _apps(::dsn::service::system::get_all_apps())
+    : _name(name)
 {
+    _apps = get_all_apps();
 }
 
 void scheduler::add_checker(checker* chker)
@@ -213,7 +213,7 @@ void scheduler::schedule()
 
         if (ready_workers.size() > 0)
         {
-            int i = dsn::service::env::random32(0, (uint32_t)ready_workers.size() - 1);
+            int i = dsn_random32(0, (uint32_t)ready_workers.size() - 1);
             _threads[ready_workers[i]]->runnable.release();
             return;
         }
@@ -229,12 +229,12 @@ void scheduler::schedule()
             }
 
             // randomize the events, and see
-            std::random_shuffle(events->begin(), events->end(), [](int n) { return dsn::service::env::random32(0, n - 1); });
+            std::random_shuffle(events->begin(), events->end(), [](int n) { return dsn_random32(0, n - 1); });
 
             for (auto it = events->begin(); it != events->end(); it++)
             {
                 task_ptr t = *it;
-                ::dsn::service::tasking::enqueue(t);
+                t->enqueue();
                 t->release_ref();
             }
 

@@ -67,7 +67,7 @@ namespace dsn {
             virtual void   set(uint64_t val) { dassert(false, "invalid execution flow"); }
             virtual double get_value()
             {
-                uint64_t now = ::dsn::service::env::now_ns();
+                uint64_t now = dsn_now_ns();
                 uint64_t interval = now - qts;
                 double val = static_cast<double>(_val.load());
                 qts = now;

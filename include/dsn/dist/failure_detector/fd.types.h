@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 # pragma once
-# include <dsn/internal/serialization.h>
+# include <dsn/service_api_cpp.h>
 
 namespace dsn { namespace fd { 
     // ---------- beacon_msg -------------

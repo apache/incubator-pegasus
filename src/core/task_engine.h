@@ -80,7 +80,7 @@ public:
     //
     // service management routines
     //
-    void start(const std::list<threadpool_code>& pools);
+    void start(const std::list<dsn_threadpool_code_t>& pools);
 
     //
     // task management routines

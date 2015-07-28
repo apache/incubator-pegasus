@@ -43,10 +43,10 @@ namespace dsn {
                 std::shared_ptr<message_parser>& parser);
             ~net_server_session();
 
-            virtual void send(message_ptr& reply_msg) { return write(reply_msg); }
+            virtual void send(message_ex* reply_msg) { return write(reply_msg); }
             virtual void on_failure() { close(); }
             virtual void on_closed() { return on_disconnected(); }
-            virtual void on_message_read(message_ptr& msg)
+            virtual void on_message_read(message_ex* msg)
             {
                 return on_recv_request(msg, 0);
             }

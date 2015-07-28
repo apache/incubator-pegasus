@@ -23,24 +23,68 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-# include <dsn/service_api.h>
+# include <dsn/service_api_c.h>
 # include <dsn/internal/task.h>
-# include "service_engine.h"
 # include <dsn/internal/env_provider.h>
-# include "task_engine.h"
 # include <dsn/internal/utils.h>
-# include <dsn/internal/service_app.h>
+# include <dsn/internal/synchronize.h>
+
+# include "task_engine.h"
+# include "service_engine.h"
 # include "service_engine.h"
 # include "disk_engine.h"
 # include "rpc_engine.h"
-# include <dsn/internal/synchronize.h>
+
 
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
 # define __TITLE__ "task"
 
-namespace dsn {
+namespace dsn 
+{
+    namespace lock_checker
+    {
+        __thread int zlock_exclusive_count = 0;
+        __thread int zlock_shared_count = 0;
+
+        void check_wait_safety()
+        {
+            if (zlock_exclusive_count + zlock_shared_count > 0)
+            {
+                dassert(false, "wait inside locks may lead to deadlocks - current thread owns %u exclusive locks and %u shared locks now.",
+                    zlock_exclusive_count, zlock_shared_count
+                    );
+            }
+        }
+
+        void check_dangling_lock()
+        {
+            if (zlock_exclusive_count + zlock_shared_count > 0)
+            {
+                dassert(false, "locks should not be hold at this point - current thread owns %u exclusive locks and %u shared locks now.",
+                    zlock_exclusive_count, zlock_shared_count
+                    );
+            }
+        }
+
+        void check_wait_task(task* waitee)
+        {
+            check_wait_safety();
+
+            if (nullptr != task::get_current_task() && !waitee->is_empty())
+            {
+                if (TASK_TYPE_RPC_RESPONSE == waitee->spec().type ||
+                    task::get_current_task()->spec().pool_code == waitee->spec().pool_code)
+                {
+                    dassert(false, "task %s waits for another task %s sharing the same thread pool - will lead to deadlocks easily (e.g., when worker_count = 1 or when the pool is partitioned)",
+                        dsn_task_code_to_string(task::get_current_task()->spec().code),
+                        dsn_task_code_to_string(waitee->spec().code)
+                        );
+                }
+            }
+        }
+    }
 
 __thread struct __tls_task_info__ tls_task_info;
 __thread struct
@@ -66,7 +110,7 @@ __thread struct
     }
 }
 
-task::task(task_code code, int hash, service_node* node)
+task::task(dsn_task_code_t code, int hash, service_node* node)
     : _state(TASK_STATE_READY)
 {
     _spec = task_spec::get(code);
@@ -189,7 +233,7 @@ void task::exec_internal()
 
     if (!_spec->allow_inline && !_is_null)
     {
-        service::lock_checker::check_dangling_lock();
+        lock_checker::check_dangling_lock();
     }
 }
 
@@ -217,7 +261,7 @@ bool task::wait(int timeout_milliseconds, bool on_cancel)
     auto cs = state();
     if (!on_cancel)
     {
-        service::lock_checker::check_wait_task(this);
+        lock_checker::check_wait_task(this);
     }
 
     if (cs >= TASK_STATE_FINISHED)
@@ -362,7 +406,7 @@ void task::enqueue(task_worker_pool* pool)
             "(1). thread pool not designatd in '[%s] pools'; "
             "(2). the caller is executed in io threads "
             "which is forbidden unless you explicitly set [task.%s].fast_execution_in_network_thread = true",            
-            _spec->pool_code.to_string(),
+            dsn_threadpool_code_to_string(_spec->pool_code),
             _node->spec().config_section.c_str(),
             _spec->name
             );
@@ -371,20 +415,23 @@ void task::enqueue(task_worker_pool* pool)
     }
 }
 
-timer_task::timer_task(task_code code,  uint32_t interval_milliseconds, int hash) 
-    : task(code, hash), _interval_milliseconds(interval_milliseconds) 
+timer_task::timer_task(dsn_task_code_t code, dsn_task_callback_t cb, void* param, uint32_t interval_milliseconds, int hash)
+    : task(code, hash), 
+    _interval_milliseconds(interval_milliseconds),
+    _cb(cb),
+    _param(param)
 {
     dassert (TASK_TYPE_COMPUTE == spec().type, "this must be a computation type task, please use DEFINE_TASK_CODE to define the task code");
 
     // enable timer randomization to avoid lots of timers execution simultaneously
-    set_delay(::dsn::service::env::random32(0, interval_milliseconds));
+    set_delay(dsn_random32(0, interval_milliseconds));
 }
 
 void timer_task::exec()
 {
     task_state RUNNING_STATE = TASK_STATE_RUNNING;
     
-    on_timer();
+    _cb(_param);
 
     if (_interval_milliseconds > 0)
     {
@@ -395,12 +442,13 @@ void timer_task::exec()
     }
 }
 
-rpc_request_task::rpc_request_task(message_ptr& request, service_node* node) 
-    : task(task_code(request->header().local_rpc_code), request->header().client.hash, node), 
-    _request(request)
+rpc_request_task::rpc_request_task(message_ex* request, rpc_handler_ptr& h, service_node* node)
+    : task(dsn_task_code_t(request->local_rpc_code), request->header->client.hash, node), 
+    _request(request),
+    _handler(h)
 {
-
-    dbg_dassert (TASK_TYPE_RPC_REQUEST == spec().type, "task type must be RPC_REQUEST, please use DEFINE_TASK_CODE_RPC to define the task code");
+    dbg_dassert (TASK_TYPE_RPC_REQUEST == spec().type, 
+        "task type must be RPC_REQUEST, please use DEFINE_TASK_CODE_RPC to define the task code");
 }
 
 void rpc_request_task::enqueue(service_node* node)
@@ -414,20 +462,21 @@ void rpc_response_task::exec()
     on_response(error(), _request, _response);
 }
 
-rpc_response_task::rpc_response_task(message_ptr& request, int hash)
-    : task(task_spec::get(request->header().local_rpc_code)->rpc_paired_code, 
-           hash == 0 ? request->header().client.hash : hash)
+rpc_response_task::rpc_response_task(message_ex* request, int hash)
+    : task(task_spec::get(request->local_rpc_code)->rpc_paired_code, 
+           hash == 0 ? request->header->client.hash : hash)
 {
     set_error_code(ERR_IO_PENDING);
 
-    dbg_dassert (TASK_TYPE_RPC_RESPONSE == spec().type, "task must be of RPC_RESPONSE type, please use DEFINE_TASK_CODE_RPC to define the request task code");
+    dbg_dassert (TASK_TYPE_RPC_RESPONSE == spec().type, 
+        "task must be of RPC_RESPONSE type, please use DEFINE_TASK_CODE_RPC to define the request task code");
 
     _request = request;
     _caller_pool = task::get_current_worker() ? 
         task::get_current_worker()->pool() : nullptr;
 }
 
-void rpc_response_task::enqueue(error_code err, message_ptr& reply)
+void rpc_response_task::enqueue(error_code err, message_ex* reply)
 {
     set_error_code(err);
     _response = (err == ERR_OK ? reply : nullptr);
@@ -438,13 +487,13 @@ void rpc_response_task::enqueue(error_code err, message_ptr& reply)
     }
 }
 
-rpc_response_task_empty::rpc_response_task_empty(message_ptr& request, int hash)
+rpc_response_task_empty::rpc_response_task_empty(message_ex* request, int hash)
     : rpc_response_task(request, hash)
 {
     _is_null = true;
 }
 
-aio_task::aio_task(task_code code, int hash) 
+aio_task::aio_task(dsn_task_code_t code, int hash) 
     : task(code, hash)
 {
     dassert (TASK_TYPE_AIO == spec().type, "task must be of AIO type, please use DEFINE_TASK_CODE_AIO to define the task code");

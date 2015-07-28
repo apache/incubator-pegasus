@@ -27,8 +27,6 @@
 
 #include <dsn/tool_api.h>
 
-namespace dsn { namespace service { class service_app;  } }
-
 namespace dsn { namespace tools {
 
 class checker
@@ -41,7 +39,7 @@ public:
     const std::string& name() const { return _name; }
 
 protected:
-    const std::map<std::string, ::dsn::service::service_app*>& _apps;
+    apps _apps;
 
 private:
     std::string _name;

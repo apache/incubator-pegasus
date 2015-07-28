@@ -129,7 +129,7 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
 {
     dassert (nullptr == _app, "");
 
-    _app = ::dsn::utils::factory_store<replication_app_base>::create(app_type, PROVIDER_TYPE_MAIN, this, _stub->config());
+    _app = ::dsn::utils::factory_store<replication_app_base>::create(app_type, PROVIDER_TYPE_MAIN, this);
     if (nullptr == _app)
     {
         return ERR_OBJECT_NOT_FOUND;

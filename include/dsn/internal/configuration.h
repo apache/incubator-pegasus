@@ -61,9 +61,9 @@ public:
 
     void get_all_sections(std::vector<std::string>& sections);
 
-    void get_all_keys(const char* section, std::vector<std::string>& keys);
+    void get_all_keys(const char* section, std::vector<const char*>& keys);
 
-    std::string get_string_value(const char* section, const char* key, const char* default_value);
+    const char* get_string_value(const char* section, const char* key, const char* default_value);
 
     std::list<std::string> get_string_value_list(const char* section, const char* key, char splitter);
 
@@ -82,7 +82,7 @@ public:
     template<typename T> T get_value(const char* section, const char* key, T default_value);
 
 private:
-    bool get_string_value_internal(const char* section, const char* key, const char* default_value, std::string& ov);
+    bool get_string_value_internal(const char* section, const char* key, const char* default_value, const char** ov);
 
 private:
     struct conf
@@ -108,8 +108,8 @@ template<> inline std::string configuration::get_value<std::string>(const char* 
 
 template<> inline double configuration::get_value<double>(const char* section, const char* key, double default_value)
 {
-    std::string value;
-    if (!get_string_value_internal(section, key, "", value))
+    const char* value;
+    if (!get_string_value_internal(section, key, "", &value))
     {
         if (_warning)
         {
@@ -124,15 +124,15 @@ template<> inline double configuration::get_value<double>(const char* section, c
     }   
     else
     {
-        return atof(value.c_str());
+        return atof(value);
     }
 }
 
 
 template<> inline long long configuration::get_value<long long>(const char* section, const char* key, long long default_value)
 {
-    std::string value;
-    if (!get_string_value_internal(section, key, "", value))
+    const char* value;
+    if (!get_string_value_internal(section, key, "", &value))
     {
         if (_warning)
         {
@@ -147,21 +147,21 @@ template<> inline long long configuration::get_value<long long>(const char* sect
     }
     else
     {
-        if (value.length() > 2 && (value.substr(0, 2) == "0x" || value.substr(0, 2) == "0X"))
+        if (strlen(value) > 2 && (value[0] == '0' && (value[1] == 'x' || value[1] == 'X')))
         {
             long long unsigned int v;
-            sscanf(value.c_str(), "0x%llx", &v);
+            sscanf(value, "0x%llx", &v);
             return v;
         }
         else
-            return atoll(value.c_str());
+            return atoll(value);
     }
 }
 
 template<> inline long configuration::get_value<long>(const char* section, const char* key, long default_value)
 {
-    std::string value;
-    if (!get_string_value_internal(section, key, "", value))
+    const char* value;
+    if (!get_string_value_internal(section, key, "", &value))
     {
         if (_warning)
         {
@@ -175,14 +175,14 @@ template<> inline long configuration::get_value<long>(const char* section, const
     }
     else
     {
-        if (value.length() > 2 && (value.substr(0, 2) == "0x" || value.substr(0, 2) == "0X"))
+        if (strlen(value) > 2 && (value[0] == '0' && (value[1] == 'x' || value[1] == 'X')))
         {
             int v;
-            sscanf(value.c_str(), "0x%x", &v);
+            sscanf(value, "0x%x", &v);
             return v;
         }
         else
-            return (long)(atoi(value.c_str()));
+            return (long)(atoi(value));
     }
 }
 
@@ -219,8 +219,8 @@ template<> inline unsigned short configuration::get_value<unsigned short>(const 
 
 template<> inline bool configuration::get_value<bool>(const char* section, const char* key, bool default_value)
 {
-    std::string value;
-    if (!get_string_value_internal(section, key, "", value))
+    const char* value;
+    if (!get_string_value_internal(section, key, "", &value))
     {
         if (_warning)
         {
@@ -232,7 +232,7 @@ template<> inline bool configuration::get_value<bool>(const char* section, const
         }
         return default_value;
     }
-    else if (strcmp(value.c_str(), "true") == 0 || strcmp(value.c_str(), "TRUE") == 0)
+    else if (strcmp(value, "true") == 0 || strcmp(value, "TRUE") == 0)
     {
         return true;
     }
@@ -245,7 +245,6 @@ template<> inline bool configuration::get_value<bool>(const char* section, const
 
 # define CONFIG_BEGIN(t_struct) \
     inline bool read_config(\
-    configuration_ptr& config, \
     const char* section, \
     __out_param t_struct& val, \
     t_struct* default_value = nullptr\
@@ -257,23 +256,27 @@ template<> inline bool configuration::get_value<bool>(const char* section, const
 }
 
 // type fld = xyz
-# define CONFIG_FLD(type, fld, default_fld_value) \
-    val.fld = config->get_value<type>(section, #fld, default_value ? default_value->fld : default_fld_value);
+# define CONFIG_FLD(real_type, config_type, fld, default_fld_value) \
+    val.fld = (real_type)dsn_config_get_value_##config_type(section, #fld, default_value ? default_value->fld : default_fld_value);
+
+# define CONFIG_FLD_STRING(fld, default_fld_value) \
+    val.fld = dsn_config_get_value_string(section, #fld, (val.fld.length() > 0 && val.fld != std::string(default_fld_value)) ? \
+         val.fld.c_str() : (default_value ? default_value->fld.c_str() : default_fld_value));
 
 // customized_id<type> fld = xyz
 # define CONFIG_FLD_ID(type, fld, default_fld_value) \
 {\
-    auto v = config->get_value<std::string>(section, #fld, ""); \
+    std::string v = dsn_config_get_value_string(section, #fld, ""); \
     if (v == "") {    \
-        if (default_value) val.fld = default_value->fld; \
-        else val.fld = default_fld_value; \
-    }\
-    else {\
+            if (default_value) val.fld = default_value->fld; \
+            else val.fld = default_fld_value; \
+        }\
+        else {\
         if (!type::is_exist(v.c_str())) {\
             printf("invalid enum configuration '[%s] %s'", section, #fld); \
             return false; \
-        }\
-        else \
+                }\
+                else \
             val.fld = type(v.c_str()); \
     }\
 }
@@ -281,18 +284,18 @@ template<> inline bool configuration::get_value<bool>(const char* section, const
 // enum type fld = xyz
 # define CONFIG_FLD_ENUM(type, fld, default_fld_value, invalid_enum) \
 {\
-    auto v = config->get_value<std::string>(section, #fld, ""); \
+    std::string v = dsn_config_get_value_string(section, #fld, ""); \
     if (v == "") {    \
-        if (default_value) val.fld = default_value->fld; \
-        else val.fld = default_fld_value; \
-    }\
-    else {\
+            if (default_value) val.fld = default_value->fld; \
+            else val.fld = default_fld_value; \
+        }\
+        else {\
         auto v2 = enum_from_string(v.c_str(), invalid_enum);\
         if (v2 == invalid_enum) {\
             printf("invalid enum configuration '[%s] %s'", section, #fld); \
             return false; \
-        }\
-        else \
+                }\
+                else \
             val.fld = v2; \
     }\
 }
@@ -301,29 +304,36 @@ template<> inline bool configuration::get_value<bool>(const char* section, const
 # define CONFIG_FLD_ID_LIST(type, fld) \
 { \
     val.fld.clear();\
-    auto lv = config->get_string_value_list(section, #fld, ','); \
+    std::string vv = dsn_config_get_value_string(section, #fld, ""); \
+    std::list<std::string> lv; \
+    ::dsn::utils::split_args(vv.c_str(), lv, ','); \
     for (auto& v : lv) {\
         if (!type::is_exist(v.c_str())) {\
             printf("invalid enum configuration '[%s] %s'", section, #fld); \
             return false; \
-        } \
-        else \
+                } \
+                else \
             val.fld.push_back(type(v.c_str())); \
-    } \
+        } \
     if (val.fld.size() == 0 && default_value) \
         val.fld = default_value->fld; \
 }
 
 // list<type> fld = x,y,z
 # define CONFIG_FLD_STRING_LIST(fld) \
-    val.fld = config->get_string_value_list(section, #fld, ','); \
+    {\
+    std::string vv = dsn_config_get_value_string(section, #fld, ""); \
+    ::dsn::utils::split_args(vv.c_str(), val.fld, ','); \
     if (val.fld.size() == 0 && default_value) \
-    val.fld = default_value->fld;
+        val.fld = default_value->fld;\
+    }
 
 // cb: std::list<std::string>& => fld value
 # define CONFIG_FLD_INT_LIST(fld) \
    { \
-    auto lv = config->get_string_value_list(section, #fld, ','); \
+    std::string vv = dsn_config_get_value_string(section, #fld, ""); \
+    std::list<std::string> lv; \
+    ::dsn::utils::split_args(vv.c_str(), lv, ','); \
     if (lv.size() == 0 && default_value) \
         val.fld = default_value->fld; \
     else {\

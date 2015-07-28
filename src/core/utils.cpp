@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 # include <dsn/internal/utils.h>
-# include <dsn/internal/env_provider.h>
+//# include <dsn/internal/env_provider.h>
 # include <random>
 # include <dsn/internal/singleton.h>
 # include <sys/types.h>
@@ -209,7 +209,9 @@ namespace dsn {
 
         uint64_t get_current_physical_time_ns()
         {
-            return env_provider::get_current_physical_time_ns();
+            auto now = std::chrono::high_resolution_clock::now();
+            auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
+            return nanos;
         }
 
         void time_ms_to_string(uint64_t ts_ms, char* str)
@@ -229,9 +231,14 @@ namespace  dsn
 
     binary_reader::binary_reader(blob& blob)
     {
-        _blob = blob;
-        _size = blob.length();
-        _ptr = blob.data();
+        init(blob);
+    }
+
+    void binary_reader::init(blob& bb)
+    {
+        _blob = bb;
+        _size = bb.length();
+        _ptr = bb.data();
         _remaining_size = _size;
     }
 
@@ -346,7 +353,7 @@ namespace  dsn
 
         _reserved_size_per_buffer = (reserveBufferSize == 0) ? _reserved_size_per_buffer_static : reserveBufferSize;
 
-        create_buffer_and_writer();
+        //create_buffer_and_writer();
     }
 
     binary_writer::binary_writer(blob& buffer)
@@ -361,19 +368,25 @@ namespace  dsn
 
         _reserved_size_per_buffer = _reserved_size_per_buffer_static;
 
-        create_buffer_and_writer(&buffer);
+        //create_buffer_and_writer(&buffer);
     }
 
     binary_writer::~binary_writer()
     {
     }
 
+    void binary_writer::create_new_buffer(size_t size, /*out*/blob& bb)
+    {
+        std::shared_ptr<char> ptr((char*)malloc(size));
+        bb.assign(ptr, 0, (int)size);
+    }
+
     void binary_writer::create_buffer_and_writer(blob* pBuffer)
     {
         if (pBuffer == nullptr)
         {
-            std::shared_ptr<char> ptr((char*)malloc(_reserved_size_per_buffer));
-            blob bb(ptr, _reserved_size_per_buffer);
+            blob bb;
+            create_new_buffer(_reserved_size_per_buffer, bb);
             _buffers.push_back(bb);
 
             bb._length = 0;
@@ -458,8 +471,8 @@ namespace  dsn
             if (sz > rem_size)
             {
                 int allocSize = _data[pos].length() + sz;
-                std::shared_ptr<char> ptr((char*)malloc(allocSize));
-                blob bb(ptr, allocSize);
+                blob bb;
+                create_new_buffer(allocSize, bb);
 
                 memcpy((void*)bb.data(), (const void*)_data[pos].data(), (size_t)_data[pos].length());
 
@@ -473,7 +486,7 @@ namespace  dsn
         }
         else
         {
-            if (_cur_is_placeholder)
+            if (_cur_is_placeholder || _cur_pos == -1)
             {
                 create_buffer_and_writer();
                 _cur_is_placeholder = false;
@@ -496,8 +509,8 @@ namespace  dsn
                 if (sz > allocSize)
                     allocSize = sz;
 
-                std::shared_ptr<char> ptr((char*)malloc(allocSize));
-                blob bb(ptr, allocSize);
+                blob bb;
+                create_new_buffer(allocSize, bb);
                 _buffers.push_back(bb);
 
                 bb._length = 0;
@@ -529,8 +542,8 @@ namespace  dsn
             if (sz > rem_size)
             {
                 int allocSize = _data[pos].length() + sz;
-                std::shared_ptr<char> ptr((char*)malloc(allocSize));
-                blob bb(ptr, allocSize);
+                blob bb;
+                create_new_buffer(allocSize, bb);
 
                 memcpy((void*)bb.data(), (const void*)_data[pos].data(), (size_t)_data[pos].length());
                 memcpy((void*)(bb.data() + _data[pos].length()), (const void*)buffer, (size_t)sz);
@@ -546,7 +559,7 @@ namespace  dsn
         }
         else
         {
-            if (_cur_is_placeholder)
+            if (_cur_is_placeholder || _cur_pos == -1)
             {
                 create_buffer_and_writer();
                 _cur_is_placeholder = false;
@@ -579,8 +592,8 @@ namespace  dsn
                 if (sz > allocSize)
                     allocSize = sz;
 
-                std::shared_ptr<char> ptr((char*)malloc(allocSize));
-                blob bb(ptr, allocSize);
+                blob bb;
+                create_new_buffer(allocSize, bb);
                 _buffers.push_back(bb);
 
                 bb._length = 0;

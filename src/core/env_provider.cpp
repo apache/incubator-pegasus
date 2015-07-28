@@ -55,11 +55,4 @@ uint64_t env_provider::random64(uint64_t min, uint64_t max)
     }
 }
 
-/*static*/ uint64_t env_provider::get_current_physical_time_ns()
-{
-    auto now = std::chrono::high_resolution_clock::now();
-    auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
-    return nanos;
-}
-
 } // end namespace

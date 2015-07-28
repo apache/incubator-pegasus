@@ -25,7 +25,6 @@
  */
 # include "server_state.h"
 # include <sstream>
-# include <dsn/internal/serialization.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -136,7 +135,7 @@ void server_state::save(const char* chk_point)
     ::fclose(fp);
 }
 
-void server_state::init_app(configuration_ptr& cf)
+void server_state::init_app()
 {
     zauto_write_lock l(_lock);
     if (_apps.size() > 0)
@@ -144,13 +143,13 @@ void server_state::init_app(configuration_ptr& cf)
 
     app_state app;
     app.app_id = 1;
-    app.app_name = cf->get_string_value("replication.app", "app_name", "");
+    app.app_name = dsn_config_get_value_string("replication.app", "app_name", "");
     dassert(app.app_name.length() > 0, "'[replication.app] app_name' not specified");
-    app.app_type = cf->get_string_value("replication.app", "app_type", "");
+    app.app_type = dsn_config_get_value_string("replication.app", "app_type", "");
     dassert(app.app_type.length() > 0, "'[replication.app] app_type' not specified");
-    app.partition_count = cf->get_value<int32_t>("replication.app", "partition_count", 1);
+    app.partition_count = (int)dsn_config_get_value_uint64("replication.app", "partition_count", 1);
 
-    int32_t max_replica_count = cf->get_value<int32_t>("replication.app", "max_replica_count", 3);
+    int32_t max_replica_count = (int)dsn_config_get_value_uint64("replication.app", "max_replica_count", 3);
     for (int i = 0; i < app.partition_count; i++)
     {
         partition_configuration ps;
@@ -283,7 +282,7 @@ void server_state::remove_meta_node(const dsn_address_t& node)
 
             else if (i == _leader_index)
             {
-                _leader_index = env::random32(0, (uint32_t)_meta_servers.size() - 1);
+                _leader_index = dsn_random32(0, (uint32_t)_meta_servers.size() - 1);
             }
             return;
         }
@@ -300,7 +299,7 @@ void server_state::switch_meta_primary()
 
     while (true)
     {
-        int r = env::random32(0, (uint32_t)_meta_servers.size() - 1);
+        int r = dsn_random32(0, (uint32_t)_meta_servers.size() - 1);
         if (r != _leader_index)
         {
             _leader_index = r;

@@ -25,7 +25,10 @@
  */
 # pragma once
 
-# include <dsn/service_api.h>
+# include <dsn/service_api_c.h>
+# include <string>
+# include <dsn/internal/utils.h>
+# include <dsn/internal/task.h>
 
 namespace dsn {
 
@@ -47,6 +50,8 @@ namespace dsn {
 
     extern void unmarshall(::dsn::binary_reader& reader, __out_param remote_copy_request& val);
 
+
+    class service_node;
     class nfs_node
     {
     public:
@@ -58,7 +63,7 @@ namespace dsn {
     public:
         nfs_node(service_node* node) : _node(node) {}
 
-        virtual error_code start() = 0;
+        virtual ::dsn::error_code start() = 0;
 
         virtual error_code stop() = 0;
 

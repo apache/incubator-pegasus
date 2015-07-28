@@ -67,7 +67,7 @@ sim_env_provider::sim_env_provider(env_provider* inner_provider)
     _seed = config()->get_value<int>("tools.simulator", "random_seed", 0);
     if (_seed == 0)
     {
-        _seed = static_cast<int>(get_current_physical_time_ns())  * std::rand();
+        _seed = static_cast<int>(utils::get_current_physical_time_ns())  * std::rand();
     }
 
     derror("simulation.random seed for this round is %d", _seed);

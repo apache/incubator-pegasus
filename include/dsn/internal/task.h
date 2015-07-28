@@ -27,13 +27,20 @@
 
 # include <dsn/internal/dsn_types.h>
 # include <dsn/internal/extensible_object.h>
-# include <dsn/internal/task_code.h>
-# include <dsn/internal/error_code.h>
+# include <dsn/internal/task_spec.h>
+# include <dsn/cpp/auto_code.h>
 # include <dsn/internal/rpc_message.h>
-# include <dsn/internal/end_point.h>
 # include <dsn/internal/link.h>
 
 namespace dsn {
+
+namespace lock_checker {
+    extern __thread int zlock_exclusive_count;
+    extern __thread int zlock_shared_count;
+    extern void check_wait_safety();
+    extern void check_dangling_lock();
+    extern void check_wait_task(task* waitee);
+}
 
 //----------------- common task -------------------------------------------------------
 
@@ -52,10 +59,12 @@ struct __tls_task_info__
 
 extern __thread struct __tls_task_info__ tls_task_info;
 
-class task : public ref_object, public extensible_object<task, 4>, public ::dsn::tools::memory::tallocator_object
+class task :
+    public ref_object, 
+    public extensible_object<task, 4>
 {
 public:
-    task(task_code code, int hash = 0, service_node* node = nullptr);
+    task(dsn_task_code_t code, int hash = 0, service_node* node = nullptr);
     virtual ~task();
         
     virtual void exec() = 0;
@@ -69,7 +78,7 @@ public:
 
     uint64_t                id() const { return _task_id; }
     task_state              state() const { return _state.load(); }
-    task_code               code() const { return _spec->code; }
+    dsn_task_code_t               code() const { return _spec->code; }
     task_spec&              spec() const { return *_spec; }
     int                     hash() const { return _hash; }
     int                     delay_milliseconds() const { return _delay_milliseconds; }
@@ -112,11 +121,10 @@ public:
 
 DEFINE_REF_OBJECT(task)
 
-
 class task_c : public task
 {
 public:
-    task_c(task_code code, dsn_task_callback_t cb, void* param, int hash = 0, service_node* node = nullptr)
+    task_c(dsn_task_code_t code, dsn_task_callback_t cb, void* param, int hash = 0, service_node* node = nullptr)
         : task(code, hash, node)
     {
         _cb = cb;
@@ -130,7 +138,7 @@ public:
 
 private:
     dsn_task_callback_t _cb;
-    void*         _param;
+    void                *_param;
 };
 
 
@@ -139,82 +147,39 @@ private:
 class timer_task : public task
 {
 public:
-    timer_task(task_code code, uint32_t interval_milliseconds, int hash = 0);
-    void exec();
-
-    virtual void on_timer() = 0;
-
+    timer_task(dsn_task_code_t code, dsn_task_callback_t cb, void* param, uint32_t interval_milliseconds, int hash = 0);
+    virtual void exec();
+    
 private:
-    uint32_t _interval_milliseconds;
-};
-
-class timer_task_c : public timer_task
-{
-public:
-    timer_task_c(task_code code, dsn_task_callback_t cb, void* param, uint32_t interval_milliseconds, int hash = 0)
-        : timer_task(code, interval_milliseconds, hash)
-    {
-        _cb = cb;
-        _param = param;
-    }
-
-    virtual void on_timer() override
-    {
-        _cb(_param);
-    }
-
-private:
+    uint32_t            _interval_milliseconds;
     dsn_task_callback_t _cb;
-    void*         _param;
+    void*               _param;
 };
 
 //----------------- rpc task -------------------------------------------------------
 
-class service_node;
-class rpc_request_task : public task
-{
-public:
-    rpc_request_task(message_ptr& request, service_node* node);
-
-    message_ptr&  get_request() { return _request; }
-    void          enqueue(service_node* node);
-
-    virtual void  exec() = 0;
-
-protected:
-    message_ptr _request;
-};
-
-typedef ::boost::intrusive_ptr<rpc_request_task> rpc_request_task_ptr;
-
-class rpc_server_handler
-{
-public:
-    virtual rpc_request_task* new_request_task(message_ptr& request, service_node* node) = 0;
-    virtual ~rpc_server_handler(){}
-};
-
 struct rpc_handler_info
 {
-    task_code   code;
-    std::string name;
-    rpc_server_handler  *handler;
-
-    std::atomic<bool>         unregistered;
+    dsn_task_code_t           code;
+    std::string               name;
+    bool                      unregistered;
     std::atomic<int>          running_count;
     dsn_rpc_request_handler_t c_handler;
     void*                     parameter;
 
-    rpc_handler_info(task_code code) : code(code), unregistered(false), running_count(0) {}
-    ~rpc_handler_info() { delete handler; }
-
-    void run(dsn_message_t* req)
+    rpc_handler_info(dsn_task_code_t code)
+        : code(code), unregistered(false), running_count(0) 
     {
-        if (unregistered.load())
-            return;
+    }
+    ~rpc_handler_info() { }
 
+    void run(dsn_message_t req)
+    {
         running_count++;
-        c_handler(req, parameter);
+        if (!unregistered)
+        {
+            c_handler(req, parameter);
+        }
         running_count--;
     }
 
@@ -230,42 +195,44 @@ struct rpc_handler_info
 
 typedef std::shared_ptr<rpc_handler_info> rpc_handler_ptr;
 
-class rpc_request_task_c : public rpc_request_task
+class service_node;
+class rpc_request_task : public task
 {
 public:
-    rpc_request_task_c(message_ptr& request, rpc_handler_ptr& h, service_node* node)
-        : rpc_request_task(request, node)
+    rpc_request_task(message_ex* request, rpc_handler_ptr& h, service_node* node);
+
+    message_ex*  get_request() { return _request; }
+    void         enqueue(service_node* node);
+
+    virtual void  exec()
     {
-        _handler = h;
+        _handler->run(_request);
     }
 
-    virtual void exec() override
-    {
-        _handler->run(_request->c_msg());
-    }
-
-private:
+protected:
+    message_ex      *_request;
     rpc_handler_ptr _handler;
 };
 
+typedef ::boost::intrusive_ptr<rpc_request_task> rpc_request_task_ptr;
 
 class rpc_response_task : public task
 {
 public:
-    rpc_response_task(message_ptr& request, int hash = 0);
+    rpc_response_task(message_ex* request, int hash = 0);
 
-    virtual void on_response(error_code err, message_ptr& request, message_ptr& response) = 0;
+    virtual void on_response(error_code err, message_ex* request, message_ex* response) = 0;
 
-    void             enqueue(error_code err, message_ptr& reply);
+    void             enqueue(error_code err, message_ex* reply);
     virtual void     enqueue() { task::enqueue(_caller_pool); } // re-enqueue after above enqueue
-    message_ptr&     get_request() { return _request; }
-    message_ptr&     get_response() { return _response; }
+    message_ex*     get_request() { return _request; }
+    message_ex*     get_response() { return _response; }
 
     virtual void  exec();
 
 private:
-    message_ptr   _request;
-    message_ptr   _response;
+    message_ex*   _request;
+    message_ex*   _response;
     task_worker_pool *_caller_pool;
 
     friend class rpc_engine;    
@@ -274,24 +241,24 @@ private:
 class rpc_response_task_empty : public rpc_response_task
 {
 public:
-    rpc_response_task_empty(message_ptr& request, int hash = 0);
+    rpc_response_task_empty(message_ex* request, int hash = 0);
 
-    virtual void on_response(error_code err, message_ptr& request, message_ptr& response) { err.end_tracking(); }
+    virtual void on_response(error_code err, message_ex* request, message_ex* response) { err.end_tracking(); }
 };
 
 class rpc_response_task_c : public rpc_response_task
 {
 public:
-    rpc_response_task_c(message_ptr& request, dsn_rpc_response_handler_t cb, void* param, int hash = 0) 
+    rpc_response_task_c(message_ex* request, dsn_rpc_response_handler_t cb, void* param, int hash = 0) 
         : rpc_response_task(request, hash)
     {
         _cb = cb;
         _param = param;
     }
 
-    virtual void on_response(error_code err, message_ptr& request, message_ptr& response)
+    virtual void on_response(error_code err, message_ex* request, message_ex* response)
     {
-        _cb(err.get(), request->c_msg(), response == nullptr ? nullptr : response->c_msg(), _param);
+        _cb(err.get(), request, response, _param);
     }
 
 private:
@@ -333,7 +300,7 @@ typedef ::std::shared_ptr<disk_aio> disk_aio_ptr;
 class aio_task : public task
 {
 public:
-    aio_task(task_code code, int hash = 0);
+    aio_task(dsn_task_code_t code, int hash = 0);
 
     void            enqueue(error_code err, size_t transferred_size, service_node* node);
     size_t          get_transferred_size() const { return _transferred_size; }
@@ -350,14 +317,14 @@ private:
 class aio_task_empty : public aio_task
 {
 public:
-    aio_task_empty(task_code code, int hash = 0) : aio_task(code, hash) { _is_null = true;  }
+    aio_task_empty(dsn_task_code_t code, int hash = 0) : aio_task(code, hash) { _is_null = true;  }
     virtual void on_completed(error_code err, size_t transferred_size) override {}
 };
 
 class aio_task_c : public aio_task
 {
 public:
-    aio_task_c(task_code code, dsn_file_callback_t cb, void* param, int hash = 0)
+    aio_task_c(dsn_task_code_t code, dsn_file_callback_t cb, void* param, int hash = 0)
         : aio_task(code, hash)
     { 
         _cb = cb;

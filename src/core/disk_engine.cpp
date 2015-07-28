@@ -25,10 +25,8 @@
  */
 # include "disk_engine.h"
 # include <dsn/internal/perf_counters.h>
-# include <dsn/internal/logging.h>
 # include <dsn/internal/aio_provider.h>
 # include <dsn/internal/utils.h>
-# include <dsn/service_api.h>
 
 # ifdef __TITLE__
 # undef __TITLE__

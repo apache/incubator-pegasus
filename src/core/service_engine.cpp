@@ -32,10 +32,8 @@
 # include <dsn/internal/nfs.h>
 # include <dsn/internal/perf_counters.h>
 # include <dsn/internal/factory_store.h>
-# include <dsn/internal/logging.h>
-# include <dsn/tool_api.h>
-# include <dsn/internal/service_app.h>
 # include <dsn/internal/command.h>
+# include <dsn/tool_api.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -46,15 +44,15 @@ using namespace dsn::utils;
 
 namespace dsn {
 
-service_node::service_node(service::service_app* app)
+service_node::service_node(service_app_spec& app_spec, void* app_context)
 {
     _computation = nullptr;
     _rpc = nullptr;
     _disk = nullptr;
     _nfs = nullptr;
-    _app_id = app->id();
-    _app_name = app->name();
-    _app = app;
+    _app_context_ptr = app_context;
+
+    _app_spec = app_spec;
 }
 
 error_code service_node::start()
@@ -63,7 +61,7 @@ error_code service_node::start()
 
     // init task engine    
     _computation = new task_engine(this);
-    _computation->start(_app->spec().pools);    
+    _computation->start(_app_spec.pools);    
     dassert (_computation->is_started(), "task engine must be started at this point");
 
     // init disk engine
@@ -79,7 +77,7 @@ error_code service_node::start()
     
     // init rpc engine
     _rpc = new rpc_engine(spec.config, this);    
-    error_code err = _rpc->start(_app->spec());
+    error_code err = _rpc->start(_app_spec);
     if (err != ERR_OK) return err;
 
     // init nfs
@@ -93,11 +91,6 @@ error_code service_node::start()
     }
 
     return err;
-}
-
-const service_app_spec& service_node::spec() const
-{
-    return _app->spec();
 }
 
 void service_node::get_runtime_info(const std::string& indent, const std::vector<std::string>& args, __out_param std::stringstream& ss)
@@ -144,11 +137,12 @@ void service_engine::init_after_toollets()
     }
 }
 
-void service_engine::register_system_rpc_handler(task_code code, const char* name, rpc_server_handler* handler, int port /*= -1*/) // -1 for all node
+void service_engine::register_system_rpc_handler(dsn_task_code_t code, const char* name, dsn_rpc_request_handler_t cb, void* param, int port /*= -1*/) // -1 for all node
 {
-    rpc_handler_ptr h(new rpc_handler_info(code));
+    ::dsn::rpc_handler_ptr h(new ::dsn::rpc_handler_info(code));
     h->name = std::string(name);
-    h->handler = handler;
+    h->c_handler = cb;
+    h->parameter = param;
 
     if (port == -1)
     {
@@ -171,16 +165,16 @@ void service_engine::register_system_rpc_handler(task_code code, const char* nam
     }
 }
 
-service_node* service_engine::start_node(service::service_app* app)
+service_node* service_engine::start_node(service_app_spec& app_spec)
 {
-    auto it = _nodes_by_app_id.find(app->id());
+    auto it = _nodes_by_app_id.find(app_spec.id);
     if (it != _nodes_by_app_id.end())
     {
         return it->second;
     }
     else
     {
-        for (auto p : app->spec().ports)
+        for (auto p : app_spec.ports)
         {
             // union to existing node if any port is shared
             if (_nodes_by_app_port.find(p) != _nodes_by_app_port.end())
@@ -190,17 +184,18 @@ service_node* service_engine::start_node(service::service_app* app)
                 dassert(false, "network port %d usage confliction for %s vs %s, please reconfig",
                     p,
                     n->name(),
-                    app->name().c_str()
+                    app_spec.name.c_str()
                     );
             }
         }
         
-        auto node = new service_node(app);
+        void* app_context = app_spec.role.create();
+        auto node = new service_node(app_spec, app_context);
         error_code err = node->start();
         dassert (err == ERR_OK, "service node start failed, err = %s", err.to_string());
         
-        _nodes_by_app_id[app->id()] = node;
-        for (auto p1 : app->spec().ports)
+        _nodes_by_app_id[node->id()] = node;
+        for (auto p1 : node->spec().ports)
         {
             _nodes_by_app_port[p1] = node;
         }
@@ -239,9 +234,9 @@ std::string service_engine::get_runtime_info(const std::vector<std::string>& arg
     return ss.str();
 }
 
-void service_engine::configuration_changed(configuration_ptr configuration)
+void service_engine::configuration_changed()
 {
-    task_spec::init(configuration);
+    task_spec::init();
 }
 
 } // end namespace

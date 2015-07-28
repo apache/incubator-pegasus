@@ -45,7 +45,7 @@ meta_service::meta_service(server_state* state)
     _data_dir = ".";
     _started = false;
 
-    _opts.initialize(system::config());
+    _opts.initialize();
 }
 
 meta_service::~meta_service(void)
@@ -89,7 +89,7 @@ void meta_service::start(const char* data_dir, bool clean_state)
         }
     }
 
-    _log = file::open((_data_dir + "/oplog").c_str(), O_RDWR | O_CREAT, 0666);
+    _log = dsn_file_open((_data_dir + "/oplog").c_str(), O_RDWR | O_CREAT, 0666);
 
     _balancer = new load_balancer(_state);            
     _failure_detector = new meta_server_failure_detector(_state, this);
@@ -153,43 +153,45 @@ void meta_service::on_load_balance_start()
     _started = true;
 }
 
-void meta_service::on_request(message_ptr& msg)
+void meta_service::on_request(dsn_message_t msg)
 {
     meta_request_header hdr;
-    unmarshall(msg, hdr);
+    ::unmarshall(msg, hdr);
 
     meta_response_header rhdr;
     bool is_primary = _state->get_meta_server_primary(rhdr.primary_address);
     if (is_primary) is_primary = (primary_address() == rhdr.primary_address);
     rhdr.err = ERR_OK;
 
+    dsn_address_t faddr;
+    dsn_msg_from_address(msg, &faddr);
     dinfo("recv meta request %s from %s:%hu", 
-        task_code::to_string(hdr.rpc_tag),
-        msg->header().from_address.name,
-        msg->header().from_address.port
+        dsn_task_code_to_string(hdr.rpc_tag),
+        faddr.name,
+        faddr.port
         );
 
-    message_ptr resp = msg->create_response();
+    dsn_message_t resp = dsn_msg_create_response(msg);
     if (!is_primary)
     {
         rhdr.err = ERR_TALK_TO_OTHERS;        
-        marshall(resp, rhdr);
+        ::marshall(resp, rhdr);
     }
     else if (!_started)
     {
         rhdr.err = ERR_SERVICE_NOT_ACTIVE;
-        marshall(resp, rhdr);
+        ::marshall(resp, rhdr);
     }
     else if (hdr.rpc_tag == RPC_CM_QUERY_NODE_PARTITIONS)
     {
         configuration_query_by_node_request request;
         configuration_query_by_node_response response;
-        unmarshall(msg, request);
+        ::unmarshall(msg, request);
 
         query_configuration_by_node(request, response);
 
-        marshall(resp, rhdr);
-        marshall(resp, response);
+        ::marshall(resp, rhdr);
+        ::marshall(resp, response);
     }
 
     else if (hdr.rpc_tag == RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX)
@@ -200,8 +202,8 @@ void meta_service::on_request(message_ptr& msg)
 
         query_configuration_by_index(request, response);
         
-        marshall(resp, rhdr);
-        marshall(resp, response);
+        ::marshall(resp, rhdr);
+        ::marshall(resp, response);
     }
 
     else  if (hdr.rpc_tag == RPC_CM_UPDATE_PARTITION_CONFIGURATION)
@@ -213,10 +215,10 @@ void meta_service::on_request(message_ptr& msg)
     
     else
     {
-        dassert(false, "unknown rpc tag %x (%s)", hdr.rpc_tag, task_code(hdr.rpc_tag).to_string());
+        dassert(false, "unknown rpc tag %x (%s)", hdr.rpc_tag, dsn_task_code_to_string(hdr.rpc_tag));
     }
 
-    rpc::reply(resp);
+    dsn_rpc_reply(resp);
 }
 
 // partition server & client => meta server
@@ -264,7 +266,7 @@ void meta_service::replay_log(const char* log)
     ::fclose(fp);
 }
 
-void meta_service::update_configuration(message_ptr req, message_ptr resp)
+void meta_service::update_configuration(dsn_message_t req, dsn_message_t resp)
 {
     if (_state->freezed())
     {
@@ -275,31 +277,35 @@ void meta_service::update_configuration(message_ptr req, message_ptr resp)
         configuration_update_request request;
         configuration_update_response response;
         
-        unmarshall(req, request);
+        ::unmarshall(req, request);
 
         response.err = ERR_STATE_FREEZED;
         _state->query_configuration_by_gpid(request.config.gpid, response.config);
 
-        marshall(resp, rhdr);
-        marshall(resp, response);
+        ::marshall(resp, rhdr);
+        ::marshall(resp, response);
 
-        rpc::reply(resp);
+        dsn_rpc_reply(resp);
         return;
     }
 
-    auto bb = req->reader().get_remaining_buffer();
+    void* ptr;
+    size_t sz;
+    dsn_msg_read_next(req, &ptr, &sz);
+    dsn_msg_read_commit(req, 0); // commit 0 so we can read again
+
     uint64_t offset;
-    int len = bb.length() + sizeof(int32_t);
+    int len = sz + sizeof(int32_t);
     
     char* buffer = (char*)malloc(len);
-    *(int32_t*)buffer = bb.length();
-    memcpy(buffer + sizeof(int32_t), bb.data(), bb.length());
+    *(int32_t*)buffer = sz;
+    memcpy(buffer + sizeof(int32_t), ptr, sz);
 
     auto tmp = std::shared_ptr<char>(buffer);
     blob bb2(tmp, 0, len);
 
     auto request = std::shared_ptr<configuration_update_request>(new configuration_update_request());
-    unmarshall(req, *request);
+    ::unmarshall(req, *request);
 
     {
 
@@ -336,7 +342,7 @@ void meta_service::update_configuration(std::shared_ptr<configuration_update_req
 
 void meta_service::on_log_completed(error_code err, size_t size,
     blob buffer, 
-    std::shared_ptr<configuration_update_request> req, message_ptr resp)
+    std::shared_ptr<configuration_update_request> req, dsn_message_t resp)
 {
     dassert(err == ERR_OK, "log operation failed, cannot proceed, err = %s", err.to_string());
     dassert(buffer.length() == size, "log size must equal to the specified buffer size");
@@ -353,7 +359,7 @@ void meta_service::on_log_completed(error_code err, size_t size,
         marshall(resp, rhdr);
         marshall(resp, response);
 
-        rpc::reply(resp);
+        dsn_rpc_reply(resp);
     }
     else
     {

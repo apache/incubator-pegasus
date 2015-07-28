@@ -26,7 +26,6 @@
 # include "task_engine.h"
 # include <dsn/internal/perf_counters.h>
 # include <dsn/internal/factory_store.h>
-# include <dsn/service_api.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -221,13 +220,13 @@ task_engine::task_engine(service_node* node)
     _node = node;
 }
 
-void task_engine::start(const std::list<threadpool_code>& pools)
+void task_engine::start(const std::list<dsn_threadpool_code_t>& pools)
 {
     if (_is_running)
         return;
 
     // init pools
-    _pools.resize(threadpool_code::max_value() + 1, nullptr);
+    _pools.resize(dsn_threadpool_code_max() + 1, nullptr);
     for (auto& p : pools)
     {
         auto& s = service_engine::instance().spec().threadpool_specs[p];
@@ -246,7 +245,7 @@ void task_engine::get_runtime_info(const std::string& indent, const std::vector<
     {
         if (p)
         {
-            ss << indent << p->spec().pool_code.to_string() << std::endl;
+            ss << indent << dsn_threadpool_code_to_string(p->spec().pool_code) << std::endl;
             p->get_runtime_info(indent2, args, ss);
         }
     }

@@ -33,8 +33,8 @@ namespace dsn {
         static void print_header(FILE* fp)
         {
             uint64_t ts = 0;
-            if (::dsn::service::system::is_ready())
-                ts = ::dsn::service::env::now_ns();
+            if (::dsn::tools::is_engine_ready())
+                ts = dsn_now_ns();
 
             char str[24];
             ::dsn::utils::time_ms_to_string(ts/1000000, str);
@@ -75,10 +75,10 @@ namespace dsn {
             }
         }
 
-        void screen_logger::logv(const char *file,
+        void screen_logger::dsn_logv(const char *file,
             const char *function,
             const int line,
-            logging_level logLevel,
+            dsn_log_level_t logLevel,
             const char* title,
             const char *fmt,
             va_list args
@@ -163,17 +163,17 @@ namespace dsn {
             ::fflush(_log);
         }
 
-        void simple_logger::logv(const char *file,
+        void simple_logger::dsn_logv(const char *file,
             const char *function,
             const int line,
-            logging_level logLevel,
+            dsn_log_level_t logLevel,
             const char* title,
             const char *fmt,
             va_list args
             )
         {
             va_list args2;
-            if (logLevel >= log_level_WARNING)
+            if (logLevel >= LOG_LEVEL_WARNING)
             {
                 va_copy(args2, args);
             }
@@ -184,10 +184,10 @@ namespace dsn {
             fprintf(_log, "%s, ", title);
             vfprintf(_log, fmt, args);
             fprintf(_log, "\n");
-            if (logLevel >= log_level_ERROR)
+            if (logLevel >= LOG_LEVEL_ERROR)
                 fflush(_log);
 
-            if (logLevel >= log_level_WARNING)
+            if (logLevel >= LOG_LEVEL_WARNING)
             {
                 print_header(stdout);
                 printf("%s, ", title);

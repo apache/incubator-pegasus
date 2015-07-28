@@ -24,7 +24,6 @@
  * THE SOFTWARE.
  */
 #include "diske.sim.h"
-#include <dsn/service_api.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
