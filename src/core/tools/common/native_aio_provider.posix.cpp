@@ -80,7 +80,7 @@ namespace dsn {
             return disk_aio_ptr(r);
         }
 
-        void native_posix_aio_provider::aio(aio_task_ptr& aio_tsk)
+        void native_posix_aio_provider::aio(aio_task* aio_tsk)
         {
             aio_internal(aio_tsk, true);
         }
@@ -100,7 +100,7 @@ namespace dsn {
                 size_t bytes = aio_return(&ctx->cb); // from e.g., read or write
                 if (!ctx->evt)
                 {
-                    aio_task_ptr aio(ctx->tsk);
+                    aio_task* aio(ctx->tsk);
                     ctx->this_->complete_io(aio, err == 0 ? ERR_OK : ERR_FILE_OPERATION_FAILED, bytes);
                 }
                 else
@@ -112,7 +112,7 @@ namespace dsn {
             }
         }
 
-        error_code native_posix_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool async, __out_param uint32_t* pbytes /*= nullptr*/)
+        error_code native_posix_aio_provider::aio_internal(aio_task* aio_tsk, bool async, __out_param uint32_t* pbytes /*= nullptr*/)
         {
             auto aio = (posix_disk_aio_context *)aio_tsk->aio().get();
             int r;

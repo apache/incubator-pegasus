@@ -40,7 +40,7 @@ namespace dsn {
         _disconnected = false;
     }
 
-    void rpc_client_session::call(message_ex* request, rpc_response_task_ptr& call)
+    void rpc_client_session::call(message_ex* request, rpc_response_task* call)
     {
         if (call != nullptr)
         {
@@ -132,7 +132,7 @@ namespace dsn {
     {
     }
 
-    void connection_oriented_network::call(message_ex* request, rpc_response_task_ptr& call)
+    void connection_oriented_network::call(message_ex* request, rpc_response_task* call)
     {
         rpc_client_session_ptr client = nullptr;
         dsn_address_t& to = request->to_address;

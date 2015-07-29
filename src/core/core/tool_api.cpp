@@ -112,7 +112,7 @@ namespace dsn {
             auto apps = service_engine::instance().get_all_nodes();
             for (auto& kv : apps)
             {
-                task_ptr t(new service_control_task(kv.second, true));
+                task* t = new service_control_task(kv.second, true);
                 t->set_delay(1000 * kv.second->spec().delay_seconds);
                 t->enqueue();
             }
@@ -124,7 +124,7 @@ namespace dsn {
             auto apps = service_engine::instance().get_all_nodes();
             for (auto& kv : apps)
             {
-                task_ptr t(new service_control_task(kv.second, false, cleanup));
+                task* t = new service_control_task(kv.second, false, cleanup);
                 t->enqueue();
             }
         }

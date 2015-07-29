@@ -42,16 +42,16 @@ public:
     // asynchonous file read/write
     dsn_handle_t        open(const char* fileName, int flag, int pmode);
     error_code      close(dsn_handle_t hFile);
-    void            read(aio_task_ptr& aio);
-    void            write(aio_task_ptr& aio);  
+    void            read(aio_task* aio);
+    void            write(aio_task* aio);  
 
     disk_aio_ptr    prepare_aio_context(aio_task* tsk) { return _provider->prepare_aio_context(tsk); }
     service_node*   node() const { return _node; }
     
 private:
     friend class aio_provider;
-    void start_io(aio_task_ptr& aio);
-    void complete_io(aio_task_ptr& aio, error_code err, uint32_t bytes, int delay_milliseconds = 0);
+    void start_io(aio_task* aio);
+    void complete_io(aio_task* aio, error_code err, uint32_t bytes, int delay_milliseconds = 0);
 
 private:
     bool           _is_running;

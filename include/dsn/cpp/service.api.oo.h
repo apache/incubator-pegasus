@@ -86,7 +86,7 @@ namespace dsn {
 
             template<typename TRequest>
             ::dsn::error_code call_typed_wait(
-                /*out*/ dsn_message_t* response,
+                /*out*/ ::dsn::cpp_msg_ptr* response,
                 const dsn_address_t& server,
                 dsn_task_code_t code,
                 const TRequest& req,

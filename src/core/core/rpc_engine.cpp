@@ -74,8 +74,8 @@ namespace dsn {
     {
         dassert(reply != nullptr, "cannot receive an empty reply message");
 
-        rpc_response_task_ptr call;
-        task_ptr timeout_task;
+        rpc_response_task* call;
+        task* timeout_task;
 
         {
             utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock);
@@ -108,7 +108,7 @@ namespace dsn {
 
     void rpc_client_matcher::on_rpc_timeout(uint64_t key)
     {
-        rpc_response_task_ptr call;
+        rpc_response_task* call;
 
         {
             utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock);
@@ -127,7 +127,7 @@ namespace dsn {
         call->enqueue(ERR_TIMEOUT, nullptr);
     }
     
-    void rpc_client_matcher::on_call(message_ex* request, rpc_response_task_ptr& call)
+    void rpc_client_matcher::on_call(message_ex* request, rpc_response_task* call)
     {
         task* timeout_task;
         message_header& hdr = *request->header;
@@ -349,7 +349,7 @@ namespace dsn {
         }
     }
 
-    void rpc_engine::call(message_ex* request, rpc_response_task_ptr& call)
+    void rpc_engine::call(message_ex* request, rpc_response_task* call)
     {
         auto sp = task_spec::get(request->local_rpc_code);
         auto nts_us = dsn_now_us();
@@ -369,7 +369,7 @@ namespace dsn {
 
         request->seal(_message_crc_required);
 
-        if (!sp->on_rpc_call.execute(task::get_current_task(), request, call.get(), true))
+        if (!sp->on_rpc_call.execute(task::get_current_task(), request, call, true))
         {
             if (call != nullptr)
             {

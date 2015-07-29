@@ -22,12 +22,12 @@ public:
         int hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-        dsn_message_t response;
+        ::dsn::cpp_msg_ptr response;
         auto err = ::dsn::service::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
             RPC_NFS_COPY, request, hash, timeout_milliseconds);
         if (err == ::dsn::ERR_OK)
         {
-            ::unmarshall(response, resp);
+            ::unmarshall(response.get(), resp);
         }
         return err;
     }
@@ -108,12 +108,12 @@ public:
         int hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-        dsn_message_t response;
+        ::dsn::cpp_msg_ptr response;
         auto err = ::dsn::service::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
             RPC_NFS_GET_FILE_SIZE, request, hash, timeout_milliseconds);
         if (err == ::dsn::ERR_OK)
         {
-            ::unmarshall(response, resp);
+            ::unmarshall(response.get(), resp);
         }
         return err;
     }

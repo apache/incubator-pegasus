@@ -204,13 +204,13 @@ disk_aio_ptr native_win_aio_provider::prepare_aio_context(aio_task* tsk)
     return disk_aio_ptr(r);
 }
 
-void native_win_aio_provider::aio(aio_task_ptr& aio_tsk)
+void native_win_aio_provider::aio(aio_task* aio_tsk)
 {
     auto err = aio_internal(aio_tsk, true);
     err.end_tracking();
 }
 
-error_code native_win_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool async, __out_param uint32_t* pbytes /*= nullptr*/)
+error_code native_win_aio_provider::aio_internal(aio_task* aio_tsk, bool async, __out_param uint32_t* pbytes /*= nullptr*/)
 {
     auto aio = (windows_disk_aio_context*)aio_tsk->aio().get();
     BOOL r = FALSE;
@@ -292,7 +292,7 @@ void native_win_aio_provider::worker()
             windows_disk_aio_context* ctx = CONTAINING_RECORD(overLap, windows_disk_aio_context, olp);
             if (!ctx->evt)
             {
-                aio_task_ptr aio(ctx->tsk);
+                aio_task* aio(ctx->tsk);
                 complete_io(aio, ERR_OK, dwTransLen);
             }
             else
@@ -310,7 +310,7 @@ void native_win_aio_provider::worker()
             windows_disk_aio_context* ctx = CONTAINING_RECORD(overLap, windows_disk_aio_context, olp);
             if (!ctx->evt)
             {
-                aio_task_ptr aio(ctx->tsk);
+                aio_task* aio(ctx->tsk);
                 complete_io(aio, ERR_FILE_OPERATION_FAILED, dwTransLen);
             }
             else

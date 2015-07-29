@@ -40,7 +40,6 @@ using namespace dsn::utils;
 DSN_API dsn_message_t dsn_msg_create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, int hash)
 {
     auto msg = ::dsn::message_ex::create_request(rpc_code, timeout_milliseconds, hash);
-    msg->add_ref();
     return msg;
 }
 
@@ -61,7 +60,6 @@ DSN_API void dsn_msg_query_request(dsn_message_t msg, int* ptimeout_milliseconds
 DSN_API dsn_message_t dsn_msg_create_response(dsn_message_t request)
 {
     auto msg = ((::dsn::message_ex*)request)->create_response();
-    msg->add_ref();
     return msg;
 }
 
@@ -95,7 +93,12 @@ DSN_API void* dsn_msg_rw_ptr(dsn_message_t msg, size_t offset_begin)
     return ((::dsn::message_ex*)msg)->rw_ptr(offset_begin);
 }
 
-DSN_API void dsn_msg_release(dsn_message_t msg)
+DSN_API void dsn_msg_add_ref(dsn_message_t msg)
+{
+    ((::dsn::message_ex*)msg)->add_ref();
+}
+
+DSN_API void dsn_msg_release_ref(dsn_message_t msg)
 {
     ((::dsn::message_ex*)msg)->release_ref();
 }

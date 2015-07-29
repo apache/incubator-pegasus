@@ -85,7 +85,7 @@ namespace dsn {
                 zlock                   user_req_lock;
 
                 get_file_size_request  file_size_req;
-                aio_task_ptr           nfs_task;
+                aio_task*           nfs_task;
                 std::atomic<int>       finished_files;
                 bool                   is_finished;
 
@@ -107,7 +107,7 @@ namespace dsn {
 
             virtual ~nfs_client_impl() {}
 
-            void begin_remote_copy(std::shared_ptr<remote_copy_request>& rci, aio_task_ptr& nfs_task); // copy file request entry
+            void begin_remote_copy(std::shared_ptr<remote_copy_request>& rci, aio_task* nfs_task); // copy file request entry
 
             void local_write_callback(error_code err, size_t sz, boost::intrusive_ptr<copy_request_ex> reqc); // write file callback
 

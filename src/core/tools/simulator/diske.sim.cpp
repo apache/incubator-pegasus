@@ -43,7 +43,7 @@ sim_aio_provider::~sim_aio_provider(void)
 {
 }
 
-void sim_aio_provider::aio(aio_task_ptr& aio)
+void sim_aio_provider::aio(aio_task* aio)
 {
     error_code err;
     uint32_t bytes;

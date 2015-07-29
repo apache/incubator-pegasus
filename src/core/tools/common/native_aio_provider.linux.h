@@ -49,7 +49,7 @@ namespace dsn {
 
             virtual dsn_handle_t open(const char* file_name, int flag, int pmode);
             virtual error_code close(dsn_handle_t hFile);
-            virtual void    aio(aio_task_ptr& aio);
+            virtual void    aio(aio_task* aio);
             virtual disk_aio_ptr prepare_aio_context(aio_task* tsk);
 
             struct linux_disk_aio_context : public disk_aio
@@ -63,7 +63,7 @@ namespace dsn {
             };
 
         protected:
-            error_code aio_internal(aio_task_ptr& aio, bool async, __out_param uint32_t* pbytes = nullptr);
+            error_code aio_internal(aio_task* aio, bool async, __out_param uint32_t* pbytes = nullptr);
             void complete_aio(struct iocb* io, int bytes, int err);
             void get_event();
 

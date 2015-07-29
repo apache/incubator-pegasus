@@ -49,6 +49,25 @@ namespace dsn
     }
     typedef ::boost::intrusive_ptr<::dsn::service::cpp_dev_task_base> cpp_task_ptr;
 
+    class cpp_msg_ptr : public ::std::shared_ptr<char>
+    {
+    public:
+        cpp_msg_ptr() : ::std::shared_ptr<char>(nullptr, release)
+        {}
+
+        cpp_msg_ptr(dsn_message_t msg) : ::std::shared_ptr<char>((char*)msg, release)
+        {}
+
+    private:
+        static void release(char* msg)
+        {
+            if (nullptr != msg)
+            {
+                dsn_msg_release_ref((dsn_message_t)msg);
+            }
+        }
+    };
+
     namespace service {
 
         // 
@@ -134,17 +153,21 @@ namespace dsn
             cpp_dev_task_base()
             {
                 _task = 0;
-                add_ref();
+                _rpc_response = 0;
             }
 
             virtual ~cpp_dev_task_base()
             {
-                dsn_task_close(_task); 
+                dsn_task_release_ref(_task);
+
+                if (0 != _rpc_response)
+                    dsn_msg_release_ref(_rpc_response);
             }
 
             void set_task_info(dsn_task_t t, servicelet* svc)
             {
                 _task = t;
+                dsn_task_add_ref(t);
                 _manager.init(svc, t);
             }
 
@@ -152,12 +175,7 @@ namespace dsn
                         
             bool cancel(bool wait_until_finished, bool* finished = nullptr)
             {
-                bool r = dsn_task_cancel2(_task, wait_until_finished, finished);
-                if (r)
-                {
-                    release_ref();
-                }
-                return r;
+                return dsn_task_cancel2(_task, wait_until_finished, finished);
             }
 
             bool wait()
@@ -187,7 +205,9 @@ namespace dsn
 
             dsn_message_t response()
             {
-                return dsn_rpc_get_response(_task);
+                if (_rpc_response == 0)
+                    _rpc_response = dsn_rpc_get_response(_task);
+                return _rpc_response;
             }
 
             void enqueue_rpc_response(error_code err, dsn_message_t resp)
@@ -198,6 +218,7 @@ namespace dsn
         private:
             dsn_task_t           _task;
             task_context_manager _manager;
+            dsn_message_t        _rpc_response;
         };
 
         DEFINE_REF_OBJECT(cpp_dev_task_base)        

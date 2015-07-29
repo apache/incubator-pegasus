@@ -77,7 +77,7 @@ namespace dsn {
         //   call - the RPC response callback task to be invoked either timeout or response is received
         //          null when this is a one-way RPC call.
         //
-        virtual void call(message_ex* request, rpc_response_task_ptr& call) = 0;
+        virtual void call(message_ex* request, rpc_response_task* call) = 0;
 
         //
         // utilities
@@ -128,7 +128,7 @@ namespace dsn {
         // when a two-way RPC call is made, register the requst id and the callback
         // which also registers a timer for timeout tracking
         //
-        void on_call(message_ex* request, rpc_response_task_ptr& call);
+        void on_call(message_ex* request, rpc_response_task* call);
 
         //
         // when a RPC response is received, call this function to trigger calback
@@ -145,8 +145,8 @@ namespace dsn {
     private:
         struct match_entry
         {
-            rpc_response_task_ptr resp_task;
-            task_ptr              timeout_task;
+            rpc_response_task*    resp_task;
+            task*                 timeout_task;
         };
         typedef std::unordered_map<uint64_t, match_entry> rpc_requests;
         rpc_requests                  _requests;
@@ -174,7 +174,7 @@ namespace dsn {
         void on_client_session_disconnected(rpc_client_session_ptr& s);
 
         // called upon RPC call, rpc client session is created on demand
-        virtual void call(message_ex* request, rpc_response_task_ptr& call);
+        virtual void call(message_ex* request, rpc_response_task* call);
 
         // to be defined
         virtual rpc_client_session_ptr create_client_session(const dsn_address_t& server_addr) = 0;
@@ -198,7 +198,7 @@ namespace dsn {
         rpc_client_session(connection_oriented_network& net, const dsn_address_t& remote_addr, rpc_client_matcher_ptr& matcher);
         bool on_recv_reply(uint64_t key, message_ex* reply, int delay_ms);
         void on_disconnected();
-        void call(message_ex* request, rpc_response_task_ptr& call);
+        void call(message_ex* request, rpc_response_task* call);
         const dsn_address_t& remote_address() const { return _remote_addr; }
         connection_oriented_network& net() const { return _net; }
         bool is_disconnected() const { return _disconnected; }

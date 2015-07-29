@@ -45,7 +45,7 @@ public:
     sim_aio_provider(disk_engine* disk, aio_provider* inner_provider);
     ~sim_aio_provider(void);
 
-    virtual void    aio(aio_task_ptr& aio);
+    virtual void    aio(aio_task* aio);
 };
 
 }} // end namespace

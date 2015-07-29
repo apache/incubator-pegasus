@@ -119,12 +119,10 @@ public:
     dlink                  _task_queue_dl;
 };
 
-DEFINE_REF_OBJECT(task)
-
 class task_c : public task
 {
 public:
-    task_c(dsn_task_code_t code, dsn_task_callback_t cb, void* param, int hash = 0, service_node* node = nullptr)
+    task_c(dsn_task_code_t code, dsn_task_handler_t cb, void* param, int hash = 0, service_node* node = nullptr)
         : task(code, hash, node)
     {
         _cb = cb;
@@ -137,7 +135,7 @@ public:
     }
 
 private:
-    dsn_task_callback_t _cb;
+    dsn_task_handler_t _cb;
     void                *_param;
 };
 
@@ -147,12 +145,12 @@ private:
 class timer_task : public task
 {
 public:
-    timer_task(dsn_task_code_t code, dsn_task_callback_t cb, void* param, uint32_t interval_milliseconds, int hash = 0);
+    timer_task(dsn_task_code_t code, dsn_task_handler_t cb, void* param, uint32_t interval_milliseconds, int hash = 0);
     virtual void exec();
     
 private:
     uint32_t            _interval_milliseconds;
-    dsn_task_callback_t _cb;
+    dsn_task_handler_t _cb;
     void*               _param;
 };
 
@@ -214,8 +212,6 @@ protected:
     rpc_handler_ptr _handler;
 };
 
-typedef ::boost::intrusive_ptr<rpc_request_task> rpc_request_task_ptr;
-
 class rpc_response_task : public task
 {
 public:
@@ -265,8 +261,6 @@ private:
     dsn_rpc_response_handler_t _cb;
     void* _param;
 };
-
-typedef ::boost::intrusive_ptr<rpc_response_task> rpc_response_task_ptr;
 
 //------------------------- disk AIO task ---------------------------------------------------
 
@@ -324,7 +318,7 @@ public:
 class aio_task_c : public aio_task
 {
 public:
-    aio_task_c(dsn_task_code_t code, dsn_file_callback_t cb, void* param, int hash = 0)
+    aio_task_c(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash = 0)
         : aio_task(code, hash)
     { 
         _cb = cb;
@@ -337,12 +331,9 @@ public:
     }
 
 private:
-    dsn_file_callback_t _cb;
+    dsn_aio_handler_t _cb;
     void* _param;
 };
-
-typedef ::boost::intrusive_ptr<aio_task> aio_task_ptr;
-
 
 // ------------------------ inline implementations --------------------
 __inline /*static*/ task* task::get_current_task()

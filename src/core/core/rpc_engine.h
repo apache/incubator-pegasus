@@ -52,7 +52,7 @@ public:
     //
     // rpc routines
     //
-    void call(message_ex* request, rpc_response_task_ptr& call);
+    void call(message_ex* request, rpc_response_task* call);
     void on_recv_request(message_ex* msg, int delay_ms);
     static void reply(message_ex* response);
 

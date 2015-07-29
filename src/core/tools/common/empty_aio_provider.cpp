@@ -48,7 +48,7 @@ namespace dsn {
             return ERR_OK;
         }
 
-        void empty_aio_provider::aio(aio_task_ptr& aio)
+        void empty_aio_provider::aio(aio_task* aio)
         {
             complete_io(aio, ERR_OK, aio->aio()->buffer_size, 0);
         }

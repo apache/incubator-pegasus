@@ -415,7 +415,7 @@ void task::enqueue(task_worker_pool* pool)
     }
 }
 
-timer_task::timer_task(dsn_task_code_t code, dsn_task_callback_t cb, void* param, uint32_t interval_milliseconds, int hash)
+timer_task::timer_task(dsn_task_code_t code, dsn_task_handler_t cb, void* param, uint32_t interval_milliseconds, int hash)
     : task(code, hash), 
     _interval_milliseconds(interval_milliseconds),
     _cb(cb),

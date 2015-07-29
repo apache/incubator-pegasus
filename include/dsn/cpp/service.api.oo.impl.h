@@ -119,7 +119,7 @@ namespace dsn {
 
                     auto task = new cpp_dev_task<rpc_reply_handler>(cb);
 
-                    auto t = dsn_rpc_create(
+                    auto t = dsn_rpc_create_response_task(
                                 msg, 
                                 cpp_dev_task<rpc_reply_handler >::exec_rcp_response,
                                 (void*)task,
@@ -153,7 +153,7 @@ namespace dsn {
 
                     auto task = new cpp_dev_task<rpc_reply_handler>(cb);
 
-                    auto t = dsn_rpc_create(
+                    auto t = dsn_rpc_create_response_task(
                         msg,
                         cpp_dev_task<rpc_reply_handler >::exec_rcp_response,
                         (void*)task,
@@ -187,7 +187,7 @@ namespace dsn {
 
                     auto task = new cpp_dev_task<rpc_reply_handler>(cb);
 
-                    auto t = dsn_rpc_create(
+                    auto t = dsn_rpc_create_response_task(
                         msg,
                         cpp_dev_task<rpc_reply_handler >::exec_rcp_response,
                         (void*)task,
@@ -220,7 +220,7 @@ namespace dsn {
 
                     auto task = new cpp_dev_task<rpc_reply_handler>(cb);
 
-                    auto t = dsn_rpc_create(
+                    auto t = dsn_rpc_create_response_task(
                         msg,
                         cpp_dev_task<rpc_reply_handler >::exec_rcp_response,
                         (void*)task,
@@ -247,7 +247,7 @@ namespace dsn {
 
             template<typename TRequest>
             ::dsn::error_code call_typed_wait(
-                /*out*/ dsn_message_t* response,
+                /*out*/ ::dsn::cpp_msg_ptr* response,
                 const dsn_address_t& server,
                 dsn_task_code_t code,
                 const TRequest& req,
@@ -263,9 +263,9 @@ namespace dsn {
                 if (resp != nullptr)
                 {
                     if (response)
-                        *response = resp;
+                        (*response).reset((char*)resp);
                     else
-                        dsn_msg_release(resp);
+                        dsn_msg_release_ref(resp);
                     return ::dsn::ERR_OK;
                 }
                 else

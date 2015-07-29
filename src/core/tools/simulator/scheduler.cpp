@@ -227,7 +227,7 @@ void scheduler::schedule()
 
             for (auto it = events->begin(); it != events->end(); it++)
             {
-                task_ptr t = *it;
+                task* t = *it;
                 t->enqueue();
                 t->release_ref();
             }

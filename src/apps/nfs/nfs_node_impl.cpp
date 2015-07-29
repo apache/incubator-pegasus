@@ -21,7 +21,7 @@ namespace dsn {
             delete _opts;
         }
 
-        void nfs_node_simple::call(std::shared_ptr<remote_copy_request> rci, aio_task_ptr& callback)
+        void nfs_node_simple::call(std::shared_ptr<remote_copy_request> rci, aio_task* callback)
         {
             _client->begin_remote_copy(rci, callback); // copy file request entry
         }

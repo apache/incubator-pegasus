@@ -77,7 +77,7 @@ namespace dsn {
             return disk_aio_ptr(r);
         }
 
-        void native_linux_aio_provider::aio(aio_task_ptr& aio_tsk)
+        void native_linux_aio_provider::aio(aio_task* aio_tsk)
         {
             aio_internal(aio_tsk, true);
         }
@@ -110,7 +110,7 @@ namespace dsn {
 
             if (!aio->evt)
             {
-                aio_task_ptr aio_ptr(aio->tsk);
+                aio_task* aio_ptr(aio->tsk);
                 aio->this_->complete_io(aio_ptr, (err == 0) ? ERR_OK : ERR_FILE_OPERATION_FAILED, bytes);
             }
             else
@@ -121,7 +121,7 @@ namespace dsn {
             }
         }
 
-        error_code native_linux_aio_provider::aio_internal(aio_task_ptr& aio_tsk, bool async, __out_param uint32_t* pbytes /*= nullptr*/)
+        error_code native_linux_aio_provider::aio_internal(aio_task* aio_tsk, bool async, __out_param uint32_t* pbytes /*= nullptr*/)
         {
             struct iocb *cbs[1];
             linux_disk_aio_context * aio;

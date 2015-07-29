@@ -48,7 +48,7 @@ public:
         int hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-        dsn_message_t resp_msg;
+        ::dsn::cpp_msg_ptr resp_msg;
         auto err = ::dsn::service::rpc::call_typed_wait(
             &resp_msg, p_server_addr ? *p_server_addr : _server,
             RPC_FD_FAILURE_DETECTOR_PING, beacon,
@@ -56,7 +56,7 @@ public:
             );
         if (err == ::dsn::ERR_OK)
         {
-            ::unmarshall(resp_msg, resp);
+            ::unmarshall(resp_msg.get(), resp);
         }
         return err;
     }

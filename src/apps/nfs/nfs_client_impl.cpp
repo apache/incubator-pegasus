@@ -7,7 +7,7 @@ namespace dsn {
     namespace service {
 
 
-        void nfs_client_impl::begin_remote_copy(std::shared_ptr<remote_copy_request>& rci, aio_task_ptr& nfs_task)
+        void nfs_client_impl::begin_remote_copy(std::shared_ptr<remote_copy_request>& rci, aio_task* nfs_task)
         {
             user_request* req = new user_request();
             req->file_size_req.source = rci->source;

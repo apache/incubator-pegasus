@@ -67,7 +67,7 @@ namespace dsn {
 
         virtual error_code stop() = 0;
 
-        virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task_ptr& callback) = 0;
+        virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task* callback) = 0;
 
     protected:
         service_node* _node;

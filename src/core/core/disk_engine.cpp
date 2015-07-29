@@ -70,19 +70,19 @@ error_code disk_engine::close(dsn_handle_t hFile)
     return _provider->close(hFile);
 }
 
-void disk_engine::read(aio_task_ptr& aio)
+void disk_engine::read(aio_task* aio)
 {
     aio->aio()->type = AIO_Read;    
     return start_io(aio);
 }
 
-void disk_engine::write(aio_task_ptr& aio)
+void disk_engine::write(aio_task* aio)
 {
     aio->aio()->type = AIO_Write;
     return start_io(aio);
 }
 
-void disk_engine::start_io(aio_task_ptr& aio_tsk)
+void disk_engine::start_io(aio_task* aio_tsk)
 {
     auto aio = aio_tsk->aio();
     aio->engine = this;
@@ -100,7 +100,7 @@ void disk_engine::start_io(aio_task_ptr& aio_tsk)
 
     // TODO: profiling, throttling here 
 
-    if (aio_tsk->spec().on_aio_call.execute(task::get_current_task(), aio_tsk.get(), true))
+    if (aio_tsk->spec().on_aio_call.execute(task::get_current_task(), aio_tsk, true))
     {
         aio_tsk->add_ref();
         return _provider->aio(aio_tsk); 
@@ -111,7 +111,7 @@ void disk_engine::start_io(aio_task_ptr& aio_tsk)
     }
 }
 
-void disk_engine::complete_io(aio_task_ptr& aio, error_code err, uint32_t bytes, int delay_milliseconds)
+void disk_engine::complete_io(aio_task* aio, error_code err, uint32_t bytes, int delay_milliseconds)
 {
     // TODO: failure injection, profiling, throttling
 
