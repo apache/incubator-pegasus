@@ -167,7 +167,7 @@ public:
             std::cout << "echo err: " << err.to_string() << std::endl;
             {
                 zauto_lock l(_lock);
-                if (1 == --_live_echo_count)
+                if (0 == --_live_echo_count)
                 {
                     ++_live_echo_count;                    
                     s = true;
@@ -204,7 +204,7 @@ public:
             std::cout << "echo err: " << err.to_string() << std::endl;
             {
                 zauto_lock l(_lock);
-                if (1 == --_live_echo_count)
+                if (0 == --_live_echo_count)
                 {
                     ++_live_echo_count;
                     s = true;

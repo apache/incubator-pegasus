@@ -229,6 +229,7 @@ void scheduler::schedule()
             {
                 task* t = *it;
                 t->enqueue();
+                t->release_ref(); // added by previous t->enqueue from app
             }
 
             delete events;
