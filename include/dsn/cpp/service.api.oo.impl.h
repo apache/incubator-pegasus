@@ -119,9 +119,10 @@ namespace dsn {
 
                     auto task = new cpp_dev_task<rpc_reply_handler>(cb);
 
+                    task->add_ref(); // released in exec_rpc_response
                     auto t = dsn_rpc_create_response_task(
                                 msg, 
-                                cpp_dev_task<rpc_reply_handler >::exec_rcp_response,
+                                cpp_dev_task<rpc_reply_handler >::exec_rpc_response,
                                 (void*)task,
                                 reply_hash
                                 );
@@ -153,9 +154,10 @@ namespace dsn {
 
                     auto task = new cpp_dev_task<rpc_reply_handler>(cb);
 
+                    task->add_ref(); // released in exec_rpc_response
                     auto t = dsn_rpc_create_response_task(
                         msg,
-                        cpp_dev_task<rpc_reply_handler >::exec_rcp_response,
+                        cpp_dev_task<rpc_reply_handler >::exec_rpc_response,
                         (void*)task,
                         reply_hash
                         );
@@ -187,9 +189,10 @@ namespace dsn {
 
                     auto task = new cpp_dev_task<rpc_reply_handler>(cb);
 
+                    task->add_ref(); // released in exec_rpc_response
                     auto t = dsn_rpc_create_response_task(
                         msg,
-                        cpp_dev_task<rpc_reply_handler >::exec_rcp_response,
+                        cpp_dev_task<rpc_reply_handler >::exec_rpc_response,
                         (void*)task,
                         reply_hash
                         );
@@ -220,9 +223,10 @@ namespace dsn {
 
                     auto task = new cpp_dev_task<rpc_reply_handler>(cb);
 
+                    task->add_ref(); // released in exec_rpc_response
                     auto t = dsn_rpc_create_response_task(
                         msg,
-                        cpp_dev_task<rpc_reply_handler >::exec_rcp_response,
+                        cpp_dev_task<rpc_reply_handler >::exec_rpc_response,
                         (void*)task,
                         reply_hash
                         );

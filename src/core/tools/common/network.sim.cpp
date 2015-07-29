@@ -91,6 +91,8 @@ namespace dsn { namespace tools {
             recv_msg->from_address == recv_msg->to_address ?
             0 : rnet->net_delay_milliseconds()
             );
+
+        on_send_completed(msg);
     }
 
     sim_server_session::sim_server_session(sim_network_provider& net, const dsn_address_t& remote_addr, rpc_client_session_ptr& client)
@@ -107,6 +109,8 @@ namespace dsn { namespace tools {
             recv_msg->from_address == recv_msg->to_address ?
             0 : (static_cast<sim_network_provider*>(&_net))->net_delay_milliseconds()
             );
+
+        on_send_completed(reply_msg);
     }
 
     sim_network_provider::sim_network_provider(rpc_engine* rpc, network* inner_provider)

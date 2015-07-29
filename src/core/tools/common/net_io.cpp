@@ -166,6 +166,7 @@ namespace dsn {
                     auto smsg = _sq.dequeue_peeked();
                     dassert(smsg == msg, "sent msg must be the first msg in send queue");
                     //dinfo("network message sent, rpc_id = %016llx", msg->header->rpc_id);
+                    on_write_completed(smsg);
 
                     do_write();
                 }
@@ -212,6 +213,16 @@ namespace dsn {
             if (_reconnect_count++ > 3)
             {
                 close();
+
+                while (true)
+                {
+                    auto msg = _sq.dequeue();
+                    if (msg == nullptr)
+                        break;
+
+                    on_write_completed(msg);
+                }
+
                 return;
             }
 

@@ -198,14 +198,17 @@ namespace dsn {
         rpc_client_session(connection_oriented_network& net, const dsn_address_t& remote_addr, rpc_client_matcher_ptr& matcher);
         bool on_recv_reply(uint64_t key, message_ex* reply, int delay_ms);
         void on_disconnected();
+        void on_send_completed(message_ex* msg) { msg->release_ref(); } // added in call
         void call(message_ex* request, rpc_response_task* call);
         const dsn_address_t& remote_address() const { return _remote_addr; }
         connection_oriented_network& net() const { return _net; }
         bool is_disconnected() const { return _disconnected; }
 
         virtual void connect() = 0;
-        virtual void send(message_ex* msg) = 0;
 
+        // always call on_send_completed later
+        virtual void send(message_ex* msg) = 0;
+        
     private:
         bool _disconnected;
 
@@ -226,10 +229,12 @@ namespace dsn {
         rpc_server_session(connection_oriented_network& net, const dsn_address_t& remote_addr);
         void on_recv_request(message_ex* msg, int delay_ms);
         void on_disconnected();
+        void on_send_completed(message_ex* msg) { msg->release_ref(); } // added in rpc_engine::reply
         const dsn_address_t& remote_address() const { return _remote_addr; }
 
+        // always call on_send_completed later
         virtual void send(message_ex* reply_msg) = 0;
-
+        
     protected:
         connection_oriented_network&   _net;
         dsn_address_t                 _remote_addr;

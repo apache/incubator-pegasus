@@ -88,21 +88,23 @@ namespace dsn {
             }
             else
             {
+                dassert(reply->ref_counter.load() == 0, 
+                    "reply should not be referenced by anybody so far");
+                delete reply;
                 return false;
             }
         }
 
-        if (call != nullptr)
+        dbg_dassert(call != nullptr, "rpc response task cannot be empty");
+        if (timeout_task != task::get_current_task())
         {
-            if (timeout_task != task::get_current_task())
-            {
-                timeout_task->cancel(true);
-            }
-            
-            call->set_delay(delay_ms);
-            call->enqueue(reply->error(), reply);
+            timeout_task->cancel(true);
         }
+            
+        call->set_delay(delay_ms);
+        call->enqueue(reply->error(), reply);
 
+        call->release_ref(); // added in on_call
         return true;
     }
 
@@ -124,7 +126,10 @@ namespace dsn {
             }
         }
 
+        dbg_dassert(call != nullptr, "rpc response task cannot be empty");
         call->enqueue(ERR_TIMEOUT, nullptr);
+
+        call->release_ref(); // added in on_call
     }
     
     void rpc_client_matcher::on_call(message_ex* request, rpc_response_task* call)
@@ -132,6 +137,7 @@ namespace dsn {
         task* timeout_task;
         message_header& hdr = *request->header;
 
+        dbg_dassert(call != nullptr, "rpc response task cannot be empty");
         timeout_task = (new rpc_timeout_task(this, hdr.id));
 
         {
@@ -144,6 +150,8 @@ namespace dsn {
 
         timeout_task->set_delay(hdr.client.timeout_ms);
         timeout_task->enqueue();
+
+        call->add_ref(); // released in on_rpc_timeout or on_recv_reply
     }
 
     //------------------------
@@ -376,6 +384,12 @@ namespace dsn {
                 call->set_delay(hdr.client.timeout_ms);
                 call->enqueue(ERR_TIMEOUT, nullptr);
             }   
+            else
+            {
+                // as ref_count for request may be zero
+                request->add_ref();
+                request->release_ref();
+            }
             return;
         }
 
@@ -384,15 +398,27 @@ namespace dsn {
 
     void rpc_engine::reply(message_ex* response)
     {
+        response->add_ref();  // released in on_send_completed
+
         auto s = response->server_session.get();
         if (s == nullptr)
+        {
+            // do not delete above add and release here for cancellation
+            // as response may initially have ref_count == 0
+            response->release_ref(); // added above
             return;
+        }   
 
         response->seal(_message_crc_required);
 
         auto sp = task_spec::get(response->local_rpc_code);
         if (!sp->on_rpc_reply.execute(task::get_current_task(), response, true))
+        {
+            // do not delete above add and release here for cancellation
+            // as response may initially have ref_count == 0
+            response->release_ref(); // added above
             return;
+        }
                 
         s->send(response);
     }

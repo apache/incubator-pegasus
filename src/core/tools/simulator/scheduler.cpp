@@ -229,7 +229,6 @@ void scheduler::schedule()
             {
                 task* t = *it;
                 t->enqueue();
-                t->release_ref();
             }
 
             delete events;

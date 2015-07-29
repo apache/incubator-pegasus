@@ -47,6 +47,7 @@ namespace dsn {
             _matcher->on_call(request, call);
         }
 
+        request->add_ref(); // released in on_send_completed
         send(request);
     }
 

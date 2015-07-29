@@ -102,7 +102,6 @@ namespace dsn
         // routines for create messages
         //
         static message_ex* create_receive_message(blob& data);
-        static message_ex* create_receive_message(blob& data, message_header* header, std::shared_ptr<char>& header_holder);
         static message_ex* create_request(dsn_task_code_t rpc_code, int timeout_milliseconds = 0, int hash = 0);
         message_ex* create_response();
 
@@ -131,7 +130,6 @@ namespace dsn
         int                    _rw_offset;
         bool                   _rw_committed;
         bool                   _is_read;
-        std::shared_ptr<char>  _header_holder;
     };
     
 //

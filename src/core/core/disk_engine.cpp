@@ -102,7 +102,7 @@ void disk_engine::start_io(aio_task* aio_tsk)
 
     if (aio_tsk->spec().on_aio_call.execute(task::get_current_task(), aio_tsk, true))
     {
-        aio_tsk->add_ref();
+        aio_tsk->add_ref(); // released in complete_io
         return _provider->aio(aio_tsk); 
     }
     else
@@ -131,7 +131,7 @@ void disk_engine::complete_io(aio_task* aio, error_code err, uint32_t bytes, int
     }
     
     aio->enqueue(err, bytes, _node);
-    aio->release_ref();
+    aio->release_ref(); // added in start_io
 }
 
 

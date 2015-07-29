@@ -43,6 +43,7 @@ namespace dsn {
                 dsn_task_t t;
                 auto tsk = new cpp_dev_task<task_handler>(callback, timer_interval_milliseconds != 0);
                 
+                tsk->add_ref(); // released in exec callback
                 if (timer_interval_milliseconds != 0)
                 { 
                     t = dsn_task_create_timer(evt, cpp_dev_task<task_handler>::exec, tsk, hash, timer_interval_milliseconds);
@@ -70,9 +71,11 @@ namespace dsn {
                 )
             {
                 auto tsk = new cpp_dev_task<rpc_reply_handler >(callback);
+
+                tsk->add_ref(); // released in exec_rpc_response
                 auto t = dsn_rpc_create_response_task(
                     request,
-                    cpp_dev_task<rpc_reply_handler >::exec_rcp_response,
+                    cpp_dev_task<rpc_reply_handler >::exec_rpc_response,
                     (void*)tsk,
                     reply_hash
                     );
@@ -97,6 +100,8 @@ namespace dsn {
                 )
             {
                 auto tsk = new cpp_dev_task<aio_handler>(callback);
+                
+                tsk->add_ref(); // released in exec_aio
                 dsn_task_t t = dsn_file_create_aio_task(callback_code, cpp_dev_task<aio_handler>::exec_aio, tsk, hash);
                 tsk->set_task_info(t, owner);
 
@@ -116,6 +121,8 @@ namespace dsn {
                 )
             {
                 auto tsk = new cpp_dev_task<aio_handler>(callback);
+
+                tsk->add_ref(); // released in exec_aio
                 dsn_task_t t = dsn_file_create_aio_task(callback_code, cpp_dev_task<aio_handler>::exec_aio, tsk, hash);
                 tsk->set_task_info(t, owner);
 
@@ -137,6 +144,8 @@ namespace dsn {
                 )
             {
                 auto tsk = new cpp_dev_task<aio_handler>(callback);
+
+                tsk->add_ref(); // released in exec_aio
                 dsn_task_t t = dsn_file_create_aio_task(callback_code, cpp_dev_task<aio_handler>::exec_aio, tsk, hash);
                 tsk->set_task_info(t, owner);
 

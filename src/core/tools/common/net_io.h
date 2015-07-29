@@ -55,6 +55,7 @@ namespace dsn {
             virtual void on_message_read(message_ex* msg) = 0;
             virtual void add_reference() = 0;
             virtual void release_reference() = 0;
+            virtual void on_write_completed(message_ex* msg) = 0;
 
         protected:
 

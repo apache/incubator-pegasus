@@ -198,6 +198,7 @@ class rpc_request_task : public task
 {
 public:
     rpc_request_task(message_ex* request, rpc_handler_ptr& h, service_node* node);
+    ~rpc_request_task();
 
     message_ex*  get_request() { return _request; }
     void         enqueue(service_node* node);
@@ -216,6 +217,7 @@ class rpc_response_task : public task
 {
 public:
     rpc_response_task(message_ex* request, int hash = 0);
+    ~rpc_response_task();
 
     virtual void on_response(error_code err, message_ex* request, message_ex* response) = 0;
 

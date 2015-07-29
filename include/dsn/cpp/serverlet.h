@@ -73,6 +73,8 @@ namespace dsn {
             }
 
         private:
+            // TODO: if rpc_replier is not used in rpc request handler
+            // we need to add references ...
             dsn_message_t _request;
             dsn_message_t _response;
         };

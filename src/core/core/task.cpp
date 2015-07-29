@@ -235,6 +235,8 @@ void task::exec_internal()
     {
         lock_checker::check_dangling_lock();
     }
+
+    this->release_ref(); // added in enqueue(pool)
 }
 
 void task::signal_waiters()
@@ -386,6 +388,8 @@ void task::enqueue()
 
 void task::enqueue(task_worker_pool* pool)
 {
+    this->add_ref(); // released in exec_internal (even when cancelled)
+
     if (spec().type == TASK_TYPE_COMPUTE)
     {
         spec().on_task_enqueue.execute(task::get_current_task(), this);
@@ -449,6 +453,13 @@ rpc_request_task::rpc_request_task(message_ex* request, rpc_handler_ptr& h, serv
 {
     dbg_dassert (TASK_TYPE_RPC_REQUEST == spec().type, 
         "task type must be RPC_REQUEST, please use DEFINE_TASK_CODE_RPC to define the task code");
+
+    _request->add_ref(); // released in dctor
+}
+
+rpc_request_task::~rpc_request_task()
+{
+    _request->release_ref(); // added in ctor
 }
 
 void rpc_request_task::enqueue(service_node* node)
@@ -472,18 +483,45 @@ rpc_response_task::rpc_response_task(message_ex* request, int hash)
         "task must be of RPC_RESPONSE type, please use DEFINE_TASK_CODE_RPC to define the request task code");
 
     _request = request;
+    _response = nullptr;
+
     _caller_pool = task::get_current_worker() ? 
         task::get_current_worker()->pool() : nullptr;
+
+    _request->add_ref(); // released in dctor
+}
+
+rpc_response_task::~rpc_response_task()
+{
+    _request->release_ref(); // added in ctor
+
+    if (_response != nullptr)
+        _response->release_ref(); // added in enqueue
 }
 
 void rpc_response_task::enqueue(error_code err, message_ex* reply)
 {
     set_error_code(err);
-    _response = (err == ERR_OK ? reply : nullptr);
+    _response = reply;
+
+    if (nullptr != reply)
+    {
+        dassert(err == ERR_OK, "error code must be success when reply is present");
+        reply->add_ref(); // released in dctor
+    }
 
     if (spec().on_rpc_response_enqueue.execute(this, true))
     {
         task::enqueue(_caller_pool);
+    }
+
+    // release the task when necessary
+    else
+    {   
+        // because (1) initially, the ref count is zero
+        //         (2) upper apps may call add_ref already
+        this->add_ref();
+        this->release_ref();
     }
 }
 

@@ -173,7 +173,7 @@ namespace dsn
 
             dsn_task_t native_handle() { return _task; }
                         
-            bool cancel(bool wait_until_finished, bool* finished = nullptr)
+            virtual bool cancel(bool wait_until_finished, bool* finished = nullptr)
             {
                 return dsn_task_cancel2(_task, wait_until_finished, finished);
             }
@@ -235,28 +235,38 @@ namespace dsn
             {
             }
 
+            virtual bool cancel(bool wait_until_finished, bool* finished = nullptr) override
+            {
+                bool r = cpp_dev_task_base::cancel(wait_until_finished, finished);
+                if (_is_timer && r)
+                {
+                    release_ref(); // added upon callback exec registration
+                }
+                return r;
+            }
+
             static void exec(void* task)
             {
                 cpp_dev_task* t = (cpp_dev_task*)task;
                 t->_handler();
                 if (!t->_is_timer)
                 {
-                    t->release_ref();
+                    t->release_ref(); // added upon callback exec registration
                 }
             }
 
-            static void exec_rcp_response(dsn_error_t err, dsn_message_t req, dsn_message_t resp, void* task)
+            static void exec_rpc_response(dsn_error_t err, dsn_message_t req, dsn_message_t resp, void* task)
             {
                 cpp_dev_task* t = (cpp_dev_task*)task;
                 t->_handler(err, req, resp);
-                t->release_ref();
+                t->release_ref(); // added upon callback exec_rpc_response registration
             }
 
             static void exec_aio(dsn_error_t err, size_t sz, void* task)
             {
                 cpp_dev_task* t = (cpp_dev_task*)task;
                 t->_handler(err, sz);
-                t->release_ref();
+                t->release_ref(); // added upon callback exec_aio registration
             }
             
         private:

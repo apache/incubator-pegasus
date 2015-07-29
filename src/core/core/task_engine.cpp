@@ -154,8 +154,6 @@ void task_worker_pool::enqueue(task* t)
             }
         }
 
-        // add reference before adding to the queue
-        t->add_ref();
         return q->enqueue(t);
     }
     else

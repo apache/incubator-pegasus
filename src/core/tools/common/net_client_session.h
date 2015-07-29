@@ -45,15 +45,19 @@ namespace dsn {
                 );
             ~net_client_session();
 
-            virtual void connect() { return client_net_io::connect(); }
-            virtual void send(message_ex* msg) { return write(msg); }
-            virtual void on_closed() { return on_disconnected(); }
-            virtual void on_message_read(message_ex* msg)
+            virtual void connect() override { return client_net_io::connect(); }
+            virtual void send(message_ex* msg) override { return write(msg); }
+            virtual void on_closed() override { return on_disconnected(); }
+            virtual void on_message_read(message_ex* msg) override
             {
                 on_recv_reply(msg->header->id, msg, 0);
             }
-            virtual void add_reference() { add_ref(); }
-            virtual void release_reference() { release_ref(); }
+            virtual void add_reference() override { add_ref(); }
+            virtual void release_reference() override { release_ref(); }
+            virtual void on_write_completed(message_ex* msg) override
+            {
+                on_send_completed(msg);
+            }
 
         private:
             asio_network_provider                 &_net;

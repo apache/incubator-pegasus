@@ -453,6 +453,8 @@ void mutation_log::close()
     _global_end_offset += _pending_write->total_size() - oldSz;
 
     auto tsk = new cpp_dev_task<aio_handler>(callback);
+
+    tsk->add_ref(); // released in exec_aio
     dsn_task_t t = dsn_file_create_aio_task(callback_code, cpp_dev_task<aio_handler>::exec_aio, tsk, hash);
     tsk->set_task_info(t, callback_host);
 

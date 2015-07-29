@@ -256,18 +256,6 @@ message_ex* message_ex::create_receive_message(blob& data)
     return msg;
 }
 
-message_ex* message_ex::create_receive_message(blob& data, message_header* header, std::shared_ptr<char>& header_holder)
-{
-    message_ex* msg = new message_ex();
-    msg->header = header;
-    msg->_is_read = true;
-    msg->_header_holder = header_holder;
-    msg->buffers.push_back(data);
-
-    dbg_dassert(msg->header->body_length > 0, "message %s is empty!", msg->header->rpc_name);
-    return msg;
-}
-
 message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, int hash)
 {
     message_ex* msg = new message_ex();

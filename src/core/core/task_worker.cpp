@@ -321,7 +321,6 @@ void task_worker::loop()
             if (task != nullptr)
             {
                 task->exec_internal();
-                task->release_ref();
             }
         }
     /*}

@@ -357,7 +357,8 @@ inline double   dsn_probability() { return static_cast<double>(dsn_random64(0, 1
 //
 //------------------------------------------------------------------------------
 
-#define dlog(level, title, ...) do {if (level >= dsn_log_start_level) dsn_logf(__FILE__, __FUNCTION__, __LINE__, level, title, __VA_ARGS__); } while(false)
+#define dlog(level, title, ...) do {if (level >= dsn_log_start_level) \
+        dsn_logf(__FILE__, __FUNCTION__, __LINE__, level, title, __VA_ARGS__); } while(false)
 #define dinfo(...)  dlog(LOG_LEVEL_INFORMATION, __TITLE__, __VA_ARGS__)
 #define ddebug(...) dlog(LOG_LEVEL_DEBUG, __TITLE__, __VA_ARGS__)
 #define dwarn(...)  dlog(LOG_LEVEL_WARNING, __TITLE__, __VA_ARGS__)

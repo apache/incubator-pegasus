@@ -458,7 +458,7 @@ DSN_API dsn_message_t dsn_rpc_call_wait(dsn_address_t server, dsn_message_t requ
     if (rtask->error() == ::dsn::ERR_OK)
     {
         auto msg = rtask->get_response();
-        msg->add_ref();
+        msg->add_ref(); // released by callers
         return msg;
     }
     else
@@ -482,7 +482,7 @@ DSN_API void dsn_rpc_call_one_way(dsn_address_t server, dsn_message_t request)
 DSN_API void dsn_rpc_reply(dsn_message_t response)
 {
     auto msg = ((::dsn::message_ex*)response);
-    msg->server_session->send(msg);
+    ::dsn::rpc_engine::reply(msg);
 }
 
 DSN_API dsn_message_t dsn_rpc_get_response(dsn_task_t rpc_call)
@@ -492,7 +492,7 @@ DSN_API dsn_message_t dsn_rpc_get_response(dsn_task_t rpc_call)
     auto msg = task->get_response();
     if (nullptr != msg)
     {
-        msg->add_ref();
+        msg->add_ref(); // released by callers
         return msg;
     }
     else
