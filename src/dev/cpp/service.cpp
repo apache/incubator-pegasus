@@ -61,14 +61,11 @@ private:
     std::set<servicelet*> _services;
 };
 
-static service_objects* s_services = &(service_objects::instance());
+static service_objects* dsn_services = &(service_objects::instance());
 
 servicelet::servicelet(int task_bucket_count)
-: _task_bucket_count(task_bucket_count)
 {
-    _outstanding_tasks_lock = new ::dsn::utils::ex_lock_nr_spin[_task_bucket_count];
-    _outstanding_tasks = new dlink[_task_bucket_count];
-
+    _tracker = dsn_task_tracker_create(task_bucket_count);
     _access_thread_id_inited = false;
     _last_id = 0;
     service_objects::instance().add(this);
@@ -76,47 +73,10 @@ servicelet::servicelet(int task_bucket_count)
 
 servicelet::~servicelet()
 {
-    clear_outstanding_tasks();
+    dsn_task_tracker_destroy(_tracker);
     service_objects::instance().remove(this);
-
-    delete[] _outstanding_tasks;
-    delete[] _outstanding_tasks_lock;
 }
 
-void servicelet::clear_outstanding_tasks()
-{
-    for (int i = 0; i < _task_bucket_count; i++)
-    {
-        while (true)
-        {
-            task_context_manager::owner_delete_state prepare_state;
-            task_context_manager *tcm;
-
-            {
-                utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_outstanding_tasks_lock[i]);
-                auto n = _outstanding_tasks[i].next();
-                if (n != &_outstanding_tasks[i])
-                {
-                    tcm = CONTAINING_RECORD(n, task_context_manager, _dl);
-                    prepare_state = tcm->owner_delete_prepare();
-                }
-                else
-                    break; // assuming nobody is putting tasks into it anymore
-            }
-
-            switch (prepare_state)
-            {
-            case task_context_manager::OWNER_DELETE_NOT_LOCKED:
-                dsn_task_cancel(tcm->_task, true);
-                tcm->owner_delete_commit();
-                break;
-            case task_context_manager::OWNER_DELETE_LOCKED:
-            case task_context_manager::OWNER_DELETE_FINISHED:
-                break;
-            }
-        }
-    }
-}
 
 void servicelet::check_hashed_access()
 {

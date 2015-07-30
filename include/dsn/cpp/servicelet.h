@@ -69,44 +69,6 @@ namespace dsn
     };
 
     namespace service {
-
-        // 
-        // many task requires a certain context to be executed
-        // task_context_manager helps manaing the context automatically
-        // for tasks so that when the context is gone, the tasks are
-        // automatically cancelled to avoid invalid context access
-        //
-        class servicelet;
-        class task_context_manager
-        {
-        public:
-            task_context_manager() : _owner(nullptr) {}
-            virtual ~task_context_manager(); 
-            void init(servicelet* owner, dsn_task_t task);      
-
-        private:
-            friend class servicelet;
-
-            enum owner_delete_state
-            {
-                OWNER_DELETE_NOT_LOCKED = 0,
-                OWNER_DELETE_LOCKED = 1,
-                OWNER_DELETE_FINISHED = 2
-            };
-            
-            dsn_task_t  _task;
-            servicelet *_owner;
-            std::atomic<owner_delete_state> _deleting_owner;
-            
-            // double-linked list for put into _owner
-            dlink      _dl;
-            int        _dl_bucket_id;
-            
-        private:
-            owner_delete_state owner_delete_prepare();
-            void               owner_delete_commit();
-        };
-
         //
         // servicelet is the base class for RPC service and client
         // there can be multiple servicelet in the system, mostly
@@ -117,6 +79,7 @@ namespace dsn
         public:
             servicelet(int task_bucket_count = 13);
             virtual ~servicelet();
+            dsn_task_tracker_t tracker() const { return _tracker; }
 
             static dsn_address_t primary_address() { return dsn_primary_address(); }
             static uint32_t random32(uint32_t min, uint32_t max) { return dsn_random32(min, max); }
@@ -126,7 +89,6 @@ namespace dsn
             static uint64_t now_ms() { return dsn_now_ms(); }
             
         protected:
-            void clear_outstanding_tasks();
             void check_hashed_access();
 
         private:
@@ -134,11 +96,7 @@ namespace dsn
             std::set<dsn_task_code_t>      _events;
             int                            _access_thread_id;
             bool                           _access_thread_id_inited;
-
-            friend class task_context_manager;
-            const int                      _task_bucket_count;
-            ::dsn::utils::ex_lock_nr_spin  *_outstanding_tasks_lock;
-            dlink                          *_outstanding_tasks;
+            dsn_task_tracker_t             _tracker;
         };
 
         //
@@ -168,7 +126,7 @@ namespace dsn
             {
                 _task = t;
                 dsn_task_add_ref(t);
-                _manager.init(svc, t);
+                dsn_task_set_tracker(t, svc->tracker());
             }
 
             dsn_task_t native_handle() { return _task; }
@@ -217,7 +175,6 @@ namespace dsn
 
         private:
             dsn_task_t           _task;
-            task_context_manager _manager;
             dsn_message_t        _rpc_response;
         };
 
@@ -276,56 +233,5 @@ namespace dsn
 
 
         // ------- inlined implementation ----------
-        inline void task_context_manager::init(servicelet* owner, dsn_task_t task)
-        {
-            _owner = owner;
-            _task = task;
-            _deleting_owner = OWNER_DELETE_NOT_LOCKED;
-
-            if (nullptr != _owner)
-            {
-                _dl_bucket_id = static_cast<int>(::dsn::utils::get_current_tid() % _owner->_task_bucket_count);
-                {
-                    utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_owner->_outstanding_tasks_lock[_dl_bucket_id]);
-                    _dl.insert_after(&_owner->_outstanding_tasks[_dl_bucket_id]);
-                }
-            }
-        }
-
-        inline task_context_manager::owner_delete_state task_context_manager::owner_delete_prepare()
-        {
-            return _deleting_owner.exchange(OWNER_DELETE_LOCKED, std::memory_order_acquire);
-        }
-
-        inline void task_context_manager::owner_delete_commit()
-        {
-            {
-                utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_owner->_outstanding_tasks_lock[_dl_bucket_id]);
-                _dl.remove();
-            }
-
-            _deleting_owner.store(OWNER_DELETE_FINISHED, std::memory_order_relaxed);
-        }
-
-        inline task_context_manager::~task_context_manager()
-        {
-            if (nullptr != _owner)
-            {
-                auto s = owner_delete_prepare();
-                switch (s)
-                {
-                case OWNER_DELETE_NOT_LOCKED:
-                    owner_delete_commit();
-                    break;
-                case OWNER_DELETE_LOCKED:
-                    while (OWNER_DELETE_LOCKED == _deleting_owner.load(std::memory_order_consume))
-                    {
-                    }
-                    break;
-                case OWNER_DELETE_FINISHED:
-                    break;
-                }
-            }
-        }
     }
 }

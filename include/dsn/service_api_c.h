@@ -94,6 +94,7 @@ typedef int                dsn_task_code_t;
 typedef int                dsn_threadpool_code_t;
 typedef unsigned long long dsn_handle_t;
 typedef void*              dsn_task_t;
+typedef void*              dsn_task_tracker_t;
 typedef void*              dsn_message_t; 
 typedef void               (*dsn_task_handler_t)(void*);
 typedef void               (*dsn_rpc_request_handler_t)(dsn_message_t, void*);
@@ -236,6 +237,21 @@ extern DSN_API dsn_task_t  dsn_task_create_timer(dsn_task_code_t code, dsn_task_
 // repeated declarations later in correpondent rpc and file sections
 //extern DSN_API dsn_task_t  dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, void* param, int reply_hash);
 //extern DSN_API dsn_task_t  dsn_file_create_aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash);
+
+//
+// task trackers are used to track task context
+//
+// when a task executes, it usually accesses certain context
+// when the context is gone, all tasks accessing this context needs 
+// to be cancelled automatically to avoid invalid context access
+// 
+// to release this burden from developers, rDSN provides 
+// task tracker which can be embedded into a context, and
+// destroyed when the context is gone
+//
+extern DSN_API dsn_task_tracker_t dsn_task_tracker_create(int task_bucket_count);
+extern DSN_API void               dsn_task_tracker_destroy(dsn_task_tracker_t tracker);
+extern DSN_API void               dsn_task_set_tracker(dsn_task_t task, dsn_task_tracker_t tracker);
 
 //
 // common task 

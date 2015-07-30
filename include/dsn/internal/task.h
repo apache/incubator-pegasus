@@ -27,6 +27,7 @@
 
 # include <dsn/internal/dsn_types.h>
 # include <dsn/internal/extensible_object.h>
+# include <dsn/internal/task_tracker.h>
 # include <dsn/internal/task_spec.h>
 # include <dsn/cpp/auto_code.h>
 # include <dsn/internal/rpc_message.h>
@@ -75,6 +76,7 @@ public:
     virtual void            enqueue();
     void                    set_error_code(error_code err) { _error = err; }
     void                    set_delay(int delay_milliseconds = 0) { _delay_milliseconds = delay_milliseconds; }
+    void                    set_tracker(task_tracker* tracker) { _context_tracker.set_tracker(tracker, this); }
 
     uint64_t                id() const { return _task_id; }
     task_state              state() const { return _state.load(); }
@@ -113,6 +115,7 @@ private:
     bool                   _wait_for_cancel;
     task_spec              *_spec;
     service_node           *_node;
+    trackable_task         _context_tracker; // when tracker is gone, the task is cancelled automatically
 
 public:
     // used by task queue only

@@ -209,6 +209,21 @@ DSN_API dsn_task_t dsn_task_create_timer(dsn_task_code_t code, dsn_task_handler_
     return t;
 }
 
+DSN_API dsn_task_tracker_t dsn_task_tracker_create(int task_bucket_count)
+{
+    return (dsn_task_tracker_t)(new ::dsn::task_tracker(task_bucket_count));
+}
+
+DSN_API void dsn_task_tracker_destroy(dsn_task_tracker_t tracker)
+{
+    delete ((::dsn::task_tracker*)tracker);
+}
+
+DSN_API void dsn_task_set_tracker(dsn_task_t task, dsn_task_tracker_t tracker)
+{
+    ((::dsn::task*)task)->set_tracker((::dsn::task_tracker*)tracker);
+}
+
 DSN_API void dsn_task_call(dsn_task_t task, int delay_milliseconds)
 {
     auto t = ((::dsn::task*)(task));
