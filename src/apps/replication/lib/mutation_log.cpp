@@ -205,7 +205,7 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
     auto* hdr = (log_block_header*)bb.data();
     hdr->magic = 0xdeadbeef;
     hdr->length = _pending_write->total_size() - sizeof(log_block_header);
-    hdr->body_crc = 0; // TODO: crc
+    hdr->body_crc = dsn_crc32_compute((const void*)(bb.data() + sizeof(log_block_header)), (size_t)hdr->length); // TODO: crc
     hdr->padding = 0;
         
     uint64_t offset = end_offset() - bb.length();
@@ -271,6 +271,8 @@ error_code mutation_log::replay(replay_callback callback)
 
     int64_t offset = start_offset();
     error_code err = ERR_OK;
+    std::shared_ptr<binary_reader> reader;
+
     for (auto it = _log_files.begin(); it != _log_files.end(); it++)
     {
         log_file_ptr log = it->second;
@@ -298,24 +300,16 @@ error_code mutation_log::replay(replay_callback callback)
             break;
         }
 
-        binary_reader reader(bb);
+        reader.reset(new binary_reader(bb));
         offset += sizeof(log_block_header);
-
-        dwarn("check body crc here");
-        /*if (!msg->is_right_body())
-        {
-            derror("data read crc check failed at offset %llu", offset);
-            return ERR_WRONG_CHECKSUM;
-        }*/
-
-        offset += log->read_header(reader);
+        offset += log->read_header(*reader);
 
         while (true)
         {
-            while (!reader.is_eof())
+            while (!reader->is_eof())
             {
-                auto oldSz = reader.get_remaining_size();
-                mutation_ptr mu = mutation::read_from(reader, nullptr);
+                auto oldSz = reader->get_remaining_size();
+                mutation_ptr mu = mutation::read_from(*reader, nullptr);
                 dassert (nullptr != mu, "");                                
                 mu->set_logged();
 
@@ -327,7 +321,7 @@ error_code mutation_log::replay(replay_callback callback)
 
                 callback(mu);
 
-                offset += oldSz - reader.get_remaining_size();
+                offset += oldSz - reader->get_remaining_size();
             }
 
             err = log->read_next_log_entry(bb);
@@ -343,17 +337,8 @@ error_code mutation_log::replay(replay_callback callback)
                     "read log entry failed for %s, err = %s", log->path().c_str(), err.to_string());
                 break;
             }
-            
-            binary_reader reader(bb);
             offset += sizeof(log_block_header);
-
-            dwarn("check body crc here");
-
-            /*if (!msg->is_right_body())
-            {
-                derror("data read crc check failed at offset %llu", offset);
-                return ERR_WRONG_CHECKSUM;
-            }*/
+            reader.reset(new binary_reader(bb));
         }
 
         log->close();
@@ -739,6 +724,13 @@ error_code log_file::read_next_log_entry(__out_param::dsn::blob& bb)
         return ERR_INVALID_DATA;
     }
     
+    auto crc = dsn_crc32_compute((const void*)bb.data(), (size_t)hdr.length);
+    if (crc != hdr.body_crc)
+    {
+        derror("crc checking failed");
+        return ERR_INVALID_DATA;
+    }
+
     return ERR_OK;
 }
 

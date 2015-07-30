@@ -116,7 +116,7 @@ void replica::on_client_read(const read_request_header& meta, dsn_message_t requ
     dassert (_app != nullptr, "");
 
     msg_binary_reader reader(request);
-    _app->dispatch_rpc_call(meta.code, reader, request);
+    _app->dispatch_rpc_call(meta.code, reader, dsn_msg_create_response(request));
 }
 
 void replica::response_client_message(dsn_message_t request, error_code error, decree d/* = invalid_decree*/)

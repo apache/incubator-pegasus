@@ -34,7 +34,7 @@ DEFINE_TASK_CODE_RPC(RPC_ECHO, TASK_PRIORITY_HIGH, ::dsn::THREAD_POOL_DEFAULT)
 using namespace dsn;
 using namespace dsn::service;
 
-class echo_server : public serverlet<echo_server>, public service_app<echo_server>
+class echo_server : public serverlet<echo_server>, public service_app
 {
 public:
     echo_server()
@@ -66,7 +66,7 @@ private:
     bool _empty_reply;
 };
 
-class echo_client : public serverlet<echo_client>, public service_app<echo_client>
+class echo_client : public serverlet<echo_client>, public service_app
 {
 public:
     echo_client()

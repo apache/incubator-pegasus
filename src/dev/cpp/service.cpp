@@ -25,10 +25,20 @@
  */
 
 # include <dsn/cpp/servicelet.h>
+# include <dsn/cpp/service_app.h>
 # include <dsn/internal/singleton.h>
 # include <iostream>
+# include <map>
 
 namespace dsn {
+
+static std::map<std::string, service_app*> dsn_apps;
+
+void service_app::register_for_debugging()
+{
+    dsn_apps[name()] = this;
+}
+
 namespace service {
 
 class service_objects : public ::dsn::utils::singleton<service_objects>

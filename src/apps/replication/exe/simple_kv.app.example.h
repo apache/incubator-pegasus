@@ -30,7 +30,7 @@
 
 namespace dsn { namespace replication { namespace application { 
 // client app example
-class simple_kv_client_app : public ::dsn::service_app<simple_kv_client_app>, public virtual ::dsn::service::servicelet
+class simple_kv_client_app : public ::dsn::service_app, public virtual ::dsn::service::servicelet
 {
 public:
     simple_kv_client_app()
@@ -70,7 +70,7 @@ public:
     void on_test_timer()
     {
         char buffer[20];
-        sprintf(buffer, "value.%u", dsn_random32(0, 100));
+        sprintf(buffer, "value.%u", dsn_random32(0, 0));
 
         std::string value(buffer);
 
@@ -103,7 +103,7 @@ private:
 };
 
 
-class simple_kv_perf_test_client_app : public ::dsn::service_app<simple_kv_perf_test_client_app>, public virtual ::dsn::service::servicelet
+class simple_kv_perf_test_client_app : public ::dsn::service_app, public virtual ::dsn::service::servicelet
 {
 public:
     simple_kv_perf_test_client_app()

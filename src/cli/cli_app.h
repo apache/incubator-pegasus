@@ -32,7 +32,7 @@
 namespace dsn {
     namespace service {
 
-        class cli : public service_app<cli>
+        class cli : public service_app
         {
         public:
             cli();

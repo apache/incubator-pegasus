@@ -36,7 +36,7 @@ namespace dsn {
     }
     namespace service {
 
-        class meta_service_app : public service_app<meta_service_app>
+        class meta_service_app : public service_app
         {
         public:
             meta_service_app();

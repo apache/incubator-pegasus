@@ -119,7 +119,7 @@ private:
     // routines for replica internal usage
     friend class replica;
     error_code write_internal(mutation_ptr& mu);
-    void       dispatch_rpc_call(int code, binary_reader& reader, dsn_message_t request);
+    void       dispatch_rpc_call(int code, binary_reader& reader, dsn_message_t response);
     
 private:
     std::string _dir_data;

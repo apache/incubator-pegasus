@@ -64,7 +64,8 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
     if (mu->rpc_code != RPC_REPLICATION_WRITE_EMPTY)
     {
         binary_reader reader(mu->data.updates[0]);
-        dispatch_rpc_call(mu->rpc_code, reader, mu->client_msg());
+        dsn_message_t resp = (mu->client_msg() ? dsn_msg_create_response(mu->client_msg()) : nullptr);
+        dispatch_rpc_call(mu->rpc_code, reader, resp);
     }
     else
     {
@@ -79,23 +80,17 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
     return _physical_error == 0 ? ERR_OK : ERR_LOCAL_APP_FAILURE;
 }
 
-void replication_app_base::dispatch_rpc_call(int code, binary_reader& reader, dsn_message_t request)
+void replication_app_base::dispatch_rpc_call(int code, binary_reader& reader, dsn_message_t response)
 {
     auto it = _handlers.find(code);
     if (it != _handlers.end())
     {
-        if (request)
+        if (response)
         {
-            dsn_message_t response = dsn_msg_create_response(request);
             int err = 0; // replication layer error
-            ::marshall(response, err);
-            it->second(reader, response);
+            ::marshall(response, err);            
         }
-        else
-        {
-            dsn_message_t response(nullptr);
-            it->second(reader, response);
-        }
+        it->second(reader, response);
     }
     else
     {

@@ -26,11 +26,11 @@
 # pragma once
 
 # include <dsn/service_api_c.h>
+# include <vector>
+# include <string>
 
 namespace dsn 
 {
-    //  class TServiceApp : public service_app<TServiceApp> {};
-    template<typename TServiceApp>
     class service_app
     {
     public:
@@ -46,11 +46,18 @@ namespace dsn
 
         const dsn_address_t& primary_address() const { return _address; }
 
+        const std::string& name() const { return _name; }
+
     private:
-        bool _started;
+        void register_for_debugging();
+
+    private:
+        bool          _started;
         dsn_address_t _address;
+        std::string   _name;
 
     public:
+        template<typename TServiceApp>
         static void* app_create()
         {
             return new TServiceApp();
@@ -64,6 +71,8 @@ namespace dsn
             {
                 sapp->_started = true;
                 sapp->_address = dsn_primary_address();
+                sapp->_name = argv[0];
+                sapp->register_for_debugging();
             }
             return r;
         }
@@ -79,7 +88,7 @@ namespace dsn
     template<typename TServiceApp>
     void register_app(const char* type_name)
     {
-        dsn_register_app_role(type_name, service_app<TServiceApp>::app_create, service_app<TServiceApp>::app_start, service_app<TServiceApp>::app_destroy);
+        dsn_register_app_role(type_name, service_app::app_create<TServiceApp>, service_app::app_start, service_app::app_destroy);
     }
 } // end namespace dsn::service
 

@@ -51,6 +51,20 @@ mutation::~mutation()
     }
 }
 
+void mutation::copy_from(mutation_ptr& old)
+{
+    data.updates = old->data.updates;
+    rpc_code = old->rpc_code;
+    
+    _client_request = old->client_msg();
+    if (_client_request)
+        dsn_msg_add_ref(_client_request);
+
+    _prepare_request = old->prepare_msg();
+    if (_prepare_request)
+        dsn_msg_add_ref(_prepare_request);
+}
+
 void mutation::set_client_request(dsn_task_code_t code, dsn_message_t request)
 {
     dassert(_client_request == nullptr, "batch is not supported now");
@@ -77,7 +91,8 @@ void mutation::set_client_request(dsn_task_code_t code, dsn_message_t request)
     unmarshall(reader, mu->rpc_code);
 
     // it is possible this is an emtpy mutation due to new primaries inserts empty mutations for holes
-    dassert(mu->data.updates.size() == 1 || mu->rpc_code == RPC_REPLICATION_WRITE_EMPTY, "batch is not supported now");
+    dassert(mu->data.updates.size() == 1 || mu->rpc_code == RPC_REPLICATION_WRITE_EMPTY,
+        "batch is not supported now");
 
     if (nullptr != from)
     {

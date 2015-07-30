@@ -33,7 +33,7 @@ using namespace dsn;
 
 namespace dsn { namespace replication {
 
-class replication_service_app : public ::dsn::service_app<replication_service_app>
+class replication_service_app : public ::dsn::service_app
 {
 public:
     replication_service_app();

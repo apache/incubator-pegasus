@@ -33,7 +33,7 @@ namespace dsn {
         namespace application {
 
             // server app example
-            class nfs_server_app : public ::dsn::service_app<nfs_server_app>, public virtual ::dsn::service::servicelet
+            class nfs_server_app : public ::dsn::service_app, public virtual ::dsn::service::servicelet
             {
             public:
                 nfs_server_app(){}
@@ -53,7 +53,7 @@ namespace dsn {
             };
 
             // client app example
-            class nfs_client_app : public ::dsn::service_app<nfs_client_app>, public virtual ::dsn::service::servicelet
+            class nfs_client_app : public ::dsn::service_app, public virtual ::dsn::service::servicelet
             {
             public:
                 nfs_client_app()
