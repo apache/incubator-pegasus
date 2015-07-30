@@ -68,47 +68,26 @@ namespace dsn {
 
                 static void internal_rpc_reply_callback(error_code err, dsn_message_t request, dsn_message_t response, params* ps)
                 {
-                    //printf ("%s\n", __FUNCTION__);
-
-                    dsn_address_t next_server;
+                    meta_response_header header;
                     if (nullptr != response)
                     {
                         err.end_tracking();
-
-                        meta_response_header header;
                         ::unmarshall(response, header);
 
-                        if (header.err == ERR_SERVICE_NOT_ACTIVE || header.err == ERR_BUSY)
+                        if (header.err == ERR_TALK_TO_OTHERS)
                         {
-
-                        }
-                        else if (header.err == ERR_TALK_TO_OTHERS)
-                        {
-                            next_server = header.primary_address;
-                            err = ERR_OK;
-                        }
-                        else
-                        {
-                            if (nullptr != ps->callback)
-                            {
-                                (ps->callback)(err, request, response);
-                            }
-                            delete ps;
+                            rpc::call(header.primary_address, request, ps->svc, ps->internal_cb, ps->reply_hash);
                             return;
                         }
+                        
+                        err = header.err;
                     }
 
-                    if (err != ERR_OK)
+                    if (nullptr != ps->callback)
                     {
-                        if (nullptr != ps->callback)
-                        {
-                            (ps->callback)(err, request, response);
-                        }
-                        delete ps;
-                        return;
+                        (ps->callback)(err, request, response);
                     }
-
-                    rpc::call(next_server, request, ps->svc, ps->internal_cb, ps->reply_hash);
+                    delete ps;
                 }
 
 

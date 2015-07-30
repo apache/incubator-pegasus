@@ -264,39 +264,43 @@ template<> inline bool configuration::get_value<bool>(const char* section, const
          val.fld.c_str() : (default_value ? default_value->fld.c_str() : default_fld_value));
 
 // customized_id<type> fld = xyz
-# define CONFIG_FLD_ID(type, fld, default_fld_value) \
+# define CONFIG_FLD_ID(type, fld, default_fld_value, defined_before_read_config) \
 {\
     std::string v = dsn_config_get_value_string(section, #fld, ""); \
     if (v == "") {    \
-            if (default_value) val.fld = default_value->fld; \
-            else val.fld = default_fld_value; \
+        if (!defined_before_read_config){\
+                if (default_value) val.fld = default_value->fld; \
+                    else val.fld = default_fld_value; \
         }\
-        else {\
-        if (!type::is_exist(v.c_str())) {\
-            printf("invalid enum configuration '[%s] %s'", section, #fld); \
-            return false; \
-                }\
-                else \
-            val.fld = type(v.c_str()); \
+    }\
+    else {\
+    if (!type::is_exist(v.c_str())) {\
+        printf("invalid enum configuration '[%s] %s'", section, #fld); \
+        return false; \
+            }\
+            else \
+        val.fld = type(v.c_str()); \
     }\
 }
 
 // enum type fld = xyz
-# define CONFIG_FLD_ENUM(type, fld, default_fld_value, invalid_enum) \
+# define CONFIG_FLD_ENUM(type, fld, default_fld_value, invalid_enum, defined_before_read_config) \
 {\
     std::string v = dsn_config_get_value_string(section, #fld, ""); \
     if (v == "") {    \
+        if (!defined_before_read_config){ \
             if (default_value) val.fld = default_value->fld; \
             else val.fld = default_fld_value; \
         }\
-        else {\
-        auto v2 = enum_from_string(v.c_str(), invalid_enum);\
-        if (v2 == invalid_enum) {\
-            printf("invalid enum configuration '[%s] %s'", section, #fld); \
-            return false; \
-                }\
-                else \
-            val.fld = v2; \
+    }\
+    else {\
+    auto v2 = enum_from_string(v.c_str(), invalid_enum);\
+    if (v2 == invalid_enum) {\
+        printf("invalid enum configuration '[%s] %s'", section, #fld); \
+        return false; \
+            }\
+            else \
+        val.fld = v2; \
     }\
 }
 

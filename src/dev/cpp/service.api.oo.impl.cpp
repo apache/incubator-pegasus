@@ -72,10 +72,12 @@ namespace dsn {
             {
                 auto tsk = new cpp_dev_task<rpc_reply_handler >(callback);
 
-                tsk->add_ref(); // released in exec_rpc_response
+                if (callback != nullptr)
+                    tsk->add_ref(); // released in exec_rpc_response
+
                 auto t = dsn_rpc_create_response_task(
                     request,
-                    cpp_dev_task<rpc_reply_handler >::exec_rpc_response,
+                    callback != nullptr ? cpp_dev_task<rpc_reply_handler >::exec_rpc_response : nullptr,
                     (void*)tsk,
                     reply_hash
                     );
@@ -99,10 +101,16 @@ namespace dsn {
                 int hash /*= 0*/
                 )
             {
-                auto tsk = new cpp_dev_task<aio_handler>(callback);
+                auto tsk = new cpp_dev_task<aio_handler>(callback);                
                 
-                tsk->add_ref(); // released in exec_aio
-                dsn_task_t t = dsn_file_create_aio_task(callback_code, cpp_dev_task<aio_handler>::exec_aio, tsk, hash);
+                if (callback != nullptr) 
+                    tsk->add_ref(); // released in exec_aio
+
+                dsn_task_t t = dsn_file_create_aio_task(callback_code, 
+                    callback != nullptr ? cpp_dev_task<aio_handler>::exec_aio : nullptr, 
+                    tsk, hash
+                    );
+
                 tsk->set_task_info(t, owner);
 
                 dsn_file_read(hFile, buffer, count, offset, t);
@@ -122,8 +130,14 @@ namespace dsn {
             {
                 auto tsk = new cpp_dev_task<aio_handler>(callback);
 
-                tsk->add_ref(); // released in exec_aio
-                dsn_task_t t = dsn_file_create_aio_task(callback_code, cpp_dev_task<aio_handler>::exec_aio, tsk, hash);
+                if (callback != nullptr)
+                    tsk->add_ref(); // released in exec_aio
+
+                dsn_task_t t = dsn_file_create_aio_task(callback_code,
+                    callback != nullptr ? cpp_dev_task<aio_handler>::exec_aio : nullptr,
+                    tsk, hash
+                    );
+
                 tsk->set_task_info(t, owner);
 
                 dsn_file_write(hFile, buffer, count, offset, t);
@@ -145,8 +159,14 @@ namespace dsn {
             {
                 auto tsk = new cpp_dev_task<aio_handler>(callback);
 
-                tsk->add_ref(); // released in exec_aio
-                dsn_task_t t = dsn_file_create_aio_task(callback_code, cpp_dev_task<aio_handler>::exec_aio, tsk, hash);
+                if (callback != nullptr)
+                    tsk->add_ref(); // released in exec_aio
+
+                dsn_task_t t = dsn_file_create_aio_task(callback_code,
+                    callback != nullptr ? cpp_dev_task<aio_handler>::exec_aio : nullptr,
+                    tsk, hash
+                    );
+
                 tsk->set_task_info(t, owner);
 
                 if (files.empty())

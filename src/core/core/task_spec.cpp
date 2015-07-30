@@ -224,6 +224,7 @@ bool threadpool_spec::init(__out_param std::vector<threadpool_spec>& specs)
     if (false == read_config("threadpool.default", default_spec, nullptr))
         return false;
 
+    default_spec.name = "";
     specs.clear();
     for (int code = 0; code <= dsn_threadpool_code_max(); code++)
     {

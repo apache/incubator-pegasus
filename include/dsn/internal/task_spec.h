@@ -177,12 +177,12 @@ public:
 };
 
 CONFIG_BEGIN(task_spec)
-    CONFIG_FLD_ENUM(dsn_task_priority_t, priority, TASK_PRIORITY_COMMON, TASK_PRIORITY_INVALID)
-    CONFIG_FLD_ID(threadpool_code2, pool_code, THREAD_POOL_DEFAULT)
+    CONFIG_FLD_ENUM(dsn_task_priority_t, priority, TASK_PRIORITY_COMMON, TASK_PRIORITY_INVALID, true)
+    CONFIG_FLD_ID(threadpool_code2, pool_code, THREAD_POOL_DEFAULT, true)
     CONFIG_FLD(bool, bool, allow_inline, false)
     CONFIG_FLD(bool, bool, fast_execution_in_network_thread, false)
-    CONFIG_FLD_ID(network_header_format, rpc_call_header_format, NET_HDR_DSN)
-    CONFIG_FLD_ID(rpc_channel, rpc_call_channel, RPC_CHANNEL_TCP)    
+    CONFIG_FLD_ID(network_header_format, rpc_call_header_format, NET_HDR_DSN, false)
+    CONFIG_FLD_ID(rpc_channel, rpc_call_channel, RPC_CHANNEL_TCP, false)
     CONFIG_FLD(int32_t, uint64, rpc_timeout_milliseconds, 5000)    
 CONFIG_END
 
@@ -214,7 +214,7 @@ CONFIG_BEGIN(threadpool_spec)
  // CONFIG_FLD_ID(dsn_threadpool_code_t, pool_code) // no need to define it inside section
     CONFIG_FLD_STRING(name, "")
     CONFIG_FLD(int, uint64, worker_count, 2)
-    CONFIG_FLD_ENUM(worker_priority_t, worker_priority, THREAD_xPRIORITY_NORMAL, THREAD_xPRIORITY_INVALID)
+    CONFIG_FLD_ENUM(worker_priority_t, worker_priority, THREAD_xPRIORITY_NORMAL, THREAD_xPRIORITY_INVALID, false)
     CONFIG_FLD(bool, bool, worker_share_core, true)
     CONFIG_FLD(uint64_t, uint64, worker_affinity_mask, 0)
     CONFIG_FLD(unsigned int, uint64, max_input_queue_length, 0xFFFFFFFFUL)

@@ -501,9 +501,8 @@ void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, ds
         primary_address().name, primary_address().port,
         err.to_string()
         );    
-    err.end_tracking();
 
-    if (response == nullptr)
+    if (err != ERR_OK)
     {
         zauto_lock l(_repicas_lock);
         if (_state == NS_Connecting)
@@ -522,7 +521,7 @@ void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, ds
         // DO NOT UPDATE STATE WHEN DISCONNECTED
         if (_state != NS_Connected)
             return;
-
+        
         configuration_query_by_node_response resp;
         ::unmarshall(response, resp);     
 

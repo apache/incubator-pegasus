@@ -94,6 +94,23 @@ namespace dsn {
                     }
                 }
 
+                inline cpp_task_ptr create_empty_rpc_call(
+                    dsn_message_t msg,
+                    servicelet* owner,
+                    int reply_hash
+                    )
+                {
+                    auto task = new cpp_dev_task_base();
+                    auto t = dsn_rpc_create_response_task(
+                        msg,
+                        nullptr,
+                        nullptr,
+                        reply_hash
+                        );
+                    task->set_task_info(t, owner);
+                    return task;
+                }
+
                 template<typename T, typename TRequest, typename TResponse>
                 inline cpp_task_ptr create_rpc_call(
                     dsn_message_t msg,
@@ -103,31 +120,38 @@ namespace dsn {
                     int reply_hash /*= 0*/
                     )
                 {
-                    rpc_reply_handler cb = std::bind(
-                        &internal_use_only::on_rpc_response1<
-                            TRequest, 
-                            TResponse, 
-                            void (T::*)(::dsn::error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&), 
+                    if (callback != nullptr)
+                    {
+                        rpc_reply_handler cb = std::bind(
+                            &internal_use_only::on_rpc_response1<
+                            TRequest,
+                            TResponse,
+                            void (T::*)(::dsn::error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&),
                             T>,
-                        owner,
-                        callback,
-                        req,
-                        std::placeholders::_1,
-                        std::placeholders::_2,
-                        std::placeholders::_3
-                        );
+                            owner,
+                            callback,
+                            req,
+                            std::placeholders::_1,
+                            std::placeholders::_2,
+                            std::placeholders::_3
+                            );
 
-                    auto task = new cpp_dev_task<rpc_reply_handler>(cb);
+                        auto task = new cpp_dev_task<rpc_reply_handler>(cb);
 
-                    task->add_ref(); // released in exec_rpc_response
-                    auto t = dsn_rpc_create_response_task(
-                                msg, 
-                                cpp_dev_task<rpc_reply_handler >::exec_rpc_response,
-                                (void*)task,
-                                reply_hash
-                                );
-                    task->set_task_info(t, (servicelet*)owner);                
-                    return task;
+                        task->add_ref(); // released in exec_rpc_response
+                        auto t = dsn_rpc_create_response_task(
+                            msg,
+                            cpp_dev_task<rpc_reply_handler >::exec_rpc_response,
+                            (void*)task,
+                            reply_hash
+                            );
+                        task->set_task_info(t, (servicelet*)owner);
+                        return task;
+                    }
+                    else
+                    {
+                        return create_empty_rpc_call(msg, (servicelet*)owner, reply_hash);
+                    }
                 }
 
                 template<typename TRequest, typename TResponse>
@@ -139,30 +163,37 @@ namespace dsn {
                     int reply_hash /*= 0*/
                     )
                 {
-                    rpc_reply_handler cb = std::bind(
-                        &internal_use_only::on_rpc_response2<
+                    if (callback != nullptr)
+                    {
+                        rpc_reply_handler cb = std::bind(
+                            &internal_use_only::on_rpc_response2<
                             TRequest,
                             TResponse,
                             std::function<void(::dsn::error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)>,
                             >,
-                        callback,
-                        req,
-                        std::placeholders::_1,
-                        std::placeholders::_2,
-                        std::placeholders::_3
-                        );
+                            callback,
+                            req,
+                            std::placeholders::_1,
+                            std::placeholders::_2,
+                            std::placeholders::_3
+                            );
 
-                    auto task = new cpp_dev_task<rpc_reply_handler>(cb);
+                        auto task = new cpp_dev_task<rpc_reply_handler>(cb);
 
-                    task->add_ref(); // released in exec_rpc_response
-                    auto t = dsn_rpc_create_response_task(
-                        msg,
-                        cpp_dev_task<rpc_reply_handler >::exec_rpc_response,
-                        (void*)task,
-                        reply_hash
-                        );
-                    task->set_task_info(t, (servicelet*)owner);
-                    return task;
+                        task->add_ref(); // released in exec_rpc_response
+                        auto t = dsn_rpc_create_response_task(
+                            msg,
+                            cpp_dev_task<rpc_reply_handler >::exec_rpc_response,
+                            (void*)task,
+                            reply_hash
+                            );
+                        task->set_task_info(t, (servicelet*)owner);
+                        return task;
+                    }
+                    else
+                    {
+                        return create_empty_rpc_call(msg, (servicelet*)owner, reply_hash);
+                    }
                 }
 
                 template<typename T, typename TResponse>
@@ -174,30 +205,37 @@ namespace dsn {
                     int reply_hash /*= 0*/
                     )
                 {
-                    rpc_reply_handler cb = std::bind(
-                        &internal_use_only::on_rpc_response3<
+                    if (callback != nullptr)
+                    {
+                        rpc_reply_handler cb = std::bind(
+                            &internal_use_only::on_rpc_response3<
                             TResponse,
                             void(T::*)(::dsn::error_code, const TResponse&, void*),
                             T>,
-                        owner,
-                        callback,
-                        context,
-                        std::placeholders::_1,
-                        std::placeholders::_2,
-                        std::placeholders::_3
-                        );
+                            owner,
+                            callback,
+                            context,
+                            std::placeholders::_1,
+                            std::placeholders::_2,
+                            std::placeholders::_3
+                            );
 
-                    auto task = new cpp_dev_task<rpc_reply_handler>(cb);
+                        auto task = new cpp_dev_task<rpc_reply_handler>(cb);
 
-                    task->add_ref(); // released in exec_rpc_response
-                    auto t = dsn_rpc_create_response_task(
-                        msg,
-                        cpp_dev_task<rpc_reply_handler >::exec_rpc_response,
-                        (void*)task,
-                        reply_hash
-                        );
-                    task->set_task_info(t, (servicelet*)owner);
-                    return task;
+                        task->add_ref(); // released in exec_rpc_response
+                        auto t = dsn_rpc_create_response_task(
+                            msg,
+                            cpp_dev_task<rpc_reply_handler >::exec_rpc_response,
+                            (void*)task,
+                            reply_hash
+                            );
+                        task->set_task_info(t, (servicelet*)owner);
+                        return task;
+                    }
+                    else
+                    {
+                        return create_empty_rpc_call(msg, (servicelet*)owner, reply_hash);
+                    }
                 }
 
                 template<typename TResponse>
@@ -209,29 +247,36 @@ namespace dsn {
                     int reply_hash /*= 0*/
                     )
                 {
-                    rpc_reply_handler cb = std::bind(
-                        &internal_use_only::on_rpc_response4<
+                    if (callback != nullptr)
+                    {
+                        rpc_reply_handler cb = std::bind(
+                            &internal_use_only::on_rpc_response4<
                             TResponse,
                             std::function<void(::dsn::error_code, const TResponse&, void*)>
                             >,
-                        callback,
-                        context,
-                        std::placeholders::_1,
-                        std::placeholders::_2,
-                        std::placeholders::_3
-                        );
+                            callback,
+                            context,
+                            std::placeholders::_1,
+                            std::placeholders::_2,
+                            std::placeholders::_3
+                            );
 
-                    auto task = new cpp_dev_task<rpc_reply_handler>(cb);
+                        auto task = new cpp_dev_task<rpc_reply_handler>(cb);
 
-                    task->add_ref(); // released in exec_rpc_response
-                    auto t = dsn_rpc_create_response_task(
-                        msg,
-                        cpp_dev_task<rpc_reply_handler >::exec_rpc_response,
-                        (void*)task,
-                        reply_hash
-                        );
-                    task->set_task_info(t, (servicelet*)owner);
-                    return task;
+                        task->add_ref(); // released in exec_rpc_response
+                        auto t = dsn_rpc_create_response_task(
+                            msg,
+                            cpp_dev_task<rpc_reply_handler >::exec_rpc_response,
+                            (void*)task,
+                            reply_hash
+                            );
+                        task->set_task_info(t, (servicelet*)owner);
+                        return task;
+                    }
+                    else
+                    {
+                        return create_empty_rpc_call(msg, (servicelet*)owner, reply_hash);
+                    }
                 }
             }
 
