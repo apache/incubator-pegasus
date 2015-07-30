@@ -47,7 +47,8 @@ public:
         return commit_without_logging_allowed ? _left_private0 == 0 : _private0 == 0;
     }
 
-    dsn_message_t owner_message() { return _from_message; }
+    dsn_message_t prepare_msg() { return _prepare_request; }
+    dsn_message_t client_msg() { return _client_request; }
     unsigned int left_secondary_ack_count() const { return _left_secondary_ack_count; }
     unsigned int left_potential_secondary_ack_count() const { return _left_potential_secondary_ack_count; }
     ::dsn::cpp_task_ptr& log_task() { return _log_task; }
@@ -65,13 +66,12 @@ public:
     int  clear_log_task();
     
     // reader & writer
-    static mutation_ptr read_from(binary_reader& reader);
+    static mutation_ptr read_from(binary_reader& readeer, dsn_message_t from);
     void write_to(binary_writer& writer);
 
     // data
     mutation_data  data;
     int            rpc_code;
-    dsn_message_t  client_request;
         
 private:
     union
@@ -90,10 +90,10 @@ private:
         uint64_t _private0;
     };
 
-    node_tasks    _prepare_or_commit_tasks;
     ::dsn::cpp_task_ptr _log_task;
-
-    dsn_message_t _from_message;
+    node_tasks    _prepare_or_commit_tasks;
+    dsn_message_t _prepare_request;
+    dsn_message_t _client_request;
     char          _name[40]; // ballot.decree
 };
 

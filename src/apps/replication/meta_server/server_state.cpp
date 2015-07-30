@@ -159,7 +159,8 @@ void server_state::init_app()
         ps.gpid.pidx = i;
         ps.last_committed_decree = 0;
         ps.max_replica_count = max_replica_count;
-
+        ps.primary = dsn_address_invalid;
+        
         app.partitions.push_back(ps);
     }
     

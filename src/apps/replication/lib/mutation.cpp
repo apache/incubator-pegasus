@@ -33,28 +33,44 @@ mutation::mutation()
     rpc_code = 0;
     _private0 = 0; 
     _not_logged = 1;
+    _client_request = nullptr;
+    _prepare_request = nullptr;
 }
 
 mutation::~mutation()
 {
     clear_log_task();
+    if (_client_request != nullptr)
+    {
+        dsn_msg_release_ref(_client_request);
+    }
+
+    if (_prepare_request != nullptr)
+    {
+        dsn_msg_release_ref(_prepare_request);
+    }
 }
 
 void mutation::set_client_request(dsn_task_code_t code, dsn_message_t request)
 {
-    dassert(client_request == nullptr, "batch is not supported now");
-    client_request = request;
+    dassert(_client_request == nullptr, "batch is not supported now");
     rpc_code = code;
 
-    void* ptr;
-    size_t size;
-    bool r = dsn_msg_read_next(request, &ptr, &size);
-    dassert(r, "payload is not present");
-    blob buffer((char*)ptr, 0, (int)size);
-    data.updates.push_back(buffer);
+    if (request != nullptr)
+    {
+        _client_request = request;
+        dsn_msg_add_ref(request);
+
+        void* ptr;
+        size_t size;
+        bool r = dsn_msg_read_next(request, &ptr, &size);
+        dassert(r, "payload is not present");
+        blob buffer((char*)ptr, 0, (int)size);
+        data.updates.push_back(buffer);
+    }    
 }
 
-/*static*/ mutation_ptr mutation::read_from(binary_reader& reader)
+/*static*/ mutation_ptr mutation::read_from(binary_reader& reader, dsn_message_t from)
 {
     mutation_ptr mu(new mutation());
     unmarshall(reader, mu->data);
@@ -63,8 +79,11 @@ void mutation::set_client_request(dsn_task_code_t code, dsn_message_t request)
     // it is possible this is an emtpy mutation due to new primaries inserts empty mutations for holes
     dassert(mu->data.updates.size() == 1 || mu->rpc_code == RPC_REPLICATION_WRITE_EMPTY, "batch is not supported now");
 
-    mu->client_request = nullptr;
-    mu->_from_message = nullptr;
+    if (nullptr != from)
+    {
+        mu->_prepare_request = from;
+        dsn_msg_add_ref(from);
+    }
     
     sprintf(mu->_name, "%lld.%lld",
         static_cast<long long int>(mu->data.header.ballot),

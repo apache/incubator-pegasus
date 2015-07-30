@@ -132,7 +132,7 @@ void replica::init_prepare(mutation_ptr& mu)
     return;
 
 ErrOut:
-    response_client_message(mu->client_request, err);
+    response_client_message(mu->client_msg(), err);
     return;
 }
 
@@ -191,7 +191,7 @@ void replica::on_prepare(dsn_message_t request)
     {
         msg_binary_reader reader(request);
         unmarshall(reader, rconfig);
-        mu = mutation::read_from(reader);
+        mu = mutation::read_from(reader, request);
     }
 
     decree decree = mu->data.header.decree;
@@ -443,8 +443,8 @@ void replica::ack_prepare_message(error_code err, mutation_ptr& mu)
     resp.last_committed_decree_in_app = _app->last_committed_decree(); 
     resp.last_committed_decree_in_prepare_list = last_committed_decree();
 
-    dassert (nullptr != mu->owner_message(), "");
-    reply(mu->owner_message(), resp);
+    dassert (nullptr != mu->prepare_msg(), "");
+    reply(mu->prepare_msg(), resp);
 
     ddebug( "%s: mutation %s ack_prepare_message", name(), mu->name());
 }

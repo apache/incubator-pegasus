@@ -730,9 +730,8 @@ void replica::replay_prepare_list()
 
         if (old != nullptr)
         {
-            mu->rpc_code = old->rpc_code;
             mu->data.updates = old->data.updates;
-            mu->client_request = old->client_request;
+            mu->set_client_request(old->rpc_code, old->client_msg());
 
             dbg_dassert (mu->data.updates.size() == old->data.updates.size(), "");
         }

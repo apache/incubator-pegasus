@@ -315,7 +315,7 @@ error_code mutation_log::replay(replay_callback callback)
             while (!reader.is_eof())
             {
                 auto oldSz = reader.get_remaining_size();
-                mutation_ptr mu = mutation::read_from(reader);
+                mutation_ptr mu = mutation::read_from(reader, nullptr);
                 dassert (nullptr != mu, "");                                
                 mu->set_logged();
 

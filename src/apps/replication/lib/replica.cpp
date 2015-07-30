@@ -114,7 +114,9 @@ void replica::on_client_read(const read_request_header& meta, dsn_message_t requ
     }
 
     dassert (_app != nullptr, "");
-    _app->dispatch_rpc_call(meta.code, request, true);
+
+    msg_binary_reader reader(request);
+    _app->dispatch_rpc_call(meta.code, reader, request);
 }
 
 void replica::response_client_message(dsn_message_t request, error_code error, decree d/* = invalid_decree*/)
@@ -137,21 +139,13 @@ void replica::execute_mutation(mutation_ptr& mu)
     {
     case PS_INACTIVE:
         if (_app->last_committed_decree() + 1 == mu->data.header.decree)
-            err = _app->write_internal(mu, false);
+            err = _app->write_internal(mu);
         break;
     case PS_PRIMARY:
     case PS_SECONDARY:
         {
         dassert (_app->last_committed_decree() + 1 == mu->data.header.decree, "");
-        bool ack_client = (status() == PS_PRIMARY);
-        if (ack_client)
-        {
-            if (mu->client_request == nullptr)
-                ack_client = false;
-            /*else if (mu->client_request->header().from_address.ip == 0)
-                ack_client = false;*/
-        }
-        err = _app->write_internal(mu, ack_client); 
+        err = _app->write_internal(mu);
         }
         break;
     case PS_POTENTIAL_SECONDARY:
@@ -159,7 +153,7 @@ void replica::execute_mutation(mutation_ptr& mu)
         {
             if (mu->data.header.decree == _app->last_committed_decree() + 1)
             {
-                err = _app->write_internal(mu, false); 
+                err = _app->write_internal(mu); 
             }
             else
             {

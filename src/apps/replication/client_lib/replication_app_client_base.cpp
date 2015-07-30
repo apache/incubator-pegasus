@@ -268,7 +268,7 @@ void replication_app_client_base::call(request_context_ptr request, bool no_dela
         }
         else
         {
-            dsn_msg_update_request(request->request, timeout_ms, 0);
+            dsn_msg_update_request(request->request, timeout_ms, DSN_INVALID_HASH);
         }
 
         {

@@ -110,7 +110,7 @@ protected:
 private:
     template<typename T, typename TRequest, typename TResponse>
     void internal_rpc_handler(
-        dsn_message_t request, 
+        binary_reader& reader,
         dsn_message_t response, 
         void (T::*callback)(const TRequest&, rpc_replier<TResponse>&)
         );
@@ -118,14 +118,14 @@ private:
 private:
     // routines for replica internal usage
     friend class replica;
-    error_code write_internal(mutation_ptr& mu, bool ack_client);
-    void       dispatch_rpc_call(int code, dsn_message_t request, bool ack_client);
+    error_code write_internal(mutation_ptr& mu);
+    void       dispatch_rpc_call(int code, binary_reader& reader, dsn_message_t request);
     
 private:
     std::string _dir_data;
     std::string _dir_learn;
     replica*    _replica;
-    std::unordered_map<int, std::function<void(dsn_message_t, dsn_message_t)> > _handlers;
+    std::unordered_map<int, std::function<void(binary_reader&, dsn_message_t)> > _handlers;
     int         _physical_error; // physical error (e.g., io error) indicates the app needs to be dropped
 
 protected:
@@ -166,14 +166,14 @@ inline void replication_app_base::unregister_rpc_handler(dsn_task_code_t code)
 
 template<typename T, typename TRequest, typename TResponse>
 inline void replication_app_base::internal_rpc_handler(
-    dsn_message_t request, 
+    binary_reader& reader, 
     dsn_message_t response, 
     void (T::*callback)(const TRequest&, rpc_replier<TResponse>&))
 {
     TRequest req;
-    ::unmarshall(request, req);
+    unmarshall(reader, req);
 
-    rpc_replier<TResponse> replier(request, response);
+    rpc_replier<TResponse> replier(response);
     (static_cast<T*>(this)->*callback)(req, replier);
 }
 

@@ -45,21 +45,13 @@ namespace dsn {
         class rpc_replier
         {
         public:
-            rpc_replier(dsn_message_t request)
+            rpc_replier(dsn_message_t response)
             {
-                _request = request;
-                _response = dsn_msg_create_response(request);
-            }
-
-            rpc_replier(dsn_message_t request, dsn_message_t response)
-            {
-                _request = request;
                 _response = response;
             }
 
             rpc_replier(const rpc_replier& r)
             {
-                _request = r._request;
                 _response = r._response;
             }
 
@@ -73,9 +65,6 @@ namespace dsn {
             }
 
         private:
-            // TODO: if rpc_replier is not used in rpc request handler
-            // we need to add references ...
-            dsn_message_t _request;
             dsn_message_t _response;
         };
 
@@ -129,7 +118,7 @@ namespace dsn {
                 TResponse resp;
                 (svc->*cb)(req, resp);
 
-                rpc_replier<TResponse> replier(request);
+                rpc_replier<TResponse> replier(dsn_msg_create_response(request));
                 replier(resp);
             }
             
@@ -140,7 +129,7 @@ namespace dsn {
                 TRequest req;
                 ::unmarshall(request, req);
 
-                rpc_replier<TResponse> replier(request);
+                rpc_replier<TResponse> replier(dsn_msg_create_response(request));
                 (svc->*cb)(req, replier);
             }
             
