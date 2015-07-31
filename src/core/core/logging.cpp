@@ -40,7 +40,7 @@ static void log_on_sys_exit(::dsn::sys_exit_type)
     }
 }
 
-DSN_API void dsn_log_init()
+void dsn_log_init()
 {
     dsn_log_start_level = enum_from_string(
         dsn_config_get_value_string("core", "log_start_level", enum_to_string(dsn_log_start_level)),
@@ -51,6 +51,11 @@ DSN_API void dsn_log_init()
 
     // register log flush on exit
     ::dsn::tools::sys_exit.put_back(log_on_sys_exit, "log.flush");
+}
+
+DSN_API dsn_log_level_t dsn_log_get_start_level()
+{
+    return dsn_log_start_level;
 }
 
 DSN_API void dsn_logv(const char *file, const char *function, const int line, dsn_log_level_t logLevel, const char* title, const char* fmt, va_list args)

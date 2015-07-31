@@ -66,7 +66,6 @@ namespace dsn
     {
         _tracker = dsn_task_tracker_create(task_bucket_count);
         _access_thread_id_inited = false;
-        _last_id = 0;
         service_objects::instance().add(this);
     }
 

@@ -73,6 +73,11 @@ DSN_API int dsn_threadpool_code_max()
     return ::dsn::utils::customized_id_mgr<::dsn::threadpool_code2_>::instance().max_value();
 }
 
+DSN_API int dsn_threadpool_get_current_tid() 
+{
+    return ::dsn::utils::get_current_tid();
+}
+
 struct task_code_placeholder { };
 DSN_API dsn_task_code_t dsn_task_code_register(const char* name, dsn_task_type_t type,
     dsn_task_priority_t pri, dsn_threadpool_code_t pool)
@@ -399,12 +404,22 @@ DSN_API bool dsn_semaphore_wait_timeout(dsn_handle_t s, int timeout_milliseconds
 //------------------------------------------------------------------------------
 
 // rpc calls
+DSN_API void dsn_address_get_invalid(/*out*/ dsn_address_t* paddr)
+{
+    *paddr = dsn_address_invalid;
+}
+
 DSN_API dsn_address_t dsn_primary_address()
 {
     auto tsk = ::dsn::task::get_current_task();
     dassert(tsk != nullptr, "this function can only be invoked inside tasks");
 
     return tsk->node()->rpc()->primary_address();
+}
+
+DSN_API void dsn_primary_address2(dsn_address_t* paddr)
+{
+    *paddr = dsn_primary_address();
 }
 
 DSN_API bool dsn_rpc_register_handler(dsn_task_code_t code, const char* name, dsn_rpc_request_handler_t cb, void* param)
@@ -757,6 +772,7 @@ namespace dsn {
     }
 }
 
+extern void dsn_log_init();
 bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_name, int app_index)
 {
     dsn_all.engine_ready = false;
