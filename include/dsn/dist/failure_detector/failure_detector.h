@@ -53,7 +53,7 @@ class failure_detector :
 public:
     failure_detector();
 
-    virtual void on_ping(const beacon_msg& beacon, ::dsn::service::rpc_replier<beacon_ack>& reply);
+    virtual void on_ping(const beacon_msg& beacon, ::dsn::rpc_replier<beacon_ack>& reply);
 
     virtual void end_ping(::dsn::error_code err, const beacon_ack& ack, void* context);
 
@@ -158,7 +158,7 @@ private:
     uint32_t             _lease_milliseconds;
     uint32_t             _grace_milliseconds;
     bool                 _is_started;
-    ::dsn::cpp_task_ptr _current_task;
+    ::dsn::task_ptr _current_task;
 
     bool                 _use_allow_list;
     allow_list           _allow_list;

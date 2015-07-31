@@ -735,7 +735,7 @@ void replica_stub::on_gc()
     }
 }
 
-::dsn::cpp_task_ptr replica_stub::begin_open_replica(const std::string& app_type, global_partition_id gpid, std::shared_ptr<group_check_request> req)
+::dsn::task_ptr replica_stub::begin_open_replica(const std::string& app_type, global_partition_id gpid, std::shared_ptr<group_check_request> req)
 {
     _repicas_lock.lock();
     if (_replicas.find(gpid) != _replicas.end())
@@ -818,7 +818,7 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
     }
 }
 
-::dsn::cpp_task_ptr replica_stub::begin_close_replica(replica_ptr r)
+::dsn::task_ptr replica_stub::begin_close_replica(replica_ptr r)
 {
     zauto_lock l(_repicas_lock);
 

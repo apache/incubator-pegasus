@@ -5,7 +5,7 @@
 
 namespace dsn { namespace service { 
 class nfs_client 
-    : public virtual ::dsn::service::servicelet
+    : public virtual ::dsn::servicelet
 {
 public:
     nfs_client(const dsn_address_t& server) { _server = server; }
@@ -22,8 +22,8 @@ public:
         int hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-        ::dsn::cpp_msg_ptr response;
-        auto err = ::dsn::service::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
+        ::dsn::message_ptr response;
+        auto err = ::dsn::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
             RPC_NFS_COPY, request, hash, timeout_milliseconds);
         if (err == ::dsn::ERR_OK)
         {
@@ -33,7 +33,7 @@ public:
     }
     
     // - asynchronous with on-stack copy_request and copy_response 
-    ::dsn::cpp_task_ptr begin_copy(
+    ::dsn::task_ptr begin_copy(
         const copy_request& request, 
         void* context = nullptr,
         int timeout_milliseconds = 0, 
@@ -41,7 +41,7 @@ public:
         int request_hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-        return ::dsn::service::rpc::call_typed(
+        return ::dsn::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
                     RPC_NFS_COPY, 
                     request, 
@@ -67,14 +67,14 @@ public:
     }
     
     // - asynchronous with on-heap std::shared_ptr<copy_request> and std::shared_ptr<copy_response> 
-    ::dsn::cpp_task_ptr begin_copy2(
+    ::dsn::task_ptr begin_copy2(
         std::shared_ptr<copy_request>& request,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0,
         int request_hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-        return ::dsn::service::rpc::call_typed(
+        return ::dsn::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
                     RPC_NFS_COPY, 
                     request, 
@@ -108,8 +108,8 @@ public:
         int hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-        ::dsn::cpp_msg_ptr response;
-        auto err = ::dsn::service::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
+        ::dsn::message_ptr response;
+        auto err = ::dsn::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
             RPC_NFS_GET_FILE_SIZE, request, hash, timeout_milliseconds);
         if (err == ::dsn::ERR_OK)
         {
@@ -119,7 +119,7 @@ public:
     }
     
     // - asynchronous with on-stack get_file_size_request and get_file_size_response 
-    ::dsn::cpp_task_ptr begin_get_file_size(
+    ::dsn::task_ptr begin_get_file_size(
         const get_file_size_request& request, 
         void* context = nullptr,
         int timeout_milliseconds = 0, 
@@ -127,7 +127,7 @@ public:
         int request_hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-        return ::dsn::service::rpc::call_typed(
+        return ::dsn::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
                     RPC_NFS_GET_FILE_SIZE, 
                     request, 
@@ -153,14 +153,14 @@ public:
     }
     
     // - asynchronous with on-heap std::shared_ptr<get_file_size_request> and std::shared_ptr<get_file_size_response> 
-    ::dsn::cpp_task_ptr begin_get_file_size2(
+    ::dsn::task_ptr begin_get_file_size2(
         std::shared_ptr<get_file_size_request>& request,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0,
         int request_hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-        return ::dsn::service::rpc::call_typed(
+        return ::dsn::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
                     RPC_NFS_GET_FILE_SIZE, 
                     request, 

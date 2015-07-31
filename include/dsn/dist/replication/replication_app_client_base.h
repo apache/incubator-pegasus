@@ -53,7 +53,7 @@ namespace dsn { namespace replication {
         ~replication_app_client_base();
 
         template<typename T, typename TRequest, typename TResponse>
-        ::dsn::cpp_task_ptr write(
+        ::dsn::task_ptr write(
             int partition_index,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
@@ -70,7 +70,7 @@ namespace dsn { namespace replication {
             
             dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds, 0);
             
-            auto task = ::dsn::service::rpc::internal_use_only::create_rpc_call(
+            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
                 msg,
                 req,
                 owner,
@@ -85,7 +85,7 @@ namespace dsn { namespace replication {
         }
         
         template<typename TRequest, typename TResponse>
-        ::dsn::cpp_task_ptr write(
+        ::dsn::task_ptr write(
             int partition_index,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
@@ -102,7 +102,7 @@ namespace dsn { namespace replication {
             
             dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds, 0);
             
-            auto task = ::dsn::service::rpc::internal_use_only::create_rpc_call(
+            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
                 msg,
                 req,
                 owner,
@@ -117,7 +117,7 @@ namespace dsn { namespace replication {
         }
 
         template<typename T, typename TRequest, typename TResponse>
-        ::dsn::cpp_task_ptr write(
+        ::dsn::task_ptr write(
             int partition_index,
             dsn_task_code_t code,
             const TRequest& req,
@@ -135,7 +135,7 @@ namespace dsn { namespace replication {
             
             dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds, 0);
             
-            auto task = ::dsn::service::rpc::internal_use_only::create_rpc_call(
+            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
                 msg,
                 owner,
                 callback,
@@ -149,7 +149,7 @@ namespace dsn { namespace replication {
         }
 
         template<typename TRequest, typename TResponse>
-        ::dsn::cpp_task_ptr write(
+        ::dsn::task_ptr write(
             int partition_index,
             dsn_task_code_t code,
             const TRequest& req,
@@ -167,7 +167,7 @@ namespace dsn { namespace replication {
             
             dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds, 0);
             
-            auto task = ::dsn::service::rpc::internal_use_only::create_rpc_call(
+            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
                 msg,
                 owner,
                 callback,
@@ -182,7 +182,7 @@ namespace dsn { namespace replication {
         }
 
         template<typename T, typename TRequest, typename TResponse>
-        ::dsn::cpp_task_ptr read(
+        ::dsn::task_ptr read(
             int partition_index,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
@@ -201,7 +201,7 @@ namespace dsn { namespace replication {
             
             dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds, 0);
             
-            auto task = ::dsn::service::rpc::internal_use_only::create_rpc_call(
+            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
                 msg,
                 req,
                 owner,
@@ -216,7 +216,7 @@ namespace dsn { namespace replication {
         }
 
         template<typename TRequest, typename TResponse>
-        ::dsn::cpp_task_ptr read(
+        ::dsn::task_ptr read(
             int partition_index,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
@@ -235,7 +235,7 @@ namespace dsn { namespace replication {
             
             dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds, 0);
             
-            auto task = ::dsn::service::rpc::internal_use_only::create_rpc_call(
+            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
                 msg,
                 req,
                 owner,
@@ -250,7 +250,7 @@ namespace dsn { namespace replication {
         }
 
         template<typename T, typename TRequest, typename TResponse>
-        ::dsn::cpp_task_ptr read(
+        ::dsn::task_ptr read(
             int partition_index,
             dsn_task_code_t code,
             const TRequest& req,
@@ -270,7 +270,7 @@ namespace dsn { namespace replication {
             
             dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds, 0);
             
-            auto task = ::dsn::service::rpc::internal_use_only::create_rpc_call(
+            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
                 msg,
                 owner,
                 callback,
@@ -285,7 +285,7 @@ namespace dsn { namespace replication {
         }
 
         template<typename TRequest, typename TResponse>
-        ::dsn::cpp_task_ptr read(
+        ::dsn::task_ptr read(
             int partition_index,
             dsn_task_code_t code,
             const TRequest& req,
@@ -305,7 +305,7 @@ namespace dsn { namespace replication {
             
             dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds, 0);
             
-            auto task = ::dsn::service::rpc::internal_use_only::create_rpc_call(
+            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
                 msg,
                 owner,
                 callback,
@@ -326,7 +326,7 @@ namespace dsn { namespace replication {
         struct request_context : public ref_object
         {
             int                   partition_index;
-            ::dsn::cpp_task_ptr callback_task;
+            ::dsn::task_ptr callback_task;
             read_request_header   read_header;
             write_request_header  write_header;
             bool                  is_read;
@@ -336,8 +336,8 @@ namespace dsn { namespace replication {
             dsn_message_t         request;
 
             zlock                      lock; // [
-            dsn::cpp_task_ptr timeout_timer; // when partition config is unknown at the first place            
-            dsn::cpp_task_ptr rw_task;
+            dsn::task_ptr timeout_timer; // when partition config is unknown at the first place            
+            dsn::task_ptr rw_task;
             bool                       completed;
             // ]
         };
@@ -347,7 +347,7 @@ namespace dsn { namespace replication {
     private:
         struct partition_context
         {
-            dsn::cpp_task_ptr     query_config_task;
+            dsn::task_ptr     query_config_task;
             std::list<request_context_ptr> requests;
         };
 
@@ -361,7 +361,7 @@ namespace dsn { namespace replication {
             int partition_index,
             dsn_task_code_t code,
             dsn_message_t request,
-            ::dsn::cpp_task_ptr& callback,
+            ::dsn::task_ptr& callback,
             int reply_hash = 0
             );
 
@@ -369,7 +369,7 @@ namespace dsn { namespace replication {
             int partition_index,
             dsn_task_code_t code,
             dsn_message_t request,
-            ::dsn::cpp_task_ptr& callback,
+            ::dsn::task_ptr& callback,
             read_semantic_t read_semantic = ReadOutdated,
             decree snapshot_decree = invalid_decree, // only used when ReadSnapshot        
             int reply_hash = 0

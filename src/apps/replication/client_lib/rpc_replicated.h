@@ -27,97 +27,96 @@
 
 #include <dsn/cpp/serverlet.h>
 
-namespace dsn {
-    namespace service {
-            namespace rpc {
+namespace dsn 
+{
+    namespace rpc 
+    {
+        template<typename TRequest, typename TResponse>
+        dsn::task_ptr call_typed_replicated(
+            // servers
+            const dsn_address_t& first_server,
+            const std::vector<dsn_address_t>& servers,
+            // request
+            dsn_task_code_t code,
+            std::shared_ptr<TRequest>& req,
 
+            // callback
+            servicelet* owner,
+            std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&, const dsn_address_t&)> callback,
+            int request_hash = 0,
+            int timeout_milliseconds = 0,
+            int reply_hash = 0
+            );
+
+        dsn::task_ptr call_replicated(
+            const dsn_address_t& first_server,
+            const std::vector<dsn_address_t>& servers,
+            dsn_message_t request,
+
+            // reply
+            servicelet* svc,
+            rpc_reply_handler callback,
+            int reply_hash = 0
+            );
+        // ----------------  inline implementation -------------------
+
+        namespace internal_use_only
+        {
             template<typename TRequest, typename TResponse>
-            dsn::cpp_task_ptr call_typed_replicated(
-                // servers
-                const dsn_address_t& first_server,
-                const std::vector<dsn_address_t>& servers,
-                // request
-                dsn_task_code_t code,
-                std::shared_ptr<TRequest>& req,
-
-                // callback
-                servicelet* owner,
-                std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&, const dsn_address_t&)> callback,
-                int request_hash = 0,
-                int timeout_milliseconds = 0,
-                int reply_hash = 0
-                );
-
-            dsn::cpp_task_ptr call_replicated(
-                const dsn_address_t& first_server,
-                const std::vector<dsn_address_t>& servers,
+            inline void rpc_replicated_callback(
+                error_code code,
                 dsn_message_t request,
-
-                // reply
-                servicelet* svc,
-                rpc_reply_handler callback,
-                int reply_hash = 0
-                );
-            // ----------------  inline implementation -------------------
-
-            namespace internal_use_only
-            {
-                template<typename TRequest, typename TResponse>
-                inline void rpc_replicated_callback(
-                    error_code code,
-                    dsn_message_t request,
-                    dsn_message_t response,
-                    std::shared_ptr<TRequest>& req,
-                    std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&, const dsn_address_t&)> callback
-                    )
-                {
-                    dsn_address_t srv = dsn_address_invalid;
-                    std::shared_ptr<TResponse> resp(nullptr);
-                    if (code == ERR_OK)
-                    {
-                        dsn_msg_from_address(response, &srv);
-                        resp.reset(new TResponse);
-                        unmarshall(response->reader(), *resp);
-                    }
-                    callback(code, req, resp, srv);
-                }
-            }
-
-            template<typename TRequest, typename TResponse>
-            inline dsn::cpp_task_ptr call_typed_replicated(
-                // servers
-                const dsn_address_t& first_server,
-                const std::vector<dsn_address_t>& servers,
-                // request
-                dsn_task_code_t code,
+                dsn_message_t response,
                 std::shared_ptr<TRequest>& req,
-
-                // callback
-                servicelet* owner,
-                std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&, const dsn_address_t&)> callback,
-                int request_hash,
-                int timeout_milliseconds,
-                int reply_hash
+                std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&, const dsn_address_t&)> callback
                 )
             {
-                dsn_message_t request = dsn_msg_create_request(code, timeout_milliseconds, request_hash);
-                marshall(request->writer(), *req);
-
-                return call_replicated(
-                    first_server,
-                    servers,
-                    request,
-                    owner,
-                    std::bind(&internal_use_only::rpc_replicated_callback,
-                    std::placeholders::_1,
-                    std::placeholders::_2,
-                    std::placeholders::_3,
-                    req,
-                    callback
-                    ),
-                    reply_hash
-                    );
+                dsn_address_t srv = dsn_address_invalid;
+                std::shared_ptr<TResponse> resp(nullptr);
+                if (code == ERR_OK)
+                {
+                    dsn_msg_from_address(response, &srv);
+                    resp.reset(new TResponse);
+                    unmarshall(response->reader(), *resp);
+                }
+                callback(code, req, resp, srv);
             }
-        } // end rpc
-    } // end service
+        }
+
+        template<typename TRequest, typename TResponse>
+        inline dsn::task_ptr call_typed_replicated(
+            // servers
+            const dsn_address_t& first_server,
+            const std::vector<dsn_address_t>& servers,
+            // request
+            dsn_task_code_t code,
+            std::shared_ptr<TRequest>& req,
+
+            // callback
+            servicelet* owner,
+            std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&, const dsn_address_t&)> callback,
+            int request_hash,
+            int timeout_milliseconds,
+            int reply_hash
+            )
+        {
+            dsn_message_t request = dsn_msg_create_request(code, timeout_milliseconds, request_hash);
+            marshall(request->writer(), *req);
+
+            return call_replicated(
+                first_server,
+                servers,
+                request,
+                owner,
+                std::bind(&internal_use_only::rpc_replicated_callback,
+                std::placeholders::_1,
+                std::placeholders::_2,
+                std::placeholders::_3,
+                req,
+                callback
+                ),
+                reply_hash
+                );
+        }
+    } // end rpc
 } // end namespace dsn

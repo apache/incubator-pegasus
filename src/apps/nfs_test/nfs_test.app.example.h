@@ -33,7 +33,7 @@ namespace dsn {
         namespace application {
 
             // server app example
-            class nfs_server_app : public ::dsn::service_app, public virtual ::dsn::service::servicelet
+            class nfs_server_app : public ::dsn::service_app, public virtual ::dsn::servicelet
             {
             public:
                 nfs_server_app(){}
@@ -53,7 +53,7 @@ namespace dsn {
             };
 
             // client app example
-            class nfs_client_app : public ::dsn::service_app, public virtual ::dsn::service::servicelet
+            class nfs_client_app : public ::dsn::service_app, public virtual ::dsn::servicelet
             {
             public:
                 nfs_client_app()
@@ -74,7 +74,7 @@ namespace dsn {
                     dsn_address_build(&_server, argv[1], (uint16_t)atoi(argv[2]));
 
                     //on_request_timer();
-                    _request_timer = ::dsn::service::tasking::enqueue(LPC_NFS_REQUEST_TIMER, this, &nfs_client_app::on_request_timer, 0, 0, 1000);
+                    _request_timer = ::dsn::tasking::enqueue(LPC_NFS_REQUEST_TIMER, this, &nfs_client_app::on_request_timer, 0, 0, 1000);
 
                     return ::dsn::ERR_OK;
                 }
@@ -121,8 +121,8 @@ namespace dsn {
                     }
                 }
             private:
-                ::dsn::cpp_task_ptr _timer;
-                ::dsn::cpp_task_ptr _request_timer;
+                ::dsn::task_ptr _timer;
+                ::dsn::task_ptr _request_timer;
 
                 dsn_address_t _server;
                 std::atomic<int> _req_index;

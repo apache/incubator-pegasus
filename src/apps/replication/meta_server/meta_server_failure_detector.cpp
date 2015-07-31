@@ -119,7 +119,7 @@ bool meta_server_failure_detector::is_primary() const
     return _is_primary;
 }
 
-void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::service::rpc_replier<fd::beacon_ack>& reply)
+void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::rpc_replier<fd::beacon_ack>& reply)
 {
     fd::beacon_ack ack;
     ack.this_node = beacon.to;

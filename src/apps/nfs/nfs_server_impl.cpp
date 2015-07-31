@@ -6,7 +6,7 @@
 namespace dsn {
     namespace service {
 
-        void nfs_service_impl::on_copy(const ::dsn::service::copy_request& request, ::dsn::service::rpc_replier<::dsn::service::copy_response>& reply)
+        void nfs_service_impl::on_copy(const ::dsn::service::copy_request& request, ::dsn::rpc_replier<::dsn::service::copy_response>& reply)
         {
             //dinfo(">>> on call RPC_COPY end, exec RPC_NFS_COPY");
 
@@ -100,7 +100,7 @@ namespace dsn {
         }
 
         // RPC_NFS_NEW_NFS_GET_FILE_SIZE 
-        void nfs_service_impl::on_get_file_size(const ::dsn::service::get_file_size_request& request, ::dsn::service::rpc_replier<::dsn::service::get_file_size_response>& reply)
+        void nfs_service_impl::on_get_file_size(const ::dsn::service::get_file_size_request& request, ::dsn::rpc_replier<::dsn::service::get_file_size_response>& reply)
         {
             //dinfo(">>> on call RPC_NFS_GET_FILE_SIZE end, exec RPC_NFS_GET_FILE_SIZE");
 

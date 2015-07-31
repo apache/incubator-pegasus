@@ -28,7 +28,7 @@
 # include <dsn/internal/dsn_types.h>
 # include <dsn/internal/singleton.h>
 # include <dsn/internal/global_config.h>
-# include <dsn/cpp/auto_code.h>
+# include <dsn/cpp/cpp_helpers.h>
 # include <sstream>
 
 namespace dsn { 

@@ -39,7 +39,7 @@ inline int gpid_to_hash(global_partition_id gpid)
 }
 
 typedef std::unordered_map<dsn_address_t, partition_status> node_statuses;
-typedef std::unordered_map<dsn_address_t, dsn::cpp_task_ptr> node_tasks;
+typedef std::unordered_map<dsn_address_t, dsn::task_ptr> node_tasks;
 
 class replication_options
 {

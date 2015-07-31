@@ -30,7 +30,7 @@
 
 namespace dsn { namespace replication { namespace application { 
 // client app example
-class simple_kv_client_app : public ::dsn::service_app, public virtual ::dsn::service::servicelet
+class simple_kv_client_app : public ::dsn::service_app, public virtual ::dsn::servicelet
 {
 public:
     simple_kv_client_app()
@@ -52,7 +52,7 @@ public:
         ::dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
         
         _simple_kv_client = new simple_kv_client(meta_servers, argv[1]);
-        _timer = ::dsn::service::tasking::enqueue(LPC_SIMPLE_KV_TEST_TIMER, this, &simple_kv_client_app::on_test_timer, 0, 0, 1000);
+        _timer = ::dsn::tasking::enqueue(LPC_SIMPLE_KV_TEST_TIMER, this, &simple_kv_client_app::on_test_timer, 0, 0, 1000);
         return ::dsn::ERR_OK;
     }
 
@@ -98,12 +98,12 @@ public:
     }
 
 private:
-    ::dsn::cpp_task_ptr _timer;
+    ::dsn::task_ptr _timer;
     simple_kv_client *_simple_kv_client;
 };
 
 
-class simple_kv_perf_test_client_app : public ::dsn::service_app, public virtual ::dsn::service::servicelet
+class simple_kv_perf_test_client_app : public ::dsn::service_app, public virtual ::dsn::servicelet
 {
 public:
     simple_kv_perf_test_client_app()

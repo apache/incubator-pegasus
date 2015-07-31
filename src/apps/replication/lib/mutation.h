@@ -51,7 +51,7 @@ public:
     dsn_message_t client_msg() { return _client_request; }
     unsigned int left_secondary_ack_count() const { return _left_secondary_ack_count; }
     unsigned int left_potential_secondary_ack_count() const { return _left_potential_secondary_ack_count; }
-    ::dsn::cpp_task_ptr& log_task() { return _log_task; }
+    ::dsn::task_ptr& log_task() { return _log_task; }
     node_tasks& remote_tasks() { return _prepare_or_commit_tasks; }
 
     // state change
@@ -91,7 +91,7 @@ private:
         uint64_t _private0;
     };
 
-    ::dsn::cpp_task_ptr _log_task;
+    ::dsn::task_ptr _log_task;
     node_tasks    _prepare_or_commit_tasks;
     dsn_message_t _prepare_request;
     dsn_message_t _client_request;

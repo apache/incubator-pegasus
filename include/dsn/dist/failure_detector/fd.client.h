@@ -31,7 +31,7 @@
 
 namespace dsn { namespace fd { 
 class failure_detector_client 
-    : public virtual ::dsn::service::servicelet
+    : public virtual ::dsn::servicelet
 {
 public:
     failure_detector_client(const dsn_address_t& server) { _server = server; }
@@ -48,8 +48,8 @@ public:
         int hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-        ::dsn::cpp_msg_ptr resp_msg;
-        auto err = ::dsn::service::rpc::call_typed_wait(
+        ::dsn::message_ptr resp_msg;
+        auto err = ::dsn::rpc::call_typed_wait(
             &resp_msg, p_server_addr ? *p_server_addr : _server,
             RPC_FD_FAILURE_DETECTOR_PING, beacon,
             hash, timeout_milliseconds
@@ -62,7 +62,7 @@ public:
     }
     
     // - asynchronous with on-stack ::dsn::fd::beacon_msg and ::dsn::fd::beacon_ack 
-    ::dsn::cpp_task_ptr begin_ping(
+    ::dsn::task_ptr begin_ping(
         const ::dsn::fd::beacon_msg& beacon, 
         void* context,
         int timeout_milliseconds = 0, 
@@ -70,7 +70,7 @@ public:
         int request_hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-        return ::dsn::service::rpc::call_typed(
+        return ::dsn::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
                     RPC_FD_FAILURE_DETECTOR_PING, 
                     beacon, 
@@ -96,14 +96,14 @@ public:
     }
     
     // - asynchronous with on-heap std::shared_ptr<::dsn::fd::beacon_msg> and std::shared_ptr<::dsn::fd::beacon_ack> 
-    ::dsn::cpp_task_ptr begin_ping2(
+    ::dsn::task_ptr begin_ping2(
         std::shared_ptr<::dsn::fd::beacon_msg>& beacon,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0,
         int request_hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-        return ::dsn::service::rpc::call_typed(
+        return ::dsn::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
                     RPC_FD_FAILURE_DETECTOR_PING, 
                     beacon, 

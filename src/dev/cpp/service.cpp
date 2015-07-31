@@ -30,65 +30,63 @@
 # include <iostream>
 # include <map>
 
-namespace dsn {
-
-static std::map<std::string, service_app*> dsn_apps;
-
-void service_app::register_for_debugging()
+namespace dsn 
 {
-    dsn_apps[name()] = this;
-}
 
-namespace service {
+    static std::map<std::string, service_app*> dsn_apps;
 
-class service_objects : public ::dsn::utils::singleton<service_objects>
-{
-public:
-    void add(servicelet* obj)
+    void service_app::register_for_debugging()
     {
-        std::lock_guard<std::mutex> l(_lock);
-        _services.insert(obj);
+        dsn_apps[name()] = this;
     }
 
-    void remove(servicelet* obj)
+    class service_objects : public ::dsn::utils::singleton<service_objects>
     {
-        std::lock_guard<std::mutex> l(_lock);
-        _services.erase(obj);
+    public:
+        void add(servicelet* obj)
+        {
+            std::lock_guard<std::mutex> l(_lock);
+            _services.insert(obj);
+        }
+
+        void remove(servicelet* obj)
+        {
+            std::lock_guard<std::mutex> l(_lock);
+            _services.erase(obj);
+        }
+
+    private:
+        std::mutex            _lock;
+        std::set<servicelet*> _services;
+    };
+
+    static service_objects* dsn_services = &(service_objects::instance());
+
+    servicelet::servicelet(int task_bucket_count)
+    {
+        _tracker = dsn_task_tracker_create(task_bucket_count);
+        _access_thread_id_inited = false;
+        _last_id = 0;
+        service_objects::instance().add(this);
     }
 
-private:
-    std::mutex            _lock;
-    std::set<servicelet*> _services;
-};
-
-static service_objects* dsn_services = &(service_objects::instance());
-
-servicelet::servicelet(int task_bucket_count)
-{
-    _tracker = dsn_task_tracker_create(task_bucket_count);
-    _access_thread_id_inited = false;
-    _last_id = 0;
-    service_objects::instance().add(this);
-}
-
-servicelet::~servicelet()
-{
-    dsn_task_tracker_destroy(_tracker);
-    service_objects::instance().remove(this);
-}
-
-
-void servicelet::check_hashed_access()
-{
-    if (_access_thread_id_inited)
+    servicelet::~servicelet()
     {
-        dassert(::dsn::utils::get_current_tid() == _access_thread_id, "the service is assumed to be accessed by one thread only!");
+        dsn_task_tracker_destroy(_tracker);
+        service_objects::instance().remove(this);
     }
-    else
-    {
-        _access_thread_id = ::dsn::utils::get_current_tid();
-        _access_thread_id_inited = true;
-    }
-}
 
-}} // end namespace dsn::service
+
+    void servicelet::check_hashed_access()
+    {
+        if (_access_thread_id_inited)
+        {
+            dassert(::dsn::utils::get_current_tid() == _access_thread_id, "the service is assumed to be accessed by one thread only!");
+        }
+        else
+        {
+            _access_thread_id = ::dsn::utils::get_current_tid();
+            _access_thread_id_inited = true;
+        }
+    }
+} // end namespace dsn::service

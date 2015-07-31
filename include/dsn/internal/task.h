@@ -29,7 +29,7 @@
 # include <dsn/internal/extensible_object.h>
 # include <dsn/internal/task_tracker.h>
 # include <dsn/internal/task_spec.h>
-# include <dsn/cpp/auto_code.h>
+# include <dsn/cpp/cpp_helpers.h>
 # include <dsn/internal/rpc_message.h>
 # include <dsn/internal/link.h>
 

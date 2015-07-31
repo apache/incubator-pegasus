@@ -26,7 +26,7 @@
 # pragma once
 
 # include <dsn/service_api_c.h>
-# include <dsn/cpp/auto_code.h>
+# include <dsn/cpp/cpp_helpers.h>
 # include <dsn/cpp/serialization.h> // TODO: unnecssary includes in it
 # include <dsn/cpp/msg_binary_io.h> // TODO: unnecssary includes in it
 # include <dsn/cpp/zlocks.h>

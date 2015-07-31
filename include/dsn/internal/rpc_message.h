@@ -29,7 +29,7 @@
 # include <dsn/internal/dsn_types.h>
 # include <dsn/internal/extensible_object.h>
 # include <dsn/internal/task_spec.h>
-# include <dsn/cpp/auto_code.h>
+# include <dsn/cpp/cpp_helpers.h>
 
 namespace dsn 
 {

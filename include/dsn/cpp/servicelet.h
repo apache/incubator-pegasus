@@ -42,20 +42,16 @@ namespace dsn
     typedef std::function<void(error_code, size_t)> aio_handler;
     typedef std::function<void(error_code, dsn_message_t, dsn_message_t)> rpc_reply_handler;
     typedef std::function<void(dsn_message_t)> rpc_request_handler;
+    class cpp_dev_task_base;
+    typedef ::boost::intrusive_ptr<::dsn::cpp_dev_task_base> task_ptr;
 
-    namespace service
-    {
-        class cpp_dev_task_base;
-    }
-    typedef ::boost::intrusive_ptr<::dsn::service::cpp_dev_task_base> cpp_task_ptr;
-
-    class cpp_msg_ptr : public ::std::shared_ptr<char>
+    class message_ptr : public ::std::shared_ptr<char>
     {
     public:
-        cpp_msg_ptr() : ::std::shared_ptr<char>(nullptr, release)
+        message_ptr() : ::std::shared_ptr<char>(nullptr, release)
         {}
 
-        cpp_msg_ptr(dsn_message_t msg) : ::std::shared_ptr<char>((char*)msg, release)
+        message_ptr(dsn_message_t msg) : ::std::shared_ptr<char>((char*)msg, release)
         {}
 
     private:
@@ -68,170 +64,168 @@ namespace dsn
         }
     };
 
-    namespace service {
-        //
-        // servicelet is the base class for RPC service and client
-        // there can be multiple servicelet in the system, mostly
-        // defined during initialization in main
-        //
-        class servicelet
-        {
-        public:
-            servicelet(int task_bucket_count = 13);
-            virtual ~servicelet();
-            dsn_task_tracker_t tracker() const { return _tracker; }
+    //
+    // servicelet is the base class for RPC service and client
+    // there can be multiple servicelet in the system, mostly
+    // defined during initialization in main
+    //
+    class servicelet
+    {
+    public:
+        servicelet(int task_bucket_count = 13);
+        virtual ~servicelet();
+        dsn_task_tracker_t tracker() const { return _tracker; }
 
-            static dsn_address_t primary_address() { return dsn_primary_address(); }
-            static uint32_t random32(uint32_t min, uint32_t max) { return dsn_random32(min, max); }
-            static uint64_t random64(uint64_t min, uint64_t max) { return dsn_random64(min, max); }
-            static uint64_t now_ns() { return dsn_now_ns(); }
-            static uint64_t now_us() { return dsn_now_us(); }
-            static uint64_t now_ms() { return dsn_now_ms(); }
+        static dsn_address_t primary_address() { return dsn_primary_address(); }
+        static uint32_t random32(uint32_t min, uint32_t max) { return dsn_random32(min, max); }
+        static uint64_t random64(uint64_t min, uint64_t max) { return dsn_random64(min, max); }
+        static uint64_t now_ns() { return dsn_now_ns(); }
+        static uint64_t now_us() { return dsn_now_us(); }
+        static uint64_t now_ms() { return dsn_now_ms(); }
             
-        protected:
-            void check_hashed_access();
+    protected:
+        void check_hashed_access();
 
-        private:
-            int                            _last_id;
-            std::set<dsn_task_code_t>      _events;
-            int                            _access_thread_id;
-            bool                           _access_thread_id_inited;
-            dsn_task_tracker_t             _tracker;
-        };
+    private:
+        int                            _last_id;
+        std::set<dsn_task_code_t>      _events;
+        int                            _access_thread_id;
+        bool                           _access_thread_id_inited;
+        dsn_task_tracker_t             _tracker;
+    };
 
-        //
-        // basic cpp task wrapper
-        // which manages the task handle
-        // and the interaction with task context manager, servicelet
-        //
+    //
+    // basic cpp task wrapper
+    // which manages the task handle
+    // and the interaction with task context manager, servicelet
+    //
         
-        class cpp_dev_task_base : public ::dsn::ref_object
+    class cpp_dev_task_base : public ::dsn::ref_object
+    {
+    public:
+        cpp_dev_task_base()
         {
-        public:
-            cpp_dev_task_base()
-            {
-                _task = 0;
-                _rpc_response = 0;
-            }
+            _task = 0;
+            _rpc_response = 0;
+        }
 
-            virtual ~cpp_dev_task_base()
-            {
-                dsn_task_release_ref(_task);
+        virtual ~cpp_dev_task_base()
+        {
+            dsn_task_release_ref(_task);
 
-                if (0 != _rpc_response)
-                    dsn_msg_release_ref(_rpc_response);
-            }
+            if (0 != _rpc_response)
+                dsn_msg_release_ref(_rpc_response);
+        }
 
-            void set_task_info(dsn_task_t t, servicelet* svc)
-            {
-                _task = t;
-                dsn_task_add_ref(t);
-                dsn_task_set_tracker(t, svc->tracker());
-            }
+        void set_task_info(dsn_task_t t, servicelet* svc)
+        {
+            _task = t;
+            dsn_task_add_ref(t);
+            dsn_task_set_tracker(t, svc->tracker());
+        }
 
-            dsn_task_t native_handle() { return _task; }
+        dsn_task_t native_handle() { return _task; }
                         
-            virtual bool cancel(bool wait_until_finished, bool* finished = nullptr)
-            {
-                return dsn_task_cancel2(_task, wait_until_finished, finished);
-            }
-
-            bool wait()
-            {
-                return dsn_task_wait(_task);
-            }
-
-            bool wait(int timeout_millieseconds)
-            {
-                return dsn_task_wait_timeout(_task, timeout_millieseconds);
-            }
-
-            ::dsn::error_code error()
-            {
-                return dsn_task_error(_task);
-            }
-            
-            size_t io_size()
-            {
-                return dsn_file_get_io_size(_task);
-            }
-            
-            void enqueue_aio(error_code err, size_t size)
-            {
-                dsn_file_task_enqueue(_task, err.get(), size);
-            }
-
-            dsn_message_t response()
-            {
-                if (_rpc_response == 0)
-                    _rpc_response = dsn_rpc_get_response(_task);
-                return _rpc_response;
-            }
-
-            void enqueue_rpc_response(error_code err, dsn_message_t resp)
-            {
-                dsn_rpc_enqueue_response(_task, err.get(), resp);
-            }
-
-        private:
-            dsn_task_t           _task;
-            dsn_message_t        _rpc_response;
-        };
-
-        DEFINE_REF_OBJECT(cpp_dev_task_base)        
-
-        template<typename THandler>
-        class cpp_dev_task : public cpp_dev_task_base
+        virtual bool cancel(bool wait_until_finished, bool* finished = nullptr)
         {
-        public:
-            cpp_dev_task(THandler& h, bool is_timer) : _handler(h), _is_timer(is_timer)
-            {
-            }
+            return dsn_task_cancel2(_task, wait_until_finished, finished);
+        }
 
-            cpp_dev_task(THandler& h) : _handler(h)
-            {
-            }
+        bool wait()
+        {
+            return dsn_task_wait(_task);
+        }
 
-            virtual bool cancel(bool wait_until_finished, bool* finished = nullptr) override
-            {
-                bool r = cpp_dev_task_base::cancel(wait_until_finished, finished);
-                if (_is_timer && r)
-                {
-                    release_ref(); // added upon callback exec registration
-                }
-                return r;
-            }
+        bool wait(int timeout_millieseconds)
+        {
+            return dsn_task_wait_timeout(_task, timeout_millieseconds);
+        }
 
-            static void exec(void* task)
-            {
-                cpp_dev_task* t = (cpp_dev_task*)task;
-                t->_handler();
-                if (!t->_is_timer)
-                {
-                    t->release_ref(); // added upon callback exec registration
-                }
-            }
-
-            static void exec_rpc_response(dsn_error_t err, dsn_message_t req, dsn_message_t resp, void* task)
-            {
-                cpp_dev_task* t = (cpp_dev_task*)task;
-                t->_handler(err, req, resp);
-                t->release_ref(); // added upon callback exec_rpc_response registration
-            }
-
-            static void exec_aio(dsn_error_t err, size_t sz, void* task)
-            {
-                cpp_dev_task* t = (cpp_dev_task*)task;
-                t->_handler(err, sz);
-                t->release_ref(); // added upon callback exec_aio registration
-            }
+        ::dsn::error_code error()
+        {
+            return dsn_task_error(_task);
+        }
             
-        private:
-            bool                 _is_timer;
-            THandler             _handler;
-        };
+        size_t io_size()
+        {
+            return dsn_file_get_io_size(_task);
+        }
+            
+        void enqueue_aio(error_code err, size_t size)
+        {
+            dsn_file_task_enqueue(_task, err.get(), size);
+        }
+
+        dsn_message_t response()
+        {
+            if (_rpc_response == 0)
+                _rpc_response = dsn_rpc_get_response(_task);
+            return _rpc_response;
+        }
+
+        void enqueue_rpc_response(error_code err, dsn_message_t resp)
+        {
+            dsn_rpc_enqueue_response(_task, err.get(), resp);
+        }
+
+    private:
+        dsn_task_t           _task;
+        dsn_message_t        _rpc_response;
+    };
+
+    DEFINE_REF_OBJECT(cpp_dev_task_base)        
+
+    template<typename THandler>
+    class cpp_dev_task : public cpp_dev_task_base
+    {
+    public:
+        cpp_dev_task(THandler& h, bool is_timer) : _handler(h), _is_timer(is_timer)
+        {
+        }
+
+        cpp_dev_task(THandler& h) : _handler(h)
+        {
+        }
+
+        virtual bool cancel(bool wait_until_finished, bool* finished = nullptr) override
+        {
+            bool r = cpp_dev_task_base::cancel(wait_until_finished, finished);
+            if (_is_timer && r)
+            {
+                release_ref(); // added upon callback exec registration
+            }
+            return r;
+        }
+
+        static void exec(void* task)
+        {
+            cpp_dev_task* t = (cpp_dev_task*)task;
+            t->_handler();
+            if (!t->_is_timer)
+            {
+                t->release_ref(); // added upon callback exec registration
+            }
+        }
+
+        static void exec_rpc_response(dsn_error_t err, dsn_message_t req, dsn_message_t resp, void* task)
+        {
+            cpp_dev_task* t = (cpp_dev_task*)task;
+            t->_handler(err, req, resp);
+            t->release_ref(); // added upon callback exec_rpc_response registration
+        }
+
+        static void exec_aio(dsn_error_t err, size_t sz, void* task)
+        {
+            cpp_dev_task* t = (cpp_dev_task*)task;
+            t->_handler(err, sz);
+            t->release_ref(); // added upon callback exec_aio registration
+        }
+            
+    private:
+        bool                 _is_timer;
+        THandler             _handler;
+    };
 
 
-        // ------- inlined implementation ----------
-    }
+    // ------- inlined implementation ----------
 }

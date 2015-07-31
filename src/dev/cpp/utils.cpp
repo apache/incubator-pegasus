@@ -275,7 +275,7 @@ namespace  dsn
         }
         else
         {
-            dwarn("read beyond the end of buffer");
+            dassert(false, "read beyond the end of buffer");
             return 0;
         }
     }
@@ -291,7 +291,7 @@ namespace  dsn
         }
         else
         {
-            dwarn("read beyond the end of buffer");
+            dassert(false, "read beyond the end of buffer");
             return 0;
         }
     }
@@ -333,7 +333,7 @@ namespace  dsn
         }
         else
         {
-            dwarn("read beyond the end of buffer");
+            dassert(false, "read beyond the end of buffer");
             return false;
         }
     }

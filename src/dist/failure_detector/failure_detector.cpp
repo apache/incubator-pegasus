@@ -312,7 +312,7 @@ void failure_detector::on_ping_internal(const beacon_msg& beacon, __out_param be
     }
 }
 
-void failure_detector::on_ping(const beacon_msg& beacon, ::dsn::service::rpc_replier<beacon_ack>& reply)
+void failure_detector::on_ping(const beacon_msg& beacon, ::dsn::rpc_replier<beacon_ack>& reply)
 {
     beacon_ack ack;
     on_ping_internal(beacon, ack);

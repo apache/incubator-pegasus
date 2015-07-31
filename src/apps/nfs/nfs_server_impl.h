@@ -5,22 +5,22 @@
 namespace dsn {
     namespace service {
         class nfs_service_impl
-            : public ::dsn::service::nfs_service, public ::dsn::service::serverlet<nfs_service_impl>
+            : public ::dsn::service::nfs_service, public ::dsn::serverlet<nfs_service_impl>
         {
         public:
             nfs_service_impl(nfs_opts& opts) :
-                ::dsn::service::serverlet<nfs_service_impl>("nfs"), _opts(opts)
+                ::dsn::serverlet<nfs_service_impl>("nfs"), _opts(opts)
             {
-                _file_close_timer = ::dsn::service::tasking::enqueue(LPC_NFS_FILE_CLOSE_TIMER, 
+                _file_close_timer = ::dsn::tasking::enqueue(LPC_NFS_FILE_CLOSE_TIMER, 
                     this, &nfs_service_impl::close_file, 0, 0, opts.file_close_timer_interval_ms_on_server);
             }
             virtual ~nfs_service_impl() {}
 
         protected:
             // RPC_NFS_V2_NFS_COPY 
-            virtual void on_copy(const copy_request& request, ::dsn::service::rpc_replier<copy_response>& reply);
+            virtual void on_copy(const copy_request& request, ::dsn::rpc_replier<copy_response>& reply);
             // RPC_NFS_V2_NFS_GET_FILE_SIZE 
-            virtual void on_get_file_size(const get_file_size_request& request, ::dsn::service::rpc_replier<get_file_size_response>& reply);
+            virtual void on_get_file_size(const get_file_size_request& request, ::dsn::rpc_replier<get_file_size_response>& reply);
 
         private:
             struct callback_para
@@ -55,7 +55,7 @@ namespace dsn {
             zlock _handles_map_lock;
             std::unordered_map <std::string, file_handle_info_on_server*> _handles_map; // cache file handles
 
-            ::dsn::cpp_task_ptr _file_close_timer;
+            ::dsn::task_ptr _file_close_timer;
         };
 
     }

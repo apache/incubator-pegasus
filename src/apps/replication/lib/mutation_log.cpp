@@ -176,7 +176,7 @@ void mutation_log::create_new_pending_buffer()
     dassert (_pending_write_timer == nullptr, "");
 
     _pending_write.reset(new binary_writer());
-    _pending_write_callbacks.reset(new std::list<::dsn::cpp_task_ptr>);
+    _pending_write_callbacks.reset(new std::list<::dsn::task_ptr>);
 
     // prepare block header
     _pending_write->write_empty((int)sizeof(log_block_header));
@@ -404,7 +404,7 @@ void mutation_log::close()
     }
 }
 
-::dsn::cpp_task_ptr mutation_log::append(mutation_ptr& mu,
+::dsn::task_ptr mutation_log::append(mutation_ptr& mu,
                         dsn_task_code_t callback_code,
                         servicelet* callback_host,
                         aio_handler callback,
@@ -734,7 +734,7 @@ error_code log_file::read_next_log_entry(__out_param::dsn::blob& bb)
     return ERR_OK;
 }
 
-::dsn::cpp_task_ptr log_file::write_log_entry(
+::dsn::task_ptr log_file::write_log_entry(
                 blob& bb,
                 dsn_task_code_t evt,  // to indicate which thread pool to execute the callback
                 servicelet* callback_host,

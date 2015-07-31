@@ -26,7 +26,12 @@
 # pragma once
 
 # include <dsn/internal/dsn_types.h>
-# include <dsn/cpp/auto_code.h>
+# include <dsn/cpp/cpp_helpers.h>
+
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "utils"
 
 namespace dsn {
 
@@ -222,7 +227,7 @@ namespace dsn {
         }
         else
         {
-            dlog(dsn_log_level_t::LOG_LEVEL_WARNING, "dsn.utils", "read beyond the end of buffer");
+            derror(false, "read beyond the end of buffer");
             return 0;
         }
     }

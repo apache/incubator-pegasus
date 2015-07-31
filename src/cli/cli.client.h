@@ -9,7 +9,7 @@ namespace dsn {
     DEFINE_TASK_CODE_RPC(RPC_DSN_CLI_CALL, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT);
 
 class cli_client 
-    : public virtual ::dsn::service::servicelet
+    : public virtual ::dsn::servicelet
 {
 public:
     cli_client(const dsn_address_t& server) { _server = server; }
@@ -26,9 +26,9 @@ public:
         int hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-        ::dsn::cpp_msg_ptr response;
+        ::dsn::message_ptr response;
 
-        auto err = ::dsn::service::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
+        auto err = ::dsn::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
             RPC_DSN_CLI_CALL, c, hash, timeout_milliseconds);
         if (err == ::dsn::ERR_OK)
         {
@@ -39,7 +39,7 @@ public:
     }
     
     // - asynchronous with on-stack command and std::string 
-    ::dsn::cpp_task_ptr begin_call(
+    ::dsn::task_ptr begin_call(
         const command& c, 
         void* context = nullptr,
         int timeout_milliseconds = 0, 
@@ -47,7 +47,7 @@ public:
         int request_hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-        return ::dsn::service::rpc::call_typed(
+        return ::dsn::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
                     RPC_DSN_CLI_CALL, 
                     c, 
@@ -73,14 +73,14 @@ public:
     }
     
     // - asynchronous with on-heap std::shared_ptr<command> and std::shared_ptr<std::string> 
-    ::dsn::cpp_task_ptr begin_call2(
+    ::dsn::task_ptr begin_call2(
         std::shared_ptr<command>& c,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0,
         int request_hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-        return ::dsn::service::rpc::call_typed(
+        return ::dsn::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
                     RPC_DSN_CLI_CALL, 
                     c, 
