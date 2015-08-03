@@ -25,12 +25,23 @@
 //
 static struct _all_info_
 {
+    int                                                       magic;
     bool                                                      engine_ready;
+    bool                                                      config_completed;
     ::dsn::tools::tool_app                                    *tool;
     ::dsn::configuration_ptr                                  config;
     ::dsn::service_engine                                     *engine;
     std::vector<::dsn::task_spec*>                            task_specs;
     ::dsn::memory_provider                                    *memory;
+
+    bool is_config_completed() const {
+        return magic == 0xdeadbeef && config_completed;
+    }
+
+    bool is_engine_ready() const {
+        return magic == 0xdeadbeef && engine_ready;
+    }
+
 } dsn_all;
 
 //------------------------------------------------------------------------------
@@ -52,6 +63,10 @@ DSN_API const char* dsn_error_to_string(dsn_error_t err)
 // use ::dsn::threadpool_code2; for parsing purpose
 DSN_API dsn_threadpool_code_t dsn_threadpool_code_register(const char* name)
 {
+    dassert(!dsn_all.is_config_completed(), 
+        "thread pool code '%s' must be registered before the service app role is registered",
+        name);
+
     return static_cast<dsn_threadpool_code_t>(
         ::dsn::utils::customized_id_mgr<::dsn::threadpool_code2_>::instance().register_id(name)
         );
@@ -82,6 +97,10 @@ struct task_code_placeholder { };
 DSN_API dsn_task_code_t dsn_task_code_register(const char* name, dsn_task_type_t type,
     dsn_task_priority_t pri, dsn_threadpool_code_t pool)
 {
+    dassert(!dsn_all.is_config_completed(),
+        "task code '%s' must be registered before the service app role is registered",
+        name);
+
     auto r = static_cast<dsn_task_code_t>(::dsn::utils::customized_id_mgr<task_code_placeholder>::instance().register_id(name));
     ::dsn::task_spec::register_task_code(r, type, pri, pool);
     return r;
@@ -224,16 +243,22 @@ DSN_API void dsn_task_tracker_destroy(dsn_task_tracker_t tracker)
     delete ((::dsn::task_tracker*)tracker);
 }
 
-DSN_API void dsn_task_set_tracker(dsn_task_t task, dsn_task_tracker_t tracker)
+DSN_API void dsn_task_tracker_cancel_all(dsn_task_tracker_t tracker)
 {
-    ((::dsn::task*)task)->set_tracker((::dsn::task_tracker*)tracker);
+    ((::dsn::task_tracker*)tracker)->cancel_outstanding_tasks();
 }
 
-DSN_API void dsn_task_call(dsn_task_t task, int delay_milliseconds)
+DSN_API void dsn_task_tracker_wait_all(dsn_task_tracker_t tracker)
+{
+    ((::dsn::task_tracker*)tracker)->wait_outstanding_tasks();
+}
+
+DSN_API void dsn_task_call(dsn_task_t task, dsn_task_tracker_t tracker, int delay_milliseconds)
 {
     auto t = ((::dsn::task*)(task));
     dassert(t->spec().type == TASK_TYPE_COMPUTE, "must be common or timer task");
 
+    t->set_tracker((::dsn::task_tracker*)tracker);
     t->set_delay(delay_milliseconds);
     t->enqueue();
 }
@@ -457,13 +482,14 @@ DSN_API dsn_task_t dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_r
     return rtask;
 }
 
-DSN_API void dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call)
+DSN_API void dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call, dsn_task_tracker_t tracker)
 {
     auto tsk = ::dsn::task::get_current_task();
     dassert(tsk != nullptr, "this function can only be invoked inside tasks");
 
     ::dsn::rpc_response_task* task = (::dsn::rpc_response_task_c*)rpc_call;
     dassert(task->spec().type == TASK_TYPE_RPC_RESPONSE, "");
+    task->set_tracker((dsn::task_tracker*)tracker);
 
     auto rpc = tsk->node()->rpc();
 
@@ -565,12 +591,13 @@ DSN_API dsn_task_t dsn_file_create_aio_task(dsn_task_code_t code, dsn_aio_handle
     return callback;
 }
 
-DSN_API void dsn_file_read(dsn_handle_t file, char* buffer, int count, uint64_t offset, dsn_task_t cb)
+DSN_API void dsn_file_read(dsn_handle_t file, char* buffer, int count, uint64_t offset, dsn_task_t cb, dsn_task_tracker_t tracker)
 {
     auto tsk = ::dsn::task::get_current_task();
     dassert(tsk != nullptr, "this function can only be invoked inside tasks");
 
     ::dsn::aio_task* callback((::dsn::aio_task*)cb);
+    callback->set_tracker((dsn::task_tracker*)tracker);
     callback->aio()->buffer = buffer;
     callback->aio()->buffer_size = count;
     callback->aio()->engine = nullptr;
@@ -581,12 +608,13 @@ DSN_API void dsn_file_read(dsn_handle_t file, char* buffer, int count, uint64_t 
     tsk->node()->disk()->read(callback);
 }
 
-DSN_API void dsn_file_write(dsn_handle_t file, const char* buffer, int count, uint64_t offset, dsn_task_t cb)
+DSN_API void dsn_file_write(dsn_handle_t file, const char* buffer, int count, uint64_t offset, dsn_task_t cb, dsn_task_tracker_t tracker)
 {
     auto tsk = ::dsn::task::get_current_task();
     dassert(tsk != nullptr, "this function can only be invoked inside tasks");
 
     ::dsn::aio_task* callback((::dsn::aio_task*)cb);
+    callback->set_tracker((dsn::task_tracker*)tracker);
     callback->aio()->buffer = (char*)buffer;
     callback->aio()->buffer_size = count;
     callback->aio()->engine = nullptr;
@@ -598,7 +626,7 @@ DSN_API void dsn_file_write(dsn_handle_t file, const char* buffer, int count, ui
 }
 
 DSN_API void dsn_file_copy_remote_directory(dsn_address_t remote, const char* source_dir, 
-    const char* dest_dir, bool overwrite, dsn_task_t cb)
+    const char* dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker)
 {
     std::shared_ptr<::dsn::remote_copy_request> rci(new ::dsn::remote_copy_request());
     rci->source = remote;
@@ -611,10 +639,11 @@ DSN_API void dsn_file_copy_remote_directory(dsn_address_t remote, const char* so
     dassert(tsk != nullptr, "this function can only be invoked inside tasks");
 
     ::dsn::aio_task* callback((::dsn::aio_task*)cb);
+    callback->set_tracker((dsn::task_tracker*)tracker);
     return tsk->node()->nfs()->call(rci, callback);
 }
 
-DSN_API void dsn_file_copy_remote_files(dsn_address_t remote, const char* source_dir, const char** source_files, const char* dest_dir, bool overwrite, dsn_task_t cb)
+DSN_API void dsn_file_copy_remote_files(dsn_address_t remote, const char* source_dir, const char** source_files, const char* dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker)
 {
     std::shared_ptr<::dsn::remote_copy_request> rci(new ::dsn::remote_copy_request());
     rci->source = remote;
@@ -635,6 +664,7 @@ DSN_API void dsn_file_copy_remote_files(dsn_address_t remote, const char* source
     dassert(tsk != nullptr, "this function can only be invoked inside tasks");
 
     ::dsn::aio_task* callback((::dsn::aio_task*)cb);
+    callback->set_tracker((dsn::task_tracker*)tracker);
     return tsk->node()->nfs()->call(rci, callback);
 }
 
@@ -762,7 +792,7 @@ namespace dsn {
     {
         bool is_engine_ready()
         {
-            return dsn_all.engine_ready;
+            return dsn_all.is_engine_ready();
         }
 
         tool_app* get_current_tool()
@@ -776,10 +806,12 @@ extern void dsn_log_init();
 bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_name, int app_index)
 {
     dsn_all.engine_ready = false;
+    dsn_all.config_completed = false;
     dsn_all.tool = nullptr;
     dsn_all.engine = &::dsn::service_engine::instance();
     dsn_all.config.reset(new ::dsn::configuration(config_file, config_arguments));
     dsn_all.memory = nullptr;
+    dsn_all.magic = 0xdeadbeef;
 
     for (int i = 0; i <= dsn_task_code_max(); i++)
     {
@@ -793,6 +825,8 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
         printf("error in config file %s, exit ...\n", config_file);
         return false;
     }
+
+    dsn_all.config_completed = true;
 
     // pause when necessary
     if (dsn_all.config->get_value<bool>("core", "pause_on_start", false))
@@ -889,7 +923,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
             );
         exit(1);
     }
-
+    
     // start cli if necessary
     if (dsn_all.config->get_value<bool>("core", "cli_local", true))
     {

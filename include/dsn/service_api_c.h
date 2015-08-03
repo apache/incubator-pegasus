@@ -251,12 +251,13 @@ extern DSN_API dsn_task_t  dsn_task_create_timer(dsn_task_code_t code, dsn_task_
 //
 extern DSN_API dsn_task_tracker_t dsn_task_tracker_create(int task_bucket_count);
 extern DSN_API void               dsn_task_tracker_destroy(dsn_task_tracker_t tracker);
-extern DSN_API void               dsn_task_set_tracker(dsn_task_t task, dsn_task_tracker_t tracker);
+extern DSN_API void               dsn_task_tracker_cancel_all(dsn_task_tracker_t tracker);
+extern DSN_API void               dsn_task_tracker_wait_all(dsn_task_tracker_t tracker);
 
 //
 // common task 
 //
-extern DSN_API void        dsn_task_call(dsn_task_t task, int delay_milliseconds);
+extern DSN_API void        dsn_task_call(dsn_task_t task, dsn_task_tracker_t tracker, int delay_milliseconds);
 extern DSN_API bool        dsn_task_cancel(dsn_task_t task, bool wait_until_finished);
 extern DSN_API bool        dsn_task_cancel2(dsn_task_t task, bool wait_until_finished, /*out*/ bool* finished);
 extern DSN_API bool        dsn_task_wait(dsn_task_t task); 
@@ -298,6 +299,8 @@ extern DSN_API bool         dsn_semaphore_wait_timeout(dsn_handle_t s, int timeo
 extern DSN_API dsn_address_t dsn_address_invalid;
 extern DSN_API void          dsn_address_build(/*out*/ dsn_address_t* ep, const char* host, uint16_t port);
 extern DSN_API dsn_address_t dsn_primary_address();
+extern DSN_API void          dsn_address_get_invalid(/*out*/ dsn_address_t* paddr);
+extern DSN_API void          dsn_primary_address2(/*out*/ dsn_address_t* paddr);
     
 // rpc message and buffer management
 //
@@ -332,7 +335,7 @@ extern DSN_API void          dsn_msg_to_address(dsn_message_t msg, /*out*/ dsn_a
 extern DSN_API bool          dsn_rpc_register_handler(dsn_task_code_t code, const char* name, dsn_rpc_request_handler_t cb, void* param);
 extern DSN_API void*         dsn_rpc_unregiser_handler(dsn_task_code_t code);   // return void* param on registration  
 extern DSN_API dsn_task_t    dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, void* param, int reply_hash);
-extern DSN_API void          dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call);
+extern DSN_API void          dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call, dsn_task_tracker_t tracker);
 extern DSN_API dsn_message_t dsn_rpc_call_wait(dsn_address_t server, dsn_message_t request); // returned msg must be explicitly msg_release_ref
 extern DSN_API void          dsn_rpc_call_one_way(dsn_address_t server, dsn_message_t request);
 extern DSN_API void          dsn_rpc_reply(dsn_message_t response);
@@ -347,10 +350,10 @@ extern DSN_API void          dsn_rpc_enqueue_response(dsn_task_t rpc_call, dsn_e
 extern DSN_API dsn_handle_t dsn_file_open(const char* file_name, int flag, int pmode);
 extern DSN_API dsn_error_t  dsn_file_close(dsn_handle_t file);
 extern DSN_API dsn_task_t   dsn_file_create_aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash);
-extern DSN_API void         dsn_file_read(dsn_handle_t file, char* buffer, int count, uint64_t offset, dsn_task_t cb);
-extern DSN_API void         dsn_file_write(dsn_handle_t file, const char* buffer, int count, uint64_t offset, dsn_task_t cb);
-extern DSN_API void         dsn_file_copy_remote_directory(dsn_address_t remote, const char* source_dir, const char* dest_dir, bool overwrite, dsn_task_t cb);
-extern DSN_API void         dsn_file_copy_remote_files(dsn_address_t remote, const char* source_dir, const char** source_files, const char* dest_dir, bool overwrite, dsn_task_t cb);
+extern DSN_API void         dsn_file_read(dsn_handle_t file, char* buffer, int count, uint64_t offset, dsn_task_t cb, dsn_task_tracker_t tracker);
+extern DSN_API void         dsn_file_write(dsn_handle_t file, const char* buffer, int count, uint64_t offset, dsn_task_t cb, dsn_task_tracker_t tracker);
+extern DSN_API void         dsn_file_copy_remote_directory(dsn_address_t remote, const char* source_dir, const char* dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker);
+extern DSN_API void         dsn_file_copy_remote_files(dsn_address_t remote, const char* source_dir, const char** source_files, const char* dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker);
 extern DSN_API size_t       dsn_file_get_io_size(dsn_task_t cb_task);
 extern DSN_API void         dsn_file_task_enqueue(dsn_task_t cb_task, dsn_error_t err, size_t size);
 

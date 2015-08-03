@@ -441,7 +441,7 @@ void mutation_log::close()
 
     tsk->add_ref(); // released in exec_aio
     dsn_task_t t = dsn_file_create_aio_task(callback_code, cpp_dev_task<aio_handler>::exec_aio, tsk, hash);
-    tsk->set_task_info(t, callback_host);
+    tsk->set_task_info(t);
 
     _pending_write_callbacks->push_back(tsk);
 

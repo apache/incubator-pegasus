@@ -10,11 +10,7 @@ namespace dsn.dev.csharp
     using dsn_task_t = System.IntPtr;
     using dsn_task_tracker_t = System.IntPtr;
     using dsn_message_t = System.IntPtr;
-    #if _WIN64 // TODO: FIX ME
-        using size_t = System.UInt64;
-    #else
-    using size_t = System.UInt64;
-    #endif
+    using size_t = System.IntPtr;
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public delegate void dsn_task_handler_t(System.IntPtr param);
@@ -92,12 +88,12 @@ namespace dsn.dev.csharp
         public static dsn_address_t New()
         {
             var addr = new dsn_address_t();
-            addr.name = new byte[core.DSN_MAX_ADDRESS_NAME_LENGTH];
+            addr.name = new byte[Native.DSN_MAX_ADDRESS_NAME_LENGTH];
             return addr;
         }
     };
 
-    public static class core
+    public static class Native
     {
         public const uint DSN_MAX_TASK_CODE_NAME_LENGTH  = 48 ;
         public const uint DSN_MAX_ADDRESS_NAME_LENGTH    = 16 ;
@@ -248,13 +244,15 @@ namespace dsn.dev.csharp
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl)]
         public extern static void               dsn_task_tracker_destroy(dsn_task_tracker_t tracker);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl)]
-        public extern static void               dsn_task_set_tracker(dsn_task_t task, dsn_task_tracker_t tracker);
+        public extern static void               dsn_task_tracker_cancel_all(dsn_task_tracker_t tracker);
+        [DllImport(DSN_CORE_DLL, CallingConvention = CallingConvention.Cdecl)]
+        public extern static void               dsn_task_tracker_wait_all(dsn_task_tracker_t tracker);
 
         //
         // common task 
         //
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl)]
-        public extern static void        dsn_task_call(dsn_task_t task, int delay_milliseconds);
+        public extern static void        dsn_task_call(dsn_task_t task, dsn_task_tracker_t tracker, int delay_milliseconds);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl)]
         public extern static bool        dsn_task_cancel(dsn_task_t task, bool wait_until_finished);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl)]
@@ -315,11 +313,11 @@ namespace dsn.dev.csharp
 
         // rpc address utilities
         [DllImport(DSN_CORE_DLL, CallingConvention = CallingConvention.Cdecl)]
-        public extern static void          dsn_address_get_invalid(out dsn_address_t addr);
+        public extern static void          dsn_address_get_invalid(ref dsn_address_t addr);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl)]
-        public extern static void          dsn_address_build(out dsn_address_t ep, string host, System.UInt16 port);
+        public extern static void          dsn_address_build(ref dsn_address_t ep, string host, System.UInt16 port);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl)]
-        public extern static void          dsn_primary_address2(out dsn_address_t addr);
+        public extern static void          dsn_primary_address2(ref dsn_address_t addr);
     
         // rpc message and buffer management
         //
@@ -372,7 +370,7 @@ namespace dsn.dev.csharp
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl)]
         public extern static dsn_task_t    dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, IntPtr param, int reply_hash);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl)]
-        public extern static void          dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call);
+        public extern static void          dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call, dsn_task_tracker_t tracker);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl)]
         public extern static dsn_message_t dsn_rpc_call_wait(dsn_address_t server, dsn_message_t request); // returned msg must be explicitly msg_release_ref
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl)]
@@ -396,13 +394,13 @@ namespace dsn.dev.csharp
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl)]
         public extern static dsn_task_t   dsn_file_create_aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, IntPtr param, int hash);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl)]
-        public extern static void         dsn_file_read(dsn_handle_t file, string buffer, int count, UInt64 offset, dsn_task_t cb);
+        public extern static void         dsn_file_read(dsn_handle_t file, byte[] buffer, int count, UInt64 offset, dsn_task_t cb, dsn_task_tracker_t tracker);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl)]
-        public extern static void         dsn_file_write(dsn_handle_t file, string buffer, int count, UInt64 offset, dsn_task_t cb);
+        public extern static void         dsn_file_write(dsn_handle_t file, byte[] buffer, int count, UInt64 offset, dsn_task_t cb, dsn_task_tracker_t tracker);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl)]
-        public extern static void         dsn_file_copy_remote_directory(dsn_address_t remote, string source_dir, string dest_dir, bool overwrite, dsn_task_t cb);
+        public extern static void         dsn_file_copy_remote_directory(dsn_address_t remote, string source_dir, string dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl)]
-        public extern static void         dsn_file_copy_remote_files(dsn_address_t remote, string source_dir, string[] source_files, string dest_dir, bool overwrite, dsn_task_t cb);
+        public extern static void         dsn_file_copy_remote_files(dsn_address_t remote, string source_dir, string[] source_files, string dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl)]
         public extern static size_t       dsn_file_get_io_size(dsn_task_t cb_task);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl)]

@@ -11,22 +11,22 @@ namespace dsn.dev.csharp
         
         public static void dlog(dsn_log_level_t level, string fmt)
         {
-            core.dsn_log("unknown", "unknown", 0, level, fmt);
+            Native.dsn_log("unknown", "unknown", 0, level, fmt);
         }
 
         public static void dlog(dsn_log_level_t level, string fmt, object arg0)
         {
-            core.dsn_log("unknown", "unknown", 0, level, string.Format(fmt, arg0));
+            Native.dsn_log("unknown", "unknown", 0, level, string.Format(fmt, arg0));
         }
 
         public static void dlog(dsn_log_level_t level, string fmt, object arg0, object arg1)
         {
-            core.dsn_log("unknown", "unknown", 0, level, string.Format(fmt, arg0, arg1));
+            Native.dsn_log("unknown", "unknown", 0, level, string.Format(fmt, arg0, arg1));
         }
 
         public static void dlog(dsn_log_level_t level, string fmt, object arg0, object arg1, object arg2)
         {
-            core.dsn_log("unknown", "unknown", 0, level, string.Format(fmt, arg0, arg1, arg2));
+            Native.dsn_log("unknown", "unknown", 0, level, string.Format(fmt, arg0, arg1, arg2));
         }
 
         /// <summary>
@@ -38,7 +38,7 @@ namespace dsn.dev.csharp
 
         public static void dinfo(dsn_log_level_t level, string fmt)
         {
-            if (core.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_INFORMATION)
+            if (Native.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_INFORMATION)
             {
                 dlog(level, fmt);
             }
@@ -46,7 +46,7 @@ namespace dsn.dev.csharp
 
         public static void dinfo(dsn_log_level_t level, string fmt, object arg0)
         {
-            if (core.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_INFORMATION)
+            if (Native.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_INFORMATION)
             {
                 dlog(level, fmt, arg0);
             }
@@ -54,7 +54,7 @@ namespace dsn.dev.csharp
 
         public static void dinfo(dsn_log_level_t level, string fmt, object arg0, object arg1)
         {
-            if (core.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_INFORMATION)
+            if (Native.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_INFORMATION)
             {
                 dlog(level, fmt, arg0, arg1);
             }
@@ -62,7 +62,7 @@ namespace dsn.dev.csharp
 
         public static void dinfo(dsn_log_level_t level, string fmt, object arg0, object arg1, object arg2)
         {
-            if (core.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_INFORMATION)
+            if (Native.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_INFORMATION)
             {
                 dlog(level, fmt, arg0, arg1, arg2);
             }
@@ -75,7 +75,7 @@ namespace dsn.dev.csharp
         /// <param name="?"></param>
         public static void ddebug(dsn_log_level_t level, string fmt)
         {
-            if (core.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_DEBUG)
+            if (Native.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_DEBUG)
             {
                 dlog(level, fmt);
             }
@@ -83,7 +83,7 @@ namespace dsn.dev.csharp
 
         public static void ddebug(dsn_log_level_t level, string fmt, object arg0)
         {
-            if (core.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_DEBUG)
+            if (Native.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_DEBUG)
             {
                 dlog(level, fmt, arg0);
             }
@@ -91,7 +91,7 @@ namespace dsn.dev.csharp
 
         public static void ddebug(dsn_log_level_t level, string fmt, object arg0, object arg1)
         {
-            if (core.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_DEBUG)
+            if (Native.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_DEBUG)
             {
                 dlog(level, fmt, arg0, arg1);
             }
@@ -99,7 +99,7 @@ namespace dsn.dev.csharp
 
         public static void ddebug(dsn_log_level_t level, string fmt, object arg0, object arg1, object arg2)
         {
-            if (core.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_DEBUG)
+            if (Native.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_DEBUG)
             {
                 dlog(level, fmt, arg0, arg1, arg2);
             }
@@ -113,7 +113,7 @@ namespace dsn.dev.csharp
         /// 
         public static void dwarn(dsn_log_level_t level, string fmt)
         {
-            if (core.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_WARNING)
+            if (Native.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_WARNING)
             {
                 dlog(level, fmt);
             }
@@ -121,7 +121,7 @@ namespace dsn.dev.csharp
 
         public static void dwarn(dsn_log_level_t level, string fmt, object arg0)
         {
-            if (core.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_WARNING)
+            if (Native.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_WARNING)
             {
                 dlog(level, fmt, arg0);
             }
@@ -129,7 +129,7 @@ namespace dsn.dev.csharp
 
         public static void dwarn(dsn_log_level_t level, string fmt, object arg0, object arg1)
         {
-            if (core.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_WARNING)
+            if (Native.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_WARNING)
             {
                 dlog(level, fmt, arg0, arg1);
             }
@@ -137,7 +137,7 @@ namespace dsn.dev.csharp
 
         public static void dwarn(dsn_log_level_t level, string fmt, object arg0, object arg1, object arg2)
         {
-            if (core.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_WARNING)
+            if (Native.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_WARNING)
             {
                 dlog(level, fmt, arg0, arg1, arg2);
             }
@@ -151,7 +151,7 @@ namespace dsn.dev.csharp
 
         public static void derror(dsn_log_level_t level, string fmt)
         {
-            if (core.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_ERROR)
+            if (Native.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_ERROR)
             {
                 dlog(level, fmt);
             }
@@ -159,7 +159,7 @@ namespace dsn.dev.csharp
 
         public static void derror(dsn_log_level_t level, string fmt, object arg0)
         {
-            if (core.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_ERROR)
+            if (Native.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_ERROR)
             {
                 dlog(level, fmt, arg0);
             }
@@ -167,7 +167,7 @@ namespace dsn.dev.csharp
 
         public static void derror(dsn_log_level_t level, string fmt, object arg0, object arg1)
         {
-            if (core.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_ERROR)
+            if (Native.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_ERROR)
             {
                 dlog(level, fmt, arg0, arg1);
             }
@@ -175,7 +175,7 @@ namespace dsn.dev.csharp
 
         public static void derror(dsn_log_level_t level, string fmt, object arg0, object arg1, object arg2)
         {
-            if (core.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_ERROR)
+            if (Native.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_ERROR)
             {
                 dlog(level, fmt, arg0, arg1, arg2);
             }
@@ -189,7 +189,7 @@ namespace dsn.dev.csharp
         /// 
         public static void dfatal(dsn_log_level_t level, string fmt)
         {
-            if (core.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_FATAL)
+            if (Native.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_FATAL)
             {
                 dlog(level, fmt);
             }
@@ -197,7 +197,7 @@ namespace dsn.dev.csharp
 
         public static void dfatal(dsn_log_level_t level, string fmt, object arg0)
         {
-            if (core.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_FATAL)
+            if (Native.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_FATAL)
             {
                 dlog(level, fmt, arg0);
             }
@@ -205,7 +205,7 @@ namespace dsn.dev.csharp
 
         public static void dfatal(dsn_log_level_t level, string fmt, object arg0, object arg1)
         {
-            if (core.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_FATAL)
+            if (Native.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_FATAL)
             {
                 dlog(level, fmt, arg0, arg1);
             }
@@ -213,7 +213,7 @@ namespace dsn.dev.csharp
 
         public static void dfatal(dsn_log_level_t level, string fmt, object arg0, object arg1, object arg2)
         {
-            if (core.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_FATAL)
+            if (Native.dsn_log_get_start_level() >= dsn_log_level_t.LOG_LEVEL_FATAL)
             {
                 dlog(level, fmt, arg0, arg1, arg2);
             }

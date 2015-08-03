@@ -52,9 +52,9 @@ namespace dsn
                 t = dsn_task_create(evt, cpp_dev_task<task_handler>::exec, tsk, hash);
             }
 
-            tsk->set_task_info(t, context);
+            tsk->set_task_info(t);
 
-            dsn_task_call(t, delay_milliseconds);
+            dsn_task_call(t, context ? context->tracker() : nullptr, delay_milliseconds);
             return tsk;
         }
     }
@@ -80,8 +80,8 @@ namespace dsn
                 (void*)tsk,
                 reply_hash
                 );
-            tsk->set_task_info(t, (servicelet*)owner);
-            dsn_rpc_call(server, t);
+            tsk->set_task_info(t);
+            dsn_rpc_call(server, t, owner ? owner->tracker() : nullptr);
 
             return tsk;
         }
@@ -110,9 +110,9 @@ namespace dsn
                 tsk, hash
                 );
 
-            tsk->set_task_info(t, owner);
+            tsk->set_task_info(t);
 
-            dsn_file_read(hFile, buffer, count, offset, t);
+            dsn_file_read(hFile, buffer, count, offset, t, owner ? owner->tracker() : nullptr);
             return tsk;
         }
 
@@ -137,9 +137,9 @@ namespace dsn
                 tsk, hash
                 );
 
-            tsk->set_task_info(t, owner);
+            tsk->set_task_info(t);
 
-            dsn_file_write(hFile, buffer, count, offset, t);
+            dsn_file_write(hFile, buffer, count, offset, t, owner ? owner->tracker() : nullptr);
             return tsk;
         }
 
@@ -166,11 +166,11 @@ namespace dsn
                 tsk, hash
                 );
 
-            tsk->set_task_info(t, owner);
+            tsk->set_task_info(t);
 
             if (files.empty())
             {
-                dsn_file_copy_remote_directory(remote, source_dir.c_str(), dest_dir.c_str(), overwrite, t);
+                dsn_file_copy_remote_directory(remote, source_dir.c_str(), dest_dir.c_str(), overwrite, t, owner ? owner->tracker() : nullptr);
             }
             else
             {
@@ -181,7 +181,7 @@ namespace dsn
                 }
                 *ptr = nullptr;
 
-                dsn_file_copy_remote_files(remote, source_dir.c_str(), ptr, dest_dir.c_str(), overwrite, t);
+                dsn_file_copy_remote_files(remote, source_dir.c_str(), ptr, dest_dir.c_str(), overwrite, t, owner ? owner->tracker() : nullptr);
             }
             return tsk;
         }

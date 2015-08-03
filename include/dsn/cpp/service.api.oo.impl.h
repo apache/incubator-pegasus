@@ -106,7 +106,7 @@ namespace dsn
                     nullptr,
                     reply_hash
                     );
-                task->set_task_info(t, owner);
+                task->set_task_info(t);
                 return task;
             }
 
@@ -144,7 +144,7 @@ namespace dsn
                         (void*)task,
                         reply_hash
                         );
-                    task->set_task_info(t, (servicelet*)owner);
+                    task->set_task_info(t);
                     return task;
                 }
                 else
@@ -186,7 +186,7 @@ namespace dsn
                         (void*)task,
                         reply_hash
                         );
-                    task->set_task_info(t, (servicelet*)owner);
+                    task->set_task_info(t);
                     return task;
                 }
                 else
@@ -228,7 +228,7 @@ namespace dsn
                         (void*)task,
                         reply_hash
                         );
-                    task->set_task_info(t, (servicelet*)owner);
+                    task->set_task_info(t);
                     return task;
                 }
                 else
@@ -269,7 +269,7 @@ namespace dsn
                         (void*)task,
                         reply_hash
                         );
-                    task->set_task_info(t, (servicelet*)owner);
+                    task->set_task_info(t);
                     return task;
                 }
                 else
@@ -338,7 +338,7 @@ namespace dsn
             auto t = internal_use_only::create_rpc_call<T, TRequest, TResponse>(
                 msg, req, owner, callback, reply_hash);
                
-            dsn_rpc_call(server, t->native_handle());
+            dsn_rpc_call(server, t->native_handle(), owner ? (servicelet*)owner : nullptr);
             return t;
         }
 
@@ -360,7 +360,7 @@ namespace dsn
             auto t = internal_use_only::create_rpc_call<TRequest, TResponse>(
                 msg, req, owner, callback, reply_hash);
 
-            dsn_rpc_call(server, t->native_handle());
+            dsn_rpc_call(server, t->native_handle(), owner ? (servicelet*)owner : nullptr);
             return t;
         }
 
@@ -383,7 +383,7 @@ namespace dsn
             auto t = internal_use_only::create_rpc_call<T, TResponse>(
                 msg, owner, callback, context, reply_hash);
 
-            dsn_rpc_call(server, t->native_handle());
+            dsn_rpc_call(server, t->native_handle(), owner ? (servicelet*)owner : nullptr);
             return t;
         }
 
@@ -406,7 +406,7 @@ namespace dsn
             auto t = internal_use_only::create_rpc_call<TResponse>(
                 msg, owner, callback, context, reply_hash);
 
-            dsn_rpc_call(server, t->native_handle());
+            dsn_rpc_call(server, t->native_handle(), owner ? (servicelet*)owner : nullptr);
             return t;
         }
 

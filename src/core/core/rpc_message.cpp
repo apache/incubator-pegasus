@@ -413,7 +413,11 @@ bool message_ex::read_next(void** ptr, size_t* size)
         return true;
     }
     else
+    {
+        *ptr = nullptr;
+        *size = 0;
         return false;
+    }   
 }
 
 void message_ex::read_commit(size_t size)

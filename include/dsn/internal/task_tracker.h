@@ -86,8 +86,8 @@ namespace dsn
         task_tracker(int task_bucket_count = 13);
         virtual ~task_tracker();
 
-    protected:
-        void clear_outstanding_tasks();
+        void cancel_outstanding_tasks();
+        void wait_outstanding_tasks();
         
     private:
 

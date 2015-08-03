@@ -42,13 +42,48 @@ namespace dsn
 
     task_tracker::~task_tracker()
     {
-        clear_outstanding_tasks();
+        cancel_outstanding_tasks();
 
         delete[] _outstanding_tasks;
         delete[] _outstanding_tasks_lock;
     }
 
-    void task_tracker::clear_outstanding_tasks()
+    void task_tracker::wait_outstanding_tasks()
+    {
+        for (int i = 0; i < _task_bucket_count; i++)
+        {
+            while (true)
+            {
+                trackable_task::owner_delete_state prepare_state;
+                trackable_task *tcm;
+
+                {
+                    utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_outstanding_tasks_lock[i]);
+                    auto n = _outstanding_tasks[i].next();
+                    if (n != &_outstanding_tasks[i])
+                    {
+                        tcm = CONTAINING_RECORD(n, trackable_task, _dl);
+                        prepare_state = tcm->owner_delete_prepare();
+                    }
+                    else
+                        break; // assuming nobody is putting tasks into it anymore
+                }
+
+                switch (prepare_state)
+                {
+                case trackable_task::OWNER_DELETE_NOT_LOCKED:
+                    dsn_task_wait(tcm->_task);
+                    tcm->owner_delete_commit();
+                    break;
+                case trackable_task::OWNER_DELETE_LOCKED:
+                case trackable_task::OWNER_DELETE_FINISHED:
+                    break;
+                }
+            }
+        }
+    }
+
+    void task_tracker::cancel_outstanding_tasks()
     {
         for (int i = 0; i < _task_bucket_count; i++)
         {

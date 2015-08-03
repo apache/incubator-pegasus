@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections;
-using System.Linq;
+using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,369 +10,341 @@ using System.Runtime.InteropServices;
 
 namespace dsn.dev.csharp
 {
-    using dsn_error_t = System.Int32;
-    using task_code = System.Int32;
-    using dsn_threadpool_code_t = System.Int32;
-    using dsn_handle_t = System.UInt64;
-    using dsn_task_t = System.IntPtr;
-    using dsn_task_tracker_t = System.IntPtr;
-    using dsn_message_t = System.IntPtr;
-    #if _WIN64 // TODO: FIX ME
-        using size_t = System.UInt64;
-    #else
-    using size_t = System.UInt64;
-    #endif
+    using dsn_task_t = IntPtr;
+    using dsn_handle_t = UInt64;
 
-    public class message : ResourceHolder
-    {
-        public message()
-        {
-            _message = IntPtr.Zero;
-        }
+    //public class task : SafeHandle
+    //{
+    //    public task()
+    //        : base(IntPtr.Zero, true)
+    //    {
+    //        _rpc_response = new message();
+    //        //_gch = GCHandle.Alloc(this);
+    //    }
+    //    public void initialize(IntPtr t)
+    //    {
+    //        core.dsn_task_add_ref(t);
+    //        SetHandle(t);
+    //    }
 
-        public message(dsn_message_t msg)
-        {
-            _message = msg;
-            if (IntPtr.Zero != msg)
-                core.dsn_msg_add_ref(msg);
-        }
+    //    public override bool IsInvalid { get { return handle == IntPtr.Zero; } }
 
-        protected override void ReleaseUnmanagedResources()
-        {
-            if (IntPtr.Zero != _message)
-                core.dsn_msg_release_ref(_message);
-        }
+    //    protected override bool ReleaseHandle()
+    //    {
+    //        if (!IsInvalid)
+    //        {
+    //            core.dsn_task_release_ref(handle);
+    //            //_gch.Free();
+    //            return true;
+    //        }
+    //        else
+    //            return false;
+    //    }
 
-        private dsn_message_t _message;
-    }
-    
-    public class task : ResourceHolder
-    {
-        public task()
-        {
-            _task = IntPtr.Zero;
-            _rpc_response = IntPtr.Zero;
-        }
+    //    public IntPtr dangerous_native_task_handle() { return handle; }
 
-        protected override void ReleaseUnmanagedResources()
-        {
- 	        core.dsn_task_release_ref(_task);
+    //    public IntPtr gc_handle_ptr() { return (IntPtr)_gch; }
 
-            if (IntPtr.Zero != _rpc_response)
-                core.dsn_msg_release_ref(_rpc_response);
-        }
-
-        public void set_task_info(dsn_task_t t, servicelet svc)
-        {
-            _task = t;
-            core.dsn_task_add_ref(t);
-            core.dsn_task_set_tracker(t, svc.tracker());
-        }
-
-        public dsn_task_t native_handle() { return _task; }
+    //    public static T from_gc_handle_ptr<T>(IntPtr ptr) 
+    //        where T : task
+    //    {
+    //        GCHandle hc = (GCHandle)ptr;
+    //        return hc.Target as T;
+    //    }
                         
-        public bool cancel(bool wait_until_finished, out bool finished)
-        {
-            return core.dsn_task_cancel2(_task, wait_until_finished, out finished);
-        }
+    //    public bool cancel(bool wait_until_finished, out bool finished)
+    //    {
+    //        return core.dsn_task_cancel2(handle, wait_until_finished, out finished);
+    //    }
 
-        public bool wait()
-        {
-            return core.dsn_task_wait(_task);
-        }
+    //    public bool wait()
+    //    {
+    //        return core.dsn_task_wait(handle);
+    //    }
 
-        public bool wait(int timeout_millieseconds)
-        {
-            return core.dsn_task_wait_timeout(_task, timeout_millieseconds);
-        }
+    //    public bool wait(int timeout_millieseconds)
+    //    {
+    //        return core.dsn_task_wait_timeout(handle, timeout_millieseconds);
+    //    }
 
-        public error_code error()
-        {
-            return new error_code(core.dsn_task_error(_task));
-        }
+    //    public error_code error()
+    //    {
+    //        return new error_code(core.dsn_task_error(handle));
+    //    }
             
-        public size_t io_size()
-        {
-            return core.dsn_file_get_io_size(_task);
-        }
+    //    public size_t io_size()
+    //    {
+    //        return core.dsn_file_get_io_size(handle);
+    //    }
             
-        public void enqueue_aio(error_code err, size_t size)
-        {
-            core.dsn_file_task_enqueue(_task, err, size);
-        }
+    //    public void enqueue_aio(error_code err, size_t size)
+    //    {
+    //        core.dsn_file_task_enqueue(handle, err, size);
+    //    }
 
-        public dsn_message_t response()
-        {
-            if (_rpc_response == IntPtr.Zero)
-                _rpc_response = core.dsn_rpc_get_response(_task);
-            return _rpc_response;
-        }
+    //    public message response()
+    //    {
+    //        if (_rpc_response.IsInvalid)
+    //        {
+    //            _rpc_response.initialize(core.dsn_rpc_get_response(handle));
+    //        }
 
-        public void enqueue_rpc_response(error_code err, dsn_message_t resp)
-        {
-            core.dsn_rpc_enqueue_response(_task, err, resp);
-        }
+    //        return _rpc_response;
+    //    }
 
-        private dsn_task_t    _task;
+    //    public void enqueue_rpc_response(error_code err, IntPtr resp)
+    //    {
+    //        core.dsn_rpc_enqueue_response(handle, err, resp);
+    //    }
 
-        private dsn_message_t _rpc_response;
-    };
+    //    private message _rpc_response;
+    //    private GCHandle _gch;
+    //};
 
-    public class servicelet : ResourceHolder
+    public class Servicelet : SafeHandle
     {
-        public servicelet(int task_bucket_count = 13)
+        public Servicelet(int task_bucket_count = 13)
+            : base(IntPtr.Zero, true)
         {
-            _tracker = core.dsn_task_tracker_create(task_bucket_count);
+            SetHandle(Native.dsn_task_tracker_create(task_bucket_count));
             _access_thread_id_inited = false;
-            _gch = GCHandle.Alloc(this);
         }
 
-        protected override void ReleaseUnmanagedResources()
+        public override bool IsInvalid { get { return handle == IntPtr.Zero; } }
+
+        protected override bool ReleaseHandle()
         {
-            core.dsn_task_tracker_destroy(_tracker);
-            _gch.Free();
+            if (!IsInvalid)
+            {
+                Native.dsn_task_tracker_destroy(handle);
+                return true;
+            }
+            else
+                return false;
         }
 
-        public dsn_task_tracker_t tracker() { return _tracker; }
+        protected IntPtr tracker() { return handle; }
 
-        public static void primary_address(out dsn_address_t addr) { core.dsn_primary_address2(out addr); }
-        public static UInt32 random32(UInt32 min, UInt32 max) { return core.dsn_random32(min, max); }
-        public static UInt64 random64(UInt64 min, UInt64 max) { return core.dsn_random64(min, max); }
-        public static UInt64 now_ns() { return core.dsn_now_ns(); }
-        public static UInt64 now_us() { return core.dsn_now_us(); }
-        public static UInt64 now_ms() { return core.dsn_now_ms(); }
+        public void wait_all_pending_tasks()
+        {
+            Native.dsn_task_tracker_wait_all(handle);
+        }
 
-        //public task enqueue(
-        //    task_code evt,
-        //    servicelet context,
-        //    task_handler callback,
-        //    int hash = 0,
-        //    int delay_milliseconds = 0,
-        //    int timer_interval_milliseconds = 0
-        //    )
-        //{
-        //    //var t = core.dsn_task_create()
-        //}
+        public void cancel_all_pending_tasks()
+        {
+            Native.dsn_task_tracker_cancel_all(handle);
+        }
 
-        //template<typename T> // where T : public virtual servicelet
-        //inline task enqueue(
-        //    task_code evt,
-        //    T* owner,
-        //    void (T::*callback)(),
-        //    int hash = 0,
-        //    int delay_milliseconds = 0,
-        //    int timer_interval_milliseconds = 0
-        //    )
-        //{
-        //    task_handler h = std::bind(callback, owner);
-        //    return enqueue(
-        //        evt,
-        //        owner,
-        //        h,
-        //        hash,
-        //        delay_milliseconds,
-        //        timer_interval_milliseconds
-        //        );
-        //}
-        ////
-        //// for TRequest/TResponse, we assume that the following routines are defined:
-        ////    marshall(binary_writer& writer, const T& val); 
-        ////    unmarshall(binary_reader& reader, __out_param T& val);
-        //// either in the namespace of ::dsn::utils or T
-        //// developers may write these helper functions by their own, or use tools
-        //// such as protocol-buffer, thrift, or bond to generate these functions automatically
-        //// for their TRequest and TResponse
-        ////
+        public static void primary_address(ref dsn_address_t addr) { Native.dsn_primary_address2(ref addr); }
+        public static UInt32 random32(UInt32 min, UInt32 max) { return Native.dsn_random32(min, max); }
+        public static UInt64 random64(UInt64 min, UInt64 max) { return Native.dsn_random64(min, max); }
+        public static UInt64 now_ns() { return Native.dsn_now_ns(); }
+        public static UInt64 now_us() { return Native.dsn_now_us(); }
+        public static UInt64 now_ms() { return Native.dsn_now_ms(); }
 
-        //// no callback
-        //template<typename TRequest>
-        //void call_one_way_typed(
-        //    const dsn_address_t& server,
-        //    task_code code,
-        //    const TRequest& req,
-        //    int hash = 0
-        //    );
-
-        //template<typename TRequest>
-        //::dsn::error_code call_typed_wait(
-        //    /*out*/ ::dsn::message_ptr* response,
-        //    const dsn_address_t& server,
-        //    task_code code,
-        //    const TRequest& req,
-        //    int hash = 0,
-        //    int timeout_milliseconds = 0
-        //    );
-
-        //// callback type 1:
-        ////  void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)
-        //template<typename T, typename TRequest, typename TResponse>
-        //task call_typed(
-        //    const dsn_address_t& server,
-        //    task_code code,
-        //    std::shared_ptr<TRequest>& req,
-        //    T* owner,
-        //    void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&),
-        //    int request_hash = 0,
-        //    int timeout_milliseconds = 0,
-        //    int reply_hash = 0
-        //    );
-
-        //// callback type 2:
-        ////  std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)>
-        //template<typename TRequest, typename TResponse>
-        //task call_typed(
-        //    const dsn_address_t& server,
-        //    task_code code,
-        //    std::shared_ptr<TRequest>& req,
-        //    servicelet* owner,
-        //    std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
-        //    int request_hash = 0,
-        //    int timeout_milliseconds = 0,
-        //    int reply_hash = 0
-        //    );
-
-        //// callback type 5
-        ////   void (T::*)(error_code, const TResponse&, void*);
-        //template<typename T, typename TRequest, typename TResponse>
-        //task call_typed(
-        //    const dsn_address_t& server,
-        //    task_code code,
-        //    const TRequest& req,
-        //    T* owner,
-        //    void(T::*callback)(error_code, const TResponse&, void*),
-        //    void* context,
-        //    int request_hash = 0,
-        //    int timeout_milliseconds = 0,
-        //    int reply_hash = 0
-        //    );
-
-        //// callback type 3:
-        ////  std::function<void(error_code, const TResponse&, void*)>
-        //template<typename TRequest, typename TResponse>
-        //task call_typed(
-        //    const dsn_address_t& server,
-        //    task_code code,
-        //    const TRequest& req,
-        //    servicelet* owner,
-        //    std::function<void(error_code, const TResponse&, void*)> callback,
-        //    void* context,
-        //    int request_hash = 0,
-        //    int timeout_milliseconds = 0,
-        //    int reply_hash = 0
-        //    );
-
-        //// callback type 4:
-        ////  std::function<void(error_code, dsn_message_t, dsn_message_t)>
-        //task call(
-        //    const dsn_address_t& server,
-        //    dsn_message_t request,
-        //    servicelet* owner,
-        //    rpc_reply_handler callback,
-        //    int reply_hash = 0
-        //    );
-
-        //task read(
-        //    dsn_handle_t hFile,
-        //    char* buffer,
-        //    int count,
-        //    uint64_t offset,
-        //    task_code callback_code,
-        //    servicelet* owner,
-        //    aio_handler callback,
-        //    int hash = 0
-        //    );
-
-        //task write(
-        //    dsn_handle_t hFile,
-        //    const char* buffer,
-        //    int count,
-        //    uint64_t offset,
-        //    task_code callback_code,
-        //    servicelet* owner,
-        //    aio_handler callback,
-        //    int hash = 0
-        //    );
-
-        //template<typename T>
-        //inline task read(
-        //    dsn_handle_t hFile,
-        //    char* buffer,
-        //    int count,
-        //    uint64_t offset,
-        //    task_code callback_code,
-        //    T* owner,
-        //    void(T::*callback)(error_code, uint32_t),
-        //    int hash = 0
-        //    )
-        //{
-        //    aio_handler h = std::bind(callback, owner, std::placeholders::_1, std::placeholders::_2);
-        //    return read(hFile, buffer, count, offset, callback_code, owner, h, hash);
-        //}
-
-        //template<typename T>
-        //inline task write(
-        //    dsn_handle_t hFile,
-        //    const char* buffer,
-        //    int count,
-        //    uint64_t offset,
-        //    task_code callback_code,
-        //    T* owner,
-        //    void(T::*callback)(error_code, uint32_t),
-        //    int hash = 0
-        //    )
-        //{
-        //    aio_handler h = std::bind(callback, owner, std::placeholders::_1, std::placeholders::_2);
-        //    return write(hFile, buffer, count, offset, callback_code, owner, h, hash);
-        //}
-
-        //task copy_remote_files(
-        //    const dsn_address_t& remote,
-        //    const std::string& source_dir,
-        //    std::vector<std::string>& files,  // empty for all
-        //    const std::string& dest_dir,
-        //    bool overwrite,
-        //    task_code callback_code,
-        //    servicelet* owner,
-        //    aio_handler callback,
-        //    int hash = 0
-        //    );
-
-        //inline task copy_remote_directory(
-        //    const dsn_address_t& remote,
-        //    const std::string& source_dir,
-        //    const std::string& dest_dir,
-        //    bool overwrite,
-        //    task_code callback_code,
-        //    servicelet* owner,
-        //    aio_handler callback,
-        //    int hash = 0
-        //    )
-        //{
-        //    std::vector<std::string> files;
-        //    return copy_remote_files(
-        //        remote, source_dir, files, dest_dir, overwrite,
-        //        callback_code, owner, callback, hash
-        //        );
-        //}
-            
-        public void check_hashed_access()
+        protected void check_hashed_access()
         {
             if (_access_thread_id_inited)
             {
-                Logging.dassert((core.dsn_threadpool_get_current_tid() == _access_thread_id),
+                Logging.dassert((Native.dsn_threadpool_get_current_tid() == _access_thread_id),
                     "the service is assumed to be accessed by one thread only!"
                     );
             }
             else
             {
-                _access_thread_id = core.dsn_threadpool_get_current_tid();
+                _access_thread_id = Native.dsn_threadpool_get_current_tid();
                 _access_thread_id_inited = true;
             }
         }
 
-        private int                            _access_thread_id;
-        private bool                           _access_thread_id_inited;
-        private dsn_task_tracker_t             _tracker;
-        protected GCHandle                     _gch;
+        private int _access_thread_id;
+        private bool _access_thread_id_inited;
+    
+        public delegate void task_handler();
+
+        // TODO: what if the task is cancelled
+        static void c_task_handler(IntPtr h)
+        {
+            int idx2 = (int)h;
+            var hr = GlobalInterOpLookupTable.GetRelease(idx2) as task_handler;
+            hr();
+        }
+
+        public static void CallAsync(
+            TaskCode evt,
+            Servicelet callbackOwner,
+            task_handler callback,
+            int hash = 0,
+            int delay_milliseconds = 0,
+            int timer_interval_milliseconds = 0
+            )
+        {
+            int idx = GlobalInterOpLookupTable.Put(callback);
+            IntPtr task;
+
+            if (timer_interval_milliseconds == 0)
+                task = Native.dsn_task_create(evt, c_task_handler, (IntPtr)idx, hash);
+            else
+                task = Native.dsn_task_create_timer(evt, c_task_handler, (IntPtr)idx, hash, timer_interval_milliseconds);
+
+            Native.dsn_task_call(task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero, delay_milliseconds);
+        }
+                
+        // no callback
+        public static void RpcCallOneWay(
+            dsn_address_t server,
+            RpcWriteStream rquestStream
+            )
+        {
+            rquestStream.Flush();
+            Native.dsn_rpc_call_one_way(server, rquestStream.DangerousGetHandle());
+        }
+
+        public static RpcReadStream RpcCallSync(
+            dsn_address_t server,
+            RpcWriteStream requestStream
+            )
+        {
+            requestStream.Flush();
+
+            IntPtr respMsg = Native.dsn_rpc_call_wait(server, requestStream.DangerousGetHandle());
+            if (IntPtr.Zero == respMsg)
+            {
+                return null;
+            }   
+            else
+            {
+                return new RpcReadStream(respMsg, true);
+            }
+        }
+
+        public delegate void RpcResponseHandler(ErrorCode err, RpcReadStream responseStream);
+
+        static void c_rpc_response_handler(int err, IntPtr reqc, IntPtr respc, System.IntPtr h)
+        {
+            int idx2 = (int)h;
+            var hr = GlobalInterOpLookupTable.GetRelease(idx2) as RpcResponseHandler;
+            
+            if (err == 0)
+            {
+                var rms = new RpcReadStream(respc, false);
+                hr(new ErrorCode(err), rms);
+            }
+            else
+            {
+                hr(new ErrorCode(err), null);
+            }
+        }
+
+        public static dsn_task_t RpcCallAsync(
+            dsn_address_t server,
+            RpcWriteStream requestStream,
+            Servicelet callbackOwner,
+            RpcResponseHandler callback,
+            int replyHash = 0
+            )
+        {
+            requestStream.Flush();
+
+            var idx = GlobalInterOpLookupTable.Put(callback);
+            dsn_task_t task = Native.dsn_rpc_create_response_task(
+                requestStream.DangerousGetHandle(), 
+                c_rpc_response_handler, 
+                (IntPtr)idx, 
+                replyHash
+                );
+            Native.dsn_rpc_call(server, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
+            return task;
+        }
+
+        public static dsn_handle_t FileOpen(string file_name, int flag, int pmode)
+        {
+            return Native.dsn_file_open(file_name, flag, pmode);
+        }
+
+        public static ErrorCode FileClose(dsn_handle_t file)
+        {
+            int err = Native.dsn_file_close(file);
+            return new ErrorCode(err);
+        }
+
+        public delegate void AioHandler(ErrorCode err, int size);
+
+        static void c_aio_handler(int err, IntPtr size, IntPtr h)
+        {
+            int idx2 = (int)h;
+            var hr = GlobalInterOpLookupTable.GetRelease(idx2) as AioHandler;
+            
+            hr(new ErrorCode(err), size.ToInt32());
+        }
+
+        public static dsn_task_t FileRead(
+            dsn_handle_t hFile,
+            byte[] buffer,
+            int count,
+            UInt64 offset,
+            TaskCode callbackCode,
+            Servicelet callbackOwner,
+            AioHandler callback,
+            int hash = 0
+            )
+        {
+            int idx = GlobalInterOpLookupTable.Put(callback);
+            dsn_task_t task = Native.dsn_file_create_aio_task(callbackCode, c_aio_handler, (IntPtr)idx, hash);
+            Native.dsn_file_read(hFile, buffer, count, offset, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
+            return task;
+        }
+
+        public static dsn_task_t FileWrite(
+            dsn_handle_t hFile,
+            byte[] buffer,
+            int count,
+            UInt64 offset,
+            TaskCode callbackCode,
+            Servicelet callbackOwner,
+            AioHandler callback,
+            int hash = 0
+            )
+        {
+            int idx = GlobalInterOpLookupTable.Put(callback);
+            dsn_task_t task = Native.dsn_file_create_aio_task(callbackCode, c_aio_handler, (IntPtr)idx, hash);
+            Native.dsn_file_write(hFile, buffer, count, offset, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
+            return task;
+        }
+
+        public static dsn_task_t CopyRemoteFiles(
+            dsn_address_t remote,
+            string source_dir,
+            string[] files,
+            string dest_dir,
+            bool overwrite, 
+            TaskCode callbackCode,
+            Servicelet callbackOwner,
+            AioHandler callback,
+            int hash = 0
+            )
+        {
+            int idx = GlobalInterOpLookupTable.Put(callback);
+            dsn_task_t task = Native.dsn_file_create_aio_task(callbackCode, c_aio_handler, (IntPtr)idx, hash);
+            Native.dsn_file_copy_remote_files(remote, source_dir, files, dest_dir, overwrite, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
+            return task;
+        }
+
+        public static dsn_task_t CopyRemoteDirectory(
+            dsn_address_t remote,
+            string source_dir,
+            string dest_dir,
+            bool overwrite,
+            TaskCode callbackCode,
+            Servicelet callbackOwner,
+            AioHandler callback,
+            int hash = 0
+            )
+        {
+            int idx = GlobalInterOpLookupTable.Put(callback);
+            dsn_task_t task = Native.dsn_file_create_aio_task(callbackCode, c_aio_handler, (IntPtr)idx, hash);
+            Native.dsn_file_copy_remote_directory(remote, source_dir, dest_dir, overwrite, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
+            return task;
+        }            
     };
 }

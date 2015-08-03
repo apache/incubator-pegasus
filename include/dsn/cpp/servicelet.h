@@ -117,11 +117,10 @@ namespace dsn
                 dsn_msg_release_ref(_rpc_response);
         }
 
-        void set_task_info(dsn_task_t t, servicelet* svc)
+        void set_task_info(dsn_task_t t)
         {
             _task = t;
             dsn_task_add_ref(t);
-            dsn_task_set_tracker(t, svc->tracker());
         }
 
         dsn_task_t native_handle() { return _task; }
