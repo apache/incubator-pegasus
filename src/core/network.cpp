@@ -181,7 +181,7 @@ namespace dsn {
 
     void connection_oriented_network::on_server_session_accepted(rpc_server_session_ptr& s)
     {
-        dinfo("server session %s:%d accepted", s->remote_address().name.c_str(), static_cast<int>(s->remote_address().port));
+        dinfo("server session %s:%hu accepted", s->remote_address().name.c_str(), s->remote_address().port);
 
         utils::auto_write_lock l(_servers_lock);
         _servers.insert(server_sessions::value_type(s->remote_address(), s));
@@ -203,9 +203,10 @@ namespace dsn {
 
         if (r)
         {
-            dinfo("server session %s:%d disconnected", 
+            dinfo("server session %s:%hu disconnected", 
                 s->remote_address().name.c_str(),
-                static_cast<int>(s->remote_address().port));
+                s->remote_address().port
+                );
         }
     }
 
@@ -231,8 +232,9 @@ namespace dsn {
 
         if (r)
         {
-            dinfo("client session %s:%d disconnected", s->remote_address().name.c_str(), 
-                static_cast<int>(s->remote_address().port));
+            dinfo("client session %s:%hu disconnected", s->remote_address().name.c_str(), 
+                s->remote_address().port
+                );
         }
     }
 }

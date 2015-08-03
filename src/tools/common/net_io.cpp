@@ -78,9 +78,9 @@ namespace dsn {
                 }
                 catch (std::exception& ex)
                 {
-                    dwarn("network session %s:%d set socket option failed, err = %s",
+                    dwarn("network session %s:%hu set socket option failed, err = %s",
                         _remote_addr.to_ip_string().c_str(),
-                        static_cast<int>(_remote_addr.port),
+                        _remote_addr.port,
                         ex.what()
                         );
                 }
@@ -95,7 +95,7 @@ namespace dsn {
             catch (std::exception& ex)
             {
                 ex;
-                /*dwarn("network session %s:%d exits failed, err = %s",
+                /*dwarn("network session %s:%hu exits failed, err = %s",
                     _remote_addr.to_ip_string().c_str(),
                     static_cast<int>_remote_addr.port,
                     ex.what()
@@ -235,9 +235,9 @@ namespace dsn {
                         _reconnect_count = 0;
                         _state = SS_CONNECTED;
 
-                        dinfo("client session %s:%d connected",
+                        dinfo("client session %s:%hu connected",
                             _remote_addr.name.c_str(),
-                            static_cast<int>(_remote_addr.port)
+                            _remote_addr.port
                             );
 
                         set_options();

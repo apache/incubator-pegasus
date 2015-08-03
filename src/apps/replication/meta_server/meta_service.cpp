@@ -106,10 +106,8 @@ void meta_service::start(const char* data_dir, bool clean_state)
 
     // make sure the delay is larger than fd.grace to ensure 
     // all machines are in the correct state (assuming connected initially)
-    _balancer_timer = tasking::enqueue(LPC_LBM_RUN, this, &meta_service::on_load_balance_timer, 0, 
-        _opts.fd_grace_seconds * 1000 + 1, // delay
-        10000
-        );
+    tasking::enqueue(LPC_LBM_START, this, &meta_service::on_load_balance_start, 0, 
+        _opts.fd_grace_seconds * 1000);
 
     auto err = _failure_detector->start(
         _opts.fd_check_interval_seconds,
@@ -120,23 +118,39 @@ void meta_service::start(const char* data_dir, bool clean_state)
         );
 
     dassert(err == ERR_OK, "FD start failed, err = %s", err.to_string());
-
-    _started = true;
 }
 
 bool meta_service::stop()
 {
-    if (!_started) return false;
+    if (!_started || _balancer_timer == nullptr) return false;
+
     _started = false;
     _failure_detector->stop();
     delete _failure_detector;
     _failure_detector = nullptr;
 
-    _balancer_timer->cancel(true);
+    if (_balancer_timer == nullptr)
+    {
+        _balancer_timer->cancel(true);
+    }
     unregister_rpc_handler(RPC_CM_CALL);
     delete _balancer;
     _balancer = nullptr;
     return true;
+}
+
+void meta_service::on_load_balance_start()
+{
+    dassert(_balancer_timer == nullptr, "");
+
+    _state->unfree_if_possible_on_start();
+    _balancer_timer = tasking::enqueue(LPC_LBM_RUN, this, &meta_service::on_load_balance_timer, 
+        0,
+        1,
+        10000
+        );
+
+    _started = true;
 }
 
 void meta_service::on_request(message_ptr& msg)
@@ -149,17 +163,21 @@ void meta_service::on_request(message_ptr& msg)
     if (is_primary) is_primary = (primary_address() == rhdr.primary_address);
     rhdr.err = ERR_OK;
 
-    dinfo("recv meta request %s from %s:%d", 
+    dinfo("recv meta request %s from %s:%hu", 
         task_code::to_string(hdr.rpc_tag),
         msg->header().from_address.name.c_str(),
-        static_cast<int>(msg->header().from_address.port)
+        msg->header().from_address.port
         );
 
     message_ptr resp = msg->create_response();
     if (!is_primary)
     {
-        rhdr.err = ERR_TALK_TO_OTHERS;
-        
+        rhdr.err = ERR_TALK_TO_OTHERS;        
+        marshall(resp, rhdr);
+    }
+    else if (!_started)
+    {
+        rhdr.err = ERR_SERVICE_NOT_ACTIVE;
         marshall(resp, rhdr);
     }
     else if (hdr.rpc_tag == RPC_CM_QUERY_NODE_PARTITIONS)
@@ -336,6 +354,10 @@ void meta_service::on_log_completed(error_code err, int size,
         marshall(resp, response);
 
         rpc::reply(resp);
+    }
+    else
+    {
+        err.end_tracking();
     }
 }
 

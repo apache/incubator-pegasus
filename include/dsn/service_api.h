@@ -191,9 +191,10 @@ namespace system
     
     //
     // run the system with arguments
-    //   config [app_name [app_index]]
-    // e.g., config.ini replica 1 to start the first replica as a new process
-    //       config.ini replica to start ALL replicas (count specified in config) as a new process
+    //   config [-cargs k1=v1;k2=v2] [-app app_name] [-app_index index]
+    // e.g., config.ini -app replica -app_index 1 to start the first replica as a new process
+    //       config.ini -app replica to start ALL replicas (count specified in config) as a new process
+    //       config.ini -app replica -cargs replica-port=34556 to start ALL replicas with given port variable specified in config.ini
     //       config.ini to start ALL apps as a new process
     //
     extern void run(int argc, char** argv, bool sleep_after_init);

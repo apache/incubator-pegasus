@@ -63,7 +63,6 @@ namespace dsn {
 
                 std::string file_name;
                 uint64_t    file_size;
-                error_code  err;
 
                 std::atomic<handle_t> file;
                 int         current_write_index;
@@ -75,7 +74,6 @@ namespace dsn {
                     user_req = req;
                     file_name = file_nm;
                     file_size = sz;
-                    err = ERR_IO_PENDING;
                     file = static_cast<handle_t>(0);
 
                     current_write_index = -1;

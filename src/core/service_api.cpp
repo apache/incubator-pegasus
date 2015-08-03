@@ -110,13 +110,13 @@ namespace dsn
             ::dsn::memory_provider                                    *memory;
         } dsn_all;
 
-        static bool run(const char* config_file, bool sleep_after_init, std::string& app_name, int app_index = -1)
+        static bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_name, int app_index = -1)
         {
             dsn_all.engine_ready = false;
             dsn_all.tool = nullptr;
             dsn_all.apps = &service_apps::instance().get_all_apps();
             dsn_all.engine = &service_engine::instance();
-            dsn_all.config.reset(new configuration(config_file));
+            dsn_all.config.reset(new configuration(config_file, config_arguments));
             dsn_all.memory = nullptr;
 
             for (int i = 0; i <= task_code::max_value(); i++)
@@ -271,9 +271,10 @@ namespace dsn
 
         //
         // run the system with arguments
-        //   config [app_name [app_index]]
-        // e.g., config.ini replica 1 to start the first replica as a new process
-        //       config.ini replica to start ALL replicas (count specified in config) as a new process
+        //   config [-cargs k1=v1;k2=v2] [-app app_name] [-app_index index]
+        // e.g., config.ini -app replica -app_index 1 to start the first replica as a new process
+        //       config.ini -app replica to start ALL replicas (count specified in config) as a new process
+        //       config.ini -app replica -cargs replica-port=34556 to start ALL replicas with given port variable specified in config.ini
         //       config.ini to start ALL apps as a new process
         //
         static void run(int argc, char** argv, bool sleep_after_init)
@@ -281,30 +282,56 @@ namespace dsn
             if (argc < 1)
             {
                 printf("invalid options for system::run\n"
-                    "   config [app_name [app_index]]\n"
-                    "   e.g., config.ini replica 1 to start the first replica as a new process\n"
-                    "       config.ini replica to start ALL replicas (count specified in config) as a new process\n"
-                    "       config.ini to start ALL apps as a new process\n"
+                    "// run the system with arguments\n"
+                    "//   config [-cargs k1=v1;k2=v2] [-app app_name] [-app_index index]\n"
+                    "// e.g., config.ini -app replica -app_index 1 to start the first replica as a new process\n"
+                    "//       config.ini -app replica to start ALL replicas (count specified in config) as a new process\n"
+                    "//       config.ini -app replica -cargs replica-port=34556 to start with %replica-port% var in config.ini\n"
+                    "//       config.ini to start ALL apps as a new process\n"
                     );
                 exit(1);
                 return;
             }
 
             char* config = argv[0];
+            std::string config_args = "";
             std::string app_name = "";
             int app_index = -1;
 
-            if (argc >= 2)
+            for (int i = 1; i < argc;)
             {
-                app_name = argv[1];
-            }
+                if (0 == strcmp(argv[i], "-cargs"))
+                {
+                    if (++i < argc)
+                    {
+                        config_args = std::string(argv[i++]);
+                    }
+                }
 
-            if (argc >= 3)
-            {
-                app_index = atoi(argv[2]);
-            }
+                else if (0 == strcmp(argv[i], "-app"))
+                {
+                    if (++i < argc)
+                    {
+                        app_name = std::string(argv[i++]);
+                    }
+                }
 
-            run(config, sleep_after_init, app_name, app_index);
+                else if (0 == strcmp(argv[i], "-app_index"))
+                {
+                    if (++i < argc)
+                    {
+                        app_index = atoi(argv[i++]);
+                    }
+                }
+                else
+                {
+                    printf("unknown arguments %s\n", argv[i]);
+                    exit(1);
+                    return;
+                }
+            }
+            
+            run(config, config_args.size() > 0 ? config_args.c_str() : nullptr, sleep_after_init, app_name, app_index);
         }
     }
 
@@ -323,7 +350,7 @@ namespace dsn
             bool run(const char* config_file, bool sleep_after_init)
             {
                 std::string name;
-                return ::dsn::internal_only::run(config_file, sleep_after_init, name);
+                return ::dsn::internal_only::run(config_file, nullptr, sleep_after_init, name);
             }
 
             void run(int argc, char** argv, bool sleep_after_init)

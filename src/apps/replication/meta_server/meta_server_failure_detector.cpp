@@ -63,6 +63,12 @@ void meta_server_failure_detector::on_worker_disconnected(const std::vector<end_
     
     for (auto& pri : pris)
     {
+        dinfo("%d.%d primary node for %s:%hu is gone, update configuration on meta server", 
+            pri.first.app_id,
+            pri.first.pidx,
+            pri.second->node.name.c_str(),
+            pri.second->node.port
+            );
         _svc->update_configuration(pri.second);
     }
 }

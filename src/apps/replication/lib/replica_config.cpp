@@ -42,10 +42,10 @@ void replica::on_config_proposal(configuration_update_request& proposal)
     check_hashed_access();
 
     ddebug(
-        "%s: on_config_proposal %s for %s:%d", 
+        "%s: on_config_proposal %s for %s:%hu", 
         name(),
         enum_to_string(proposal.type),
-        proposal.node.name.c_str(), static_cast<int>(proposal.node.port)
+        proposal.node.name.c_str(), proposal.node.port
         );
 
     if (proposal.config.ballot < get_ballot())
@@ -141,12 +141,6 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     dassert (proposal.config.app_type == _primary_states.membership.app_type, "");
     dassert (proposal.config.primary == _primary_states.membership.primary, "");
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
-
-    // zy: work around for meta server bug
-    if (_primary_states.check_exist(proposal.node, PS_PRIMARY)
-        || _primary_states.check_exist(proposal.node, PS_SECONDARY))
-        return;
-
     dassert (!_primary_states.check_exist(proposal.node, PS_PRIMARY), "");
     dassert (!_primary_states.check_exist(proposal.node, PS_SECONDARY), "");
 
@@ -176,9 +170,9 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
 void replica::upgrade_to_secondary_on_primary(const end_point& node)
 {
     ddebug(
-            "%s: upgrade potential secondary %s:%d to secondary",
+            "%s: upgrade potential secondary %s:%hu to secondary",
             name(),
-            node.name.c_str(), static_cast<int>(node.port)
+            node.name.c_str(), node.port
             );
 
     partition_configuration newConfig = _primary_states.membership;
@@ -699,9 +693,14 @@ void replica::on_config_sync(const partition_configuration& config)
     {
         update_configuration(config);
 
-        if (config.primary == primary_address() && status() == PS_INACTIVE && !_inactive_is_transient)
+        if (status() == PS_INACTIVE && !_inactive_is_transient)
         {
-            _stub->remove_replica_on_meta_server(config);
+            if (config.primary == primary_address() // dead primary
+                || config.primary == end_point::INVALID // primary is dead (otherwise let primary remove this)
+                )
+            {
+                _stub->remove_replica_on_meta_server(config);
+            }
         }
     }
 }
@@ -736,9 +735,9 @@ void replica::replay_prepare_list()
         {
             mu->rpc_code = RPC_REPLICATION_WRITE_EMPTY;
             ddebug(
-                "%s: emit empty mutation %s when replay prepare list",
+                "%s: emit empty mutation %lld when replay prepare list",
                 name(),
-                mu->name()
+                decree
                 );
         }
 

@@ -101,16 +101,16 @@ void failure_detector::register_master(const end_point& target)
     if (ret.second)
     {
         dinfo(
-            "register_rpc_handler master successfully, target machine ip [%u], port[%u]",
-            target.ip, static_cast<int>(target.port));
+            "register_rpc_handler master successfully, target machine ip [%u], port[%hu]",
+            target.ip, target.port);
     }
     else
     {
         // active the beacon again in case previously local node is not in target's allow list
         ret.first->second.rejected = false;
         dinfo(
-            "master already registered, for target machine: target machine ip [%u], port[%u]",
-            target.ip, static_cast<int>(target.port));
+            "master already registered, for target machine: target machine ip [%u], port[%hu]",
+            target.ip, target.port);
     }
 
     send_beacon(target, now_ms());
@@ -128,9 +128,9 @@ bool failure_detector::switch_master(const end_point& from, const end_point& to)
             if (it2 != _masters.end())
             {
                 dinfo(
-                    "master switch, switch master from %s:%d to %s:%d failed as both are already registered",
-                    from.name.c_str(), static_cast<int>(from.port),
-                    to.name.c_str(), static_cast<int>(to.port)
+                    "master switch, switch master from %s:%hu to %s:%hu failed as both are already registered",
+                    from.name.c_str(), from.port,
+                    to.name.c_str(), to.port
                     );
                 return false;
             }
@@ -141,17 +141,17 @@ bool failure_detector::switch_master(const end_point& from, const end_point& to)
             _masters.erase(from);
 
             dinfo(
-                "master switch, switch master from %s:%d to %s:%d succeeded",
-                from.name.c_str(), static_cast<int>(from.port),
-                to.name.c_str(), static_cast<int>(to.port)
+                "master switch, switch master from %s:%hu to %s:%hu succeeded",
+                from.name.c_str(), from.port,
+                to.name.c_str(), to.port
                 );
         }
         else
         {
             dinfo(
-                "master switch, switch master from %s:%d to %s:%d failed as the former has not been registered yet",
-                from.name.c_str(), static_cast<int>(from.port),
-                to.name.c_str(), static_cast<int>(to.port)
+                "master switch, switch master from %s:%hu to %s:%hu failed as the former has not been registered yet",
+                from.name.c_str(), from.port,
+                to.name.c_str(), to.port
                 );
             return false;
         }
@@ -413,14 +413,14 @@ void failure_detector::register_worker( const end_point& target, bool is_connect
     if ( ret.second )
     {
         dinfo(
-            "register_rpc_handler worker successfully", "target machine ip [%u], port[%u]",
-            target.ip, static_cast<int>(target.port));
+            "register_rpc_handler worker successfully", "target machine ip [%u], port[%hu]",
+            target.ip, target.port);
     }
     else
     {
         dinfo(       
-            "worker already registered", "for target machine: target machine ip [%u], port[%u]",
-            target.ip, static_cast<int>(target.port));
+            "worker already registered", "for target machine: target machine ip [%u], port[%hu]",
+            target.ip, target.port);
     }
 }
 

@@ -150,8 +150,8 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
         _app = nullptr;
     }
 
-    sprintf(_name, "%u.%u @ %s:%d", _config.gpid.app_id, _config.gpid.pidx, primary_address().name.c_str(),
-        static_cast<int>(primary_address().port));
+    sprintf(_name, "%u.%u @ %s:%hu", _config.gpid.app_id, _config.gpid.pidx, primary_address().name.c_str(),
+        primary_address().port);
 
     return err;
 }
@@ -170,9 +170,9 @@ void replica::replay_mutation(mutation_ptr& mu)
 
     // prepare
     /*ddebug( 
-            "%u.%u @ %s:%d: replay mutation ballot = %llu, decree = %llu, last_committed_decree = %llu",
+            "%u.%u @ %s:%hu: replay mutation ballot = %llu, decree = %llu, last_committed_decree = %llu",
             get_gpid().app_id, get_gpid().pidx, 
-            address().name.c_str(), static_cast<int>address().port,
+            address().name.c_str(), address().port,
             mu->data.header.ballot, 
             mu->data.header.decree,
             mu->data.header.last_committed_decree
