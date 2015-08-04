@@ -109,7 +109,7 @@ namespace echo.csharp
 
             Native.dsn_address_build(out _server, argv[1], ushort.Parse(argv[2]));
 
-            //CallAsync(EchoClientApp.LPC_ECHO_TIMER1, this,  this.OnTimer1, 0, 0);
+            CallAsync(EchoClientApp.LPC_ECHO_TIMER1, this,  this.OnTimer1, 0, 0);
             CallAsync(EchoClientApp.LPC_ECHO_TIMER2, this, () => this.OnTimer2(100), 0, 0);
         }
 
