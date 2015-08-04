@@ -472,14 +472,7 @@ DSN_API void* dsn_rpc_unregiser_handler(dsn_task_code_t code)
 DSN_API dsn_task_t dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, void* param, int reply_hash)
 {
     auto msg = ((::dsn::message_ex*)request);
-    ::dsn::task* rtask;
-
-    if (cb != nullptr) 
-        rtask = new ::dsn::rpc_response_task_c(msg, cb, param, reply_hash);
-    else 
-        rtask = new ::dsn::rpc_response_task_empty(msg, reply_hash);
-
-    return rtask;
+    return new ::dsn::rpc_response_task(msg, cb, param, reply_hash);
 }
 
 DSN_API void dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call, dsn_task_tracker_t tracker)
@@ -487,7 +480,7 @@ DSN_API void dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call, dsn_task_tr
     auto tsk = ::dsn::task::get_current_task();
     dassert(tsk != nullptr, "this function can only be invoked inside tasks");
 
-    ::dsn::rpc_response_task* task = (::dsn::rpc_response_task_c*)rpc_call;
+    ::dsn::rpc_response_task* task = (::dsn::rpc_response_task*)rpc_call;
     dassert(task->spec().type == TASK_TYPE_RPC_RESPONSE, "");
     task->set_tracker((dsn::task_tracker*)tracker);
 
@@ -508,7 +501,7 @@ DSN_API dsn_message_t dsn_rpc_call_wait(dsn_address_t server, dsn_message_t requ
     auto msg = ((::dsn::message_ex*)request);
     msg->to_address = server;
 
-    ::dsn::rpc_response_task* rtask = new ::dsn::rpc_response_task_empty(msg);
+    ::dsn::rpc_response_task* rtask = new ::dsn::rpc_response_task(msg, nullptr, nullptr, 0);
     rpc->call(msg, rtask);
     rtask->wait();
     if (rtask->error() == ::dsn::ERR_OK)
@@ -587,8 +580,7 @@ DSN_API dsn_error_t dsn_file_close(dsn_handle_t file)
 
 DSN_API dsn_task_t dsn_file_create_aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash)
 {
-    auto callback = new ::dsn::aio_task_c(code, cb, param, hash);
-    return callback;
+    return new ::dsn::aio_task(code, cb, param, hash);
 }
 
 DSN_API void dsn_file_read(dsn_handle_t file, char* buffer, int count, uint64_t offset, dsn_task_t cb, dsn_task_tracker_t tracker)

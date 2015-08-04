@@ -468,15 +468,14 @@ void rpc_request_task::enqueue(service_node* node)
     task::enqueue(node->computation()->get_pool(spec().pool_code));
 }
 
-void rpc_response_task::exec() 
-{ 
-    on_response(error(), _request, _response);
-}
-
-rpc_response_task::rpc_response_task(message_ex* request, int hash)
+rpc_response_task::rpc_response_task(message_ex* request, dsn_rpc_response_handler_t cb, void* param, int hash)
     : task(task_spec::get(request->local_rpc_code)->rpc_paired_code, 
            hash == 0 ? request->header->client.hash : hash)
 {
+    _cb = cb;
+    _param = param;
+    _is_null = (_cb == nullptr);
+
     set_error_code(ERR_IO_PENDING);
 
     dbg_dassert (TASK_TYPE_RPC_RESPONSE == spec().type, 
@@ -525,24 +524,17 @@ void rpc_response_task::enqueue(error_code err, message_ex* reply)
     }
 }
 
-rpc_response_task_empty::rpc_response_task_empty(message_ex* request, int hash)
-    : rpc_response_task(request, hash)
-{
-    _is_null = true;
-}
-
-aio_task::aio_task(dsn_task_code_t code, int hash) 
+aio_task::aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash)
     : task(code, hash)
 {
+    _cb = cb;
+    _param = param;
+    _is_null = (_cb == nullptr);
+
     dassert (TASK_TYPE_AIO == spec().type, "task must be of AIO type, please use DEFINE_TASK_CODE_AIO to define the task code");
     set_error_code(ERR_IO_PENDING);
 
     _aio = node()->disk()->prepare_aio_context(this);
-}
-
-void aio_task::exec() 
-{ 
-    on_completed(error(), _transferred_size);
 }
 
 void aio_task::enqueue(error_code err, size_t transferred_size, service_node* node)

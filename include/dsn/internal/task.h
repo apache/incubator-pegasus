@@ -103,6 +103,7 @@ protected:
 
     mutable std::atomic<task_state> _state;
     bool                   _is_null;
+    error_code             _error;
 
 private:
     task(const task&);
@@ -111,7 +112,6 @@ private:
     std::atomic<void*>     _wait_event;
     int                    _hash;
     int                    _delay_milliseconds;
-    error_code             _error;
     bool                   _wait_for_cancel;
     task_spec              *_spec;
     service_node           *_node;
@@ -139,7 +139,7 @@ public:
 
 private:
     dsn_task_handler_t _cb;
-    void                *_param;
+    void               *_param;
 };
 
 
@@ -152,9 +152,9 @@ public:
     virtual void exec();
     
 private:
-    uint32_t            _interval_milliseconds;
+    uint32_t           _interval_milliseconds;
     dsn_task_handler_t _cb;
-    void*               _param;
+    void*              _param;
 };
 
 //----------------- rpc task -------------------------------------------------------
@@ -219,52 +219,34 @@ protected:
 class rpc_response_task : public task
 {
 public:
-    rpc_response_task(message_ex* request, int hash = 0);
+    rpc_response_task(message_ex* request, dsn_rpc_response_handler_t cb, void* param, int hash = 0);
     ~rpc_response_task();
-
-    virtual void on_response(error_code err, message_ex* request, message_ex* response) = 0;
 
     void             enqueue(error_code err, message_ex* reply);
     virtual void     enqueue() { task::enqueue(_caller_pool); } // re-enqueue after above enqueue
-    message_ex*     get_request() { return _request; }
-    message_ex*     get_response() { return _response; }
+    message_ex*      get_request() { return _request; }
+    message_ex*      get_response() { return _response; }
 
-    virtual void  exec();
+    virtual void  exec()
+    {
+        if (_cb)
+        {
+            _cb(_error.get(), _request, _response, _param);
+        }
+        else
+        {
+            _error.end_tracking();
+        }
+    }
 
 private:
-    message_ex*   _request;
-    message_ex*   _response;
-    task_worker_pool *_caller_pool;
+    message_ex*                _request;
+    message_ex*                _response;
+    task_worker_pool *         _caller_pool;
+    dsn_rpc_response_handler_t _cb;
+    void*                      _param;
 
     friend class rpc_engine;    
-};
-
-class rpc_response_task_empty : public rpc_response_task
-{
-public:
-    rpc_response_task_empty(message_ex* request, int hash = 0);
-
-    virtual void on_response(error_code err, message_ex* request, message_ex* response) { err.end_tracking(); }
-};
-
-class rpc_response_task_c : public rpc_response_task
-{
-public:
-    rpc_response_task_c(message_ex* request, dsn_rpc_response_handler_t cb, void* param, int hash = 0) 
-        : rpc_response_task(request, hash)
-    {
-        _cb = cb;
-        _param = param;
-    }
-
-    virtual void on_response(error_code err, message_ex* request, message_ex* response)
-    {
-        _cb(err.get(), request, response, _param);
-    }
-
-private:
-    dsn_rpc_response_handler_t _cb;
-    void* _param;
 };
 
 //------------------------- disk AIO task ---------------------------------------------------
@@ -299,45 +281,29 @@ typedef ::std::shared_ptr<disk_aio> disk_aio_ptr;
 class aio_task : public task
 {
 public:
-    aio_task(dsn_task_code_t code, int hash = 0);
+    aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash = 0);
 
     void            enqueue(error_code err, size_t transferred_size, service_node* node);
     size_t          get_transferred_size() const { return _transferred_size; }
     disk_aio_ptr    aio() { return _aio; }
-    void            exec();
 
-    virtual void on_completed(error_code err, size_t transferred_size) = 0;
-
-private:
-    disk_aio_ptr     _aio;
-    size_t           _transferred_size;
-};
-
-class aio_task_empty : public aio_task
-{
-public:
-    aio_task_empty(dsn_task_code_t code, int hash = 0) : aio_task(code, hash) { _is_null = true;  }
-    virtual void on_completed(error_code err, size_t transferred_size) override {}
-};
-
-class aio_task_c : public aio_task
-{
-public:
-    aio_task_c(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash = 0)
-        : aio_task(code, hash)
-    { 
-        _cb = cb;
-        _param = param;
-    }
-
-    virtual void on_completed(error_code err, size_t transferred_size) override
+    void            exec() // aio completed
     {
-        _cb(err.get(), transferred_size, _param);
+        if (nullptr != _cb)
+        {
+            _cb(_error.get(), _transferred_size, _param);
+        }
+        else
+        {
+            _error.end_tracking();
+        }
     }
 
 private:
+    disk_aio_ptr      _aio;
+    size_t            _transferred_size;
     dsn_aio_handler_t _cb;
-    void* _param;
+    void*             _param;
 };
 
 // ------------------------ inline implementations --------------------

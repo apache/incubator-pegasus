@@ -229,6 +229,7 @@ namespace dsn.dev.csharp
             if (!condition)
             {
                 dlog(dsn_log_level_t.LOG_LEVEL_FATAL, fmt);
+                Native.dsn_coredump();
             }
         }
 
@@ -237,6 +238,7 @@ namespace dsn.dev.csharp
             if (!condition)
             {
                 dlog(dsn_log_level_t.LOG_LEVEL_FATAL, fmt, arg0);
+                Native.dsn_coredump();
             }
         }
 
@@ -245,6 +247,7 @@ namespace dsn.dev.csharp
             if (!condition)
             {
                 dlog(dsn_log_level_t.LOG_LEVEL_FATAL, fmt, arg0, arg1);
+                Native.dsn_coredump();
             }
         }
 
@@ -253,6 +256,7 @@ namespace dsn.dev.csharp
             if (!condition)
             {
                 dlog(dsn_log_level_t.LOG_LEVEL_FATAL, fmt, arg0, arg1, arg2);
+                Native.dsn_coredump();
             }
         }
     }

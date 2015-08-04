@@ -81,6 +81,8 @@ namespace echo.csharp
         {
             string v = request.ReadString();
             response.WriteString(v);
+            response.Flush();
+            Reply(response);
         }
 
         public void OpenService()
@@ -134,6 +136,7 @@ namespace echo.csharp
             Console.WriteLine("on_timer2 " + param.ToString());
             RpcWriteStream s = new RpcWriteStream(EchoClientApp.RPC_ECHO, 1000, 0);
             s.WriteString("hi, this is timer2 echo");
+            s.Flush();
             RpcCallAsync(_server, s, this, this.OnTimer2EchoCallback, 0);
         }
 
@@ -146,6 +149,7 @@ namespace echo.csharp
 
             RpcWriteStream s = new RpcWriteStream(EchoClientApp.RPC_ECHO, 1000, 0);
             s.WriteString("hi, this is timer2 echo");
+            s.Flush();
             RpcCallAsync(_server, s, this, this.OnTimer2EchoCallback, 0);
         }
 

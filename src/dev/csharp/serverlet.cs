@@ -17,14 +17,14 @@ namespace dsn.dev.csharp
             : base(task_bucket_count)
         {
             _name = name;
-            _codes = new HashSet<TaskCode>();
+            _handlers = new Dictionary<TaskCode, dsn_rpc_request_handler_t>();
         }
 
         ~Serverlet()
         {
-            foreach (var c in _codes)
+            foreach (var c in _handlers)
             {
-                UnregisterRpcHandler(c);
+                UnregisterRpcHandler(c.Key);
             }   
         }
 
@@ -43,9 +43,9 @@ namespace dsn.dev.csharp
             bool r = Native.dsn_rpc_register_handler(code, name, cb, IntPtr.Zero);
             Logging.dassert(r, "rpc handler registration failed for " + code.ToString());
 
-            lock (_codes)
+            lock (_handlers)
             {
-                _codes.Add(code);
+                _handlers.Add(code, cb);
             }
             return r;
         }
@@ -56,16 +56,15 @@ namespace dsn.dev.csharp
             {
                 RpcReadStream rms = new RpcReadStream(req, false);
                 RpcWriteStream wms = new RpcWriteStream(Native.dsn_msg_create_response(req), false);
-                handler(rms, wms);
-                wms.Flush();
+                handler(rms, wms);    
             };
 
             bool r = Native.dsn_rpc_register_handler(code, name, cb, IntPtr.Zero);
             Logging.dassert(r, "rpc handler registration failed for " + code.ToString());
 
-            lock(_codes)
+            lock (_handlers)
             {
-                _codes.Add(code);
+                _handlers.Add(code, cb);
             }
             return true;
         }
@@ -75,16 +74,24 @@ namespace dsn.dev.csharp
             Native.dsn_rpc_unregiser_handler(code);
             bool r;
 
-            lock(_codes)
+            lock (_handlers)
             {
-                r = _codes.Remove(code); 
+                r = _handlers.Remove(code); 
             }
             return r;
+        }
+
+        protected void Reply(RpcWriteStream response)
+        {
+            Logging.dassert(response.IsFlushed(),
+                "RpcWriteStream must be flushed after write in the same thread");
+
+            Native.dsn_rpc_reply(response.DangerousGetHandle());
         }
 
         public string Name() { return _name; }
 
         private string _name;
-        private HashSet<TaskCode> _codes;
+        private Dictionary<TaskCode, dsn_rpc_request_handler_t> _handlers;
     }
 }

@@ -201,11 +201,13 @@ namespace dsn.dev.csharp
         // no callback
         public static void RpcCallOneWay(
             dsn_address_t server,
-            RpcWriteStream rquestStream
+            RpcWriteStream requestStream
             )
         {
-            rquestStream.Flush();
-            Native.dsn_rpc_call_one_way(server, rquestStream.DangerousGetHandle());
+            Logging.dassert(requestStream.IsFlushed(),
+                "RpcWriteStream must be flushed after write in the same thread");
+
+            Native.dsn_rpc_call_one_way(server, requestStream.DangerousGetHandle());
         }
 
         public static RpcReadStream RpcCallSync(
@@ -213,7 +215,8 @@ namespace dsn.dev.csharp
             RpcWriteStream requestStream
             )
         {
-            requestStream.Flush();
+            Logging.dassert(requestStream.IsFlushed(), 
+                "RpcWriteStream must be flushed after write in the same thread");
 
             IntPtr respMsg = Native.dsn_rpc_call_wait(server, requestStream.DangerousGetHandle());
             if (IntPtr.Zero == respMsg)
@@ -252,7 +255,8 @@ namespace dsn.dev.csharp
             int replyHash = 0
             )
         {
-            requestStream.Flush();
+            Logging.dassert(requestStream.IsFlushed(),
+                "RpcWriteStream must be flushed after write in the same thread");
 
             var idx = GlobalInterOpLookupTable.Put(callback);
             dsn_task_t task = Native.dsn_rpc_create_response_task(

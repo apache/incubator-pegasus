@@ -126,6 +126,11 @@ namespace dsn.dev.csharp
             _currentBufferLength = IntPtr.Zero;
         }
 
+        public bool IsFlushed()
+        {
+            return _currentWriteOffset == 0;
+        }
+
         public override int Read(byte[] buffer, int offset, int count)
         {
             throw new NotSupportedException();
