@@ -120,6 +120,7 @@ struct service_spec
     std::string                  tool;   // the main tool (only 1 is allowed for a time)
     std::list<std::string>       toollets; // toollets enabled compatible to the main tool
     std::string                  coredump_dir; // to store core dump files
+    bool                         start_nfs;
     
     std::string                  aio_factory_name;
     std::string                  env_factory_name;
@@ -153,6 +154,7 @@ CONFIG_BEGIN(service_spec)
     CONFIG_FLD_STRING(tool, "")
     CONFIG_FLD_STRING_LIST(toollets)
     CONFIG_FLD_STRING(coredump_dir, "./coredump")
+    CONFIG_FLD(bool, bool, start_nfs, false)
     CONFIG_FLD_STRING(aio_factory_name, "")
     CONFIG_FLD_STRING(env_factory_name, "")
     CONFIG_FLD_STRING(lock_factory_name, "")

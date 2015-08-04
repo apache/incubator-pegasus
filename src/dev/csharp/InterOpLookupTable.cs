@@ -7,6 +7,9 @@ using System.Collections.Concurrent;
 
 namespace dsn.dev.csharp
 {
+    /// <summary>
+    /// TODO: optimization - use TLS slots for quick Put and Get in most cases
+    /// </summary>
     public static class GlobalInterOpLookupTable
     {
         public static int Put(object obj)
@@ -31,7 +34,7 @@ namespace dsn.dev.csharp
             return _tables[table_id].GetRelease(idx);
         }
 
-        private static InterOpLookupTable[] _tables = InitTables(100, 13);
+        private static InterOpLookupTable[] _tables = InitTables(100, 997);
         private static int _table_count;
 
         private static InterOpLookupTable[] InitTables(int init_slot_count_per_table, int table_count)

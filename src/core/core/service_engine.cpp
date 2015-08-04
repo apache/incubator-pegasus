@@ -81,13 +81,20 @@ error_code service_node::start()
     if (err != ERR_OK) return err;
 
     // init nfs
-    if (spec.nfs_factory_name == "")
+    if (spec.start_nfs)
     {
-        dwarn ("nfs not started coz no nfs_factory_name is specified, continue with no nfs");
+        if (spec.nfs_factory_name == "")
+        {
+            dwarn("nfs not started coz no nfs_factory_name is specified, continue with no nfs");
+        }
+        else
+        {
+            _nfs = factory_store<nfs_node>::create(spec.nfs_factory_name.c_str(), PROVIDER_TYPE_MAIN, this);
+        }
     }
     else
     {
-        _nfs = factory_store<nfs_node>::create(spec.nfs_factory_name.c_str(), PROVIDER_TYPE_MAIN, this);
+        dwarn("nfs not started coz [core] start_nfs = false");
     }
 
     return err;

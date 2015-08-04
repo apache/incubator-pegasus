@@ -12,8 +12,7 @@ namespace dsn.dev.csharp
         public ServiceApp()
         {
             _started = false;
-            _address = dsn_address_t.New();
-            Native.dsn_address_get_invalid(ref _address);
+            Native.dsn_address_get_invalid(out _address);
             _gch = GCHandle.Alloc(this);
         }
 
@@ -44,7 +43,7 @@ namespace dsn.dev.csharp
             return (IntPtr)(app._gch);
         }
 
-        private static int AppStart(IntPtr app_handle, int argc, string[] argv)
+        private static int AppStart(IntPtr app_handle, string[] argv)
         {
             GCHandle h = (GCHandle)app_handle;
             ServiceApp sapp = h.Target as ServiceApp;
@@ -52,7 +51,7 @@ namespace dsn.dev.csharp
             if (r == 0)
             {
                 sapp._started = true;
-                Native.dsn_primary_address2(ref sapp._address);
+                Native.dsn_primary_address2(out sapp._address);
                 sapp._name = argv[0];
             }
             return r;
@@ -70,7 +69,7 @@ namespace dsn.dev.csharp
         public static void RegisterApp<T>(string type_name)
             where T : ServiceApp, new()
         {
-            Native.dsn_register_app_role(type_name, AppCreate<T>, AppStart, AppDestroy);
+            Native.dsn_register_app_role_managed(type_name, AppCreate<T>, AppStart, AppDestroy);
         }
     };
 

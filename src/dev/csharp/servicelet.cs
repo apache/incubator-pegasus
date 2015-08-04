@@ -135,7 +135,7 @@ namespace dsn.dev.csharp
             Native.dsn_task_tracker_cancel_all(handle);
         }
 
-        public static void primary_address(ref dsn_address_t addr) { Native.dsn_primary_address2(ref addr); }
+        public static void primary_address(out dsn_address_t addr) { Native.dsn_primary_address2(out addr); }
         public static UInt32 random32(UInt32 min, UInt32 max) { return Native.dsn_random32(min, max); }
         public static UInt64 random64(UInt64 min, UInt64 max) { return Native.dsn_random64(min, max); }
         public static UInt64 now_ns() { return Native.dsn_now_ns(); }
@@ -170,7 +170,7 @@ namespace dsn.dev.csharp
             hr();
         }
 
-        public static void CallAsync(
+        public static dsn_task_t CallAsync(
             TaskCode evt,
             Servicelet callbackOwner,
             task_handler callback,
@@ -182,12 +182,20 @@ namespace dsn.dev.csharp
             int idx = GlobalInterOpLookupTable.Put(callback);
             IntPtr task;
 
+            //dsn_task_handler_t cb = (IntPtr h) =>
+            //{
+            //    c_task_handler(h);
+            //};
+
             if (timer_interval_milliseconds == 0)
                 task = Native.dsn_task_create(evt, c_task_handler, (IntPtr)idx, hash);
             else
                 task = Native.dsn_task_create_timer(evt, c_task_handler, (IntPtr)idx, hash, timer_interval_milliseconds);
 
-            Native.dsn_task_call(task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero, delay_milliseconds);
+            //Native.dsn_task_call(task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero, delay_milliseconds);
+            Native.dsn_task_call(task, IntPtr.Zero, delay_milliseconds);
+
+            return task;
         }
                 
         // no callback

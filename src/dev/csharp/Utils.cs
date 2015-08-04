@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 
 namespace dsn.dev.csharp
 {
@@ -28,7 +29,8 @@ namespace dsn.dev.csharp
 
         public override string ToString()
         {
-            return Native.dsn_error_to_string(_error);
+            var ptr = Native.dsn_error_to_string(_error);
+            return Marshal.PtrToStringAnsi(ptr);
         }
 
         public static implicit operator int(ErrorCode ec)
@@ -63,7 +65,8 @@ namespace dsn.dev.csharp
 
         public override string ToString()
         {
-            return Native.dsn_task_code_to_string(_code);
+            var ptr = Native.dsn_task_code_to_string(_code);
+            return Marshal.PtrToStringAnsi(ptr);
         }
 
         public static implicit operator int(ThreadPoolCode c)
@@ -100,7 +103,8 @@ namespace dsn.dev.csharp
 
         public override string ToString()
         {
-            return Native.dsn_task_code_to_string(_code);
+            var ptr = Native.dsn_task_code_to_string(_code);
+            return Marshal.PtrToStringAnsi(ptr);
         }
 
         public static implicit operator int(TaskCode c)

@@ -98,7 +98,6 @@ namespace echo.csharp
     {
         public void Start(string[] argv)
         {
-            _server = dsn_address_t.New();
             _last_ts = DateTime.Now;
 
             if (argv.Length < 3)
@@ -106,9 +105,9 @@ namespace echo.csharp
                 throw new Exception("wrong usage: EchoServiceClient server-host server-port");                
             }
 
-            Native.dsn_address_build(ref _server, argv[1], ushort.Parse(argv[2]));
+            Native.dsn_address_build(out _server, argv[1], ushort.Parse(argv[2]));
 
-            CallAsync(EchoClientApp.LPC_ECHO_TIMER1, this,  this.OnTimer1, 0, 0);
+            //CallAsync(EchoClientApp.LPC_ECHO_TIMER1, this,  this.OnTimer1, 0, 0);
             CallAsync(EchoClientApp.LPC_ECHO_TIMER2, this, () => this.OnTimer2(100), 0, 0);
         }
 
@@ -141,9 +140,13 @@ namespace echo.csharp
         public void OnTimer2EchoCallback(ErrorCode err, RpcReadStream response)
         {
             Console.WriteLine("OnTimer2Callback recevie " +
-                response != null ? response.ReadString() : "nothing" +
+                (response != null ? response.ReadString() : "nothing") +
                 ", err = " + err.ToString()
                 );
+
+            RpcWriteStream s = new RpcWriteStream(EchoClientApp.RPC_ECHO, 1000, 0);
+            s.WriteString("hi, this is timer2 echo");
+            RpcCallAsync(_server, s, this, this.OnTimer2EchoCallback, 0);
         }
 
         private dsn_address_t _server;
@@ -160,7 +163,10 @@ namespace echo.csharp
             ServiceApp.RegisterApp<EchoClientApp>("echo.client");
             ServiceApp.RegisterApp<EchoServerApp>("echo.server");
 
-            Native.dsn_run_config("config.ini", true);
+            //Native.dsn_run_config("config.ini", true);
+
+            string[] args2 = {"config.ini"};
+            Native.dsn_run(1, args2, true);
         }
     }
 }

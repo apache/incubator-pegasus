@@ -23,7 +23,9 @@ namespace dsn.dev.csharp
         ~Serverlet()
         {
             foreach (var c in _codes)
+            {
                 UnregisterRpcHandler(c);
+            }   
         }
 
         protected delegate void RpcRequestHandlerOneWay(RpcReadStream req);
@@ -40,7 +42,11 @@ namespace dsn.dev.csharp
 
             bool r = Native.dsn_rpc_register_handler(code, name, cb, IntPtr.Zero);
             Logging.dassert(r, "rpc handler registration failed for " + code.ToString());
-            _codes.Add(code);
+
+            lock (_codes)
+            {
+                _codes.Add(code);
+            }
             return r;
         }
 
@@ -51,18 +57,29 @@ namespace dsn.dev.csharp
                 RpcReadStream rms = new RpcReadStream(req, false);
                 RpcWriteStream wms = new RpcWriteStream(Native.dsn_msg_create_response(req), false);
                 handler(rms, wms);
+                wms.Flush();
             };
 
             bool r = Native.dsn_rpc_register_handler(code, name, cb, IntPtr.Zero);
             Logging.dassert(r, "rpc handler registration failed for " + code.ToString());
-            _codes.Add(code);
-            return r;
+
+            lock(_codes)
+            {
+                _codes.Add(code);
+            }
+            return true;
         }
 
         protected bool UnregisterRpcHandler(TaskCode code)
         {
             Native.dsn_rpc_unregiser_handler(code);
-            return _codes.Remove(code);
+            bool r;
+
+            lock(_codes)
+            {
+                r = _codes.Remove(code); 
+            }
+            return r;
         }
 
         public string Name() { return _name; }
