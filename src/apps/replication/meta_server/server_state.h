@@ -75,7 +75,7 @@ public:
     void query_configuration_by_index(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response);
     void query_configuration_by_gpid(global_partition_id id, __out_param partition_configuration& config);
     void update_configuration(configuration_update_request& request, __out_param configuration_update_response& response);
-
+    void unfree_if_possible_on_start();
     bool freezed() const { return _freeze.load(); }
     
 private:

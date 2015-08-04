@@ -28,7 +28,7 @@ public:
 <?php foreach ($svc->functions as $f) { ?>
         s.name = "<?=$svc->name?>.<?=$f->name?>";
         s.config_section = "task.<?=$f->get_rpc_code()?>";
-        s.send_one = [this](){this->send_one_<?=$f->name?>(); };
+        s.send_one = [this](int payload_bytes){this->send_one_<?=$f->name?>(payload_bytes); };
         s.cases.clear();
         load_suite_config(s);
         suits.push_back(s);
@@ -38,7 +38,7 @@ public:
     }                
 <?php foreach ($svc->functions as $f) { ?>
 
-    void send_one_<?=$f->name?>()
+    void send_one_<?=$f->name?>(int payload_bytes)
     {
         void* ctx = prepare_send_one();
         if (!ctx)
@@ -59,7 +59,7 @@ public:
         const <?=$f->get_cpp_return_type()?>& resp,
         void* context) override
     {
-        end_send_one(context, err, [this](){ send_one_<?=$f->name?>();});
+        end_send_one(context, err);
     }
 <?php } ?>
 };

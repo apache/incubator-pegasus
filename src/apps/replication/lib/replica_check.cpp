@@ -100,7 +100,7 @@ void replica::broadcast_group_check()
         _primary_states.group_check_pending_replies[addr] = callback_task;
 
         ddebug(
-            "%s: init_group_check for %s:%d", name(), addr.name.c_str(), addr.port
+            "%s: init_group_check for %s:%hu", name(), addr.name.c_str(), addr.port
         );
     }
 }
@@ -108,7 +108,7 @@ void replica::broadcast_group_check()
 void replica::on_group_check(const group_check_request& request, __out_param group_check_response& response)
 {
     ddebug(
-        "%s: on_group_check from %s:%d",
+        "%s: on_group_check from %s:%hu",
         name(), request.config.primary.name.c_str(), request.config.primary.port
         );
     

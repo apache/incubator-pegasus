@@ -172,7 +172,10 @@ void replication_app_client_base::end_request(request_context_ptr& request, erro
 {
     zauto_lock l(request->lock);
     if (request->completed)
+    {
+        err.end_tracking();
         return;
+    }
 
     if (err != ERR_TIMEOUT && request->timeout_timer != nullptr)
         request->timeout_timer->cancel(false);
@@ -200,7 +203,7 @@ void replication_app_client_base::call(request_context_ptr request, bool no_dela
  
     auto& msg = request->callback_task->get_request();
     int timeout_ms;
-    if (nts + 1000 <= request->timeout_ts_us)
+    if (nts + 1000 > request->timeout_ts_us)
         timeout_ms = 1;
     else
         timeout_ms = static_cast<int>(request->timeout_ts_us - nts) / 1000;

@@ -28,6 +28,7 @@
 
 #include "replication_common.h"
 #include <vector>
+#include <atomic>
 
 namespace dsn { namespace replication {
 
@@ -55,7 +56,7 @@ private:
     int          _start_idx;
     int          _end_idx;
     decree       _start_decree;
-    decree       _end_decree;
+    std::atomic<decree>  _end_decree;
 };
 
 }} // namespace

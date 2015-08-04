@@ -65,6 +65,7 @@ private:
     void update_configuration(configuration_update_request& request, __out_param configuration_update_response& response);
       
     // load balance actions
+    void on_load_balance_start();
     void on_load_balance_timer();
     void on_config_changed(global_partition_id gpid);
 

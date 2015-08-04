@@ -42,7 +42,7 @@ class mutation_log : public virtual servicelet
 {
 public:
     // mutationPtr
-    typedef std::function<void (mutation_ptr&)> ReplayCallback;
+    typedef std::function<void (mutation_ptr&)> replay_callback;
 
 public:
     //
@@ -61,7 +61,7 @@ public:
     // initialization
     //
     error_code initialize(const char* dir);
-    error_code replay(ReplayCallback callback);
+    error_code replay(replay_callback callback);
     void reset();
     error_code start_write_service(multi_partition_decrees& initMaxDecrees, int max_staleness_for_commit);
     void close();
@@ -82,7 +82,7 @@ public:
     //
     //  garbage collection logs that are already covered by durable state on disk, return deleted log segment count
     //
-    int garbage_collection(multi_partition_decrees& durable_decrees);
+    int garbage_collection(multi_partition_decrees& durable_decrees, multi_partition_decrees& max_seen_decrees);
 
     //
     //    other inquiry routines
@@ -185,6 +185,7 @@ public:
 
     int read_header(message_ptr& msg);
     int write_header(message_ptr& msg, multi_partition_decrees& initMaxDecrees, int bufferSizeBytes);
+    bool is_right_header() const;
     
 private:
     log_file(const char* path, handle_t handle, int index, int64_t startOffset, int max_staleness_for_commit, bool isRead, int write_task_max_count = 2);

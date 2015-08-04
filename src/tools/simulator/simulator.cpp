@@ -113,7 +113,7 @@ void simulator::install(service_spec& spec)
             tspec.queue_factory_name = ("dsn::tools::sim_task_queue");
     }
 
-    sys_exit.put_back(simulator::on_system_exit, "simulator");
+    sys_exit.put_front(simulator::on_system_exit, "simulator");
 }
 
 void simulator::on_system_exit(sys_exit_type st)

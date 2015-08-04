@@ -43,6 +43,12 @@
 namespace dsn {
 
 __thread struct __tls_task_info__ tls_task_info;
+__thread struct
+{
+    int magic;
+    uint64_t node_pool_thread_ids; // 8,8,16 bits
+    int last_task_id; // 32bits
+} tls_task_id;
 
 /*static*/ void task::set_current_worker(task_worker* worker)
 {
@@ -64,7 +70,6 @@ task::task(task_code code, int hash, service_node* node)
     : _state(TASK_STATE_READY)
 {
     _spec = task_spec::get(code);
-    _task_id = (uint64_t)(this);
     _wait_event.store(nullptr);
     _hash = hash;
     _delay_milliseconds = 0;
@@ -82,6 +87,20 @@ task::task(task_code code, int hash, service_node* node)
             "can only be created inside other tasks");
         _node = p->node();
     }
+
+    if (tls_task_id.magic != 0xdeadbeef)
+    {
+        tls_task_id.node_pool_thread_ids = ((uint64_t)(uint8_t)_node->id()) << (64 - 8); // high 8 bits for node id
+        tls_task_id.node_pool_thread_ids |= ((uint64_t)(uint8_t)(int)_spec->pool_code) << (64 - 8 - 8); // next 8 bits for pool id
+        auto worker_idx = task::get_current_worker_index();
+        if (worker_idx == -1) worker_idx = ::dsn::utils::get_current_tid();
+        tls_task_id.node_pool_thread_ids |= ((uint64_t)(uint16_t)worker_idx) << 32; // next 16 bits for thread id
+
+        tls_task_id.last_task_id = 0;
+        tls_task_id.magic = 0xdeadbeef;
+    }
+
+    _task_id = tls_task_id.node_pool_thread_ids + (++tls_task_id.last_task_id);
 }
 
 task::~task()

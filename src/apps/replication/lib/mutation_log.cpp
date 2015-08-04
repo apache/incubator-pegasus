@@ -136,8 +136,6 @@ error_code mutation_log::initialize(const char* dir)
 
 error_code mutation_log::create_new_log_file()
 {
-    //dassert (_lock.IsHeldByCurrentThread(), "");
-
     if (_current_log_file != nullptr)
     {
         _last_log_file = _current_log_file;
@@ -151,7 +149,7 @@ error_code mutation_log::create_new_log_file()
         return ERR_FILE_OPERATION_FAILED;
     }    
 
-    derror ("create new log file %s", logFile->path().c_str());
+    dinfo ("create new log file %s", logFile->path().c_str());
         
     _last_file_number++;
     dassert (_log_files.find(_last_file_number) == _log_files.end(), "");
@@ -207,25 +205,24 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
 
     auto bb = _pending_write->writer().get_buffer();
     uint64_t offset = end_offset() - bb.length();
-    auto buf = bb.buffer();
-    blob bb2(buf, bb.length());
 
+    dassert(*(int*)bb.data() != 0, "");
     task_ptr aio = _current_log_file->write_log_entry(
-        bb2,
+        bb,
         LPC_AIO_IMMEDIATE_CALLBACK,
         this,
         std::bind(
             &mutation_log::internal_write_callback, 
             std::placeholders::_1, 
             std::placeholders::_2, 
-            _pending_write_callbacks, bb2),
+            _pending_write_callbacks, bb),
         offset,
         -1
         );    
     
     if (aio == nullptr)
     {
-        internal_write_callback(ERR_FILE_OPERATION_FAILED, 0, _pending_write_callbacks, bb2);
+        internal_write_callback(ERR_FILE_OPERATION_FAILED, 0, _pending_write_callbacks, bb);
     }
     else
     {
@@ -246,7 +243,7 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
         error_code ret = create_new_log_file();
         if (ret != ERR_OK)
         {
-            derror ("create new log file failed, err = %s", ret.to_string());
+            dinfo ("create new log file failed, err = %s", ret.to_string());
         }
         return ret;
     }
@@ -265,7 +262,7 @@ void mutation_log::internal_write_callback(error_code err, uint32_t size, mutati
 /*
 TODO: when there is a log error, the server cannot contain any primary or secondary any more!
 */
-error_code mutation_log::replay(ReplayCallback callback)
+error_code mutation_log::replay(replay_callback callback)
 {
     zauto_lock l(_lock);
 
@@ -309,6 +306,11 @@ error_code mutation_log::replay(ReplayCallback callback)
         }
 
         offset += log->read_header(msg);
+        if (!log->is_right_header())
+        {
+            derror("log header for '%s' is invalid", log->path().c_str());
+            return ERR_FILE_OPERATION_FAILED;
+        }
 
         while (true)
         {
@@ -454,9 +456,10 @@ task_ptr mutation_log::append(mutation_ptr& mu,
     
     _pending_write_callbacks->push_back(tsk);
 
+    error_code err = ERR_OK;
     if (!_batch_write)
     {
-        write_pending_mutations();
+        err = write_pending_mutations();
     }
     else
     {
@@ -464,12 +467,12 @@ task_ptr mutation_log::append(mutation_ptr& mu,
         {
             if (nullptr == _pending_write_timer)
             {
-                write_pending_mutations();
+                err = write_pending_mutations();
             }   
             else if (_pending_write_timer->cancel(false))
             {
                 _pending_write_timer = nullptr;
-                write_pending_mutations();
+                err = write_pending_mutations();
             }
         }
 
@@ -485,6 +488,8 @@ task_ptr mutation_log::append(mutation_ptr& mu,
         }
     }   
 
+    dassert(err == ERR_OK, "write pending mutation failed, err = %s", err.to_string());
+
     return tsk;
 }
 
@@ -494,7 +499,7 @@ void mutation_log::on_partition_removed(global_partition_id gpid)
     _init_prepared_decrees.erase(gpid);
 }
 
-int mutation_log::garbage_collection(multi_partition_decrees& durable_decrees)
+int mutation_log::garbage_collection(multi_partition_decrees& durable_decrees, multi_partition_decrees& max_seen_decrees)
 {
     std::map<int, log_file_ptr> files;
     std::map<int, log_file_ptr>::reverse_iterator itr;
@@ -514,7 +519,17 @@ int mutation_log::garbage_collection(multi_partition_decrees& durable_decrees)
         {
             global_partition_id gpid = it2->first;
             decree lastDurableDecree = it2->second;
-        
+
+            auto it4 = max_seen_decrees.find(gpid);
+            dassert(it4 != max_seen_decrees.end(), "");
+
+            decree max_seen_decree = it4->second;
+            if (max_seen_decree < lastDurableDecree)
+            {
+                // learn after last prepare, therefore it is ok to delete logs
+                continue;
+            }
+
             auto it3 = log->init_prepare_decrees().find(gpid);
             if (it3 == log->init_prepare_decrees().end())
             {
@@ -523,7 +538,9 @@ int mutation_log::garbage_collection(multi_partition_decrees& durable_decrees)
             else
             {
                 decree initPrepareDecree = it3->second;
-                decree maxPrepareDecreeBeforeThis = initPrepareDecree;
+                decree maxPrepareDecreeBeforeThis = initPrepareDecree + _max_staleness_for_commit;
+                if (maxPrepareDecreeBeforeThis > max_seen_decree)
+                    maxPrepareDecreeBeforeThis = max_seen_decree;
                 
                 // when all possible decress are covered by durable decress
                 if (lastDurableDecree >= maxPrepareDecreeBeforeThis)
@@ -608,7 +625,7 @@ std::map<int, log_file_ptr>& mutation_log::get_logfiles_for_test()
 
     
     int index = atoi(name.substr(pos + 1, pos2 - pos - 1).c_str());
-    int64_t startOffset = atol(name.substr(pos2 + 1).c_str());
+    int64_t startOffset = static_cast<int64_t>(atoll(name.substr(pos2 + 1).c_str()));
     
     return new log_file(path, hFile, index, startOffset, 0, true);
 }
@@ -664,7 +681,10 @@ void log_file::close()
         if (_is_read)
             ::close((int)(_handle));
         else
-            dsn::service::file::close(_handle);
+        {
+            auto err = dsn::service::file::close(_handle);
+            dassert(err == ERR_OK, "file::close failed, err = %s", err.to_string());
+        }
 
         _handle = 0;
     }
@@ -674,11 +694,12 @@ error_code log_file::read_next_log_entry(__out_param::dsn::blob& bb)
 {
     dassert (_is_read, "");
 
-    std::shared_ptr<char> hdrBuffer(new char[MSG_HDR_SERIALIZED_SIZE]);
+    char hdr_buffer[MSG_HDR_SERIALIZED_SIZE];
+    message_header hdr;
     
     int read_count = ::read(
         (int)(_handle),
-        hdrBuffer.get(),
+        hdr_buffer,
         MSG_HDR_SERIALIZED_SIZE
         );
 
@@ -694,20 +715,19 @@ error_code log_file::read_next_log_entry(__out_param::dsn::blob& bb)
             return ERR_HANDLE_EOF;
         }
     }
-
-    message_header hdr;
-    ::dsn::blob bb2(hdrBuffer, MSG_HDR_SERIALIZED_SIZE);
+        
+    ::dsn::blob bb2(hdr_buffer, 0, MSG_HDR_SERIALIZED_SIZE);
     ::dsn::binary_reader reader(bb2);
     hdr.unmarshall(reader);
 
-    if (!hdr.is_right_header((char*)hdrBuffer.get()))
+    if (!hdr.is_right_header((char*)hdr_buffer))
     {
         derror("invalid data header");
         return ERR_INVALID_DATA;
     }
 
     std::shared_ptr<char> data(new char[MSG_HDR_SERIALIZED_SIZE + hdr.body_length]);
-    memcpy(data.get(), hdrBuffer.get(), MSG_HDR_SERIALIZED_SIZE);
+    memcpy(data.get(), hdr_buffer, MSG_HDR_SERIALIZED_SIZE);
     bb.assign(data, 0, MSG_HDR_SERIALIZED_SIZE + hdr.body_length);
 
     read_count = ::read(
@@ -787,6 +807,12 @@ int log_file::read_header(message_ptr& reader)
         sizeof(_header) + sizeof(count) 
         + (sizeof(global_partition_id) + sizeof(decree))*count
         );
+}
+
+bool log_file::is_right_header() const
+{
+    return _header.magic == 0xdeadbeef &&
+        _header.start_global_offset == _start_offset;
 }
 
 int log_file::write_header(message_ptr& writer, multi_partition_decrees& initMaxDecrees, int bufferSizeBytes)

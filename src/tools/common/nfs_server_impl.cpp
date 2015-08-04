@@ -171,7 +171,8 @@ namespace dsn {
                 {
                     it = _handles_map.erase(it);
 
-                    file::close(fptr->file_handle);
+                    auto err = file::close(fptr->file_handle);
+                    dassert(err == ERR_OK, "file::close failed, err = %s", err.to_string());
 
                     delete fptr;
                 }
