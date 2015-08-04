@@ -109,7 +109,7 @@ namespace echo.csharp
 
             Native.dsn_address_build(out _server, argv[1], ushort.Parse(argv[2]));
 
-            CallAsync(EchoClientApp.LPC_ECHO_TIMER1, this,  this.OnTimer1, 0, 0);
+            //CallAsync(EchoClientApp.LPC_ECHO_TIMER1, this,  this.OnTimer1, 0, 0);
             CallAsync(EchoClientApp.LPC_ECHO_TIMER2, this, () => this.OnTimer2(100), 0, 0);
         }
 
@@ -118,14 +118,14 @@ namespace echo.csharp
             //Console.WriteLine("on_timer1");
             CallAsync(EchoClientApp.LPC_ECHO_TIMER1, this, this.OnTimer1, 0, 0);
 
-            var c = ++_count;
-            if (c % 1000000 == 0)
+            var c = ++_count_timer1;
+            if (c % 10000 == 0)
             {
                 var gap = DateTime.Now - _last_ts;
                 _last_ts = DateTime.Now;
 
-                Console.WriteLine("Cost {0} ms for {1} tasks", gap.TotalMilliseconds, _count);
-                _count = 0;
+                Console.WriteLine("Timer1: Cost {0} ms for {1} tasks", gap.TotalMilliseconds, _count_timer1);
+                _count_timer1 = 0;
 
                 //cancel_all_pending_tasks();
             }
@@ -133,7 +133,7 @@ namespace echo.csharp
 
         public void OnTimer2(object param)
         {
-            Console.WriteLine("on_timer2 " + param.ToString());
+            //Console.WriteLine("on_timer2 " + param.ToString());
             RpcWriteStream s = new RpcWriteStream(EchoClientApp.RPC_ECHO, 1000, 0);
             s.WriteString("hi, this is timer2 echo");
             s.Flush();
@@ -142,10 +142,23 @@ namespace echo.csharp
 
         public void OnTimer2EchoCallback(ErrorCode err, RpcReadStream response)
         {
-            Console.WriteLine("OnTimer2Callback recevie " +
-                (response != null ? response.ReadString() : "nothing") +
-                ", err = " + err.ToString()
-                );
+            if (err == ErrorCode.ERR_OK)
+            {
+                Logging.dassert(response.ReadString() == "hi, this is timer2 echo",
+                "incorrect responsed value");
+            }
+
+            var c = ++_count_timer2;
+            if (c % 10000 == 0)
+            {
+                var gap = DateTime.Now - _last_ts;
+                _last_ts = DateTime.Now;
+
+                Console.WriteLine("Timer2: Cost {0} ms for {1} tasks", gap.TotalMilliseconds, _count_timer2);
+                _count_timer1 = 0;
+
+                //cancel_all_pending_tasks();
+            }
 
             RpcWriteStream s = new RpcWriteStream(EchoClientApp.RPC_ECHO, 1000, 0);
             s.WriteString("hi, this is timer2 echo");
@@ -154,7 +167,8 @@ namespace echo.csharp
         }
 
         private dsn_address_t _server;
-        private int _count = 0;
+        private int _count_timer1 = 0;
+        private int _count_timer2 = 0;
         private DateTime _last_ts;
     }
 

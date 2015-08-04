@@ -38,6 +38,16 @@ namespace dsn.dev.csharp
             return ec._error;
         }
 
+        public override bool Equals(object obj)
+        {
+            return this._error == ((ErrorCode)obj)._error;
+        }
+
+        public override int GetHashCode()
+        {
+            return _error.GetHashCode();
+        }
+
         private int _error;
     }
 
@@ -74,6 +84,16 @@ namespace dsn.dev.csharp
             return c._code;
         }
 
+        public override bool Equals(object obj)
+        {
+            return this._code == ((ThreadPoolCode)obj)._code;
+        }
+
+        public override int GetHashCode()
+        {
+            return _code.GetHashCode();
+        }
+
         private int _code;
     }
 
@@ -84,11 +104,6 @@ namespace dsn.dev.csharp
         public TaskCode(int c)
         {
             _code = c;
-        }
-
-        public override int GetHashCode()
-        {
-            return _code.GetHashCode();
         }
 
         public TaskCode(TaskCode c)
@@ -110,6 +125,17 @@ namespace dsn.dev.csharp
         public static implicit operator int(TaskCode c)
         {
             return c._code;
+        }
+
+
+        public override bool Equals(object obj)
+        {
+            return this._code == ((TaskCode)obj)._code;
+        }
+
+        public override int GetHashCode()
+        {
+            return _code.GetHashCode();
         }
 
         private int _code;
