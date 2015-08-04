@@ -287,6 +287,16 @@ class t_program
         }
         return $rt;
     }
+	
+	function get_csharp_namespace()
+    {
+        if (!array_key_exists("csharp", $this->namespaces))
+        {
+            return "";
+        }
+        
+        return $nms = $this->namespaces["csharp"];
+    }
     
     function add_annotations($atts)
     {

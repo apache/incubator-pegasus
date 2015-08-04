@@ -2,12 +2,12 @@
 
 function usage()
 {
-    echo "dsn.cg %name%.thrift|.proto %out_dir% [single|replication]".PHP_EOL;
+    echo "dsn.cg %name%.thrift|.proto cpp|csharp %out_dir% [single|replication]".PHP_EOL;
     echo "\tsingle - generate code for a single-node service".PHP_EOL;
     echo "\treplication - generate code for a partitioned and replicated service".PHP_EOL;
 }
 
-if (count($argv) < 3)
+if (count($argv) < 4)
 {
     usage();
     exit(0);
@@ -24,16 +24,17 @@ global $g_idl_php;
 global $g_is_replicated;
 
 $g_idl = $argv[1];
-$g_out_dir = $argv[2];
+$g_lang = $argv[2];
+$g_out_dir = $argv[3];
 $g_cg_dir = __DIR__;
-$g_cg_libs = $g_cg_dir."/dsn.templates";
+$g_templates = $g_cg_dir."/dsn.templates";
 $g_idl_type = "";
 $g_idl_post = "";
 $g_program = "";
 $g_idl_php = "";
 
-if (count($argv) >= 4)
-    $g_mode = $argv[3];
+if (count($argv) >= 5)
+    $g_mode = $argv[4];
 else
     $g_mode = "single";
     
@@ -162,7 +163,7 @@ if (file_exists($g_idl.".annotations"))
 
 function generate_files_from_dir($dr)
 {
-    global $g_cg_libs;
+    global $g_templates;
     global $g_idl_php;
     global $g_program;
     global $g_out_dir;
@@ -187,7 +188,7 @@ function generate_files_from_dir($dr)
             $output_file = $g_out_dir."/".$g_program.".".substr($template, 0, strlen($template)-4);
             
         $command = "php -f ".$dr."/".$template
-                    ." ".$g_cg_libs."/type.php"
+                    ." ".$g_templates."/type.php"
                     ." ".$g_idl_php
                     ." ".$g_program
                     ." ".$g_idl_type
@@ -208,7 +209,14 @@ function generate_files_from_dir($dr)
     }
 }
 
-generate_files_from_dir($g_cg_libs);
-generate_files_from_dir($g_cg_libs."/".$g_mode);
+// generate all files 
+if (!file_exists($g_templates."/".$g_lang))
+{
+	echo "specified language '" . $g_lang. "' is not supported".PHP_EOL;
+	exit(0);
+}
+
+generate_files_from_dir($g_templates."/".$g_lang);
+generate_files_from_dir($g_templates."/".$g_lang."/".$g_mode);
 
 ?>
