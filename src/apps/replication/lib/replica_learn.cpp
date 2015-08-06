@@ -160,8 +160,10 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
     {
         if (it->second.prepare_start_decree == invalid_decree)
         {
+            // start from (last_committed_decree + 1)
             it->second.prepare_start_decree = localCommittedDecree + 1;
 
+            // TODO(qinzuoyan) replay before response on_learn, learner may reject prepare request?
             cleanup_preparing_mutations(true);
             replay_prepare_list();
 
@@ -265,58 +267,43 @@ void replica::on_copy_remote_state_completed(error_code err2, int size, std::sha
     localState.meta = resp->state.meta;
     if (err2 == ERR_OK)
     {
-        int err = 0;
-
-        // if there are sstables to apply, need to flush memtables firstly
-        if (resp->state.files.size() > 0
-                && _app->last_committed_decree() > _app->last_durable_decree())
+        for (auto itr = resp->state.files.begin(); itr != resp->state.files.end(); ++itr)
         {
-            err = _app->flush(true);
-            if (err == 0)
-            {
-                dassert (_app->last_committed_decree() == _app->last_durable_decree(), "");
-            }
+            std::string file;
+            if (dir().back() == '/' || itr->front() == '/')
+                file = dir() + *itr;
+            else
+                file = dir() + '/' + *itr;
+
+            localState.files.push_back(file);
         }
 
+        decree oldDecree = _app->last_committed_decree();
+
+        // the only place where there is non-in-partition-thread update
+        int err = _app->apply_learn_state(resp->state);
         if (err == 0)
         {
-            for (auto itr = resp->state.files.begin(); itr != resp->state.files.end(); ++itr)
-            {
-                std::string file;
-                if (dir().back() == '/' || itr->front() == '/')
-                    file = dir() + *itr;
-                else 
-                    file = dir() + '/' + *itr;
-
-                localState.files.push_back(file);
-            }
-
-            decree oldDecree = _app->last_committed_decree();
-
-            // the only place where there is non-in-partition-thread update  
-            err = _app->apply_learn_state(resp->state);
-            if (err == 0)
-            {
-                // because if the original _app->last_committed_decree > resp->commit_decree,
-                // the learnStartDecree will be set to 0, which makes learner to learn from scratch
-                dassert(_app->last_committed_decree() <= resp->commit_decree, "");
-            }
-
-            ddebug(
-                    "%s: learning %d files to %s, err = %x, "
-                    "appCommit(%llu => %llu), durable(%llu), "
-                    "remoteC(%llu), prepStart(%llu), state(%s)",
-                    name(),
-                    resp->state.files.size(), _dir.c_str(), err,
-                    oldDecree, _app->last_committed_decree(),
-                    _app->last_durable_decree(),                
-                    resp->commit_decree,
-                    resp->prepare_start_decree,
-                    enum_to_string(_potential_secondary_states.learning_status)
-                  );
+            dassert(_app->last_committed_decree() >= _app->last_durable_decree(), "");
+            // because if the original _app->last_committed_decree > resp->commit_decree,
+            // the learnStartDecree will be set to 0, which makes learner to learn from scratch
+            dassert(_app->last_committed_decree() <= resp->commit_decree, "");
         }
 
-        // if catch-up done, do flush
+        ddebug(
+                "%s: learning %d files to %s, err = %x, "
+                "appCommit(%llu => %llu), durable(%llu), "
+                "remoteC(%llu), prepStart(%llu), state(%s)",
+                name(),
+                resp->state.files.size(), _dir.c_str(), err,
+                oldDecree, _app->last_committed_decree(),
+                _app->last_durable_decree(),
+                resp->commit_decree,
+                resp->prepare_start_decree,
+                enum_to_string(_potential_secondary_states.learning_status)
+              );
+
+        // if catch-up done, do flush to force data in memtables to the ground
         if (err == 0 && _app->last_committed_decree() == resp->commit_decree)
         {
             err = _app->flush(true);
