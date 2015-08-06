@@ -209,4 +209,200 @@ namespace dsn.dev.csharp
         private long _pos;
         private IntPtr _length;
     }
+
+    public static partial class RpcStreamIoHelper
+    {
+        public static void Read(this RpcReadStream rs, out UInt64 val)
+        {
+            using (BinaryReader reader = new BinaryReader(rs))
+            {
+                val = reader.ReadUInt64();
+            }
+        }
+
+        public static void Write(this RpcWriteStream ws, UInt64 val)
+        {
+            using (BinaryWriter writer = new BinaryWriter(ws))
+            {
+                writer.Write(val);
+            }
+        }
+
+        public static void Read(this RpcReadStream rs, out UInt32 val)
+        {
+            using (BinaryReader reader = new BinaryReader(rs))
+            {
+                val = reader.ReadUInt32();
+            }
+        }
+
+        public static void Write(this RpcWriteStream ws, UInt32 val)
+        {
+            using (BinaryWriter writer = new BinaryWriter(ws))
+            {
+                writer.Write(val);
+            }
+        }
+
+        public static void Read(this RpcReadStream rs, out UInt16 val)
+        {
+            using (BinaryReader reader = new BinaryReader(rs))
+            {
+                val = reader.ReadUInt16();
+            }
+        }
+
+        public static void Write(this RpcWriteStream ws, UInt16 val)
+        {
+            using (BinaryWriter writer = new BinaryWriter(ws))
+            {
+                writer.Write(val);
+            }
+        }
+
+        public static void Read(this RpcReadStream rs, out byte val)
+        {
+            using (BinaryReader reader = new BinaryReader(rs))
+            {
+                val = reader.ReadByte();
+            }
+        }
+
+        public static void Write(this RpcWriteStream ws, byte val)
+        {
+            using (BinaryWriter writer = new BinaryWriter(ws))
+            {
+                writer.Write(val);
+            }
+        }
+
+        public static void Read(this RpcReadStream rs, out Int64 val)
+        {
+            using (BinaryReader reader = new BinaryReader(rs))
+            {
+                val = reader.ReadInt64();
+            }
+        }
+
+        public static void Write(this RpcWriteStream ws, Int64 val)
+        {
+            using (BinaryWriter writer = new BinaryWriter(ws))
+            {
+                writer.Write(val);
+            }
+        }
+
+        public static void Read(this RpcReadStream rs, out Int32 val)
+        {
+            using (BinaryReader reader = new BinaryReader(rs))
+            {
+                val = reader.ReadInt32();
+            }
+        }
+
+        public static void Write(this RpcWriteStream ws, Int32 val)
+        {
+            using (BinaryWriter writer = new BinaryWriter(ws))
+            {
+                writer.Write(val);
+            }
+        }
+
+        public static void Read(this RpcReadStream rs, out Int16 val)
+        {
+            using (BinaryReader reader = new BinaryReader(rs))
+            {
+                val = reader.ReadInt16();
+            }
+        }
+
+        public static void Write(this RpcWriteStream ws, Int16 val)
+        {
+            using (BinaryWriter writer = new BinaryWriter(ws))
+            {
+                writer.Write(val);
+            }
+        }
+
+        public static void Read(this RpcReadStream rs, out sbyte val)
+        {
+            using (BinaryReader reader = new BinaryReader(rs))
+            {
+                val = reader.ReadSByte();
+            }
+        }
+
+        public static void Write(this RpcWriteStream ws, sbyte val)
+        {
+            using (BinaryWriter writer = new BinaryWriter(ws))
+            {
+                writer.Write(val);
+            }
+        }
+
+        public static void Read(this RpcReadStream rs, out bool val)
+        {
+            using (BinaryReader reader = new BinaryReader(rs))
+            {
+                val = reader.ReadBoolean();
+            }
+        }
+
+        public static void Write(this RpcWriteStream ws, bool val)
+        {
+            using (BinaryWriter writer = new BinaryWriter(ws))
+            {
+                writer.Write(val);
+            }
+        }
+
+        public static void Read(this RpcReadStream rs, out double val)
+        {
+            using (BinaryReader reader = new BinaryReader(rs))
+            {
+                val = reader.ReadDouble();
+            }
+        }
+
+        public static void Write(this RpcWriteStream ws, double val)
+        {
+            using (BinaryWriter writer = new BinaryWriter(ws))
+            {
+                writer.Write(val);
+            }
+        }
+
+        public static void Read(this RpcReadStream rs, out float val)
+        {
+            using (BinaryReader reader = new BinaryReader(rs))
+            {
+                val = reader.ReadSingle();
+            }
+        }
+
+        public static void Write(this RpcWriteStream ws, float val)
+        {
+            using (BinaryWriter writer = new BinaryWriter(ws))
+            {
+                writer.Write(val);
+            }
+        }
+
+        public static void Read(this RpcReadStream rs, out string val)
+        {
+            using (BinaryReader reader = new BinaryReader(rs))
+            {
+                val = reader.ReadString();
+            }
+        }
+
+        public static void Write(this RpcWriteStream ws, string val)
+        {
+            using (BinaryWriter writer = new BinaryWriter(ws))
+            {
+                writer.Write(val);
+            }
+        }
+    }
+
 }

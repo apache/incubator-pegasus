@@ -188,7 +188,7 @@ namespace dsn {
         bool next(void** data, int* size);
         bool backup(int count);
 
-        void get_buffers(__out_param std::vector<blob>& buffers) const;
+        void get_buffers(__out_param std::vector<blob>& buffers);
         int  get_buffer_count() const { return static_cast<int>(_buffers.size()); }
         blob get_buffer();
         blob get_first_buffer() const;
@@ -197,8 +197,9 @@ namespace dsn {
 
     protected:
         // bb may have large space than size
-        virtual void create_buffer(size_t size);
-        virtual void commit();
+        void create_buffer(size_t size);
+        void commit();
+        virtual void create_new_buffer(size_t size, /*out*/blob& bb);
 
     private:
         std::vector<blob>  _buffers;
@@ -236,8 +237,9 @@ namespace dsn {
         write((char*)&val, static_cast<int>(sizeof(T)));
     }
 
-    inline void binary_writer::get_buffers(__out_param std::vector<blob>& buffers) const
+    inline void binary_writer::get_buffers(__out_param std::vector<blob>& buffers)
     {
+        commit();
         buffers = _buffers;
     }
 

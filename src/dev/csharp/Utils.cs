@@ -7,11 +7,13 @@ using System.Runtime.InteropServices;
 
 namespace dsn.dev.csharp
 {
+    using dsn_task_t = IntPtr;
     public struct ErrorCode
     {
         public static ErrorCode ERR_OK = new ErrorCode("ERR_OK");
         public static ErrorCode ERR_TIMEOUT = new ErrorCode("ERR_TIMEOUT");
-
+        public static ErrorCode ERR_INVALID_PARAMETERS = new ErrorCode("ERR_INVALID_PARAMETERS");
+        
         public ErrorCode(int err)
         {
             _error = err;
@@ -141,4 +143,66 @@ namespace dsn.dev.csharp
         private int _code;
     }
 
+    public class SafeTaskHandle : SafeHandle
+    {
+        public SafeTaskHandle(dsn_task_t nativeHandle)
+            : base(nativeHandle, true)
+        {
+            Native.dsn_task_add_ref(nativeHandle);
+        }
+
+        protected override bool ReleaseHandle()
+        {
+            Native.dsn_task_release_ref(handle);
+            return true;
+        }
+
+        public override bool IsInvalid
+        {
+            get { return IntPtr.Zero == handle; }
+        }
+
+        public bool Cancel(bool waitFinished)
+        {
+            return Native.dsn_task_cancel(handle, waitFinished);
+        }
+
+        public bool Cancel(bool waitFinished, out bool finished)
+        {
+            return Native.dsn_task_cancel2(handle, waitFinished, out finished);
+        }
+
+        public void Wait()
+        {
+            Native.dsn_task_wait(handle);
+        }
+
+        public bool WaitTimeout(int milliseconds)
+        {
+            return Native.dsn_task_wait_timeout(handle, milliseconds);
+        }
+    }
+
+    public class RpcAddress
+    {
+        public RpcAddress(dsn_address_t ad)
+        {
+            addr = ad;
+        }
+
+        public RpcAddress()
+        {
+            addr = new dsn_address_t();
+            addr.ip = 0;
+            addr.port = 0;
+            addr.name = "invalid";
+        }
+
+        public static implicit operator dsn_address_t(RpcAddress c)
+        {
+            return c.addr;
+        }
+
+        public dsn_address_t addr;
+    }
 }

@@ -12,7 +12,8 @@ namespace dsn.dev.csharp
         public ServiceApp()
         {
             _started = false;
-            Native.dsn_address_get_invalid(out _address);
+            _address = new RpcAddress();
+            Native.dsn_address_get_invalid(out _address.addr);
             _gch = GCHandle.Alloc(this);
         }
 
@@ -27,12 +28,12 @@ namespace dsn.dev.csharp
 
         public bool IsStarted() { return _started; }
 
-        public dsn_address_t PrimaryAddress() { return _address; }
+        public RpcAddress PrimaryAddress() { return _address; }
 
         public string Name() { return _name; }
 
         private bool          _started;
-        private dsn_address_t _address;
+        private RpcAddress    _address;
         private string        _name;
         private GCHandle      _gch;
 
@@ -51,7 +52,7 @@ namespace dsn.dev.csharp
             if (r == 0)
             {
                 sapp._started = true;
-                Native.dsn_primary_address2(out sapp._address);
+                Native.dsn_primary_address2(out sapp._address.addr);
                 sapp._name = argv[0];
             }
             return r;

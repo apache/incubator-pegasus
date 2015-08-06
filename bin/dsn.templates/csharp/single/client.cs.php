@@ -3,125 +3,119 @@ require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
 ?>
+using System;
+using System.IO;
+using dsn.dev.csharp;
 
-# include "<?=$file_prefix?>.code.definition.h"
-# include <iostream>
-
-
-<?=$_PROG->get_cpp_namespace_begin()?>
-
-<?php foreach ($_PROG->services as $svc) { ?>
-class <?=$svc->name?>_client 
-    : public virtual ::dsn::service::servicelet
+namespace <?=$_PROG->get_csharp_namespace()?> 
 {
-public:
-    <?=$svc->name?>_client(const dsn_address_t& server) { _server = server; }
-    <?=$svc->name?>_client() { _server = dsn_address_invalid; }
-    virtual ~<?=$svc->name?>_client() {}
+<?php foreach ($_PROG->services as $svc) { ?>
+    public class <?=$svc->name?>Client : Servicelet
+    {
+        private RpcAddress _server;
+		
+        public <?=$svc->name?>Client(RpcAddress server) { _server = server; }
+        public <?=$svc->name?>Client() { Native.dsn_address_get_invalid(out _server.addr); }
+        ~<?=$svc->name?>Client() {}
 
-<?php foreach ($svc->functions as $f) { ?>
+    <?php foreach ($svc->functions as $f) { ?>
 
-    // ---------- call <?=$f->get_rpc_code()?> ------------
+        // ---------- call <?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?> ------------
 <?php    if ($f->is_one_way()) {?>
-    void <?=$f->name?>(
-        const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
-        int hash = 0,
-        const dsn_address_t *p_server_addr = nullptr)
-    {
-        ::dsn::service::rpc::call_one_way_typed(p_server_addr ? *p_server_addr : _server, 
-            <?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash);
-    }
+        public void <?=$f->name?>(
+            <?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>, 
+            int hash = 0,
+            RpcAddress server = null)
+        {
+            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, 0, hash);
+            s.Write(<?=$f->get_first_param()->name?>);
+            s.Flush();
+            
+            RpcCallOneWay(server != null ? server : _server, s);
+        }
 <?php    } else { ?>
-    // - synchronous 
-    ::dsn::error_code <?=$f->name?>(
-        const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
-        __out_param <?=$f->get_cpp_return_type()?>& resp, 
-        int timeout_milliseconds = 0, 
-        int hash = 0,
-        const dsn_address_t *p_server_addr = nullptr)
-    {
-        dsn_message_t response;
-        auto err = ::dsn::service::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
-            <?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash, timeout_milliseconds);
-        if (err == ::dsn::ERR_OK)
+        // - synchronous 
+        public ErrorCode <?=$f->name?>(
+            <?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>, 
+            out <?=$f->get_csharp_return_type()?> resp, 
+            int timeout_milliseconds = 0, 
+            int hash = 0,
+            RpcAddress server = null)
         {
-            ::unmarshall(response, resp);
+            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>, timeout_milliseconds, hash);
+            s.Write(<?=$f->get_first_param()->name?>);
+            s.Flush();
+            
+            var respStream = RpcCallSync(server != null ? server : _server, s);
+            if (null == respStream)
+            {
+                resp = default(<?=$f->get_csharp_return_type()?>);
+                return ErrorCode.ERR_TIMEOUT;
+            }
+            else
+            {
+                respStream.Read(out resp);
+                return ErrorCode.ERR_OK;
+            }
         }
-        return err;
-    }
-    
-    // - asynchronous with on-stack <?=$f->get_first_param()->get_cpp_type()?> and <?=$f->get_cpp_return_type()?> 
-    ::dsn::cpp_task_ptr begin_<?=$f->name?>(
-        const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
-        void* context = nullptr,
-        int timeout_milliseconds = 0, 
-        int reply_hash = 0,
-        int request_hash = 0,
-        const dsn_address_t *p_server_addr = nullptr)
-    {
-        return ::dsn::service::rpc::call_typed(
-                    p_server_addr ? *p_server_addr : _server, 
-                    <?=$f->get_rpc_code()?>, 
-                    <?=$f->get_first_param()->name?>, 
-                    this, 
-                    &<?=$svc->name?>_client::end_<?=$f->name?>,
-                    context,
-                    request_hash, 
-                    timeout_milliseconds, 
-                    reply_hash
-                    );
-    }
-
-    virtual void end_<?=$f->name?>(
-        ::dsn::error_code err, 
-        const <?=$f->get_cpp_return_type()?>& resp,
-        void* context)
-    {
-        if (err != ::dsn::ERR_OK) std::cout << "reply <?=$f->get_rpc_code()?> err : " << err.to_string() << std::endl;
-        else
+        
+        // - asynchronous with on-stack <?=$f->get_first_param()->get_csharp_type()?> and <?=$f->get_csharp_return_type()?> 
+        public delegate void <?=$f->name?>Callback(ErrorCode err, <?=$f->get_csharp_return_type()?> resp);
+        public void <?=$f->name?>(
+            <?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>, 
+            <?=$f->name?>Callback callback,
+            int timeout_milliseconds = 0, 
+            int reply_hash = 0,
+            int request_hash = 0,
+            RpcAddress server = null)
         {
-            std::cout << "reply <?=$f->get_rpc_code()?> ok" << std::endl;
-        }
-    }
-    
-    // - asynchronous with on-heap std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>> and std::shared_ptr<<?=$f->get_cpp_return_type()?>> 
-    ::dsn::cpp_task_ptr begin_<?=$f->name?>2(
-        std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>>& <?=$f->get_first_param()->name?>,         
-        int timeout_milliseconds = 0, 
-        int reply_hash = 0,
-        int request_hash = 0,
-        const dsn_address_t *p_server_addr = nullptr)
-    {
-        return ::dsn::service::rpc::call_typed(
-                    p_server_addr ? *p_server_addr : _server, 
-                    <?=$f->get_rpc_code()?>, 
-                    <?=$f->get_first_param()->name?>, 
-                    this, 
-                    &<?=$svc->name?>_client::end_<?=$f->name?>2, 
-                    request_hash, 
-                    timeout_milliseconds, 
-                    reply_hash
-                    );
-    }
-
-    virtual void end_<?=$f->name?>2(
-        ::dsn::error_code err, 
-        std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>>& <?=$f->get_first_param()->name?>, 
-        std::shared_ptr<<?=$f->get_cpp_return_type()?>>& resp)
-    {
-        if (err != ::dsn::ERR_OK) std::cout << "reply <?=$f->get_rpc_code()?> err : " << err.to_string() << std::endl;
-        else
+            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>,timeout_milliseconds, request_hash);
+            s.Write(<?=$f->get_first_param()->name?>);
+            s.Flush();
+            
+            RpcCallAsync(
+                        server != null ? server : _server, 
+                        s,
+                        this, 
+                        (err, rs) => 
+                            { 
+                                <?=$f->get_csharp_return_type()?> resp;
+                                rs.Read(out resp);
+                                callback(err, resp);
+                            },
+                        reply_hash
+                        );
+        }        
+		
+		public SafeTaskHandle <?=$f->name?>2(
+            <?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>, 
+            <?=$f->name?>Callback callback,
+            int timeout_milliseconds = 0, 
+            int reply_hash = 0,
+            int request_hash = 0,
+            RpcAddress server = null)
         {
-            std::cout << "reply <?=$f->get_rpc_code()?> ok" << std::endl;
-        }
-    }
-    
+            RpcWriteStream s = new RpcWriteStream(<?=$_PROG->name?>Helper.<?=$f->get_rpc_code()?>,timeout_milliseconds, request_hash);
+            s.Write(<?=$f->get_first_param()->name?>);
+            s.Flush();
+            
+            return RpcCallAsync2(
+                        server != null ? server : _server, 
+                        s,
+                        this, 
+                        (err, rs) => 
+                            { 
+                                <?=$f->get_csharp_return_type()?> resp;
+                                rs.Read(out resp);
+                                callback(err, resp);
+                            },
+                        reply_hash
+                        );
+        }       
 <?php    }?>
 <?php } ?>
-
-private:
-    dsn_address_t _server;
-};
+    
+    }
 
 <?php } ?>
-<?=$_PROG->get_cpp_namespace_end()?>
+} // end namespace

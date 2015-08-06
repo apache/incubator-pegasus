@@ -56,13 +56,13 @@ namespace echo.csharp
 
     public static class RpcStreamHelper
     {
-        public static string ReadString(this RpcReadStream s)
+        public static void Read(this RpcReadStream s, out string v)
         {
             StreamReader reader = new StreamReader(s);
-            return reader.ReadToEnd();
+            v = reader.ReadToEnd();
         }
         
-        public static void WriteString(this RpcWriteStream s, string v)
+        public static void Write(this RpcWriteStream s, string v)
         {
             var bytes = Encoding.UTF8.GetBytes(v);
             s.Write(bytes, 0, bytes.Length);
@@ -79,8 +79,9 @@ namespace echo.csharp
 
         public void OnEcho(RpcReadStream request, RpcWriteStream response)
         {
-            string v = request.ReadString();
-            response.WriteString(v);
+            string v;
+            request.Read(out v);
+            response.Write(v);
             response.Flush();
             Reply(response);
         }
@@ -135,7 +136,7 @@ namespace echo.csharp
         {
             //Console.WriteLine("on_timer2 " + param.ToString());
             RpcWriteStream s = new RpcWriteStream(EchoClientApp.RPC_ECHO, 1000, 0);
-            s.WriteString("hi, this is timer2 echo");
+            s.Write("hi, this is timer2 echo");
             s.Flush();
             RpcCallAsync(_server, s, this, this.OnTimer2EchoCallback, 0);
         }
@@ -144,7 +145,9 @@ namespace echo.csharp
         {
             if (err == ErrorCode.ERR_OK)
             {
-                Logging.dassert(response.ReadString() == "hi, this is timer2 echo",
+                string v;
+                response.Read(out v);
+                Logging.dassert(v == "hi, this is timer2 echo",
                 "incorrect responsed value");
             }
 
@@ -161,7 +164,7 @@ namespace echo.csharp
             }
 
             RpcWriteStream s = new RpcWriteStream(EchoClientApp.RPC_ECHO, 1000, 0);
-            s.WriteString("hi, this is timer2 echo");
+            s.Write("hi, this is timer2 echo");
             s.Flush();
             RpcCallAsync(_server, s, this, this.OnTimer2EchoCallback, 0);
         }

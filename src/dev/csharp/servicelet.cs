@@ -172,7 +172,7 @@ namespace dsn.dev.csharp
 
         static dsn_task_handler_t _c_task_handler_holder = c_task_handler;
 
-        public static dsn_task_t CallAsync(
+        public static void CallAsync(
             TaskCode evt,
             Servicelet callbackOwner,
             task_handler callback,
@@ -190,12 +190,37 @@ namespace dsn.dev.csharp
                 task = Native.dsn_task_create_timer(evt, _c_task_handler_holder, (IntPtr)idx, hash, timer_interval_milliseconds);
 
             Native.dsn_task_call(task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero, delay_milliseconds);
-            return task;
+        }
+
+        //
+        // this gives you the task handle so you can wait or cancel
+        // the task, with the cost of add/ref the task handle
+        // 
+        public static SafeTaskHandle CallAsync2(
+            TaskCode evt,
+            Servicelet callbackOwner,
+            task_handler callback,
+            int hash = 0,
+            int delay_milliseconds = 0,
+            int timer_interval_milliseconds = 0
+            )
+        {
+            int idx = GlobalInterOpLookupTable.Put(callback);
+            IntPtr task;
+
+            if (timer_interval_milliseconds == 0)
+                task = Native.dsn_task_create(evt, _c_task_handler_holder, (IntPtr)idx, hash);
+            else
+                task = Native.dsn_task_create_timer(evt, _c_task_handler_holder, (IntPtr)idx, hash, timer_interval_milliseconds);
+
+            var ret = new SafeTaskHandle(task);
+            Native.dsn_task_call(task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero, delay_milliseconds);
+            return ret;
         }
                 
         // no callback
         public static void RpcCallOneWay(
-            dsn_address_t server,
+            RpcAddress server,
             RpcWriteStream requestStream
             )
         {
@@ -206,7 +231,7 @@ namespace dsn.dev.csharp
         }
 
         public static RpcReadStream RpcCallSync(
-            dsn_address_t server,
+            RpcAddress server,
             RpcWriteStream requestStream
             )
         {
@@ -244,8 +269,8 @@ namespace dsn.dev.csharp
 
         static dsn_rpc_response_handler_t _c_rpc_response_handler_holder = c_rpc_response_handler;
 
-        public static dsn_task_t RpcCallAsync(
-            dsn_address_t server,
+        public static void RpcCallAsync(
+            RpcAddress server,
             RpcWriteStream requestStream,
             Servicelet callbackOwner,
             RpcResponseHandler callback,
@@ -263,7 +288,34 @@ namespace dsn.dev.csharp
                 replyHash
                 );
             Native.dsn_rpc_call(server, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
-            return task;
+        }
+
+        //
+        // this gives you the task handle so you can wait or cancel
+        // the task, with the cost of add/ref the task handle
+        // 
+        public static SafeTaskHandle RpcCallAsync2(
+            RpcAddress server,
+            RpcWriteStream requestStream,
+            Servicelet callbackOwner,
+            RpcResponseHandler callback,
+            int replyHash = 0
+            )
+        {
+            Logging.dassert(requestStream.IsFlushed(),
+                "RpcWriteStream must be flushed after write in the same thread");
+
+            var idx = GlobalInterOpLookupTable.Put(callback);
+            dsn_task_t task = Native.dsn_rpc_create_response_task(
+                requestStream.DangerousGetHandle(),
+                _c_rpc_response_handler_holder,
+                (IntPtr)idx,
+                replyHash
+                );
+
+            var ret = new SafeTaskHandle(task);
+            Native.dsn_rpc_call(server, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
+            return ret;
         }
 
         public static dsn_handle_t FileOpen(string file_name, int flag, int pmode)

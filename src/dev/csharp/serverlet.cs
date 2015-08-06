@@ -10,6 +10,29 @@ namespace dsn.dev.csharp
     using dsn_message_t = IntPtr;
     using dsn_task_t = IntPtr;
     
+    public class RpcReplier<TResponse>
+    {
+        public delegate void Marshaller(RpcWriteStream respStream, TResponse resp);
+        public RpcReplier(RpcWriteStream respStream, Marshaller marshal)
+        {
+            _respStream = respStream;
+            _marshaller = marshal;
+        }
+
+        public void Reply(TResponse resp)
+        {
+            _marshaller(_respStream, resp);
+
+            Logging.dassert(_respStream.IsFlushed(),
+                "RpcWriteStream must be flushed after write in the same thread");
+
+            Native.dsn_rpc_reply(_respStream.DangerousGetHandle());
+        }
+
+        private RpcWriteStream _respStream;
+        private Marshaller _marshaller;
+    }
+
     public class Serverlet<T> : Servicelet
         where T : Serverlet<T>
     {

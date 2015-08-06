@@ -3,161 +3,140 @@ require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
 ?>
+using System;
+using System.IO;
+using dsn.dev.csharp;
 
-
-# include "<?=$file_prefix?>.client.perf.h"
-# include "<?=$file_prefix?>.server.h"
-
-<?=$_PROG->get_cpp_namespace_begin()?>
-
-// server app example
-class <?=$_PROG->name?>_server_app : 
-    public ::dsn::service_app<<?=$_PROG->name?>_server_app>
+namespace <?=$_PROG->get_csharp_namespace()?> 
 {
-public:
-    <?=$_PROG->name?>_server_app()
-    {}
-
-    virtual ::dsn::error_code start(int argc, char** argv)
+    // server app example
+    public class <?=$_PROG->name?>ServerApp : ServiceApp
     {
-<?php foreach ($_PROG->services as $svc) { ?>
-        _<?=$svc->name?>_svc.open_service();
-<?php } ?>
-        return ::dsn::ERR_OK;
-    }
-
-    virtual void stop(bool cleanup = false)
-    {
-<?php foreach ($_PROG->services as $svc) { ?>
-        _<?=$svc->name?>_svc.close_service();
-<?php } ?>
-    }
-
-private:
-<?php foreach ($_PROG->services as $svc) { ?>
-    <?=$svc->name?>_service _<?=$svc->name?>_svc;
-<?php } ?>
-};
-
-// client app example
-class <?=$_PROG->name?>_client_app : 
-    public ::dsn::service_app<<?=$_PROG->name?>_client_app>, 
-    public virtual ::dsn::service::servicelet
-{
-public:
-    <?=$_PROG->name?>_client_app() 
-    {
-<?php foreach ($_PROG->services as $svc) { ?>
-        _<?=$svc->name?>_client = nullptr;
-<?php } ?>
-    }
-    
-    ~<?=$_PROG->name?>_client_app() 
-    {
-        stop();
-    }
-
-    virtual ::dsn::error_code start(int argc, char** argv)
-    {
-        if (argc < 3)
-            return ::dsn::ERR_INVALID_PARAMETERS;
-
-        dsn_address_build(&_server, argv[1], (uint16_t)atoi(argv[2]));
-<?php foreach ($_PROG->services as $svc) { ?>
-        _<?=$svc->name?>_client = new <?=$svc->name?>_client(_server);
-<?php } ?>
-        _timer = ::dsn::service::tasking::enqueue(<?=$_PROG->get_test_task_code()?>, this, &<?=$_PROG->name?>_client_app::on_test_timer, 0, 0, 1000);
-        return ::dsn::ERR_OK;
-    }
-
-    virtual void stop(bool cleanup = false)
-    {
-        _timer->cancel(true);
-<?php foreach ($_PROG->services as $svc) { ?> 
-        if (_<?=$svc->name?>_client != nullptr)
+        public override ErrorCode Start(string[] args)
         {
-            delete _<?=$svc->name?>_client;
-            _<?=$svc->name?>_client = nullptr;
+<?php foreach ($_PROG->services as $svc) { ?>
+            _<?=$svc->name?>Server.OpenService();
+<?php } ?>
+            return ErrorCode.ERR_OK;
         }
+
+        public override void Stop(bool cleanup = false)
+        {
+<?php foreach ($_PROG->services as $svc) { ?>
+            _<?=$svc->name?>Server.CloseService();
+            _<?=$svc->name?>Server.Dispose();
+<?php } ?>
+        }
+
+<?php foreach ($_PROG->services as $svc) { ?>
+        private <?=$svc->name?>Server _<?=$svc->name?>Server;
 <?php } ?>
     }
 
-    void on_test_timer()
+    // client app example
+    public class <?=$_PROG->name?>ClientApp : ServiceApp
     {
+        public override ErrorCode Start(string[] args)
+        {
+            if (args.Length < 3)
+            {
+                throw new Exception("wrong usage: server-host server-port");                
+            }
+
+            Native.dsn_address_build(out _server.addr, args[1], ushort.Parse(args[2]));
+
+<?php foreach ($_PROG->services as $svc) { ?>
+            _<?=$svc->name?>Client= new <?=$svc->name?>Client(_server);
+<?php } ?>
+            _timer = Servicelet.CallAsync2(<?=$_PROG->name?>Helper.<?=$_PROG->get_test_task_code()?>, null, this.OnTestTimer, 0, 0, 1000);
+            return ErrorCode.ERR_OK;
+        }
+
+        public override void Stop(bool cleanup = false)
+        {
+            _timer.Cancel(true);
+<?php foreach ($_PROG->services as $svc) { ?>
+            _<?=$svc->name?>Client.Dispose();
+            _<?=$svc->name?>Client = null;
+<?php } ?>
+        }
+
+        private void OnTestTimer()
+        {
 <?php
-foreach ($_PROG->services as $svc)
-{
-    echo "        // test for service '". $svc->name ."'". PHP_EOL;
-    foreach ($svc->functions as $f)
-{?>
-        {
-            <?=$f->get_first_param()->get_cpp_type()?> req;
+    foreach ($_PROG->services as $svc)
+    {
+        echo "            // test for service '". $svc->name ."'". PHP_EOL;
+        foreach ($svc->functions as $f)
+    {?>
+            {
+                <?=$f->get_first_param()->get_csharp_type()?> req = default(<?=$f->get_first_param()->get_csharp_type()?>);
 <?php if ($f->is_one_way()) { ?>
-            _<?=$svc->name?>_client-><?=$f->name?>(req);
+                _<?=$svc->name?>Client.<?=$f->name?>(req);
 <?php } else { ?>
-            //sync:
-            <?=$f->get_cpp_return_type()?> resp;
-            auto err = _<?=$svc->name?>_client-><?=$f->name?>(req, resp);
-            std::cout << "call <?=$f->get_rpc_code()?> end, return " << err.to_string() << std::endl;
-            //async: 
-            //_<?=$svc->name?>_client->begin_<?=$f->name?>(req);
+                //sync:
+                <?=$f->get_csharp_return_type()?> resp;
+                var err = _<?=$svc->name?>Client.<?=$f->name?>(req, out resp);
+                Console.WriteLine("call <?=$f->get_rpc_code()?> end, return " + err.ToString());
+                //async: 
+                // TODO:
 <?php } ?>           
-        }
+            }
 <?php }    
-}
+    }
 ?>
-    }
-
-private:
-    ::dsn::cpp_task_ptr _timer;
-    dsn_address_t _server;
-    
-<?php foreach ($_PROG->services as $svc) { ?>
-    <?=$svc->name?>_client *_<?=$svc->name?>_client;
-<?php } ?>
-};
-
-<?php foreach ($_PROG->services as $svc) { ?>
-class <?=$svc->name?>_perf_test_client_app :
-    public ::dsn::service_app<<?=$svc->name?>_perf_test_client_app>, 
-    public virtual ::dsn::service::servicelet
-{
-public:
-    <?=$svc->name?>_perf_test_client_app()
-    {
-        _<?=$svc->name?>_client = nullptr;
-    }
-
-    ~<?=$svc->name?>_perf_test_client_app()
-    {
-        stop();
-    }
-
-    virtual ::dsn::error_code start(int argc, char** argv)
-    {
-        if (argc < 2)
-            return ::dsn::ERR_INVALID_PARAMETERS;
-
-        dsn_address_build(&_server, argv[1], (uint16_t)atoi(argv[2]));
-
-        _<?=$svc->name?>_client = new <?=$svc->name?>_perf_test_client(_server);
-        _<?=$svc->name?>_client->start_test();
-        return ::dsn::ERR_OK;
-    }
-
-    virtual void stop(bool cleanup = false)
-    {
-        if (_<?=$svc->name?>_client != nullptr)
-        {
-            delete _<?=$svc->name?>_client;
-            _<?=$svc->name?>_client = nullptr;
         }
-    }
-    
-private:
-    <?=$svc->name?>_perf_test_client *_<?=$svc->name?>_client;
-    dsn_address_t _server;
-};
-<?php } ?>
 
-<?=$_PROG->get_cpp_namespace_end()?>
+        private SafeTaskHandle _timer;
+        private RpcAddress  _server = new RpcAddress();
+        
+<?php foreach ($_PROG->services as $svc) { ?>
+        private <?=$svc->name?>Client _<?=$svc->name?>Client;
+<?php } ?>
+    }
+
+    /*
+<?php foreach ($_PROG->services as $svc) { ?>
+    class <?=$svc->name?>_perf_testClientApp :
+        public ::dsn::service_app<<?=$svc->name?>_perf_testClientApp>, 
+        public virtual ::dsn::service::servicelet
+    {
+    public:
+        <?=$svc->name?>_perf_testClientApp()
+        {
+            _<?=$svc->name?>Client= null;
+        }
+
+        ~<?=$svc->name?>_perf_testClientApp()
+        {
+            stop();
+        }
+
+        virtual ErrorCode start(int argc, char** argv)
+        {
+            if (argc < 2)
+                return ErrorCode.ERR_INVALID_PARAMETERS;
+
+            dsn_address_build(&_server, argv[1], (uint16_t)atoi(argv[2]));
+
+            _<?=$svc->name?>Client= new <?=$svc->name?>_perf_testClient(_server);
+            _<?=$svc->name?>Client->start_test();
+            return ErrorCode.ERR_OK;
+        }
+
+        virtual void stop(bool cleanup = false)
+        {
+            if (_<?=$svc->name?>Client!= null)
+            {
+                delete _<?=$svc->name?>Client;
+                _<?=$svc->name?>Client= null;
+            }
+        }
+        
+    private:
+        <?=$svc->name?>_perf_testClient*_<?=$svc->name?>Client;
+        RpcAddress _server;
+    }
+<?php } ?>
+    */
+} // end namespace

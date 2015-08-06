@@ -398,13 +398,17 @@ namespace  dsn
         commit();
 
         blob bb;
-        std::shared_ptr<char> ptr((char*)malloc(size));
-        bb.assign(ptr, 0, (int)size);
+        create_new_buffer(size, bb);
         _buffers.push_back(bb);
 
-        _current_buffer = (char*)bb.data();
-        _current_offset = 0;
+        _current_buffer = (char*)bb.data();        
         _current_buffer_length = bb.length();
+    }
+
+    void binary_writer::create_new_buffer(size_t size, /*out*/blob& bb)
+    {
+        std::shared_ptr<char> ptr((char*)malloc(size));
+        bb.assign(ptr, 0, (int)size);
     }
 
     void binary_writer::commit()
@@ -412,11 +416,15 @@ namespace  dsn
         if (_current_offset > 0)
         {
             *_buffers.rbegin() = _buffers.rbegin()->range(0, _current_offset);
+
+            _current_offset = 0;
+            _current_buffer_length = 0;
         }
     }
     
     blob binary_writer::get_buffer()
     {
+        commit();
         if (_buffers.size() == 1)
         {
             return _buffers[0];
