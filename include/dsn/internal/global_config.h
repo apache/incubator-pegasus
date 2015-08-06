@@ -87,6 +87,7 @@ struct service_app_spec
     int                  delay_seconds;
     bool                 run;
     int                  count; // index = 1,2,...,count
+    std::string          dmodule; // when the service is a dynamcially loaded module
 
     service_app_role     role;
 
@@ -106,6 +107,7 @@ struct service_app_spec
 CONFIG_BEGIN(service_app_spec)
     CONFIG_FLD_STRING(type, "")
     CONFIG_FLD_STRING(arguments, "")
+    CONFIG_FLD_STRING(dmodule, "")    
     CONFIG_FLD_INT_LIST(ports)
     CONFIG_FLD_ID_LIST(threadpool_code2, pools)
     CONFIG_FLD(int, uint64, delay_seconds, 0)
