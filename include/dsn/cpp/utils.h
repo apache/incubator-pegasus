@@ -283,6 +283,8 @@ namespace dsn {
         extern int get_current_tid();
 
         inline int get_invalid_tid() { return -1; }
+
+        extern bool load_dynamic_library(const char* module);
     }
 } // end namespace dsn::utils
 

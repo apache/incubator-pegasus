@@ -30,6 +30,7 @@
 
 # if defined(__linux__)
 # include <sys/syscall.h>
+# include <dlfcn.h> 
 # elif defined(__FreeBSD__)
 # include <sys/thr.h>
 # elif defined(__APPLE__)
@@ -57,6 +58,32 @@ namespace dsn {
             return static_cast<int>(lwpid);
 # elif defined(__APPLE__)
             return static_cast<int>(pthread_mach_thread_np(pthread_self()));
+# else
+# error not implemented yet
+# endif 
+        }
+
+        bool load_dynamic_library(const char* module)
+        {
+            std::string module_name(module);
+# if defined(_WIN32)
+            module_name += ".dll";
+            if (::LoadLibraryA(module_name.c_str()) != NULL)
+            {
+                derror("load dynamic library '%s' failed, err = %d", module_name.c_str(), ::GetLastError());
+                return false;
+            }
+            else
+                return true;
+# elif defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
+            module_name += ".dll";
+            if (nullptr == dlopen(module_name.c_str(), RTLD_LAZY))
+            {
+                derror("load dynamic library '%s' failed, err = %s", module_name.c_str(), dlerror());
+                return false;
+            }
+            else
+                return true;
 # else
 # error not implemented yet
 # endif 

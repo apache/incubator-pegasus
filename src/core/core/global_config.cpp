@@ -261,6 +261,7 @@ service_app_spec::service_app_spec(const service_app_spec& r)
     pools = r.pools;
     delay_seconds = r.delay_seconds;
     run = r.run;
+    dmodule = r.dmodule;
     network_client_confs = r.network_client_confs;
     network_server_confs = r.network_server_confs;
 }
@@ -362,6 +363,15 @@ bool service_spec::init_app_specs()
             service_app_spec app;
             if (!app.init((*it).c_str(), it->substr(5).c_str(), &default_app))
                 return false;
+
+            // load dynamic module where app role is defined
+            if (app.dmodule.length() > 0)
+            {
+                if (!::dsn::utils::load_dynamic_library(app.dmodule.c_str()))
+                {
+                    return false;
+                }   
+            }
 
             auto& store = ::dsn::utils::singleton_store<std::string, ::dsn::service_app_role>::instance();
             ::dsn::service_app_role role;
