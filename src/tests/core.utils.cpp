@@ -46,26 +46,6 @@ TEST(core, binary_io)
 }
 
 
-TEST(core, binary_io_with_pos)
-{
-    int value = 0xdeadbeef;
-    int value2 = 0xdeadbeef + 100;
-    binary_writer writer;
-    auto pos = writer.write_placeholder();
-    
-    writer.write(value);
-    writer.write(value2, pos);
-    
-    auto buf = writer.get_buffer();
-    binary_reader reader(buf);
-    int value3, value4;
-    reader.read(value3);
-    reader.read(value4);
-
-    EXPECT_TRUE(value3 == value2);
-    EXPECT_TRUE(value4 == value);
-}
-
 TEST(core, split_args)
 {
     std::string value = "a ,b, c ";

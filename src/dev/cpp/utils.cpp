@@ -343,105 +343,56 @@ namespace  dsn
     binary_writer::binary_writer(int reserveBufferSize)
     {
         _total_size = 0;
-
         _buffers.reserve(1);
-        _data.reserve(1);
-
-        _cur_pos = -1;
-        _cur_is_placeholder = false;
-
         _reserved_size_per_buffer = (reserveBufferSize == 0) ? _reserved_size_per_buffer_static : reserveBufferSize;
-
-        //create_buffer_and_writer();
+        _current_buffer = nullptr;
+        _current_offset = 0;
+        _current_buffer_length = 0;
     }
 
     binary_writer::binary_writer(blob& buffer)
     {
         _total_size = 0;
-
         _buffers.reserve(1);
-        _data.reserve(1);
-
-        _cur_pos = -1;
-        _cur_is_placeholder = false;
-
         _reserved_size_per_buffer = _reserved_size_per_buffer_static;
 
-        //create_buffer_and_writer(&buffer);
+        _buffers.push_back(buffer);
+        _current_buffer = (char*)buffer.data();
+        _current_offset = 0;
+        _current_buffer_length = buffer.length();
     }
 
     binary_writer::~binary_writer()
     {
     }
 
-    void binary_writer::create_new_buffer(size_t size, /*out*/blob& bb)
+    void binary_writer::create_buffer(size_t size)
     {
+        commit();
+
+        blob bb;
         std::shared_ptr<char> ptr((char*)malloc(size));
         bb.assign(ptr, 0, (int)size);
+        _buffers.push_back(bb);
+
+        _current_buffer = (char*)bb.data();
+        _current_offset = 0;
+        _current_buffer_length = bb.length();
     }
 
-    void binary_writer::create_buffer_and_writer(blob* pBuffer)
+    void binary_writer::commit()
     {
-        if (pBuffer == nullptr)
+        if (_current_offset > 0)
         {
-            blob bb;
-            create_new_buffer(_reserved_size_per_buffer, bb);
-            _buffers.push_back(bb);
-
-            bb._length = 0;
-            _data.push_back(bb);
-        }
-        else
-        {
-            _buffers.push_back(*pBuffer);
-
-            pBuffer->_length = 0;
-            _data.push_back(*pBuffer);
-        }
-
-        ++_cur_pos;
-    }
-
-    void binary_writer::sanity_check()
-    {
-        dassert(_cur_pos < static_cast<int>(_buffers.size()), 
-            "current position must be within the buffer array: %d vs %d", 
-            static_cast<int>(_cur_pos), 
-            static_cast<int>(_buffers.size())
-            );
-
-        dassert(_data.size() == _buffers.size(),
-            "data and buffer array must be of the same size: %d vs %d",
-            static_cast<int>(_data.size()),
-            static_cast<int>(_buffers.size())
-            );
-
-        for (size_t i = 0; i < _data.size(); i++)
-        {
-            dassert(_data[i].length() <= _buffers[i].length(),
-                "data size must not be greater than the buffer size: %d vs %d",
-                static_cast<int>(_data[i].length()),
-                static_cast<int>(_buffers[i].length())
-                );
+            *_buffers.rbegin() = _buffers.rbegin()->range(0, _current_offset);
         }
     }
-
-    uint16_t binary_writer::write_placeholder()
+    
+    blob binary_writer::get_buffer()
     {
-        if (_cur_is_placeholder)
+        if (_buffers.size() == 1)
         {
-            create_buffer_and_writer();
-        }
-        _cur_is_placeholder = true;
-        dassert(_cur_pos <= 0x0000ffff, "placeholder do not support index exceed uint16.max right now: %d", _cur_pos);
-        return (uint16_t)_cur_pos;
-    }
-
-    blob binary_writer::get_buffer() const
-    {
-        if (_data.size() == 1)
-        {
-            return _data[0];
+            return _buffers[0];
         }
         else
         {
@@ -449,196 +400,86 @@ namespace  dsn
             blob bb(bptr, _total_size);
             const char* ptr = bb.data();
 
-            for (int i = 0; i < static_cast<int>(_data.size()); i++)
+            for (int i = 0; i < static_cast<int>(_buffers.size()); i++)
             {
-                memcpy((void*)ptr, (const void*)_data[i].data(), (size_t)_data[i].length());
-                ptr += _data[i].length();
+                memcpy((void*)ptr, (const void*)_buffers[i].data(), (size_t)_buffers[i].length());
+                ptr += _buffers[i].length();
             }
             return bb;
         }
     }
 
-    void binary_writer::write_empty(int sz, uint16_t pos /*= 0xffff*/)
+    void binary_writer::write_empty(int sz)
     {
         int sz0 = sz;
-# ifdef _DEBUG
-        sanity_check();
-# endif
-        if (pos != 0xffff)
+        int rem_size = _current_buffer_length - _current_offset;
+        if (rem_size >= sz)
         {
-            int rem_size = _buffers[pos].length() - _data[pos].length();
-            if (sz > rem_size)
-            {
-                int allocSize = _data[pos].length() + sz;
-                blob bb;
-                create_new_buffer(allocSize, bb);
-
-                memcpy((void*)bb.data(), (const void*)_data[pos].data(), (size_t)_data[pos].length());
-
-                _buffers[pos] = bb;
-                _data[pos] = bb;
-            }
-            else
-            {
-                _data[pos]._length += sz;
-            }
+            _current_offset += sz;
         }
         else
         {
-            if (_cur_is_placeholder || _cur_pos == -1)
-            {
-                create_buffer_and_writer();
-                _cur_is_placeholder = false;
-            }
+            _current_offset += rem_size;
+            sz -= rem_size;
 
-            int pos2 = _cur_pos;
+            int allocSize = _reserved_size_per_buffer;
+            if (sz > allocSize)
+                allocSize = sz;
 
-            int rem_size = _buffers[pos2].length() - _data[pos2].length();
-            if (rem_size >= sz)
-            {
-                _data[pos2]._length += sz;
-            }
-            else
-            {
-                _data[pos2]._length += rem_size;
-
-                sz -= rem_size;
-
-                int allocSize = _reserved_size_per_buffer;
-                if (sz > allocSize)
-                    allocSize = sz;
-
-                blob bb;
-                create_new_buffer(allocSize, bb);
-                _buffers.push_back(bb);
-
-                bb._length = 0;
-                _data.push_back(bb);
-
-                pos2 = (++_cur_pos);
-
-                _data[pos2]._length += sz;
-            }
+            create_buffer(allocSize);
+            _current_offset += sz;
         }
-# ifdef _DEBUG
-        sanity_check();
-# endif
 
         _total_size += sz0;
     }
 
-    void binary_writer::write(const char* buffer, int sz, uint16_t pos /*= 0xffff*/)
+    void binary_writer::write(const char* buffer, int sz)
     {
         int sz0 = sz;
-
-# ifdef _DEBUG
-        sanity_check();
-# endif
-
-        if (pos != 0xffff)
+        int rem_size = _current_buffer_length - _current_offset;
+        if (rem_size >= sz)
         {
-            int rem_size = _buffers[pos].length() - _data[pos].length();
-            if (sz > rem_size)
-            {
-                int allocSize = _data[pos].length() + sz;
-                blob bb;
-                create_new_buffer(allocSize, bb);
-
-                memcpy((void*)bb.data(), (const void*)_data[pos].data(), (size_t)_data[pos].length());
-                memcpy((void*)(bb.data() + _data[pos].length()), (const void*)buffer, (size_t)sz);
-
-                _buffers[pos] = bb;
-                _data[pos] = bb;
-            }
-            else
-            {
-                memcpy((void*)(_data[pos].data() + _data[pos].length()), buffer, (size_t)sz);
-                _data[pos]._length += sz;
-            }
+            memcpy((void*)(_current_buffer + _current_offset), buffer, (size_t)sz);
+            _current_offset += sz;
         }
         else
         {
-            if (_cur_is_placeholder || _cur_pos == -1)
-            {
-                create_buffer_and_writer();
-                _cur_is_placeholder = false;
-            }
+            memcpy((void*)(_current_buffer + _current_offset), buffer, (size_t)rem_size);
+            _current_offset += rem_size;
+            sz -= rem_size;
 
-            int pos2 = _cur_pos;
+            int allocSize = _reserved_size_per_buffer;
+            if (sz > allocSize)
+                allocSize = sz;
 
-            int rem_size = _buffers[pos2].length() - _data[pos2].length();
-            if (rem_size >= sz)
-            {
-                memcpy((void*)(_data[pos2].data() + _data[pos2].length()), buffer, (size_t)sz);
-                _data[pos2]._length += sz;
-            }
-            else
-            {
-                if (rem_size > 0)
-                {
-                    memcpy((void*)(_data[pos2].data() + _data[pos2].length()), buffer, (size_t)rem_size);
-                    _data[pos2]._length += rem_size;
-
-                    sz -= rem_size;
-                    buffer += rem_size;
-                }
-                else
-                {
-                    dbg_dassert(rem_size == 0, "remaining size must be zero in this case: %d", rem_size);
-                }
-
-                int allocSize = _reserved_size_per_buffer;
-                if (sz > allocSize)
-                    allocSize = sz;
-
-                blob bb;
-                create_new_buffer(allocSize, bb);
-                _buffers.push_back(bb);
-
-                bb._length = 0;
-                _data.push_back(bb);
-
-                pos2 = (++_cur_pos);
-
-                memcpy((void*)(_data[pos2].data() + _data[pos2].length()), buffer, (size_t)sz);
-                _data[pos2]._length += sz;
-            }
+            create_buffer(allocSize);
+            memcpy((void*)(_current_buffer + _current_offset), buffer + rem_size, (size_t)sz);
+            _current_offset += sz;
         }
-
-# ifdef _DEBUG
-        sanity_check();
-# endif
 
         _total_size += sz0;
     }
 
     bool binary_writer::next(void** data, int* size)
     {
-        int sz = _buffers[_cur_pos].length() - _data[_cur_pos].length();
-        if (sz == 0)
+        int rem_size = _current_buffer_length - _current_offset;
+        if (rem_size == 0)
         {
-            std::shared_ptr<char> ptr((char*)malloc(_reserved_size_per_buffer));
-            blob bb(ptr, _reserved_size_per_buffer);
-            _buffers.push_back(bb);
-
-            bb._length = 0;
-            _data.push_back(bb);
-            ++_cur_pos;
-
-            sz = _reserved_size_per_buffer;
+            create_buffer(_reserved_size_per_buffer);
+            rem_size = _current_buffer_length;
         }
 
-        *size = sz;
-        *data = (void*)(_data[_cur_pos].data() + _data[_cur_pos].length());
-        _data[_cur_pos]._length += sz;
-        _total_size += sz;
+        *size = rem_size;
+        *data = (void*)(_current_buffer + _current_offset);
+        _current_offset = _current_buffer_length;
+        _total_size += rem_size;
         return true;
     }
 
     bool binary_writer::backup(int count)
     {
-        dassert(count <= _data[_cur_pos].length(), "currently we don't support backup before the last buffer's header");
-        _data[_cur_pos]._length -= count;
+        dassert(count <= _current_offset, "currently we don't support backup before the last buffer's header");
+        _current_offset -= count;
         _total_size -= count;
         return true;
     }

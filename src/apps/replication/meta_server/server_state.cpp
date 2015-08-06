@@ -31,7 +31,7 @@
 # endif
 # define __TITLE__ "meta.server.state"
 
-void marshall(binary_writer& writer, const app_state& val, uint16_t pos = 0xffff)
+void marshall(binary_writer& writer, const app_state& val)
 {
     marshall(writer, val.app_type);
     marshall(writer, val.app_name);

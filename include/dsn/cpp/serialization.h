@@ -34,9 +34,9 @@
 
 // pod types
 #define DEFINE_POD_SERIALIZATION(T) \
-    inline void marshall(::dsn::binary_writer& writer, const T& val, uint16_t pos = 0xffff)\
+    inline void marshall(::dsn::binary_writer& writer, const T& val)\
     {\
-    writer.write((const char*)&val, static_cast<int>(sizeof(val)), pos); \
+    writer.write((const char*)&val, static_cast<int>(sizeof(val))); \
     }\
     inline void unmarshall(::dsn::binary_reader& reader, __out_param T& val)\
     {\
@@ -76,10 +76,10 @@ namespace dsn {
         DEFINE_POD_SERIALIZATION(uint64_t)
 
     // error_code
-    inline void marshall(::dsn::binary_writer& writer, const error_code& val, uint16_t pos = 0xffff)
+    inline void marshall(::dsn::binary_writer& writer, const error_code& val)
     {
         int err = val.get();
-        marshall(writer, err, pos);
+        marshall(writer, err);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, __out_param error_code& val)
@@ -97,18 +97,18 @@ namespace dsn {
         reader.read((char*)val.name, (int)sizeof(val.name));
     }
 
-    inline void marshall(::dsn::binary_writer& writer, const dsn_address_t& val, uint16_t pos = 0xffff)
+    inline void marshall(::dsn::binary_writer& writer, const dsn_address_t& val)
     {
-        writer.write_pod(val.ip, pos);
-        writer.write_pod(val.port, pos);
-        writer.write((const char*)val.name, (int)sizeof(val.name), pos);
+        writer.write_pod(val.ip);
+        writer.write_pod(val.port);
+        writer.write((const char*)val.name, (int)sizeof(val.name));
     }
 
 
     // std::string
-    inline void marshall(::dsn::binary_writer& writer, const std::string& val, uint16_t pos = 0xffff)
+    inline void marshall(::dsn::binary_writer& writer, const std::string& val)
     {
-        writer.write(val, pos);
+        writer.write(val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, __out_param std::string& val)
@@ -117,13 +117,13 @@ namespace dsn {
     }
 
     // end point
-    //extern inline void marshall(::dsn::binary_writer& writer, const dsn_address_t& val, uint16_t pos = 0xffff);
+    //extern inline void marshall(::dsn::binary_writer& writer, const dsn_address_t& val);
     //extern inline void unmarshall(::dsn::binary_reader& reader, __out_param dsn_address_t& val);
 
     // blob
-    inline void marshall(::dsn::binary_writer& writer, const blob& val, uint16_t pos = 0xffff)
+    inline void marshall(::dsn::binary_writer& writer, const blob& val)
     {
-        writer.write(val, pos);
+        writer.write(val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, __out_param blob& val)
@@ -133,13 +133,13 @@ namespace dsn {
 
     // for generic list
     template<typename T>
-    inline void marshall(::dsn::binary_writer& writer, const std::list<T>& val, uint16_t pos = 0xffff)
+    inline void marshall(::dsn::binary_writer& writer, const std::list<T>& val)
     {
         int sz = static_cast<int>(val.size());
-        marshall(writer, sz, pos);
+        marshall(writer, sz);
         for (auto& v : val)
         {
-            marshall(writer, v, pos);
+            marshall(writer, v);
         }
     }
 
@@ -157,13 +157,13 @@ namespace dsn {
 
     // for generic vector
     template<typename T>
-    inline void marshall(::dsn::binary_writer& writer, const std::vector<T>& val, uint16_t pos = 0xffff)
+    inline void marshall(::dsn::binary_writer& writer, const std::vector<T>& val)
     {
         int sz = static_cast<int>(val.size());
-        marshall(writer, sz, pos);
+        marshall(writer, sz);
         for (auto& v : val)
         {
-            marshall(writer, v, pos);
+            marshall(writer, v);
         }
     }
 
@@ -181,13 +181,13 @@ namespace dsn {
 
     // for generic set
     template<typename T>
-    inline void marshall(::dsn::binary_writer& writer, const std::set<T, std::less<T>, std::allocator<T>>& val, uint16_t pos = 0xffff)
+    inline void marshall(::dsn::binary_writer& writer, const std::set<T, std::less<T>, std::allocator<T>>& val)
     {
         int sz = static_cast<int>(val.size());
-        marshall(writer, sz, pos);
+        marshall(writer, sz);
         for (auto& v : val)
         {
-            marshall(writer, v, pos);
+            marshall(writer, v);
         }
     }
 

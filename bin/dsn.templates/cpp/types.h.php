@@ -30,7 +30,7 @@ echo $_PROG->get_cpp_namespace_begin().PHP_EOL;
 foreach ($_PROG->structs as $s) 
 {
     echo "    // ---------- ". $s->name . " -------------". PHP_EOL;
-    echo "    inline void marshall(::dsn::binary_writer& writer, const ". $s->get_cpp_name() . "& val, uint16_t pos = 0xffff)".PHP_EOL;
+    echo "    inline void marshall(::dsn::binary_writer& writer, const ". $s->get_cpp_name() . "& val)".PHP_EOL;
     echo "    {".PHP_EOL;
     echo "        boost::shared_ptr<::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));".PHP_EOL;
     echo "        ::apache::thrift::protocol::TBinaryProtocol proto(transport);".PHP_EOL;
@@ -87,10 +87,10 @@ foreach ($_PROG->structs as $s)
     }
     echo "    };".PHP_EOL;
     echo PHP_EOL;
-    echo "    inline void marshall(::dsn::binary_writer& writer, const ". $s->get_cpp_name() . "& val, uint16_t pos = 0xffff)".PHP_EOL;
+    echo "    inline void marshall(::dsn::binary_writer& writer, const ". $s->get_cpp_name() . "& val)".PHP_EOL;
     echo "    {".PHP_EOL;
     foreach ($s->fields as $fld) {
-        echo "        marshall(writer, val." .$fld->name .", pos);" .PHP_EOL;
+        echo "        marshall(writer, val." .$fld->name .");" .PHP_EOL;
     }
     echo "    };".PHP_EOL;
     echo PHP_EOL;

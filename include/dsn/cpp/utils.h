@@ -167,48 +167,46 @@ namespace dsn {
         binary_writer(blob& buffer);
         ~binary_writer();
 
-        uint16_t write_placeholder();
-        template<typename T> void write_pod(const T& val, uint16_t pos = 0xffff);
-        template<typename T> void write(const T& val, uint16_t pos = 0xffff) { dassert(false, "write of this type is not implemented"); }
-        void write(const int8_t& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
-        void write(const uint8_t& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
-        void write(const int16_t& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
-        void write(const uint16_t& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
-        void write(const int32_t& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
-        void write(const uint32_t& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
-        void write(const int64_t& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
-        void write(const uint64_t& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
-        void write(const bool& val, uint16_t pos = 0xffff) { write_pod(val, pos); }
+        template<typename T> void write_pod(const T& val);
+        template<typename T> void write(const T& val) { dassert(false, "write of this type is not implemented"); }
+        void write(const int8_t& val) { write_pod(val); }
+        void write(const uint8_t& val) { write_pod(val); }
+        void write(const int16_t& val) { write_pod(val); }
+        void write(const uint16_t& val) { write_pod(val); }
+        void write(const int32_t& val) { write_pod(val); }
+        void write(const uint32_t& val) { write_pod(val); }
+        void write(const int64_t& val) { write_pod(val); }
+        void write(const uint64_t& val) { write_pod(val); }
+        void write(const bool& val) { write_pod(val); }
 
-        void write(const error_code& val, uint16_t pos = 0xffff) { int err = val.get();  write_pod(err, pos); }
-        void write(const std::string& val, uint16_t pos = 0xffff);
-        void write(const char* buffer, int sz, uint16_t pos = 0xffff);
-        void write(const blob& val, uint16_t pos = 0xffff);
-        void write_empty(int sz, uint16_t pos = 0xffff);
+        void write(const error_code& val) { int err = val.get();  write_pod(err); }
+        void write(const std::string& val);
+        void write(const char* buffer, int sz);
+        void write(const blob& val);
+        void write_empty(int sz);
 
         bool next(void** data, int* size);
         bool backup(int count);
 
         void get_buffers(__out_param std::vector<blob>& buffers) const;
         int  get_buffer_count() const { return static_cast<int>(_buffers.size()); }
-        blob get_buffer() const;
+        blob get_buffer();
         blob get_first_buffer() const;
 
         int total_size() const { return _total_size; }
 
-    private:
-        void create_buffer_and_writer(blob* pBuffer = nullptr);
-        void sanity_check();
-
     protected:
         // bb may have large space than size
-        virtual void create_new_buffer(size_t size, /*out*/blob& bb);
+        virtual void create_buffer(size_t size);
+        virtual void commit();
 
     private:
         std::vector<blob>  _buffers;
-        std::vector<blob>  _data;
-        bool               _cur_is_placeholder;
-        int                _cur_pos;
+        
+        char*              _current_buffer;
+        int                _current_offset;
+        int                _current_buffer_length;
+
         int                _total_size;
         int                _reserved_size_per_buffer;
         static int         _reserved_size_per_buffer_static;
@@ -233,34 +231,34 @@ namespace dsn {
     }
 
     template<typename T>
-    inline void binary_writer::write_pod(const T& val, uint16_t pos)
+    inline void binary_writer::write_pod(const T& val)
     {
-        write((char*)&val, static_cast<int>(sizeof(T)), pos);
+        write((char*)&val, static_cast<int>(sizeof(T)));
     }
 
     inline void binary_writer::get_buffers(__out_param std::vector<blob>& buffers) const
     {
-        buffers = _data;
+        buffers = _buffers;
     }
 
     inline blob binary_writer::get_first_buffer() const
     {
-        return _data[0];
+        return _buffers[0];
     }
 
-    inline void binary_writer::write(const std::string& val, uint16_t pos /*= 0xffff*/)
+    inline void binary_writer::write(const std::string& val)
     {
         int len = static_cast<int>(val.length());
-        write((const char*)&len, sizeof(int), pos);
-        if (len > 0) write((const char*)&val[0], len, pos);
+        write((const char*)&len, sizeof(int));
+        if (len > 0) write((const char*)&val[0], len);
     }
 
-    inline void binary_writer::write(const blob& val, uint16_t pos /*= 0xffff*/)
+    inline void binary_writer::write(const blob& val)
     {
         // TODO: optimization by not memcpy
         int len = val.length();
-        write((const char*)&len, sizeof(int), pos);
-        if (len > 0) write((const char*)val.data(), len, pos);
+        write((const char*)&len, sizeof(int));
+        if (len > 0) write((const char*)val.data(), len);
     }
 }
 
