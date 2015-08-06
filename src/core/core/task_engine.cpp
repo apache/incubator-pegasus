@@ -122,7 +122,7 @@ void task_worker_pool::enqueue(task* t)
                         t->spec().rejection_handler(t, controller);
 
                         ddebug("task %s (%016llx) is rejected",                            
-                            t->spec().name,
+                            t->spec().name.c_str(),
                             t->id()
                             );
 
@@ -142,7 +142,7 @@ void task_worker_pool::enqueue(task* t)
                         t->spec().rejection_handler(t, controller);
 
                         ddebug("task %s (%016llx) is rejected because the target queue is full",                            
-                            t->spec().name,
+                            t->spec().name.c_str(),
                             t->id()
                             );
 
@@ -160,7 +160,7 @@ void task_worker_pool::enqueue(task* t)
     {
         dassert (false, "worker pool %s must be started before enqueue task %s",
             spec().name.c_str(),
-            t->spec().name
+            t->spec().name.c_str()
             );
     }
 }

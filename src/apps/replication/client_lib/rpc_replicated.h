@@ -77,7 +77,7 @@ namespace dsn
                 {
                     dsn_msg_from_address(response, &srv);
                     resp.reset(new TResponse);
-                    unmarshall(response->reader(), *resp);
+                    ::unmarshall(response, *resp);
                 }
                 callback(code, req, resp, srv);
             }
@@ -101,7 +101,7 @@ namespace dsn
             )
         {
             dsn_message_t request = dsn_msg_create_request(code, timeout_milliseconds, request_hash);
-            marshall(request->writer(), *req);
+            ::marshall(request, *req);
 
             return call_replicated(
                 first_server,

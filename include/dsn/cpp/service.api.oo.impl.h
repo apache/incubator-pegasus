@@ -168,7 +168,7 @@ namespace dsn
                         &internal_use_only::on_rpc_response2<
                         TRequest,
                         TResponse,
-                        std::function<void(::dsn::error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)>,
+                        std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)>
                         >,
                         callback,
                         req,
@@ -176,7 +176,7 @@ namespace dsn
                         std::placeholders::_2,
                         std::placeholders::_3
                         );
-
+                    
                     auto task = new cpp_dev_task<rpc_reply_handler>(cb);
 
                     task->add_ref(); // released in exec_rpc_response

@@ -26,8 +26,7 @@
 
 # ifndef _WIN32
 
-# include <dsn/internal/logging.h>
-# include <dsn/internal/coredump.h>
+# include "coredump.h"
 # include <dsn/tool_api.h>
 
 # ifdef __TITLE__

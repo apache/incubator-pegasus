@@ -412,7 +412,7 @@ void task::enqueue(task_worker_pool* pool)
             "which is forbidden unless you explicitly set [task.%s].fast_execution_in_network_thread = true",            
             dsn_threadpool_code_to_string(_spec->pool_code),
             _node->spec().config_section.c_str(),
-            _spec->name
+            _spec->name.c_str()
             );
 
         pool->enqueue(this);

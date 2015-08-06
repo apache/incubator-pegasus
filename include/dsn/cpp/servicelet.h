@@ -31,6 +31,7 @@
 # include <dsn/internal/link.h>
 # include <dsn/cpp/utils.h>
 # include <dsn/cpp/msg_binary_io.h>
+# include <dsn/cpp/serialization.h>
 # include <dsn/cpp/zlocks.h>
 # include <set>
 # include <map>

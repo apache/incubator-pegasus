@@ -27,6 +27,7 @@
 
 # include <dsn/service_api_c.h>
 # include <dsn/cpp/utils.h>
+# include <dsn/cpp/msg_binary_io.h>
 # include <list>
 # include <map>
 # include <set>
