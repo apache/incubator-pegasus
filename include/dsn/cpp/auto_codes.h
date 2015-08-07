@@ -26,7 +26,8 @@
 # pragma once
 
 # include <dsn/service_api_c.h>
-# include <dsn/internal/dsn_types.h>
+# include <dsn/ports.h>
+# include <dsn/cpp/autoref_ptr.h>
 
 namespace dsn 
 {

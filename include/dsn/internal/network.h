@@ -33,9 +33,8 @@
 namespace dsn {
 
     class rpc_engine;
-    class rpc_client_matcher;
     class service_node;
-    
+        
     //
     // network bound to a specific rpc_channel and port (see start)
     //
@@ -119,7 +118,7 @@ namespace dsn {
     // (3) or we have certain cases we want RPC responses from node which is not the initial target node
     //     the RPC request message is sent to. In this case, a shared rpc_engine level matcher is used.
     //
-    class rpc_client_matcher : public ref_object
+    class rpc_client_matcher : public ref_counter
     {
     public:
         ~rpc_client_matcher();
@@ -152,9 +151,7 @@ namespace dsn {
         rpc_requests                  _requests;
         ::dsn::utils::ex_lock_nr_spin _requests_lock;
     };
-
-    DEFINE_REF_OBJECT(rpc_client_matcher)
-
+    
     //
     // an incomplete network implementation for connection oriented network, e.g., TCP
     //
@@ -192,7 +189,7 @@ namespace dsn {
     //
     // session management on the client side
     //
-    class rpc_client_session : public ref_object
+    class rpc_client_session : public ref_counter
     {
     public:
         rpc_client_session(connection_oriented_network& net, const dsn_address_t& remote_addr, rpc_client_matcher_ptr& matcher);
@@ -218,12 +215,11 @@ namespace dsn {
         rpc_client_matcher_ptr _matcher;
     };
 
-    DEFINE_REF_OBJECT(rpc_client_session)
 
     //
     // session management on the server side
     //
-    class rpc_server_session : public ref_object
+    class rpc_server_session : public ref_counter
     {
     public:
         rpc_server_session(connection_oriented_network& net, const dsn_address_t& remote_addr);
@@ -240,5 +236,4 @@ namespace dsn {
         dsn_address_t                 _remote_addr;
     };
 
-    DEFINE_REF_OBJECT(rpc_server_session)
 }

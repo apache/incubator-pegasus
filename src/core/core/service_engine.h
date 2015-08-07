@@ -25,10 +25,10 @@
  */
 # pragma once
 
-# include <dsn/internal/dsn_types.h>
+# include <dsn/ports.h>
 # include <dsn/internal/singleton.h>
 # include <dsn/internal/global_config.h>
-# include <dsn/cpp/cpp_helpers.h>
+# include <dsn/cpp/auto_codes.h>
 # include <sstream>
 
 namespace dsn { 

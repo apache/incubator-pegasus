@@ -34,7 +34,7 @@ namespace dsn { namespace replication {
 #define MAX_LOG_FILESIZE (32)
 
 class log_file;
-typedef boost::intrusive_ptr<log_file> log_file_ptr;
+typedef dsn::ref_ptr<log_file> log_file_ptr;
 
 typedef std::unordered_map<global_partition_id, decree> multi_partition_decrees;
 
@@ -152,7 +152,7 @@ private:
     int                         _write_task_number;
 };
 
-class log_file : public ref_object
+class log_file : public ref_counter
 {
 public:    
     ~log_file() { close(); }
@@ -211,7 +211,5 @@ protected:
     multi_partition_decrees _init_prepared_decrees;    
     log_file_header         _header;
 };
-
-DEFINE_REF_OBJECT(log_file)
 
 }} // namespace

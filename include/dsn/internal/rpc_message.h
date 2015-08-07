@@ -26,13 +26,21 @@
 # pragma once
 
 # include <atomic>
-# include <dsn/internal/dsn_types.h>
+# include <dsn/ports.h>
 # include <dsn/internal/extensible_object.h>
 # include <dsn/internal/task_spec.h>
-# include <dsn/cpp/cpp_helpers.h>
+# include <dsn/cpp/auto_codes.h>
 
 namespace dsn 
 {
+    class rpc_client_session;
+    class rpc_server_session;
+    class rpc_client_matcher;
+
+    typedef ::dsn::ref_ptr<rpc_client_session> rpc_client_session_ptr;
+    typedef ::dsn::ref_ptr<rpc_server_session> rpc_server_session_ptr;
+    typedef ::dsn::ref_ptr<rpc_client_matcher> rpc_client_matcher_ptr;
+
     typedef struct dsn_buffer_t // binary compatible with WSABUF on windows
     {
         unsigned long length;
@@ -67,7 +75,7 @@ namespace dsn
     } message_header;
             
     class message_ex : 
-        public ref_object, 
+        public ref_counter, 
         public extensible_object<message_ex, 4>
     {
     public:

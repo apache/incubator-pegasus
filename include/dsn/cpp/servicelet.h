@@ -26,13 +26,14 @@
 # pragma once
 
 # include <dsn/service_api_c.h>
-# include <dsn/internal/dsn_types.h>
+# include <dsn/ports.h>
 # include <dsn/internal/synchronize.h>
 # include <dsn/internal/link.h>
 # include <dsn/cpp/utils.h>
 # include <dsn/cpp/msg_binary_io.h>
 # include <dsn/cpp/serialization.h>
 # include <dsn/cpp/zlocks.h>
+# include <dsn/cpp/autoref_ptr.h>
 # include <set>
 # include <map>
 # include <thread>
@@ -44,7 +45,7 @@ namespace dsn
     typedef std::function<void(error_code, dsn_message_t, dsn_message_t)> rpc_reply_handler;
     typedef std::function<void(dsn_message_t)> rpc_request_handler;
     class cpp_dev_task_base;
-    typedef ::boost::intrusive_ptr<::dsn::cpp_dev_task_base> task_ptr;
+    typedef ::dsn::ref_ptr<::dsn::cpp_dev_task_base> task_ptr;
 
     class message_ptr : public ::std::shared_ptr<char>
     {
@@ -106,7 +107,7 @@ namespace dsn
     // and the interaction with task context manager, servicelet
     //
         
-    class cpp_dev_task_base : public ::dsn::ref_object
+    class cpp_dev_task_base : public ::dsn::ref_counter
     {
     public:
         cpp_dev_task_base()
@@ -177,8 +178,6 @@ namespace dsn
         dsn_task_t           _task;
         dsn_message_t        _rpc_response;
     };
-
-    DEFINE_REF_OBJECT(cpp_dev_task_base)        
 
     template<typename THandler>
     class cpp_dev_task : public cpp_dev_task_base

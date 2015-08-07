@@ -25,11 +25,11 @@
  */
 # pragma once
 
-# include <dsn/internal/dsn_types.h>
+# include <dsn/ports.h>
 # include <dsn/internal/extensible_object.h>
 # include <dsn/internal/task_tracker.h>
 # include <dsn/internal/task_spec.h>
-# include <dsn/cpp/cpp_helpers.h>
+# include <dsn/cpp/auto_codes.h>
 # include <dsn/internal/rpc_message.h>
 # include <dsn/internal/link.h>
 
@@ -61,7 +61,7 @@ struct __tls_task_info__
 extern __thread struct __tls_task_info__ tls_task_info;
 
 class task :
-    public ref_object, 
+    public ref_counter, 
     public extensible_object<task, 4>
 {
 public:

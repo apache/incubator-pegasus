@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 # include "simple_logger.h"
-# include <boost/thread.hpp>
+# include <sstream>
 # include <boost/filesystem.hpp>
 
 namespace dsn {

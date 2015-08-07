@@ -25,7 +25,7 @@
  */
 # pragma once
 
-# include <dsn/internal/dsn_types.h>
+# include <dsn/ports.h>
 
 // using high performance versions from https://github.com/preshing/cpp11-on-multicore
 

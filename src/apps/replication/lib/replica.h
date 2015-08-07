@@ -46,7 +46,7 @@ class replica_stub;
 
 using namespace ::dsn::service;
 
-class replica : public serverlet<replica>, public ref_object
+class replica : public serverlet<replica>, public ref_counter
 {
 public:        
     ~replica(void);
@@ -200,7 +200,4 @@ private:
     potential_secondary_context _potential_secondary_states;
     bool                        _inactive_is_transient; // upgrade to P/S is allowed only iff true
 };
-
-DEFINE_REF_OBJECT(replica)
-
 }} // namespace

@@ -88,7 +88,7 @@ namespace dsn {
             }
             else
             {
-                dassert(reply->ref_counter.load() == 0, 
+                dassert(reply->get_count() == 0, 
                     "reply should not be referenced by anybody so far");
                 delete reply;
                 return false;

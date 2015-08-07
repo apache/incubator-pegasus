@@ -111,55 +111,7 @@ __pragma(warning(disable:4127))
 
 // common utilities
 # include <atomic>
-# include <boost/shared_ptr.hpp>
-# include <boost/intrusive_ptr.hpp>
 
-// common types
-namespace dsn
-{   
-    class ref_object
-    {
-    public:
-        ref_object() { ref_counter = 0; }
-        virtual ~ref_object() {}
-        std::atomic<long> ref_counter;
-
-        void add_ref()
-        {
-            ++ref_counter;
-        }
-
-        void release_ref()
-        {
-            if (--ref_counter == 0)
-                delete this;
-        }
-    };
-    
-#define DEFINE_REF_OBJECT(T) \
-    static void intrusive_ptr_add_ref(T* obj) \
-    { \
-        ++obj->ref_counter; \
-    } \
-    static void intrusive_ptr_release(T* obj) \
-    { \
-        if (--obj->ref_counter == 0) \
-            delete obj; \
-    }
-    
-    class task;
-    class rpc_client_session;
-    class rpc_server_session;
-    class rpc_client_matcher;
-
-    typedef ::boost::intrusive_ptr<rpc_client_session> rpc_client_session_ptr;
-    typedef ::boost::intrusive_ptr<rpc_server_session> rpc_server_session_ptr;
-    typedef ::boost::intrusive_ptr<rpc_client_matcher> rpc_client_matcher_ptr;
-
-    #define TOOL_TYPE_MAIN 0
-    #define TOOL_TYPE_ASPECT 1
-
-    #define PROVIDER_TYPE_MAIN 0
-    #define PROVIDER_TYPE_ASPECT 1
-    
-} // end namespace dsn
+// common macros
+#define PROVIDER_TYPE_MAIN 0
+#define PROVIDER_TYPE_ASPECT 1

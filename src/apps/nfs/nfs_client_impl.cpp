@@ -68,7 +68,7 @@ namespace dsn {
                 int idx = 0;
                 for (;;) // send one file with multi-round rpc
                 {
-                    auto req = boost::intrusive_ptr<copy_request_ex>(new copy_request_ex(filec, idx++));
+                    auto req = dsn::ref_ptr<copy_request_ex>(new copy_request_ex(filec, idx++));
                     filec->copy_requests.push_back(req);
 
                     {
@@ -117,7 +117,7 @@ namespace dsn {
                 return;
             }
 
-            boost::intrusive_ptr<copy_request_ex> req = nullptr;
+            dsn::ref_ptr<copy_request_ex> req = nullptr;
             while (true)
             {
                 {
@@ -158,7 +158,7 @@ namespace dsn {
         {
             //dinfo("*** call RPC_NFS_COPY end, return (%d, %d) with %s", resp.offset, resp.size, err.to_string());
 
-            boost::intrusive_ptr<copy_request_ex> reqc;
+            dsn::ref_ptr<copy_request_ex> reqc;
             reqc.reset((copy_request_ex*)context);
             reqc->release_ref();
 
@@ -220,7 +220,7 @@ namespace dsn {
             }
 
             // get write
-            boost::intrusive_ptr<copy_request_ex> reqc;
+            dsn::ref_ptr<copy_request_ex> reqc;
             while (true)
             {
                 {
@@ -303,7 +303,7 @@ namespace dsn {
             }
         }
 
-        void nfs_client_impl::local_write_callback(error_code err, size_t sz, boost::intrusive_ptr<copy_request_ex> reqc)
+        void nfs_client_impl::local_write_callback(error_code err, size_t sz, dsn::ref_ptr<copy_request_ex> reqc)
         {
             //dassert(reqc->local_write_task == task::get_current_task(), "");
             --_concurrent_local_write_count;

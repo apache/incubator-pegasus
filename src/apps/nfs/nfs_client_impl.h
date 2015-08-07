@@ -39,7 +39,7 @@ namespace dsn {
         public:
             struct user_request;
             struct file_context;
-            struct copy_request_ex : public ::dsn::ref_object
+            struct copy_request_ex : public ::dsn::ref_counter
             {
                 file_context *file_ctx;
                 int           index;
@@ -72,7 +72,7 @@ namespace dsn {
                 std::atomic<dsn_handle_t> file;
                 int         current_write_index;
                 int         finished_segments;
-                std::vector<boost::intrusive_ptr<copy_request_ex> > copy_requests;
+                std::vector<::dsn::ref_ptr<copy_request_ex> > copy_requests;
 
                 file_context(user_request* req, const std::string& file_nm, uint64_t sz)
                 {
@@ -115,7 +115,7 @@ namespace dsn {
 
             void begin_remote_copy(std::shared_ptr<remote_copy_request>& rci, aio_task* nfs_task); // copy file request entry
 
-            void local_write_callback(error_code err, size_t sz, boost::intrusive_ptr<copy_request_ex> reqc); // write file callback
+            void local_write_callback(error_code err, size_t sz, ::dsn::ref_ptr<copy_request_ex> reqc); // write file callback
 
         private:
             void end_copy(
@@ -130,7 +130,7 @@ namespace dsn {
 
             void continue_copy(int done_count);
 
-            void write_copy(boost::intrusive_ptr<copy_request_ex> reqc);
+            void write_copy(::dsn::ref_ptr<copy_request_ex> reqc);
 
             void continue_write();
 
@@ -143,14 +143,10 @@ namespace dsn {
             std::atomic<int> _concurrent_local_write_count; // 
 
             zlock                            _copy_requests_lock;
-            std::queue <boost::intrusive_ptr<copy_request_ex> >    _copy_requests;
+            std::queue <::dsn::ref_ptr<copy_request_ex> >    _copy_requests;
 
             zlock                            _local_writes_lock;
-            std::queue <boost::intrusive_ptr<copy_request_ex> >    _local_writes;
+            std::queue <::dsn::ref_ptr<copy_request_ex> >    _local_writes;
         };
-
-
-        DEFINE_REF_OBJECT(nfs_client_impl::copy_request_ex);
-
     }
 }

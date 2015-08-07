@@ -25,8 +25,8 @@
  */
 # pragma once
 
-# include <dsn/internal/dsn_types.h>
-# include <dsn/cpp/cpp_helpers.h>
+
+# include <dsn/cpp/auto_codes.h>
 
 # ifdef __TITLE__
 # undef __TITLE__

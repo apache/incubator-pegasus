@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-# include <dsn/internal/dsn_types.h>
+# include <dsn/ports.h>
 # include <dsn/service_api_c.h>
 # include <dsn/cpp/address.h>
 

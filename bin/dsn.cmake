@@ -8,7 +8,7 @@ function(ms_add_project PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PROJ_LIBS PRO
     	message(STATUS "PROJ_LIB_PATH = ${PROJ_LIB_PATH}")
     	message(STATUS "PROJ_BINPLACES = ${PROJ_BINPLACES}")
     	message(STATUS "DO_INSTALL = ${DO_INSTALL}")
-    endif()
+    endif() 
     
     if(NOT((PROJ_TYPE STREQUAL "STATIC") OR (PROJ_TYPE STREQUAL "SHARED") OR (PROJ_TYPE STREQUAL "EXECUTABLE")))
         #"MODULE" is not used yet

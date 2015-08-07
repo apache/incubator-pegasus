@@ -2,7 +2,7 @@
 # include <dsn/service_api_c.h>
 # include <dsn/tool_api.h>
 # include <dsn/internal/enum_helper.h>
-# include <dsn/cpp/cpp_helpers.h>
+# include <dsn/cpp/auto_codes.h>
 # include <dsn/internal/task_spec.h>
 # include <dsn/internal/zlock_provider.h>
 # include <dsn/internal/nfs.h>

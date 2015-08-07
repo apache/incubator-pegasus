@@ -25,7 +25,7 @@
  */
 #pragma once
 
-# include <dsn/internal/dsn_types.h>
+# include <dsn/ports.h>
 # include <dsn/internal/rpc_message.h>
 
 namespace dsn 

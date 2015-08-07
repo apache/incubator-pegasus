@@ -33,7 +33,7 @@
 
 namespace dsn { namespace replication {
 
-class mutation : public ref_object
+class mutation : public ref_counter
 {
 public:
     mutation();
@@ -97,8 +97,6 @@ private:
     dsn_message_t _client_request;
     char          _name[40]; // ballot.decree
 };
-
-DEFINE_REF_OBJECT(mutation)
 
 // ---------------------- inline implementation ----------------------------
 inline void mutation::set_id(ballot b, decree c)

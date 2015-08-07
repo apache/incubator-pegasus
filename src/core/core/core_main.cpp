@@ -1,6 +1,6 @@
 
 # include <dsn/service_api_c.h>
-# include <dsn/internal/dsn_types.h>
+# include <dsn/ports.h>
 
 # include <dsn/tool/simulator.h>
 # include <dsn/tool/nativerun.h>

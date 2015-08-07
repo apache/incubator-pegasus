@@ -323,7 +323,7 @@ namespace dsn { namespace replication {
         virtual dsn_address_t get_read_address(read_semantic_t semantic, const partition_configuration& config);
         
     public:
-        struct request_context : public ref_object
+        struct request_context : public ref_counter
         {
             int                   partition_index;
             ::dsn::task_ptr callback_task;
@@ -342,7 +342,7 @@ namespace dsn { namespace replication {
             // ]
         };
 
-        typedef ::boost::intrusive_ptr<request_context> request_context_ptr;
+        typedef ::dsn::ref_ptr<request_context> request_context_ptr;
 
     private:
         struct partition_context
@@ -394,9 +394,6 @@ namespace dsn { namespace replication {
         void on_user_request_timeout(request_context_ptr& rc);
         void clear_all_pending_tasks();
     };
-
-    DEFINE_REF_OBJECT(replication_app_client_base::request_context);
-
 #pragma pack(pop)
 
 }} // namespace

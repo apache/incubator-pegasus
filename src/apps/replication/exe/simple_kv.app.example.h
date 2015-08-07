@@ -77,22 +77,23 @@ public:
         {
             ::dsn::replication::application::kv_pair req;
             req.key = "key";
-            req.value = value;
+            req.value.resize(512 * 1024);
+            req.value.append(value); // = value;
 
             //sync:
             int32_t resp;
             auto err = _simple_kv_client->write(req, resp);
-            std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_WRITE end, write " << req.value << ", err = " << err.to_string() << std::endl;
+            std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_WRITE end, write " << req.key << ", err = " << err.to_string() << std::endl;
             //async: 
             //_simple_kv_client->begin_write(req);
 
             std::string v;
             auto err2 = _simple_kv_client->read(req.key, v);
-            std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_READ end, read " << v << ", err = " << err2.to_string() << std::endl;
+            std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_READ end, read " << req.key << ", err = " << err2.to_string() << std::endl;
 
             if (err == ERR_OK && err2 == ERR_OK)
             {
-                dassert(v == value, "data is inconsistent!");
+                dassert(v == req.value, "data is inconsistent!");
             }
         }
     }

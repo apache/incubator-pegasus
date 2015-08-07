@@ -25,7 +25,7 @@
  */
 # pragma once
 
-# include <dsn/internal/dsn_types.h>
+# include <dsn/ports.h>
 # include <dsn/cpp/utils.h>
 
 namespace dsn {

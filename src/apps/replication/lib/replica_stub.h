@@ -41,7 +41,7 @@ class replication_failure_detector;
 // from, new replica config, isClosing
 typedef std::function<void (const dsn_address_t&, const replica_configuration&, bool)> replica_state_subscriber;
 
-class replica_stub : public serverlet<replica_stub>, public ref_object
+class replica_stub : public serverlet<replica_stub>, public ref_counter
 {
 public:
     replica_stub(replica_state_subscriber subscriber = nullptr, bool is_long_subscriber = true);
@@ -161,9 +161,6 @@ private:
     void response_client_error(dsn_message_t request, int error);
     void replay_mutation(mutation_ptr& mu, replicas* rps);
 };
-
-DEFINE_REF_OBJECT(replica_stub)
-
 //------------ inline impl ----------------------
 
 }} // namespace

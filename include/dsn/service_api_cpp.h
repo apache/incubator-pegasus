@@ -26,9 +26,10 @@
 # pragma once
 
 # include <dsn/service_api_c.h>
-# include <dsn/cpp/cpp_helpers.h>
-# include <dsn/cpp/serialization.h> // TODO: unnecssary includes in it
-# include <dsn/cpp/msg_binary_io.h> // TODO: unnecssary includes in it
+# include <dsn/ports.h>
+# include <dsn/cpp/auto_codes.h>
+# include <dsn/cpp/serialization.h>
+# include <dsn/cpp/msg_binary_io.h>
 # include <dsn/cpp/zlocks.h>
 # include <dsn/cpp/serverlet.h>
 # include <dsn/cpp/service.api.oo.h>
