@@ -725,7 +725,7 @@ DSN_API bool dsn_run_config(const char* config, bool sleep_after_init)
 //
 DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init)
 {
-    if (argc < 1)
+    if (argc < 2)
     {
         printf("invalid options for dsn_run\n"
             "// run the system with arguments\n"
@@ -739,12 +739,12 @@ DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init)
         return;
     }
 
-    char* config = argv[0];
+    char* config = argv[1];
     std::string config_args = "";
     std::string app_name = "";
     int app_index = -1;
 
-    for (int i = 1; i < argc;)
+    for (int i = 2; i < argc;)
     {
         if (0 == strcmp(argv[i], "-cargs"))
         {
