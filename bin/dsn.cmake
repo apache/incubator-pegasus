@@ -329,9 +329,9 @@ function(dsn_setup_packages)
     if(UNIX AND (NOT APPLE))
         set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} rt)
     endif()    
-    if("${CMAKE_SYSTEM}" MATCHES "Linux")
+	if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
         set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} aio)
-    endif()   
+    endif()
     set(DSN_SYSTEM_LIBS
         ${DSN_SYSTEM_LIBS}
         ${CMAKE_THREAD_LIBS_INIT}
