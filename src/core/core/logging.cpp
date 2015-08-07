@@ -43,7 +43,8 @@ static void log_on_sys_exit(::dsn::sys_exit_type)
 void dsn_log_init()
 {
     dsn_log_start_level = enum_from_string(
-        dsn_config_get_value_string("core", "log_start_level", enum_to_string(dsn_log_start_level)),
+        dsn_config_get_value_string("core", "log_start_level", enum_to_string(dsn_log_start_level), 
+            "logs with level below this will not be logged"),
         dsn_log_level_t::LOG_LEVEL_INVALID
         );
 

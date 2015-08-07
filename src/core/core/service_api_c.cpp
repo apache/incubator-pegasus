@@ -152,24 +152,24 @@ DSN_API const char* dsn_task_priority_to_string(dsn_task_priority_t tt)
     return enum_to_string(tt);
 }
 
-DSN_API const char* dsn_config_get_value_string(const char* section, const char* key, const char* default_value)
+DSN_API const char* dsn_config_get_value_string(const char* section, const char* key, const char* default_value, const char* dsptr)
 {
-    return dsn_all.config->get_string_value(section, key, default_value);
+    return dsn_all.config->get_string_value(section, key, default_value, dsptr);
 }
 
-DSN_API bool dsn_config_get_value_bool(const char* section, const char* key, bool default_value)
+DSN_API bool dsn_config_get_value_bool(const char* section, const char* key, bool default_value, const char* dsptr)
 {
-    return dsn_all.config->get_value<bool>(section, key, default_value);
+    return dsn_all.config->get_value<bool>(section, key, default_value, dsptr);
 }
 
-DSN_API uint64_t dsn_config_get_value_uint64(const char* section, const char* key, uint64_t default_value)
+DSN_API uint64_t dsn_config_get_value_uint64(const char* section, const char* key, uint64_t default_value, const char* dsptr)
 {
-    return dsn_all.config->get_value<uint64_t>(section, key, default_value);
+    return dsn_all.config->get_value<uint64_t>(section, key, default_value, dsptr);
 }
 
-DSN_API double dsn_config_get_value_double(const char* section, const char* key, double default_value)
+DSN_API double dsn_config_get_value_double(const char* section, const char* key, double default_value, const char* dsptr)
 {
-    return dsn_all.config->get_value<double>(section, key, default_value);
+    return dsn_all.config->get_value<double>(section, key, default_value, dsptr);
 }
 
 DSN_API int dsn_config_get_all_keys(const char* section, const char** buffers, /*inout*/ int* buffer_count) // return all key count (may greater than buffer_count)

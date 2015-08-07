@@ -48,10 +48,10 @@ namespace dsn {
         };
 
         CONFIG_BEGIN(perf_test_opts)
-            CONFIG_FLD(int, uint64, perf_test_rounds, 10000)            
-            CONFIG_FLD(bool, bool, perf_test_concurrent, true)
-            CONFIG_FLD_INT_LIST(perf_test_payload_bytes)
-            CONFIG_FLD_INT_LIST(perf_test_timeouts_ms)
+            CONFIG_FLD(int, uint64, perf_test_rounds, 10000, "how many rounds of test for each rpc request")            
+            CONFIG_FLD(bool, bool, perf_test_concurrent, true, "whether the rpc request should be issued concurrently")
+            CONFIG_FLD_INT_LIST(perf_test_payload_bytes, "", "byte size of each rpc request test")
+            CONFIG_FLD_INT_LIST(perf_test_timeouts_ms, "timeout (ms) for each rpc call")
         CONFIG_END
         
         template<typename T>

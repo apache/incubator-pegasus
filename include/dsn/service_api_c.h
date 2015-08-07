@@ -89,40 +89,77 @@ extern "C" {
 // common data structures
 //
 //------------------------------------------------------------------------------
+
+// handles and codes
 struct dsn_app_info;
-typedef struct             dsn_app_info dsn_app_info;
-typedef int                dsn_error_t;
-typedef int                dsn_task_code_t;
-typedef int                dsn_threadpool_code_t;
-typedef unsigned long long dsn_handle_t;
-typedef void*              dsn_task_t;
-typedef void*              dsn_task_tracker_t;
-typedef void*              dsn_message_t; 
-typedef void               (*dsn_task_handler_t)(void*);
-typedef void               (*dsn_rpc_request_handler_t)(dsn_message_t, void*);
-typedef void               (*dsn_rpc_response_handler_t)(dsn_error_t, dsn_message_t, dsn_message_t, void*);
-typedef void               (*dsn_aio_handler_t)(dsn_error_t, size_t, void*);
-typedef void*              (*dsn_app_create)(); // return app_context
-typedef dsn_error_t        (*dsn_app_start)(void*, int, char**); // void* app_context, int argc, char** argv
-typedef void               (*dsn_app_destroy)(void*, bool); // void* app_context, bool cleanup
-typedef void*              (*dsn_checker_create)(const char*, dsn_app_info*, int); //name, input app-info/count, return checker
-typedef void               (*dsn_checker_apply)(void*); // run the given checker
+typedef struct      dsn_app_info dsn_app_info; // rDSN app information
+typedef int         dsn_error_t;
+typedef int         dsn_task_code_t;
+typedef int         dsn_threadpool_code_t;
+typedef void*       dsn_handle_t;
+typedef void*       dsn_task_t;
+typedef void*       dsn_task_tracker_t;
+typedef void*       dsn_message_t; 
+
+// all computation in rDSN are as tasks or events, 
+// i.e., event-driven programming
+// task callbacks
+typedef void        (*dsn_task_handler_t)(void*); // void* context
+typedef void        (*dsn_rpc_request_handler_t)(
+                                dsn_message_t,  // incoming request
+                                void*           // handler context registered
+                                );
+typedef void        (*dsn_rpc_response_handler_t)(
+                                dsn_error_t,    //
+                                dsn_message_t,  // sent rpc request
+                                dsn_message_t,  // incoming rpc response
+                                void*           // context when rpc is called
+                                );
+typedef void        (*dsn_aio_handler_t)(
+                                dsn_error_t,    //
+                                size_t,         // transferred io size
+                                void*           // context when rd/wt is called
+                                );
+
+// rDSN allows many apps in the same process for easy deployment and test
+// app ceate, start, and destroy callbacks
+typedef void*       (*dsn_app_create)();        // return app_context
+typedef dsn_error_t (*dsn_app_start)(
+                                void*,          // context return by app_create
+                                int,            // argc
+                                char**          // argv
+                                );
+typedef void        (*dsn_app_destroy)(
+                                void*,          // context return by app_create
+                                bool            // cleanup app state or not
+                                );
+
+// rDSN allows global assert across many apps in the same process
+// the global assertions are called checkers
+typedef void*       (*dsn_checker_create)(      // return a checker
+                                const char*,    // checker name
+                                dsn_app_info*,  // apps available to the checker
+                                int             // apps count
+                                );
+typedef void        (*dsn_checker_apply)(void*); // run the given checker
 
 struct dsn_app_info
 {
-    void* app_context_ptr; // returned by dsn_app_create
-    int   app_id;
-    char  type[DSN_MAX_APP_TYPE_NAME_LENGTH]; // upon registration 
-    char  name[DSN_MAX_APP_TYPE_NAME_LENGTH];
+    void* app_context_ptr;                    // returned by dsn_app_create
+    int   app_id;                             // assigned by rDSN automatically
+    char  type[DSN_MAX_APP_TYPE_NAME_LENGTH]; // see dsn_register_app_role
+    char  name[DSN_MAX_APP_TYPE_NAME_LENGTH]; // app name configed in config file
 };
 
 typedef enum dsn_task_type_t
 {
-    TASK_TYPE_RPC_REQUEST,
-    TASK_TYPE_RPC_RESPONSE,
-    TASK_TYPE_COMPUTE,
-    TASK_TYPE_AIO,
-    TASK_TYPE_CONTINUATION,
+    TASK_TYPE_RPC_REQUEST,   // task handling rpc request
+    TASK_TYPE_RPC_RESPONSE,  // task handling rpc response or timeout
+    TASK_TYPE_COMPUTE,       // async calls or timers
+    TASK_TYPE_AIO,           // callback for file read and write
+    TASK_TYPE_CONTINUATION,  // above tasks are seperated into several continuation
+                             // tasks by thread-synchronization operations.
+                             // so that each "task" is non-blocking
     TASK_TYPE_COUNT,
     TASK_TYPE_INVALID,
 } dsn_task_type_t;
@@ -159,16 +196,31 @@ typedef struct dsn_address_t
 // system
 //
 //------------------------------------------------------------------------------
-extern DSN_API bool dsn_register_app_role(const char* type_name, dsn_app_create create, dsn_app_start start, dsn_app_destroy destroy);
-extern DSN_API int  dsn_register_app_checker(const char* name, dsn_checker_create create, dsn_checker_apply apply);
-extern DSN_API bool dsn_run_config(const char* config, bool sleep_after_init);
+extern DSN_API bool dsn_register_app_role(
+                        const char* type_name, 
+                        dsn_app_create create, 
+                        dsn_app_start start, 
+                        dsn_app_destroy destroy
+                        );
+extern DSN_API int  dsn_register_app_checker(
+                        const char* name, 
+                        dsn_checker_create create, 
+                        dsn_checker_apply apply
+                        );
+extern DSN_API bool dsn_run_config(
+                        const char* config, 
+                        bool sleep_after_init
+                        );
 //
 // run the system with arguments
 //   config [-cargs k1=v1;k2=v2] [-app app_name] [-app_index index]
 // e.g., config.ini -app replica -app_index 1 to start the first replica as a new process
 //       config.ini -app replica to start ALL replicas (count specified in config) as a new process
-//       config.ini -app replica -cargs replica-port=34556 to start ALL replicas with given port variable specified in config.ini
+//       config.ini -app replica -cargs replica-port=34556 to start ALL replicas
+//                 with given port variable specified in config.ini
 //       config.ini to start ALL apps as a new process
+//
+// Note the argc, argv folllows the C main convention that argv[0] is the executable name
 //
 extern DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init);
 
@@ -181,23 +233,44 @@ extern DSN_API dsn_error_t           dsn_error_register(const char* name);
 extern DSN_API const char*           dsn_error_to_string(dsn_error_t err);    
 extern DSN_API dsn_threadpool_code_t dsn_threadpool_code_register(const char* name);
 extern DSN_API const char*           dsn_threadpool_code_to_string(dsn_threadpool_code_t pool_code);
-extern DSN_API dsn_threadpool_code_t dsn_threadpool_code_from_string(const char* s, dsn_threadpool_code_t default_code);
+extern DSN_API dsn_threadpool_code_t dsn_threadpool_code_from_string(
+                                        const char* s, 
+                                        dsn_threadpool_code_t default_code // when s is not registered
+                                        );
 extern DSN_API int                   dsn_threadpool_code_max();
-extern DSN_API dsn_task_code_t       dsn_task_code_register(const char* name, dsn_task_type_t type, dsn_task_priority_t, dsn_threadpool_code_t pool);
-extern DSN_API void                  dsn_task_code_query(dsn_task_code_t code, /*out*/ dsn_task_type_t *ptype, /*out*/ dsn_task_priority_t *ppri, /*out*/ dsn_threadpool_code_t *ppool);
-extern DSN_API void                  dsn_task_code_set_threadpool(dsn_task_code_t code, dsn_threadpool_code_t pool);
+extern DSN_API dsn_task_code_t       dsn_task_code_register(
+                                        const char* name,          // task code name
+                                        dsn_task_type_t type,
+                                        dsn_task_priority_t, 
+                                        dsn_threadpool_code_t pool // in which thread pool the tasks run
+                                        );
+extern DSN_API void                  dsn_task_code_query(
+                                        dsn_task_code_t code, 
+                                        /*out*/ dsn_task_type_t *ptype, 
+                                        /*out*/ dsn_task_priority_t *ppri, 
+                                        /*out*/ dsn_threadpool_code_t *ppool
+                                        );
+extern DSN_API void                  dsn_task_code_set_threadpool( // change thread pool for this task code
+                                        dsn_task_code_t code, 
+                                        dsn_threadpool_code_t pool
+                                        );
 extern DSN_API void                  dsn_task_code_set_priority(dsn_task_code_t code, dsn_task_priority_t pri);
 extern DSN_API const char*           dsn_task_code_to_string(dsn_task_code_t code);
 extern DSN_API dsn_task_code_t       dsn_task_code_from_string(const char* s, dsn_task_code_t default_code);
 extern DSN_API int                   dsn_task_code_max();
 extern DSN_API const char*           dsn_task_type_to_string(dsn_task_type_t tt);
 extern DSN_API const char*           dsn_task_priority_to_string(dsn_task_priority_t tt);
-extern DSN_API const char*           dsn_config_get_value_string(const char* section, const char* key, const char* default_value);
-extern DSN_API bool                  dsn_config_get_value_bool(const char* section, const char* key, bool default_value);
-extern DSN_API uint64_t              dsn_config_get_value_uint64(const char* section, const char* key, uint64_t default_value);
-extern DSN_API double                dsn_config_get_value_double(const char* section, const char* key, double default_value);
+extern DSN_API const char*           dsn_config_get_value_string(
+                                        const char* section,       // [section]
+                                        const char* key,           // key = value
+                                        const char* default_value, // if [section] key is not present
+                                        const char* dsptr          // what it is for, see dsn_config_dump
+                                        );
+extern DSN_API bool                  dsn_config_get_value_bool(const char* section, const char* key, bool default_value, const char* dsptr);
+extern DSN_API uint64_t              dsn_config_get_value_uint64(const char* section, const char* key, uint64_t default_value, const char* dsptr);
+extern DSN_API double                dsn_config_get_value_double(const char* section, const char* key, double default_value, const char* dsptr);
 // return all key count (may greater than buffer_count)
-extern DSN_API int                   dsn_config_get_all_keys(const char* section, const char** buffers, /*inout*/ int* buffer_count); 
+extern DSN_API int                   dsn_config_get_all_keys(const char* section, const char** buffers, /*inout*/ int* buffer_count);
 extern DSN_API dsn_log_level_t       dsn_log_start_level;
 extern DSN_API void                  dsn_log_init();
 extern DSN_API void                  dsn_logv(const char *file, const char *function, const int line, dsn_log_level_t logLevel, const char* title, const char* fmt, va_list args);

@@ -143,7 +143,7 @@ namespace dsn.dev.csharp
         private int _code;
     }
 
-    public class SafeTaskHandle : SafeHandle
+    public class SafeTaskHandle : SafeHandleZeroIsInvalid
     {
         public SafeTaskHandle(dsn_task_t nativeHandle)
             : base(nativeHandle, true)
@@ -155,11 +155,6 @@ namespace dsn.dev.csharp
         {
             Native.dsn_task_release_ref(handle);
             return true;
-        }
-
-        public override bool IsInvalid
-        {
-            get { return IntPtr.Zero == handle; }
         }
 
         public bool Cancel(bool waitFinished)

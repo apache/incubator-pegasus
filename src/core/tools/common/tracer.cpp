@@ -206,16 +206,16 @@ namespace dsn {
                 task_spec* spec = task_spec::get(i);
                 dassert (spec != nullptr, "task_spec cannot be null");
 
-                if (!config()->get_value<bool>(section_name.c_str(), "is_trace", trace))
+                if (!config()->get_value<bool>(section_name.c_str(), "is_trace", trace, "whether to trace this kind of task"))
                     continue;
 
-                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_enqueue", true))
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_enqueue", true, "whether to trace this kind of task when a compute task is enqueued"))
                     spec->on_task_enqueue.put_back(tracer_on_task_enqueue, "tracer");
 
-                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_begin", true))
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_begin", true, "whether to trace this kind of task when a task begins"))
                     spec->on_task_begin.put_back(tracer_on_task_begin, "tracer");
 
-                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_end", true))
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_end", true, "whether to trace this kind of task when a task ends"))
                     spec->on_task_end.put_back(tracer_on_task_end, "tracer");
 
                 //if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_cancelled", true))
@@ -230,7 +230,7 @@ namespace dsn {
                 //if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_cancel_post", true))
                     //spec->on_task_cancel_post.put_back(tracer_on_task_cancel_post, "tracer");
 
-                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_aio_call", true))
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_aio_call", true, "whether to trace this kind of task when a compute task is enqueued"))
                     spec->on_aio_call.put_back(tracer_on_aio_call, "tracer");
 
                 if (config()->get_value<bool>(section_name.c_str(), "tracer::on_aio_enqueue", true))

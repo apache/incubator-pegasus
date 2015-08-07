@@ -233,8 +233,8 @@ namespace dsn {
             message_ext_for_profiler::register_ext();
             dassert(sizeof(counter_info_ptr) / sizeof(counter_info*) == PREF_COUNTER_COUNT, "PREF COUNTER ERROR");
 
-            auto profile = config()->get_value<bool>("task.default", "is_profile", false);
-            auto collect_call_count = config()->get_value<bool>("task.default", "collect_call_count", true);
+            auto profile = config()->get_value<bool>("task.default", "is_profile", false, "whether to profile this kind of task");
+            auto collect_call_count = config()->get_value<bool>("task.default", "collect_call_count", true, "whether to collect how many time this kind of tasks invoke each of other kinds tasks");
 
             for (int i = 0; i <= dsn_task_code_max(); i++)
             {
@@ -267,7 +267,7 @@ namespace dsn {
                     s_spec_profilers[i].ptr[AIO_LATENCY_NS] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".latency(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
                 }
 
-                s_spec_profilers[i].is_profile = config()->get_value<bool>(name.c_str(), "is_profile", profile);
+                s_spec_profilers[i].is_profile = config()->get_value<bool>(name.c_str(), "is_profile", profile, "whether to profile this kind of task");
 
                 if (!s_spec_profilers[i].is_profile)
                     continue;
