@@ -19,6 +19,7 @@
 # include "disk_engine.h"
 # include "coredump.h"
 # include "crc.h"
+# include <fstream>
 
 //
 // global state

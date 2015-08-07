@@ -27,6 +27,7 @@
 # include <cassert>
 # include <dsn/cpp/utils.h>
 # include <errno.h>
+# include <iostream>
 
 namespace dsn {
 

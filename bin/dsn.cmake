@@ -1,57 +1,83 @@
-function(ms_add_library PROJ_TYPE PROJ_NAME PROJ_SRC DO_INSTALL)
-    if(NOT((PROJ_TYPE STREQUAL "STATIC") OR (PROJ_TYPE STREQUAL "SHARED") OR (PROJ_TYPE STREQUAL "MODULE")))
-        message(FATAL_ERROR "Invalid project type")
+function(ms_add_project PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PROJ_LIBS PROJ_LIB_PATH PROJ_BINPLACES DO_INSTALL)
+	if(DEFINED DSN_DEBUG_CMAKE)
+        message(STATUS "PROJ_TYPE = ${PROJ_TYPE}")
+    	message(STATUS "PROJ_NAME = ${PROJ_NAME}")
+    	message(STATUS "PROJ_SRC = ${PROJ_SRC}")
+    	message(STATUS "PROJ_INC_PATH = ${PROJ_INC_PATH}")
+    	message(STATUS "PROJ_LIBS = ${PROJ_LIBS}")
+    	message(STATUS "PROJ_LIB_PATH = ${PROJ_LIB_PATH}")
+    	message(STATUS "PROJ_BINPLACES = ${PROJ_BINPLACES}")
+    	message(STATUS "DO_INSTALL = ${DO_INSTALL}")
+    endif()
+    
+    if(NOT((PROJ_TYPE STREQUAL "STATIC") OR (PROJ_TYPE STREQUAL "SHARED") OR (PROJ_TYPE STREQUAL "EXECUTABLE")))
+        #"MODULE" is not used yet
+        message(FATAL_ERROR "Invalid project type.")
     endif()
     
     if(PROJ_NAME STREQUAL "")
-        message(FATAL_ERROR "Invalid project name")
+        message(FATAL_ERROR "Invalid project name.")
     endif()
 
-    if(MSVC)
-        add_definitions(-D_LIB)
+    if(PROJ_SRC STREQUAL "")
+        message(FATAL_ERROR "No source files.")
     endif()
 
-    include_directories(${DSN_EXTRA_INCLUDEDIR})
-    add_library(${PROJ_NAME} ${PROJ_TYPE} ${PROJ_SRC})
-
-    if(DO_INSTALL)
-        install(TARGETS ${PROJ_NAME} DESTINATION lib)
-    endif()
-endfunction(ms_add_library PROJ_TYPE PROJ_NAME PROJ_SRC DO_INSTALL)
-
-function(ms_add_executable PROJ_NAME PROJ_SRC INPUT_LIBS BINPLACE_FILES DO_INSTALL)
-    if(PROJ_NAME STREQUAL "")
-        message(FATAL_ERROR "Invalid project name")
-    endif()
-    
-    if(MSVC)
-        add_definitions(-D_CONSOLE)
-    endif()
-
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJ_NAME}")
-    set(INSTALL_BINPLACE_DIR "bin/${PROJ_NAME}")
-
-    include_directories(${DSN_EXTRA_INCLUDEDIR})
-    link_directories(${DSN_EXTRA_LIBRARYDIR})
-    add_executable(${PROJ_NAME} ${PROJ_SRC})
-    target_link_libraries(${PROJ_NAME} LINK_PUBLIC ${INPUT_LIBS})
-    
-    set(BINPLACE_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/")
-    foreach(BF ${BINPLACE_FILES})
-        add_custom_command(
-            TARGET ${PROJ_NAME}
-            POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy ${BF} "${BINPLACE_DIR}"
-            )
-        if(DO_INSTALL)
-            install(FILES ${BF} DESTINATION "${INSTALL_BINPLACE_DIR}")
+    if(NOT (PROJ_INC_PATH STREQUAL ""))
+        include_directories(${PROJ_INC_PATH})
+    endif()   
+    if(NOT (PROJ_LIB_PATH STREQUAL ""))
+        link_directories(${PROJ_LIB_PATH})
+    endif()    
+      
+    if(PROJ_TYPE STREQUAL "STATIC")
+        if(MSVC)
+            add_definitions(-D_LIB)
         endif()
-    endforeach()
+        add_library(${PROJ_NAME} ${PROJ_TYPE} ${PROJ_SRC})
+    elseif(PROJ_TYPE STREQUAL "SHARED")
+        add_library(${PROJ_NAME} ${PROJ_TYPE} ${PROJ_SRC})
+    elseif(PROJ_TYPE STREQUAL "EXECUTABLE")
+        if(MSVC)
+            add_definitions(-D_CONSOLE)
+        endif()        
+        set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJ_NAME}")
+        add_executable(${PROJ_NAME} ${PROJ_SRC})
+    endif()
+    
+    if((PROJ_TYPE STREQUAL "SHARED") OR (PROJ_TYPE STREQUAL "EXECUTABLE"))
+        if(PROJ_TYPE STREQUAL "SHARED")
+            set(LINK_MODE LINK_PUBLIC)
+        else()
+            set(LINK_MODE LINK_PUBLIC)
+        endif()
+        target_link_libraries(${PROJ_NAME} "${LINK_MODE}" ${PROJ_LIBS})
+    endif()
+    
+    if(PROJ_TYPE STREQUAL "EXECUTABLE")
+        set(INSTALL_DIR "bin/${PROJ_NAME}")
+    else()
+        set(INSTALL_DIR "lib")
+    endif()
+    
+    if((PROJ_TYPE STREQUAL "EXECUTABLE") AND (NOT (PROJ_BINPLACES STREQUAL "")))
+        set(BINPLACE_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/")
+        foreach(BF ${PROJ_BINPLACES})
+            add_custom_command(
+                TARGET ${PROJ_NAME}
+                POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy ${BF} "${BINPLACE_DIR}"
+                )
+            if(DO_INSTALL)
+                install(FILES ${BF} DESTINATION "${INSTALL_DIR}")
+            endif()
+        endforeach()
+    endif()
 
     if(DO_INSTALL)
-        install(TARGETS ${PROJ_NAME} DESTINATION "${INSTALL_BINPLACE_DIR}")
+        install(TARGETS ${PROJ_NAME} DESTINATION "${INSTALL_DIR}")
     endif()
-endfunction(ms_add_executable PROJ_NAME PROJ_SRC INPUT_LIBS BINPLACE_FILES DO_INSTALL)
+endfunction(ms_add_project)
 
 macro(ms_add_compiler_flags LANGUAGES SUFFIXES FLAGS)
     foreach(LANG ${LANGUAGES})
@@ -67,19 +93,19 @@ macro(ms_add_compiler_flags LANGUAGES SUFFIXES FLAGS)
             message(STATUS ${FLAG_VAR} ":" ${${FLAG_VAR}})
         endforeach()
     endforeach()
-endmacro(ms_add_compiler_flags LANGUAGES SUFFIXES FLAGS)
+endmacro(ms_add_compiler_flags)
 
-function(ms_link_static_runtime FLAG_VAR)
+macro(ms_link_static_runtime FLAG_VAR)
     if(MSVC)
         if(${FLAG_VAR} MATCHES "/MD")
-            string(REGEX REPLACE "/MD"  "/MT" "${FLAG_VAR}" "${${FLAG_VAR}}")
+            string(REPLACE "/MD"  "/MT" "${FLAG_VAR}" "${${FLAG_VAR}}")
             #Save persistently
             set(${FLAG_VAR} ${${FLAG_VAR}} CACHE STRING "" FORCE)
         endif()
     endif()
-endfunction(ms_link_static_runtime)
+endmacro(ms_link_static_runtime)
 
-function(ms_replace_compiler_flags REPLACE_OPTION)
+macro(ms_replace_compiler_flags REPLACE_OPTION)
     set(SUFFIXES "")
     if((NOT DEFINED CMAKE_CONFIGURATION_TYPES) OR (CMAKE_CONFIGURATION_TYPES STREQUAL ""))
         #set(SUFFIXES "_DEBUG" "_RELEASE" "_MINSIZEREL" "_RELWITHDEBINFO")
@@ -103,7 +129,7 @@ function(ms_replace_compiler_flags REPLACE_OPTION)
         endforeach()
         #message(STATUS ${FLAG_VAR} ":" ${${FLAG_VAR}})
     endforeach()
-endfunction(ms_replace_compiler_flags REPLACE_OPTION)
+endmacro(ms_replace_compiler_flags)
 
 function(ms_check_cxx11_support)
     if(UNIX)
@@ -123,69 +149,118 @@ function(ms_check_cxx11_support)
     endif()
 endfunction(ms_check_cxx11_support)
 
-function(dsn_add_library_ex PROJ_NAME PROJ_TYPE)
-    if((NOT DEFINED DSN_RECURSIVE_SRC) OR (NOT DSN_RECURSIVE_SRC))
-        set(MY_GLOB_OPTION "GLOB")
-    else()
-        set(MY_GLOB_OPTION "GLOB_RECURSE")
-    endif()
-
-    file(${MY_GLOB_OPTION}
-        PROJ_SRC
-        "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/*.cc"
-        "${CMAKE_CURRENT_SOURCE_DIR}/*.c"
-        "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
-        "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp"
+macro(ms_find_source_files SOURCE_DIR GLOB_OPTION PROJ_SRC)
+    file(${GLOB_OPTION}
+        ${PROJ_SRC}
+        "${SOURCE_DIR}/*.cpp"
+		"${SOURCE_DIR}/*.cc"
+		"${SOURCE_DIR}/*.c"
+		"${SOURCE_DIR}/*.h"
+		"${SOURCE_DIR}/*.hpp"
         )
-    set(PROJ_SRC ${PROJ_SRC} ${DSN_EXTRA_SRC})
-    if (PROJ_SRC STREQUAL "")
-        message (FATAL "input sources cannot be empty")
-    endif()
-    if ((NOT DEFINED PROJ_TYPE) OR (${PROJ_TYPE} STREQUAL ""))
-        set(PROJ_TYPE "STATIC")
-    endif()
-    ms_add_library(${PROJ_TYPE} ${PROJ_NAME} "${PROJ_SRC}" 1)
-endfunction(dsn_add_library_ex)
+endmacro(ms_find_source_files)
 
-function(dsn_add_library PROJ_NAME)
-    dsn_add_library_ex(${PROJ_NAME} "STATIC")
-endfunction(dsn_add_library)
-
-function(dsn_add_dynamic_library PROJ_NAME)
-    dsn_add_library_ex(${PROJ_NAME} "SHARED")
-endfunction(dsn_add_dynamic_library)
-
-function(dsn_add_executable PROJ_NAME BINPLACE_FILES)
-    if((NOT DEFINED DSN_RECURSIVE_SRC) OR (NOT DSN_RECURSIVE_SRC))
-        set(MY_GLOB_OPTION "GLOB")
-    else()
-        set(MY_GLOB_OPTION "GLOB_RECURSE")
+function(dsn_add_project)
+    if(NOT DEFINED MY_PROJ_TYPE)
+        set(MY_PROJ_TYPE "")
+    endif()
+    if(NOT DEFINED MY_PROJ_NAME)
+        set(MY_PROJ_NAME "")
+    endif()
+	if(NOT DEFINED MY_SRC_SEARCH_MODE)
+		set(MY_SRC_SEARCH_MODE "GLOB")
+	endif()
+    if(NOT DEFINED MY_PROJ_SRC)
+        set(MY_PROJ_SRC "")
+    endif()
+    set(TEMP_SRC "")
+	ms_find_source_files("${CMAKE_CURRENT_SOURCE_DIR}" ${MY_SRC_SEARCH_MODE} TEMP_SRC)
+    set(MY_PROJ_SRC ${TEMP_SRC} ${MY_PROJ_SRC})
+    if(NOT DEFINED MY_PROJ_INC_PATH)
+        set(MY_PROJ_INC_PATH "")
+    endif()
+    if(NOT DEFINED MY_PROJ_LIBS)
+        set(MY_PROJ_LIBS "")
+    endif()
+    if(NOT DEFINED MY_PROJ_LIB_PATH)
+        set(MY_PROJ_LIB_PATH "")
+    endif()
+    if(NOT DEFINED MY_PROJ_BINPLACES)
+        set(MY_PROJ_BINPLACES "")
+    endif()
+    if(NOT DEFINED MY_BOOST_PACKAGES)
+        set(MY_BOOST_PACKAGES "")
+    endif()
+	if(NOT DEFINED MY_DO_INSTALL)
+		if(DSN_BUILD_RUNTIME AND (MY_PROJ_TYPE STREQUAL "EXECUTABLE"))
+			set(MY_DO_INSTALL FALSE)
+		else()
+			set(MY_DO_INSTALL TRUE)
+		endif()
+	endif()
+    
+    set(MY_BOOST_LIBS "")
+    if(NOT (MY_BOOST_PACKAGES STREQUAL ""))        
+        ms_setup_boost(TRUE "${MY_BOOST_PACKAGES}" MY_BOOST_LIBS)
+    endif()
+    
+    if((MY_PROJ_TYPE STREQUAL "SHARED") OR (MY_PROJ_TYPE STREQUAL "EXECUTABLE"))
+        if(DSN_BUILD_RUNTIME AND (MY_PROJ_NAME STREQUAL "dsn.core"))
+            set(TEMP_LIBS            
+            ${DSN_SYSTEM_LIBS}
+            dsn.dev.cpp.core.use
+            dsn.tools.common
+            dsn.tools.simulator
+            dsn.tools.nfs
+            )
+        else()
+            set(TEMP_LIBS dsn.core dsn.dev.cpp)
+        endif()      
+        set(MY_PROJ_LIBS ${MY_BOOST_LIBS} ${TEMP_LIBS} ${MY_PROJ_LIBS})        
     endif()
 
-    file(${MY_GLOB_OPTION}
-        PROJ_SRC
-        "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/*.cc"
-        "${CMAKE_CURRENT_SOURCE_DIR}/*.c"
-        "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
-        "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp"
-        )
-    set(PROJ_SRC ${PROJ_SRC} ${DSN_EXTRA_SRC})
-    set(INPUT_LIBS ${DSN_EXTRA_LIBS} ${DSN_LIBS})
-    if (PROJ_SRC STREQUAL "")
-        message (FATAL "input sources cannot be empty")
+    if(DEFINED DSN_DEBUG_CMAKE)
+    	message(STATUS "MY_PROJ_TYPE = ${MY_PROJ_TYPE}")
+    	message(STATUS "MY_PROJ_NAME = ${MY_PROJ_NAME}")
+    	message(STATUS "MY_PROJ_SRC = ${MY_PROJ_SRC}")
+		message(STATUS "MY_SRC_SEARCH_MODE = ${MY_SRC_SEARCH_MODE}")
+    	message(STATUS "MY_PROJ_INC_PATH = ${MY_PROJ_INC_PATH}")
+    	message(STATUS "MY_PROJ_LIBS = ${MY_PROJ_LIBS}")
+    	message(STATUS "MY_PROJ_LIB_PATH = ${MY_PROJ_LIB_PATH}")
+    	message(STATUS "MY_PROJ_BINPLACES = ${MY_PROJ_BINPLACES}")
+    	message(STATUS "MY_DO_INSTALL = ${MY_DO_INSTALL}")
+        message(STATUS "MY_BOOST_PACKAGES = ${MY_BOOST_PACKAGES}")
+        message(STATUS "MY_BOOST_LIBS = ${MY_BOOST_LIBS}")
     endif()
-    ms_add_executable(${PROJ_NAME} "${PROJ_SRC}" "${INPUT_LIBS}" "${BINPLACE_FILES}" 0)
-endfunction(dsn_add_executable PROJ_NAME BINPLACE_FILES)
+    
+    ms_add_project("${MY_PROJ_TYPE}" "${MY_PROJ_NAME}" "${MY_PROJ_SRC}" "${MY_PROJ_INC_PATH}" "${MY_PROJ_LIBS}" "${MY_PROJ_LIB_PATH}" "${MY_BINPLACES}" "${MY_DO_INSTALL}")
+endfunction(dsn_add_project)
+
+function(dsn_add_static_library)
+    set(MY_PROJ_TYPE "STATIC")
+    dsn_add_project()
+endfunction(dsn_add_static_library)
+
+function(dsn_add_shared_library)
+    set(MY_PROJ_TYPE "SHARED")
+    dsn_add_project()
+endfunction(dsn_add_shared_library)
+
+function(dsn_add_executable)
+    set(MY_PROJ_TYPE "EXECUTABLE")
+    dsn_add_project()
+endfunction(dsn_add_executable)
 
 function(dsn_setup_compiler_flags)
-    if(UNIX)
-        set_directory_properties(PROPERTIES COMPILE_DEFINITIONS_DEBUG "_DEBUG")
-    endif()
     ms_replace_compiler_flags("STATIC_LINK")
 
     if(UNIX)
+        if(CMAKE_USE_PTHREADS_INIT)
+            add_compile_options(-pthread)
+        endif()   
+        if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+            add_definitions(-D_DEBUG)
+        endif()
         add_compile_options(-std=c++11)
         if(DEFINED DSN_PEDANTIC)
             add_compile_options(-Werror)
@@ -198,14 +273,18 @@ function(dsn_setup_compiler_flags)
         add_definitions(-D_WIN32_WINNT=0x0501)
         add_definitions(-D_UNICODE)
         add_definitions(-DUNICODE)
-        add_compile_options(-MP)
+		add_compile_options(-MP)
         if(DEFINED DSN_PEDANTIC)
             add_compile_options(-WX)
         endif()
     endif()
 endfunction(dsn_setup_compiler_flags)
 
-function(ms_setup_boost STATIC_LINK PACKAGES)
+macro(ms_setup_boost STATIC_LINK PACKAGES BOOST_LIBS)
+    if(DEFINED DSN_DEBUG_CMAKE)
+        message(STATUS "BOOST_PACKAGES = ${PACKAGES}")
+    endif()
+    
     set(Boost_USE_MULTITHREADED            ON)
     if(STATIC_LINK)
         set(Boost_USE_STATIC_LIBS        ON)
@@ -217,18 +296,17 @@ function(ms_setup_boost STATIC_LINK PACKAGES)
 
     find_package(Boost COMPONENTS ${PACKAGES} REQUIRED)
 
-    set(BOOST_REQUIRED_LIBS "")
+    set(TEMP_LIBS "")
     foreach(PACKAGE ${PACKAGES})
         string(TOUPPER ${PACKAGE} PACKAGE)
-        set(BOOST_REQUIRED_LIBS ${BOOST_REQUIRED_LIBS} ${Boost_${PACKAGE}_LIBRARY})
+        set(TEMP_LIBS ${TEMP_LIBS} ${Boost_${PACKAGE}_LIBRARY})
     endforeach()
-    set(BOOST_REQUIRED_LIBS ${BOOST_REQUIRED_LIBS} CACHE STRING "Required boost packages" FORCE)
+    set(${BOOST_LIBS} ${TEMP_LIBS})
 
-endfunction(ms_setup_boost STATIC_LINK PACKAGES)
+endmacro(ms_setup_boost)
 
 function(dsn_setup_packages)
-    set(BOOST_PACKAGES
-        ${DSN_EXTRA_BOOST_PACKAGES}
+    set(DSN_BOOST_PACKAGES 
         thread
         regex
         system
@@ -236,62 +314,30 @@ function(dsn_setup_packages)
         chrono
         date_time
         )
-    ms_setup_boost(1 "${BOOST_PACKAGES}")
+    set(DSN_BOOST_LIBS "")
+    ms_setup_boost(TRUE "${DSN_BOOST_PACKAGES}" DSN_BOOST_LIBS)
+    if(DEFINED DSN_DEBUG_CMAKE)
+        message(STATUS "DSN_BOOST_LIBS = ${DSN_BOOST_LIBS}")
+    endif()
     
     if(UNIX)
         set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
     endif()
     find_package(Threads REQUIRED)
-    if(UNIX AND CMAKE_USE_PTHREADS_INIT)
-        add_compile_options(-pthread)
-    endif()
         
     set(DSN_SYSTEM_LIBS "")
-    set(DSN_CORE_LIBS "")
-    set(DSN_LIBS "")
-    set(DSN_CORE_TARGETS
-        dsn.failure_detector
-        dsn.dev.cpp
-        dsn.core
-        )
-
     if(UNIX AND (NOT APPLE))
         set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} rt)
-    endif()
-    
+    endif()    
     if("${CMAKE_SYSTEM}" MATCHES "Linux")
         set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} aio)
-    endif()
-    
+    endif()   
     set(DSN_SYSTEM_LIBS
         ${DSN_SYSTEM_LIBS}
         ${CMAKE_THREAD_LIBS_INIT}
-        ${BOOST_REQUIRED_LIBS}
+        ${DSN_BOOST_LIBS}
+        CACHE STRING "rDSN system libs" FORCE
     )
-
-    if(DSN_BUILD_RUNTIME)
-        set(DSN_LIBS ${DSN_CORE_TARGETS})
-    else()
-        ######Useless#######
-        if(MSVC)
-            set(RLEXT ".lib")
-        else()
-            set(RLEXT ".a")
-        endif()
-
-        foreach(RL ${DSN_EXTRA_TARGETS})
-            #set(DSN_LIBS ${DSN_LIBS} "lib${RL}${RLEXT}")
-        endforeach()
-
-        foreach(RL ${DSN_CORE_TARGETS})
-            #set(DSN_LIBS ${DSN_LIBS} "lib${RL}${RLEXT}")
-        endforeach()
-        ####################
-
-        set(DSN_LIBS ${DSN_CORE_TARGETS})
-    endif()
-
-    set(DSN_LIBS ${DSN_LIBS} ${DSN_SYSTEM_LIBS} CACHE STRING "rDSN libs" FORCE)
 endfunction(dsn_setup_packages)
 
 function(dsn_set_output_path)
@@ -368,11 +414,10 @@ function(dsn_common_setup)
     set(BUILD_SHARED_LIBS OFF)
     dsn_setup_version()
     ms_check_cxx11_support()
-    dsn_setup_compiler_flags()
     dsn_setup_packages()
+    dsn_setup_compiler_flags()
     dsn_setup_include_path()
     dsn_set_output_path()
     dsn_setup_link_path()
     dsn_setup_install()
 endfunction(dsn_common_setup)
-

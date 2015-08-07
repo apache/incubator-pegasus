@@ -668,7 +668,7 @@ void log_file::close()
     if (0 != _handle)
     {
         if (_is_read)
-            ::close((int)(_handle));
+            ::close((int)(uintptr_t)(_handle));
         else
         {
             error_code err = dsn_file_close(_handle);
@@ -685,7 +685,7 @@ error_code log_file::read_next_log_entry(__out_param::dsn::blob& bb)
 
     log_block_header hdr;    
     int read_count = ::read(
-        (int)(_handle),
+        (int)(uintptr_t)(_handle),
         &hdr,
         sizeof(log_block_header)
         );
@@ -713,7 +713,7 @@ error_code log_file::read_next_log_entry(__out_param::dsn::blob& bb)
     bb.assign(data, 0, hdr.length);
 
     read_count = ::read(
-        (int)(_handle),
+        (int)(uintptr_t)(_handle),
         (void*)(char*)bb.data(),
         hdr.length
         );
