@@ -40,7 +40,7 @@ public:
     void start(aio_provider* provider);
 
     // asynchonous file read/write
-    dsn_handle_t        open(const char* fileName, int flag, int pmode);
+    dsn_handle_t    open(const char* fileName, int flag, int pmode);
     error_code      close(dsn_handle_t hFile);
     void            read(aio_task* aio);
     void            write(aio_task* aio);  

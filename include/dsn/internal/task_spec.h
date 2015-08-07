@@ -177,13 +177,13 @@ public:
 };
 
 CONFIG_BEGIN(task_spec)
-    CONFIG_FLD_ENUM(dsn_task_priority_t, priority, TASK_PRIORITY_COMMON, TASK_PRIORITY_INVALID, true)
-    CONFIG_FLD_ID(threadpool_code2, pool_code, THREAD_POOL_DEFAULT, true)
-    CONFIG_FLD(bool, bool, allow_inline, false)
-    CONFIG_FLD(bool, bool, fast_execution_in_network_thread, false)
-    CONFIG_FLD_ID(network_header_format, rpc_call_header_format, NET_HDR_DSN, false)
-    CONFIG_FLD_ID(rpc_channel, rpc_call_channel, RPC_CHANNEL_TCP, false)
-    CONFIG_FLD(int32_t, uint64, rpc_timeout_milliseconds, 5000)    
+    CONFIG_FLD_ENUM(dsn_task_priority_t, priority, TASK_PRIORITY_COMMON, TASK_PRIORITY_INVALID, true, "task priority")
+    CONFIG_FLD_ID(threadpool_code2, pool_code, THREAD_POOL_DEFAULT, true, "thread pool to execute the task")
+    CONFIG_FLD(bool, bool, allow_inline, false, "whether the task can be executed inlined with the caller task")
+    CONFIG_FLD(bool, bool, fast_execution_in_network_thread, false, "whether the rpc task can be executed in network threads directly")
+    CONFIG_FLD_ID(network_header_format, rpc_call_header_format, NET_HDR_DSN, false, "what kind of header format for this kind of rpc calls")
+    CONFIG_FLD_ID(rpc_channel, rpc_call_channel, RPC_CHANNEL_TCP, false, "what kind of network channel for this kind of rpc calls")
+    CONFIG_FLD(int32_t, uint64, rpc_timeout_milliseconds, 5000, "what is the default timeout (ms) for this kind of rpc calls")    
 CONFIG_END
 
 struct threadpool_spec
@@ -211,20 +211,20 @@ struct threadpool_spec
 };
 
 CONFIG_BEGIN(threadpool_spec)
- // CONFIG_FLD_ID(dsn_threadpool_code_t, pool_code) // no need to define it inside section
-    CONFIG_FLD_STRING(name, "")
-    CONFIG_FLD(int, uint64, worker_count, 2)
-    CONFIG_FLD_ENUM(worker_priority_t, worker_priority, THREAD_xPRIORITY_NORMAL, THREAD_xPRIORITY_INVALID, false)
-    CONFIG_FLD(bool, bool, worker_share_core, true)
-    CONFIG_FLD(uint64_t, uint64, worker_affinity_mask, 0)
-    CONFIG_FLD(unsigned int, uint64, max_input_queue_length, 0xFFFFFFFFUL)
-    CONFIG_FLD(bool, bool, partitioned, false)
-    CONFIG_FLD_STRING(queue_factory_name, "")
-    CONFIG_FLD_STRING(worker_factory_name, "")
-    CONFIG_FLD_STRING_LIST(queue_aspects)
-    CONFIG_FLD_STRING_LIST(worker_aspects)
-    CONFIG_FLD_STRING(admission_controller_factory_name, "")
-    CONFIG_FLD_STRING(admission_controller_arguments, "")
+    // CONFIG_FLD_ID(dsn_threadpool_code_t, pool_code) // no need to define it inside section
+    CONFIG_FLD_STRING(name, "", "thread pool name")
+    CONFIG_FLD(int, uint64, worker_count, 2, "thread/worker count")
+    CONFIG_FLD_ENUM(worker_priority_t, worker_priority, THREAD_xPRIORITY_NORMAL, THREAD_xPRIORITY_INVALID, false, "thread priority")
+    CONFIG_FLD(bool, bool, worker_share_core, true, "whether the threads share all assigned cores")
+    CONFIG_FLD(uint64_t, uint64, worker_affinity_mask, 0, "what CPU cores are assigned to this pool, 0 for all")
+    CONFIG_FLD(unsigned int, uint64, max_input_queue_length, 0xFFFFFFFFUL, "maximum (each) task queue length for this pool")
+    CONFIG_FLD(bool, bool, partitioned, false, "whethe the threads share a single queue(partitioned=false) or not; the latter is usually for workload hash partitioning for avoiding locking")
+    CONFIG_FLD_STRING(queue_factory_name, "", "TaskQueue(queue) provider name")
+    CONFIG_FLD_STRING(worker_factory_name, "", "TaskWorker(thread) provider name")
+    CONFIG_FLD_STRING_LIST(queue_aspects, "TaskQueue aspects names, usually for tooling purpose")
+    CONFIG_FLD_STRING_LIST(worker_aspects, "TaskWorker aspects names, usually for tooling purpose")
+    CONFIG_FLD_STRING(admission_controller_factory_name, "", "customized admission controller for the task queues")
+    CONFIG_FLD_STRING(admission_controller_arguments, "", "arguments for the cusotmized admission controller")
 CONFIG_END
 
 } // end namespace

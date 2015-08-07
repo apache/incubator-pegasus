@@ -14,7 +14,20 @@ namespace dsn.dev.csharp
     //    void UnMarshall(Stream readStream);
     //}
 
-    public class Message : SafeHandle
+    public abstract class SafeHandleZeroIsInvalid : SafeHandle
+    {
+        public SafeHandleZeroIsInvalid(IntPtr handle, bool isOwner)
+            : base(handle, isOwner)
+        {
+        }
+
+        public override bool IsInvalid
+        {
+            get { return handle == IntPtr.Zero; }
+        }
+    }
+
+    public class Message : SafeHandleZeroIsInvalid
     {
         private bool _isOwner;
         public Message(IntPtr msg, bool owner)
@@ -22,11 +35,6 @@ namespace dsn.dev.csharp
         {
             SetHandle(msg);
             _isOwner = owner;
-        }
-
-        public override bool IsInvalid 
-        {
-            get { return handle == IntPtr.Zero; } 
         }
 
         protected override bool ReleaseHandle()

@@ -13,7 +13,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
     public class <?=$svc->name?>Client : Servicelet
     {
         private RpcAddress _server;
-		
+        
         public <?=$svc->name?>Client(RpcAddress server) { _server = server; }
         public <?=$svc->name?>Client() { Native.dsn_address_get_invalid(out _server.addr); }
         ~<?=$svc->name?>Client() {}
@@ -86,8 +86,8 @@ namespace <?=$_PROG->get_csharp_namespace()?>
                         reply_hash
                         );
         }        
-		
-		public SafeTaskHandle <?=$f->name?>2(
+        
+        public SafeTaskHandle <?=$f->name?>2(
             <?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>, 
             <?=$f->name?>Callback callback,
             int timeout_milliseconds = 0, 

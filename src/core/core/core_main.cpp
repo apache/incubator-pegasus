@@ -15,7 +15,7 @@
 
 # if defined(__GNUC__) || defined(_WIN32)
 # else
-# error "dsn init on shared lib loading is not supported on this platform yet""
+# error "dsn init on shared lib loading is not supported on this platform yet"
 # endif
 
 # if defined(__GNUC__)

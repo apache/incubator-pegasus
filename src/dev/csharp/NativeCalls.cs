@@ -5,10 +5,10 @@ using System.Runtime.InteropServices;
 
 namespace dsn.dev.csharp
 {
-    using dsn_error_t = System.Int32;
-    using dsn_task_code_t = System.Int32;
-    using dsn_threadpool_code_t = System.Int32;
-    using dsn_handle_t = System.UInt64;
+    using dsn_error_t = Int32;
+    using dsn_task_code_t = Int32;
+    using dsn_threadpool_code_t = Int32;
+    using dsn_handle_t = IntPtr;
     using dsn_task_t = IntPtr;
     using dsn_task_tracker_t = IntPtr;
     using dsn_message_t = IntPtr;

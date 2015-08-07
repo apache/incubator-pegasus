@@ -11,97 +11,9 @@ using System.Runtime.InteropServices;
 namespace dsn.dev.csharp
 {
     using dsn_task_t = IntPtr;
-    using dsn_handle_t = UInt64;
-
-    //public class task : SafeHandle
-    //{
-    //    public task()
-    //        : base(IntPtr.Zero, true)
-    //    {
-    //        _rpc_response = new message();
-    //        //_gch = GCHandle.Alloc(this);
-    //    }
-    //    public void initialize(IntPtr t)
-    //    {
-    //        core.dsn_task_add_ref(t);
-    //        SetHandle(t);
-    //    }
-
-    //    public override bool IsInvalid { get { return handle == IntPtr.Zero; } }
-
-    //    protected override bool ReleaseHandle()
-    //    {
-    //        if (!IsInvalid)
-    //        {
-    //            core.dsn_task_release_ref(handle);
-    //            //_gch.Free();
-    //            return true;
-    //        }
-    //        else
-    //            return false;
-    //    }
-
-    //    public IntPtr dangerous_native_task_handle() { return handle; }
-
-    //    public IntPtr gc_handle_ptr() { return (IntPtr)_gch; }
-
-    //    public static T from_gc_handle_ptr<T>(IntPtr ptr) 
-    //        where T : task
-    //    {
-    //        GCHandle hc = (GCHandle)ptr;
-    //        return hc.Target as T;
-    //    }
-                        
-    //    public bool cancel(bool wait_until_finished, out bool finished)
-    //    {
-    //        return core.dsn_task_cancel2(handle, wait_until_finished, out finished);
-    //    }
-
-    //    public bool wait()
-    //    {
-    //        return core.dsn_task_wait(handle);
-    //    }
-
-    //    public bool wait(int timeout_millieseconds)
-    //    {
-    //        return core.dsn_task_wait_timeout(handle, timeout_millieseconds);
-    //    }
-
-    //    public error_code error()
-    //    {
-    //        return new error_code(core.dsn_task_error(handle));
-    //    }
-            
-    //    public size_t io_size()
-    //    {
-    //        return core.dsn_file_get_io_size(handle);
-    //    }
-            
-    //    public void enqueue_aio(error_code err, size_t size)
-    //    {
-    //        core.dsn_file_task_enqueue(handle, err, size);
-    //    }
-
-    //    public message response()
-    //    {
-    //        if (_rpc_response.IsInvalid)
-    //        {
-    //            _rpc_response.initialize(core.dsn_rpc_get_response(handle));
-    //        }
-
-    //        return _rpc_response;
-    //    }
-
-    //    public void enqueue_rpc_response(error_code err, IntPtr resp)
-    //    {
-    //        core.dsn_rpc_enqueue_response(handle, err, resp);
-    //    }
-
-    //    private message _rpc_response;
-    //    private GCHandle _gch;
-    //};
-
-    public class Servicelet : SafeHandle
+    using dsn_handle_t = IntPtr;
+        
+    public class Servicelet : SafeHandleZeroIsInvalid
     {
         public Servicelet(int task_bucket_count = 13)
             : base(IntPtr.Zero, true)
@@ -109,8 +21,6 @@ namespace dsn.dev.csharp
             SetHandle(Native.dsn_task_tracker_create(task_bucket_count));
             _access_thread_id_inited = false;
         }
-
-        public override bool IsInvalid { get { return handle == IntPtr.Zero; } }
 
         protected override bool ReleaseHandle()
         {

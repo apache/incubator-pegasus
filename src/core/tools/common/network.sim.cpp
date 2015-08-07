@@ -124,8 +124,12 @@ namespace dsn { namespace tools {
         auto config = tool_app::get_service_spec().config;
         if (config != NULL)
         {
-            _min_message_delay_microseconds = config->get_value<uint32_t>("tools.simulator", "min_message_delay_microseconds", _min_message_delay_microseconds);
-            _max_message_delay_microseconds = config->get_value<uint32_t>("tools.simulator", "max_message_delay_microseconds", _max_message_delay_microseconds);
+            _min_message_delay_microseconds = config->get_value<uint32_t>("tools.simulator", 
+                "min_message_delay_microseconds", _min_message_delay_microseconds,
+                "min message delay (us)");
+            _max_message_delay_microseconds = config->get_value<uint32_t>("tools.simulator", 
+                "max_message_delay_microseconds", _max_message_delay_microseconds,
+                "max message delay (us)");
         }
     }
 

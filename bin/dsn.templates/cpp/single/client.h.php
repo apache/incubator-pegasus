@@ -12,7 +12,7 @@ $file_prefix = $argv[3];
 
 <?php foreach ($_PROG->services as $svc) { ?>
 class <?=$svc->name?>_client 
-    : public virtual ::dsn::service::servicelet
+    : public virtual ::dsn::servicelet
 {
 public:
     <?=$svc->name?>_client(const dsn_address_t& server) { _server = server; }
@@ -28,7 +28,7 @@ public:
         int hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-        ::dsn::service::rpc::call_one_way_typed(p_server_addr ? *p_server_addr : _server, 
+        ::dsn::rpc::call_one_way_typed(p_server_addr ? *p_server_addr : _server, 
             <?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash);
     }
 <?php    } else { ?>
@@ -40,18 +40,18 @@ public:
         int hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-        dsn_message_t response;
-        auto err = ::dsn::service::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
+        dsn::message_ptr response;
+        auto err = ::dsn::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
             <?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash, timeout_milliseconds);
         if (err == ::dsn::ERR_OK)
         {
-            ::unmarshall(response, resp);
+            ::unmarshall(response.get_msg(), resp);
         }
         return err;
     }
     
     // - asynchronous with on-stack <?=$f->get_first_param()->get_cpp_type()?> and <?=$f->get_cpp_return_type()?> 
-    ::dsn::cpp_task_ptr begin_<?=$f->name?>(
+    ::dsn::task_ptr begin_<?=$f->name?>(
         const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
         void* context = nullptr,
         int timeout_milliseconds = 0, 
@@ -59,7 +59,7 @@ public:
         int request_hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-        return ::dsn::service::rpc::call_typed(
+        return ::dsn::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
                     <?=$f->get_rpc_code()?>, 
                     <?=$f->get_first_param()->name?>, 
@@ -85,14 +85,14 @@ public:
     }
     
     // - asynchronous with on-heap std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>> and std::shared_ptr<<?=$f->get_cpp_return_type()?>> 
-    ::dsn::cpp_task_ptr begin_<?=$f->name?>2(
+    ::dsn::task_ptr begin_<?=$f->name?>2(
         std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>>& <?=$f->get_first_param()->name?>,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0,
         int request_hash = 0,
         const dsn_address_t *p_server_addr = nullptr)
     {
-        return ::dsn::service::rpc::call_typed(
+        return ::dsn::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
                     <?=$f->get_rpc_code()?>, 
                     <?=$f->get_first_param()->name?>, 

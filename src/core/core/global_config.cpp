@@ -70,7 +70,8 @@ static bool build_client_network_confs(
 
             // dsn::tools::asio_network_provider,65536
             std::list<std::string> vs;
-            std::string v = dsn_config_get_value_string(section, k.c_str(), "");
+            std::string v = dsn_config_get_value_string(section, k.c_str(), "", 
+                "network channel configuration, e.g., dsn::tools::asio_network_provider,65536");
             utils::split_args(v.c_str(), vs, ',');
 
             if (vs.size() != 2)
@@ -182,7 +183,8 @@ static bool build_server_network_confs(
 
             // NET_HDR_DSN, dsn::tools::asio_network_provider,65536
             std::list<std::string> vs;
-            std::string v = dsn_config_get_value_string(section, k.c_str(), "");
+            std::string v = dsn_config_get_value_string(section, k.c_str(), "", 
+                "network channel configuration, e.g., NET_HDR_DSN, dsn::tools::asio_network_provider,65536");
             utils::split_args(v.c_str(), vs, ',');
 
             if (vs.size() != 3)

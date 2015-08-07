@@ -96,7 +96,7 @@ configuration::configuration(const char* file_name, const char* arguments)
     //
     // parse mapped file and build conf map
     //
-    std::map<std::string, conf>* pSection = nullptr;
+    std::map<std::string, conf*>* pSection = nullptr;
     char *p, *pLine = (char*)"", *pNextLine, *pEnd, *pSectionName = nullptr, *pEqual;
     int lineno = 0;
     unsigned int indexInSection = 0;
@@ -172,18 +172,19 @@ ConfReg:
                     pSectionName,
                     pKey,
                     lineno,
-                    it->second.section,
-                    it->second.key,
-                    it->second.line
+                    it->second->section.c_str(),
+                    it->second->key.c_str(),
+                    it->second->line
                     );
             }
             else
             {
-                conf cf;
-                cf.section = (const char*)pSectionName;
-                cf.key = (const char*)pKey;
-                cf.value = pValue;
-                cf.line = lineno; 
+                conf* cf = new conf;
+                cf->section = (const char*)pSectionName;
+                cf->key = pKey;
+                cf->value = pValue ? pValue : "";
+                cf->line = lineno; 
+                cf->present = true;
                 pSection->insert(std::make_pair(std::string(pKey), cf));
             }            
         }
@@ -209,7 +210,7 @@ ConfReg:
             }
             set_warning(old);
 
-            std::map<std::string, conf> sm;
+            std::map<std::string, conf*> sm;
             auto it = _configs.insert(config_map::value_type(std::string(pSectionName), sm));
             assert (it.second);
             pSection = &it.first->second;
@@ -253,26 +254,63 @@ void configuration::get_all_keys(const char* section, std::vector<const char*>& 
     }
 }
 
-bool configuration::get_string_value_internal(const char* section, const char* key, const char* default_value, const char** ov)
+bool configuration::get_string_value_internal(const char* section, const char* key, const char* default_value, const char** ov, const char* dsptr)
 {
+    _lock.lock();
+
+    std::map<std::string, conf*> *ps = nullptr;
     auto it = _configs.find(section);
     if (it != _configs.end())
     {
+        ps = &it->second;
         auto it2 = it->second.find(key);
         if (it2 != it->second.end())
         {
-            *ov = it2->second.value;
-            return true;
+            if (it2->second->present)
+            {
+                if (it2->second->dsptr.length() == 0)
+                it2->second->dsptr = dsptr;
+
+                *ov = it2->second->value.c_str();
+
+                _lock.unlock();
+                return true;
+            }
+            else
+            {
+                _lock.unlock();
+                return false;
+            }
         }
     }
-    *ov = default_value;
+    
+    if (ps == nullptr)
+    {
+        std::map<std::string, conf*> sm;
+        auto it = _configs.insert(config_map::value_type(std::string(section), sm));
+        assert(it.second);
+        ps = &it.first->second;
+    }
+
+    conf* cf = new conf();
+    cf->dsptr = dsptr;
+    cf->key = key;
+    cf->value = default_value;
+    cf->line = 0;
+    cf->present = false;
+    cf->section = section;
+    ps->insert(std::make_pair(cf->section, cf));
+
+    *ov = cf->value.c_str();
+
+    _lock.unlock();
     return false;
 }
 
-const char* configuration::get_string_value(const char* section, const char* key, const char* default_value)
+const char* configuration::get_string_value(const char* section, const char* key, const char* default_value, const char* dsptr)
 {
     const char* ov;
-    if (!get_string_value_internal(section, key, default_value, &ov))
+    if (!get_string_value_internal(section, key, default_value, &ov, dsptr))
     {
         if (_warning)
         {
@@ -286,10 +324,10 @@ const char* configuration::get_string_value(const char* section, const char* key
     return ov;
 }
 
-std::list<std::string> configuration::get_string_value_list(const char* section, const char* key, char splitter)
+std::list<std::string> configuration::get_string_value_list(const char* section, const char* key, char splitter, const char* dsptr)
 {
     const char* ov;
-    if (!get_string_value_internal(section, key, "", &ov))
+    if (!get_string_value_internal(section, key, "", &ov, dsptr))
     {
         if (_warning)
         {
@@ -309,6 +347,26 @@ std::list<std::string> configuration::get_string_value_list(const char* section,
         v = std::string(utils::trim_string((char*)v.c_str()));
     }
     return vs;
+}
+
+void configuration::dump(std::ostream& os)
+{
+    _lock.lock();
+
+    for (auto& s : _configs)
+    {
+        os << "[" << s.first << "]" << std::endl;
+
+        for (auto& kv : s.second)
+        {
+            os << "// " << kv.second->dsptr << std::endl;
+            os << kv.first << " = " << kv.second->value << std::endl;
+        }
+
+        os << std::endl;
+    }
+
+    _lock.unlock();
 }
 
 void configuration::register_config_change_notification(config_file_change_notifier notifier)

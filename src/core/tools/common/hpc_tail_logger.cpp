@@ -67,7 +67,8 @@ namespace dsn
             _per_thread_buffer_bytes = config()->get_value<int>(
                 "tools.hpc_tail_logger",
                 "per_thread_buffer_bytes",
-                10*1024*1024 // 10 MB by default
+                10*1024*1024, // 10 MB by default
+                "buffer size for per-thread logging"
                 );
 
             // register command for tail logging

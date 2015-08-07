@@ -18,12 +18,18 @@ namespace dsn {
 
             void init()
             {
-                nfs_copy_block_bytes = (uint32_t)dsn_config_get_value_uint64("nfs", "nfs_copy_block_bytes", 4*1024*1024);
-                max_concurrent_remote_copy_requests = (int)dsn_config_get_value_uint64("nfs", "max_concurrent_remote_copy_requests", 50);
-                max_concurrent_local_writes = (int)dsn_config_get_value_uint64("nfs", "max_concurrent_local_writes", 5);
-                file_close_expire_time_ms = (int)dsn_config_get_value_uint64("nfs", "file_close_expire_time_ms", 3 * 60 * 1000);
-                file_close_timer_interval_ms_on_server = (int)dsn_config_get_value_uint64("nfs", "file_close_timer_interval_ms_on_server", 2 * 60 * 1000);
-                max_file_copy_request_count_per_file = (int)dsn_config_get_value_uint64("nfs", "max_file_copy_request_count_per_file", 10); // limit each file copy speed
+                nfs_copy_block_bytes = (uint32_t)dsn_config_get_value_uint64("nfs", "nfs_copy_block_bytes", 
+                    4*1024*1024, "maximum block size (bytes) for each network copy");
+                max_concurrent_remote_copy_requests = (int)dsn_config_get_value_uint64("nfs", "max_concurrent_remote_copy_requests", 
+                    50, "maximum concurrent remote copy to the same server on nfs client");
+                max_concurrent_local_writes = (int)dsn_config_get_value_uint64("nfs", "max_concurrent_local_writes", 
+                    5, "maximum local file writes on nfs client");
+                file_close_expire_time_ms = (int)dsn_config_get_value_uint64("nfs", "file_close_expire_time_ms", 
+                    3 * 60 * 1000, "maximum idle time for an opening file on nfs server"); // TODO: what the difference between this and below
+                file_close_timer_interval_ms_on_server = (int)dsn_config_get_value_uint64("nfs", "file_close_timer_interval_ms_on_server",
+                    2 * 60 * 1000, "maximum idle time for an opened file on nfs server");
+                max_file_copy_request_count_per_file = (int)dsn_config_get_value_uint64("nfs", "max_file_copy_request_count_per_file", 
+                    10, "maximum concurrent remote copy requests for the same file on nfs client"); // limit each file copy speed
             }
         };
 

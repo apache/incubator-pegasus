@@ -108,7 +108,8 @@ namespace echo.csharp
                 throw new Exception("wrong usage: EchoServiceClient server-host server-port");                
             }
 
-            Native.dsn_address_build(out _server, argv[1], ushort.Parse(argv[2]));
+            _server = new RpcAddress();
+            Native.dsn_address_build(out _server.addr, argv[1], ushort.Parse(argv[2]));
 
             //CallAsync(EchoClientApp.LPC_ECHO_TIMER1, this,  this.OnTimer1, 0, 0);
             CallAsync(EchoClientApp.LPC_ECHO_TIMER2, this, () => this.OnTimer2(100), 0, 0);
@@ -169,7 +170,7 @@ namespace echo.csharp
             RpcCallAsync(_server, s, this, this.OnTimer2EchoCallback, 0);
         }
 
-        private dsn_address_t _server;
+        private RpcAddress _server;
         private int _count_timer1 = 0;
         private int _count_timer2 = 0;
         private DateTime _last_ts;
