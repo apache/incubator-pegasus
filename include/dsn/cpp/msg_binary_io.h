@@ -64,15 +64,30 @@ namespace dsn
             _last_write_next_total_size = 0;
         }
 
+        // write buffer for msg_binary_writer is allocated from
+        // a per-thread pool, and it is expected that
+        // the per-thread pool cannot allocated two outstanding
+        // buffers at the same time.
+        // e.g., alloc1, commit1, alloc2, commit2 is ok
+        // while alloc1, alloc2, commit2, commit 1 is invalid
+        void commit_buffer()
+        {
+            if (!_last_write_next_committed)
+            {
+                dsn_msg_write_commit(_msg, (size_t)(total_size() - _last_write_next_total_size));
+                _last_write_next_committed = true;
+            }
+        }
+
         ~msg_binary_writer()
         {
-            commit();
+            commit_buffer();
         }
         
     private:
         virtual void create_new_buffer(size_t size, /*out*/blob& bb) override
         {
-            commit();
+            commit_buffer();
 
             void* ptr;
             size_t sz;
@@ -82,15 +97,6 @@ namespace dsn
 
             _last_write_next_total_size = total_size();
             _last_write_next_committed = false;
-        }
-        
-        void commit()
-        {
-            if (!_last_write_next_committed)
-            {
-                dsn_msg_write_commit(_msg, (size_t)(total_size() - _last_write_next_total_size));
-                _last_write_next_committed = true;
-            }
         }
 
     private:

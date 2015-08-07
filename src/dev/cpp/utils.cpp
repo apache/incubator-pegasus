@@ -470,18 +470,22 @@ namespace  dsn
 
     void binary_writer::write(const char* buffer, int sz)
     {
-        int sz0 = sz;
         int rem_size = _current_buffer_length - _current_offset;
         if (rem_size >= sz)
         {
             memcpy((void*)(_current_buffer + _current_offset), buffer, (size_t)sz);
             _current_offset += sz;
+            _total_size += sz;
         }
         else
         {
-            memcpy((void*)(_current_buffer + _current_offset), buffer, (size_t)rem_size);
-            _current_offset += rem_size;
-            sz -= rem_size;
+            if (rem_size > 0)
+            {
+                memcpy((void*)(_current_buffer + _current_offset), buffer, (size_t)rem_size);
+                _current_offset += rem_size;
+                _total_size += rem_size;
+                sz -= rem_size;
+            }            
 
             int allocSize = _reserved_size_per_buffer;
             if (sz > allocSize)
@@ -490,9 +494,8 @@ namespace  dsn
             create_buffer(allocSize);
             memcpy((void*)(_current_buffer + _current_offset), buffer + rem_size, (size_t)sz);
             _current_offset += sz;
+            _total_size += sz;
         }
-
-        _total_size += sz0;
     }
 
     bool binary_writer::next(void** data, int* size)
