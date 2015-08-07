@@ -37,7 +37,7 @@ namespace dsn {
         {
         }
 
-        void counter_service_impl::on_add(const ::dsn::example::count_op& op, ::dsn::service::rpc_replier<int32_t>& reply)
+        void counter_service_impl::on_add(const ::dsn::example::count_op& op, ::dsn::rpc_replier<int32_t>& reply)
         {
             zauto_lock l(_lock);
             ++_last_committed_decree;
@@ -45,7 +45,7 @@ namespace dsn {
             reply(rt);
         }
 
-        void counter_service_impl::on_read(const std::string& name, ::dsn::service::rpc_replier<int32_t>& reply)
+        void counter_service_impl::on_read(const std::string& name, ::dsn::rpc_replier<int32_t>& reply)
         {
             zauto_lock l(_lock);
 

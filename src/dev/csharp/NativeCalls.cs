@@ -214,13 +214,13 @@ namespace dsn.dev.csharp
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static string                dsn_task_priority_to_string(dsn_task_priority_t tt);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static string                dsn_config_get_value_string(string section, string key, string default_value);
+        public extern static string                dsn_config_get_value_string(string section, string key, string default_value, string dsptr);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static bool                  dsn_config_get_value_bool(string section, string key, bool default_value);
+        public extern static bool                  dsn_config_get_value_bool(string section, string key, bool default_value, string dsptr);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static UInt64                dsn_config_get_value_uint64(string section, string key, UInt64 default_value);
+        public extern static UInt64                dsn_config_get_value_uint64(string section, string key, UInt64 default_value, string dsptr);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static double                dsn_config_get_value_double(string section, string key, double default_value);
+        public extern static double                dsn_config_get_value_double(string section, string key, double default_value, string dsptr);
         // return all key count (may greater than buffer_count)
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static int                   dsn_config_get_all_keys(string section, string[] buffers, ref int buffer_count); 

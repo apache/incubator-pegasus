@@ -50,6 +50,6 @@ int main(int argc, char** argv)
     //       config.ini -app replica -cargs replica-port=34556 to start ALL replicas with given port variable specified in config.ini
     //       config.ini to start ALL apps as a new process
     //
-    dsn_run(--argc, ++argv, true);
+    dsn_run(argc, argv, true);
     return 0;
 }

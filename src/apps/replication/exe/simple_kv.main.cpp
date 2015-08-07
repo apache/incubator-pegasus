@@ -44,6 +44,6 @@ int main(int argc, char** argv)
     dsn::replication::install_checkers();
 
     // specify what services and tools will run in config file, then run
-    dsn_run(--argc, ++argv, true);
+    dsn_run(argc, argv, true);
     return 0;
 }
