@@ -143,13 +143,17 @@ void server_state::init_app()
 
     app_state app;
     app.app_id = 1;
-    app.app_name = dsn_config_get_value_string("replication.app", "app_name", "");
+    app.app_name = dsn_config_get_value_string("replication.app",
+        "app_name", "", "replication app name");
     dassert(app.app_name.length() > 0, "'[replication.app] app_name' not specified");
-    app.app_type = dsn_config_get_value_string("replication.app", "app_type", "");
+    app.app_type = dsn_config_get_value_string("replication.app",
+        "app_type", "", "replication app type-name");
     dassert(app.app_type.length() > 0, "'[replication.app] app_type' not specified");
-    app.partition_count = (int)dsn_config_get_value_uint64("replication.app", "partition_count", 1);
+    app.partition_count = (int)dsn_config_get_value_uint64("replication.app", 
+        "partition_count", 1, "how many partitions the app should have");
 
-    int32_t max_replica_count = (int)dsn_config_get_value_uint64("replication.app", "max_replica_count", 3);
+    int32_t max_replica_count = (int)dsn_config_get_value_uint64("replication.app",
+        "max_replica_count", 3, "maximum replica count for each partition");
     for (int i = 0; i < app.partition_count; i++)
     {
         partition_configuration ps;

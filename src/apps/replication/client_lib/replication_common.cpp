@@ -35,7 +35,7 @@ replication_options::replication_options()
     staleness_for_commit = 10;
     staleness_for_start_prepare_for_potential_secondary = 110;
     mutation_2pc_min_replica_count = 1;
-    preapre_list_max_size_mb = 250;
+    prepare_list_max_size_mb = 250;
     prepare_ack_on_secondary_before_logging_allowed = false;
 
     group_check_internal_ms = 100000;
@@ -93,62 +93,161 @@ void replication_options::read_meta_servers()
 void replication_options::initialize()
 {
     prepare_timeout_ms_for_secondaries =
-        (int)dsn_config_get_value_uint64("replication", "prepare_timeout_ms_for_secondaries", prepare_timeout_ms_for_secondaries);
+        (int)dsn_config_get_value_uint64("replication", 
+        "prepare_timeout_ms_for_secondaries", 
+        prepare_timeout_ms_for_secondaries,
+        "timeout (ms) for prepare message to secondaries in two phase commit"
+        );
     prepare_timeout_ms_for_potential_secondaries = 
-        (int)dsn_config_get_value_uint64("replication", "prepare_timeout_ms_for_potential_secondaries", prepare_timeout_ms_for_potential_secondaries);
+        (int)dsn_config_get_value_uint64("replication", 
+        "prepare_timeout_ms_for_potential_secondaries",
+        prepare_timeout_ms_for_potential_secondaries,
+        "timeout (ms) for prepare message to potential secondaries in two phase commit"
+        );
     prepare_ack_on_secondary_before_logging_allowed =
-        dsn_config_get_value_bool("replication", "prepare_ack_on_secondary_before_logging_allowed", prepare_ack_on_secondary_before_logging_allowed);
+        dsn_config_get_value_bool("replication", 
+        "prepare_ack_on_secondary_before_logging_allowed", 
+        prepare_ack_on_secondary_before_logging_allowed,
+        "whether we need to ensure logging is completed before acking a prepare message"
+        );
 
     staleness_for_commit =
-        (int)dsn_config_get_value_uint64("replication", "staleness_for_commit", staleness_for_commit);
+        (int)dsn_config_get_value_uint64("replication", 
+        "staleness_for_commit", 
+        staleness_for_commit,
+        "how many concurrent two phase commit rounds are allowed"
+        );
     staleness_for_start_prepare_for_potential_secondary =
-        (int)dsn_config_get_value_uint64("replication", "staleness_for_start_prepare_for_potential_secondary", staleness_for_start_prepare_for_potential_secondary);
+        (int)dsn_config_get_value_uint64("replication", 
+        "staleness_for_start_prepare_for_potential_secondary", 
+        staleness_for_start_prepare_for_potential_secondary,
+        "within this decree gap we will start two phase commit for potential secondaries to catch up online traffic"
+        );
     mutation_2pc_min_replica_count =
-        (int)dsn_config_get_value_uint64("replication", "mutation_2pc_min_replica_count", mutation_2pc_min_replica_count);
-    preapre_list_max_size_mb =
-        (int)dsn_config_get_value_uint64("replication", "preapre_list_max_size_mb", preapre_list_max_size_mb);
+        (int)dsn_config_get_value_uint64("replication", 
+        "mutation_2pc_min_replica_count",
+        mutation_2pc_min_replica_count,
+        "minimum number of alive replicas under which write is allowed"
+        );
+    prepare_list_max_size_mb =
+        (int)dsn_config_get_value_uint64("replication", 
+        "prepare_list_max_size_mb",
+        prepare_list_max_size_mb,
+        "maximum size (Mb) for prepare list"
+        );
     group_check_internal_ms =
-        (int)dsn_config_get_value_uint64("replication", "group_check_internal_ms", group_check_internal_ms);
+        (int)dsn_config_get_value_uint64("replication",
+        "group_check_internal_ms", 
+        group_check_internal_ms,
+        "every what period (ms) we check the replica healthness"
+        );
     group_check_disabled =
-        dsn_config_get_value_bool("replication", "group_check_disabled", group_check_disabled);
+        dsn_config_get_value_bool("replication",
+        "group_check_disabled", 
+        group_check_disabled,
+        "whether group check is disabled"
+        );
     gc_interval_ms =
-        (int)dsn_config_get_value_uint64("replication", "gc_interval_ms", gc_interval_ms);
+        (int)dsn_config_get_value_uint64("replication", 
+        "gc_interval_ms", 
+        gc_interval_ms,
+        "every what period (ms) we do garbage collection for dead replicas, on-disk state, log, etc."
+        );
     gc_memory_replica_interval_ms =
-        (int)dsn_config_get_value_uint64("replication", "gc_memory_replica_interval_ms", gc_memory_replica_interval_ms);
+        (int)dsn_config_get_value_uint64("replication", 
+        "gc_memory_replica_interval_ms", 
+        gc_memory_replica_interval_ms,
+        "after closing a healthy replica (due to LB), the replica will remain in memory for this long (ms) for quick recover"
+        );
     gc_disk_error_replica_interval_seconds =
-        (int)dsn_config_get_value_uint64("replication", "gc_disk_error_replica_interval_seconds", gc_disk_error_replica_interval_seconds);
+        (int)dsn_config_get_value_uint64("replication", 
+        "gc_disk_error_replica_interval_seconds", 
+        gc_disk_error_replica_interval_seconds,
+        "error replica are deleted after they have been closed and lasted on disk this long (seconds)"
+        );
     gc_disabled =
-        dsn_config_get_value_bool("replication", "gc_disabled", gc_disabled);
-
+        dsn_config_get_value_bool("replication", "gc_disabled", gc_disabled,
+        "whether to disable garbage collection"
+        );
     fd_disabled =
-        dsn_config_get_value_bool("replication", "fd_disabled", fd_disabled);
+        dsn_config_get_value_bool("replication", "fd_disabled", fd_disabled,
+        "whether to disable failure detection"
+        );
     //_options.meta_servers = ...;
     fd_check_interval_seconds =
-        (int)dsn_config_get_value_uint64("replication", "fd_check_interval_seconds", fd_check_interval_seconds);
+        (int)dsn_config_get_value_uint64("replication", 
+        "fd_check_interval_seconds", 
+        fd_check_interval_seconds,
+        "every this period(seconds) the FD will check healthness of remote peers"
+        );
     fd_beacon_interval_seconds =
-        (int)dsn_config_get_value_uint64("replication", "fd_beacon_interval_seconds", fd_beacon_interval_seconds);
+        (int)dsn_config_get_value_uint64("replication", 
+        "fd_beacon_interval_seconds", 
+        fd_beacon_interval_seconds,
+        "every this period(seconds) the FD sends beacon message to remote peers"
+        );
     fd_lease_seconds =
-        (int)dsn_config_get_value_uint64("replication", "fd_lease_seconds", fd_lease_seconds);
+        (int)dsn_config_get_value_uint64("replication", 
+        "fd_lease_seconds", 
+        fd_lease_seconds,
+        "lease (seconds) get from remote FD master"
+        );
     fd_grace_seconds =
-        (int)dsn_config_get_value_uint64("replication", "fd_grace_seconds", fd_grace_seconds);
-    working_dir = dsn_config_get_value_string("replication", "working_dir", working_dir.c_str());
+        (int)dsn_config_get_value_uint64("replication", 
+        "fd_grace_seconds", 
+        fd_grace_seconds,
+        "grace (seconds) assigned to remote FD slaves (grace > lease)"
+        );
+    working_dir = dsn_config_get_value_string("replication", 
+        "working_dir", 
+        working_dir.c_str(),
+        "root working directory for replication"
+        );
     
     log_file_size_mb =
-        (int)dsn_config_get_value_uint64("replication", "log_file_size_mb", log_file_size_mb);
+        (int)dsn_config_get_value_uint64("replication", 
+        "log_file_size_mb", 
+        log_file_size_mb,
+        "maximum log segment file size (MB)"
+        );
     log_buffer_size_mb =
-        (int)dsn_config_get_value_uint64("replication", "log_buffer_size_mb", log_buffer_size_mb);
+        (int)dsn_config_get_value_uint64("replication", 
+        "log_buffer_size_mb", 
+        log_buffer_size_mb,
+        "log buffer size (MB) for batching incoming logs"
+        );
     log_pending_max_ms =
-        (int)dsn_config_get_value_uint64("replication", "log_pending_max_ms", log_pending_max_ms);
+        (int)dsn_config_get_value_uint64("replication", 
+        "log_pending_max_ms", 
+        log_pending_max_ms,
+        "maximum duration (ms) the log entries reside in the buffer for batching"
+        );
     log_batch_write = 
-        dsn_config_get_value_bool("replication", "log_batch_write", log_batch_write);
+        dsn_config_get_value_bool("replication", 
+        "log_batch_write", 
+        log_batch_write,
+        "whether to batch write the incoming logs"
+        );
     log_max_concurrent_writes =
-        (int)dsn_config_get_value_uint64("replication", "log_max_concurrent_writes", log_max_concurrent_writes);
+        (int)dsn_config_get_value_uint64("replication", 
+        "log_max_concurrent_writes", 
+        log_max_concurrent_writes,
+        "maximum concurrent log writes"
+        );
 
      config_sync_disabled =
-        dsn_config_get_value_bool("replication", "config_sync_disabled", config_sync_disabled);
+        dsn_config_get_value_bool("replication", 
+        "config_sync_disabled",
+        config_sync_disabled,
+        "whether to disable replica configuration periodical sync with the meta server"
+        );
     //_options.meta_servers = ...;
     config_sync_interval_ms =
-        (int)dsn_config_get_value_uint64("replication", "config_sync_interval_ms", config_sync_interval_ms);
+        (int)dsn_config_get_value_uint64("replication", 
+        "config_sync_interval_ms", 
+        config_sync_interval_ms,
+        "every this period(ms) the replica syncs replica configuration with the meta server"
+        );
         
     read_meta_servers();
 

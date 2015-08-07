@@ -40,7 +40,8 @@ namespace dsn {
         public:
             shared_io_service()
             {
-                _io_service_worker_count = config()->get_value<int>("network", "io_service_worker_count", 1);
+                _io_service_worker_count = config()->get_value<int>("network", "io_service_worker_count", 1,
+                    "thread number for io service (timer and boost network)");
                 for (int i = 0; i < _io_service_worker_count; i++)
                 {
                     _workers.push_back(std::shared_ptr<std::thread>(new std::thread([this]()

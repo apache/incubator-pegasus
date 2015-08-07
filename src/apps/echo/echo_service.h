@@ -40,7 +40,8 @@ public:
     echo_server()
         : serverlet<echo_server>("echo_server")
     {
-        _empty_reply = dsn_config_get_value_bool("apps.server", "empty_reply", false);
+        _empty_reply = dsn_config_get_value_bool("apps.server", "empty_reply", false, 
+            "whether to send empty reply or echo the whole incoming request");
     }
 
     void on_echo(const std::string& req, __out_param std::string& resp)
@@ -72,10 +73,10 @@ public:
     echo_client()
         : servicelet(8), serverlet<echo_client>("echo_client")
     {
-        _message_size = (int)dsn_config_get_value_uint64("apps.client", "message_size", 1024);
-        _concurrency = (int)dsn_config_get_value_uint64("apps.client", "concurrency", 1);
-        _bench = dsn_config_get_value_string("apps.client", "bench", "echo");
-        _test_local_queue = dsn_config_get_value_bool("apps.client", "queue-test-local", false);
+        _message_size = (int)dsn_config_get_value_uint64("apps.client", "message_size", 1024, "message size");
+        _concurrency = (int)dsn_config_get_value_uint64("apps.client", "concurrency", 1, "concurrency for the test");
+        _bench = dsn_config_get_value_string("apps.client", "bench", "echo", "which benchmark to run");
+        _test_local_queue = dsn_config_get_value_bool("apps.client", "queue-test-local", false, "whether queue the calls to current threads");
         
         _seq = 0;
         _last_report_ts_ms = now_ms();

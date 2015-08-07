@@ -49,7 +49,7 @@ public:
 
     int32_t prepare_timeout_ms_for_secondaries;
     int32_t prepare_timeout_ms_for_potential_secondaries;
-    int32_t preapre_list_max_size_mb;
+    int32_t prepare_list_max_size_mb;
     bool    prepare_ack_on_secondary_before_logging_allowed;
         
     int32_t staleness_for_commit;

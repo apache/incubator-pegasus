@@ -33,7 +33,7 @@
 # include <cstring>
 # include <string>
 # include <list>
-# include <dsn/internal/synchronize.h>
+# include <mutex>
 
 
 namespace dsn {
@@ -78,6 +78,8 @@ public:
 
     bool set_warning(bool warn) { bool old = _warning; _warning = warn; return old; }
 
+    void dump(std::ostream& os);
+
     // ---------------------- commmon routines ----------------------------------
     
     template<typename T> T get_value(const char* section, const char* key, T default_value, const char* dsptr);
@@ -98,7 +100,7 @@ private:
     };
 
     typedef std::map<std::string, std::map<std::string, conf*>> config_map;    
-    ::dsn::utils::ex_lock_nr                _lock;
+    std::mutex                              _lock;
     config_map                              _configs;
     
     std::string                             _file_name;

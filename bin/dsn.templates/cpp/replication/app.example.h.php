@@ -12,8 +12,8 @@ $file_prefix = $argv[3];
 
 // client app example
 class <?=$_PROG->name?>_client_app : 
-    public ::dsn::service_app<<?=$_PROG->name?>_client_app>,
-    public virtual ::dsn::service::servicelet
+    public ::dsn::service_app,
+    public virtual ::dsn::servicelet
 {
 public:
     <?=$_PROG->name?>_client_app()
@@ -39,7 +39,7 @@ public:
 <?php foreach ($_PROG->services as $svc) { ?>
         _<?=$svc->name?>_client = new <?=$svc->name?>_client(meta_servers, argv[1]);
 <?php } ?>
-        _timer = ::dsn::service::tasking::enqueue(<?=$_PROG->get_test_task_code()?>, this, &<?=$_PROG->name?>_client_app::on_test_timer, 0, 0, 1000);
+        _timer = ::dsn::tasking::enqueue(<?=$_PROG->get_test_task_code()?>, this, &<?=$_PROG->name?>_client_app::on_test_timer, 0, 0, 1000);
         return ::dsn::ERR_OK;
     }
 
@@ -82,7 +82,7 @@ foreach ($_PROG->services as $svc)
     }
 
 private:
-    ::dsn::cpp_task_ptr _timer;
+    ::dsn::task_ptr _timer;
     dsn_address_t _server;
     
 <?php foreach ($_PROG->services as $svc) { ?>
@@ -92,8 +92,8 @@ private:
 
 <?php foreach ($_PROG->services as $svc) { ?>
 class <?=$svc->name?>_perf_test_client_app : 
-    public ::dsn::service_app<<?=$svc->name?>_perf_test_client_app>,
-    public virtual ::dsn::service::servicelet
+    public ::dsn::service_app,
+    public virtual ::dsn::servicelet
 {
 public:
     <?=$svc->name?>_perf_test_client_app()

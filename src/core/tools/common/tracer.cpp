@@ -195,7 +195,8 @@ namespace dsn {
 
         void tracer::install(service_spec& spec)
         {
-            auto trace = config()->get_value<bool>("task.default", "is_trace", false);
+            auto trace = config()->get_value<bool>("task.default", "is_trace", false,
+                "whether to trace tasks by default");
 
             for (int i = 0; i <= dsn_task_code_max(); i++)
             {
@@ -206,16 +207,20 @@ namespace dsn {
                 task_spec* spec = task_spec::get(i);
                 dassert (spec != nullptr, "task_spec cannot be null");
 
-                if (!config()->get_value<bool>(section_name.c_str(), "is_trace", trace, "whether to trace this kind of task"))
+                if (!config()->get_value<bool>(section_name.c_str(), "is_trace", trace, 
+                    "whether to trace this kind of task"))
                     continue;
 
-                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_enqueue", true, "whether to trace this kind of task when a compute task is enqueued"))
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_enqueue", true, 
+                    "whether to trace when a timer or async task is enqueued"))
                     spec->on_task_enqueue.put_back(tracer_on_task_enqueue, "tracer");
 
-                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_begin", true, "whether to trace this kind of task when a task begins"))
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_begin", true, 
+                    "whether to trace when a task begins"))
                     spec->on_task_begin.put_back(tracer_on_task_begin, "tracer");
 
-                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_end", true, "whether to trace this kind of task when a task ends"))
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_end", true, 
+                    "whether to trace when a task ends"))
                     spec->on_task_end.put_back(tracer_on_task_end, "tracer");
 
                 //if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_cancelled", true))
@@ -230,22 +235,28 @@ namespace dsn {
                 //if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_cancel_post", true))
                     //spec->on_task_cancel_post.put_back(tracer_on_task_cancel_post, "tracer");
 
-                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_aio_call", true, "whether to trace this kind of task when a compute task is enqueued"))
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_aio_call", true, 
+                    "whether to trace when an aio task is called"))
                     spec->on_aio_call.put_back(tracer_on_aio_call, "tracer");
 
-                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_aio_enqueue", true))
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_aio_enqueue", true,
+                    "whether to trace when an aio task is enqueued"))
                     spec->on_aio_enqueue.put_back(tracer_on_aio_enqueue, "tracer");
 
-                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_rpc_call", true))
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_rpc_call", true,
+                    "whether to trace when a rpc is made"))
                     spec->on_rpc_call.put_back(tracer_on_rpc_call, "tracer");
 
-                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_rpc_request_enqueue", true))
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_rpc_request_enqueue", true,
+                    "whether to trace when a rpc request task is enqueued"))
                     spec->on_rpc_request_enqueue.put_back(tracer_on_rpc_request_enqueue, "tracer");
 
-                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_rpc_reply", true))
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_rpc_reply", true,
+                    "whether to trace when reply a rpc request"))
                     spec->on_rpc_reply.put_back(tracer_on_rpc_reply, "tracer");
 
-                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_rpc_response_enqueue", true))
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_rpc_response_enqueue", true,
+                    "whetehr to trace when a rpc response task is enqueued"))
                     spec->on_rpc_response_enqueue.put_back(tracer_on_rpc_response_enqueue, "tracer");
             }
         }

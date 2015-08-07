@@ -212,8 +212,8 @@ function generate_files_from_dir($dr)
 // generate all files 
 if (!file_exists($g_templates."/".$g_lang))
 {
-	echo "specified language '" . $g_lang. "' is not supported".PHP_EOL;
-	exit(0);
+    echo "specified language '" . $g_lang. "' is not supported".PHP_EOL;
+    exit(0);
 }
 
 generate_files_from_dir($g_templates."/".$g_lang);

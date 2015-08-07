@@ -83,7 +83,7 @@ foreach ($keys as $k => $v)
     }
     
     // - asynchronous with on-stack <?=$f->get_first_param()->get_cpp_type()?> and <?=$f->get_cpp_return_type()?> 
-    ::dsn::cpp_task_ptr begin_<?=$f->name?>(
+    ::dsn::task_ptr begin_<?=$f->name?>(
         const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>,
         void* context = nullptr,
         int timeout_milliseconds = 0, 
@@ -115,7 +115,7 @@ foreach ($keys as $k => $v)
     }
     
     // - asynchronous with on-heap std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>> and std::shared_ptr<<?=$f->get_cpp_return_type()?>> 
-    ::dsn::cpp_task_ptr begin_<?=$f->name?>2(
+    ::dsn::task_ptr begin_<?=$f->name?>2(
         std::shared_ptr<<?=$f->get_first_param()->get_cpp_type()?>>& <?=$f->get_first_param()->name?>,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0<?=$f->is_write ? "":", ". PHP_EOL."        ::dsn::replication::read_semantic_t read_semantic = ::dsn::replication::read_semantic_t::ReadLastUpdate"?> 

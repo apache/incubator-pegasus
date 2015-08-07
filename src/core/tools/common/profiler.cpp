@@ -234,7 +234,8 @@ namespace dsn {
             dassert(sizeof(counter_info_ptr) / sizeof(counter_info*) == PREF_COUNTER_COUNT, "PREF COUNTER ERROR");
 
             auto profile = config()->get_value<bool>("task.default", "is_profile", false, "whether to profile this kind of task");
-            auto collect_call_count = config()->get_value<bool>("task.default", "collect_call_count", true, "whether to collect how many time this kind of tasks invoke each of other kinds tasks");
+            auto collect_call_count = config()->get_value<bool>("task.default", "collect_call_count", true, 
+                "whether to collect how many time this kind of tasks invoke each of other kinds tasks");
 
             for (int i = 0; i <= dsn_task_code_max(); i++)
             {
@@ -245,7 +246,10 @@ namespace dsn {
                 task_spec* spec = task_spec::get(i);
                 dassert(spec != nullptr, "task_spec cannot be null");
 
-                s_spec_profilers[i].collect_call_count = config()->get_value<bool>(name.c_str(), "collect_call_count", collect_call_count);
+                s_spec_profilers[i].collect_call_count = config()->get_value<bool>(name.c_str(), "collect_call_count", 
+                    collect_call_count, 
+                    "whether to collect how many time this kind of tasks invoke each of other kinds tasks"
+                    );
                 s_spec_profilers[i].call_counts = new std::atomic<int64_t>[dsn_task_code_max() + 1];
 
                 s_spec_profilers[i].ptr[TASK_QUEUEING_TIME_NS] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".queue(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);

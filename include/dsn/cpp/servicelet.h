@@ -55,6 +55,11 @@ namespace dsn
         message_ptr(dsn_message_t msg) : ::std::shared_ptr<char>((char*)msg, release)
         {}
 
+        dsn_message_t get_msg()
+        {
+            return (dsn_message_t)get();
+        }
+
     private:
         static void release(char* msg)
         {

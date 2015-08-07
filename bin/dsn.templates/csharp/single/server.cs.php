@@ -22,41 +22,41 @@ namespace <?=$_PROG->get_csharp_namespace()?>
         private void On<?=$f->name?>Internal(RpcReadStream request)
         {
             <?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>;
-			
-			try 
-			{
-				request.Read(out <?=$f->get_first_param()->name?>);
-			} 
-			catch (Exception e)
-			{
-				// TODO: error handling
-				return;
-			}
-			
-			On<?=$f->name?>(<?=$f->get_first_param()->name?>);
+            
+            try 
+            {
+                request.Read(out <?=$f->get_first_param()->name?>);
+            } 
+            catch (Exception e)
+            {
+                // TODO: error handling
+                return;
+            }
+            
+            On<?=$f->name?>(<?=$f->get_first_param()->name?>);
         }
         
         protected virtual void On<?=$f->name?>(<?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>)
         {
             Console.WriteLine("... exec <?=$f->get_rpc_code()?> ... (not implemented) ");
         }
-		
+        
 <?php     } else {?>
         private void On<?=$f->name?>Internal(RpcReadStream request, RpcWriteStream response)
         {
             <?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>;
-			
-			try 
-			{
-				request.Read(out <?=$f->get_first_param()->name?>);
-			} 
-			catch (Exception e)
-			{
-				// TODO: error handling
-				return;
-			}
-			
-			On<?=$f->name?>(<?=$f->get_first_param()->name?>, new RpcReplier<<?=$f->get_csharp_return_type()?>>(response, (s, r) => {s.Write(r);}));
+            
+            try 
+            {
+                request.Read(out <?=$f->get_first_param()->name?>);
+            } 
+            catch (Exception e)
+            {
+                // TODO: error handling
+                return;
+            }
+            
+            On<?=$f->name?>(<?=$f->get_first_param()->name?>, new RpcReplier<<?=$f->get_csharp_return_type()?>>(response, (s, r) => {s.Write(r);}));
         }
         
         protected virtual void On<?=$f->name?>(<?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>, RpcReplier<<?=$f->get_csharp_return_type()?>> replier)
@@ -65,7 +65,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
             var resp =  new <?=$f->get_csharp_return_type()?>();
             replier.Reply(resp);
         }
-		
+        
 <?php     } ?>
 <?php } ?>
         

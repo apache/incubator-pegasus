@@ -61,24 +61,24 @@ namespace dsn {
         };
 
         CONFIG_BEGIN(fj_opt)
-            CONFIG_FLD(bool, bool, fault_injection_enabled, true)
+            CONFIG_FLD(bool, bool, fault_injection_enabled, true, "whether enable fault injection")
 
-            CONFIG_FLD(double, double, rpc_request_drop_ratio, 0.0001)
-            CONFIG_FLD(double, double, rpc_response_drop_ratio, 0.001)
-            CONFIG_FLD(double, double, disk_read_fail_ratio, 0.000001)
-            CONFIG_FLD(double, double, disk_write_fail_ratio, 0.000001)
+            CONFIG_FLD(double, double, rpc_request_drop_ratio, 0.0001, "drop ratio for rpc request messages")
+            CONFIG_FLD(double, double, rpc_response_drop_ratio, 0.001, "drop ratio for rpc response messages")
+            CONFIG_FLD(double, double, disk_read_fail_ratio, 0.000001, "failure ratio for disk read operations")
+            CONFIG_FLD(double, double, disk_write_fail_ratio, 0.000001, "failure ratio for disk write operations")
 
-            CONFIG_FLD(uint32_t, uint64, rpc_message_delay_ms_min, 0)
-            CONFIG_FLD(uint32_t, uint64, rpc_message_delay_ms_max, 1000)
-            CONFIG_FLD(uint32_t, uint64, disk_io_delay_ms_min, 1)
-            CONFIG_FLD(uint32_t, uint64, disk_io_delay_ms_max, 12)
-            CONFIG_FLD(uint32_t, uint64, execution_extra_delay_us_max, 0)
+            CONFIG_FLD(uint32_t, uint64, rpc_message_delay_ms_min, 0, "miminum message delay (ms) for rpc messages")
+            CONFIG_FLD(uint32_t, uint64, rpc_message_delay_ms_max, 1000, "maximum message delay (ms) for rpc messages")
+            CONFIG_FLD(uint32_t, uint64, disk_io_delay_ms_min, 1, "miminum disk operation delay (ms)")
+            CONFIG_FLD(uint32_t, uint64, disk_io_delay_ms_max, 12, "maximum disk operation delay (ms)")
+            CONFIG_FLD(uint32_t, uint64, execution_extra_delay_us_max, 0, "extra execution time delay (us) for this task")
 
-            CONFIG_FLD(uint32_t, uint64, node_crash_minutes_min, 40)
-            CONFIG_FLD(uint32_t, uint64, node_crash_minutes_max, 60)
-            CONFIG_FLD(uint32_t, uint64, node_crash_minutes_recover_min, 1)
-            CONFIG_FLD(uint32_t, uint64, node_crash_minutes_recover_max, 4)
-            CONFIG_FLD(bool, bool, node_crashed, false)
+            CONFIG_FLD(uint32_t, uint64, node_crash_minutes_min, 40, "every minimum period (mins) the node should crash")
+            CONFIG_FLD(uint32_t, uint64, node_crash_minutes_max, 60, "every maximum period (mins) the node should crash")
+            CONFIG_FLD(uint32_t, uint64, node_crash_minutes_recover_min, 1, "minimum recovery time (ms) for the node")
+            CONFIG_FLD(uint32_t, uint64, node_crash_minutes_recover_max, 4, "minimum recovery time (ms) for the node")
+            CONFIG_FLD(bool, bool, node_crashed, false, "whether to enable node crash")
         CONFIG_END
         
         static fj_opt* s_fj_opts = nullptr;

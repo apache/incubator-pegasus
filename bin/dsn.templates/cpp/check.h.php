@@ -10,7 +10,7 @@ $idl_type = $argv[4];
 <?=$_PROG->get_cpp_namespace_begin()?> 
 
 class <?=$_PROG->name?>_checker 
-	: public ::dsn::tools::checker
+    : public ::dsn::tools::checker
 {
 public:
     <?=$_PROG->name?>_checker(const char* name) : ::dsn::tools::checker(name)

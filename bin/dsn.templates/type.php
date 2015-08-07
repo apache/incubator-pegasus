@@ -98,8 +98,8 @@ class thelpers
         default: return $base_type;
         }
     }
-	
-	public static function base_type_to_csharp_type($base_type)
+    
+    public static function base_type_to_csharp_type($base_type)
     {
         //echo "base_type_to_cpp_type'".$base_type."'".PHP_EOL;
         switch ($base_type)
@@ -228,8 +228,8 @@ class thelpers
             return thelpers::base_type_to_cpp_type($full_name);
         }
     }
-	
-	public static function get_csharp_type_name($full_name)
+    
+    public static function get_csharp_type_name($full_name)
     {
         global $_PROG;
         if (thelpers::is_container_type($full_name))
@@ -295,8 +295,8 @@ class thelpers
             }
         }
     }
-	
-	private static function get_csharp_name_internal($full_name)
+    
+    private static function get_csharp_name_internal($full_name)
     {
         if (thelpers::is_container_type($full_name))
         {
@@ -482,8 +482,8 @@ class t_type
             return str_replace(".", "_", $prefix);
         }
     }
-	
-	function get_csharp_name()
+    
+    function get_csharp_name()
     {
         $pos = strpos($this->name, ".");
         if ($pos == FALSE)
@@ -541,7 +541,7 @@ class t_enum extends t_type
         $this->values[$name] = $value;
     }    
     
-    function is_enum() { return true; }	
+    function is_enum() { return true; }    
 }
 
 class t_field
@@ -559,24 +559,24 @@ class t_field
     {
         return thelpers::get_cpp_type_name($this->type_name);
     }
-	
-	function get_csharp_type()
+    
+    function get_csharp_type()
     {
         return thelpers::get_csharp_type_name($this->type_name);
     }
-	
-	function is_base_type()
-	{
-		global $_PROG;
-		if (!array_key_exists($this->type_name, $_PROG->types))
-		{
-			return true;
-		}
-		else
-		{
-			return $_PROG->types[$this->type_name]->is_base_type();
-		}
-	}
+    
+    function is_base_type()
+    {
+        global $_PROG;
+        if (!array_key_exists($this->type_name, $_PROG->types))
+        {
+            return true;
+        }
+        else
+        {
+            return $_PROG->types[$this->type_name]->is_base_type();
+        }
+    }
 }
 
 class t_struct extends t_type
@@ -629,8 +629,8 @@ class t_function
     {
         return thelpers::get_cpp_type_name($this->ret);
     }
-	
-	function get_csharp_return_type()
+    
+    function get_csharp_return_type()
     {
         return thelpers::get_csharp_type_name($this->ret);
     }
