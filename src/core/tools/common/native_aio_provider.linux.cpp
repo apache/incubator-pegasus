@@ -64,7 +64,7 @@ namespace dsn {
         error_code native_linux_aio_provider::close(dsn_handle_t hFile)
         {
             // TODO: handle failure
-            ::close(static_cast<int>(hFile));
+            ::close((int)(uintptr_t)(hFile));
             return ERR_OK;
         }
 
