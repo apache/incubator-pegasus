@@ -159,7 +159,7 @@ namespace dsn {
             //dinfo("*** call RPC_NFS_COPY end, return (%d, %d) with %s", resp.offset, resp.size, err.to_string());
 
             dsn::ref_ptr<copy_request_ex> reqc;
-            reqc.reset((copy_request_ex*)context);
+            reqc = (copy_request_ex*)context;
             reqc->release_ref();
 
             continue_copy(1);

@@ -83,7 +83,7 @@ namespace dsn {
         msg->from_address.port = msg->header->client.port;
         msg->to_address = _net.address();
 
-        msg->server_session.reset(this);
+        msg->server_session = this;
         return _net.on_recv_request(msg, delay_ms);
     }
 

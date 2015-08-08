@@ -26,6 +26,7 @@
 
 # include <dsn/cpp/utils.h>
 # include <dsn/internal/link.h>
+# include <dsn/cpp/autoref_ptr.h>
 # include <gtest/gtest.h>
 
 using namespace ::dsn;
@@ -101,6 +102,80 @@ TEST(core, dlink)
     }
 
     EXPECT_TRUE(hdr.is_alone());
+    EXPECT_TRUE(count == 0);
+}
+
+
+
+class foo : public ::dsn::ref_counter
+{
+public:
+    foo(int &count)
+        : _count(count)
+    {
+        _count++;
+    }
+
+    ~foo()
+    {
+        _count--;
+    }
+
+private:
+    int &_count;
+};
+
+typedef ::dsn::ref_ptr<foo> foo_ptr;
+
+TEST(core, ref_ptr)
+{
+    int count = 0;
+    foo_ptr x = nullptr;
+    auto y = new foo(count);
+    x = y;
+    EXPECT_TRUE(x->get_count() == 1);
+    EXPECT_TRUE(count == 1);
+    x = new foo(count);
+    EXPECT_TRUE(x->get_count() == 1);
+    EXPECT_TRUE(count == 1);
+    x = nullptr;
+    EXPECT_TRUE(count == 0);
+
+    std::map<int, foo_ptr> xs;
+    x = new foo(count);
+    EXPECT_TRUE(x->get_count() == 1);
+    EXPECT_TRUE(count == 1);
+    xs.insert(std::make_pair(1, x));
+    EXPECT_TRUE(x->get_count() == 2);
+    EXPECT_TRUE(count == 1);
+    x = nullptr;
+    EXPECT_TRUE(count == 1);
+    xs.clear();
+    EXPECT_TRUE(count == 0);
+
+    x = new foo(count);
+    EXPECT_TRUE(count == 1);
+    xs[2] = x;
+    EXPECT_TRUE(x->get_count() == 2);
+    x = nullptr;
+    EXPECT_TRUE(count == 1);
+    xs.clear();
+    EXPECT_TRUE(count == 0);
+
+    y = new foo(count);
+    EXPECT_TRUE(count == 1);
+    xs.insert(std::make_pair(1, y));
+    EXPECT_TRUE(count == 1);
+    EXPECT_TRUE(y->get_count() == 1);
+    xs.clear();
+    EXPECT_TRUE(count == 0);
+
+    y = new foo(count);
+    EXPECT_TRUE(count == 1);
+    xs[2] = y;
+    EXPECT_TRUE(count == 1);
+    EXPECT_TRUE(y->get_count() == 1);
+    xs.clear();
     EXPECT_TRUE(count == 0);
 }
 

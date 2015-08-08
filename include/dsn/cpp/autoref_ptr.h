@@ -96,8 +96,11 @@ namespace dsn
             }
         }
 
-        void reset(T* obj)
+        ref_ptr<T>& operator = (T* obj)
         {
+            if (_obj == obj)
+                return *this;
+
             if (nullptr != _obj)
             {
                 _obj->release_ref();
@@ -109,8 +112,21 @@ namespace dsn
             {
                 _obj->add_ref();
             }
+
+            return *this;
         }
 
+        ref_ptr<T>& operator = (const ref_ptr<T>& obj)
+        {
+            return operator = (obj._obj);
+        }
+
+        ref_ptr<T>& operator = (ref_ptr<T>&& obj)
+        {
+            _obj = obj._obj;
+            obj._obj = nullptr;
+            return *this;
+        }
 
         T* get() const
         {
@@ -145,6 +161,5 @@ namespace dsn
     private:
         T* _obj;
     };
-
 
 } // end namespace dsn

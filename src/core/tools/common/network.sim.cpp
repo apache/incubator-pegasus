@@ -81,7 +81,7 @@ namespace dsn { namespace tools {
         if (nullptr == server_session)
         {
             rpc_client_session_ptr cptr = this;
-            server_session.reset(new sim_server_session(*rnet, _net.address(), cptr));
+            server_session = new sim_server_session(*rnet, _net.address(), cptr);
             rnet->on_server_session_accepted(server_session);
         }
 
