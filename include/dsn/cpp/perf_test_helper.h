@@ -60,9 +60,9 @@ namespace dsn {
         protected:
             perf_client_helper()
             {
-                if (!read_config("task.default", _default_opts))
+                if (!read_config("task..default", _default_opts))
                 {
-                    dassert(false, "read configuration failed for section [task.default]");
+                    dassert(false, "read configuration failed for section [task..default]");
                 }
 
                 if (_default_opts.perf_test_timeouts_ms.size() == 0)

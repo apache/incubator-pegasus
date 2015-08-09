@@ -32,8 +32,8 @@ using namespace dsn::service;
 int main(int argc, char * argv[])
 {
     // register all possible services
-    dsn::register_app<echo_client>("echo_client_app");
-    dsn::register_app<echo_server>("echo_server_app");
+    dsn::register_app<echo_client>("client");
+    dsn::register_app<echo_server>("server");
 
     
     // specify what services and tools will run in config file, then run

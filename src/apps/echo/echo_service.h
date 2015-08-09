@@ -183,7 +183,7 @@ public:
                 zauto_lock l(_lock);
                 _recv_bytes_since_last += _message_size;
                 auto n = now_ms();
-                if (n - _last_report_ts_ms >= 1000)
+                if (n - _last_report_ts_ms >= 10000)
                 {
                     std::cout << "throughput = "
                         << static_cast<double>(_recv_bytes_since_last) / 1024.0 / 1024.0 / ((static_cast<double>(n - _last_report_ts_ms)) / 1000.0)

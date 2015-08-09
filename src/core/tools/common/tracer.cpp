@@ -195,7 +195,7 @@ namespace dsn {
 
         void tracer::install(service_spec& spec)
         {
-            auto trace = config()->get_value<bool>("task.default", "is_trace", false,
+            auto trace = config()->get_value<bool>("task..default", "is_trace", false,
                 "whether to trace tasks by default");
 
             for (int i = 0; i <= dsn_task_code_max(); i++)

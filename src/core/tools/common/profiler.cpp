@@ -233,8 +233,8 @@ namespace dsn {
             message_ext_for_profiler::register_ext();
             dassert(sizeof(counter_info_ptr) / sizeof(counter_info*) == PREF_COUNTER_COUNT, "PREF COUNTER ERROR");
 
-            auto profile = config()->get_value<bool>("task.default", "is_profile", false, "whether to profile this kind of task");
-            auto collect_call_count = config()->get_value<bool>("task.default", "collect_call_count", true, 
+            auto profile = config()->get_value<bool>("task..default", "is_profile", false, "whether to profile this kind of task");
+            auto collect_call_count = config()->get_value<bool>("task..default", "collect_call_count", true, 
                 "whether to collect how many time this kind of tasks invoke each of other kinds tasks");
 
             for (int i = 0; i <= dsn_task_code_max(); i++)

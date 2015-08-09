@@ -156,7 +156,7 @@ static bool build_server_network_confs(
             if (port != 0)
             {
                 printf("invalid network server configuration '%s'\n", k.c_str());
-                printf("port must be zero in [apps.default]\n");
+                printf("port must be zero in [apps..default]\n");
                 printf(" e.g., network.server.0.RPC_CHANNEL_TCP = NET_HDR_DSN, dsn::tools::asio_network_provider,65536\n");
                 return false;
             }
@@ -172,7 +172,7 @@ static bool build_server_network_confs(
         if (rpc_channel::is_exist(k3.c_str()))
         {
             /*            
-            port = 0 for default setting in [apps.default]
+            port = 0 for default setting in [apps..default]
             port.channel = header_format, network_provider_name,buffer_block_size
             network.server.port.RPC_CHANNEL_TCP = NET_HDR_DSN, dsn::tools::asio_network_provider,65536
             network.server.port.RPC_CHANNEL_UDP = NET_HDR_DSN, dsn::tools::asio_network_provider,65536
@@ -348,7 +348,7 @@ bool service_spec::init_app_specs()
 {
     // init service apps
     service_app_spec default_app;
-    if (!default_app.init("apps.default", "default", nullptr,
+    if (!default_app.init("apps..default", ".default", nullptr,
         &this->network_default_client_cfs,
         &this->network_default_server_cfs
         ))
@@ -360,7 +360,7 @@ bool service_spec::init_app_specs()
     int app_id = 0;
     for (auto it = allSectionNames.begin(); it != allSectionNames.end(); it++)
     {
-        if (it->substr(0, strlen("apps.")) == std::string("apps.") && *it != std::string("apps.default"))
+        if (it->substr(0, strlen("apps.")) == std::string("apps.") && *it != std::string("apps..default"))
         {
             service_app_spec app;
             if (!app.init((*it).c_str(), it->substr(5).c_str(), &default_app))

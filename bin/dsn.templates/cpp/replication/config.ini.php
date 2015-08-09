@@ -3,7 +3,7 @@ require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
 ?>
-[apps.default]
+[apps..default]
 run = true
 count = 1
 ;network.client.RPC_CHANNEL_TCP = dsn::tools::sim_network_provider, 65536
@@ -64,7 +64,7 @@ random_seed = 0
 io_service_worker_count = 2
 
 ; specification for each thread pool
-[threadpool.default]
+[threadpool..default]
 worker_count = 2
 
 [threadpool.THREAD_POOL_DEFAULT]
@@ -80,7 +80,7 @@ partitioned = true
 ; max_input_queue_length = 8192
 worker_priority = THREAD_xPRIORITY_NORMAL
 
-[task.default]
+[task..default]
 is_trace = true
 is_profile = true
 allow_inline = false

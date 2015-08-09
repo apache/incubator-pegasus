@@ -195,7 +195,7 @@ namespace dsn {
         {
             s_fj_opts = new fj_opt[dsn_task_code_max() + 1];
             fj_opt default_opt;
-            read_config("task.default", default_opt);
+            read_config("task..default", default_opt);
 
             for (int i = 0; i <= dsn_task_code_max(); i++)
             {

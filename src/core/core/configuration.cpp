@@ -300,7 +300,7 @@ bool configuration::get_string_value_internal(const char* section, const char* k
     cf->line = 0;
     cf->present = false;
     cf->section = section;
-    ps->insert(std::make_pair(cf->section, cf));
+    ps->insert(std::make_pair(cf->key, cf));
 
     *ov = cf->value.c_str();
 
@@ -360,8 +360,8 @@ void configuration::dump(std::ostream& os)
 
         for (auto& kv : s.second)
         {
-            os << "// " << kv.second->dsptr << std::endl;
-            os << kv.first << " = " << kv.second->value << std::endl;
+            os << "; " << kv.second->dsptr << std::endl;
+            os << kv.first << " = " << kv.second->value << std::endl << std::endl;
         }
 
         os << std::endl;

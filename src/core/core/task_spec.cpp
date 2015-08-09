@@ -94,7 +94,7 @@ task_spec::task_spec(int code, const char* name, dsn_task_type_t type, dsn_task_
 bool task_spec::init()
 {
     /*
-    [task.default]
+    [task..default]
     is_trace = false
     is_profile = false
 
@@ -106,7 +106,7 @@ bool task_spec::init()
     */
 
     task_spec default_spec(0, "placeholder", TASK_TYPE_COMPUTE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT);
-    if (!read_config("task.default", default_spec))
+    if (!read_config("task..default", default_spec))
         return false;
     
     for (int code = 0; code <= dsn_task_code_max(); code++)
@@ -197,7 +197,7 @@ threadpool_spec& threadpool_spec::operator=(const threadpool_spec& source)
 bool threadpool_spec::init(__out_param std::vector<threadpool_spec>& specs)
 {
     /*
-    [threadpool.default]
+    [threadpool..default]
     worker_count = 4
     worker_priority = THREAD_xPRIORITY_NORMAL
     max_input_queue_length = 10000
@@ -221,7 +221,7 @@ bool threadpool_spec::init(__out_param std::vector<threadpool_spec>& specs)
     */
 
     threadpool_spec default_spec(THREAD_POOL_INVALID);
-    if (false == read_config("threadpool.default", default_spec, nullptr))
+    if (false == read_config("threadpool..default", default_spec, nullptr))
         return false;
 
     default_spec.name = "";

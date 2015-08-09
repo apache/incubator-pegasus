@@ -117,7 +117,10 @@ template<> inline std::string configuration::get_value<std::string>(const char* 
 template<> inline double configuration::get_value<double>(const char* section, const char* key, double default_value, const char* dsptr)
 {
     const char* value;
-    if (!get_string_value_internal(section, key, "", &value, dsptr))
+    char defaultstr[32];
+    sprintf(defaultstr, "%lf", default_value);
+
+    if (!get_string_value_internal(section, key, defaultstr, &value, dsptr))
     {
         if (_warning)
         {
@@ -140,7 +143,10 @@ template<> inline double configuration::get_value<double>(const char* section, c
 template<> inline long long configuration::get_value<long long>(const char* section, const char* key, long long default_value, const char* dsptr)
 {
     const char* value;
-    if (!get_string_value_internal(section, key, "", &value, dsptr))
+    char defaultstr[32];
+    sprintf(defaultstr, "%lld", default_value);
+
+    if (!get_string_value_internal(section, key, defaultstr, &value, dsptr))
     {
         if (_warning)
         {
@@ -169,7 +175,10 @@ template<> inline long long configuration::get_value<long long>(const char* sect
 template<> inline long configuration::get_value<long>(const char* section, const char* key, long default_value, const char* dsptr)
 {
     const char* value;
-    if (!get_string_value_internal(section, key, "", &value, dsptr))
+    char defaultstr[32];
+    sprintf(defaultstr, "%d", (int)default_value);
+
+    if (!get_string_value_internal(section, key, defaultstr, &value, dsptr))
     {
         if (_warning)
         {
@@ -228,7 +237,9 @@ template<> inline unsigned short configuration::get_value<unsigned short>(const 
 template<> inline bool configuration::get_value<bool>(const char* section, const char* key, bool default_value, const char* dsptr)
 {
     const char* value;
-    if (!get_string_value_internal(section, key, "", &value, dsptr))
+    const char* defaultstr = (default_value ? "true" : "false");
+
+    if (!get_string_value_internal(section, key, defaultstr, &value, dsptr))
     {
         if (_warning)
         {

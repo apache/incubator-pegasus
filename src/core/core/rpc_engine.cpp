@@ -83,7 +83,8 @@ namespace dsn {
             if (it != _requests.end())
             {
                 call = it->second.resp_task;
-                timeout_task = std::move(it->second.timeout_task);
+                timeout_task = it->second.timeout_task;
+                timeout_task->add_ref(); // released below in the same function
                 _requests.erase(it);
             }
             else
@@ -100,6 +101,7 @@ namespace dsn {
         {
             timeout_task->cancel(true);
         }
+        timeout_task->release_ref();
             
         call->set_delay(delay_ms);
         call->enqueue(reply->error(), reply);
@@ -117,7 +119,7 @@ namespace dsn {
             auto it = _requests.find(key);
             if (it != _requests.end())
             {
-                call = std::move(it->second.resp_task);
+                call = it->second.resp_task;
                 _requests.erase(it);
             }
             else

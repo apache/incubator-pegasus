@@ -148,8 +148,8 @@ namespace echo.csharp
             {
                 string v;
                 response.Read(out v);
-                Logging.dassert(v == "hi, this is timer2 echo",
-                "incorrect responsed value");
+                //Logging.dassert(v == "hi, this is timer2 echo",
+                //"incorrect responsed value");
             }
 
             var c = ++_count_timer2;
@@ -164,8 +164,9 @@ namespace echo.csharp
                 //cancel_all_pending_tasks();
             }
 
+            string cs = new string('v', 1024 * 1024);
             RpcWriteStream s = new RpcWriteStream(EchoClientApp.RPC_ECHO, 1000, 0);
-            s.Write("hi, this is timer2 echo");
+            s.Write(cs);
             s.Flush();
             RpcCallAsync(_server, s, this, this.OnTimer2EchoCallback, 0);
         }
@@ -182,13 +183,11 @@ namespace echo.csharp
         {
             EchoClientApp.InitCodes();
 
-            ServiceApp.RegisterApp<EchoClientApp>("echo.client");
-            ServiceApp.RegisterApp<EchoServerApp>("echo.server");
+            ServiceApp.RegisterApp<EchoClientApp>("client");
+            ServiceApp.RegisterApp<EchoServerApp>("server");
 
-            //Native.dsn_run_config("config.ini", true);
-
-            string[] args2 = {"config.ini"};
-            Native.dsn_run(1, args2, true);
+            string[] args2 = (new string[] { "echo.exe" }).Union(args).ToArray();
+            Native.dsn_run(args2.Length, args2, true);
         }
     }
 }
