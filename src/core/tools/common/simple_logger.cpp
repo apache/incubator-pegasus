@@ -87,6 +87,7 @@ namespace dsn {
             utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
 
             print_header(stdout);
+            printf("%s:%d:%s(): ", title, line, function);
             vprintf(fmt, args);
             printf("\n");
         }
@@ -181,7 +182,7 @@ namespace dsn {
             utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
          
             print_header(_log);
-            fprintf(_log, "%s, ", title);
+            fprintf(_log, "%s:%d:%s(): ", title, line, function);
             vfprintf(_log, fmt, args);
             fprintf(_log, "\n");
             if (log_level >= LOG_LEVEL_ERROR)
@@ -190,7 +191,7 @@ namespace dsn {
             if (log_level >= LOG_LEVEL_WARNING)
             {
                 print_header(stdout);
-                printf("%s, ", title);
+                printf("%s:%d:%s(): ", title, line, function);
                 vprintf(fmt, args2);
                 printf("\n");
             }
