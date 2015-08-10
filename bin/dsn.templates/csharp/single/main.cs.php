@@ -6,6 +6,7 @@ $idl_type = $argv[4];
 ?>
 using System;
 using System.IO;
+using System.Linq;
 using dsn.dev.csharp;
 
 namespace <?=$_PROG->get_csharp_namespace()?> 
@@ -22,7 +23,8 @@ namespace <?=$_PROG->get_csharp_namespace()?>
             // ServiceApp.RegisterApp<<?=$svc->name?>PerfTestClientApp>("client.<?=$svc->name?>.perf.test");
 <?php } ?>
 
-            Native.dsn_run(args.Length, args, true);
+            string[] args2 = (new string[] { "<?=$_PROG->name?>" }).Union(args).ToArray();
+            Native.dsn_run(args2.Length, args2, true);
         }
     }
 }

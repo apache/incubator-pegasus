@@ -165,7 +165,7 @@ public:
         if (err != ERR_OK)
         {
             bool s = false;
-            std::cout << "echo err: " << err.to_string() << std::endl;
+            //std::cout << "echo err: " << err.to_string() << std::endl;
             {
                 zauto_lock l(_lock);
                 if (0 == --_live_echo_count)

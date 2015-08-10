@@ -27,7 +27,6 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "replica_stub.h"
-#include <boost/filesystem.hpp>
 
 # ifdef __TITLE__
 # undef __TITLE__

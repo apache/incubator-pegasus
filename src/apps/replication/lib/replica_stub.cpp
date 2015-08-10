@@ -68,21 +68,23 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     // init dirs
     set_options(opts);
     _dir = _options.working_dir;
+    auto dr = boost::filesystem::path(_dir);
+
     if (clear)
-    {
-        boost::filesystem::remove_all(_dir);
+    {        
+        boost::filesystem::remove_all(dr);
     }
 
-    if (!boost::filesystem::exists(_dir))
+    if (!::dsn::utils::is_file_or_dir_exist(_dir.c_str()))
     {
-        boost::filesystem::create_directory(_dir);
+        mkdir_(_dir.c_str());
     }
 
-    _dir = boost::filesystem::canonical(boost::filesystem::path(_dir)).string();
+    _dir = ::dsn::utils::get_absolute_path(_dir.c_str());
     std::string logDir = _dir + "/log";
-    if (!boost::filesystem::exists(logDir))
+    if (!::dsn::utils::is_file_or_dir_exist(logDir.c_str()))
     {
-        boost::filesystem::create_directory(logDir);
+        mkdir_(logDir.c_str());
     }
 
     // init rps

@@ -26,6 +26,7 @@
 # include <dsn/cpp/utils.h>
 # include <dsn/internal/singleton.h>
 # include <sys/types.h>
+# include <sys/stat.h>
 # include <random>
 
 # if defined(__linux__)
@@ -87,6 +88,51 @@ namespace dsn {
 # else
 # error not implemented yet
 # endif 
+        }
+
+        bool is_file_or_dir_exist(const char* path)
+        {
+# if defined(_WIN32)
+            struct _stat32 buffer;
+            return _stat32(path, &buffer) == 0;
+# else
+            struct stat buffer;
+            return stat(path, &buffer) == 0;
+# endif
+        }
+
+        bool remove_dir(const char* path, bool recursive)
+        {
+            if (!recursive)
+                return rmdir_(path) == 0;
+            else
+            {
+                dassert(!"not implemented", "not implmented");
+                return 0;
+            }
+        }
+
+        std::string get_absolute_path(const char* path)
+        {
+            char absoluate_path[1024];
+# if defined(_WIN32)
+            char* component;
+            if (0 == ::GetFullPathNameA(path, 1024, absoluate_path, &component))
+                return "";
+            else
+                return std::string(absoluate_path);
+# else
+            if (0 != realpath(path, absoluate_path))
+                return "";
+            else
+                return std::string(absoluate_path);
+# endif
+        }
+
+        std::string remove_file_name(const char* path)
+        {
+            std::string path0(path);
+            return path0.substr(0, path0.find_last_of("\\/"));
         }
 
         std::string get_last_component(const std::string& input, char splitters[])

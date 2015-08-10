@@ -27,7 +27,6 @@
 #include "replica.h"
 #include "mutation.h"
 #include <dsn/internal/factory_store.h>
-#include <boost/filesystem.hpp>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -50,11 +49,11 @@ replication_app_base::replication_app_base(replica* replica)
     _replica = replica;
     _last_committed_decree = _last_durable_decree = 0;
 
-    if (!boost::filesystem::exists(_dir_data))
-        boost::filesystem::create_directory(_dir_data);
+    if (!::dsn::utils::is_file_or_dir_exist(_dir_data.c_str()))
+        mkdir_(_dir_data.c_str());
 
-    if (!boost::filesystem::exists(_dir_learn))
-        boost::filesystem::create_directory(_dir_learn);
+    if (!::dsn::utils::is_file_or_dir_exist(_dir_learn.c_str()))
+        mkdir_(_dir_learn.c_str());
 }
 
 error_code replication_app_base::write_internal(mutation_ptr& mu)

@@ -1,7 +1,6 @@
 # include "nfs_client_impl.h"
 # include <dsn/internal/nfs.h>
 # include <queue>
-# include <boost/filesystem.hpp>
 
 namespace dsn {
     namespace service {
@@ -252,12 +251,10 @@ namespace dsn {
 
             // real write
             std::string file_path = reqc->copy_req.dst_dir + reqc->file_ctx->file_name;
-
-            boost::filesystem::path path(file_path); // create directory recursively if necessary
-            path = path.remove_filename();
-            if (!boost::filesystem::exists(path))
+            std::string path = ::dsn::utils::remove_file_name(file_path.c_str());
+            if (!::dsn::utils::is_file_or_dir_exist(path.c_str()))
             {
-                boost::filesystem::create_directories(path);
+                mkdir_(path.c_str());
             }
 
             dsn_handle_t hfile = reqc->file_ctx->file.load();
@@ -397,7 +394,8 @@ namespace dsn {
 
                     if (f.second->finished_segments != (int)f.second->copy_requests.size())
                     {
-                        boost::filesystem::remove(f.second->user_req->file_size_req.dst_dir + f.second->file_name);
+                        ::remove((f.second->user_req->file_size_req.dst_dir 
+                            + f.second->file_name).c_str());
                     }
                 }
 

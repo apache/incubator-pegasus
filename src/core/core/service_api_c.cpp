@@ -11,7 +11,6 @@
 # include <dsn/internal/task.h>
 # include <dsn/internal/singleton_store.h>
 # include <dsn/internal/configuration.h>
-# include <boost/filesystem.hpp>
 
 # include "command_manager.h"
 # include "service_engine.h"
@@ -834,11 +833,11 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
     }
 
     // setup coredump
-    if (!boost::filesystem::exists(spec.coredump_dir))
+    if (!::dsn::utils::is_file_or_dir_exist(spec.coredump_dir.c_str()))
     {
-        boost::filesystem::create_directory(spec.coredump_dir);
+        mkdir_(spec.coredump_dir.c_str());
     }
-    std::string cdir = boost::filesystem::canonical(boost::filesystem::path(spec.coredump_dir)).string();
+    std::string cdir = ::dsn::utils::get_absolute_path(spec.coredump_dir.c_str());
     ::dsn::utils::coredump::init(cdir.c_str());
 
     // init tools

@@ -287,6 +287,14 @@ namespace dsn {
         inline int get_invalid_tid() { return -1; }
 
         extern bool load_dynamic_library(const char* module);
+
+        extern bool is_file_or_dir_exist(const char* path);
+
+        extern std::string get_absolute_path(const char* path);
+
+        extern std::string remove_file_name(const char* path);
+
+        extern bool remove_dir(const char* path, bool recursive);
     }
 } // end namespace dsn::utils
 

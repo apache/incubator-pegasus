@@ -84,7 +84,7 @@ error_code mutation_log::initialize(const char* dir)
     zauto_lock l(_lock);
 
     //create dir if necessary
-    if (!boost::filesystem::exists(dir) && !boost::filesystem::create_directory(dir))
+    if (!::dsn::utils::is_file_or_dir_exist(dir) && !mkdir_(dir))
     {
         derror ("open mutation_log: create log path failed");
         return ERR_FILE_OPERATION_FAILED;

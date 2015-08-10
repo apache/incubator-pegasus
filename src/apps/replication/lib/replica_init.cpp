@@ -47,12 +47,12 @@ error_code replica::initialize_on_new(const char* app_type, global_partition_id 
     _config.gpid = gpid;
     _dir = _stub->dir() + "/" + buffer;
 
-    if (boost::filesystem::exists(_dir))
+    if (::dsn::utils::is_file_or_dir_exist(_dir.c_str()))
     {
         return ERR_PATH_ALREADY_EXIST;
     }
 
-    boost::filesystem::create_directory(_dir);
+    mkdir_(_dir.c_str());
 
     error_code err = init_app_and_prepare_list(app_type, true);
     dassert (err == ERR_OK, "");

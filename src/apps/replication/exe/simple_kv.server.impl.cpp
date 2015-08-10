@@ -92,7 +92,7 @@ namespace dsn {
                 if (create_new)
                 {
                     boost::filesystem::remove_all(data_dir());
-                    boost::filesystem::create_directory(data_dir());
+                    mkdir_(data_dir().c_str());
                 }
                 else
                 {
@@ -308,7 +308,7 @@ namespace dsn {
                 {
                     dassert(state.files.size() == 1, "");
                     std::string fn = learn_dir() + "/" + state.files[0];
-                    ret = boost::filesystem::exists(fn);
+                    ret = ::dsn::utils::is_file_or_dir_exist(fn.c_str());
                     if (ret)
                     {
                         std::string s;

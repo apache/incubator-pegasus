@@ -58,11 +58,15 @@ void mutation::copy_from(mutation_ptr& old)
     
     _client_request = old->client_msg();
     if (_client_request)
-        dsn_msg_add_ref(_client_request);
+    {
+        old->_client_request = nullptr;
+    }
 
     _prepare_request = old->prepare_msg();
     if (_prepare_request)
-        dsn_msg_add_ref(_prepare_request);
+    {
+        old->_prepare_request = nullptr;
+    }
 }
 
 void mutation::set_client_request(dsn_task_code_t code, dsn_message_t request)
@@ -73,7 +77,7 @@ void mutation::set_client_request(dsn_task_code_t code, dsn_message_t request)
     if (request != nullptr)
     {
         _client_request = request;
-        dsn_msg_add_ref(request);
+        dsn_msg_add_ref(request); // released on dctor
 
         void* ptr;
         size_t size;
@@ -97,7 +101,7 @@ void mutation::set_client_request(dsn_task_code_t code, dsn_message_t request)
     if (nullptr != from)
     {
         mu->_prepare_request = from;
-        dsn_msg_add_ref(from);
+        dsn_msg_add_ref(from); // released on dctor
     }
     
     sprintf(mu->_name, "%lld.%lld",

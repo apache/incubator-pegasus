@@ -110,7 +110,7 @@ namespace dsn {
             std::string folder = request.source_dir;
             if (request.file_list.size() == 0) // return all file size in the destination file folder
             {
-                if (!::boost::filesystem::exists(folder))
+                if (!::dsn::utils::is_file_or_dir_exist(folder.c_str()))
                 {
                     err = ERR_OBJECT_NOT_FOUND;
                 }

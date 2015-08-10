@@ -71,17 +71,17 @@ void meta_service::start(const char* data_dir, bool clean_state)
     }
     else
     {
-        if (!boost::filesystem::exists(_data_dir))
+        if (!::dsn::utils::is_file_or_dir_exist(_data_dir.c_str()))
         {
-            boost::filesystem::create_directory(_data_dir);
+            mkdir_(_data_dir.c_str());
         }
 
-        if (boost::filesystem::exists(_data_dir + "/checkpoint"))
+        if (::dsn::utils::is_file_or_dir_exist((_data_dir + "/checkpoint").c_str()))
         {
             _state->load((_data_dir + "/checkpoint").c_str());
         }
 
-        if (boost::filesystem::exists(_data_dir + "/oplog"))
+        if (::dsn::utils::is_file_or_dir_exist((_data_dir + "/oplog").c_str()))
         {
             replay_log((_data_dir + "/oplog").c_str());
             _state->save((_data_dir + "/checkpoint").c_str());
