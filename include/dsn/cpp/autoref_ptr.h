@@ -140,7 +140,7 @@ namespace dsn
 
         T& operator * () const
         {
-            return (*_t);
+            return (*_obj);
         }
 
         T* operator -> () const
