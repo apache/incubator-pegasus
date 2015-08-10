@@ -42,7 +42,7 @@ namespace dsn {
             virtual void dsn_logv(const char *file,
                 const char *function,
                 const int line,
-                dsn_log_level_t logLevel,
+                dsn_log_level_t log_level,
                 const char* title,
                 const char *fmt,
                 va_list args
@@ -64,7 +64,7 @@ namespace dsn {
             virtual void dsn_logv(const char *file,
                 const char *function,
                 const int line,
-                dsn_log_level_t logLevel,
+                dsn_log_level_t log_level,
                 const char* title,
                 const char *fmt,
                 va_list args

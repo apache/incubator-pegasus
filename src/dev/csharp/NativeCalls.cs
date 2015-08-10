@@ -227,9 +227,9 @@ namespace dsn.dev.csharp
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static dsn_log_level_t       dsn_log_get_start_level();
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static void                  dsn_logf(string file, string function, int line, dsn_log_level_t logLevel, string title, string fmt, __arglist);
+        public extern static void                  dsn_logf(string file, string function, int line, dsn_log_level_t log_level, string title, string fmt, __arglist);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static void                  dsn_log(string file, string function, int line, dsn_log_level_t logLevel, string title);
+        public extern static void                  dsn_log(string file, string function, int line, dsn_log_level_t log_level, string title);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static void                  dsn_coredump();
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]

@@ -67,7 +67,7 @@ namespace dsn {
                 _store[pr.key] = pr.value;
                 ++_last_committed_decree;
 
-                dinfo("write %s, decree = %lld\n", pr.value.c_str(), last_committed_decree());
+                dinfo("write %s, decree = %lld\n", pr.key.c_str(), last_committed_decree());
                 reply(0);
             }
 
@@ -82,7 +82,7 @@ namespace dsn {
                     _store[pr.key] = pr.value;
                 ++_last_committed_decree;
 
-                dinfo("append %s, decree = %lld\n", pr.value.c_str(), last_committed_decree());
+                dinfo("append %s, decree = %lld\n", pr.key.c_str(), last_committed_decree());
                 reply(0);
             }
             

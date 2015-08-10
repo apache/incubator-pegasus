@@ -224,7 +224,7 @@ namespace dsn
         void hpc_tail_logger::dsn_logv(const char *file,
             const char *function,
             const int line,
-            dsn_log_level_t logLevel,
+            dsn_log_level_t log_level,
             const char* title,
             const char *fmt,
             va_list args
@@ -317,7 +317,7 @@ namespace dsn
             s_tail_log_info.next_write_ptr = ptr;
 
             // dump critical logs on screen
-            if (logLevel >= LOG_LEVEL_WARNING)
+            if (log_level >= LOG_LEVEL_WARNING)
             {
                 std::cout << ptr0 << std::endl;
             }

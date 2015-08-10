@@ -78,7 +78,7 @@ namespace dsn {
         void screen_logger::dsn_logv(const char *file,
             const char *function,
             const int line,
-            dsn_log_level_t logLevel,
+            dsn_log_level_t log_level,
             const char* title,
             const char *fmt,
             va_list args
@@ -166,14 +166,14 @@ namespace dsn {
         void simple_logger::dsn_logv(const char *file,
             const char *function,
             const int line,
-            dsn_log_level_t logLevel,
+            dsn_log_level_t log_level,
             const char* title,
             const char *fmt,
             va_list args
             )
         {
             va_list args2;
-            if (logLevel >= LOG_LEVEL_WARNING)
+            if (log_level >= LOG_LEVEL_WARNING)
             {
                 va_copy(args2, args);
             }
@@ -184,10 +184,10 @@ namespace dsn {
             fprintf(_log, "%s, ", title);
             vfprintf(_log, fmt, args);
             fprintf(_log, "\n");
-            if (logLevel >= LOG_LEVEL_ERROR)
+            if (log_level >= LOG_LEVEL_ERROR)
                 fflush(_log);
 
-            if (logLevel >= LOG_LEVEL_WARNING)
+            if (log_level >= LOG_LEVEL_WARNING)
             {
                 print_header(stdout);
                 printf("%s, ", title);
