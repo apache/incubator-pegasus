@@ -71,13 +71,13 @@ namespace dsn {
             uint32_t bytes;
         };
 
-        disk_aio_ptr native_posix_aio_provider::prepare_aio_context(aio_task* tsk)
+        disk_aio* native_posix_aio_provider::prepare_aio_context(aio_task* tsk)
         {
             auto r = new posix_disk_aio_context;
             bzero((char*)&r->cb, sizeof(r->cb));
             r->tsk = tsk;
             r->evt = nullptr;
-            return disk_aio_ptr(r);
+            return r;
         }
 
         void native_posix_aio_provider::aio(aio_task* aio_tsk)
@@ -114,7 +114,7 @@ namespace dsn {
 
         error_code native_posix_aio_provider::aio_internal(aio_task* aio_tsk, bool async, __out_param uint32_t* pbytes /*= nullptr*/)
         {
-            auto aio = (posix_disk_aio_context *)aio_tsk->aio().get();
+            auto aio = (posix_disk_aio_context *)aio_tsk->aio();
             int r;
 
             aio->this_ = this;

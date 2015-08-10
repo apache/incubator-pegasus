@@ -44,7 +44,7 @@ namespace dsn {
             virtual dsn_handle_t open(const char* file_name, int flag, int pmode);
             virtual error_code close(dsn_handle_t hFile);
             virtual void    aio(aio_task* aio);            
-            virtual disk_aio_ptr prepare_aio_context(aio_task* tsk);
+            virtual disk_aio* prepare_aio_context(aio_task* tsk);
 
         protected:
             error_code aio_internal(aio_task* aio, bool async, __out_param uint32_t* pbytes = nullptr);

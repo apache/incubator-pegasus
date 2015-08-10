@@ -25,7 +25,7 @@
  */
 # pragma once
 
-
+# include <dsn/ports.h>
 # include <dsn/cpp/auto_codes.h>
 
 # ifdef __TITLE__
@@ -282,7 +282,26 @@ namespace dsn {
 
         extern void time_ms_to_string(uint64_t ts_ms, char* str);
 
-        extern int get_current_tid();
+        extern int get_current_tid_internal();
+
+        typedef struct _tls_tid
+        {
+            int magic;
+            int local_tid;
+        } tls_tid;
+        extern __thread tls_tid s_tid;
+
+        inline int get_current_tid()
+        {
+            if (s_tid.magic == 0xdeadbeef)
+                return s_tid.local_tid;
+            else
+            {
+                s_tid.magic = 0xdeadbeef;
+                s_tid.local_tid = get_current_tid_internal();                
+                return s_tid.local_tid;
+            }
+        }
 
         inline int get_invalid_tid() { return -1; }
 

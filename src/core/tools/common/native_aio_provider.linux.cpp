@@ -68,13 +68,13 @@ namespace dsn {
             return ERR_OK;
         }
 
-        disk_aio_ptr native_linux_aio_provider::prepare_aio_context(aio_task* tsk)
+        disk_aio* native_linux_aio_provider::prepare_aio_context(aio_task* tsk)
         {
             auto r = new linux_disk_aio_context;
             bzero((char*)&r->cb, sizeof(r->cb));
             r->tsk = tsk;
             r->evt = nullptr;
-            return disk_aio_ptr(r);
+            return r;
         }
 
         void native_linux_aio_provider::aio(aio_task* aio_tsk)
@@ -127,7 +127,7 @@ namespace dsn {
             linux_disk_aio_context * aio;
             int ret;
 
-            aio = (linux_disk_aio_context *)aio_tsk->aio().get();
+            aio = (linux_disk_aio_context *)aio_tsk->aio();
 
             memset(&aio->cb, 0, sizeof(aio->cb));
 

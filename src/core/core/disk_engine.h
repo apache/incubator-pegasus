@@ -45,7 +45,7 @@ public:
     void            read(aio_task* aio);
     void            write(aio_task* aio);  
 
-    disk_aio_ptr    prepare_aio_context(aio_task* tsk) { return _provider->prepare_aio_context(tsk); }
+    disk_aio*       prepare_aio_context(aio_task* tsk) { return _provider->prepare_aio_context(tsk); }
     service_node*   node() const { return _node; }
     
 private:

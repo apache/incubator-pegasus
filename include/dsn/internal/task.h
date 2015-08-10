@@ -29,9 +29,10 @@
 # include <dsn/internal/extensible_object.h>
 # include <dsn/internal/task_tracker.h>
 # include <dsn/internal/task_spec.h>
-# include <dsn/cpp/auto_codes.h>
 # include <dsn/internal/rpc_message.h>
 # include <dsn/internal/link.h>
+# include <dsn/cpp/auto_codes.h>
+# include <dsn/cpp/utils.h>
 
 namespace dsn {
 
@@ -52,7 +53,7 @@ class task;
 
 struct __tls_task_info__
 {
-    uint32_t     magic;
+    uint32_t     magic;    
     task         *current_task;
     task_worker  *worker;
     int           worker_index;
@@ -80,7 +81,7 @@ public:
 
     uint64_t                id() const { return _task_id; }
     task_state              state() const { return _state.load(); }
-    dsn_task_code_t               code() const { return _spec->code; }
+    dsn_task_code_t         code() const { return _spec->code; }
     task_spec&              spec() const { return *_spec; }
     int                     hash() const { return _hash; }
     int                     delay_milliseconds() const { return _delay_milliseconds; }
@@ -94,7 +95,7 @@ public:
     static uint64_t         get_current_task_id();
     static task_worker*     get_current_worker();
     static int              get_current_worker_index();
-    static void             set_current_worker(task_worker* worker);
+    static void             set_current_worker(task_worker* worker);    
 
 protected:
     void                    signal_waiters();
@@ -263,7 +264,7 @@ class disk_aio
 {
 public:    
     // filled by apps
-    dsn_handle_t     file;
+    dsn_handle_t file;
     void*        buffer;
     uint32_t     buffer_size;    
     uint64_t     file_offset;
@@ -276,16 +277,15 @@ public:
     virtual ~disk_aio(){}
 };
 
-typedef ::std::shared_ptr<disk_aio> disk_aio_ptr;
-
 class aio_task : public task
 {
 public:
     aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash = 0);
+    ~aio_task();
 
     void            enqueue(error_code err, size_t transferred_size, service_node* node);
     size_t          get_transferred_size() const { return _transferred_size; }
-    disk_aio_ptr    aio() { return _aio; }
+    disk_aio*       aio() { return _aio; }
 
     void            exec() // aio completed
     {
@@ -300,7 +300,7 @@ public:
     }
 
 private:
-    disk_aio_ptr      _aio;
+    disk_aio*         _aio;
     size_t            _transferred_size;
     dsn_aio_handler_t _cb;
     void*             _param;

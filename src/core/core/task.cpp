@@ -537,6 +537,11 @@ aio_task::aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int 
     _aio = node()->disk()->prepare_aio_context(this);
 }
 
+aio_task::~aio_task()
+{
+    delete _aio;
+}
+
 void aio_task::enqueue(error_code err, size_t transferred_size, service_node* node)
 {
     set_error_code(err);

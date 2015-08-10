@@ -195,13 +195,13 @@ struct windows_disk_aio_context : public disk_aio
     uint32_t bytes;
 };
 
-disk_aio_ptr native_win_aio_provider::prepare_aio_context(aio_task* tsk)
+disk_aio* native_win_aio_provider::prepare_aio_context(aio_task* tsk)
 {
     auto r = new windows_disk_aio_context;
     ZeroMemory(&r->olp, sizeof(r->olp));
     r->tsk = tsk;
     r->evt = nullptr;
-    return disk_aio_ptr(r);
+    return r;
 }
 
 void native_win_aio_provider::aio(aio_task* aio_tsk)
@@ -212,7 +212,7 @@ void native_win_aio_provider::aio(aio_task* aio_tsk)
 
 error_code native_win_aio_provider::aio_internal(aio_task* aio_tsk, bool async, __out_param uint32_t* pbytes /*= nullptr*/)
 {
-    auto aio = (windows_disk_aio_context*)aio_tsk->aio().get();
+    auto aio = (windows_disk_aio_context*)aio_tsk->aio();
     BOOL r = FALSE;
 
     aio->olp.Offset = (uint32_t)aio->file_offset;

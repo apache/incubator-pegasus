@@ -53,9 +53,9 @@ namespace dsn {
             complete_io(aio, ERR_OK, aio->aio()->buffer_size, 0);
         }
 
-        disk_aio_ptr empty_aio_provider::prepare_aio_context(aio_task* tsk)
+        disk_aio* empty_aio_provider::prepare_aio_context(aio_task* tsk)
         {
-            return disk_aio_ptr(new disk_aio());
+            return new disk_aio();
         }
     }
 }

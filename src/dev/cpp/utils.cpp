@@ -46,7 +46,8 @@
 namespace dsn {
     namespace utils {
 
-        int get_current_tid()
+        __thread tls_tid s_tid;
+        int get_current_tid_internal()
         {
 # if defined(_WIN32)
             return static_cast<int>(::GetCurrentThreadId());
