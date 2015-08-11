@@ -24,18 +24,13 @@
  * THE SOFTWARE.
  */
 
-#include <iomanip>
 #include <dsn/toollet/profiler.h>
 #include <dsn/service_api.h>
 #include "shared_io_service.h"
 #include "profiler_header.h"
 #include <dsn/internal/command.h>
-#include <iostream>
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "toollet.profiler"
+#define __TITLE__ "toollet.profiler"
 using namespace dsn::service;
 
 namespace dsn {
@@ -118,7 +113,6 @@ namespace dsn {
             {
                 prof.call_counts[callee->spec().code]++;
             }
-
             // time disk io starts
             task_ext_for_profiler::get(callee) = ::dsn::service::env::now_ns();
         }
@@ -127,7 +121,7 @@ namespace dsn {
         {
             uint64_t& ats = task_ext_for_profiler::get(this_);
             uint64_t now = ::dsn::service::env::now_ns();
-
+            
             s_spec_profilers[this_->spec().code].ptr[AIO_LATENCY_NS]->set(now - ats);
             ats = now;
         }
@@ -193,37 +187,58 @@ namespace dsn {
 
         void register_command_profiler()
         {
-            std::stringstream tmpss;
-            tmpss << "NAME:" << std::endl;
-            tmpss << "    profiler - collect performance data" << std::endl;
-            tmpss << "SYNOPSIS:" << std::endl;
-            tmpss << "  show how tasks call each other with what frequency:" << std::endl;
-            tmpss << "      p|P|profile|Profile task|t dependency|dep matrix" << std::endl;
-            tmpss << "  show how tasks call each oether with list format sort by caller/callee:" << std::endl;
-            tmpss << "      p|P|profile|Profile task|t dependency|dep list [$task] [caller(default)|callee]" << std::endl;
-            tmpss << "  show performance data for specific tasks:" << std::endl;
-            tmpss << "      p|P|profile|Profile task|t info [all|$task]:" << std::endl;
-            tmpss << "  show the top N task kinds sort by counter_name:" << std::endl;
-            tmpss << "      p|P|profile|Profile task|t top $N $counter_name [$percentile]:" << std::endl;
-            tmpss << "ARGUMENTS:" << std::endl;            
-            tmpss << "  $percentile : e.g, 50 for latency at 50 percentile, 50(default)|90|95|99|999:" << std::endl;
-            tmpss << "  $counter_name :" << std::endl;
+            std::stringstream textp, textpjs, textpd, textarg;
+            textp << "NAME:" << std::endl;
+            textp << "  profiler - collect performance data" << std::endl;
+            textp << "SYNOPSIS:" << std::endl;
+            textp << "  show how tasks call each other with what frequency:" << std::endl;
+            textp << "      p|P|profile|Profile task|t dependency|dep matrix" << std::endl;
+            textp << "  show how tasks call each oether with list format sort by caller/callee:" << std::endl;
+            textp << "      p|P|profile|Profile task|t dependency|dep list [$task] [caller(default)|callee]" << std::endl;
+            textp << "  show performance data for specific tasks:" << std::endl;
+            textp << "      p|P|profile|Profile task|t info [all|$task]" << std::endl;
+            textp << "  show the top N task kinds sort by counter_name:" << std::endl;
+            textp << "      p|P|profile|Profile task|t top $N $counter_name [$percentile]" << std::endl;
+
+            textpjs << "NAME:" << std::endl;
+            textpjs << "  profile javascript - collect performance data and show as chart by javascript" << std::endl;
+            textpjs << "SYNOPSIS:" << std::endl;
+            textpjs << "  pjs|PJS|profilejavascript|ProfileJavaScript $chart_type task|t $task_name [$percentile] [$counter_name $counter_name ...]" << std::endl;
+            textpjs << "  pjs|PJS|profilejavascript|ProfileJavaScript $chart_type counter|c $counter_name [$percentile] $task_name $task_name ..." << std::endl;
+            textpjs << "  pjs|PJS|profilejavascript|ProfileJavaScript top $N $counter_name [$percentile]" << std::endl;
+
+            textpd << "NAME:" << std::endl;
+            textpd << "  profiler data - get appointed data, using by pjs" << std::endl;
+            textpd << "SYNOPSIS:" << std::endl;
+            textpd << "  pd|PD|profiledata|ProfileData $task_name:$counter_name:$percentile ..." << std::endl;
+            textpd << "  pd|PD|profiledata|ProfileData $task_name:AllPercentile:$percentile" << std::endl;
+
+            textarg << "ARGUMENTS:" << std::endl;
+            textarg << "  $percentile : e.g, 50 for latency at 50 percentile, 50(default)|90|95|99|999" << std::endl;
+            textarg << "  $counter_name :" << std::endl;
             for (int i = 0; i < PREF_COUNTER_COUNT; i++)
             {
-                tmpss << "      " << std::setw(data_width) << counter_info_ptr[i]->title << " :";
+                textarg << "      " << std::setw(data_width) << counter_info_ptr[i]->title << " :";
                 for (size_t j = 0; j < counter_info_ptr[i]->keys.size(); j++)
                 {
-                    tmpss << " " << counter_info_ptr[i]->keys[j];
+                    textarg << " " << counter_info_ptr[i]->keys[j];
                 }
-                tmpss << std::endl;
+                textarg << std::endl;
             }
-            tmpss << "  $task : all task code, such as" << std::endl;
+            textarg << "  $task : all task code, such as" << std::endl;
             for (int i = 1; i < task_code::max_value() && i <= 10; i++)
             {
-                tmpss << "      " << task_code::to_string(i) << std::endl;
+                textarg << "      " << task_code::to_string(i) << std::endl;
             }
-                        
-            register_command({ "p", "P", "profile", "Profile"}, "profile|Profile|p|P - performance profiling", tmpss.str().c_str(), profiler_output_handler);
+
+            textp << textarg.str();
+            textpjs << textarg.str();
+            textpd << textarg.str();
+
+
+            register_command({ "p", "P", "profile", "Profile" }, "profile|Profile|p|P - performance profiling", textp.str().c_str(), profiler_output_handler);
+            //register_command({ "pjs", "PJS", "profilejavascript", "ProfileJavaScript", nullptr }, "pjs|PJS|profilejavascript|ProfileJavaScript - profile and show by javascript", textpjs.str().c_str(), profiler_js_handler);
+            register_command({ "pd", "PD", "profiledata", "ProfileData" }, "profiler data - get appointed data, using by pjs", textpd.str().c_str(), profiler_data_handler);
         }
 
         void profiler::install(service_spec& spec)
@@ -268,7 +283,6 @@ namespace dsn {
                 }
 
                 s_spec_profilers[i].is_profile = config()->get_value<bool>(name.c_str(), "is_profile", profile);
-
                 if (!s_spec_profilers[i].is_profile)
                     continue;
 

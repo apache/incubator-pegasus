@@ -28,7 +28,6 @@
 #include <algorithm>
 #include <dsn/toollet/profiler.h>
 #include "profiler_header.h"
-#include <iostream>
 
 namespace dsn {
     namespace tools {
@@ -42,7 +41,6 @@ namespace dsn {
 
         extern task_spec_profiler* s_spec_profilers;
         extern counter_info* counter_info_ptr[PREF_COUNTER_COUNT];
-        static const std::string percentail_counter_string[COUNTER_PERCENTILE_COUNT] = { "50%", "90%", "95%", "99%", "999%" };
         profiler_output_data_type* profiler_output_data = new profiler_output_data_type(taskname_width, data_width, call_width);
 
         static inline bool cmp(const sort_node &x, const sort_node &y)
@@ -54,11 +52,12 @@ namespace dsn {
             return x.val > y.val;
         }
 
-        void profiler_output_top(std::stringstream &ss, const perf_counter_ptr_type counter_type, const counter_percentile_type type, const int num)
+        void profiler_output_top(std::stringstream &ss, const perf_counter_ptr_type counter_type, const counter_percentile_type percentile_type, const int num)
         {
             sort_node *_tmp = new sort_node[task_code::max_value() + 3];
-            int tmp_num = num >= task_code::max_value() + 1 ? task_code::max_value() + 1 : num;
+            int tmp_num = (num >= task_code::max_value() + 1) ? task_code::max_value() + 1 : num;
 
+            //Load data
             for (int i = 0; i <= task_code::max_value(); _tmp[i].id = i, i++)
             {
                 if ((i == TASK_CODE_INVALID) || (!s_spec_profilers[i].is_profile) || (s_spec_profilers[i].ptr[counter_type] == nullptr))
@@ -66,7 +65,7 @@ namespace dsn {
 
                 if (counter_info_ptr[counter_type]->type == COUNTER_TYPE_NUMBER_PERCENTILES)
                 {
-                    _tmp[i].val = s_spec_profilers[i].ptr[counter_type]->get_percentile(type);
+                    _tmp[i].val = s_spec_profilers[i].ptr[counter_type]->get_percentile(percentile_type);
                 }
                 else
                 {
@@ -79,15 +78,17 @@ namespace dsn {
             ss << profiler_output_data->separate_line_top << std::endl;
             ss << "|PROFILE|" << profiler_output_data->view_task_type << std::setw(data_width) << counter_info_ptr[counter_type]->title << "|" << std::endl;
             ss << profiler_output_data->separate_line_top << std::endl;
+
+            //Print sorted data
             for (int k = 0; k < tmp_num; k++)
             {
                 int i = _tmp[k].id;
 
-                if ((i == TASK_CODE_INVALID) || (s_spec_profilers[i].is_profile == false) || (_tmp[k].val == -1))
+                if ((i == TASK_CODE_INVALID) || (!s_spec_profilers[i].is_profile) || (_tmp[k].val == -1))
                     continue;
 
                 ss << "|" << std::setw(4) << i << "   |" << std::setiosflags(std::ios::left) << std::setw(taskname_width) << std::string(task_code::to_string(i)) << std::resetiosflags(std::ios::left);
-                if (s_spec_profilers[i].ptr[counter_type] != nullptr)
+                if (_tmp[k].val != -1)
                 {
                     ss << "|" << std::setw(data_width) << _tmp[k].val << "|" << std::endl;
                 }
@@ -95,56 +96,68 @@ namespace dsn {
                 {
                     ss << profiler_output_data->none << std::endl;
                 }
-
                 ss << profiler_output_data->separate_line_top << std::endl;
             }
+
             delete[] _tmp;
         }
 
-        void profiler_output_infomation_line(std::stringstream &ss, const int request, counter_percentile_type type, const bool flag)
+        void profiler_output_infomation_line(std::stringstream &ss, const int task_id, counter_percentile_type percentile_type, const bool full_data)
         {
-            task_spec* spec = task_spec::get(request);
+            task_spec* spec = task_spec::get(task_id);
 
-            if (flag == true)
+            //Print the table infrom
+            if (full_data == true)
             {
-                ss << "|" << std::setw(4) << request << "   |" << std::setiosflags(std::ios::left) << std::setw(taskname_width) << std::string(task_code::to_string(request))
-                    << std::resetiosflags(std::ios::left) << "|" << std::setw(7) << percentail_counter_string[type] << "|";
+                ss << "|" << std::setw(4) << task_id << "   |" << std::setiosflags(std::ios::left) << std::setw(taskname_width) << std::string(task_code::to_string(task_id))
+                    << std::resetiosflags(std::ios::left) << "|" << std::setw(7) << percentail_counter_string[percentile_type] << "|";
             }
             else
             {
-                ss << "|       |" << profiler_output_data->blank_name << std::setw(7) << percentail_counter_string[type] << "|";
+                ss << "|       |" << profiler_output_data->blank_name << std::setw(7) << percentail_counter_string[percentile_type] << "|";
             }
+
+            //Print the data
             for (int i = 0; i < PREF_COUNTER_COUNT; i++)
             {
-                if (flag == true)
+                //The middle line, print the data of all counter type
+                if (full_data == true)
                 {
-                    if (s_spec_profilers[request].ptr[i] == nullptr)
+                    if (s_spec_profilers[task_id].ptr[i] == nullptr)
                     {
                         ss << profiler_output_data->none;
                     }
                     else if (counter_info_ptr[i]->type == COUNTER_TYPE_NUMBER_PERCENTILES)
                     {
-                        ss << std::setw(data_width) << s_spec_profilers[request].ptr[i]->get_percentile(type) << "|";
+                        ss << std::setw(data_width) << s_spec_profilers[task_id].ptr[i]->get_percentile(percentile_type) << "|";
                     }
                     else
                     {
-                        ss << std::setw(data_width) << s_spec_profilers[request].ptr[i]->get_value() << "|";
+                        ss << std::setw(data_width) << s_spec_profilers[task_id].ptr[i]->get_value() << "|";
                     }
                 }
-                else
-                if ((counter_info_ptr[i]->type == COUNTER_TYPE_NUMBER_PERCENTILES) && (s_spec_profilers[request].ptr[i] != nullptr))
-                {
-                    ss << std::setw(data_width) << s_spec_profilers[request].ptr[i]->get_percentile(type) << "|";
-                }
+                //Other line, just print the number_percentile_type data
                 else
                 {
-                    ss << profiler_output_data->blank_data;
+                    if (counter_info_ptr[i]->type != COUNTER_TYPE_NUMBER_PERCENTILES)
+                    {
+                        ss << profiler_output_data->blank_data;
+                    }
+                    else if (s_spec_profilers[task_id].ptr[i] != nullptr)
+                    {
+                        ss << std::setw(data_width) << s_spec_profilers[task_id].ptr[i]->get_percentile(percentile_type) << "|";
+                    }
+                    else
+                    {
+                        ss << profiler_output_data->none;
+                    }
                 }
+                
             }
             ss << std::endl;
         }
 
-        void profiler_output_information_table(std::stringstream &ss, const int request, const bool flag)
+        void profiler_output_information_table(std::stringstream &ss, const int task_id)
         {
             ss << profiler_output_data->separate_line_info << std::endl;
             ss << "|PROFILE|" << profiler_output_data->view_task_type << "PERCENT|";
@@ -155,28 +168,41 @@ namespace dsn {
             ss << std::endl;
             ss << profiler_output_data->separate_line_info << std::endl;
             
+            //Select the task
+            if (task_id >= 0)
+            {
+                if ((task_id == TASK_CODE_INVALID) || (!s_spec_profilers[task_id].is_profile)) return;
+
+                //Print all percentile type
+                task_spec* spec = task_spec::get(task_id);
+                for (int j = 0; j < COUNTER_PERCENTILE_COUNT; j++)
+                {
+                    profiler_output_infomation_line(ss, task_id, (counter_percentile_type)j, j == COUNTER_PERCENTILE_COUNT / 2);
+                }
+                ss << profiler_output_data->separate_line_info << std::endl;
+                return;
+            }
+
+            //Print all task infrom
             for (int i = 0; i <= task_code::max_value(); i++)
             {
                 if ((i == TASK_CODE_INVALID) || (s_spec_profilers[i].is_profile == false))
                     continue;
 
-                if ((request >= 0) && (request != i))
-                    continue;
-
-                if ((request < 0) && (flag == false) && (s_spec_profilers[i].ptr[TASK_EXEC_TIME_NS]->get_percentile(COUNTER_PERCENTILE_999) < 0.0))
-                    continue;
-
+                //Print all percentile type
                 task_spec* spec = task_spec::get(i);
                 for (int j = 0; j < COUNTER_PERCENTILE_COUNT; j++)
                 {
                     profiler_output_infomation_line(ss, i, (counter_percentile_type)j, j == COUNTER_PERCENTILE_COUNT / 2);
                 }
+
                 ss << profiler_output_data->separate_line_info << std::endl;
             }
         }
 
         void profiler_output_dependency_matrix(std::stringstream &ss)
         {
+            //Print the separate line
             ss << profiler_output_data->separate_line_depmatrix;
             for (int i = 0; i <= task_code::max_value(); i++)
             {
@@ -187,6 +213,7 @@ namespace dsn {
             }
             ss << std::endl;
 
+            //Print the title of table
             ss << "|" << profiler_output_data->view_task_type << profiler_output_data->blank_matrix;
             for (int i = 0; i <= task_code::max_value(); i++)
             {
@@ -197,6 +224,7 @@ namespace dsn {
             }
             ss << std::endl;
 
+            //Print the separate line
             ss << profiler_output_data->separate_line_depmatrix;
             for (int i = 0; i <= task_code::max_value(); i++)
             {
@@ -207,6 +235,7 @@ namespace dsn {
             }
             ss << std::endl;
 
+            //Print the calling table
             for (int i = 0; i <= task_code::max_value(); i++)
             {
                 if ((i != TASK_CODE_INVALID) && (s_spec_profilers[i].is_profile != false))
@@ -221,6 +250,7 @@ namespace dsn {
                     }
                     ss << std::endl;
 
+                    //Print the separate line
                     ss << profiler_output_data->separate_line_depmatrix;
                     for (int j = 0; j <= task_code::max_value(); j++)
                     {
@@ -234,19 +264,39 @@ namespace dsn {
             }
         }
 
-        void profiler_output_dependency_list_caller(std::stringstream &ss, const int request)
+        void profiler_output_dependency_list_caller(std::stringstream &ss, const int task_id)
         {
+            //Print the title of table
             ss << profiler_output_data->separate_line_deplist << std::endl;
             ss << "|" << profiler_output_data->view_caller_type << profiler_output_data->view_callee_type << profiler_output_data->view_call_times << std::endl;
             ss << profiler_output_data->separate_line_deplist << std::endl;
 
+            //Select the task
+            if (task_id >= 0)
+            {
+                if ((task_id == TASK_CODE_INVALID) || (!s_spec_profilers[task_id].is_profile) || (s_spec_profilers[task_id].collect_call_count)) return;
+
+                for (int j = 0; j <= task_code::max_value(); j++)
+                {
+                    if ((j != TASK_CODE_INVALID) && (s_spec_profilers[j].is_profile) && (s_spec_profilers[task_id].call_counts[j] > 0))
+                    {
+                        ss << "|" << std::setiosflags(std::ios::left) << std::setw(taskname_width) << std::string(task_code::to_string(task_id));
+                        ss << "|" << std::setw(taskname_width) << std::string(task_code::to_string(j)) << std::resetiosflags(std::ios::left);
+                        ss << "|" << std::setw(call_width) << s_spec_profilers[task_id].call_counts[j] << "|" << std::endl;
+                        ss << profiler_output_data->separate_line_deplist << std::endl;
+                    }
+                }
+                return;
+            }
+
+            //Print all task calling infrom
             for (int i = 0; i <= task_code::max_value(); i++)
             {
-                if ((i != TASK_CODE_INVALID) && (s_spec_profilers[i].is_profile != false) && (s_spec_profilers[i].collect_call_count != false) && ((request < 0) || (request == i)))
+                if ((i != TASK_CODE_INVALID) && (s_spec_profilers[i].is_profile) && (s_spec_profilers[i].collect_call_count))
                 {
                     for (int j = 0; j <= task_code::max_value(); j++)
                     {
-                        if ((j != TASK_CODE_INVALID) && (s_spec_profilers[j].is_profile != false) && (s_spec_profilers[i].call_counts[j] != 0))
+                        if ((j != TASK_CODE_INVALID) && (s_spec_profilers[j].is_profile) && (s_spec_profilers[i].call_counts[j] > 0))
                         {
                             ss << "|" << std::setiosflags(std::ios::left) << std::setw(taskname_width) << std::string(task_code::to_string(i));
                             ss << "|" << std::setw(taskname_width) << std::string(task_code::to_string(j)) << std::resetiosflags(std::ios::left);
@@ -258,27 +308,84 @@ namespace dsn {
             }
         }
 
-        void profiler_output_dependency_list_callee(std::stringstream &ss, const int request)
+        void profiler_output_dependency_list_callee(std::stringstream &ss, const int task_id)
         {
+            //Print the title of table
             ss << profiler_output_data->separate_line_deplist << std::endl;
             ss << "|" << profiler_output_data->view_callee_type << profiler_output_data->view_caller_type << "  TIMES  |" << std::endl;
             ss << profiler_output_data->separate_line_deplist << std::endl;
+
+            //Select the task
+            if (task_id >= 0)
+            {
+                if ((task_id == TASK_CODE_INVALID) || (!s_spec_profilers[task_id].is_profile)) return;
+
+                for (int j = 0; j <= task_code::max_value(); j++)
+                {
+                    if ((j != TASK_CODE_INVALID) && (s_spec_profilers[j].is_profile) && (s_spec_profilers[j].collect_call_count) && (s_spec_profilers[j].call_counts[task_id] > 0))
+                    {
+                        ss << "|" << std::setiosflags(std::ios::left) << std::setw(taskname_width) << std::string(task_code::to_string(task_id));
+                        ss << "|" << std::setw(taskname_width) << std::string(task_code::to_string(j)) << std::resetiosflags(std::ios::left);
+                        ss << "|" << std::setw(call_width) << s_spec_profilers[j].call_counts[task_id] << "|" << std::endl;
+                        ss << profiler_output_data->separate_line_deplist << std::endl;
+                    }
+                }
+                return;
+            }
+
+            //Print all task calling infrom
             for (int i = 0; i <= task_code::max_value(); i++)
             {
-                if ((i != TASK_CODE_INVALID) && (s_spec_profilers[i].is_profile != false) && (s_spec_profilers[i].collect_call_count != false) && ((request < 0) || (request == i)))
+                if ((i != TASK_CODE_INVALID) && (s_spec_profilers[i].is_profile))
                 {
                     for (int j = 0; j <= task_code::max_value(); j++)
                     {
-                        if ((j != TASK_CODE_INVALID) && (s_spec_profilers[j].is_profile != false) && (s_spec_profilers[j].call_counts[i] != 0))
+                        if ((j != TASK_CODE_INVALID) && (s_spec_profilers[j].is_profile) && (s_spec_profilers[j].collect_call_count) && (s_spec_profilers[j].call_counts[i] > 0))
                         {
                             ss << "|" << std::setiosflags(std::ios::left) << std::setw(taskname_width) << std::string(task_code::to_string(i));
                             ss << "|" << std::setw(taskname_width) << std::string(task_code::to_string(j)) << std::resetiosflags(std::ios::left);
-                            ss << "|" << std::setw(9) << s_spec_profilers[j].call_counts[i] << "|" << std::endl;
+                            ss << "|" << std::setw(call_width) << s_spec_profilers[j].call_counts[i] << "|" << std::endl;
                             ss << profiler_output_data->separate_line_deplist << std::endl;
                         }
                     }
                 }
             }
+        }
+
+        void profiler_data_top(std::stringstream &ss, const perf_counter_ptr_type counter_type, const counter_percentile_type percentile_type, const int num)
+        {
+            sort_node *_tmp = new sort_node[task_code::max_value() + 3];
+            int tmp_num = num >= task_code::max_value() + 1 ? task_code::max_value() + 1 : num;
+
+            //Load data
+            for (int i = 0; i <= task_code::max_value(); _tmp[i].id = i, i++)
+            {
+                if ((i == TASK_CODE_INVALID) || (!s_spec_profilers[i].is_profile) || (s_spec_profilers[i].ptr[counter_type] == nullptr))
+                    continue;
+
+                if (counter_info_ptr[counter_type]->type == COUNTER_TYPE_NUMBER_PERCENTILES)
+                {
+                    _tmp[i].val = s_spec_profilers[i].ptr[counter_type]->get_percentile(percentile_type);
+                }
+                else
+                {
+                    _tmp[i].val = s_spec_profilers[i].ptr[counter_type]->get_value();
+                }
+            }
+
+            std::sort(_tmp, _tmp + 1 + task_code::max_value(), cmp);
+
+            //Output sorted data
+            for (int k = 0; k < tmp_num; k++)
+            {
+                int i = _tmp[k].id;
+
+                if ((i == TASK_CODE_INVALID) || (s_spec_profilers[i].is_profile == false) || (_tmp[k].val == -1))
+                    continue;
+
+                ss << task_code::to_string(i) << ":" << counter_info_ptr[counter_type]->keys[0] << ":" << percentail_counter_int[percentile_type] << " ";
+            }
+            delete[] _tmp;
         }
     }
 }

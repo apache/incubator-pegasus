@@ -31,15 +31,31 @@
 
 namespace dsn {
     namespace service {
+#define MAX_PJS_REQUEST 20
+        class cli_pjs
+        {
+        public:
+            dsn::task_ptr timer;
+            command rcmd;
+            command topcmd;
+            std::string chart_type;
+            std::string profile_view;
+            int count;
+            int interval;
+        };
 
-        class cli : public service_app
+        class cli : public service_app, public virtual ::dsn::service::servicelet
         {
         public:
             cli(service_app_spec* s);
             virtual error_code start(int argc, char** argv);
+            virtual std::string trans_to_json_file(std::string src, int nowreq);
+            virtual void get_pjs_json_file(int nowreq);
+            virtual bool get_pjs_top_data(int nowreq);
             virtual void stop(bool cleanup = false);
 
         private:
+            cli_pjs    _pjs_request[MAX_PJS_REQUEST];
             cli_client _client;
             end_point  _target;
             int        _timeout_seconds;

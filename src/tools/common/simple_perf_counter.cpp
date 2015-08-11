@@ -25,28 +25,83 @@
  */
 # include "simple_perf_counter.h"
 # include "shared_io_service.h"
+# include <dsn\internal\env_provider.h>
 
 namespace dsn {
     namespace tools {
 
-        // -----------   NUMBER perf counter ---------------------------------
+#pragma pack(push)
+#pragma pack(8)
 
+        // -----------   NUMBER perf counter ---------------------------------
+//# define PERFORMANCE_TEST
+# define DIVIDE_CONTAINER 107
         class perf_counter_number : public perf_counter
         {
         public:
             perf_counter_number(const char *section, const char *name, perf_counter_type type)
-                : perf_counter(section, name, type), _val(0){}
+                : perf_counter(section, name, type)
+            {
+                for (int i = 0; i < DIVIDE_CONTAINER; i++)
+                {
+                    #ifdef PERFORMANCE_TEST
+                    _val[i] = 0;
+                    #else
+                    _val[i].store(0, std::memory_order_relaxed);
+                    #endif
+                }
+            }
             ~perf_counter_number(void) {}
 
-            virtual void   increment() { _val++; }
-            virtual void   decrement() { _val--; }
-            virtual void   add(uint64_t val) { _val += val; }
+            virtual void   increment() 
+            {
+                uint64_t task_id = static_cast<int>(::GetCurrentThreadId());
+                #ifdef PERFORMANCE_TEST
+                _val[task_id % DIVIDE_CONTAINER]++;
+                #else
+                _val[task_id % DIVIDE_CONTAINER].fetch_add(1, std::memory_order_consume);
+                #endif
+            }
+            virtual void   decrement()
+            {
+                uint64_t task_id = static_cast<int>(::GetCurrentThreadId());
+                #ifdef PERFORMANCE_TEST
+                _val[task_id % DIVIDE_CONTAINER]--;
+                #else
+                _val[task_id % DIVIDE_CONTAINER].fetch_sub(1, std::memory_order_consume);
+                #endif
+            }
+            virtual void   add(uint64_t val) 
+            {
+                uint64_t task_id = static_cast<int>(::GetCurrentThreadId());
+                #ifdef PERFORMANCE_TEST
+                _val[task_id % DIVIDE_CONTAINER] += val;
+                #else
+                _val[task_id % DIVIDE_CONTAINER].fetch_add(val, std::memory_order_consume);
+                #endif
+            }
             virtual void   set(uint64_t val) { dassert(false, "invalid execution flow"); }
-            virtual double get_value() { return static_cast<double>(_val.load()); }
+            virtual double get_value() 
+            { 
+                double val = 0;
+                for (int i = 0; i < DIVIDE_CONTAINER; i++)
+                {
+                    #ifdef PERFORMANCE_TEST
+                    val += _val[i];
+                    #else
+                    val += static_cast<double>(_val[i].load(std::memory_order_relaxed));
+                    #endif
+                }
+                return val; 
+            }
             virtual double get_percentile(counter_percentile_type type) { dassert(false, "invalid execution flow"); return 0.0; }
 
         private:
-            std::atomic<uint64_t> _val;
+            #ifdef PERFORMANCE_TEST
+            uint64_t              _val[DIVIDE_CONTAINER];
+            #else
+            std::atomic<uint64_t> _val[DIVIDE_CONTAINER];
+            #endif
         };
 
         // -----------   RATE perf counter ---------------------------------
@@ -55,54 +110,118 @@ namespace dsn {
         {
         public:
             perf_counter_rate(const char *section, const char *name, perf_counter_type type)
-                : perf_counter(section, name, type), _val(0)
+                : perf_counter(section, name, type), _rate(0) 
             {
-                qts = 0;
+                _last_time = ::dsn::env_provider::get_current_physical_time_ns();
+                for (int i = 0; i < DIVIDE_CONTAINER; i++)
+                {
+                    #ifdef PERFORMANCE_TEST
+                    _val[i] = 0;
+                    #else
+                    _val[i].store(0, std::memory_order_relaxed);
+                    #endif
+                }
             }
             ~perf_counter_rate(void) {}
 
-            virtual void   increment() { _val++; }
-            virtual void   decrement() { _val--; }
-            virtual void   add(uint64_t val) { _val += val; }
+            virtual void   increment()
+            {
+                uint64_t task_id = static_cast<int>(::GetCurrentThreadId());
+                #ifdef PERFORMANCE_TEST
+                _val[task_id % DIVIDE_CONTAINER]++;
+                #else
+                _val[task_id % DIVIDE_CONTAINER].fetch_add(1, std::memory_order_consume);
+                #endif
+            }
+            virtual void   decrement()
+            {
+                uint64_t task_id = static_cast<int>(::GetCurrentThreadId());
+                #ifdef PERFORMANCE_TEST
+                _val[task_id % DIVIDE_CONTAINER]--;
+                #else
+                _val[task_id % DIVIDE_CONTAINER].fetch_sub(1, std::memory_order_consume);
+                #endif
+            }
+            virtual void   add(uint64_t val)
+            {
+                uint64_t task_id = static_cast<int>(::GetCurrentThreadId());
+                #ifdef PERFORMANCE_TEST
+                _val[task_id % DIVIDE_CONTAINER] += val;
+                #else
+                _val[task_id % DIVIDE_CONTAINER].fetch_add(val, std::memory_order_consume);
+                #endif
+            }
             virtual void   set(uint64_t val) { dassert(false, "invalid execution flow"); }
             virtual double get_value()
             {
-                uint64_t now = ::dsn::service::env::now_ns();
-                uint64_t interval = now - qts;
-                double val = static_cast<double>(_val.load());
-                qts = now;
-                _val = 0;
-                return val / interval * 1000 * 1000 * 1000;
+                double val = 0;
+                for (int i = 0; i < DIVIDE_CONTAINER; i++)
+                {
+                    #ifdef PERFORMANCE_TEST
+                    val += _val[i];
+                    #else
+                    val += static_cast<double>(_val[i].load(std::memory_order_relaxed));
+                    #endif
+                }
+
+                uint64_t now = ::dsn::env_provider::get_current_physical_time_ns();
+                double interval = (now - _last_time) / 1e9;
+                if (interval <= 0.1) 
+                    return _rate;
+                
+                _last_time = now;
+                for (int i = 0; i < DIVIDE_CONTAINER; i++)
+                {
+                    #ifdef PERFORMANCE_TEST
+                    _val[i] = 0;
+                    #else
+                    _val[i].store(0, std::memory_order_relaxed);
+                    #endif
+                }
+
+                _rate = val / interval;
+                return _rate;
             }
             virtual double get_percentile(counter_percentile_type type) { dassert(false, "invalid execution flow"); return 0.0; }
 
         private:
-            std::atomic<uint64_t> _val;
-            std::atomic<uint64_t> qts;
+            std::atomic<double> _rate;
+            std::atomic<uint64_t> _last_time;
+            #ifdef PERFORMANCE_TEST
+            uint64_t              _val[DIVIDE_CONTAINER];
+            #else
+            std::atomic<uint64_t> _val[DIVIDE_CONTAINER];
+            #endif
         };
 
         // -----------   NUMBER_PERCENTILE perf counter ---------------------------------
 
-        # define MAX_QUEUE_LENGTH 50000
-        # define _LEFT 0
-        # define _RIGHT 1
-        # define _QLEFT 2
-        # define _QRIGHT 3
+# define MAX_QUEUE_LENGTH 10000
+# define _LEFT 0
+# define _RIGHT 1
+# define _QLEFT 2
+# define _QRIGHT 3
 
         class perf_counter_number_percentile : public perf_counter
         {
         public:
             perf_counter_number_percentile(const char *section, const char *name, perf_counter_type type)
-                : perf_counter(section, name, type), _tail(0)
+                : perf_counter(section, name, type)
             {
-                _counter_computation_interval_seconds = config()->get_value<int>("components.simple_perf_counter", "counter_computation_interval_seconds", 30);
+                _results[COUNTER_PERCENTILE_50] = 0;
+                _results[COUNTER_PERCENTILE_90] = 0;
+                _results[COUNTER_PERCENTILE_95] = 0;
+                _results[COUNTER_PERCENTILE_99] = 0;
+                _results[COUNTER_PERCENTILE_999] = 0;
+                _tail = 0;
 
+                _counter_computation_interval_seconds = config()->get_value<int>("components.simple_perf_counter", "counter_computation_interval_seconds", 30);
                 _timer.reset(new boost::asio::deadline_timer(shared_io_service::instance().ios));
                 _timer->expires_from_now(boost::posix_time::seconds(rand() % _counter_computation_interval_seconds + 1));
                 _timer->async_wait(std::bind(&perf_counter_number_percentile::on_timer, this, std::placeholders::_1));
             }
-            
-            ~perf_counter_number_percentile(void) 
+
+            ~perf_counter_number_percentile(void)
             {
                 _timer->cancel();
             }
@@ -120,60 +239,48 @@ namespace dsn {
 
             virtual double get_percentile(counter_percentile_type type)
             {
-                if (_tail == 0)
-                    return -1.0;
                 if ((type < 0) || (type >= COUNTER_PERCENTILE_COUNT))
                 {
                     dassert(false, "send a wrong counter percentile type");
-                    return -1;
+                    return 0.0;
                 }
                 return (double)_results[type];
             }
 
         private:
-            struct compute_context
-            {
-                uint64_t ask[COUNTER_PERCENTILE_COUNT];
-                uint64_t tmp[MAX_QUEUE_LENGTH];
-                uint64_t mid_tmp[MAX_QUEUE_LENGTH];
-                int      calc_queue[MAX_QUEUE_LENGTH * 10][4];
-            };
-
-        private:
-            inline void insert_calc_queue(boost::shared_ptr<compute_context>& ctx, int left, int right, int qleft, int qright, int &calc_tail)
+            inline void insert_calc_queue(int left, int right, int qleft, int qright, int &calc_tail)
             {
                 calc_tail++;
-                ctx->calc_queue[calc_tail][_LEFT] = left;
-                ctx->calc_queue[calc_tail][_RIGHT] = right;
-                ctx->calc_queue[calc_tail][_QLEFT] = qleft;
-                ctx->calc_queue[calc_tail][_QRIGHT] = qright;
+                _calc_queue[calc_tail][_LEFT] = left;
+                _calc_queue[calc_tail][_RIGHT] = right;
+                _calc_queue[calc_tail][_QLEFT] = qleft;
+                _calc_queue[calc_tail][_QRIGHT] = qright;
                 return;
             }
 
-            uint64_t find_mid(boost::shared_ptr<compute_context>& ctx, int left, int right)
+            uint64_t find_mid(int left, int right)
             {
                 if (left == right)
-                    return ctx->mid_tmp[left];
+                    return _mid_tmp[left];
 
-                int index;
-                for (index = left; index < right; index += 5)
+                for (int index = left; index < right; index += 5)
                 {
                     int remain_num = index + 5 >= right ? right - index + 1 : 5;
                     for (int i = index; i < index + remain_num; i++)
                     {
                         int j;
-                        uint64_t k = ctx->mid_tmp[i];
-                        for (j = i - 1; (j >= index) && (ctx->mid_tmp[j] > k); j--)
-                            ctx->mid_tmp[j + 1] = ctx->mid_tmp[j];
-                        ctx->mid_tmp[j + 1] = k;
+                        uint64_t k = _mid_tmp[i];
+                        for (j = i - 1; (j >= index) && (_mid_tmp[j] > k); j--)
+                            _mid_tmp[j + 1] = _mid_tmp[j];
+                        _mid_tmp[j + 1] = k;
                     }
-                    ctx->mid_tmp[(index - left) / 5] = ctx->mid_tmp[index + remain_num / 2];
+                    _mid_tmp[(index - left) / 5] = _mid_tmp[index + remain_num / 2];
                 }
 
-                return find_mid(ctx, 0, (right - left - 1) / 5);
+                return find_mid(0, (right - left - 1) / 5);
             }
 
-            inline void select(boost::shared_ptr<compute_context>& ctx, int left, int right, int qleft, int qright, int &calc_tail)
+            inline void select(int left, int right, int qleft, int qright, int &calc_tail)
             {
                 int i, j, index, now;
                 uint64_t mid;
@@ -184,64 +291,64 @@ namespace dsn {
                 if (left == right)
                 {
                     for (i = qleft; i <= qright; i++)
-                    if (ctx->ask[i] == 1)
-                        _results[i] = ctx->tmp[left];
+                    if (_ask[i] == 1)
+                        _results[i] = _tmp[left];
                     else
                         dassert(false, "select percentail wrong!!!");
                     return;
                 }
 
                 for (i = left; i <= right; i++)
-                    ctx->mid_tmp[i] = ctx->tmp[i];
-                mid = find_mid(ctx, left, right);
+                    _mid_tmp[i] = _tmp[i];
+                mid = find_mid(left, right);
 
                 for (index = left; index <= right; index++)
-                if (ctx->tmp[index] == mid)
+                if (_tmp[index] == mid)
                     break;
 
-                ctx->tmp[index] = ctx->tmp[left];
+                _tmp[index] = _tmp[left];
                 index = left;
                 for (i = left, j = right; i <= j;)
                 {
-                    while ((i <= j) && (ctx->tmp[j] > mid)) j--;
-                    if (i <= j) ctx->tmp[index] = ctx->tmp[j], index = j--;
-                    while ((i <= j) && (ctx->tmp[i] < mid)) i++;
-                    if (i <= j) ctx->tmp[index] = ctx->tmp[i], index = i++;
+                    while ((i <= j) && (_tmp[j] > mid)) j--;
+                    if (i <= j) _tmp[index] = _tmp[j], index = j--;
+                    while ((i <= j) && (_tmp[i] < mid)) i++;
+                    if (i <= j) _tmp[index] = _tmp[i], index = i++;
                 }
-                ctx->tmp[index] = mid;
+                _tmp[index] = mid;
 
                 now = index - left + 1;
-                for (i = qleft; (i <= qright) && (ctx->ask[i] < now); i++);
-                for (j = i; j <= qright; j++) ctx->ask[j] -= now;
-                for (j = i; (j <= qright) && (ctx->ask[j] == 0); j++) ctx->ask[j]++;
-                insert_calc_queue(ctx, left, index - 1, qleft, i - 1, calc_tail);
-                insert_calc_queue(ctx, index, index, i, j - 1, calc_tail);
-                insert_calc_queue(ctx, index + 1, right, j, qright, calc_tail);
+                for (i = qleft; (i <= qright) && (_ask[i] < now); i++);
+                for (j = i; j <= qright; j++) _ask[j] -= now;
+                for (j = i; (j <= qright) && (_ask[j] == 0); j++) _ask[j]++;
+                insert_calc_queue(left, index - 1, qleft, i - 1, calc_tail);
+                insert_calc_queue(index, index, i, j - 1, calc_tail);
+                insert_calc_queue(index + 1, right, j, qright, calc_tail);
                 return;
             }
 
-            void   calc(boost::shared_ptr<compute_context>& ctx)
+            void   calc()
             {
-                if (_tail == 0)
+                uint64_t _num = _tail > MAX_QUEUE_LENGTH ? MAX_QUEUE_LENGTH : _tail;
+
+                if (_num == 0)
                     return;
+                for (int i = 0; i < _num; i++)
+                    _tmp[i] = _samples[i];
 
-                int tmp_num = _tail > MAX_QUEUE_LENGTH ? MAX_QUEUE_LENGTH : _tail.load();
-                for (int i = 0; i < tmp_num; i++)
-                    ctx->tmp[i] = _samples[i];
-
-                ctx->ask[COUNTER_PERCENTILE_50] = (int)(tmp_num * 0.5) + 1;
-                ctx->ask[COUNTER_PERCENTILE_90] = (int)(tmp_num * 0.90) + 1;
-                ctx->ask[COUNTER_PERCENTILE_95] = (int)(tmp_num * 0.95) + 1;
-                ctx->ask[COUNTER_PERCENTILE_99] = (int)(tmp_num * 0.99) + 1;
-                ctx->ask[COUNTER_PERCENTILE_999] = (int)(tmp_num * 0.999) + 1;
+                _ask[COUNTER_PERCENTILE_50] = (int)(_num * 0.5) + 1;
+                _ask[COUNTER_PERCENTILE_90] = (int)(_num * 0.90) + 1;
+                _ask[COUNTER_PERCENTILE_95] = (int)(_num * 0.95) + 1;
+                _ask[COUNTER_PERCENTILE_99] = (int)(_num * 0.99) + 1;
+                _ask[COUNTER_PERCENTILE_999] = (int)(_num * 0.999) + 1;
                 // must be sorted
                 // std::sort(ctx->ask, ctx->ask + MAX_TYPE_NUMBER);
 
                 int l, r = 0;
 
-                insert_calc_queue(ctx, 0, tmp_num - 1, 0, COUNTER_PERCENTILE_COUNT - 1, r);
+                insert_calc_queue(0, _num - 1, 0, COUNTER_PERCENTILE_COUNT - 1, r);
                 for (l = 1; l <= r; l++)
-                    select(ctx, ctx->calc_queue[l][_LEFT], ctx->calc_queue[l][_RIGHT], ctx->calc_queue[l][_QLEFT], ctx->calc_queue[l][_QRIGHT], r);
+                    select(_calc_queue[l][_LEFT], _calc_queue[l][_RIGHT], _calc_queue[l][_QLEFT], _calc_queue[l][_QRIGHT], r);
 
                 return;
             }
@@ -250,8 +357,7 @@ namespace dsn {
             {
                 if (!ec)
                 {
-                    boost::shared_ptr<compute_context> ctx(new compute_context());
-                    calc(ctx);
+                    calc();
 
                     _timer.reset(new boost::asio::deadline_timer(shared_io_service::instance().ios));
                     _timer->expires_from_now(boost::posix_time::seconds(_counter_computation_interval_seconds));
@@ -264,10 +370,15 @@ namespace dsn {
             }
 
             std::shared_ptr<boost::asio::deadline_timer> _timer;
-            std::atomic<int> _tail;
+            int _tail;
             uint64_t _samples[MAX_QUEUE_LENGTH];
             uint64_t _results[COUNTER_PERCENTILE_COUNT];
             int      _counter_computation_interval_seconds;
+
+            uint64_t _ask[COUNTER_PERCENTILE_COUNT];
+            uint64_t _tmp[MAX_QUEUE_LENGTH];
+            uint64_t _mid_tmp[MAX_QUEUE_LENGTH];
+            int      _calc_queue[MAX_QUEUE_LENGTH / 20][4];
         };
 
         // ---------------------- perf counter dispatcher ---------------------
@@ -283,9 +394,12 @@ namespace dsn {
                 _counter_impl = new perf_counter_number_percentile(section, name, type);
         }
 
-        simple_perf_counter::~simple_perf_counter(void) 
+        simple_perf_counter::~simple_perf_counter(void)
         {
             delete _counter_impl;
         }
+
+#pragma pack(pop)
+
     }
 }
