@@ -45,11 +45,21 @@ namespace dsn
             dsn_task_code_t evt,
             T* owner,
             void (T::*callback)(),
+            //TParam param,
             int hash = 0,
             int delay_milliseconds = 0,
             int timer_interval_milliseconds = 0
             )
         {
+            /*typedef safe_task_context< T, void(T::*)(TParam), TParam> local_context;
+
+            auto tc = new local_context(owner, callback);
+            dsn_task_handler_t cb = [](void* param)
+            {
+                auto tc2 = (local_context*)param;
+                ((tc2->_this)->*(tc2->_handler)(tc2->_param);
+            };*/
+
             task_handler h = std::bind(callback, owner);
             return enqueue(
                 evt,

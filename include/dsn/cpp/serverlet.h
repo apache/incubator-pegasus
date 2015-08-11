@@ -95,55 +95,14 @@ namespace dsn
         const std::string& name() const { return _name; }
 
     private:
+        template<typename TCallback>
+        struct handler_context
+        {
+            T         *this_;
+            TCallback cb;
+        };
+
         std::string _name;
-
-    private:
-        // type 1 --------------------------
-        template<typename TRequest>
-        static void on_rpc_request1(T* svc, void (T::*cb)(const TRequest&), dsn_message_t request)
-        {
-            TRequest req;
-            ::unmarshall(request, req);
-            (svc->*cb)(req);
-        }
-            
-        // type 2 ---------------------------
-        template<typename TRequest, typename TResponse>
-        static void on_rpc_request2(T* svc, void (T::*cb)(const TRequest&, TResponse&), dsn_message_t request)
-        {
-            TRequest req;
-            ::unmarshall(request, req);
-
-            TResponse resp;
-            (svc->*cb)(req, resp);
-
-            rpc_replier<TResponse> replier(dsn_msg_create_response(request));
-            replier(resp);
-        }
-            
-        // type 3 -----------------------------------
-        template<typename TRequest, typename TResponse>
-        static void on_rpc_request3(T* svc, void (T::*cb)(const TRequest&, rpc_replier<TResponse>&), dsn_message_t request)
-        {
-            TRequest req;
-            ::unmarshall(request, req);
-
-            rpc_replier<TResponse> replier(dsn_msg_create_response(request));
-            (svc->*cb)(req, replier);
-        }
-            
-        // type 4 ------------------------------------------
-        static void on_rpc_request4(T* svc, void (T::*cb)(dsn_message_t), dsn_message_t request)
-        {
-            (svc->*cb)(request);
-        }
-
-        // rpc request handler factory
-        static void cpp_rpc_request_handler_rountine(dsn_message_t req, void* param)
-        {
-            rpc_request_handler* pcb = (rpc_request_handler*)param;
-            (*pcb)(req);
-        }
     };
 
     // ------------- inline implementation ----------------
@@ -161,36 +120,92 @@ namespace dsn
     template<typename T> template<typename TRequest>
     inline bool serverlet<T>::register_rpc_handler(dsn_task_code_t rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&))
     {
-        auto cb = new rpc_request_handler(std::bind(&serverlet<T>::on_rpc_request1<TRequest>, static_cast<T*>(this), handler, std::placeholders::_1));
-        return dsn_rpc_register_handler(rpc_code, rpc_name_, cpp_rpc_request_handler_rountine, cb);
+        typedef handler_context<void (T::*)(const TRequest&)> hc_type1;
+        auto hc = (hc_type1*)malloc(sizeof(hc_type1));
+        hc->this_ = (T*)this;
+        hc->cb = handler;
+
+        dsn_rpc_request_handler_t cb = [](dsn_message_t request, void* param)
+        {
+            auto hc2 = (hc_type1*)param;
+
+            TRequest req;
+            ::unmarshall(request, req);
+            ((hc2->this_)->*(hc2->cb))(req);
+        };
+
+        return dsn_rpc_register_handler(rpc_code, rpc_name_, cb, hc);
     }
 
     template<typename T> template<typename TRequest, typename TResponse>
     inline bool serverlet<T>::register_rpc_handler(dsn_task_code_t rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&, TResponse&))
     {
-        auto cb = new rpc_request_handler(std::bind(&serverlet<T>::on_rpc_request2<TRequest, TResponse>, static_cast<T*>(this), handler, std::placeholders::_1));
-        return dsn_rpc_register_handler(rpc_code, rpc_name_, cpp_rpc_request_handler_rountine, cb);
+        typedef handler_context<void (T::*)(const TRequest&, TResponse&)> hc_type2;
+        auto hc = (hc_type2*)malloc(sizeof(hc_type2));
+        hc->this_ = (T*)this;
+        hc->cb = handler;
+
+        dsn_rpc_request_handler_t cb = [](dsn_message_t request, void* param)
+        {
+            auto hc2 = (hc_type2*)param;
+
+            TRequest req;
+            ::unmarshall(request, req);
+
+            TResponse resp;
+            ((hc2->this_)->*(hc2->cb))(req, resp);
+
+            rpc_replier<TResponse> replier(dsn_msg_create_response(request));
+            replier(resp);
+        };
+
+        return dsn_rpc_register_handler(rpc_code, rpc_name_, cb, hc);
     }
 
     template<typename T> template<typename TRequest, typename TResponse>
     inline bool serverlet<T>::register_async_rpc_handler(dsn_task_code_t rpc_code, const char* rpc_name_, void (T::*handler)(const TRequest&, rpc_replier<TResponse>&))
     {
-        auto cb = new rpc_request_handler(std::bind(&serverlet<T>::on_rpc_request3<TRequest, TResponse>, static_cast<T*>(this), handler, std::placeholders::_1));
-        return dsn_rpc_register_handler(rpc_code, rpc_name_, cpp_rpc_request_handler_rountine, cb);
+        typedef handler_context<void (T::*)(const TRequest&, rpc_replier<TResponse>&)> hc_type3;
+        auto hc = (hc_type3*)malloc(sizeof(hc_type3));
+        hc->this_ = (T*)this;
+        hc->cb = handler;
+
+        dsn_rpc_request_handler_t cb = [](dsn_message_t request, void* param)
+        {
+            auto hc2 = (hc_type3*)param;
+
+            TRequest req;
+            ::unmarshall(request, req);
+
+            rpc_replier<TResponse> replier(dsn_msg_create_response(request));
+            ((hc2->this_)->*(hc2->cb))(req, replier);
+        };
+
+        return dsn_rpc_register_handler(rpc_code, rpc_name_, cb, hc);
     }
 
     template<typename T>
     inline bool serverlet<T>::register_rpc_handler(dsn_task_code_t rpc_code, const char* rpc_name_, void (T::*handler)(dsn_message_t))
     {
-        auto cb = new rpc_request_handler(std::bind(&serverlet<T>::on_rpc_request4, static_cast<T*>(this), handler, std::placeholders::_1));
-        return dsn_rpc_register_handler(rpc_code, rpc_name_, cpp_rpc_request_handler_rountine, cb);
+        typedef handler_context<void (T::*)(dsn_message_t)> hc_type4;
+        auto hc = (hc_type4*)malloc(sizeof(hc_type4));
+        hc->this_ = (T*)this;
+        hc->cb = handler;
+
+        dsn_rpc_request_handler_t cb = [](dsn_message_t request, void* param)
+        {
+            auto hc2 = (hc_type4*)param;
+            ((hc2->this_)->*(hc2->cb))(request);
+        };
+
+        return dsn_rpc_register_handler(rpc_code, rpc_name_, cb, hc);
     }
 
     template<typename T>
     inline bool serverlet<T>::unregister_rpc_handler(dsn_task_code_t rpc_code)
     {
-        auto cb = (rpc_request_handler*)dsn_rpc_unregiser_handler(rpc_code);
-        if (cb != nullptr) delete cb;
+        auto cb = (void*)dsn_rpc_unregiser_handler(rpc_code);
+        if (cb != nullptr) free(cb);
         return cb != nullptr;
     }
 

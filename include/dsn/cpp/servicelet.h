@@ -27,13 +27,14 @@
 
 # include <dsn/service_api_c.h>
 # include <dsn/ports.h>
-# include <dsn/internal/synchronize.h>
-# include <dsn/internal/link.h>
+# include <dsn/cpp/auto_codes.h>
 # include <dsn/cpp/utils.h>
 # include <dsn/cpp/msg_binary_io.h>
 # include <dsn/cpp/serialization.h>
 # include <dsn/cpp/zlocks.h>
 # include <dsn/cpp/autoref_ptr.h>
+# include <dsn/internal/synchronize.h>
+# include <dsn/internal/link.h>
 # include <set>
 # include <map>
 # include <thread>
@@ -44,32 +45,10 @@ namespace dsn
     typedef std::function<void(error_code, size_t)> aio_handler;
     typedef std::function<void(error_code, dsn_message_t, dsn_message_t)> rpc_reply_handler;
     typedef std::function<void(dsn_message_t)> rpc_request_handler;
-    class cpp_dev_task_base;
-    typedef ::dsn::ref_ptr<::dsn::cpp_dev_task_base> task_ptr;
+    class safe_task_handle;
+    typedef ::dsn::ref_ptr<::dsn::safe_task_handle> task_ptr;
 
-    class message_ptr : public ::std::shared_ptr<char>
-    {
-    public:
-        message_ptr() : ::std::shared_ptr<char>(nullptr, release)
-        {}
-
-        message_ptr(dsn_message_t msg) : ::std::shared_ptr<char>((char*)msg, release)
-        {}
-
-        dsn_message_t get_msg()
-        {
-            return (dsn_message_t)get();
-        }
-
-    private:
-        static void release(char* msg)
-        {
-            if (nullptr != msg)
-            {
-                dsn_msg_release_ref((dsn_message_t)msg);
-            }
-        }
-    };
+    
 
     //
     // servicelet is the base class for RPC service and client
@@ -105,18 +84,17 @@ namespace dsn
     // basic cpp task wrapper
     // which manages the task handle
     // and the interaction with task context manager, servicelet
-    //
-        
-    class cpp_dev_task_base : public ::dsn::ref_counter
+    //        
+    class safe_task_handle : public ::dsn::ref_counter
     {
     public:
-        cpp_dev_task_base()
+        safe_task_handle()
         {
             _task = 0;
             _rpc_response = 0;
         }
 
-        virtual ~cpp_dev_task_base()
+        virtual ~safe_task_handle()
         {
             dsn_task_release_ref(_task);
 
@@ -180,20 +158,20 @@ namespace dsn
     };
 
     template<typename THandler>
-    class cpp_dev_task : public cpp_dev_task_base
+    class safe_task : public safe_task_handle
     {
     public:
-        cpp_dev_task(THandler& h, bool is_timer) : _handler(h), _is_timer(is_timer)
+        safe_task(THandler& h, bool is_timer) : _handler(h), _is_timer(is_timer)
         {
         }
 
-        cpp_dev_task(THandler& h) : _handler(h)
+        safe_task(THandler& h) : _handler(h)
         {
         }
 
         virtual bool cancel(bool wait_until_finished, bool* finished = nullptr) override
         {
-            bool r = cpp_dev_task_base::cancel(wait_until_finished, finished);
+            bool r = safe_task_handle::cancel(wait_until_finished, finished);
             if (_is_timer && r)
             {
                 release_ref(); // added upon callback exec registration
@@ -203,7 +181,7 @@ namespace dsn
 
         static void exec(void* task)
         {
-            cpp_dev_task* t = (cpp_dev_task*)task;
+            safe_task* t = (safe_task*)task;
             t->_handler();
             if (!t->_is_timer)
             {
@@ -213,14 +191,14 @@ namespace dsn
 
         static void exec_rpc_response(dsn_error_t err, dsn_message_t req, dsn_message_t resp, void* task)
         {
-            cpp_dev_task* t = (cpp_dev_task*)task;
+            safe_task* t = (safe_task*)task;
             t->_handler(err, req, resp);
             t->release_ref(); // added upon callback exec_rpc_response registration
         }
 
         static void exec_aio(dsn_error_t err, size_t sz, void* task)
         {
-            cpp_dev_task* t = (cpp_dev_task*)task;
+            safe_task* t = (safe_task*)task;
             t->_handler(err, sz);
             t->release_ref(); // added upon callback exec_aio registration
         }

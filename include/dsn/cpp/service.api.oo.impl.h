@@ -99,7 +99,7 @@ namespace dsn
                 int reply_hash
                 )
             {
-                auto task = new cpp_dev_task_base();
+                auto task = new safe_task_handle();
                 auto t = dsn_rpc_create_response_task(
                     msg,
                     nullptr,
@@ -135,12 +135,12 @@ namespace dsn
                         std::placeholders::_3
                         );
 
-                    auto task = new cpp_dev_task<rpc_reply_handler>(cb);
+                    auto task = new safe_task<rpc_reply_handler>(cb);
 
                     task->add_ref(); // released in exec_rpc_response
                     auto t = dsn_rpc_create_response_task(
                         msg,
-                        cpp_dev_task<rpc_reply_handler >::exec_rpc_response,
+                        safe_task<rpc_reply_handler >::exec_rpc_response,
                         (void*)task,
                         reply_hash
                         );
@@ -177,12 +177,12 @@ namespace dsn
                         std::placeholders::_3
                         );
                     
-                    auto task = new cpp_dev_task<rpc_reply_handler>(cb);
+                    auto task = new safe_task<rpc_reply_handler>(cb);
 
                     task->add_ref(); // released in exec_rpc_response
                     auto t = dsn_rpc_create_response_task(
                         msg,
-                        cpp_dev_task<rpc_reply_handler >::exec_rpc_response,
+                        safe_task<rpc_reply_handler >::exec_rpc_response,
                         (void*)task,
                         reply_hash
                         );
@@ -219,12 +219,12 @@ namespace dsn
                         std::placeholders::_3
                         );
 
-                    auto task = new cpp_dev_task<rpc_reply_handler>(cb);
+                    auto task = new safe_task<rpc_reply_handler>(cb);
 
                     task->add_ref(); // released in exec_rpc_response
                     auto t = dsn_rpc_create_response_task(
                         msg,
-                        cpp_dev_task<rpc_reply_handler >::exec_rpc_response,
+                        safe_task<rpc_reply_handler >::exec_rpc_response,
                         (void*)task,
                         reply_hash
                         );
@@ -260,12 +260,12 @@ namespace dsn
                         std::placeholders::_3
                         );
 
-                    auto task = new cpp_dev_task<rpc_reply_handler>(cb);
+                    auto task = new safe_task<rpc_reply_handler>(cb);
 
                     task->add_ref(); // released in exec_rpc_response
                     auto t = dsn_rpc_create_response_task(
                         msg,
-                        cpp_dev_task<rpc_reply_handler >::exec_rpc_response,
+                        safe_task<rpc_reply_handler >::exec_rpc_response,
                         (void*)task,
                         reply_hash
                         );

@@ -28,9 +28,34 @@
 # include <dsn/service_api_c.h>
 # include <dsn/ports.h>
 # include <dsn/cpp/autoref_ptr.h>
+# include <memory>
 
 namespace dsn 
 {
+    class message_ptr : public ::std::shared_ptr<char>
+    {
+    public:
+        message_ptr() : ::std::shared_ptr<char>(nullptr, release)
+        {}
+
+        message_ptr(dsn_message_t msg) : ::std::shared_ptr<char>((char*)msg, release)
+        {}
+
+        dsn_message_t get_msg()
+        {
+            return (dsn_message_t)get();
+        }
+
+    private:
+        static void release(char* msg)
+        {
+            if (nullptr != msg)
+            {
+                dsn_msg_release_ref((dsn_message_t)msg);
+            }
+        }
+    };
+
     class task_code
     {
     public:
