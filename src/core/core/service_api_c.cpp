@@ -306,10 +306,10 @@ DSN_API dsn_error_t dsn_task_error(dsn_task_t task)
 DSN_API dsn_handle_t dsn_exlock_create()
 {
     ::dsn::lock_provider* last = ::dsn::utils::factory_store<::dsn::lock_provider>::create(
-            ::dsn::service_engine::instance().spec().lock_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
+            ::dsn::service_engine::fast_instance().spec().lock_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
 
     // TODO: perf opt by saving the func ptrs somewhere
-    for (auto& s : ::dsn::service_engine::instance().spec().lock_aspects)
+    for (auto& s : ::dsn::service_engine::fast_instance().spec().lock_aspects)
     {
         last = ::dsn::utils::factory_store<::dsn::lock_provider>::create(s.c_str(), PROVIDER_TYPE_ASPECT, last);
     }
@@ -347,10 +347,10 @@ DSN_API void dsn_exlock_unlock(dsn_handle_t l)
 DSN_API dsn_handle_t dsn_rwlock_nr_create()
 {
     ::dsn::rwlock_nr_provider* last = ::dsn::utils::factory_store<::dsn::rwlock_nr_provider>::create(
-        ::dsn::service_engine::instance().spec().rwlock_nr_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
+        ::dsn::service_engine::fast_instance().spec().rwlock_nr_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
 
     // TODO: perf opt by saving the func ptrs somewhere
-    for (auto& s : ::dsn::service_engine::instance().spec().rwlock_nr_aspects)
+    for (auto& s : ::dsn::service_engine::fast_instance().spec().rwlock_nr_aspects)
     {
         last = ::dsn::utils::factory_store<::dsn::rwlock_nr_provider>::create(s.c_str(), PROVIDER_TYPE_ASPECT, last);
     }
@@ -390,10 +390,10 @@ DSN_API void dsn_rwlock_nr_unlock_write(dsn_handle_t l)
 DSN_API dsn_handle_t dsn_semaphore_create(int initial_count)
 {
     ::dsn::semaphore_provider* last = ::dsn::utils::factory_store<::dsn::semaphore_provider>::create(
-        ::dsn::service_engine::instance().spec().semaphore_factory_name.c_str(), PROVIDER_TYPE_MAIN, initial_count, nullptr);
+        ::dsn::service_engine::fast_instance().spec().semaphore_factory_name.c_str(), PROVIDER_TYPE_MAIN, initial_count, nullptr);
 
     // TODO: perf opt by saving the func ptrs somewhere
-    for (auto& s : ::dsn::service_engine::instance().spec().semaphore_aspects)
+    for (auto& s : ::dsn::service_engine::fast_instance().spec().semaphore_aspects)
     {
         last = ::dsn::utils::factory_store<::dsn::semaphore_provider>::create(
             s.c_str(), PROVIDER_TYPE_ASPECT, initial_count, last);
@@ -682,12 +682,12 @@ DSN_API void dsn_file_task_enqueue(dsn_task_t cb_task, dsn_error_t err, size_t s
 //------------------------------------------------------------------------------
 DSN_API uint64_t dsn_now_ns()
 {
-    return ::dsn::service_engine::instance().env()->now_ns();
+    return ::dsn::service_engine::fast_instance().env()->now_ns();
 }
 
 DSN_API uint64_t dsn_random64(uint64_t min, uint64_t max) // [min, max]
 {
-    return ::dsn::service_engine::instance().env()->random64(min, max);
+    return ::dsn::service_engine::fast_instance().env()->random64(min, max);
 }
 
 //------------------------------------------------------------------------------
@@ -856,7 +856,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
         spec.tools_memory_factory_name.c_str(), PROVIDER_TYPE_MAIN);
 
     // prepare minimum necessary
-    ::dsn::service_engine::instance().init_before_toollets(spec);
+    ::dsn::service_engine::fast_instance().init_before_toollets(spec);
 
     // init logging
     dsn_log_init();
@@ -870,12 +870,12 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
     }
 
     // init provider specific system inits
-    dsn::tools::sys_init_before_app_created.execute(::dsn::service_engine::instance().spec().config);
+    dsn::tools::sys_init_before_app_created.execute(::dsn::service_engine::fast_instance().spec().config);
 
     // TODO: register sys_exit execution
 
     // init runtime
-    ::dsn::service_engine::instance().init_after_toollets();
+    ::dsn::service_engine::fast_instance().init_after_toollets();
 
     dsn_all.engine_ready = true;
 
@@ -904,11 +904,11 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
 
         if (create_it)
         {
-            ::dsn::service_engine::instance().start_node(sp);
+            ::dsn::service_engine::fast_instance().start_node(sp);
         }
     }
 
-    if (::dsn::service_engine::instance().get_all_nodes().size() == 0)
+    if (::dsn::service_engine::fast_instance().get_all_nodes().size() == 0)
     {
         printf("no app are created, usually because \n"
             "app_name is not specified correctly, should be 'xxx' in [apps.xxx]\n"
@@ -952,7 +952,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
     });
 
     // invoke customized init after apps are created
-    dsn::tools::sys_init_after_app_created.execute(::dsn::service_engine::instance().spec().config);
+    dsn::tools::sys_init_after_app_created.execute(::dsn::service_engine::fast_instance().spec().config);
 
     // start the tool
     dsn_all.tool->run();
@@ -976,7 +976,7 @@ DSN_API int dsn_register_app_checker(const char* name, dsn_checker_create create
 
 DSN_API int dsn_get_all_apps(dsn_app_info* info_buffer, int count)
 {
-    auto& as = ::dsn::service_engine::instance().get_all_nodes();
+    auto& as = ::dsn::service_engine::fast_instance().get_all_nodes();
     int i = 0;
     for (auto& kv : as)
     {

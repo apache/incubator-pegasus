@@ -37,6 +37,7 @@ namespace dsn {
         
     //
     // network bound to a specific rpc_channel and port (see start)
+    // !!! all threads must be started with task::set_current_worker(null, provider->node());
     //
     class network
     {

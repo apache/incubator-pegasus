@@ -54,9 +54,10 @@ class task;
 struct __tls_task_info__
 {
     uint32_t     magic;    
-    task         *current_task;
+    task         *current_task;    
     task_worker  *worker;
     int           worker_index;
+    service_node *current_node;
 };
 
 extern __thread struct __tls_task_info__ tls_task_info;
@@ -95,7 +96,7 @@ public:
     static uint64_t         get_current_task_id();
     static task_worker*     get_current_worker();
     static int              get_current_worker_index();
-    static void             set_current_worker(task_worker* worker);    
+    static void             set_current_worker(task_worker* worker, service_node* node);
 
 protected:
     void                    signal_waiters();

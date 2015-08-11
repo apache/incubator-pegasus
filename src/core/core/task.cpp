@@ -94,7 +94,7 @@ __thread struct
     int last_task_id; // 32bits
 } tls_task_id;
 
-/*static*/ void task::set_current_worker(task_worker* worker)
+/*static*/ void task::set_current_worker(task_worker* worker, service_node* node)
 {
     if (tls_task_info.magic == 0xdeadbeef)
     {
@@ -107,6 +107,7 @@ __thread struct
         tls_task_info.worker = worker;
         tls_task_info.worker_index = worker ? worker->index() : -1;
         tls_task_info.current_task = nullptr;
+        tls_task_info.current_node = worker ? worker->pool()->node() : node;
     }
 }
 
@@ -167,16 +168,9 @@ void task::exec_internal()
 
     if (_state.compare_exchange_strong(READY_STATE, TASK_STATE_RUNNING))
     {
-        task* parent_task = nullptr;
-        if (tls_task_info.magic == 0xdeadbeef)
-        {
-            parent_task = tls_task_info.current_task;
-        }
-        else
-        {
-            set_current_worker(nullptr);
-        }
+        dassert(tls_task_info.magic == 0xdeadbeef, "thread is not inited with task::set_current_worker");
         
+        task* parent_task = tls_task_info.current_task;
         tls_task_info.current_task = this;
 
         _spec->on_task_begin.execute(this);

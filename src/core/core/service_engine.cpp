@@ -57,7 +57,7 @@ service_node::service_node(service_app_spec& app_spec, void* app_context)
 
 error_code service_node::start()
 {
-    auto& spec = service_engine::instance().spec();
+    auto& spec = service_engine::fast_instance().spec();
 
     // init task engine    
     _computation = new task_engine(this);
@@ -216,8 +216,8 @@ std::string service_engine::get_runtime_info(const std::vector<std::string>& arg
     std::stringstream ss;
     if (args.size() == 0)
     {
-        ss << "" << service_engine::instance()._nodes_by_app_id.size() << " nodes available:" << std::endl;
-        for (auto& kv : service_engine::instance()._nodes_by_app_id)
+        ss << "" << service_engine::fast_instance()._nodes_by_app_id.size() << " nodes available:" << std::endl;
+        for (auto& kv : service_engine::fast_instance()._nodes_by_app_id)
         {
             ss << "\t" << kv.second->id() << "." << kv.second->name() << std::endl;
         }
@@ -226,8 +226,8 @@ std::string service_engine::get_runtime_info(const std::vector<std::string>& arg
     {
         std::string indent = "";
         int id = atoi(args[0].c_str());
-        auto it = service_engine::instance()._nodes_by_app_id.find(id);
-        if (it != service_engine::instance()._nodes_by_app_id.end())
+        auto it = service_engine::fast_instance()._nodes_by_app_id.find(id);
+        if (it != service_engine::fast_instance()._nodes_by_app_id.end())
         {
             auto args2 = args;
             args2.erase(args2.begin());

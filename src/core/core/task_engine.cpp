@@ -227,7 +227,7 @@ void task_engine::start(const std::list<dsn_threadpool_code_t>& pools)
     _pools.resize(dsn_threadpool_code_max() + 1, nullptr);
     for (auto& p : pools)
     {
-        auto& s = service_engine::instance().spec().threadpool_specs[p];
+        auto& s = service_engine::fast_instance().spec().threadpool_specs[p];
         auto workerPool = new task_worker_pool(s, this);
         workerPool->start();
         _pools[p] = workerPool;

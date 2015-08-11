@@ -177,7 +177,7 @@ namespace dsn {
     //
     network* rpc_engine::create_network(const network_server_config& netcs, bool client_only)
     {
-        const service_spec& spec = service_engine::instance().spec();
+        const service_spec& spec = service_engine::fast_instance().spec();
         auto net = utils::factory_store<network>::create(
             netcs.factory_name.c_str(), PROVIDER_TYPE_MAIN, this, nullptr);
         net->reset_parser(netcs.hdr_format, netcs.message_buffer_block_size);
@@ -215,7 +215,7 @@ namespace dsn {
         // start client networks
         _client_nets.resize(network_header_format::max_value() + 1);
 
-        const service_spec& spec = service_engine::instance().spec();
+        const service_spec& spec = service_engine::fast_instance().spec();
 
         // for each format
         for (int i = 0; i <= network_header_format::max_value(); i++)

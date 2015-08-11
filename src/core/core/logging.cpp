@@ -33,7 +33,7 @@ DSN_API dsn_log_level_t dsn_log_start_level = dsn_log_level_t::LOG_LEVEL_INFORMA
 
 static void log_on_sys_exit(::dsn::sys_exit_type)
 {
-    ::dsn::logging_provider* logger = ::dsn::service_engine::instance().logging();
+    ::dsn::logging_provider* logger = ::dsn::service_engine::fast_instance().logging();
     if (logger != nullptr)
     {
         logger->flush();
@@ -61,7 +61,7 @@ DSN_API dsn_log_level_t dsn_log_get_start_level()
 
 DSN_API void dsn_logv(const char *file, const char *function, const int line, dsn_log_level_t log_level, const char* title, const char* fmt, va_list args)
 {
-    ::dsn::logging_provider* logger = ::dsn::service_engine::instance().logging();
+    ::dsn::logging_provider* logger = ::dsn::service_engine::fast_instance().logging();
     if (logger != nullptr)
     {
         logger->dsn_logv(file, function, line, log_level, title, fmt, args);

@@ -162,7 +162,7 @@ namespace dsn {
 
     void command_manager::start_remote_cli()
     {
-        ::dsn::service_engine::instance().register_system_rpc_handler(RPC_DSN_CLI_CALL, "dsn.cli", remote_cli_handler, nullptr);
+        ::dsn::service_engine::fast_instance().register_system_rpc_handler(RPC_DSN_CLI_CALL, "dsn.cli", remote_cli_handler, nullptr);
     }
 
     void command_manager::on_remote_cli(dsn_message_t req)

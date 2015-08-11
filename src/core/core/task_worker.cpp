@@ -274,7 +274,7 @@ void task_worker::run_internal()
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
-    task::set_current_worker(this);
+    task::set_current_worker(this, pool()->node());
     
     _native_tid = ::dsn::utils::get_current_tid();
     set_name();

@@ -35,6 +35,9 @@
 namespace dsn {
     namespace tools {
 
+        // TODO: seperate this into per-node service, so we can use
+        // task::get_current_node for faster access to the nodes in all tasks
+        // coz tasks may run in io-threads when [task.xxx] fast_execution_in_network_thread is true
         class shared_io_service : public utils::singleton<shared_io_service>
         {
         public:

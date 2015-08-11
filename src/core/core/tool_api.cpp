@@ -109,7 +109,7 @@ namespace dsn {
 
         void tool_app::start_all_apps()
         {
-            auto apps = service_engine::instance().get_all_nodes();
+            auto apps = service_engine::fast_instance().get_all_nodes();
             for (auto& kv : apps)
             {
                 task* t = new service_control_task(kv.second, true);
@@ -121,7 +121,7 @@ namespace dsn {
 
         void tool_app::stop_all_apps(bool cleanup)
         {
-            auto apps = service_engine::instance().get_all_nodes();
+            auto apps = service_engine::fast_instance().get_all_nodes();
             for (auto& kv : apps)
             {
                 task* t = new service_control_task(kv.second, false, cleanup);
@@ -131,17 +131,17 @@ namespace dsn {
 
         const service_spec& tool_app::get_service_spec()
         {
-            return service_engine::instance().spec();
+            return service_engine::fast_instance().spec();
         }
 
         configuration_ptr config()
         {
-            return service_engine::instance().spec().config;
+            return service_engine::fast_instance().spec().config;
         }
 
         const service_spec& spec()
         {
-            return service_engine::instance().spec();
+            return service_engine::fast_instance().spec();
         }
 
         join_point<void, configuration_ptr> sys_init_before_app_created("system.init.1");
