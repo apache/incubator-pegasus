@@ -36,9 +36,15 @@ namespace dsn
         class checker
         {
         public:
-            checker(const char* name)
+            checker(const char* name, dsn_app_info* info, int count)
                 : _name(name)
-            {}
+            {
+                _apps.resize(count);
+                for (int i = 0; i < count; i++)
+                {
+                    _apps[i] = info[i];
+                }
+            }
 
             virtual void check() = 0;
 
@@ -54,12 +60,7 @@ namespace dsn
             template<typename T> // T : public checker
             static void* create(const char* name, dsn_app_info* info, int count)
             {
-                auto chker = new T(name);
-                chker->_apps.resize(count);
-                for (int i = 0; i < count; i++)
-                {
-                    chker->_apps[i] = info[i];
-                }
+                auto chker = new T(name, info, count);                
                 return chker;
             }
 

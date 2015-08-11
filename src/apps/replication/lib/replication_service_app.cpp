@@ -27,12 +27,21 @@
 # include "replication_common.h"
 # include "replica_stub.h"
 
+# include <boost/filesystem.hpp>
+
 namespace dsn { namespace replication {
 
 replication_service_app::replication_service_app()
     : service_app()
 {
     _stub = nullptr;
+
+    ::boost::filesystem::path pr("./");
+    if (!::boost::filesystem::exists(pr))
+    {
+        printf("we are avoiding a bug in boost file system here\n");
+        // http://boost.2283326.n4.nabble.com/filesystem-v3-v1-49-Path-constructor-issue-in-VS-Debug-configuration-td4463703.html
+    }
 }
 
 replication_service_app::~replication_service_app(void)

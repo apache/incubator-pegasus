@@ -13,7 +13,8 @@ class <?=$_PROG->name?>_checker
     : public ::dsn::tools::checker
 {
 public:
-    <?=$_PROG->name?>_checker(const char* name) : ::dsn::tools::checker(name)
+    <?=$_PROG->name?>_checker(const char* name, dsn_app_info* info, int count)
+          : ::dsn::tools::checker(name, info, count)
     {
         for (auto& app : _apps)
         {

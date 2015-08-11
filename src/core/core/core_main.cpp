@@ -10,6 +10,7 @@
 
 # include <dsn/tool/providers.common.h>
 # include <dsn/tool/nfs_node_simple.h>
+# include <dsn/internal/singleton.h>
 
 //# include <dsn/thrift_helper.h>
 
@@ -35,6 +36,51 @@ static void dsn_init_on_load()
     dsn::tools::register_toollet<dsn::tools::tracer>("tracer");
     dsn::tools::register_toollet<dsn::tools::profiler>("profiler");
     dsn::tools::register_toollet<dsn::tools::fault_injector>("fault_injector");
+}
+
+void sys_init_for_add_global_checker(::dsn::configuration_ptr config);
+class global_checker_store : public ::dsn::utils::singleton< global_checker_store >
+{
+public:
+    struct global_checker
+    {
+        std::string        name;
+        dsn_checker_create create;
+        dsn_checker_apply  apply;
+    };
+
+public:
+    global_checker_store()
+    {
+        ::dsn::tools::sys_init_after_app_created.put_back(
+            sys_init_for_add_global_checker,
+            "checkers.install"
+            );
+    }
+
+    std::list<global_checker> checkers;
+};
+
+void sys_init_for_add_global_checker(::dsn::configuration_ptr config)
+{
+    auto t = dynamic_cast<dsn::tools::simulator*>(::dsn::tools::get_current_tool());
+    if (t != nullptr)
+    {
+        for (auto& c : global_checker_store::instance().checkers)
+        {
+            t->add_checker(c.name.c_str(), c.create, c.apply);
+        }
+    }
+}
+
+DSN_API void dsn_register_app_checker(const char* name, dsn_checker_create create, dsn_checker_apply apply)
+{
+    global_checker_store::global_checker ck;
+    ck.name = name;
+    ck.create = create;
+    ck.apply = apply;
+
+    global_checker_store::instance().checkers.push_back(ck);
 }
 
 # ifdef _WIN32

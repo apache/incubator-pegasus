@@ -30,7 +30,6 @@
 // framework specific tools
 # include <dsn/dist/replication/replication.global_check.h>
 
-
 int main(int argc, char** argv)
 {
     // register replication application provider

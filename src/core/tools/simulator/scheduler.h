@@ -68,13 +68,13 @@ public:
     scheduler(void);
     ~scheduler(void);
 
-    void start() { _running = true; }    
+    void start();
     uint64_t now_ns() const { utils::auto_lock<::dsn::utils::ex_lock> l(_lock); return _time_ns; }
 
     void reset();
     void add_task(task* task, task_queue* q);
     void wait_schedule(bool in_continue, bool is_continue_ready = false);
-    void add_checker(checker* chker);
+    void add_checker(const char* name, dsn_checker_create create, dsn_checker_apply apply);
     
 public:
     struct task_state_ext
@@ -96,7 +96,15 @@ private:
     uint64_t                       _time_ns;
     bool                           _running;
     std::vector<sim_worker_state*> _threads;
-    std::vector<checker*>          _checkers;
+
+    struct checker_info
+    {
+        std::string name;
+        dsn_checker_create create;
+        dsn_checker_apply apply;
+        void *checker_ptr;
+    };
+    std::vector<checker_info*>     _checkers;
     
 private:
     void schedule();

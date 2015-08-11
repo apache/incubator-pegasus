@@ -168,8 +168,12 @@ void task::exec_internal()
 
     if (_state.compare_exchange_strong(READY_STATE, TASK_STATE_RUNNING))
     {
-        dassert(tls_task_info.magic == 0xdeadbeef, "thread is not inited with task::set_current_worker");
-        
+        //dassert(tls_task_info.magic == 0xdeadbeef, "thread is not inited with task::set_current_worker");
+        if (tls_task_info.magic != 0xdeadbeef)
+        {
+            task::set_current_worker(nullptr, nullptr);
+        }
+
         task* parent_task = tls_task_info.current_task;
         tls_task_info.current_task = this;
 

@@ -24,6 +24,7 @@
  * THE SOFTWARE.
  */
 # include <dsn/tool/simulator.h>
+# include <dsn/service_api_c.h>
 # include "scheduler.h"
 # include "env.sim.h"
 # include <set>
@@ -155,8 +156,28 @@ void scheduler::add_task(task* tsk, task_queue* q)
     _wheel.add_event(now_ns() + delay, tsk);
 }
 
-void scheduler::add_checker(checker* chker)
+void scheduler::start()
 {
+    // init all checkers
+    dsn_app_info apps[DSN_MAX_APP_COUNT_IN_SAME_PROCESS]; // maximum apps
+    int count = dsn_get_all_apps(apps, DSN_MAX_APP_COUNT_IN_SAME_PROCESS);
+    for (auto& c : _checkers)
+    {
+        c->checker_ptr = c->create(c->name.c_str(), apps, count);
+    }
+
+    // set flag
+    _running = true;
+}
+
+void scheduler::add_checker(const char* name, dsn_checker_create create, dsn_checker_apply apply)
+{
+    auto chker = new checker_info();
+    chker->name = name;
+    chker->create = create;
+    chker->apply = apply;
+    chker->checker_ptr = nullptr;
+
     _checkers.push_back(chker);
 }
 
@@ -164,7 +185,8 @@ void scheduler::check()
 {
     for (auto& c : _checkers)
     {
-        c->check();
+        if (c->checker_ptr != nullptr)
+            c->apply(c->checker_ptr);
     }
 }
 

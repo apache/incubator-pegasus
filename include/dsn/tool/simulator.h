@@ -26,7 +26,6 @@
 #pragma once
 
 # include <dsn/tool_api.h>
-# include <dsn/tool/global_checker.h>
 
 namespace dsn { namespace tools {
 
@@ -42,7 +41,7 @@ public:
     
     virtual void run() override;
 
-    void add_checker(checker* chker);
+    void add_checker(const char* name, dsn_checker_create create, dsn_checker_apply apply);
 
 private:
     static void on_system_exit(sys_exit_type st);

@@ -213,7 +213,7 @@ namespace dsn {
     protected:
         connection_oriented_network         &_net;
         dsn_address_t                       _remote_addr;
-        rpc_client_matcher_ptr _matcher;
+        rpc_client_matcher_ptr              _matcher;
     };
 
 

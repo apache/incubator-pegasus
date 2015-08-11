@@ -68,10 +68,10 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     // init dirs
     set_options(opts);
     _dir = _options.working_dir;
-    auto dr = boost::filesystem::path(_dir);
-
+    
     if (clear)
-    {        
+    {
+        auto dr = boost::filesystem::path(_dir);
         boost::filesystem::remove_all(dr);
     }
 

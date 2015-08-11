@@ -50,11 +50,12 @@ extern "C" {
     # endif
 # endif
 
-# define DSN_MAX_TASK_CODE_NAME_LENGTH   48
-# define DSN_MAX_ADDRESS_NAME_LENGTH     16
-# define DSN_MAX_BUFFER_COUNT_IN_MESSAGE 64
-# define DSN_INVALID_HASH                0xdeadbeef
-# define DSN_MAX_APP_TYPE_NAME_LENGTH    32
+# define DSN_MAX_TASK_CODE_NAME_LENGTH     48
+# define DSN_MAX_ADDRESS_NAME_LENGTH       16
+# define DSN_MAX_BUFFER_COUNT_IN_MESSAGE   64
+# define DSN_INVALID_HASH                  0xdeadbeef
+# define DSN_MAX_APP_TYPE_NAME_LENGTH      32
+# define DSN_MAX_APP_COUNT_IN_SAME_PROCESS 256
 
 //------------------------------------------------------------------------------
 //
@@ -202,7 +203,7 @@ extern DSN_API bool dsn_register_app_role(
                         dsn_app_start start, 
                         dsn_app_destroy destroy
                         );
-extern DSN_API int  dsn_register_app_checker(
+extern DSN_API void dsn_register_app_checker(
                         const char* name, 
                         dsn_checker_create create, 
                         dsn_checker_apply apply
@@ -223,6 +224,7 @@ extern DSN_API bool dsn_run_config(
 // Note the argc, argv folllows the C main convention that argv[0] is the executable name
 //
 extern DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init);
+extern DSN_API int  dsn_get_all_apps(dsn_app_info* info_buffer, int count); // return real app count
 
 //------------------------------------------------------------------------------
 //

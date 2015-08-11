@@ -38,9 +38,9 @@
 
 namespace dsn { namespace tools {
 
-void simulator::add_checker(checker* chker)
+void simulator::add_checker(const char* name, dsn_checker_create create, dsn_checker_apply apply)
 {
-    scheduler::instance().add_checker(chker);
+    scheduler::instance().add_checker(name, create, apply);
 }
 
 void simulator::install(service_spec& spec)
