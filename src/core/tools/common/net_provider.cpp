@@ -23,7 +23,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "shared_io_service.h"
 #include "net_provider.h"
 #include "net_client_session.h"
 #include "net_server_session.h"
@@ -32,10 +31,24 @@ namespace dsn {
     namespace tools{
 
         asio_network_provider::asio_network_provider(rpc_engine* srv, network* inner_provider)
-            : connection_oriented_network(srv, inner_provider), _io_service(shared_io_service::instance().ios)
+            : connection_oriented_network(srv, inner_provider)
         {
+            int io_service_worker_count = config()->get_value<int>("network", "io_service_worker_count", 1,
+                "thread number for io service (timer and boost network)");
+            for (int i = 0; i < io_service_worker_count; i++)
+            {
+                _workers.push_back(std::shared_ptr<std::thread>(new std::thread([this]()
+                {
+                    task::set_current_worker(nullptr, node());
+
+                    boost::asio::io_service::work work(_io_service);
+                    _io_service.run();
+                })));
+            }
+
             _acceptor = nullptr;
             _socket.reset(new boost::asio::ip::tcp::socket(_io_service));
+
         }
 
         error_code asio_network_provider::start(rpc_channel channel, int port, bool client_only)
@@ -72,7 +85,7 @@ namespace dsn {
             auto matcher = new_client_matcher();
             auto parser = new_message_parser();
             auto sock = boost::asio::ip::tcp::socket(_io_service);
-            return rpc_client_session_ptr(new net_client_session(*this, sock, server_addr, matcher, parser));
+            return rpc_client_session_ptr(new net_client_session(*this, sock, server_addr, matcher, parser, _io_service));
         }
 
         void asio_network_provider::do_accept()
@@ -92,7 +105,7 @@ namespace dsn {
 
                     auto parser = new_message_parser();
                     auto sock = std::move(*_socket);
-                    auto s = rpc_server_session_ptr(new net_server_session(*this, client_addr, sock, parser));
+                    auto s = rpc_server_session_ptr(new net_server_session(*this, client_addr, sock, parser, _io_service));
                     this->on_server_session_accepted(s);
                 }
 

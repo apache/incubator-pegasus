@@ -38,6 +38,9 @@ namespace dsn {
             if (spec.env_factory_name == "")
                 spec.env_factory_name = ("dsn::env_provider");
 
+            if (spec.timer_factory_name == "")
+                spec.timer_factory_name = ("dsn::tools::simple_timer_service");
+
             network_client_config cs;
             cs.factory_name = "dsn::tools::asio_network_provider";
             cs.message_buffer_block_size = 1024 * 64;

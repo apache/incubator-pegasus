@@ -38,6 +38,7 @@
 # include <dsn/internal/message_parser.h>
 # include <dsn/internal/logging_provider.h>
 # include <dsn/internal/memory_provider.h>
+# include <dsn/internal/timer_service.h>
 # include <dsn/internal/perf_counters.h>
 # include <dsn/internal/configuration.h>
 
@@ -94,6 +95,7 @@ public:
     static const service_spec& get_service_spec();
 };
 
+typedef timer_service*   (*timer_factory)(service_node*, timer_service*);
 typedef task_queue*      (*task_queue_factory)(task_worker_pool*, int, task_queue*);
 typedef task_worker*     (*task_worker_factory)(task_worker_pool*, task_queue*, int, task_worker*);
 typedef admission_controller* (*admission_controller_factory)(task_queue*, const char*);
@@ -114,6 +116,7 @@ typedef tool_app*        (*tool_app_factory)(const char*);
 
 namespace internal_use_only
 {
+    bool register_component_provider(const char* name, timer_factory f, int type);
     bool register_component_provider(const char* name, task_queue_factory f, int type);
     bool register_component_provider(const char* name, task_worker_factory f, int type);
     bool register_component_provider(const char* name, admission_controller_factory f, int type);

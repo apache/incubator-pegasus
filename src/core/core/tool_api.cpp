@@ -160,6 +160,11 @@ namespace dsn {
                 return dsn::utils::factory_store<tool_app>::register_factory(name, f, type);
             }
 
+            bool register_component_provider(const char* name, timer_factory f, int type)
+            {
+                return dsn::utils::factory_store<timer_service>::register_factory(name, f, type);
+            }
+
             bool register_component_provider(const char* name, task_queue_factory f, int type)
             {
                 return dsn::utils::factory_store<task_queue>::register_factory(name, f, type);

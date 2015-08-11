@@ -30,6 +30,7 @@
 # include <dsn/internal/admission_controller.h>
 # include <dsn/internal/perf_counter.h>
 # include <dsn/internal/task_worker.h>
+# include <dsn/internal/timer_service.h>
 
 namespace dsn {
 
@@ -56,6 +57,7 @@ public:
     // inquery
     const threadpool_spec& spec() const { return _spec; }
     bool shared_same_worker_with_current_task(task* task) const;
+    timer_service* timer_svc() const { return _timer_service; }
     task_engine* engine() const { return _owner; }
     service_node* node() const { return _node; }
     void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, __out_param std::stringstream& ss);
@@ -68,6 +70,7 @@ private:
     std::vector<task_worker*>          _workers;
     std::vector<task_queue*>           _queues;
     std::vector<admission_controller*> _controllers;
+    timer_service                     *_timer_service;
 
     bool                              _is_running;
 };
@@ -86,6 +89,7 @@ public:
     // task management routines
     //
     task_worker_pool* get_pool(int code) const { return _pools[code]; }
+    timer_service* timer_svc() const { return _timer_service;  }
 
     bool is_started() const { return _is_running; }
 
@@ -93,9 +97,10 @@ public:
     void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, __out_param std::stringstream& ss);
     
 private:
+    timer_service                 *_timer_service;
     std::vector<task_worker_pool*> _pools;
-    volatile bool                _is_running;
-    service_node*                 _node;
+    volatile bool                  _is_running;
+    service_node                   *_node;
 };
 
 // -------------------- inline implementation ----------------------------

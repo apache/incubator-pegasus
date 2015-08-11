@@ -100,7 +100,7 @@ void task_worker::stop()
     _is_running = false;
 }
 
-void task_worker::set_name()
+void task_worker::set_name(const char* name)
 {
 # ifdef _WIN32
 
@@ -118,7 +118,7 @@ void task_worker::set_name()
 
     THREADNAME_INFO info;
     info.dwType = 0x1000;
-    info.szName = name().c_str();
+    info.szName = name;
     info.dwThreadID = (uint32_t)-1;
     info.dwFlags = 0;
 
@@ -131,12 +131,13 @@ void task_worker::set_name()
     }
 
 # else
-    auto thread_name = name()
+    std::string sname(name);
+    auto thread_name = sname
     # ifdef __linux__
         .substr(0, (16 - 1))
     # endif
     ;
-    auto tid = _thread->native_handle();
+    auto tid = pthread_self();
     int err = 0;
     # ifdef __FreeBSD__
     pthread_set_name_np(tid, thread_name.c_str());
@@ -200,14 +201,14 @@ void task_worker::set_priority(worker_priority_t pri)
 # endif
 
 # ifdef _WIN32
-    succ = (::SetThreadPriority(_thread->native_handle(), prio) == TRUE);
+    succ = (::SetThreadPriority(::GetCurrentThread(), prio) == TRUE);
 # elif defined(__linux__)
     if ((nice(prio) == -1) && (errno != 0))
     {
         succ = false;
     }
 # else
-    succ = (pthread_setschedparam(_thread->native_handle(), policy, &param) == 0);
+    succ = (pthread_setschedparam(pthread_self(), policy, &param) == 0);
 //# error "not implemented"
 # endif
 
@@ -225,10 +226,9 @@ void task_worker::set_affinity(uint64_t affinity)
     dassert(affinity <= (((uint64_t)1 << nr_cpu) - 1),
         "There are %d cpus in total, while setting thread affinity to a nonexistent one.", nr_cpu);
 
-    auto tid = _thread->native_handle();
     int err;
 # ifdef _WIN32
-    if (::SetThreadAffinityMask(tid, static_cast<DWORD_PTR>(affinity)) == 0)
+    if (::SetThreadAffinityMask(::GetCurrentThread(), static_cast<DWORD_PTR>(affinity)) == 0)
     {
         err = static_cast<int>(::GetLastError());
     }
@@ -258,7 +258,7 @@ void task_worker::set_affinity(uint64_t affinity)
             CPU_SET(i, &cpuset);
         }
     }
-    err = pthread_setaffinity_np(tid, sizeof(cpuset), &cpuset);
+    err = pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);
 # endif
 
     if (err != 0)
@@ -277,7 +277,7 @@ void task_worker::run_internal()
     task::set_current_worker(this, pool()->node());
     
     _native_tid = ::dsn::utils::get_current_tid();
-    set_name();
+    set_name(name().c_str());
     set_priority(pool_spec().worker_priority);
     
     if (true == pool_spec().worker_share_core)

@@ -27,7 +27,12 @@
 #include "scheduler.h"
 
 namespace dsn { namespace tools {
-    
+
+void sim_timer_service::add_timer(task* task)
+{
+    scheduler::instance().add_task(task, nullptr);
+}
+
 sim_task_queue::sim_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider)
 : task_queue(pool, index, inner_provider)
 {
@@ -53,7 +58,7 @@ void sim_task_queue::enqueue(task* t)
     }
     else
     {
-        scheduler::instance().add_task(t, this);
+        
     }
 }
 

@@ -49,8 +49,9 @@ namespace dsn {
 
             std::shared_ptr<boost::asio::ip::tcp::acceptor> _acceptor;
             std::shared_ptr<boost::asio::ip::tcp::socket>   _socket;
-            boost::asio::io_service        &_io_service;
-            dsn_address_t                      _address;
+            boost::asio::io_service                         _io_service;
+            std::vector<std::shared_ptr<std::thread>>       _workers;
+            dsn_address_t                                   _address;
         };
 
     }

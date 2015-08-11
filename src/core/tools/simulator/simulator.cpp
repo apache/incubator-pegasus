@@ -48,6 +48,7 @@ void simulator::install(service_spec& spec)
     register_component_provider<sim_aio_provider>("dsn::tools::sim_aio_provider");
     register_component_provider<sim_env_provider>("dsn::tools::sim_env_provider");
     register_component_provider<sim_task_queue>("dsn::tools::sim_task_queue");
+    register_component_provider<sim_timer_service>("dsn::tools::sim_timer_service");
     register_component_provider<sim_semaphore_provider>("dsn::tools::sim_semaphore_provider");
 
     scheduler::instance();
@@ -57,6 +58,9 @@ void simulator::install(service_spec& spec)
 
     if (spec.env_factory_name == "")
         spec.env_factory_name = ("dsn::tools::sim_env_provider");
+
+    if (spec.timer_factory_name == "")
+        spec.timer_factory_name = ("dsn::tools::sim_timer_service");
 
     network_client_config cs;
     cs.factory_name = "dsn::tools::sim_network_provider";

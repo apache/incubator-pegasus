@@ -37,11 +37,12 @@ namespace dsn {
             boost::asio::ip::tcp::socket& socket,
             const dsn_address_t& remote_addr, 
             rpc_client_matcher_ptr& matcher,
-            std::shared_ptr<message_parser>& parser)
+            std::shared_ptr<message_parser>& parser,
+            boost::asio::io_service& ios)
             : 
             _net(net),
             rpc_client_session(net, remote_addr, matcher),
-            client_net_io(remote_addr, socket, parser)
+            client_net_io(remote_addr, socket, parser, ios)
         {   
         }
         

@@ -168,11 +168,7 @@ void task::exec_internal()
 
     if (_state.compare_exchange_strong(READY_STATE, TASK_STATE_RUNNING))
     {
-        //dassert(tls_task_info.magic == 0xdeadbeef, "thread is not inited with task::set_current_worker");
-        if (tls_task_info.magic != 0xdeadbeef)
-        {
-            task::set_current_worker(nullptr, nullptr);
-        }
+        dassert(tls_task_info.magic == 0xdeadbeef, "thread is not inited with task::set_current_worker");
 
         task* parent_task = tls_task_info.current_task;
         tls_task_info.current_task = this;
@@ -387,16 +383,21 @@ void task::enqueue()
 void task::enqueue(task_worker_pool* pool)
 {
     this->add_ref(); // released in exec_internal (even when cancelled)
-
+    
+    // for delayed tasks, refering to timer service
+    if (_delay_milliseconds != 0)
+    {
+        pool->timer_svc()->add_timer(this);
+        return;
+    }
+    
     if (spec().type == TASK_TYPE_COMPUTE)
     {
         spec().on_task_enqueue.execute(task::get_current_task(), this);
     }
 
     // fast execution
-    if (_delay_milliseconds == 0
-        && (_spec->allow_inline || _spec->fast_execution_in_network_thread || _is_null)
-       )
+    if (_spec->allow_inline || _spec->fast_execution_in_network_thread || _is_null)
     {
         exec_internal();
     }

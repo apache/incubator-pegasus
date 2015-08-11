@@ -124,6 +124,7 @@ struct service_spec
     std::string                  coredump_dir; // to store core dump files
     bool                         start_nfs;
     
+    std::string                  timer_factory_name;
     std::string                  aio_factory_name;
     std::string                  env_factory_name;
     std::string                  lock_factory_name;
@@ -138,6 +139,7 @@ struct service_spec
     std::list<std::string>       network_aspects; // toollets compatible to the above network main providers in network configs
     std::list<std::string>       aio_aspects; // toollets compatible to main aio provider
     std::list<std::string>       env_aspects;
+    std::list<std::string>       timer_aspects;
     std::list<std::string>       lock_aspects;
     std::list<std::string>       rwlock_nr_aspects;
     std::list<std::string>       semaphore_aspects;
@@ -157,6 +159,7 @@ CONFIG_BEGIN(service_spec)
     CONFIG_FLD_STRING_LIST(toollets, "use what toollets, e.g., tracer, profiler, fault_injector")
     CONFIG_FLD_STRING(coredump_dir, "./coredump", "where to put the core dump files")
     CONFIG_FLD(bool, bool, start_nfs, false, "whether to start nfs")
+    CONFIG_FLD_STRING(timer_factory_name, "", "timer service provider")
     CONFIG_FLD_STRING(aio_factory_name, "", "asynchonous file system provider")
     CONFIG_FLD_STRING(env_factory_name, "", "environment provider")
     CONFIG_FLD_STRING(lock_factory_name, "", "lock provider")
@@ -170,6 +173,7 @@ CONFIG_BEGIN(service_spec)
 
     CONFIG_FLD_STRING_LIST(network_aspects, "network aspect providers, usually for tooling purpose")
     CONFIG_FLD_STRING_LIST(aio_aspects, "aio aspect providers, usually for tooling purpose")
+    CONFIG_FLD_STRING_LIST(timer_aspects, "timer service aspect providers, usually for tooling purpose")
     CONFIG_FLD_STRING_LIST(env_aspects, "environment aspect providers, usually for tooling purpose")
     CONFIG_FLD_STRING_LIST(lock_aspects, "lock aspect providers, usually for tooling purpose")
     CONFIG_FLD_STRING_LIST(rwlock_nr_aspects, "non-recursive rwlock aspect providers, usually for tooling purpose")

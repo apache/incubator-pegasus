@@ -69,10 +69,12 @@ private:
     bool             _is_running;
     utils::notify_event _started;
 
+public:
+    static void set_name(const char* name);
+    static void set_priority(worker_priority_t pri);
+    static void set_affinity(uint64_t affinity);
+
 private:
-    void set_name();
-    void set_priority(worker_priority_t pri);
-    void set_affinity(uint64_t affinity);
     void run_internal();
 
 public:

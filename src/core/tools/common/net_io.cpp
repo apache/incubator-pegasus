@@ -24,7 +24,6 @@
  * THE SOFTWARE.
  */
 # include "net_io.h"
-# include "shared_io_service.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -37,10 +36,11 @@ namespace dsn {
         net_io::net_io(
             const dsn_address_t& remote_addr,
             boost::asio::ip::tcp::socket& socket,
-            std::shared_ptr<dsn::message_parser>& parser
+            std::shared_ptr<dsn::message_parser>& parser,
+            boost::asio::io_service& ios
             )
             :
-            _io_service(shared_io_service::instance().ios),
+            _io_service(ios),
             _socket(std::move(socket)),
             _sq("net_io.send.queue"),
             _remote_addr(remote_addr),
@@ -185,9 +185,10 @@ namespace dsn {
         
         client_net_io::client_net_io(const dsn_address_t& remote_addr,
             boost::asio::ip::tcp::socket& socket,
-            std::shared_ptr<dsn::message_parser>& parser)
+            std::shared_ptr<dsn::message_parser>& parser,
+            boost::asio::io_service& ios)
             :
-            net_io(remote_addr, socket, parser), 
+            net_io(remote_addr, socket, parser, ios), 
             _state(SS_CLOSED),
             _reconnect_count(0)
         {

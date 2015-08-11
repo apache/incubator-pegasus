@@ -38,7 +38,8 @@ namespace dsn {
         public:
             net_io(const dsn_address_t& remote_addr,
                 boost::asio::ip::tcp::socket& socket,
-                std::shared_ptr<dsn::message_parser>& parser);
+                std::shared_ptr<dsn::message_parser>& parser,
+                boost::asio::io_service& ios);
             virtual ~net_io();
 
             virtual void write(message_ex* msg);
@@ -74,7 +75,8 @@ namespace dsn {
         public:
             client_net_io(const dsn_address_t& remote_addr,
                 boost::asio::ip::tcp::socket& socket,
-                std::shared_ptr<dsn::message_parser>& parser);
+                std::shared_ptr<dsn::message_parser>& parser,
+                boost::asio::io_service& ios);
 
             void connect();
             virtual void write(message_ex* msg);

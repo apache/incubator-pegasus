@@ -23,39 +23,35 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#pragma once
+# pragma once
 
-# include <dsn/tool_api.h>
-# include <dsn/internal/priority_queue.h>
-# include <boost/asio.hpp>
+# include <dsn/internal/task.h>
 
-namespace dsn {
-    namespace tools {
-        class simple_task_queue : public task_queue
+namespace dsn 
+{
+    class service_node;
+    class timer_service
+    {
+    public:
+        template <typename T> static timer_service* create(service_node* node, timer_service* inner_provider)
         {
-        public:
-            simple_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
+            return new T(node, inner_provider);
+        }
 
-            virtual void     enqueue(task* task);
-            virtual task*    dequeue();
-            virtual int      count() const;
-
-        private:
-            typedef utils::blocking_priority_queue<task*, TASK_PRIORITY_COUNT> tqueue;
-            tqueue _samples;
-        };
-
-        class simple_timer_service : public timer_service
+    public:
+        timer_service(service_node* node, timer_service* inner_provider)
         {
-        public:
-            simple_timer_service(service_node* node, timer_service* inner_provider);
+            _node = node;
+        }
 
-            // after milliseconds, the provider should call task->enqueue()        
-            virtual void add_timer(task* task) override;
+        // after milliseconds, the provider should call task->enqueue()        
+        virtual void add_timer(task* task) = 0;
 
-        private:
-            boost::asio::io_service      _ios;
-            std::shared_ptr<std::thread> _worker;
-        };
-    }
-}
+        // inquery
+        service_node* node() const { return _node; }
+
+    private:
+        service_node* _node;
+    };
+
+} // end namespace

@@ -25,7 +25,6 @@
  */
 
 # include "hpc_task_queue.h"
-# include "shared_io_service.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -42,40 +41,15 @@ namespace dsn {
         
         void hpc_task_queue::enqueue(task* task)
         {
-            if (task->delay_milliseconds() == 0)
             {
-                {
-                    utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
+                utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
 
-                    task->_task_queue_dl.insert_before(&_tasks);
-                }
-                
-                _count.fetch_add(1, std::memory_order_release);
-
-                _sema.signal();
+                task->_task_queue_dl.insert_before(&_tasks);
             }
-            else
-            {
-                std::shared_ptr<boost::asio::deadline_timer> timer(new boost::asio::deadline_timer(shared_io_service::instance().ios));
-                timer->expires_from_now(boost::posix_time::milliseconds(task->delay_milliseconds()));
-                task->set_delay(0);
 
-                timer->async_wait([this, task, timer](const boost::system::error_code& ec)
-                {
-                    if (!ec)
-                    {
-                        task->enqueue();
-                    }
-                    else
-                    {
-                        dfatal("delayed execution failed for task %s, err = %u",
-                            task->spec().name.c_str(), ec.value());
-                    }
+            _count.fetch_add(1, std::memory_order_release);
 
-                    // to consume the added ref count by another task::enqueue
-                    task->release_ref();
-                });
-            }
+            _sema.signal();
         }
 
         task* hpc_task_queue::dequeue()

@@ -25,7 +25,6 @@
  */
 
 # include "net_server_session.h"
-# include "shared_io_service.h"
 # include <dsn/internal/message_parser.h>
 
 # ifdef __TITLE__
@@ -39,11 +38,12 @@ namespace dsn {
             asio_network_provider& net, 
             const dsn_address_t& remote_addr,
             boost::asio::ip::tcp::socket& socket,
-            std::shared_ptr<message_parser>& parser
+            std::shared_ptr<message_parser>& parser,
+            boost::asio::io_service& ios
             )
             : _net(net),
             rpc_server_session(net, remote_addr),
-            net_io(remote_addr, socket, parser)
+            net_io(remote_addr, socket, parser, ios)
         {
             start_read();
         }

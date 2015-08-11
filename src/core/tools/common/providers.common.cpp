@@ -55,6 +55,7 @@ namespace dsn {
             register_component_provider<asio_network_provider>("dsn::tools::asio_network_provider");
             register_component_provider<sim_network_provider>("dsn::tools::sim_network_provider");
             register_component_provider<simple_task_queue>("dsn::tools::simple_task_queue");
+            register_component_provider<simple_timer_service>("dsn::tools::simple_timer_service");
             register_component_provider<hpc_task_queue>("dsn::tools::hpc_task_queue");
             
             register_message_header_parser<dsn_message_parser>(NET_HDR_DSN);

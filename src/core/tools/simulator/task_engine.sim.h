@@ -30,6 +30,18 @@
 
 namespace dsn { namespace tools {
 
+class sim_timer_service : public timer_service
+{
+public:
+    sim_timer_service(service_node* node, timer_service* inner_provider)
+        : timer_service(node, inner_provider)
+    {
+    }
+
+    // after milliseconds, the provider should call task->enqueue()        
+    virtual void add_timer(task* task) override;
+};
+
 class sim_task_queue : public task_queue
 {
 public:

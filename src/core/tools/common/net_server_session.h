@@ -40,7 +40,8 @@ namespace dsn {
                 asio_network_provider& net, 
                 const dsn_address_t& remote_addr,
                 boost::asio::ip::tcp::socket& socket,
-                std::shared_ptr<message_parser>& parser);
+                std::shared_ptr<message_parser>& parser,
+                boost::asio::io_service& ios);
             ~net_server_session();
 
             virtual void send(message_ex* reply_msg) override { return write(reply_msg); }

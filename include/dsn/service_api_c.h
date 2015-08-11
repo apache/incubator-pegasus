@@ -489,9 +489,11 @@ extern DSN_API void          dsn_primary_address2(/*out*/ dsn_address_t* paddr);
 // if you want to hold them in upper apps, you need to call msg_add_ref
 // and msg_release_ref explicitly.
 //
+// when timeout_milliseconds == 0,  [task.%rpc_code%] rpc_timeout_milliseconds is used.
+// 
 extern DSN_API dsn_message_t dsn_msg_create_request(
                                 dsn_task_code_t rpc_code, 
-                                int timeout_milliseconds, 
+                                int timeout_milliseconds, // if 0, see comments
                                 int hash
                                 );
 extern DSN_API dsn_message_t dsn_msg_create_response(dsn_message_t request);
@@ -499,8 +501,8 @@ extern DSN_API void          dsn_msg_add_ref(dsn_message_t msg);
 extern DSN_API void          dsn_msg_release_ref(dsn_message_t msg);
 extern DSN_API void          dsn_msg_update_request(
                                 dsn_message_t msg, 
-                                int timeout_milliseconds, 
-                                int hash
+                                int timeout_milliseconds,  // if == 0, no update
+                                int hash // if == DSN_INVALID_HASH, no update
                                 );
 extern DSN_API void          dsn_msg_query_request(
                                 dsn_message_t msg, 
