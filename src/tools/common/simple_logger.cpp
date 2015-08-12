@@ -37,9 +37,9 @@ namespace dsn {
                 ts = ::dsn::service::env::now_ns();
 
             char str[24];
-            ::dsn::utils::time_ms_to_string(ts/1000000, str);
+            ::dsn::utils::time_ms_to_string(ts / 1000000, str);
 
-            int tid = ::dsn::utils::get_current_tid(); 
+            int tid = ::dsn::utils::get_current_tid();
 
             fprintf(fp, "%s (%llu %04x) ", str, static_cast<long long unsigned int>(ts), tid);
 
@@ -97,7 +97,7 @@ namespace dsn {
             ::fflush(stdout);
         }
 
-        simple_logger::simple_logger() 
+        simple_logger::simple_logger()
         {
             _start_index = 0;
             _index = 0;
@@ -141,7 +141,7 @@ namespace dsn {
 
             std::stringstream str;
             str << "log." << ++_index << ".txt";
-            _log = fopen(str.str().c_str(), "w+");  
+            _log = fopen(str.str().c_str(), "w+");
 
             // TODO: move gc out of criticial path
             if (_index - _start_index > 20)
@@ -154,8 +154,8 @@ namespace dsn {
             }
         }
 
-        simple_logger::~simple_logger(void) 
-        { 
+        simple_logger::~simple_logger(void)
+        {
             fclose(_log);
         }
 
@@ -180,7 +180,7 @@ namespace dsn {
             }
 
             utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
-         
+
             print_header(_log);
             fprintf(_log, "%s:%d:%s(): ", title, line, function);
             vfprintf(_log, fmt, args);
