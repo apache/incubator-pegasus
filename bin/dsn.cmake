@@ -286,7 +286,7 @@ macro(ms_setup_boost STATIC_LINK PACKAGES BOOST_LIBS)
     endif()
     
     set(Boost_USE_MULTITHREADED            ON)
-	if(MSVC)#${STATIC_LINK})
+	if(${STATIC_LINK})
         set(Boost_USE_STATIC_LIBS        ON)
         set(Boost_USE_STATIC_RUNTIME    ON)
     else()
