@@ -115,18 +115,23 @@ namespace dsn {
 
         std::string get_absolute_path(const char* path)
         {
-            char absoluate_path[1024];
 # if defined(_WIN32)
             char* component;
+            char absoluate_path[1024];
             if (0 == ::GetFullPathNameA(path, 1024, absoluate_path, &component))
                 return "";
             else
                 return std::string(absoluate_path);
 # else
-            if (0 != realpath(path, absoluate_path))
+            char* rpath = realpath(path, nullptr);
+            if (rpath == nullptr)
                 return "";
             else
-                return std::string(absoluate_path);
+            {
+                std::string apath = rpath;
+                free(rpath);
+                return apath;
+            }
 # endif
         }
 
