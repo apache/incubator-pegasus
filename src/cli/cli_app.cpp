@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- *
- * -=- Robust Distributed System Nucleus (rDSN) -=-
+ * 
+ * -=- Robust Distributed System Nucleus (rDSN) -=- 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,7 @@ namespace dsn {
     namespace service {
 
         cli::cli(service_app_spec* s)
-            : service_app(s)
+        : service_app(s)
         {
             _timeout_seconds = 10; // 10 seconds by default
         }
@@ -48,7 +48,7 @@ namespace dsn {
 
         error_code cli::start(int argc, char** argv)
         {
-
+            
             std::cout << "dsn remote cli begin ..." << std::endl;
             usage();
 
@@ -90,7 +90,7 @@ namespace dsn {
                         int port = atoi(args[2].c_str());
                         _timeout_seconds = atoi(args[3].c_str());
                         _target = end_point(machine.c_str(), port);
-                        std::cout << "remote target is set to " << machine << ":" << port << ", timeout = " << _timeout_seconds << " seconds" << std::endl;
+                        std::cout << "remote target is set to " << machine << ":" << port << ", timeout = " << _timeout_seconds << " seconds" <<std::endl;
                         continue;
                     }
                 }
@@ -123,8 +123,8 @@ namespace dsn {
 
         void cli::stop(bool cleanup)
         {
-
-        }
+            
+        } 
 
     }
 }
