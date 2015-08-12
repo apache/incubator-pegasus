@@ -30,7 +30,10 @@
 #include "profiler_header.h"
 #include <dsn/internal/command.h>
 
-#define __TITLE__ "toollet.profiler"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "toollet.profiler"
 using namespace dsn::service;
 
 namespace dsn {
