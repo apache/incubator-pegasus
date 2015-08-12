@@ -87,7 +87,7 @@ namespace dsn {
             utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
 
             print_header(stdout);
-            printf("%s:%d:%s(): ", title, line, function);
+            // printf("%s:%d:%s(): ", title, line, function);
             vprintf(fmt, args);
             printf("\n");
         }

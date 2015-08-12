@@ -61,7 +61,7 @@ namespace dsn
             static void* create(const char* name, dsn_app_info* info, int count)
             {
                 auto chker = new T(name, info, count);                
-                return chker;
+                return dynamic_cast<checker*>(chker);
             }
 
             static void apply(void* chker)
