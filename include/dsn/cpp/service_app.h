@@ -60,7 +60,8 @@ namespace dsn
         template<typename TServiceApp>
         static void* app_create()
         {
-            return new TServiceApp();
+            auto svc =  new TServiceApp();
+            return (void*)(dynamic_cast<service_app*>(svc));
         }
 
         static dsn_error_t app_start(void* app, int argc, char** argv)
@@ -71,7 +72,7 @@ namespace dsn
             {
                 sapp->_started = true;
                 sapp->_address = dsn_primary_address();
-                sapp->_name = argv[0];
+                sapp->_name = std::string(argv[0]);
                 sapp->register_for_debugging();
             }
             return r;

@@ -51,7 +51,7 @@ __pragma(warning(disable:4127))
 # define __selectany __attribute__((weak)) extern 
 #define getcwd_ getcwd
 #define rmdir_ rmdir
-#define mkdir_(path) mkdir(path, 0666)
+#define mkdir_(path) mkdir(path, 0775)
 
 # ifndef O_BINARY
 # define O_BINARY 0
