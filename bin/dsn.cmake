@@ -46,10 +46,10 @@ function(ms_add_project PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PROJ_LIBS PRO
     endif()
     
     if((PROJ_TYPE STREQUAL "SHARED") OR (PROJ_TYPE STREQUAL "EXECUTABLE"))
-        if(PROJ_TYPE STREQUAL "SHARED")
-            set(LINK_MODE LINK_PUBLIC)
+		if((PROJ_TYPE STREQUAL "SHARED") AND MSVC)
+			set(LINK_MODE PRIVATE)
         else()
-            set(LINK_MODE LINK_PUBLIC)
+            set(LINK_MODE PUBLIC)
         endif()
         target_link_libraries(${PROJ_NAME} "${LINK_MODE}" ${PROJ_LIBS})
     endif()
