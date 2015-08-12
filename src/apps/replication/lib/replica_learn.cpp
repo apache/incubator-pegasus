@@ -146,9 +146,11 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
     }
 
     ddebug(
-        "%s: on_learn %s:%d, with localCommittedDecree = %llu and learnStartDecree = %llu",
+        "%s: on_learn %s:%d, with localCommittedDecree = %llu, "
+        "localAppC/DDecree = <%llu, %llu>, learnStartDecree = %llu",
         name(), request.learner.name.c_str(), static_cast<int>(request.learner.port),
-        localCommittedDecree, learnStartDecree
+        localCommittedDecree, _app->last_committed_decree(), _app->last_durable_decree(),
+        learnStartDecree
         );
     
     response.prepare_start_decree = invalid_decree;
@@ -209,8 +211,9 @@ void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request>& req
     }
 
     ddebug(
-        "%s: on_learn_reply with err = %s, prepare_start_decree = %llu, current learnState = %s",
-        name(), resp->err.to_string(), resp->prepare_start_decree, enum_to_string(_potential_secondary_states.learning_status)
+        "%s: on_learn_reply with err = %s, remoteCommit = %llu, prepareStart = %llu, currentState = %s",
+        name(), resp->err.to_string(), resp->commit_decree, resp->prepare_start_decree,
+        enum_to_string(_potential_secondary_states.learning_status)
         );
 
     if (resp->err != ERR_OK)
@@ -233,6 +236,11 @@ void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request>& req
     {
         _potential_secondary_states.learning_status = LearningWithPrepare;
         _prepare_list->reset(resp->prepare_start_decree - 1);
+        ddebug(
+            "%s: resetPrepareList = %llu, currentState = %s",
+            name(), resp->prepare_start_decree - 1,
+            enum_to_string(_potential_secondary_states.learning_status)
+            );
     }
 
     if (resp->state.files.size() > 0)
@@ -293,7 +301,7 @@ void replica::on_copy_remote_state_completed(error_code err2, int size, std::sha
         ddebug(
                 "%s: learning %d files to %s, err = %x, "
                 "appCommit(%llu => %llu), durable(%llu), "
-                "remoteC(%llu), prepStart(%llu), state(%s)",
+                "remoteCommit(%llu), prepareStart(%llu), currentState(%s)",
                 name(),
                 resp->state.files.size(), _dir.c_str(), err,
                 oldDecree, _app->last_committed_decree(),
@@ -307,6 +315,10 @@ void replica::on_copy_remote_state_completed(error_code err2, int size, std::sha
         if (err == 0 && _app->last_committed_decree() == resp->commit_decree)
         {
             err = _app->flush(true);
+            ddebug(
+                "%s: flush done, err = %x, lastC/DDecree = <%llu, %llu>",
+                name(), err, _app->last_committed_decree(), _app->last_durable_decree()
+                );
             if (err == 0)
             {
                 dassert (_app->last_committed_decree() == _app->last_durable_decree(), "");
@@ -392,7 +404,16 @@ void replica::notify_learn_completion()
     report.learner_signature = _potential_secondary_states.learning_signature;
     report.learner_status_ = _potential_secondary_states.learning_status;
     report.node = primary_address();
-    
+
+    ddebug(
+        "%s: notify_learn_completion with lastAppC/DDecree = <%llu,%llu>, lastCDecree = %llu, learnState = %s",
+        name(),
+        _app->last_committed_decree(),
+        _app->last_durable_decree(),
+        last_committed_decree(),
+        enum_to_string(_potential_secondary_states.learning_status)
+        );
+
     rpc::call_one_way_typed(_config.primary, RPC_LEARN_COMPLETION_NOTIFY, report, gpid_to_hash(get_gpid()));
 }
 

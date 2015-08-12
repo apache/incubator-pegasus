@@ -274,19 +274,23 @@ namespace dsn {
                     if (_current_suit_index >= (int)_suits.size())
                     {
                         std::stringstream ss;
+                        ss << ">>>>>>>>>>>>>>>>>>>" << std::endl;
 
                         for (auto& s : _suits)
                         {
                             for (auto& cs : s.cases)
                             {
                                 ss << "TEST " << s.name
-                                    << ", timeout/err/succ: " << cs.timeout_rounds << "/" << cs.error_rounds << "/" << cs.succ_rounds
-                                    << ", latency(us): " << cs.succ_latency_avg_us << "(avg), "
-                                    << cs.min_latency_us << "(min), "
-                                    << cs.max_latency_us << "(max)"
-                                    << ", qps: " << cs.succ_qps << "#/s"
-                                    << ", target timeout(ms) " << cs.timeout_ms
-                                    << std::endl;
+                                   << ", rounds " << _current_case->rounds
+                                   << ", concurrent " << (_current_case->concurrent ? "true" : "false")
+                                   << ", timeout(ms) " << _current_case->timeout_ms
+                                   << ", payload(byte) " << _current_case->payload_bytes
+                                   << ", timeout/err/succ: " << cs.timeout_rounds << "/" << cs.error_rounds << "/" << cs.succ_rounds
+                                   << ", latency(us): " << cs.succ_latency_avg_us << "(avg), "
+                                   << cs.min_latency_us << "(min), "
+                                   << cs.max_latency_us << "(max)"
+                                   << ", qps: " << cs.succ_qps << "#/s"
+                                   << std::endl;
                             }
                         }
 
@@ -313,6 +317,14 @@ namespace dsn {
                 _rounds_req = 0;
                 _rounds_resp = 0;
                 _rounds_latency_us.resize(cs.rounds, 0);
+
+                std::stringstream ss;
+                ss << "TEST " << _name
+                   << ", rounds " << _current_case->rounds
+                   << ", concurrent " << (_current_case->concurrent ? "true" : "false")
+                   << ", timeout(ms) " << _current_case->timeout_ms
+                   << ", payload(byte) " << _current_case->payload_bytes;
+                dwarn(ss.str().c_str());
 
                 // start
                 suit.send_one(_current_case->payload_bytes);
