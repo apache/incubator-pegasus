@@ -77,7 +77,7 @@ public:
         {
             ::dsn::replication::application::kv_pair req;
             req.key = "key";
-            req.value.resize(512 * 1024);
+            req.value.resize(512 * 1024, 'v');
             req.value.append(value); // = value;
 
             //sync:

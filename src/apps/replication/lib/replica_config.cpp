@@ -725,13 +725,12 @@ void replica::replay_prepare_list()
 
     for (decree decree = start; decree <= end; decree++)
     {
-        mutation_ptr old = _prepare_list->get_mutation_by_decree(decree);
+        mutation_ptr old = _prepare_list->remove_mutation_by_decree(decree);
         mutation_ptr mu = new_mutation(decree);
 
         if (old != nullptr)
         {
-            mu->copy_from(old);
-            dbg_dassert (mu->data.updates.size() == old->data.updates.size(), "");
+            mu->move_from(old);
         }
         else
         {

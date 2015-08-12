@@ -51,11 +51,11 @@ mutation::~mutation()
     }
 }
 
-void mutation::copy_from(mutation_ptr& old)
+void mutation::move_from(mutation_ptr& old)
 {
-    data.updates = old->data.updates;
+    data.updates = std::move(old->data.updates);
     rpc_code = old->rpc_code;
-    
+        
     _client_request = old->client_msg();
     if (_client_request)
     {
@@ -83,6 +83,8 @@ void mutation::set_client_request(dsn_task_code_t code, dsn_message_t request)
         size_t size;
         bool r = dsn_msg_read_next(request, &ptr, &size);
         dassert(r, "payload is not present");
+        dsn_msg_read_commit(request, size);
+
         blob buffer((char*)ptr, 0, (int)size);
         data.updates.push_back(buffer);
     }    

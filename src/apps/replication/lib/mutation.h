@@ -57,7 +57,7 @@ public:
     // state change
     void set_id(ballot b, decree c);
     void set_client_request(dsn_task_code_t code, dsn_message_t request);
-    void copy_from(mutation_ptr& old);
+    void move_from(mutation_ptr& old);
     void set_logged() { dassert (!is_logged(), ""); _not_logged = 0; }
     unsigned int decrease_left_secondary_ack_count() { return --_left_secondary_ack_count; }
     unsigned int decrease_left_potential_secondary_ack_count() { return --_left_potential_secondary_ack_count; }
