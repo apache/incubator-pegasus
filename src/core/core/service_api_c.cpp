@@ -756,7 +756,7 @@ DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init)
             "//   config [-cargs k1=v1;k2=v2] [-app app_name] [-app_index index]\n"
             "// e.g., config.ini -app replica -app_index 1 to start the first replica as a new process\n"
             "//       config.ini -app replica to start ALL replicas (count specified in config) as a new process\n"
-            "//       config.ini -app replica -cargs replica-port=34556 to start with %replica-port% var in config.ini\n"
+            "//       config.ini -app replica -cargs replica-port=34556 to start with %%replica-port%% var in config.ini\n"
             "//       config.ini to start ALL apps as a new process\n"
             );
         exit(1);
