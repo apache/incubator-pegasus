@@ -78,7 +78,7 @@
 	<Compile Include="${MY_PROJ_SRC}" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config" />
+	  <None Include="${CMAKE_CURRENT_SOURCE_DIR}\App.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\dev\csharp\dsn.dev.csharp.csproj">
