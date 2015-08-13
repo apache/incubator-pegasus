@@ -82,6 +82,7 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
 		if(MSVC)
 			file(TO_NATIVE_PATH "${MY_PROJ_SRC}" MY_PROJ_SRC)
 			file(TO_NATIVE_PATH "${MY_OUTPUT_DIRECTORY}" MY_OUTPUT_DIRECTORY)
+			file(TO_NATIVE_PATH "${MY_CURRENT_SOURCE_DIR}" MY_CURRENT_SOURCE_DIR)
 		endif()
         configure_file("${PROJ_NAME}.csproj.template" "${PROJ_NAME}.csproj")
         include_external_msproject(
