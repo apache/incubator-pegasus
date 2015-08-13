@@ -33,6 +33,7 @@ mutation::mutation()
     rpc_code = 0;
     _private0 = 0; 
     _not_logged = 1;
+    _prepare_ts_ms = 0;
     _client_request = nullptr;
     _prepare_request = nullptr;
 }

@@ -93,6 +93,7 @@ void replica::init_prepare(mutation_ptr& mu)
     }
     
     // remote prepare
+    mu->set_prepare_ts();
     dassert (mu->remote_tasks().size() == 0, "");
     mu->set_left_secondary_ack_count((unsigned int)_primary_states.membership.secondaries.size());
     for (auto it = _primary_states.membership.secondaries.begin(); it != _primary_states.membership.secondaries.end(); it++)
@@ -228,7 +229,10 @@ void replica::on_prepare(dsn_message_t request)
             name(), mu->name(),
             enum_to_string(status())
             );
-        ack_prepare_message(ERR_INVALID_STATE, mu);
+        ack_prepare_message(
+            (PS_INACTIVE == status() && _inactive_is_transient) ? ERR_INACTIVE_STATE : ERR_INVALID_STATE,
+            mu
+            );
         return;
     }
 
@@ -376,13 +380,14 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
     else
     {
         ::unmarshall(reply, resp);
-
-        ddebug( 
-            "%s: mutation %s on_prepare_reply from %s:%hu", 
-            name(), mu->name(),
-            node.name, node.port
-            );
     }
+    
+    ddebug(
+        "%s: mutation %s on_prepare_reply from %s:%hu, err = %s",
+        name(), mu->name(),
+        node.name, node.port,
+        resp.err.to_string()
+        );
        
     if (resp.err == ERR_OK)
     {
@@ -417,6 +422,20 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
     // failure handling
     else
     {
+        // retry for INACTIVE state when there are still time
+        if (resp.err == ERR_INACTIVE_STATE
+            && !mu->is_prepare_close_to_timeout(2, targetStatus == PS_SECONDARY ? 
+            _options.prepare_timeout_ms_for_secondaries :
+            _options.prepare_timeout_ms_for_potential_secondaries)
+            )
+        {
+            mu->remote_tasks().erase(node);
+            send_prepare_message(node, targetStatus, mu, targetStatus == PS_SECONDARY ?
+                _options.prepare_timeout_ms_for_secondaries :
+                _options.prepare_timeout_ms_for_potential_secondaries);
+            return;
+        }
+
         // note targetStatus and (curent) status may diff
         if (targetStatus == PS_POTENTIAL_SECONDARY)
         {

@@ -53,6 +53,7 @@ public:
     unsigned int left_potential_secondary_ack_count() const { return _left_potential_secondary_ack_count; }
     ::dsn::task_ptr& log_task() { return _log_task; }
     node_tasks& remote_tasks() { return _prepare_or_commit_tasks; }
+    bool is_prepare_close_to_timeout(int gap_ms, int timeout_ms) { return dsn_now_ms() + gap_ms >= _prepare_ts_ms + timeout_ms; }
 
     // state change
     void set_id(ballot b, decree c);
@@ -65,6 +66,7 @@ public:
     void set_left_potential_secondary_ack_count(unsigned int count) { _left_potential_secondary_ack_count = count; }
     int  clear_prepare_or_commit_tasks();
     int  clear_log_task();
+    void set_prepare_ts() { _prepare_ts_ms = dsn_now_ms(); }
     
     // reader & writer
     static mutation_ptr read_from(binary_reader& readeer, dsn_message_t from);
@@ -91,11 +93,12 @@ private:
         uint64_t _private0;
     };
 
+    uint64_t        _prepare_ts_ms;
     ::dsn::task_ptr _log_task;
-    node_tasks    _prepare_or_commit_tasks;
-    dsn_message_t _prepare_request;
-    dsn_message_t _client_request;
-    char          _name[40]; // ballot.decree
+    node_tasks      _prepare_or_commit_tasks;
+    dsn_message_t   _prepare_request;
+    dsn_message_t   _client_request;
+    char            _name[40]; // ballot.decree
 };
 
 // ---------------------- inline implementation ----------------------------
