@@ -81,8 +81,9 @@
     <None Include="${MY_CURRENT_SOURCE_DIR}\App.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="${MY_CURRENT_SOURCE_DIR}\config.ini" />
-    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></CopyToOutputDirectory>
+    <None Include="${MY_CURRENT_SOURCE_DIR}\config.ini">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\dev\csharp\dsn.dev.csharp.csproj">
