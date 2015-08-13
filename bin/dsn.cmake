@@ -72,6 +72,9 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
     endif()
     
     if(PROJ_LANG STREQUAL "CS")
+		if(MSVC)
+		    file(TO_NATIVE_PATH "${MY_PROJ_SRC}" MY_PROJ_SRC)
+		endif()
         configure_file("${PROJ_NAME}.csproj.template" "${PROJ_NAME}.csproj")
         include_external_msproject(
             "${PROJ_NAME}"
