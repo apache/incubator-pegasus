@@ -1,5 +1,6 @@
-function(ms_add_project PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PROJ_LIBS PROJ_LIB_PATH PROJ_BINPLACES DO_INSTALL)
+function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PROJ_LIBS PROJ_LIB_PATH PROJ_BINPLACES DO_INSTALL)
 	if(DEFINED DSN_DEBUG_CMAKE)
+        message(STATUS "PROJ_LANG = ${PROJ_LANG}")
         message(STATUS "PROJ_TYPE = ${PROJ_TYPE}")
     	message(STATUS "PROJ_NAME = ${PROJ_NAME}")
     	message(STATUS "PROJ_SRC = ${PROJ_SRC}")
@@ -10,6 +11,10 @@ function(ms_add_project PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PROJ_LIBS PRO
     	message(STATUS "DO_INSTALL = ${DO_INSTALL}")
     endif() 
     
+    if(PROJ_LANG STREQUAL "")
+        message(FATAL_ERROR "Invalid project language.")
+    endif()
+
     if(NOT((PROJ_TYPE STREQUAL "STATIC") OR (PROJ_TYPE STREQUAL "SHARED") OR (PROJ_TYPE STREQUAL "EXECUTABLE")))
         #"MODULE" is not used yet
         message(FATAL_ERROR "Invalid project type.")
@@ -22,44 +27,59 @@ function(ms_add_project PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PROJ_LIBS PRO
     if(PROJ_SRC STREQUAL "")
         message(FATAL_ERROR "No source files.")
     endif()
-
-    if(NOT (PROJ_INC_PATH STREQUAL ""))
-        include_directories(${PROJ_INC_PATH})
-    endif()   
-    if(NOT (PROJ_LIB_PATH STREQUAL ""))
-        link_directories(${PROJ_LIB_PATH})
-    endif()    
-      
-    if(PROJ_TYPE STREQUAL "STATIC")
-        if(MSVC)
-            add_definitions(-D_LIB)
-        endif()
-        add_library(${PROJ_NAME} ${PROJ_TYPE} ${PROJ_SRC})
-    elseif(PROJ_TYPE STREQUAL "SHARED")
-        add_library(${PROJ_NAME} ${PROJ_TYPE} ${PROJ_SRC})
-    elseif(PROJ_TYPE STREQUAL "EXECUTABLE")
-        if(MSVC)
-            add_definitions(-D_CONSOLE)
-        endif()        
-        set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJ_NAME}")
-        add_executable(${PROJ_NAME} ${PROJ_SRC})
-    endif()
-    
-    if((PROJ_TYPE STREQUAL "SHARED") OR (PROJ_TYPE STREQUAL "EXECUTABLE"))
-		if((PROJ_TYPE STREQUAL "SHARED") AND MSVC)
-			set(LINK_MODE PRIVATE)
-        else()
-            set(LINK_MODE PUBLIC)
-        endif()
-        target_link_libraries(${PROJ_NAME} "${LINK_MODE}" ${PROJ_LIBS})
-    endif()
     
     if(PROJ_TYPE STREQUAL "EXECUTABLE")
         set(INSTALL_DIR "bin/${PROJ_NAME}")
     else()
         set(INSTALL_DIR "lib")
+    endif()    
+
+    if(PROJ_LANG STREQUAL "CXX")
+        if(NOT (PROJ_INC_PATH STREQUAL ""))
+            include_directories(${PROJ_INC_PATH})
+        endif()
+        if(NOT (PROJ_LIB_PATH STREQUAL ""))
+            link_directories(${PROJ_LIB_PATH})
+        endif()
+          
+        if(PROJ_TYPE STREQUAL "STATIC")
+            if(MSVC)
+                add_definitions(-D_LIB)
+            endif()
+            add_library(${PROJ_NAME} ${PROJ_TYPE} ${PROJ_SRC})
+        elseif(PROJ_TYPE STREQUAL "SHARED")
+            add_library(${PROJ_NAME} ${PROJ_TYPE} ${PROJ_SRC})
+        elseif(PROJ_TYPE STREQUAL "EXECUTABLE")
+            if(MSVC)
+                add_definitions(-D_CONSOLE)
+            endif()
+            set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJ_NAME}")
+            add_executable(${PROJ_NAME} ${PROJ_SRC})
+        endif()
+
+        if((PROJ_TYPE STREQUAL "SHARED") OR (PROJ_TYPE STREQUAL "EXECUTABLE"))
+            if((PROJ_TYPE STREQUAL "SHARED") AND MSVC)
+    		    set(LINK_MODE PRIVATE)
+            else()
+                set(LINK_MODE PUBLIC)
+            endif()
+            target_link_libraries(${PROJ_NAME} "${LINK_MODE}" ${PROJ_LIBS})
+        endif()
+        
+        if(DO_INSTALL)
+            install(TARGETS ${PROJ_NAME} DESTINATION "${INSTALL_DIR}")
+        endif()
     endif()
     
+    if(PROJ_LANG STREQUAL "CS")
+        configure_file("${PROJ_NAME}.csproj.template" "${PROJ_NAME}.csproj")
+        include_external_msproject(
+            "${PROJ_NAME}"
+			"${CMAKE_CURRENT_BINARY_DIR}/${PROJ_NAME}.csproj"
+            TYPE FAE04EC0-301F-11D3-BF4B-00C04F79EFBC
+            )
+    endif()
+               
     if((PROJ_TYPE STREQUAL "EXECUTABLE") AND (NOT (PROJ_BINPLACES STREQUAL "")))
         set(BINPLACE_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/")
         foreach(BF ${PROJ_BINPLACES})
@@ -72,10 +92,6 @@ function(ms_add_project PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PROJ_LIBS PRO
                 install(FILES ${BF} DESTINATION "${INSTALL_DIR}")
             endif()
         endforeach()
-    endif()
-
-    if(DO_INSTALL)
-        install(TARGETS ${PROJ_NAME} DESTINATION "${INSTALL_DIR}")
     endif()
 endfunction(ms_add_project)
 
@@ -157,15 +173,19 @@ macro(ms_find_source_files SOURCE_DIR GLOB_OPTION PROJ_SRC)
 		"${SOURCE_DIR}/*.c"
 		"${SOURCE_DIR}/*.h"
 		"${SOURCE_DIR}/*.hpp"
+        "${SOURCE_DIR}/*.cs"
         )
 endmacro(ms_find_source_files)
 
 function(dsn_add_project)
-    if(NOT DEFINED MY_PROJ_TYPE)
-        set(MY_PROJ_TYPE "")
+	if((NOT DEFINED MY_PROJ_LANG) OR (MY_PROJ_LANG STREQUAL ""))
+		message(FATAL_ERROR "MY_PROJ_LANG is empty.")
     endif()
-    if(NOT DEFINED MY_PROJ_NAME)
-        set(MY_PROJ_NAME "")
+	if((NOT DEFINED MY_PROJ_TYPE) OR (MY_PROJ_TYPE STREQUAL ""))
+		message(FATAL_ERROR "MY_PROJ_TYPE is empty.")
+    endif()
+	if((NOT DEFINED MY_PROJ_NAME) OR (MY_PROJ_NAME STREQUAL ""))
+        message(FATAL_ERROR "MY_PROJ_NAME is empty.")
     endif()
 	if(NOT DEFINED MY_SRC_SEARCH_MODE)
 		set(MY_SRC_SEARCH_MODE "GLOB")
@@ -199,25 +219,27 @@ function(dsn_add_project)
 		endif()
 	endif()
     
-    set(MY_BOOST_LIBS "")
-    if(NOT (MY_BOOST_PACKAGES STREQUAL ""))        
-        ms_setup_boost(TRUE "${MY_BOOST_PACKAGES}" MY_BOOST_LIBS)
-    endif()
+	if(MY_PROJ_LANG STREQUAL "CXX")
+        set(MY_BOOST_LIBS "")
+        if(NOT (MY_BOOST_PACKAGES STREQUAL ""))
+            ms_setup_boost(TRUE "${MY_BOOST_PACKAGES}" MY_BOOST_LIBS)
+        endif()
     
-    if((MY_PROJ_TYPE STREQUAL "SHARED") OR (MY_PROJ_TYPE STREQUAL "EXECUTABLE"))
-        if(DSN_BUILD_RUNTIME AND (MY_PROJ_NAME STREQUAL "dsn.core"))
-            set(TEMP_LIBS            
-            ${DSN_SYSTEM_LIBS}
-            dsn.dev.cpp.core.use
-            dsn.tools.common
-            dsn.tools.simulator
-            dsn.tools.nfs
-            )
-        else()
-            set(TEMP_LIBS dsn.core dsn.dev.cpp)
-        endif()      
-        set(MY_PROJ_LIBS ${MY_BOOST_LIBS} ${TEMP_LIBS} ${MY_PROJ_LIBS})        
-    endif()
+        if((MY_PROJ_TYPE STREQUAL "SHARED") OR (MY_PROJ_TYPE STREQUAL "EXECUTABLE"))
+            if(DSN_BUILD_RUNTIME AND (MY_PROJ_NAME STREQUAL "dsn.core"))
+                set(TEMP_LIBS
+                ${DSN_SYSTEM_LIBS}
+                dsn.dev.cpp.core.use
+                dsn.tools.common
+                dsn.tools.simulator
+                dsn.tools.nfs
+                )
+            else()
+                set(TEMP_LIBS dsn.core dsn.dev.cpp)
+            endif()
+            set(MY_PROJ_LIBS ${MY_BOOST_LIBS} ${TEMP_LIBS} ${MY_PROJ_LIBS})
+        endif()
+     endif()
 
     if(DEFINED DSN_DEBUG_CMAKE)
     	message(STATUS "MY_PROJ_TYPE = ${MY_PROJ_TYPE}")
@@ -233,21 +255,30 @@ function(dsn_add_project)
         message(STATUS "MY_BOOST_LIBS = ${MY_BOOST_LIBS}")
     endif()
     
-    ms_add_project("${MY_PROJ_TYPE}" "${MY_PROJ_NAME}" "${MY_PROJ_SRC}" "${MY_PROJ_INC_PATH}" "${MY_PROJ_LIBS}" "${MY_PROJ_LIB_PATH}" "${MY_BINPLACES}" "${MY_DO_INSTALL}")
+    ms_add_project("${MY_PROJ_LANG}" "${MY_PROJ_TYPE}" "${MY_PROJ_NAME}" "${MY_PROJ_SRC}" "${MY_PROJ_INC_PATH}" "${MY_PROJ_LIBS}" "${MY_PROJ_LIB_PATH}" "${MY_BINPLACES}" "${MY_DO_INSTALL}")
 endfunction(dsn_add_project)
 
+function(dsn_add_cs_shared_library)
+	set(MY_PROJ_LANG "CS")
+	set(MY_PROJ_TYPE "SHARED")
+    dsn_add_project()
+endfunction(dsn_add_cs_shared_library)
+
 function(dsn_add_static_library)
-    set(MY_PROJ_TYPE "STATIC")
+	set(MY_PROJ_LANG "CXX")
+	set(MY_PROJ_TYPE "STATIC")
     dsn_add_project()
 endfunction(dsn_add_static_library)
 
 function(dsn_add_shared_library)
-    set(MY_PROJ_TYPE "SHARED")
+	set(MY_PROJ_LANG "CXX")
+	set(MY_PROJ_TYPE "SHARED")
     dsn_add_project()
 endfunction(dsn_add_shared_library)
 
 function(dsn_add_executable)
-    set(MY_PROJ_TYPE "EXECUTABLE")
+	set(MY_PROJ_LANG "CXX")
+	set(MY_PROJ_TYPE "EXECUTABLE")
     dsn_add_project()
 endfunction(dsn_add_executable)
 
