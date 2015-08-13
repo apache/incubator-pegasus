@@ -267,6 +267,12 @@ function(dsn_add_cs_shared_library)
     dsn_add_project()
 endfunction(dsn_add_cs_shared_library)
 
+function(dsn_add_cs_executable)
+	set(MY_PROJ_LANG "CS")
+	set(MY_PROJ_TYPE "EXECUTABLE")
+    dsn_add_project()
+endfunction(dsn_add_cs_executable)
+
 function(dsn_add_static_library)
 	set(MY_PROJ_LANG "CXX")
 	set(MY_PROJ_TYPE "STATIC")
