@@ -3,7 +3,7 @@ set(MY_PROJ_NAME dsn.tools.nfs)
 # Source files under CURRENT project directory will be automatically included.
 # You can manually set MY_PROJ_SRC to include source files under other directories.
 set(MY_PROJ_SRC "")
-ms_find_source_files("${CMAKE_CURRENT_SOURCE_DIR}/../../../apps/nfs" "GLOB" MY_PROJ_SRC)
+ms_find_source_files("CXX" "${CMAKE_CURRENT_SOURCE_DIR}/../../../apps/nfs" "GLOB" MY_PROJ_SRC)
    
 # Search mode for source files under CURRENT project directory?
 # "GLOB_RECURSE" for recursive search

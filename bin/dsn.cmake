@@ -28,11 +28,16 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
         message(FATAL_ERROR "No source files.")
     endif()
     
-    if(PROJ_TYPE STREQUAL "EXECUTABLE")
-        set(INSTALL_DIR "bin/${PROJ_NAME}")
-    else()
-        set(INSTALL_DIR "lib")
-    endif()    
+	set(INSTALL_DIR "lib")
+	if(PROJ_TYPE STREQUAL "EXECUTABLE")
+		set(INSTALL_DIR "bin/${PROJ_NAME}")
+		set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJ_NAME}")
+		set(OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+	elseif(PROJ_TYPE STREQUAL "STATIC")
+		set(OUTPUT_DIRECTORY "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}")
+	elseif(PROJ_TYPE STREQUAL "SHARED")
+		set(OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+	endif()
 
     if(PROJ_LANG STREQUAL "CXX")
         if(NOT (PROJ_INC_PATH STREQUAL ""))
@@ -53,7 +58,6 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
             if(MSVC)
                 add_definitions(-D_CONSOLE)
             endif()
-            set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJ_NAME}")
             add_executable(${PROJ_NAME} ${PROJ_SRC})
         endif()
 
@@ -72,8 +76,11 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
     endif()
     
     if(PROJ_LANG STREQUAL "CS")
+		set(MY_PROJ_SRC ${PROJ_SRC})
+		set(MY_OUTPUT_DIRECTORY ${OUTPUT_DIRECTORY})
 		if(MSVC)
-		    file(TO_NATIVE_PATH "${MY_PROJ_SRC}" MY_PROJ_SRC)
+			file(TO_NATIVE_PATH "${MY_PROJ_SRC}" MY_PROJ_SRC)
+			file(TO_NATIVE_PATH "${MY_OUTPUT_DIRECTORY}" MY_OUTPUT_DIRECTORY)
 		endif()
         configure_file("${PROJ_NAME}.csproj.template" "${PROJ_NAME}.csproj")
         include_external_msproject(
@@ -168,16 +175,29 @@ function(ms_check_cxx11_support)
     endif()
 endfunction(ms_check_cxx11_support)
 
-macro(ms_find_source_files SOURCE_DIR GLOB_OPTION PROJ_SRC)
-    file(${GLOB_OPTION}
-        ${PROJ_SRC}
-        "${SOURCE_DIR}/*.cpp"
-		"${SOURCE_DIR}/*.cc"
-		"${SOURCE_DIR}/*.c"
-		"${SOURCE_DIR}/*.h"
-		"${SOURCE_DIR}/*.hpp"
-        "${SOURCE_DIR}/*.cs"
-        )
+macro(ms_find_source_files LANG SOURCE_DIR GLOB_OPTION PROJ_SRC)
+    if(${LANG} STREQUAL "CXX")
+        file(${GLOB_OPTION}
+            ${PROJ_SRC}
+            "${SOURCE_DIR}/*.cpp"
+		    "${SOURCE_DIR}/*.cc"
+		    "${SOURCE_DIR}/*.c"
+		    "${SOURCE_DIR}/*.h"
+		    "${SOURCE_DIR}/*.hpp"
+            )
+	elseif(${LANG} STREQUAL "CS")
+        file(${GLOB_OPTION}
+            ${PROJ_SRC}
+            "${SOURCE_DIR}/*.cs"
+			)
+	endif()
+
+	if(DEFINED DSN_DEBUG_CMAKE)
+		message(STATUS "LANG = ${LANG}")
+		message(STATUS "SOURCE_DIR = ${SOURCE_DIR}")
+		message(STATUS "GLOB_OPTION = ${GLOB_OPTION}")
+		message(STATUS "PROJ_SRC = ${${PROJ_SRC}}")
+	endif()
 endmacro(ms_find_source_files)
 
 function(dsn_add_project)
@@ -197,7 +217,7 @@ function(dsn_add_project)
         set(MY_PROJ_SRC "")
     endif()
     set(TEMP_SRC "")
-	ms_find_source_files("${CMAKE_CURRENT_SOURCE_DIR}" ${MY_SRC_SEARCH_MODE} TEMP_SRC)
+	ms_find_source_files("${MY_PROJ_LANG}" "${CMAKE_CURRENT_SOURCE_DIR}" ${MY_SRC_SEARCH_MODE} TEMP_SRC)
     set(MY_PROJ_SRC ${TEMP_SRC} ${MY_PROJ_SRC})
     if(NOT DEFINED MY_PROJ_INC_PATH)
         set(MY_PROJ_INC_PATH "")

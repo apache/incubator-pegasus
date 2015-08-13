@@ -16,6 +16,6 @@ set(MY_PROJ_LIBS "")
 set(MY_PROJ_LIB_PATH "")
 
 # Extra files that will be installed
-set(MY_BINPLACES "")
+set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
 
 dsn_add_cs_executable()
