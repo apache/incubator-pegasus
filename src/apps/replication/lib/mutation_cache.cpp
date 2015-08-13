@@ -77,10 +77,6 @@ error_code mutation_cache::put(mutation_ptr& mu)
         
     // update tracking data
     _interval += delta;
-    if (old != nullptr)
-    {
-        old = nullptr;
-    }
 
     if (tag > 0)
     {

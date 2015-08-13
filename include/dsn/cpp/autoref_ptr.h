@@ -123,6 +123,11 @@ namespace dsn
 
         ref_ptr<T>& operator = (ref_ptr<T>&& obj)
         {
+            if (nullptr != _obj)
+            {
+                _obj->release_ref();
+            }
+
             _obj = obj._obj;
             obj._obj = nullptr;
             return *this;

@@ -177,5 +177,12 @@ TEST(core, ref_ptr)
     EXPECT_TRUE(y->get_count() == 1);
     xs.clear();
     EXPECT_TRUE(count == 0);
+
+
+    foo_ptr z = new foo(count);
+    EXPECT_TRUE(count == 1);
+    z = std::move(foo_ptr());
+    EXPECT_TRUE(count == 0);
 }
+
 
