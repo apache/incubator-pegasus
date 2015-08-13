@@ -287,6 +287,7 @@ void replica::on_copy_remote_state_completed(error_code err2, int size, std::sha
         }
 
         decree oldDecree = _app->last_committed_decree();
+        decree oldDurable = _app->last_durable_decree();
 
         // the only place where there is non-in-partition-thread update
         int err = _app->apply_learn_state(resp->state);
@@ -300,14 +301,12 @@ void replica::on_copy_remote_state_completed(error_code err2, int size, std::sha
 
         ddebug(
                 "%s: learning %d files to %s, err = %x, "
-                "appCommit(%llu => %llu), durable(%llu), "
+                "appCommit(%llu => %llu), appDurable(%llu => %llu), "
                 "remoteCommit(%llu), prepareStart(%llu), currentState(%s)",
-                name(),
-                resp->state.files.size(), _dir.c_str(), err,
+                name(), resp->state.files.size(), _dir.c_str(), err,
                 oldDecree, _app->last_committed_decree(),
-                _app->last_durable_decree(),
-                resp->commit_decree,
-                resp->prepare_start_decree,
+                oldDurable, _app->last_durable_decree(),
+                resp->commit_decree, resp->prepare_start_decree,
                 enum_to_string(_potential_secondary_states.learning_status)
               );
 
@@ -316,7 +315,7 @@ void replica::on_copy_remote_state_completed(error_code err2, int size, std::sha
         {
             err = _app->flush(true);
             ddebug(
-                "%s: flush done, err = %x, lastC/DDecree = <%llu, %llu>",
+                "%s: flush done, err = %d, lastC/DDecree = <%llu, %llu>",
                 name(), err, _app->last_committed_decree(), _app->last_durable_decree()
                 );
             if (err == 0)
