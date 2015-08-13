@@ -72,6 +72,9 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
     endif()
     
     if(PROJ_LANG STREQUAL "CS")
+		if(MSVC)
+		    file(TO_NATIVE_PATH "${MY_PROJ_SRC}" MY_PROJ_SRC)
+		endif()
         configure_file("${PROJ_NAME}.csproj.template" "${PROJ_NAME}.csproj")
         include_external_msproject(
             "${PROJ_NAME}"
@@ -263,6 +266,12 @@ function(dsn_add_cs_shared_library)
 	set(MY_PROJ_TYPE "SHARED")
     dsn_add_project()
 endfunction(dsn_add_cs_shared_library)
+
+function(dsn_add_cs_executable)
+	set(MY_PROJ_LANG "CS")
+	set(MY_PROJ_TYPE "EXECUTABLE")
+    dsn_add_project()
+endfunction(dsn_add_cs_executable)
 
 function(dsn_add_static_library)
 	set(MY_PROJ_LANG "CXX")
