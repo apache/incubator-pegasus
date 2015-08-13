@@ -160,7 +160,10 @@ void replica::replay_mutation(mutation_ptr& mu)
 {
     if (mu->data.header.decree <= last_committed_decree() ||
         mu->data.header.ballot < get_ballot())
+    {
         return;
+    }
+        
     
     if (mu->data.header.ballot > get_ballot())
     {

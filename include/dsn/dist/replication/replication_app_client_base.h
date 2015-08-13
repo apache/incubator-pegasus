@@ -335,10 +335,9 @@ namespace dsn { namespace replication {
             uint64_t              timeout_ts_us; // timeout at this timing point
             dsn_message_t         request;
 
-            zlock                      lock; // [
-            dsn::task_ptr timeout_timer; // when partition config is unknown at the first place            
-            dsn::task_ptr rw_task;
-            bool                       completed;
+            zlock                 lock; // [
+            dsn::task_ptr         timeout_timer; // when partition config is unknown at the first place            
+            bool                  completed;
             // ]
         };
 

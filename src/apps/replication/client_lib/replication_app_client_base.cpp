@@ -273,7 +273,7 @@ void replication_app_client_base::call(request_context_ptr request, bool no_dela
 
         {
             zauto_lock l(request->lock);
-            request->rw_task = rpc::call(
+            rpc::call(
                 addr,
                 msg,
                 this,

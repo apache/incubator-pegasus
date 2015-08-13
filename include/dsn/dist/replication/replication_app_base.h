@@ -39,6 +39,7 @@ namespace dsn { namespace replication {
 
 using namespace ::dsn::service;
 
+class mutation;
 class replication_app_base
 {
 public:

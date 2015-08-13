@@ -172,8 +172,9 @@ namespace dsn
         virtual bool cancel(bool wait_until_finished, bool* finished = nullptr) override
         {
             bool r = safe_task_handle::cancel(wait_until_finished, finished);
-            if (_is_timer && r)
+            if (r)
             {
+                _handler = nullptr;
                 release_ref(); // added upon callback exec registration
             }
             return r;
@@ -185,6 +186,7 @@ namespace dsn
             t->_handler();
             if (!t->_is_timer)
             {
+                t->_handler = nullptr;
                 t->release_ref(); // added upon callback exec registration
             }
         }
@@ -193,6 +195,7 @@ namespace dsn
         {
             safe_task* t = (safe_task*)task;
             t->_handler(err, req, resp);
+            t->_handler = nullptr;
             t->release_ref(); // added upon callback exec_rpc_response registration
         }
 
@@ -200,6 +203,7 @@ namespace dsn
         {
             safe_task* t = (safe_task*)task;
             t->_handler(err, sz);
+            t->_handler = nullptr;
             t->release_ref(); // added upon callback exec_aio registration
         }
             

@@ -40,7 +40,6 @@ mutation::mutation()
 
 mutation::~mutation()
 {
-    clear_log_task();
     if (_client_request != nullptr)
     {
         dsn_msg_release_ref(_client_request);
@@ -125,8 +124,10 @@ int mutation::clear_prepare_or_commit_tasks()
     int c = 0;
     for (auto it = _prepare_or_commit_tasks.begin(); it != _prepare_or_commit_tasks.end(); it++)
     {
-        it->second->cancel(true);
-        c++;
+        if (it->second->cancel(true))
+        {
+            c++;
+        }        
     }
 
     _prepare_or_commit_tasks.clear();
@@ -135,16 +136,12 @@ int mutation::clear_prepare_or_commit_tasks()
 
 int mutation::clear_log_task()
 {
-    if (_log_task != nullptr)
+    if (_log_task != nullptr && _log_task->cancel(true))
     {
-        _log_task->cancel(true);
         _log_task = nullptr;
         return 1;
     }
-    else
-    {
-        return 0;
-    }
+    return 0;
 }
 
 }} // namespace end

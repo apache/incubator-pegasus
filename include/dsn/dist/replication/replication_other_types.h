@@ -51,9 +51,6 @@ namespace dsn {
 
         class mutation;
         typedef dsn::ref_ptr<mutation> mutation_ptr;
-
-
-
     }
 } // namespace
 

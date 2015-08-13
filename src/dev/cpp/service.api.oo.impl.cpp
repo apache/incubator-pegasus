@@ -40,7 +40,7 @@ namespace dsn
             )
         {                
             dsn_task_t t;
-            auto tsk = new safe_task<task_handler>(callback, timer_interval_milliseconds != 0);
+            task_ptr tsk = new safe_task<task_handler>(callback, timer_interval_milliseconds != 0);
                 
             tsk->add_ref(); // released in exec callback
             if (timer_interval_milliseconds != 0)
@@ -69,7 +69,7 @@ namespace dsn
             int reply_hash
             )
         {
-            auto tsk = new safe_task<rpc_reply_handler >(callback);
+            task_ptr tsk = new safe_task<rpc_reply_handler >(callback);
 
             if (callback != nullptr)
                 tsk->add_ref(); // released in exec_rpc_response
@@ -100,7 +100,7 @@ namespace dsn
             int hash /*= 0*/
             )
         {
-            auto tsk = new safe_task<aio_handler>(callback);                
+            task_ptr tsk = new safe_task<aio_handler>(callback);
                 
             if (callback != nullptr) 
                 tsk->add_ref(); // released in exec_aio
@@ -127,7 +127,7 @@ namespace dsn
             int hash /*= 0*/
             )
         {
-            auto tsk = new safe_task<aio_handler>(callback);
+            task_ptr tsk = new safe_task<aio_handler>(callback);
 
             if (callback != nullptr)
                 tsk->add_ref(); // released in exec_aio
@@ -156,7 +156,7 @@ namespace dsn
             int hash /*= 0*/
             )
         {
-            auto tsk = new safe_task<aio_handler>(callback);
+            task_ptr tsk = new safe_task<aio_handler>(callback);
 
             if (callback != nullptr)
                 tsk->add_ref(); // released in exec_aio

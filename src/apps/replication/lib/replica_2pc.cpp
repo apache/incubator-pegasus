@@ -94,7 +94,6 @@ void replica::init_prepare(mutation_ptr& mu)
     
     // remote prepare
     mu->set_prepare_ts();
-    dassert (mu->remote_tasks().size() == 0, "");
     mu->set_left_secondary_ack_count((unsigned int)_primary_states.membership.secondaries.size());
     for (auto it = _primary_states.membership.secondaries.begin(); it != _primary_states.membership.secondaries.end(); it++)
     {
@@ -150,9 +149,7 @@ void replica::send_prepare_message(const dsn_address_t& addr, partition_status s
         mu->write_to(writer);
     }
     
-    dbg_dassert (mu->remote_tasks().find(addr) == mu->remote_tasks().end(), "");
-
-    mu->remote_tasks()[addr] = rpc::call(addr, msg, 
+    mu->remote_tasks()[addr] = rpc::call(addr, msg,
         this,
         std::bind(&replica::on_prepare_reply, 
             this,
@@ -293,6 +290,7 @@ void replica::on_prepare(dsn_message_t request)
     
     // write log
     dassert (mu->log_task() == nullptr, "");
+
     mu->log_task() = _stub->_log->append(mu,
         LPC_WRITE_REPLICATION_LOG,
         this,
@@ -356,7 +354,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
 {
     check_hashed_access();
 
-    mutation_ptr& mu = pr.first;
+    mutation_ptr mu = pr.first;
     partition_status targetStatus = pr.second;
 
     // skip callback for old mutations
@@ -429,7 +427,6 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
             _options.prepare_timeout_ms_for_potential_secondaries)
             )
         {
-            mu->remote_tasks().erase(node);
             send_prepare_message(node, targetStatus, mu, targetStatus == PS_SECONDARY ?
                 _options.prepare_timeout_ms_for_secondaries :
                 _options.prepare_timeout_ms_for_potential_secondaries);

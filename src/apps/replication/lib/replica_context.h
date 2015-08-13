@@ -58,12 +58,12 @@ public:
     learner_map             learners;
 
     // 2pc batching
-    mutation_ptr                   pending_mutation;
+    mutation_ptr      pending_mutation;
     dsn::task_ptr     pending_mutation_task;
 
     // group check
     dsn::task_ptr     group_check_task;
-    node_tasks                     group_check_pending_replies;
+    node_tasks        group_check_pending_replies;
 
     // reconfig
     dsn::task_ptr     reconfiguration_task;
