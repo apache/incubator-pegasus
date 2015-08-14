@@ -369,12 +369,8 @@ endmacro(ms_setup_boost)
 
 function(dsn_setup_packages)
     set(DSN_BOOST_PACKAGES 
-        thread
-        regex
         system
         filesystem
-        chrono
-        date_time
         )
     set(DSN_BOOST_LIBS "")
     ms_setup_boost(TRUE "${DSN_BOOST_PACKAGES}" DSN_BOOST_LIBS)
