@@ -74,10 +74,10 @@ extern "C" {
 //     besides the existing high performance providers; developers can also configure
 //     thread pools, thread numbers, thread/task priorities, CPU core affinities, 
 //     throttling policies etc. to build a best threading model for upper apps.
-// (4) ease of intergration - through langauge wrapper for service integration and low level
+// (4) ease of intergration - through language wrapper for service integration and low level
 //     plugged components for platform integration.
 // (5) rich debug, development tools and runtime policies support.
-// (6) tool API with task graunilarity semantic for further tool and runtime policy development.
+// (6) tool API with task granularity semantic for further tool and runtime policy development.
 // (7) PRINCIPLE: all non-determinims must be go through these system calls so that powerful
 //     internal tools are possible - replay, model checking, replication, ...,
 //     AND, it is still OK to call other DETERMINISTIC APIs for applications.
@@ -345,7 +345,7 @@ extern DSN_API uint32_t              dsn_crc32_concatenate(
 // tasking - asynchronous tasks and timers tasks executed in target thread pools
 //
 // (configured in config files)
-// [task.RPC_PREPARE
+// [task.RPC_PREPARE]
 // // TODO: what can be configured for a task
 //
 // [threadpool.THREAD_POOL_REPLICATION]

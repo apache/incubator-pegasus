@@ -58,7 +58,7 @@ namespace dsn {
 
         dsn_handle_t native_linux_aio_provider::open(const char* file_name, int flag, int pmode)
         {
-            return (dsn_handle_t)::open(file_name, flag, pmode);
+            return (dsn_handle_t)(uintptr_t)::open(file_name, flag, pmode);
         }
 
         error_code native_linux_aio_provider::close(dsn_handle_t hFile)
