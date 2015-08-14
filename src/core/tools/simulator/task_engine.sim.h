@@ -73,4 +73,33 @@ private:
     std::list<sim_worker_state*> _wait_threads;
 };
 
+class sim_lock : public lock_provider
+{
+public:
+    sim_lock(lock_provider* inner_provider)
+        : lock_provider(inner_provider),
+        _sema(1, nullptr)
+    {}
+    
+    virtual ~sim_lock()
+    {}
+
+    virtual void lock()
+    {
+        _sema.wait(TIME_MS_MAX);
+    }
+    virtual bool try_lock()
+    {
+        return _sema.wait(0);
+    }
+
+    virtual void unlock()
+    {
+        _sema.signal(1);
+    }
+
+private:
+    sim_semaphore_provider _sema;
+};
+
 }} // end namespace

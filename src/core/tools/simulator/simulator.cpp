@@ -50,6 +50,7 @@ void simulator::install(service_spec& spec)
     register_component_provider<sim_task_queue>("dsn::tools::sim_task_queue");
     register_component_provider<sim_timer_service>("dsn::tools::sim_timer_service");
     register_component_provider<sim_semaphore_provider>("dsn::tools::sim_semaphore_provider");
+    //register_component_provider<sim_lock>("dsn::tools::sim_lock");
 
     scheduler::instance();
 
