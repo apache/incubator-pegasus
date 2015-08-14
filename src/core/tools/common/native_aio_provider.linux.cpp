@@ -97,6 +97,10 @@ namespace dsn {
                     struct iocb *io = events[0].obj;
                     complete_aio(io, static_cast<int>(events[0].res), static_cast<int>(events[0].res2));
                 }
+                else
+                {
+                    dwarn("io_getevents returns %d, you probably want to try on another machine:-(", ret);
+                }
             }
         }
 
