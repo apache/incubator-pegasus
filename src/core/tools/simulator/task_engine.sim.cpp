@@ -40,26 +40,26 @@ sim_task_queue::sim_task_queue(task_worker_pool* pool, int index, task_queue* in
 
 void sim_task_queue::enqueue(task* t)
 {
-    if (0 == t->delay_milliseconds())    
+    dassert(0 == t->delay_milliseconds(), "delay time must be zero");
+    if (_tasks.size() > 0)
     {
-        if (_tasks.size() > 0)
-        {
-            do {
-                int random_pos = dsn_random32(0, 1000000);
-                auto pr = _tasks.insert(std::map<uint32_t, task*>::value_type(random_pos, t));
-                if (pr.second) break;
-            } while (true);
-        }
-        else
-        {
+        do {
             int random_pos = dsn_random32(0, 1000000);
-            _tasks.insert(std::map<uint32_t, task*>::value_type(random_pos, t));
-        }
+            auto pr = _tasks.insert(std::map<uint32_t, task*>::value_type(random_pos, t));
+            if (pr.second) break;
+        } while (true);
     }
     else
     {
-        
+        int random_pos = dsn_random32(0, 1000000);
+        _tasks.insert(std::map<uint32_t, task*>::value_type(random_pos, t));
     }
+
+    // for scheduling
+    /*if (task::get_current_worker())
+    {
+        scheduler::instance().wait_schedule(true, true);
+    }*/
 }
 
 task* sim_task_queue::dequeue()
@@ -100,7 +100,12 @@ bool sim_semaphore_provider::wait(int timeout_milliseconds)
         scheduler::instance().wait_schedule(true, true);
         return true;
     }
-    else
+    else if (0 == timeout_milliseconds)
+    {
+        scheduler::instance().wait_schedule(true, true);
+        return false;
+    }
+    else // TODO: timeout
     {
         _wait_threads.push_back(scheduler::task_worker_ext::get(task::get_current_worker()));
         scheduler::instance().wait_schedule(true, false);
