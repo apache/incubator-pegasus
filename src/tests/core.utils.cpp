@@ -24,8 +24,9 @@
  * THE SOFTWARE.
  */
 
-# include <dsn/internal/utils.h>
+# include <dsn/cpp/utils.h>
 # include <dsn/internal/link.h>
+# include <dsn/cpp/autoref_ptr.h>
 # include <gtest/gtest.h>
 
 using namespace ::dsn;
@@ -45,26 +46,6 @@ TEST(core, binary_io)
     EXPECT_TRUE(value3 == value);
 }
 
-
-TEST(core, binary_io_with_pos)
-{
-    int value = 0xdeadbeef;
-    int value2 = 0xdeadbeef + 100;
-    binary_writer writer;
-    auto pos = writer.write_placeholder();
-    
-    writer.write(value);
-    writer.write(value2, pos);
-    
-    auto buf = writer.get_buffer();
-    binary_reader reader(buf);
-    int value3, value4;
-    reader.read(value3);
-    reader.read(value4);
-
-    EXPECT_TRUE(value3 == value2);
-    EXPECT_TRUE(value4 == value);
-}
 
 TEST(core, split_args)
 {
@@ -123,4 +104,85 @@ TEST(core, dlink)
     EXPECT_TRUE(hdr.is_alone());
     EXPECT_TRUE(count == 0);
 }
+
+
+
+class foo : public ::dsn::ref_counter
+{
+public:
+    foo(int &count)
+        : _count(count)
+    {
+        _count++;
+    }
+
+    ~foo()
+    {
+        _count--;
+    }
+
+private:
+    int &_count;
+};
+
+typedef ::dsn::ref_ptr<foo> foo_ptr;
+
+TEST(core, ref_ptr)
+{
+    int count = 0;
+    foo_ptr x = nullptr;
+    auto y = new foo(count);
+    x = y;
+    EXPECT_TRUE(x->get_count() == 1);
+    EXPECT_TRUE(count == 1);
+    x = new foo(count);
+    EXPECT_TRUE(x->get_count() == 1);
+    EXPECT_TRUE(count == 1);
+    x = nullptr;
+    EXPECT_TRUE(count == 0);
+
+    std::map<int, foo_ptr> xs;
+    x = new foo(count);
+    EXPECT_TRUE(x->get_count() == 1);
+    EXPECT_TRUE(count == 1);
+    xs.insert(std::make_pair(1, x));
+    EXPECT_TRUE(x->get_count() == 2);
+    EXPECT_TRUE(count == 1);
+    x = nullptr;
+    EXPECT_TRUE(count == 1);
+    xs.clear();
+    EXPECT_TRUE(count == 0);
+
+    x = new foo(count);
+    EXPECT_TRUE(count == 1);
+    xs[2] = x;
+    EXPECT_TRUE(x->get_count() == 2);
+    x = nullptr;
+    EXPECT_TRUE(count == 1);
+    xs.clear();
+    EXPECT_TRUE(count == 0);
+
+    y = new foo(count);
+    EXPECT_TRUE(count == 1);
+    xs.insert(std::make_pair(1, y));
+    EXPECT_TRUE(count == 1);
+    EXPECT_TRUE(y->get_count() == 1);
+    xs.clear();
+    EXPECT_TRUE(count == 0);
+
+    y = new foo(count);
+    EXPECT_TRUE(count == 1);
+    xs[2] = y;
+    EXPECT_TRUE(count == 1);
+    EXPECT_TRUE(y->get_count() == 1);
+    xs.clear();
+    EXPECT_TRUE(count == 0);
+
+
+    foo_ptr z = new foo(count);
+    EXPECT_TRUE(count == 1);
+    z = std::move(foo_ptr());
+    EXPECT_TRUE(count == 0);
+}
+
 

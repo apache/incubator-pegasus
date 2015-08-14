@@ -98,6 +98,47 @@ class thelpers
         default: return $base_type;
         }
     }
+    
+    public static function base_type_to_csharp_type($base_type)
+    {
+        //echo "base_type_to_cpp_type'".$base_type."'".PHP_EOL;
+        switch ($base_type)
+        {
+        case "list": return "List";
+        case "map": return "Dictionary";
+        case "set": return "HashSet";
+        case "vector": return "List";
+        case "string": return "string";
+        case "double": return "double";
+        case "float": return "float";
+        case "i64": return "Int64";
+        case "int64": return "Int64";
+        case "int64_t": return "Int64";
+        case "ui64": return "UInt64";
+        case "uint64": return "UInt64";
+        case "uint64_t": return "UInt64";
+        case "i32": return "Int32";
+        case "int32": return "Int32";
+        case "int32_t": return "Int32";
+        case "ui32": return "UInt32";
+        case "uint32": return "UInt32";
+        case "uint32_t": return "UInt32";
+        case "byte": return "byte";
+        case "BYTE": return "byte";
+        case "Byte": return "byte";
+        case "bool": return "bool";
+        case "BOOL": return "bool";
+        case "Bool": return "bool";
+        case "sint32": return "Int32";
+        case "sint64": return "Int64";
+        case "fixed32": return "Int32";
+        case "fixed64": return "Int64";
+        case "sfixed32": return "Int32";
+        case "sfixed64": return "Int64";
+                
+        default: return $base_type;
+        }
+    }
 
     public static function get_cpp_type_name($full_name)
     {
@@ -181,14 +222,99 @@ class thelpers
         else if (FALSE != strpos($full_name, "."))
         {
             return str_replace(".", "_", $full_name);
-            //return substr($full_name, 0, strpos($full_name, ".")) 
-            //    ."::".thelpers::get_cpp_name_internal(
-            //    substr($full_name, strpos($full_name, ".") + 1)
-            //    );
         }
         else
         {
             return thelpers::base_type_to_cpp_type($full_name);
+        }
+    }
+    
+    public static function get_csharp_type_name($full_name)
+    {
+        global $_PROG;
+        if (thelpers::is_container_type($full_name))
+            return thelpers::get_csharp_name_internal($full_name);
+        else
+        {
+            $pos = strrpos($full_name, ".");
+            if (FALSE == $pos)
+                return thelpers::get_csharp_name_internal($full_name);
+            else
+            {        
+                // check cpp namespace as prefix
+                $prog = NULL;
+                $left = "";
+                if (thelpers::begin_with($full_name, $_PROG->get_csharp_namespace()."."))
+                {
+                    $left = substr($full_name, strlen($_PROG->get_csharp_namespace()) + 1);
+                    $prog = $_PROG;
+                }
+                else 
+                {
+                    foreach ($_PROG->includes as $pn => $p)
+                    {
+                        if (thelpers::begin_with($full_name, $p->get_csharp_namespace()."."))
+                        {
+                            $left = substr($full_name, strlen($p->get_csharp_namespace()) + 1);
+                            $prog = $p;
+                            break;
+                        }
+                    }
+                }
+                
+                // check package as prefix
+                if ($prog == NULL)
+                {
+                    if (thelpers::begin_with($full_name, $_PROG->name."."))
+                    {
+                        $left = substr($full_name, strlen($_PROG->name) + 1);
+                        $prog = $_PROG;
+                    }
+                    else 
+                    {
+                        foreach ($_PROG->includes as $pn => $p)
+                        {
+                            if (thelpers::begin_with($full_name, $p->name."."))
+                            {
+                                $left = substr($full_name, strlen($p->name) + 1);
+                                $prog = $p;
+                                break;
+                            }
+                        }
+                    }
+                }
+                    
+                if (NULL == $prog)
+                {
+                    return "full type translation from '". $full_name. "' failed.";
+                }
+                
+                return $prog == $_PROG ? 
+                    thelpers::get_csharp_name_internal($left) :
+                    $prog->get_csharp_namespace() . thelpers::get_csharp_name_internal($left);
+            }
+        }
+    }
+    
+    private static function get_csharp_name_internal($full_name)
+    {
+        if (thelpers::is_container_type($full_name))
+        {
+            $kt = thelpers::get_container_key_type($full_name);
+            $vt = thelpers::get_container_value_type($full_name);
+            $ct = thelpers::get_container_type($full_name);
+            return thelpers::base_type_to_csharp_type($ct)."< ".
+                    ($vt == FALSE ? thelpers::get_csharp_type_name($kt)
+                        : (thelpers::get_csharp_type_name($kt).", ".thelpers::get_csharp_type_name($vt)))
+                    .">";
+        }
+        else if (FALSE != strpos($full_name, "."))
+        {
+            return str_replace(".", "_", $full_name);
+        }
+        else
+        {
+            return thelpers::base_type_to_csharp_type($full_name);
         }
     }
 }
@@ -288,6 +414,16 @@ class t_program
         return $rt;
     }
     
+    function get_csharp_namespace()
+    {
+        if (!array_key_exists("csharp", $this->namespaces))
+        {
+            return $this->namespaces["cpp"];
+        }
+        
+        return $this->namespaces["csharp"];
+    }
+    
     function add_annotations($atts)
     {
         $this->annotations = $atts;
@@ -347,6 +483,28 @@ class t_type
         }
     }
     
+    function get_csharp_name()
+    {
+        $pos = strpos($this->name, ".");
+        if ($pos == FALSE)
+            return $this->name;
+        else
+        {
+            $prefix = substr($this->name, 0, $pos);
+            if (0 == strcmp($prefix, $this->program->name)
+             || 0 == strcmp($prefix, $this->program->get_csharp_namespace()))
+            {
+                $prefix = substr($this->name, $pos + 1);
+            }
+            else
+            {
+                $prefix = $this->name;
+            }
+            
+            return str_replace(".", "_", $prefix);
+        }
+    }
+    
     function is_void() { return false; }
     function is_enum() { return false; }
     function is_alias() { return false; }
@@ -383,7 +541,7 @@ class t_enum extends t_type
         $this->values[$name] = $value;
     }    
     
-    function is_enum() { return true; }
+    function is_enum() { return true; }    
 }
 
 class t_field
@@ -400,6 +558,24 @@ class t_field
     function get_cpp_type()
     {
         return thelpers::get_cpp_type_name($this->type_name);
+    }
+    
+    function get_csharp_type()
+    {
+        return thelpers::get_csharp_type_name($this->type_name);
+    }
+    
+    function is_base_type()
+    {
+        global $_PROG;
+        if (!array_key_exists($this->type_name, $_PROG->types))
+        {
+            return true;
+        }
+        else
+        {
+            return $_PROG->types[$this->type_name]->is_base_type();
+        }
     }
 }
 
@@ -452,6 +628,11 @@ class t_function
     function get_cpp_return_type()
     {
         return thelpers::get_cpp_type_name($this->ret);
+    }
+    
+    function get_csharp_return_type()
+    {
+        return thelpers::get_csharp_type_name($this->ret);
     }
     
     function get_first_param()

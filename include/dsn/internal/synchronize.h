@@ -25,8 +25,7 @@
  */
 # pragma once
 
-# include <dsn/internal/dsn_types.h>
-# include <dsn/internal/logging.h>
+# include <dsn/ports.h>
 
 // using high performance versions from https://github.com/preshing/cpp11-on-multicore
 
@@ -143,8 +142,8 @@ namespace dsn {
         class semaphore
         {
         public:
-            semaphore(int initialCount = 0)
-                : _sema(initialCount, 128)
+            semaphore(int initial_count = 0)
+                : _sema(initial_count, 128)
             {
             }
 

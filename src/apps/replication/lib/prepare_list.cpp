@@ -165,9 +165,11 @@ bool prepare_list::commit(decree d, bool force)
         for (decree d0 = last_committed_decree() + 1; d0 <= d; d0++)
         {
             mutation_ptr mu = get_mutation_by_decree(d0);
-            dassert (mu != nullptr && 
-                (mu->is_logged() || _allow_prepare_ack_before_logging)
-                , "");
+            dassert(mu != nullptr &&
+                (mu->is_logged() || _allow_prepare_ack_before_logging),
+                "mutation %lld is missing in prepare list",
+                d0
+                );
 
             _last_committed_decree++;
             _committer(mu);

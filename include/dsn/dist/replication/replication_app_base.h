@@ -30,7 +30,7 @@
 // this library
 // 
 
-# include <dsn/serverlet.h>
+# include <dsn/cpp/serverlet.h>
 # include <dsn/dist/replication/replication.types.h>
 # include <dsn/dist/replication/replication_other_types.h>
 # include <dsn/dist/replication/replication.codes.h>
@@ -39,17 +39,19 @@ namespace dsn { namespace replication {
 
 using namespace ::dsn::service;
 
+class mutation;
 class replication_app_base
 {
 public:
     template <typename T> static replication_app_base* create(
-            ::dsn::replication::replica* replica, ::dsn::configuration_ptr& config)
+        ::dsn::replication::replica* replica
+        )
     {
-        return new T(replica, config);
+        return new T(replica);
     }
     
 public:
-    replication_app_base(::dsn::replication::replica* replica, ::dsn::configuration_ptr& config);
+    replication_app_base(::dsn::replication::replica* replica);
     virtual ~replication_app_base() {}
 
     //
@@ -128,32 +130,32 @@ public:
 protected:
     template<typename T, typename TRequest, typename TResponse> 
     void register_async_rpc_handler(
-        task_code code,
+        dsn_task_code_t code,
         const char* name,
         void (T::*callback)(const TRequest&, rpc_replier<TResponse>&)
         );
 
-    void unregister_rpc_handler(task_code code);
+    void unregister_rpc_handler(dsn_task_code_t code);
     
 private:
     template<typename T, typename TRequest, typename TResponse>
     void internal_rpc_handler(
-        message_ptr& request, 
-        message_ptr& response, 
+        binary_reader& reader,
+        dsn_message_t response, 
         void (T::*callback)(const TRequest&, rpc_replier<TResponse>&)
         );
 
 private:
     // routines for replica internal usage
     friend class replica;
-    error_code write_internal(mutation_ptr& mu, bool ack_client);
-    void       dispatch_rpc_call(int code, message_ptr& request, bool ack_client);
+    error_code write_internal(mutation_ptr& mu);
+    void       dispatch_rpc_call(int code, binary_reader& reader, dsn_message_t response);
     
 private:
     std::string _dir_data;
     std::string _dir_learn;
     replica*    _replica;
-    std::unordered_map<int, std::function<void(message_ptr&, message_ptr&)> > _handlers;
+    std::unordered_map<int, std::function<void(binary_reader&, dsn_message_t)> > _handlers;
     int         _physical_error; // physical error (e.g., io error) indicates the app needs to be dropped
 
 protected:
@@ -161,7 +163,7 @@ protected:
     std::atomic<decree> _last_durable_decree;
 };
 
-typedef replication_app_base* (*replica_app_factory)(replica*, configuration_ptr&);
+typedef replication_app_base* (*replica_app_factory)(replica*);
 extern void register_replica_provider(replica_app_factory f, const char* name);
 
 template<typename T>
@@ -173,7 +175,7 @@ inline void register_replica_provider(const char* name)
 //------------------ inline implementation ---------------------
 template<typename T, typename TRequest, typename TResponse>
 inline void replication_app_base::register_async_rpc_handler(
-    task_code code,
+    dsn_task_code_t code,
     const char* name,
     void (T::*callback)(const TRequest&, rpc_replier<TResponse>&)
     )
@@ -187,21 +189,21 @@ inline void replication_app_base::register_async_rpc_handler(
         );
 }
 
-inline void replication_app_base::unregister_rpc_handler(task_code code)
+inline void replication_app_base::unregister_rpc_handler(dsn_task_code_t code)
 {
     _handlers.erase(code);
 }
 
 template<typename T, typename TRequest, typename TResponse>
 inline void replication_app_base::internal_rpc_handler(
-    message_ptr& request, 
-    message_ptr& response, 
+    binary_reader& reader, 
+    dsn_message_t response, 
     void (T::*callback)(const TRequest&, rpc_replier<TResponse>&))
 {
     TRequest req;
-    unmarshall(request->reader(), req);
+    unmarshall(reader, req);
 
-    rpc_replier<TResponse> replier(request, response);
+    rpc_replier<TResponse> replier(response);
     (static_cast<T*>(this)->*callback)(req, replier);
 }
 

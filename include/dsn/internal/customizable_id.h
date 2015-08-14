@@ -29,7 +29,7 @@
 # include <string>
 # include <map>
 # include <vector>
-# include <dsn/internal/dsn_types.h>
+# include <dsn/ports.h>
 
 namespace dsn { namespace utils {
 

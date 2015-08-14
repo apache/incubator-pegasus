@@ -37,12 +37,12 @@ class failure_detector_callback
 {
 public:
     // client side
-    virtual void on_master_disconnected( const std::vector<end_point>& nodes ) = 0;
-    virtual void on_master_connected( const end_point& node) = 0;
+    virtual void on_master_disconnected( const std::vector<dsn_address_t>& nodes ) = 0;
+    virtual void on_master_connected( const dsn_address_t& node) = 0;
 
     // server side
-    virtual void on_worker_disconnected( const std::vector<end_point>& nodes ) = 0;
-    virtual void on_worker_connected( const end_point& node ) = 0;
+    virtual void on_worker_disconnected( const std::vector<dsn_address_t>& nodes ) = 0;
+    virtual void on_worker_connected( const dsn_address_t& node ) = 0;
 };
 
 class failure_detector : 
@@ -53,7 +53,7 @@ class failure_detector :
 public:
     failure_detector();
 
-    virtual void on_ping(const beacon_msg& beacon, ::dsn::service::rpc_replier<beacon_ack>& reply);
+    virtual void on_ping(const beacon_msg& beacon, ::dsn::rpc_replier<beacon_ack>& reply);
 
     virtual void end_ping(::dsn::error_code err, const beacon_ack& ack, void* context);
 
@@ -68,28 +68,28 @@ public:
 
     error_code stop();
 
-    void register_master(const end_point& target);
+    void register_master(const dsn_address_t& target);
 
-    bool switch_master(const end_point& from, const end_point& to);
+    bool switch_master(const dsn_address_t& from, const dsn_address_t& to);
 
-    bool unregister_master( const end_point& node);
+    bool unregister_master( const dsn_address_t& node);
 
-    bool is_master_connected( const end_point& node) const;
+    bool is_master_connected( const dsn_address_t& node) const;
 
     // ATTENTION: be very careful to set is_connected to false as
     // workers are always considered *connected* initially which is ok even when workers think master is disconnected
     // Considering workers *disconnected* initially is *dangerous* coz it may violate the invariance when workers think they are online 
-    void register_worker( const end_point& node, bool is_connected = true);
+    void register_worker( const dsn_address_t& node, bool is_connected = true);
 
-    bool unregister_worker( const end_point& node);
+    bool unregister_worker( const dsn_address_t& node);
 
     void clear_workers();
 
-    bool is_worker_connected( const end_point& node) const;
+    bool is_worker_connected( const dsn_address_t& node) const;
 
-    void add_allow_list( const end_point& node);
+    void add_allow_list( const dsn_address_t& node);
 
-    bool remove_from_allow_list( const end_point& node);
+    bool remove_from_allow_list( const dsn_address_t& node);
 
     int  worker_count() const { return static_cast<int>(_workers.size()); }
 
@@ -100,7 +100,7 @@ protected:
 
     bool is_time_greater_than(uint64_t ts, uint64_t base); 
 
-    void report(const end_point& node, bool is_master, bool is_connected);
+    void report(const dsn_address_t& node, bool is_master, bool is_connected);
 
 private:
     void process_all_records();
@@ -109,14 +109,14 @@ private:
     class master_record
     {
     public:
-        end_point       node;
+        dsn_address_t       node;
         uint64_t        last_send_time_for_beacon_with_ack;
         uint64_t        next_beacon_time;
         bool            is_alive;
         bool            rejected;
 
         // masters are always considered *disconnected* initially which is ok even when master thinks workers are connected
-        master_record(const end_point& n, uint64_t last_send_time_for_beacon_with_ack_, uint64_t next_beacon_time_)
+        master_record(const dsn_address_t& n, uint64_t last_send_time_for_beacon_with_ack_, uint64_t next_beacon_time_)
         {
             node = n;
             last_send_time_for_beacon_with_ack = last_send_time_for_beacon_with_ack_;
@@ -129,12 +129,12 @@ private:
     class worker_record
     {
     public:
-        end_point       node;
+        dsn_address_t       node;
         uint64_t        last_beacon_recv_time;
         bool            is_alive;
 
         // workers are always considered *connected* initially which is ok even when workers think master is disconnected
-        worker_record(const end_point& node, uint64_t last_beacon_recv_time)
+        worker_record(const dsn_address_t& node, uint64_t last_beacon_recv_time)
         {
             this->node = node;
             this->last_beacon_recv_time = last_beacon_recv_time;
@@ -143,11 +143,11 @@ private:
     };
 
 private:    
-    typedef std::unordered_map<end_point, master_record>    master_map;
-    typedef std::unordered_map<end_point, worker_record>    worker_map;
+    typedef std::unordered_map<dsn_address_t, master_record>    master_map;
+    typedef std::unordered_map<dsn_address_t, worker_record>    worker_map;
 
     // allow list are set on machine name (port can vary)
-    typedef std::unordered_set<end_point>   allow_list;
+    typedef std::unordered_set<dsn_address_t>   allow_list;
 
     mutable service::zlock _lock;
     master_map            _masters;
@@ -158,14 +158,14 @@ private:
     uint32_t             _lease_milliseconds;
     uint32_t             _grace_milliseconds;
     bool                 _is_started;
-    task_ptr             _current_task;
+    ::dsn::task_ptr _current_task;
 
     bool                 _use_allow_list;
     allow_list           _allow_list;
 
 protected:
     // subClass can rewrite these method.
-    virtual void send_beacon(const end_point& node, uint64_t time);
+    virtual void send_beacon(const dsn_address_t& node, uint64_t time);
 };
 
 }} // end namespace

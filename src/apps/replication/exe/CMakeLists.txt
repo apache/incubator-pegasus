@@ -1,4 +1,21 @@
-set(DSN_APP_TARGET "dsn.replication.simple_kv")
-set(DSN_EXTRA_LIBS dsn.replication.global_checker dsn.replication dsn.replication.meta_server dsn.replication.clientlib dsn.failure_detector)
-file(GLOB BINPLACE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini" "${CMAKE_CURRENT_SOURCE_DIR}/test.cmd" "${CMAKE_CURRENT_SOURCE_DIR}/vconfig.ini" "${CMAKE_CURRENT_SOURCE_DIR}/vtest.cmd") 
-dsn_add_executable(${DSN_APP_TARGET} "${BINPLACE_FILES}")
+set(MY_PROJ_NAME dsn.replication.simple_kv)
+
+# Source files under CURRENT project directory will be automatically included.
+# You can manually set MY_PROJ_SRC to include source files under other directories.
+set(MY_PROJ_SRC "")
+
+# Search mode for source files under CURRENT project directory?
+# "GLOB_RECURSE" for recursive search
+# "GLOB" for non-recursive search
+set(MY_SRC_SEARCH_MODE "GLOB")
+
+set(MY_PROJ_INC_PATH "")
+
+set(MY_PROJ_LIBS dsn.replication.global_checker dsn.replication dsn.replication.meta_server dsn.replication.clientlib dsn.failure_detector)
+
+set(MY_PROJ_LIB_PATH "")
+
+# Extra files that will be installed
+set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini" "${CMAKE_CURRENT_SOURCE_DIR}/test.cmd" "${CMAKE_CURRENT_SOURCE_DIR}/vconfig.ini" "${CMAKE_CURRENT_SOURCE_DIR}/vtest.cmd")
+
+dsn_add_executable()

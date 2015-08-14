@@ -27,7 +27,6 @@
 #include "replica.h"
 #include "mutation.h"
 #include <dsn/internal/factory_store.h>
-#include <boost/filesystem.hpp>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -41,7 +40,7 @@ void register_replica_provider(replica_app_factory f, const char* name)
     ::dsn::utils::factory_store<replication_app_base>::register_factory(name, f, PROVIDER_TYPE_MAIN);
 }
 
-replication_app_base::replication_app_base(replica* replica, configuration_ptr& config)
+replication_app_base::replication_app_base(replica* replica)
 {
     _physical_error = 0;
     _dir_data = replica->dir() + "/data";
@@ -50,25 +49,22 @@ replication_app_base::replication_app_base(replica* replica, configuration_ptr& 
     _replica = replica;
     _last_committed_decree = _last_durable_decree = 0;
 
-    if (!boost::filesystem::exists(_dir_data))
-        boost::filesystem::create_directory(_dir_data);
+    if (!::dsn::utils::is_file_or_dir_exist(_dir_data.c_str()))
+        mkdir_(_dir_data.c_str());
 
-    if (!boost::filesystem::exists(_dir_learn))
-        boost::filesystem::create_directory(_dir_learn);
+    if (!::dsn::utils::is_file_or_dir_exist(_dir_learn.c_str()))
+        mkdir_(_dir_learn.c_str());
 }
 
-error_code replication_app_base::write_internal(mutation_ptr& mu, bool ack_client)
+error_code replication_app_base::write_internal(mutation_ptr& mu)
 {
     dassert (mu->data.header.decree == last_committed_decree() + 1, "");
-    
+
     if (mu->rpc_code != RPC_REPLICATION_WRITE_EMPTY)
     {
-        auto& msg = mu->client_request;
-        dispatch_rpc_call(
-            mu->rpc_code,
-            msg,
-            ack_client
-            );
+        binary_reader reader(mu->data.updates[0]);
+        dsn_message_t resp = (mu->client_msg() ? dsn_msg_create_response(mu->client_msg()) : nullptr);
+        dispatch_rpc_call(mu->rpc_code, reader, resp);
     }
     else
     {
@@ -83,25 +79,17 @@ error_code replication_app_base::write_internal(mutation_ptr& mu, bool ack_clien
     return _physical_error == 0 ? ERR_OK : ERR_LOCAL_APP_FAILURE;
 }
 
-void replication_app_base::dispatch_rpc_call(int code, message_ptr& request, bool ack_client)
+void replication_app_base::dispatch_rpc_call(int code, binary_reader& reader, dsn_message_t response)
 {
     auto it = _handlers.find(code);
     if (it != _handlers.end())
     {
-        if (ack_client)
+        if (response)
         {
-            message_ptr response = request->create_response();
-
             int err = 0; // replication layer error
-            marshall(response->writer(), err);
-
-            it->second(request, response);
+            ::marshall(response, err);            
         }
-        else
-        {
-            message_ptr response(nullptr);
-            it->second(request, response);
-        }
+        it->second(reader, response);
     }
     else
     {

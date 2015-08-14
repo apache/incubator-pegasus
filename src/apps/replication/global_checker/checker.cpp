@@ -25,7 +25,7 @@
  */
 
 # include <dsn/dist/replication/replication.global_check.h>
-# include <dsn/tool/simulator.h>
+# include <dsn/tool/global_checker.h>
 # include "replica.h"
 # include "replica_stub.h"
 # include "meta_service.h"
@@ -44,15 +44,19 @@ namespace dsn {
         class replication_checker : public ::dsn::tools::checker
         {
         public:
-            replication_checker(const char* name) : ::dsn::tools::checker(name)
+            replication_checker(const char* name, dsn_app_info* info, int count) : 
+                ::dsn::tools::checker(name, info, count)
             {
                 for (auto& app : _apps)
                 {
-                    auto meta = dynamic_cast<meta_service_app *>(app.second);
-                    if (meta != nullptr) _meta_servers.push_back(meta);
-
-                    auto rs = dynamic_cast<replication_service_app *>(app.second);
-                    if (rs != nullptr) _replica_servers.push_back(rs);
+                    if (0 == strcmp(app.type, "meta"))
+                    {
+                        _meta_servers.push_back((meta_service_app*)app.app_context_ptr);
+                    }
+                    else if (0 == strcmp(app.type, "replica"))
+                    {
+                        _replica_servers.push_back((replication_service_app*)app.app_context_ptr);
+                    }
                 }
             }
 
@@ -105,8 +109,8 @@ namespace dsn {
                 auto meta = meta_leader();
                 if (!meta) return;
 
-                std::unordered_map<global_partition_id, end_point> primaries_from_meta_server;
-                std::unordered_map<global_partition_id, end_point> primaries_from_replica_servers;
+                std::unordered_map<global_partition_id, dsn_address_t> primaries_from_meta_server;
+                std::unordered_map<global_partition_id, dsn_address_t> primaries_from_replica_servers;
 
                 for (auto& app : meta->_reliable_state->_apps)
                 {
@@ -127,7 +131,7 @@ namespace dsn {
                         if (r.second->status() == PS_PRIMARY)
                         {
                             auto pr = primaries_from_replica_servers.insert(
-                                std::unordered_map<global_partition_id, end_point>::value_type(r.first, rs->primary_address())
+                                std::unordered_map<global_partition_id, dsn_address_t>::value_type(r.first, rs->primary_address())
                                 );
                             dassert(pr.second, "only one primary can exist for one partition");
 
@@ -208,13 +212,13 @@ namespace dsn {
             std::vector<replication_service_app*> _replica_servers;
         };
 
-        void install_checkers(configuration_ptr config)
+        void install_checkers()
         {
-            auto sim = dynamic_cast<::dsn::tools::simulator*>(::dsn::tools::get_current_tool());
-            if (nullptr == sim)
-                return;
-
-            sim->add_checker(new replication_checker("replication.global-checker"));
+            dsn_register_app_checker(
+                "replication.global-checker",
+                ::dsn::tools::checker::create<replication_checker>,
+                ::dsn::tools::checker::apply
+                );
         }
     }
 }

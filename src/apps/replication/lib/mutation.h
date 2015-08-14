@@ -33,7 +33,7 @@
 
 namespace dsn { namespace replication {
 
-class mutation : public ref_object
+class mutation : public ref_counter
 {
 public:
     mutation();
@@ -47,15 +47,18 @@ public:
         return commit_without_logging_allowed ? _left_private0 == 0 : _private0 == 0;
     }
 
-    message_ptr& owner_message() { return _from_message; }
+    dsn_message_t prepare_msg() { return _prepare_request; }
+    dsn_message_t client_msg() { return _client_request; }
     unsigned int left_secondary_ack_count() const { return _left_secondary_ack_count; }
     unsigned int left_potential_secondary_ack_count() const { return _left_potential_secondary_ack_count; }
-    task_ptr& log_task() { return _log_task; }
+    ::dsn::task_ptr& log_task() { return _log_task; }
     node_tasks& remote_tasks() { return _prepare_or_commit_tasks; }
+    bool is_prepare_close_to_timeout(int gap_ms, int timeout_ms) { return dsn_now_ms() + gap_ms >= _prepare_ts_ms + timeout_ms; }
 
     // state change
     void set_id(ballot b, decree c);
-    void set_client_request(task_code code, message_ptr& request);
+    void set_client_request(dsn_task_code_t code, dsn_message_t request);
+    void move_from(mutation_ptr& old);
     void set_logged() { dassert (!is_logged(), ""); _not_logged = 0; }
     unsigned int decrease_left_secondary_ack_count() { return --_left_secondary_ack_count; }
     unsigned int decrease_left_potential_secondary_ack_count() { return --_left_potential_secondary_ack_count; }
@@ -63,15 +66,15 @@ public:
     void set_left_potential_secondary_ack_count(unsigned int count) { _left_potential_secondary_ack_count = count; }
     int  clear_prepare_or_commit_tasks();
     int  clear_log_task();
+    void set_prepare_ts() { _prepare_ts_ms = dsn_now_ms(); }
     
     // reader & writer
-    static mutation_ptr read_from(message_ptr& reader);
-    void write_to(message_ptr& writer);
+    static mutation_ptr read_from(binary_reader& readeer, dsn_message_t from);
+    void write_to(binary_writer& writer);
 
     // data
     mutation_data  data;
     int            rpc_code;
-    message_ptr    client_request;
         
 private:
     union
@@ -90,14 +93,13 @@ private:
         uint64_t _private0;
     };
 
-    node_tasks    _prepare_or_commit_tasks;
-    task_ptr      _log_task;
-
-    message_ptr   _from_message;
-    char          _name[40]; // ballot.decree
+    uint64_t        _prepare_ts_ms;
+    ::dsn::task_ptr _log_task;
+    node_tasks      _prepare_or_commit_tasks;
+    dsn_message_t   _prepare_request;
+    dsn_message_t   _client_request;
+    char            _name[40]; // ballot.decree
 };
-
-DEFINE_REF_OBJECT(mutation)
 
 // ---------------------- inline implementation ----------------------------
 inline void mutation::set_id(ballot b, decree c)

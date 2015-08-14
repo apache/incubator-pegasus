@@ -136,19 +136,19 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
     if (request.last_committed_decree_in_app > localCommittedDecree)
     {
         ddebug(
-            "%s: on_learn %s:%d, learner state is lost due to DDD, "
+            "%s: on_learn %s:%hu, learner state is lost due to DDD, "
             "with its appCommittedDecree = %llu vs localCommittedDecree = %llu, "
             "so we learn from scratch by setting learnStartDecree = 0",
-            name(), request.learner.name.c_str(), static_cast<int>(request.learner.port),
+            name(), request.learner.name, request.learner.port,
             request.last_committed_decree_in_app, localCommittedDecree
             );
         learnStartDecree = 0; // 0 means learn from scratch
     }
 
     ddebug(
-        "%s: on_learn %s:%d, with localCommittedDecree = %llu, "
+        "%s: on_learn %s:%hu, with localCommittedDecree = %llu, "
         "localAppC/DDecree = <%llu, %llu>, learnStartDecree = %llu",
-        name(), request.learner.name.c_str(), static_cast<int>(request.learner.port),
+        name(), request.learner.name, request.learner.port,
         localCommittedDecree, _app->last_committed_decree(), _app->last_durable_decree(),
         learnStartDecree
         );
@@ -170,8 +170,8 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
             replay_prepare_list();
 
             ddebug(
-                "%s: on_learn %s:%d, set prepareStartDecree = %llu",
-                name(), request.learner.name.c_str(), static_cast<int>(request.learner.port),
+                "%s: on_learn %s:%hu, set prepareStartDecree = %llu",
+                name(), request.learner.name, request.learner.port,
                 localCommittedDecree + 1
             );
         }
@@ -269,7 +269,7 @@ void replica::on_learn_reply(error_code err, std::shared_ptr<learn_request>& req
     }
 }
 
-void replica::on_copy_remote_state_completed(error_code err2, int size, std::shared_ptr<learn_response> resp)
+void replica::on_copy_remote_state_completed(error_code err2, size_t size, std::shared_ptr<learn_response> resp)
 {   
     learn_state localState;
     localState.meta = resp->state.meta;
@@ -386,7 +386,7 @@ void replica::handle_learning_error(error_code err)
     update_local_configuration_with_no_ballot_change(PS_ERROR);
 }
 
-void replica::handle_learning_succeeded_on_primary(const end_point& node, uint64_t learnSignature)
+void replica::handle_learning_succeeded_on_primary(const dsn_address_t& node, uint64_t learnSignature)
 {
     auto it = _primary_states.learners.find(node);
     if (it != _primary_states.learners.end() && it->second.signature == learnSignature)

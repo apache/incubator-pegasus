@@ -38,13 +38,13 @@ namespace dsn {
 class lock_provider : public extensible_object<lock_provider, 4>
 {
 public:
-    template <typename T> static lock_provider* create(dsn::service::zlock *lock, lock_provider* inner_provider)
+    template <typename T> static lock_provider* create(lock_provider* inner_provider)
     {
-        return new T(lock, inner_provider);
+        return new T(inner_provider);
     }
 
 public:
-    lock_provider(dsn::service::zlock *lock, lock_provider* inner_provider) { _inner_provider = inner_provider; }
+    lock_provider(lock_provider* inner_provider) { _inner_provider = inner_provider; }
     virtual ~lock_provider() { if (nullptr != _inner_provider) delete _inner_provider; }
 
     virtual void lock() = 0;
@@ -60,13 +60,13 @@ private:
 class rwlock_nr_provider : public extensible_object<lock_provider, 4>
 {
 public:
-    template <typename T> static rwlock_nr_provider* create(dsn::service::zrwlock_nr *lock, rwlock_nr_provider* inner_provider)
+    template <typename T> static rwlock_nr_provider* create(rwlock_nr_provider* inner_provider)
     {
-        return new T(lock, inner_provider);
+        return new T(inner_provider);
     }
 
 public:
-    rwlock_nr_provider(dsn::service::zrwlock_nr *lock, rwlock_nr_provider* inner_provider) { _inner_provider = inner_provider; }
+    rwlock_nr_provider(rwlock_nr_provider* inner_provider) { _inner_provider = inner_provider; }
     virtual ~rwlock_nr_provider() { if (nullptr != _inner_provider) delete _inner_provider; }
 
     virtual void lock_read() = 0;
@@ -84,13 +84,13 @@ private:
 class semaphore_provider : public extensible_object<lock_provider, 4>
 {
 public:
-    template <typename T> static semaphore_provider* create(dsn::service::zsemaphore *sema, int initCount, semaphore_provider* inner_provider)
+    template <typename T> static semaphore_provider* create(int initCount, semaphore_provider* inner_provider)
     {
-        return new T(sema, initCount, inner_provider);
+        return new T(initCount, inner_provider);
     }
 
 public:  
-    semaphore_provider(dsn::service::zsemaphore *sema, int initialCount, semaphore_provider* inner_provider) { _inner_provider = inner_provider; }
+    semaphore_provider(int initial_count, semaphore_provider* inner_provider) { _inner_provider = inner_provider; }
     virtual ~semaphore_provider() { if (nullptr != _inner_provider) delete _inner_provider; }
 
 public:

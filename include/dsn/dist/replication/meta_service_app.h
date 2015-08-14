@@ -25,7 +25,7 @@
  */
 #pragma once
 
-# include <dsn/service_api.h>
+# include <dsn/cpp/service_app.h>
 
 class server_state;
 class meta_service;
@@ -39,11 +39,10 @@ namespace dsn {
         class meta_service_app : public service_app
         {
         public:
-            meta_service_app(service_app_spec* s);
-
+            meta_service_app();
             ~meta_service_app();
 
-            virtual error_code start(int argc, char** argv) override;
+            virtual ::dsn::error_code start(int argc, char** argv) override;
 
             virtual void stop(bool cleanup = false) override;
 

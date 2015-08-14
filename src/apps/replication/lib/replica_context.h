@@ -32,11 +32,11 @@ namespace dsn { namespace replication {
 struct remote_learner_state
 {
     uint64_t signature;
-    task_ptr timeout_task;
+    ::dsn::task_ptr timeout_task;
     decree   prepare_start_decree;
 };
 
-typedef std::unordered_map<end_point, remote_learner_state> learner_map;
+typedef std::unordered_map<dsn_address_t, remote_learner_state> learner_map;
 
 class primary_context
 {
@@ -44,10 +44,10 @@ public:
     void cleanup(bool clean_pending_mutations = true);
        
     void reset_membership(const partition_configuration& config, bool clear_learners);
-    bool get_replica_config(const end_point& node, __out_param replica_configuration& config);
+    bool get_replica_config(const dsn_address_t& node, __out_param replica_configuration& config);
     void get_replica_config(partition_status status, __out_param replica_configuration& config);
-    bool check_exist(const end_point& node, partition_status status);
-    partition_status get_node_status(const end_point& addr) const;
+    bool check_exist(const dsn_address_t& node, partition_status status);
+    partition_status get_node_status(const dsn_address_t& addr) const;
 
     void do_cleanup_pending_mutations(bool clean_pending_mutations = true);
     
@@ -58,15 +58,15 @@ public:
     learner_map             learners;
 
     // 2pc batching
-    mutation_ptr pending_mutation;
-    task_ptr     pending_mutation_task;
+    mutation_ptr      pending_mutation;
+    dsn::task_ptr     pending_mutation_task;
 
     // group check
-    task_ptr     group_check_task;
-    node_tasks   group_check_pending_replies;
+    dsn::task_ptr     group_check_task;
+    node_tasks        group_check_pending_replies;
 
     // reconfig
-    task_ptr     reconfiguration_task;
+    dsn::task_ptr     reconfiguration_task;
 
     // when read lastest update, all prepared decrees must be firstly committed
     // (possibly true on old primary) before opening read service
@@ -89,16 +89,16 @@ public:
     learner_status  learning_status;
     volatile bool learning_round_is_running;
 
-    task_ptr       learning_task;
-    task_ptr       learn_remote_files_task;
-    task_ptr       learn_remote_files_completed_task;
+    ::dsn::task_ptr       learning_task;
+    ::dsn::task_ptr       learn_remote_files_task;
+    ::dsn::task_ptr       learn_remote_files_completed_task;
 
 
 };
 
 //---------------inline impl----------------------------------------------------------------
 
-inline partition_status primary_context::get_node_status(const end_point& addr) const
+inline partition_status primary_context::get_node_status(const dsn_address_t& addr) const
 { 
     auto it = statuses.find(addr);
     return it != statuses.end()  ? it->second : PS_INACTIVE;

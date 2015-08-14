@@ -25,7 +25,7 @@
  */
 #pragma once
 
-# include <dsn/internal/dsn_types.h>
+# include <dsn/ports.h>
 # include <dsn/internal/rpc_message.h>
 
 namespace dsn 
@@ -46,10 +46,15 @@ namespace dsn
         int read_buffer_capacity() const;
 
         // afer read, see if we can compose a message
-        virtual message_ptr get_message_on_receive(int read_length, __out_param int& read_next) = 0;
+        virtual message_ex* get_message_on_receive(int read_length, __out_param int& read_next) = 0;
 
-        // before write
-        virtual void prepare_buffers_for_send(message_ptr& msg, __out_param std::vector<blob>& buffers) = 0;
+        // before send, prepare buffer
+        struct send_buf
+        {
+            void* buf;
+            size_t sz;
+        };
+        virtual void prepare_buffers_on_send(message_ex* msg, __out_param std::vector<send_buf>& buffers) = 0;
         
     protected:
         void create_new_buffer(int sz);
@@ -66,11 +71,8 @@ namespace dsn
     public:
         dsn_message_parser(int buffer_block_size);
 
-        virtual message_ptr get_message_on_receive(int read_length, __out_param int& read_next);
+        virtual message_ex* get_message_on_receive(int read_length, __out_param int& read_next);
 
-        virtual void prepare_buffers_for_send(message_ptr& msg, __out_param std::vector<blob>& buffers)
-        {
-            return msg->writer().get_buffers(buffers);
-        }
+        virtual void prepare_buffers_on_send(message_ex* msg, __out_param std::vector<send_buf>& buffers) override;
     };
 }

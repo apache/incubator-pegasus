@@ -30,11 +30,10 @@
 
 namespace dsn { namespace replication { namespace application { 
 // client app example
-class simple_kv_client_app : public ::dsn::service::service_app, public virtual ::dsn::service::servicelet
+class simple_kv_client_app : public ::dsn::service_app, public virtual ::dsn::servicelet
 {
 public:
-    simple_kv_client_app(::dsn::service_app_spec* s) 
-        : ::dsn::service::service_app(s) 
+    simple_kv_client_app()
     {
         _simple_kv_client = nullptr;
     }
@@ -49,12 +48,11 @@ public:
         if (argc < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        std::vector<::dsn::end_point> meta_servers;
-        auto cf = ::dsn::service::system::config();
-        ::dsn::replication::replication_app_client_base::load_meta_servers(cf, meta_servers);
+        std::vector<dsn_address_t> meta_servers;
+        ::dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
         
         _simple_kv_client = new simple_kv_client(meta_servers, argv[1]);
-        _timer = ::dsn::service::tasking::enqueue(LPC_SIMPLE_KV_TEST_TIMER, this, &simple_kv_client_app::on_test_timer, 0, 0, 1000);
+        _timer = ::dsn::tasking::enqueue(LPC_SIMPLE_KV_TEST_TIMER, this, &simple_kv_client_app::on_test_timer, 0, 0, 1000);
         return ::dsn::ERR_OK;
     }
 
@@ -72,29 +70,30 @@ public:
     void on_test_timer()
     {
         char buffer[20];
-        sprintf(buffer, "value.%u", env::random32(0, 100));
+        sprintf(buffer, "value.%u", dsn_random32(0, 0));
 
         std::string value(buffer);
 
         {
             ::dsn::replication::application::kv_pair req;
             req.key = "key";
-            req.value = value;
+//            req.value.resize(512 * 1024, 'v');
+            req.value.append(value); // = value;
 
             //sync:
             int32_t resp;
             auto err = _simple_kv_client->write(req, resp);
-            std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_WRITE end, write " << req.value << ", err = " << err.to_string() << std::endl;
+            std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_WRITE end, write " << req.key << ", err = " << err.to_string() << std::endl;
             //async: 
             //_simple_kv_client->begin_write(req);
 
             std::string v;
             auto err2 = _simple_kv_client->read(req.key, v);
-            std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_READ end, read " << v << ", err = " << err2.to_string() << std::endl;
+            std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_READ end, read " << req.key << ", err = " << err2.to_string() << std::endl;
 
             if (err == ERR_OK && err2 == ERR_OK)
             {
-                dassert(v == value, "data is inconsistent!");
+                dassert(v == req.value, "data is inconsistent!");
             }
         }
     }
@@ -105,11 +104,10 @@ private:
 };
 
 
-class simple_kv_perf_test_client_app : public ::dsn::service::service_app, public virtual ::dsn::service::servicelet
+class simple_kv_perf_test_client_app : public ::dsn::service_app, public virtual ::dsn::servicelet
 {
 public:
-    simple_kv_perf_test_client_app(::dsn::service_app_spec* s)
-        : ::dsn::service::service_app(s)
+    simple_kv_perf_test_client_app()
     {
         _simple_kv_client = nullptr;
     }
@@ -124,9 +122,8 @@ public:
         if (argc < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        std::vector<::dsn::end_point> meta_servers;
-        auto cf = ::dsn::service::system::config();
-        ::dsn::replication::replication_app_client_base::load_meta_servers(cf, meta_servers);
+        std::vector<dsn_address_t> meta_servers;
+        ::dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
 
         _simple_kv_client = new simple_kv_perf_test_client(meta_servers, argv[1]);
         _simple_kv_client->start_test();

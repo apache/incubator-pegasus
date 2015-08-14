@@ -32,6 +32,9 @@ namespace dsn {
 class disk_engine;
 class service_node;
 
+//
+// !!! all threads must be started with task::set_current_worker(null, provider->node());
+//
 class aio_provider
 {
 public:
@@ -44,13 +47,13 @@ public:
     aio_provider(disk_engine* disk, aio_provider* inner_provider);
     service_node* node() const;
 
-    virtual handle_t  open(const char* file_name, int flag, int pmode) = 0;
-    virtual error_code close(handle_t hFile) = 0;
-    virtual void    aio(aio_task_ptr& aio) = 0;
-    virtual disk_aio_ptr prepare_aio_context(aio_task*) = 0;
+    virtual dsn_handle_t open(const char* file_name, int flag, int pmode) = 0;
+    virtual error_code   close(dsn_handle_t hFile) = 0;
+    virtual void         aio(aio_task* aio) = 0;
+    virtual disk_aio*    prepare_aio_context(aio_task*) = 0;
 
 protected:
-    void complete_io(aio_task_ptr& aio, error_code err, uint32_t bytes, int delay_milliseconds = 0);
+    void complete_io(aio_task* aio, error_code err, uint32_t bytes, int delay_milliseconds = 0);
 
 private:
     disk_engine *_engine;

@@ -51,7 +51,7 @@ public:
     bool stop();
 
 private:
-    void on_request(message_ptr& request);
+    void on_request(dsn_message_t request);
     void replay_log(const char* log);
 
     // partition server & client => meta server
@@ -59,9 +59,9 @@ private:
     void query_configuration_by_index(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response);
 
     // update configuration
-    void update_configuration(message_ptr req, message_ptr resp);
+    void update_configuration(dsn_message_t req, dsn_message_t resp);
     void update_configuration(std::shared_ptr<configuration_update_request>& update);
-    void on_log_completed(error_code err, int size, blob buffer, std::shared_ptr<configuration_update_request> req, message_ptr resp);
+    void on_log_completed(error_code err, size_t size, blob buffer, std::shared_ptr<configuration_update_request> req, dsn_message_t resp);
     void update_configuration(configuration_update_request& request, __out_param configuration_update_response& response);
       
     // load balance actions
@@ -76,13 +76,13 @@ private:
     meta_server_failure_detector *_failure_detector;
     server_state                 *_state;
     load_balancer                *_balancer;
-    task_ptr                     _balancer_timer;
+    dsn::task_ptr   _balancer_timer;
     replication_options          _opts;
     std::string                  _data_dir;
     bool                         _started;
 
     zlock                        _log_lock;
-    handle_t                     _log;
+    dsn_handle_t                     _log;
     uint64_t                     _offset;
 }; 
 

@@ -1,1 +1,2 @@
-dsn_add_library(dsn.dev)
+add_subdirectory(cpp)
+add_subdirectory(csharp)

@@ -47,12 +47,12 @@ error_code replica::initialize_on_new(const char* app_type, global_partition_id 
     _config.gpid = gpid;
     _dir = _stub->dir() + "/" + buffer;
 
-    if (boost::filesystem::exists(_dir))
+    if (::dsn::utils::is_file_or_dir_exist(_dir.c_str()))
     {
         return ERR_PATH_ALREADY_EXIST;
     }
 
-    boost::filesystem::create_directory(_dir);
+    mkdir_(_dir.c_str());
 
     error_code err = init_app_and_prepare_list(app_type, true);
     dassert (err == ERR_OK, "");
@@ -129,7 +129,7 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
 {
     dassert (nullptr == _app, "");
 
-    _app = ::dsn::utils::factory_store<replication_app_base>::create(app_type, PROVIDER_TYPE_MAIN, this, _stub->config());
+    _app = ::dsn::utils::factory_store<replication_app_base>::create(app_type, PROVIDER_TYPE_MAIN, this);
     if (nullptr == _app)
     {
         return ERR_OBJECT_NOT_FOUND;
@@ -150,7 +150,7 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
         _app = nullptr;
     }
 
-    sprintf(_name, "%u.%u @ %s:%hu", _config.gpid.app_id, _config.gpid.pidx, primary_address().name.c_str(),
+    sprintf(_name, "%u.%u @ %s:%hu", _config.gpid.app_id, _config.gpid.pidx, primary_address().name,
         primary_address().port);
 
     return err;
@@ -160,7 +160,10 @@ void replica::replay_mutation(mutation_ptr& mu)
 {
     if (mu->data.header.decree <= last_committed_decree() ||
         mu->data.header.ballot < get_ballot())
+    {
         return;
+    }
+        
     
     if (mu->data.header.ballot > get_ballot())
     {
@@ -172,7 +175,7 @@ void replica::replay_mutation(mutation_ptr& mu)
     /*ddebug( 
             "%u.%u @ %s:%hu: replay mutation ballot = %llu, decree = %llu, last_committed_decree = %llu",
             get_gpid().app_id, get_gpid().pidx, 
-            address().name.c_str(), address().port,
+            address().name, address().port,
             mu->data.header.ballot, 
             mu->data.header.decree,
             mu->data.header.last_committed_decree

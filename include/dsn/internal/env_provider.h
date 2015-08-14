@@ -25,7 +25,8 @@
  */
 # pragma once
 
-# include <dsn/internal/dsn_types.h>
+# include <dsn/ports.h>
+# include <dsn/cpp/utils.h>
 
 namespace dsn {
 
@@ -40,12 +41,9 @@ public:
 public:
     env_provider(env_provider* inner_provider);
 
-    virtual uint64_t now_ns() const { return get_current_physical_time_ns(); }
+    virtual uint64_t now_ns() const { return utils::get_current_physical_time_ns(); }
 
     virtual uint64_t random64(uint64_t min, uint64_t max);
-
-public:
-    static uint64_t get_current_physical_time_ns();
 };
 
 } // end namespace

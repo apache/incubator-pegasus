@@ -25,21 +25,18 @@
 */
 # pragma once
 # include <dsn/dist/replication.h>
-# include <dsn/service_api.h>
-
-# include "nfs_node_impl.h"
-# include "nfs_server_impl.h"
+# include <dsn/tool/nfs_node_simple.h>
+# include "nfs_code_definition.h"
 
 namespace dsn {
     namespace replication {
         namespace application {
 
             // server app example
-            class nfs_server_app : public ::dsn::service::service_app, public virtual ::dsn::service::servicelet
+            class nfs_server_app : public ::dsn::service_app, public virtual ::dsn::servicelet
             {
             public:
-                nfs_server_app(::dsn::service_app_spec* s)
-                    : ::dsn::service::service_app(s) {}
+                nfs_server_app(){}
 
                 virtual ::dsn::error_code start(int argc, char** argv)
                 {
@@ -52,15 +49,14 @@ namespace dsn {
                 }
 
             private:
-                nfs_node_impl* _nfs_node_impl;
+                nfs_node_simple* _nfs_node_impl;
             };
 
             // client app example
-            class nfs_client_app : public ::dsn::service::service_app, public virtual ::dsn::service::servicelet
+            class nfs_client_app : public ::dsn::service_app, public virtual ::dsn::servicelet
             {
             public:
-                nfs_client_app(::dsn::service_app_spec* s)
-                    : ::dsn::service::service_app(s) 
+                nfs_client_app()
                 {
                     _req_index = 0;
                 }
@@ -75,10 +71,10 @@ namespace dsn {
                     if (argc < 2)
                         return ::dsn::ERR_INVALID_PARAMETERS;
 
-                    _server = ::dsn::end_point(argv[1], (uint16_t)atoi(argv[2]));
+                    dsn_address_build(&_server, argv[1], (uint16_t)atoi(argv[2]));
 
                     //on_request_timer();
-                    _request_timer = ::dsn::service::tasking::enqueue(LPC_NFS_REQUEST_TIMER, this, &nfs_client_app::on_request_timer, 0, 0, 1000);
+                    _request_timer = ::dsn::tasking::enqueue(LPC_NFS_REQUEST_TIMER, this, &nfs_client_app::on_request_timer, 0, 0, 1000);
 
                     return ::dsn::ERR_OK;
                 }
@@ -113,7 +109,7 @@ namespace dsn {
                         ));*/
                 }
 
-                void internal_copy_callback(error_code err, uint32_t size, int index)
+                void internal_copy_callback(error_code err, size_t size, int index)
                 {
                     if (err == ::dsn::ERR_OK)
                     {
@@ -128,7 +124,7 @@ namespace dsn {
                 ::dsn::task_ptr _timer;
                 ::dsn::task_ptr _request_timer;
 
-                ::dsn::end_point _server;
+                dsn_address_t _server;
                 std::atomic<int> _req_index;
 
             };
