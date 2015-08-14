@@ -28,10 +28,10 @@ private:
     Semaphore& operator=(const Semaphore& other) = delete;
 
 public:
-    Semaphore(int initialCount = 0)
+    Semaphore(int initial_count = 0)
     {
-        assert(initialCount >= 0);
-        m_hSema = CreateSemaphore(NULL, initialCount, MAXLONG, NULL);
+        assert(initial_count >= 0);
+        m_hSema = CreateSemaphore(NULL, initial_count, MAXLONG, NULL);
     }
 
     ~Semaphore()
@@ -73,10 +73,10 @@ private:
     Semaphore& operator=(const Semaphore& other) = delete;
 
 public:
-    Semaphore(int initialCount = 0)
+    Semaphore(int initial_count = 0)
     {
-        assert(initialCount >= 0);
-        semaphore_create(mach_task_self(), &m_sema, SYNC_POLICY_FIFO, initialCount);
+        assert(initial_count >= 0);
+        semaphore_create(mach_task_self(), &m_sema, SYNC_POLICY_FIFO, initial_count);
     }
 
     ~Semaphore()
@@ -128,10 +128,10 @@ private:
     Semaphore& operator=(const Semaphore& other) = delete;
 
 public:
-    Semaphore(int initialCount = 0)
+    Semaphore(int initial_count = 0)
     {
-        assert(initialCount >= 0);
-        sem_init(&m_sema, 0, initialCount);
+        assert(initial_count >= 0);
+        sem_init(&m_sema, 0, initial_count);
     }
 
     ~Semaphore()
@@ -214,9 +214,9 @@ private:
     }
 
 public:
-    LightweightSemaphore(int initialCount = 0, int spin_count = 128) : m_count(initialCount), m_spin_count(spin_count)
+    LightweightSemaphore(int initial_count = 0, int spin_count = 128) : m_count(initial_count), m_spin_count(spin_count)
     {
-        assert(initialCount >= 0);
+        assert(initial_count >= 0);
     }
 
     bool tryWait()

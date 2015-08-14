@@ -38,18 +38,18 @@ inline int gpid_to_hash(global_partition_id gpid)
     return static_cast<int>(gpid.app_id ^ gpid.pidx);
 }
 
-typedef std::unordered_map<end_point, partition_status> node_statuses;
-typedef std::unordered_map<end_point, task_ptr> node_tasks;
+typedef std::unordered_map<dsn_address_t, partition_status> node_statuses;
+typedef std::unordered_map<dsn_address_t, dsn::task_ptr> node_tasks;
 
 class replication_options
 {
 public:
     std::string working_dir;
-    std::vector<end_point> meta_servers;
+    std::vector<dsn_address_t> meta_servers;
 
     int32_t prepare_timeout_ms_for_secondaries;
     int32_t prepare_timeout_ms_for_potential_secondaries;
-    int32_t preapre_list_max_size_mb;
+    int32_t prepare_list_max_size_mb;
     bool    prepare_ack_on_secondary_before_logging_allowed;
         
     int32_t staleness_for_commit;
@@ -81,19 +81,19 @@ public:
 
 public:
     replication_options();
-    void initialize(configuration_ptr config);
+    void initialize();
     ~replication_options();
 
 private:
-    void read_meta_servers(configuration_ptr config);
+    void read_meta_servers();
     void sanity_check();
 };
 
 class replica_helper
 {
 public:
-    static bool remove_node(const end_point& node, __inout_param std::vector<end_point>& nodeList);
-    static bool get_replica_config(const partition_configuration& partition_config, const end_point& node, __out_param replica_configuration& replica_config);
+    static bool remove_node(const dsn_address_t& node, __inout_param std::vector<dsn_address_t>& nodeList);
+    static bool get_replica_config(const partition_configuration& partition_config, const dsn_address_t& node, __out_param replica_configuration& replica_config);
 };
 
 }} // namespace

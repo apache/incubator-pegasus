@@ -32,12 +32,12 @@ namespace dsn {
     namespace example {
 
 
-        counter_service_impl::counter_service_impl(replica* replica, configuration_ptr& config)
-            : counter_service(replica, config)
+        counter_service_impl::counter_service_impl(replica* replica)
+            : counter_service(replica)
         {
         }
 
-        void counter_service_impl::on_add(const ::dsn::example::count_op& op, ::dsn::service::rpc_replier<int32_t>& reply)
+        void counter_service_impl::on_add(const ::dsn::example::count_op& op, ::dsn::rpc_replier<int32_t>& reply)
         {
             zauto_lock l(_lock);
             ++_last_committed_decree;
@@ -45,7 +45,7 @@ namespace dsn {
             reply(rt);
         }
 
-        void counter_service_impl::on_read(const std::string& name, ::dsn::service::rpc_replier<int32_t>& reply)
+        void counter_service_impl::on_read(const std::string& name, ::dsn::rpc_replier<int32_t>& reply)
         {
             zauto_lock l(_lock);
 

@@ -26,105 +26,118 @@
 # pragma once
 
 # include <atomic>
-# include <dsn/internal/dsn_types.h>
-# include <dsn/internal/end_point.h>
+# include <dsn/ports.h>
 # include <dsn/internal/extensible_object.h>
-# include <dsn/internal/task_code.h>
-# include <dsn/internal/error_code.h>
-# include <dsn/internal/memory.tools.h>
+# include <dsn/internal/task_spec.h>
+# include <dsn/cpp/auto_codes.h>
 
-namespace dsn {
-
-struct message_header
-{    
-    int32_t       hdr_crc32;
-    int32_t       body_crc32;
-    int32_t       body_length;
-    int32_t       version;
-    uint64_t      id;
-    uint64_t      rpc_id;
-    char          rpc_name[MAX_TASK_CODE_NAME_LENGTH + 1];
-
-    // info from client => server
-    union
-    {
-        struct 
-        {
-            int32_t  timeout_ms;
-            int32_t  hash;
-            uint16_t port;
-        } client;
-
-        struct 
-        {
-            int32_t  error;
-        } server;
-    };
-
-    // local fields - no need to be transmitted
-    end_point     from_address;
-    end_point     to_address;
-    uint16_t      local_rpc_code;
-    
-    void marshall(binary_writer& writer);
-    void unmarshall(binary_reader& reader);
-    void new_rpc_id();
-    
-    static bool is_right_header(char* hdr);
-    static int get_body_length(char* hdr)
-    {
-        return ((message_header*)hdr)->body_length;
-    }
-};
-
-# define MSG_HDR_SERIALIZED_SIZE (static_cast<int>(FIELD_OFFSET(message_header, from_address)))
-
-class rpc_server_session;
-class message : public ref_object, public extensible_object<message, 4>, public ::dsn::tools::memory::tallocator_object
+namespace dsn 
 {
-public:
-    message(); // write             
-    message(blob bb, bool parse_hdr = true); // read 
-    virtual ~message();
+    class rpc_client_session;
+    class rpc_server_session;
+    class rpc_client_matcher;
 
-    //
-    // routines for request and response
-    //
-    static message_ptr create_request(task_code rpc_code, int timeout_milliseconds = 0, int hash = 0);
-    message_ptr create_response();
+    typedef ::dsn::ref_ptr<rpc_client_session> rpc_client_session_ptr;
+    typedef ::dsn::ref_ptr<rpc_server_session> rpc_server_session_ptr;
+    typedef ::dsn::ref_ptr<rpc_client_matcher> rpc_client_matcher_ptr;
 
-    //
-    // routines for reader & writer
-    //
-    binary_reader& reader() { return *_reader; }
-    binary_writer& writer() { return *_writer; }
+    typedef struct dsn_buffer_t // binary compatible with WSABUF on windows
+    {
+        unsigned long length;
+        char          *buffer;
+    } dsn_buffer_t;
 
-    //
-    // meta info
-    //
-    void seal(bool fillCrc, bool is_placeholder = false);
-    message_header& header() { return _msg_header; }
-    int  total_size() const { return is_read() ? _reader->total_size() : _writer->total_size(); }
-    bool is_read() const { return _reader != nullptr; }
-    error_code error() const { error_code ec; ec.set(_msg_header.server.error); return ec; }
-    bool is_right_header() const;
-    bool is_right_body() const;
-    static uint64_t new_id() { return ++_id; }
-    rpc_server_session_ptr& server_session() { return _server_session; }
+    typedef struct message_header
+    {
+        int32_t       hdr_crc32;
+        int32_t       body_crc32;
+        int32_t       body_length;
+        int32_t       version;
+        uint64_t      id;
+        uint64_t      rpc_id;
+        char          rpc_name[DSN_MAX_TASK_CODE_NAME_LENGTH];
 
-private:            
-    void read_header();
+        // info from client => server
+        union
+        {
+            struct
+            {
+                int32_t  timeout_ms;
+                int32_t  hash;
+                uint16_t port;
+            } client;
 
-private:
-    message_header         _msg_header;    
-    binary_reader          *_reader;
-    binary_writer          *_writer;
-    rpc_server_session_ptr _server_session;
+            struct
+            {
+                int32_t  error;
+            } server;
+        };
+    } message_header;
+            
+    class message_ex : 
+        public ref_counter, 
+        public extensible_object<message_ex, 4>
+    {
+    public:
+        message_header         *header;
+        std::vector<blob>      buffers; // header included for *send* message, 
+                                        // header not included for *recieved* 
 
-protected:
-    static std::atomic<uint64_t> _id;
-};
+        // by rpc and network
+        rpc_server_session_ptr server_session;
+        dsn_address_t          from_address;
+        dsn_address_t          to_address;
+        uint16_t               local_rpc_code;
 
-DEFINE_REF_OBJECT(message)
+    public:        
+        //message_ex(blob bb, bool parse_hdr = true); // read 
+        ~message_ex();
+
+        //
+        // utility routines
+        //
+        bool is_right_header() const;
+        bool is_right_body() const;
+        error_code error() const { return header->server.error; }        
+        static uint64_t new_id() { return ++_id; }
+        static bool is_right_header(char* hdr);
+        static int  get_body_length(char* hdr)
+        {
+            return ((message_header*)hdr)->body_length;
+        }
+
+        //
+        // routines for create messages
+        //
+        static message_ex* create_receive_message(blob& data);
+        static message_ex* create_request(dsn_task_code_t rpc_code, int timeout_milliseconds = 0, int hash = 0);
+        message_ex* create_response();
+
+
+        //
+        // routines for buffer management
+        //        
+        void write_next(void** ptr, size_t* size, size_t min_size);
+        void write_commit(size_t size);
+        bool read_next(void** ptr, size_t* size);
+        void read_commit(size_t size);
+        size_t body_size() { return (size_t)header->body_length; }
+        void* rw_ptr(size_t offset_begin);
+        void seal(bool crc_required);
+
+    private:
+        message_ex();
+        void prepare_buffer_header();
+
+    private:        
+        static std::atomic<uint64_t> _id;
+
+    private:
+        // by msg read & write
+        int                    _rw_index;
+        int                    _rw_offset;
+        bool                   _rw_committed;
+        bool                   _is_read;
+    };
 
 } // end namespace

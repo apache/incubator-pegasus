@@ -25,7 +25,7 @@
  */
 # pragma once
 
-# include <dsn/internal/logging.h>
+# include <dsn/service_api_c.h>
 # include <stdarg.h>
 
 namespace dsn {
@@ -43,7 +43,7 @@ public:
 
     virtual ~logging_provider(void) { }
     
-    virtual void logv(const char *file, const char *function, const int line, logging_level logLevel, const char* title, const char* fmt, va_list args) = 0;
+    virtual void dsn_logv(const char *file, const char *function, const int line, dsn_log_level_t log_level, const char* title, const char* fmt, va_list args) = 0;
 
     virtual void flush() = 0;
 };

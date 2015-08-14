@@ -54,37 +54,37 @@ replica_stub::~replica_stub(void)
     close();
 }
 
-void replica_stub::initialize(configuration_ptr config, bool clear/* = false*/)
+void replica_stub::initialize(bool clear/* = false*/)
 {
     replication_options opts;
-    opts.initialize(config);
-    initialize(opts, config, clear);
+    opts.initialize();
+    initialize(opts, clear);
 }
 
-void replica_stub::initialize(const replication_options& opts, configuration_ptr config, bool clear/* = false*/)
+void replica_stub::initialize(const replication_options& opts, bool clear/* = false*/)
 {
     zauto_lock l(_repicas_lock);
-
-    _config = config;
 
     // init dirs
     set_options(opts);
     _dir = _options.working_dir;
+    
     if (clear)
     {
-        boost::filesystem::remove_all(_dir);
+        auto dr = boost::filesystem::path(_dir);
+        boost::filesystem::remove_all(dr);
     }
 
-    if (!boost::filesystem::exists(_dir))
+    if (!::dsn::utils::is_file_or_dir_exist(_dir.c_str()))
     {
-        boost::filesystem::create_directory(_dir);
+        mkdir_(_dir.c_str());
     }
 
-    _dir = boost::filesystem::canonical(boost::filesystem::path(_dir)).string();
+    _dir = ::dsn::utils::get_absolute_path(_dir.c_str());
     std::string logDir = _dir + "/log";
-    if (!boost::filesystem::exists(logDir))
+    if (!::dsn::utils::is_file_or_dir_exist(logDir.c_str()))
     {
-        boost::filesystem::create_directory(logDir);
+        mkdir_(logDir.c_str());
     }
 
     // init rps
@@ -107,7 +107,7 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
         {
             ddebug( "%u.%u @ %s:%hu: load replica success with durable decree = %llu from '%s'",
                 r->get_gpid().app_id, r->get_gpid().pidx,
-                primary_address().name.c_str(), primary_address().port,
+                primary_address().name, primary_address().port,
                 r->last_durable_decree(),
                 name.c_str()
                 );
@@ -133,7 +133,7 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
             derror(
                 "%u.%u @ %s:%hu: initialized, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
                 it->first.app_id, it->first.pidx,
-                primary_address().name.c_str(), primary_address().port,
+                primary_address().name, primary_address().port,
                 it->second->last_durable_decree(),
                 it->second->last_committed_decree(),
                 it->second->max_prepared_decree(),
@@ -147,7 +147,7 @@ void replica_stub::initialize(const replication_options& opts, configuration_ptr
             derror(
                 "%u.%u @ %s:%hu: initialized with log error, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
                 it->first.app_id, it->first.pidx,
-                primary_address().name.c_str(), primary_address().port,
+                primary_address().name, primary_address().port,
                 it->second->last_durable_decree(),
                 it->second->last_committed_decree(),
                 it->second->max_prepared_decree(),
@@ -272,10 +272,10 @@ void replica_stub::get_primary_replica_list(uint32_t p_tableID, std::vector<glob
     }
 }
 
-void replica_stub::on_client_write(message_ptr& request)
+void replica_stub::on_client_write(dsn_message_t request)
 {
     write_request_header hdr;
-    unmarshall(request, hdr);    
+    ::unmarshall(request, hdr);    
     
     replica_ptr rep = get_replica(hdr.gpid);
     if (rep != nullptr)
@@ -288,10 +288,10 @@ void replica_stub::on_client_write(message_ptr& request)
     }
 }
 
-void replica_stub::on_client_read(message_ptr& request)
+void replica_stub::on_client_read(dsn_message_t request)
 {
     read_request_header req;
-    unmarshall(request, req);
+    ::unmarshall(request, req);
 
     replica_ptr rep = get_replica(req.gpid);
     if (rep != nullptr)
@@ -351,10 +351,10 @@ void replica_stub::on_query_decree(const query_replica_decree_request& req, __ou
     }
 }
 
-void replica_stub::on_prepare(message_ptr& request)
+void replica_stub::on_prepare(dsn_message_t request)
 {
     global_partition_id gpid;
-    unmarshall(request, gpid);    
+    ::unmarshall(request, gpid);    
     replica_ptr rep = get_replica(gpid);
     if (rep != nullptr)
     {
@@ -458,15 +458,15 @@ void replica_stub::query_configuration_by_node()
         _config_query_task->cancel(false);
     }
 
-    message_ptr msg = message::create_request(RPC_CM_CALL);
+    dsn_message_t msg = dsn_msg_create_request(RPC_CM_CALL, 0, 0);
 
     meta_request_header hdr;
     hdr.rpc_tag = RPC_CM_QUERY_NODE_PARTITIONS;
-    marshall(msg, hdr);
+    ::marshall(msg, hdr);
 
     configuration_query_by_node_request req;
     req.node = primary_address();
-    marshall(msg, req);
+    ::marshall(msg, req);
 
     _config_query_task = rpc::call_replicated(
         _failure_detector->current_server_contact(),
@@ -485,7 +485,7 @@ void replica_stub::on_meta_server_connected()
 {
     ddebug(
         "%s:%hu: meta server connected",
-        primary_address().name.c_str(), primary_address().port
+        primary_address().name, primary_address().port
         );
 
     zauto_lock l(_repicas_lock);
@@ -496,16 +496,15 @@ void replica_stub::on_meta_server_connected()
     }
 }
 
-void replica_stub::on_node_query_reply(error_code err, message_ptr& request, message_ptr& response)
+void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, dsn_message_t response)
 {
     ddebug(
         "%s:%hu: node view replied, err = %s",
-        primary_address().name.c_str(), primary_address().port,
+        primary_address().name, primary_address().port,
         err.to_string()
         );    
-    err.end_tracking();
 
-    if (response == nullptr)
+    if (err != ERR_OK)
     {
         zauto_lock l(_repicas_lock);
         if (_state == NS_Connecting)
@@ -524,9 +523,9 @@ void replica_stub::on_node_query_reply(error_code err, message_ptr& request, mes
         // DO NOT UPDATE STATE WHEN DISCONNECTED
         if (_state != NS_Connected)
             return;
-
+        
         configuration_query_by_node_response resp;
-        unmarshall(response, resp);     
+        ::unmarshall(response, resp);     
 
         if (resp.err != ERR_OK)
             return;
@@ -586,7 +585,7 @@ void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_, const par
         ddebug(
             "%u.%u @ %s:%hu: replica not exists on replica server, remove it from meta server",
             config.gpid.app_id, config.gpid.pidx,
-            primary_address().name.c_str(), primary_address().port
+            primary_address().name, primary_address().port
             );
 
         if (config.primary == primary_address())
@@ -604,7 +603,7 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, global_p
         ddebug(
             "%u.%u @ %s:%hu: replica not exists on meta server, removed",
             gpid.app_id, gpid.pidx,
-            primary_address().name.c_str(), primary_address().port
+            primary_address().name, primary_address().port
             );
         replica->update_local_configuration_with_no_ballot_change(PS_ERROR);
     }
@@ -612,10 +611,10 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, global_p
 
 void replica_stub::remove_replica_on_meta_server(const partition_configuration& config)
 {
-    message_ptr msg = message::create_request(RPC_CM_CALL);
+    dsn_message_t msg = dsn_msg_create_request(RPC_CM_CALL, 0, 0);
     meta_request_header hdr;
     hdr.rpc_tag = RPC_CM_UPDATE_PARTITION_CONFIGURATION;
-    marshall(msg, hdr);
+    ::marshall(msg, hdr);
 
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
     request->config = config;
@@ -625,7 +624,7 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
 
     if (primary_address() == config.primary)
     {
-        request->config.primary = dsn::end_point::INVALID;        
+        request->config.primary = dsn_address_invalid;        
     }
     else if (replica_helper::remove_node(primary_address(), request->config.secondaries))
     {
@@ -635,7 +634,7 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
         return;
     }
 
-    marshall(msg, *request);
+    ::marshall(msg, *request);
 
     rpc::call_replicated(
         _failure_detector->current_server_contact(),
@@ -650,7 +649,7 @@ void replica_stub::on_meta_server_disconnected()
 {
     ddebug(
         "%s:%hu: meta server disconnected",
-        primary_address().name.c_str(), primary_address().port
+        primary_address().name, primary_address().port
         );
     zauto_lock l(_repicas_lock);
     if (NS_Disconnected == _state)
@@ -685,11 +684,9 @@ void replica_stub::on_meta_server_disconnected_scatter(replica_stub_ptr this_, g
     }
 }
 
-void replica_stub::response_client_error(message_ptr& request, int error)
+void replica_stub::response_client_error(dsn_message_t request, int error)
 {
-    message_ptr resp = request->create_response();
-    resp->writer().write(error);
-    rpc::reply(resp);
+    reply(request, error);
 }
 
 void replica_stub::init_gc_for_test()
@@ -740,7 +737,7 @@ void replica_stub::on_gc()
     }
 }
 
-task_ptr replica_stub::begin_open_replica(const std::string& app_type, global_partition_id gpid, std::shared_ptr<group_check_request> req)
+::dsn::task_ptr replica_stub::begin_open_replica(const std::string& app_type, global_partition_id gpid, std::shared_ptr<group_check_request> req)
 {
     _repicas_lock.lock();
     if (_replicas.find(gpid) != _replicas.end())
@@ -823,7 +820,7 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
     }
 }
 
-task_ptr replica_stub::begin_close_replica(replica_ptr r)
+::dsn::task_ptr replica_stub::begin_close_replica(replica_ptr r)
 {
     zauto_lock l(_repicas_lock);
 

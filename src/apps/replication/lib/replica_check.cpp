@@ -37,6 +37,8 @@ namespace dsn { namespace replication {
 
 void replica::init_group_check()
 {
+    check_hashed_access();
+
     if (PS_PRIMARY != status() || _options.group_check_disabled)
         return;
 
@@ -73,7 +75,7 @@ void replica::broadcast_group_check()
         if (it->first == primary_address())
             continue;
 
-        end_point addr = it->first;
+        dsn_address_t addr = it->first;
         std::shared_ptr<group_check_request> request(new group_check_request);
 
         request->app_type = _primary_states.membership.app_type;
@@ -88,7 +90,7 @@ void replica::broadcast_group_check()
             request->learner_signature = it2->second.signature;
         }
 
-        task_ptr callback_task = rpc::call_typed(
+        dsn::task_ptr callback_task = rpc::call_typed(
             addr,
             RPC_GROUP_CHECK,
             request,            
@@ -100,16 +102,18 @@ void replica::broadcast_group_check()
         _primary_states.group_check_pending_replies[addr] = callback_task;
 
         ddebug(
-            "%s: init_group_check for %s:%hu", name(), addr.name.c_str(), addr.port
+            "%s: init_group_check for %s:%hu", name(), addr.name, addr.port
         );
     }
 }
 
 void replica::on_group_check(const group_check_request& request, __out_param group_check_response& response)
 {
+    check_hashed_access();
+
     ddebug(
         "%s: on_group_check from %s:%hu",
-        name(), request.config.primary.name.c_str(), request.config.primary.port
+        name(), request.config.primary.name, request.config.primary.port
         );
     
     if (request.config.ballot < get_ballot())
@@ -161,6 +165,8 @@ void replica::on_group_check(const group_check_request& request, __out_param gro
 
 void replica::on_group_check_reply(error_code err, std::shared_ptr<group_check_request>& req, std::shared_ptr<group_check_response>& resp)
 {
+    check_hashed_access();
+
     if (PS_PRIMARY != status() || req->config.ballot < get_ballot())
     {
         return;

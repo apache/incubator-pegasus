@@ -36,7 +36,7 @@
 namespace dsn { namespace replication {
 
 
-void replica::on_client_write(int code, message_ptr& request)
+void replica::on_client_write(int code, dsn_message_t request)
 {
     check_hashed_access();
 
@@ -93,7 +93,7 @@ void replica::init_prepare(mutation_ptr& mu)
     }
     
     // remote prepare
-    dassert (mu->remote_tasks().size() == 0, "");
+    mu->set_prepare_ts();
     mu->set_left_secondary_ack_count((unsigned int)_primary_states.membership.secondaries.size());
     for (auto it = _primary_states.membership.secondaries.begin(); it != _primary_states.membership.secondaries.end(); it++)
     {
@@ -132,24 +132,24 @@ void replica::init_prepare(mutation_ptr& mu)
     return;
 
 ErrOut:
-    response_client_message(mu->client_request, err);
+    response_client_message(mu->client_msg(), err);
     return;
 }
 
-void replica::send_prepare_message(const end_point& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds)
+void replica::send_prepare_message(const dsn_address_t& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds)
 {
-    message_ptr msg = message::create_request(RPC_PREPARE, timeout_milliseconds, gpid_to_hash(get_gpid()));
-    marshall(msg, get_gpid());
-    
+    dsn_message_t msg = dsn_msg_create_request(RPC_PREPARE, timeout_milliseconds, gpid_to_hash(get_gpid()));
     replica_configuration rconfig;
     _primary_states.get_replica_config(status, rconfig);
 
-    marshall(msg, rconfig);
-    mu->write_to(msg);
-
-    dbg_dassert (mu->remote_tasks().find(addr) == mu->remote_tasks().end(), "");
-
-    mu->remote_tasks()[addr] = rpc::call(addr, msg, 
+    {
+        msg_binary_writer writer(msg);
+        marshall(writer, get_gpid());
+        marshall(writer, rconfig);
+        mu->write_to(writer);
+    }
+    
+    mu->remote_tasks()[addr] = rpc::call(addr, msg,
         this,
         std::bind(&replica::on_prepare_reply, 
             this,
@@ -163,7 +163,7 @@ void replica::send_prepare_message(const end_point& addr, partition_status statu
     ddebug( 
         "%s: mutation %s send_prepare_message to %s:%hu as %s", 
         name(), mu->name(),
-        addr.name.c_str(), addr.port,
+        addr.name, addr.port,
         enum_to_string(rconfig.status)
         );
 }
@@ -179,14 +179,19 @@ void replica::do_possible_commit_on_primary(mutation_ptr& mu)
     }
 }
 
-void replica::on_prepare(message_ptr& request)
+void replica::on_prepare(dsn_message_t request)
 {
     check_hashed_access();
 
     replica_configuration rconfig;
-    unmarshall(request, rconfig);    
+    mutation_ptr mu;
 
-    mutation_ptr mu = mutation::read_from(request);
+    {
+        msg_binary_reader reader(request);
+        unmarshall(reader, rconfig);
+        mu = mutation::read_from(reader, request);
+    }
+
     decree decree = mu->data.header.decree;
 
     ddebug( "%s: mutation %s on_prepare", name(), mu->name());
@@ -221,7 +226,10 @@ void replica::on_prepare(message_ptr& request)
             name(), mu->name(),
             enum_to_string(status())
             );
-        ack_prepare_message(ERR_INVALID_STATE, mu);
+        ack_prepare_message(
+            (PS_INACTIVE == status() && _inactive_is_transient) ? ERR_INACTIVE_STATE : ERR_INVALID_STATE,
+            mu
+            );
         return;
     }
 
@@ -282,6 +290,7 @@ void replica::on_prepare(message_ptr& request)
     
     // write log
     dassert (mu->log_task() == nullptr, "");
+
     mu->log_task() = _stub->_log->append(mu,
         LPC_WRITE_REPLICATION_LOG,
         this,
@@ -292,7 +301,7 @@ void replica::on_prepare(message_ptr& request)
     dassert(mu->log_task() != nullptr, "");
 }
 
-void replica::on_append_log_completed(mutation_ptr& mu, error_code err, uint32_t size)
+void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t size)
 {
     check_hashed_access();
 
@@ -341,11 +350,11 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, uint32_t
     }
 }
 
-void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, error_code err, message_ptr& request, message_ptr& reply)
+void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, error_code err, dsn_message_t request, dsn_message_t reply)
 {
     check_hashed_access();
 
-    mutation_ptr& mu = pr.first;
+    mutation_ptr mu = pr.first;
     partition_status targetStatus = pr.second;
 
     // skip callback for old mutations
@@ -354,7 +363,8 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
     
     dassert (mu->data.header.ballot == get_ballot(), "");
 
-    end_point node = request->header().to_address;
+    dsn_address_t node;
+    dsn_msg_to_address(request, &node);
     partition_status st = _primary_states.get_node_status(node);
 
     // handle reply
@@ -367,14 +377,15 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
     }
     else
     {
-        unmarshall(reply, resp);        
-
-        ddebug( 
-            "%s: mutation %s on_prepare_reply from %s:%hu", 
-            name(), mu->name(),
-            node.name.c_str(), node.port
-            );
+        ::unmarshall(reply, resp);
     }
+    
+    ddebug(
+        "%s: mutation %s on_prepare_reply from %s:%hu, err = %s",
+        name(), mu->name(),
+        node.name, node.port,
+        resp.err.to_string()
+        );
        
     if (resp.err == ERR_OK)
     {
@@ -409,6 +420,19 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
     // failure handling
     else
     {
+        // retry for INACTIVE state when there are still time
+        if (resp.err == ERR_INACTIVE_STATE
+            && !mu->is_prepare_close_to_timeout(2, targetStatus == PS_SECONDARY ? 
+            _options.prepare_timeout_ms_for_secondaries :
+            _options.prepare_timeout_ms_for_potential_secondaries)
+            )
+        {
+            send_prepare_message(node, targetStatus, mu, targetStatus == PS_SECONDARY ?
+                _options.prepare_timeout_ms_for_secondaries :
+                _options.prepare_timeout_ms_for_potential_secondaries);
+            return;
+        }
+
         // note targetStatus and (curent) status may diff
         if (targetStatus == PS_POTENTIAL_SECONDARY)
         {
@@ -435,8 +459,8 @@ void replica::ack_prepare_message(error_code err, mutation_ptr& mu)
     resp.last_committed_decree_in_app = _app->last_committed_decree(); 
     resp.last_committed_decree_in_prepare_list = last_committed_decree();
 
-    dassert (nullptr != mu->owner_message(), "");
-    reply(mu->owner_message(), resp);
+    dassert (nullptr != mu->prepare_msg(), "");
+    reply(mu->prepare_msg(), resp);
 
     ddebug( "%s: mutation %s ack_prepare_message", name(), mu->name());
 }

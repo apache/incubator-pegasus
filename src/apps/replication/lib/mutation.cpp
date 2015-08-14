@@ -33,42 +33,78 @@ mutation::mutation()
     rpc_code = 0;
     _private0 = 0; 
     _not_logged = 1;
+    _prepare_ts_ms = 0;
+    _client_request = nullptr;
+    _prepare_request = nullptr;
 }
 
 mutation::~mutation()
 {
-    clear_log_task();
+    if (_client_request != nullptr)
+    {
+        dsn_msg_release_ref(_client_request);
+    }
+
+    if (_prepare_request != nullptr)
+    {
+        dsn_msg_release_ref(_prepare_request);
+    }
 }
 
-void mutation::set_client_request(task_code code, message_ptr& request)
+void mutation::move_from(mutation_ptr& old)
 {
-    dassert(client_request == nullptr, "batch is not supported now");
-    client_request = request;
-    rpc_code = code;
-    data.updates.push_back(request->reader().get_remaining_buffer());
+    data.updates = std::move(old->data.updates);
+    rpc_code = old->rpc_code;
+        
+    _client_request = old->client_msg();
+    if (_client_request)
+    {
+        old->_client_request = nullptr;
+    }
+
+    _prepare_request = old->prepare_msg();
+    if (_prepare_request)
+    {
+        old->_prepare_request = nullptr;
+    }
 }
 
-/*static*/ mutation_ptr mutation::read_from(message_ptr& reader)
+void mutation::set_client_request(dsn_task_code_t code, dsn_message_t request)
+{
+    dassert(_client_request == nullptr, "batch is not supported now");
+    rpc_code = code;
+
+    if (request != nullptr)
+    {
+        _client_request = request;
+        dsn_msg_add_ref(request); // released on dctor
+
+        void* ptr;
+        size_t size;
+        bool r = dsn_msg_read_next(request, &ptr, &size);
+        dassert(r, "payload is not present");
+        dsn_msg_read_commit(request, size);
+
+        blob buffer((char*)ptr, 0, (int)size);
+        data.updates.push_back(buffer);
+    }    
+}
+
+/*static*/ mutation_ptr mutation::read_from(binary_reader& reader, dsn_message_t from)
 {
     mutation_ptr mu(new mutation());
     unmarshall(reader, mu->data);
     unmarshall(reader, mu->rpc_code);
 
     // it is possible this is an emtpy mutation due to new primaries inserts empty mutations for holes
-    dassert(mu->data.updates.size() == 1 || mu->rpc_code == RPC_REPLICATION_WRITE_EMPTY, "batch is not supported now");
-    message_ptr msg;
-    if (mu->rpc_code != RPC_REPLICATION_WRITE_EMPTY)
-    {
-        msg.reset(new message(mu->data.updates[0], false));
-    }
-    else
-    {
-        blob bb;
-        msg.reset(new message(bb, false));
-    }
+    dassert(mu->data.updates.size() == 1 || mu->rpc_code == RPC_REPLICATION_WRITE_EMPTY,
+        "batch is not supported now");
 
-    mu->client_request = msg;
-    mu->_from_message = reader;
+    if (nullptr != from)
+    {
+        mu->_prepare_request = from;
+        dsn_msg_add_ref(from); // released on dctor
+    }
     
     sprintf(mu->_name, "%lld.%lld",
         static_cast<long long int>(mu->data.header.ballot),
@@ -77,7 +113,7 @@ void mutation::set_client_request(task_code code, message_ptr& request)
     return mu;
 }
 
-void mutation::write_to(message_ptr& writer)
+void mutation::write_to(binary_writer& writer)
 {
     marshall(writer, data);
     marshall(writer, rpc_code);
@@ -88,8 +124,10 @@ int mutation::clear_prepare_or_commit_tasks()
     int c = 0;
     for (auto it = _prepare_or_commit_tasks.begin(); it != _prepare_or_commit_tasks.end(); it++)
     {
-        it->second->cancel(true);
-        c++;
+        if (it->second->cancel(true))
+        {
+            c++;
+        }        
     }
 
     _prepare_or_commit_tasks.clear();
@@ -98,16 +136,12 @@ int mutation::clear_prepare_or_commit_tasks()
 
 int mutation::clear_log_task()
 {
-    if (_log_task != nullptr)
+    if (_log_task != nullptr && _log_task->cancel(true))
     {
-        _log_task->cancel(true);
         _log_task = nullptr;
         return 1;
     }
-    else
-    {
-        return 0;
-    }
+    return 0;
 }
 
 }} // namespace end

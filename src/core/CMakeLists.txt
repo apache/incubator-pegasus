@@ -1,2 +1,7 @@
-dsn_add_library(dsn.core)
-
+add_definitions(-DDSN_IN_CORE)
+if(UNIX)
+    add_compile_options(-fPIC)
+endif()
+add_subdirectory(dev.cpp.core.use)
+add_subdirectory(tools)
+add_subdirectory(core)

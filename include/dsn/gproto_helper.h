@@ -25,8 +25,8 @@
  */
 # pragma once
 
-# include <dsn/internal/dsn_types.h>
-# include <dsn/internal/utils.h>
+# include <dsn/ports.h>
+# include <dsn/cpp/utils.h>
 
 # include <google/protobuf/stubs/common.h>
 # include <google/protobuf/io/zero_copy_stream.h>

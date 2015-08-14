@@ -32,7 +32,7 @@
 // which is binded to this replication partition
 //
 
-# include <dsn/serverlet.h>
+# include <dsn/cpp/serverlet.h>
 # include "replication_common.h"
 # include "mutation.h"
 # include "prepare_list.h"
@@ -46,7 +46,7 @@ class replica_stub;
 
 using namespace ::dsn::service;
 
-class replica : public serverlet<replica>, public ref_object
+class replica : public serverlet<replica>, public ref_counter
 {
 public:        
     ~replica(void);
@@ -66,8 +66,8 @@ public:
     //
     //    requests from clients
     // 
-    void on_client_write(int code, message_ptr& request);
-    void on_client_read(const read_request_header& meta, message_ptr& request);
+    void on_client_write(int code, dsn_message_t request);
+    void on_client_read(const read_request_header& meta, dsn_message_t request);
 
     //
     //    messages and tools from/for meta server
@@ -78,7 +78,7 @@ public:
     //
     //    messages from peers (primary or secondary)
     //
-    void on_prepare(message_ptr& request);    
+    void on_prepare(dsn_message_t request);    
     void on_learn(const learn_request& request, __out_param learn_response& response);
     void on_learn_completion_notification(const group_check_response& report);
     void on_add_learner(const group_check_request& request);
@@ -114,7 +114,7 @@ public:
 private:
     // common helpers
     void init_state();
-    void response_client_message(message_ptr& request, error_code error, decree decree = -1);    
+    void response_client_message(dsn_message_t request, error_code error, decree decree = -1);    
     void execute_mutation(mutation_ptr& mu);
     mutation_ptr new_mutation(decree decree);
     
@@ -128,9 +128,9 @@ private:
     /////////////////////////////////////////////////////////////////
     // 2pc
     void init_prepare(mutation_ptr& mu);
-    void send_prepare_message(const end_point& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds);
-    void on_append_log_completed(mutation_ptr& mu, error_code err, uint32_t size);
-    void on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, error_code err, message_ptr& request, message_ptr& reply);
+    void send_prepare_message(const dsn_address_t& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds);
+    void on_append_log_completed(mutation_ptr& mu, error_code err, size_t size);
+    void on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, error_code err, dsn_message_t request, dsn_message_t reply);
     void do_possible_commit_on_primary(mutation_ptr& mu);    
     void ack_prepare_message(error_code err, mutation_ptr& mu);
     void cleanup_preparing_mutations(bool is_primary);
@@ -139,27 +139,27 @@ private:
     // learning    
     void init_learn(uint64_t signature);
     void on_learn_reply(error_code err, std::shared_ptr<learn_request>& req, std::shared_ptr<learn_response>& resp);
-    void on_copy_remote_state_completed(error_code err, int size, std::shared_ptr<learn_response> resp);
+    void on_copy_remote_state_completed(error_code err, size_t size, std::shared_ptr<learn_response> resp);
     void on_learn_remote_state_completed(error_code err);
     void handle_learning_error(error_code err);
-    void handle_learning_succeeded_on_primary(const end_point& node, uint64_t learnSignature);
+    void handle_learning_succeeded_on_primary(const dsn_address_t& node, uint64_t learnSignature);
     void notify_learn_completion();
         
     /////////////////////////////////////////////////////////////////
     // failure handling    
     void handle_local_failure(error_code error);
-    void handle_remote_failure(partition_status status, const end_point& node, error_code error);
+    void handle_remote_failure(partition_status status, const dsn_address_t& node, error_code error);
 
     /////////////////////////////////////////////////////////////////
     // reconfiguration
     void assign_primary(configuration_update_request& proposal);
     void add_potential_secondary(configuration_update_request& proposal);
-    void upgrade_to_secondary_on_primary(const end_point& node);
+    void upgrade_to_secondary_on_primary(const dsn_address_t& node);
     void downgrade_to_secondary_on_primary(configuration_update_request& proposal);
     void downgrade_to_inactive_on_primary(configuration_update_request& proposal);
     void remove(configuration_update_request& proposal);
-    void update_configuration_on_meta_server(config_type type, const end_point& node, partition_configuration& newConfig);
-    void on_update_configuration_on_meta_server_reply(error_code err, message_ptr& request, message_ptr& response, std::shared_ptr<configuration_update_request> req);
+    void update_configuration_on_meta_server(config_type type, const dsn_address_t& node, partition_configuration& newConfig);
+    void on_update_configuration_on_meta_server_reply(error_code err, dsn_message_t request, dsn_message_t response, std::shared_ptr<configuration_update_request> req);
     void replay_prepare_list();
     bool is_same_ballot_status_change_allowed(partition_status olds, partition_status news);
 
@@ -200,7 +200,4 @@ private:
     potential_secondary_context _potential_secondary_states;
     bool                        _inactive_is_transient; // upgrade to P/S is allowed only iff true
 };
-
-DEFINE_REF_OBJECT(replica)
-
 }} // namespace

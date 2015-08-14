@@ -25,18 +25,18 @@
  */
 # pragma once
 # include "simple_kv.client.h"
-# include <dsn/internal/perf_test_helper.h>
 
 namespace dsn {
     namespace replication {
         namespace application {
 
             class simple_kv_perf_test_client
-                : public simple_kv_client, public ::dsn::service::perf_client_helper<simple_kv_perf_test_client>
+                : public simple_kv_client, 
+                  public ::dsn::service::perf_client_helper<simple_kv_perf_test_client>
             {
             public:
                 simple_kv_perf_test_client(
-                    const std::vector<end_point>& meta_servers,
+                    const std::vector<dsn_address_t>& meta_servers,
                     const char* app_name)
                     : simple_kv_client(meta_servers, app_name)
                 {
@@ -73,12 +73,12 @@ namespace dsn {
 
                 virtual int get_partition_index(const std::string& key) 
                 {
-                    return (int)env::random32(0, 7);
+                    return (int)0; // dsn_random32(0, 7);
                 }
 
                 virtual int get_partition_index(const ::dsn::replication::application::kv_pair& key)
                 {
-                    return (int)env::random32(0, 7);
+                    return (int)0; // dsn_random32(0, 7);
                 }
                                 
                 void send_one_read(int payload_bytes)

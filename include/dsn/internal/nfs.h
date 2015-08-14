@@ -25,13 +25,16 @@
  */
 # pragma once
 
-# include <dsn/service_api.h>
+# include <dsn/service_api_c.h>
+# include <string>
+# include <dsn/cpp/utils.h>
+# include <dsn/internal/task.h>
 
 namespace dsn {
 
     struct remote_copy_request
     {
-        end_point   source;
+        dsn_address_t   source;
         std::string source_dir;
         std::vector<std::string> files;
         std::string dest_dir;
@@ -43,10 +46,12 @@ namespace dsn {
 
     };
 
-    extern void marshall(::dsn::binary_writer& writer, const remote_copy_request& val, uint16_t pos = 0xffff);
+    extern void marshall(::dsn::binary_writer& writer, const remote_copy_request& val);
 
     extern void unmarshall(::dsn::binary_reader& reader, __out_param remote_copy_request& val);
 
+
+    class service_node;
     class nfs_node
     {
     public:
@@ -58,11 +63,11 @@ namespace dsn {
     public:
         nfs_node(service_node* node) : _node(node) {}
 
-        virtual error_code start() = 0;
+        virtual ::dsn::error_code start() = 0;
 
         virtual error_code stop() = 0;
 
-        virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task_ptr& callback) = 0;
+        virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task* callback) = 0;
 
     protected:
         service_node* _node;

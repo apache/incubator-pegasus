@@ -52,6 +52,11 @@ public:
         return *_instance;
     }
 
+    static T& fast_instance()
+    {
+        return *_instance;
+    }
+
     static bool is_instance_created()
     {
         return nullptr != _instance;

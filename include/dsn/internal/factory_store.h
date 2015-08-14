@@ -26,7 +26,7 @@
 # pragma once
 
 # include <dsn/internal/singleton_store.h>
-# include <dsn/internal/logging.h>
+# include <dsn/service_api_c.h>
 
 namespace dsn { namespace utils {
 
@@ -119,7 +119,7 @@ public:
 private:
     static void report_error(const char* name, int type)
     {
-        dlog(dsn::log_level_FATAL, "factory.store", "cannot find factory '%s' with factory type %s", name, type == PROVIDER_TYPE_MAIN ? "provider" : "aspect");
+        dlog(LOG_LEVEL_FATAL, "factory.store", "cannot find factory '%s' with factory type %s", name, type == PROVIDER_TYPE_MAIN ? "provider" : "aspect");
 
         printf("cannot find factory '%s' with factory type %s\n", name, type == PROVIDER_TYPE_MAIN ? "provider" : "aspect");
 

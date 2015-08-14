@@ -52,21 +52,21 @@ public:
     bool is_primary() const;
 
     // client side
-    virtual void on_master_disconnected(const std::vector<end_point>& nodes)
+    virtual void on_master_disconnected(const std::vector<dsn_address_t>& nodes)
     {
         dassert (false, "unsupported method");
     }
 
-    virtual void on_master_connected(const end_point& node)
+    virtual void on_master_connected(const dsn_address_t& node)
     {
         dassert (false, "unsupported method");
     }
 
     // server side
-    virtual void on_worker_disconnected(const std::vector<end_point>& nodes);
-    virtual void on_worker_connected(const end_point& node);
+    virtual void on_worker_disconnected(const std::vector<dsn_address_t>& nodes);
+    virtual void on_worker_connected(const dsn_address_t& node);
 
-    virtual void on_ping(const fd::beacon_msg& beacon, ::dsn::service::rpc_replier<fd::beacon_ack>& reply);
+    virtual void on_ping(const fd::beacon_msg& beacon, ::dsn::rpc_replier<fd::beacon_ack>& reply);
 
 private:
     friend class ::dsn::replication::replication_checker;

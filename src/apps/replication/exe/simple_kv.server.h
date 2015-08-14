@@ -33,8 +33,8 @@ class simple_kv_service
     : public ::dsn::replication::replication_app_base
 {
 public:
-    simple_kv_service(::dsn::replication::replica* replica, ::dsn::configuration_ptr& config) 
-        : ::dsn::replication::replication_app_base(replica, config)
+    simple_kv_service(::dsn::replication::replica* replica) 
+        : ::dsn::replication::replication_app_base(replica)
     {
         open_service();
     }
@@ -47,21 +47,21 @@ public:
 protected:
     // all service handlers to be implemented further
     // RPC_SIMPLE_KV_SIMPLE_KV_READ 
-    virtual void on_read(const std::string& key, ::dsn::service::rpc_replier<std::string>& reply)
+    virtual void on_read(const std::string& key, ::dsn::rpc_replier<std::string>& reply)
     {
         std::cout << "... exec RPC_SIMPLE_KV_SIMPLE_KV_READ ... (not implemented) " << std::endl;
         std::string resp;
         reply(resp);
     }
     // RPC_SIMPLE_KV_SIMPLE_KV_WRITE 
-    virtual void on_write(const ::dsn::replication::application::kv_pair& pr, ::dsn::service::rpc_replier<int32_t>& reply)
+    virtual void on_write(const ::dsn::replication::application::kv_pair& pr, ::dsn::rpc_replier<int32_t>& reply)
     {
         std::cout << "... exec RPC_SIMPLE_KV_SIMPLE_KV_WRITE ... (not implemented) " << std::endl;
         int32_t resp;
         reply(resp);
     }
     // RPC_SIMPLE_KV_SIMPLE_KV_APPEND 
-    virtual void on_append(const ::dsn::replication::application::kv_pair& pr, ::dsn::service::rpc_replier<int32_t>& reply)
+    virtual void on_append(const ::dsn::replication::application::kv_pair& pr, ::dsn::rpc_replier<int32_t>& reply)
     {
         std::cout << "... exec RPC_SIMPLE_KV_SIMPLE_KV_APPEND ... (not implemented) " << std::endl;
         int32_t resp;

@@ -44,16 +44,13 @@ namespace dsn {
         #define invalid_offset (-1LL)
 
         class replica;
-        typedef boost::intrusive_ptr<replica> replica_ptr;
+        typedef dsn::ref_ptr<replica> replica_ptr;
                     
         class replica_stub;
-        typedef boost::intrusive_ptr<replica_stub> replica_stub_ptr;
+        typedef dsn::ref_ptr<replica_stub> replica_stub_ptr;
 
         class mutation;
-        typedef boost::intrusive_ptr<mutation> mutation_ptr;
-
-
-
+        typedef dsn::ref_ptr<mutation> mutation_ptr;
     }
 } // namespace
 

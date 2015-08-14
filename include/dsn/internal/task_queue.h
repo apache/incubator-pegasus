@@ -44,13 +44,8 @@ public:
     task_queue(task_worker_pool* pool, int index, task_queue* inner_provider); 
     ~task_queue() {}
     
-    // before enqueue, the caller calls task::add_ref to ensure a reference is kept
     virtual void     enqueue(task* task) = 0;
-
-    // after dequeue, the caller calles task::release_ref to release the reference
-    virtual task* dequeue() = 0;
-
-
+    virtual task*    dequeue() = 0;
     virtual int      count() const = 0;
 
     const std::string & get_name() { return _name; }    

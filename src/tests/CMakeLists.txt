@@ -1,9 +1,26 @@
+set(MY_PROJ_NAME dsn.tests)
 
-set(DSN_EXTRA_INCLUDEDIR ${DSN_EXTRA_INCLUDEDIR} ${GTEST_INCLUDE_DIRS})
-set(DSN_EXTRA_LIBS ${DSN_EXTRA_LIBS} gtest_main gtest)
+# Source files under CURRENT project directory will be automatically included.
+# You can manually set MY_PROJ_SRC to include source files under other directories.
+set(MY_PROJ_SRC "")
 
-include_directories(AFTER ../core ../tools/common ../tools/simulator)
-include_directories(AFTER ../dist/failure_detector ../apps/replication/client_lib ../apps/replication/lib ../apps/replication/meta_server)
+# Search mode for source files under CURRENT project directory?
+# "GLOB_RECURSE" for recursive search
+# "GLOB" for non-recursive search
+set(MY_SRC_SEARCH_MODE "GLOB")
 
-dsn_add_executable(dsn.tests "")
+message(STATUS "GTEST_INCLUDE_DIRS = ${GTEST_INCLUDE_DIRS}")
+set(MY_PROJ_INC_PATH
+	${GTEST_INCLUDE_DIRS} 
+	../core/coreapi ../core/tools/common ../core/tools/simulator ../core/tools/nfs 
+	../dist/failure_detector ../apps/replication/client_lib ../apps/replication/lib ../apps/replication/meta_server
+	)
 
+set(MY_PROJ_LIBS gtest_main gtest)
+
+set(MY_PROJ_LIB_PATH "")
+
+# Extra files that will be installed
+set(MY_BINPLACES "")
+
+dsn_add_executable()

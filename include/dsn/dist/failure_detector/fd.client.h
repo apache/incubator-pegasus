@@ -24,18 +24,18 @@
  * THE SOFTWARE.
  */
 # pragma once
-# include <dsn/internal/service.api.oo.h>
+# include <dsn/cpp/service.api.oo.h>
 # include <dsn/dist/failure_detector/fd.code.definition.h>
 # include <iostream>
 
 
 namespace dsn { namespace fd { 
 class failure_detector_client 
-    : public virtual ::dsn::service::servicelet
+    : public virtual ::dsn::servicelet
 {
 public:
-    failure_detector_client(const ::dsn::end_point& server) { _server = server; }
-    failure_detector_client() { _server = ::dsn::end_point::INVALID; }
+    failure_detector_client(const dsn_address_t& server) { _server = server; }
+    failure_detector_client() { _server = dsn_address_invalid; }
     virtual ~failure_detector_client() {}
 
 
@@ -46,29 +46,31 @@ public:
         __out_param ::dsn::fd::beacon_ack& resp, 
         int timeout_milliseconds = 0, 
         int hash = 0,
-        const ::dsn::end_point *p_server_addr = nullptr)
+        const dsn_address_t *p_server_addr = nullptr)
     {
-        ::dsn::message_ptr msg = ::dsn::message::create_request(RPC_FD_FAILURE_DETECTOR_PING, timeout_milliseconds, hash);
-        marshall(msg->writer(), beacon);
-        auto resp_task = ::dsn::service::rpc::call(p_server_addr ? *p_server_addr : _server, msg);
-        resp_task->wait();
-        if (resp_task->error() == ::dsn::ERR_OK)
+        ::dsn::message_ptr resp_msg;
+        auto err = ::dsn::rpc::call_typed_wait(
+            &resp_msg, p_server_addr ? *p_server_addr : _server,
+            RPC_FD_FAILURE_DETECTOR_PING, beacon,
+            hash, timeout_milliseconds
+            );
+        if (err == ::dsn::ERR_OK)
         {
-            unmarshall(resp_task->get_response()->reader(), resp);
+            ::unmarshall(resp_msg.get(), resp);
         }
-        return resp_task->error();
+        return err;
     }
     
     // - asynchronous with on-stack ::dsn::fd::beacon_msg and ::dsn::fd::beacon_ack 
-    ::dsn::rpc_response_task_ptr begin_ping(
+    ::dsn::task_ptr begin_ping(
         const ::dsn::fd::beacon_msg& beacon, 
         void* context,
         int timeout_milliseconds = 0, 
         int reply_hash = 0,
         int request_hash = 0,
-        const ::dsn::end_point *p_server_addr = nullptr)
+        const dsn_address_t *p_server_addr = nullptr)
     {
-        return ::dsn::service::rpc::call_typed(
+        return ::dsn::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
                     RPC_FD_FAILURE_DETECTOR_PING, 
                     beacon, 
@@ -94,14 +96,14 @@ public:
     }
     
     // - asynchronous with on-heap std::shared_ptr<::dsn::fd::beacon_msg> and std::shared_ptr<::dsn::fd::beacon_ack> 
-    ::dsn::rpc_response_task_ptr begin_ping2(
+    ::dsn::task_ptr begin_ping2(
         std::shared_ptr<::dsn::fd::beacon_msg>& beacon,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0,
         int request_hash = 0,
-        const ::dsn::end_point *p_server_addr = nullptr)
+        const dsn_address_t *p_server_addr = nullptr)
     {
-        return ::dsn::service::rpc::call_typed(
+        return ::dsn::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
                     RPC_FD_FAILURE_DETECTOR_PING, 
                     beacon, 
@@ -127,7 +129,7 @@ public:
     
 
 private:
-    ::dsn::end_point _server;
+    dsn_address_t _server;
 };
 
 } } 

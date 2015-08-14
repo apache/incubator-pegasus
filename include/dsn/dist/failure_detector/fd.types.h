@@ -24,15 +24,15 @@
  * THE SOFTWARE.
  */
 # pragma once
-# include <dsn/internal/serialization.h>
+# include <dsn/service_api_cpp.h>
 
 namespace dsn { namespace fd { 
     // ---------- beacon_msg -------------
     struct beacon_msg
     {
         int64_t time;
-        ::dsn::end_point from;
-        ::dsn::end_point to;
+        dsn_address_t from;
+        dsn_address_t to;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const beacon_msg& val)
@@ -53,8 +53,8 @@ namespace dsn { namespace fd {
     struct beacon_ack
     {
         int64_t time;
-        ::dsn::end_point this_node;
-        ::dsn::end_point primary_node;
+        dsn_address_t this_node;
+        dsn_address_t primary_node;
         bool is_master;
         bool allowed;
     };

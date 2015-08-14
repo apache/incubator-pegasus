@@ -34,9 +34,27 @@ namespace dsn { namespace replication {
 #define MAX_LOG_FILESIZE (32)
 
 class log_file;
-typedef boost::intrusive_ptr<log_file> log_file_ptr;
+typedef dsn::ref_ptr<log_file> log_file_ptr;
 
 typedef std::unordered_map<global_partition_id, decree> multi_partition_decrees;
+
+struct log_block_header
+{
+    int32_t magic;
+    int32_t length;
+    int32_t body_crc;
+    int32_t padding;
+};
+
+struct log_file_header
+{
+    int32_t  magic;
+    int32_t  version;
+    int32_t  header_size;
+    int32_t  max_staleness_for_commit;
+    int32_t  log_buffer_size_bytes;
+    int64_t  start_global_offset;
+};
 
 class mutation_log : public virtual servicelet
 {
@@ -70,8 +88,8 @@ public:
     // log mutation
     //
     // return value: nullptr for error
-    task_ptr append(mutation_ptr& mu, 
-            task_code callback_code,
+    ::dsn::task_ptr append(mutation_ptr& mu,
+            dsn_task_code_t callback_code,
             servicelet* callback_host,
             aio_handler callback,
             int hash = 0);
@@ -96,12 +114,12 @@ private:
     //
     //  internal helpers
     //
-    typedef std::shared_ptr<std::list<aio_task_ptr>> pending_callbacks_ptr;
+    typedef std::shared_ptr<std::list<::dsn::task_ptr>> pending_callbacks_ptr;
 
     error_code create_new_log_file();
     void create_new_pending_buffer();    
-    void internal_pending_write_timer(uint64_t id);
-    static void internal_write_callback(error_code err, uint32_t size, pending_callbacks_ptr callbacks, blob data);
+    void internal_pending_write_timer(binary_writer* w_ptr);
+    static void internal_write_callback(error_code err, size_t size, pending_callbacks_ptr callbacks, blob data);
     error_code write_pending_mutations(bool create_new_log_when_necessary = true);
 
 private:    
@@ -127,26 +145,15 @@ private:
     uint32_t                    _log_buffer_size_bytes;
     uint32_t                    _log_pending_max_milliseconds;
     
-    message_ptr                 _pending_write;
-    pending_callbacks_ptr       _pending_write_callbacks;
-    task_ptr                    _pending_write_timer;
+    std::shared_ptr<binary_writer> _pending_write;
+    pending_callbacks_ptr          _pending_write_callbacks;
+    ::dsn::task_ptr   _pending_write_timer;
     
     int                         _write_task_number;
 };
 
-class log_file : public ref_object
+class log_file : public ref_counter
 {
-public:
-    struct log_file_header
-    {
-        int32_t  magic;
-        int32_t  version;
-        int32_t  header_size;
-        int32_t  max_staleness_for_commit;
-        int32_t  log_buffer_size_bytes;
-        int64_t  start_global_offset;
-    };
-
 public:    
     ~log_file() { close(); }
 
@@ -166,9 +173,9 @@ public:
     // write routines
     //
     // return value: nullptr for error or immediate success (using ::GetLastError to get code), otherwise it is pending
-    aio_task_ptr write_log_entry(
+    ::dsn::task_ptr write_log_entry(
                     blob& bb,
-                    task_code evt,  // to indicate which thread pool to execute the callback
+                    dsn_task_code_t evt,  // to indicate which thread pool to execute the callback
                     servicelet* callback_host,
                     aio_handler callback,
                     int64_t offset,
@@ -183,28 +190,26 @@ public:
     const multi_partition_decrees& init_prepare_decrees() { return _init_prepared_decrees; }
     const log_file_header& header() const { return _header;}
 
-    int read_header(message_ptr& msg);
-    int write_header(message_ptr& msg, multi_partition_decrees& initMaxDecrees, int bufferSizeBytes);
+    int read_header(binary_reader& reader);
+    int write_header(binary_writer& writer, multi_partition_decrees& initMaxDecrees, int bufferSizeBytes);
     bool is_right_header() const;
     
 private:
-    log_file(const char* path, handle_t handle, int index, int64_t startOffset, int max_staleness_for_commit, bool isRead, int write_task_max_count = 2);
+    log_file(const char* path, dsn_handle_t handle, int index, int64_t startOffset, int max_staleness_for_commit, bool isRead, int write_task_max_count = 2);
 
 protected:        
     int64_t       _start_offset;
     int64_t       _end_offset;
-    handle_t      _handle;
+    dsn_handle_t      _handle;
     bool          _is_read;
     std::string   _path;
     int           _index;
-    std::vector<aio_task_ptr>  _write_tasks;
+    std::vector<::dsn::task_ptr>  _write_tasks;
     int                        _write_task_itr;    
 
     // for gc
     multi_partition_decrees _init_prepared_decrees;    
     log_file_header         _header;
 };
-
-DEFINE_REF_OBJECT(log_file)
 
 }} // namespace

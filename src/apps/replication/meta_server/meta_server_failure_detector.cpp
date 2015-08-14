@@ -43,7 +43,7 @@ meta_server_failure_detector::~meta_server_failure_detector(void)
 {
 }
 
-void meta_server_failure_detector::on_worker_disconnected(const std::vector<end_point>& nodes)
+void meta_server_failure_detector::on_worker_disconnected(const std::vector<dsn_address_t>& nodes)
 {
     if (!is_primary())
     {
@@ -55,7 +55,7 @@ void meta_server_failure_detector::on_worker_disconnected(const std::vector<end_
     {
         states.push_back(std::make_pair(n, false));
 
-        dwarn("client expired: %s:%hu", n.name.c_str(), n.port);
+        dwarn("client expired: %s:%hu", n.name, n.port);
     }
     
     machine_fail_updates pris;
@@ -66,14 +66,14 @@ void meta_server_failure_detector::on_worker_disconnected(const std::vector<end_
         dinfo("%d.%d primary node for %s:%hu is gone, update configuration on meta server", 
             pri.first.app_id,
             pri.first.pidx,
-            pri.second->node.name.c_str(),
+            pri.second->node.name,
             pri.second->node.port
             );
         _svc->update_configuration(pri.second);
     }
 }
 
-void meta_server_failure_detector::on_worker_connected(const end_point& node)
+void meta_server_failure_detector::on_worker_connected(const dsn_address_t& node)
 {
     if (!is_primary())
     {
@@ -84,7 +84,7 @@ void meta_server_failure_detector::on_worker_connected(const end_point& node)
     states.push_back(std::make_pair(node, true));
 
     dwarn("Client reconnected",
-        "Client %s:%hu", node.name.c_str(), node.port);
+        "Client %s:%hu", node.name, node.port);
 
     _state->set_node_state(states, nullptr);
 }
@@ -119,13 +119,13 @@ bool meta_server_failure_detector::is_primary() const
     return _is_primary;
 }
 
-void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::service::rpc_replier<fd::beacon_ack>& reply)
+void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::rpc_replier<fd::beacon_ack>& reply)
 {
     fd::beacon_ack ack;
     ack.this_node = beacon.to;
     if (!is_primary())
     {
-        end_point master;
+        dsn_address_t master;
         if (_state->get_meta_server_primary(master))
         {
             ack.time = beacon.time;
@@ -136,7 +136,7 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::
         {
             ack.time = beacon.time;
             ack.is_master = false;
-            ack.primary_node =  end_point::INVALID;
+            ack.primary_node =  dsn_address_invalid;
         }
     }
     else

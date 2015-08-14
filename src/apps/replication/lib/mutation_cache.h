@@ -41,6 +41,7 @@ public:
     error_code   put(mutation_ptr& mu);
     mutation_ptr pop_min();
     mutation_ptr get_mutation_by_decree(decree decree);
+    mutation_ptr remove_mutation_by_decree(decree decree);
     void         reset(decree init_decree, bool clear_mutations);
 
     decree  min_decree() const { return _start_decree; } 

@@ -34,7 +34,7 @@ class simple_kv_client
 {
 public:
     simple_kv_client(
-        const std::vector<end_point>& meta_servers,
+        const std::vector<dsn_address_t>& meta_servers,
         const char* app_name)
         : ::dsn::replication::replication_app_client_base(meta_servers, app_name) 
     {
@@ -69,13 +69,13 @@ public:
         resp_task->wait();
         if (resp_task->error() == ::dsn::ERR_OK)
         {
-            unmarshall(resp_task->get_response()->reader(), resp);
+            ::unmarshall(resp_task->response(), resp);
         }
         return resp_task->error();
     }
     
     // - asynchronous with on-stack std::string and std::string 
-    ::dsn::rpc_response_task_ptr begin_read(
+    ::dsn::task_ptr begin_read(
         const std::string& key,         
         void* context = nullptr,
         int timeout_milliseconds = 0, 
@@ -107,7 +107,7 @@ public:
     }
     
     // - asynchronous with on-heap std::shared_ptr<std::string> and std::shared_ptr<std::string> 
-    ::dsn::rpc_response_task_ptr begin_read2(
+    ::dsn::task_ptr begin_read2(
         std::shared_ptr<std::string>& key,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0
@@ -157,13 +157,13 @@ public:
         resp_task->wait();
         if (resp_task->error() == ::dsn::ERR_OK)
         {
-            unmarshall(resp_task->get_response()->reader(), resp);
+            ::unmarshall(resp_task->response(), resp);
         }
         return resp_task->error();
     }
     
     // - asynchronous with on-stack ::dsn::replication::application::kv_pair and int32_t 
-    ::dsn::rpc_response_task_ptr begin_write(
+    ::dsn::task_ptr begin_write(
         const ::dsn::replication::application::kv_pair& pr,     
         void* context = nullptr,
         int timeout_milliseconds = 0, 
@@ -195,7 +195,7 @@ public:
     }
     
     // - asynchronous with on-heap std::shared_ptr<::dsn::replication::application::kv_pair> and std::shared_ptr<int32_t> 
-    ::dsn::rpc_response_task_ptr begin_write2(
+    ::dsn::task_ptr begin_write2(
         std::shared_ptr<::dsn::replication::application::kv_pair>& pr,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0
@@ -245,13 +245,13 @@ public:
         resp_task->wait();
         if (resp_task->error() == ::dsn::ERR_OK)
         {
-            unmarshall(resp_task->get_response()->reader(), resp);
+            ::unmarshall(resp_task->response(), resp);
         }
         return resp_task->error();
     }
     
     // - asynchronous with on-stack ::dsn::replication::application::kv_pair and int32_t 
-    ::dsn::rpc_response_task_ptr begin_append(
+    ::dsn::task_ptr begin_append(
         const ::dsn::replication::application::kv_pair& pr,         
         void* context = nullptr,
         int timeout_milliseconds = 0, 
@@ -283,7 +283,7 @@ public:
     }
     
     // - asynchronous with on-heap std::shared_ptr<::dsn::replication::application::kv_pair> and std::shared_ptr<int32_t> 
-    ::dsn::rpc_response_task_ptr begin_append2(
+    ::dsn::task_ptr begin_append2(
         std::shared_ptr<::dsn::replication::application::kv_pair>& pr,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0

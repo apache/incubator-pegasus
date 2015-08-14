@@ -9,7 +9,7 @@
 #include <cassert>
 #include <thread>
 #include <atomic>
-#include <dsn/internal/utils.h>
+#include <dsn/cpp/utils.h>
 #include <dsn/ext/hpc-locks/sema.h>
 
 
