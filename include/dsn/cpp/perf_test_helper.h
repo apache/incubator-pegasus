@@ -41,8 +41,12 @@ namespace dsn {
 
         struct perf_test_opts
         {
-            int  perf_test_rounds;            
-            bool perf_test_concurrent;            
+            int  perf_test_rounds;
+            // perf_test_concurrent_count is used only when perf_test_concurrent is true:
+            //   - if perf_test_concurrent_count == 0, means concurrency grow exponentially.
+            //   - if perf_test_concurrent_count >  0, means concurrency maintained to a fixed number.
+            bool perf_test_concurrent;
+            int  perf_test_concurrent_count;
             std::vector<int> perf_test_payload_bytes;
             std::vector<int> perf_test_timeouts_ms;
         };
@@ -50,6 +54,7 @@ namespace dsn {
         CONFIG_BEGIN(perf_test_opts)
             CONFIG_FLD(int, uint64, perf_test_rounds, 10000, "how many rounds of test for each rpc request")            
             CONFIG_FLD(bool, bool, perf_test_concurrent, true, "whether the rpc request should be issued concurrently")
+            CONFIG_FLD(int, uint64, perf_test_concurrent_count, 10, "0 for expotentially growing concurrenty, >0 for fixed")
             CONFIG_FLD_INT_LIST(perf_test_payload_bytes, "byte size of each rpc request test")
             CONFIG_FLD_INT_LIST(perf_test_timeouts_ms, "timeout (ms) for each rpc call")
         CONFIG_END
@@ -85,6 +90,7 @@ namespace dsn {
                 int  rounds;
                 int  payload_bytes;
                 bool concurrent;
+                int  concurrent_count;
                 int  timeout_ms;
 
                 // statistics 
@@ -102,6 +108,7 @@ namespace dsn {
                     payload_bytes = r.payload_bytes;
                     timeout_ms = r.timeout_ms;
                     concurrent = r.concurrent;
+                    concurrent_count = r.concurrent_count;
 
                     timeout_rounds.store(r.timeout_rounds.load());
                     error_rounds.store(r.error_rounds.load());
@@ -149,6 +156,7 @@ namespace dsn {
                         c.payload_bytes = bytes;
                         c.timeout_ms = opt.perf_test_timeouts_ms[i];
                         c.concurrent = opt.perf_test_concurrent;
+                        c.concurrent_count = opt.perf_test_concurrent_count;
                         s.cases.push_back(c);
                     }
                 }
@@ -178,7 +186,6 @@ namespace dsn {
             {
                 int id = (int)(size_t)(context);
                 int lr = --_live_rpc_count;
-                int next = _current_case->concurrent ? 2 : 1;
                 if (err != ERR_OK)
                 {
                     if (err == ERR_TIMEOUT)
@@ -187,9 +194,6 @@ namespace dsn {
                         _current_case->error_rounds++;
 
                     _rounds_latency_us[id - 1] = 0;
-
-                    if (err == ERR_TIMEOUT)
-                        next = (lr == 0 ? 1 : 0);
                 }
                 else
                 {
@@ -204,8 +208,27 @@ namespace dsn {
                 }
 
                 // conincontinue further waves
-                for (int i = 0; i < next; i++)
+                if (_current_case->concurrent)
                 {
+                    if (_current_case->concurrent_count == 0)
+                    {
+                        // exponential increase
+                        _suits[_current_suit_index].send_one(_current_case->payload_bytes);
+                        _suits[_current_suit_index].send_one(_current_case->payload_bytes);
+                    }
+                    else
+                    {
+                        // maintain fixed concurrent number
+                        while (_rounds_req < _current_case->rounds
+                               && _live_rpc_count < _current_case->concurrent_count)
+                        {
+                            _suits[_current_suit_index].send_one(_current_case->payload_bytes);
+                        }
+                    }
+                }
+                else
+                {
+                    // always one live request
                     _suits[_current_suit_index].send_one(_current_case->payload_bytes);
                 }
             }
@@ -272,19 +295,24 @@ namespace dsn {
                     if (_current_suit_index >= (int)_suits.size())
                     {
                         std::stringstream ss;
+                        ss << ">>>>>>>>>>>>>>>>>>>" << std::endl;
 
                         for (auto& s : _suits)
                         {
                             for (auto& cs : s.cases)
                             {
                                 ss << "TEST " << s.name
-                                    << ", timeout/err/succ: " << cs.timeout_rounds << "/" << cs.error_rounds << "/" << cs.succ_rounds
-                                    << ", latency(us): " << cs.succ_latency_avg_us << "(avg), "
-                                    << cs.min_latency_us << "(min), "
-                                    << cs.max_latency_us << "(max)"
-                                    << ", qps: " << cs.succ_qps << "#/s"
-                                    << ", target timeout(ms) " << cs.timeout_ms
-                                    << std::endl;
+                                   << ", rounds " << _current_case->rounds
+                                   << ", concurrent " << (_current_case->concurrent ? "true" : "false")
+                                   << ", concurrent_count " << _current_case->concurrent_count
+                                   << ", timeout(ms) " << _current_case->timeout_ms
+                                   << ", payload(byte) " << _current_case->payload_bytes
+                                   << ", timeout/err/succ: " << cs.timeout_rounds << "/" << cs.error_rounds << "/" << cs.succ_rounds
+                                   << ", latency(us): " << cs.succ_latency_avg_us << "(avg), "
+                                   << cs.min_latency_us << "(min), "
+                                   << cs.max_latency_us << "(max)"
+                                   << ", qps: " << cs.succ_qps << "#/s"
+                                   << std::endl;
                             }
                         }
 
@@ -311,6 +339,15 @@ namespace dsn {
                 _rounds_req = 0;
                 _rounds_resp = 0;
                 _rounds_latency_us.resize(cs.rounds, 0);
+
+                std::stringstream ss;
+                ss << "TEST " << _name
+                   << ", rounds " << _current_case->rounds
+                   << ", concurrent " << (_current_case->concurrent ? "true" : "false")
+                   << ", concurrent_count " << _current_case->concurrent_count
+                   << ", timeout(ms) " << _current_case->timeout_ms
+                   << ", payload(byte) " << _current_case->payload_bytes;
+                dwarn(ss.str().c_str());
 
                 // start
                 suit.send_one(_current_case->payload_bytes);
