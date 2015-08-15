@@ -668,7 +668,7 @@ DSN_API void dsn_file_copy_remote_files(dsn_address_t remote, const char* source
 
     rci->files.clear();
     const char** p = source_files;
-    while (*p != nullptr &&& **p != '\0')
+    while (*p != nullptr && **p != '\0')
     {
         rci->files.push_back(std::string(*p));
         p++;

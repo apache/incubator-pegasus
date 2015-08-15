@@ -151,7 +151,8 @@ namespace dsn {
 
             if (r != 0)
             {
-                derror("file op failed, err = %d. On FreeBSD, you may need to load aio kernel module by running 'sudo kldload aio'.", errno);
+                derror("file op failed, err = %d (%s). On FreeBSD, you may need to load"
+                       " aio kernel module by running 'sudo kldload aio'.", errno, strerror(errno));
 
                 if (async)
                 {
