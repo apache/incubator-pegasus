@@ -604,7 +604,7 @@ std::map<int, log_file_ptr>& mutation_log::get_logfiles_for_test()
         return nullptr;
     }
 
-    dsn_handle_t hfile = (dsn_handle_t)::open(path, O_RDONLY | O_BINARY, 0);
+    dsn_handle_t hfile = (dsn_handle_t)(uintptr_t)::open(path, O_RDONLY | O_BINARY, 0);
 
     if (hfile == 0)
     {

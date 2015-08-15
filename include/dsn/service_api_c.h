@@ -74,10 +74,10 @@ extern "C" {
 //     besides the existing high performance providers; developers can also configure
 //     thread pools, thread numbers, thread/task priorities, CPU core affinities, 
 //     throttling policies etc. to build a best threading model for upper apps.
-// (4) ease of intergration - through langauge wrapper for service integration and low level
+// (4) ease of intergration - through language wrapper for service integration and low level
 //     plugged components for platform integration.
 // (5) rich debug, development tools and runtime policies support.
-// (6) tool API with task graunilarity semantic for further tool and runtime policy development.
+// (6) tool API with task granularity semantic for further tool and runtime policy development.
 // (7) PRINCIPLE: all non-determinims must be go through these system calls so that powerful
 //     internal tools are possible - replay, model checking, replication, ...,
 //     AND, it is still OK to call other DETERMINISTIC APIs for applications.
@@ -103,8 +103,8 @@ typedef void*       dsn_task_tracker_t;
 typedef void*       dsn_message_t; 
 
 // all computation in rDSN are as tasks or events, 
-// i.e., event-driven programming
-// task callbacks
+// i.e., in event-driven programming
+// all kinds of task callbacks, see dsn_task_type_t below
 typedef void        (*dsn_task_handler_t)(void*); // void* context
 typedef void        (*dsn_rpc_request_handler_t)(
                                 dsn_message_t,  // incoming request
@@ -344,26 +344,19 @@ extern DSN_API uint32_t              dsn_crc32_concatenate(
 //
 // tasking - asynchronous tasks and timers tasks executed in target thread pools
 //
-// (configured in config files)
-// [task.RPC_PREPARE
-// // TODO: what can be configured for a task
-//
-// [threadpool.THREAD_POOL_REPLICATION]
-// // TODO: what can be configured for a thread pool
-//
-//------------------------------------------------------------------------------
-//
-
+// use the config-dump command in rDSN cli for detailed configurations for
+// each kind of task
 //
 // all returned dsn_task_t are NOT add_ref by rDSN,
 // so you DO NOT need to call task_release_ref to release the tasks.
-// the exception is made for easier programming, and you may consider the later
+// the decision is made for easier programming, and you may consider the later
 // dsn_rpc_xxx calls do the resource gc work for you.
 //
-// however, after you use the tasks with rDSN calls (e.g., dsn_task_call, 
-// dsn_rpc_call_xxx, dsn_file_read/write, etc.) and you want to hold them
-// further, you need to call task_add_ref and task_release_ref.
-// 
+// however, before you emit the tasks (e.g., via dsn_task_call, dsn_rpc_call),
+// AND you want to hold the task handle further after the emit API,
+// you need to call dsn_task_add_ref to ensure the handle is 
+// still valid, and also call dsn_task_release_ref later to 
+// release the handle.
 //
 extern DSN_API void        dsn_task_release_ref(dsn_task_t task);
 extern DSN_API void        dsn_task_add_ref(dsn_task_t task);
@@ -477,17 +470,23 @@ extern DSN_API void          dsn_primary_address2(/*out*/ dsn_address_t* paddr);
     
 // rpc message and buffer management
 //
-// all returned dsn_message_t are add_ref by rDSN except those dsn_msg_create_xxx, 
-// so you need to call msg_release_ref to release the msgs.
-// the exception is made for easier programming, and you may consider the later
+// all returned dsn_message_t are NOT add_ref by rDSN, 
+// so you do not need to call msg_release_ref to release the msgs.
+// the decision is made for easier programming, and you may consider the later
 // dsn_rpc_xxx calls do the resource gc work for you.
+// however, if you want to hold the message further after call dsn_rpc_xxx,
+// you need to call dsn_msg_add_ref first before these operations, 
+// and call dsn_msg_release_ref later to ensure there is no memory leak.
+// This is very similar to what we have above with task handles.
 //
-// for those returned by dsn_msg_create_xxx, if you want to hold them after
-// calling dsn_rpc_xxx, you need to call msg_add_ref and msg_release_ref.
-// 
-// for all msgs accessable in callbacks, rDSN will handle reference by itself.
-// if you want to hold them in upper apps, you need to call msg_add_ref
-// and msg_release_ref explicitly.
+// however, this is not true for returned message from
+// dsn_rpc_call_wait and dsn_rpc_get_response. For these two cases,
+// developers are responsible for releasing the message handle
+// by calling dsn_msg_release_ref.
+//
+// similarily, for all msgs accessable in callbacks, if you want to hold them in 
+// upper apps further beyond the callbacks, 
+// you need to call msg_add_ref, and msg_release_ref explicitly.
 //
 // when timeout_milliseconds == 0,  [task.%rpc_code%] rpc_timeout_milliseconds is used.
 // 
