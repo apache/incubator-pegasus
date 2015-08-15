@@ -34,8 +34,10 @@
 # include <dlfcn.h> 
 # elif defined(__FreeBSD__)
 # include <sys/thr.h>
+# include <dlfcn.h> 
 # elif defined(__APPLE__)
 # include <pthread.h>
+# include <dlfcn.h> 
 # endif
 
 # ifdef __TITLE__
