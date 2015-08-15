@@ -164,8 +164,9 @@ void message_ex::seal(bool fill_crc)
                     sz = (size_t)buffers[i].length();
                 }
 
-                lcrc = dsn_crc32_compute(ptr, sz);
+                lcrc = dsn_crc32_compute(ptr, sz, crc32);
                 crc32 = dsn_crc32_concatenate(
+                    0,
                     0, crc32, len, 
                     crc32, lcrc, sz
                     );
@@ -178,7 +179,7 @@ void message_ex::seal(bool fill_crc)
         }
 
         header->hdr_crc32 = CRC_INVALID;
-        header->hdr_crc32 = dsn_crc32_compute(header, sizeof(message_header));
+        header->hdr_crc32 = dsn_crc32_compute(header, sizeof(message_header), 0);
     }
     else
     {
@@ -216,7 +217,7 @@ bool message_ex::is_right_header() const
     {
         //dassert  (*(int32_t*)data == hdr_crc32, "HeaderCrc must be put at the beginning of the buffer");
         *(int32_t*)hdr = CRC_INVALID;
-        bool r = ((uint32_t)crc32 == dsn_crc32_compute(hdr, sizeof(message_header)));
+        bool r = ((uint32_t)crc32 == dsn_crc32_compute(hdr, sizeof(message_header), 0));
         *(int32_t*)hdr = crc32;
         return r;
     }

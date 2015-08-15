@@ -320,18 +320,19 @@ extern DSN_API void                  dsn_log(
                                         const char* title
                                         );
 extern DSN_API void                  dsn_coredump();
-extern DSN_API uint32_t              dsn_crc32_compute(const void* ptr, size_t size);
+extern DSN_API uint32_t              dsn_crc32_compute(const void* ptr, size_t size, uint32_t init_crc);
 
 //
 // Given
-//      x_final = dsn_crc32_compute (x_ptr, x_size);
+//      x_final = dsn_crc32_compute (x_ptr, x_size, x_init);
 // and
-//      y_final = dsn_crc32_compute (y_ptr, y_size);
+//      y_final = dsn_crc32_compute (y_ptr, y_size, y_init);
 // compute CRC of concatenation of A and B
-//      x##y_crc = ComputeCrc (x##y, x_size + y_size);
+//      x##y_crc = dsn_crc32_compute (x##y, x_size + y_size, xy_init);
 // without touching A and B
 //
 extern DSN_API uint32_t              dsn_crc32_concatenate(
+                                        uint32_t xy_init, 
                                         uint32_t x_init,
                                         uint32_t x_final, 
                                         size_t   x_size, 

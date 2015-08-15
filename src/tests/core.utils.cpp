@@ -32,6 +32,21 @@
 using namespace ::dsn;
 using namespace ::dsn::utils;
 
+TEST(core, crc)
+{
+    char buffer[24];
+    for (int i = 0; i < sizeof(buffer) / sizeof(char); i++)
+    {
+        buffer[i] = dsn_random32(0, 200);
+    }
+
+    auto c1 = dsn_crc32_compute(buffer, 12, 0);
+    auto c2 = dsn_crc32_compute(buffer + 12, 12, c1);
+    auto c3 = dsn_crc32_compute(buffer, 24, 0);
+    auto c4 = dsn_crc32_concatenate(0, 0, c1, 12, c1, c2, 12);
+    EXPECT_TRUE(c3 == c4);
+}
+
 TEST(core, binary_io)
 {
     int value = 0xdeadbeef;

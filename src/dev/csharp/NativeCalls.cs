@@ -233,9 +233,9 @@ namespace dsn.dev.csharp
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static void                  dsn_coredump();
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static UInt32                dsn_crc32_compute(IntPtr ptr, size_t size);
+        public extern static UInt32                dsn_crc32_compute(IntPtr ptr, size_t size, UInt32 init_crc);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static UInt32                dsn_crc32_concatenate(UInt32 x_init, UInt32 x_final, size_t x_size, UInt32 y_init, UInt32 y_final, size_t y_size);
+        public extern static UInt32                dsn_crc32_concatenate(UInt32 xy_init, UInt32 x_init, UInt32 x_final, size_t x_size, UInt32 y_init, UInt32 y_final, size_t y_size);
 
         //------------------------------------------------------------------------------
         //

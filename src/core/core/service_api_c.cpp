@@ -220,12 +220,12 @@ DSN_API void dsn_coredump()
     ::abort();
 }
 
-DSN_API uint32_t dsn_crc32_compute(const void* ptr, size_t size)
+DSN_API uint32_t dsn_crc32_compute(const void* ptr, size_t size, uint32_t init_crc)
 {
-    return ::dsn::utils::crc32::compute(ptr, size, 0);
+    return ::dsn::utils::crc32::compute(ptr, size, init_crc);
 }
 
-DSN_API uint32_t dsn_crc32_concatenate(uint32_t x_init, uint32_t x_final, size_t x_size, uint32_t y_init, uint32_t y_final, size_t y_size)
+DSN_API uint32_t dsn_crc32_concatenate(uint32_t xy_init, uint32_t x_init, uint32_t x_final, size_t x_size, uint32_t y_init, uint32_t y_final, size_t y_size)
 {
     return ::dsn::utils::crc32::concatenate(
         0,
