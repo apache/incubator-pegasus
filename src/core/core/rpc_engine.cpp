@@ -215,8 +215,6 @@ namespace dsn {
         // start client networks
         _client_nets.resize(network_header_format::max_value() + 1);
 
-        const service_spec& spec = service_engine::fast_instance().spec();
-
         // for each format
         for (int i = 0; i <= network_header_format::max_value(); i++)
         {
@@ -347,7 +345,7 @@ namespace dsn {
         if (tsk != nullptr)
         {
             tsk->set_delay(delay_ms);
-            tsk->enqueue(_node);
+            tsk->enqueue();
         }
         else
         {
@@ -364,7 +362,6 @@ namespace dsn {
     void rpc_engine::call(message_ex* request, rpc_response_task* call)
     {
         auto sp = task_spec::get(request->local_rpc_code);
-        auto nts_us = dsn_now_us();
         auto& named_nets = _client_nets[sp->rpc_call_header_format];
         network* net = named_nets[sp->rpc_call_channel];
         auto& hdr = *request->header;

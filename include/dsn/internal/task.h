@@ -206,7 +206,7 @@ public:
     ~rpc_request_task();
 
     message_ex*  get_request() { return _request; }
-    void         enqueue(service_node* node);
+    virtual void enqueue() override;
 
     virtual void  exec()
     {
