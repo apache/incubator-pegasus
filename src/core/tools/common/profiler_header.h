@@ -34,6 +34,8 @@ namespace dsn {
         const int data_width = 15;
         const int taskname_width = 30;
         const int call_width = 15;
+        static const std::string percentail_counter_string[COUNTER_PERCENTILE_COUNT] = { "50%", "90%", "95%", "99%", "999%" };
+        static const int percentail_counter_int[COUNTER_PERCENTILE_COUNT] = { 50, 90, 95, 99, 999 };
 
         enum perf_counter_ptr_type
         {
@@ -204,11 +206,15 @@ namespace dsn {
         };
 
         std::string profiler_output_handler(const std::vector<std::string>& args);
-        void profiler_output_dependency_list_callee(std::stringstream &ss, const int request);
-        void profiler_output_dependency_list_caller(std::stringstream &ss, const int request);
+        std::string profiler_js_handler(const std::vector<std::string>& args);
+        std::string profiler_data_handler(const std::vector<std::string>& args);
+
+        void profiler_output_dependency_list_callee(std::stringstream &ss, const int task_id);
+        void profiler_output_dependency_list_caller(std::stringstream &ss, const int task_id);
         void profiler_output_dependency_matrix(std::stringstream &ss);
-        void profiler_output_information_table(std::stringstream &ss, const int request, const bool flag);
-        void profiler_output_infomation_line(std::stringstream &ss, const int request, counter_percentile_type type, const bool flag);
-        void profiler_output_top(std::stringstream &ss, const perf_counter_ptr_type counter_type, const counter_percentile_type type, const int num);
+        void profiler_output_information_table(std::stringstream &ss, const int task_id);
+        void profiler_output_infomation_line(std::stringstream &ss, const int task_id, counter_percentile_type percentile_type, const bool full_data);
+        void profiler_output_top(std::stringstream &ss, const perf_counter_ptr_type counter_type, const counter_percentile_type percentile_type, const int num);
+        void profiler_data_top(std::stringstream &ss, const perf_counter_ptr_type counter_type, const counter_percentile_type percentile_type, const int num);
     }
 }
