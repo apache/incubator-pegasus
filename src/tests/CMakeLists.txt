@@ -19,9 +19,9 @@ set(MY_PROJ_INC_PATH
 	)
 
 if (UNIX)
-    set(MY_PROJ_LIBS "gtest pthread")
+    set(MY_PROJ_LIBS gtest pthread)
 else()
-    set(MY_PROJ_LIBS "gtest")
+    set(MY_PROJ_LIBS gtest)
 endif()
 
 set(MY_BOOST_PACKAGES system filesystem)
