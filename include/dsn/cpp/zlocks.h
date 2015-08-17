@@ -36,7 +36,7 @@ namespace dsn { namespace service {
 class zlock
 {
 public:
-    zlock() { _h = dsn_exlock_create(); }
+    zlock(bool recursive = false) { _h = dsn_exlock_create(recursive); }
     ~zlock() { dsn_exlock_destroy(_h); }
 
     void lock() { dsn_exlock_lock(_h); }

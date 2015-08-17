@@ -49,6 +49,7 @@ namespace dsn {
             register_component_provider<simple_logger>("dsn::tools::simple_logger");
             register_component_provider<hpc_tail_logger>("dsn::tools::hpc_tail_logger");
             register_component_provider<std_lock_provider>("dsn::tools::std_lock_provider");
+            register_component_provider<std_lock_nr_provider>("dsn::tools::std_lock_nr_provider");
             register_component_provider<std_rwlock_nr_provider>("dsn::tools::std_rwlock_nr_provider");
             register_component_provider<std_semaphore_provider>("dsn::tools::std_semaphore_provider");
             register_component_provider<simple_perf_counter>("dsn::tools::simple_perf_counter");

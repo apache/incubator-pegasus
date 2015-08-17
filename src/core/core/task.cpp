@@ -96,19 +96,15 @@ __thread struct
 
 /*static*/ void task::set_current_worker(task_worker* worker, service_node* node)
 {
-    if (tls_task_info.magic == 0xdeadbeef)
-    {
-        tls_task_info.worker = worker;
-        tls_task_info.worker_index = worker ? worker->index() : -1;
-    }
-    else
+    if (tls_task_info.magic != 0xdeadbeef)
     {
         tls_task_info.magic = 0xdeadbeef;
-        tls_task_info.worker = worker;
-        tls_task_info.worker_index = worker ? worker->index() : -1;
-        tls_task_info.current_task = nullptr;
-        tls_task_info.current_node = worker ? worker->pool()->node() : node;
     }
+
+    tls_task_info.worker = worker;
+    tls_task_info.worker_index = worker ? worker->index() : -1;
+    tls_task_info.current_task = nullptr;
+    tls_task_info.current_node = worker ? worker->pool()->node() : node;
 }
 
 task::task(dsn_task_code_t code, int hash, service_node* node)
@@ -366,9 +362,10 @@ bool task::cancel(bool wait_until_finished, /*out*/ bool* finished /*= nullptr*/
     return succ;
 }
 
-const char* task::node_name() const
+const char* task::get_current_node_name()
 {
-    return node()->name();
+    auto n = task::get_current_node();
+    return n ? n->name() : "unknown";
 }
 
 void task::enqueue()

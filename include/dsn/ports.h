@@ -62,8 +62,35 @@ __pragma(warning(disable:4127))
 #error "unsupported platform"
 #endif
 
+// stl headers
+# include <string>
+# include <memory>
+# include <map>
+# include <unordered_map>
+# include <set>
+# include <unordered_set>
+# include <vector>
+# include <list>
+# include <algorithm>
+
+// common c headers
+# include <cassert>
+# include <cstring>
+# include <cstdlib>
+# include <fcntl.h> // for file open flags
+# include <cstdio>
+# include <climits>
+
+// common utilities
+# include <atomic>
+
+// common macros
+#define PROVIDER_TYPE_MAIN 0
+#define PROVIDER_TYPE_ASPECT 1
+
+
 # ifndef TIME_MS_MAX
-# define TIME_MS_MAX 0x0FFFFFFF
+# define TIME_MS_MAX INT_MAX
 # endif
 
 # ifndef FIELD_OFFSET
@@ -95,28 +122,3 @@ __pragma(warning(disable:4127))
 # ifndef __inout_param
 # define __inout_param
 # endif
-
-// stl headers
-# include <string>
-# include <memory>
-# include <map>
-# include <unordered_map>
-# include <set>
-# include <unordered_set>
-# include <vector>
-# include <list>
-# include <algorithm>
-
-// common c headers
-# include <cassert>
-# include <cstring>
-# include <cstdlib>
-# include <fcntl.h> // for file open flags
-# include <cstdio>
-
-// common utilities
-# include <atomic>
-
-// common macros
-#define PROVIDER_TYPE_MAIN 0
-#define PROVIDER_TYPE_ASPECT 1

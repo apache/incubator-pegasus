@@ -128,6 +128,7 @@ struct service_spec
     std::string                  aio_factory_name;
     std::string                  env_factory_name;
     std::string                  lock_factory_name;
+    std::string                  lock_nr_factory_name;
     std::string                  rwlock_nr_factory_name;
     std::string                  semaphore_factory_name;
     std::string                  nfs_factory_name;
@@ -141,6 +142,7 @@ struct service_spec
     std::list<std::string>       env_aspects;
     std::list<std::string>       timer_aspects;
     std::list<std::string>       lock_aspects;
+    std::list<std::string>       lock_nr_aspects;
     std::list<std::string>       rwlock_nr_aspects;
     std::list<std::string>       semaphore_aspects;
         
@@ -162,7 +164,8 @@ CONFIG_BEGIN(service_spec)
     CONFIG_FLD_STRING(timer_factory_name, "", "timer service provider")
     CONFIG_FLD_STRING(aio_factory_name, "", "asynchonous file system provider")
     CONFIG_FLD_STRING(env_factory_name, "", "environment provider")
-    CONFIG_FLD_STRING(lock_factory_name, "", "lock provider")
+    CONFIG_FLD_STRING(lock_factory_name, "", "recursive exclusive lock provider")
+    CONFIG_FLD_STRING(lock_nr_factory_name, "", "non-recurisve exclusive lock provider")
     CONFIG_FLD_STRING(rwlock_nr_factory_name, "", "non-recurisve rwlock provider")
     CONFIG_FLD_STRING(semaphore_factory_name, "", "semaphore provider")
     CONFIG_FLD_STRING(nfs_factory_name, "", "nfs provider")
@@ -175,7 +178,8 @@ CONFIG_BEGIN(service_spec)
     CONFIG_FLD_STRING_LIST(aio_aspects, "aio aspect providers, usually for tooling purpose")
     CONFIG_FLD_STRING_LIST(timer_aspects, "timer service aspect providers, usually for tooling purpose")
     CONFIG_FLD_STRING_LIST(env_aspects, "environment aspect providers, usually for tooling purpose")
-    CONFIG_FLD_STRING_LIST(lock_aspects, "lock aspect providers, usually for tooling purpose")
+    CONFIG_FLD_STRING_LIST(lock_aspects, "recursive lock aspect providers, usually for tooling purpose")
+    CONFIG_FLD_STRING_LIST(lock_nr_aspects, "non-recurisve lock aspect providers, usually for tooling purpose")
     CONFIG_FLD_STRING_LIST(rwlock_nr_aspects, "non-recursive rwlock aspect providers, usually for tooling purpose")
     CONFIG_FLD_STRING_LIST(semaphore_aspects, "semaphore aspect providers, usually for tooling purpose")
 CONFIG_END

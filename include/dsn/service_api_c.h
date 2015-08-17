@@ -429,7 +429,7 @@ extern DSN_API dsn_error_t dsn_task_error(dsn_task_t task);
 // thread synchronization
 //
 //------------------------------------------------------------------------------
-extern DSN_API dsn_handle_t dsn_exlock_create();
+extern DSN_API dsn_handle_t dsn_exlock_create(bool recursive);
 extern DSN_API void         dsn_exlock_destroy(dsn_handle_t l);
 extern DSN_API void         dsn_exlock_lock(dsn_handle_t l);
 extern DSN_API bool         dsn_exlock_try_lock(dsn_handle_t l);

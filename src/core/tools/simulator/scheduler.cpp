@@ -25,6 +25,7 @@
  */
 # include <dsn/tool/simulator.h>
 # include <dsn/service_api_c.h>
+# include <dsn/tool/node_scoper.h>
 # include "scheduler.h"
 # include "env.sim.h"
 # include <set>
@@ -75,6 +76,8 @@ void event_wheel::clear()
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
+
+__thread bool scheduler::_is_scheduling = false;
 
 scheduler::scheduler(void)
 {
@@ -211,6 +214,8 @@ void scheduler::wait_schedule(bool in_continue, bool is_continue_ready /*= false
 
 void scheduler::schedule()
 {
+    _is_scheduling = true;
+
     check(); // check before schedule
 
     while (true)
@@ -231,6 +236,8 @@ void scheduler::schedule()
         {
             int i = dsn_random32(0, (uint32_t)ready_workers.size() - 1);
             _threads[ready_workers[i]]->runnable.release();
+            
+            _is_scheduling = false;
             return;
         }
 
@@ -250,7 +257,12 @@ void scheduler::schedule()
             for (auto it = events->begin(); it != events->end(); it++)
             {
                 task* t = *it;
-                t->enqueue();
+
+                {
+                    node_scoper ns(t->node());
+                    t->enqueue();
+                }
+
                 t->release_ref(); // added by previous t->enqueue from app
             }
 
@@ -261,6 +273,8 @@ void scheduler::schedule()
         // wait a moment
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
+
+    _is_scheduling = false;
 }
 
 

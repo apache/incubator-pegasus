@@ -23,10 +23,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include <boost/asio.hpp>
-#include <dsn/service_api_c.h>
-#include <dsn/internal/singleton_store.h>
-#include "network.sim.h" 
+
+# include <boost/asio.hpp>
+# include <dsn/service_api_c.h>
+# include <dsn/internal/singleton_store.h>
+# include <dsn/tool/node_scoper.h>
+# include "network.sim.h" 
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -87,11 +89,15 @@ namespace dsn { namespace tools {
 
         message_ex* recv_msg = virtual_send_message(msg);
 
-        server_session->on_recv_request(recv_msg, 
-            recv_msg->from_address == recv_msg->to_address ?
-            0 : rnet->net_delay_milliseconds()
-            );
+        {
+            node_scoper ns(rnet->node());
 
+            server_session->on_recv_request(recv_msg,
+                recv_msg->from_address == recv_msg->to_address ?
+                0 : rnet->net_delay_milliseconds()
+                );
+        }
+        
         on_send_completed(msg);
     }
 
@@ -105,10 +111,14 @@ namespace dsn { namespace tools {
     {
         message_ex* recv_msg = virtual_send_message(reply_msg);
 
-        _client->on_recv_reply(recv_msg->header->id, recv_msg,
-            recv_msg->from_address == recv_msg->to_address ?
-            0 : (static_cast<sim_network_provider*>(&_net))->net_delay_milliseconds()
-            );
+        {
+            node_scoper ns(_client->net().node());
+
+            _client->on_recv_reply(recv_msg->header->id, recv_msg,
+                recv_msg->from_address == recv_msg->to_address ?
+                0 : (static_cast<sim_network_provider*>(&_net))->net_delay_milliseconds()
+                );
+        }
 
         on_send_completed(reply_msg);
     }

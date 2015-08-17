@@ -38,7 +38,7 @@ namespace dsn {
         namespace application {
             
             simple_kv_service_impl::simple_kv_service_impl(replica* replica)
-                : simple_kv_service(replica)
+                : simple_kv_service(replica), _lock(true)
             {
                 _test_file_learning = false;
             }

@@ -73,7 +73,7 @@ namespace dsn { namespace tools {
         uint32_t     _min_message_delay_microseconds;
         uint32_t     _max_message_delay_microseconds;
     };
-
+        
     //------------- inline implementations -------------
 
 

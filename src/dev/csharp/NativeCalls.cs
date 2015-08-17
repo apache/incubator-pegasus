@@ -318,7 +318,7 @@ namespace dsn.dev.csharp
         //
         //------------------------------------------------------------------------------
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static dsn_handle_t dsn_exlock_create();
+        public extern static dsn_handle_t dsn_exlock_create(bool recursive);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static void         dsn_exlock_destroy(dsn_handle_t l);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]

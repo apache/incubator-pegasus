@@ -268,7 +268,7 @@ namespace dsn
                 if (nullptr != task::get_current_worker())
                 {
                     wn = sprintf(ptr, "%6s.%7s%u.%016llx: ",
-                        t->node_name(),
+                        task::get_current_node_name(),
                         task::get_current_worker()->pool_spec().name.c_str(),
                         task::get_current_worker()->index(),
                         static_cast<long long unsigned int>(t->id())
@@ -277,7 +277,7 @@ namespace dsn
                 else
                 {
                     wn = sprintf(ptr, "%6s.%7s.%05d.%016llx: ",
-                        t->node_name(),
+                        task::get_current_node_name(),
                         "io-thrd",
                         tid,
                         static_cast<long long unsigned int>(t->id())
@@ -287,11 +287,12 @@ namespace dsn
             else
             {
                 wn = sprintf(ptr, "%6s.%7s.%05d: ",
-                    "system",
+                    task::get_current_node_name(),
                     "io-thrd",
                     tid
                     );
             }
+
             ptr += wn;
             capacity -= wn;
 
