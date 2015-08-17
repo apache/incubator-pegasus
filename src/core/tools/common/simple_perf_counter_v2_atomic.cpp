@@ -23,90 +23,157 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-# include "simple_perf_counter.h"
+# include "simple_perf_counter_v2_atomic.h"
 # include "shared_io_service.h"
 
 namespace dsn {
     namespace tools {
 
-        // -----------   NUMBER perf counter ---------------------------------
 
-        class perf_counter_number : public perf_counter
+#pragma pack(push)
+#pragma pack(8)
+
+        // -----------   NUMBER perf counter ---------------------------------
+        //# define PERFORMANCE_TEST
+# define DIVIDE_CONTAINER 107
+        class perf_counter_number_v2_atomic : public perf_counter
         {
         public:
-            perf_counter_number(const char *section, const char *name, perf_counter_type type)
-                : perf_counter(section, name, type), _val(0){}
-            ~perf_counter_number(void) {}
+            perf_counter_number_v2_atomic(const char *section, const char *name, perf_counter_type type)
+                : perf_counter(section, name, type)
+            {
+                for (int i = 0; i < DIVIDE_CONTAINER; i++)
+                {
+                    _val[i].store(0, std::memory_order_relaxed);
+                }
+            }
+            ~perf_counter_number_v2_atomic(void) {}
 
-            virtual void   increment() { _val++; }
-            virtual void   decrement() { _val--; }
-            virtual void   add(uint64_t val) { _val += val; }
+            virtual void   increment()
+            {
+                uint64_t task_id = static_cast<int>(::dsn::utils::get_current_tid());
+                _val[task_id % DIVIDE_CONTAINER].fetch_add(1, std::memory_order_consume);
+            }
+            virtual void   decrement()
+            {
+                uint64_t task_id = static_cast<int>(::dsn::utils::get_current_tid());
+                _val[task_id % DIVIDE_CONTAINER].fetch_sub(1, std::memory_order_consume);
+            }
+            virtual void   add(uint64_t val)
+            {
+                uint64_t task_id = static_cast<int>(::dsn::utils::get_current_tid());
+                _val[task_id % DIVIDE_CONTAINER].fetch_add(val, std::memory_order_consume);
+            }
             virtual void   set(uint64_t val) { dassert(false, "invalid execution flow"); }
-            virtual double get_value() { return static_cast<double>(_val.load()); }
+            virtual double get_value()
+            {
+                double val = 0;
+                for (int i = 0; i < DIVIDE_CONTAINER; i++)
+                {
+                    val += static_cast<double>(_val[i].load(std::memory_order_relaxed));
+                }
+                return val;
+            }
             virtual double get_percentile(counter_percentile_type type) { dassert(false, "invalid execution flow"); return 0.0; }
 
         private:
-            std::atomic<uint64_t> _val;
+            std::atomic<uint64_t> _val[DIVIDE_CONTAINER];
         };
 
         // -----------   RATE perf counter ---------------------------------
 
-        class perf_counter_rate : public perf_counter
+        class perf_counter_rate_v2_atomic : public perf_counter
         {
         public:
-            perf_counter_rate(const char *section, const char *name, perf_counter_type type)
-                : perf_counter(section, name, type), _val(0)
+            perf_counter_rate_v2_atomic(const char *section, const char *name, perf_counter_type type)
+                : perf_counter(section, name, type), _rate(0)
             {
-                qts = 0;
+                _last_time = ::dsn::utils::get_current_physical_time_ns();
+                for (int i = 0; i < DIVIDE_CONTAINER; i++)
+                {
+                    _val[i].store(0, std::memory_order_relaxed);
+                }
             }
-            ~perf_counter_rate(void) {}
+            ~perf_counter_rate_v2_atomic(void) {}
 
-            virtual void   increment() { _val++; }
-            virtual void   decrement() { _val--; }
-            virtual void   add(uint64_t val) { _val += val; }
+            virtual void   increment()
+            {
+                uint64_t task_id = static_cast<int>(::dsn::utils::get_current_tid());
+                _val[task_id % DIVIDE_CONTAINER].fetch_add(1, std::memory_order_consume);
+            }
+            virtual void   decrement()
+            {
+                uint64_t task_id = static_cast<int>(::dsn::utils::get_current_tid());
+                _val[task_id % DIVIDE_CONTAINER].fetch_sub(1, std::memory_order_consume);
+            }
+            virtual void   add(uint64_t val)
+            {
+                uint64_t task_id = static_cast<int>(::dsn::utils::get_current_tid());
+                _val[task_id % DIVIDE_CONTAINER].fetch_add(val, std::memory_order_consume);
+            }
             virtual void   set(uint64_t val) { dassert(false, "invalid execution flow"); }
             virtual double get_value()
             {
-                uint64_t now = dsn_now_ns();
-                uint64_t interval = now - qts;
-                double val = static_cast<double>(_val.load());
-                qts = now;
-                _val = 0;
-                return val / interval * 1000 * 1000 * 1000;
+                double val = 0;
+                for (int i = 0; i < DIVIDE_CONTAINER; i++)
+                {
+                    val += static_cast<double>(_val[i].load(std::memory_order_relaxed));
+                }
+
+                uint64_t now = ::dsn::utils::get_current_physical_time_ns();
+                double interval = (now - _last_time) / 1e9;
+                if (interval <= 0.1)
+                    return _rate;
+
+                _last_time = now;
+                for (int i = 0; i < DIVIDE_CONTAINER; i++)
+                {
+                    _val[i].store(0, std::memory_order_relaxed);
+                }
+
+                _rate = val / interval;
+                return _rate;
             }
             virtual double get_percentile(counter_percentile_type type) { dassert(false, "invalid execution flow"); return 0.0; }
 
         private:
-            std::atomic<uint64_t> _val;
-            std::atomic<uint64_t> qts;
+            std::atomic<double> _rate;
+            std::atomic<uint64_t> _last_time;
+            std::atomic<uint64_t> _val[DIVIDE_CONTAINER];
         };
 
         // -----------   NUMBER_PERCENTILE perf counter ---------------------------------
 
-        # define MAX_QUEUE_LENGTH 50000
-        # define _LEFT 0
-        # define _RIGHT 1
-        # define _QLEFT 2
-        # define _QRIGHT 3
+# define MAX_QUEUE_LENGTH 10000
+# define _LEFT 0
+# define _RIGHT 1
+# define _QLEFT 2
+# define _QRIGHT 3
 
-        class perf_counter_number_percentile : public perf_counter
+        class perf_counter_number_percentile_v2_atomic : public perf_counter
         {
         public:
-            perf_counter_number_percentile(const char *section, const char *name, perf_counter_type type)
-                : perf_counter(section, name, type), _tail(0)
+            perf_counter_number_percentile_v2_atomic(const char *section, const char *name, perf_counter_type type)
+                : perf_counter(section, name, type)
             {
+                _results[COUNTER_PERCENTILE_50] = 0;
+                _results[COUNTER_PERCENTILE_90] = 0;
+                _results[COUNTER_PERCENTILE_95] = 0;
+                _results[COUNTER_PERCENTILE_99] = 0;
+                _results[COUNTER_PERCENTILE_999] = 0;
+                _tail = 0;
+
                 _counter_computation_interval_seconds = config()->get_value<int>(
-                    "components.simple_perf_counter", 
+                    "components.simple_perf_counter_v2_atomic",
                     "counter_computation_interval_seconds",
                     30,
                     "period (seconds) the system computes the percentiles of the counters");
-
                 _timer.reset(new boost::asio::deadline_timer(shared_io_service::instance().ios));
                 _timer->expires_from_now(boost::posix_time::seconds(rand() % _counter_computation_interval_seconds + 1));
-                _timer->async_wait(std::bind(&perf_counter_number_percentile::on_timer, this, std::placeholders::_1));
+                _timer->async_wait(std::bind(&perf_counter_number_percentile_v2_atomic::on_timer, this, std::placeholders::_1));
             }
-            
-            ~perf_counter_number_percentile(void) 
+
+            ~perf_counter_number_percentile_v2_atomic(void)
             {
                 _timer->cancel();
             }
@@ -124,12 +191,10 @@ namespace dsn {
 
             virtual double get_percentile(counter_percentile_type type)
             {
-                if (_tail == 0)
-                    return -1.0;
                 if ((type < 0) || (type >= COUNTER_PERCENTILE_COUNT))
                 {
                     dassert(false, "send a wrong counter percentile type");
-                    return -1;
+                    return 0.0;
                 }
                 return (double)_results[type];
             }
@@ -143,7 +208,6 @@ namespace dsn {
                 int      calc_queue[MAX_QUEUE_LENGTH][4];
             };
 
-        private:
             inline void insert_calc_queue(boost::shared_ptr<compute_context>& ctx, int left, int right, int qleft, int qright, int &calc_tail)
             {
                 calc_tail++;
@@ -159,8 +223,7 @@ namespace dsn {
                 if (left == right)
                     return ctx->mid_tmp[left];
 
-                int index;
-                for (index = left; index < right; index += 5)
+                for (int index = left; index < right; index += 5)
                 {
                     int remain_num = index + 5 >= right ? right - index + 1 : 5;
                     for (int i = index; i < index + remain_num; i++)
@@ -226,24 +289,24 @@ namespace dsn {
 
             void   calc(boost::shared_ptr<compute_context>& ctx)
             {
-                if (_tail == 0)
-                    return;
+                uint64_t _num = _tail > MAX_QUEUE_LENGTH ? MAX_QUEUE_LENGTH : _tail;
 
-                int tmp_num = _tail > MAX_QUEUE_LENGTH ? MAX_QUEUE_LENGTH : _tail.load();
-                for (int i = 0; i < tmp_num; i++)
+                if (_num == 0)
+                    return;
+                for (int i = 0; i < _num; i++)
                     ctx->tmp[i] = _samples[i];
 
-                ctx->ask[COUNTER_PERCENTILE_50] = (int)(tmp_num * 0.5) + 1;
-                ctx->ask[COUNTER_PERCENTILE_90] = (int)(tmp_num * 0.90) + 1;
-                ctx->ask[COUNTER_PERCENTILE_95] = (int)(tmp_num * 0.95) + 1;
-                ctx->ask[COUNTER_PERCENTILE_99] = (int)(tmp_num * 0.99) + 1;
-                ctx->ask[COUNTER_PERCENTILE_999] = (int)(tmp_num * 0.999) + 1;
+                ctx->ask[COUNTER_PERCENTILE_50] = (int)(_num * 0.5) + 1;
+                ctx->ask[COUNTER_PERCENTILE_90] = (int)(_num * 0.90) + 1;
+                ctx->ask[COUNTER_PERCENTILE_95] = (int)(_num * 0.95) + 1;
+                ctx->ask[COUNTER_PERCENTILE_99] = (int)(_num * 0.99) + 1;
+                ctx->ask[COUNTER_PERCENTILE_999] = (int)(_num * 0.999) + 1;
                 // must be sorted
                 // std::sort(ctx->ask, ctx->ask + MAX_TYPE_NUMBER);
 
                 int l, r = 0;
 
-                insert_calc_queue(ctx, 0, tmp_num - 1, 0, COUNTER_PERCENTILE_COUNT - 1, r);
+                insert_calc_queue(ctx, 0, _num - 1, 0, COUNTER_PERCENTILE_COUNT - 1, r);
                 for (l = 1; l <= r; l++)
                     select(ctx, ctx->calc_queue[l][_LEFT], ctx->calc_queue[l][_RIGHT], ctx->calc_queue[l][_QLEFT], ctx->calc_queue[l][_QRIGHT], r);
 
@@ -259,7 +322,7 @@ namespace dsn {
 
                     _timer.reset(new boost::asio::deadline_timer(shared_io_service::instance().ios));
                     _timer->expires_from_now(boost::posix_time::seconds(_counter_computation_interval_seconds));
-                    _timer->async_wait(std::bind(&perf_counter_number_percentile::on_timer, this, std::placeholders::_1));
+                    _timer->async_wait(std::bind(&perf_counter_number_percentile_v2_atomic::on_timer, this, std::placeholders::_1));
                 }
                 else
                 {
@@ -268,7 +331,7 @@ namespace dsn {
             }
 
             std::shared_ptr<boost::asio::deadline_timer> _timer;
-            std::atomic<int> _tail;
+            int _tail;
             uint64_t _samples[MAX_QUEUE_LENGTH];
             uint64_t _results[COUNTER_PERCENTILE_COUNT];
             int      _counter_computation_interval_seconds;
@@ -276,20 +339,23 @@ namespace dsn {
 
         // ---------------------- perf counter dispatcher ---------------------
 
-        simple_perf_counter::simple_perf_counter(const char *section, const char *name, perf_counter_type type)
+        simple_perf_counter_v2_atomic::simple_perf_counter_v2_atomic(const char *section, const char *name, perf_counter_type type)
             : perf_counter(section, name, type)
         {
             if (type == perf_counter_type::COUNTER_TYPE_NUMBER)
-                _counter_impl = new perf_counter_number(section, name, type);
+                _counter_impl = new perf_counter_number_v2_atomic(section, name, type);
             else if (type == perf_counter_type::COUNTER_TYPE_RATE)
-                _counter_impl = new perf_counter_rate(section, name, type);
+                _counter_impl = new perf_counter_rate_v2_atomic(section, name, type);
             else
-                _counter_impl = new perf_counter_number_percentile(section, name, type);
+                _counter_impl = new perf_counter_number_percentile_v2_atomic(section, name, type);
         }
 
-        simple_perf_counter::~simple_perf_counter(void) 
+        simple_perf_counter_v2_atomic::~simple_perf_counter_v2_atomic(void)
         {
             delete _counter_impl;
         }
+
+#pragma pack(pop)
+
     }
 }
