@@ -38,6 +38,51 @@ class singleton_store : public dsn::utils::singleton<singleton_store<TKey, TValu
 public:
     bool put(TKey key, TValue val)
     {
+        auto it = _store.find(key);
+        if (it != _store.end())
+            return false;
+        else
+        {
+            _store.insert(std::make_pair(key, val));
+            return true;
+        }
+    }
+
+    bool get(TKey key, __out_param TValue& val) const
+    {
+        auto it = _store.find(key);
+        if (it != _store.end())
+        {
+            val = it->second;
+            return true;
+        }
+        else
+            return false;
+    }
+
+    bool remove(TKey key)
+    {
+        return _store.erase(key) > 0;
+    }
+
+    void get_all_keys(__out_param std::vector<TKey>& keys)
+    {
+        for (auto it = _store.begin(); it != _store.end(); it++)
+        {
+            keys.push_back(it->first);
+        }
+    }
+
+private:
+    std::map<TKey, TValue, TCompare> _store;
+};
+
+template<typename TKey, typename TValue, typename TCompare = std::less<TKey>>
+class safe_singleton_store : public dsn::utils::singleton<safe_singleton_store<TKey, TValue, TCompare>>
+{
+public:
+    bool put(TKey key, TValue val)
+    {
         auto_write_lock l(_lock);
         auto it = _store.find(key);
         if (it != _store.end())

@@ -56,7 +56,7 @@ namespace dsn
             tail_log_hdr *last_hdr;
         };
 
-        typedef ::dsn::utils::singleton_store<int, struct __tail_log_info__*> tail_log_manager;
+        typedef ::dsn::utils::safe_singleton_store<int, struct __tail_log_info__*> tail_log_manager;
 
         static __thread struct __tail_log_info__ s_tail_log_info;
         
