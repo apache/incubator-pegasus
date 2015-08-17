@@ -18,7 +18,11 @@ set(MY_PROJ_INC_PATH
 	../apps/replication/meta_server
 	)
 
-set(MY_PROJ_LIBS gtest pthread)
+if (UNIX)
+    set(MY_PROJ_LIBS "gtest pthread")
+else()
+    set(MY_PROJ_LIBS "gtest")
+endif()
 
 set(MY_BOOST_PACKAGES system filesystem)
 
