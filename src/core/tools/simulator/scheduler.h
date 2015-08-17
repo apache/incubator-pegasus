@@ -99,7 +99,7 @@ private:
     uint64_t                       _time_ns;
     bool                           _running;
     std::vector<sim_worker_state*> _threads;
-    __thread static bool           _is_scheduling;
+    static __thread bool           _is_scheduling;
 
     struct checker_info
     {

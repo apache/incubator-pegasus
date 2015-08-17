@@ -12,11 +12,12 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH "")
 
-set(MY_PROJ_LIBS dsn.corelib
-				 dsn.dev.cpp.core.use
-                 dsn.tools.common
+set(MY_PROJ_LIBS dsn.tools.nfs
+                 dsn.dev.cpp.core.use
                  dsn.tools.simulator
-                 dsn.tools.nfs)
+                 dsn.tools.common
+                 dsn.corelib
+   )
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 	set(MY_PROJ_LIBS ${MY_PROJ_LIBS} dl)
 endif()

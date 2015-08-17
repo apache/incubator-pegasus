@@ -18,7 +18,9 @@ set(MY_PROJ_INC_PATH
 	../apps/replication/meta_server
 	)
 
-set(MY_PROJ_LIBS gtest)
+set(MY_PROJ_LIBS gtest pthread)
+
+set(MY_BOOST_PACKAGES system filesystem)
 
 set(MY_PROJ_LIB_PATH "")
 
