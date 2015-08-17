@@ -178,9 +178,10 @@ function(ms_check_cxx11_support)
 endfunction(ms_check_cxx11_support)
 
 macro(ms_find_source_files LANG SOURCE_DIR GLOB_OPTION PROJ_SRC)
+	set(TEMP_PROJ_SRC "")
     if(${LANG} STREQUAL "CXX")
         file(${GLOB_OPTION}
-            ${PROJ_SRC}
+            TEMP_PROJ_SRC
             "${SOURCE_DIR}/*.cpp"
 		    "${SOURCE_DIR}/*.cc"
 		    "${SOURCE_DIR}/*.c"
@@ -189,7 +190,7 @@ macro(ms_find_source_files LANG SOURCE_DIR GLOB_OPTION PROJ_SRC)
             )
 	elseif(${LANG} STREQUAL "CS")
         file(${GLOB_OPTION}
-            ${PROJ_SRC}
+            TEMP_PROJ_SRC
             "${SOURCE_DIR}/*.cs"
 			)
 	endif()
@@ -200,6 +201,8 @@ macro(ms_find_source_files LANG SOURCE_DIR GLOB_OPTION PROJ_SRC)
 		message(STATUS "GLOB_OPTION = ${GLOB_OPTION}")
 		message(STATUS "PROJ_SRC = ${${PROJ_SRC}}")
 	endif()
+	
+	set(${PROJ_SRC} ${${PROJ_SRC}} ${TEMP_PROJ_SRC})
 endmacro(ms_find_source_files)
 
 function(dsn_add_project)
@@ -251,14 +254,8 @@ function(dsn_add_project)
         endif()
     
         if((MY_PROJ_TYPE STREQUAL "SHARED") OR (MY_PROJ_TYPE STREQUAL "EXECUTABLE"))
-            if(DSN_BUILD_RUNTIME AND (MY_PROJ_NAME STREQUAL "dsn.core"))
-                set(TEMP_LIBS
-                ${DSN_SYSTEM_LIBS}
-                dsn.dev.cpp.core.use
-                dsn.tools.common
-                dsn.tools.simulator
-                dsn.tools.nfs
-                )
+            if(DSN_BUILD_RUNTIME AND(DEFINED DSN_IN_CORE) AND DSN_IN_CORE)
+                set(TEMP_LIBS ${DSN_SYSTEM_LIBS})
             else()
                 set(TEMP_LIBS dsn.core dsn.dev.cpp)
             endif()

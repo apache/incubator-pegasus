@@ -1,4 +1,5 @@
-set(MY_PROJ_NAME dsn.tests)
+
+set(MY_PROJ_NAME dsn.core)
 
 # Source files under CURRENT project directory will be automatically included.
 # You can manually set MY_PROJ_SRC to include source files under other directories.
@@ -9,20 +10,20 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-message(STATUS "GTEST_INCLUDE_DIRS = ${GTEST_INCLUDE_DIRS}")
-set(MY_PROJ_INC_PATH
-	${GTEST_INCLUDE_DIRS} 
-	../dist/failure_detector 
-	../apps/replication/client_lib 
-	../apps/replication/lib 
-	../apps/replication/meta_server
-	)
+set(MY_PROJ_INC_PATH "")
 
-set(MY_PROJ_LIBS gtest)
+set(MY_PROJ_LIBS dsn.corelib
+				 dsn.dev.cpp.core.use
+                 dsn.tools.common
+                 dsn.tools.simulator
+                 dsn.tools.nfs)
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+	set(MY_PROJ_LIBS ${MY_PROJ_LIBS} dl)
+endif()
 
 set(MY_PROJ_LIB_PATH "")
 
 # Extra files that will be installed
 set(MY_BINPLACES "")
 
-dsn_add_executable()
+dsn_add_shared_library()

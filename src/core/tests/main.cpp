@@ -27,6 +27,34 @@
 # include "gtest/gtest.h"
 # include <dsn/service_api_cpp.h>
 
+
+# include <dsn/tool/simulator.h>
+# include <dsn/tool/nativerun.h>
+# include <dsn/toollet/tracer.h>
+# include <dsn/toollet/profiler.h>
+# include <dsn/toollet/fault_injector.h>
+
+# include <dsn/tool/providers.common.h>
+# include <dsn/tool/nfs_node_simple.h>
+
+void module_init()
+{
+    // register all providers
+    dsn::tools::register_common_providers();
+    dsn::tools::register_component_provider<::dsn::service::nfs_node_simple>("dsn::service::nfs_node_simple");
+
+    //dsn::tools::register_component_provider<dsn::thrift_binary_message_parser>("thrift");
+
+    // register all possible tools and toollets
+    dsn::tools::register_tool<dsn::tools::nativerun>("nativerun");
+    dsn::tools::register_tool<dsn::tools::simulator>("simulator");
+    dsn::tools::register_toollet<dsn::tools::tracer>("tracer");
+    dsn::tools::register_toollet<dsn::tools::profiler>("profiler");
+    dsn::tools::register_toollet<dsn::tools::fault_injector>("fault_injector");
+}
+
+
+
 class test_client : public ::dsn::service_app
 {
 public:
@@ -46,6 +74,9 @@ public:
 
 GTEST_API_ int main(int argc, char **argv) 
 {
+    // register all tools
+    module_init();
+
     // register all possible services
     dsn::register_app<test_client>("test.client");
     
