@@ -62,22 +62,30 @@ extern "C" {
 // The service system call API for rDSN
 //-------------------------------------------
 // Summary:
-// (1) rich API for common distributed system development, including:
+// (1) rich API for common distributed system development
 //     - thread pools and tasking
 //     - thread synchronization
 //     - remote procedure calls
 //     - asynchnous file operations
 //     - envrionment inputs 
 //     - rDSN system and other utilities
-// (2) portable: system calls are in C so that later language wrappers are possibles.
-// (3) high performance - all low level components can be plugged with the tool API (in C++)
-//     besides the existing high performance providers; developers can also configure
-//     thread pools, thread numbers, thread/task priorities, CPU core affinities, 
-//     throttling policies etc. to build a best threading model for upper apps.
-// (4) ease of intergration - through language wrapper for service integration and low level
-//     plugged components for platform integration.
-// (5) rich debug, development tools and runtime policies support.
-// (6) tool API with task granularity semantic for further tool and runtime policy development.
+// (2) portable
+//     - compilable on many platforms (currently linux, windows, FreeBSD, MacOS)
+//     - system calls are in C so that later language wrappers are possibles.
+// (3) high performance
+//     - all low level components can be plugged with the tool API (in C++)
+//       besides the existing high performance providers; 
+//     - developers can also configure thread pools, thread numbers, thread/task 
+//       priorities, CPU core affinities, throttling policies etc. declaratively
+//       to build a best threading model for upper apps.
+// (4) ease of intergration
+//     - support many languages through language wrappers based this c interface
+//     - easy support for existing protocols (thrift/protobuf etc.)
+//     - integrate with existing platform infra with low level providers (plug-in),
+//       such as loggers, performance counters, etc.
+// (5) rich debug, development tools and runtime policies support
+//     - tool API with task granularity semantic for further tool and runtime policy development.
+//     - rich existing tools, tracer, profiler, simulator, model checker, replayer, global checker
 // (7) PRINCIPLE: all non-determinims must be go through these system calls so that powerful
 //     internal tools are possible - replay, model checking, replication, ...,
 //     AND, it is still OK to call other DETERMINISTIC APIs for applications.
@@ -185,11 +193,34 @@ typedef enum dsn_log_level_t
     LOG_LEVEL_INVALID
 } dsn_log_level_t;
 
+
+typedef enum dsn_host_type_t
+{
+    HOST_TYPE_IPV4,  // 4 bytes
+    HOST_TYPE_IPV6,  // 16 bytes
+    HOST_TYPE_URL,   // customized bytes
+    HOST_TYPE_COUNT,
+    HOST_TYPE_INVALID
+} dsn_host_type_t;
+
+//
+// TODO: support other host types
+//
 typedef struct dsn_address_t
 {
+    /*dsn_host_type_t type;
+    union {
+        uint32_t   ip;
+        uint32_t   ipv6[4];
+        struct {
+            const char *url;
+            void (*deletor)(const char*);
+        };
+    };*/
+
     uint32_t ip;
     uint16_t port;
-    char     name[DSN_MAX_ADDRESS_NAME_LENGTH];
+    char     name[DSN_MAX_ADDRESS_NAME_LENGTH]; // for verbose debugging
 } dsn_address_t;
 
 //------------------------------------------------------------------------------

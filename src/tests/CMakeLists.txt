@@ -16,7 +16,7 @@ set(MY_PROJ_INC_PATH
 	../dist/failure_detector ../apps/replication/client_lib ../apps/replication/lib ../apps/replication/meta_server
 	)
 
-set(MY_PROJ_LIBS gtest_main gtest)
+set(MY_PROJ_LIBS gtest)
 
 set(MY_PROJ_LIB_PATH "")
 
