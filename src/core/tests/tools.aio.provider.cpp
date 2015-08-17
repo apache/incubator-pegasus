@@ -26,30 +26,68 @@
 
 # include <dsn/internal/aio_provider.h>
 # include <gtest/gtest.h>
+# include <dsn/service_api_cpp.h>
 
 
 using namespace ::dsn;
 
-void test_aio(aio_provider& ap)
+DEFINE_TASK_CODE_AIO(LPC_AIO_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT);
+
+TEST(tools, aio)
 {
+    const char* buffer = "hello, world";
+    int len = (int)strlen(buffer);
+
+    // write
+    auto fp = dsn_file_open("tmp", O_WRONLY, 0666);
     
-}
+    auto t1 = ::dsn::file::write(fp, buffer, len, 0, LPC_AIO_TEST, nullptr, nullptr, 0);
+    auto t2 = ::dsn::file::write(fp, buffer, len, len, LPC_AIO_TEST, nullptr, nullptr, 0);
+    
+    bool r = t1->wait();
+    EXPECT_TRUE(r);
 
-TEST(tools, aio_win)
-{
-    //env_provider ev(nullptr);
-    //test_aio(ev);
-}
+    r = t2->wait();
+    EXPECT_TRUE(r);
 
-TEST(tools, aio_posix)
-{
-    //env_provider ev(nullptr);
-    //test_aio(ev);
-}
+    t1 = ::dsn::file::write(fp, buffer, len, 0, LPC_AIO_TEST, nullptr, nullptr, 0);
+    t2 = ::dsn::file::write(fp, buffer, len, len, LPC_AIO_TEST, nullptr, nullptr, 0);
 
-TEST(tools, aio_linux)
-{
-    //env_provider ev(nullptr);
-    //test_aio(ev);
-}
+    r = t1->wait();
+    EXPECT_TRUE(r);
 
+    r = t2->wait();
+    EXPECT_TRUE(r);
+
+    auto err = dsn_file_close(fp);
+    EXPECT_TRUE(err == ERR_OK);
+
+    // read
+    char* buffer2 = (char*)alloca((size_t)len);
+    fp = dsn_file_open("tmp", O_WRONLY, 0666);
+
+    t1 = ::dsn::file::read(fp, buffer2, len, 0, LPC_AIO_TEST, nullptr, nullptr, 0);
+    t2 = ::dsn::file::read(fp, buffer2, len, len, LPC_AIO_TEST, nullptr, nullptr, 0);
+
+    r = t1->wait();
+    EXPECT_TRUE(r);
+
+    r = t2->wait();
+    EXPECT_TRUE(r);
+
+    EXPECT_TRUE(memcmp(buffer, buffer2, len) == 0);
+
+    t1 = ::dsn::file::read(fp, buffer2, len, 0, LPC_AIO_TEST, nullptr, nullptr, 0);
+    t2 = ::dsn::file::read(fp, buffer2, len, len, LPC_AIO_TEST, nullptr, nullptr, 0);
+
+    r = t1->wait();
+    EXPECT_TRUE(r);
+
+    r = t2->wait();
+    EXPECT_TRUE(r);
+
+    EXPECT_TRUE(memcmp(buffer, buffer2, len) == 0);
+
+    err = dsn_file_close(fp);
+    EXPECT_TRUE(err == ERR_OK);
+}
