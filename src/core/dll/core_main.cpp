@@ -1,3 +1,28 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Microsoft Corporation
+ * 
+ * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 
 # include <dsn/service_api_c.h>
 # include <dsn/ports.h>
@@ -12,17 +37,11 @@
 # include <dsn/tool/nfs_node_simple.h>
 # include <dsn/internal/singleton.h>
 
+# include <dsn/internal/module_int.cpp.h>
+
 //# include <dsn/thrift_helper.h>
 
-# if defined(__GNUC__) || defined(_WIN32)
-# else
-# error "dsn init on shared lib loading is not supported on this platform yet"
-# endif
-
-# if defined(__GNUC__)
-__attribute__((constructor))
-# endif
-static void dsn_init_on_load()
+void module_init()
 {
     // register all providers
     dsn::tools::register_common_providers();
@@ -38,6 +57,9 @@ static void dsn_init_on_load()
     dsn::tools::register_toollet<dsn::tools::fault_injector>("fault_injector");
 }
 
+//
+// global checker implementation
+//
 void sys_init_for_add_global_checker(::dsn::configuration_ptr config);
 class global_checker_store : public ::dsn::utils::singleton< global_checker_store >
 {
@@ -82,34 +104,3 @@ DSN_API void dsn_register_app_checker(const char* name, dsn_checker_create creat
 
     global_checker_store::instance().checkers.push_back(ck);
 }
-
-# ifdef _WIN32
-
-#ifdef _MANAGED
-#pragma managed(push, off)
-#endif
-
-bool APIENTRY DllMain(HMODULE hModule,
-    DWORD  ul_reason_for_call,
-    void* lpReserved
-    )
-{
-    switch (ul_reason_for_call)
-    {
-    case DLL_PROCESS_ATTACH:
-        dsn_init_on_load();
-        break;
-    case DLL_THREAD_ATTACH:
-    case DLL_THREAD_DETACH:
-        break;
-    case DLL_PROCESS_DETACH:
-        break;
-    }
-    return TRUE;
-}
-
-#ifdef _MANAGED
-#pragma managed(pop)
-#endif
-
-# endif

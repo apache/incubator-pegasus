@@ -83,6 +83,8 @@ namespace dsn {
         
         static fj_opt* s_fj_opts = nullptr;
 
+        typedef uint64_extension_helper<task> task_ext_for_fj;
+
         static void fault_on_task_enqueue(task* caller, task* callee)
         {
         }
@@ -148,7 +150,11 @@ namespace dsn {
         static void fault_on_aio_enqueue(aio_task* this_)
         {
             fj_opt& opt = s_fj_opts[this_->spec().code];
-            this_->set_delay(dsn_random32(opt.disk_io_delay_ms_min, opt.disk_io_delay_ms_max));
+            if (this_->delay_milliseconds() == 0 && task_ext_for_fj::get(this_) == 0)
+            {
+                this_->set_delay(dsn_random32(opt.disk_io_delay_ms_min, opt.disk_io_delay_ms_max));
+                task_ext_for_fj::get(this_) = 1; // ensure only fd once
+            }
         }
 
         // return true means continue, otherwise early terminate with task::set_error_code
@@ -168,7 +174,11 @@ namespace dsn {
         static void fault_on_rpc_request_enqueue(rpc_request_task* callee)
         {
             fj_opt& opt = s_fj_opts[callee->spec().code];
-            callee->set_delay(dsn_random32(opt.rpc_message_delay_ms_min, opt.rpc_message_delay_ms_max));
+            if (callee->delay_milliseconds() == 0 && task_ext_for_fj::get(callee) == 0)
+            {
+                callee->set_delay(dsn_random32(opt.rpc_message_delay_ms_min, opt.rpc_message_delay_ms_max));
+                task_ext_for_fj::get(callee) = 1; // ensure only fd once
+            }
         }
 
         // return true means continue, otherwise early terminate with task::set_error_code
@@ -188,11 +198,17 @@ namespace dsn {
         static void fault_on_rpc_response_enqueue(rpc_response_task* resp)
         {
             fj_opt& opt = s_fj_opts[resp->spec().code];
-            resp->set_delay(dsn_random32(opt.rpc_message_delay_ms_min, opt.rpc_message_delay_ms_max));
+            if (resp->delay_milliseconds() == 0 && task_ext_for_fj::get(resp) == 0)
+            {
+                resp->set_delay(dsn_random32(opt.rpc_message_delay_ms_min, opt.rpc_message_delay_ms_max));
+                task_ext_for_fj::get(resp) = 1; // ensure only fd once
+            }
         }
 
         void fault_injector::install(service_spec& spec)
         {
+            task_ext_for_fj::register_ext();
+
             s_fj_opts = new fj_opt[dsn_task_code_max() + 1];
             fj_opt default_opt;
             read_config("task..default", default_opt);

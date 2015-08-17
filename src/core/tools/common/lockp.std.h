@@ -43,6 +43,20 @@ private:
     utils::ex_lock _lock;
 };
 
+class std_lock_nr_provider : public lock_nr_provider
+{
+public:
+    std_lock_nr_provider(lock_nr_provider* inner_provider) : lock_nr_provider(inner_provider) {}
+
+    virtual void lock() { _lock.lock(); }
+    virtual bool try_lock() { return _lock.try_lock(); }
+    virtual void unlock() { _lock.unlock(); }
+
+private:
+    utils::ex_lock_nr _lock;
+};
+
+
 class std_rwlock_nr_provider : public rwlock_nr_provider
 {
 public:

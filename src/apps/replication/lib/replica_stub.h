@@ -135,7 +135,7 @@ private:
     typedef std::unordered_map<global_partition_id, ::dsn::task_ptr> opening_replicas;
     typedef std::unordered_map<global_partition_id, std::pair<::dsn::task_ptr, replica_ptr>> closing_replicas; // <close, replica>
 
-    zlock                       _repicas_lock;
+    zlock                       _replicas_lock;
     replicas                    _replicas;
     opening_replicas            _opening_replicas;
     closing_replicas            _closing_replicas;

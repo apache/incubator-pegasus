@@ -28,6 +28,7 @@
 # include <dsn/internal/task_spec.h>
 # include <dsn/internal/network.h>
 # include <dsn/internal/singleton_store.h>
+# include "library_utils.h"
 
 # ifdef __TITLE__
 # undef __TITLE__

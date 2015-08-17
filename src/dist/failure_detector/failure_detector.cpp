@@ -471,9 +471,9 @@ void failure_detector::send_beacon(const dsn_address_t& target, uint64_t time)
 
     begin_ping(
         beacon,
-        nullptr,
-        0,
+        nullptr,        
         static_cast<int>(_check_interval_milliseconds),
+        0,
         0,
         &target
         );

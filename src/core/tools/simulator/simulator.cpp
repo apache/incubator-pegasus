@@ -50,7 +50,8 @@ void simulator::install(service_spec& spec)
     register_component_provider<sim_task_queue>("dsn::tools::sim_task_queue");
     register_component_provider<sim_timer_service>("dsn::tools::sim_timer_service");
     register_component_provider<sim_semaphore_provider>("dsn::tools::sim_semaphore_provider");
-    //register_component_provider<sim_lock>("dsn::tools::sim_lock");
+    register_component_provider<sim_lock_provider>("dsn::tools::sim_lock_provider");
+    register_component_provider<sim_lock_nr_provider>("dsn::tools::sim_lock_nr_provider");
 
     scheduler::instance();
 
@@ -92,7 +93,10 @@ void simulator::install(service_spec& spec)
         spec.tools_memory_factory_name = "dsn::default_memory_provider";
 
     if (spec.lock_factory_name == "")
-        spec.lock_factory_name = ("dsn::tools::std_lock_provider");
+        spec.lock_factory_name = ("dsn::tools::sim_lock_provider");
+
+    if (spec.lock_nr_factory_name == "")
+        spec.lock_nr_factory_name = ("dsn::tools::sim_lock_nr_provider");
 
     if (spec.rwlock_nr_factory_name == "")
         spec.rwlock_nr_factory_name = ("dsn::tools::std_rwlock_nr_provider");

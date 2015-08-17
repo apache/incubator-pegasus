@@ -62,22 +62,30 @@ extern "C" {
 // The service system call API for rDSN
 //-------------------------------------------
 // Summary:
-// (1) rich API for common distributed system development, including:
+// (1) rich API for common distributed system development
 //     - thread pools and tasking
 //     - thread synchronization
 //     - remote procedure calls
 //     - asynchnous file operations
 //     - envrionment inputs 
 //     - rDSN system and other utilities
-// (2) portable: system calls are in C so that later language wrappers are possibles.
-// (3) high performance - all low level components can be plugged with the tool API (in C++)
-//     besides the existing high performance providers; developers can also configure
-//     thread pools, thread numbers, thread/task priorities, CPU core affinities, 
-//     throttling policies etc. to build a best threading model for upper apps.
-// (4) ease of intergration - through language wrapper for service integration and low level
-//     plugged components for platform integration.
-// (5) rich debug, development tools and runtime policies support.
-// (6) tool API with task granularity semantic for further tool and runtime policy development.
+// (2) portable
+//     - compilable on many platforms (currently linux, windows, FreeBSD, MacOS)
+//     - system calls are in C so that later language wrappers are possibles.
+// (3) high performance
+//     - all low level components can be plugged with the tool API (in C++)
+//       besides the existing high performance providers; 
+//     - developers can also configure thread pools, thread numbers, thread/task 
+//       priorities, CPU core affinities, throttling policies etc. declaratively
+//       to build a best threading model for upper apps.
+// (4) ease of intergration
+//     - support many languages through language wrappers based this c interface
+//     - easy support for existing protocols (thrift/protobuf etc.)
+//     - integrate with existing platform infra with low level providers (plug-in),
+//       such as loggers, performance counters, etc.
+// (5) rich debug, development tools and runtime policies support
+//     - tool API with task granularity semantic for further tool and runtime policy development.
+//     - rich existing tools, tracer, profiler, simulator, model checker, replayer, global checker
 // (7) PRINCIPLE: all non-determinims must be go through these system calls so that powerful
 //     internal tools are possible - replay, model checking, replication, ...,
 //     AND, it is still OK to call other DETERMINISTIC APIs for applications.
@@ -185,11 +193,34 @@ typedef enum dsn_log_level_t
     LOG_LEVEL_INVALID
 } dsn_log_level_t;
 
+
+typedef enum dsn_host_type_t
+{
+    HOST_TYPE_IPV4,  // 4 bytes
+    HOST_TYPE_IPV6,  // 16 bytes
+    HOST_TYPE_URL,   // customized bytes
+    HOST_TYPE_COUNT,
+    HOST_TYPE_INVALID
+} dsn_host_type_t;
+
+//
+// TODO: support other host types
+//
 typedef struct dsn_address_t
 {
+    /*dsn_host_type_t type;
+    union {
+        uint32_t   ip;
+        uint32_t   ipv6[4];
+        struct {
+            const char *url;
+            void (*deletor)(const char*);
+        };
+    };*/
+
     uint32_t ip;
     uint16_t port;
-    char     name[DSN_MAX_ADDRESS_NAME_LENGTH];
+    char     name[DSN_MAX_ADDRESS_NAME_LENGTH]; // for verbose debugging
 } dsn_address_t;
 
 //------------------------------------------------------------------------------
@@ -320,18 +351,19 @@ extern DSN_API void                  dsn_log(
                                         const char* title
                                         );
 extern DSN_API void                  dsn_coredump();
-extern DSN_API uint32_t              dsn_crc32_compute(const void* ptr, size_t size);
+extern DSN_API uint32_t              dsn_crc32_compute(const void* ptr, size_t size, uint32_t init_crc);
 
 //
 // Given
-//      x_final = dsn_crc32_compute (x_ptr, x_size);
+//      x_final = dsn_crc32_compute (x_ptr, x_size, x_init);
 // and
-//      y_final = dsn_crc32_compute (y_ptr, y_size);
+//      y_final = dsn_crc32_compute (y_ptr, y_size, y_init);
 // compute CRC of concatenation of A and B
-//      x##y_crc = ComputeCrc (x##y, x_size + y_size);
+//      x##y_crc = dsn_crc32_compute (x##y, x_size + y_size, xy_init);
 // without touching A and B
 //
 extern DSN_API uint32_t              dsn_crc32_concatenate(
+                                        uint32_t xy_init, 
                                         uint32_t x_init,
                                         uint32_t x_final, 
                                         size_t   x_size, 
@@ -428,7 +460,7 @@ extern DSN_API dsn_error_t dsn_task_error(dsn_task_t task);
 // thread synchronization
 //
 //------------------------------------------------------------------------------
-extern DSN_API dsn_handle_t dsn_exlock_create();
+extern DSN_API dsn_handle_t dsn_exlock_create(bool recursive);
 extern DSN_API void         dsn_exlock_destroy(dsn_handle_t l);
 extern DSN_API void         dsn_exlock_lock(dsn_handle_t l);
 extern DSN_API bool         dsn_exlock_try_lock(dsn_handle_t l);
