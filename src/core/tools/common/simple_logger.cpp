@@ -49,7 +49,7 @@ namespace dsn {
                 if (nullptr != task::get_current_worker())
                 {
                     fprintf(fp, "%6s.%7s%u.%016llx: ",
-                        t->node_name(),
+                        task::get_current_node_name(),
                         task::get_current_worker()->pool_spec().name.c_str(),
                         task::get_current_worker()->index(),
                         static_cast<long long unsigned int>(t->id())
@@ -58,7 +58,7 @@ namespace dsn {
                 else
                 {
                     fprintf(fp, "%6s.%7s.%05d.%016llx: ",
-                        t->node_name(),
+                        task::get_current_node_name(),
                         "io-thrd",
                         tid,
                         static_cast<long long unsigned int>(t->id())
@@ -68,7 +68,7 @@ namespace dsn {
             else
             {
                 fprintf(fp, "%6s.%7s.%05d: ",
-                    "system",
+                    task::get_current_node_name(),
                     "io-thrd",
                     tid
                     );
@@ -103,6 +103,8 @@ namespace dsn {
             _index = 0;
             _lines = 0;
             _log = nullptr;
+            _short_header = dsn_config_get_value_bool("tools.simple_logger", "short_header", 
+                false, "whether to use short header (excluding file/function etc.)");
 
             // check existing log files
             boost::filesystem::directory_iterator endtr;
@@ -182,7 +184,10 @@ namespace dsn {
             utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
          
             print_header(_log);
-            fprintf(_log, "%s:%d:%s(): ", title, line, function);
+            if (!_short_header)
+            {
+                fprintf(_log, "%s:%d:%s(): ", title, line, function);
+            }            
             vfprintf(_log, fmt, args);
             fprintf(_log, "\n");
             if (log_level >= LOG_LEVEL_ERROR)
@@ -191,7 +196,10 @@ namespace dsn {
             if (log_level >= LOG_LEVEL_WARNING)
             {
                 print_header(stdout);
-                printf("%s:%d:%s(): ", title, line, function);
+                if (!_short_header)
+                {
+                    printf("%s:%d:%s(): ", title, line, function);
+                }
                 vprintf(fmt, args2);
                 printf("\n");
             }

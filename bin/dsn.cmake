@@ -62,7 +62,7 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
         endif()
 
         if((PROJ_TYPE STREQUAL "SHARED") OR (PROJ_TYPE STREQUAL "EXECUTABLE"))
-            if((PROJ_TYPE STREQUAL "SHARED") AND MSVC)
+            if(PROJ_TYPE STREQUAL "SHARED")
     		    set(LINK_MODE PRIVATE)
             else()
                 set(LINK_MODE PUBLIC)
@@ -178,9 +178,10 @@ function(ms_check_cxx11_support)
 endfunction(ms_check_cxx11_support)
 
 macro(ms_find_source_files LANG SOURCE_DIR GLOB_OPTION PROJ_SRC)
+	set(TEMP_PROJ_SRC "")
     if(${LANG} STREQUAL "CXX")
         file(${GLOB_OPTION}
-            ${PROJ_SRC}
+            TEMP_PROJ_SRC
             "${SOURCE_DIR}/*.cpp"
 		    "${SOURCE_DIR}/*.cc"
 		    "${SOURCE_DIR}/*.c"
@@ -189,7 +190,7 @@ macro(ms_find_source_files LANG SOURCE_DIR GLOB_OPTION PROJ_SRC)
             )
 	elseif(${LANG} STREQUAL "CS")
         file(${GLOB_OPTION}
-            ${PROJ_SRC}
+            TEMP_PROJ_SRC
             "${SOURCE_DIR}/*.cs"
 			)
 	endif()
@@ -200,6 +201,8 @@ macro(ms_find_source_files LANG SOURCE_DIR GLOB_OPTION PROJ_SRC)
 		message(STATUS "GLOB_OPTION = ${GLOB_OPTION}")
 		message(STATUS "PROJ_SRC = ${${PROJ_SRC}}")
 	endif()
+	
+	set(${PROJ_SRC} ${${PROJ_SRC}} ${TEMP_PROJ_SRC})
 endmacro(ms_find_source_files)
 
 function(dsn_add_project)
@@ -251,18 +254,12 @@ function(dsn_add_project)
         endif()
     
         if((MY_PROJ_TYPE STREQUAL "SHARED") OR (MY_PROJ_TYPE STREQUAL "EXECUTABLE"))
-            if(DSN_BUILD_RUNTIME AND (MY_PROJ_NAME STREQUAL "dsn.core"))
-                set(TEMP_LIBS
-                ${DSN_SYSTEM_LIBS}
-                dsn.dev.cpp.core.use
-                dsn.tools.common
-                dsn.tools.simulator
-                dsn.tools.nfs
-                )
+            if(DSN_BUILD_RUNTIME AND(DEFINED DSN_IN_CORE) AND DSN_IN_CORE)
+                set(TEMP_LIBS ${DSN_SYSTEM_LIBS})
             else()
-                set(TEMP_LIBS dsn.core dsn.dev.cpp)
+                set(TEMP_LIBS dsn.dev.cpp dsn.core)
             endif()
-            set(MY_PROJ_LIBS ${MY_BOOST_LIBS} ${TEMP_LIBS} ${MY_PROJ_LIBS})
+            set(MY_PROJ_LIBS ${MY_PROJ_LIBS} ${MY_BOOST_LIBS} ${TEMP_LIBS})
         endif()
      endif()
 
@@ -348,7 +345,7 @@ macro(ms_setup_boost STATIC_LINK PACKAGES BOOST_LIBS)
     endif()
     
     set(Boost_USE_MULTITHREADED            ON)
-	if(${STATIC_LINK})
+    if(MSVC)#${STATIC_LINK})
         set(Boost_USE_STATIC_LIBS        ON)
         set(Boost_USE_STATIC_RUNTIME    ON)
     else()
@@ -390,6 +387,7 @@ function(dsn_setup_packages)
 			message(WARNING "Cannot find library rt.")
 			set(DSN_LIB_RT rt)
 		endif()
+		set(DSN_LIB_RT rt)
 		set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} ${DSN_LIB_RT})
     endif()
 	if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
@@ -398,6 +396,7 @@ function(dsn_setup_packages)
 			message(WARNING "Cannot find library aio.")
 			set(DSN_LIB_AIO aio)
 		endif()
+		set(DSN_LIB_AIO aio)
 		set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} ${DSN_LIB_AIO})
     endif()
     set(DSN_SYSTEM_LIBS

@@ -56,10 +56,10 @@ void sim_task_queue::enqueue(task* t)
     }
 
     // for scheduling
-    /*if (task::get_current_worker())
+    if (task::get_current_worker())
     {
         scheduler::instance().wait_schedule(true, true);
-    }*/
+    }
 }
 
 task* sim_task_queue::dequeue()
@@ -105,12 +105,165 @@ bool sim_semaphore_provider::wait(int timeout_milliseconds)
         scheduler::instance().wait_schedule(true, true);
         return false;
     }
-    else // TODO: timeout
+    else
     {
-        _wait_threads.push_back(scheduler::task_worker_ext::get(task::get_current_worker()));
-        scheduler::instance().wait_schedule(true, false);
-        return true;
+        // wait success
+        if (timeout_milliseconds == TIME_MS_MAX || dsn_probability() <= 0.5)
+        {
+            _wait_threads.push_back(scheduler::task_worker_ext::get(task::get_current_worker()));
+            scheduler::instance().wait_schedule(true, false);
+            return true;
+        }
+
+        // timeout
+        else
+        {
+            scheduler::instance().wait_schedule(true, true);
+            return false;
+        }
     }
 }
+
+sim_lock_provider::sim_lock_provider(lock_provider* inner_provider)
+    : lock_provider(inner_provider),
+    _sema(1, nullptr)
+{
+    _current_holder = -1;
+    _lock_depth = 0;
+}
+
+sim_lock_provider::~sim_lock_provider()
+{
+}
+
+void sim_lock_provider::lock()
+{
+    // ignore locks inside schedulers
+    if (scheduler::is_scheduling())
+        return;
+
+    int ctid = ::dsn::utils::get_current_tid();
+    if (ctid == _current_holder)
+    {
+        ++_lock_depth;
+        return;
+    }
+
+    _sema.wait(TIME_MS_MAX);
+
+    dassert(-1 == _current_holder && _lock_depth == 0, "must be unlocked state");
+    _current_holder = ctid;
+    ++_lock_depth;
+}
+
+bool sim_lock_provider::try_lock()
+{
+    // ignore locks inside schedulers
+    if (scheduler::is_scheduling())
+        return true;
+
+    int ctid = ::dsn::utils::get_current_tid();
+    if (ctid == _current_holder)
+    {
+        ++_lock_depth;
+        return true;
+    }
+
+    bool r = _sema.wait(0);
+    if (r)
+    {
+        dassert(-1 == _current_holder && _lock_depth == 0, "must be unlocked state");
+        _current_holder = ctid;
+        ++_lock_depth;
+    }
+    return r;
+}
+
+void sim_lock_provider::unlock()
+{
+    // ignore locks inside schedulers
+    if (scheduler::is_scheduling())
+        return;
+
+    dassert(::dsn::utils::get_current_tid() == _current_holder,
+        "lock must be locked must current holder");
+
+    if (0 == --_lock_depth)
+    {
+        _current_holder = -1;
+        _sema.signal(1);
+    }
+    else
+    {
+    }
+}
+
+sim_lock_nr_provider::sim_lock_nr_provider(lock_nr_provider* inner_provider)
+    : lock_nr_provider(inner_provider),
+    _sema(1, nullptr)
+{
+    _current_holder = -1;
+    _lock_depth = 0;
+}
+
+sim_lock_nr_provider::~sim_lock_nr_provider()
+{
+}
+
+void sim_lock_nr_provider::lock()
+{
+    // ignore locks inside schedulers
+    if (scheduler::is_scheduling())
+        return;
+
+    int ctid = ::dsn::utils::get_current_tid();
+    dassert(ctid != _current_holder, "non-recursive lock, error or use recursive locks instead");
+
+    _sema.wait(TIME_MS_MAX);
+
+    dassert(-1 == _current_holder && _lock_depth == 0, "must be unlocked state");
+    _current_holder = ctid;
+    ++_lock_depth;
+}
+
+bool sim_lock_nr_provider::try_lock()
+{
+    // ignore locks inside schedulers
+    if (scheduler::is_scheduling())
+        return true;
+
+    int ctid = ::dsn::utils::get_current_tid();
+    dassert(ctid != _current_holder, "non-recursive lock, error or use recursive locks instead");
+
+    bool r = _sema.wait(0);
+    if (r)
+    {
+        dassert(-1 == _current_holder && _lock_depth == 0, "must be unlocked state");
+        _current_holder = ctid;
+        ++_lock_depth;
+    }
+    return r;
+}
+
+void sim_lock_nr_provider::unlock()
+{
+    // ignore locks inside schedulers
+    if (scheduler::is_scheduling())
+        return;
+
+    dassert(::dsn::utils::get_current_tid() == _current_holder,
+        "lock must be locked must current holder");
+
+    if (0 == --_lock_depth)
+    {
+        _current_holder = -1;
+        _sema.signal(1);
+    }
+    else
+    {
+        dassert(false, "non-recursive lock, error or use recursive locks instead");
+    }
+}
+
 
 }} // end namespace

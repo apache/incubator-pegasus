@@ -73,9 +73,12 @@ public:
 
     void reset();
     void add_task(task* task, task_queue* q);
+
+    // TODO: time delay for true, true
     void wait_schedule(bool in_continue, bool is_continue_ready = false);
     void add_checker(const char* name, dsn_checker_create create, dsn_checker_apply apply);
-    
+    static bool is_scheduling() { return _is_scheduling; }
+
 public:
     struct task_state_ext
     {
@@ -96,6 +99,7 @@ private:
     uint64_t                       _time_ns;
     bool                           _running;
     std::vector<sim_worker_state*> _threads;
+    static __thread bool           _is_scheduling;
 
     struct checker_info
     {

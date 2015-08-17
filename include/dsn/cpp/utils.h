@@ -305,8 +305,6 @@ namespace dsn {
 
         inline int get_invalid_tid() { return -1; }
 
-        extern bool load_dynamic_library(const char* module);
-
         extern bool is_file_or_dir_exist(const char* path);
 
         extern std::string get_absolute_path(const char* path);

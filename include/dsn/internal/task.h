@@ -88,14 +88,15 @@ public:
     int                     delay_milliseconds() const { return _delay_milliseconds; }
     error_code              error() const { return _error; }
     service_node*           node() const { return _node; }
-    const char*             node_name() const;
     bool                    is_empty() const { return _is_null; }
 
     
     static task*            get_current_task();
     static uint64_t         get_current_task_id();
     static task_worker*     get_current_worker();
+    static service_node*    get_current_node();
     static int              get_current_worker_index();
+    static const char*      get_current_node_name();
     static void             set_current_worker(task_worker* worker, service_node* node);
 
 protected:
@@ -206,7 +207,7 @@ public:
     ~rpc_request_task();
 
     message_ex*  get_request() { return _request; }
-    void         enqueue(service_node* node);
+    virtual void enqueue() override;
 
     virtual void  exec()
     {
@@ -329,6 +330,14 @@ __inline /*static*/ task_worker* task::get_current_worker()
 {
     if (tls_task_info.magic == 0xdeadbeef)
         return tls_task_info.worker;
+    else
+        return nullptr;
+}
+
+__inline /*static*/ service_node* task::get_current_node()
+{
+    if (tls_task_info.magic == 0xdeadbeef)
+        return tls_task_info.current_node;
     else
         return nullptr;
 }

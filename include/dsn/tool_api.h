@@ -100,6 +100,7 @@ typedef task_queue*      (*task_queue_factory)(task_worker_pool*, int, task_queu
 typedef task_worker*     (*task_worker_factory)(task_worker_pool*, task_queue*, int, task_worker*);
 typedef admission_controller* (*admission_controller_factory)(task_queue*, const char*);
 typedef lock_provider*   (*lock_factory)(lock_provider*);
+typedef lock_nr_provider*   (*lock_nr_factory)(lock_nr_provider*);
 typedef rwlock_nr_provider* (*read_write_lock_factory)(rwlock_nr_provider*);
 typedef semaphore_provider* (*semaphore_factory)(int, semaphore_provider*);
 typedef network*         (*network_factory)(rpc_engine*, network*);
@@ -121,6 +122,7 @@ namespace internal_use_only
     bool register_component_provider(const char* name, task_worker_factory f, int type);
     bool register_component_provider(const char* name, admission_controller_factory f, int type);
     bool register_component_provider(const char* name, lock_factory f, int type);
+    bool register_component_provider(const char* name, lock_nr_factory f, int type);
     bool register_component_provider(const char* name, read_write_lock_factory f, int type);
     bool register_component_provider(const char* name, semaphore_factory f, int type);
     bool register_component_provider(const char* name, network_factory f, int type);

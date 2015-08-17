@@ -69,6 +69,9 @@ namespace dsn {
             if (spec.lock_factory_name == "")
                 spec.lock_factory_name = ("dsn::tools::std_lock_provider");
 
+            if (spec.lock_nr_factory_name == "")
+                spec.lock_nr_factory_name = ("dsn::tools::std_lock_nr_provider");
+
             if (spec.rwlock_nr_factory_name == "")
                 spec.rwlock_nr_factory_name = ("dsn::tools::std_rwlock_nr_provider");
 

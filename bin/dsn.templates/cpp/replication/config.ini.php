@@ -37,9 +37,9 @@ count = 2
 pools = THREAD_POOL_DEFAULT
 
 <?php foreach ($_PROG->services as $svc) { ?>
-[apps.client.<?=$svc->name?>.perf.test]
-name = client.<?=$svc->name?>.perf
-type = client.<?=$svc->name?>.perf.test
+[apps.client.perf.<?=$svc->name?>]
+name = client.perf.<?=$svc->name?>
+type = client.perf.<?=$svc->name?>
 arguments = <?=$_PROG->name?>.instance0
 count = 1
 run = false

@@ -9,8 +9,8 @@ namespace dsn.dev.csharp
     using dsn_handle_t = IntPtr;
     public class ZLock : SafeHandleZeroIsInvalid
     {
-        public ZLock() 
-            : base(Native.dsn_exlock_create(), true) 
+        public ZLock(bool recursive = false) 
+            : base(Native.dsn_exlock_create(recursive), true) 
         {
         }
 

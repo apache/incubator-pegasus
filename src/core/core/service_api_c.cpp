@@ -220,12 +220,12 @@ DSN_API void dsn_coredump()
     ::abort();
 }
 
-DSN_API uint32_t dsn_crc32_compute(const void* ptr, size_t size)
+DSN_API uint32_t dsn_crc32_compute(const void* ptr, size_t size, uint32_t init_crc)
 {
-    return ::dsn::utils::crc32::compute(ptr, size, 0);
+    return ::dsn::utils::crc32::compute(ptr, size, init_crc);
 }
 
-DSN_API uint32_t dsn_crc32_concatenate(uint32_t x_init, uint32_t x_final, size_t x_size, uint32_t y_init, uint32_t y_final, size_t y_size)
+DSN_API uint32_t dsn_crc32_concatenate(uint32_t xy_init, uint32_t x_init, uint32_t x_final, size_t x_size, uint32_t y_init, uint32_t y_final, size_t y_size)
 {
     return ::dsn::utils::crc32::concatenate(
         0,
@@ -328,33 +328,50 @@ DSN_API dsn_error_t dsn_task_error(dsn_task_t task)
 // synchronization - concurrent access and coordination among threads
 //
 //------------------------------------------------------------------------------
-DSN_API dsn_handle_t dsn_exlock_create()
+DSN_API dsn_handle_t dsn_exlock_create(bool recursive)
 {
-    ::dsn::lock_provider* last = ::dsn::utils::factory_store<::dsn::lock_provider>::create(
+    if (recursive)
+    {
+        ::dsn::lock_provider* last = ::dsn::utils::factory_store<::dsn::lock_provider>::create(
             ::dsn::service_engine::fast_instance().spec().lock_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
 
-    // TODO: perf opt by saving the func ptrs somewhere
-    for (auto& s : ::dsn::service_engine::fast_instance().spec().lock_aspects)
-    {
-        last = ::dsn::utils::factory_store<::dsn::lock_provider>::create(s.c_str(), PROVIDER_TYPE_ASPECT, last);
+        // TODO: perf opt by saving the func ptrs somewhere
+        for (auto& s : ::dsn::service_engine::fast_instance().spec().lock_aspects)
+        {
+            last = ::dsn::utils::factory_store<::dsn::lock_provider>::create(s.c_str(), PROVIDER_TYPE_ASPECT, last);
+        }
+
+        return (dsn_handle_t)dynamic_cast<::dsn::ilock*>(last);
     }
-    return (dsn_handle_t)(last);
+    else
+    {
+        ::dsn::lock_nr_provider* last = ::dsn::utils::factory_store<::dsn::lock_nr_provider>::create(
+            ::dsn::service_engine::fast_instance().spec().lock_nr_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
+
+        // TODO: perf opt by saving the func ptrs somewhere
+        for (auto& s : ::dsn::service_engine::fast_instance().spec().lock_nr_aspects)
+        {
+            last = ::dsn::utils::factory_store<::dsn::lock_nr_provider>::create(s.c_str(), PROVIDER_TYPE_ASPECT, last);
+        }
+
+        return (dsn_handle_t)dynamic_cast<::dsn::ilock*>(last);
+    }
 }
 
 DSN_API void dsn_exlock_destroy(dsn_handle_t l)
 {
-    delete (::dsn::lock_provider*)(l);
+    delete (::dsn::ilock*)(l);
 }
 
 DSN_API void dsn_exlock_lock(dsn_handle_t l)
 {
-    ((::dsn::lock_provider*)(l))->lock();
+    ((::dsn::ilock*)(l))->lock();
     ::dsn::lock_checker::zlock_exclusive_count++;
 }
 
 DSN_API bool dsn_exlock_try_lock(dsn_handle_t l)
 {
-    auto r = ((::dsn::lock_provider*)(l))->try_lock();
+    auto r = ((::dsn::ilock*)(l))->try_lock();
     if (r)
     {
         ::dsn::lock_checker::zlock_exclusive_count++;
@@ -365,7 +382,7 @@ DSN_API bool dsn_exlock_try_lock(dsn_handle_t l)
 DSN_API void dsn_exlock_unlock(dsn_handle_t l)
 {
     ::dsn::lock_checker::zlock_exclusive_count--;
-    ((::dsn::lock_provider*)(l))->unlock();
+    ((::dsn::ilock*)(l))->unlock();
 }
 
 // non-recursive rwlock
@@ -668,7 +685,7 @@ DSN_API void dsn_file_copy_remote_files(dsn_address_t remote, const char* source
 
     rci->files.clear();
     const char** p = source_files;
-    while (*p != nullptr &&& **p != '\0')
+    while (*p != nullptr && **p != '\0')
     {
         rci->files.push_back(std::string(*p));
         p++;

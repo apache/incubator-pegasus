@@ -185,6 +185,11 @@ namespace dsn {
                 return dsn::utils::factory_store<lock_provider>::register_factory(name, f, type);
             }
 
+            bool register_component_provider(const char* name, lock_nr_factory f, int type)
+            {
+                return dsn::utils::factory_store<lock_nr_provider>::register_factory(name, f, type);
+            }
+
             bool register_component_provider(const char* name, read_write_lock_factory f, int type)
             {
                 return dsn::utils::factory_store<rwlock_nr_provider>::register_factory(name, f, type);

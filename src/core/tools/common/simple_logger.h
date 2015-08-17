@@ -81,6 +81,7 @@ namespace dsn {
             int _start_index;
             int _index;
             int _lines;
+            bool _short_header;
         };
 
     }

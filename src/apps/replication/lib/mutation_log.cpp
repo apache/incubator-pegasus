@@ -205,7 +205,7 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
     auto* hdr = (log_block_header*)bb.data();
     hdr->magic = 0xdeadbeef;
     hdr->length = _pending_write->total_size() - sizeof(log_block_header);
-    hdr->body_crc = dsn_crc32_compute((const void*)(bb.data() + sizeof(log_block_header)), (size_t)hdr->length); // TODO: crc
+    hdr->body_crc = dsn_crc32_compute((const void*)(bb.data() + sizeof(log_block_header)), (size_t)hdr->length, 0); // TODO: crc
     hdr->padding = 0;
         
     uint64_t offset = end_offset() - bb.length();
@@ -724,7 +724,7 @@ error_code log_file::read_next_log_entry(__out_param::dsn::blob& bb)
         return ERR_INVALID_DATA;
     }
     
-    auto crc = dsn_crc32_compute((const void*)bb.data(), (size_t)hdr.length);
+    auto crc = dsn_crc32_compute((const void*)bb.data(), (size_t)hdr.length, 0);
     if (crc != hdr.body_crc)
     {
         derror("crc checking failed");
