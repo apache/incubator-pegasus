@@ -28,12 +28,11 @@
 # include <gtest/gtest.h>
 # include <dsn/service_api_cpp.h>
 
-
 using namespace ::dsn;
 
 DEFINE_TASK_CODE_AIO(LPC_AIO_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT);
 
-TEST(tools, aio)
+TEST(core, aio)
 {
     const char* buffer = "hello, world";
     int len = (int)strlen(buffer);

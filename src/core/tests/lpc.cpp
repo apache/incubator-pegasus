@@ -24,33 +24,38 @@
  * THE SOFTWARE.
  */
 
-# include <dsn/internal/env_provider.h>
+# include <dsn/internal/aio_provider.h>
 # include <gtest/gtest.h>
-# include "env.sim.h"
+# include <dsn/service_api_cpp.h>
+# include "test_utils.h"
 
-using namespace ::dsn;
-//
-//void test_env(env_provider& ev)
-//{
-//    uint64_t xs[] = {
-//        0,
-//        (uint64_t)-1LL,
-//        0xdeadbeef
-//        };
-//
-//    for (auto& x : xs)
-//    {
-//        auto r = ev.random64(x, x);
-//        EXPECT_EQ(r, x);
-//
-//        r = ev.random64(x, x + 1);
-//        EXPECT_TRUE(r == x || r == (x + 1));
-//    }
-//}
-//
-//TEST(tools, env_native)
-//{
-//    env_provider ev(nullptr);
-//    test_env(ev);
-//}
+DEFINE_TASK_CODE(LPC_TEST_HASH, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
+void on_lpc_test_hash(void* p)
+{
+    std::string& result = *(std::string*)p;
+    result = ::dsn::task::get_current_worker()->name();
+}
+
+void on_lpc_test_hash2(void* p)
+{
+
+}
+
+TEST(core, lpc)
+{
+    std::string result;
+    auto t = dsn_task_create(LPC_TEST_HASH, on_lpc_test_hash, (void*)&result, 1);
+    dsn_task_add_ref(t);
+    bool r = dsn_task_wait(t);
+    dsn_task_release_ref(t);
+
+    EXPECT_TRUE(r);
+    EXPECT_TRUE(result == "default1");
+    
+    t = dsn_task_create(LPC_TEST_HASH, on_lpc_test_hash2, nullptr, ::dsn::task::get_current_worker_index());
+    dsn_task_add_ref(t);
+    r = dsn_task_wait_timeout(t, 1000);
+    dsn_task_release_ref(t);
+    EXPECT_TRUE(!r);
+}

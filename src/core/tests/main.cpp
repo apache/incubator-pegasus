@@ -25,8 +25,7 @@
  */
 # include <iostream>
 # include "gtest/gtest.h"
-# include <dsn/service_api_cpp.h>
-
+# include "test_utils.h"
 
 # include <dsn/tool/simulator.h>
 # include <dsn/tool/nativerun.h>
@@ -52,25 +51,6 @@ void module_init()
     dsn::tools::register_toollet<dsn::tools::profiler>("profiler");
     dsn::tools::register_toollet<dsn::tools::fault_injector>("fault_injector");
 }
-
-
-
-class test_client : public ::dsn::service_app
-{
-public:
-    ::dsn::error_code start(int argc, char** argv)
-    {
-        testing::InitGoogleTest(&argc, argv);
-        RUN_ALL_TESTS();
-        exit(0);
-        return ::dsn::ERR_OK;
-    }
-
-    void stop(bool cleanup = false)
-    {
-
-    }
-};
 
 GTEST_API_ int main(int argc, char **argv) 
 {
