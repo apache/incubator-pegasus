@@ -51,7 +51,7 @@ extern "C" {
 # endif
 
 # define DSN_MAX_TASK_CODE_NAME_LENGTH     48
-# define DSN_MAX_ADDRESS_NAME_LENGTH       16
+# define DSN_MAX_ADDRESS_NAME_LENGTH       48
 # define DSN_MAX_BUFFER_COUNT_IN_MESSAGE   64
 # define DSN_INVALID_HASH                  0xdeadbeef
 # define DSN_MAX_APP_TYPE_NAME_LENGTH      32

@@ -214,7 +214,7 @@ void task_worker::set_priority(worker_priority_t pri)
 
     if (!succ)
     {
-        dwarn("You may need priviledge to set thread priority. errno = %d.\n", errno);
+        dwarn("You may need priviledge to set thread priority. errno = %d", errno);
     }
 }
 

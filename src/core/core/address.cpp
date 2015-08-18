@@ -64,6 +64,7 @@ DSN_API void dsn_address_build(dsn_address_t* ep, const char* host, uint16_t por
     
     ep->port = port;
     strncpy(ep->name, host, sizeof(ep->name));
+    ep->name[sizeof(ep->name) - 1] = '\0';
     
     sockaddr_in addr;
     memset(&addr,0,sizeof(addr));
