@@ -59,6 +59,8 @@ inline void unmarshall(dsn_message_t msg, __out_param T& val)
 }
 
 namespace dsn {
+
+    typedef ::dsn_address_t end_point;
     
 #ifndef DSN_NOT_USE_DEFAULT_SERIALIZATION
 
