@@ -23,41 +23,36 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-// apps
-# include "simple_kv.app.example.h"
-# include "simple_kv.server.impl.h"
+#pragma once
 
-// framework specific tools
-# include <dsn/dist/replication/replication.global_check.h>
+# include <dsn/ports.h>
+# include <dsn/tool_api.h>
 
-void module_init()
+namespace dsn
 {
-    // register replication application provider
-    dsn::replication::register_replica_provider<::dsn::replication::application::simple_kv_service_impl>("simple_kv");
+    namespace tools
+    {
+        class completion_queue_worker : public task_worker
+        {
+        public:
+            completion_queue_worker(task_worker_pool* pool, task_queue* q, int index, task_worker* inner_provider);
+            virtual ~completion_queue_worker(void);
 
-    // register all possible services
-    dsn::register_app<::dsn::replication::meta_service_app>("meta");
-    dsn::register_app<::dsn::replication::replication_service_app>("replica");
-    dsn::register_app<::dsn::replication::application::simple_kv_client_app>("client");
-    dsn::register_app<::dsn::replication::application::simple_kv_perf_test_client_app>("client.perf.test");
+            virtual void loop(); // run tasks from _input_queueu
 
-    dsn::replication::install_checkers();
+        private:
+
+        };
+
+        class completion_queue : public task_queue
+        {
+        public:
+            completion_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
+            ~completion_queue();
+
+            virtual void     enqueue(task* task) = 0;
+            virtual task*    dequeue() = 0;
+            virtual int      count() const;
+        };
+    }
 }
-
-
-# ifndef DSN_RUN_USE_SVCHOST
-
-int main(int argc, char** argv)
-{
-    module_init();
-
-    // specify what services and tools will run in config file, then run
-    dsn_run(argc, argv, true);
-    return 0;
-}
-
-# else
-
-# include <dsn/internal/module_int.cpp.h>
-
-# endif
