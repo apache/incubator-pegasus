@@ -23,41 +23,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-// apps
-# include "simple_kv.app.example.h"
-# include "simple_kv.server.impl.h"
 
-// framework specific tools
-# include <dsn/dist/replication/replication.global_check.h>
+# include <dsn/tool/providers.hpc.h>
+# include "hpc_task_queue.h"
+# include "hpc_tail_logger.h"
+# include "hpc_aio_provider.h"
+# include "hpc_network_provider.h"
+# include "hpc_env_provider.h"
 
-void module_init()
-{
-    // register replication application provider
-    dsn::replication::register_replica_provider<::dsn::replication::application::simple_kv_service_impl>("simple_kv");
-
-    // register all possible services
-    dsn::register_app<::dsn::replication::meta_service_app>("meta");
-    dsn::register_app<::dsn::replication::replication_service_app>("replica");
-    dsn::register_app<::dsn::replication::application::simple_kv_client_app>("client");
-    dsn::register_app<::dsn::replication::application::simple_kv_perf_test_client_app>("client.perf.test");
-
-    dsn::replication::install_checkers();
+namespace dsn {
+    namespace tools {
+        void register_hpc_providers()
+        {
+            register_component_provider<hpc_tail_logger>("dsn::tools::hpc_tail_logger");
+            register_component_provider<hpc_task_queue>("dsn::tools::hpc_task_queue");
+            register_component_provider<hpc_aio_provider>("dsn::tools::hpc_aio_provider");
+            register_component_provider<hpc_network_provider>("dsn::tools::hpc_network_provider");
+            register_component_provider<hpc_env_provider>("dsn::tools::hpc_env_provider");
+        }
+    }
 }
-
-
-# ifndef DSN_RUN_USE_SVCHOST
-
-int main(int argc, char** argv)
-{
-    module_init();
-
-    // specify what services and tools will run in config file, then run
-    dsn_run(argc, argv, true);
-    return 0;
-}
-
-# else
-
-# include <dsn/internal/module_int.cpp.h>
-
-# endif

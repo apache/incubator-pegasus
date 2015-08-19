@@ -23,41 +23,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-// apps
-# include "simple_kv.app.example.h"
-# include "simple_kv.server.impl.h"
 
-// framework specific tools
-# include <dsn/dist/replication/replication.global_check.h>
+# pragma once
 
-void module_init()
+# include <dsn/cpp/autoref_ptr.h>
+
+namespace dsn
 {
-    // register replication application provider
-    dsn::replication::register_replica_provider<::dsn::replication::application::simple_kv_service_impl>("simple_kv");
+    class service_node;
 
-    // register all possible services
-    dsn::register_app<::dsn::replication::meta_service_app>("meta");
-    dsn::register_app<::dsn::replication::replication_service_app>("replica");
-    dsn::register_app<::dsn::replication::application::simple_kv_client_app>("client");
-    dsn::register_app<::dsn::replication::application::simple_kv_perf_test_client_app>("client.perf.test");
+    namespace tools
+    {
+        ref_counter* get_per_service_node_state(service_node* node, const char* name);
 
-    dsn::replication::install_checkers();
+        bool put_per_service_node_state(service_node* node, const char* name, ref_counter* obj);
+
+        ref_counter* remove_per_service_node_state(service_node* node, const char* name);
+    }
 }
-
-
-# ifndef DSN_RUN_USE_SVCHOST
-
-int main(int argc, char** argv)
-{
-    module_init();
-
-    // specify what services and tools will run in config file, then run
-    dsn_run(argc, argv, true);
-    return 0;
-}
-
-# else
-
-# include <dsn/internal/module_int.cpp.h>
-
-# endif

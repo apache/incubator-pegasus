@@ -496,6 +496,11 @@ extern DSN_API void          dsn_address_build(
                                 const char* host, 
                                 uint16_t port
                                 );
+extern DSN_API void          dsn_address_build_ipv4(
+                                /*out*/ dsn_address_t* ep,
+                                uint32_t ipv4,
+                                uint16_t port
+                                );
 extern DSN_API dsn_address_t dsn_primary_address();
 extern DSN_API void          dsn_address_get_invalid(/*out*/ dsn_address_t* paddr);
 extern DSN_API void          dsn_primary_address2(/*out*/ dsn_address_t* paddr);
