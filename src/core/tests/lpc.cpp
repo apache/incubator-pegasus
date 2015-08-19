@@ -47,14 +47,16 @@ TEST(core, lpc)
     std::string result;
     auto t = dsn_task_create(LPC_TEST_HASH, on_lpc_test_hash, (void*)&result, 1);
     dsn_task_add_ref(t);
+    dsn_task_call(t, nullptr, 0);
     bool r = dsn_task_wait(t);
     dsn_task_release_ref(t);
 
     EXPECT_TRUE(r);
-    EXPECT_TRUE(result == "default1");
+    EXPECT_TRUE(result.substr(result.length() - 9) == "default.1");
     
     t = dsn_task_create(LPC_TEST_HASH, on_lpc_test_hash2, nullptr, ::dsn::task::get_current_worker_index());
     dsn_task_add_ref(t);
+    dsn_task_call(t, nullptr, 0);
     r = dsn_task_wait_timeout(t, 1000);
     dsn_task_release_ref(t);
     EXPECT_TRUE(!r);

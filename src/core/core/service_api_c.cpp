@@ -837,6 +837,7 @@ namespace dsn {
 }
 
 extern void dsn_log_init();
+extern bool s_check_wait;
 bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_name, int app_index)
 {
     dsn_all.engine_ready = false;
@@ -873,6 +874,9 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
 #endif
         getchar();
     }
+    s_check_wait = dsn_all.config->get_value<bool>("core", "check_wait", true, 
+        "whether to check task and sync primitive wait safety (e.g., deadlock)"
+        );
 
     // setup coredump
     if (!::dsn::utils::is_file_or_dir_exist(spec.coredump_dir.c_str()))
