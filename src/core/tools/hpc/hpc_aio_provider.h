@@ -46,7 +46,7 @@ namespace dsn {
 
         protected:
             error_code aio_internal(aio_task* aio, bool async, __out_param uint32_t* pbytes = nullptr);
-            void set_looper(io_looper* looper) { _looper = looper; }
+            io_looper* get_looper() { return _looper ? _looper : dynamic_cast<io_looper*>(task::get_current_worker()); }
 
         private:
             class hpc_aio_io_loop_callback : public io_loop_callback

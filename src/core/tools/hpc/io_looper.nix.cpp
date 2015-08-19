@@ -78,11 +78,16 @@ namespace dsn
                 return ERR_OK;
         }
 
-        void io_looper::start(int worker_count)
+        void io_looper::create_completion_queue()
         {
             const int max_event_count = sizeof(_events) / sizeof(struct epoll_event);
 
             _io_queue = epoll_create(max_event_count);
+        }
+
+        void io_looper::start(int worker_count)
+        {
+            create_completion_queue();
             for (int i = 0; i < worker_count; i++)
             {
                 std::thread* thr = new std::thread([this](){ this->loop_ios(); });

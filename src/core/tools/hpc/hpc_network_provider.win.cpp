@@ -27,6 +27,7 @@
 
 # include "hpc_network_provider.h"
 # include <MSWSock.h>
+# include "mix_all_io_looper.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -175,6 +176,7 @@ namespace dsn
         {
             load_socket_functions();
             _listen_fd = INVALID_SOCKET;
+            _looper = get_io_looper(node());
         }
 
         error_code hpc_network_provider::start(rpc_channel channel, int port, bool client_only)
@@ -214,7 +216,7 @@ namespace dsn
                     return ERR_NETWORK_START_FAILED;
                 }
                 
-                _looper->bind_io_handle((dsn_handle_t)_listen_fd, &_callback);
+                get_looper()->bind_io_handle((dsn_handle_t)_listen_fd, &_callback);
 
                 do_accept();
             }
@@ -228,7 +230,7 @@ namespace dsn
             auto parser = new_message_parser();
             auto sock = create_tcp_socket(nullptr);
 
-            _looper->bind_io_handle((dsn_handle_t)sock, &_callback);
+            get_looper()->bind_io_handle((dsn_handle_t)sock, &_callback);
 
             return new hpc_rpc_client_session(sock, parser, *this, server_addr, matcher);
         }
@@ -238,7 +240,7 @@ namespace dsn
             SOCKET s = create_tcp_socket(nullptr);
             dassert(s != INVALID_SOCKET, "cannot create socket for accept");
 
-            _looper->bind_io_handle((dsn_handle_t)s, &_callback);
+            get_looper()->bind_io_handle((dsn_handle_t)s, &_callback);
 
             _accept_event.s = s;
             _accept_event.callback = [this](int err, uint32_t size)

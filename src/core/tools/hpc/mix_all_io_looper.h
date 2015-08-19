@@ -33,26 +33,40 @@ namespace dsn
 {
     namespace tools
     {
-        class mix_all_io_looper : public task_queue, public io_looper
+        enum io_loop_type
+        {
+            IOLOOP_GLOBAL,
+            IOLOOP_PER_NODE,
+            IOLOOP_PER_QUEUE, // can be shared in a thread pool or per thread, according to the queue mode
+            IOLOOP_COUNT,
+            IOLOOP_INVALID
+        };
+
+        ENUM_BEGIN(io_loop_type, IOLOOP_INVALID)
+            ENUM_REG(IOLOOP_GLOBAL)
+            ENUM_REG(IOLOOP_PER_NODE)
+            ENUM_REG(IOLOOP_PER_QUEUE)
+        ENUM_END(io_loop_type)
+
+        extern io_loop_type get_io_looper_type();
+        extern io_looper* get_io_looper(service_node* node);
+
+        class io_looper_task_queue : public task_queue, public io_looper
         {
         public:
-            mix_all_io_looper(task_worker_pool* pool, int index, task_queue* inner_provider);
-            virtual ~mix_all_io_looper();
+            io_looper_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
+            virtual ~io_looper_task_queue();
 
-            virtual void start(int worker_count);
+            virtual void  start(int worker_count);
+            virtual void  stop();
+            virtual void  handle_local_queues();
 
-            virtual void stop();
-
-            virtual void handle_local_queues();
-
-        public:
-            virtual void     enqueue(task* task);
-            virtual task*    dequeue();
-            virtual int      count() const { return _remote_count.load(); }
-
-            void execute(int qutota_milliseconds);
-
+            virtual void  enqueue(task* task);
+            virtual task* dequeue();
+            virtual int   count() const { return _remote_count.load(); }
+            
         private:
+            bool                          _is_shared;
             std::atomic<int>              _remote_count;
 
             // tasks from remote threads

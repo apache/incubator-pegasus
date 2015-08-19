@@ -23,14 +23,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifdef _WIN32
+# ifdef _WIN32
 
-#include "hpc_aio_provider.h"
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <io.h>
-#include <stdio.h>
+# include "hpc_aio_provider.h"
+# include <fcntl.h>
+# include <sys/types.h>
+# include <sys/stat.h>
+# include <io.h>
+# include <stdio.h>
+# include "mix_all_io_looper.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -43,6 +44,7 @@ namespace dsn { namespace tools {
 hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provider)
     : aio_provider(disk, inner_provider), _callback(this)
 {
+    _looper = get_io_looper(node());
 }
 
 hpc_aio_provider::~hpc_aio_provider()
@@ -146,7 +148,7 @@ dsn_handle_t hpc_aio_provider::open(const char* file_name, int oflag, int pmode)
 
     if (fileHandle != INVALID_HANDLE_VALUE && fileHandle != nullptr)
     {
-        auto err = _looper->bind_io_handle((dsn_handle_t)fileHandle, nullptr);
+        auto err = get_looper()->bind_io_handle((dsn_handle_t)fileHandle, nullptr);
         if (err != ERR_OK)
         {
             dassert(false, "cannot associate file handle %s to io completion port, err = %x\n", file_name, ::GetLastError());

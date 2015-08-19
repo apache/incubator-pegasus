@@ -23,27 +23,27 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#pragma once
 
-# include <dsn/internal/per_node_state.h>
-# include "service_engine.h"
+#include <dsn/tool_api.h>
 
-namespace dsn
+namespace dsn 
 {
     namespace tools
     {
-        void* get_per_service_node_state(service_node* node, const char* name)
-        {
-            return node->get_per_node_state(name);
-        }
 
-        bool put_per_service_node_state(service_node* node, const char* name, void* obj)
+        class fastrun : public tool_app
         {
-            return node->put_per_node_state(name, obj);
-        }
+        public:
+            fastrun(const char* name)
+                : tool_app(name)
+            {
+            }
 
-        void* remove_per_service_node_state(service_node* node, const char* name)
-        {
-            return node->remove_per_node_state(name);
-        }
+            void install(service_spec& s);
+
+            virtual void run() override;
+        };
+
     }
-}
+} // end namespace dsn::tools

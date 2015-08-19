@@ -28,6 +28,8 @@
 
 # ifdef _WIN32
 
+# define NON_IO_TASK_NOTIFICATION_KEY 2
+
 namespace dsn
 {
     namespace tools
@@ -60,9 +62,22 @@ namespace dsn
             return ERR_OK;
         }
 
-        void io_looper::start(int worker_count)
+        void io_looper::notify_local_execution()
+        {
+            if (!::PostQueuedCompletionStatus(_io_queue, 0, NON_IO_TASK_NOTIFICATION_KEY, NULL))
+            {
+                dassert(false, "PostQueuedCompletionStatus failed, err = %d", ::GetLastError());
+            }
+        }
+
+        void io_looper::create_completion_queue()
         {
             _io_queue = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
+        }
+
+        void io_looper::start(int worker_count)
+        {
+            create_completion_queue();
             for (int i = 0; i < worker_count; i++)
             {
                 std::thread* thr = new std::thread([this](){ this->loop_ios(); });

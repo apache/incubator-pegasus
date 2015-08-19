@@ -38,7 +38,13 @@ task_queue::task_queue(task_worker_pool* pool, int index, task_queue* inner_prov
 {
     char num[30];
     sprintf(num, "%u", index);
+    _index = index;
     _name = pool->spec().name + '.';
     _name.append(num);
+}
+
+bool task_queue::is_shared() const
+{
+    return !this->pool()->spec().partitioned;
 }
 }

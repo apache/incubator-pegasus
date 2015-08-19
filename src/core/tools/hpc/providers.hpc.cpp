@@ -30,6 +30,7 @@
 # include "hpc_aio_provider.h"
 # include "hpc_network_provider.h"
 # include "hpc_env_provider.h"
+# include "mix_all_io_looper.h"
 
 namespace dsn {
     namespace tools {
@@ -40,6 +41,8 @@ namespace dsn {
             register_component_provider<hpc_aio_provider>("dsn::tools::hpc_aio_provider");
             register_component_provider<hpc_network_provider>("dsn::tools::hpc_network_provider");
             register_component_provider<hpc_env_provider>("dsn::tools::hpc_env_provider");
+            register_component_provider<io_looper_task_queue>("dsn::tools::io_looper_task_queue");
+            register_component_provider<io_looper_task_worker>("dsn::tools::io_looper_task_worker");
         }
     }
 }

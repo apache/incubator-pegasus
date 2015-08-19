@@ -50,7 +50,7 @@ namespace dsn {
             io_looper *_looper;
 
         private:
-            void set_looper(io_looper* looper) { _looper = looper; }
+            io_looper* get_looper() { return _looper ? _looper : dynamic_cast<io_looper*>(task::get_current_worker()); }
 
 # ifdef _WIN32
         public:

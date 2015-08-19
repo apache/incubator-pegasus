@@ -34,10 +34,10 @@ namespace dsn
 
     namespace tools
     {
-        ref_counter* get_per_service_node_state(service_node* node, const char* name);
+        void* get_per_service_node_state(service_node* node, const char* name);
 
-        bool put_per_service_node_state(service_node* node, const char* name, ref_counter* obj);
+        bool  put_per_service_node_state(service_node* node, const char* name, void* obj);
 
-        ref_counter* remove_per_service_node_state(service_node* node, const char* name);
+        void* remove_per_service_node_state(service_node* node, const char* name);
     }
 }

@@ -60,9 +60,9 @@ public:
     const service_app_spec& spec() const { return _app_spec;  }
     void* get_app_context_ptr() const { return _app_context_ptr; }
 
-    ref_counter* get_per_node_state(const char* name);
-    bool put_per_node_state(const char* name, ref_counter* obj);
-    ref_counter* remove_per_node_state(const char* name);
+    void* get_per_node_state(const char* name);
+    bool  put_per_node_state(const char* name, void* obj);
+    void* remove_per_node_state(const char* name);
     
 private:
     void*            _app_context_ptr; // app start returns this value and used by app stop
@@ -73,7 +73,7 @@ private:
     nfs_node*        _nfs;
 
     utils::ex_lock_nr_spin              _lock;
-    std::map<std::string, ref_counter*> _per_node_states;
+    std::map<std::string, void*> _per_node_states;
 };
 
 typedef std::map<int, service_node*> service_nodes_by_app_id;

@@ -31,21 +31,10 @@
 # include <dsn/ports.h>
 # include <dsn/tool_api.h>
 
-# define NON_IO_TASK_NOTIFICATION_KEY 2
-
 namespace dsn
 {
     namespace tools
     {
-        enum io_loop_type
-        {
-            IOLOOP_GLOBAL,
-            IOLOOP_PER_NODE,
-            IOLOOP_PER_QUEUE, // can be shared in a thread pool or per thread, according to the queue mode
-            IOLOOP_COUNT,
-            IOLOOP_INVALID
-        };
-
         //
         // this structure is per io handle, and registered when bind_io_handle to completion queue
         // the callback will be executed per io completion or ready
@@ -71,9 +60,13 @@ namespace dsn
             io_looper();
             virtual ~io_looper(void);
 
+            void create_completion_queue();
+
             error_code bind_io_handle(dsn_handle_t handle, io_loop_callback* cb, unsigned int events = 0);
             
             error_code unbind_io_handle(dsn_handle_t handle);
+
+            void notify_local_execution();
             
             void exit_loops(bool wait);
 

@@ -132,7 +132,7 @@ namespace dsn {
         buffers.clear();
         for (auto& buf : msg->buffers)
         {
-            buffers.push_back(send_buf{(void*)buf.data(), (size_t)buf.length()});
+            buffers.push_back(send_buf{ (uint32_t)buf.length(), (void*)buf.data() });
         }
     }
 

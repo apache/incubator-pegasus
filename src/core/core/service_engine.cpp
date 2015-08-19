@@ -55,14 +55,14 @@ service_node::service_node(service_app_spec& app_spec, void* app_context)
     _app_spec = app_spec;
 }
 
-ref_counter* service_node::get_per_node_state(const char* name)
+void* service_node::get_per_node_state(const char* name)
 {
     utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
     auto it = _per_node_states.find(std::string(name));
     return it != _per_node_states.end() ? it->second : nullptr;
 }
 
-bool service_node::put_per_node_state(const char* name, ref_counter* obj)
+bool service_node::put_per_node_state(const char* name, void* obj)
 {
     utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
     auto it = _per_node_states.find(std::string(name));
@@ -76,7 +76,7 @@ bool service_node::put_per_node_state(const char* name, ref_counter* obj)
     }
 }
 
-ref_counter* service_node::remove_per_node_state(const char* name)
+void* service_node::remove_per_node_state(const char* name)
 {
     utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
     auto it = _per_node_states.find(std::string(name));

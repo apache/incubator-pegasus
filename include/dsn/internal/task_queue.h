@@ -50,12 +50,15 @@ public:
 
     const std::string & get_name() { return _name; }    
     task_worker_pool* pool() const { return _pool; }
+    bool              is_shared() const;
+    int               index() const { return _index; }
     admission_controller* controller() const { return _controller; }
     void set_controller(admission_controller* controller) { _controller = controller; }
 
 private:
     task_worker_pool*      _pool;
     std::string            _name;
+    int                    _index;
     admission_controller*  _controller;
 };
 
