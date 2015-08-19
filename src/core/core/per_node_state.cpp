@@ -24,3 +24,26 @@
  * THE SOFTWARE.
  */
 
+# include <dsn/internal/per_node_state.h>
+# include "service_engine.h"
+
+namespace dsn
+{
+    namespace tools
+    {
+        ref_counter* get_per_service_node_state(service_node* node, const char* name)
+        {
+            return node->get_per_node_state(name);
+        }
+
+        bool put_per_service_node_state(service_node* node, const char* name, ref_counter* obj)
+        {
+            return node->put_per_node_state(name, obj);
+        }
+
+        ref_counter* remove_per_service_node_state(service_node* node, const char* name)
+        {
+            return node->remove_per_node_state(name);
+        }
+    }
+}

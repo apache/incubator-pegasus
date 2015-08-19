@@ -421,6 +421,6 @@ namespace dsn {
             return;
         }
                 
-        s->send(response);
+        s->send_message(response);
     }
 }

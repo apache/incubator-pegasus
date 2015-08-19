@@ -46,13 +46,13 @@
 
 DSN_API dsn_address_t dsn_address_invalid = {0, 0, "invalid"};
 
-DSN_API void dsn_address_build(dsn_address_t* ep, const char* host, uint16_t port)
+static void net_init()
 {
     static std::once_flag flag;
     static bool flag_inited = false;
     if (!flag_inited)
     {
-        std::call_once(flag, [&]() 
+        std::call_once(flag, [&]()
         {
 #ifdef _WIN32
             WSADATA wsaData;
@@ -61,9 +61,17 @@ DSN_API void dsn_address_build(dsn_address_t* ep, const char* host, uint16_t por
             flag_inited = true;
         });
     }
+}
+
+DSN_API void dsn_address_build(dsn_address_t* ep, const char* host, uint16_t port)
+{
+    net_init();
     
     ep->port = port;
-    strncpy(ep->name, host, sizeof(ep->name));
+    if (host != ep->name)
+    {
+        strncpy(ep->name, host, sizeof(ep->name));
+    }
     
     sockaddr_in addr;
     memset(&addr,0,sizeof(addr));
@@ -80,4 +88,27 @@ DSN_API void dsn_address_build(dsn_address_t* ep, const char* host, uint16_t por
     
     // network order
     ep->ip = (uint32_t)(addr.sin_addr.s_addr);
+}
+
+
+DSN_API void dsn_address_build_ipv4(
+    /*out*/ dsn_address_t* ep,
+    uint32_t ipv4,
+    uint16_t port
+    )
+{
+    net_init();
+    ep->ip = ipv4;
+    ep->port = port;
+
+    uint32_t addr = htonl(ipv4);
+    auto host = gethostbyaddr((char*)&addr, 4, AF_INET);
+    if (host == nullptr)
+    {
+        sprintf(ep->name, "%u.%u.%u.%u", (ipv4 >> 24) & 0xff, (ipv4 >> 16) & 0xff, (ipv4 >> 8) & 0xff, ipv4 & 0xff);
+    }
+    else
+    {
+        strncpy(ep->name, host->h_name, sizeof(ep->name));
+    }
 }

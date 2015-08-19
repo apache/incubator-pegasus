@@ -35,8 +35,6 @@
 # include "network.sim.h"
 # include "simple_logger.h"
 # include "empty_aio_provider.h"
-# include "hpc_task_queue.h"
-# include "hpc_tail_logger.h"
 
 namespace dsn {
     namespace tools {
@@ -47,7 +45,6 @@ namespace dsn {
             register_component_provider<task_worker>("dsn::task_worker");
             register_component_provider<screen_logger>("dsn::tools::screen_logger");
             register_component_provider<simple_logger>("dsn::tools::simple_logger");
-            register_component_provider<hpc_tail_logger>("dsn::tools::hpc_tail_logger");
             register_component_provider<std_lock_provider>("dsn::tools::std_lock_provider");
             register_component_provider<std_lock_nr_provider>("dsn::tools::std_lock_nr_provider");
             register_component_provider<std_rwlock_nr_provider>("dsn::tools::std_rwlock_nr_provider");
@@ -57,7 +54,6 @@ namespace dsn {
             register_component_provider<sim_network_provider>("dsn::tools::sim_network_provider");
             register_component_provider<simple_task_queue>("dsn::tools::simple_task_queue");
             register_component_provider<simple_timer_service>("dsn::tools::simple_timer_service");
-            register_component_provider<hpc_task_queue>("dsn::tools::hpc_task_queue");
             
             register_message_header_parser<dsn_message_parser>("NET_HDR_DSN");
 #if defined(_WIN32)

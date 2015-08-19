@@ -51,8 +51,8 @@ namespace dsn
         // before send, prepare buffer
         struct send_buf
         {
-            void* buf;
-            size_t sz;
+            uint32_t sz;
+            void*    buf;            
         };
         virtual void prepare_buffers_on_send(message_ex* msg, __out_param std::vector<send_buf>& buffers) = 0;
         

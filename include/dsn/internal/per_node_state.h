@@ -23,3 +23,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+# pragma once
+
+# include <dsn/cpp/autoref_ptr.h>
+
+namespace dsn
+{
+    class service_node;
+
+    namespace tools
+    {
+        ref_counter* get_per_service_node_state(service_node* node, const char* name);
+
+        bool put_per_service_node_state(service_node* node, const char* name, ref_counter* obj);
+
+        ref_counter* remove_per_service_node_state(service_node* node, const char* name);
+    }
+}

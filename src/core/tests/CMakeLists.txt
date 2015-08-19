@@ -11,14 +11,15 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH
 	${GTEST_INCLUDE_DIRS} 
-	../core ../tools/common ../tools/simulator ../tools/nfs 
+	../core ../tools/common ../tools/simulator ../tools/hpc ../tools/nfs 
 	../../dev/cpp
 	)
 	
 set(MY_PROJ_LIBS gtest
                  dsn.tools.nfs
                  dsn.dev.cpp.core.use
-                 dsn.tools.simulator
+                 dsn.tools.hpc
+				 dsn.tools.simulator
                  dsn.tools.common
                  dsn.corelib
   )

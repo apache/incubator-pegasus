@@ -29,6 +29,7 @@
 # include <dsn/internal/synchronize.h>
 # include <dsn/internal/message_parser.h>
 # include <dsn/cpp/address.h>
+# include <dsn/internal/priority_queue.h>
 
 namespace dsn {
 
@@ -188,15 +189,45 @@ namespace dsn {
     };
 
     //
+    // 
+    //
+    class rpc_session : public ref_counter
+    {
+    public:
+        rpc_session(connection_oriented_network& net, const dsn_address_t& remote_addr);
+        virtual ~rpc_session();
+
+        void send_message(message_ex* msg)
+        {
+            _sq.enqueue(msg, task_spec::get(msg->local_rpc_code)->priority);
+            send_messages();
+        }
+
+        void send_messages();
+        void on_send_completed(message_ex* msg);
+        
+        // always call on_send_completed later
+        virtual void send(message_ex* msg) = 0;
+
+    protected:
+        connection_oriented_network         &_net;
+        dsn_address_t                       _remote_addr;
+
+    private:
+        // TODO: expose the queue to be customizable
+        typedef utils::priority_queue<message_ex*, TASK_PRIORITY_COUNT> send_queue;
+        send_queue                         _sq;
+    };
+
+    //
     // session management on the client side
     //
-    class rpc_client_session : public ref_counter
+    class rpc_client_session : public rpc_session
     {
     public:
         rpc_client_session(connection_oriented_network& net, const dsn_address_t& remote_addr, rpc_client_matcher_ptr& matcher);
         bool on_recv_reply(uint64_t key, message_ex* reply, int delay_ms);
         void on_disconnected();
-        void on_send_completed(message_ex* msg) { msg->release_ref(); } // added in call
         void call(message_ex* request, rpc_response_task* call);
         const dsn_address_t& remote_address() const { return _remote_addr; }
         connection_oriented_network& net() const { return _net; }
@@ -211,8 +242,6 @@ namespace dsn {
         bool _disconnected;
 
     protected:
-        connection_oriented_network         &_net;
-        dsn_address_t                       _remote_addr;
         rpc_client_matcher_ptr              _matcher;
     };
 
@@ -220,21 +249,16 @@ namespace dsn {
     //
     // session management on the server side
     //
-    class rpc_server_session : public ref_counter
+    class rpc_server_session : public rpc_session
     {
     public:
         rpc_server_session(connection_oriented_network& net, const dsn_address_t& remote_addr);
         void on_recv_request(message_ex* msg, int delay_ms);
         void on_disconnected();
-        void on_send_completed(message_ex* msg) { msg->release_ref(); } // added in rpc_engine::reply
         const dsn_address_t& remote_address() const { return _remote_addr; }
 
         // always call on_send_completed later
         virtual void send(message_ex* reply_msg) = 0;
-        
-    protected:
-        connection_oriented_network&   _net;
-        dsn_address_t                 _remote_addr;
     };
 
 }

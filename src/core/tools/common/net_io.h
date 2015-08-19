@@ -48,7 +48,6 @@ namespace dsn {
 
         protected:
             void do_read(size_t sz = 256);
-            void do_write();
             void set_options();
             
             virtual void on_failure() = 0;     
@@ -64,10 +63,6 @@ namespace dsn {
             boost::asio::ip::tcp::socket _socket;
             dsn_address_t                    _remote_addr;
             std::shared_ptr<dsn::message_parser> _parser;
-            
-            // TODO: expose the queue to be customizable
-            typedef utils::priority_queue<message_ex*, TASK_PRIORITY_COUNT> send_queue;
-            send_queue                   _sq;
         };
 
         class client_net_io : public net_io

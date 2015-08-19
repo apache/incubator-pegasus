@@ -23,36 +23,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#pragma once
 
-# include <dsn/ports.h>
-# include <dsn/tool_api.h>
+# include <dsn/tool/providers.hpc.h>
+# include "hpc_task_queue.h"
+# include "hpc_tail_logger.h"
+# include "hpc_aio_provider.h"
+# include "hpc_network_provider.h"
+# include "hpc_env_provider.h"
 
-namespace dsn
-{
-    namespace tools
-    {
-        class completion_queue_worker : public task_worker
+namespace dsn {
+    namespace tools {
+        void register_hpc_providers()
         {
-        public:
-            completion_queue_worker(task_worker_pool* pool, task_queue* q, int index, task_worker* inner_provider);
-            virtual ~completion_queue_worker(void);
-
-            virtual void loop(); // run tasks from _input_queueu
-
-        private:
-
-        };
-
-        class completion_queue : public task_queue
-        {
-        public:
-            completion_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
-            ~completion_queue();
-
-            virtual void     enqueue(task* task) = 0;
-            virtual task*    dequeue() = 0;
-            virtual int      count() const;
-        };
+            register_component_provider<hpc_tail_logger>("dsn::tools::hpc_tail_logger");
+            register_component_provider<hpc_task_queue>("dsn::tools::hpc_task_queue");
+            register_component_provider<hpc_aio_provider>("dsn::tools::hpc_aio_provider");
+            register_component_provider<hpc_network_provider>("dsn::tools::hpc_network_provider");
+            register_component_provider<hpc_env_provider>("dsn::tools::hpc_env_provider");
+        }
     }
 }

@@ -42,7 +42,6 @@ namespace dsn {
             :
             _io_service(ios),
             _socket(std::move(socket)),
-            _sq("net_io.send.queue"),
             _remote_addr(remote_addr),
             _parser(parser)
         {
@@ -136,19 +135,15 @@ namespace dsn {
                 release_reference();
             });
         }
-
-        void net_io::do_write()
+        
+        void net_io::write(message_ex* msg)
         {
-            auto msg = _sq.peek();
-            if (nullptr == msg)
-                return;
-
             // make sure header is already in the buffer
             std::vector<dsn_message_parser::send_buf> buffers;
             _parser->prepare_buffers_on_send(msg, buffers);
 
             std::vector<boost::asio::const_buffer> buffers2;
-            for (auto& bb: buffers)
+            for (auto& bb : buffers)
             {
                 buffers2.push_back(boost::asio::const_buffer(bb.buf, bb.sz));
             }
@@ -163,22 +158,11 @@ namespace dsn {
                 }
                 else
                 {
-                    auto smsg = _sq.dequeue_peeked();
-                    dassert(smsg == msg, "sent msg must be the first msg in send queue");
-                    //dinfo("network message sent, rpc_id = %016llx", msg->header->rpc_id);
-                    on_write_completed(smsg);
-
-                    do_write();
+                    on_write_completed(msg);
                 }
 
                 release_reference();
             });
-        }
-
-        void net_io::write(message_ex* msg)
-        {
-            _sq.enqueue(msg, task_spec::get(msg->local_rpc_code)->priority);
-            do_write();
         }
 
         // ------------------------------------------------------------
@@ -196,15 +180,13 @@ namespace dsn {
 
         void client_net_io::write(message_ex* msg)
         {
-            _sq.enqueue(msg, task_spec::get(msg->local_rpc_code)->priority);
-
             // not connected
             if (SS_CONNECTED != _state)
             {
                 return;
             }
 
-            do_write();
+            net_io::write(msg);
         }
 
         void client_net_io::on_failure()
@@ -214,16 +196,6 @@ namespace dsn {
             if (_reconnect_count++ > 3)
             {
                 close();
-
-                while (true)
-                {
-                    auto msg = _sq.dequeue();
-                    if (msg == nullptr)
-                        break;
-
-                    on_write_completed(msg);
-                }
-
                 return;
             }
 
@@ -254,7 +226,7 @@ namespace dsn {
 
                         set_options();
 
-                        do_write();
+                        on_write_completed(nullptr);
                         do_read();                        
                     }
                     else

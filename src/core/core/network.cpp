@@ -34,8 +34,50 @@
 
 namespace dsn {
 
+    rpc_session::rpc_session(connection_oriented_network& net, const dsn_address_t& remote_addr)
+        : _net(net), _remote_addr(remote_addr), _sq("msg.send.queue")
+    {
+    }
+
+    rpc_session::~rpc_session()
+    {
+        while (true)
+        {
+            auto msg = _sq.dequeue();
+            if (msg == nullptr)
+                break;
+
+            // added in rpc_engine::reply (for server) or rpc_client_session::call (for client)
+            msg->release_ref();
+        }
+    }
+
+    void rpc_session::send_messages()
+    {
+        auto msg = _sq.peek();
+        if (nullptr == msg)
+            return;
+
+        this->send(msg);
+    }
+
+    void rpc_session::on_send_completed(message_ex* msg)
+    {
+        if (nullptr != msg)
+        {
+            // added in rpc_engine::reply (for server) or rpc_client_session::call (for client)
+            msg->release_ref();
+
+            auto smsg = _sq.dequeue_peeked();
+            dassert(smsg == msg, "sent msg must be the first msg in send queue");
+        }
+
+        // for next send
+        send_messages();
+    }
+
     rpc_client_session::rpc_client_session(connection_oriented_network& net, const dsn_address_t& remote_addr, rpc_client_matcher_ptr& matcher)
-        : _net(net), _remote_addr(remote_addr), _matcher(matcher)
+        : rpc_session(net, remote_addr), _matcher(matcher)
     {
         _disconnected = false;
     }
@@ -48,7 +90,7 @@ namespace dsn {
         }
 
         request->add_ref(); // released in on_send_completed
-        send(request);
+        send_message(request);
     }
 
     void rpc_client_session::on_disconnected()
@@ -73,7 +115,7 @@ namespace dsn {
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     rpc_server_session::rpc_server_session(connection_oriented_network& net, const dsn_address_t& remote_addr)
-        : _remote_addr(remote_addr), _net(net)
+        : rpc_session(net, remote_addr)
     {
     }
 
