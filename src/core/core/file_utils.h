@@ -40,10 +40,18 @@ namespace dsn {
 			bool recursive = true
 			);
 
-		bool directory_exists(std::string& dir);
+		bool exists(const std::string& path);
 
-		bool get_files(std::string& dir, std::vector<std::string>& file_list, bool recursive);
+		bool directory_exists(const std::string& path);
 
-		bool delete_directory(std::string& dir);
+		bool file_exists(const std::string& path);
+
+		bool get_files(const std::string& path, std::vector<std::string>& file_list, bool recursive);
+
+		bool remove(const std::string& path);
+
+		bool create_directory(const std::string& path);
+
+		bool create_file(const std::string& path);
 	}
 }
