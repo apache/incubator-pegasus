@@ -37,24 +37,28 @@ namespace dsn
         {
             _io_queue = 0;
             _local_notification_fd = eventfd(0, EFD_NONBLOCK | EFD_SEMAPHORE);
-            _disk_fd = eventfd(0, EFD_NONBLOCK | EFD_SEMAPHORE);
         }
 
         io_looper::~io_looper(void)
         {
             stop();
-            close(_disk_fd);
             close(_local_notification_fd);
         }
 
         error_code io_looper::bind_io_handle(dsn_handle_t handle, io_loop_callback* cb, unsigned int events)
         {
+            int fd = (int)(intptr_t)(handle);
+
+            int flags = fcntl(fd, F_GETFL, 0);
+            dassert (flags != -1, "fcntl failed, err = %s", strerror(errno));
+            flags |= O_NONBLOCK;
+            flags = fcntl(fd, F_SETFL, flags);
+            dassert (flags != -1, "fcntl failed, err = %s", strerror(errno));
+
             struct epoll_event e;
             e.data.ptr = cb;
             e.events = events;
-
-            int fd = (int)(intptr_t)(handle);
-
+            
             if (epoll_ctl(_io_queue, EPOLL_CTL_ADD, fd, &e) < 0)
             {
                 derror("bind io handler to completion port failed, err = %s", strerror(errno));

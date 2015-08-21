@@ -50,10 +50,6 @@ namespace dsn {
             virtual rpc_client_session_ptr create_client_session(const dsn_address_t& server_addr);
 
         private:
-            void do_accept();
-            void on_accepted(int err, uint32_t size);
-
-        private:
             socket_t        _listen_fd;
             dsn_address_t _address;
             io_looper *_looper;
@@ -62,6 +58,10 @@ namespace dsn {
             io_looper* get_looper() { return _looper ? _looper : dynamic_cast<io_looper*>(task::get_current_worker()); }
 
 # ifdef _WIN32
+        private:
+            void do_accept();
+            void on_accepted(int err, uint32_t size);
+
         public:
             struct completion_event
             {
@@ -98,7 +98,28 @@ namespace dsn {
             hpc_network_io_loop_callback _callback;
             accept_completion_event _accept_event;
 # else
+        private:
+            class hpc_network_io_loop_callback : public io_loop_callback
+            {
+            public:
+                hpc_network_io_loop_callback(hpc_network_provider* provider)
+                {
+                    _provider = provider;
+                }
 
+                virtual void handle_event(int native_error, uint32_t io_size, uintptr_t lolp_or_events) override
+                {
+                    _provider->on_events_ready((uint32_t)lolp_or_events);
+                }
+
+            private:
+                hpc_network_provider *_provider;
+            };
+
+        private:
+            void on_events_ready(uint32_t events);
+
+            hpc_network_io_loop_callback _callback;
 # endif
         };
 

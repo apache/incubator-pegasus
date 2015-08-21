@@ -91,7 +91,6 @@ namespace dsn
             int    _io_queue;
             struct epoll_event _events[100];
             int    _local_notification_fd;
-            int    _disk_fd;
 # endif
             std::vector<std::thread*> _workers;
         };
