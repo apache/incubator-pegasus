@@ -147,36 +147,10 @@ scheduler::~scheduler(void)
     
     if (waitee->state() < task_state::TASK_STATE_FINISHED)
     {
-        // impossible for real timeout, somebody must kick me, so let somebody go first
-        if (timeout_milliseconds == TIME_MS_MAX)
-        {
-            auto ts = task_ext::get_inited(waitee);
-            ts->wait_threads.push_back(task_worker_ext::get(task::get_current_worker()));
+        auto ts = task_ext::get_inited(waitee);
+        ts->wait_threads.push_back(task_worker_ext::get(task::get_current_worker()));
 
-            scheduler::instance().wait_schedule(true, false);
-        }
-        
-        // it is possible for real timeout and nobody will kick me
-        // need a system task to save me out in this case
-        else
-        {
-            waitee->add_ref();
-            scheduler::instance().add_system_event(
-                dsn_now_ns() + (uint64_t)timeout_milliseconds * 1000000 + 1,
-                [waitee]()
-                {
-                    // trigger real timeout when necessary
-                    if (waitee->state() < task_state::TASK_STATE_FINISHED)
-                    {
-
-                    }
-
-                    waitee->release_ref();
-                }
-            );
-
-            scheduler::instance().wait_schedule(true, false);
-        }
+        scheduler::instance().wait_schedule(true, false);
     }
     else
     {

@@ -23,9 +23,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#pragma once
-
-# ifdef _WIN32
+# pragma once
 
 # include <dsn/tool_api.h>
 # include <dsn/internal/synchronize.h>
@@ -69,5 +67,3 @@ namespace dsn {
         };
     }
 }
-
-# endif

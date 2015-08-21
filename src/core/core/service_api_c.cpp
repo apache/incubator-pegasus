@@ -544,16 +544,19 @@ DSN_API dsn_message_t dsn_rpc_call_wait(dsn_address_t server, dsn_message_t requ
     msg->to_address = server;
 
     ::dsn::rpc_response_task* rtask = new ::dsn::rpc_response_task(msg, nullptr, nullptr, 0);
+    rtask->add_ref();
     rpc->call(msg, rtask);
     rtask->wait();
     if (rtask->error() == ::dsn::ERR_OK)
     {
         auto msg = rtask->get_response();
         msg->add_ref(); // released by callers
+        rtask->release_ref(); // added above
         return msg;
     }
     else
     {
+        rtask->release_ref(); // added above
         return nullptr;
     }
 }
@@ -837,7 +840,6 @@ namespace dsn {
 }
 
 extern void dsn_log_init();
-extern bool s_check_wait;
 bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_name, int app_index)
 {
     dsn_all.engine_ready = false;
@@ -874,10 +876,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
 #endif
         getchar();
     }
-    s_check_wait = dsn_all.config->get_value<bool>("core", "check_wait", true, 
-        "whether to check task and sync primitive wait safety (e.g., deadlock)"
-        );
-
+    
     // setup coredump
     if (!::dsn::utils::is_file_or_dir_exist(spec.coredump_dir.c_str()))
     {

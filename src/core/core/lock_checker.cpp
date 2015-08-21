@@ -1,8 +1,6 @@
 
 # include <dsn/internal/task.h>
 
-bool s_check_wait = false;
-
 namespace dsn
 {
     namespace lock_checker
@@ -34,7 +32,7 @@ namespace dsn
         {
             check_wait_safety();
 
-            if (s_check_wait && nullptr != task::get_current_task() && !waitee->is_empty())
+            if (nullptr != task::get_current_task() && !waitee->is_empty())
             {
                 if (TASK_TYPE_RPC_RESPONSE == waitee->spec().type ||
                     task::get_current_task()->spec().pool_code == waitee->spec().pool_code)

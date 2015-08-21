@@ -148,7 +148,7 @@ dsn_handle_t hpc_aio_provider::open(const char* file_name, int oflag, int pmode)
 
     if (fileHandle != INVALID_HANDLE_VALUE && fileHandle != nullptr)
     {
-        auto err = get_looper()->bind_io_handle((dsn_handle_t)fileHandle, nullptr);
+        auto err = get_looper()->bind_io_handle((dsn_handle_t)fileHandle, &_callback);
         if (err != ERR_OK)
         {
             dassert(false, "cannot associate file handle %s to io completion port, err = %x\n", file_name, ::GetLastError());

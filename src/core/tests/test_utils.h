@@ -30,9 +30,15 @@
 # include <dsn/internal/task.h>
 # include <dsn/internal/task_worker.h>
 
+# ifndef _WIN32
+# include <signal.h>
+# endif
+
 using namespace ::dsn;
 
-DEFINE_TASK_CODE_RPC(RPC_TEST_HASH, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_THREAD_POOL_CODE(THREAD_POOL_TEST_SERVER)
+DEFINE_TASK_CODE_RPC(RPC_TEST_HASH, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
+
 
 class test_client :
     public ::dsn::serverlet<test_client>,
@@ -62,7 +68,13 @@ public:
 
         testing::InitGoogleTest(&argc, argv);
         RUN_ALL_TESTS();
-        exit(0);
+
+        // exit without any destruction
+# if defined(_WIN32)
+        ::ExitProcess(0);
+# else
+        kill(getpid(), SIGKILL);
+# endif
         return ::dsn::ERR_OK;
     }
 

@@ -32,13 +32,16 @@ namespace dsn
     {
         void fastrun::install(service_spec& spec)
         {
+# if !defined(_WIN32) && !defined(__linux__)
+            dassert(false, "fast run only supports windows and linux platform so far");
+# endif
             if (spec.aio_factory_name == "")
             {
                 spec.aio_factory_name = ("dsn::tools::hpc_aio_provider");
             }
                 
             if (spec.env_factory_name == "")
-                spec.env_factory_name = ("dsn::hpc_env_provider");
+                spec.env_factory_name = ("dsn::tools::hpc_env_provider");
 
             if (spec.timer_factory_name == "")
                 spec.timer_factory_name = ("dsn::tools::simple_timer_service");

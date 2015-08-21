@@ -50,7 +50,7 @@ namespace dsn
 
         io_loop_type get_io_looper_type()
         {
-            std::once_flag flag;
+            static std::once_flag flag;
             std::call_once(flag, []()
             {
                 if (!read_config("io_loop", s_config, nullptr))

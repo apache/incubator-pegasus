@@ -26,7 +26,7 @@
 
 # include "io_looper.h"
 
-# if defined(__linux__) || defined(__APPLE__) || defined (__FreeBSD__)
+# if defined(__linux__)
 //# ifdef _WIN32
 
 namespace dsn

@@ -27,10 +27,11 @@
 # include <dsn/internal/aio_provider.h>
 # include <gtest/gtest.h>
 # include <dsn/service_api_cpp.h>
+# include "test_utils.h"
 
 using namespace ::dsn;
 
-DEFINE_TASK_CODE_AIO(LPC_AIO_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT);
+DEFINE_TASK_CODE_AIO(LPC_AIO_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER);
 
 TEST(core, aio)
 {

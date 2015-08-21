@@ -281,6 +281,8 @@ void native_win_aio_provider::worker()
     ULONG_PTR dwKey;
     LPOVERLAPPED overLap;
 
+    task::set_current_worker(nullptr, node());
+
     do
     {
         bool ret = (0 != GetQueuedCompletionStatus(_iocp, &dwTransLen, &dwKey, &overLap, INFINITE));

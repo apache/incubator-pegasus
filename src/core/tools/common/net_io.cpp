@@ -209,7 +209,7 @@ namespace dsn {
             if (_state.compare_exchange_strong(closed_state, SS_CONNECTING))
             {
                 boost::asio::ip::tcp::endpoint ep(
-                    boost::asio::ip::address_v4(ntohl(_remote_addr.ip)), _remote_addr.port);
+                    boost::asio::ip::address_v4(_remote_addr.ip), _remote_addr.port);
 
                 add_reference();
                 _socket.async_connect(ep, [this](boost::system::error_code ec)

@@ -228,7 +228,13 @@ namespace dsn
         {
             auto matcher = new_client_matcher();
             auto parser = new_message_parser();
-            auto sock = create_tcp_socket(nullptr);
+
+            struct sockaddr_in addr;
+            addr.sin_family = AF_INET;
+            addr.sin_addr.s_addr = INADDR_ANY;
+            addr.sin_port = 0;
+
+            auto sock = create_tcp_socket(&addr);
 
             get_looper()->bind_io_handle((dsn_handle_t)sock, &_callback);
 
@@ -271,11 +277,25 @@ namespace dsn
         {
             if (err == ERROR_SUCCESS)
             {
+                setsockopt(_accept_event.s,
+                    SOL_SOCKET,
+                    SO_UPDATE_ACCEPT_CONTEXT,
+                    (char *)&_listen_fd, 
+                    sizeof(_listen_fd)
+                    );
+
                 struct sockaddr_in addr;
+                memset((void*)&addr, 0, sizeof(addr));
+
+                addr.sin_family = AF_INET;
+                addr.sin_addr.s_addr = INADDR_ANY;
+                addr.sin_port = 0;
+
                 int addr_len = sizeof(addr);
-                if (getsockname(_accept_event.s, (struct sockaddr*)&addr, &addr_len) != 0)
+                if (getpeername(_accept_event.s, (struct sockaddr*)&addr, &addr_len)
+                    == SOCKET_ERROR)
                 {
-                    dassert(false, "getsockname failed, err = %d", ::WSAGetLastError());
+                    dassert(false, "getpeername failed, err = %d", ::WSAGetLastError());
                 }
 
                 dsn_address_t client_addr;
@@ -310,6 +330,7 @@ namespace dsn
             {
                 if (err != ERROR_SUCCESS)
                 {
+                    dwarn("WSARecv failed, err = %d", err);
                     on_failure();
                 }
                 else
@@ -337,19 +358,21 @@ namespace dsn
             buf[0].buf = (char*)ptr;
             buf[0].len = remaining;
 
-            BOOL rt = WSARecv(
+            DWORD bytes = 0;
+            DWORD flag = 0;
+            int rt = WSARecv(
                 _rw_fd,
                 buf,
                 1,
-                NULL,
-                NULL,
+                &bytes,
+                &flag,
                 &_read_event.olp,
                 NULL
                 );
 
-            if (!rt && (WSAGetLastError() != ERROR_IO_PENDING))
+            if (SOCKET_ERROR == rt && (WSAGetLastError() != ERROR_IO_PENDING))
             {
-                dassert(false, "WSARecv failed, err = %d", ::WSAGetLastError());
+                dwarn("WSARecv failed, err = %d", ::WSAGetLastError());
                 release_reference();
                 on_failure();
             }
@@ -358,10 +381,11 @@ namespace dsn
         void hpc_rpc_session::do_write(message_ex* msg)
         {
             add_reference();
-            _read_event.callback = [this, msg](int err, uint32_t length)
+            _write_event.callback = [this, msg](int err, uint32_t length)
             {
                 if (err != ERROR_SUCCESS)
                 {
+                    dwarn("WSASend failed, err = %d", err);
                     on_failure();
                 }
                 else
@@ -371,6 +395,7 @@ namespace dsn
 
                 release_reference();
             };
+            memset(&_write_event.olp, 0, sizeof(_write_event.olp));
 
             // make sure header is already in the buffer
             std::vector<dsn_message_parser::send_buf> buffers;
@@ -378,19 +403,20 @@ namespace dsn
 
             static_assert (sizeof(dsn_message_parser::send_buf) == sizeof(WSABUF), "make sure they are compatible");
 
-            BOOL rt = WSASend(
+            DWORD bytes = 0;
+            int rt = WSASend(
                 _rw_fd,
                 (LPWSABUF)&buffers[0],
                 (DWORD)buffers.size(),
-                NULL,
-                NULL,
-                &_read_event.olp,
+                &bytes,
+                0,
+                &_write_event.olp,
                 NULL
                 );
 
-            if (!rt && (WSAGetLastError() != ERROR_IO_PENDING))
+            if (SOCKET_ERROR == rt && (WSAGetLastError() != ERROR_IO_PENDING))
             {
-                dassert(false, "WSASend failed, err = %d", ::WSAGetLastError());
+                dwarn("WSASend failed, err = %d", ::WSAGetLastError());
                 release_reference();
                 on_failure();
             }
@@ -419,9 +445,9 @@ namespace dsn
         {
             _state = SS_CLOSED;
 
-            if (_reconnect_count++ > 3)
+            if (++_reconnect_count > 3)
             {
-                closesocket(_socket);
+                close();
                 on_disconnected();
                 return;
             }
@@ -435,12 +461,13 @@ namespace dsn
 
             if (!_state.compare_exchange_strong(closed_state, SS_CONNECTING))
                 return;
-
+                        
             auto evt = new hpc_network_provider::completion_event;
             evt->callback = [this, evt](int err, uint32_t io_size)
             {
                 if (err != ERROR_SUCCESS)
                 {
+                    dwarn("ConnectEx failed, err = %d", err);
                     this->on_failure();
                 }
                 else
@@ -472,16 +499,15 @@ namespace dsn
                 _socket,
                 (struct sockaddr*)&addr,
                 (int)sizeof(addr),
-                nullptr,
                 0,
-                nullptr,
+                0,
+                0,
                 &evt->olp
                 );
 
             if (!rt && (WSAGetLastError() != ERROR_IO_PENDING))
             {
-                dassert(false, "ConnectEx failed, err = %d", ::WSAGetLastError());
-                closesocket(_socket);
+                dwarn("ConnectEx failed, err = %d", ::WSAGetLastError());
                 this->release_ref();
                 delete evt;
 
@@ -497,6 +523,7 @@ namespace dsn
             )
             : rpc_server_session(net, remote_addr), hpc_rpc_session(sock, parser)
         {
+            do_read();
         }
 
     }

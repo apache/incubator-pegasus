@@ -28,6 +28,7 @@
 # include <dsn/internal/env_provider.h>
 # include <dsn/cpp/utils.h>
 # include <dsn/internal/synchronize.h>
+# include <dsn/tool/node_scoper.h>
 
 # include "task_engine.h"
 # include "service_engine.h"
@@ -353,6 +354,7 @@ void task::enqueue(task_worker_pool* pool)
     // fast execution
     if (_spec->allow_inline || _spec->fast_execution_in_network_thread || _is_null)
     {
+        tools::node_scoper ns(_node);
         exec_internal();
     }
 

@@ -88,6 +88,8 @@ namespace dsn {
             int ret;
             linux_disk_aio_context * aio;
 
+            task::set_current_worker(nullptr, node());
+
             while (true)
             {
                 ret = io_getevents(_ctx, 1, 1, events, NULL);

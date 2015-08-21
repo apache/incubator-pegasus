@@ -28,9 +28,18 @@
 # include <dsn/tool_api.h>
 # include "io_looper.h"
 
+# ifdef _WIN32
+typedef SOCKET socket_t;
+# else
+# include <sys/types.h>
+# include <sys/socket.h>
+typedef int socket_t;
+# endif
+
 namespace dsn {
     namespace tools {
         
+
         class hpc_network_provider : public connection_oriented_network
         {
         public:
@@ -45,7 +54,7 @@ namespace dsn {
             void on_accepted(int err, uint32_t size);
 
         private:
-            SOCKET        _listen_fd;
+            socket_t        _listen_fd;
             dsn_address_t _address;
             io_looper *_looper;
 
@@ -82,7 +91,7 @@ namespace dsn {
         private:
             struct accept_completion_event : completion_event
             {
-                SOCKET s;
+                socket_t s;
                 char   buffer[1024];
             };
             
@@ -97,7 +106,7 @@ namespace dsn {
         {
         public:
             hpc_rpc_session(
-                SOCKET sock,
+                socket_t sock,
                 std::shared_ptr<dsn::message_parser>& parser
                 );
 
@@ -113,7 +122,7 @@ namespace dsn {
             virtual void release_reference() = 0;
 
         private:
-            SOCKET _rw_fd;
+            socket_t _rw_fd;
             std::shared_ptr<dsn::message_parser>   _parser;
 # ifdef _WIN32
             hpc_network_provider::completion_event _read_event;
@@ -126,7 +135,7 @@ namespace dsn {
         {
         public:
             hpc_rpc_client_session(
-                SOCKET sock, 
+                socket_t sock, 
                 std::shared_ptr<dsn::message_parser>& parser, 
                 connection_oriented_network& net, 
                 const dsn_address_t& remote_addr, 
@@ -155,7 +164,7 @@ namespace dsn {
             }
 
         private:
-            SOCKET _socket;
+            socket_t _socket;
 
         private:
             virtual void on_failure();
@@ -176,7 +185,7 @@ namespace dsn {
         {
         public:
             hpc_rpc_server_session(
-                SOCKET sock,
+                socket_t sock,
                 std::shared_ptr<dsn::message_parser>& parser,
                 connection_oriented_network& net,
                 const dsn_address_t& remote_addr

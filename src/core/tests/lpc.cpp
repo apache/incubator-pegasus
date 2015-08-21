@@ -29,7 +29,7 @@
 # include <dsn/service_api_cpp.h>
 # include "test_utils.h"
 
-DEFINE_TASK_CODE(LPC_TEST_HASH, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_TEST_HASH, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
 
 void on_lpc_test_hash(void* p)
 {
@@ -52,12 +52,5 @@ TEST(core, lpc)
     dsn_task_release_ref(t);
 
     EXPECT_TRUE(r);
-    EXPECT_TRUE(result.substr(result.length() - 9) == "default.1");
-    
-    t = dsn_task_create(LPC_TEST_HASH, on_lpc_test_hash2, nullptr, ::dsn::task::get_current_worker_index());
-    dsn_task_add_ref(t);
-    dsn_task_call(t, nullptr, 0);
-    r = dsn_task_wait_timeout(t, 1000);
-    dsn_task_release_ref(t);
-    EXPECT_TRUE(!r);
+    EXPECT_TRUE(result.substr(result.length() - 2) == ".1");
 }

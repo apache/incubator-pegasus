@@ -87,7 +87,7 @@ DSN_API void dsn_address_build(dsn_address_t* ep, const char* host, uint16_t por
     }
     
     // network order
-    ep->ip = (uint32_t)(addr.sin_addr.s_addr);
+    ep->ip = (uint32_t)ntohl(addr.sin_addr.s_addr);
 }
 
 

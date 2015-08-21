@@ -96,7 +96,7 @@ namespace dsn {
                 if (!ec)
                 {
                     dsn_address_t client_addr;
-                    client_addr.ip = htonl(_socket->remote_endpoint().address().to_v4().to_ulong());
+                    client_addr.ip = _socket->remote_endpoint().address().to_v4().to_ulong();
                     client_addr.port = _socket->remote_endpoint().port();
 
                     // TODO: convert ip to host name

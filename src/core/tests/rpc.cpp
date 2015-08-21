@@ -47,15 +47,5 @@ TEST(core, rpc)
     EXPECT_TRUE(err == ERR_OK);
 
     ::unmarshall(response.get(), result);
-    EXPECT_TRUE(result.substr(result.length() - 9) == "default.1");
-
-    err = ::dsn::rpc::call_typed_wait(
-        &response,
-        server,
-        RPC_TEST_HASH,
-        req,
-        0,
-        1000
-        );
-    EXPECT_TRUE(err == ERR_TIMEOUT);
+    EXPECT_TRUE(result.substr(result.length() - 2) == ".1");
 }
