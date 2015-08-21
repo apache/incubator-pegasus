@@ -85,11 +85,11 @@ namespace dsn {
 	namespace utils {
 
 #ifndef _WIN32
-		__thread struct
+		static __thread struct
 		{
-			void*	ctx;
-			sftw_fn	fn;
-			bool	recursive;
+			void*		ctx;
+			sftw_fn_t	fn;
+			bool		recursive;
 		} sftw_ctx;
 
 		static int ftw_wrapper(const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf)
@@ -105,7 +105,7 @@ namespace dsn {
 		bool sftw(
 			const char* dirpath,
 			void* ctx,
-			sftw_fn fn,
+			sftw_fn_t fn,
 			bool recursive
 			)
 		{
@@ -140,7 +140,6 @@ namespace dsn {
 					}
 
 					subpath = path + "\\" + name;
-
 					if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 					{
 						if (recursive)
@@ -203,7 +202,7 @@ namespace dsn {
 			return ((stat(dir.c_str(), &sb) == 0) && S_ISDIR(sb.st_mode));
 #endif
 		}
-		static int get_file_names_fn(const char* fpath, void* ctx, int typeflag)
+		static int get_files_fn(const char* fpath, void* ctx, int typeflag)
 		{
 			std::vector<std::string>& file_list = *((std::vector<std::string>*)ctx);
 			if (typeflag == FTW_F)
@@ -214,14 +213,14 @@ namespace dsn {
 			return FTW_CONTINUE;
 		}
 
-		bool get_file_names(std::string& dir, std::vector<std::string>& file_list, bool recursive)
+		bool get_files(std::string& dir, std::vector<std::string>& file_list, bool recursive)
 		{
 			if (!directory_exists(dir))
 			{
 				return false;
 			}
 
-			return sftw(dir.c_str(), &file_list, get_file_names_fn, recursive);
+			return sftw(dir.c_str(), &file_list, get_files_fn, recursive);
 		}
 
 		static int delete_directory_fn(const char* fpath, void* ctx, int typeflag)
