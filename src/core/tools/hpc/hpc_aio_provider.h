@@ -29,6 +29,10 @@
 # include <dsn/internal/synchronize.h>
 # include "io_looper.h"
 
+# ifdef __linux__
+# include <libaio.h>
+# endif
+
 namespace dsn {
     namespace tools {
         class hpc_aio_provider : public aio_provider
@@ -64,6 +68,15 @@ namespace dsn {
         private:            
             io_looper *_looper;
             hpc_aio_io_loop_callback _callback;
+
+# ifdef __linux__
+            void on_aio_completed(uint32_t events);
+            void complete_aio(struct iocb* io, int bytes, int err);
+
+            io_context_t _ctx;
+            int          _event_fd;
+            bool         _event_fd_registered;
+# endif 
         };
     }
 }
