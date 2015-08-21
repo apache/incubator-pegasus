@@ -31,18 +31,18 @@
 namespace dsn {
 	namespace utils {
 		
-		typedef int (*sftw_fn)(const char* fpath, void* ctx, int typeflag);
+		typedef int (*sftw_fn_t)(const char* fpath, void* ctx, int typeflag);
 		
 		bool sftw(
 			const char* dirpath,
 			void* ctx,
-			sftw_fn fn,
+			sftw_fn_t fn,
 			bool recursive = true
 			);
 
 		bool directory_exists(std::string& dir);
 
-		bool get_file_names(std::string& dir, std::vector<std::string>& file_list, bool recursive);
+		bool get_files(std::string& dir, std::vector<std::string>& file_list, bool recursive);
 
 		bool delete_directory(std::string& dir);
 	}
