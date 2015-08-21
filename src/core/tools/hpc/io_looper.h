@@ -31,6 +31,10 @@
 # include <dsn/ports.h>
 # include <dsn/tool_api.h>
 
+#ifndef _WIN32
+# include <sys/epoll.h>
+#endif
+
 namespace dsn
 {
     namespace tools
