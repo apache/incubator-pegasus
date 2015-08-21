@@ -54,7 +54,8 @@ TEST(core, rpc)
         server,
         RPC_TEST_HASH,
         req,
-        0
+        0,
+        1000
         );
     EXPECT_TRUE(err == ERR_TIMEOUT);
 }

@@ -38,7 +38,7 @@ TEST(core, aio)
     int len = (int)strlen(buffer);
 
     // write
-    auto fp = dsn_file_open("tmp", O_WRONLY, 0666);
+    auto fp = dsn_file_open("tmp", O_RDWR | O_CREAT | O_BINARY, 0666);
     
     auto t1 = ::dsn::file::write(fp, buffer, len, 0, LPC_AIO_TEST, nullptr, nullptr, 0);
     auto t2 = ::dsn::file::write(fp, buffer, len, len, LPC_AIO_TEST, nullptr, nullptr, 0);
@@ -63,7 +63,7 @@ TEST(core, aio)
 
     // read
     char* buffer2 = (char*)alloca((size_t)len);
-    fp = dsn_file_open("tmp", O_WRONLY, 0666);
+    fp = dsn_file_open("tmp", O_RDONLY | O_BINARY, 0666);
 
     t1 = ::dsn::file::read(fp, buffer2, len, 0, LPC_AIO_TEST, nullptr, nullptr, 0);
     t2 = ::dsn::file::read(fp, buffer2, len, len, LPC_AIO_TEST, nullptr, nullptr, 0);
