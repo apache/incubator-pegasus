@@ -469,16 +469,6 @@ namespace dsn { namespace replication {
     {
         int32_t app_id;
         int32_t pidx;
-
-        bool operator < (const global_partition_id& r) const
-        {
-            return app_id < r.app_id || (app_id == r.app_id && pidx < r.pidx);
-        }
-
-        bool operator == (const global_partition_id& r) const
-        {
-            return app_id == r.app_id && pidx == r.pidx;
-        }
     };
 
     inline void marshall(::dsn::binary_writer& writer, const global_partition_id& val)
@@ -547,9 +537,9 @@ namespace dsn { namespace replication {
         global_partition_id gpid;
         int64_t ballot;
         int32_t max_replica_count;
-        dsn_address_t primary;
-        std::vector< dsn_address_t> secondaries;
-        std::vector< dsn_address_t> drop_outs;
+        ::dsn::end_point primary;
+        std::vector< ::dsn::end_point> secondaries;
+        std::vector< ::dsn::end_point> drop_outs;
         int64_t last_committed_decree;
     };
 
@@ -582,7 +572,7 @@ namespace dsn { namespace replication {
     {
         global_partition_id gpid;
         int64_t ballot;
-        dsn_address_t primary;
+        ::dsn::end_point primary;
         partition_status status;
     };
 
@@ -735,7 +725,7 @@ namespace dsn { namespace replication {
     struct learn_request
     {
         global_partition_id gpid;
-        dsn_address_t learner;
+        ::dsn::end_point learner;
         int64_t signature;
         int64_t last_committed_decree_in_app;
         int64_t last_committed_decree_in_prepare_list;
@@ -797,7 +787,7 @@ namespace dsn { namespace replication {
     struct group_check_request
     {
         std::string app_type;
-        dsn_address_t node;
+        ::dsn::end_point node;
         replica_configuration config;
         int64_t last_committed_decree;
         int64_t learner_signature;
@@ -830,7 +820,7 @@ namespace dsn { namespace replication {
         int64_t last_committed_decree_in_prepare_list;
         learner_status learner_status_;
         int64_t learner_signature;
-        dsn_address_t node;
+        ::dsn::end_point node;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const group_check_response& val)
@@ -875,7 +865,7 @@ namespace dsn { namespace replication {
     struct meta_response_header
     {
         ::dsn::error_code err;
-        dsn_address_t primary_address;
+        ::dsn::end_point primary_address;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const meta_response_header& val)
@@ -895,7 +885,7 @@ namespace dsn { namespace replication {
     {
         partition_configuration config;
         config_type type;
-        dsn_address_t node;
+        ::dsn::end_point node;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const configuration_update_request& val)
@@ -936,7 +926,7 @@ namespace dsn { namespace replication {
     {
         partition_configuration config;
         config_type type;
-        dsn_address_t node;
+        ::dsn::end_point node;
         bool is_clean_data;
         bool is_upgrade;
     };
@@ -962,7 +952,7 @@ namespace dsn { namespace replication {
     // ---------- configuration_query_by_node_request -------------
     struct configuration_query_by_node_request
     {
-        dsn_address_t node;
+        ::dsn::end_point node;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const configuration_query_by_node_request& val)
@@ -1042,7 +1032,7 @@ namespace dsn { namespace replication {
     struct query_replica_decree_request
     {
         global_partition_id gpid;
-        dsn_address_t node;
+        ::dsn::end_point node;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const query_replica_decree_request& val)

@@ -71,6 +71,7 @@ DSN_API void dsn_address_build(dsn_address_t* ep, const char* host, uint16_t por
     if (host != ep->name)
     {
         strncpy(ep->name, host, sizeof(ep->name));
+        ep->name[sizeof(ep->name) - 1] = '\0';
     }
     
     sockaddr_in addr;
