@@ -31,6 +31,8 @@
 namespace dsn {
 	namespace utils {
 		
+		bool get_normalized_path(const std::string& path, std::string& npath);
+
 		typedef int (*sftw_fn_t)(const char* fpath, void* ctx, int typeflag);
 		
 		bool sftw(

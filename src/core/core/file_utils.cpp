@@ -82,16 +82,16 @@ enum
 namespace dsn {
 	namespace utils {
 
-		#define _FS_COLON	':'
-		#define _FS_PERIOD	'.'
-		#define _FS_SLASH	'/'
-		#define _FS_BSLASH	'\\'
-		#define _FS_STAR	'*'
-		#define _FS_QUESTION	'?'
-		#define _FS_NULL	'\0'
-		#define _FS_ISSEP(x)	((x) == _FS_SLASH || (x) == _FS_BSLASH)
+# define _FS_COLON		':'
+# define _FS_PERIOD		'.'
+# define _FS_SLASH		'/'
+# define _FS_BSLASH		'\\'
+# define _FS_STAR		'*'
+# define _FS_QUESTION	'?'
+# define _FS_NULL		'\0'
+# define _FS_ISSEP(x)	((x) == _FS_SLASH || (x) == _FS_BSLASH)
 
-		static bool get_normalized_path(const std::string& path, std::string& npath)
+		bool get_normalized_path(const std::string& path, std::string& npath)
 		{
 			char sep;
 			size_t i;
