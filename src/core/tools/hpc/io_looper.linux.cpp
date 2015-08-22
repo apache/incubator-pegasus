@@ -71,10 +71,9 @@ namespace dsn
 
         error_code io_looper::unbind_io_handle(dsn_handle_t handle)
         {
-            struct epoll_event e;
-            e.data.fd = (int)(intptr_t)handle;
+            int fd = (int)(intptr_t)handle;
 
-            if (epoll_ctl(_io_queue, EPOLL_CTL_DEL, e.data.fd, &e) < 0)
+            if (epoll_ctl(_io_queue, EPOLL_CTL_DEL, fd, NULL) < 0)
             {
                 derror("unbind io handler to completion port failed, err = %s", strerror(errno));
                 return ERR_BIND_IOCP_FAILED;

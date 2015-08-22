@@ -103,7 +103,7 @@ namespace dsn {
             virtual void release_reference() = 0;
 
         protected:
-            socket_t _socket;
+            socket_t                               _socket;
             std::shared_ptr<dsn::message_parser>   _parser;
             io_loop_callback                       _ready_event;
 
@@ -114,6 +114,9 @@ namespace dsn {
             message_ex*                            _sending_msg;
             int                                    _sending_next_offset;
             struct sockaddr_in                     _peer_addr;
+            io_looper*                             _looper;
+
+            void set_ready_event_for_send_recv();
 # endif
         };
 
@@ -151,6 +154,7 @@ namespace dsn {
 
         private:
 # ifdef _WIN32
+            // use _ready_event on linux, so this is only used on windows
             hpc_network_provider::ready_event      _connect_event;
 # endif
 
