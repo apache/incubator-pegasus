@@ -39,9 +39,9 @@ namespace dsn
 {
     namespace tools
     {
-        static SOCKET create_tcp_socket(sockaddr_in* addr)
+        static socket_t create_tcp_socket(sockaddr_in* addr)
         {
-            SOCKET s = INVALID_SOCKET;
+            socket_t s = INVALID_SOCKET;
             if ((s = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, 0, 0, WSA_FLAG_OVERLAPPED)) == INVALID_SOCKET)
             {
                 dwarn("WSASocket failed, err = %d", ::GetLastError());
@@ -101,7 +101,7 @@ namespace dsn
             if (s_lpfnGetAcceptExSockaddrs != NULL)
                 return;
 
-            SOCKET s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+            socket_t s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
             if (s == INVALID_SOCKET)
             {
                 dassert(false, "create Socket Failed, err = %d", ::GetLastError());
@@ -172,7 +172,7 @@ namespace dsn
         }
 
         hpc_network_provider::hpc_network_provider(rpc_engine* srv, network* inner_provider)
-            : connection_oriented_network(srv, inner_provider), _callback(this)
+            : connection_oriented_network(srv, inner_provider)
         {
             load_socket_functions();
             _listen_fd = INVALID_SOCKET;
@@ -207,8 +207,10 @@ namespace dsn
                 if (setsockopt(_listen_fd, SOL_SOCKET, SO_REUSEADDR, 
                     (char*)&forcereuse, sizeof(forcereuse)) != 0)
                 {
-                    dwarn("setsockopt SO_REUSEDADDR failed, err = %d");
+                    dwarn("setsockopt SO_REUSEDADDR failed, err = %d", ::GetLastError());
                 }
+
+                get_looper()->bind_io_handle((dsn_handle_t)_listen_fd, &_accept_event.callback);
 
                 if (listen(_listen_fd, SOMAXCONN) != 0)
                 {
@@ -216,8 +218,6 @@ namespace dsn
                     return ERR_NETWORK_START_FAILED;
                 }
                 
-                get_looper()->bind_io_handle((dsn_handle_t)_listen_fd, &_callback);
-
                 do_accept();
             }
             
@@ -235,30 +235,66 @@ namespace dsn
             addr.sin_port = 0;
 
             auto sock = create_tcp_socket(&addr);
-
-            get_looper()->bind_io_handle((dsn_handle_t)sock, &_callback);
-
-            return new hpc_rpc_client_session(sock, parser, *this, server_addr, matcher);
+            auto client = new hpc_rpc_client_session(sock, parser, *this, server_addr, matcher);
+            client->bind_looper(get_looper());
+            return client;
         }
 
         void hpc_network_provider::do_accept()
         {
-            SOCKET s = create_tcp_socket(nullptr);
+            socket_t s = create_tcp_socket(nullptr);
             dassert(s != INVALID_SOCKET, "cannot create socket for accept");
 
-            get_looper()->bind_io_handle((dsn_handle_t)s, &_callback);
-
-            _accept_event.s = s;
-            _accept_event.callback = [this](int err, uint32_t size)
+            _accept_sock = s;            
+            _accept_event.callback = [this](int err, uint32_t size, uintptr_t lpolp)
             {
-                this->on_accepted(err, size);
+                dassert(&_accept_event.olp == (LPOVERLAPPED)lpolp, "must be this exact overlap");
+                if (err == ERROR_SUCCESS)
+                {
+                    setsockopt(_accept_sock,
+                        SOL_SOCKET,
+                        SO_UPDATE_ACCEPT_CONTEXT,
+                        (char *)&_listen_fd,
+                        sizeof(_listen_fd)
+                        );
+
+                    struct sockaddr_in addr;
+                    memset((void*)&addr, 0, sizeof(addr));
+
+                    addr.sin_family = AF_INET;
+                    addr.sin_addr.s_addr = INADDR_ANY;
+                    addr.sin_port = 0;
+
+                    int addr_len = sizeof(addr);
+                    if (getpeername(_accept_sock, (struct sockaddr*)&addr, &addr_len)
+                        == SOCKET_ERROR)
+                    {
+                        dassert(false, "getpeername failed, err = %d", ::WSAGetLastError());
+                    }
+
+                    dsn_address_t client_addr;
+                    dsn_address_build_ipv4(&client_addr, ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
+
+                    auto parser = new_message_parser();
+                    auto s = new hpc_rpc_server_session(_accept_sock, parser, *this, client_addr);
+                    s->bind_looper(get_looper());
+
+                    rpc_server_session_ptr s1(s);
+                    this->on_server_session_accepted(s1);
+                }
+                else
+                {
+                    closesocket(_accept_sock);
+                }
+
+                do_accept();
             };
             memset(&_accept_event.olp, 0, sizeof(_accept_event.olp));
 
             DWORD bytes;
             BOOL rt = s_lpfnAcceptEx(
                 _listen_fd, s,
-                _accept_event.buffer,
+                _accept_buffer,
                 0,
                 (sizeof(struct sockaddr_in) + 16),
                 (sizeof(struct sockaddr_in) + 16),
@@ -272,62 +308,31 @@ namespace dsn
                 closesocket(s);
             }
         }
-
-        void hpc_network_provider::on_accepted(int err, uint32_t size)
-        {
-            if (err == ERROR_SUCCESS)
-            {
-                setsockopt(_accept_event.s,
-                    SOL_SOCKET,
-                    SO_UPDATE_ACCEPT_CONTEXT,
-                    (char *)&_listen_fd, 
-                    sizeof(_listen_fd)
-                    );
-
-                struct sockaddr_in addr;
-                memset((void*)&addr, 0, sizeof(addr));
-
-                addr.sin_family = AF_INET;
-                addr.sin_addr.s_addr = INADDR_ANY;
-                addr.sin_port = 0;
-
-                int addr_len = sizeof(addr);
-                if (getpeername(_accept_event.s, (struct sockaddr*)&addr, &addr_len)
-                    == SOCKET_ERROR)
-                {
-                    dassert(false, "getpeername failed, err = %d", ::WSAGetLastError());
-                }
-
-                dsn_address_t client_addr;
-                dsn_address_build_ipv4(&client_addr, ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
                 
-                auto parser = new_message_parser();
-                rpc_server_session_ptr s = new hpc_rpc_server_session(_accept_event.s, parser, *this, client_addr);
-                this->on_server_session_accepted(s);
-            }
-            else
-            {
-                closesocket(_accept_event.s);
-            }
-
-            do_accept();
-        }
-        
         hpc_rpc_session::hpc_rpc_session(
-            SOCKET sock,
+            socket_t sock,
             std::shared_ptr<dsn::message_parser>& parser
             )
-            : _rw_fd(sock), _parser(parser)
+            : _socket(sock), _parser(parser)
         {
+            _ready_event = [](int err, uint32_t length, uintptr_t lolp)
+            {
+                auto evt = CONTAINING_RECORD(lolp, hpc_network_provider::ready_event, olp);
+                evt->callback(err, length, lolp);
+            };
+        }
 
+        void hpc_rpc_session::bind_looper(io_looper* looper)
+        {
+            looper->bind_io_handle((dsn_handle_t)_socket, &_ready_event);
         }
 
         void hpc_rpc_session::do_read(int sz)
         {
             add_reference();
-
-            _read_event.callback = [this](int err, uint32_t length)
+            _read_event.callback = [this](int err, uint32_t length, uintptr_t lolp)
             {
+                dassert((LPOVERLAPPED)lolp == &_read_event.olp, "must be exact this overlapped");
                 if (err != ERROR_SUCCESS)
                 {
                     dwarn("WSARecv failed, err = %d", err);
@@ -361,7 +366,7 @@ namespace dsn
             DWORD bytes = 0;
             DWORD flag = 0;
             int rt = WSARecv(
-                _rw_fd,
+                _socket,
                 buf,
                 1,
                 &bytes,
@@ -381,8 +386,9 @@ namespace dsn
         void hpc_rpc_session::do_write(message_ex* msg)
         {
             add_reference();
-            _write_event.callback = [this, msg](int err, uint32_t length)
+            _write_event.callback = [this, msg](int err, uint32_t length, uintptr_t lolp)
             {
+                dassert((LPOVERLAPPED)lolp == &_write_event.olp, "must be exact this overlapped");
                 if (err != ERROR_SUCCESS)
                 {
                     dwarn("WSASend failed, err = %d", err);
@@ -398,16 +404,19 @@ namespace dsn
             memset(&_write_event.olp, 0, sizeof(_write_event.olp));
 
             // make sure header is already in the buffer
-            std::vector<dsn_message_parser::send_buf> buffers;
-            _parser->prepare_buffers_on_send(msg, buffers);
+            int tlen = 0;
+            int buffer_count = _parser->get_send_buffers_count_and_total_length(msg, &tlen);
+            auto buffers = (dsn_message_parser::send_buf*)alloca(buffer_count * sizeof(dsn_message_parser::send_buf));
+
+            _parser->prepare_buffers_on_send(msg, 0, buffers);
 
             static_assert (sizeof(dsn_message_parser::send_buf) == sizeof(WSABUF), "make sure they are compatible");
 
             DWORD bytes = 0;
             int rt = WSASend(
-                _rw_fd,
-                (LPWSABUF)&buffers[0],
-                (DWORD)buffers.size(),
+                _socket,
+                (LPWSABUF)buffers,
+                (DWORD)buffer_count,
                 &bytes,
                 0,
                 &_write_event.olp,
@@ -424,18 +433,18 @@ namespace dsn
 
         void hpc_rpc_session::close()
         {
-            closesocket(_rw_fd);
+            closesocket(_socket);
             on_closed();
         }
 
         hpc_rpc_client_session::hpc_rpc_client_session(
-            SOCKET sock,
+            socket_t sock,
             std::shared_ptr<dsn::message_parser>& parser,
             connection_oriented_network& net,
             const dsn_address_t& remote_addr,
             rpc_client_matcher_ptr& matcher
             )
-            : rpc_client_session(net, remote_addr, matcher), hpc_rpc_session(sock, parser), _socket(sock)
+            : rpc_client_session(net, remote_addr, matcher), hpc_rpc_session(sock, parser)
         {
             _reconnect_count = 0;
             _state = SS_CLOSED;
@@ -462,8 +471,7 @@ namespace dsn
             if (!_state.compare_exchange_strong(closed_state, SS_CONNECTING))
                 return;
                         
-            auto evt = new hpc_network_provider::completion_event;
-            evt->callback = [this, evt](int err, uint32_t io_size)
+            _connect_event.callback = [this](int err, uint32_t io_size, uintptr_t lpolp)
             {
                 if (err != ERROR_SUCCESS)
                 {
@@ -484,17 +492,15 @@ namespace dsn
                     do_read();
                 }
                 this->release_ref(); // added before ConnectEx
-                delete evt;
             };
-
-            memset(&evt->olp, 0, sizeof(evt->olp));
+            memset(&_connect_event.olp, 0, sizeof(_connect_event.olp));
 
             struct sockaddr_in addr;
             addr.sin_family = AF_INET;
             addr.sin_addr.s_addr = htonl(_remote_addr.ip);
             addr.sin_port = htons(_remote_addr.port);
 
-            this->add_ref(); // released in evt->callback
+            this->add_ref(); // released in _connect_event.callback
             BOOL rt = s_lpfnConnectEx(
                 _socket,
                 (struct sockaddr*)&addr,
@@ -502,21 +508,20 @@ namespace dsn
                 0,
                 0,
                 0,
-                &evt->olp
+                &_connect_event.olp
                 );
 
             if (!rt && (WSAGetLastError() != ERROR_IO_PENDING))
             {
                 dwarn("ConnectEx failed, err = %d", ::WSAGetLastError());
                 this->release_ref();
-                delete evt;
 
                 on_failure();
             }
         }
 
         hpc_rpc_server_session::hpc_rpc_server_session(
-            SOCKET sock,
+            socket_t sock,
             std::shared_ptr<dsn::message_parser>& parser,
             connection_oriented_network& net,
             const dsn_address_t& remote_addr

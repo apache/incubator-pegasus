@@ -49,10 +49,8 @@ namespace dsn
         //   using evens to differentiate differnt types of ops
         //   for the same type of ops, it seems Linux doesn't support op differentiation
         //
-        struct io_loop_callback
-        {
-            virtual void handle_event(int native_error, uint32_t io_size, uintptr_t lolp_or_events) = 0;
-        };
+        // void handle_event(int native_error, uint32_t io_size, uintptr_t lolp_or_events) 
+        typedef std::function<void(int, uint32_t, uintptr_t)> io_loop_callback;
 
         //
         // io looper on completion queue
@@ -91,6 +89,7 @@ namespace dsn
             int    _io_queue;
             struct epoll_event _events[100];
             int    _local_notification_fd;
+            io_loop_callback _local_notification_callback;
 # endif
             std::vector<std::thread*> _workers;
         };

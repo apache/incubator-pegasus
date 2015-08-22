@@ -27,7 +27,8 @@
 # include "io_looper.h"
 
 # if defined(__linux__)
-//# ifdef _WIN32
+
+# include <sys/eventfd.h>
 
 namespace dsn
 {
@@ -71,7 +72,7 @@ namespace dsn
         error_code io_looper::unbind_io_handle(dsn_handle_t handle)
         {
             struct epoll_event e;
-            e.data.fd = (int)handle;
+            e.data.fd = (int)(intptr_t)handle;
 
             if (epoll_ctl(_io_queue, EPOLL_CTL_DEL, e.data.fd, &e) < 0)
             {
@@ -80,6 +81,11 @@ namespace dsn
             }
             else
                 return ERR_OK;
+        }
+
+        void io_looper::notify_local_execution()
+        {
+            //write(_event_fd, 1, 1);
         }
 
         void io_looper::create_completion_queue()
@@ -92,6 +98,28 @@ namespace dsn
         void io_looper::start(int worker_count)
         {
             create_completion_queue();
+
+            _local_notification_callback =[this](
+                int native_error,
+                uint32_t io_size,
+                uintptr_t lolp_or_events
+                )
+            {
+                uint32_t events = (uint32_t)lolp_or_events;
+                int notify_count = 0;
+
+                if (read(_local_notification_fd, &notify_count, sizeof(notify_count)) != sizeof(notify_count))
+                {
+                    dassert(false, "read number of aio completion from eventfd failed, err = %s",
+                        strerror(errno)
+                        );
+                }
+
+                this->handle_local_queues();
+            };
+
+            bind_io_handle((dsn_handle_t)_local_notification_fd, &_local_notification_callback, EPOLLIN | EPOLLET);
+
             for (int i = 0; i < worker_count; i++)
             {
                 std::thread* thr = new std::thread([this](){ this->loop_ios(); });
@@ -120,7 +148,7 @@ namespace dsn
 
             while (true)
             {
-                int nfds = epoll_pwait(_io_queue, _events, max_event_count, -1);
+                int nfds = epoll_wait(_io_queue, _events, max_event_count, -1);
                 if (-1 == nfds)
                 {
                     derror("epoll_pwait loop exits, err = %s", strerror(errno));
@@ -130,7 +158,7 @@ namespace dsn
                 for (int i = 0; i < nfds; i++)
                 {
                     auto cb = (io_loop_callback*)_events[i].data.ptr;
-                    cb->handle_event(0, 0, (uintptr_t)_events[i].events);
+                    (*cb)(0, 0, (uintptr_t)_events[i].events);
                 }
             }
         }

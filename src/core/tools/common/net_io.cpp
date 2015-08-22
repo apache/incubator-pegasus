@@ -139,13 +139,19 @@ namespace dsn {
         void net_io::write(message_ex* msg)
         {
             // make sure header is already in the buffer
-            std::vector<dsn_message_parser::send_buf> buffers;
-            _parser->prepare_buffers_on_send(msg, buffers);
+            // make sure header is already in the buffer
+            int tlen;
+            int buffer_count = _parser->get_send_buffers_count_and_total_length(msg, &tlen);
+            auto buffers = (dsn_message_parser::send_buf*)alloca(buffer_count * sizeof(dsn_message_parser::send_buf));
 
+            int c = _parser->prepare_buffers_on_send(msg, 0, buffers);
+            
             std::vector<boost::asio::const_buffer> buffers2;
-            for (auto& bb : buffers)
+            buffers2.resize(c);
+
+            for (int i = 0; i < c; i++)
             {
-                buffers2.push_back(boost::asio::const_buffer(bb.buf, bb.sz));
+                buffers2[i] = boost::asio::const_buffer(buffers[i].buf, buffers[i].sz);
             }
 
             add_reference();

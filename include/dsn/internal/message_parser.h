@@ -49,12 +49,26 @@ namespace dsn
         virtual message_ex* get_message_on_receive(int read_length, __out_param int& read_next) = 0;
 
         // before send, prepare buffer
+        // be compatible with WSABUF on windows and iovec on linux
+# ifdef _WIN32
         struct send_buf
         {
             uint32_t sz;
             void*    buf;            
         };
-        virtual void prepare_buffers_on_send(message_ex* msg, __out_param std::vector<send_buf>& buffers) = 0;
+# else
+        struct send_buf
+        {
+            void*    buf;
+            size_t   sz;
+        };
+# endif
+
+        // caller must ensure buffers length is correct as get_send_buffers_count_and_total_length(...);
+        // return buffer count used
+        virtual int prepare_buffers_on_send(message_ex* msg, int offset, __out_param send_buf* buffers) = 0;
+
+        virtual int get_send_buffers_count_and_total_length(message_ex* msg, __out_param int* total_length) = 0;
         
     protected:
         void create_new_buffer(int sz);
@@ -73,6 +87,8 @@ namespace dsn
 
         virtual message_ex* get_message_on_receive(int read_length, __out_param int& read_next);
 
-        virtual void prepare_buffers_on_send(message_ex* msg, __out_param std::vector<send_buf>& buffers) override;
+        virtual int prepare_buffers_on_send(message_ex* msg, int offset, __out_param send_buf* buffers) override;
+
+        virtual int get_send_buffers_count_and_total_length(message_ex* msg, __out_param int* total_length) override;
     };
 }

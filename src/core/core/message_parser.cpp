@@ -127,13 +127,30 @@ namespace dsn {
         }
     }
 
-    void dsn_message_parser::prepare_buffers_on_send(message_ex* msg, __out_param std::vector<send_buf>& buffers)
+    int dsn_message_parser::prepare_buffers_on_send(message_ex* msg, int offset, __out_param send_buf* buffers)
     {
-        buffers.clear();
+        int i = 0;        
         for (auto& buf : msg->buffers)
         {
-            buffers.push_back(send_buf{ (uint32_t)buf.length(), (void*)buf.data() });
+            if (offset >= buf.length())
+            {
+                offset -= buf.length();
+                continue;
+            }
+         
+            buffers[i].buf = (void*)(buf.data() + offset);
+            buffers[i].sz = (uint32_t)(buf.length() - offset);
+            offset = 0;
+            ++i;
         }
+
+        return i;
+    }
+
+    int dsn_message_parser::get_send_buffers_count_and_total_length(message_ex* msg, int* total_length)
+    {
+        *total_length = (int)msg->body_size() + sizeof(message_header);
+        return (int)msg->buffers.size();
     }
 
 }

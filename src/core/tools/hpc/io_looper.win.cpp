@@ -148,7 +148,7 @@ namespace dsn
                 else
                 {
                     io_loop_callback* cb = (io_loop_callback*)completion_key;
-                    cb->handle_event((int)error, io_size, (uintptr_t)lolp);
+                    (*cb)((int)error, io_size, (uintptr_t)lolp);
                 }
             }
         }
