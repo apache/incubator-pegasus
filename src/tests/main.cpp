@@ -33,7 +33,7 @@ public:
     ::dsn::error_code start(int argc, char** argv)
     {
         testing::InitGoogleTest(&argc, argv);
-        RUN_ALL_TESTS();
+        auto ret = RUN_ALL_TESTS();
         exit(0);
         return ::dsn::ERR_OK;
     }

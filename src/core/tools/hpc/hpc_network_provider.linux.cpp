@@ -114,7 +114,7 @@ namespace dsn
                 _listen_fd = create_tcp_socket(&addr);
                 if (_listen_fd == -1)
                 {
-                    dassert(false, "");
+                    dassert(false, "cannot create listen socket");
                 }
 
                 int forcereuse = 1;
@@ -124,19 +124,19 @@ namespace dsn
                     dwarn("setsockopt SO_REUSEDADDR failed, err = %s", strerror(errno));
                 }
 
+                if (listen(_listen_fd, SOMAXCONN) != 0)
+                {
+                    dwarn("listen failed, err = %s", strerror(errno));
+                    return ERR_NETWORK_START_FAILED;
+                }
+
                 _accept_event.callback = [this](int err, uint32_t size, uintptr_t lpolp)
                 {
                     this->do_accept();
                 };
 
                 get_looper()->bind_io_handle((dsn_handle_t)_listen_fd, &_accept_event.callback,
-                    EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLRDHUP | EPOLLET);
-
-                if (listen(_listen_fd, SOMAXCONN) != 0)
-                {
-                    dwarn("listen failed, err = %s", strerror(errno));
-                    return ERR_NETWORK_START_FAILED;
-                }
+                    EPOLLIN | EPOLLET);
             }
 
             return ERR_OK;
@@ -160,24 +160,11 @@ namespace dsn
 
         void hpc_network_provider::do_accept()
         {
-            struct sockaddr_in local_addr;
-            socklen_t len = (socklen_t)sizeof(local_addr);
-            socket_t s = accept(_listen_fd, (struct sockaddr*)&local_addr, &len);
+            struct sockaddr_in addr;
+            socklen_t addr_len = (socklen_t)sizeof(addr);
+            socket_t s = ::accept(_listen_fd, (struct sockaddr*)&addr, &addr_len);
             if (s != -1)
             {                
-                struct sockaddr_in addr;
-                memset((void*)&addr, 0, sizeof(addr));
-
-                addr.sin_family = AF_INET;
-                addr.sin_addr.s_addr = INADDR_ANY;
-                addr.sin_port = 0;
-
-                socklen_t addr_len = (socklen_t)sizeof(addr);
-                if (getpeername(s, (struct sockaddr*)&addr, &addr_len) == -1)
-                {
-                    dassert(false, "getpeername failed, err = %s", strerror(errno));
-                }
-
                 dsn_address_t client_addr;
                 dsn_address_build_ipv4(&client_addr, ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
 
