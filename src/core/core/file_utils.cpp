@@ -174,8 +174,15 @@ namespace dsn {
 		{
 			if (!sftw_ctx.recursive && (ftwbuf->level > 1))
 			{
-				sftw_ctx.expected_stop = true;
-				return FTW_STOP;
+				//sftw_ctx.expected_stop = true;
+				if ((typeflag == FTW_D) || (typeflag == FTW_DP))
+				{
+					return FTW_SKIP_SUBTREE;
+				}
+				else
+				{
+					return FTW_SKIP_SIBLINGS;
+				}
 			}
 
 			return sftw_ctx.fn(fpath, sftw_ctx.ctx, typeflag);
@@ -276,10 +283,14 @@ namespace dsn {
 			sftw_ctx.fn = fn;
 			sftw_ctx.recursive = recursive;
 			sftw_ctx.expected_stop = false;
-			int flags = recursive ? FTW_DEPTH : 0;
+			int flags = FTW_ACTIONRETVAL;
+			if (recursive)
+			{
+				flags |= FTW_DEPTH;
+			}
 			int ret = nftw(dirpath, ftw_wrapper, 1, flags);
 
-			return ((ret == 0) || ((ret == FTW_STOP) && sftw_ctx.expected_stop));
+			return (ret == 0);
 		#endif
 		}
 

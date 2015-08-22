@@ -614,14 +614,6 @@ TEST(core, file_utils_create_remove)
 	EXPECT_TRUE(ret);
 	if (ret)
 	{
-		if (true)//file_list.size() != 2)
-		{
-			printf("file_list size : %d\n", (int)file_list.size());
-			for (auto& file : file_list)
-			{
-				printf("file: %s\n", file.c_str());
-			}
-		}
 		EXPECT_TRUE(file_list.size() == 2);
 	}
 	file_list.clear();
