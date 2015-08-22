@@ -564,6 +564,20 @@ TEST(core, file_utils_create_remove)
 	std::vector<std::string> file_list;
 	bool ret;
 
+	path = "./file_utils_temp.txt";
+	ret = dsn::utils::remove(path);
+	EXPECT_TRUE(ret);
+	ret = dsn::utils::file_exists(path);
+	EXPECT_FALSE(ret);
+	ret = dsn::utils::create_file(path);
+	EXPECT_TRUE(ret);
+	ret = dsn::utils::file_exists(path);
+	EXPECT_TRUE(ret);
+	ret = dsn::utils::remove(path);
+	EXPECT_TRUE(ret);
+	ret = dsn::utils::file_exists(path);
+	EXPECT_FALSE(ret);
+
 	path = "./file_utils_temp";
 	ret = dsn::utils::remove(path);
 	ret = dsn::utils::directory_exists(path);
@@ -622,7 +636,7 @@ TEST(core, file_utils_create_remove)
 	ret = dsn::utils::remove(path);
 	EXPECT_TRUE(ret);
 	ret = dsn::utils::remove(path);
-	EXPECT_FALSE(ret);
+	EXPECT_TRUE(ret);
 
 	path = "./file_utils_temp/";
 	ret = dsn::utils::remove(path);

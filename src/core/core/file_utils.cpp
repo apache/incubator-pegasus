@@ -167,14 +167,13 @@ namespace dsn {
 			void*		ctx;
 			sftw_fn_t	fn;
 			bool		recursive;
-			bool		expected_stop;
 		} sftw_ctx;
 
 		static int ftw_wrapper(const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf)
 		{
 			if (!sftw_ctx.recursive && (ftwbuf->level > 1))
 			{
-				//sftw_ctx.expected_stop = true;
+#ifdef __linux__
 				if ((typeflag == FTW_D) || (typeflag == FTW_DP))
 				{
 					return FTW_SKIP_SUBTREE;
@@ -183,6 +182,9 @@ namespace dsn {
 				{
 					return FTW_SKIP_SIBLINGS;
 				}
+#else
+				return 0;
+#endif
 			}
 
 			return sftw_ctx.fn(fpath, sftw_ctx.ctx, typeflag);
@@ -205,7 +207,7 @@ namespace dsn {
 			std::string path;
 			int fn_ret;
 
-			if (!get_normalized_path(dirpath, path) || path.empty())
+			if (!dsn::utils::get_normalized_path(dirpath, path) || path.empty())
 			{
 				return false;
 			}
@@ -220,7 +222,7 @@ namespace dsn {
 				path = (dir
 					+ ((c == _FS_BSLASH) || (c == _FS_COLON) ? '' : _FS_BSLASH)
 					+ _FS_STAR);
-				hFind = FindFirstFileA(path.c_str(), &ffd);
+				hFind = ::FindFirstFileA(path.c_str(), &ffd);
 				if (INVALID_HANDLE_VALUE == hFind)
 				{
 					return false;
@@ -250,14 +252,14 @@ namespace dsn {
 						fn_ret = fn(path.c_str(), ctx, FTW_F);
 						if (fn_ret == FTW_STOP)
 						{
-							FindClose(hFind);
+							::FindClose(hFind);
 							return false;
 						}
 					}
-				} while (FindNextFileA(hFind, &ffd) != 0);
+				} while (::FindNextFileA(hFind, &ffd) != 0);
 
-				dwError = GetLastError();
-				FindClose(hFind);
+				dwError = ::GetLastError();
+				::FindClose(hFind);
 				if (dwError != ERROR_NO_MORE_FILES)
 				{
 					return false;
@@ -282,13 +284,18 @@ namespace dsn {
 			sftw_ctx.ctx = ctx;
 			sftw_ctx.fn = fn;
 			sftw_ctx.recursive = recursive;
-			sftw_ctx.expected_stop = false;
-			int flags = FTW_ACTIONRETVAL;
+			int flags = 
+#ifdef __linux__
+				FTW_ACTIONRETVAL
+#else
+				0
+#endif
+				;
 			if (recursive)
 			{
 				flags |= FTW_DEPTH;
 			}
-			int ret = nftw(dirpath, ftw_wrapper, 1, flags);
+			int ret = ::nftw(dirpath, ftw_wrapper, 1, flags);
 
 			return (ret == 0);
 		#endif
@@ -311,7 +318,7 @@ namespace dsn {
 #else
 			struct stat sb;
 
-			if (stat(path.c_str(), &sb) != 0)
+			if (::stat(path.c_str(), &sb) != 0)
 			{
 				return false;
 			}
@@ -322,17 +329,17 @@ namespace dsn {
 
 		bool exists(const std::string& path)
 		{
-			return (directory_exists(path) || file_exists(path));
+			return (dsn::utils::directory_exists(path) || dsn::utils::file_exists(path));
 		}
 
 		bool directory_exists(const std::string& path)
 		{
-			return exists_internal(path, false);
+			return dsn::utils::exists_internal(path, false);
 		}
 		
 		bool file_exists(const std::string& path)
 		{
-			return exists_internal(path, true);
+			return dsn::utils::exists_internal(path, true);
 		}
 
 		static int get_files_fn(const char* fpath, void* ctx, int typeflag)
@@ -348,12 +355,12 @@ namespace dsn {
 
 		bool get_files(const std::string& path, std::vector<std::string>& file_list, bool recursive)
 		{
-			if (!directory_exists(path))
+			if (!dsn::utils::directory_exists(path))
 			{
 				return false;
 			}
 
-			return sftw(path.c_str(), &file_list, get_files_fn, recursive);
+			return dsn::utils::sftw(path.c_str(), &file_list, dsn::utils::get_files_fn, recursive);
 		}
 
 		static int remove_directory_fn(const char* fpath, void* ctx, int typeflag)
@@ -361,38 +368,43 @@ namespace dsn {
 			bool succ;
 
 			dassert((typeflag == FTW_F) || (typeflag == FTW_DP), "Invalid typeflag = %d.", typeflag);
-#ifdef _WIN32
-			if (typeflag == FTW_F)
-			{
-				succ = (DeleteFileA(fpath) == TRUE);
-			}
-			else 
-			{
-				succ = (RemoveDirectoryA(fpath) == TRUE);
-			}
 
-#else
-			succ = (std::remove(fpath) == 0);
+#ifdef _WIN32
+			if (typeflag != FTW_F)
+			{
+				succ = (::RemoveDirectoryA(fpath) == TRUE);
+			}
+			else
+			{
 #endif
-			
+				succ = (std::remove(fpath) == 0);
+#ifdef _WIN32
+			}
+#endif
+
 			return (succ ? FTW_CONTINUE : FTW_STOP);
 		}
 
 		static bool remove_directory(const std::string& path)
 		{
-			if (!directory_exists(path))
+			if (!dsn::utils::directory_exists(path))
 			{
 				return false;
 			}
 
-			return sftw(path.c_str(), NULL, remove_directory_fn, true);
+			return dsn::utils::sftw(path.c_str(), NULL, dsn::utils::remove_directory_fn, true);
 		}
 
 		bool remove(const std::string& path)
 		{
-			if (directory_exists(path))
+			if (!dsn::utils::exists(path))
 			{
-				return remove_directory(path);
+				return true;
+			}
+
+			if (dsn::utils::directory_exists(path))
+			{
+				return dsn::utils::remove_directory(path);
 			}
 			else
 			{
@@ -413,12 +425,12 @@ namespace dsn {
 				return false;
 			}
 			
-			if (directory_exists(path))
+			if (dsn::utils::directory_exists(path))
 			{
-				return !file_exists(path);
+				return !dsn::utils::file_exists(path);
 			}
 
-			if (!get_normalized_path(path, npath) || npath.empty())
+			if (!dsn::utils::get_normalized_path(path, npath) || npath.empty())
 			{
 				return false;
 			}
@@ -450,9 +462,9 @@ namespace dsn {
 			{
 				auto ppath = npath.substr(0, pos++);
 				prev = pos;
-				if (!directory_exists(ppath))
+				if (!dsn::utils::directory_exists(ppath))
 				{
-					if (mkdir_(ppath.c_str()) != 0)
+					if (::mkdir_(ppath.c_str()) != 0)
 					{
 						return false;
 					}
@@ -461,7 +473,7 @@ namespace dsn {
 			
 			if (prev < len)
 			{
-				if (mkdir_(npath.c_str()) != 0)
+				if (::mkdir_(npath.c_str()) != 0)
 				{
 					return false;
 				}
@@ -473,60 +485,53 @@ namespace dsn {
 
 		bool create_file(const std::string& path)
 		{
-			size_t len;
 			size_t pos;
-			char endc;
-			std::string dir;
-
-			if (path.empty())
-			{
-				return false;
-			}
-
-			len = path.length();
-			endc = path[len - 1];
-			if ((endc == _FS_SLASH) || (endc == _FS_BSLASH))
-			{
-				return false;
-			}
-
-			if (dsn::utils::directory_exists(path))
-			{
-				return false;
-			}
-
-			pos = path.find_last_of("/\\");
-			if (pos == std::string::npos)
-			{
-				return false;
-			}
-			dir = path.substr(0, pos);
-
-			if (!create_directory(dir))
-			{
-				return false;
-			}
-
+			char c;
+			std::string npath;
 			int fd;
 			int mode;
+
+			if (!dsn::utils::get_normalized_path(path, npath) || npath.empty())
+			{
+				return false;
+			}
+
+			c = npath[npath.length() - 1];
+			if (_FS_ISSEP(c))
+			{
+				return false;
+			}
+
+			if (dsn::utils::directory_exists(npath))
+			{
+				return false;
+			}
+
+			pos = npath.find_last_of("/\\");
+			if ((pos != std::string::npos) && (pos > 0))
+			{
+				auto dir = npath.substr(0, pos);
+				if (!dsn::utils::create_directory(dir))
+				{
+					return false;
+				}
+			}
+
 #ifdef _WIN32
 			mode = _S_IREAD | _S_IWRITE;
 			if (_sopen_s(&fd,
-					path.c_str(),
+					npath.c_str(),
 					_O_WRONLY | _O_CREAT | _O_TRUNC,
 					_SH_DENYRW,
 					mode) != 0)
-			{
-				return false;
-			}
 #else
 			mode = 0775;
-			fd = creat(path.c_str(), mode);
+			fd = creat(npath.c_str(), mode);
 			if (fd == -1)
+#endif
 			{
 				return false;
 			}
-#endif
 
 			return (close_(fd) == 0);
 		}
