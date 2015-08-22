@@ -67,7 +67,7 @@ public:
         register_async_rpc_handler(RPC_TEST_HASH, "rpc.test.hash", &test_client::on_rpc_test_hash);
 
         testing::InitGoogleTest(&argc, argv);
-        RUN_ALL_TESTS();
+        auto ret = RUN_ALL_TESTS();
 
         // exit without any destruction
 # if defined(_WIN32)
