@@ -167,12 +167,14 @@ namespace dsn {
 			void*		ctx;
 			sftw_fn_t	fn;
 			bool		recursive;
+			bool		expected_stop;
 		} sftw_ctx;
 
 		static int ftw_wrapper(const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf)
 		{
 			if (!sftw_ctx.recursive && (ftwbuf->level > 1))
 			{
+				sftw_ctx.expected_stop = true;
 				return FTW_STOP;
 			}
 
@@ -273,9 +275,11 @@ namespace dsn {
 			sftw_ctx.ctx = ctx;
 			sftw_ctx.fn = fn;
 			sftw_ctx.recursive = recursive;
+			sftw_ctx.expected_stop = false;
 			int flags = recursive ? FTW_DEPTH : 0;
+			int ret = nftw(dirpath, ftw_wrapper, 1, flags);
 
-			return (nftw(dirpath, ftw_wrapper, 1, flags) == 0);
+			return ((ret == 0) || ((ret == FTW_STOP) && sftw_ctx.expected_stop));
 		#endif
 		}
 
