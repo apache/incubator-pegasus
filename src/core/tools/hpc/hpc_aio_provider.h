@@ -50,27 +50,11 @@ namespace dsn {
             error_code aio_internal(aio_task* aio, bool async, __out_param uint32_t* pbytes = nullptr);
             io_looper* get_looper() { return _looper ? _looper : dynamic_cast<io_looper*>(task::get_current_worker()); }
 
-        private:
-            class hpc_aio_io_loop_callback : public io_loop_callback
-            {
-            public:
-                hpc_aio_io_loop_callback(hpc_aio_provider* provider)
-                {
-                    _provider = provider;
-                }
-
-                virtual void handle_event(int native_error, uint32_t io_size, uintptr_t lolp_or_events) override;
-
-            private:
-                hpc_aio_provider *_provider;
-            };
-
         private:            
             io_looper *_looper;
-            hpc_aio_io_loop_callback _callback;
+            io_loop_callback _callback;
 
 # ifdef __linux__
-            void on_aio_completed(uint32_t events);
             void complete_aio(struct iocb* io, int bytes, int err);
 
             io_context_t _ctx;

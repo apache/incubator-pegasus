@@ -42,11 +42,54 @@
 
 namespace dsn { namespace tools {
 
+struct linux_disk_aio_context : public disk_aio
+{
+    struct iocb cb;
+    aio_task* tsk;
+    hpc_aio_provider* this_;
+    utils::notify_event* evt;
+    error_code err;
+    uint32_t bytes;
+};
 
 hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provider)
-    : aio_provider(disk, inner_provider), _callback(this)
+    : aio_provider(disk, inner_provider)
 {
     _looper = get_io_looper(node());
+    _callback = [this](
+        int native_error,
+        uint32_t io_size,
+        uintptr_t lolp_or_events
+        )
+    {
+        uint32_t events = (uint32_t)lolp_or_events;
+        int finished_aio = 0;
+
+        if (read(_event_fd, &finished_aio, sizeof(finished_aio)) != sizeof(finished_aio))
+        {
+            dassert(false, "read number of aio completion from eventfd failed, err = %s",
+                strerror(errno)
+                );
+        }
+
+        struct io_event events[1];
+        int ret;
+        linux_disk_aio_context * aio;
+
+        while (finished_aio > 0) 
+        {
+            struct timespec tms;
+            tms.tv_sec = 0;
+            tms.tv_nsec = 0;
+
+            ret = io_getevents(_ctx, 1, 1, events, &tms);
+            dassert(ret == 1, "aio must return 1 event as we already got "
+                "notification from eventfd");
+
+            struct iocb *io = events[0].obj;
+            complete_aio(io, static_cast<int>(events[0].res), static_cast<int>(events[0].res2));
+        }
+    };
 
     memset(&_ctx, 0, sizeof(_ctx));
     auto ret = io_setup(128, &_ctx); // 128 concurrent events
@@ -84,16 +127,6 @@ error_code hpc_aio_provider::close(dsn_handle_t hFile)
     ::close((int)(uintptr_t)(hFile));
     return ERR_OK;
 }
-
-struct linux_disk_aio_context : public disk_aio
-{
-    struct iocb cb;
-    aio_task* tsk;
-    hpc_aio_provider* this_;
-    utils::notify_event* evt;
-    error_code err;
-    uint32_t bytes;
-};
 
 disk_aio* hpc_aio_provider::prepare_aio_context(aio_task* tsk)
 {
@@ -184,45 +217,6 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, __out_p
             *pbytes = aio->bytes;
             return aio->err;
         }
-    }
-}
-
-void hpc_aio_provider::hpc_aio_io_loop_callback::handle_event(
-    int native_error,
-    uint32_t io_size,
-    uintptr_t lolp_or_events
-    )
-{
-    _provider->on_aio_completed((uint32_t)lolp_or_events);
-}
-
-void hpc_aio_provider::on_aio_completed(uint32_t events)
-{
-    int finished_aio = 0;
-    if (read(_event_fd, &finished_aio, sizeof(finished_aio)) != sizeof(finished_aio))
-    {
-        dassert(false, "read number of aio completion from eventfd failed, err = %s",
-            strerror(errno)
-            );
-    }
-
-
-    struct io_event events[1];
-    int ret;
-    linux_disk_aio_context * aio;
-
-    while (finished_aio > 0) 
-    {
-        struct timespec tms;
-        tms.tv_sec = 0;
-        tms.tv_nsec = 0;
-
-        ret = io_getevents(_ctx, 1, 1, events, &tms);
-        dassert(ret == 1, "aio must return 1 event as we already got "
-            "notification from eventfd");
-
-        struct iocb *io = events[0].obj;
-        complete_aio(io, static_cast<int>(events[0].res), static_cast<int>(events[0].res2));
     }
 }
 

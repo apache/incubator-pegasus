@@ -40,11 +40,39 @@
 
 namespace dsn { namespace tools {
 
+struct windows_disk_aio_context : public disk_aio
+{
+    OVERLAPPED olp;
+    aio_task*  tsk;
+    utils::notify_event*  evt;
+    error_code err;
+    uint32_t bytes;
+};
 
 hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provider)
-    : aio_provider(disk, inner_provider), _callback(this)
+    : aio_provider(disk, inner_provider)
 {
     _looper = get_io_looper(node());
+    _callback = [this](
+        int native_error,
+        uint32_t io_size,
+        uintptr_t lolp_or_events
+        )
+    {
+        windows_disk_aio_context* ctx = CONTAINING_RECORD(lolp_or_events, windows_disk_aio_context, olp);
+        error_code err = native_error == ERROR_SUCCESS ? ERR_OK : ERR_FILE_OPERATION_FAILED;
+        if (!ctx->evt)
+        {
+            aio_task* aio(ctx->tsk);
+            this->complete_io(aio, err, io_size);
+        }
+        else
+        {
+            ctx->err = err;
+            ctx->bytes = io_size;
+            ctx->evt->notify();
+        }
+    };
 }
 
 hpc_aio_provider::~hpc_aio_provider()
@@ -177,15 +205,6 @@ error_code hpc_aio_provider::close(dsn_handle_t hFile)
     }        
 }
 
-struct windows_disk_aio_context : public disk_aio
-{
-    OVERLAPPED olp;
-    aio_task*  tsk;
-    utils::notify_event*  evt;
-    error_code err;
-    uint32_t bytes;
-};
-
 disk_aio* hpc_aio_provider::prepare_aio_context(aio_task* tsk)
 {
     auto r = new windows_disk_aio_context;
@@ -262,27 +281,6 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, __out_p
         aio->evt = nullptr;
         *pbytes = aio->bytes;
         return aio->err;
-    }
-}
-
-void hpc_aio_provider::hpc_aio_io_loop_callback::handle_event(
-    int native_error, 
-    uint32_t io_size, 
-    uintptr_t lolp_or_events
-    )
-{
-    windows_disk_aio_context* ctx = CONTAINING_RECORD(lolp_or_events, windows_disk_aio_context, olp);
-    error_code err = native_error == ERROR_SUCCESS ? ERR_OK : ERR_FILE_OPERATION_FAILED;
-    if (!ctx->evt)
-    {
-        aio_task* aio(ctx->tsk);
-        _provider->complete_io(aio, err, io_size);
-    }
-    else
-    {
-        ctx->err = err;
-        ctx->bytes = io_size;
-        ctx->evt->notify();
     }
 }
 

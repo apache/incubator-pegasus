@@ -82,6 +82,11 @@ namespace dsn
                 return ERR_OK;
         }
 
+        void io_looper::notify_local_execution()
+        {
+            //write(_event_fd, 1, 1);
+        }
+
         void io_looper::create_completion_queue()
         {
             const int max_event_count = sizeof(_events) / sizeof(struct epoll_event);
@@ -92,6 +97,28 @@ namespace dsn
         void io_looper::start(int worker_count)
         {
             create_completion_queue();
+
+            _local_notification_callback =[this](
+                int native_error,
+                uint32_t io_size,
+                uintptr_t lolp_or_events
+                )
+            {
+                uint32_t events = (uint32_t)lolp_or_events;
+                int notify_count = 0;
+
+                if (read(_event_fd, &notify_count, sizeof(notify_count)) != sizeof(notify_count))
+                {
+                    dassert(false, "read number of aio completion from eventfd failed, err = %s",
+                        strerror(errno)
+                        );
+                }
+
+                this->handle_local_queues();
+            };
+
+            bind_io_handle(_local_notification_fd, &_local_notification_callback, EPOLLIN | EPOLLET);
+
             for (int i = 0; i < worker_count; i++)
             {
                 std::thread* thr = new std::thread([this](){ this->loop_ios(); });
@@ -130,7 +157,7 @@ namespace dsn
                 for (int i = 0; i < nfds; i++)
                 {
                     auto cb = (io_loop_callback*)_events[i].data.ptr;
-                    cb->handle_event(0, 0, (uintptr_t)_events[i].events);
+                    (*cb)(0, 0, (uintptr_t)_events[i].events);
                 }
             }
         }

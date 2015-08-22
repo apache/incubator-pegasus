@@ -50,76 +50,30 @@ namespace dsn {
             virtual rpc_client_session_ptr create_client_session(const dsn_address_t& server_addr);
 
         private:
-            socket_t        _listen_fd;
+            socket_t      _listen_fd;
             dsn_address_t _address;
-            io_looper *_looper;
-
-        private:
-            io_looper* get_looper() { return _looper ? _looper : dynamic_cast<io_looper*>(task::get_current_worker()); }
-
-# ifdef _WIN32
-        private:
-            void do_accept();
-            void on_accepted(int err, uint32_t size);
+            io_looper     *_looper;
 
         public:
-            struct completion_event
+            io_looper* get_looper() { return _looper ? _looper : dynamic_cast<io_looper*>(task::get_current_worker()); }
+
+        private:
+            void do_accept();
+
+        public:
+            struct ready_event
             {
+# ifdef _WIN32
                 OVERLAPPED olp;
-                std::function<void(int, uint32_t)> callback;
+# endif
+                io_loop_callback callback;
             };
 
-        private:
-            class hpc_network_io_loop_callback : public io_loop_callback
-            {
-            public:
-                hpc_network_io_loop_callback(hpc_network_provider* provider)
-                {
-                    _provider = provider;
-                }
-
-                virtual void handle_event(int native_error, uint32_t io_size, uintptr_t lolp_or_events) override
-                {
-                    completion_event* ctx = CONTAINING_RECORD(lolp_or_events, completion_event, olp);
-                    ctx->callback(native_error, io_size);
-                }
-
-            private:
-                hpc_network_provider *_provider;
-            };
-
-        private:
-            struct accept_completion_event : completion_event
-            {
-                socket_t s;
-                char   buffer[1024];
-            };
-            
-            hpc_network_io_loop_callback _callback;
-            accept_completion_event _accept_event;
-# else
-        private:
-            class hpc_network_io_loop_callback : public io_loop_callback
-            {
-            public:
-                hpc_network_io_loop_callback(hpc_network_provider* provider)
-                {
-                    _provider = provider;
-                }
-
-                virtual void handle_event(int native_error, uint32_t io_size, uintptr_t lolp_or_events) override
-                {
-                    _provider->on_events_ready((uint32_t)lolp_or_events);
-                }
-
-            private:
-                hpc_network_provider *_provider;
-            };
-
-        private:
-            void on_events_ready(uint32_t events);
-
-            hpc_network_io_loop_callback _callback;
+        private:            
+            ready_event      _accept_event;
+# ifdef _WIN32
+            socket_t         _accept_sock;
+            char             _accept_buffer[1024];
 # endif
         };
 
@@ -131,6 +85,7 @@ namespace dsn {
                 std::shared_ptr<dsn::message_parser>& parser
                 );
 
+            void bind_looper(io_looper* looper);
             void do_read(int sz = 256);
             void do_write(message_ex* msg);
             void close();
@@ -142,13 +97,18 @@ namespace dsn {
             virtual void add_reference() = 0;
             virtual void release_reference() = 0;
 
-        private:
-            socket_t _rw_fd;
+        protected:
+            socket_t _socket;
             std::shared_ptr<dsn::message_parser>   _parser;
+            io_loop_callback                       _ready_event;
+
 # ifdef _WIN32
-            hpc_network_provider::completion_event _read_event;
-            hpc_network_provider::completion_event _write_event;
+            hpc_network_provider::ready_event      _read_event;
+            hpc_network_provider::ready_event      _write_event;
 # else
+            message_ex*                            _sending_msg;
+            int                                    _sending_next_offset;
+            struct sockaddr_in                     _peer_addr;
 # endif
         };
 
@@ -185,7 +145,9 @@ namespace dsn {
             }
 
         private:
-            socket_t _socket;
+# ifdef _WIN32
+            hpc_network_provider::ready_event      _connect_event;
+# endif
 
         private:
             virtual void on_failure();
