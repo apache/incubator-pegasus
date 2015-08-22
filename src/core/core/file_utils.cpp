@@ -82,8 +82,84 @@ enum
 namespace dsn {
 	namespace utils {
 
-		static char UnixPathSeparator = '/';
-		static char WinPathSeparator = '\\';
+		#define _FS_COLON	':'
+		#define _FS_PERIOD	'.'
+		#define _FS_SLASH	'/'
+		#define _FS_BSLASH	'\\'
+		#define _FS_STAR	'*'
+		#define _FS_QUESTION	'?'
+		#define _FS_NULL	'\0'
+		#define _FS_ISSEP(x)	((x) == _FS_SLASH || (x) == _FS_BSLASH)
+
+		static bool get_normalized_path(const std::string& path, std::string& npath)
+		{
+			char sep;
+			size_t i;
+			size_t pos;
+			size_t len;
+			char* buf;
+			char c;
+
+			if (path.empty())
+			{
+				npath = "";
+				return true;
+			}
+
+			len = path.length();
+			buf = new char[len + 1];
+			if (buf == nullptr)
+			{
+				return false;
+			}
+
+#ifdef _WIN32
+			sep = _FS_BSLASH;
+#else
+			sep = _FS_SLASH;
+#endif
+			i = 0;
+			pos = 0;
+			while (i < len)
+			{
+				c = path[i++];
+				if (
+#ifdef _WIN32
+					_FS_ISSEP(c)
+#else
+					c == _FS_SLASH
+#endif
+					)
+				{
+#ifdef _WIN32
+					c = sep;
+					if (i > 1)
+#endif
+						while ((i < len) && _FS_ISSEP(path[i]))
+						{
+							i++;
+							continue;
+						}
+				}
+
+				buf[pos++] = c;
+			}
+
+			buf[pos] = _FS_NULL;
+			if ((c == sep) && (pos > 1))
+			{
+#ifdef _WIN32
+				c = buf[pos - 2];
+				if ((c != _FS_COLON) && (c != _FS_QUESTION) && (c != _FS_BSLASH))
+#endif
+					buf[pos - 1] = _FS_NULL;
+			}
+
+			npath = buf;
+			delete[] buf;
+
+			return true;
+		}
 
 #ifndef _WIN32
 		static __thread struct
@@ -116,17 +192,26 @@ namespace dsn {
 			DWORD dwError = ERROR_SUCCESS;
 			std::deque<std::string> queue;
 			std::deque<std::string> queue2;
-			std::string name;
-			std::string subpath;
+			char c;
+			std::string path;
 			int fn_ret;
 
-			queue.push_back(dirpath);
+			if (!get_normalized_path(dirpath, path) || path.empty())
+			{
+				return false;
+			}
+
+			queue.push_back(path);
 			while (!queue.empty())
 			{
-				auto path = queue.front();
+				std::string& dir = queue.front();
 				queue.pop_front();
 
-				hFind = FindFirstFileA((path + "\\*").c_str(), &ffd);
+				c = dir[dir.length() - 1];
+				path = (dir
+					+ ((c == _FS_BSLASH) || (c == _FS_COLON) ? '' : _FS_BSLASH)
+					+ _FS_STAR);
+				hFind = FindFirstFileA(path.c_str(), &ffd);
 				if (INVALID_HANDLE_VALUE == hFind)
 				{
 					return false;
@@ -134,23 +219,26 @@ namespace dsn {
 
 				do
 				{
-					name = ffd.cFileName;
-					if ((name == ".") || (name == ".."))
+					path = ffd.cFileName;
+					if (path.empty() || (path == ".") || (path == ".."))
 					{
 						continue;
 					}
 
-					subpath = path + "\\" + name;
+					path = (dir
+						+ ((c == _FS_BSLASH) || (c == _FS_COLON) ? '' : _FS_BSLASH)
+						+ path);
+
 					if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 					{
 						if (recursive)
 						{
-							queue.push_front(subpath);
+							queue.push_front(path);
 						}
 					}
 					else
 					{
-						fn_ret = fn(subpath.c_str(), ctx, FTW_F);
+						fn_ret = fn(path.c_str(), ctx, FTW_F);
 						if (fn_ret == FTW_STOP)
 						{
 							FindClose(hFind);
@@ -166,14 +254,14 @@ namespace dsn {
 					return false;
 				}
 
-				queue2.push_front(path);
+				queue2.push_front(dir);
 			}
 
 			while (!queue2.empty())
 			{
-				auto path = queue2.front();
+				std::string& dir = queue2.front();
 				queue2.pop_front();
-				fn_ret = fn(path.c_str(), ctx, FTW_DP);
+				fn_ret = fn(dir.c_str(), ctx, FTW_DP);
 				if (fn_ret == FTW_STOP)
 				{
 					return false;
@@ -297,62 +385,6 @@ namespace dsn {
 			}
 		}
 
-		static std::string get_normalized_path(const std::string& path)
-		{
-			char sep;
-			size_t start;
-			size_t end;
-			std::string ret;
-
-			start = 0;
-			end = path.length() - 1;
-#ifdef _WIN32
-			sep = WinPathSeparator;
-#else
-			sep = UnixPathSeparator;
-			while ((path[start] == sep) && (start < end))
-			{
-				start++;				
-			}
-			if (start > 0)
-			{
-				start--;
-			}
-#endif
-
-			while (
-#ifdef _WIN32
-				(
-#endif
-				(path[end] == sep)
-#ifdef _WIN32
-					|| (path[end] == UnixPathSeparator))
-#endif
-					&& (start < end))
-			{
-				end--;
-			}
-#ifdef _WIN32
-			if (path[end] == ':')
-			{
-				end++;
-			}
-#endif
-
-			ret = path.substr(start, (end - start + 1));
-#ifdef _WIN32
-			for (char& c : ret)
-			{
-				if (c == UnixPathSeparator)
-				{
-					c = WinPathSeparator;
-				}
-			}
-#endif
-
-			return ret;
-		}
-
 		bool create_directory(const std::string& path)
 		{
 			size_t prev = 0;
@@ -371,10 +403,14 @@ namespace dsn {
 				return !file_exists(path);
 			}
 
-			npath = get_normalized_path(path);
+			if (!get_normalized_path(path, npath) || npath.empty())
+			{
+				return false;
+			}
+			
 			len = npath.length();
 #ifdef _WIN32
-			sep = WinPathSeparator;
+			sep = _FS_BSLASH;
 			if (npath.compare(0, 4, "\\\\?\\") == 0)
 			{
 				prev = 4;
@@ -383,13 +419,21 @@ namespace dsn {
 			{
 				prev = 2
 			}
+			else if (npath.compare(1, 2 ":\\") == 0)
+			{
+				prev = 3;
+			}
 #else
-			sep = UnixPathSeparator;
+			sep = _FS_SLASH;
+			if (npath[0] == sep)
+			{
+				prev = 1;
+			}
 #endif
 
 			while ((pos = npath.find_first_of(sep, prev)) != std::string::npos)
 			{
-				auto ppath = npath.substr(0,pos++);
+				auto ppath = npath.substr(0, pos++);
 				prev = pos;
 				if (!directory_exists(ppath))
 				{
@@ -426,7 +470,7 @@ namespace dsn {
 
 			len = path.length();
 			endc = path[len - 1];
-			if ((endc == UnixPathSeparator) || (endc == WinPathSeparator))
+			if ((endc == _FS_SLASH) || (endc == _FS_BSLASH))
 			{
 				return false;
 			}
