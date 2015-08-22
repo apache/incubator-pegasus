@@ -32,7 +32,11 @@
 # include <dsn/tool_api.h>
 
 #ifndef _WIN32
+
+#ifdef __linux__
 # include <sys/epoll.h>
+#endif
+
 #endif
 
 namespace dsn
