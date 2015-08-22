@@ -84,7 +84,8 @@ namespace dsn
 
         void io_looper::notify_local_execution()
         {
-            //write(_event_fd, 1, 1);
+            int64_t c = 1;
+            ::write(_local_notification_fd, &c, sizeof(c));
         }
 
         void io_looper::create_completion_queue()

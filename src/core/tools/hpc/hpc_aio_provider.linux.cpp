@@ -63,7 +63,7 @@ hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provid
         uintptr_t lolp_or_events
         )
     {
-        int finished_aio = 0;
+        int64_t finished_aio = 0;
 
         if (read(_event_fd, &finished_aio, sizeof(finished_aio)) != sizeof(finished_aio))
         {
@@ -76,7 +76,7 @@ hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provid
         int ret;
         linux_disk_aio_context * aio;
 
-        while (finished_aio > 0) 
+        while (finished_aio-- > 0) 
         {
             struct timespec tms;
             tms.tv_sec = 0;
