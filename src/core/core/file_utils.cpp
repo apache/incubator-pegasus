@@ -76,6 +76,14 @@ enum
 #endif
 # include <ftw.h>
 
+#ifndef FTW_CONTINUE
+# define FTW_CONTINUE 0
+#endif
+
+#ifndef FTW_STOP
+# define FTW_STOP 1
+#endif
+
 #endif
 
 
