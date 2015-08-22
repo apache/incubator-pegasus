@@ -78,7 +78,7 @@ namespace dsn
                 if (bind(s, (struct sockaddr*)addr, sizeof(*addr)) != 0)
                 {
                     derror("bind failed, err = %s", strerror(errno));
-                    close(s);
+                    ::close(s);
                     return -1;
                 }
             }
