@@ -28,6 +28,7 @@
 
 # include "hpc_network_provider.h"
 # include "mix_all_io_looper.h"
+# include <netinet/tcp.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -54,20 +55,13 @@ namespace dsn
                 dwarn("setsockopt TCP_NODELAY failed, err = %s", strerror(errno));
             }
 
-            int isopt = 1;
-            if (setsockopt(s, SOL_SOCKET, SO_DONTLINGER, (char*)&isopt, sizeof(int)) != 0)
-            {
-                dwarn("setsockopt SO_DONTLINGER failed, err = %s", strerror(errno));
-            }
+            //int isopt = 1;
+            //if (setsockopt(s, SOL_SOCKET, SO_DONTLINGER, (char*)&isopt, sizeof(int)) != 0)
+            //{
+            //    dwarn("setsockopt SO_DONTLINGER failed, err = %s", strerror(errno));
+            //}
 
-            //streaming data using overlapped I/O should set the send buffer to zero
-            int buflen = 0;
-            if (setsockopt(s, SOL_SOCKET, SO_SNDBUF, (char*)&buflen, sizeof(buflen)) != 0)
-            {
-                dwarn("setsockopt SO_SNDBUF failed, err = %s", strerror(errno));
-            }
-
-            buflen = 8 * 1024 * 1024;
+            int buflen = 8 * 1024 * 1024;
             if (setsockopt(s, SOL_SOCKET, SO_RCVBUF, (char*)&buflen, sizeof(buflen)) != 0)
             {
                 dwarn("setsockopt SO_RCVBUF failed, err = %s", strerror(errno));
@@ -84,7 +78,7 @@ namespace dsn
                 if (bind(s, (struct sockaddr*)addr, sizeof(*addr)) != 0)
                 {
                     derror("bind failed, err = %s", strerror(errno));
-                    closesocket(s);
+                    close(s);
                     return -1;
                 }
             }
@@ -167,7 +161,7 @@ namespace dsn
         void hpc_network_provider::do_accept()
         {
             struct sockaddr_in local_addr;
-            int len = (int)sizeof(local_addr);
+            socklen_t len = (socklen_t)sizeof(local_addr);
             socket_t s = accept(_listen_fd, (struct sockaddr*)&local_addr, &len);
             if (s != -1)
             {                
@@ -178,8 +172,8 @@ namespace dsn
                 addr.sin_addr.s_addr = INADDR_ANY;
                 addr.sin_port = 0;
 
-                int addr_len = sizeof(addr);
-                if (getpeername(_accept_sock, (struct sockaddr*)&addr, &addr_len) == -1)
+                socklen_t addr_len = (socklen_t)sizeof(addr);
+                if (getpeername(s, (struct sockaddr*)&addr, &addr_len) == -1)
                 {
                     dassert(false, "getpeername failed, err = %s", strerror(errno));
                 }
@@ -188,10 +182,10 @@ namespace dsn
                 dsn_address_build_ipv4(&client_addr, ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
 
                 auto parser = new_message_parser();
-                auto s = new hpc_rpc_server_session(_accept_sock, parser, *this, client_addr);
-                s->bind_looper(get_looper());
+                auto rs = new hpc_rpc_server_session(s, parser, *this, client_addr);
+                rs->bind_looper(get_looper());
 
-                rpc_server_session_ptr s1(s);
+                rpc_server_session_ptr s1(rs);
                 this->on_server_session_accepted(s1);
             }
             else
@@ -215,11 +209,6 @@ namespace dsn
             _peer_addr.sin_addr.s_addr = INADDR_ANY;
             _peer_addr.sin_port = 0;
 
-            int addr_len = sizeof(_peer_addr);
-            if (getpeername(_accept_sock, (struct sockaddr*)&_peer_addr, &addr_len) == -1)
-            {
-                dassert(false, "getpeername failed, err = %s", strerror(errno));
-            }
 
             _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
             {
@@ -349,7 +338,7 @@ namespace dsn
 
         void hpc_rpc_session::close()
         {
-            closesocket(_socket);
+            ::close(_socket);
             on_closed();
         }
 
@@ -392,7 +381,7 @@ namespace dsn
             addr.sin_addr.s_addr = htonl(_remote_addr.ip);
             addr.sin_port = htons(_remote_addr.port);
 
-            int rt = connect(_socket, (struct sockaddr*)&addr, (int)sizeof(addr));
+            int rt = ::connect(_socket, (struct sockaddr*)&addr, (int)sizeof(addr));
             if (rt == -1)
             {
                 dwarn("connect failed, err = %s", strerror(errno));
@@ -400,6 +389,12 @@ namespace dsn
             }
             else
             {
+                socklen_t addr_len = (socklen_t)sizeof(_peer_addr);
+                if (getpeername(_socket, (struct sockaddr*)&_peer_addr, &addr_len) == -1)
+                {
+                    dassert(false, "getpeername failed, err = %s", strerror(errno));
+                }
+
                 // looper is already bound, so nothing to do
             }
         }
@@ -412,6 +407,13 @@ namespace dsn
             )
             : rpc_server_session(net, remote_addr), hpc_rpc_session(sock, parser)
         {
+            socklen_t addr_len = (socklen_t)sizeof(_peer_addr);
+            if (getpeername(_socket, (struct sockaddr*)&_peer_addr, &addr_len) == -1)
+            {
+                dassert(false, "getpeername failed, err = %s", strerror(errno));
+            }
+
+
             do_read();
         }
     }

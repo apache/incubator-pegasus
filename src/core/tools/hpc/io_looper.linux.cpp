@@ -27,7 +27,8 @@
 # include "io_looper.h"
 
 # if defined(__linux__)
-//# ifdef _WIN32
+
+# include <sys/eventfd.h>
 
 namespace dsn
 {
@@ -71,7 +72,7 @@ namespace dsn
         error_code io_looper::unbind_io_handle(dsn_handle_t handle)
         {
             struct epoll_event e;
-            e.data.fd = (int)handle;
+            e.data.fd = (int)(intptr_t)handle;
 
             if (epoll_ctl(_io_queue, EPOLL_CTL_DEL, e.data.fd, &e) < 0)
             {
@@ -107,7 +108,7 @@ namespace dsn
                 uint32_t events = (uint32_t)lolp_or_events;
                 int notify_count = 0;
 
-                if (read(_event_fd, &notify_count, sizeof(notify_count)) != sizeof(notify_count))
+                if (read(_local_notification_fd, &notify_count, sizeof(notify_count)) != sizeof(notify_count))
                 {
                     dassert(false, "read number of aio completion from eventfd failed, err = %s",
                         strerror(errno)
@@ -117,7 +118,7 @@ namespace dsn
                 this->handle_local_queues();
             };
 
-            bind_io_handle(_local_notification_fd, &_local_notification_callback, EPOLLIN | EPOLLET);
+            bind_io_handle((dsn_handle_t)_local_notification_fd, &_local_notification_callback, EPOLLIN | EPOLLET);
 
             for (int i = 0; i < worker_count; i++)
             {
@@ -147,7 +148,7 @@ namespace dsn
 
             while (true)
             {
-                int nfds = epoll_pwait(_io_queue, _events, max_event_count, -1);
+                int nfds = epoll_wait(_io_queue, _events, max_event_count, -1);
                 if (-1 == nfds)
                 {
                     derror("epoll_pwait loop exits, err = %s", strerror(errno));

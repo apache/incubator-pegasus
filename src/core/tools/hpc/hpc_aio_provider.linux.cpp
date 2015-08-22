@@ -31,7 +31,8 @@
 # include <fcntl.h>
 # include <sys/types.h>
 # include <sys/stat.h>
-# include <io.h>
+# include <aio.h>
+# include <sys/eventfd.h>
 # include <stdio.h>
 # include "mix_all_io_looper.h"
 
@@ -62,7 +63,6 @@ hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provid
         uintptr_t lolp_or_events
         )
     {
-        uint32_t events = (uint32_t)lolp_or_events;
         int finished_aio = 0;
 
         if (read(_event_fd, &finished_aio, sizeof(finished_aio)) != sizeof(finished_aio))
@@ -113,7 +113,7 @@ hpc_aio_provider::~hpc_aio_provider()
     auto ret = io_destroy(_ctx);
     dassert(ret == 0, "io_destroy error, ret = %d", ret);
 
-    close(_event_fd);
+    ::close(_event_fd);
 }
 
 dsn_handle_t hpc_aio_provider::open(const char* file_name, int oflag, int pmode)

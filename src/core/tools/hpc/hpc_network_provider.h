@@ -29,11 +29,16 @@
 # include "io_looper.h"
 
 # ifdef _WIN32
-typedef SOCKET socket_t;
+    typedef SOCKET socket_t;
 # else
-# include <sys/types.h>
-# include <sys/socket.h>
-typedef int socket_t;
+    # include <sys/types.h>
+    # include <sys/socket.h>
+    # include <netdb.h>
+    # include <arpa/inet.h>
+    typedef int socket_t;
+    # if defined(__FreeBSD__)
+        # include <netinet/in.h>
+    # endif
 # endif
 
 namespace dsn {
