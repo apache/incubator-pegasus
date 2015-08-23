@@ -226,10 +226,14 @@ namespace dsn {
 				std::string& dir = queue.front();
 				queue.pop_front();
 
+				path = dir;
 				c = dir[dir.length() - 1];
-				path = (dir
-					+ ((c == _FS_BSLASH) || (c == _FS_COLON) ? '' : _FS_BSLASH)
-					+ _FS_STAR);
+				if ((c != _FS_BSLASH) && (c != _FS_COLON))
+				{
+					path.append(1, _FS_BSLASH);
+				}
+				path.append(1, _FS_STAR);
+
 				hFind = ::FindFirstFileA(path.c_str(), &ffd);
 				if (INVALID_HANDLE_VALUE == hFind)
 				{
@@ -244,9 +248,12 @@ namespace dsn {
 						continue;
 					}
 
-					path = (dir
-						+ ((c == _FS_BSLASH) || (c == _FS_COLON) ? '' : _FS_BSLASH)
-						+ path);
+					path = dir;
+					if ((c != _FS_BSLASH) && (c != _FS_COLON))
+					{
+						path.append(1, _FS_BSLASH);
+					}
+					path.append(ffd.cFileName);
 
 					if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 					{
@@ -450,11 +457,11 @@ namespace dsn {
 			{
 				prev = 4;
 			}
-			else if (npath.compare(0, 2 "\\\\") == 0)
+			else if (npath.compare(0, 2, "\\\\") == 0)
 			{
-				prev = 2
+				prev = 2;
 			}
-			else if (npath.compare(1, 2 ":\\") == 0)
+			else if (npath.compare(1, 2, ":\\") == 0)
 			{
 				prev = 3;
 			}
