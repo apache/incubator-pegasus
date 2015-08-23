@@ -146,7 +146,6 @@ namespace dsn {
 						while ((i < len) && _FS_ISSEP(path[i]))
 						{
 							i++;
-							continue;
 						}
 				}
 
@@ -212,22 +211,25 @@ namespace dsn {
 			std::deque<std::string> queue;
 			std::deque<std::string> queue2;
 			char c;
+			std::string dir;
 			std::string path;
 			int fn_ret;
 
+			path.reserve(MAX_PATH);
 			if (!dsn::utils::get_normalized_path(dirpath, path) || path.empty())
 			{
 				return false;
 			}
 
+			dir.reserve(MAX_PATH);
 			queue.push_back(path);
 			while (!queue.empty())
 			{
-				std::string& dir = queue.front();
+				dir = queue.front();
 				queue.pop_front();
 
-				path = dir;
 				c = dir[dir.length() - 1];
+				path = dir;
 				if ((c != _FS_BSLASH) && (c != _FS_COLON))
 				{
 					path.append(1, _FS_BSLASH);
@@ -242,8 +244,10 @@ namespace dsn {
 
 				do
 				{
-					path = ffd.cFileName;
-					if (path.empty() || (path == ".") || (path == ".."))
+					if ((ffd.cFileName[0] == _FS_NULL)
+						|| (strcmp(ffd.cFileName, ".") == 0)
+						|| (strcmp(ffd.cFileName, "..") == 0)
+						)
 					{
 						continue;
 					}
@@ -265,7 +269,7 @@ namespace dsn {
 					else
 					{
 						fn_ret = fn(path.c_str(), ctx, FTW_F);
-						if (fn_ret == FTW_STOP)
+						if (fn_ret != FTW_CONTINUE)
 						{
 							::FindClose(hFind);
 							return false;
@@ -283,12 +287,10 @@ namespace dsn {
 				queue2.push_front(dir);
 			}
 
-			while (!queue2.empty())
+			for (auto& dir2 : queue2)
 			{
-				std::string& dir = queue2.front();
-				queue2.pop_front();
-				fn_ret = fn(dir.c_str(), ctx, FTW_DP);
-				if (fn_ret == FTW_STOP)
+				fn_ret = fn(dir2.c_str(), ctx, FTW_DP);
+				if (fn_ret != FTW_CONTINUE)
 				{
 					return false;
 				}
