@@ -450,11 +450,11 @@ namespace dsn {
 			{
 				prev = 4;
 			}
-			else if (npath.compare(0, 2 "\\\\") == 0)
+			else if (npath.compare(0, 2, "\\\\") == 0)
 			{
-				prev = 2
+				prev = 2;
 			}
-			else if (npath.compare(1, 2 ":\\") == 0)
+			else if (npath.compare(1, 2, ":\\") == 0)
 			{
 				prev = 3;
 			}
