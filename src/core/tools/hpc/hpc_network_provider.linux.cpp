@@ -365,6 +365,10 @@ namespace dsn
                     }
 
                     _state = SS_CONNECTED;
+                    dinfo("client session %s:%u connected", 
+                            _remote_addr.name,
+                            _remote_addr.port
+                         );
                     set_ready_event_for_send_recv();
                 }
             };
@@ -418,6 +422,10 @@ namespace dsn
                 }
 
                 _state = SS_CONNECTED;
+                dinfo("client session %s:%u connected", 
+                            _remote_addr.name,
+                            _remote_addr.port
+                         );
                 set_ready_event_for_send_recv();
             }
         }
