@@ -25,6 +25,7 @@
  */
 
 # include "io_looper.h"
+# include <dsn/internal/per_node_state.h>
 
 # ifdef _WIN32
 
@@ -75,12 +76,17 @@ namespace dsn
             _io_queue = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
         }
 
-        void io_looper::start(int worker_count)
+        void io_looper::start(service_node* node, int worker_count)
         {
             create_completion_queue();
             for (int i = 0; i < worker_count; i++)
             {
-                std::thread* thr = new std::thread([this](){ this->loop_ios(); });
+                std::thread* thr = new std::thread([this, node]()
+                {
+                    const char* name = node ? ::dsn::tools::get_service_node_name(node) : "unknown";
+                    task_worker::set_name(name);
+                    this->loop_ios(); 
+                });
                 _workers.push_back(thr);
             }
         }

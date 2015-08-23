@@ -61,7 +61,7 @@ namespace dsn
                 if (s_config.type == IOLOOP_GLOBAL)
                 {
                     s_global_looper = new io_looper();
-                    s_global_looper->start(s_config.worker_count);
+                    s_global_looper->start(nullptr, s_config.worker_count);
                 }
             });
 
@@ -80,7 +80,7 @@ namespace dsn
                     if (looper == nullptr)
                     {
                         looper = new io_looper();
-                        looper->start(s_config.worker_count);
+                        looper->start(node, s_config.worker_count);
                         put_per_service_node_state(node, "io_looper", looper);
                     }
                     return looper;
@@ -108,7 +108,7 @@ namespace dsn
         
         }
 
-        void io_looper_task_queue::start(int worker_count)
+        void io_looper_task_queue::start(service_node* node, int worker_count)
         {
             create_completion_queue();
         }

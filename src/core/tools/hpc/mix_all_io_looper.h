@@ -57,7 +57,7 @@ namespace dsn
             io_looper_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
             virtual ~io_looper_task_queue();
 
-            virtual void  start(int worker_count);
+            virtual void  start(service_node* node, int worker_count);
             virtual void  stop();
             virtual void  handle_local_queues();
 

@@ -45,5 +45,10 @@ namespace dsn
         {
             return node->remove_per_node_state(name);
         }
+
+        const char* get_service_node_name(service_node* node)
+        {
+            return node->name();
+        }
     }
 }

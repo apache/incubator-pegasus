@@ -39,5 +39,7 @@ namespace dsn
         bool  put_per_service_node_state(service_node* node, const char* name, void* obj);
 
         void* remove_per_service_node_state(service_node* node, const char* name);
+
+        const char* get_service_node_name(service_node* node);
     }
 }

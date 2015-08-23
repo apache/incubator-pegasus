@@ -80,7 +80,7 @@ namespace dsn
 
             void loop_ios();
 
-            virtual void start(int worker_count);
+            virtual void start(service_node* node, int worker_count);
 
             virtual void stop();
 
