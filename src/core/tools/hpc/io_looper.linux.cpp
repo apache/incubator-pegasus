@@ -151,13 +151,19 @@ namespace dsn
                 int nfds = epoll_wait(_io_queue, _events, max_event_count, -1);
                 if (-1 == nfds)
                 {
-                    derror("epoll_pwait loop exits, err = %s", strerror(errno));
-                    break;
+                    if (errno == EINTR)
+                        continue;
+                    else
+                    {
+                        derror("epoll_wait loop exits, err = %s", strerror(errno));
+                        break;
+                    }
                 }
 
                 for (int i = 0; i < nfds; i++)
                 {
                     auto cb = (io_loop_callback*)_events[i].data.ptr;
+                    dinfo("epoll_wait get events %x, cb = %p", _events[i].events, cb);
                     (*cb)(0, 0, (uintptr_t)_events[i].events);
                 }
             }

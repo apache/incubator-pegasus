@@ -67,6 +67,9 @@ hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provid
 
         if (read(_event_fd, &finished_aio, sizeof(finished_aio)) != sizeof(finished_aio))
         {
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+                return;
+
             dassert(false, "read number of aio completion from eventfd failed, err = %s",
                 strerror(errno)
                 );
@@ -95,7 +98,7 @@ hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provid
     auto ret = io_setup(128, &_ctx); // 128 concurrent events
     dassert(ret == 0, "io_setup error, ret = %d", ret);
 
-    _event_fd = eventfd(0, EFD_NONBLOCK | EFD_SEMAPHORE);
+    _event_fd = eventfd(0, EFD_NONBLOCK);
 
     if (_looper)
     {

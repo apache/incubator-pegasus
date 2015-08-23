@@ -115,8 +115,6 @@ namespace dsn {
             int                                    _sending_next_offset;
             struct sockaddr_in                     _peer_addr;
             io_looper*                             _looper;
-
-            void set_ready_event_for_send_recv();
 # endif
         };
 
