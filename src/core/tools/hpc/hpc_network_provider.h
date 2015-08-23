@@ -136,6 +136,10 @@ namespace dsn {
             {
                 if (SS_CONNECTED == _state)
                     do_write(msg);
+                else
+                {
+                    dinfo("client not conected");
+                }
             }
             
             virtual void on_closed() override { return on_disconnected(); }

@@ -248,6 +248,7 @@ namespace dsn
             _accept_sock = s;            
             _accept_event.callback = [this](int err, uint32_t size, uintptr_t lpolp)
             {
+                //dinfo("accept completed, err = %d, size = %u", err, size);
                 dassert(&_accept_event.olp == (LPOVERLAPPED)lpolp, "must be this exact overlap");
                 if (err == ERROR_SUCCESS)
                 {
@@ -281,6 +282,8 @@ namespace dsn
 
                     rpc_server_session_ptr s1(s);
                     this->on_server_session_accepted(s1);
+
+                    s->do_read();
                 }
                 else
                 {
@@ -332,6 +335,7 @@ namespace dsn
             add_reference();
             _read_event.callback = [this](int err, uint32_t length, uintptr_t lolp)
             {
+                //dinfo("WSARecv completed, err = %d, size = %u", err, length);
                 dassert((LPOVERLAPPED)lolp == &_read_event.olp, "must be exact this overlapped");
                 if (err != ERROR_SUCCESS)
                 {
@@ -374,13 +378,15 @@ namespace dsn
                 &_read_event.olp,
                 NULL
                 );
-
+            
             if (SOCKET_ERROR == rt && (WSAGetLastError() != ERROR_IO_PENDING))
             {
                 dwarn("WSARecv failed, err = %d", ::WSAGetLastError());
                 release_reference();
                 on_failure();
             }
+
+            //dinfo("WSARecv called, err = %d", rt);
         }
 
         void hpc_rpc_session::do_write(message_ex* msg)
@@ -388,6 +394,7 @@ namespace dsn
             add_reference();
             _write_event.callback = [this, msg](int err, uint32_t length, uintptr_t lolp)
             {
+                //dinfo("WSASend completed, err = %d, size = %u", err, length);
                 dassert((LPOVERLAPPED)lolp == &_write_event.olp, "must be exact this overlapped");
                 if (err != ERROR_SUCCESS)
                 {
@@ -422,13 +429,15 @@ namespace dsn
                 &_write_event.olp,
                 NULL
                 );
-
+            
             if (SOCKET_ERROR == rt && (WSAGetLastError() != ERROR_IO_PENDING))
             {
                 dwarn("WSASend failed, err = %d", ::WSAGetLastError());
                 release_reference();
                 on_failure();
             }
+            
+            //dinfo("WSASend called, err = %d", rt);
         }
 
         void hpc_rpc_session::close()
@@ -473,6 +482,7 @@ namespace dsn
                         
             _connect_event.callback = [this](int err, uint32_t io_size, uintptr_t lpolp)
             {
+                //dinfo("ConnectEx completed, err = %d, size = %u", err, io_size);
                 if (err != ERROR_SUCCESS)
                 {
                     dwarn("ConnectEx failed, err = %d", err);
@@ -488,7 +498,10 @@ namespace dsn
                         _remote_addr.port
                         );
 
-                    send_messages();                    
+                    set_connected(true);
+                    dinfo("send_messages");
+                    send_messages();
+                    dinfo("do_read");
                     do_read();
                 }
                 this->release_ref(); // added before ConnectEx
@@ -528,7 +541,6 @@ namespace dsn
             )
             : rpc_server_session(net, remote_addr), hpc_rpc_session(sock, parser)
         {
-            do_read();
         }
 
     }

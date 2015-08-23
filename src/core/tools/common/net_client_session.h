@@ -46,6 +46,7 @@ namespace dsn {
                 );
             ~net_client_session();
 
+            virtual void on_connected() override { set_connected(true); }
             virtual void connect() override { return client_net_io::connect(); }
             virtual void send(message_ex* msg) override { return write(msg); }
             virtual void on_closed() override { return on_disconnected(); }

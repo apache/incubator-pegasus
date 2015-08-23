@@ -75,10 +75,11 @@ namespace dsn {
 
             void connect();
             virtual void write(message_ex* msg);
+            virtual void on_connected() = 0;
 
         private:
             virtual void on_failure();
-
+            
         private:
             enum session_state
             {

@@ -40,7 +40,6 @@ public:
     {
         _name = name;
         _count = 0;
-        _peeked_item = nullptr;
     }
 
     virtual long enqueue(T obj, uint32_t priority)
@@ -52,36 +51,6 @@ public:
             _items[priority].push(obj);
             return ++_count;
         }
-    }
-
-    virtual T peek()
-    {
-        auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
-
-        // already peeked
-        if (nullptr != _peeked_item)
-            return nullptr;
-
-        else
-        {
-            long ct = 0;
-            _peeked_item = dequeue_impl(ct);
-            return _peeked_item;
-        }
-    }
-
-    virtual T dequeue_peeked()
-    {
-        auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
-        auto c = _peeked_item;
-        _peeked_item = nullptr;
-        return c;
-    }
-
-    bool is_peeked()
-    {
-        auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
-        return _peeked_item != nullptr;
     }
 
     virtual T dequeue()
@@ -128,7 +97,6 @@ protected:
 
 protected:
     std::string   _name;
-    T             _peeked_item;
     TQueue        _items[priority_count];
     long          _count;
     mutable utils::ex_lock_nr_spin _lock;

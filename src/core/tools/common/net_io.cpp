@@ -231,7 +231,7 @@ namespace dsn {
                             );
 
                         set_options();
-
+                        on_connected();
                         on_write_completed(nullptr);
                         do_read();                        
                     }

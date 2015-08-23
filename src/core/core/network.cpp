@@ -35,28 +35,81 @@
 namespace dsn {
 
     rpc_session::rpc_session(connection_oriented_network& net, const dsn_address_t& remote_addr)
-        : _net(net), _remote_addr(remote_addr), _sq("msg.send.queue")
+        : _net(net), _remote_addr(remote_addr)
     {
+        _is_sending_next = false;
+        _is_connected = true;
     }
 
     rpc_session::~rpc_session()
     {
+        dlink* msg = nullptr;
         while (true)
         {
-            auto msg = _sq.dequeue();
-            if (msg == nullptr)
-                break;
+            {
+                utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+                msg = _messages.next();
+                if (msg == &_messages)
+                    break;
 
+                msg->remove();
+            }
             // added in rpc_engine::reply (for server) or rpc_client_session::call (for client)
-            msg->release_ref();
+            auto rmsg = CONTAINING_RECORD(msg, message_ex, dl);
+            rmsg->release_ref();
         }
+    }
+
+    bool rpc_session::set_connected(bool is_connected) // return old
+    {
+        utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+        auto b = _is_connected;
+        _is_connected = is_connected;
+
+        /*if (b && !is_connected && _is_sending_next)
+        {
+            _is_sending_next = false;
+        }*/
+        return b;
+    }
+
+    void rpc_session::send_message(message_ex* msg)
+    {
+        {
+            utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+            msg->dl.insert_before(&_messages);
+            if (_is_connected && !_is_sending_next)
+            {
+                _is_sending_next = true;
+                msg = CONTAINING_RECORD(_messages.next(), message_ex, dl);
+            }
+            else
+            {
+                return;
+            }
+        }
+
+        this->send(msg);
     }
 
     void rpc_session::send_messages()
     {
-        auto msg = _sq.peek();
-        if (nullptr == msg)
-            return;
+        message_ex *msg;
+        {
+            utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+            if (!_messages.is_alone())
+            {
+                dassert(_is_connected && !_is_sending_next, 
+                    "send message only when session is connected");
+
+                _is_sending_next = true;
+                msg = CONTAINING_RECORD(_messages.next(), message_ex, dl);
+            }
+            else
+            {
+                return;
+            }
+        }
 
         this->send(msg);
     }
@@ -65,11 +118,16 @@ namespace dsn {
     {
         if (nullptr != msg)
         {
+            {
+                utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+                dassert(_is_sending_next && &msg->dl == _messages.next(), 
+                    "sent msg must be the first msg in send queue");
+                msg->dl.remove();
+                _is_sending_next = false;
+            }
+
             // added in rpc_engine::reply (for server) or rpc_client_session::call (for client)
             msg->release_ref();
-
-            auto smsg = _sq.dequeue_peeked();
-            dassert(smsg == msg, "sent msg must be the first msg in send queue");
         }
 
         // for next send
@@ -79,7 +137,7 @@ namespace dsn {
     rpc_client_session::rpc_client_session(connection_oriented_network& net, const dsn_address_t& remote_addr, rpc_client_matcher_ptr& matcher)
         : rpc_session(net, remote_addr), _matcher(matcher)
     {
-        _disconnected = false;
+        set_connected(false);
     }
 
     void rpc_client_session::call(message_ex* request, rpc_response_task* call)
@@ -95,7 +153,7 @@ namespace dsn {
 
     void rpc_client_session::on_disconnected()
     {
-        _disconnected = true;
+        set_connected(false);
 
         rpc_client_session_ptr sp = this;
         _net.on_client_session_disconnected(sp);
@@ -117,6 +175,8 @@ namespace dsn {
     rpc_server_session::rpc_server_session(connection_oriented_network& net, const dsn_address_t& remote_addr)
         : rpc_session(net, remote_addr)
     {
+        // by default it is true, so
+        // set_connected(true);
     }
 
     void rpc_server_session::on_recv_request(message_ex* msg, int delay_ms)
@@ -131,6 +191,8 @@ namespace dsn {
 
     void rpc_server_session::on_disconnected()
     {
+        set_connected(false);
+
         rpc_server_session_ptr sp = this;
         return _net.on_server_session_disconnected(sp);
     }

@@ -189,12 +189,13 @@ namespace dsn
         io_looper_task_worker::io_looper_task_worker(task_worker_pool* pool, task_queue* q, int index, task_worker* inner_provider)
             : task_worker(pool, q, index, inner_provider)
         {
-        
+            io_looper_task_queue* looper = dynamic_cast<io_looper_task_queue*>(queue());
+            looper->start(nullptr, 0);
         }
 
         void io_looper_task_worker::loop()
         {
-            io_looper_task_queue* looper = (io_looper_task_queue*)queue();
+            io_looper_task_queue* looper = dynamic_cast<io_looper_task_queue*>(queue());
             looper->loop_ios();
         }
     }

@@ -125,8 +125,16 @@ namespace dsn
             {
                 std::thread* thr = new std::thread([this, node]()
                 {
-                    const char* name = node ? ::dsn::tools::get_service_node_name(node) : "unknown";
-                    task_worker::set_name(name);
+                    const char* name = node ? ::dsn::tools::get_service_node_name(node) : "glb";
+                    char buffer[128];
+                    sprintf(buffer, "%s.io-loop.%d", name, i);
+                    task_worker::set_name(buffer);
+
+                    if (node)
+                    {
+                        task::set_current_worker(nullptr, node);
+                    }
+
                     this->loop_ios(); 
                 });
                 _workers.push_back(thr);

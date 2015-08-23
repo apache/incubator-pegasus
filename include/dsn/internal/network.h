@@ -197,12 +197,7 @@ namespace dsn {
         rpc_session(connection_oriented_network& net, const dsn_address_t& remote_addr);
         virtual ~rpc_session();
 
-        void send_message(message_ex* msg)
-        {
-            _sq.enqueue(msg, task_spec::get(msg->local_rpc_code)->priority);
-            send_messages();
-        }
-
+        void send_message(message_ex* msg);
         void send_messages();
         void on_send_completed(message_ex* msg);
         
@@ -210,13 +205,17 @@ namespace dsn {
         virtual void send(message_ex* msg) = 0;
 
     protected:
+        bool set_connected(bool is_connected); // return old
+
         connection_oriented_network         &_net;
         dsn_address_t                       _remote_addr;
 
     private:
         // TODO: expose the queue to be customizable
-        typedef utils::priority_queue<message_ex*, TASK_PRIORITY_COUNT> send_queue;
-        send_queue                         _sq;
+        ::dsn::utils::ex_lock_nr_spin      _lock;
+        bool                               _is_connected;
+        bool                               _is_sending_next;
+        dlink                              _messages;
     };
 
     //
@@ -231,15 +230,11 @@ namespace dsn {
         void call(message_ex* request, rpc_response_task* call);
         const dsn_address_t& remote_address() const { return _remote_addr; }
         connection_oriented_network& net() const { return _net; }
-        bool is_disconnected() const { return _disconnected; }
 
         virtual void connect() = 0;
 
         // always call on_send_completed later
         virtual void send(message_ex* msg) = 0;
-        
-    private:
-        bool _disconnected;
 
     protected:
         rpc_client_matcher_ptr              _matcher;

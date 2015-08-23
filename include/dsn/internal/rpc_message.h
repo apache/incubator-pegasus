@@ -30,6 +30,7 @@
 # include <dsn/internal/extensible_object.h>
 # include <dsn/internal/task_spec.h>
 # include <dsn/cpp/auto_codes.h>
+# include <dsn/internal/link.h>
 
 namespace dsn 
 {
@@ -88,6 +89,9 @@ namespace dsn
         dsn_address_t          from_address;
         dsn_address_t          to_address;
         uint16_t               local_rpc_code;
+
+        // by message queuing
+        dlink                  dl;
 
     public:        
         //message_ex(blob bb, bool parse_hdr = true); // read 

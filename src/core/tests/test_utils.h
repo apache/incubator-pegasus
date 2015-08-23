@@ -64,17 +64,26 @@ public:
 
     ::dsn::error_code start(int argc, char** argv)
     {
-        register_async_rpc_handler(RPC_TEST_HASH, "rpc.test.hash", &test_client::on_rpc_test_hash);
+        // server
+        if (argc == 1)
+        {
+            register_async_rpc_handler(RPC_TEST_HASH, "rpc.test.hash", &test_client::on_rpc_test_hash);
+        }
 
-        testing::InitGoogleTest(&argc, argv);
-        auto ret = RUN_ALL_TESTS();
+        // client
+        else
+        {
+            testing::InitGoogleTest(&argc, argv);
+            auto ret = RUN_ALL_TESTS();
 
-        // exit without any destruction
+            // exit without any destruction
 # if defined(_WIN32)
-        ::ExitProcess(0);
+            ::ExitProcess(0);
 # else
-        kill(getpid(), SIGKILL);
+            kill(getpid(), SIGKILL);
 # endif
+        }
+        
         return ::dsn::ERR_OK;
     }
 

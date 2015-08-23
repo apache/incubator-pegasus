@@ -252,7 +252,8 @@ namespace dsn
             // therefore we change derror to dwarn
             if (!_used)
             {
-                dlog(LOG_LEVEL_WARNING, "error-code", "error code is not handled");
+                dlog(LOG_LEVEL_WARNING, "error-code", 
+                    "error code is not handled, err = %s", to_string());
             }
         }
     # endif

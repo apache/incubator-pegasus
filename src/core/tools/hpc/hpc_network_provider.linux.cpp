@@ -339,6 +339,8 @@ namespace dsn
                             _remote_addr.name,
                             _remote_addr.port
                             );
+
+                        set_connected(true);
                     }
 
                     //  send
@@ -417,6 +419,8 @@ namespace dsn
                             _remote_addr.name,
                             _remote_addr.port
                          );
+
+                set_connected(true);
             }
         }
 
