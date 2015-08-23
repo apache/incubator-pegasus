@@ -197,36 +197,6 @@ namespace dsn
             _peer_addr.sin_port = 0;
         }
 
-        void hpc_rpc_session::set_ready_event_for_send_recv()
-        {
-            _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
-            {
-                uint32_t events = (uint32_t)lolp_or_events;
-
-                if (events & EPOLLIN)
-                {
-                    do_read();
-                }
-
-                if (events & EPOLLOUT)
-                {
-                    if (_sending_msg)
-                    {
-                        do_write(_sending_msg);
-                    }
-                    else
-                    {
-                        on_write_completed(nullptr); // send next msg if there is.
-                    }
-                }
-
-                if ((events & EPOLLHUP) || (events & EPOLLRDHUP))
-                {
-                    on_failure();
-                }
-            };
-        }
-
         void hpc_rpc_session::bind_looper(io_looper* looper)
         {
             _looper = looper;
@@ -347,29 +317,50 @@ namespace dsn
         {
             _reconnect_count = 0;
             _state = SS_CLOSED;
-
-            // set for connect callback first
+            
             _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
             {
                 uint32_t events = (uint32_t)lolp_or_events;
-                if ((events & EPOLLHUP) || (events & EPOLLRDHUP) || (events & EPOLLERR))
-                {
-                    on_failure();
-                }
-                else
-                {
-                    socklen_t addr_len = (socklen_t)sizeof(_peer_addr);
-                    if (getpeername(_socket, (struct sockaddr*)&_peer_addr, &addr_len) == -1)
-                    {
-                        dassert(false, "getpeername failed, err = %s", strerror(errno));
-                    }
 
-                    _state = SS_CONNECTED;
-                    dinfo("client session %s:%u connected", 
+                // connect established is a EPOLLOUT event, so detect OUT first
+                if (events & EPOLLOUT)
+                {
+                    // connect
+                    if (_state != SS_CONNECTED)
+                    {
+                        socklen_t addr_len = (socklen_t)sizeof(_peer_addr);
+                        if (getpeername(_socket, (struct sockaddr*)&_peer_addr, &addr_len) == -1)
+                        {
+                            dassert(false, "getpeername failed, err = %s", strerror(errno));
+                        }
+
+                        _state = SS_CONNECTED;
+                        dinfo("client session %s:%u connected", 
                             _remote_addr.name,
                             _remote_addr.port
-                         );
-                    set_ready_event_for_send_recv();
+                            );
+                    }
+
+                    //  send
+                    if (_sending_msg)
+                    {
+                        do_write(_sending_msg);
+                    }
+                    else
+                    {
+                        on_write_completed(nullptr); // send next msg if there is.
+                    }
+                }
+
+                if (events & EPOLLIN)
+                {
+                    // recv
+                    do_read();
+                }
+
+                if ((events & EPOLLHUP) || (events & EPOLLRDHUP))
+                {
+                    on_failure();
                 }
             };
         }
@@ -426,7 +417,6 @@ namespace dsn
                             _remote_addr.name,
                             _remote_addr.port
                          );
-                set_ready_event_for_send_recv();
             }
         }
 
@@ -444,7 +434,32 @@ namespace dsn
                 dassert(false, "getpeername failed, err = %s", strerror(errno));
             }
 
-            set_ready_event_for_send_recv();
+            _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
+            {
+                uint32_t events = (uint32_t)lolp_or_events;
+
+                if (events & EPOLLIN)
+                {
+                    do_read();
+                }
+
+                if (events & EPOLLOUT)
+                {
+                    if (_sending_msg)
+                    {
+                        do_write(_sending_msg);
+                    }
+                    else
+                    {
+                        on_write_completed(nullptr); // send next msg if there is.
+                    }
+                }
+
+                if ((events & EPOLLHUP) || (events & EPOLLRDHUP))
+                {
+                    on_failure();
+                }
+            };
         }
     }
 }
