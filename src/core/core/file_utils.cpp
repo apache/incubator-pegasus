@@ -228,7 +228,7 @@ namespace dsn {
 
 				c = dir[dir.length() - 1];
 				path = (dir
-					+ ((c == _FS_BSLASH) || (c == _FS_COLON) ? '' : _FS_BSLASH)
+					+ ((c == _FS_BSLASH) || (c == _FS_COLON) ? "" : _FS_BSLASH)
 					+ _FS_STAR);
 				hFind = ::FindFirstFileA(path.c_str(), &ffd);
 				if (INVALID_HANDLE_VALUE == hFind)
@@ -245,7 +245,7 @@ namespace dsn {
 					}
 
 					path = (dir
-						+ ((c == _FS_BSLASH) || (c == _FS_COLON) ? '' : _FS_BSLASH)
+						+ ((c == _FS_BSLASH) || (c == _FS_COLON) ? "" : _FS_BSLASH)
 						+ path);
 
 					if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
