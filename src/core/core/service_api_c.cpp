@@ -478,10 +478,7 @@ DSN_API void dsn_address_get_invalid(/*out*/ dsn_address_t* paddr)
 
 DSN_API dsn_address_t dsn_primary_address()
 {
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
-    return tsk->node()->rpc()->primary_address();
+    return ::dsn::task::get_current_rpc()->primary_address();
 }
 
 DSN_API void dsn_primary_address2(dsn_address_t* paddr)
@@ -491,23 +488,17 @@ DSN_API void dsn_primary_address2(dsn_address_t* paddr)
 
 DSN_API bool dsn_rpc_register_handler(dsn_task_code_t code, const char* name, dsn_rpc_request_handler_t cb, void* param)
 {
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
     ::dsn::rpc_handler_ptr h(new ::dsn::rpc_handler_info(code));
     h->name = std::string(name);
     h->c_handler = cb;
     h->parameter = param;
 
-    return tsk->node()->rpc()->register_rpc_handler(h);
+    return ::dsn::task::get_current_node()->rpc_register_handler(h);
 }
 
 DSN_API void* dsn_rpc_unregiser_handler(dsn_task_code_t code)
 {
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
-    auto h = tsk->node()->rpc()->unregister_rpc_handler(code);
+    auto h = ::dsn::task::get_current_node()->rpc_unregister_handler(code);
     return h->parameter;
 }
 
@@ -519,14 +510,11 @@ DSN_API dsn_task_t dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_r
 
 DSN_API void dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call, dsn_task_tracker_t tracker)
 {
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
     ::dsn::rpc_response_task* task = (::dsn::rpc_response_task*)rpc_call;
     dassert(task->spec().type == TASK_TYPE_RPC_RESPONSE, "");
     task->set_tracker((dsn::task_tracker*)tracker);
 
-    auto rpc = tsk->node()->rpc();
+    auto rpc = ::dsn::task::get_current_rpc();
 
     // TODO: remove this parameter in future
     auto msg = task->get_request();
@@ -536,10 +524,7 @@ DSN_API void dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call, dsn_task_tr
 
 DSN_API dsn_message_t dsn_rpc_call_wait(dsn_address_t server, dsn_message_t request)
 {
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
-    auto rpc = tsk->node()->rpc();
+    auto rpc = ::dsn::task::get_current_rpc();
     auto msg = ((::dsn::message_ex*)request);
     msg->to_address = server;
 
@@ -563,10 +548,7 @@ DSN_API dsn_message_t dsn_rpc_call_wait(dsn_address_t server, dsn_message_t requ
 
 DSN_API void dsn_rpc_call_one_way(dsn_address_t server, dsn_message_t request)
 {
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
-    auto rpc = tsk->node()->rpc();
+    auto rpc = ::dsn::task::get_current_rpc();
     auto msg = ((::dsn::message_ex*)request);
     msg->to_address = server;
 
@@ -609,18 +591,12 @@ DSN_API void dsn_rpc_enqueue_response(dsn_task_t rpc_call, dsn_error_t err, dsn_
 //------------------------------------------------------------------------------
 DSN_API dsn_handle_t dsn_file_open(const char* file_name, int flag, int pmode)
 {
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
-    return tsk->node()->disk()->open(file_name, flag, pmode);
+    return ::dsn::task::get_current_disk()->open(file_name, flag, pmode);
 }
 
 DSN_API dsn_error_t dsn_file_close(dsn_handle_t file)
 {
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
-    return tsk->node()->disk()->close(file);
+    return ::dsn::task::get_current_disk()->close(file);
 }
 
 DSN_API dsn_task_t dsn_file_create_aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash)
@@ -630,9 +606,6 @@ DSN_API dsn_task_t dsn_file_create_aio_task(dsn_task_code_t code, dsn_aio_handle
 
 DSN_API void dsn_file_read(dsn_handle_t file, char* buffer, int count, uint64_t offset, dsn_task_t cb, dsn_task_tracker_t tracker)
 {
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
     ::dsn::aio_task* callback((::dsn::aio_task*)cb);
     callback->set_tracker((dsn::task_tracker*)tracker);
     callback->aio()->buffer = buffer;
@@ -642,14 +615,11 @@ DSN_API void dsn_file_read(dsn_handle_t file, char* buffer, int count, uint64_t 
     callback->aio()->file_offset = offset;
     callback->aio()->type = ::dsn::AIO_Read;
 
-    tsk->node()->disk()->read(callback);
+    ::dsn::task::get_current_disk()->read(callback);
 }
 
 DSN_API void dsn_file_write(dsn_handle_t file, const char* buffer, int count, uint64_t offset, dsn_task_t cb, dsn_task_tracker_t tracker)
 {
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
     ::dsn::aio_task* callback((::dsn::aio_task*)cb);
     callback->set_tracker((dsn::task_tracker*)tracker);
     callback->aio()->buffer = (char*)buffer;
@@ -659,7 +629,7 @@ DSN_API void dsn_file_write(dsn_handle_t file, const char* buffer, int count, ui
     callback->aio()->file_offset = offset;
     callback->aio()->type = ::dsn::AIO_Write;
 
-    tsk->node()->disk()->write(callback);
+    ::dsn::task::get_current_disk()->write(callback);
 }
 
 DSN_API void dsn_file_copy_remote_directory(dsn_address_t remote, const char* source_dir, 
@@ -672,12 +642,9 @@ DSN_API void dsn_file_copy_remote_directory(dsn_address_t remote, const char* so
     rci->dest_dir = dest_dir;
     rci->overwrite = overwrite;
 
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
     ::dsn::aio_task* callback((::dsn::aio_task*)cb);
     callback->set_tracker((dsn::task_tracker*)tracker);
-    return tsk->node()->nfs()->call(rci, callback);
+    return ::dsn::task::get_current_nfs()->call(rci, callback);
 }
 
 DSN_API void dsn_file_copy_remote_files(dsn_address_t remote, const char* source_dir, const char** source_files, const char* dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker)
@@ -697,12 +664,9 @@ DSN_API void dsn_file_copy_remote_files(dsn_address_t remote, const char* source
     rci->dest_dir = dest_dir;
     rci->overwrite = overwrite;
 
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
     ::dsn::aio_task* callback((::dsn::aio_task*)cb);
     callback->set_tracker((dsn::task_tracker*)tracker);
-    return tsk->node()->nfs()->call(rci, callback);
+    return ::dsn::task::get_current_nfs()->call(rci, callback);
 }
 
 DSN_API size_t dsn_file_get_io_size(dsn_task_t cb_task)
@@ -727,12 +691,12 @@ DSN_API void dsn_file_task_enqueue(dsn_task_t cb_task, dsn_error_t err, size_t s
 //------------------------------------------------------------------------------
 DSN_API uint64_t dsn_now_ns()
 {
-    return ::dsn::service_engine::fast_instance().env()->now_ns();
+    return ::dsn::task::get_current_env()->now_ns();
 }
 
 DSN_API uint64_t dsn_random64(uint64_t min, uint64_t max) // [min, max]
 {
-    return ::dsn::service_engine::fast_instance().env()->random64(min, max);
+    return ::dsn::task::get_current_env()->random64(min, max);
 }
 
 //------------------------------------------------------------------------------

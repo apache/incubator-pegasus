@@ -36,18 +36,18 @@ namespace dsn
     {
         struct io_loop_config
         {
-            io_loop_type type;
+            io_loop_mode type;
             int          worker_count;
         };
 
         CONFIG_BEGIN(io_loop_config)
-            CONFIG_FLD_ENUM(io_loop_type, type, IOLOOP_PER_NODE, IOLOOP_INVALID, false, "io loop mode: IOLOOP_GLOBAL, IOLOOP_PER_NODE, or IOLOOP_PER_QUEUE")
+            CONFIG_FLD_ENUM(io_loop_mode, type, IOLOOP_PER_NODE, IOLOOP_INVALID, false, "io loop mode: IOLOOP_GLOBAL, IOLOOP_PER_NODE, or IOLOOP_PER_QUEUE")
             CONFIG_FLD(int, uint64, worker_count, 4, "io loop thread count, not used for IOLOOP_PER_QUEUE")
         CONFIG_END
 
         static io_loop_config s_config;
 
-        io_loop_type get_io_looper_type()
+        io_loop_mode get_io_looper_type()
         {
             static std::once_flag flag;
             std::call_once(flag, []()

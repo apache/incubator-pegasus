@@ -115,6 +115,8 @@ class rpc_response_task;
 class message_ex;
 class admission_controller;
 typedef void (*task_rejection_handler)(task*, admission_controller*);
+struct rpc_handler_info;
+typedef std::shared_ptr<rpc_handler_info> rpc_handler_ptr;
 
 class task_spec : public extensible_object<task_spec, 4>
 {

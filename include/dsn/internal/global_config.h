@@ -74,6 +74,21 @@ typedef struct service_app_role
 
 } service_app_role;
 
+typedef enum io_loop_mode
+{
+    IOLOOP_PER_NODE,  // each node has shared io engine (rpc/disk/nfs)
+    IOLOOP_PER_POOL,  // each pool has shared io engine (rpc/disk/nfs)
+    IOLOOP_PER_QUEUE, // each queue has shared io engine (rpc/disk/nfs)
+    IOLOOP_COUNT,
+    IOLOOP_INVALID
+} io_loop_mode;
+
+ENUM_BEGIN(io_loop_mode, IOLOOP_INVALID)
+    ENUM_REG(IOLOOP_PER_NODE)
+    ENUM_REG(IOLOOP_PER_POOL)
+    ENUM_REG(IOLOOP_PER_QUEUE)
+ENUM_END(io_loop_mode)
+
 struct service_app_spec
 {
     int                  id;    // global for all roles
@@ -88,7 +103,6 @@ struct service_app_spec
     bool                 run;
     int                  count; // index = 1,2,...,count
     std::string          dmodule; // when the service is a dynamcially loaded module
-
     service_app_role     role;
 
     network_client_configs network_client_confs;
@@ -107,7 +121,7 @@ struct service_app_spec
 CONFIG_BEGIN(service_app_spec)
     CONFIG_FLD_STRING(type, "", "app type name, as given when registering by dsn_register_app_role")
     CONFIG_FLD_STRING(arguments, "", "arguments for the app instances")
-    CONFIG_FLD_STRING(dmodule, "", "path of a dynamic library which implement this app role, and register itself upon loaded")    
+    CONFIG_FLD_STRING(dmodule, "", "path of a dynamic library which implement this app role, and register itself upon loaded")
     CONFIG_FLD_INT_LIST(ports, "RPC server listening ports needed for this app")
     CONFIG_FLD_ID_LIST(threadpool_code2, pools, "thread pools need to be started")
     CONFIG_FLD(int, uint64, delay_seconds, 0, "delay seconds for when the apps should be started")
@@ -145,6 +159,9 @@ struct service_spec
     std::list<std::string>       lock_nr_aspects;
     std::list<std::string>       rwlock_nr_aspects;
     std::list<std::string>       semaphore_aspects;
+
+    io_loop_mode                 io_mode;
+    int                          io_worker_count;
         
     network_client_configs        network_default_client_cfs; // default network configed by tools
     network_server_configs        network_default_server_cfs; // default network configed by tools
@@ -182,6 +199,11 @@ CONFIG_BEGIN(service_spec)
     CONFIG_FLD_STRING_LIST(lock_nr_aspects, "non-recurisve lock aspect providers, usually for tooling purpose")
     CONFIG_FLD_STRING_LIST(rwlock_nr_aspects, "non-recursive rwlock aspect providers, usually for tooling purpose")
     CONFIG_FLD_STRING_LIST(semaphore_aspects, "semaphore aspect providers, usually for tooling purpose")
+
+    CONFIG_FLD_ENUM(io_loop_mode, io_mode, IOLOOP_PER_NODE, IOLOOP_INVALID, false,
+    "io loop mode: IOLOOP_PER_NODE, IOLOOP_PER_POOL, or IOLOOP_PER_QUEUE")
+    CONFIG_FLD(int, uint64, io_worker_count, 2, "io thread count, only for IOLOOP_PER_NODE; "
+    "for IOLOOP_PER_POOL and IOLOOP_PER_QUEUE, task workers are also served as io threads")
 CONFIG_END
 
 enum sys_exit_type

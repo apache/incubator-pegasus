@@ -47,10 +47,13 @@ namespace dsn {
             if (_start)
             {
                 error_code err;
-                if (_node->nfs())
+                for (auto& io : _node->ios())
                 {
-                    err = _node->nfs()->start();
-                    dassert(err == ERR_OK, "start nfs failed, err = %s", err.to_string());
+                    if (io.nfs)
+                    {
+                        err = io.nfs->start();
+                        dassert(err == ERR_OK, "start nfs failed, err = %s", err.to_string());
+                    }
                 }
                 
                 std::vector<std::string> args;
