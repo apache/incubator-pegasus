@@ -175,13 +175,13 @@ namespace dsn {
 		static __thread struct
 		{
 			void*		ctx;
-			sftw_fn_t	fn;
+			ftw_handler	handler;
 			bool		recursive;
-		} sftw_ctx;
+		} ftw_ctx;
 
 		static int ftw_wrapper(const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf)
 		{
-			if (!sftw_ctx.recursive && (ftwbuf->level > 1))
+			if (!ftw_ctx.recursive && (ftwbuf->level > 1))
 			{
 #ifdef __linux__
 				if ((typeflag == FTW_D) || (typeflag == FTW_DP))
@@ -197,13 +197,13 @@ namespace dsn {
 #endif
 			}
 
-			return sftw_ctx.fn(fpath, sftw_ctx.ctx, typeflag);
+			return ftw_ctx.handler(fpath, ftw_ctx.ctx, typeflag);
 		}
 #endif
 		bool sftw(
 			const char* dirpath,
 			void* ctx,
-			sftw_fn_t fn,
+			ftw_handler handler,
 			bool recursive
 			)
 		{
@@ -216,7 +216,7 @@ namespace dsn {
 			char c;
 			std::string dir;
 			std::string path;
-			int fn_ret;
+			int ret;
 
 			path.reserve(MAX_PATH);
 			if (!dsn::utils::get_normalized_path(dirpath, path) || path.empty())
@@ -271,8 +271,8 @@ namespace dsn {
 					}
 					else
 					{
-						fn_ret = fn(path.c_str(), ctx, FTW_F);
-						if (fn_ret != FTW_CONTINUE)
+						ret = handler(path.c_str(), ctx, FTW_F);
+						if (ret != FTW_CONTINUE)
 						{
 							::FindClose(hFind);
 							return false;
@@ -292,8 +292,8 @@ namespace dsn {
 
 			for (auto& dir2 : queue2)
 			{
-				fn_ret = fn(dir2.c_str(), ctx, FTW_DP);
-				if (fn_ret != FTW_CONTINUE)
+				ret = handler(dir2.c_str(), ctx, FTW_DP);
+				if (ret != FTW_CONTINUE)
 				{
 					return false;
 				}
@@ -301,9 +301,9 @@ namespace dsn {
 
 			return true;
 		#else
-			sftw_ctx.ctx = ctx;
-			sftw_ctx.fn = fn;
-			sftw_ctx.recursive = recursive;
+			ftw_ctx.ctx = ctx;
+			ftw_ctx.handler = handler;
+			ftw_ctx.recursive = recursive;
 			int flags = 
 #ifdef __linux__
 				FTW_ACTIONRETVAL
@@ -347,7 +347,7 @@ namespace dsn {
 #endif
 		}
 
-		bool exists(const std::string& path)
+		bool path_exists(const std::string& path)
 		{
 			return (dsn::utils::directory_exists(path) || dsn::utils::file_exists(path));
 		}
@@ -417,7 +417,7 @@ namespace dsn {
 
 		bool remove(const std::string& path)
 		{
-			if (!dsn::utils::exists(path))
+			if (!dsn::utils::path_exists(path))
 			{
 				return true;
 			}

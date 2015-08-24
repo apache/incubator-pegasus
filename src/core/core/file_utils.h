@@ -33,16 +33,16 @@ namespace dsn {
 		
 		bool get_normalized_path(const std::string& path, std::string& npath);
 
-		typedef int (*sftw_fn_t)(const char* fpath, void* ctx, int typeflag);
+		typedef int (*ftw_handler)(const char* fpath, void* ctx, int typeflag);
 		
-		bool sftw(
+		bool file_tree_walk(
 			const char* dirpath,
 			void* ctx,
-			sftw_fn_t fn,
+			ftw_handler handler,
 			bool recursive = true
 			);
 
-		bool exists(const std::string& path);
+		bool path_exists(const std::string& path);
 
 		bool directory_exists(const std::string& path);
 

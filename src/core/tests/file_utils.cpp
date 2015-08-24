@@ -462,7 +462,7 @@ TEST(core, file_utils_exists)
 	bool ret;
 
 	path = "c:\\";
-	ret = dsn::utils::exists(path);
+	ret = dsn::utils::path_exists(path);
 #ifdef _WIN32
 	EXPECT_TRUE(ret);
 #else
@@ -486,7 +486,7 @@ TEST(core, file_utils_exists)
 #endif
 
 	path = "/";
-	ret = dsn::utils::exists(path);
+	ret = dsn::utils::path_exists(path);
 	EXPECT_TRUE(ret);
 
 	path = "/";
@@ -498,11 +498,11 @@ TEST(core, file_utils_exists)
 	EXPECT_FALSE(ret);
 
 	path = "./not_exists_not_exists";
-	ret = dsn::utils::exists(path);
+	ret = dsn::utils::path_exists(path);
 	EXPECT_FALSE(ret);
 
 	path = "c:\\Windows\\System32\\notepad.exe";
-	ret = dsn::utils::exists(path);
+	ret = dsn::utils::path_exists(path);
 #ifdef _WIN32
 	EXPECT_TRUE(ret);
 #else
@@ -522,7 +522,7 @@ TEST(core, file_utils_exists)
 #endif
 
 	path = "/bin/ls";
-	ret = dsn::utils::exists(path);
+	ret = dsn::utils::path_exists(path);
 #ifdef _WIN32
 	EXPECT_FALSE(ret);
 #else
