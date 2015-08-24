@@ -27,6 +27,7 @@
 
 # include <dsn/ports.h>
 # include <dsn/cpp/auto_codes.h>
+# include <functional>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -317,11 +318,11 @@ namespace dsn {
 
 		extern bool get_normalized_path(const std::string& path, std::string& npath);
 
-		typedef int(*ftw_handler)(const char* fpath, void* ctx, int typeflag);
+		//int (const char* fpath, int typeflag)
+		typedef std::function<int (const char*, int)> ftw_handler;
 
 		extern bool file_tree_walk(
 			const char* dirpath,
-			void* ctx,
 			ftw_handler handler,
 			bool recursive = true
 			);

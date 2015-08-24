@@ -169,7 +169,6 @@ namespace dsn {
 #ifndef _WIN32
 		static __thread struct
 		{
-			void*		ctx;
 			ftw_handler	handler;
 			bool		recursive;
 		} ftw_ctx;
@@ -195,9 +194,8 @@ namespace dsn {
 			return ftw_ctx.handler(fpath, ftw_ctx.ctx, typeflag);
 		}
 #endif
-		bool sftw(
+		bool file_tree_walk(
 			const char* dirpath,
-			void* ctx,
 			ftw_handler handler,
 			bool recursive
 			)
@@ -266,7 +264,7 @@ namespace dsn {
 					}
 					else
 					{
-						ret = handler(path.c_str(), ctx, FTW_F);
+						ret = handler(path.c_str(), FTW_F);
 						if (ret != FTW_CONTINUE)
 						{
 							::FindClose(hFind);
@@ -287,7 +285,7 @@ namespace dsn {
 
 			for (auto& dir2 : queue2)
 			{
-				ret = handler(dir2.c_str(), ctx, FTW_DP);
+				ret = handler(dir2.c_str(), FTW_DP);
 				if (ret != FTW_CONTINUE)
 				{
 					return false;
@@ -296,7 +294,6 @@ namespace dsn {
 
 			return true;
 		#else
-			ftw_ctx.ctx = ctx;
 			ftw_ctx.handler = handler;
 			ftw_ctx.recursive = recursive;
 			int flags = 
@@ -357,17 +354,6 @@ namespace dsn {
 			return dsn::utils::exists_internal(path, true);
 		}
 
-		static int get_files_fn(const char* fpath, void* ctx, int typeflag)
-		{
-			std::vector<std::string>& file_list = *((std::vector<std::string>*)ctx);
-			if (typeflag == FTW_F)
-			{
-				file_list.push_back(fpath);
-			}
-
-			return FTW_CONTINUE;
-		}
-
 		bool get_files(const std::string& path, std::vector<std::string>& file_list, bool recursive)
 		{
 			if (!dsn::utils::directory_exists(path))
@@ -375,29 +361,18 @@ namespace dsn {
 				return false;
 			}
 
-			return dsn::utils::sftw(path.c_str(), &file_list, dsn::utils::get_files_fn, recursive);
-		}
+			return dsn::utils::file_tree_walk(path.c_str(),
+				[&file_list](const char* fpath, int typeflag)
+				{
+					if (typeflag == FTW_F)
+					{
+						file_list.push_back(fpath);
+					}
 
-		static int remove_directory_fn(const char* fpath, void* ctx, int typeflag)
-		{
-			bool succ;
-
-			dassert((typeflag == FTW_F) || (typeflag == FTW_DP), "Invalid typeflag = %d.", typeflag);
-
-#ifdef _WIN32
-			if (typeflag != FTW_F)
-			{
-				succ = (::RemoveDirectoryA(fpath) == TRUE);
-			}
-			else
-			{
-#endif
-				succ = (std::remove(fpath) == 0);
-#ifdef _WIN32
-			}
-#endif
-
-			return (succ ? FTW_CONTINUE : FTW_STOP);
+					return FTW_CONTINUE;
+				},
+				recursive
+					);
 		}
 
 		static bool remove_directory(const std::string& path)
@@ -407,7 +382,30 @@ namespace dsn {
 				return false;
 			}
 
-			return dsn::utils::sftw(path.c_str(), NULL, dsn::utils::remove_directory_fn, true);
+			return dsn::utils::file_tree_walk(path.c_str(), 
+				[](const char* fpath, int typeflag)
+				{
+					bool succ;
+
+					dassert((typeflag == FTW_F) || (typeflag == FTW_DP),
+						"Invalid typeflag = %d.", typeflag);
+#ifdef _WIN32
+					if (typeflag != FTW_F)
+					{
+						succ = (::RemoveDirectoryA(fpath) == TRUE);
+					}
+					else
+					{
+#endif
+						succ = (std::remove(fpath) == 0);
+#ifdef _WIN32
+					}
+#endif
+
+					return (succ ? FTW_CONTINUE : FTW_STOP);
+			},
+				true
+					);
 		}
 
 		bool remove(const std::string& path)
