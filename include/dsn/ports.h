@@ -46,6 +46,7 @@ __pragma(warning(disable:4127))
 # define rmdir_ _rmdir
 # define mkdir_ _mkdir
 # define close_ _close
+# define stat64_ _stat64
 
 # elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
 
@@ -57,6 +58,7 @@ __pragma(warning(disable:4127))
 # define rmdir_ rmdir
 # define mkdir_(path) mkdir(path, 0775)
 # define close_ close
+# define stat64_ stat64
 
 # ifndef O_BINARY
 # define O_BINARY 0
