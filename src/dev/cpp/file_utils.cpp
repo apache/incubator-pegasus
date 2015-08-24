@@ -451,13 +451,9 @@ namespace dsn {
 
 		bool file_size(const std::string& path, int64_t& sz)
 		{
-#ifdef _WIN32
-			struct _stat64 st;
-#else
-			struct stat64 st;
-#endif
+			struct stat64_ st;
 
-			if (stat64_(path.c_str(), &st) != 0)
+			if (::stat64_(path.c_str(), &st) != 0)
 			{
 				return false;
 			}
