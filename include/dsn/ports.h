@@ -34,6 +34,8 @@
 # include <Windows.h>
 # include <direct.h>
 # include <io.h>
+# include <sys/types.h>
+# include <sys/stat.h>
 # pragma comment(lib, "ws2_32.lib")
 
 __pragma(warning(disable:4127))
