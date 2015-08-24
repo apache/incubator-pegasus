@@ -175,7 +175,11 @@ namespace dsn {
     //
     // management routines
     //
-    network* rpc_engine::create_network(const network_server_config& netcs, bool client_only)
+    network* rpc_engine::create_network(
+        const network_server_config& netcs, 
+        bool client_only,
+        task_queue* q           // when rpc engine is bound to this queue, see io_loop_mode
+        )
     {
         const service_spec& spec = service_engine::fast_instance().spec();
         auto net = utils::factory_store<network>::create(
@@ -190,6 +194,7 @@ namespace dsn {
         }
 
         // start the net
+        net->update_on_io_mode(q);
         error_code ret = net->start(netcs.channel, netcs.port, client_only);
         if (ret == ERR_OK)
         {
@@ -202,7 +207,10 @@ namespace dsn {
         }   
     }
 
-    error_code rpc_engine::start(const service_app_spec& aspec)
+    error_code rpc_engine::start(
+        const service_app_spec& aspec, 
+        task_queue* q
+        )
     {
         if (_is_running)
         {
@@ -246,7 +254,7 @@ namespace dsn {
                 cs.message_buffer_block_size = blk_size;
                 cs.hdr_format = network_header_format(network_header_format::to_string(i));
 
-                auto net = create_network(cs, true);
+                auto net = create_network(cs, true, q);
                 if (!net) return ERR_NETWORK_INIT_FALED;
                 pnet[j] = net;
             }
@@ -272,7 +280,7 @@ namespace dsn {
                 pnets = &it->second;
             }
 
-            auto net = create_network(sp.second, false);
+            auto net = create_network(sp.second, false, q);
             if (net == nullptr)
             {
                 return ERR_NETWORK_INIT_FALED;

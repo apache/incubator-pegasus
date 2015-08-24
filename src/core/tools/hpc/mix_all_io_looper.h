@@ -33,18 +33,21 @@ namespace dsn
 {
     namespace tools
     {
-        
-        extern io_loop_mode get_io_looper_type();
-        extern io_looper* get_io_looper(service_node* node);
+        extern io_looper* get_io_looper(service_node* node, task_queue* q);
 
-        class io_looper_task_queue : public task_queue, public io_looper
+        class io_looper_without_workers : public io_looper
+        {
+        public:
+            virtual void  start(service_node* node, int worker_count);
+            virtual void  stop();
+        };
+
+        class io_looper_task_queue : public task_queue, public io_looper_without_workers
         {
         public:
             io_looper_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
             virtual ~io_looper_task_queue();
-
-            virtual void  start(service_node* node, int worker_count);
-            virtual void  stop();
+                        
             virtual void  handle_local_queues();
 
             virtual void  enqueue(task* task);

@@ -87,12 +87,11 @@ namespace dsn
                 spec.nfs_factory_name = "dsn::service::nfs_node_simple";
 
 
-            auto io_looper_type = get_io_looper_type();
             for (auto it = spec.threadpool_specs.begin(); it != spec.threadpool_specs.end(); it++)
             {
                 threadpool_spec& tspec = *it;
 
-                if (io_looper_type == IOLOOP_PER_QUEUE)
+                if (spec.io_mode == IOLOOP_PER_QUEUE)
                 {
                     if (tspec.worker_factory_name == "")
                         tspec.worker_factory_name = ("dsn::tools::io_looper_task_worker");
@@ -102,6 +101,8 @@ namespace dsn
                 }
                 else
                 {
+                    dassert(spec.io_mode == IOLOOP_PER_NODE, "");
+
                     if (tspec.worker_factory_name == "")
                         tspec.worker_factory_name = ("dsn::task_worker");
 

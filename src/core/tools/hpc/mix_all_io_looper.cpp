@@ -28,56 +28,43 @@
  */
 
 # include "mix_all_io_looper.h"
-# include <dsn/internal/per_node_state.h>
 
 namespace dsn
 {
     namespace tools
     {
-        struct io_loop_config
+        class io_looper_holder : public utils::singleton < io_looper_holder >
         {
-            io_loop_mode type;
-            int          worker_count;
+        public:
+            std::unordered_map<service_node*, io_looper*> per_node_loopers;
+            std::unordered_map<task_queue*, io_looper*> per_queue_loopers;
         };
 
-        CONFIG_BEGIN(io_loop_config)
-            CONFIG_FLD_ENUM(io_loop_mode, type, IOLOOP_PER_NODE, IOLOOP_INVALID, false, "io loop mode: IOLOOP_GLOBAL, IOLOOP_PER_NODE, or IOLOOP_PER_QUEUE")
-            CONFIG_FLD(int, uint64, worker_count, 4, "io loop thread count, not used for IOLOOP_PER_QUEUE")
-        CONFIG_END
-
-        static io_loop_config s_config;
-
-        io_loop_mode get_io_looper_type()
-        {
-            static std::once_flag flag;
-            std::call_once(flag, []()
-            {
-                if (!read_config("io_loop", s_config, nullptr))
-                {
-                    dassert(false, "invalid io loop configuration");
-                }
-            });
-
-            return s_config.type;
-        }
-
-        io_looper* get_io_looper(service_node* node)
+        io_looper* get_io_looper(service_node* node, task_queue* q)
         {   
-            switch (get_io_looper_type())
+            switch (spec().io_mode)
             {
             case IOLOOP_PER_NODE:
+            {
+                dassert(node, "node is not given");
+                auto it = io_looper_holder::instance().per_node_loopers.find(node);
+                if (it == io_looper_holder::instance().per_node_loopers.end())
                 {
-                    auto looper = (io_looper*)get_per_service_node_state(node, "io_looper");
-                    if (looper == nullptr)
-                    {
-                        looper = new io_looper();
-                        looper->start(node, s_config.worker_count);
-                        put_per_service_node_state(node, "io_looper", looper);
-                    }
+                    auto looper = new io_looper();
+                    looper->start(node, spec().io_worker_count);
+                    io_looper_holder::instance().per_node_loopers[node] = looper;
                     return looper;
                 }
+                else
+                    return it->second;
+            }
             case IOLOOP_PER_QUEUE:
-                return nullptr;
+            {
+                dassert(q, "task queue is not given");
+                auto p = dynamic_cast<io_looper*>(q);
+                dassert(p, "task queue must also be the io looper");
+                return p;
+            }
             default:
                 dassert(false, "invalid io loop type");
                 return nullptr;
@@ -88,6 +75,17 @@ namespace dsn
         //
         // when s_config.type == IOLOOP_PER_QUEUE
         //
+
+        void io_looper_without_workers::start(service_node* node, int worker_count)
+        {
+            create_completion_queue();
+        }
+
+        void io_looper_without_workers::stop()
+        {
+            io_looper::stop();
+        }
+
         io_looper_task_queue::io_looper_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider)
             : task_queue(pool, index, inner_provider)
         {
@@ -98,17 +96,7 @@ namespace dsn
         {
         
         }
-
-        void io_looper_task_queue::start(service_node* node, int worker_count)
-        {
-            create_completion_queue();
-        }
-
-        void io_looper_task_queue::stop()
-        {
-            io_looper::stop();
-        }
-
+        
         void io_looper_task_queue::handle_local_queues()
         {
             // execute shared queue

@@ -52,7 +52,7 @@ struct windows_disk_aio_context : public disk_aio
 hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provider)
     : aio_provider(disk, inner_provider)
 {
-    _looper = get_io_looper(node());
+    _looper = nullptr;
     _callback = [this](
         int native_error,
         uint32_t io_size,
@@ -73,6 +73,11 @@ hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provid
             ctx->evt->notify();
         }
     };
+}
+
+void hpc_aio_provider::update_on_io_mode(task_queue* q)
+{
+    _looper = get_io_looper(node(), q);
 }
 
 hpc_aio_provider::~hpc_aio_provider()
@@ -176,7 +181,7 @@ dsn_handle_t hpc_aio_provider::open(const char* file_name, int oflag, int pmode)
 
     if (fileHandle != INVALID_HANDLE_VALUE && fileHandle != nullptr)
     {
-        auto err = get_looper()->bind_io_handle((dsn_handle_t)fileHandle, &_callback);
+        auto err = _looper->bind_io_handle((dsn_handle_t)fileHandle, &_callback);
         if (err != ERR_OK)
         {
             dassert(false, "cannot associate file handle %s to io completion port, err = %x\n", file_name, ::GetLastError());

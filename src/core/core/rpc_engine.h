@@ -41,7 +41,10 @@ public:
     //
     // management routines
     //
-    ::dsn::error_code start(const service_app_spec& spec);
+    ::dsn::error_code start(
+        const service_app_spec& spec, 
+        task_queue* q           // when rpc engine is bound to this queue, see io_loop_mode
+        );
 
     //
     // rpc registrations
@@ -63,7 +66,11 @@ public:
     const dsn_address_t& primary_address() const { return _local_primary_address; }
 
 private:
-    network* create_network(const network_server_config& netcs, bool client_only);
+    network* create_network(
+        const network_server_config& netcs, 
+        bool client_only,
+        task_queue* q           // when rpc engine is bound to this queue, see io_loop_mode
+        );
 
 private:
     configuration_ptr                     _config;    

@@ -35,7 +35,9 @@ namespace dsn {
 
     class rpc_engine;
     class service_node;
-        
+    class task_worker_pool;
+    class task_queue;
+
     //
     // network bound to a specific rpc_channel and port (see start)
     // !!! all threads must be started with task::set_tls_dsn_context(null, provider->node());
@@ -80,6 +82,11 @@ namespace dsn {
         //
         virtual void call(message_ex* request, rpc_response_task* call) = 0;
 
+        //
+        // update according to io mode when necessary (usually not necessary)
+        //
+        virtual void update_on_io_mode(task_queue* q) {}
+        
         //
         // utilities
         //

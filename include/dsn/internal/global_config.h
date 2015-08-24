@@ -74,21 +74,6 @@ typedef struct service_app_role
 
 } service_app_role;
 
-typedef enum io_loop_mode
-{
-    IOLOOP_PER_NODE,  // each node has shared io engine (rpc/disk/nfs)
-    IOLOOP_PER_POOL,  // each pool has shared io engine (rpc/disk/nfs)
-    IOLOOP_PER_QUEUE, // each queue has shared io engine (rpc/disk/nfs)
-    IOLOOP_COUNT,
-    IOLOOP_INVALID
-} io_loop_mode;
-
-ENUM_BEGIN(io_loop_mode, IOLOOP_INVALID)
-    ENUM_REG(IOLOOP_PER_NODE)
-    ENUM_REG(IOLOOP_PER_POOL)
-    ENUM_REG(IOLOOP_PER_QUEUE)
-ENUM_END(io_loop_mode)
-
 struct service_app_spec
 {
     int                  id;    // global for all roles
@@ -201,9 +186,9 @@ CONFIG_BEGIN(service_spec)
     CONFIG_FLD_STRING_LIST(semaphore_aspects, "semaphore aspect providers, usually for tooling purpose")
 
     CONFIG_FLD_ENUM(io_loop_mode, io_mode, IOLOOP_PER_NODE, IOLOOP_INVALID, false,
-    "io loop mode: IOLOOP_PER_NODE, IOLOOP_PER_POOL, or IOLOOP_PER_QUEUE")
+    "io loop mode: IOLOOP_PER_NODE, or IOLOOP_PER_QUEUE")
     CONFIG_FLD(int, uint64, io_worker_count, 2, "io thread count, only for IOLOOP_PER_NODE; "
-    "for IOLOOP_PER_POOL and IOLOOP_PER_QUEUE, task workers are also served as io threads")
+    "for IOLOOP_PER_QUEUE, task workers are served as io threads")
 CONFIG_END
 
 enum sys_exit_type
