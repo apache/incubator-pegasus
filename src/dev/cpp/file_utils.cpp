@@ -24,16 +24,11 @@
  * THE SOFTWARE.
  */
 
-
-# include "file_utils.h"
-# include <dsn/ports.h>
-# include <dsn/service_api_c.h>
+# include <dsn/cpp/utils.h>
 
 #ifdef _WIN32
 
 # include <deque>
-# include <io.h>
-# include <sys/stat.h>
 
 enum
 {
@@ -174,14 +169,13 @@ namespace dsn {
 #ifndef _WIN32
 		static __thread struct
 		{
-			void*		ctx;
-			sftw_fn_t	fn;
+			ftw_handler	handler;
 			bool		recursive;
-		} sftw_ctx;
+		} ftw_ctx;
 
 		static int ftw_wrapper(const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf)
 		{
-			if (!sftw_ctx.recursive && (ftwbuf->level > 1))
+			if (!ftw_ctx.recursive && (ftwbuf->level > 1))
 			{
 #ifdef __linux__
 				if ((typeflag == FTW_D) || (typeflag == FTW_DP))
@@ -197,13 +191,12 @@ namespace dsn {
 #endif
 			}
 
-			return sftw_ctx.fn(fpath, sftw_ctx.ctx, typeflag);
+			return ftw_ctx.handler(fpath, ftw_ctx.ctx, typeflag);
 		}
 #endif
-		bool sftw(
+		bool file_tree_walk(
 			const char* dirpath,
-			void* ctx,
-			sftw_fn_t fn,
+			ftw_handler handler,
 			bool recursive
 			)
 		{
@@ -216,7 +209,7 @@ namespace dsn {
 			char c;
 			std::string dir;
 			std::string path;
-			int fn_ret;
+			int ret;
 
 			path.reserve(MAX_PATH);
 			if (!dsn::utils::get_normalized_path(dirpath, path) || path.empty())
@@ -271,8 +264,8 @@ namespace dsn {
 					}
 					else
 					{
-						fn_ret = fn(path.c_str(), ctx, FTW_F);
-						if (fn_ret != FTW_CONTINUE)
+						ret = handler(path.c_str(), FTW_F);
+						if (ret != FTW_CONTINUE)
 						{
 							::FindClose(hFind);
 							return false;
@@ -292,8 +285,8 @@ namespace dsn {
 
 			for (auto& dir2 : queue2)
 			{
-				fn_ret = fn(dir2.c_str(), ctx, FTW_DP);
-				if (fn_ret != FTW_CONTINUE)
+				ret = handler(dir2.c_str(), FTW_DP);
+				if (ret != FTW_CONTINUE)
 				{
 					return false;
 				}
@@ -301,9 +294,8 @@ namespace dsn {
 
 			return true;
 		#else
-			sftw_ctx.ctx = ctx;
-			sftw_ctx.fn = fn;
-			sftw_ctx.recursive = recursive;
+			ftw_ctx.handler = handler;
+			ftw_ctx.recursive = recursive;
 			int flags = 
 #ifdef __linux__
 				FTW_ACTIONRETVAL
@@ -347,7 +339,7 @@ namespace dsn {
 #endif
 		}
 
-		bool exists(const std::string& path)
+		bool path_exists(const std::string& path)
 		{
 			return (dsn::utils::directory_exists(path) || dsn::utils::file_exists(path));
 		}
@@ -362,17 +354,6 @@ namespace dsn {
 			return dsn::utils::exists_internal(path, true);
 		}
 
-		static int get_files_fn(const char* fpath, void* ctx, int typeflag)
-		{
-			std::vector<std::string>& file_list = *((std::vector<std::string>*)ctx);
-			if (typeflag == FTW_F)
-			{
-				file_list.push_back(fpath);
-			}
-
-			return FTW_CONTINUE;
-		}
-
 		bool get_files(const std::string& path, std::vector<std::string>& file_list, bool recursive)
 		{
 			if (!dsn::utils::directory_exists(path))
@@ -380,29 +361,18 @@ namespace dsn {
 				return false;
 			}
 
-			return dsn::utils::sftw(path.c_str(), &file_list, dsn::utils::get_files_fn, recursive);
-		}
+			return dsn::utils::file_tree_walk(path.c_str(),
+				[&file_list](const char* fpath, int typeflag)
+				{
+					if (typeflag == FTW_F)
+					{
+						file_list.push_back(fpath);
+					}
 
-		static int remove_directory_fn(const char* fpath, void* ctx, int typeflag)
-		{
-			bool succ;
-
-			dassert((typeflag == FTW_F) || (typeflag == FTW_DP), "Invalid typeflag = %d.", typeflag);
-
-#ifdef _WIN32
-			if (typeflag != FTW_F)
-			{
-				succ = (::RemoveDirectoryA(fpath) == TRUE);
-			}
-			else
-			{
-#endif
-				succ = (std::remove(fpath) == 0);
-#ifdef _WIN32
-			}
-#endif
-
-			return (succ ? FTW_CONTINUE : FTW_STOP);
+					return FTW_CONTINUE;
+				},
+				recursive
+					);
 		}
 
 		static bool remove_directory(const std::string& path)
@@ -412,12 +382,35 @@ namespace dsn {
 				return false;
 			}
 
-			return dsn::utils::sftw(path.c_str(), NULL, dsn::utils::remove_directory_fn, true);
+			return dsn::utils::file_tree_walk(path.c_str(), 
+				[](const char* fpath, int typeflag)
+				{
+					bool succ;
+
+					dassert((typeflag == FTW_F) || (typeflag == FTW_DP),
+						"Invalid typeflag = %d.", typeflag);
+#ifdef _WIN32
+					if (typeflag != FTW_F)
+					{
+						succ = (::RemoveDirectoryA(fpath) == TRUE);
+					}
+					else
+					{
+#endif
+						succ = (std::remove(fpath) == 0);
+#ifdef _WIN32
+					}
+#endif
+
+					return (succ ? FTW_CONTINUE : FTW_STOP);
+			},
+				true
+					);
 		}
 
 		bool remove(const std::string& path)
 		{
-			if (!dsn::utils::exists(path))
+			if (!dsn::utils::path_exists(path))
 			{
 				return true;
 			}

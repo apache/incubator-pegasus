@@ -27,6 +27,7 @@
 
 # include <dsn/ports.h>
 # include <dsn/cpp/auto_codes.h>
+# include <functional>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -312,6 +313,35 @@ namespace dsn {
         extern std::string remove_file_name(const char* path);
 
         extern bool remove_dir(const char* path, bool recursive);
+
+		#pragma region
+
+		extern bool get_normalized_path(const std::string& path, std::string& npath);
+
+		//int (const char* fpath, int typeflag)
+		typedef std::function<int (const char*, int)> ftw_handler;
+
+		extern bool file_tree_walk(
+			const char* dirpath,
+			ftw_handler handler,
+			bool recursive = true
+			);
+
+		extern bool path_exists(const std::string& path);
+
+		extern bool directory_exists(const std::string& path);
+
+		extern bool file_exists(const std::string& path);
+
+		extern bool get_files(const std::string& path, std::vector<std::string>& file_list, bool recursive);
+
+		extern bool remove(const std::string& path);
+
+		extern bool create_directory(const std::string& path);
+
+		extern bool create_file(const std::string& path);
+
+		#pragma endregion
     }
 } // end namespace dsn::utils
 
