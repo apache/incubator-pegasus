@@ -132,7 +132,9 @@ typedef void        (*dsn_aio_handler_t)(
 
 // rDSN allows many apps in the same process for easy deployment and test
 // app ceate, start, and destroy callbacks
-typedef void*       (*dsn_app_create)();        // return app_context
+typedef void*       (*dsn_app_create)(          // return app_context,
+                                const char*     // type name registered on dsn_register_app_role
+                                );              
 typedef dsn_error_t (*dsn_app_start)(
                                 void*,          // context return by app_create
                                 int,            // argc

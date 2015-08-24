@@ -37,9 +37,10 @@ namespace dsn.dev.csharp
         private string        _name;
         private GCHandle      _gch;
 
-        private static IntPtr AppCreate<T>()
+        private static IntPtr AppCreate<T>(string tname)
             where T : ServiceApp, new()
         {
+            tname;
             ServiceApp app = new T();
             return (IntPtr)(app._gch);
         }

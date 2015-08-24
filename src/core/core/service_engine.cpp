@@ -227,7 +227,7 @@ service_node* service_engine::start_node(service_app_spec& app_spec)
             }
         }
         
-        void* app_context = app_spec.role.create();
+        void* app_context = app_spec.role.create(app_spec.role.name.c_str());
         auto node = new service_node(app_spec, app_context);
         error_code err = node->start();
         dassert (err == ERR_OK, "service node start failed, err = %s", err.to_string());

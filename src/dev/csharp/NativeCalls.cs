@@ -23,7 +23,7 @@ namespace dsn.dev.csharp
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public delegate void dsn_aio_handler_t(dsn_error_t err, size_t sz, IntPtr param);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    public delegate IntPtr dsn_app_create(); // return app_context
+    public delegate IntPtr dsn_app_create(string type_name); // return app_context
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public delegate dsn_error_t dsn_app_start(IntPtr app_context, int argc, IntPtr argv); // argv: char**
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]

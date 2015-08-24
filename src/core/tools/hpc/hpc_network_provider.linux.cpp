@@ -54,14 +54,14 @@ namespace dsn
             {
                 dwarn("setsockopt TCP_NODELAY failed, err = %s", strerror(errno));
             }
-
-            //int isopt = 1;
-            //if (setsockopt(s, SOL_SOCKET, SO_DONTLINGER, (char*)&isopt, sizeof(int)) != 0)
-            //{
-            //    dwarn("setsockopt SO_DONTLINGER failed, err = %s", strerror(errno));
-            //}
-
+            
             int buflen = 8 * 1024 * 1024;
+            if (setsockopt(s, SOL_SOCKET, SO_SNDBUF, (char*)&buflen, sizeof(buflen)) != 0)
+            {
+                dwarn("setsockopt SO_SNDBUF failed, err = %s", strerror(errno));
+            }
+
+            buflen = 8 * 1024 * 1024;
             if (setsockopt(s, SOL_SOCKET, SO_RCVBUF, (char*)&buflen, sizeof(buflen)) != 0)
             {
                 dwarn("setsockopt SO_RCVBUF failed, err = %s", strerror(errno));
@@ -322,6 +322,12 @@ namespace dsn
             {
                 uint32_t events = (uint32_t)lolp_or_events;
 
+                if ((events & EPOLLHUP) || (events & EPOLLRDHUP) || (events & EPOLLERR))
+                {
+                    on_failure();
+                    return;
+                }
+
                 // connect established is a EPOLLOUT event, so detect OUT first
                 if (events & EPOLLOUT)
                 {
@@ -358,11 +364,6 @@ namespace dsn
                 {
                     // recv
                     do_read();
-                }
-
-                if ((events & EPOLLHUP) || (events & EPOLLRDHUP))
-                {
-                    on_failure();
                 }
             };
         }
@@ -442,6 +443,12 @@ namespace dsn
             {
                 uint32_t events = (uint32_t)lolp_or_events;
 
+                if ((events & EPOLLHUP) || (events & EPOLLRDHUP) || (events & EPOLLERR))
+                {
+                    on_failure();
+                    return;
+                }
+
                 if (events & EPOLLIN)
                 {
                     do_read();
@@ -457,11 +464,6 @@ namespace dsn
                     {
                         on_write_completed(nullptr); // send next msg if there is.
                     }
-                }
-
-                if ((events & EPOLLHUP) || (events & EPOLLRDHUP))
-                {
-                    on_failure();
                 }
             };
         }

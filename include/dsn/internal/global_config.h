@@ -67,9 +67,9 @@ typedef std::map<network_server_config, network_server_config> network_server_co
 
 typedef struct service_app_role
 {
-    std::string   name; // type name
-    dsn_app_create create;
-    dsn_app_start start;
+    std::string     name; // type name
+    dsn_app_create  create;
+    dsn_app_start   start;
     dsn_app_destroy destroy;
 
 } service_app_role;

@@ -58,8 +58,9 @@ namespace dsn
 
     public:
         template<typename TServiceApp>
-        static void* app_create()
+        static void* app_create(const char* tname)
         {
+            tname;
             auto svc =  new TServiceApp();
             return (void*)(dynamic_cast<service_app*>(svc));
         }
