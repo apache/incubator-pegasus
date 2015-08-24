@@ -41,12 +41,11 @@ namespace dsn
         };
 
         CONFIG_BEGIN(io_loop_config)
-            CONFIG_FLD_ENUM(io_loop_type, type, IOLOOP_GLOBAL, IOLOOP_INVALID, false, "io loop mode: IOLOOP_GLOBAL, IOLOOP_PER_NODE, or IOLOOP_PER_QUEUE")
+            CONFIG_FLD_ENUM(io_loop_type, type, IOLOOP_PER_NODE, IOLOOP_INVALID, false, "io loop mode: IOLOOP_GLOBAL, IOLOOP_PER_NODE, or IOLOOP_PER_QUEUE")
             CONFIG_FLD(int, uint64, worker_count, 4, "io loop thread count, not used for IOLOOP_PER_QUEUE")
         CONFIG_END
 
         static io_loop_config s_config;
-        static io_looper *s_global_looper;
 
         io_loop_type get_io_looper_type()
         {
@@ -57,12 +56,6 @@ namespace dsn
                 {
                     dassert(false, "invalid io loop configuration");
                 }
-
-                if (s_config.type == IOLOOP_GLOBAL)
-                {
-                    s_global_looper = new io_looper();
-                    s_global_looper->start(nullptr, s_config.worker_count);
-                }
             });
 
             return s_config.type;
@@ -72,8 +65,6 @@ namespace dsn
         {   
             switch (get_io_looper_type())
             {
-            case IOLOOP_GLOBAL:
-                return s_global_looper;
             case IOLOOP_PER_NODE:
                 {
                     auto looper = (io_looper*)get_per_service_node_state(node, "io_looper");

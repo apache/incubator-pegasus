@@ -24,6 +24,7 @@
  * THE SOFTWARE.
  */
 # include "simple_task_queue.h"
+# include <dsn/internal/per_node_state.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -39,11 +40,14 @@ namespace dsn
         {
             _worker = std::shared_ptr<std::thread>(new std::thread([this, node]()
             {
-                task_worker::set_name("timer");
-                task_worker::set_priority(worker_priority_t::THREAD_xPRIORITY_ABOVE_NORMAL);
-
                 task::set_tls_dsn_context(node, nullptr, nullptr, nullptr, nullptr);
 
+                char buffer[128];
+                sprintf(buffer, "%s.timer", get_service_node_name(node));
+
+                task_worker::set_name(buffer);
+                task_worker::set_priority(worker_priority_t::THREAD_xPRIORITY_ABOVE_NORMAL);
+                
                 boost::asio::io_service::work work(_ios);
                 _ios.run();
             }));

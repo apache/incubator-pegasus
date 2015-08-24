@@ -83,16 +83,13 @@ namespace dsn
             {
                 std::thread* thr = new std::thread([this, node, i]()
                 {
+                    task::set_tls_dsn_context(node, nullptr, nullptr, nullptr, nullptr);
+
                     const char* name = node ? ::dsn::tools::get_service_node_name(node) : "glb";
                     char buffer[128];
                     sprintf(buffer, "%s.io-loop.%d", name, i);
                     task_worker::set_name(buffer);
-
-                    if (node)
-                    {
-                        task::set_tls_dsn_context(node, nullptr, nullptr, nullptr, nullptr);
-                    }
-
+                    
                     this->loop_ios(); 
                 });
                 _workers.push_back(thr);

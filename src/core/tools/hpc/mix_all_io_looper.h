@@ -35,7 +35,6 @@ namespace dsn
     {
         enum io_loop_type
         {
-            IOLOOP_GLOBAL,
             IOLOOP_PER_NODE,
             IOLOOP_PER_QUEUE, // can be shared in a thread pool or per thread, according to the queue mode
             IOLOOP_COUNT,
@@ -43,7 +42,6 @@ namespace dsn
         };
 
         ENUM_BEGIN(io_loop_type, IOLOOP_INVALID)
-            ENUM_REG(IOLOOP_GLOBAL)
             ENUM_REG(IOLOOP_PER_NODE)
             ENUM_REG(IOLOOP_PER_QUEUE)
         ENUM_END(io_loop_type)
