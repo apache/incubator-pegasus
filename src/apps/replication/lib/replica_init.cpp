@@ -101,7 +101,7 @@ error_code replica::initialize_on_load(const char* dir, bool renameDirOnFailure)
         // GCed later
         char newPath[256];
         sprintf(newPath, "%s.%x.err", dir, random32(0, (uint32_t)-1));  
-        boost::filesystem::remove_all(newPath);
+        dsn::utils::remove(newPath);
         boost::filesystem::rename(dir, newPath);
         derror( "move bad replica from '%s' to '%s'", dir, newPath);
     }

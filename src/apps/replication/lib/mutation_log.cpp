@@ -96,23 +96,25 @@ error_code mutation_log::initialize(const char* dir)
     _last_file_number = 0;
     _log_files.clear();
 
-    boost::filesystem::directory_iterator endtr;
+	std::vector<std::string> file_list;
+	if (!dsn::utils::get_files(dir, file_list, false))
+	{
+		derror("open mutation_log: get files failed.");
+		return ERR_FILE_OPERATION_FAILED;
+	}
 
-    for (boost::filesystem::directory_iterator it(dir);
-        it != endtr;
-        ++it)
-    {
-        std::string fullPath = it->path().string();
-        log_file_ptr log = log_file::opend_read(fullPath.c_str());
-        if (log == nullptr)
-        {
-            dwarn ("Skip file %s during log init", fullPath.c_str());
-            continue;
-        }
+	for (auto& fpath : file_list)
+	{
+		log_file_ptr log = log_file::opend_read(fpath.c_str());
+		if (log == nullptr)
+		{
+			dwarn("Skip file %s during log init", fpath.c_str());
+			continue;
+		}
 
-        dassert (_log_files.find(log->index()) == _log_files.end(), "");
-        _log_files[log->index()] = log;
-    }
+		dassert(_log_files.find(log->index()) == _log_files.end(), "");
+		_log_files[log->index()] = log;
+	}
 
     if (_log_files.size() > 0)
     {
@@ -557,9 +559,13 @@ int mutation_log::garbage_collection(multi_partition_decrees& durable_decrees, m
     {
         itr->second->close();
 
-        ddebug("remove log segment %s", itr->second->path().c_str());
+		auto& fpath = itr->second->path();
+        ddebug("remove log segment %s", fpath.c_str());
 
-        boost::filesystem::remove(itr->second->path().c_str());
+		if (!dsn::utils::remove(fpath))
+		{
+			dwarn("Fail to remove %s.", fpath.c_str());
+		}
 
         count++;
 

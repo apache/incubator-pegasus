@@ -1,6 +1,5 @@
 # include "nfs_server_impl.h"
 # include <cstdlib>
-# include <boost/filesystem.hpp>
 # include <sys/stat.h>
 
 namespace dsn {
@@ -116,19 +115,25 @@ namespace dsn {
                 }
                 else
                 {
-                    get_file_names(folder, file_list);
-                    for (size_t i = 0; i < file_list.size(); i++)
-                    {
-                        struct stat st;
-                        ::stat(file_list[i].c_str(), &st);
+					if (!dsn::utils::get_files(folder, file_list, true))
+					{
+						err = ERR_OBJECT_NOT_FOUND;
+					}
+					else
+					{
+						for (size_t i = 0; i < file_list.size(); i++)
+						{
+							struct stat st;
+							::stat(file_list[i].c_str(), &st);
 
-                        // TODO: using uint64 instead as file ma
-                        // Done
-                        uint64_t size = st.st_size;
+							// TODO: using uint64 instead as file ma
+							// Done
+							uint64_t size = st.st_size;
 
-                        resp.size_list.push_back(size);
-                        resp.file_list.push_back(file_list[i].substr(request.source_dir.length(), file_list[i].length() - 1));
-                    }
+							resp.size_list.push_back(size);
+							resp.file_list.push_back(file_list[i].substr(request.source_dir.length(), file_list[i].length() - 1));
+						}
+					}
                 }
             }
             else // return file size in the request file folder
@@ -181,16 +186,9 @@ namespace dsn {
             }
         }
 
-        void nfs_service_impl::get_file_names(std::string dir, std::vector<std::string>& file_list)
+        bool nfs_service_impl::get_file_names(std::string dir, std::vector<std::string>& file_list)
         {
-            boost::filesystem::recursive_directory_iterator it(dir), end;
-            for (; it != end; ++it)
-            {
-                if (!boost::filesystem::is_directory(*it))
-                {
-                    file_list.push_back(it->path().string());
-                }
-            }
+			return dsn::utils::get_files(dir, file_list, true);
         }
 
     }

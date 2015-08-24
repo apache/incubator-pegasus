@@ -47,7 +47,7 @@ namespace dsn {
 
             void close_file();
 
-            void get_file_names(std::string dir, std::vector<std::string>& file_list);
+            bool get_file_names(std::string dir, std::vector<std::string>& file_list);
 
         private:
             nfs_opts  &_opts;
