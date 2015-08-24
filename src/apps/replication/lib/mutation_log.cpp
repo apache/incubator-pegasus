@@ -25,7 +25,6 @@
  */
 
 #include "mutation_log.h"
-#include <boost/filesystem.hpp>
 #ifdef _WIN32
 #include <io.h>
 #endif
@@ -115,6 +114,7 @@ error_code mutation_log::initialize(const char* dir)
 		dassert(_log_files.find(log->index()) == _log_files.end(), "");
 		_log_files[log->index()] = log;
 	}
+	file_list.clear();
 
     if (_log_files.size() > 0)
     {
@@ -655,8 +655,12 @@ log_file::log_file(const char* path, dsn_handle_t handle, int index, int64_t sta
 
     if (isRead)
     {
-        boost::filesystem::path cp(_path);
-        _end_offset += boost::filesystem::file_size(cp);
+		int64_t sz;
+		if (!dsn::utils::file_size(_path, sz))
+		{
+			dassert(false, "Fail to get file size of %s.", _path);
+		}
+		_end_offset += sz;
     }
 }
 
