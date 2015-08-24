@@ -75,9 +75,9 @@ hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provid
     };
 }
 
-void hpc_aio_provider::update_on_io_mode(task_queue* q)
+void hpc_aio_provider::start(io_modifer& ctx)
 {
-    _looper = get_io_looper(node(), q);
+    _looper = get_io_looper(node(), ctx.queue);
 }
 
 hpc_aio_provider::~hpc_aio_provider()

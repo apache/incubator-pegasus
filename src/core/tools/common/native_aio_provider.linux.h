@@ -52,6 +52,8 @@ namespace dsn {
             virtual void    aio(aio_task* aio);
             virtual disk_aio* prepare_aio_context(aio_task* tsk);
 
+            virtual void start(io_modifer& ctx) override;
+
             struct linux_disk_aio_context : public disk_aio
             {
                 struct iocb cb;

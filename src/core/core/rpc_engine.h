@@ -43,7 +43,7 @@ public:
     //
     ::dsn::error_code start(
         const service_app_spec& spec, 
-        task_queue* q           // when rpc engine is bound to this queue, see io_loop_mode
+        io_modifer& ctx
         );
 
     //
@@ -69,7 +69,7 @@ private:
     network* create_network(
         const network_server_config& netcs, 
         bool client_only,
-        task_queue* q           // when rpc engine is bound to this queue, see io_loop_mode
+        io_modifer& ctx
         );
 
 private:

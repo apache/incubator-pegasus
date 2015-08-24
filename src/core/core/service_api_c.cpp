@@ -808,6 +808,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
 {
     memset((void*)&dsn::tls_dsn, 0, sizeof(dsn::tls_dsn));
     dsn::tls_dsn.magic = 0xdeadbeef;
+    dsn::tls_dsn.worker_index = -1;
 
     dsn_all.engine_ready = false;
     dsn_all.config_completed = false;

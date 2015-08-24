@@ -41,6 +41,7 @@ task_queue::task_queue(task_worker_pool* pool, int index, task_queue* inner_prov
     _index = index;
     _name = pool->spec().name + '.';
     _name.append(num);
+    _owner_worker = nullptr;
 }
 
 bool task_queue::is_shared() const

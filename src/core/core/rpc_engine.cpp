@@ -34,6 +34,7 @@
 # include "service_engine.h"
 # include <dsn/internal/perf_counters.h>
 # include <dsn/internal/factory_store.h>
+# include <dsn/internal/task_queue.h>
 # include <set>
 
 # ifdef __TITLE__
@@ -178,7 +179,7 @@ namespace dsn {
     network* rpc_engine::create_network(
         const network_server_config& netcs, 
         bool client_only,
-        task_queue* q           // when rpc engine is bound to this queue, see io_loop_mode
+        io_modifer& ctx
         )
     {
         const service_spec& spec = service_engine::fast_instance().spec();
@@ -194,8 +195,7 @@ namespace dsn {
         }
 
         // start the net
-        net->update_on_io_mode(q);
-        error_code ret = net->start(netcs.channel, netcs.port, client_only);
+        error_code ret = net->start(netcs.channel, netcs.port + ctx.port_shift_value, client_only, ctx); 
         if (ret == ERR_OK)
         {
             return net;
@@ -209,7 +209,7 @@ namespace dsn {
 
     error_code rpc_engine::start(
         const service_app_spec& aspec, 
-        task_queue* q
+        io_modifer& ctx
         )
     {
         if (_is_running)
@@ -254,9 +254,29 @@ namespace dsn {
                 cs.message_buffer_block_size = blk_size;
                 cs.hdr_format = network_header_format(network_header_format::to_string(i));
 
-                auto net = create_network(cs, true, q);
+                auto net = create_network(cs, true, ctx);
                 if (!net) return ERR_NETWORK_INIT_FALED;
                 pnet[j] = net;
+
+                if (ctx.queue)
+                {
+                    dwarn("[%s.%s] network client started at port %u, channel = %s, fmt = %s ...",
+                        node()->name(),
+                        ctx.queue->get_name().c_str(),
+                        (uint32_t)(cs.port + ctx.port_shift_value),
+                        cs.channel.to_string(),
+                        cs.hdr_format.to_string()
+                        );
+                }
+                else
+                {
+                    dwarn("[%s] network client started at port %u, channel = %s, fmt = %s ...",
+                        node()->name(),
+                        (uint32_t)(cs.port + ctx.port_shift_value),
+                        cs.channel.to_string(),
+                        cs.hdr_format.to_string()
+                        );
+                }
             }
         }
         
@@ -280,7 +300,7 @@ namespace dsn {
                 pnets = &it->second;
             }
 
-            auto net = create_network(sp.second, false, q);
+            auto net = create_network(sp.second, false, ctx);
             if (net == nullptr)
             {
                 return ERR_NETWORK_INIT_FALED;
@@ -288,15 +308,29 @@ namespace dsn {
 
             (*pnets)[sp.second.channel] = net;
 
-            dinfo("network started at port %u, channel = %s, fmt = %s ...",
-                (uint32_t)port,
-                sp.second.channel.to_string(),
-                sp.second.hdr_format.to_string()
-                );
+            if (ctx.queue)
+            {
+                dwarn("[%s.%s] network server started at port %u, channel = %s, fmt = %s ...",
+                    node()->name(),
+                    ctx.queue->get_name().c_str(),
+                    (uint32_t)(port + ctx.port_shift_value),
+                    sp.second.channel.to_string(),
+                    sp.second.hdr_format.to_string()
+                    );
+            }
+            else
+            {
+                dwarn("[%s] network server started at port %u, channel = %s, fmt = %s ...",
+                    node()->name(),
+                    (uint32_t)(port + ctx.port_shift_value),
+                    sp.second.channel.to_string(),
+                    sp.second.hdr_format.to_string()
+                    );
+            }
         }
 
         _local_primary_address = _client_nets[0][0]->address();
-        _local_primary_address.port = aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id;
+        _local_primary_address.port = aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id + ctx.port_shift_value;
 
         _is_running = true;
         return ERR_OK;

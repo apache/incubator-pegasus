@@ -91,7 +91,7 @@ namespace dsn
             {
                 threadpool_spec& tspec = *it;
 
-                if (spec.io_mode == IOLOOP_PER_QUEUE)
+                if (spec.io_mode == IOE_PER_QUEUE)
                 {
                     if (tspec.worker_factory_name == "")
                         tspec.worker_factory_name = ("dsn::tools::io_looper_task_worker");
@@ -101,7 +101,7 @@ namespace dsn
                 }
                 else
                 {
-                    dassert(spec.io_mode == IOLOOP_PER_NODE, "");
+                    dassert(spec.io_mode == IOE_PER_NODE, "");
 
                     if (tspec.worker_factory_name == "")
                         tspec.worker_factory_name = ("dsn::task_worker");

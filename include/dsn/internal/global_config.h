@@ -87,6 +87,7 @@ struct service_app_spec
     int                  delay_seconds;
     bool                 run;
     int                  count; // index = 1,2,...,count
+    int                  ports_gap; // when count > 1 or service_spec.io_mode != IOE_PER_NODE
     std::string          dmodule; // when the service is a dynamcially loaded module
     service_app_role     role;
 
@@ -100,7 +101,7 @@ struct service_app_spec
         service_app_spec* default_value,
         network_client_configs* default_client_nets = nullptr,
         network_server_configs* default_server_nets = nullptr
-        );
+        );    
 };
 
 CONFIG_BEGIN(service_app_spec)
@@ -145,7 +146,7 @@ struct service_spec
     std::list<std::string>       rwlock_nr_aspects;
     std::list<std::string>       semaphore_aspects;
 
-    io_loop_mode                 io_mode;
+    ioe_mode                     io_mode;
     int                          io_worker_count;
         
     network_client_configs        network_default_client_cfs; // default network configed by tools
@@ -156,6 +157,7 @@ struct service_spec
     service_spec() {}
     bool init();
     bool init_app_specs();
+    int get_ports_delta(int app_id, dsn_threadpool_code_t pool, int queue_index) const;
 };
 
 CONFIG_BEGIN(service_spec)
@@ -185,10 +187,10 @@ CONFIG_BEGIN(service_spec)
     CONFIG_FLD_STRING_LIST(rwlock_nr_aspects, "non-recursive rwlock aspect providers, usually for tooling purpose")
     CONFIG_FLD_STRING_LIST(semaphore_aspects, "semaphore aspect providers, usually for tooling purpose")
 
-    CONFIG_FLD_ENUM(io_loop_mode, io_mode, IOLOOP_PER_NODE, IOLOOP_INVALID, false,
-    "io loop mode: IOLOOP_PER_NODE, or IOLOOP_PER_QUEUE")
-    CONFIG_FLD(int, uint64, io_worker_count, 2, "io thread count, only for IOLOOP_PER_NODE; "
-    "for IOLOOP_PER_QUEUE, task workers are served as io threads")
+    CONFIG_FLD_ENUM(ioe_mode, io_mode, IOE_PER_NODE, IOE_INVALID, false,
+        "io engine mode: IOE_PER_NODE, or IOE_PER_QUEUE")
+    CONFIG_FLD(int, uint64, io_worker_count, 2, "io thread count, only for IOE_PER_NODE; "
+        "for IOE_PER_QUEUE, task workers are served as io threads")
 CONFIG_END
 
 enum sys_exit_type

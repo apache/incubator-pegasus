@@ -43,8 +43,7 @@ native_win_aio_provider::native_win_aio_provider(disk_engine* disk, aio_provider
 : aio_provider(disk, inner_provider)
 {
     _iocp = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 0);
-    _worker_thr = new std::thread(std::bind(&native_win_aio_provider::worker, this));
-    ::SetThreadPriority(_worker_thr->native_handle(), THREAD_PRIORITY_HIGHEST);
+    
 }
 
 native_win_aio_provider::~native_win_aio_provider()
@@ -59,6 +58,22 @@ native_win_aio_provider::~native_win_aio_provider()
         delete _worker_thr;
         _worker_thr = nullptr;
     }
+}
+
+void native_win_aio_provider::start(io_modifer& ctx)
+{
+    _worker_thr = new std::thread([this, ctx]()
+    {
+        task::set_tls_dsn_context(node(), nullptr, ctx.queue);
+
+        const char* name = ::dsn::tools::get_service_node_name(node());
+        char buffer[128];
+        sprintf(buffer, "%s.aio", name);
+        task_worker::set_name(buffer);
+
+        worker(); 
+    });
+    ::SetThreadPriority(_worker_thr->native_handle(), THREAD_PRIORITY_HIGHEST);
 }
 
 dsn_handle_t native_win_aio_provider::open(const char* file_name, int oflag, int pmode)
@@ -280,9 +295,7 @@ void native_win_aio_provider::worker()
     DWORD dwErrorCode;
     ULONG_PTR dwKey;
     LPOVERLAPPED overLap;
-
-    task::set_tls_dsn_context(node(), nullptr, nullptr, nullptr, nullptr);
-
+    
     do
     {
         bool ret = (0 != GetQueuedCompletionStatus(_iocp, &dwTransLen, &dwKey, &overLap, INFINITE));

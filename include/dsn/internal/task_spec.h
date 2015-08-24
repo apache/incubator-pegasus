@@ -96,18 +96,18 @@ ENUM_BEGIN(task_state, TASK_STATE_INVALID)
     ENUM_REG(TASK_STATE_CANCELLED)
 ENUM_END(task_state)
 
-typedef enum io_loop_mode
+typedef enum ioe_mode
 {
-    IOLOOP_PER_NODE,  // each node has shared io engine (rpc/disk/nfs)
-    IOLOOP_PER_QUEUE, // each queue has shared io engine (rpc/disk/nfs)
-    IOLOOP_COUNT,
-    IOLOOP_INVALID
-} io_loop_mode;
+    IOE_PER_NODE,  // each node has shared io engine (rpc/disk/nfs/timer)
+    IOE_PER_QUEUE, // each queue has shared io engine (rpc/disk/nfs/timer)
+    IOE_COUNT,
+    IOE_INVALID
+} ioe_mode;
 
-ENUM_BEGIN(io_loop_mode, IOLOOP_INVALID)
-    ENUM_REG(IOLOOP_PER_NODE)
-    ENUM_REG(IOLOOP_PER_QUEUE)
-ENUM_END(io_loop_mode)
+ENUM_BEGIN(ioe_mode, IOE_INVALID)
+    ENUM_REG(IOE_PER_NODE)
+    ENUM_REG(IOE_PER_QUEUE)
+ENUM_END(ioe_mode)
 
 // define network header format for RPC
 DEFINE_CUSTOMIZED_ID_TYPE(network_header_format);
@@ -122,6 +122,7 @@ DEFINE_CUSTOMIZED_ID(rpc_channel, RPC_CHANNEL_UDP)
 DEFINE_CUSTOMIZED_ID_TYPE(threadpool_code2)
 
 class task;
+class task_queue;
 class aio_task;
 class rpc_request_task;
 class rpc_response_task;
@@ -130,6 +131,13 @@ class admission_controller;
 typedef void (*task_rejection_handler)(task*, admission_controller*);
 struct rpc_handler_info;
 typedef std::shared_ptr<rpc_handler_info> rpc_handler_ptr;
+
+typedef struct __io_mode_modifier__
+{
+    ioe_mode    mode;     // see ioe_mode for details
+    task_queue* queue;    // when mode == IOE_PER_QUEUE
+    int port_shift_value; // port += port_shift_value
+} io_modifer;
 
 class task_spec : public extensible_object<task_spec, 4>
 {

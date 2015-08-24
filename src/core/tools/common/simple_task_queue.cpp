@@ -37,16 +37,24 @@ namespace dsn
         simple_timer_service::simple_timer_service(service_node* node, timer_service* inner_provider)
             : timer_service(node, inner_provider)
         {
-            _worker = std::shared_ptr<std::thread>(new std::thread([this, node]()
+            _worker = nullptr;
+        }
+
+        void simple_timer_service::start(io_modifer& ctx)
+        {
+            _worker = std::shared_ptr<std::thread>(new std::thread([this, ctx]()
             {
-                task::set_tls_dsn_context(node, nullptr, nullptr, nullptr, nullptr);
+                task::set_tls_dsn_context(node(), nullptr, ctx.queue);
 
                 char buffer[128];
-                sprintf(buffer, "%s.timer", get_service_node_name(node));
+                sprintf(buffer, "%s.%s.timer", 
+                    get_service_node_name(node()), 
+                    ctx.queue ? ctx.queue->get_name().c_str():""
+                    );
 
                 task_worker::set_name(buffer);
                 task_worker::set_priority(worker_priority_t::THREAD_xPRIORITY_ABOVE_NORMAL);
-                
+
                 boost::asio::io_service::work work(_ios);
                 _ios.run();
             }));

@@ -50,13 +50,14 @@ disk_engine::~disk_engine()
 {
 }
 
-void disk_engine::start(aio_provider* provider)
+void disk_engine::start(aio_provider* provider, io_modifer& ctx)
 {
     auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
     if (_is_running)
         return;  
 
     _provider = provider;
+    _provider->start(ctx);
     _is_running = true;
 }
 

@@ -26,7 +26,7 @@ namespace dsn {
             _client->begin_remote_copy(rci, callback); // copy file request entry
         }
 
-        error_code nfs_node_simple::start()
+        error_code nfs_node_simple::start(io_modifer& ctx)
         {
             _server = new nfs_service_impl(*_opts);
             _server->open_service();

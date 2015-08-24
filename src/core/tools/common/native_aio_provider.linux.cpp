@@ -46,14 +46,21 @@ namespace dsn {
             memset(&_ctx, 0, sizeof(_ctx));
             auto ret = io_setup(128, &_ctx); // 128 concurrent events
             dassert(ret == 0, "io_setup error, ret = %d", ret);
-
-            new std::thread(std::bind(&native_linux_aio_provider::get_event, this));
         }
 
         native_linux_aio_provider::~native_linux_aio_provider()
         {
             auto ret = io_destroy(_ctx);
             dassert(ret == 0, "io_destroy error, ret = %d", ret);
+        }
+
+        void native_linux_aio_provider::start(io_modifer& ctx)
+        {
+            new std::thread([this, ctx]()
+            {
+                task::set_tls_dsn_context(node(), nullptr, ctx.queue);
+                get_event();
+            });
         }
 
         dsn_handle_t native_linux_aio_provider::open(const char* file_name, int flag, int pmode)
@@ -89,7 +96,12 @@ namespace dsn {
             int ret;
             linux_disk_aio_context * aio;
 
-            task::set_tls_dsn_context(node(), nullptr, nullptr, nullptr, nullptr);
+            task::set_tls_dsn_context(node(), nullptr, nullptr);
+
+            const char* name = ::dsn::tools::get_service_node_name(node());
+            char buffer[128];
+            sprintf(buffer, "%s.aio.%d", name);
+            task_worker::set_name(buffer);
 
             while (true)
             {

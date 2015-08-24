@@ -178,17 +178,14 @@ namespace dsn
             _listen_fd = INVALID_SOCKET;
             _looper = nullptr;
         }
-
-        void hpc_network_provider::update_on_io_mode(task_queue* q)
-        {
-            _looper = get_io_looper(node(), q);
-        }
-
-        error_code hpc_network_provider::start(rpc_channel channel, int port, bool client_only)
+        
+        error_code hpc_network_provider::start(rpc_channel channel, int port, bool client_only, io_modifer& ctx)
         {
             if (_listen_fd != INVALID_SOCKET)
                 return ERR_SERVICE_ALREADY_RUNNING;
             
+            _looper = get_io_looper(node(), ctx.queue);
+
             dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP, 
                 "invalid given channel %s", channel.to_string());
 

@@ -55,9 +55,7 @@ __thread struct
 /*static*/ void task::set_tls_dsn_context(
     service_node* node,  // cannot be null
     task_worker* worker, // null for io or timer threads if they are not worker threads
-    rpc_engine* rpc,     // if null, then node->rpc
-    disk_engine* disk,   // if null, then node->disk
-    nfs_node* nfs        // if null, then node->nfs
+    task_queue* queue    // owner queue if io_mode == IOE_PER_QUEUE
     )
 {
     if (tls_dsn.magic != 0xdeadbeef)
@@ -76,29 +74,11 @@ __thread struct
             );
     }
 
-    if (rpc != nullptr)
+    if (queue != nullptr)
     {
-        dassert(rpc->node() == node,
-            "rpc not belonging to the given node: %s vs %s",
-            rpc->node()->name(),
-            node->name()
-            );
-    }
-
-    if (disk != nullptr)
-    {
-        dassert(disk->node() == node,
-            "disk not belonging to the given node: %s vs %s",
-            disk->node()->name(),
-            node->name()
-            );
-    }
-    
-    if (nfs != nullptr)
-    {
-        dassert(nfs->node() == node,
-            "nfs not belonging to the given node: %s vs %s",
-            nfs->node()->name(),
+        dassert(queue->pool()->node() == node,
+            "queue not belonging to the given node: %s vs %s",
+            queue->pool()->node()->name(),
             node->name()
             );
     }
@@ -107,10 +87,11 @@ __thread struct
     tls_dsn.worker = worker;
     tls_dsn.worker_index = worker ? worker->index() : -1;
     tls_dsn.current_task = nullptr;
-    tls_dsn.rpc = rpc ? rpc : node->rpc(worker ? worker->queue() : nullptr);
-    tls_dsn.disk = disk ? disk : node->disk(worker ? worker->queue() : nullptr);
+    tls_dsn.rpc = node->rpc(queue ? queue : (worker ? worker->queue() : nullptr));
+    tls_dsn.disk = node->disk(queue ? queue : (worker ? worker->queue() : nullptr));
     tls_dsn.env = service_engine::fast_instance().env();
-    tls_dsn.nfs = nfs ? nfs : node->nfs(worker ? worker->queue() : nullptr);
+    tls_dsn.nfs = node->nfs(queue ? queue : (worker ? worker->queue() : nullptr));
+    tls_dsn.tsvc = node->tsvc(queue ? queue : (worker ? worker->queue() : nullptr));
 }
 
 task::task(dsn_task_code_t code, int hash, service_node* node)
@@ -390,7 +371,7 @@ void task::enqueue(task_worker_pool* pool)
     // for delayed tasks, refering to timer service
     if (_delay_milliseconds != 0)
     {
-        pool->timer_svc()->add_timer(this);
+        pool->add_timer(this);
         return;
     }
     
@@ -402,8 +383,15 @@ void task::enqueue(task_worker_pool* pool)
     // fast execution
     if (_spec->allow_inline || _spec->fast_execution_in_network_thread || _is_null)
     {
-        tools::node_scoper ns(_node);
-        exec_internal();
+        if (_node != task::get_current_node())
+        {
+            tools::node_scoper ns(_node);
+            exec_internal();
+        }
+        else
+        {
+            exec_internal();
+        }
     }
 
     // normal path
