@@ -89,7 +89,7 @@ namespace dsn {
             int ret;
             linux_disk_aio_context * aio;
 
-            task::set_tls_dsn_context(nullptr, node());
+            task::set_tls_dsn_context(node(), nullptr, nullptr, nullptr, nullptr);
 
             while (true)
             {

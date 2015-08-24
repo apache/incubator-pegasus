@@ -123,7 +123,7 @@ namespace dsn
 
             for (int i = 0; i < worker_count; i++)
             {
-                std::thread* thr = new std::thread([this, node]()
+                std::thread* thr = new std::thread([this, node, i]()
                 {
                     const char* name = node ? ::dsn::tools::get_service_node_name(node) : "glb";
                     char buffer[128];
