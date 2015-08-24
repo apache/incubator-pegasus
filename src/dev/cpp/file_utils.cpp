@@ -449,7 +449,7 @@ namespace dsn {
 			return (::rename(path1.c_str(), path2.c_str()) == 0);
 		}
 
-		bool file_size(const std::string& path, uintmax_t& sz)
+		bool file_size(const std::string& path, int64_t& sz)
 		{
 #ifdef _WIN32
 			struct _stat64 st;
@@ -467,7 +467,7 @@ namespace dsn {
 				return false;
 			}
 
-			sz = (uintmax_t)st.st_size;
+			sz = st.st_size;
 
 			return true;
 		}

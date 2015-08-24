@@ -513,7 +513,7 @@ static void test_create()
 static void test_file_size()
 {
 	std::string path;
-	uintmax_t sz;
+	int64_t sz;
 	bool ret;
 
 	path = "./file_utils_temp.txt";
