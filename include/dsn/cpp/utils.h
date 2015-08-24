@@ -339,7 +339,7 @@ namespace dsn {
 
 		extern bool rename(const std::string& path1, const std::string& path2);
 
-		//extern bool file_size(const std::string& path, uintmax_t& sz);
+		extern bool file_size(const std::string& path, uintmax_t& sz);
 
 		extern bool create_directory(const std::string& path);
 

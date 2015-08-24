@@ -26,6 +26,7 @@
 
 # include <gtest/gtest.h>
 # include <dsn/cpp/utils.h>
+# include <fstream>
 
 
 static void test_setup()
@@ -467,6 +468,11 @@ static void test_create()
 	ret = dsn::utils::file_exists(path);
 	EXPECT_TRUE(ret);
 
+	std::ofstream myfile(path.c_str(), std::ios::out | std::ios::app | std::ios::binary);
+	EXPECT_TRUE(myfile.is_open());
+	myfile << "Hello world!";
+	myfile.close();
+
 	path = "./file_utils_temp";
 	ret = dsn::utils::create_directory(path);
 	EXPECT_TRUE(ret);
@@ -502,6 +508,22 @@ static void test_create()
 	EXPECT_TRUE(ret);
 	ret = dsn::utils::file_exists(path);
 	EXPECT_TRUE(ret);
+}
+
+static void test_file_size()
+{
+	std::string path;
+	uintmax_t sz;
+	bool ret;
+
+	path = "./file_utils_temp.txt";
+	ret = dsn::utils::file_size(path, sz);
+	EXPECT_TRUE(ret);
+	EXPECT_TRUE(sz == 12);
+
+	path = "./file_utils_temp2.txt";
+	ret = dsn::utils::file_size(path, sz);
+	EXPECT_FALSE(ret);
 }
 
 static void test_path_exists()
@@ -665,6 +687,7 @@ TEST(core, file_utils_test)
 	test_setup();
 	test_get_normalized_path();
 	test_create();
+	test_file_size();
 	test_path_exists();
 	test_get_files();
 	test_remove();
