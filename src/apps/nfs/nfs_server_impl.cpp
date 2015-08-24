@@ -117,22 +117,24 @@ namespace dsn {
                 {
 					if (!dsn::utils::get_files(folder, file_list, true))
 					{
-						err = ERR_OBJECT_NOT_FOUND;
+						err = ERR_FILE_OPERATION_FAILED;
 					}
 					else
 					{
-						for (size_t i = 0; i < file_list.size(); i++)
+						for (auto& fpath : file_list)
 						{
-							struct stat st;
-							::stat(file_list[i].c_str(), &st);
-
 							// TODO: using uint64 instead as file ma
 							// Done
-							uint64_t size = st.st_size;
+							int64_t sz;
+							if (!dsn::utils::file_size(fpath, sz))
+							{
+								dassert(false, "Fail to get file size of %s.", fpath.c_str());
+							}
 
-							resp.size_list.push_back(size);
-							resp.file_list.push_back(file_list[i].substr(request.source_dir.length(), file_list[i].length() - 1));
+							resp.size_list.push_back((uint64_t)sz);
+							resp.file_list.push_back(fpath.substr(request.source_dir.length(), fpath.length() - 1));
 						}
+						file_list.clear();
 					}
                 }
             }
@@ -185,11 +187,5 @@ namespace dsn {
                     it++;
             }
         }
-
-        bool nfs_service_impl::get_file_names(std::string dir, std::vector<std::string>& file_list)
-        {
-			return dsn::utils::get_files(dir, file_list, true);
-        }
-
     }
 }
