@@ -49,9 +49,11 @@ namespace dsn {
     extern void marshall(::dsn::binary_writer& writer, const remote_copy_request& val);
 
     extern void unmarshall(::dsn::binary_reader& reader, __out_param remote_copy_request& val);
-
-
+    
     class service_node;
+    class task_worker_pool;
+    class task_queue;
+
     class nfs_node
     {
     public:
@@ -68,6 +70,11 @@ namespace dsn {
         virtual error_code stop() = 0;
 
         virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task* callback) = 0;
+
+        //
+        // update according to io mode when necessary (usually not necessary)
+        //
+        virtual void update_on_io_mode(task_queue* q) {}
 
         service_node* node() { return _node; }
 

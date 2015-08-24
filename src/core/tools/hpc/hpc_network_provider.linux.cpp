@@ -90,7 +90,12 @@ namespace dsn
             : connection_oriented_network(srv, inner_provider)
         {
             _listen_fd = -1;
-            _looper = get_io_looper(node());
+            _looper = nullptr;
+        }
+
+        void hpc_network_provider::update_on_io_mode(task_queue* q)
+        {
+            _looper = get_io_looper(node(), q);
         }
 
         error_code hpc_network_provider::start(rpc_channel channel, int port, bool client_only)
@@ -135,7 +140,7 @@ namespace dsn
                     this->do_accept();
                 };
 
-                get_looper()->bind_io_handle((dsn_handle_t)_listen_fd, &_accept_event.callback,
+                _looper->bind_io_handle((dsn_handle_t)_listen_fd, &_accept_event.callback,
                     EPOLLIN | EPOLLET);
             }
 
@@ -154,7 +159,7 @@ namespace dsn
 
             auto sock = create_tcp_socket(&addr);
             auto client = new hpc_rpc_client_session(sock, parser, *this, server_addr, matcher);
-            client->bind_looper(get_looper());
+            client->bind_looper(_looper);
             return client;
         }
 
@@ -170,7 +175,7 @@ namespace dsn
 
                 auto parser = new_message_parser();
                 auto rs = new hpc_rpc_server_session(s, parser, *this, client_addr);
-                rs->bind_looper(get_looper());
+                rs->bind_looper(_looper);
 
                 rpc_server_session_ptr s1(rs);
                 this->on_server_session_accepted(s1);

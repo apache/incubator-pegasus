@@ -64,9 +64,9 @@ public:
 public:    
     service_node(service_app_spec& app_spec, void* app_context);
        
-    rpc_engine*  rpc(task_worker_pool* pool, task_queue* q) const;
-    disk_engine* disk(task_worker_pool* pool, task_queue* q) const;
-    nfs_node* nfs(task_worker_pool* pool, task_queue* q) const;
+    rpc_engine*  rpc(task_queue* q) const;
+    disk_engine* disk(task_queue* q) const;
+    nfs_node* nfs(task_queue* q) const;
 
     task_engine* computation() const { return _computation; }
     const std::list<io_engine>& ios() const { return _ios; }
@@ -93,7 +93,6 @@ private:
 
     io_loop_mode                                _io_mode;
     io_engine                                   _per_node_io;
-    std::unordered_map<task_worker_pool*, io_engine> _per_pool_ios;
     std::unordered_map<task_queue*, io_engine>  _per_queue_ios;
     std::list<io_engine>                        _ios; // all ios
     
@@ -101,8 +100,8 @@ private:
     std::unordered_map<std::string, void*>      _per_node_states;
     
 private:
-    error_code init_io_engine(io_engine& io, int ports_add);
-    void get_io(task_worker_pool* pool, task_queue* q, __out_param io_engine& io) const;
+    error_code init_io_engine(io_engine& io, task_worker_pool* pool, task_queue* q);
+    void get_io(task_queue* q, __out_param io_engine& io) const;
 };
 
 typedef std::map<int, service_node*> service_nodes_by_app_id;

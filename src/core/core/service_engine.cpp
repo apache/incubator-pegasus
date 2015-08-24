@@ -112,7 +112,7 @@ rpc_handler_ptr service_node::rpc_unregister_handler(dsn_task_code_t rpc_code)
     return ret;
 }
 
-error_code service_node::init_io_engine(io_engine& io, int ports_add)
+error_code service_node::init_io_engine(io_engine& io, task_worker_pool* pool, task_queue* q)
 {
     auto& spec = service_engine::fast_instance().spec();
     error_code err = ERR_OK;
@@ -128,16 +128,12 @@ error_code service_node::init_io_engine(io_engine& io, int ports_add)
         aio = factory_store<aio_provider>::create(it->c_str(), 
             PROVIDER_TYPE_ASPECT, io.disk, aio);
     }
+    aio->update_on_io_mode(q);
     io.disk->start(aio);
 
     // init rpc engine
     io.rpc = new rpc_engine(spec.config, this);
-    auto aspec = _app_spec;
-    for (auto& p : aspec.ports)
-    {
-        p += ports_add;
-    }
-    err = io.rpc->start(aspec);
+    err = io.rpc->start(_app_spec, q);
     if (err != ERR_OK) return err;
 
     // init nfs
@@ -152,6 +148,7 @@ error_code service_node::init_io_engine(io_engine& io, int ports_add)
         {
             io.nfs = factory_store<nfs_node>::create(spec.nfs_factory_name.c_str(), 
                 PROVIDER_TYPE_MAIN, this);
+            io.nfs->update_on_io_mode(q);
         }
     }
     else
@@ -176,23 +173,9 @@ error_code service_node::start()
     switch (_io_mode)
     {
     case IOLOOP_PER_NODE:
-        err = init_io_engine(_per_node_io, 0);
+        err = init_io_engine(_per_node_io, nullptr, nullptr);
         if (err != ERR_OK) return err;
         _ios.push_back(_per_node_io);
-        break;
-    case IOLOOP_PER_POOL:
-        for (auto& pl : _computation->pools())
-        {
-            if (pl == nullptr)
-                continue;
-
-            io_engine io;
-            err = init_io_engine(io, 0); // TODO: compute adder
-            if (err != ERR_OK) return err;
-            _per_pool_ios[pl] = io;
-
-            _ios.push_back(io);
-        }
         break;
     case IOLOOP_PER_QUEUE:
         for (auto& pl : _computation->pools())
@@ -203,7 +186,7 @@ error_code service_node::start()
             for (auto& q : pl->queues())
             {
                 io_engine io;
-                err = init_io_engine(io, 0); // TODO: compute adder
+                err = init_io_engine(io, pl, q); // TODO: compute adder
                 if (err != ERR_OK) return err;
                 _per_queue_ios[q] = io;
 
@@ -223,23 +206,15 @@ error_code service_node::start()
     return err;
 }
 
-void service_node::get_io(task_worker_pool* pool, task_queue* q, __out_param io_engine& io) const
+void service_node::get_io(task_queue* q, __out_param io_engine& io) const
 {
     switch (_io_mode)
     {
     case IOLOOP_PER_NODE:
         io = _per_node_io;
         break;
-    case IOLOOP_PER_POOL:
-        dassert(pool, "pool cannot be empty");
-        {
-            auto it = _per_pool_ios.find(pool);
-            dassert(it != _per_pool_ios.end(), "io engine must be created for the pool");
-            io = it->second;
-        }
-        break;
     case IOLOOP_PER_QUEUE:
-        dassert(pool, "pool cannot be empty");
+        dassert(q, "queue cannot be empty");
         {
             auto it = _per_queue_ios.find(q);
             dassert(it != _per_queue_ios.end(), "io engine must be created for the queue");
@@ -250,24 +225,24 @@ void service_node::get_io(task_worker_pool* pool, task_queue* q, __out_param io_
         dassert(false, "invalid io mode");
     }
 }
-rpc_engine* service_node::rpc(task_worker_pool* pool, task_queue* q) const
+rpc_engine* service_node::rpc(task_queue* q) const
 {
     io_engine io;
-    get_io(pool, q, io);
+    get_io(q, io);
     return io.rpc;
 }
 
-disk_engine* service_node::disk(task_worker_pool* pool, task_queue* q) const
+disk_engine* service_node::disk(task_queue* q) const
 {
     io_engine io;
-    get_io(pool, q, io);
+    get_io(q, io);
     return io.disk;
 }
 
-nfs_node* service_node::nfs(task_worker_pool* pool, task_queue* q) const
+nfs_node* service_node::nfs(task_queue* q) const
 {
     io_engine io;
-    get_io(pool, q, io);
+    get_io(q, io);
     return io.nfs;
 }
 

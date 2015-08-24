@@ -107,13 +107,10 @@ __thread struct
     tls_dsn.worker = worker;
     tls_dsn.worker_index = worker ? worker->index() : -1;
     tls_dsn.current_task = nullptr;
-    tls_dsn.rpc = rpc ? rpc : node->rpc(
-        worker ? worker->pool() : nullptr, worker ? worker->queue() : nullptr);
-    tls_dsn.disk = disk ? disk : node->disk(
-        worker ? worker->pool() : nullptr, worker ? worker->queue() : nullptr);
+    tls_dsn.rpc = rpc ? rpc : node->rpc(worker ? worker->queue() : nullptr);
+    tls_dsn.disk = disk ? disk : node->disk(worker ? worker->queue() : nullptr);
     tls_dsn.env = service_engine::fast_instance().env();
-    tls_dsn.nfs = nfs ? nfs : node->nfs(
-        worker ? worker->pool() : nullptr, worker ? worker->queue() : nullptr);
+    tls_dsn.nfs = nfs ? nfs : node->nfs(worker ? worker->queue() : nullptr);
 }
 
 task::task(dsn_task_code_t code, int hash, service_node* node)

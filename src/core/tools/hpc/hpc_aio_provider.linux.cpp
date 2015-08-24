@@ -56,7 +56,6 @@ struct linux_disk_aio_context : public disk_aio
 hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provider)
     : aio_provider(disk, inner_provider)
 {
-    _looper = get_io_looper(node());
     _callback = [this](
         int native_error,
         uint32_t io_size,
@@ -99,16 +98,13 @@ hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provid
     dassert(ret == 0, "io_setup error, ret = %d", ret);
 
     _event_fd = eventfd(0, EFD_NONBLOCK);
+    _looper = nullptr;
+}
 
-    if (_looper)
-    {
-        _looper->bind_io_handle((dsn_handle_t)_event_fd, &_callback, EPOLLIN | EPOLLET);
-        _event_fd_registered = true;
-    }
-    else
-    {
-        _event_fd_registered = false;
-    }
+void hpc_aio_provider::update_on_io_mode(task_queue* q)
+{
+    _looper = get_io_looper(node(), q);
+    _looper->bind_io_handle((dsn_handle_t)_event_fd, &_callback, EPOLLIN | EPOLLET);
 }
 
 hpc_aio_provider::~hpc_aio_provider()
@@ -151,12 +147,6 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, __out_p
     struct iocb *cbs[1];
     linux_disk_aio_context * aio;
     int ret;
-
-    if (!_event_fd_registered)
-    {
-        get_looper()->bind_io_handle((dsn_handle_t)_event_fd, &_callback, EPOLLIN | EPOLLET);
-        _event_fd_registered = true;
-    }
 
     aio = (linux_disk_aio_context *)aio_tsk->aio();
 

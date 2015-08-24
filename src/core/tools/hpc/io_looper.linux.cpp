@@ -25,7 +25,6 @@
  */
 
 # include "io_looper.h"
-# include <dsn/internal/per_node_state.h>
 
 # if defined(__linux__)
 

@@ -96,6 +96,19 @@ ENUM_BEGIN(task_state, TASK_STATE_INVALID)
     ENUM_REG(TASK_STATE_CANCELLED)
 ENUM_END(task_state)
 
+typedef enum io_loop_mode
+{
+    IOLOOP_PER_NODE,  // each node has shared io engine (rpc/disk/nfs)
+    IOLOOP_PER_QUEUE, // each queue has shared io engine (rpc/disk/nfs)
+    IOLOOP_COUNT,
+    IOLOOP_INVALID
+} io_loop_mode;
+
+ENUM_BEGIN(io_loop_mode, IOLOOP_INVALID)
+    ENUM_REG(IOLOOP_PER_NODE)
+    ENUM_REG(IOLOOP_PER_QUEUE)
+ENUM_END(io_loop_mode)
+
 // define network header format for RPC
 DEFINE_CUSTOMIZED_ID_TYPE(network_header_format);
 DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_DSN);

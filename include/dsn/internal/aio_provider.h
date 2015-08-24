@@ -31,6 +31,8 @@ namespace dsn {
 
 class disk_engine;
 class service_node;
+class task_worker_pool;
+class task_queue;
 
 //
 // !!! all threads must be started with task::set_tls_dsn_context(null, provider->node());
@@ -51,6 +53,9 @@ public:
     virtual error_code   close(dsn_handle_t hFile) = 0;
     virtual void         aio(aio_task* aio) = 0;
     virtual disk_aio*    prepare_aio_context(aio_task*) = 0;
+
+    // update according to io mode when necessary (usually not necessary)
+    virtual void update_on_io_mode(task_queue* q) {}
 
 protected:
     void complete_io(aio_task* aio, error_code err, uint32_t bytes, int delay_milliseconds = 0);

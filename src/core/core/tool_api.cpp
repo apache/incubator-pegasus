@@ -147,6 +147,11 @@ namespace dsn {
             return service_engine::fast_instance().spec();
         }
 
+        const char* get_service_node_name(service_node* node)
+        {
+            return node->name();
+        }
+
         join_point<void, configuration_ptr> sys_init_before_app_created("system.init.1");
         join_point<void, configuration_ptr> sys_init_after_app_created("system.init.2");
         join_point<void, sys_exit_type> sys_exit("system.exit");

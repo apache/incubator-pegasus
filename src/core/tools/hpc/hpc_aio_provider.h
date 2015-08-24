@@ -46,9 +46,10 @@ namespace dsn {
             virtual void         aio(aio_task* aio);            
             virtual disk_aio*    prepare_aio_context(aio_task* tsk);
 
+            virtual void update_on_io_mode(task_queue* q) override;
+
         protected:
             error_code aio_internal(aio_task* aio, bool async, __out_param uint32_t* pbytes = nullptr);
-            io_looper* get_looper() { return _looper ? _looper : dynamic_cast<io_looper*>(task::get_current_worker()); }
 
         private:            
             io_looper *_looper;
@@ -59,7 +60,6 @@ namespace dsn {
 
             io_context_t _ctx;
             int          _event_fd;
-            bool         _event_fd_registered;
 # endif 
         };
     }

@@ -24,7 +24,6 @@
  * THE SOFTWARE.
  */
 # include "simple_task_queue.h"
-# include <dsn/internal/per_node_state.h>
 
 # ifdef __TITLE__
 # undef __TITLE__

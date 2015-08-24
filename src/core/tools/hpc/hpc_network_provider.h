@@ -54,14 +54,13 @@ namespace dsn {
             virtual const dsn_address_t& address() { return _address;  }
             virtual rpc_client_session_ptr create_client_session(const dsn_address_t& server_addr);
 
+            virtual void update_on_io_mode(task_queue* q) override;
+
         private:
             socket_t      _listen_fd;
             dsn_address_t _address;
             io_looper     *_looper;
-
-        public:
-            io_looper* get_looper() { return _looper ? _looper : dynamic_cast<io_looper*>(task::get_current_worker()); }
-
+            
         private:
             void do_accept();
 
