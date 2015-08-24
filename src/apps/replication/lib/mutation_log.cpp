@@ -658,7 +658,7 @@ log_file::log_file(const char* path, dsn_handle_t handle, int index, int64_t sta
 		int64_t sz;
 		if (!dsn::utils::filesystem::file_size(_path, sz))
 		{
-			dassert(false, "Fail to get file size of %s.", _path);
+			dassert(false, "Fail to get file size of %s.", _path.c_str());
 		}
 		_end_offset += sz;
     }
