@@ -41,16 +41,35 @@ class env_provider;
 class logging_provider;
 class nfs_node;
 class memory_provider;
+class task_queue;
+class task_worker_pool;
 
 class service_node
 {
+public:
+    struct io_engine
+    {
+        rpc_engine*      rpc;
+        disk_engine*     disk;
+        nfs_node*        nfs;
+
+        struct io_engine()
+        {
+            rpc = nullptr;
+            disk = nullptr;
+            nfs = nullptr;
+        }
+    };
+
 public:    
     service_node(service_app_spec& app_spec, void* app_context);
-    
+       
+    rpc_engine*  rpc(task_worker_pool* pool, task_queue* q) const;
+    disk_engine* disk(task_worker_pool* pool, task_queue* q) const;
+    nfs_node* nfs(task_worker_pool* pool, task_queue* q) const;
+
     task_engine* computation() const { return _computation; }
-    rpc_engine*  rpc() const { return _rpc; }
-    disk_engine* disk() const { return _disk; }
-    nfs_node* nfs() const { return _nfs; }
+    const std::list<io_engine>& ios() const { return _ios; }
     void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, __out_param std::stringstream& ss);
 
     ::dsn::error_code start();
@@ -63,17 +82,27 @@ public:
     void* get_per_node_state(const char* name);
     bool  put_per_node_state(const char* name, void* obj);
     void* remove_per_node_state(const char* name);
-    
+
+    bool  rpc_register_handler(rpc_handler_ptr& handler);
+    rpc_handler_ptr rpc_unregister_handler(dsn_task_code_t rpc_code);
+
 private:
     void*            _app_context_ptr; // app start returns this value and used by app stop
     service_app_spec _app_spec;
     task_engine*     _computation;
-    rpc_engine*      _rpc;
-    disk_engine*     _disk;
-    nfs_node*        _nfs;
 
-    utils::ex_lock_nr_spin              _lock;
-    std::map<std::string, void*> _per_node_states;
+    io_loop_mode                                _io_mode;
+    io_engine                                   _per_node_io;
+    std::unordered_map<task_worker_pool*, io_engine> _per_pool_ios;
+    std::unordered_map<task_queue*, io_engine>  _per_queue_ios;
+    std::list<io_engine>                        _ios; // all ios
+    
+    utils::ex_lock_nr_spin                      _lock;
+    std::unordered_map<std::string, void*>      _per_node_states;
+    
+private:
+    error_code init_io_engine(io_engine& io, int ports_add);
+    void get_io(task_worker_pool* pool, task_queue* q, __out_param io_engine& io) const;
 };
 
 typedef std::map<int, service_node*> service_nodes_by_app_id;

@@ -107,10 +107,13 @@ __thread struct
     tls_dsn.worker = worker;
     tls_dsn.worker_index = worker ? worker->index() : -1;
     tls_dsn.current_task = nullptr;
-    tls_dsn.rpc = rpc ? rpc : node->rpc();
-    tls_dsn.disk = disk ? disk : node->disk();
+    tls_dsn.rpc = rpc ? rpc : node->rpc(
+        worker ? worker->pool() : nullptr, worker ? worker->queue() : nullptr);
+    tls_dsn.disk = disk ? disk : node->disk(
+        worker ? worker->pool() : nullptr, worker ? worker->queue() : nullptr);
     tls_dsn.env = service_engine::fast_instance().env();
-    tls_dsn.nfs = nfs ? nfs : node->nfs();
+    tls_dsn.nfs = nfs ? nfs : node->nfs(
+        worker ? worker->pool() : nullptr, worker ? worker->queue() : nullptr);
 }
 
 task::task(dsn_task_code_t code, int hash, service_node* node)
@@ -537,7 +540,7 @@ aio_task::aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int 
     dassert (TASK_TYPE_AIO == spec().type, "task must be of AIO type, please use DEFINE_TASK_CODE_AIO to define the task code");
     set_error_code(ERR_IO_PENDING);
 
-    _aio = node()->disk()->prepare_aio_context(this);
+    _aio = task::get_current_disk()->prepare_aio_context(this);
 }
 
 aio_task::~aio_task()

@@ -220,8 +220,6 @@ struct rpc_handler_info
     }
 };
 
-typedef std::shared_ptr<rpc_handler_info> rpc_handler_ptr;
-
 class service_node;
 class rpc_request_task : public task
 {
@@ -363,25 +361,25 @@ __inline /*static*/ int task::get_current_worker_index()
     return tls_dsn.worker_index;
 }
 
-__inline /*static*/ rpc_engine*      get_current_rpc()
+__inline /*static*/ rpc_engine* task::get_current_rpc()
 {
     dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
     return tls_dsn.rpc;
 }
 
-__inline /*static*/ disk_engine*     get_current_disk()
+__inline /*static*/ disk_engine* task::get_current_disk()
 {
     dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
     return tls_dsn.disk;
 }
 
-__inline /*static*/ env_provider*    get_current_env()
+__inline /*static*/ env_provider* task::get_current_env()
 {
     dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
     return tls_dsn.env;
 }
 
-__inline /*static*/ nfs_node*        get_current_nfs()
+__inline /*static*/ nfs_node* task::get_current_nfs()
 {
     dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
     return tls_dsn.nfs;

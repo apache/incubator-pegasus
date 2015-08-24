@@ -33,20 +33,8 @@ namespace dsn
 {
     namespace tools
     {
-        enum io_loop_type
-        {
-            IOLOOP_PER_NODE,
-            IOLOOP_PER_QUEUE, // can be shared in a thread pool or per thread, according to the queue mode
-            IOLOOP_COUNT,
-            IOLOOP_INVALID
-        };
-
-        ENUM_BEGIN(io_loop_type, IOLOOP_INVALID)
-            ENUM_REG(IOLOOP_PER_NODE)
-            ENUM_REG(IOLOOP_PER_QUEUE)
-        ENUM_END(io_loop_type)
-
-        extern io_loop_type get_io_looper_type();
+        
+        extern io_loop_mode get_io_looper_type();
         extern io_looper* get_io_looper(service_node* node);
 
         class io_looper_task_queue : public task_queue, public io_looper

@@ -40,7 +40,6 @@ namespace dsn.dev.csharp
         private static IntPtr AppCreate<T>(string tname)
             where T : ServiceApp, new()
         {
-            tname;
             ServiceApp app = new T();
             return (IntPtr)(app._gch);
         }

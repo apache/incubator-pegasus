@@ -62,6 +62,8 @@ public:
     task_engine* engine() const { return _owner; }
     service_node* node() const { return _node; }
     void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, __out_param std::stringstream& ss);
+    std::vector<task_queue*>& queues() { return _queues; }
+    std::vector<task_worker*>& workers() { return _workers; }
 
 private:
     threadpool_spec                    _spec;
@@ -91,6 +93,7 @@ public:
     // task management routines
     //
     task_worker_pool* get_pool(int code) const { return _pools[code]; }
+    std::vector<task_worker_pool*>& pools() { return _pools; }
     timer_service* timer_svc() const { return _timer_service;  }
 
     bool is_started() const { return _is_running; }
