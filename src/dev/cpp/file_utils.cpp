@@ -169,8 +169,8 @@ namespace dsn {
 #ifndef _WIN32
 		static __thread struct
 		{
-			ftw_handler	handler;
-			bool		recursive;
+			ftw_handler*	handler;
+			bool			recursive;
 		} ftw_ctx;
 
 		static int ftw_wrapper(const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf)
@@ -191,7 +191,7 @@ namespace dsn {
 #endif
 			}
 
-			return ftw_ctx.handler(fpath, ftw_ctx.ctx, typeflag);
+			return (*ftw_ctx.handler)(fpath, typeflag);
 		}
 #endif
 		bool file_tree_walk(
@@ -294,7 +294,7 @@ namespace dsn {
 
 			return true;
 		#else
-			ftw_ctx.handler = handler;
+			ftw_ctx.handler = &handler;
 			ftw_ctx.recursive = recursive;
 			int flags = 
 #ifdef __linux__
