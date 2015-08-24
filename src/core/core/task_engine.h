@@ -48,7 +48,8 @@ public:
     task_worker_pool(const threadpool_spec& opts, task_engine* owner);
 
     // service management
-    void start();    
+    void create();    
+    void start();
 
     // task procecessing
     void enqueue(task* task);
@@ -83,7 +84,8 @@ public:
     //
     // service management routines
     //
-    void start(const std::list<dsn_threadpool_code_t>& pools);
+    void create(const std::list<dsn_threadpool_code_t>& pools);
+    void start();
 
     //
     // task management routines

@@ -842,6 +842,9 @@ namespace dsn {
 extern void dsn_log_init();
 bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_name, int app_index)
 {
+    memset((void*)&dsn::tls_dsn, 0, sizeof(dsn::tls_dsn));
+    dsn::tls_dsn.magic = 0xdeadbeef;
+
     dsn_all.engine_ready = false;
     dsn_all.config_completed = false;
     dsn_all.tool = nullptr;

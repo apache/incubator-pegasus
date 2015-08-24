@@ -43,7 +43,7 @@ task_worker_pool::task_worker_pool(const threadpool_spec& opts, task_engine* own
     _timer_service = _owner->timer_svc();
 }
 
-void task_worker_pool::start()
+void task_worker_pool::create()
 {
     if (_is_running)
         return;
@@ -95,8 +95,16 @@ void task_worker_pool::start()
         task_worker::on_create.execute(worker);
 
         _workers.push_back(worker);
-        worker->start();
     }
+}
+
+void task_worker_pool::start()
+{
+    if (_is_running)
+        return;
+
+    for (auto& wk : _workers)
+        wk->start();
 
     _is_running = true;
 }
@@ -219,7 +227,7 @@ task_engine::task_engine(service_node* node)
     _node = node;
 }
 
-void task_engine::start(const std::list<dsn_threadpool_code_t>& pools)
+void task_engine::create(const std::list<dsn_threadpool_code_t>& pools)
 {
     if (_is_running)
         return;
@@ -244,10 +252,22 @@ void task_engine::start(const std::list<dsn_threadpool_code_t>& pools)
     {
         auto& s = service_engine::fast_instance().spec().threadpool_specs[p];
         auto workerPool = new task_worker_pool(s, this);
-        workerPool->start();
+        workerPool->create();
         _pools[p] = workerPool;
     }
-    
+}
+
+void task_engine::start()
+{
+    if (_is_running)
+        return;
+
+    for (auto& pl : _pools)
+    {
+        if (pl)
+            pl->start();
+    }        
+
     _is_running = true;
 }
 

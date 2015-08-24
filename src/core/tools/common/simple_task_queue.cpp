@@ -42,7 +42,8 @@ namespace dsn
                 task_worker::set_name("timer");
                 task_worker::set_priority(worker_priority_t::THREAD_xPRIORITY_ABOVE_NORMAL);
 
-                task::set_current_worker(nullptr, node);
+                task::set_tls_dsn_context(node, nullptr, nullptr, nullptr, nullptr);
+
                 boost::asio::io_service::work work(_ios);
                 _ios.run();
             }));

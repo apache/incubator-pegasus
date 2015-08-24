@@ -92,8 +92,8 @@ error_code service_node::start()
 
     // init task engine    
     _computation = new task_engine(this);
-    _computation->start(_app_spec.pools);    
-    dassert (_computation->is_started(), "task engine must be started at this point");
+    _computation->create(_app_spec.pools);    
+    dassert (!_computation->is_started(), "task engine must not be started at this point");
 
     // init disk engine
     _disk = new disk_engine(this);
@@ -127,6 +127,10 @@ error_code service_node::start()
     {
         dwarn("nfs not started coz [core] start_nfs = false");
     }
+
+    // start task engine
+    _computation->start();
+    dassert(_computation->is_started(), "task engine must be started at this point");
 
     return err;
 }

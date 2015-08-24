@@ -89,7 +89,7 @@ namespace dsn {
             int ret;
             linux_disk_aio_context * aio;
 
-            task::set_current_worker(nullptr, node());
+            task::set_tls_dsn_context(nullptr, node());
 
             while (true)
             {

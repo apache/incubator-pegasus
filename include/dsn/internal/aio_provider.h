@@ -33,7 +33,7 @@ class disk_engine;
 class service_node;
 
 //
-// !!! all threads must be started with task::set_current_worker(null, provider->node());
+// !!! all threads must be started with task::set_tls_dsn_context(null, provider->node());
 //
 class aio_provider
 {

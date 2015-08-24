@@ -34,24 +34,17 @@ namespace dsn { namespace tools {
     public:
         node_scoper(service_node* node)
         {
-            _cnode = task::get_current_node();
-            _cworker = task::get_current_worker();
-            _ctask = tls_task_info.current_task;
-
-            task::set_current_worker(nullptr, node);
-            tls_task_info.current_task = nullptr;
+            _old = tls_dsn;
+            task::set_tls_dsn_context(node, nullptr, nullptr, nullptr, nullptr);
         }
 
         ~node_scoper()
         {
-            task::set_current_worker(_cworker, _cnode);
-            tls_task_info.current_task = _ctask;
+            tls_dsn = _old;
         }
 
     private:
-        task         *_ctask;
-        task_worker  *_cworker;
-        service_node *_cnode;
+        struct __tls_dsn__ _old;
     };
 
 // ---- inline implementation ------

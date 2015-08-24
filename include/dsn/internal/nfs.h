@@ -69,6 +69,8 @@ namespace dsn {
 
         virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task* callback) = 0;
 
+        service_node* node() { return _node; }
+
     protected:
         service_node* _node;
     };

@@ -39,7 +39,7 @@ namespace dsn {
             {
                 _workers.push_back(std::shared_ptr<std::thread>(new std::thread([this]()
                 {
-                    task::set_current_worker(nullptr, node());
+                    task::set_tls_dsn_context(node(), nullptr, nullptr, nullptr, nullptr);
 
                     boost::asio::io_service::work work(_io_service);
                     _io_service.run();

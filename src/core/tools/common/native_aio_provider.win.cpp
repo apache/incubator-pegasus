@@ -281,7 +281,7 @@ void native_win_aio_provider::worker()
     ULONG_PTR dwKey;
     LPOVERLAPPED overLap;
 
-    task::set_current_worker(nullptr, node());
+    task::set_tls_dsn_context(node(), nullptr, nullptr, nullptr, nullptr);
 
     do
     {

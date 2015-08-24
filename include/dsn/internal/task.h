@@ -34,9 +34,11 @@
 # include <dsn/cpp/auto_codes.h>
 # include <dsn/cpp/utils.h>
 
-namespace dsn {
+namespace dsn 
+{
 
-namespace lock_checker {
+namespace lock_checker 
+{
     extern __thread int zlock_exclusive_count;
     extern __thread int zlock_shared_count;
     extern void check_wait_safety();
@@ -44,23 +46,33 @@ namespace lock_checker {
     extern void check_wait_task(task* waitee);
 }
 
-//----------------- common task -------------------------------------------------------
-
 class task_worker;
 class task_worker_pool;
 class service_node;
+class task_engine;
+class rpc_engine;
+class disk_engine;
+class env_provider;
+class nfs_node;
 class task;
 
-struct __tls_task_info__
+struct __tls_dsn__
 {
     uint32_t     magic;    
-    task         *current_task;    
+    task         *current_task;   
+
     task_worker  *worker;
     int           worker_index;
-    service_node *current_node;
+    service_node *node;
+    rpc_engine   *rpc;
+    disk_engine  *disk;
+    env_provider *env;
+    nfs_node     *nfs;
 };
 
-extern __thread struct __tls_task_info__ tls_task_info;
+extern __thread struct __tls_dsn__ tls_dsn;
+
+//----------------- common task -------------------------------------------------------
 
 class task :
     public ref_counter, 
@@ -90,14 +102,25 @@ public:
     service_node*           node() const { return _node; }
     bool                    is_empty() const { return _is_null; }
 
-    
+    // static helper utilities
     static task*            get_current_task();
     static uint64_t         get_current_task_id();
     static task_worker*     get_current_worker();
     static service_node*    get_current_node();
     static int              get_current_worker_index();
     static const char*      get_current_node_name();
-    static void             set_current_worker(task_worker* worker, service_node* node);
+    static rpc_engine*      get_current_rpc();
+    static disk_engine*     get_current_disk();
+    static env_provider*    get_current_env();
+    static nfs_node*        get_current_nfs();
+
+    static void             set_tls_dsn_context(
+                                service_node* node,  // cannot be null
+                                task_worker* worker, // null for io or timer threads if they are not worker threads
+                                rpc_engine* rpc,     // if null, then node->rpc
+                                disk_engine* disk,   // if null, then node->disk
+                                nfs_node* nfs        // if null, then node->nfs
+                                );
 
 protected:
     void                    signal_waiters();
@@ -311,43 +334,57 @@ private:
 // ------------------------ inline implementations --------------------
 __inline /*static*/ task* task::get_current_task()
 {
-    if (tls_task_info.magic == 0xdeadbeef)
-        return tls_task_info.current_task;
-    else
-        return nullptr;
+    dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
+    return tls_dsn.current_task;
 }
 
 __inline /*static*/ uint64_t task::get_current_task_id()
 {
-    if (tls_task_info.magic == 0xdeadbeef)
-        return tls_task_info.current_task ? tls_task_info.current_task->id() : 0;
-    else
-        return 0;
+    dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
+    return tls_dsn.current_task ? tls_dsn.current_task->id() : 0;
 }
 
 
 __inline /*static*/ task_worker* task::get_current_worker()
 {
-    if (tls_task_info.magic == 0xdeadbeef)
-        return tls_task_info.worker;
-    else
-        return nullptr;
+    dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
+    return tls_dsn.worker;
 }
 
 __inline /*static*/ service_node* task::get_current_node()
 {
-    if (tls_task_info.magic == 0xdeadbeef)
-        return tls_task_info.current_node;
-    else
-        return nullptr;
+    dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
+    return tls_dsn.node;
 }
 
 __inline /*static*/ int task::get_current_worker_index()
 {
-    if (tls_task_info.magic == 0xdeadbeef)
-        return tls_task_info.worker_index;
-    else
-        return -1;
+    dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
+    return tls_dsn.worker_index;
+}
+
+__inline /*static*/ rpc_engine*      get_current_rpc()
+{
+    dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
+    return tls_dsn.rpc;
+}
+
+__inline /*static*/ disk_engine*     get_current_disk()
+{
+    dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
+    return tls_dsn.disk;
+}
+
+__inline /*static*/ env_provider*    get_current_env()
+{
+    dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
+    return tls_dsn.env;
+}
+
+__inline /*static*/ nfs_node*        get_current_nfs()
+{
+    dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
+    return tls_dsn.nfs;
 }
 
 } // end namespace

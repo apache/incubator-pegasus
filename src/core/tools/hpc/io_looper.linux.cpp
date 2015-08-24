@@ -132,7 +132,7 @@ namespace dsn
 
                     if (node)
                     {
-                        task::set_current_worker(nullptr, node);
+                        task::set_tls_dsn_context(node, nullptr, nullptr, nullptr, nullptr);
                     }
 
                     this->loop_ios(); 

@@ -44,7 +44,7 @@
 
 namespace dsn 
 {
-__thread struct __tls_task_info__ tls_task_info;
+__thread struct __tls_dsn__ tls_dsn;
 __thread struct
 {
     int magic;
@@ -52,17 +52,65 @@ __thread struct
     int last_task_id; // 32bits
 } tls_task_id;
 
-/*static*/ void task::set_current_worker(task_worker* worker, service_node* node)
+/*static*/ void task::set_tls_dsn_context(
+    service_node* node,  // cannot be null
+    task_worker* worker, // null for io or timer threads if they are not worker threads
+    rpc_engine* rpc,     // if null, then node->rpc
+    disk_engine* disk,   // if null, then node->disk
+    nfs_node* nfs        // if null, then node->nfs
+    )
 {
-    if (tls_task_info.magic != 0xdeadbeef)
+    if (tls_dsn.magic != 0xdeadbeef)
     {
-        tls_task_info.magic = 0xdeadbeef;
+        tls_dsn.magic = 0xdeadbeef;
     }
 
-    tls_task_info.worker = worker;
-    tls_task_info.worker_index = worker ? worker->index() : -1;
-    tls_task_info.current_task = nullptr;
-    tls_task_info.current_node = worker ? worker->pool()->node() : node;
+    dassert(node, "service node cannot be empty");
+    
+    if (worker != nullptr)
+    {
+        dassert(worker->pool()->node() == node, 
+            "worker not belonging to the given node: %s vs %s",
+            worker->pool()->node()->name(),
+            node->name()
+            );
+    }
+
+    if (rpc != nullptr)
+    {
+        dassert(rpc->node() == node,
+            "rpc not belonging to the given node: %s vs %s",
+            rpc->node()->name(),
+            node->name()
+            );
+    }
+
+    if (disk != nullptr)
+    {
+        dassert(disk->node() == node,
+            "disk not belonging to the given node: %s vs %s",
+            disk->node()->name(),
+            node->name()
+            );
+    }
+    
+    if (nfs != nullptr)
+    {
+        dassert(nfs->node() == node,
+            "nfs not belonging to the given node: %s vs %s",
+            nfs->node()->name(),
+            node->name()
+            );
+    }
+
+    tls_dsn.node = node;
+    tls_dsn.worker = worker;
+    tls_dsn.worker_index = worker ? worker->index() : -1;
+    tls_dsn.current_task = nullptr;
+    tls_dsn.rpc = rpc ? rpc : node->rpc();
+    tls_dsn.disk = disk ? disk : node->disk();
+    tls_dsn.env = service_engine::fast_instance().env();
+    tls_dsn.nfs = nfs ? nfs : node->nfs();
 }
 
 task::task(dsn_task_code_t code, int hash, service_node* node)
@@ -95,7 +143,7 @@ task::task(dsn_task_code_t code, int hash, service_node* node)
         if (worker_idx == -1)
         {
             worker_idx = ::dsn::utils::get_current_tid();
-            // tls_task_info.worker_index = worker_idx;
+            // tls_dsn.worker_index = worker_idx;
         }
         tls_task_id.node_pool_thread_ids |= ((uint64_t)(uint16_t)worker_idx) << 32; // next 16 bits for thread id
 
@@ -122,10 +170,10 @@ void task::exec_internal()
 
     if (_state.compare_exchange_strong(READY_STATE, TASK_STATE_RUNNING))
     {
-        dassert(tls_task_info.magic == 0xdeadbeef, "thread is not inited with task::set_current_worker");
+        dassert(tls_dsn.magic == 0xdeadbeef, "thread is not inited with task::set_tls_dsn_context");
 
-        task* parent_task = tls_task_info.current_task;
-        tls_task_info.current_task = this;
+        task* parent_task = tls_dsn.current_task;
+        tls_dsn.current_task = this;
 
         _spec->on_task_begin.execute(this);
 
@@ -171,7 +219,7 @@ void task::exec_internal()
             }
         }
         
-        tls_task_info.current_task = parent_task;
+        tls_dsn.current_task = parent_task;
     }
     else
     {
