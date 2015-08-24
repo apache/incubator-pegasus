@@ -554,7 +554,7 @@ TEST(core, file_utils_get_files)
 #ifdef _WIN32
 	EXPECT_TRUE(file_list.size() >= 3);
 #else
-	EXPECT_TRUE(file_list.size() == 2);
+	EXPECT_TRUE(file_list.size() >= 2);
 #endif
 	file_list.clear();
 
