@@ -425,6 +425,21 @@ namespace dsn {
 			}
 		}
 
+		bool rename(const std::string& path1, const std::string& path2)
+		{
+			return (::rename(path1.c_str(), path2.c_str()) == 0);
+		}
+
+		bool file_size(const std::string& path, uintmax_t& sz)
+		{
+			if (!dsn::utils::file_exists(path))
+			{
+				return false;
+			}
+
+			return false;
+		}
+
 		bool create_directory(const std::string& path)
 		{
 			size_t prev = 0;
