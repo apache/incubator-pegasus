@@ -603,7 +603,7 @@ namespace dsn {
 				char* component;
 				succ = (0 != ::GetFullPathNameA(path1.c_str(), PATH_MAX, path_buffer, &component));
 # else
-				succ = (realpath(path, path_buffer) != nullptr);
+				succ = (realpath(path1.c_str(), path_buffer) != nullptr);
 # endif
 				if (succ)
 				{
