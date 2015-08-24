@@ -71,29 +71,34 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     
     if (clear)
     {
-		if (!dsn::utils::remove(_dir))
+		if (!dsn::utils::filesystem::remove(_dir))
 		{
-			dwarn("Fail to remove %s.", _dir.c_str());
+			dassert("Fail to remove %s.", _dir.c_str());
 		}
     }
 
-    if (!::dsn::utils::is_file_or_dir_exist(_dir.c_str()))
-    {
-        mkdir_(_dir.c_str());
-    }
+	if (!dsn::utils::filesystem::create_directory(_dir))
+	{
+		dassert(false, "Fail to create directory %s.", _dir.c_str());
+	}
 
-    _dir = ::dsn::utils::get_absolute_path(_dir.c_str());
+	std::string temp;
+	if (!dsn::utils::filesystem::get_absolute_path(_dir, temp))
+	{
+		dassert(false, "Fail to get absolute path from %s.", _dir.c_str());
+	}
+	_dir = temp;
     std::string logDir = _dir + "/log";
-    if (!::dsn::utils::is_file_or_dir_exist(logDir.c_str()))
-    {
-        mkdir_(logDir.c_str());
-    }
+	if (!dsn::utils::filesystem::create_directory(logDir))
+	{
+		dassert(false, "Fail to create directory %s.", logDir.c_str());
+	}
 
     // init rps
     replicas rps;
 	std::vector<std::string> file_list;
 
-	if (!dsn::utils::get_files(dir(), file_list, false))
+	if (!dsn::utils::filesystem::get_files(dir(), file_list, false))
 	{
 		dassert(false, "Fail to get files in %s.", dir().c_str());
 	}
@@ -727,7 +732,7 @@ void replica_stub::on_gc()
     // gc on-disk rps
 #if 0
 	std::vector<std::string> file_list;
-	if (!dsn::utils::get_files(dir(), file_list, false))
+	if (!dsn::utils::filesystem::get_files(dir(), file_list, false))
 	{
 		dassert(false, "Fail to get files in %s.", dir().c_str());
 	}

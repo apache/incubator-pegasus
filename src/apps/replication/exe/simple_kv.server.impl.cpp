@@ -308,7 +308,7 @@ namespace dsn {
                 {
                     dassert(state.files.size() == 1, "");
                     std::string fn = learn_dir() + "/" + state.files[0];
-                    ret = ::dsn::utils::is_file_or_dir_exist(fn.c_str());
+                    ret = dsn::utils::filesystem::exists(fn.c_str());
                     if (ret)
                     {
                         std::string s;
