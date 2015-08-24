@@ -53,7 +53,7 @@ public:
         disk_engine*     disk;
         nfs_node*        nfs;
 
-        struct io_engine()
+        io_engine()
         {
             rpc = nullptr;
             disk = nullptr;
