@@ -71,8 +71,10 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     
     if (clear)
     {
-        auto dr = boost::filesystem::path(_dir);
-        boost::filesystem::remove_all(dr);
+		if (!dsn::utils::remove(_dir))
+		{
+			dwarn("Fail to remove %s.", _dir.c_str());
+		}
     }
 
     if (!::dsn::utils::is_file_or_dir_exist(_dir.c_str()))
@@ -88,32 +90,35 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     }
 
     // init rps
-    boost::filesystem::directory_iterator endtr;
     replicas rps;
+	std::vector<std::string> file_list;
 
-    for (boost::filesystem::directory_iterator it(dir());
-        it != endtr;
-        ++it)
-    {
-        auto name = it->path().string();
-        if (name.length() >= 4 &&
-            (name.substr(name.length() - strlen("log")) == "log" ||
-            name.substr(name.length() - strlen(".err")) == ".err")
-            )
-            continue;
+	if (!dsn::utils::get_files(dir(), file_list, false))
+	{
+		dassert(false, "Fail to get files in %s.", dir().c_str());
+	}
 
-        auto r = replica::load(this, name.c_str(), _options, true);
-        if (r != nullptr)
-        {
-            ddebug( "%u.%u @ %s:%hu: load replica success with durable decree = %llu from '%s'",
-                r->get_gpid().app_id, r->get_gpid().pidx,
-                primary_address().name, primary_address().port,
-                r->last_durable_decree(),
-                name.c_str()
-                );
-            rps[r->get_gpid()] = r;
-        }
-    }
+	for (auto& name : file_list)
+	{
+		if (name.length() >= 4 &&
+			(name.substr(name.length() - strlen("log")) == "log" ||
+				name.substr(name.length() - strlen(".err")) == ".err")
+			)
+			continue;
+
+		auto r = replica::load(this, name.c_str(), _options, true);
+		if (r != nullptr)
+		{
+			ddebug("%u.%u @ %s:%hu: load replica success with durable decree = %llu from '%s'",
+				r->get_gpid().app_id, r->get_gpid().pidx,
+				primary_address().name, primary_address().port,
+				r->last_durable_decree(),
+				name.c_str()
+				);
+			rps[r->get_gpid()] = r;
+		}
+	}
+	file_list.clear();
 
     // init logs
     _log = new mutation_log(opts.log_buffer_size_mb, opts.log_pending_max_ms, opts.log_file_size_mb, opts.log_batch_write, opts.log_max_concurrent_writes);
@@ -720,6 +725,14 @@ void replica_stub::on_gc()
     _log->garbage_collection(durable_decrees, max_seen_decrees);
     
     // gc on-disk rps
+#if 0
+	std::vector<std::string> file_list;
+	if (!dsn::utils::get_files(dir(), file_list, false))
+	{
+		dassert(false, "Fail to get files in %s.", dir().c_str());
+	}
+#endif
+
     boost::filesystem::directory_iterator endtr;
     for (boost::filesystem::directory_iterator it(dir());
         it != endtr;

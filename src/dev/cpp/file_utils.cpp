@@ -67,6 +67,18 @@ enum
 # define FTW_SKIP_SIBLINGS FTW_SKIP_SIBLINGS
 };
 
+#ifndef __S_ISTYPE
+#define __S_ISTYPE(mode, mask)  (((mode) & S_IFMT) == (mask))
+#endif
+
+#ifndef S_ISREG
+#define S_ISREG(mode)    __S_ISTYPE((mode), S_IFREG)
+#endif
+
+#ifndef S_ISDIR
+#define S_ISDIR(mode)    __S_ISTYPE((mode), S_IFDIR)
+#endif
+
 #else
 
 #ifndef _XOPEN_SOURCE
@@ -169,8 +181,8 @@ namespace dsn {
 #ifndef _WIN32
 		static __thread struct
 		{
-			ftw_handler	handler;
-			bool		recursive;
+			ftw_handler*	handler;
+			bool			recursive;
 		} ftw_ctx;
 
 		static int ftw_wrapper(const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf)
@@ -191,7 +203,7 @@ namespace dsn {
 #endif
 			}
 
-			return ftw_ctx.handler(fpath, ftw_ctx.ctx, typeflag);
+			return (*ftw_ctx.handler)(fpath, typeflag);
 		}
 #endif
 		bool file_tree_walk(
@@ -294,7 +306,7 @@ namespace dsn {
 
 			return true;
 		#else
-			ftw_ctx.handler = handler;
+			ftw_ctx.handler = &handler;
 			ftw_ctx.recursive = recursive;
 			int flags = 
 #ifdef __linux__
@@ -313,45 +325,52 @@ namespace dsn {
 		#endif
 		}
 
-		static bool exists_internal(const std::string& path, bool isfile)
+		static bool exists_internal(const std::string& path, int type)
 		{
+			bool ret;
 #ifdef _WIN32
-			DWORD attr = ::GetFileAttributesA(path.c_str());
-			DWORD test;
-
-			if (attr == INVALID_FILE_ATTRIBUTES)
-			{
-				return false;
-			}
-
-			test = (attr & FILE_ATTRIBUTE_DIRECTORY);
-
-			return (isfile ? (test == 0) : (test != 0));
+			struct _stat64 st;
 #else
-			struct stat sb;
+			struct stat64 st;
+#endif
 
-			if (::stat(path.c_str(), &sb) != 0)
+			if (stat64_(path.c_str(), &st) != 0)
 			{
 				return false;
 			}
 
-			return (isfile ? S_ISREG(sb.st_mode) : S_ISDIR(sb.st_mode));
-#endif
+			switch (type)
+			{
+			case 0:
+				ret = S_ISREG(st.st_mode);
+				break;
+			case 1:
+				ret = S_ISDIR(st.st_mode);
+				break;
+			case 2:
+				ret = S_ISREG(st.st_mode) || S_ISDIR(st.st_mode);
+				break;
+			default:
+				ret = false;
+				break;
+			}
+
+			return ret;
 		}
 
 		bool path_exists(const std::string& path)
 		{
-			return (dsn::utils::directory_exists(path) || dsn::utils::file_exists(path));
+			return dsn::utils::exists_internal(path, 2);
 		}
 
 		bool directory_exists(const std::string& path)
 		{
-			return dsn::utils::exists_internal(path, false);
+			return dsn::utils::exists_internal(path, 1);
 		}
 		
 		bool file_exists(const std::string& path)
 		{
-			return dsn::utils::exists_internal(path, true);
+			return dsn::utils::exists_internal(path, 0);
 		}
 
 		bool get_files(const std::string& path, std::vector<std::string>& file_list, bool recursive)
@@ -430,14 +449,23 @@ namespace dsn {
 			return (::rename(path1.c_str(), path2.c_str()) == 0);
 		}
 
-		bool file_size(const std::string& path, uintmax_t& sz)
+		bool file_size(const std::string& path, int64_t& sz)
 		{
-			if (!dsn::utils::file_exists(path))
+			struct stat64_ st;
+
+			if (::stat64_(path.c_str(), &st) != 0)
 			{
 				return false;
 			}
 
-			return false;
+			if (!S_ISREG(st.st_mode))
+			{
+				return false;
+			}
+
+			sz = st.st_size;
+
+			return true;
 		}
 
 		bool create_directory(const std::string& path)
