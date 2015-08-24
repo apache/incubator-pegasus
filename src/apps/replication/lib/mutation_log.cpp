@@ -83,7 +83,7 @@ error_code mutation_log::initialize(const char* dir)
     zauto_lock l(_lock);
 
     //create dir if necessary
-    if (!::dsn::utils::is_file_or_dir_exist(dir) && !mkdir_(dir))
+	if (!dsn::utils::filesystem::create_directory(dir))
     {
         derror ("open mutation_log: create log path failed");
         return ERR_FILE_OPERATION_FAILED;
@@ -96,7 +96,7 @@ error_code mutation_log::initialize(const char* dir)
     _log_files.clear();
 
 	std::vector<std::string> file_list;
-	if (!dsn::utils::get_files(dir, file_list, false))
+	if (!dsn::utils::filesystem::get_files(dir, file_list, false))
 	{
 		derror("open mutation_log: get files failed.");
 		return ERR_FILE_OPERATION_FAILED;
@@ -562,9 +562,9 @@ int mutation_log::garbage_collection(multi_partition_decrees& durable_decrees, m
 		auto& fpath = itr->second->path();
         ddebug("remove log segment %s", fpath.c_str());
 
-		if (!dsn::utils::remove(fpath))
+		if (!dsn::utils::filesystem::remove(fpath))
 		{
-			dwarn("Fail to remove %s.", fpath.c_str());
+			derror("Fail to remove %s.", fpath.c_str());
 		}
 
         count++;
@@ -656,7 +656,7 @@ log_file::log_file(const char* path, dsn_handle_t handle, int index, int64_t sta
     if (isRead)
     {
 		int64_t sz;
-		if (!dsn::utils::file_size(_path, sz))
+		if (!dsn::utils::filesystem::file_size(_path, sz))
 		{
 			dassert(false, "Fail to get file size of %s.", _path);
 		}

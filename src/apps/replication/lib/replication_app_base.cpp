@@ -49,11 +49,15 @@ replication_app_base::replication_app_base(replica* replica)
     _replica = replica;
     _last_committed_decree = _last_durable_decree = 0;
 
-    if (!::dsn::utils::is_file_or_dir_exist(_dir_data.c_str()))
-        mkdir_(_dir_data.c_str());
+	if (!dsn::utils::filesystem::create_directory(_dir_data))
+	{
+		dassert(false, "Fail to create directory %s.", _dir_data.c_str());
+	}
 
-    if (!::dsn::utils::is_file_or_dir_exist(_dir_learn.c_str()))
-        mkdir_(_dir_learn.c_str());
+	if (!dsn::utils::filesystem::create_directory(_dir_learn))
+	{
+		dassert(false, "Fail to create directory %s.", _dir_learn.c_str());
+	}
 }
 
 error_code replication_app_base::write_internal(mutation_ptr& mu)

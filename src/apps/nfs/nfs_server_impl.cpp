@@ -109,13 +109,13 @@ namespace dsn {
             std::string folder = request.source_dir;
             if (request.file_list.size() == 0) // return all file size in the destination file folder
             {
-                if (!::dsn::utils::is_file_or_dir_exist(folder.c_str()))
+                if (!dsn::utils::filesystem::directory_exists(folder))
                 {
                     err = ERR_OBJECT_NOT_FOUND;
                 }
                 else
                 {
-					if (!dsn::utils::get_files(folder, file_list, true))
+					if (!dsn::utils::filesystem::get_files(folder, file_list, true))
 					{
 						err = ERR_FILE_OPERATION_FAILED;
 					}
@@ -126,7 +126,7 @@ namespace dsn {
 							// TODO: using uint64 instead as file ma
 							// Done
 							int64_t sz;
-							if (!dsn::utils::file_size(fpath, sz))
+							if (!dsn::utils::filesystem::file_size(fpath, sz))
 							{
 								dassert(false, "Fail to get file size of %s.", fpath.c_str());
 							}

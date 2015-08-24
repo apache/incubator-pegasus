@@ -68,15 +68,19 @@ enum
 };
 
 #ifndef __S_ISTYPE
-#define __S_ISTYPE(mode, mask)  (((mode) & S_IFMT) == (mask))
+# define __S_ISTYPE(mode, mask)  (((mode) & S_IFMT) == (mask))
 #endif
 
 #ifndef S_ISREG
-#define S_ISREG(mode)    __S_ISTYPE((mode), S_IFREG)
+# define S_ISREG(mode)    __S_ISTYPE((mode), S_IFREG)
 #endif
 
 #ifndef S_ISDIR
-#define S_ISDIR(mode)    __S_ISTYPE((mode), S_IFDIR)
+# define S_ISDIR(mode)    __S_ISTYPE((mode), S_IFDIR)
+#endif
+
+#ifndef PATH_MAX
+# define PATH_MAX MAX_PATH
 #endif
 
 #else
@@ -99,6 +103,7 @@ enum
 
 namespace dsn {
 	namespace utils {
+		namespace filesystem {
 
 # define _FS_COLON		':'
 # define _FS_PERIOD		'.'
@@ -109,279 +114,274 @@ namespace dsn {
 # define _FS_NULL		'\0'
 # define _FS_ISSEP(x)	((x) == _FS_SLASH || (x) == _FS_BSLASH)
 
-		bool get_normalized_path(const std::string& path, std::string& npath)
-		{
-			char sep;
-			size_t i;
-			size_t pos;
-			size_t len;
-			char* buf;
-			char c;
+			static __thread char path_buffer[PATH_MAX];
 
-			if (path.empty())
+			bool get_normalized_path(const std::string& path, std::string& npath)
 			{
-				npath = "";
+				char sep;
+				size_t i;
+				size_t pos;
+				size_t len;
+				char c;
+
+				if (path.empty())
+				{
+					npath = "";
+					return true;
+				}
+
+				len = path.length();
+
+#ifdef _WIN32
+				sep = _FS_BSLASH;
+#else
+				sep = _FS_SLASH;
+#endif
+				i = 0;
+				pos = 0;
+				while (i < len)
+				{
+					c = path[i++];
+					if (
+#ifdef _WIN32
+						_FS_ISSEP(c)
+#else
+						c == _FS_SLASH
+#endif
+						)
+					{
+#ifdef _WIN32
+						c = sep;
+						if (i > 1)
+#endif
+							while ((i < len) && _FS_ISSEP(path[i]))
+							{
+								i++;
+							}
+					}
+
+					path_buffer[pos++] = c;
+				}
+
+				path_buffer[pos] = _FS_NULL;
+				if ((c == sep) && (pos > 1))
+				{
+#ifdef _WIN32
+					c = path_buffer[pos - 2];
+					if ((c != _FS_COLON) && (c != _FS_QUESTION) && (c != _FS_BSLASH))
+#endif
+						path_buffer[pos - 1] = _FS_NULL;
+				}
+
+				npath = path_buffer;
+
 				return true;
 			}
 
-			len = path.length();
-			buf = new char[len + 1];
-			if (buf == nullptr)
-			{
-				return false;
-			}
-
-#ifdef _WIN32
-			sep = _FS_BSLASH;
-#else
-			sep = _FS_SLASH;
-#endif
-			i = 0;
-			pos = 0;
-			while (i < len)
-			{
-				c = path[i++];
-				if (
-#ifdef _WIN32
-					_FS_ISSEP(c)
-#else
-					c == _FS_SLASH
-#endif
-					)
-				{
-#ifdef _WIN32
-					c = sep;
-					if (i > 1)
-#endif
-						while ((i < len) && _FS_ISSEP(path[i]))
-						{
-							i++;
-						}
-				}
-
-				buf[pos++] = c;
-			}
-
-			buf[pos] = _FS_NULL;
-			if ((c == sep) && (pos > 1))
-			{
-#ifdef _WIN32
-				c = buf[pos - 2];
-				if ((c != _FS_COLON) && (c != _FS_QUESTION) && (c != _FS_BSLASH))
-#endif
-					buf[pos - 1] = _FS_NULL;
-			}
-
-			npath = buf;
-			delete[] buf;
-
-			return true;
-		}
-
 #ifndef _WIN32
-		static __thread struct
-		{
-			ftw_handler*	handler;
-			bool			recursive;
-		} ftw_ctx;
-
-		static int ftw_wrapper(const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf)
-		{
-			if (!ftw_ctx.recursive && (ftwbuf->level > 1))
+			static __thread struct
 			{
+				ftw_handler*	handler;
+				bool			recursive;
+			} ftw_ctx;
+
+			static int ftw_wrapper(const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf)
+			{
+				if (!ftw_ctx.recursive && (ftwbuf->level > 1))
+				{
 #ifdef __linux__
-				if ((typeflag == FTW_D) || (typeflag == FTW_DP))
-				{
-					return FTW_SKIP_SUBTREE;
-				}
-				else
-				{
-					return FTW_SKIP_SIBLINGS;
-				}
+					if ((typeflag == FTW_D) || (typeflag == FTW_DP))
+					{
+						return FTW_SKIP_SUBTREE;
+					}
+					else
+					{
+						return FTW_SKIP_SIBLINGS;
+					}
 #else
-				return 0;
+					return 0;
 #endif
-			}
-
-			return (*ftw_ctx.handler)(fpath, typeflag);
-		}
-#endif
-		bool file_tree_walk(
-			const char* dirpath,
-			ftw_handler handler,
-			bool recursive
-			)
-		{
-		#ifdef _WIN32
-			WIN32_FIND_DATAA ffd;
-			HANDLE hFind;
-			DWORD dwError = ERROR_SUCCESS;
-			std::deque<std::string> queue;
-			std::deque<std::string> queue2;
-			char c;
-			std::string dir;
-			std::string path;
-			int ret;
-
-			path.reserve(MAX_PATH);
-			if (!dsn::utils::get_normalized_path(dirpath, path) || path.empty())
-			{
-				return false;
-			}
-
-			dir.reserve(MAX_PATH);
-			queue.push_back(path);
-			while (!queue.empty())
-			{
-				dir = queue.front();
-				queue.pop_front();
-
-				c = dir[dir.length() - 1];
-				path = dir;
-				if ((c != _FS_BSLASH) && (c != _FS_COLON))
-				{
-					path.append(1, _FS_BSLASH);
 				}
-				path.append(1, _FS_STAR);
 
-				hFind = ::FindFirstFileA(path.c_str(), &ffd);
-				if (INVALID_HANDLE_VALUE == hFind)
+				return (*ftw_ctx.handler)(fpath, typeflag);
+			}
+#endif
+			bool file_tree_walk(
+				const char* dirpath,
+				ftw_handler handler,
+				bool recursive
+				)
+			{
+#ifdef _WIN32
+				WIN32_FIND_DATAA ffd;
+				HANDLE hFind;
+				DWORD dwError = ERROR_SUCCESS;
+				std::deque<std::string> queue;
+				std::deque<std::string> queue2;
+				char c;
+				std::string dir;
+				std::string path;
+				int ret;
+
+				path.reserve(MAX_PATH);
+				if (!dsn::utils::filesystem::get_normalized_path(dirpath, path) || path.empty())
 				{
 					return false;
 				}
 
-				do
+				dir.reserve(MAX_PATH);
+				queue.push_back(path);
+				while (!queue.empty())
 				{
-					if ((ffd.cFileName[0] == _FS_NULL)
-						|| (strcmp(ffd.cFileName, ".") == 0)
-						|| (strcmp(ffd.cFileName, "..") == 0)
-						)
-					{
-						continue;
-					}
+					dir = queue.front();
+					queue.pop_front();
 
+					c = dir[dir.length() - 1];
 					path = dir;
 					if ((c != _FS_BSLASH) && (c != _FS_COLON))
 					{
 						path.append(1, _FS_BSLASH);
 					}
-					path.append(ffd.cFileName);
+					path.append(1, _FS_STAR);
 
-					if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+					hFind = ::FindFirstFileA(path.c_str(), &ffd);
+					if (INVALID_HANDLE_VALUE == hFind)
 					{
-						if (recursive)
-						{
-							queue.push_front(path);
-						}
+						return false;
 					}
-					else
-					{
-						ret = handler(path.c_str(), FTW_F);
-						if (ret != FTW_CONTINUE)
-						{
-							::FindClose(hFind);
-							return false;
-						}
-					}
-				} while (::FindNextFileA(hFind, &ffd) != 0);
 
-				dwError = ::GetLastError();
-				::FindClose(hFind);
-				if (dwError != ERROR_NO_MORE_FILES)
-				{
-					return false;
+					do
+					{
+						if ((ffd.cFileName[0] == _FS_NULL)
+							|| (strcmp(ffd.cFileName, ".") == 0)
+							|| (strcmp(ffd.cFileName, "..") == 0)
+							)
+						{
+							continue;
+						}
+
+						path = dir;
+						if ((c != _FS_BSLASH) && (c != _FS_COLON))
+						{
+							path.append(1, _FS_BSLASH);
+						}
+						path.append(ffd.cFileName);
+
+						if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+						{
+							if (recursive)
+							{
+								queue.push_front(path);
+							}
+						}
+						else
+						{
+							ret = handler(path.c_str(), FTW_F);
+							if (ret != FTW_CONTINUE)
+							{
+								::FindClose(hFind);
+								return false;
+							}
+						}
+					} while (::FindNextFileA(hFind, &ffd) != 0);
+
+					dwError = ::GetLastError();
+					::FindClose(hFind);
+					if (dwError != ERROR_NO_MORE_FILES)
+					{
+						return false;
+					}
+
+					queue2.push_front(dir);
 				}
 
-				queue2.push_front(dir);
-			}
-
-			for (auto& dir2 : queue2)
-			{
-				ret = handler(dir2.c_str(), FTW_DP);
-				if (ret != FTW_CONTINUE)
+				for (auto& dir2 : queue2)
 				{
-					return false;
+					ret = handler(dir2.c_str(), FTW_DP);
+					if (ret != FTW_CONTINUE)
+					{
+						return false;
+					}
 				}
-			}
 
-			return true;
-		#else
-			ftw_ctx.handler = &handler;
-			ftw_ctx.recursive = recursive;
-			int flags = 
+				return true;
+#else
+				ftw_ctx.handler = &handler;
+				ftw_ctx.recursive = recursive;
+				int flags =
 #ifdef __linux__
-				FTW_ACTIONRETVAL
+					FTW_ACTIONRETVAL
 #else
-				0
+					0
 #endif
-				;
-			if (recursive)
-			{
-				flags |= FTW_DEPTH;
+					;
+				if (recursive)
+				{
+					flags |= FTW_DEPTH;
+				}
+				int ret = ::nftw(dirpath, ftw_wrapper, 1, flags);
+
+				return (ret == 0);
+#endif
 			}
-			int ret = ::nftw(dirpath, ftw_wrapper, 1, flags);
 
-			return (ret == 0);
-		#endif
-		}
-
-		static bool exists_internal(const std::string& path, int type)
-		{
-			bool ret;
+			static bool exists_internal(const std::string& path, int type)
+			{
+				bool ret;
 #ifdef _WIN32
-			struct _stat64 st;
+				struct _stat64 st;
 #else
-			struct stat64 st;
+				struct stat64 st;
 #endif
 
-			if (stat64_(path.c_str(), &st) != 0)
-			{
-				return false;
+				if (stat64_(path.c_str(), &st) != 0)
+				{
+					return false;
+				}
+
+				switch (type)
+				{
+				case 0:
+					ret = S_ISREG(st.st_mode);
+					break;
+				case 1:
+					ret = S_ISDIR(st.st_mode);
+					break;
+				case 2:
+					ret = S_ISREG(st.st_mode) || S_ISDIR(st.st_mode);
+					break;
+				default:
+					ret = false;
+					break;
+				}
+
+				return ret;
 			}
 
-			switch (type)
+			bool exists(const std::string& path)
 			{
-			case 0:
-				ret = S_ISREG(st.st_mode);
-				break;
-			case 1:
-				ret = S_ISDIR(st.st_mode);
-				break;
-			case 2:
-				ret = S_ISREG(st.st_mode) || S_ISDIR(st.st_mode);
-				break;
-			default:
-				ret = false;
-				break;
+				return dsn::utils::filesystem::exists_internal(path, 2);
 			}
 
-			return ret;
-		}
-
-		bool path_exists(const std::string& path)
-		{
-			return dsn::utils::exists_internal(path, 2);
-		}
-
-		bool directory_exists(const std::string& path)
-		{
-			return dsn::utils::exists_internal(path, 1);
-		}
-		
-		bool file_exists(const std::string& path)
-		{
-			return dsn::utils::exists_internal(path, 0);
-		}
-
-		bool get_files(const std::string& path, std::vector<std::string>& file_list, bool recursive)
-		{
-			if (!dsn::utils::directory_exists(path))
+			bool directory_exists(const std::string& path)
 			{
-				return false;
+				return dsn::utils::filesystem::exists_internal(path, 1);
 			}
 
-			return dsn::utils::file_tree_walk(path.c_str(),
-				[&file_list](const char* fpath, int typeflag)
+			bool file_exists(const std::string& path)
+			{
+				return dsn::utils::filesystem::exists_internal(path, 0);
+			}
+
+			bool get_files(const std::string& path, std::vector<std::string>& file_list, bool recursive)
+			{
+				if (!dsn::utils::filesystem::directory_exists(path))
+				{
+					return false;
+				}
+
+				return dsn::utils::filesystem::file_tree_walk(path.c_str(),
+					[&file_list](const char* fpath, int typeflag)
 				{
 					if (typeflag == FTW_F)
 					{
@@ -390,19 +390,19 @@ namespace dsn {
 
 					return FTW_CONTINUE;
 				},
-				recursive
+					recursive
 					);
-		}
-
-		static bool remove_directory(const std::string& path)
-		{
-			if (!dsn::utils::directory_exists(path))
-			{
-				return false;
 			}
 
-			return dsn::utils::file_tree_walk(path.c_str(), 
-				[](const char* fpath, int typeflag)
+			static bool remove_directory(const std::string& path)
+			{
+				if (!dsn::utils::filesystem::directory_exists(path))
+				{
+					return false;
+				}
+
+				return dsn::utils::filesystem::file_tree_walk(path.c_str(),
+					[](const char* fpath, int typeflag)
 				{
 					bool succ;
 
@@ -422,174 +422,202 @@ namespace dsn {
 #endif
 
 					return (succ ? FTW_CONTINUE : FTW_STOP);
-			},
-				true
+				},
+					true
 					);
-		}
+			}
 
-		bool remove(const std::string& path)
-		{
-			if (!dsn::utils::path_exists(path))
+			bool remove(const std::string& path)
 			{
+				if (dsn::utils::filesystem::file_exists(path))
+				{
+					return (std::remove(path.c_str()) == 0);
+				}
+				else if(dsn::utils::filesystem::directory_exists(path))
+				{
+					return dsn::utils::filesystem::remove_directory(path);
+				}
+				else
+				{
+					return true;
+				}
+			}
+
+			bool rename(const std::string& path1, const std::string& path2)
+			{
+				return (::rename(path1.c_str(), path2.c_str()) == 0);
+			}
+
+			bool file_size(const std::string& path, int64_t& sz)
+			{
+				struct stat64_ st;
+
+				if (::stat64_(path.c_str(), &st) != 0)
+				{
+					return false;
+				}
+
+				if (!S_ISREG(st.st_mode))
+				{
+					return false;
+				}
+
+				sz = st.st_size;
+
 				return true;
 			}
 
-			if (dsn::utils::directory_exists(path))
+			bool create_directory(const std::string& path)
 			{
-				return dsn::utils::remove_directory(path);
-			}
-			else
-			{
-				return (std::remove(path.c_str()) == 0);
-			}
-		}
+				size_t prev = 0;
+				size_t pos;
+				char sep;
+				std::string npath;
+				size_t len;
 
-		bool rename(const std::string& path1, const std::string& path2)
-		{
-			return (::rename(path1.c_str(), path2.c_str()) == 0);
-		}
+				if (path.empty())
+				{
+					return false;
+				}
 
-		bool file_size(const std::string& path, int64_t& sz)
-		{
-			struct stat64_ st;
+				if (dsn::utils::filesystem::directory_exists(path))
+				{
+					return true;
+				}
 
-			if (::stat64_(path.c_str(), &st) != 0)
-			{
-				return false;
-			}
+				if (dsn::utils::filesystem::file_exists(path))
+				{
+					return false;
+				}
 
-			if (!S_ISREG(st.st_mode))
-			{
-				return false;
-			}
+				if (!dsn::utils::filesystem::get_normalized_path(path, npath) || npath.empty())
+				{
+					return false;
+				}
 
-			sz = st.st_size;
-
-			return true;
-		}
-
-		bool create_directory(const std::string& path)
-		{
-			size_t prev = 0;
-			size_t pos;
-			char sep;
-			std::string npath;
-			size_t len;
-
-			if (path.empty())
-			{
-				return false;
-			}
-			
-			if (dsn::utils::directory_exists(path))
-			{
-				return !dsn::utils::file_exists(path);
-			}
-
-			if (!dsn::utils::get_normalized_path(path, npath) || npath.empty())
-			{
-				return false;
-			}
-			
-			len = npath.length();
+				len = npath.length();
 #ifdef _WIN32
-			sep = _FS_BSLASH;
-			if (npath.compare(0, 4, "\\\\?\\") == 0)
-			{
-				prev = 4;
-			}
-			else if (npath.compare(0, 2, "\\\\") == 0)
-			{
-				prev = 2;
-			}
-			else if (npath.compare(1, 2, ":\\") == 0)
-			{
-				prev = 3;
-			}
+				sep = _FS_BSLASH;
+				if (npath.compare(0, 4, "\\\\?\\") == 0)
+				{
+					prev = 4;
+				}
+				else if (npath.compare(0, 2, "\\\\") == 0)
+				{
+					prev = 2;
+				}
+				else if (npath.compare(1, 2, ":\\") == 0)
+				{
+					prev = 3;
+				}
 #else
-			sep = _FS_SLASH;
-			if (npath[0] == sep)
-			{
-				prev = 1;
-			}
+				sep = _FS_SLASH;
+				if (npath[0] == sep)
+				{
+					prev = 1;
+				}
 #endif
 
-			while ((pos = npath.find_first_of(sep, prev)) != std::string::npos)
-			{
-				auto ppath = npath.substr(0, pos++);
-				prev = pos;
-				if (!dsn::utils::directory_exists(ppath))
+				while ((pos = npath.find_first_of(sep, prev)) != std::string::npos)
 				{
-					if (::mkdir_(ppath.c_str()) != 0)
+					auto ppath = npath.substr(0, pos++);
+					prev = pos;
+					if (!dsn::utils::filesystem::directory_exists(ppath))
+					{
+						if (::mkdir_(ppath.c_str()) != 0)
+						{
+							return false;
+						}
+					}
+				}
+
+				if (prev < len)
+				{
+					if (::mkdir_(npath.c_str()) != 0)
 					{
 						return false;
 					}
 				}
+
+				return true;
 			}
-			
-			if (prev < len)
+
+
+			bool create_file(const std::string& path)
 			{
-				if (::mkdir_(npath.c_str()) != 0)
+				size_t pos;
+				char c;
+				std::string npath;
+				int fd;
+				int mode;
+
+				if (!dsn::utils::filesystem::get_normalized_path(path, npath) || npath.empty())
 				{
 					return false;
 				}
-			}
 
-			return true;
-		}
-
-
-		bool create_file(const std::string& path)
-		{
-			size_t pos;
-			char c;
-			std::string npath;
-			int fd;
-			int mode;
-
-			if (!dsn::utils::get_normalized_path(path, npath) || npath.empty())
-			{
-				return false;
-			}
-
-			c = npath[npath.length() - 1];
-			if (_FS_ISSEP(c))
-			{
-				return false;
-			}
-
-			if (dsn::utils::directory_exists(npath))
-			{
-				return false;
-			}
-
-			pos = npath.find_last_of("/\\");
-			if ((pos != std::string::npos) && (pos > 0))
-			{
-				auto dir = npath.substr(0, pos);
-				if (!dsn::utils::create_directory(dir))
+				c = npath[npath.length() - 1];
+				if (_FS_ISSEP(c))
 				{
 					return false;
 				}
-			}
+
+				if (dsn::utils::filesystem::directory_exists(npath))
+				{
+					return false;
+				}
+
+				pos = npath.find_last_of("/\\");
+				if ((pos != std::string::npos) && (pos > 0))
+				{
+					auto dir = npath.substr(0, pos);
+					if (!dsn::utils::filesystem::create_directory(dir))
+					{
+						return false;
+					}
+				}
 
 #ifdef _WIN32
-			mode = _S_IREAD | _S_IWRITE;
-			if (_sopen_s(&fd,
+				mode = _S_IREAD | _S_IWRITE;
+				if (_sopen_s(&fd,
 					npath.c_str(),
 					_O_WRONLY | _O_CREAT | _O_TRUNC,
 					_SH_DENYRW,
 					mode) != 0)
 #else
-			mode = 0775;
-			fd = creat(npath.c_str(), mode);
-			if (fd == -1)
+				mode = 0775;
+				fd = creat(npath.c_str(), mode);
+				if (fd == -1)
 #endif
-			{
-				return false;
+				{
+					return false;
+				}
+
+				return (close_(fd) == 0);
 			}
 
-			return (close_(fd) == 0);
+			bool get_absolute_path(const std::string& path1, std::string& path2)
+			{
+				bool succ;
+# if defined(_WIN32)
+				char* component;
+				succ = (0 != ::GetFullPathNameA(path1.c_str(), PATH_MAX, path_buffer, &component));
+# else
+				succ = (realpath(path, path_buffer) != nullptr);
+# endif
+				if (succ)
+				{
+					path2 = path_buffer;
+				}
+				
+				return succ;
+			}
+
+			std::string remove_file_name(const std::string& path)
+			{
+				return path.substr(0, path.find_last_of("\\/"));
+			}
+
 		}
 	}
 }

@@ -150,9 +150,10 @@ namespace dsn {
             {
                 std::stringstream str2;
                 str2 << "log." << _start_index++ << ".txt";
-                boost::filesystem::path dp = str2.str();
-                if (::dsn::utils::is_file_or_dir_exist(str2.str().c_str()))
-                    boost::filesystem::remove(dp);
+				if (!dsn::utils::filesystem::remove(str2.str()))
+				{
+					dassert(false, "Fail to remove file %s.", str2.str().c_str());
+				}
             }
         }
 

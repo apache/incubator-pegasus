@@ -251,10 +251,10 @@ namespace dsn {
 
             // real write
             std::string file_path = reqc->copy_req.dst_dir + reqc->file_ctx->file_name;
-            std::string path = ::dsn::utils::remove_file_name(file_path.c_str());
-            if (!::dsn::utils::is_file_or_dir_exist(path.c_str()))
+            std::string path = dsn::utils::filesystem::remove_file_name(file_path.c_str());
+			if (!dsn::utils::filesystem::create_directory(path))
             {
-                mkdir_(path.c_str());
+				dassert(false, "Fail to create directory %s.", path.c_str());
             }
 
             dsn_handle_t hfile = reqc->file_ctx->file.load();

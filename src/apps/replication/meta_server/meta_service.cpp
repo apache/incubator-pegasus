@@ -57,12 +57,22 @@ void meta_service::start(const char* data_dir, bool clean_state)
     dassert(!_started, "meta service is already started");
 
     _data_dir = data_dir;
+	std::string checkpoint_path = _data_dir + "/checkpoint";
+	std::string oplog_path = _data_dir + "/oplog";
+
 
     if (clean_state)
     {
         try {
-            boost::filesystem::remove(_data_dir + "/checkpoint");
-            boost::filesystem::remove(_data_dir + "/oplog");
+			if (!dsn::utils::filesystem::remove(checkpoint_path))
+			{
+				dassert(false, "Fail to remove file %s.", checkpoint_path.c_str());
+			}
+
+			if (!dsn::utils::filesystem::remove(oplog_path))
+			{
+				dassert(false, "Fail to remove file %s.", oplog_path.c_str());
+			}
         }
         catch (std::exception& ex)
         {
@@ -71,21 +81,24 @@ void meta_service::start(const char* data_dir, bool clean_state)
     }
     else
     {
-        if (!::dsn::utils::is_file_or_dir_exist(_data_dir.c_str()))
+		if (!dsn::utils::filesystem::create_directory(_data_dir))
+		{
+			dassert(false, "Fail to create directory %s.", _data_dir.c_str());
+		}
+
+        if (dsn::utils::filesystem::file_exists(checkpoint_path))
         {
-            mkdir_(_data_dir.c_str());
+            _state->load(checkpoint_path.c_str());
         }
 
-        if (::dsn::utils::is_file_or_dir_exist((_data_dir + "/checkpoint").c_str()))
+        if (dsn::utils::filesystem::file_exists(oplog_path))
         {
-            _state->load((_data_dir + "/checkpoint").c_str());
-        }
-
-        if (::dsn::utils::is_file_or_dir_exist((_data_dir + "/oplog").c_str()))
-        {
-            replay_log((_data_dir + "/oplog").c_str());
-            _state->save((_data_dir + "/checkpoint").c_str());
-            boost::filesystem::remove(_data_dir + "/oplog");
+            replay_log(oplog_path.c_str());
+            _state->save(checkpoint_path.c_str());
+			if (!dsn::utils::filesystem::remove(oplog_path))
+			{
+				dassert(false, "Fail to remove file %s.", oplog_path.c_str());
+			}
         }
     }
 
