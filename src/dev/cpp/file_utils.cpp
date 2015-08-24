@@ -24,16 +24,11 @@
  * THE SOFTWARE.
  */
 
-
-# include "file_utils.h"
-# include <dsn/ports.h>
-# include <dsn/service_api_c.h>
+# include <dsn/cpp/utils.h>
 
 #ifdef _WIN32
 
 # include <deque>
-# include <io.h>
-# include <sys/stat.h>
 
 enum
 {

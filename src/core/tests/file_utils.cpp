@@ -25,7 +25,7 @@
  */
 
 # include <gtest/gtest.h>
-# include "file_utils.h"
+# include <dsn/cpp/utils.h>
 
 
 TEST(core, file_utils_setup)

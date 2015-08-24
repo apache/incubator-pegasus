@@ -312,6 +312,35 @@ namespace dsn {
         extern std::string remove_file_name(const char* path);
 
         extern bool remove_dir(const char* path, bool recursive);
+
+		#pragma region
+
+		extern bool get_normalized_path(const std::string& path, std::string& npath);
+
+		typedef int(*ftw_handler)(const char* fpath, void* ctx, int typeflag);
+
+		extern bool file_tree_walk(
+			const char* dirpath,
+			void* ctx,
+			ftw_handler handler,
+			bool recursive = true
+			);
+
+		extern bool path_exists(const std::string& path);
+
+		extern bool directory_exists(const std::string& path);
+
+		extern bool file_exists(const std::string& path);
+
+		extern bool get_files(const std::string& path, std::vector<std::string>& file_list, bool recursive);
+
+		extern bool remove(const std::string& path);
+
+		extern bool create_directory(const std::string& path);
+
+		extern bool create_file(const std::string& path);
+
+		#pragma endregion
     }
 } // end namespace dsn::utils
 
