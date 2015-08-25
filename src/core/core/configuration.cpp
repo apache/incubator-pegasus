@@ -46,7 +46,7 @@ configuration::configuration(const char* file_name, const char* arguments)
     if (fd == nullptr) 
     {
 		std::string cdir;
-		if (!dsn::utils::filesystem::getcwd(cdir))
+		if (!dsn::utils::filesystem::get_current_directory(cdir))
 		{
 			dassert(false, "Fail to get current working directory.");
 		}

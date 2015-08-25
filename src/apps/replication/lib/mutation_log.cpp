@@ -562,7 +562,7 @@ int mutation_log::garbage_collection(multi_partition_decrees& durable_decrees, m
 		auto& fpath = itr->second->path();
         ddebug("remove log segment %s", fpath.c_str());
 
-		if (!dsn::utils::filesystem::remove(fpath))
+		if (!dsn::utils::filesystem::remove_path(fpath))
 		{
 			derror("Fail to remove %s.", fpath.c_str());
 		}
