@@ -356,7 +356,7 @@ namespace dsn {
 #endif
 			}
 
-			static bool exists_internal(const std::string& path, int type)
+			static bool path_exists_internal(const std::string& path, int type)
 			{
 				bool ret;
 				struct stat64_ st;
@@ -385,19 +385,19 @@ namespace dsn {
 				return ret;
 			}
 
-			bool exists(const std::string& path)
+			bool path_exists(const std::string& path)
 			{
-				return dsn::utils::filesystem::exists_internal(path, 2);
+				return dsn::utils::filesystem::path_exists_internal(path, 2);
 			}
 
 			bool directory_exists(const std::string& path)
 			{
-				return dsn::utils::filesystem::exists_internal(path, 1);
+				return dsn::utils::filesystem::path_exists_internal(path, 1);
 			}
 
 			bool file_exists(const std::string& path)
 			{
-				return dsn::utils::filesystem::exists_internal(path, 0);
+				return dsn::utils::filesystem::path_exists_internal(path, 0);
 			}
 
 			bool get_files(const std::string& path, std::vector<std::string>& file_list, bool recursive)
@@ -454,7 +454,7 @@ namespace dsn {
 					);
 			}
 
-			bool remove(const std::string& path)
+			bool remove_path(const std::string& path)
 			{
 				if (dsn::utils::filesystem::file_exists(path))
 				{
@@ -470,7 +470,17 @@ namespace dsn {
 				}
 			}
 
-			bool rename(const std::string& path1, const std::string& path2)
+			//bool remove_file(const std::string& path)
+			//{
+			//	return false;
+			//}
+
+			//bool remove_directory(const std::string& path)
+			//{
+			//	return false;
+			//}
+
+			bool rename_path(const std::string& path1, const std::string& path2)
 			{
 				return (::rename(path1.c_str(), path2.c_str()) == 0);
 			}
@@ -645,7 +655,7 @@ namespace dsn {
 				return path.substr(0, path.find_last_of("\\/"));
 			}
 
-			bool getcwd(std::string& path)
+			bool get_current_directory(std::string& path)
 			{
 				bool succ;
 

@@ -64,12 +64,12 @@ void meta_service::start(const char* data_dir, bool clean_state)
     if (clean_state)
     {
         try {
-			if (!dsn::utils::filesystem::remove(checkpoint_path))
+			if (!dsn::utils::filesystem::remove_path(checkpoint_path))
 			{
 				dassert(false, "Fail to remove file %s.", checkpoint_path.c_str());
 			}
 
-			if (!dsn::utils::filesystem::remove(oplog_path))
+			if (!dsn::utils::filesystem::remove_path(oplog_path))
 			{
 				dassert(false, "Fail to remove file %s.", oplog_path.c_str());
 			}
@@ -95,7 +95,7 @@ void meta_service::start(const char* data_dir, bool clean_state)
         {
             replay_log(oplog_path.c_str());
             _state->save(checkpoint_path.c_str());
-			if (!dsn::utils::filesystem::remove(oplog_path))
+			if (!dsn::utils::filesystem::remove_path(oplog_path))
 			{
 				dassert(false, "Fail to remove file %s.", oplog_path.c_str());
 			}

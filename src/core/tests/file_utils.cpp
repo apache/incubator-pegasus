@@ -35,13 +35,13 @@ static void test_setup()
 	bool ret;
 
 	path = "./file_utils_temp.txt";
-	ret = dsn::utils::filesystem::remove(path);
+	ret = dsn::utils::filesystem::remove_path(path);
 	EXPECT_TRUE(ret);
 	ret = dsn::utils::filesystem::file_exists(path);
 	EXPECT_FALSE(ret);
 
 	path = "./file_utils_temp";
-	ret = dsn::utils::filesystem::remove(path);
+	ret = dsn::utils::filesystem::remove_path(path);
 	EXPECT_TRUE(ret);
 	ret = dsn::utils::filesystem::directory_exists(path);
 	EXPECT_FALSE(ret);
@@ -533,7 +533,7 @@ static void test_path_exists()
 	bool ret;
 
 	path = "c:\\";
-	ret = dsn::utils::filesystem::exists(path);
+	ret = dsn::utils::filesystem::path_exists(path);
 #ifdef _WIN32
 	EXPECT_TRUE(ret);
 #else
@@ -557,7 +557,7 @@ static void test_path_exists()
 #endif
 
 	path = "/";
-	ret = dsn::utils::filesystem::exists(path);
+	ret = dsn::utils::filesystem::path_exists(path);
 	EXPECT_TRUE(ret);
 
 	path = "/";
@@ -569,11 +569,11 @@ static void test_path_exists()
 	EXPECT_FALSE(ret);
 
 	path = "./not_exists_not_exists";
-	ret = dsn::utils::filesystem::exists(path);
+	ret = dsn::utils::filesystem::path_exists(path);
 	EXPECT_FALSE(ret);
 
 	path = "c:\\Windows\\System32\\notepad.exe";
-	ret = dsn::utils::filesystem::exists(path);
+	ret = dsn::utils::filesystem::path_exists(path);
 #ifdef _WIN32
 	EXPECT_TRUE(ret);
 #else
@@ -593,7 +593,7 @@ static void test_path_exists()
 #endif
 
 	path = "/bin/ls";
-	ret = dsn::utils::filesystem::exists(path);
+	ret = dsn::utils::filesystem::path_exists(path);
 #ifdef _WIN32
 	EXPECT_FALSE(ret);
 #else
@@ -661,19 +661,19 @@ static void test_remove()
 	bool ret;
 
 	path = "./file_utils_temp.txt";
-	ret = dsn::utils::filesystem::remove(path);
+	ret = dsn::utils::filesystem::remove_path(path);
 	EXPECT_TRUE(ret);
 	ret = dsn::utils::filesystem::file_exists(path);
 	EXPECT_FALSE(ret);
 
 	path = "./file_utils_temp/a/2.txt";
-	ret = dsn::utils::filesystem::remove(path);
+	ret = dsn::utils::filesystem::remove_path(path);
 	EXPECT_TRUE(ret);
-	ret = dsn::utils::filesystem::remove(path);
+	ret = dsn::utils::filesystem::remove_path(path);
 	EXPECT_TRUE(ret);
 
 	path = "./file_utils_temp/";
-	ret = dsn::utils::filesystem::remove(path);
+	ret = dsn::utils::filesystem::remove_path(path);
 	EXPECT_TRUE(ret);
 	ret = dsn::utils::filesystem::directory_exists(path);
 	EXPECT_FALSE(ret);

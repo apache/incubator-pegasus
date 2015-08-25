@@ -71,7 +71,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     
     if (clear)
     {
-		if (!dsn::utils::filesystem::remove(_dir))
+		if (!dsn::utils::filesystem::remove_path(_dir))
 		{
 			dassert("Fail to remove %s.", _dir.c_str());
 		}

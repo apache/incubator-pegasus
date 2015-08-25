@@ -323,7 +323,7 @@ namespace dsn {
 				bool recursive = true
 				);
 
-			extern bool exists(const std::string& path);
+			extern bool path_exists(const std::string& path);
 
 			extern bool directory_exists(const std::string& path);
 
@@ -331,9 +331,13 @@ namespace dsn {
 
 			extern bool get_files(const std::string& path, std::vector<std::string>& file_list, bool recursive);
 
-			extern bool remove(const std::string& path);
+			extern bool remove_path(const std::string& path);
+			
+			//extern bool remove_file(const std::string& path);
 
-			extern bool rename(const std::string& path1, const std::string& path2);
+			//extern bool remove_directory(const std::string& path);
+
+			extern bool rename_path(const std::string& path1, const std::string& path2);
 
 			extern bool file_size(const std::string& path, int64_t& sz);
 
@@ -341,7 +345,7 @@ namespace dsn {
 
 			extern bool create_file(const std::string& path);
 
-			extern bool getcwd(std::string& path);
+			extern bool get_current_directory(std::string& path);
 
 			extern bool last_write_time(std::string& path, time_t& tm);
 		}
