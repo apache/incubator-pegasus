@@ -327,6 +327,8 @@ namespace dsn
             )
             : _socket(sock), _parser(parser)
         {
+            _sending_msg = nullptr;
+            _sending_next_offset = 0;
         }
 
         void hpc_rpc_session::bind_looper(io_looper* looper)
@@ -396,9 +398,9 @@ namespace dsn
         void hpc_rpc_session::do_write(message_ex* msg)
         {
             add_reference();
-            _write_event.callback = [this, msg](int err, uint32_t length, uintptr_t lolp)
+            
+            _write_event.callback = [this](int err, uint32_t length, uintptr_t lolp)
             {
-                //dinfo("WSASend completed, err = %d, size = %u", err, length);
                 dassert((LPOVERLAPPED)lolp == &_write_event.olp, "must be exact this overlapped");
                 if (err != ERROR_SUCCESS)
                 {
@@ -407,20 +409,46 @@ namespace dsn
                 }
                 else
                 {
-                    on_write_completed(msg);
+                    _sending_next_offset += length;
+
+                    int total_length = 0;
+                    int buffer_count = _parser->get_send_buffers_count_and_total_length(_sending_msg, &total_length);
+
+                    // message completed, continue next message
+                    if (_sending_next_offset == total_length)
+                    {
+                        auto lmsg = _sending_msg;
+                        _sending_msg = nullptr;
+                        on_write_completed(lmsg);
+                    }
+                    else
+                        do_write(_sending_msg);
                 }
 
                 release_reference();
             };
             memset(&_write_event.olp, 0, sizeof(_write_event.olp));
+            
+            // new msg
+            if (_sending_msg != msg)
+            {
+                dassert(_sending_msg == nullptr, "only one sending msg is possible");
+                _sending_msg = msg;
+                _sending_next_offset = 0;
+            }
 
-            // make sure header is already in the buffer
-            int tlen = 0;
-            int buffer_count = _parser->get_send_buffers_count_and_total_length(msg, &tlen);
+            // continue old msg
+            else
+            {
+                // nothing to do
+            }
+
+            // prepare send buffer, make sure header is already in the buffer
+            int total_length = 0;
+            int buffer_count = _parser->get_send_buffers_count_and_total_length(msg, &total_length);
             auto buffers = (dsn_message_parser::send_buf*)alloca(buffer_count * sizeof(dsn_message_parser::send_buf));
-
-            _parser->prepare_buffers_on_send(msg, 0, buffers);
-
+            int count = _parser->prepare_buffers_on_send(msg, _sending_next_offset, buffers);
+            
             static_assert (sizeof(dsn_message_parser::send_buf) == sizeof(WSABUF), "make sure they are compatible");
 
             DWORD bytes = 0;
@@ -471,8 +499,7 @@ namespace dsn
 
         void hpc_rpc_client_session::connect()
         {
-            session_state closed_state = SS_CLOSED;
-
+            session_state closed_state = SS_CLOSED;            
             if (!_state.compare_exchange_strong(closed_state, SS_CONNECTING))
                 return;
                         

@@ -99,18 +99,20 @@ namespace dsn {
             virtual void add_reference() = 0;
             virtual void release_reference() = 0;
 
+            
+
         protected:
             socket_t                               _socket;
-            std::shared_ptr<dsn::message_parser>   _parser;            
+            std::shared_ptr<dsn::message_parser>   _parser;
+            message_ex*                            _sending_msg;
+            int                                    _sending_next_offset;
 
 # ifdef _WIN32
             static io_loop_callback                _ready_event; // it is stateless, so static
             hpc_network_provider::ready_event      _read_event;
             hpc_network_provider::ready_event      _write_event;
 # else
-            io_loop_callback                       _ready_event;
-            message_ex*                            _sending_msg;
-            int                                    _sending_next_offset;
+            io_loop_callback                       _ready_event;            
             struct sockaddr_in                     _peer_addr;
             io_looper*                             _looper;
 # endif
