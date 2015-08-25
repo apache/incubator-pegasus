@@ -116,22 +116,38 @@ namespace dsn {
 
     void rpc_session::on_send_completed(message_ex* msg)
     {
-        if (nullptr != msg)
+        message_ex* next_msg;
         {
+            utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+            if (nullptr != msg)
             {
-                utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
-                dassert(_is_sending_next && &msg->dl == _messages.next(), 
+                dassert(_is_sending_next && &msg->dl == _messages.next(),
                     "sent msg must be the first msg in send queue");
                 msg->dl.remove();
                 _is_sending_next = false;
             }
-
-            // added in rpc_engine::reply (for server) or rpc_client_session::call (for client)
-            msg->release_ref();
+            
+            if (!_messages.is_alone())
+            {
+                dassert(_is_connected && !_is_sending_next,
+                    "send message only when session is connected");
+                _is_sending_next = true;
+                next_msg = CONTAINING_RECORD(_messages.next(), message_ex, dl);
+            }
+            else
+            {
+                next_msg = nullptr;
+            }
         }
 
+        // for old msg
+        // added in rpc_engine::reply (for server) or rpc_client_session::call (for client)
+        if (msg)
+            msg->release_ref();
+
         // for next send
-        send_messages();
+        if (next_msg)
+            this->send(next_msg);
     }
 
     rpc_client_session::rpc_client_session(connection_oriented_network& net, const dsn_address_t& remote_addr, rpc_client_matcher_ptr& matcher)
