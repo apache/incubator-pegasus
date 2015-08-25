@@ -35,14 +35,14 @@ static void test_setup()
 	bool ret;
 
 	path = "./file_utils_temp.txt";
-	ret = dsn::utils::remove(path);
+	ret = dsn::utils::filesystem::remove(path);
 	EXPECT_TRUE(ret);
-	ret = dsn::utils::file_exists(path);
+	ret = dsn::utils::filesystem::file_exists(path);
 	EXPECT_FALSE(ret);
 
 	path = "./file_utils_temp";
-	ret = dsn::utils::remove(path);
-	ret = dsn::utils::directory_exists(path);
+	ret = dsn::utils::filesystem::remove(path);
+	ret = dsn::utils::filesystem::directory_exists(path);
 	EXPECT_FALSE(ret);
 }
 
@@ -53,37 +53,37 @@ static void test_get_normalized_path()
 	std::string npath;
 	
 	path = "\\\\?\\";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
     EXPECT_TRUE(ret);
 	EXPECT_TRUE(npath == path);
 
 	path = "c:\\";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 	EXPECT_TRUE(npath == path);
 
 	path = "c:";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 	EXPECT_TRUE(npath == path);
 
 	path = "\\\\?\\c:\\";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 	EXPECT_TRUE(npath == path);
 
 	path = "\\\\?\\c:";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 	EXPECT_TRUE(npath == path);
 
 	path = "c:\\a";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 	EXPECT_TRUE(npath == path);
 
 	path = "c:\\\\a";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "c:\\a");
@@ -92,7 +92,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "c:\\\\a\\";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "c:\\a");
@@ -101,7 +101,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "c:\\\\a\\\\";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "c:\\a");
@@ -110,12 +110,12 @@ static void test_get_normalized_path()
 #endif
 
 	path = "\\\\?\\c:\\a";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 	EXPECT_TRUE(npath == path);
 
 	path = "\\\\?\\c:\\\\a";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "\\\\?\\c:\\a");
@@ -124,7 +124,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "\\\\?\\c:\\\\a\\";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "\\\\?\\c:\\a");
@@ -133,7 +133,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "\\\\?\\c:\\\\a\\\\";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "\\\\?\\c:\\a");
@@ -142,17 +142,17 @@ static void test_get_normalized_path()
 #endif
 
 	path = "\\";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 	EXPECT_TRUE(npath == path);
 
 	path = "\\\\";
-		ret = dsn::utils::get_normalized_path(path, npath);
+		ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 	EXPECT_TRUE(npath == path);
 
 	path = "\\\\\\";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "\\\\");
@@ -161,12 +161,12 @@ static void test_get_normalized_path()
 #endif
 
 	path = "\\\\a";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 	EXPECT_TRUE(npath == path);
 
 	path = "\\\\\\a";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "\\\\a");
@@ -175,7 +175,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "\\\\a\\";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "\\\\a");
@@ -184,7 +184,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "\\\\\\a\\";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "\\\\a");
@@ -193,7 +193,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "\\\\\\a\\\\";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "\\\\a");
@@ -202,7 +202,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "/";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "\\");
@@ -211,7 +211,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "//";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "\\\\");
@@ -220,7 +220,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "//?/";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "\\\\?\\");
@@ -229,7 +229,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "//a";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "\\\\a");
@@ -238,7 +238,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "//a/";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "\\\\a");
@@ -247,7 +247,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "//a//";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "\\\\a");
@@ -256,7 +256,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "c:/";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "c:\\");
@@ -265,7 +265,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "c://";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "c:\\");
@@ -274,7 +274,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "c:/a";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "c:\\a");
@@ -283,7 +283,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "c:/a/";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "c:\\a");
@@ -292,7 +292,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "c://a/";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "c:\\a");
@@ -301,7 +301,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "c://a//";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "c:\\a");
@@ -310,7 +310,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "/////////////////////////////////////////////////////////////////";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "\\\\");
@@ -320,7 +320,7 @@ static void test_get_normalized_path()
 
 
 	path = "/////////////////////////////////////////////////////////////////a/////////////////b///////////";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "\\\\a\\b");
@@ -329,17 +329,17 @@ static void test_get_normalized_path()
 #endif
 
 	path = ".";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 	EXPECT_TRUE(npath == path);
 
 	path = "./";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 	EXPECT_TRUE(npath == ".");
 
 	path = "./a";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == ".\\a");
@@ -348,7 +348,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = ".//a";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == ".\\a");
@@ -357,7 +357,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "./a/";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == ".\\a");
@@ -366,7 +366,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "./a/b";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == ".\\a\\b");
@@ -375,7 +375,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "./a/b/";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == ".\\a\\b");
@@ -384,7 +384,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = ".///a////b///";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == ".\\a\\b");
@@ -393,17 +393,17 @@ static void test_get_normalized_path()
 #endif
 
 	path = "..";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 	EXPECT_TRUE(npath == path);
 
 	path = "../";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 	EXPECT_TRUE(npath == "..");
 
 	path = "../a";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "..\\a");
@@ -412,7 +412,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "..//a";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "..\\a");
@@ -421,7 +421,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "../a/";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "..\\a");
@@ -430,7 +430,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "../a/b";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "..\\a\\b");
@@ -439,7 +439,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "../a/b/";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "..\\a\\b");
@@ -448,7 +448,7 @@ static void test_get_normalized_path()
 #endif
 
 	path = "..///a////b///";
-	ret = dsn::utils::get_normalized_path(path, npath);
+	ret = dsn::utils::filesystem::get_normalized_path(path, npath);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(npath == "..\\a\\b");
@@ -463,9 +463,9 @@ static void test_create()
 	bool ret;
 
 	path = "./file_utils_temp.txt";
-	ret = dsn::utils::create_file(path);
+	ret = dsn::utils::filesystem::create_file(path);
 	EXPECT_TRUE(ret);
-	ret = dsn::utils::file_exists(path);
+	ret = dsn::utils::filesystem::file_exists(path);
 	EXPECT_TRUE(ret);
 
 	std::ofstream myfile(path.c_str(), std::ios::out | std::ios::app | std::ios::binary);
@@ -474,39 +474,39 @@ static void test_create()
 	myfile.close();
 
 	path = "./file_utils_temp";
-	ret = dsn::utils::create_directory(path);
+	ret = dsn::utils::filesystem::create_directory(path);
 	EXPECT_TRUE(ret);
-	ret = dsn::utils::directory_exists(path);
+	ret = dsn::utils::filesystem::directory_exists(path);
 	EXPECT_TRUE(ret);
 
 	path = "./file_utils_temp/a/b/c/d//";
-	ret = dsn::utils::create_directory(path);
+	ret = dsn::utils::filesystem::create_directory(path);
 	EXPECT_TRUE(ret);
-	ret = dsn::utils::directory_exists(path);
-	EXPECT_TRUE(ret);
-
-	path = "./file_utils_temp/a/1.txt";
-	ret = dsn::utils::create_file(path);
-	EXPECT_TRUE(ret);
-	ret = dsn::utils::file_exists(path);
+	ret = dsn::utils::filesystem::directory_exists(path);
 	EXPECT_TRUE(ret);
 
 	path = "./file_utils_temp/a/1.txt";
-	ret = dsn::utils::create_file(path);
+	ret = dsn::utils::filesystem::create_file(path);
 	EXPECT_TRUE(ret);
-	ret = dsn::utils::file_exists(path);
+	ret = dsn::utils::filesystem::file_exists(path);
+	EXPECT_TRUE(ret);
+
+	path = "./file_utils_temp/a/1.txt";
+	ret = dsn::utils::filesystem::create_file(path);
+	EXPECT_TRUE(ret);
+	ret = dsn::utils::filesystem::file_exists(path);
 	EXPECT_TRUE(ret);
 
 	path = "./file_utils_temp/a/2.txt";
-	ret = dsn::utils::create_file(path);
+	ret = dsn::utils::filesystem::create_file(path);
 	EXPECT_TRUE(ret);
-	ret = dsn::utils::file_exists(path);
+	ret = dsn::utils::filesystem::file_exists(path);
 	EXPECT_TRUE(ret);
 
 	path = "./file_utils_temp/b/c/d/1.txt";
-	ret = dsn::utils::create_file(path);
+	ret = dsn::utils::filesystem::create_file(path);
 	EXPECT_TRUE(ret);
-	ret = dsn::utils::file_exists(path);
+	ret = dsn::utils::filesystem::file_exists(path);
 	EXPECT_TRUE(ret);
 }
 
@@ -517,12 +517,12 @@ static void test_file_size()
 	bool ret;
 
 	path = "./file_utils_temp.txt";
-	ret = dsn::utils::file_size(path, sz);
+	ret = dsn::utils::filesystem::file_size(path, sz);
 	EXPECT_TRUE(ret);
 	EXPECT_TRUE(sz == 12);
 
 	path = "./file_utils_temp2.txt";
-	ret = dsn::utils::file_size(path, sz);
+	ret = dsn::utils::filesystem::file_size(path, sz);
 	EXPECT_FALSE(ret);
 }
 
@@ -532,7 +532,7 @@ static void test_path_exists()
 	bool ret;
 
 	path = "c:\\";
-	ret = dsn::utils::path_exists(path);
+	ret = dsn::utils::filesystem::exists(path);
 #ifdef _WIN32
 	EXPECT_TRUE(ret);
 #else
@@ -540,7 +540,7 @@ static void test_path_exists()
 #endif
 
 	path = "c:\\";
-	ret = dsn::utils::directory_exists(path);
+	ret = dsn::utils::filesystem::directory_exists(path);
 #ifdef _WIN32
 	EXPECT_TRUE(ret);
 #else
@@ -548,7 +548,7 @@ static void test_path_exists()
 #endif
 
 	path = "c:\\";
-	ret = dsn::utils::file_exists(path);
+	ret = dsn::utils::filesystem::file_exists(path);
 #ifdef _WIN32
 	EXPECT_FALSE(ret);
 #else
@@ -556,23 +556,23 @@ static void test_path_exists()
 #endif
 
 	path = "/";
-	ret = dsn::utils::path_exists(path);
+	ret = dsn::utils::filesystem::exists(path);
 	EXPECT_TRUE(ret);
 
 	path = "/";
-	ret = dsn::utils::directory_exists(path);
+	ret = dsn::utils::filesystem::directory_exists(path);
 	EXPECT_TRUE(ret);
 
 	path = "/";
-	ret = dsn::utils::file_exists(path);
+	ret = dsn::utils::filesystem::file_exists(path);
 	EXPECT_FALSE(ret);
 
 	path = "./not_exists_not_exists";
-	ret = dsn::utils::path_exists(path);
+	ret = dsn::utils::filesystem::exists(path);
 	EXPECT_FALSE(ret);
 
 	path = "c:\\Windows\\System32\\notepad.exe";
-	ret = dsn::utils::path_exists(path);
+	ret = dsn::utils::filesystem::exists(path);
 #ifdef _WIN32
 	EXPECT_TRUE(ret);
 #else
@@ -580,11 +580,11 @@ static void test_path_exists()
 #endif
 
 	path = "c:\\Windows\\System32\\notepad.exe";
-	ret = dsn::utils::directory_exists(path);
+	ret = dsn::utils::filesystem::directory_exists(path);
 	EXPECT_FALSE(ret);
 
 	path = "c:\\Windows\\System32\\notepad.exe";
-	ret = dsn::utils::file_exists(path);
+	ret = dsn::utils::filesystem::file_exists(path);
 #ifdef _WIN32
 	EXPECT_TRUE(ret);
 #else
@@ -592,7 +592,7 @@ static void test_path_exists()
 #endif
 
 	path = "/bin/ls";
-	ret = dsn::utils::path_exists(path);
+	ret = dsn::utils::filesystem::exists(path);
 #ifdef _WIN32
 	EXPECT_FALSE(ret);
 #else
@@ -600,11 +600,11 @@ static void test_path_exists()
 #endif
 
 	path = "/bin/ls";
-	ret = dsn::utils::directory_exists(path);
+	ret = dsn::utils::filesystem::directory_exists(path);
 	EXPECT_FALSE(ret);
 
 	path = "/bin/ls";
-	ret = dsn::utils::file_exists(path);
+	ret = dsn::utils::filesystem::file_exists(path);
 #ifdef _WIN32
 	EXPECT_FALSE(ret);
 #else
@@ -619,7 +619,7 @@ static void test_get_files()
 	std::vector<std::string> file_list;
 
 	path = ".";
-	ret = dsn::utils::get_files(path, file_list, false);
+	ret = dsn::utils::filesystem::get_files(path, file_list, false);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(file_list.size() >= 3);
@@ -629,25 +629,25 @@ static void test_get_files()
 	file_list.clear();
 
 	path = ".";
-	ret = dsn::utils::get_files(path, file_list, true);
+	ret = dsn::utils::filesystem::get_files(path, file_list, true);
 	EXPECT_TRUE(ret);
 	EXPECT_TRUE(file_list.size() >= 3);
 	file_list.clear();
 
 	path = "../../";
-	ret = dsn::utils::get_files(path, file_list, true);
+	ret = dsn::utils::filesystem::get_files(path, file_list, true);
 	EXPECT_TRUE(ret);
 	EXPECT_TRUE(file_list.size() >= 3);
 	file_list.clear();
 
 	path = "./file_utils_temp/";
-	ret = dsn::utils::get_files(path, file_list, true);
+	ret = dsn::utils::filesystem::get_files(path, file_list, true);
 	EXPECT_TRUE(ret);
 	EXPECT_TRUE(file_list.size() == 3);
 	file_list.clear();
 
 	path = "./file_utils_temp/a/";
-	ret = dsn::utils::get_files(path, file_list, false);
+	ret = dsn::utils::filesystem::get_files(path, file_list, false);
 	EXPECT_TRUE(ret);
 	EXPECT_TRUE(file_list.size() == 2);
 	file_list.clear();
@@ -660,21 +660,21 @@ static void test_remove()
 	bool ret;
 
 	path = "./file_utils_temp.txt";
-	ret = dsn::utils::remove(path);
+	ret = dsn::utils::filesystem::remove(path);
 	EXPECT_TRUE(ret);
-	ret = dsn::utils::file_exists(path);
+	ret = dsn::utils::filesystem::file_exists(path);
 	EXPECT_FALSE(ret);
 
 	path = "./file_utils_temp/a/2.txt";
-	ret = dsn::utils::remove(path);
+	ret = dsn::utils::filesystem::remove(path);
 	EXPECT_TRUE(ret);
-	ret = dsn::utils::remove(path);
+	ret = dsn::utils::filesystem::remove(path);
 	EXPECT_TRUE(ret);
 
 	path = "./file_utils_temp/";
-	ret = dsn::utils::remove(path);
+	ret = dsn::utils::filesystem::remove(path);
 	EXPECT_TRUE(ret);
-	ret = dsn::utils::directory_exists(path);
+	ret = dsn::utils::filesystem::directory_exists(path);
 	EXPECT_FALSE(ret);
 }
 

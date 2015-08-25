@@ -36,7 +36,7 @@ namespace dsn {
         public:
             asio_network_provider(rpc_engine* srv, network* inner_provider);
 
-            virtual error_code start(rpc_channel channel, int port, bool client_only);
+            virtual error_code start(rpc_channel channel, int port, bool client_only, io_modifer& ctx);
             virtual const dsn_address_t& address() { return _address;  }
             virtual rpc_client_session_ptr create_client_session(const dsn_address_t& server_addr);
 

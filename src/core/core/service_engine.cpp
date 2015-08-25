@@ -52,37 +52,6 @@ service_node::service_node(service_app_spec& app_spec, void* app_context)
     _io_mode = service_engine::fast_instance().spec().io_mode;
 }
 
-void* service_node::get_per_node_state(const char* name)
-{
-    utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
-    auto it = _per_node_states.find(std::string(name));
-    return it != _per_node_states.end() ? it->second : nullptr;
-}
-
-bool service_node::put_per_node_state(const char* name, void* obj)
-{
-    utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
-    auto it = _per_node_states.find(std::string(name));
-    auto old_obj = (it != _per_node_states.end() ? it->second : nullptr);
-    if (old_obj)
-        return false;
-    else
-    {
-        _per_node_states[std::string(name)] = obj;
-        return true;
-    }
-}
-
-void* service_node::remove_per_node_state(const char* name)
-{
-    utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
-    auto it = _per_node_states.find(std::string(name));
-    auto old_obj = (it != _per_node_states.end() ? it->second : nullptr);
-    if (old_obj)
-        _per_node_states.erase(it);
-    return old_obj;
-}
-
 bool service_node::rpc_register_handler(rpc_handler_ptr& handler)
 {
     for (auto& io : _ios)
@@ -112,10 +81,32 @@ rpc_handler_ptr service_node::rpc_unregister_handler(dsn_task_code_t rpc_code)
     return ret;
 }
 
-error_code service_node::init_io_engine(io_engine& io, task_worker_pool* pool, task_queue* q)
+error_code service_node::init_io_engine(io_engine& io)
 {
     auto& spec = service_engine::fast_instance().spec();
     error_code err = ERR_OK;
+    io_modifer ctx;
+    ctx.mode = spec.io_mode;
+    ctx.queue = io.q;
+    ctx.port_shift_value = 0;
+    if (spec.io_mode == IOE_PER_QUEUE)
+    {
+        // update ports if there are more than one rpc engines for one node
+        ctx.port_shift_value = spec.get_ports_delta(_app_spec.id, io.pool->spec().pool_code, io.q->index());
+    }
+
+    // init timer service
+    io.tsvc = factory_store<timer_service>::create(
+        service_engine::fast_instance().spec().timer_factory_name.c_str(),
+        PROVIDER_TYPE_MAIN, this, nullptr);
+    for (auto& s : service_engine::fast_instance().spec().timer_aspects)
+    {
+        io.tsvc = factory_store<timer_service>::create(
+            s.c_str(),
+            PROVIDER_TYPE_ASPECT,
+            this, io.tsvc
+            );
+    }
 
     // init disk engine
     io.disk = new disk_engine(this);
@@ -128,13 +119,10 @@ error_code service_node::init_io_engine(io_engine& io, task_worker_pool* pool, t
         aio = factory_store<aio_provider>::create(it->c_str(), 
             PROVIDER_TYPE_ASPECT, io.disk, aio);
     }
-    aio->update_on_io_mode(q);
-    io.disk->start(aio);
+    io.aio = aio;
 
     // init rpc engine
     io.rpc = new rpc_engine(spec.config, this);
-    err = io.rpc->start(_app_spec, q);
-    if (err != ERR_OK) return err;
 
     // init nfs
     if (spec.start_nfs)
@@ -148,12 +136,63 @@ error_code service_node::init_io_engine(io_engine& io, task_worker_pool* pool, t
         {
             io.nfs = factory_store<nfs_node>::create(spec.nfs_factory_name.c_str(), 
                 PROVIDER_TYPE_MAIN, this);
-            io.nfs->update_on_io_mode(q);
         }
     }
     else
     {
         dwarn("nfs not started coz [core] start_nfs = false");
+    }
+
+    return err;
+}
+
+error_code service_node::start_io_engine_in_main(const io_engine& io)
+{
+    auto& spec = service_engine::fast_instance().spec();
+    error_code err = ERR_OK;
+    io_modifer ctx;
+    ctx.mode = spec.io_mode;
+    ctx.queue = io.q;
+    ctx.port_shift_value = 0;
+    if (spec.io_mode == IOE_PER_QUEUE)
+    {
+        // update ports if there are more than one rpc engines for one node
+        ctx.port_shift_value = spec.get_ports_delta(_app_spec.id, io.pool->spec().pool_code, io.q->index());
+    }
+
+    // start timer service
+    io.tsvc->start(ctx);
+
+    // start disk engine
+    io.disk->start(io.aio, ctx);
+
+    // start rpc engine
+    err = io.rpc->start(_app_spec, ctx);
+    if (err != ERR_OK) return err;
+
+    return err;
+}
+
+
+error_code service_node::start_io_engine_in_node_start_task(const io_engine& io)
+{
+    auto& spec = service_engine::fast_instance().spec();
+    error_code err = ERR_OK;
+    io_modifer ctx;
+    ctx.mode = spec.io_mode;
+    ctx.queue = io.q;
+    ctx.port_shift_value = 0;
+    if (spec.io_mode == IOE_PER_QUEUE)
+    {
+        // update ports if there are more than one rpc engines for one node
+        ctx.port_shift_value = spec.get_ports_delta(_app_spec.id, io.pool->spec().pool_code, io.q->index());
+    }
+    
+    // start nfs delayed when the app is started
+    if (io.nfs)
+    {
+        err = io.nfs->start(ctx);
+        if (err != ERR_OK) return err;
     }
 
     return err;
@@ -172,12 +211,12 @@ error_code service_node::start()
     // init io engines
     switch (_io_mode)
     {
-    case IOLOOP_PER_NODE:
-        err = init_io_engine(_per_node_io, nullptr, nullptr);
+    case IOE_PER_NODE:
+        err = init_io_engine(_per_node_io);
         if (err != ERR_OK) return err;
         _ios.push_back(_per_node_io);
         break;
-    case IOLOOP_PER_QUEUE:
+    case IOE_PER_QUEUE:
         for (auto& pl : _computation->pools())
         {
             if (pl == nullptr)
@@ -186,7 +225,10 @@ error_code service_node::start()
             for (auto& q : pl->queues())
             {
                 io_engine io;
-                err = init_io_engine(io, pl, q); // TODO: compute adder
+                io.q = q;
+                io.pool = pl;
+                
+                err = init_io_engine(io);
                 if (err != ERR_OK) return err;
                 _per_queue_ios[q] = io;
 
@@ -196,6 +238,12 @@ error_code service_node::start()
         break;
     default:
         dassert(false, "invalid io mode");
+    }
+    
+    // start io engines (only computation and timer), others are started in app start task
+    for (auto& io : _ios)
+    {
+        start_io_engine_in_main(io);
     }
 
     // start task engine
@@ -210,10 +258,10 @@ void service_node::get_io(task_queue* q, __out_param io_engine& io) const
 {
     switch (_io_mode)
     {
-    case IOLOOP_PER_NODE:
+    case IOE_PER_NODE:
         io = _per_node_io;
         break;
-    case IOLOOP_PER_QUEUE:
+    case IOE_PER_QUEUE:
         dassert(q, "queue cannot be empty");
         {
             auto it = _per_queue_ios.find(q);
@@ -244,6 +292,13 @@ nfs_node* service_node::nfs(task_queue* q) const
     io_engine io;
     get_io(q, io);
     return io.nfs;
+}
+
+timer_service* service_node::tsvc(task_queue* q) const
+{
+    io_engine io;
+    get_io(q, io);
+    return io.tsvc;
 }
 
 void service_node::get_runtime_info(

@@ -33,13 +33,26 @@ namespace dsn {
         asio_network_provider::asio_network_provider(rpc_engine* srv, network* inner_provider)
             : connection_oriented_network(srv, inner_provider)
         {
+            _acceptor = nullptr;
+        }
+
+        error_code asio_network_provider::start(rpc_channel channel, int port, bool client_only, io_modifer& ctx)
+        {
+            if (_acceptor != nullptr)
+                return ERR_SERVICE_ALREADY_RUNNING;
+
             int io_service_worker_count = config()->get_value<int>("network", "io_service_worker_count", 1,
                 "thread number for io service (timer and boost network)");
             for (int i = 0; i < io_service_worker_count; i++)
             {
-                _workers.push_back(std::shared_ptr<std::thread>(new std::thread([this]()
+                _workers.push_back(std::shared_ptr<std::thread>(new std::thread([this, ctx, i]()
                 {
-                    task::set_tls_dsn_context(node(), nullptr, nullptr, nullptr, nullptr);
+                    task::set_tls_dsn_context(node(), nullptr, ctx.queue);
+
+                    const char* name = ::dsn::tools::get_service_node_name(node());
+                    char buffer[128];
+                    sprintf(buffer, "%s.asio.%d", name, i);
+                    task_worker::set_name(buffer);
 
                     boost::asio::io_service::work work(_io_service);
                     _io_service.run();
@@ -48,13 +61,6 @@ namespace dsn {
 
             _acceptor = nullptr;
             _socket.reset(new boost::asio::ip::tcp::socket(_io_service));
-
-        }
-
-        error_code asio_network_provider::start(rpc_channel channel, int port, bool client_only)
-        {
-            if (_acceptor != nullptr)
-                return ERR_SERVICE_ALREADY_RUNNING;
             
             dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP, "invalid given channel %s", channel.to_string());
 

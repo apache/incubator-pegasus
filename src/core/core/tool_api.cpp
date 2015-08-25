@@ -49,11 +49,7 @@ namespace dsn {
                 error_code err;
                 for (auto& io : _node->ios())
                 {
-                    if (io.nfs)
-                    {
-                        err = io.nfs->start();
-                        dassert(err == ERR_OK, "start nfs failed, err = %s", err.to_string());
-                    }
+                    _node->start_io_engine_in_node_start_task(io);
                 }
                 
                 std::vector<std::string> args;

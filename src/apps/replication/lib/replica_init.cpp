@@ -47,12 +47,15 @@ error_code replica::initialize_on_new(const char* app_type, global_partition_id 
     _config.gpid = gpid;
     _dir = _stub->dir() + "/" + buffer;
 
-    if (::dsn::utils::is_file_or_dir_exist(_dir.c_str()))
+    if (dsn::utils::filesystem::directory_exists(_dir))
     {
         return ERR_PATH_ALREADY_EXIST;
     }
 
-    mkdir_(_dir.c_str());
+	if (!dsn::utils::filesystem::create_directory(_dir))
+	{
+		dassert(false, "Fail to create directory %s.", _dir.c_str());
+	}
 
     error_code err = init_app_and_prepare_list(app_type, true);
     dassert (err == ERR_OK, "");
@@ -101,7 +104,7 @@ error_code replica::initialize_on_load(const char* dir, bool renameDirOnFailure)
         // GCed later
         char newPath[256];
         sprintf(newPath, "%s.%x.err", dir, random32(0, (uint32_t)-1));  
-        dsn::utils::remove(newPath);
+        dsn::utils::filesystem::remove(newPath);
         boost::filesystem::rename(dir, newPath);
         derror( "move bad replica from '%s' to '%s'", dir, newPath);
     }

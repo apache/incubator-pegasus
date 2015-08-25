@@ -43,21 +43,30 @@ class nfs_node;
 class memory_provider;
 class task_queue;
 class task_worker_pool;
+class timer_service;
+class aio_provider;
 
 class service_node
 {
 public:
     struct io_engine
-    {
+    {        
         rpc_engine*      rpc;
         disk_engine*     disk;
         nfs_node*        nfs;
+        timer_service*   tsvc;
+
+        task_queue*      q;
+        task_worker_pool *pool;
+        aio_provider     *aio;
 
         io_engine()
         {
+            q = nullptr;
             rpc = nullptr;
             disk = nullptr;
             nfs = nullptr;
+            tsvc = nullptr;
         }
     };
 
@@ -67,10 +76,12 @@ public:
     rpc_engine*  rpc(task_queue* q) const;
     disk_engine* disk(task_queue* q) const;
     nfs_node* nfs(task_queue* q) const;
+    timer_service* tsvc(task_queue* q) const;
 
     task_engine* computation() const { return _computation; }
     const std::list<io_engine>& ios() const { return _ios; }
     void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, __out_param std::stringstream& ss);
+    error_code start_io_engine_in_node_start_task(const io_engine& io);
 
     ::dsn::error_code start();
 
@@ -78,10 +89,6 @@ public:
     const char* name() const { return _app_spec.name.c_str(); }
     const service_app_spec& spec() const { return _app_spec;  }
     void* get_app_context_ptr() const { return _app_context_ptr; }
-
-    void* get_per_node_state(const char* name);
-    bool  put_per_node_state(const char* name, void* obj);
-    void* remove_per_node_state(const char* name);
 
     bool  rpc_register_handler(rpc_handler_ptr& handler);
     rpc_handler_ptr rpc_unregister_handler(dsn_task_code_t rpc_code);
@@ -91,16 +98,14 @@ private:
     service_app_spec _app_spec;
     task_engine*     _computation;
 
-    io_loop_mode                                _io_mode;
+    ioe_mode                                    _io_mode;
     io_engine                                   _per_node_io;
     std::unordered_map<task_queue*, io_engine>  _per_queue_ios;
     std::list<io_engine>                        _ios; // all ios
-    
-    utils::ex_lock_nr_spin                      _lock;
-    std::unordered_map<std::string, void*>      _per_node_states;
-    
+
 private:
-    error_code init_io_engine(io_engine& io, task_worker_pool* pool, task_queue* q);
+    error_code init_io_engine(io_engine& io);
+    error_code start_io_engine_in_main(const io_engine& io);
     void get_io(task_queue* q, __out_param io_engine& io) const;
 };
 

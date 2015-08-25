@@ -65,17 +65,12 @@ namespace dsn {
     public:
         nfs_node(service_node* node) : _node(node) {}
 
-        virtual ::dsn::error_code start() = 0;
+        virtual ::dsn::error_code start(io_modifer& ctx) = 0;
 
         virtual error_code stop() = 0;
 
         virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task* callback) = 0;
-
-        //
-        // update according to io mode when necessary (usually not necessary)
-        //
-        virtual void update_on_io_mode(task_queue* q) {}
-
+        
         service_node* node() { return _node; }
 
     protected:

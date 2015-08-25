@@ -808,6 +808,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
 {
     memset((void*)&dsn::tls_dsn, 0, sizeof(dsn::tls_dsn));
     dsn::tls_dsn.magic = 0xdeadbeef;
+    dsn::tls_dsn.worker_index = -1;
 
     dsn_all.engine_ready = false;
     dsn_all.config_completed = false;
@@ -845,11 +846,20 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
     }
     
     // setup coredump
-    if (!::dsn::utils::is_file_or_dir_exist(spec.coredump_dir.c_str()))
+	auto& coredump_dir = spec.coredump_dir;
+	dassert(!dsn::utils::filesystem::file_exists(coredump_dir), "%s should not be a file.", coredump_dir.c_str());
+    if (!dsn::utils::filesystem::directory_exists(coredump_dir.c_str()))
     {
-        mkdir_(spec.coredump_dir.c_str());
+		if (!dsn::utils::filesystem::create_directory(coredump_dir))
+		{
+			dassert(false, "Fail to create %s.", coredump_dir.c_str());
+		}
     }
-    std::string cdir = ::dsn::utils::get_absolute_path(spec.coredump_dir.c_str());
+	std::string cdir;
+	if (!dsn::utils::filesystem::get_absolute_path(coredump_dir.c_str(), cdir))
+	{
+		dassert(false, "Fail to get absolute path from %s.", coredump_dir.c_str());
+	}
     ::dsn::utils::coredump::init(cdir.c_str());
 
     // init tools

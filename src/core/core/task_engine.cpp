@@ -36,11 +36,12 @@ using namespace dsn::utils;
 
 namespace dsn {
 
+
 task_worker_pool::task_worker_pool(const threadpool_spec& opts, task_engine* owner)
     : _spec(opts), _owner(owner), _node(owner->node())
 {
     _is_running = false;
-    _timer_service = _owner->timer_svc();
+    _per_node_timer_svc = nullptr;
 }
 
 void task_worker_pool::create()
@@ -93,6 +94,7 @@ void task_worker_pool::create()
             worker = factory_store<task_worker>::create(it->c_str(), PROVIDER_TYPE_ASPECT, this, q, i, worker);
         }
         task_worker::on_create.execute(worker);
+        q->set_owner_worker(spec().partitioned ? worker : nullptr);
 
         _workers.push_back(worker);
     }
@@ -106,7 +108,36 @@ void task_worker_pool::start()
     for (auto& wk : _workers)
         wk->start();
 
+    // setup cached ptrs for fast timer service access
+    if (service_engine::fast_instance().spec().io_mode == IOE_PER_QUEUE)
+    {
+        for (size_t i = 0; i < _queues.size(); i++)
+        {
+            auto svc = node()->tsvc(_queues[i]);
+            dassert(svc, "per queue timer service must be present");
+            _per_queue_timer_svcs.push_back(svc);
+        }
+    }
+    else
+    {
+        _per_node_timer_svc = node()->tsvc(nullptr);
+    }
+
     _is_running = true;
+}
+
+void task_worker_pool::add_timer(task* t)
+{
+    dassert(t->delay_milliseconds() > 0,
+        "task delayed should be dispatched to timer service first");
+
+    if (_per_node_timer_svc)
+        _per_node_timer_svc->add_timer(t);
+    else
+    {
+        int idx = (_spec.partitioned ? t->hash() % _queues.size() : 0);
+        _per_queue_timer_svcs[idx]->add_timer(t);
+    }
 }
 
 void task_worker_pool::enqueue(task* t)
@@ -231,21 +262,7 @@ void task_engine::create(const std::list<dsn_threadpool_code_t>& pools)
 {
     if (_is_running)
         return;
-
-    // init timer service
-    _timer_service = factory_store<timer_service>::create(
-        service_engine::fast_instance().spec().timer_factory_name.c_str(),
-        PROVIDER_TYPE_MAIN, _node, nullptr);
-
-    for (auto& s : service_engine::fast_instance().spec().timer_aspects)
-    {
-        _timer_service = factory_store<timer_service>::create(
-            s.c_str(),
-            PROVIDER_TYPE_ASPECT,
-            _node, _timer_service
-            );
-    }
-
+    
     // init pools
     _pools.resize(dsn_threadpool_code_max() + 1, nullptr);
     for (auto& p : pools)
@@ -266,7 +283,7 @@ void task_engine::start()
     {
         if (pl)
             pl->start();
-    }        
+    }
 
     _is_running = true;
 }

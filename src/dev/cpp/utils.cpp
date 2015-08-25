@@ -64,56 +64,6 @@ namespace dsn {
 # endif 
         }
 
-        bool is_file_or_dir_exist(const char* path)
-        {
-# if defined(_WIN32)
-            struct _stat32 buffer;
-            return _stat32(path, &buffer) == 0;
-# else
-            struct stat buffer;
-            return stat(path, &buffer) == 0;
-# endif
-        }
-
-        bool remove_dir(const char* path, bool recursive)
-        {
-            if (!recursive)
-                return rmdir_(path) == 0;
-            else
-            {
-                dassert(!"not implemented", "not implmented");
-                return 0;
-            }
-        }
-
-        std::string get_absolute_path(const char* path)
-        {
-# if defined(_WIN32)
-            char* component;
-            char absoluate_path[1024];
-            if (0 == ::GetFullPathNameA(path, 1024, absoluate_path, &component))
-                return "";
-            else
-                return std::string(absoluate_path);
-# else
-            char* rpath = realpath(path, nullptr);
-            if (rpath == nullptr)
-                return "";
-            else
-            {
-                std::string apath = rpath;
-                free(rpath);
-                return apath;
-            }
-# endif
-        }
-
-        std::string remove_file_name(const char* path)
-        {
-            std::string path0(path);
-            return path0.substr(0, path0.find_last_of("\\/"));
-        }
-
         std::string get_last_component(const std::string& input, char splitters[])
         {
             int index = -1;

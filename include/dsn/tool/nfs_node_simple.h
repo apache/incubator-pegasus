@@ -18,7 +18,7 @@ namespace dsn {
 
             virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task* callback) override;
 
-            virtual ::dsn::error_code start() override;
+            virtual ::dsn::error_code start(io_modifer& ctx) override;
 
             virtual error_code stop() override;
     

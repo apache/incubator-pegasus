@@ -35,7 +35,7 @@ namespace dsn { namespace tools {
         node_scoper(service_node* node)
         {
             _old = tls_dsn;
-            task::set_tls_dsn_context(node, nullptr, nullptr, nullptr, nullptr);
+            task::set_tls_dsn_context(node, nullptr, nullptr);
         }
 
         ~node_scoper()

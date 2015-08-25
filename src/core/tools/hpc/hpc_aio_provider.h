@@ -46,7 +46,7 @@ namespace dsn {
             virtual void         aio(aio_task* aio);            
             virtual disk_aio*    prepare_aio_context(aio_task* tsk);
 
-            virtual void update_on_io_mode(task_queue* q) override;
+            virtual void start(io_modifer& ctx) override;
 
         protected:
             error_code aio_internal(aio_task* aio, bool async, __out_param uint32_t* pbytes = nullptr);

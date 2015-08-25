@@ -65,7 +65,7 @@ namespace dsn {
         //
         // when client_only is true, port is faked (equal to app id for tracing purpose)
         //
-        virtual error_code start(rpc_channel channel, int port, bool client_only) = 0;
+        virtual error_code start(rpc_channel channel, int port, bool client_only, io_modifer& ctx) = 0;
 
         //
         // the named address (when client_only is true)
@@ -81,12 +81,7 @@ namespace dsn {
         //          null when this is a one-way RPC call.
         //
         virtual void call(message_ex* request, rpc_response_task* call) = 0;
-
-        //
-        // update according to io mode when necessary (usually not necessary)
-        //
-        virtual void update_on_io_mode(task_queue* q) {}
-        
+                
         //
         // utilities
         //

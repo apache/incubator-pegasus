@@ -44,7 +44,7 @@ namespace dsn
         {   
             switch (spec().io_mode)
             {
-            case IOLOOP_PER_NODE:
+            case IOE_PER_NODE:
             {
                 dassert(node, "node is not given");
                 auto it = io_looper_holder::instance().per_node_loopers.find(node);
@@ -58,7 +58,7 @@ namespace dsn
                 else
                     return it->second;
             }
-            case IOLOOP_PER_QUEUE:
+            case IOE_PER_QUEUE:
             {
                 dassert(q, "task queue is not given");
                 auto p = dynamic_cast<io_looper*>(q);
@@ -73,19 +73,8 @@ namespace dsn
 
         //--------------------------------------------
         //
-        // when s_config.type == IOLOOP_PER_QUEUE
+        // when s_config.type == IOE_PER_QUEUE
         //
-
-        void io_looper_without_workers::start(service_node* node, int worker_count)
-        {
-            create_completion_queue();
-        }
-
-        void io_looper_without_workers::stop()
-        {
-            io_looper::stop();
-        }
-
         io_looper_task_queue::io_looper_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider)
             : task_queue(pool, index, inner_provider)
         {
@@ -96,14 +85,22 @@ namespace dsn
         {
         
         }
-        
+
+        void io_looper_task_queue::start(service_node* node, int worker_count)
+        {
+            create_completion_queue();
+        }
+
+        void io_looper_task_queue::stop()
+        {
+            io_looper::stop();
+        }
+
         void io_looper_task_queue::handle_local_queues()
         {
             // execute shared queue
             while (true)
             {
-                utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
-
                 dlink *t;
                 {
                     utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
@@ -137,7 +134,7 @@ namespace dsn
         void io_looper_task_queue::enqueue(task* task)
         {
             // put into locked queue when it is shared or from remote threads
-            if (_is_shared || task::get_current_worker_index() != index())
+            if (_is_shared || task::get_current_worker() != this->owner_worker())
             {
                 {
                     utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);

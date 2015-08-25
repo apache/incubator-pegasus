@@ -306,46 +306,41 @@ namespace dsn {
 
         inline int get_invalid_tid() { return -1; }
 
-        extern bool is_file_or_dir_exist(const char* path);
+		namespace filesystem {
 
-        extern std::string get_absolute_path(const char* path);
+			extern bool get_absolute_path(const std::string& path1, std::string& path2);
 
-        extern std::string remove_file_name(const char* path);
+			extern std::string remove_file_name(const std::string& path);
 
-        extern bool remove_dir(const char* path, bool recursive);
+			extern bool get_normalized_path(const std::string& path, std::string& npath);
 
-		#pragma region
+			//int (const char* fpath, int typeflag)
+			typedef std::function<int(const char*, int)> ftw_handler;
 
-		extern bool get_normalized_path(const std::string& path, std::string& npath);
+			extern bool file_tree_walk(
+				const char* dirpath,
+				ftw_handler handler,
+				bool recursive = true
+				);
 
-		//int (const char* fpath, int typeflag)
-		typedef std::function<int (const char*, int)> ftw_handler;
+			extern bool exists(const std::string& path);
 
-		extern bool file_tree_walk(
-			const char* dirpath,
-			ftw_handler handler,
-			bool recursive = true
-			);
+			extern bool directory_exists(const std::string& path);
 
-		extern bool path_exists(const std::string& path);
+			extern bool file_exists(const std::string& path);
 
-		extern bool directory_exists(const std::string& path);
+			extern bool get_files(const std::string& path, std::vector<std::string>& file_list, bool recursive);
 
-		extern bool file_exists(const std::string& path);
+			extern bool remove(const std::string& path);
 
-		extern bool get_files(const std::string& path, std::vector<std::string>& file_list, bool recursive);
+			extern bool rename(const std::string& path1, const std::string& path2);
 
-		extern bool remove(const std::string& path);
+			extern bool file_size(const std::string& path, int64_t& sz);
 
-		extern bool rename(const std::string& path1, const std::string& path2);
+			extern bool create_directory(const std::string& path);
 
-		extern bool file_size(const std::string& path, int64_t& sz);
-
-		extern bool create_directory(const std::string& path);
-
-		extern bool create_file(const std::string& path);
-
-		#pragma endregion
+			extern bool create_file(const std::string& path);
+		}
     }
 } // end namespace dsn::utils
 

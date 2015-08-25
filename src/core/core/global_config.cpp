@@ -263,10 +263,12 @@ service_app_spec::service_app_spec(const service_app_spec& r)
     ports = r.ports;
     pools = r.pools;
     delay_seconds = r.delay_seconds;
+    ports_gap = r.ports_gap;
     run = r.run;
     dmodule = r.dmodule;
     network_client_confs = r.network_client_confs;
     network_server_confs = r.network_server_confs;
+    count = r.count;
 }
 
 bool service_app_spec::init(
@@ -286,6 +288,7 @@ bool service_app_spec::init(
         return false;
 
     std::sort(ports.begin(), ports.end());
+    ports_gap = ports.size() > 0 ? (*ports.rbegin() + 1 - *ports.begin()) : 0;
 
     if (!build_client_network_confs(
         section,
@@ -305,7 +308,6 @@ bool service_app_spec::init(
 
     return true;
 }
-
 
 network_server_config::network_server_config(const network_server_config& r)
 : channel(r.channel), hdr_format(r.hdr_format)
@@ -367,6 +369,29 @@ bool service_spec::init_app_specs()
             if (!app.init((*it).c_str(), it->substr(5).c_str(), &default_app))
                 return false;
 
+            // fix ports_gap when necessary
+            int ports_gap = app.ports_gap;
+            switch (io_mode)
+            {
+            case IOE_PER_NODE:
+                ports_gap *= 1;
+                break;
+            case IOE_PER_QUEUE:
+                {
+                    int number_of_ioes = 0;
+                    for (auto& pl : app.pools)
+                    {
+                        number_of_ioes += (this->threadpool_specs[pl].partitioned 
+                            ? this->threadpool_specs[pl].worker_count : 1);
+                    }
+                    ports_gap *= number_of_ioes;
+                }
+                break;
+            default:
+                dassert(false, "unsupport io mode");
+                break;
+            }
+
             // load dynamic module where app role is defined
             if (app.dmodule.length() > 0)
             {
@@ -387,8 +412,7 @@ bool service_spec::init_app_specs()
             app.role = role;
 
             auto ports = app.ports;   
-            auto nsc = app.network_server_confs;
-            auto gap = ports.size() > 0 ? (*ports.rbegin() + 1 - *ports.begin()) : 0;            
+            auto nsc = app.network_server_confs;            
             std::string name = app.name;
             for (int i = 1; i <= app.count; i++)
             {
@@ -400,18 +424,19 @@ bool service_spec::init_app_specs()
 
                 // add app
                 app_specs.push_back(app);
+                dassert((int)app_specs.size() == app.id, "incorrect app id");
 
                 // for next instance
                 app.ports.clear();
                 for (auto& p : ports)
                 {
-                    app.ports.push_back(p + i * gap);
+                    app.ports.push_back(p + i * ports_gap);
                 }
 
                 app.network_server_confs.clear();
                 for (auto sc : nsc)
                 {
-                    sc.second.port += i * gap;
+                    sc.second.port += i * ports_gap;
                     app.network_server_confs[sc.second] = sc.second;
                 }
             }
@@ -420,5 +445,32 @@ bool service_spec::init_app_specs()
 
     return true;
 }
+
+int service_spec::get_ports_delta(int app_id, dsn_threadpool_code_t pool, int queue_index) const
+{
+    dassert(io_mode == IOE_PER_QUEUE, "only used for IOE_PER_QUEUE mode");
+
+    auto& aps = app_specs[app_id - 1];
+    int number_of_ioes = 0;
+    for (auto& pl : aps.pools)
+    {
+        if (pl != pool)
+        {
+            number_of_ioes += (this->threadpool_specs[pl].partitioned
+                ? this->threadpool_specs[pl].worker_count : 1);
+        }
+        else
+        {
+            number_of_ioes += (this->threadpool_specs[pl].partitioned
+                ? (queue_index + 1) : 1);
+            break;
+        }
+    }
+
+    dassert(number_of_ioes >= 1, "given pool not started");
+
+    return aps.ports_gap * (number_of_ioes - 1);
+}
+
 
 } // end namespace dsn
