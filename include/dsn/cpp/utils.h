@@ -340,6 +340,10 @@ namespace dsn {
 			extern bool create_directory(const std::string& path);
 
 			extern bool create_file(const std::string& path);
+
+			extern bool getcwd(std::string& path);
+
+			extern bool last_write_time(std::string& path, time_t& tm);
 		}
     }
 } // end namespace dsn::utils

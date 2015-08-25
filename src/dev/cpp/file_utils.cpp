@@ -28,7 +28,17 @@
 
 #ifdef _WIN32
 
+# include <direct.h>
+# include <io.h>
+# include <sys/types.h>
+# include <sys/stat.h>
 # include <deque>
+
+# define getcwd_ _getcwd
+# define rmdir_ _rmdir
+# define mkdir_ _mkdir
+# define close_ _close
+# define stat64_ _stat64
 
 enum
 {
@@ -85,9 +95,18 @@ enum
 
 #else
 
+# include <sys/stat.h>
+
 #ifndef _XOPEN_SOURCE
 # define _XOPEN_SOURCE 500
 #endif
+
+# define getcwd_ getcwd
+# define rmdir_ rmdir
+# define mkdir_(path) mkdir(path, 0775)
+# define close_ close
+# define stat64_ stat64
+
 # include <ftw.h>
 
 #ifndef FTW_CONTINUE
@@ -115,6 +134,18 @@ namespace dsn {
 # define _FS_ISSEP(x)	((x) == _FS_SLASH || (x) == _FS_BSLASH)
 
 			static __thread char tls_path_buffer[PATH_MAX];
+
+			static bool get_stat(const std::string& path, struct stat64_& st)
+			{
+				std::string npath;
+
+				if (!get_normalized_path(path, npath))
+				{
+					return false;
+				}
+
+				return (::stat64_(path.c_str(), &st) == 0);
+			}
 
 			bool get_normalized_path(const std::string& path, std::string& npath)
 			{
@@ -328,15 +359,9 @@ namespace dsn {
 			static bool exists_internal(const std::string& path, int type)
 			{
 				bool ret;
-				std::string npath;
 				struct stat64_ st;
 
-				if (!get_normalized_path(path, npath))
-				{
-					return false;
-				}
-
-				if (::stat64_(path.c_str(), &st) != 0)
+				if (!dsn::utils::filesystem::get_stat(path, st))
 				{
 					return false;
 				}
@@ -454,7 +479,7 @@ namespace dsn {
 			{
 				struct stat64_ st;
 
-				if (::stat64_(path.c_str(), &st) != 0)
+				if (!dsn::utils::filesystem::get_stat(path, st))
 				{
 					return false;
 				}
@@ -620,6 +645,32 @@ namespace dsn {
 				return path.substr(0, path.find_last_of("\\/"));
 			}
 
+			bool getcwd(std::string& path)
+			{
+				bool succ;
+
+				succ = (getcwd_(tls_path_buffer, PATH_MAX) == 0);
+				if (succ)
+				{
+					path = tls_path_buffer;
+				}
+
+				return succ;
+			}
+
+			bool last_write_time(std::string& path, time_t& tm)
+			{
+				struct stat64_ st;
+
+				if (!dsn::utils::filesystem::get_stat(path, st))
+				{
+					return false;
+				}
+
+				tm = st.st_mtime;
+
+				return true;
+			}
 		}
 	}
 }
