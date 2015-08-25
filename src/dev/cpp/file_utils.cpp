@@ -38,7 +38,7 @@
 # define rmdir_ _rmdir
 # define mkdir_ _mkdir
 # define close_ _close
-# define stat64_ _stat64
+# define stat_ _stat64
 
 enum
 {
@@ -105,7 +105,7 @@ enum
 # define rmdir_ rmdir
 # define mkdir_(path) mkdir(path, 0775)
 # define close_ close
-# define stat64_ stat64
+# define stat_ stat
 
 # include <ftw.h>
 
@@ -135,9 +135,9 @@ namespace dsn {
 
 			static __thread char tls_path_buffer[PATH_MAX];
 
-			static inline bool get_stat(const std::string& npath, struct stat64_& st)
+			static inline bool get_stat(const std::string& npath, struct stat_& st)
 			{
-				return (::stat64_(npath.c_str(), &st) == 0);
+				return (::stat_(npath.c_str(), &st) == 0);
 			}
 
 			bool get_normalized_path(const std::string& path, std::string& npath)
@@ -353,7 +353,7 @@ namespace dsn {
 			static bool path_exists(const std::string& npath, int type)
 			{
 				bool ret;
-				struct stat64_ st;
+				struct stat_ st;
 
 				if (!dsn::utils::filesystem::get_stat(npath, st))
 				{
@@ -526,7 +526,7 @@ namespace dsn {
 
 			bool file_size(const std::string& path, int64_t& sz)
 			{
-				struct stat64_ st;
+				struct stat_ st;
 				std::string npath;
 
 				if (path.empty())
@@ -728,7 +728,7 @@ namespace dsn {
 
 			bool last_write_time(std::string& path, time_t& tm)
 			{
-				struct stat64_ st;
+				struct stat_ st;
 				std::string npath;
 
 				if (path.empty())
