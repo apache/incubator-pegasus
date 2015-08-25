@@ -344,7 +344,7 @@ namespace dsn {
 				{
 					flags |= FTW_DEPTH;
 				}
-				int ret = ::nftw(dirpath, ftw_wrapper, 1, flags);
+				int ret = ::nftw(dirpath.c_str(), ftw_wrapper, 1, flags);
 
 				return (ret == 0);
 #endif
