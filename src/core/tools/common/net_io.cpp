@@ -179,8 +179,7 @@ namespace dsn {
             boost::asio::io_service& ios)
             :
             net_io(remote_addr, socket, parser, ios), 
-            _state(SS_CLOSED),
-            _reconnect_count(0)
+            _state(SS_CLOSED)
         {
         }
 
@@ -198,14 +197,8 @@ namespace dsn {
         void client_net_io::on_failure()
         {
             _state = SS_CLOSED;
-
-            if (_reconnect_count++ > 3)
-            {
-                close();
-                return;
-            }
-
-            connect();
+            close();
+            return;
         }
 
         void client_net_io::connect()
@@ -222,7 +215,6 @@ namespace dsn {
                 {
                     if (!ec)
                     {
-                        _reconnect_count = 0;
                         _state = SS_CONNECTED;
 
                         dinfo("client session %s:%hu connected",

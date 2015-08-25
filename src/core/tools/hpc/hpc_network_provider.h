@@ -101,13 +101,14 @@ namespace dsn {
 
         protected:
             socket_t                               _socket;
-            std::shared_ptr<dsn::message_parser>   _parser;
-            io_loop_callback                       _ready_event;
+            std::shared_ptr<dsn::message_parser>   _parser;            
 
 # ifdef _WIN32
+            static io_loop_callback                _ready_event; // it is stateless, so static
             hpc_network_provider::ready_event      _read_event;
             hpc_network_provider::ready_event      _write_event;
 # else
+            io_loop_callback                       _ready_event;
             message_ex*                            _sending_msg;
             int                                    _sending_next_offset;
             struct sockaddr_in                     _peer_addr;
@@ -169,7 +170,6 @@ namespace dsn {
             };
 
             std::atomic<session_state>   _state;
-            int                          _reconnect_count;
         };
         
         class hpc_rpc_server_session : public rpc_server_session, public hpc_rpc_session

@@ -314,17 +314,19 @@ namespace dsn
             }
         }
                 
+        io_loop_callback hpc_rpc_session::_ready_event = 
+            [](int err, uint32_t length, uintptr_t lolp)
+            {
+                auto evt = CONTAINING_RECORD(lolp, hpc_network_provider::ready_event, olp);
+                evt->callback(err, length, lolp);
+            };
+
         hpc_rpc_session::hpc_rpc_session(
             socket_t sock,
             std::shared_ptr<dsn::message_parser>& parser
             )
             : _socket(sock), _parser(parser)
         {
-            _ready_event = [](int err, uint32_t length, uintptr_t lolp)
-            {
-                auto evt = CONTAINING_RECORD(lolp, hpc_network_provider::ready_event, olp);
-                evt->callback(err, length, lolp);
-            };
         }
 
         void hpc_rpc_session::bind_looper(io_looper* looper)
@@ -457,22 +459,14 @@ namespace dsn
             )
             : rpc_client_session(net, remote_addr, matcher), hpc_rpc_session(sock, parser)
         {
-            _reconnect_count = 0;
             _state = SS_CLOSED;
         }
 
         void hpc_rpc_client_session::on_failure()
         {
             _state = SS_CLOSED;
-
-            if (++_reconnect_count > 3)
-            {
-                close();
-                on_disconnected();
-                return;
-            }
-
-            connect();
+            close();
+            on_disconnected();
         }
 
         void hpc_rpc_client_session::connect()
@@ -492,7 +486,6 @@ namespace dsn
                 }
                 else
                 {
-                    _reconnect_count = 0;
                     _state = SS_CONNECTED;
 
                     dinfo("client session %s:%hu connected",
@@ -500,10 +493,8 @@ namespace dsn
                         _remote_addr.port
                         );
 
-                    set_connected(true);
-                    dinfo("send_messages");
+                    set_connected();
                     send_messages();
-                    dinfo("do_read");
                     do_read();
                 }
                 this->release_ref(); // added before ConnectEx

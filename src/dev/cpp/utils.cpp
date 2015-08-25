@@ -271,6 +271,15 @@ namespace  dsn
         if (len <= get_remaining_size())
         {
             blob = _blob.range(static_cast<int>(_ptr - _blob.data()), len);
+
+            // optimization: zero-copy
+            if (!blob.buffer_ptr())
+            {
+                std::shared_ptr<char> buffer((char*)malloc(len));
+                memcpy(buffer.get(), blob.data(), blob.length());
+                blob = ::dsn::blob(buffer, 0, blob.length());
+            }
+            
             _ptr += len;
             _remaining_size -= len;
             return len + sizeof(len);

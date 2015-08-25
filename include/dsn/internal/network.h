@@ -202,22 +202,26 @@ namespace dsn {
         void send_message(message_ex* msg);
         void send_messages();
         void on_send_completed(message_ex* msg);
-        
+        bool has_pending_out_msgs();
+                
         // always call on_send_completed later
         virtual void send(message_ex* msg) = 0;
 
     protected:
-        bool set_connected(bool is_connected); // return old
+        void set_connected();
 
         connection_oriented_network         &_net;
         dsn_address_t                       _remote_addr;
+        bool                                _is_connected;
 
     private:
         // TODO: expose the queue to be customizable
-        ::dsn::utils::ex_lock_nr_spin      _lock;
-        bool                               _is_connected;
+        ::dsn::utils::ex_lock_nr_spin      _lock;        
         bool                               _is_sending_next;
         dlink                              _messages;
+
+        friend class connection_oriented_network;
+        std::atomic<int>                   _reconnect_count_after_last_success;
     };
 
     //

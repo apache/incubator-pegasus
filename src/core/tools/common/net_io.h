@@ -89,7 +89,6 @@ namespace dsn {
             };
 
             std::atomic<session_state>   _state;
-            int                          _reconnect_count;
         };
     }
 }

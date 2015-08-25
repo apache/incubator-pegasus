@@ -317,7 +317,6 @@ namespace dsn
             )
             : rpc_client_session(net, remote_addr, matcher), hpc_rpc_session(sock, parser)
         {
-            _reconnect_count = 0;
             _state = SS_CLOSED;
             
             _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
@@ -348,7 +347,7 @@ namespace dsn
                             _remote_addr.port
                             );
 
-                        set_connected(true);
+                        set_connected();
                     }
 
                     //  send
@@ -373,15 +372,8 @@ namespace dsn
         void hpc_rpc_client_session::on_failure()
         {
             _state = SS_CLOSED;
-
-            if (++_reconnect_count > 3)
-            {
-                close();
-                on_disconnected();
-                return;
-            }
-
-            connect();
+            close();
+            on_disconnected();
         }
 
         void hpc_rpc_client_session::connect()
@@ -423,7 +415,7 @@ namespace dsn
                             _remote_addr.port
                          );
 
-                set_connected(true);
+                set_connected();
             }
         }
 
