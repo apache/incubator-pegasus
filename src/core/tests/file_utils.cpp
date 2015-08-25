@@ -29,7 +29,7 @@
 # include <fstream>
 
 
-static void test_setup()
+static void file_utils_test_setup()
 {
 	std::string path;
 	bool ret;
@@ -47,7 +47,7 @@ static void test_setup()
 	EXPECT_FALSE(ret);
 }
 
-static void test_get_normalized_path()
+static void file_utils_test_get_normalized_path()
 {
 	bool ret;
 	std::string path;
@@ -458,7 +458,18 @@ static void test_get_normalized_path()
 #endif
 }
 
-static void test_create()
+static void file_utils_test_get_current_directory()
+{
+	std::string path;
+	bool ret;
+
+	path = "";
+	ret = dsn::utils::filesystem::get_current_directory(path);
+	EXPECT_TRUE(ret);
+	EXPECT_TRUE(!path.empty());
+}
+
+static void file_utils_test_create()
 {
 	std::string path;
 	bool ret;
@@ -469,10 +480,18 @@ static void test_create()
 	ret = dsn::utils::filesystem::file_exists(path);
 	EXPECT_TRUE(ret);
 
+	time_t current_time = ::time(nullptr);
+	EXPECT_TRUE(current_time != 1);
+
 	std::ofstream myfile(path.c_str(), std::ios::out | std::ios::app | std::ios::binary);
 	EXPECT_TRUE(myfile.is_open());
 	myfile << "Hello world!";
 	myfile.close();
+
+	time_t last_write_time;
+	ret = dsn::utils::filesystem::last_write_time(path, last_write_time);
+	EXPECT_TRUE(ret);
+	EXPECT_TRUE((last_write_time != -1) && (last_write_time >= current_time));
 
 	path = "./file_utils_temp";
 	ret = dsn::utils::filesystem::create_directory(path);
@@ -511,7 +530,9 @@ static void test_create()
 	EXPECT_TRUE(ret);
 }
 
-static void test_file_size()
+
+
+static void file_utils_test_file_size()
 {
 	std::string path;
 	int64_t sz;
@@ -527,7 +548,7 @@ static void test_file_size()
 	EXPECT_FALSE(ret);
 }
 
-static void test_path_exists()
+static void file_utils_test_path_exists()
 {
 	std::string path;
 	bool ret;
@@ -613,7 +634,7 @@ static void test_path_exists()
 #endif
 }
 
-static void test_get_files()
+static void file_utils_test_get_files()
 {
 	std::string path;
 	bool ret;
@@ -654,7 +675,25 @@ static void test_get_files()
 	file_list.clear();
 }
 
-static void test_remove()
+static void file_utils_test_rename()
+{
+	std::string path;
+	std::string path2;
+	bool ret;
+
+	path = "./file_utils_temp/b/c/d/1.txt";
+	path2 = "./file_utils_temp/b/c/d/2.txt";
+	ret = dsn::utils::filesystem::rename_path(path, path2);
+	EXPECT_TRUE(ret);
+	ret = dsn::utils::filesystem::file_exists(path);
+	EXPECT_FALSE(ret);
+	ret = dsn::utils::filesystem::file_exists(path2);
+	EXPECT_TRUE(ret);
+	ret = dsn::utils::filesystem::rename_path(path, path2);
+	EXPECT_FALSE(ret);
+}
+
+static void file_utils_test_remove()
 {
 	std::string path;
 	std::vector<std::string> file_list;
@@ -679,18 +718,20 @@ static void test_remove()
 	EXPECT_FALSE(ret);
 }
 
-static void test_cleanup()
+static void file_utils_test_cleanup()
 {
 }
 
-TEST(core, file_utils_test)
+TEST(core, file_utils)
 {
-	test_setup();
-	test_get_normalized_path();
-	test_create();
-	test_file_size();
-	test_path_exists();
-	test_get_files();
-	test_remove();
-	test_cleanup();
+	file_utils_test_setup();
+	file_utils_test_get_normalized_path();
+	file_utils_test_get_current_directory();
+	file_utils_test_create();
+	file_utils_test_file_size();
+	file_utils_test_path_exists();
+	file_utils_test_get_files();
+	file_utils_test_rename();
+	file_utils_test_remove();
+	file_utils_test_cleanup();
 }
