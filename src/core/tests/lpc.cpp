@@ -31,13 +31,13 @@
 
 DEFINE_TASK_CODE(LPC_TEST_HASH, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
 
-void on_lpc_test_hash(void* p)
+void on_lpc_test(void* p)
 {
     std::string& result = *(std::string*)p;
     result = ::dsn::task::get_current_worker()->name();
 }
 
-void on_lpc_test_hash2(void* p)
+void on_lpc_test2(void* p)
 {
 
 }
@@ -45,12 +45,12 @@ void on_lpc_test_hash2(void* p)
 TEST(core, lpc)
 {
     std::string result;
-    auto t = dsn_task_create(LPC_TEST_HASH, on_lpc_test_hash, (void*)&result, 1);
+    auto t = dsn_task_create(LPC_TEST_HASH, on_lpc_test, (void*)&result, 1);
     dsn_task_add_ref(t);
     dsn_task_call(t, nullptr, 0);
     bool r = dsn_task_wait(t);
     dsn_task_release_ref(t);
 
     EXPECT_TRUE(r);
-    EXPECT_TRUE(result.substr(result.length() - 2) == ".1");
+    EXPECT_TRUE(result.substr(0, result.length() - 2) == "client.THREAD_POOL_TEST_SERVER");
 }

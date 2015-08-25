@@ -51,14 +51,9 @@ public:
 
     }
 
-    void on_rpc_test_hash(const int& test_id, ::dsn::rpc_replier<std::string>& replier)
+    void on_rpc_test(const int& test_id, ::dsn::rpc_replier<std::string>& replier)
     {
-        std::stringstream ss;
-        ss << test_id << "."
-           << ::dsn::task::get_current_worker()->name()
-           ;
-
-        std::string r = std::move(ss.str());
+        std::string r = ::dsn::task::get_current_worker()->name();
         replier(r);
     }
 
@@ -67,7 +62,7 @@ public:
         // server
         if (argc == 1)
         {
-            register_async_rpc_handler(RPC_TEST_HASH, "rpc.test.hash", &test_client::on_rpc_test_hash);
+            register_async_rpc_handler(RPC_TEST_HASH, "rpc.test.hash", &test_client::on_rpc_test);
         }
 
         // client

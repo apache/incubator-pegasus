@@ -1,5 +1,7 @@
 
 # include <dsn/internal/task.h>
+# include <dsn/tool_api.h>
+# include "task_engine.h"
 
 namespace dsn
 {
@@ -32,12 +34,47 @@ namespace dsn
         {
             check_wait_safety();
 
-            if (nullptr != task::get_current_task() && !waitee->is_empty())
+            if (
+                // in worker thread
+                task::get_current_worker() != nullptr
+
+                // caller and callee share the same thread pool,
+                // or caller and io notification which notifies the callee share the same thread pool
+                && (waitee->spec().type == TASK_TYPE_RPC_RESPONSE
+                || (waitee->spec().pool_code == task::get_current_worker()->pool_spec().pool_code)
+                || (
+                    // assuming wait is with the same thread when the io call is emitted
+                    // in this case io notificaiton is received by the current thread
+                    ::dsn::tools::spec().io_mode == IOE_PER_QUEUE
+                   )
+                )
+
+                // callee is not empty or we are using IOE_PER_QUEUE mode (io received by current thread)
+                && (!waitee->is_empty()
+                    || ::dsn::tools::spec().io_mode == IOE_PER_QUEUE
+                )
+
+                // not much concurrency in the current pool
+                && (task::get_current_worker()->pool_spec().partitioned
+                    || task::get_current_worker()->pool_spec().worker_count == 1)
+                )
             {
-                if (TASK_TYPE_RPC_RESPONSE == waitee->spec().type ||
-                    task::get_current_task()->spec().pool_code == waitee->spec().pool_code)
+                if (::dsn::tools::spec().io_mode == IOE_PER_QUEUE
+                    && (task::get_current_worker()->pool_spec().partitioned
+                        || task::get_current_worker()->pool_spec().worker_count == 1)
+                        )
                 {
-                    dassert(false, "task %s waits for another task %s sharing the same thread pool - will lead to deadlocks easily (e.g., when worker_count = 1 or when the pool is partitioned)",
+                    dassert(false, 
+                        "cannot call task wait in worker thread '%s' that also serves as io thread "
+                        "(io_mode == IOE_PER_QUEUE) "
+                        "when the thread pool is partitioned or the worker thread number is 1",
+                        task::get_current_worker()->name().c_str()
+                        );
+                }
+                else
+                {
+                    dassert(false, "task %s waits for another task %s sharing the same thread pool "
+                        "- will lead to deadlocks easily (e.g., when worker_count = 1 or when the pool is partitioned)",
                         dsn_task_code_to_string(task::get_current_task()->spec().code),
                         dsn_task_code_to_string(waitee->spec().code)
                         );

@@ -47,5 +47,5 @@ TEST(core, rpc)
     EXPECT_TRUE(err == ERR_OK);
 
     ::unmarshall(response.get(), result);
-    EXPECT_TRUE(result.substr(result.length() - 2) == ".1");
+    EXPECT_TRUE(result.substr(0, result.length() - 2) == "server.THREAD_POOL_TEST_SERVER");
 }
