@@ -114,7 +114,7 @@ namespace dsn {
 # define _FS_NULL		'\0'
 # define _FS_ISSEP(x)	((x) == _FS_SLASH || (x) == _FS_BSLASH)
 
-			static __thread char path_buffer[PATH_MAX];
+			static __thread char tls_path_buffer[PATH_MAX];
 
 			bool get_normalized_path(const std::string& path, std::string& npath)
 			{
@@ -160,20 +160,20 @@ namespace dsn {
 							}
 					}
 
-					path_buffer[pos++] = c;
+					tls_path_buffer[pos++] = c;
 				}
 
-				path_buffer[pos] = _FS_NULL;
+				tls_path_buffer[pos] = _FS_NULL;
 				if ((c == sep) && (pos > 1))
 				{
 #ifdef _WIN32
-					c = path_buffer[pos - 2];
+					c = tls_path_buffer[pos - 2];
 					if ((c != _FS_COLON) && (c != _FS_QUESTION) && (c != _FS_BSLASH))
 #endif
-						path_buffer[pos - 1] = _FS_NULL;
+						tls_path_buffer[pos - 1] = _FS_NULL;
 				}
 
-				npath = path_buffer;
+				npath = tls_path_buffer;
 
 				return true;
 			}
@@ -183,11 +183,11 @@ namespace dsn {
 			{
 				ftw_handler*	handler;
 				bool			recursive;
-			} ftw_ctx;
+			} tls_ftw_ctx;
 
 			static int ftw_wrapper(const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf)
 			{
-				if (!ftw_ctx.recursive && (ftwbuf->level > 1))
+				if (!tls_ftw_ctx.recursive && (ftwbuf->level > 1))
 				{
 #ifdef __linux__
 					if ((typeflag == FTW_D) || (typeflag == FTW_DP))
@@ -203,7 +203,7 @@ namespace dsn {
 #endif
 				}
 
-				return (*ftw_ctx.handler)(fpath, typeflag);
+				return (*tls_ftw_ctx.handler)(fpath, typeflag);
 			}
 #endif
 			bool file_tree_walk(
@@ -306,8 +306,8 @@ namespace dsn {
 
 				return true;
 #else
-				ftw_ctx.handler = &handler;
-				ftw_ctx.recursive = recursive;
+				tls_ftw_ctx.handler = &handler;
+				tls_ftw_ctx.recursive = recursive;
 				int flags =
 #ifdef __linux__
 					FTW_ACTIONRETVAL
@@ -328,13 +328,15 @@ namespace dsn {
 			static bool exists_internal(const std::string& path, int type)
 			{
 				bool ret;
-#ifdef _WIN32
-				struct _stat64 st;
-#else
-				struct stat64 st;
-#endif
+				std::string npath;
+				struct stat64_ st;
 
-				if (stat64_(path.c_str(), &st) != 0)
+				if (!get_normalized_path(path, npath))
+				{
+					return false;
+				}
+
+				if (::stat64_(path.c_str(), &st) != 0)
 				{
 					return false;
 				}
@@ -601,13 +603,13 @@ namespace dsn {
 				bool succ;
 # if defined(_WIN32)
 				char* component;
-				succ = (0 != ::GetFullPathNameA(path1.c_str(), PATH_MAX, path_buffer, &component));
+				succ = (0 != ::GetFullPathNameA(path1.c_str(), PATH_MAX, tls_path_buffer, &component));
 # else
-				succ = (realpath(path1.c_str(), path_buffer) != nullptr);
+				succ = (realpath(path1.c_str(), tls_path_buffer) != nullptr);
 # endif
 				if (succ)
 				{
-					path2 = path_buffer;
+					path2 = tls_path_buffer;
 				}
 				
 				return succ;
