@@ -32,33 +32,18 @@
 # include <Winsock2.h>
 # include <ws2tcpip.h>
 # include <Windows.h>
-# include <direct.h>
-# include <io.h>
-# include <sys/types.h>
-# include <sys/stat.h>
 # pragma comment(lib, "ws2_32.lib")
 
 __pragma(warning(disable:4127))
 
 # define __thread __declspec(thread)
 # define __selectany __declspec(selectany) extern 
-# define getcwd_ _getcwd
-# define rmdir_ _rmdir
-# define mkdir_ _mkdir
-# define close_ _close
-# define stat64_ _stat64
 
 # elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
 
 # include <unistd.h>
-# include <sys/stat.h>
 
 # define __selectany __attribute__((weak)) extern 
-# define getcwd_ getcwd
-# define rmdir_ rmdir
-# define mkdir_(path) mkdir(path, 0775)
-# define close_ close
-# define stat64_ stat64
 
 # ifndef O_BINARY
 # define O_BINARY 0

@@ -42,6 +42,7 @@ static void test_setup()
 
 	path = "./file_utils_temp";
 	ret = dsn::utils::filesystem::remove(path);
+	EXPECT_TRUE(ret);
 	ret = dsn::utils::filesystem::directory_exists(path);
 	EXPECT_FALSE(ret);
 }

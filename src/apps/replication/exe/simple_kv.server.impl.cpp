@@ -91,8 +91,9 @@ namespace dsn {
                 zauto_lock l(_lock);
                 if (create_new)
                 {
-                    boost::filesystem::remove_all(data_dir());
-                    mkdir_(data_dir().c_str());
+					auto& dir = data_dir();
+					dsn::utils::filesystem::remove(dir);
+					dsn::utils::filesystem::create_directory(dir);
                 }
                 else
                 {
