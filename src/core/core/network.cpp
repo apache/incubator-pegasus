@@ -175,7 +175,12 @@ namespace dsn {
 
     void rpc_client_session::on_disconnected()
     {
-        _is_connected = false;
+        if (!_is_connected
+            && ++_reconnect_count_after_last_success < 3
+            )
+        {
+            connect();
+        }
 
         rpc_client_session_ptr sp = this;
         _net.on_client_session_disconnected(sp);
@@ -213,8 +218,6 @@ namespace dsn {
 
     void rpc_server_session::on_disconnected()
     {
-        _is_connected = false;
-
         rpc_server_session_ptr sp = this;
         return _net.on_server_session_disconnected(sp);
     }
@@ -362,13 +365,6 @@ namespace dsn {
             dinfo("client session %s:%hu disconnected", s->remote_address().name, 
                 s->remote_address().port
                 );
-        }
-
-        if (s->has_pending_out_msgs()
-            && s->_reconnect_count_after_last_success.load() < 3
-            )
-        {
-            // TODO: reconnect
         }
     }
 }

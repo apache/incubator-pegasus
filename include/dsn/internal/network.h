@@ -214,14 +214,13 @@ namespace dsn {
         dsn_address_t                       _remote_addr;
         bool                                _is_connected;
 
+        std::atomic<int>                   _reconnect_count_after_last_success;
+
     private:
         // TODO: expose the queue to be customizable
         ::dsn::utils::ex_lock_nr_spin      _lock;        
         bool                               _is_sending_next;
         dlink                              _messages;
-
-        friend class connection_oriented_network;
-        std::atomic<int>                   _reconnect_count_after_last_success;
     };
 
     //
