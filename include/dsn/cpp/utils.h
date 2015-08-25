@@ -318,7 +318,7 @@ namespace dsn {
 			typedef std::function<int(const char*, int)> ftw_handler;
 
 			extern bool file_tree_walk(
-				const char* dirpath,
+				const std::string& dirpath,
 				ftw_handler handler,
 				bool recursive = true
 				);
@@ -333,10 +333,6 @@ namespace dsn {
 
 			extern bool remove_path(const std::string& path);
 			
-			//extern bool remove_file(const std::string& path);
-
-			//extern bool remove_directory(const std::string& path);
-
 			extern bool rename_path(const std::string& path1, const std::string& path2);
 
 			extern bool file_size(const std::string& path, int64_t& sz);
