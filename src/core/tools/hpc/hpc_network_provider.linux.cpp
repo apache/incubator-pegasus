@@ -161,6 +161,7 @@ namespace dsn
             addr.sin_port = 0;
 
             auto sock = create_tcp_socket(&addr);
+            dassert(sock != -1, "create client tcp socket failed!");
             auto client = new hpc_rpc_client_session(sock, parser, *this, server_addr, matcher);
             client->bind_looper(_looper);
             return client;
@@ -195,6 +196,7 @@ namespace dsn
             )
             : _socket(sock), _parser(parser)
         {
+            dassert(sock != -1, "invalid given socket handle");
             _sending_msg = nullptr;
             _sending_next_offset = 0;
             _looper = nullptr;
@@ -310,6 +312,7 @@ namespace dsn
             {
                 _looper->unbind_io_handle((dsn_handle_t)(intptr_t)_socket);
                 ::close(_socket);
+                dinfo("close socket %p", this);
                 _socket = -1;
             }
         }
@@ -327,55 +330,66 @@ namespace dsn
             {
                 uint32_t events = (uint32_t)lolp_or_events;
 
-                if ((events & EPOLLHUP) || (events & EPOLLRDHUP) || (events & EPOLLERR))
-                {
-                    on_failure();
-                    return;
-                }
-
-                // connect established is a EPOLLOUT event, so detect OUT first
-                if (events & EPOLLOUT)
-                {
-                    // connect
-                    if (is_connecting())
-                    {
-                        socklen_t addr_len = (socklen_t)sizeof(_peer_addr);
-                        if (getpeername(_socket, (struct sockaddr*)&_peer_addr, &addr_len) == -1)
-                        {
-                            dassert(false, "getpeername failed, err = %s", strerror(errno));
-                        }
-
-                        dinfo("client session %s:%u connected", 
-                            _remote_addr.name,
-                            _remote_addr.port
-                            );
-
-                        set_connected();
-                    }
-
-                    //  send
-                    if (is_connected())
-                    {
-                        if (_sending_msg)
-                        {
-                            do_write(_sending_msg);
-                        }
-                        else
-                        {
-                            on_write_completed(nullptr); // send next msg if there is.
-                        }
-                    }                    
-                }
-
-                if (events & EPOLLIN)
-                {
-                    // recv
-                    if (is_connected())
-                    {
-                        do_read();
-                    }
-                }
+                // this is tricky: after move the body as a stand-alone function,
+                // things works fine ...
+                this->on_events(events);                
             };
+        }
+
+        void hpc_rpc_client_session::on_events(uint32_t events)
+        {
+            if (is_disconnected())
+            {
+                dinfo("skip epoll events %x as the connection %s:%hu is disconnected",
+                    events,
+                    _remote_addr.name,
+                    _remote_addr.port
+                    );
+                return;
+            }
+
+            if ((events & EPOLLHUP) || (events & EPOLLRDHUP) || (events & EPOLLERR))
+            {
+                on_failure();
+                return;
+            }
+
+            // connect established is a EPOLLOUT event, so detect OUT first
+            if (events & EPOLLOUT)
+            {
+                // connect
+                if (is_connecting())
+                {
+                    socklen_t addr_len = (socklen_t)sizeof(_peer_addr);
+                    if (getpeername(_socket, (struct sockaddr*)&_peer_addr, &addr_len) == -1)
+                    {
+                        dassert(false, "getpeername failed, err = %s", strerror(errno));
+                    }
+
+                    dinfo("client session %s:%u connected",
+                        _remote_addr.name,
+                        _remote_addr.port
+                        );
+
+                    set_connected();
+                }
+
+                //  send
+                if (_sending_msg)
+                {
+                    do_write(_sending_msg);
+                }
+                else
+                {
+                    on_write_completed(nullptr); // send next msg if there is.
+                }
+            }
+
+            if (events & EPOLLIN)
+            {
+                // recv
+                do_read();
+            }
         }
 
         void hpc_rpc_client_session::on_failure()
@@ -389,6 +403,8 @@ namespace dsn
             if (!try_connecting())
                 return;
             
+            dassert(_socket != -1, "invalid given socket handle");
+
             struct sockaddr_in addr;
             addr.sin_family = AF_INET;
             addr.sin_addr.s_addr = htonl(_remote_addr.ip);

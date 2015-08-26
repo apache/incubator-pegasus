@@ -149,6 +149,8 @@ namespace dsn {
 # ifdef _WIN32
             // use _ready_event on linux, so this is only used on windows
             hpc_network_provider::ready_event      _connect_event;
+# else
+            void on_events(uint32_t events);
 # endif
 
         private:

@@ -210,6 +210,7 @@ namespace dsn {
         bool try_connecting(); // return true when it is permitted
         void set_connected();
         void set_disconnected();
+        bool is_disconnected() const { return _connect_state == SS_DISCONNECTED; }
         bool is_connecting() const { return _connect_state == SS_CONNECTING; }
         bool is_connected() const { return _connect_state == SS_CONNECTED; }
 
