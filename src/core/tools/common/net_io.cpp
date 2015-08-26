@@ -42,7 +42,7 @@ namespace dsn {
             :
             _io_service(ios),
             _socket(std::move(socket)),
-            _remote_addr(remote_addr),
+            _remote_address(remote_addr),
             _parser(parser)
         {
             set_options();
@@ -77,8 +77,8 @@ namespace dsn {
                 catch (std::exception& ex)
                 {
                     dwarn("network session %x:%hu set socket option failed, err = %s",
-                        _remote_addr.ip,
-                        _remote_addr.port,
+                        _remote_address.ip,
+                        _remote_address.port,
                         ex.what()
                         );
                 }
@@ -94,8 +94,8 @@ namespace dsn {
             {
                 ex;
                 /*dwarn("network session %s:%hu exits failed, err = %s",
-                    _remote_addr.to_ip_string().c_str(),
-                    static_cast<int>_remote_addr.port,
+                    _remote_address.to_ip_string().c_str(),
+                    static_cast<int>_remote_address.port,
                     ex.what()
                     );*/
             }
@@ -169,75 +169,7 @@ namespace dsn {
                 release_reference();
             });
         }
-
-        // ------------------------------------------------------------
         
-        client_net_io::client_net_io(const dsn_address_t& remote_addr,
-            boost::asio::ip::tcp::socket& socket,
-            std::shared_ptr<dsn::message_parser>& parser,
-            boost::asio::io_service& ios)
-            :
-            net_io(remote_addr, socket, parser, ios), 
-            _state(SS_CLOSED)
-        {
-        }
-
-        void client_net_io::write(message_ex* msg)
-        {
-            // not connected
-            if (SS_CONNECTED != _state)
-            {
-                return;
-            }
-
-            net_io::write(msg);
-        }
-
-        void client_net_io::on_failure()
-        {
-            _state = SS_CLOSED;
-            close();
-            return;
-        }
-
-        void client_net_io::connect()
-        {
-            session_state closed_state = SS_CLOSED;
-
-            if (_state.compare_exchange_strong(closed_state, SS_CONNECTING))
-            {
-                boost::asio::ip::tcp::endpoint ep(
-                    boost::asio::ip::address_v4(_remote_addr.ip), _remote_addr.port);
-
-                add_reference();
-                _socket.async_connect(ep, [this](boost::system::error_code ec)
-                {
-                    if (!ec)
-                    {
-                        _state = SS_CONNECTED;
-
-                        dinfo("client session %s:%hu connected",
-                            _remote_addr.name,
-                            _remote_addr.port
-                            );
-
-                        set_options();
-                        on_connected();
-                        on_write_completed(nullptr);
-                        do_read();                        
-                    }
-                    else
-                    {
-                        derror("network client session connect failed, error = %s",
-                            ec.message().c_str()
-                            );
-                        on_failure();
-                    }
-                    release_reference();
-                });
-            }
-        }
-
 
     }
 }

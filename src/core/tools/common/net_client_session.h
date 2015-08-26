@@ -33,7 +33,7 @@ namespace dsn {
 
         class asio_network_provider;
         class net_client_session
-            : public rpc_client_session, public client_net_io
+            : public rpc_client_session, public net_io
         {
         public:
             net_client_session(
@@ -46,10 +46,9 @@ namespace dsn {
                 );
             ~net_client_session();
 
-            virtual void on_connected() override { set_connected(); }
-            virtual void connect() override { return client_net_io::connect(); }
+            virtual void connect() override;
             virtual void send(message_ex* msg) override { return write(msg); }
-            virtual void on_failure() override { if (on_disconnected()) client_net_io::on_failure(); }
+            virtual void on_failure() override;;
             virtual void on_message_read(message_ex* msg) override
             {
                 on_recv_reply(msg->header->id, msg, 0);
@@ -60,7 +59,7 @@ namespace dsn {
             {
                 on_send_completed(msg);
             }
-
+            
         private:
             asio_network_provider                 &_net;
         };

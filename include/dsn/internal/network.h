@@ -208,12 +208,12 @@ namespace dsn {
         virtual void send(message_ex* msg) = 0;
 
     protected:
-        void set_connected();
+        bool try_connecting(); // return true when it is permitted
+        void set_connected(bool success);
+        void set_disconnected();
 
-        connection_oriented_network         &_net;
-        dsn_address_t                       _remote_addr;
-        bool                                _is_connected;
-
+        connection_oriented_network        &_net;
+        dsn_address_t                      _remote_addr;
         std::atomic<int>                   _reconnect_count_after_last_success;
 
     private:
@@ -221,6 +221,14 @@ namespace dsn {
         ::dsn::utils::ex_lock_nr_spin      _lock;        
         bool                               _is_sending_next;
         dlink                              _messages;
+
+        enum session_state
+        {
+            SS_CONNECTING,
+            SS_CONNECTED,
+            SS_DISCONNECTED
+        };
+        session_state                      _connect_state;
     };
 
     //

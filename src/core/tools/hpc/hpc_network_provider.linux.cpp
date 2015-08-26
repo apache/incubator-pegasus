@@ -316,7 +316,7 @@ namespace dsn
             )
             : rpc_client_session(net, remote_addr, matcher), hpc_rpc_session(sock, parser)
         {
-            _state = SS_CLOSED;
+            _state = SS_DISCONNECTED;
             
             _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
             {
@@ -370,14 +370,14 @@ namespace dsn
 
         void hpc_rpc_client_session::on_failure()
         {
-            _state = SS_CLOSED;
+            _state = SS_DISCONNECTED;
             if (on_disconnected())
                 close();            
         }
 
         void hpc_rpc_client_session::connect()
         {
-            session_state closed_state = SS_CLOSED;
+            session_state closed_state = SS_DISCONNECTED;
 
             if (!_state.compare_exchange_strong(closed_state, SS_CONNECTING))
                 return;

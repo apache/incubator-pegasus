@@ -42,12 +42,53 @@ namespace dsn {
             : 
             _net(net),
             rpc_client_session(net, remote_addr, matcher),
-            client_net_io(remote_addr, socket, parser, ios)
+            net_io(remote_addr, socket, parser, ios)
         {   
         }
         
         net_client_session::~net_client_session()
         {
+        }
+        
+        void net_client_session::on_failure()
+        {
+            set_disconnected();
+            if (on_disconnected())
+                close();
+        }
+
+        void net_client_session::connect()
+        {
+            if (try_connecting())
+            {
+                boost::asio::ip::tcp::endpoint ep(
+                    boost::asio::ip::address_v4(_remote_addr.ip), _remote_addr.port);
+
+                add_reference();
+                _socket.async_connect(ep, [this](boost::system::error_code ec)
+                {
+                    if (!ec)
+                    {
+                        dinfo("client session %s:%hu connected",
+                            _remote_addr.name,
+                            _remote_addr.port
+                            );
+
+                        set_options();
+                        set_connected(true);
+                        on_write_completed(nullptr);
+                        do_read();
+                    }
+                    else
+                    {
+                        derror("network client session connect failed, error = %s",
+                            ec.message().c_str()
+                            );
+                        on_failure();
+                    }
+                    release_reference();
+                });
+            }
         }
     }
 }

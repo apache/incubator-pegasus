@@ -131,12 +131,7 @@ namespace dsn {
             // always call on_send_completed later
             virtual void send(message_ex* msg) override
             {
-                if (SS_CONNECTED == _state)
-                    do_write(msg);
-                else
-                {
-                    dinfo("client not conected");
-                }
+                do_write(msg);
             }
             
             virtual void on_read_completed(message_ex* msg) override
@@ -160,14 +155,7 @@ namespace dsn {
             virtual void on_failure();
 
         private:
-            enum session_state
-            {
-                SS_CONNECTING,
-                SS_CONNECTED,
-                SS_CLOSED
-            };
-
-            std::atomic<session_state>   _state;
+            
         };
         
         class hpc_rpc_server_session : public rpc_server_session, public hpc_rpc_session

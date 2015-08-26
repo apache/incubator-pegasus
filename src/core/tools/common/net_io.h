@@ -60,34 +60,8 @@ namespace dsn {
 
             boost::asio::io_service              &_io_service;
             boost::asio::ip::tcp::socket         _socket;
-            dsn_address_t                        _remote_addr;
+            dsn_address_t                        _remote_address;
             std::shared_ptr<dsn::message_parser> _parser;
-        };
-
-        class client_net_io : public net_io
-        {
-        public:
-            client_net_io(const dsn_address_t& remote_addr,
-                boost::asio::ip::tcp::socket& socket,
-                std::shared_ptr<dsn::message_parser>& parser,
-                boost::asio::io_service& ios);
-
-            void connect();
-            virtual void write(message_ex* msg);
-            virtual void on_connected() = 0;
-
-        protected:
-            virtual void on_failure();
-            
-        private:
-            enum session_state
-            {
-                SS_CONNECTING,
-                SS_CONNECTED,
-                SS_CLOSED
-            };
-
-            std::atomic<session_state>   _state;
         };
     }
 }
