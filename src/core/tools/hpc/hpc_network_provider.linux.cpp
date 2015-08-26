@@ -310,6 +310,7 @@ namespace dsn
             {
                 _looper->unbind_io_handle((dsn_handle_t)(intptr_t)_socket);
                 ::close(_socket);
+                _socket = -1;
             }
         }
 
@@ -398,7 +399,7 @@ namespace dsn
             {
                 if (errno != EINPROGRESS)
                 {
-                    dwarn("connect failed, err = %s", strerror(errno));
+                    dwarn("connect failed, socket = %d, err = %s", (int)_socket, strerror(errno));
                     on_failure();
                 }
                 else

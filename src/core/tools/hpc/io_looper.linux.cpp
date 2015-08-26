@@ -85,7 +85,11 @@ namespace dsn
         void io_looper::notify_local_execution()
         {
             int64_t c = 1;
-            ::write(_local_notification_fd, &c, sizeof(c));
+            if (::write(_local_notification_fd, &c, sizeof(c)) < 0)
+            {
+                dassert(false, "post local notification via eventfd failed, err = %s", strerror(errno));
+            }
+            dinfo("notify local");
         }
 
         void io_looper::create_completion_queue()
@@ -93,20 +97,15 @@ namespace dsn
             const int max_event_count = sizeof(_events) / sizeof(struct epoll_event);
 
             _io_queue = epoll_create(max_event_count);
-        }
 
-        void io_looper::start(service_node* node, int worker_count)
-        {
-            create_completion_queue();
-
-            _local_notification_callback =[this](
+            _local_notification_callback = [this](
                 int native_error,
                 uint32_t io_size,
                 uintptr_t lolp_or_events
                 )
             {
                 uint32_t events = (uint32_t)lolp_or_events;
-                int notify_count = 0;
+                int64_t notify_count = 0;
 
                 if (read(_local_notification_fd, &notify_count, sizeof(notify_count)) != sizeof(notify_count))
                 {
@@ -115,11 +114,18 @@ namespace dsn
                         );
                 }
 
+                dinfo("exec local");
+
                 this->handle_local_queues();
             };
 
             bind_io_handle((dsn_handle_t)(intptr_t)_local_notification_fd, &_local_notification_callback, EPOLLIN | EPOLLET);
+        }
 
+        void io_looper::start(service_node* node, int worker_count)
+        {
+            create_completion_queue();
+            
             for (int i = 0; i < worker_count; i++)
             {
                 std::thread* thr = new std::thread([this, node, i]()
@@ -162,7 +168,10 @@ namespace dsn
                 if (-1 == nfds)
                 {
                     if (errno == EINTR)
+                    {
+                        derror("epoll_wait loop with EINTR, continue ....");
                         continue;
+                    }                        
                     else
                     {
                         derror("epoll_wait loop exits, err = %s", strerror(errno));

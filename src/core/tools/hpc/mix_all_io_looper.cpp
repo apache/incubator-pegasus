@@ -79,6 +79,7 @@ namespace dsn
             : task_queue(pool, index, inner_provider)
         {
             _is_shared = is_shared();
+            _remote_count = 0;
         }
 
         io_looper_task_queue::~io_looper_task_queue()
