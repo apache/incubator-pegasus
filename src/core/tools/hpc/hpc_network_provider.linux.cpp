@@ -49,6 +49,12 @@ namespace dsn
                 return -1;
             }
 
+            int reuse = 1;
+            if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int)) == -1)
+            {
+                dwarn("setsockopt SO_REUSEADDR failed, err = %s", strerror(errno));
+            }
+
             int nodelay = 1;
             if (setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char*)&nodelay, sizeof(int)) != 0)
             {
@@ -137,7 +143,7 @@ namespace dsn
                     this->do_accept();
                 };
 
-                _looper->bind_io_handle((dsn_handle_t)_listen_fd, &_accept_event.callback,
+                _looper->bind_io_handle((dsn_handle_t)(intptr_t)_listen_fd, &_accept_event.callback,
                     EPOLLIN | EPOLLET);
             }
 
@@ -202,7 +208,7 @@ namespace dsn
         void hpc_rpc_session::bind_looper(io_looper* looper)
         {
             _looper = looper;
-            looper->bind_io_handle((dsn_handle_t)_socket, &_ready_event, 
+            looper->bind_io_handle((dsn_handle_t)(intptr_t)_socket, &_ready_event, 
                 EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLRDHUP | EPOLLET);
         }
 
@@ -316,8 +322,6 @@ namespace dsn
             )
             : rpc_client_session(net, remote_addr, matcher), hpc_rpc_session(sock, parser)
         {
-            _state = SS_DISCONNECTED;
-            
             _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
             {
                 uint32_t events = (uint32_t)lolp_or_events;
@@ -332,7 +336,7 @@ namespace dsn
                 if (events & EPOLLOUT)
                 {
                     // connect
-                    if (_state != SS_CONNECTED)
+                    if (is_connecting())
                     {
                         socklen_t addr_len = (socklen_t)sizeof(_peer_addr);
                         if (getpeername(_socket, (struct sockaddr*)&_peer_addr, &addr_len) == -1)
@@ -340,13 +344,12 @@ namespace dsn
                             dassert(false, "getpeername failed, err = %s", strerror(errno));
                         }
 
-                        _state = SS_CONNECTED;
                         dinfo("client session %s:%u connected", 
                             _remote_addr.name,
                             _remote_addr.port
                             );
 
-                        set_connected();
+                        set_connected(true);
                     }
 
                     //  send
@@ -370,16 +373,14 @@ namespace dsn
 
         void hpc_rpc_client_session::on_failure()
         {
-            _state = SS_DISCONNECTED;
+            set_disconnected();
             if (on_disconnected())
                 close();            
         }
 
         void hpc_rpc_client_session::connect()
         {
-            session_state closed_state = SS_DISCONNECTED;
-
-            if (!_state.compare_exchange_strong(closed_state, SS_CONNECTING))
+            if (!try_connecting())
                 return;
             
             struct sockaddr_in addr;
@@ -408,13 +409,12 @@ namespace dsn
                     dassert(false, "getpeername failed, err = %s", strerror(errno));
                 }
 
-                _state = SS_CONNECTED;
                 dinfo("client session %s:%u connected", 
                             _remote_addr.name,
                             _remote_addr.port
                          );
 
-                set_connected();
+                set_connected(true);
             }
         }
 

@@ -118,7 +118,7 @@ namespace dsn
                 this->handle_local_queues();
             };
 
-            bind_io_handle((dsn_handle_t)_local_notification_fd, &_local_notification_callback, EPOLLIN | EPOLLET);
+            bind_io_handle((dsn_handle_t)(intptr_t)_local_notification_fd, &_local_notification_callback, EPOLLIN | EPOLLET);
 
             for (int i = 0; i < worker_count; i++)
             {

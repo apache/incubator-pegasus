@@ -104,7 +104,7 @@ hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provid
 void hpc_aio_provider::start(io_modifer& ctx)
 {
     _looper = get_io_looper(node(), ctx.queue);
-    _looper->bind_io_handle((dsn_handle_t)_event_fd, &_callback, EPOLLIN | EPOLLET);
+    _looper->bind_io_handle((dsn_handle_t)(intptr_t)_event_fd, &_callback, EPOLLIN | EPOLLET);
 }
 
 hpc_aio_provider::~hpc_aio_provider()

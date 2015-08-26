@@ -88,6 +88,12 @@ namespace dsn {
         _connect_state = SS_DISCONNECTED;
     }
 
+    bool rpc_session::is_connecting()
+    {
+        utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+        return _connect_state == SS_CONNECTING;
+    }
+
     void rpc_session::send_message(message_ex* msg)
     {
         {
@@ -106,29 +112,7 @@ namespace dsn {
 
         this->send(msg);
     }
-
-    void rpc_session::send_messages()
-    {
-        message_ex *msg;
-        {
-            utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
-            if (!_messages.is_alone())
-            {
-                dassert(SS_CONNECTED == _connect_state && !_is_sending_next,
-                    "send message only when session is connected");
-
-                _is_sending_next = true;
-                msg = CONTAINING_RECORD(_messages.next(), message_ex, dl);
-            }
-            else
-            {
-                return;
-            }
-        }
-
-        this->send(msg);
-    }
-
+    
     void rpc_session::on_send_completed(message_ex* msg)
     {
         message_ex* next_msg;
@@ -141,15 +125,11 @@ namespace dsn {
                 msg->dl.remove();
                 _is_sending_next = false;
             }
-            else
-            {
-                dassert(!_is_sending_next, "no message should be being sent");
-            }
             
-            if (!_messages.is_alone())
+            if (!_messages.is_alone() && !_is_sending_next)
             {
-                dassert(SS_CONNECTED == _connect_state && !_is_sending_next,
-                    "send message only when session is connected AND no other message is being sent");
+                dassert(SS_CONNECTED == _connect_state,
+                    "send message only when session is connected");
                 _is_sending_next = true;
                 next_msg = CONTAINING_RECORD(_messages.next(), message_ex, dl);
             }

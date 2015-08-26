@@ -200,7 +200,6 @@ namespace dsn {
         virtual ~rpc_session();
 
         void send_message(message_ex* msg);
-        void send_messages();
         void on_send_completed(message_ex* msg);
         bool has_pending_out_msgs();
                 
@@ -211,6 +210,7 @@ namespace dsn {
         bool try_connecting(); // return true when it is permitted
         void set_connected(bool success);
         void set_disconnected();
+        bool is_connecting();
 
         connection_oriented_network        &_net;
         dsn_address_t                      _remote_addr;

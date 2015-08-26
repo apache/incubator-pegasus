@@ -48,6 +48,12 @@ namespace dsn
                 return INVALID_SOCKET;
             }
 
+            int reuse = 1;
+            if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int)) == -1)
+            {
+                dwarn("setsockopt SO_REUSEADDR failed, err = %s", strerror(errno));
+            }
+
             int nodelay = 1;
             if (setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char*)&nodelay, sizeof(int)) != 0)
             {
@@ -516,7 +522,7 @@ namespace dsn
                         );
 
                     set_connected(true);
-                    send_messages();
+                    on_write_completed(nullptr);
                     do_read();
                 }
                 this->release_ref(); // added before ConnectEx
