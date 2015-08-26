@@ -231,7 +231,7 @@ namespace dsn {
     public:
         rpc_client_session(connection_oriented_network& net, const dsn_address_t& remote_addr, rpc_client_matcher_ptr& matcher);
         bool on_recv_reply(uint64_t key, message_ex* reply, int delay_ms);
-        void on_disconnected();
+        bool on_disconnected();
         void call(message_ex* request, rpc_response_task* call);
         const dsn_address_t& remote_address() const { return _remote_addr; }
         connection_oriented_network& net() const { return _net; }

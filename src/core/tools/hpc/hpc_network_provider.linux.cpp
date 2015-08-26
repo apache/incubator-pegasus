@@ -371,8 +371,8 @@ namespace dsn
         void hpc_rpc_client_session::on_failure()
         {
             _state = SS_CLOSED;
-            close();
-            on_disconnected();
+            if (on_disconnected())
+                close();            
         }
 
         void hpc_rpc_client_session::connect()

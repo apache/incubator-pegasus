@@ -173,17 +173,19 @@ namespace dsn {
         send_message(request);
     }
 
-    void rpc_client_session::on_disconnected()
+    bool rpc_client_session::on_disconnected()
     {
         if (!_is_connected
             && ++_reconnect_count_after_last_success < 3
             )
         {
             connect();
+            return false;
         }
 
         rpc_client_session_ptr sp = this;
         _net.on_client_session_disconnected(sp);
+        return true;
     }
 
     bool rpc_client_session::on_recv_reply(uint64_t key, message_ex* reply, int delay_ms)
