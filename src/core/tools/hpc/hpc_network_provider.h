@@ -95,11 +95,8 @@ namespace dsn {
             virtual void on_read_completed(message_ex* msg) = 0;
             virtual void on_write_completed(message_ex* msg) = 0;
             virtual void on_failure() = 0;
-            virtual void on_closed() = 0;
             virtual void add_reference() = 0;
             virtual void release_reference() = 0;
-
-            
 
         protected:
             socket_t                               _socket;
@@ -142,7 +139,6 @@ namespace dsn {
                 }
             }
             
-            virtual void on_closed() override { return on_disconnected(); }
             virtual void on_read_completed(message_ex* msg) override
             {
                 on_recv_reply(msg->header->id, msg, 0);
@@ -190,8 +186,11 @@ namespace dsn {
                 do_write(reply_msg);
             }
 
-            virtual void on_failure() override { close(); }
-            virtual void on_closed() override { return on_disconnected(); }
+            virtual void on_failure() override 
+            {
+                close(); 
+                on_disconnected(); 
+            }
             virtual void on_read_completed(message_ex* msg) override
             {
                 return on_recv_request(msg, 0);

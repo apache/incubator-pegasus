@@ -51,7 +51,6 @@ namespace dsn {
             void set_options();
             
             virtual void on_failure() = 0;     
-            virtual void on_closed() = 0;
             virtual void on_message_read(message_ex* msg) = 0;
             virtual void add_reference() = 0;
             virtual void release_reference() = 0;
@@ -59,9 +58,9 @@ namespace dsn {
 
         protected:
 
-            boost::asio::io_service      &_io_service;
-            boost::asio::ip::tcp::socket _socket;
-            dsn_address_t                    _remote_addr;
+            boost::asio::io_service              &_io_service;
+            boost::asio::ip::tcp::socket         _socket;
+            dsn_address_t                        _remote_addr;
             std::shared_ptr<dsn::message_parser> _parser;
         };
 
@@ -77,7 +76,7 @@ namespace dsn {
             virtual void write(message_ex* msg);
             virtual void on_connected() = 0;
 
-        private:
+        protected:
             virtual void on_failure();
             
         private:

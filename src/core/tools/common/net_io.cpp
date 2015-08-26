@@ -101,7 +101,6 @@ namespace dsn {
             }
 
             _socket.close();
-            on_closed();
         }
 
         void net_io::do_read(size_t sz)

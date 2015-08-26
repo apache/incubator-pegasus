@@ -45,8 +45,7 @@ namespace dsn {
             ~net_server_session();
 
             virtual void send(message_ex* reply_msg) override { return write(reply_msg); }
-            virtual void on_failure() override { close(); }
-            virtual void on_closed() override { return on_disconnected(); }
+            virtual void on_failure() override { close(); on_disconnected(); }
             virtual void on_message_read(message_ex* msg) override
             {
                 return on_recv_request(msg, 0);

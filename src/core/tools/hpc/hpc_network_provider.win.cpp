@@ -475,7 +475,6 @@ namespace dsn
         void hpc_rpc_session::close()
         {
             closesocket(_socket);
-            on_closed();
         }
 
         hpc_rpc_client_session::hpc_rpc_client_session(

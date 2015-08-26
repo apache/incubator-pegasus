@@ -305,7 +305,6 @@ namespace dsn
                 _looper->unbind_io_handle((dsn_handle_t)(intptr_t)_socket);
                 ::close(_socket);
             }
-            on_closed();
         }
 
         hpc_rpc_client_session::hpc_rpc_client_session(

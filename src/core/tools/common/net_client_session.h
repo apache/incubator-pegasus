@@ -49,7 +49,7 @@ namespace dsn {
             virtual void on_connected() override { set_connected(); }
             virtual void connect() override { return client_net_io::connect(); }
             virtual void send(message_ex* msg) override { return write(msg); }
-            virtual void on_closed() override { return on_disconnected(); }
+            virtual void on_failure() override { client_net_io::on_failure(); on_disconnected(); }
             virtual void on_message_read(message_ex* msg) override
             {
                 on_recv_reply(msg->header->id, msg, 0);
