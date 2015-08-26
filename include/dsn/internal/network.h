@@ -208,9 +208,10 @@ namespace dsn {
 
     protected:
         bool try_connecting(); // return true when it is permitted
-        void set_connected(bool success);
+        void set_connected();
         void set_disconnected();
-        bool is_connecting();
+        bool is_connecting() const { return _connect_state == SS_CONNECTING; }
+        bool is_connected() const { return _connect_state == SS_CONNECTED; }
 
         connection_oriented_network        &_net;
         dsn_address_t                      _remote_addr;

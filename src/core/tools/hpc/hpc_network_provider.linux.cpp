@@ -50,7 +50,7 @@ namespace dsn
             }
 
             int reuse = 1;
-            if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int)) == -1)
+            if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char*)&reuse, sizeof(int)) == -1)
             {
                 dwarn("setsockopt SO_REUSEADDR failed, err = %s", strerror(errno));
             }
@@ -349,31 +349,36 @@ namespace dsn
                             _remote_addr.port
                             );
 
-                        set_connected(true);
+                        set_connected();
                     }
 
                     //  send
-                    if (_sending_msg)
+                    if (is_connected())
                     {
-                        do_write(_sending_msg);
-                    }
-                    else
-                    {
-                        on_write_completed(nullptr); // send next msg if there is.
-                    }
+                        if (_sending_msg)
+                        {
+                            do_write(_sending_msg);
+                        }
+                        else
+                        {
+                            on_write_completed(nullptr); // send next msg if there is.
+                        }
+                    }                    
                 }
 
                 if (events & EPOLLIN)
                 {
                     // recv
-                    do_read();
+                    if (is_connected())
+                    {
+                        do_read();
+                    }
                 }
             };
         }
 
         void hpc_rpc_client_session::on_failure()
         {
-            set_disconnected();
             if (on_disconnected())
                 close();            
         }
@@ -414,7 +419,7 @@ namespace dsn
                             _remote_addr.port
                          );
 
-                set_connected(true);
+                set_connected();
             }
         }
 

@@ -73,13 +73,12 @@ namespace dsn {
             return false;
     }
 
-    void rpc_session::set_connected(bool success)
+    void rpc_session::set_connected()
     {
         utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
         dassert(_connect_state == SS_CONNECTING, "session must be connecting");
-        _connect_state = success ? SS_CONNECTED : SS_DISCONNECTED;
-        if (success)
-            _reconnect_count_after_last_success = 0;
+        _connect_state = SS_CONNECTED;
+        _reconnect_count_after_last_success = 0;
     }
 
     void rpc_session::set_disconnected()
@@ -87,13 +86,7 @@ namespace dsn {
         utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
         _connect_state = SS_DISCONNECTED;
     }
-
-    bool rpc_session::is_connecting()
-    {
-        utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
-        return _connect_state == SS_CONNECTING;
-    }
-
+    
     void rpc_session::send_message(message_ex* msg)
     {
         {
@@ -173,15 +166,16 @@ namespace dsn {
 
     bool rpc_client_session::on_disconnected()
     {
-        // TODO: reconnect
-        /*if (_connect_state != SS_CONNECTED
-            && ++_reconnect_count_after_last_success < 3
+        // still connecting, let's retry
+        if (is_connecting() && ++_reconnect_count_after_last_success < 3
             )
         {
+            set_disconnected();
             connect();
             return false;
-        }*/
+        }
 
+        set_disconnected();
         rpc_client_session_ptr sp = this;
         _net.on_client_session_disconnected(sp);
         return true;
@@ -204,7 +198,7 @@ namespace dsn {
         : rpc_session(net, remote_addr)
     {
         try_connecting();
-        set_connected(true);
+        set_connected();
     }
 
     void rpc_server_session::on_recv_request(message_ex* msg, int delay_ms)

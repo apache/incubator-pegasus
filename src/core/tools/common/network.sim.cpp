@@ -47,7 +47,7 @@ namespace dsn { namespace tools {
     void sim_client_session::connect() 
     {
         if (try_connecting())
-           set_connected(true);
+           set_connected();
     }
 
     static message_ex* virtual_send_message(message_ex* msg)

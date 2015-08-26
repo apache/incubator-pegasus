@@ -52,7 +52,6 @@ namespace dsn {
         
         void net_client_session::on_failure()
         {
-            set_disconnected();
             if (on_disconnected())
                 close();
         }
@@ -75,7 +74,7 @@ namespace dsn {
                             );
 
                         set_options();
-                        set_connected(true);
+                        set_connected();
                         on_write_completed(nullptr);
                         do_read();
                     }

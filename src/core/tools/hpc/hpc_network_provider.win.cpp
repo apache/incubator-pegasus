@@ -49,7 +49,7 @@ namespace dsn
             }
 
             int reuse = 1;
-            if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int)) == -1)
+            if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char*)&reuse, sizeof(int)) == -1)
             {
                 dwarn("setsockopt SO_REUSEADDR failed, err = %s", strerror(errno));
             }
@@ -496,7 +496,6 @@ namespace dsn
 
         void hpc_rpc_client_session::on_failure()
         {
-            set_disconnected();
             if (on_disconnected())
                 close();
         }
@@ -521,7 +520,7 @@ namespace dsn
                         _remote_addr.port
                         );
 
-                    set_connected(true);
+                    set_connected();
                     on_write_completed(nullptr);
                     do_read();
                 }
