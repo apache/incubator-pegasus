@@ -150,7 +150,7 @@ namespace dsn
             return ERR_OK;
         }
 
-        rpc_client_session_ptr hpc_network_provider::create_client_session(const dsn_address_t& server_addr)
+        rpc_session_ptr hpc_network_provider::create_client_session(const dsn_address_t& server_addr)
         {
             auto matcher = new_client_matcher();
             auto parser = new_message_parser();
@@ -162,7 +162,7 @@ namespace dsn
 
             auto sock = create_tcp_socket(&addr);
             dassert(sock != -1, "create client tcp socket failed!");
-            auto client = new hpc_rpc_client_session(sock, parser, *this, server_addr, matcher);
+            auto client = new hpc_rpc_session(sock, parser, *this, server_addr, matcher);
             client->bind_looper(_looper);
             return client;
         }
@@ -178,10 +178,10 @@ namespace dsn
                 dsn_address_build_ipv4(&client_addr, ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
 
                 auto parser = new_message_parser();
-                auto rs = new hpc_rpc_server_session(s, parser, *this, client_addr);
+                auto rs = new hpc_rpc_session(s, parser, *this, client_addr);
                 rs->bind_looper(_looper);
 
-                rpc_server_session_ptr s1(rs);
+                rpc_session_ptr s1(rs);
                 this->on_server_session_accepted(s1);
             }
             else
@@ -287,7 +287,7 @@ namespace dsn
                 {
                     msg = _sending_msg;
                     _sending_msg = nullptr;
-                    on_write_completed(msg);
+                    on_send_completed(msg);
                     return;
                 }
             }
@@ -317,14 +317,14 @@ namespace dsn
             }
         }
 
-        hpc_rpc_client_session::hpc_rpc_client_session(
+        hpc_rpc_session::hpc_rpc_session(
             socket_t sock,
             std::shared_ptr<dsn::message_parser>& parser,
             connection_oriented_network& net,
             const dsn_address_t& remote_addr,
             rpc_client_matcher_ptr& matcher
             )
-            : rpc_client_session(net, remote_addr, matcher), hpc_rpc_session(sock, parser)
+            : rpc_session(net, remote_addr, matcher), hpc_rpc_session(sock, parser)
         {
             _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
             {
@@ -336,7 +336,7 @@ namespace dsn
             };
         }
 
-        void hpc_rpc_client_session::on_events(uint32_t events)
+        void hpc_rpc_session::on_events(uint32_t events)
         {
             if (is_disconnected())
             {
@@ -381,7 +381,7 @@ namespace dsn
                 }
                 else
                 {
-                    on_write_completed(nullptr); // send next msg if there is.
+                    on_send_completed(nullptr); // send next msg if there is.
                 }
             }
 
@@ -392,13 +392,13 @@ namespace dsn
             }
         }
 
-        void hpc_rpc_client_session::on_failure()
+        void hpc_rpc_session::on_failure()
         {
             if (on_disconnected())
                 close();            
         }
 
-        void hpc_rpc_client_session::connect()
+        void hpc_rpc_session::connect()
         {
             if (!try_connecting())
                 return;
@@ -440,13 +440,13 @@ namespace dsn
             }
         }
 
-        hpc_rpc_server_session::hpc_rpc_server_session(
+        hpc_rpc_session::hpc_rpc_session(
             socket_t sock,
             std::shared_ptr<dsn::message_parser>& parser,
             connection_oriented_network& net,
             const dsn_address_t& remote_addr
             )
-            : rpc_server_session(net, remote_addr), hpc_rpc_session(sock, parser)
+            : rpc_session(net, remote_addr), hpc_rpc_session(sock, parser)
         {
             socklen_t addr_len = (socklen_t)sizeof(_peer_addr);
             if (getpeername(_socket, (struct sockaddr*)&_peer_addr, &addr_len) == -1)
@@ -477,7 +477,7 @@ namespace dsn
                     }
                     else
                     {
-                        on_write_completed(nullptr); // send next msg if there is.
+                        on_send_completed(nullptr); // send next msg if there is.
                     }
                 }
             };

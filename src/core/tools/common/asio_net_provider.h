@@ -25,41 +25,34 @@
  */
 #pragma once
 
-# include "net_provider.h"
-# include "net_io.h"
+# include <dsn/tool_api.h>
+# include <boost/asio.hpp>
 
 namespace dsn {
     namespace tools {
-
-        class asio_network_provider;
-        class net_server_session
-            : public rpc_server_session, public net_io
+        
+        class asio_network_provider : public connection_oriented_network
         {
         public:
-            net_server_session(
-                asio_network_provider& net, 
-                const dsn_address_t& remote_addr,
-                boost::asio::ip::tcp::socket& socket,
-                std::shared_ptr<message_parser>& parser,
-                boost::asio::io_service& ios);
-            ~net_server_session();
+            asio_network_provider(rpc_engine* srv, network* inner_provider);
 
-            virtual void send(message_ex* reply_msg) override { return write(reply_msg); }
-            virtual void on_failure() override { close(); on_disconnected(); }
-            virtual void on_message_read(message_ex* msg) override
-            {
-                return on_recv_request(msg, 0);
-            }
-            virtual void add_reference() override { add_ref(); }
-            virtual void release_reference() override { release_ref(); }
-            virtual void on_write_completed(message_ex* msg) override
-            {
-                on_send_completed(msg);
-            }
-            
+            virtual error_code start(rpc_channel channel, int port, bool client_only, io_modifer& ctx);
+            virtual const dsn_address_t& address() { return _address;  }
+            virtual rpc_session_ptr create_client_session(const dsn_address_t& server_addr);
+
         private:
-            asio_network_provider           &_net;
+            void do_accept();
+
+        private:
+            friend class asio_rpc_session;
+            friend class asio_rpc_session;
+
+            std::shared_ptr<boost::asio::ip::tcp::acceptor> _acceptor;
+            std::shared_ptr<boost::asio::ip::tcp::socket>   _socket;
+            boost::asio::io_service                         _io_service;
+            std::vector<std::shared_ptr<std::thread>>       _workers;
+            dsn_address_t                                   _address;
         };
+
     }
 }
-

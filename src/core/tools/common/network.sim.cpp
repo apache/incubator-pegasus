@@ -41,7 +41,7 @@ namespace dsn { namespace tools {
     static utils::safe_singleton_store<dsn_address_t, sim_network_provider*> s_switch[10]; 
 
     sim_client_session::sim_client_session(sim_network_provider& net, const dsn_address_t& remote_addr, rpc_client_matcher_ptr& matcher)
-        : rpc_client_session(net, remote_addr, matcher)
+        : rpc_session(net, remote_addr, matcher)
     {}
 
     void sim_client_session::connect() 
@@ -83,7 +83,7 @@ namespace dsn { namespace tools {
         auto server_session = rnet->get_server_session(_net.address());
         if (nullptr == server_session)
         {
-            rpc_client_session_ptr cptr = this;
+            rpc_session_ptr cptr = this;
             server_session = new sim_server_session(*rnet, _net.address(), cptr);
             rnet->on_server_session_accepted(server_session);
         }
@@ -102,8 +102,8 @@ namespace dsn { namespace tools {
         on_send_completed(msg);
     }
 
-    sim_server_session::sim_server_session(sim_network_provider& net, const dsn_address_t& remote_addr, rpc_client_session_ptr& client)
-        : rpc_server_session(net, remote_addr)
+    sim_server_session::sim_server_session(sim_network_provider& net, const dsn_address_t& remote_addr, rpc_session_ptr& client)
+        : rpc_session(net, remote_addr)
     {
         _client = client;
     }

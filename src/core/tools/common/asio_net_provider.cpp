@@ -23,9 +23,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "net_provider.h"
-#include "net_client_session.h"
-#include "net_server_session.h"
+#include "asio_net_provider.h"
+#include "asio_rpc_session.h"
 
 namespace dsn {
     namespace tools{
@@ -86,12 +85,12 @@ namespace dsn {
             return ERR_OK;
         }
 
-        rpc_client_session_ptr asio_network_provider::create_client_session(const dsn_address_t& server_addr)
+        rpc_session_ptr asio_network_provider::create_client_session(const dsn_address_t& server_addr)
         {
             auto matcher = new_client_matcher();
             auto parser = new_message_parser();
             auto sock = boost::asio::ip::tcp::socket(_io_service);
-            return rpc_client_session_ptr(new net_client_session(*this, sock, server_addr, matcher, parser, _io_service));
+            return rpc_session_ptr(new asio_rpc_session(*this, sock, server_addr, matcher, parser, _io_service));
         }
 
         void asio_network_provider::do_accept()
@@ -111,7 +110,7 @@ namespace dsn {
 
                     auto parser = new_message_parser();
                     auto sock = std::move(*_socket);
-                    auto s = rpc_server_session_ptr(new net_server_session(*this, client_addr, sock, parser, _io_service));
+                    auto s = rpc_session_ptr(new asio_rpc_session(*this, client_addr, sock, parser, _io_service));
                     this->on_server_session_accepted(s);
                 }
 

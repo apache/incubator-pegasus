@@ -52,7 +52,7 @@ namespace dsn {
 
             virtual error_code start(rpc_channel channel, int port, bool client_only, io_modifer& ctx);
             virtual const dsn_address_t& address() { return _address;  }
-            virtual rpc_client_session_ptr create_client_session(const dsn_address_t& server_addr);
+            virtual rpc_session_ptr create_client_session(const dsn_address_t& server_addr);
             
         private:
             socket_t      _listen_fd;
@@ -79,25 +79,51 @@ namespace dsn {
 # endif
         };
 
-        class hpc_rpc_session
+        class hpc_rpc_session : public rpc_session
         {
+        // client
         public:
             hpc_rpc_session(
                 socket_t sock,
-                std::shared_ptr<dsn::message_parser>& parser
+                std::shared_ptr<dsn::message_parser>& parser,
+                connection_oriented_network& net,
+                const dsn_address_t& remote_addr,
+                rpc_client_matcher_ptr& matcher
                 );
+
+            virtual void connect() override;
+            
+        // server
+        public:
+            hpc_rpc_session(
+                socket_t sock,
+                std::shared_ptr<dsn::message_parser>& parser,
+                connection_oriented_network& net,
+                const dsn_address_t& remote_addr
+                );
+            
+        // shared
+        public:
+            virtual void send(message_ex* msg) override
+            {
+                do_write(msg);
+            }
 
             void bind_looper(io_looper* looper);
             void do_read(int sz = 256);
+
+        private:            
             void do_write(message_ex* msg);
             void close();
-
-            virtual void on_read_completed(message_ex* msg) = 0;
-            virtual void on_write_completed(message_ex* msg) = 0;
-            virtual void on_failure() = 0;
-            virtual void add_reference() = 0;
-            virtual void release_reference() = 0;
-
+            void on_failure();
+            void on_read_completed(message_ex* msg)
+            {
+                if (is_client())
+                    on_recv_reply(msg->header->id, msg, 0);
+                else
+                    on_recv_request(msg, 0);
+            }
+            
         protected:
             socket_t                               _socket;
             std::shared_ptr<dsn::message_parser>   _parser;
@@ -105,94 +131,16 @@ namespace dsn {
             int                                    _sending_next_offset;
 
 # ifdef _WIN32
-            static io_loop_callback                _ready_event; // it is stateless, so static
             hpc_network_provider::ready_event      _read_event;
             hpc_network_provider::ready_event      _write_event;
+            hpc_network_provider::ready_event      _connect_event;
 # else
             io_loop_callback                       _ready_event;            
             struct sockaddr_in                     _peer_addr;
             io_looper*                             _looper;
-# endif
-        };
 
-        class hpc_rpc_client_session : public rpc_client_session, public hpc_rpc_session
-        {
-        public:
-            hpc_rpc_client_session(
-                socket_t sock, 
-                std::shared_ptr<dsn::message_parser>& parser, 
-                connection_oriented_network& net, 
-                const dsn_address_t& remote_addr, 
-                rpc_client_matcher_ptr& matcher
-                );
-            
-            virtual void connect() override;
-
-            // always call on_send_completed later
-            virtual void send(message_ex* msg) override
-            {
-                do_write(msg);
-            }
-            
-            virtual void on_read_completed(message_ex* msg) override
-            {
-                on_recv_reply(msg->header->id, msg, 0);
-            }
-            virtual void add_reference() override { add_ref(); }
-            virtual void release_reference() override { release_ref(); }
-            virtual void on_write_completed(message_ex* msg) override
-            {
-                on_send_completed(msg);
-            }
-
-        private:
-# ifdef _WIN32
-            // use _ready_event on linux, so this is only used on windows
-            hpc_network_provider::ready_event      _connect_event;
-# else
             void on_events(uint32_t events);
 # endif
-
-        private:
-            virtual void on_failure();
-
-        private:
-            
-        };
-        
-        class hpc_rpc_server_session : public rpc_server_session, public hpc_rpc_session
-        {
-        public:
-            hpc_rpc_server_session(
-                socket_t sock,
-                std::shared_ptr<dsn::message_parser>& parser,
-                connection_oriented_network& net,
-                const dsn_address_t& remote_addr
-                );
-            
-            // always call on_send_completed later
-            virtual void send(message_ex* reply_msg) override
-            {
-                do_write(reply_msg);
-            }
-
-            virtual void on_failure() override 
-            {
-                close(); 
-                on_disconnected(); 
-            }
-            virtual void on_read_completed(message_ex* msg) override
-            {
-                return on_recv_request(msg, 0);
-            }
-            virtual void add_reference() override { add_ref(); }
-            virtual void release_reference() override { release_ref(); }
-            virtual void on_write_completed(message_ex* msg) override
-            {
-                on_send_completed(msg);
-            }
-            
-        private:
         };
     }
 }

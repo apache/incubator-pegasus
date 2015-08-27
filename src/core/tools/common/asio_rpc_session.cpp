@@ -23,7 +23,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-# include "net_io.h"
+# include "asio_rpc_session.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -33,26 +33,12 @@
 namespace dsn {
     namespace tools {
 
-        net_io::net_io(
-            const dsn_address_t& remote_addr,
-            boost::asio::ip::tcp::socket& socket,
-            std::shared_ptr<dsn::message_parser>& parser,
-            boost::asio::io_service& ios
-            )
-            :
-            _io_service(ios),
-            _socket(std::move(socket)),
-            _remote_address(remote_addr),
-            _parser(parser)
-        {
-            set_options();
-        }
 
-        net_io::~net_io()
+        asio_rpc_session::~asio_rpc_session()
         {
         }
 
-        void net_io::set_options()
+        void asio_rpc_session::set_options()
         {
             if (_socket.is_open())
             {
@@ -77,35 +63,17 @@ namespace dsn {
                 catch (std::exception& ex)
                 {
                     dwarn("network session %x:%hu set socket option failed, err = %s",
-                        _remote_address.ip,
-                        _remote_address.port,
+                        remote_address().ip,
+                        remote_address().port,
                         ex.what()
                         );
                 }
             }
         }
 
-        void net_io::close()
+        void asio_rpc_session::do_read(size_t sz)
         {
-            try {
-                _socket.shutdown(boost::asio::socket_base::shutdown_type::shutdown_both);
-            }
-            catch (std::exception& ex)
-            {
-                ex;
-                /*dwarn("network session %s:%hu exits failed, err = %s",
-                    _remote_address.to_ip_string().c_str(),
-                    static_cast<int>_remote_address.port,
-                    ex.what()
-                    );*/
-            }
-
-            _socket.close();
-        }
-
-        void net_io::do_read(size_t sz)
-        {
-            add_reference();
+            add_ref();
 
             void* ptr = _parser->read_buffer_ptr((int)sz);
             int remaining = _parser->read_buffer_capacity();
@@ -131,11 +99,11 @@ namespace dsn {
                     do_read(read_next);
                 }
 
-                release_reference();
+                release_ref();
             });
         }
         
-        void net_io::write(message_ex* msg)
+        void asio_rpc_session::write(message_ex* msg)
         {
             // make sure header is already in the buffer
             // make sure header is already in the buffer
@@ -153,7 +121,7 @@ namespace dsn {
                 buffers2[i] = boost::asio::const_buffer(buffers[i].buf, buffers[i].sz);
             }
 
-            add_reference();
+            add_ref();
             boost::asio::async_write(_socket, buffers2,
                 [this, msg](boost::system::error_code ec, std::size_t length)
             {
@@ -163,13 +131,99 @@ namespace dsn {
                 }
                 else
                 {
-                    on_write_completed(msg);
+                    on_send_completed(msg);
                 }
 
-                release_reference();
+                release_ref();
             });
         }
         
+        asio_rpc_session::asio_rpc_session(
+            asio_network_provider& net,
+            boost::asio::ip::tcp::socket& socket,
+            const dsn_address_t& remote_addr,
+            rpc_client_matcher_ptr& matcher,
+            std::shared_ptr<message_parser>& parser,
+            boost::asio::io_service& ios)
+            :
+            rpc_session(net, remote_addr, matcher),
+            _io_service(ios),
+            _socket(std::move(socket)),
+            _parser(parser)            
+        {
+            set_options();
+        }
+        
+        void asio_rpc_session::on_failure()
+        {
+            if (on_disconnected())
+            {
+                try {
+                    _socket.shutdown(boost::asio::socket_base::shutdown_type::shutdown_both);
+                }
+                catch (std::exception& ex)
+                {
+                    ex;
+                    /*dwarn("network session %s:%hu exits failed, err = %s",
+                    remote_address().to_ip_string().c_str(),
+                    static_cast<int>remote_address().port,
+                    ex.what()
+                    );*/
+                }
 
+                _socket.close();
+            }
+        }
+
+        void asio_rpc_session::connect()
+        {
+            if (try_connecting())
+            {
+                boost::asio::ip::tcp::endpoint ep(
+                    boost::asio::ip::address_v4(_remote_addr.ip), _remote_addr.port);
+
+                add_ref();
+                _socket.async_connect(ep, [this](boost::system::error_code ec)
+                {
+                    if (!ec)
+                    {
+                        dinfo("client session %s:%hu connected",
+                            _remote_addr.name,
+                            _remote_addr.port
+                            );
+
+                        set_options();
+                        set_connected();
+                        on_send_completed(nullptr);
+                        do_read();
+                    }
+                    else
+                    {
+                        derror("network client session connect failed, error = %s",
+                            ec.message().c_str()
+                            );
+                        on_failure();
+                    }
+                    release_ref();
+                });
+            }
+        }
+
+        asio_rpc_session::asio_rpc_session(
+            asio_network_provider& net,
+            const dsn_address_t& remote_addr,
+            boost::asio::ip::tcp::socket& socket,
+            std::shared_ptr<message_parser>& parser,
+            boost::asio::io_service& ios
+            )
+            :
+            rpc_session(net, remote_addr),
+            _io_service(ios),
+            _socket(std::move(socket)),
+            _parser(parser)
+        {
+            set_options();
+            do_read();
+        }
     }
 }

@@ -232,7 +232,7 @@ namespace dsn
             return ERR_OK;
         }
 
-        rpc_client_session_ptr hpc_network_provider::create_client_session(const dsn_address_t& server_addr)
+        rpc_session_ptr hpc_network_provider::create_client_session(const dsn_address_t& server_addr)
         {
             auto matcher = new_client_matcher();
             auto parser = new_message_parser();
@@ -243,7 +243,7 @@ namespace dsn
             addr.sin_port = 0;
 
             auto sock = create_tcp_socket(&addr);
-            auto client = new hpc_rpc_client_session(sock, parser, *this, server_addr, matcher);
+            auto client = new hpc_rpc_session(sock, parser, *this, server_addr, matcher);
             client->bind_looper(_looper);
             return client;
         }
@@ -285,10 +285,10 @@ namespace dsn
                     dsn_address_build_ipv4(&client_addr, ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
 
                     auto parser = new_message_parser();
-                    auto s = new hpc_rpc_server_session(_accept_sock, parser, *this, client_addr);
+                    auto s = new hpc_rpc_session(_accept_sock, parser, *this, client_addr);
                     s->bind_looper(_looper);
 
-                    rpc_server_session_ptr s1(s);
+                    rpc_session_ptr s1(s);
                     this->on_server_session_accepted(s1);
 
                     s->do_read();
@@ -320,31 +320,21 @@ namespace dsn
             }
         }
                 
-        io_loop_callback hpc_rpc_session::_ready_event = 
+        io_loop_callback s_ready_event = 
             [](int err, uint32_t length, uintptr_t lolp)
             {
                 auto evt = CONTAINING_RECORD(lolp, hpc_network_provider::ready_event, olp);
                 evt->callback(err, length, lolp);
             };
-
-        hpc_rpc_session::hpc_rpc_session(
-            socket_t sock,
-            std::shared_ptr<dsn::message_parser>& parser
-            )
-            : _socket(sock), _parser(parser)
-        {
-            _sending_msg = nullptr;
-            _sending_next_offset = 0;
-        }
-
+        
         void hpc_rpc_session::bind_looper(io_looper* looper)
         {
-            looper->bind_io_handle((dsn_handle_t)_socket, &_ready_event);
+            looper->bind_io_handle((dsn_handle_t)_socket, &s_ready_event);
         }
 
         void hpc_rpc_session::do_read(int sz)
         {
-            add_reference();
+            add_ref();
             _read_event.callback = [this](int err, uint32_t length, uintptr_t lolp)
             {
                 //dinfo("WSARecv completed, err = %d, size = %u", err, length);
@@ -368,7 +358,7 @@ namespace dsn
                     do_read(read_next);
                 }
 
-                release_reference();
+                release_ref();
             };
             memset(&_read_event.olp, 0, sizeof(_read_event.olp));
 
@@ -394,7 +384,7 @@ namespace dsn
             if (SOCKET_ERROR == rt && (WSAGetLastError() != ERROR_IO_PENDING))
             {
                 dwarn("WSARecv failed, err = %d", ::WSAGetLastError());
-                release_reference();
+                release_ref();
                 on_failure();
             }
 
@@ -403,7 +393,7 @@ namespace dsn
 
         void hpc_rpc_session::do_write(message_ex* msg)
         {
-            add_reference();
+            add_ref();
             
             _write_event.callback = [this](int err, uint32_t length, uintptr_t lolp)
             {
@@ -425,13 +415,13 @@ namespace dsn
                     {
                         auto lmsg = _sending_msg;
                         _sending_msg = nullptr;
-                        on_write_completed(lmsg);
+                        on_send_completed(lmsg);
                     }
                     else
                         do_write(_sending_msg);
                 }
 
-                release_reference();
+                release_ref();
             };
             memset(&_write_event.olp, 0, sizeof(_write_event.olp));
             
@@ -471,7 +461,7 @@ namespace dsn
             if (SOCKET_ERROR == rt && (WSAGetLastError() != ERROR_IO_PENDING))
             {
                 dwarn("WSASend failed, err = %d", ::WSAGetLastError());
-                release_reference();
+                release_ref();
                 on_failure();
             }
             
@@ -483,24 +473,27 @@ namespace dsn
             closesocket(_socket);
         }
 
-        hpc_rpc_client_session::hpc_rpc_client_session(
+        hpc_rpc_session::hpc_rpc_session(
             socket_t sock,
             std::shared_ptr<dsn::message_parser>& parser,
             connection_oriented_network& net,
             const dsn_address_t& remote_addr,
             rpc_client_matcher_ptr& matcher
             )
-            : rpc_client_session(net, remote_addr, matcher), hpc_rpc_session(sock, parser)
+            : rpc_session(net, remote_addr, matcher),
+            _socket(sock), _parser(parser)
         {
+            _sending_msg = nullptr;
+            _sending_next_offset = 0;
         }
 
-        void hpc_rpc_client_session::on_failure()
+        void hpc_rpc_session::on_failure()
         {
             if (on_disconnected())
                 close();
         }
 
-        void hpc_rpc_client_session::connect()
+        void hpc_rpc_session::connect()
         {
             if (!try_connecting())
                 return;
@@ -521,7 +514,7 @@ namespace dsn
                         );
 
                     set_connected();
-                    on_write_completed(nullptr);
+                    on_send_completed(nullptr);
                     do_read();
                 }
                 this->release_ref(); // added before ConnectEx
@@ -553,16 +546,18 @@ namespace dsn
             }
         }
 
-        hpc_rpc_server_session::hpc_rpc_server_session(
+        hpc_rpc_session::hpc_rpc_session(
             socket_t sock,
             std::shared_ptr<dsn::message_parser>& parser,
             connection_oriented_network& net,
             const dsn_address_t& remote_addr
             )
-            : rpc_server_session(net, remote_addr), hpc_rpc_session(sock, parser)
+            : rpc_session(net, remote_addr),
+            _socket(sock), _parser(parser)
         {
+            _sending_msg = nullptr;
+            _sending_next_offset = 0;
         }
-
     }
 }
 

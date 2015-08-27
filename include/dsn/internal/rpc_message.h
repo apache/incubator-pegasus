@@ -34,12 +34,11 @@
 
 namespace dsn 
 {
-    class rpc_client_session;
-    class rpc_server_session;
+    class rpc_session;
+    class rpc_session;
     class rpc_client_matcher;
 
-    typedef ::dsn::ref_ptr<rpc_client_session> rpc_client_session_ptr;
-    typedef ::dsn::ref_ptr<rpc_server_session> rpc_server_session_ptr;
+    typedef ::dsn::ref_ptr<rpc_session> rpc_session_ptr;
     typedef ::dsn::ref_ptr<rpc_client_matcher> rpc_client_matcher_ptr;
 
     typedef struct dsn_buffer_t // binary compatible with WSABUF on windows
@@ -85,7 +84,7 @@ namespace dsn
                                         // header not included for *recieved* 
 
         // by rpc and network
-        rpc_server_session_ptr server_session;
+        rpc_session_ptr server_session;
         dsn_address_t          from_address;
         dsn_address_t          to_address;
         uint16_t               local_rpc_code;
