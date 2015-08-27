@@ -45,7 +45,6 @@ namespace dsn {
 
         private:
             friend class asio_rpc_session;
-            friend class asio_rpc_session;
 
             std::shared_ptr<boost::asio::ip::tcp::acceptor> _acceptor;
             std::shared_ptr<boost::asio::ip::tcp::socket>   _socket;

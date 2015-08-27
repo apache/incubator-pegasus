@@ -152,9 +152,6 @@ namespace dsn
         _connect_state = SS_DISCONNECTED;
         _reconnect_count_after_last_success = 0;
         _message_sent = 0;
-
-        try_connecting();
-        set_connected();
     }
 
     // server

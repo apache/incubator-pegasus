@@ -151,7 +151,7 @@ namespace dsn
             return ERR_OK;
         }
 
-        rpc_client_session_ptr hpc_network_provider::create_client_session(const dsn_address_t& server_addr)
+        rpc_session_ptr hpc_network_provider::create_client_session(const dsn_address_t& server_addr)
         {
             auto matcher = new_client_matcher();
             auto parser = new_message_parser();
@@ -182,7 +182,7 @@ namespace dsn
                 auto rs = new hpc_rpc_session(s, parser, *this, client_addr);
                 rs->bind_looper(_looper);
 
-                rpc_server_session_ptr s1(rs);
+                rpc_session_ptr s1(rs);
                 this->on_server_session_accepted(s1);
             }
             else
@@ -275,7 +275,7 @@ namespace dsn
                 {
                     msg = _sending_msg;
                     _sending_msg = nullptr;
-                    on_write_completed(msg);
+                    on_send_completed(msg);
                     return;
                 }
             }
@@ -305,6 +305,7 @@ namespace dsn
             }
         }
 
+        // client
         hpc_rpc_session::hpc_rpc_session(
             socket_t sock,
             std::shared_ptr<dsn::message_parser>& parser,
@@ -330,7 +331,7 @@ namespace dsn
                 uint32_t events = (uint32_t)lolp_or_events;
 
                 // zhenyu: there are concurrency bugs in on_events, let's put a lock here for the time being...
-                utils::auto_lock<utils::ex_lock_nr_spin> l(_event_lock);
+                // utils::auto_lock<utils::ex_lock_nr_spin> l(_event_lock);
                 this->on_events(events);                
             };
         }
@@ -406,7 +407,7 @@ namespace dsn
                 }
                 else
                 {
-                    on_write_completed(nullptr); // send next msg if there is.
+                    on_send_completed(nullptr); // send next msg if there is.
                 }
             }
 
@@ -435,6 +436,8 @@ namespace dsn
             addr.sin_family = AF_INET;
             addr.sin_addr.s_addr = htonl(_remote_addr.ip);
             addr.sin_port = htons(_remote_addr.port);
+
+            dinfo("connecting to %s:%hu ...", _remote_addr.name, _remote_addr.port);
 
             int rt = ::connect(_socket, (struct sockaddr*)&addr, (int)sizeof(addr));
             if (rt == -1 && errno != EINPROGRESS)
@@ -496,7 +499,7 @@ namespace dsn
                     }
                     else
                     {
-                        on_write_completed(nullptr); // send next msg if there is.
+                        on_send_completed(nullptr); // send next msg if there is.
                     }
                 }
             };
