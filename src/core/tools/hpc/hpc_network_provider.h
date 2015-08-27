@@ -109,7 +109,7 @@ namespace dsn {
                 do_write(msg);
             }
 
-            void bind_looper(io_looper* looper);
+            void bind_looper(io_looper* looper, bool delay = false);
             void do_read(int sz = 256);
 
         private:            

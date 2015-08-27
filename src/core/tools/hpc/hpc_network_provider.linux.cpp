@@ -163,7 +163,7 @@ namespace dsn
 
             auto sock = create_tcp_socket(&addr);
             dassert(sock != -1, "create client tcp socket failed!");
-            auto client = new hpc_rpc_client_session(sock, parser, *this, server_addr, matcher);
+            auto client = new hpc_rpc_session(sock, parser, *this, server_addr, matcher);
             client->bind_looper(_looper, true);
             return client;
         }
@@ -179,7 +179,7 @@ namespace dsn
                 dsn_address_build_ipv4(&client_addr, ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
 
                 auto parser = new_message_parser();
-                auto rs = new hpc_rpc_server_session(s, parser, *this, client_addr);
+                auto rs = new hpc_rpc_session(s, parser, *this, client_addr);
                 rs->bind_looper(_looper);
 
                 rpc_server_session_ptr s1(rs);
@@ -189,23 +189,6 @@ namespace dsn
             {
                 derror("accept failed, err = %s", strerror(errno));
             }
-        }
-
-        hpc_rpc_session::hpc_rpc_session(
-            socket_t sock,
-            std::shared_ptr<dsn::message_parser>& parser
-            )
-            : _socket(sock), _parser(parser)
-        {
-            dassert(sock != -1, "invalid given socket handle");
-            _sending_msg = nullptr;
-            _sending_next_offset = 0;
-            _looper = nullptr;
-
-            memset((void*)&_peer_addr, 0, sizeof(_peer_addr));
-            _peer_addr.sin_family = AF_INET;
-            _peer_addr.sin_addr.s_addr = INADDR_ANY;
-            _peer_addr.sin_port = 0;
         }
 
         void hpc_rpc_session::bind_looper(io_looper* looper, bool delay)
@@ -322,15 +305,26 @@ namespace dsn
             }
         }
 
-        hpc_rpc_client_session::hpc_rpc_client_session(
+        hpc_rpc_session::hpc_rpc_session(
             socket_t sock,
             std::shared_ptr<dsn::message_parser>& parser,
             connection_oriented_network& net,
             const dsn_address_t& remote_addr,
             rpc_client_matcher_ptr& matcher
             )
-            : rpc_client_session(net, remote_addr, matcher), hpc_rpc_session(sock, parser)
+            : rpc_session(net, remote_addr, matcher),
+             _socket(sock), _parser(parser)
         {
+            dassert(sock != -1, "invalid given socket handle");
+            _sending_msg = nullptr;
+            _sending_next_offset = 0;
+            _looper = nullptr;
+
+            memset((void*)&_peer_addr, 0, sizeof(_peer_addr));
+            _peer_addr.sin_family = AF_INET;
+            _peer_addr.sin_addr.s_addr = INADDR_ANY;
+            _peer_addr.sin_port = 0;
+
             _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
             {
                 uint32_t events = (uint32_t)lolp_or_events;
@@ -341,7 +335,7 @@ namespace dsn
             };
         }
 
-        void hpc_rpc_client_session::on_events(uint32_t events)
+        void hpc_rpc_session::on_events(uint32_t events)
         {
             if (is_disconnected())
             {
@@ -423,14 +417,14 @@ namespace dsn
             }
         }
 
-        void hpc_rpc_client_session::on_failure()
+        void hpc_rpc_session::on_failure()
         {
             _looper->unbind_io_handle((dsn_handle_t)(intptr_t)_socket);
             if (on_disconnected())
                 close();            
         }
 
-        void hpc_rpc_client_session::connect()
+        void hpc_rpc_session::connect()
         {
             if (!try_connecting())
                 return;
@@ -454,14 +448,25 @@ namespace dsn
                 EPOLLOUT | EPOLLET);
         }
 
-        hpc_rpc_server_session::hpc_rpc_server_session(
+        hpc_rpc_session::hpc_rpc_session(
             socket_t sock,
             std::shared_ptr<dsn::message_parser>& parser,
             connection_oriented_network& net,
             const dsn_address_t& remote_addr
             )
-            : rpc_server_session(net, remote_addr), hpc_rpc_session(sock, parser)
+            : rpc_session(net, remote_addr),
+            _socket(sock), _parser(parser)
         {
+            dassert(sock != -1, "invalid given socket handle");
+            _sending_msg = nullptr;
+            _sending_next_offset = 0;
+            _looper = nullptr;
+
+            memset((void*)&_peer_addr, 0, sizeof(_peer_addr));
+            _peer_addr.sin_family = AF_INET;
+            _peer_addr.sin_addr.s_addr = INADDR_ANY;
+            _peer_addr.sin_port = 0;
+
             socklen_t addr_len = (socklen_t)sizeof(_peer_addr);
             if (getpeername(_socket, (struct sockaddr*)&_peer_addr, &addr_len) == -1)
             {

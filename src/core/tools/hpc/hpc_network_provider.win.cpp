@@ -327,7 +327,7 @@ namespace dsn
                 evt->callback(err, length, lolp);
             };
         
-        void hpc_rpc_session::bind_looper(io_looper* looper)
+        void hpc_rpc_session::bind_looper(io_looper* looper, bool delay)
         {
             looper->bind_io_handle((dsn_handle_t)_socket, &s_ready_event);
         }

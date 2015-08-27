@@ -197,16 +197,12 @@ namespace dsn {
     {
     public:
         virtual ~rpc_session();
-
-        void send_message(message_ex* msg);
-        void on_send_completed(message_ex* msg);
+                
         bool has_pending_out_msgs();
         bool is_client() const { return _matcher.get() != nullptr; }
         const dsn_address_t& remote_address() const { return _remote_addr; }
         connection_oriented_network& net() const { return _net; }
-                
-        // always call on_send_completed later
-        virtual void send(message_ex* msg) = 0;
+        void send_message(message_ex* msg);
 
     // for client session
     public:        
@@ -216,11 +212,16 @@ namespace dsn {
         void call(message_ex* request, rpc_response_task* call);
         
         virtual void connect() = 0;
-
+        
     // for server session
     public:        
         rpc_session(connection_oriented_network& net, const dsn_address_t& remote_addr);
         void on_recv_request(message_ex* msg, int delay_ms);
+
+    // shared
+    protected:
+        // always call on_send_completed later
+        virtual void send(message_ex* msg) = 0;
 
     protected:
         bool try_connecting(); // return true when it is permitted
@@ -228,7 +229,8 @@ namespace dsn {
         void set_disconnected();
         bool is_disconnected() const { return _connect_state == SS_DISCONNECTED; }
         bool is_connecting() const { return _connect_state == SS_CONNECTING; }
-        bool is_connected() const { return _connect_state == SS_CONNECTED; }
+        bool is_connected() const { return _connect_state == SS_CONNECTED; }        
+        void on_send_completed(message_ex* msg);
 
     protected:
         connection_oriented_network        &_net;
@@ -249,5 +251,6 @@ namespace dsn {
         bool                               _is_sending_next;
         dlink                              _messages;        
         session_state                      _connect_state;
+        uint64_t                           _message_sent;
     };
 }

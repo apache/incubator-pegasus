@@ -108,7 +108,7 @@ namespace dsn
                 dassert(_is_sending_next && &msg->dl == _messages.next(),
                     "sent msg must be the first msg in send queue");
                 msg->dl.remove();
-                _is_sending_next = false;
+                _is_sending_next = false;                
             }
             
             if (!_messages.is_alone() && !_is_sending_next)
@@ -127,7 +127,10 @@ namespace dsn
         // for old msg
         // added in rpc_engine::reply (for server) or rpc_session::call (for client)
         if (msg)
-            msg->release_ref();
+        {
+            msg->release_ref(); 
+            _message_sent++;
+        }        
 
         // for next send
         if (next_msg)
@@ -148,6 +151,7 @@ namespace dsn
         _is_sending_next = false;
         _connect_state = SS_DISCONNECTED;
         _reconnect_count_after_last_success = 0;
+        _message_sent = 0;
 
         try_connecting();
         set_connected();
@@ -161,6 +165,7 @@ namespace dsn
         _is_sending_next = false;
         _connect_state = SS_CONNECTED;
         _reconnect_count_after_last_success = 0;
+        _message_sent = 0;
     }
 
     void rpc_session::call(message_ex* request, rpc_response_task* call)
