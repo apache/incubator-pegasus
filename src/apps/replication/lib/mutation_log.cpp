@@ -96,7 +96,7 @@ error_code mutation_log::initialize(const char* dir)
     _log_files.clear();
 
 	std::vector<std::string> file_list;
-	if (!dsn::utils::filesystem::get_files(dir, file_list, false))
+	if (!dsn::utils::filesystem::get_subfiles(dir, file_list, false))
 	{
 		derror("open mutation_log: get files failed.");
 		return ERR_FILE_OPERATION_FAILED;

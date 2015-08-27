@@ -29,7 +29,6 @@
 #include "mutation.h"
 #include "replication_failure_detector.h"
 #include "rpc_replicated.h"
-#include <boost/filesystem.hpp>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -98,7 +97,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     replicas rps;
 	std::vector<std::string> file_list;
 
-	if (!dsn::utils::filesystem::get_files(dir(), file_list, false))
+	if (!dsn::utils::filesystem::get_subfiles(dir(), file_list, false))
 	{
 		dassert(false, "Fail to get files in %s.", dir().c_str());
 	}
@@ -730,21 +729,45 @@ void replica_stub::on_gc()
     _log->garbage_collection(durable_decrees, max_seen_decrees);
     
     // gc on-disk rps
-#if 0
-	std::vector<std::string> file_list;
-	if (!dsn::utils::filesystem::get_files(dir(), file_list, false))
-	{
-		dassert(false, "Fail to get files in %s.", dir().c_str());
-	}
-#endif
 
+	std::vector<std::string> dir_list;
+	if (!dsn::utils::filesystem::get_subdirectories(_dir, dir_list, false))
+	{
+		dassert(false, "Fail to get subdirectories in %s.", _dir.c_str());
+	}
+	std::string ext = ".err";
+	for (auto& dpath : dir_list)
+	{
+		auto&& name = dsn::utils::filesystem::get_file_name(dpath);
+		if ((name.length() > ext.length())
+			&& (name.compare((name.length() - ext.length()), std::string::npos, ext) == 0)
+			)
+		{
+			time_t mt;
+			if (!dsn::utils::filesystem::last_write_time(dpath, mt))
+			{
+				dassert(false, "Fail to get last write time of %s.", dpath.c_str());
+			}
+
+			if (mt > ::time(0) + _options.gc_disk_error_replica_interval_seconds)
+			{
+				if (!dsn::utils::filesystem::remove_path(dpath))
+				{
+					dassert(false, "Fail to delete directory %s.", dpath.c_str());
+				}
+			}
+		}
+	}
+	dir_list.clear();
+
+#if 0
     boost::filesystem::directory_iterator endtr;
     for (boost::filesystem::directory_iterator it(dir());
         it != endtr;
         ++it)
     {
         auto name = it->path().filename().string();
-        if (name.length() > strlen(".err") && name.substr(name.length() - strlen(".err")) == ".err")
+        if (name.length() > strlen(".err") && name.substr() == ".err")
         {
             std::time_t mt = boost::filesystem::last_write_time(it->path());
             if (mt > time(0) + _options.gc_disk_error_replica_interval_seconds)
@@ -753,6 +776,7 @@ void replica_stub::on_gc()
             }
         }
     }
+#endif
 }
 
 ::dsn::task_ptr replica_stub::begin_open_replica(const std::string& app_type, global_partition_id gpid, std::shared_ptr<group_check_request> req)

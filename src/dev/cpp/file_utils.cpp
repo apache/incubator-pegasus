@@ -77,6 +77,7 @@ enum
 # define FTW_SKIP_SIBLINGS FTW_SKIP_SIBLINGS
 };
 
+
 #ifndef __S_ISTYPE
 # define __S_ISTYPE(mode, mask)  (((mode) & S_IFMT) == (mask))
 #endif
@@ -228,9 +229,18 @@ namespace dsn {
 #endif
 				}
 
-				return (*tls_ftw_ctx.handler)(fpath, typeflag);
+				return (*tls_ftw_ctx.handler)(fpath, typeflag, ftwbuf);
 			}
 #endif
+
+#ifdef _WIN32
+			struct win_ftw_info
+			{
+				struct FTW ftw;
+				std::string path;
+			};
+#endif
+
 			bool file_tree_walk(
 				const std::string& dirpath,
 				ftw_handler handler,
@@ -241,35 +251,42 @@ namespace dsn {
 				WIN32_FIND_DATAA ffd;
 				HANDLE hFind;
 				DWORD dwError = ERROR_SUCCESS;
-				std::deque<std::string> queue;
-				std::deque<std::string> queue2;
+				std::deque<win_ftw_info> queue;
+				std::deque<win_ftw_info> queue2;
 				char c;
-				std::string dir;
-				std::string path;
+				size_t pos;
+				win_ftw_info info;
+				win_ftw_info info2;
 				int ret;
 
-				path.reserve(PATH_MAX);
-				if (!dsn::utils::filesystem::get_normalized_path(dirpath, path))
+				info.path.reserve(PATH_MAX);
+				if (!dsn::utils::filesystem::get_normalized_path(dirpath, info.path))
 				{
 					return false;
 				}
-				dir.reserve(PATH_MAX);
-				queue.push_back(path);
+				info2.path.reserve(PATH_MAX);
+				pos = info.path.find_last_of("\\");
+				info.ftw.base = (info.ftw.base == std::string::npos) ? 0 : (int)(pos + 1);
+				info.ftw.level = 0;
+				queue.push_back(info);
 
 				while (!queue.empty())
 				{
-					dir = queue.front();
+					info = queue.front();
 					queue.pop_front();
 
-					c = dir[dir.length() - 1];
-					path = dir;
+					c = info.path[info.path.length() - 1];
+					info2.path = info.path;
+					pos = info2.path.length() + 1;
+					info2.ftw.base = (int)pos;
+					info2.ftw.level = info.ftw.level + 1;
 					if ((c != _FS_BSLASH) && (c != _FS_COLON))
 					{
-						path.append(1, _FS_BSLASH);
+						info2.path.append(1, _FS_BSLASH);
 					}
-					path.append(1, _FS_STAR);
+					info2.path.append(1, _FS_STAR);
 
-					hFind = ::FindFirstFileA(path.c_str(), &ffd);
+					hFind = ::FindFirstFileA(info2.path.c_str(), &ffd);
 					if (INVALID_HANDLE_VALUE == hFind)
 					{
 						return false;
@@ -285,23 +302,18 @@ namespace dsn {
 							continue;
 						}
 
-						path = dir;
-						if ((c != _FS_BSLASH) && (c != _FS_COLON))
-						{
-							path.append(1, _FS_BSLASH);
-						}
-						path.append(ffd.cFileName);
+						info2.path.replace(pos, std::string::npos, ffd.cFileName);
 
 						if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 						{
 							if (recursive)
 							{
-								queue.push_front(path);
+								queue.push_front(info2);
 							}
 						}
 						else
 						{
-							ret = handler(path.c_str(), FTW_F);
+							ret = handler(info2.path.c_str(), FTW_F, &info2.ftw);
 							if (ret != FTW_CONTINUE)
 							{
 								::FindClose(hFind);
@@ -317,12 +329,12 @@ namespace dsn {
 						return false;
 					}
 
-					queue2.push_front(dir);
+					queue2.push_front(info);
 				}
 
-				for (auto& dir2 : queue2)
+				for (auto& info3 : queue2)
 				{
-					ret = handler(dir2.c_str(), FTW_DP);
+					ret = handler(info3.path.c_str(), FTW_DP, &info3.ftw);
 					if (ret != FTW_CONTINUE)
 					{
 						return false;
@@ -430,9 +442,10 @@ namespace dsn {
 				return dsn::utils::filesystem::path_exists(npath, FTW_F);
 			}
 
-			bool get_files(const std::string& path, std::vector<std::string>& file_list, bool recursive)
+			static bool get_subpaths(const std::string& path, std::vector<std::string>& sub_list, bool recursive, int typeflags)
 			{
 				std::string npath;
+				bool ret;
 
 				if (path.empty())
 				{
@@ -449,24 +462,80 @@ namespace dsn {
 					return false;
 				}
 
-				return dsn::utils::filesystem::file_tree_walk(
-					npath, [&file_list](const char* fpath, int typeflag)
+				switch (typeflags)
 				{
-					if (typeflag == FTW_F)
+				case FTW_F:
+					ret = dsn::utils::filesystem::file_tree_walk(
+						npath, [&sub_list](const char* fpath, int typeflag, struct FTW* ftwbuf)
 					{
-						file_list.push_back(fpath);
-					}
+						if (typeflag == FTW_F)
+						{
+							sub_list.push_back(fpath);
+						}
 
-					return FTW_CONTINUE;
-				},
-					recursive
-					);
+						return FTW_CONTINUE;
+					},
+						recursive
+						);
+					break;
+
+				case FTW_D:
+					ret = dsn::utils::filesystem::file_tree_walk(
+						npath, [&sub_list](const char* fpath, int typeflag, struct FTW* ftwbuf)
+					{
+						if ((typeflag == FTW_D) && (ftwbuf->level > 0))
+						{
+							sub_list.push_back(fpath);
+						}
+
+						return FTW_CONTINUE;
+					},
+						recursive
+						);
+					break;
+
+				case FTW_NS:
+					ret = dsn::utils::filesystem::file_tree_walk(
+						npath, [&sub_list](const char* fpath, int typeflag, struct FTW* ftwbuf)
+					{
+						if (ftwbuf->level > 0)
+						{
+							sub_list.push_back(fpath);
+						}
+
+						return FTW_CONTINUE;
+					},
+						recursive
+						);
+					break;
+
+				default:
+					ret = false;
+					break;
+				}
+
+				return ret;
+			}
+
+			bool get_subfiles(const std::string& path, std::vector<std::string>& sub_list, bool recursive)
+			{
+				return dsn::utils::filesystem::get_subpaths(path, sub_list, recursive, FTW_F);
+			}
+
+			bool get_subdirectories(const std::string& path, std::vector<std::string>& sub_list, bool recursive)
+			{
+				return dsn::utils::filesystem::get_subpaths(path, sub_list, recursive, FTW_D);
+			}
+
+			bool get_subpaths(const std::string& path, std::vector<std::string>& sub_list, bool recursive)
+			{
+				return dsn::utils::filesystem::get_subpaths(path, sub_list, recursive, FTW_NS);
 			}
 
 			static bool remove_directory(const std::string& npath)
 			{
 				return dsn::utils::filesystem::file_tree_walk(
-					npath, [](const char* fpath, int typeflag)
+					npath, [](const char* fpath, int typeflag, struct FTW* ftwbuf)
 				{
 					bool succ;
 
@@ -662,7 +731,7 @@ namespace dsn {
 					return false;
 				}
 
-				pos = npath.find_last_of("/\\");
+				pos = npath.find_last_of("\\/");
 				if ((pos != std::string::npos) && (pos > 0))
 				{
 					auto ppath = npath.substr(0, pos);
@@ -710,7 +779,100 @@ namespace dsn {
 
 			std::string remove_file_name(const std::string& path)
 			{
-				return path.substr(0, path.find_last_of("\\/"));
+				size_t len;
+				size_t pos;
+
+				len = path.length();
+				if (len == 0)
+				{
+					return "";
+				}
+
+				pos = path.find_last_of("\\/");
+				if (pos == std::string::npos)
+				{
+					return "";
+				}
+
+				if (pos == len)
+				{
+					return path;
+				}
+				
+				return path.substr(0, pos);
+			}
+
+			std::string get_file_name(const std::string& path)
+			{
+				size_t len;
+				size_t pos;
+
+				len = path.length();
+				if (len == 0)
+				{
+					return "";
+				}
+
+				pos = path.find_last_of("\\/");
+
+				if (pos == len)
+				{
+					return "";
+				}
+
+				if (pos == std::string::npos)
+				{
+					return path;
+				}
+
+				return path.substr((pos + 1), (len - pos));
+			}
+
+			std::string path_combine(const std::string& path1, const std::string& path2)
+			{
+				char c;
+				std::string npath1;
+				std::string npath2;
+
+				if (!dsn::utils::filesystem::get_normalized_path(path1, npath1))
+				{
+					return false;
+				}
+
+				if (!dsn::utils::filesystem::get_normalized_path(path2, npath2))
+				{
+					return false;
+				}
+
+				if (npath1.empty())
+				{
+					return npath2;
+				}
+
+				if (npath2.empty())
+				{
+					return npath1;
+				}	
+
+				c = npath1[npath1.length() - 1];
+				if (!_FS_ISSEP(c)
+#ifdef _WIN32
+					&& (c != _FS_COLON)
+#endif
+					)
+				{
+					npath1.append(1,
+#ifdef _WIN32
+						_FS_BSLASH
+#else
+						_FS_SLASH
+#endif
+						);
+				}
+
+				npath1.append(npath2);
+
+				return npath1;
 			}
 
 			bool get_current_directory(std::string& path)
