@@ -204,12 +204,22 @@ namespace dsn
 
         void hpc_rpc_session::do_read(int read_next)
         {
+            utils::auto_lock<utils::ex_lock_nr_spin> l(_recv_lock);
+
             while (true)
             {
                 char* ptr = (char*)_parser->read_buffer_ptr((int)read_next);
                 int remaining = _parser->read_buffer_capacity();
 
                 int sz = recv(_socket, ptr, remaining, 0);
+                int err = errno;
+                dinfo("call recv on %s:%hu, return %d, err = %s",
+                    _remote_addr.name,
+                    _remote_addr.port,
+                    sz,
+                    strerror(err)
+                    );
+
                 if (sz > 0)
                 {
                     message_ex* msg = _parser->get_message_on_receive(sz, read_next);
@@ -219,10 +229,14 @@ namespace dsn
                         this->on_read_completed(msg);
                         msg = _parser->get_message_on_receive(0, read_next);
                     }
+
+                    if (err == EAGAIN || err == EWOULDBLOCK)
+                    {
+                        break;
+                    }
                 }
                 else
                 {
-                    int err = errno;
                     if (err != EAGAIN && err != EWOULDBLOCK && err != EINPROGRESS)
                     {
                         derror("recv failed, err = %s", strerror(err));
@@ -233,15 +247,39 @@ namespace dsn
             }
         }
 
+        void hpc_rpc_session::do_safe_write(message_ex* msg)
+        {
+            utils::auto_lock<utils::ex_lock_nr_spin> l(_send_lock);
+
+            if (nullptr == msg)
+            {
+                if (_sending_msg)
+                {
+                    do_write(_sending_msg);
+                }
+                else
+                {
+                    _send_lock.unlock(); // avoid recursion
+                    on_send_completed(nullptr); // send next msg if there is.
+                    _send_lock.lock();
+                }
+            }
+            else
+            {
+                do_write(msg);
+            }
+        }
+
         void hpc_rpc_session::do_write(message_ex* msg)
         {
             static_assert (sizeof(dsn_message_parser::send_buf) == sizeof(struct iovec), 
                 "make sure they are compatible");
+
+            dbg_dassert(msg != nullptr, "cannot send empty msg");
                         
             // new msg
-            if (_sending_msg != msg)
+            if (_sending_msg == nullptr)
             {
-                dassert(_sending_msg == nullptr, "only one sending msg is possible");
                 _sending_msg = msg;
                 _sending_next_offset = 0;
             }
@@ -249,47 +287,64 @@ namespace dsn
             // continue old msg
             else
             {
-                // nothing to do
+                dassert(_sending_msg == msg, "only one sending msg is possible");
             }
 
             // prepare send buffer, make sure header is already in the buffer
             int total_length = 0;
             int buffer_count = _parser->get_send_buffers_count_and_total_length(msg, &total_length);
             auto buffers = (dsn_message_parser::send_buf*)alloca(buffer_count * sizeof(dsn_message_parser::send_buf));
-            int count = _parser->prepare_buffers_on_send(msg, _sending_next_offset, buffers);
-            
-            struct msghdr hdr;
-            memset((void*)&hdr, 0, sizeof(hdr));
-            hdr.msg_name = (void*)&_peer_addr;
-            hdr.msg_namelen = (socklen_t)sizeof(_peer_addr);
-            hdr.msg_iov = (struct iovec*)buffers;
-            hdr.msg_iovlen = (size_t)count;
 
-            int sz = sendmsg(_socket, &hdr, MSG_NOSIGNAL);
-            if (sz > 0)
+            while (true)
             {
-                _sending_next_offset += sz;
+                int count = _parser->prepare_buffers_on_send(msg, _sending_next_offset, buffers);
+                struct msghdr hdr;
+                memset((void*)&hdr, 0, sizeof(hdr));
+                hdr.msg_name = (void*)&_peer_addr;
+                hdr.msg_namelen = (socklen_t)sizeof(_peer_addr);
+                hdr.msg_iov = (struct iovec*)buffers;
+                hdr.msg_iovlen = (size_t)count;
 
-                // message completed, continue next message
-                if (_sending_next_offset == total_length)
+                int sz = sendmsg(_socket, &hdr, MSG_NOSIGNAL);
+                int err = errno;
+                dinfo("call sendmsg on %s:%hu, return %d, err = %s",
+                    _remote_addr.name,
+                    _remote_addr.port,
+                    sz,
+                    strerror(err)
+                    );
+
+                if (sz < 0)
                 {
-                    msg = _sending_msg;
-                    _sending_msg = nullptr;
-                    on_send_completed(msg);
+                    if (err != EAGAIN && err != EWOULDBLOCK && err != EINPROGRESS)
+                    {
+                        derror("sendmsg failed, err = %s", strerror(err));
+                        on_failure();                        
+                    }
+                    else
+                    {
+                        // wait for epoll_wait notification
+                    }
                     return;
-                }
-            }
-            else
-            { 
-                int err = errno;                
-                if (err != EAGAIN && err != EWOULDBLOCK && err != EINPROGRESS)
-                {
-                    derror("sendmsg failed, err = %s", strerror(err));
-                    on_failure();
                 }
                 else
                 {
-                    // wait for next ready
+                    _sending_next_offset += sz;
+
+                    if (_sending_next_offset < total_length)
+                    {
+                        // try next while(true) loop to continue sending current msg
+                    }
+
+                    // message completed, continue next message
+                    else
+                    {
+                        _sending_msg = nullptr;
+
+                        // try next msg recursively
+                        on_send_completed(msg);
+                        return;
+                    }
                 }
             }
         }
@@ -302,6 +357,45 @@ namespace dsn
                 ::close(_socket);
                 dinfo("close socket %p", this);
                 _socket = -1;
+            }
+        }
+
+        void hpc_rpc_session::on_send_recv_events_ready(uint32_t events)
+        {
+            // send/recv error
+            if ((events & EPOLLHUP) || (events & EPOLLRDHUP) || (events & EPOLLERR))
+            {
+                dinfo("epoll failure on %s:%u, events = %x",
+                    _remote_addr.name,
+                    _remote_addr.port,
+                    events
+                    );
+                on_failure();
+                return;
+            }
+
+            //  send
+            if (events & EPOLLOUT)
+            {
+                dinfo("epoll EPOLLOUT on %s:%u, events = %x",
+                    _remote_addr.name,
+                    _remote_addr.port,
+                    events
+                    );
+
+                do_safe_write(nullptr);
+            }
+
+            // recv
+            if (events & EPOLLIN)
+            {
+                dinfo("epoll EPOLLIN on %s:%u, events = %x",
+                    _remote_addr.name,
+                    _remote_addr.port,
+                    events
+                    );
+
+                do_read();
             }
         }
 
@@ -329,93 +423,68 @@ namespace dsn
             _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
             {
                 uint32_t events = (uint32_t)lolp_or_events;
-
-                // zhenyu: there are concurrency bugs in on_events, let's put a lock here for the time being...
-                // utils::auto_lock<utils::ex_lock_nr_spin> l(_event_lock);
-                this->on_events(events);                
-            };
-        }
-
-        void hpc_rpc_session::on_events(uint32_t events)
-        {
-            if (is_disconnected())
-            {
-                dinfo("skip epoll events %x as the connection %s:%hu is disconnected",
-                    events,
-                    _remote_addr.name,
-                    _remote_addr.port
-                    );
-                return;
-            }
-
-            if (is_connecting())
-            {
-                if ((events & EPOLLOUT )
-                    && !(events & EPOLLERR)
-                    && !(events & EPOLLHUP)
-                    )
+               
+                if (is_disconnected())
                 {
-                    socklen_t addr_len = (socklen_t)sizeof(_peer_addr);
-                    if (getpeername(_socket, (struct sockaddr*)&_peer_addr, &addr_len) == -1)
-                    {
-                        dassert(false, "(client) getpeername failed, err = %s", strerror(errno));
-                    }
-
-                    dinfo("client session %s:%u connected",
+                    dinfo("skip epoll events %x as the connection %s:%hu is disconnected",
+                        events,
                         _remote_addr.name,
                         _remote_addr.port
                         );
-
-                    // unbind for connect
-                    _looper->unbind_io_handle((dsn_handle_t)(intptr_t)_socket);
-
-                    // bind for send/recv
-                    _looper->bind_io_handle((dsn_handle_t)(intptr_t)_socket, &_ready_event,
-                        EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLET);
-                    set_connected();
+                    return;
                 }
-                else
-                {
-                    int err = 0;
-                    socklen_t err_len = (socklen_t)sizeof(err);
 
-                    if (getsockopt(_socket, SOL_SOCKET, SO_ERROR, (void*)&err, &err_len) < 0)
+                if (is_connecting())
+                {
+                    dinfo("epoll for connect to %s:%u, events = %x",
+                        _remote_addr.name,
+                        _remote_addr.port,
+                        events
+                        );
+
+                    if ((events & EPOLLOUT)
+                        && !(events & EPOLLERR)
+                        && !(events & EPOLLHUP)
+                        )
                     {
-                        dassert(false, "getsockopt for SO_ERROR failed, err = %s", strerror(errno));
+                        socklen_t addr_len = (socklen_t)sizeof(_peer_addr);
+                        if (getpeername(_socket, (struct sockaddr*)&_peer_addr, &addr_len) == -1)
+                        {
+                            dassert(false, "(client) getpeername failed, err = %s", strerror(errno));
+                        }
+
+                        dinfo("client session %s:%u connected",
+                            _remote_addr.name,
+                            _remote_addr.port
+                            );
+
+                        // unbind for connect
+                        _looper->unbind_io_handle((dsn_handle_t)(intptr_t)_socket);
+
+                        // bind for send/recv
+                        _looper->bind_io_handle((dsn_handle_t)(intptr_t)_socket, &_ready_event,
+                            EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLET);
+                        set_connected();
+                    }
+                    else
+                    {
+                        int err = 0;
+                        socklen_t err_len = (socklen_t)sizeof(err);
+
+                        if (getsockopt(_socket, SOL_SOCKET, SO_ERROR, (void*)&err, &err_len) < 0)
+                        {
+                            dassert(false, "getsockopt for SO_ERROR failed, err = %s", strerror(errno));
+                        }
+
+                        derror("connect failed (in epoll), err = %s", strerror(err));
+                        on_failure();
                     }
 
-                    derror("connect failed (in epoll), err = %s", strerror(err));
-                    on_failure();
+                    return;
                 }
-                
-                return;
-            }
 
-            // send/recv error
-            if ((events & EPOLLHUP) || (events & EPOLLRDHUP) || (events & EPOLLERR))
-            {
-                on_failure();
-                return;
-            }
-
-            //  send
-            if (events & EPOLLOUT)
-            {   
-                if (_sending_msg)
-                {
-                    do_write(_sending_msg);
-                }
-                else
-                {
-                    on_send_completed(nullptr); // send next msg if there is.
-                }
-            }
-
-            // recv
-            if (events & EPOLLIN)
-            {   
-                do_read();
-            }
+                this->on_send_recv_events_ready(events);
+            };
         }
 
         void hpc_rpc_session::on_failure()
@@ -437,12 +506,18 @@ namespace dsn
             addr.sin_addr.s_addr = htonl(_remote_addr.ip);
             addr.sin_port = htons(_remote_addr.port);
 
-            dinfo("connecting to %s:%hu ...", _remote_addr.name, _remote_addr.port);
-
             int rt = ::connect(_socket, (struct sockaddr*)&addr, (int)sizeof(addr));
-            if (rt == -1 && errno != EINPROGRESS)
+            int err = errno;
+            dinfo("call connect to %s:%hu, return %d, err = %s",
+                _remote_addr.name,
+                _remote_addr.port,
+                rt,
+                strerror(err)
+                );
+
+            if (rt == -1 && err != EINPROGRESS)
             {
-                dwarn("connect failed, socket = %d, err = %s", (int)_socket, strerror(errno));
+                dwarn("connect failed, socket = %d, err = %s", (int)_socket, strerror(err));
                 on_failure();
             }
 
@@ -479,29 +554,7 @@ namespace dsn
             _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
             {
                 uint32_t events = (uint32_t)lolp_or_events;
-
-                if ((events & EPOLLHUP) || (events & EPOLLRDHUP) || (events & EPOLLERR))
-                {
-                    on_failure();
-                    return;
-                }
-
-                if (events & EPOLLIN)
-                {
-                    do_read();
-                }
-
-                if (events & EPOLLOUT)
-                {
-                    if (_sending_msg)
-                    {
-                        do_write(_sending_msg);
-                    }
-                    else
-                    {
-                        on_send_completed(nullptr); // send next msg if there is.
-                    }
-                }
+                this->on_send_recv_events_ready(events);
             };
         }
     }
