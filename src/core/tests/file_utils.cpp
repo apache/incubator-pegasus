@@ -641,7 +641,7 @@ static void file_utils_test_get_files()
 	std::vector<std::string> file_list;
 
 	path = ".";
-	ret = dsn::utils::filesystem::get_files(path, file_list, false);
+	ret = dsn::utils::filesystem::get_subfiles(path, file_list, false);
 	EXPECT_TRUE(ret);
 #ifdef _WIN32
 	EXPECT_TRUE(file_list.size() >= 3);
@@ -651,25 +651,25 @@ static void file_utils_test_get_files()
 	file_list.clear();
 
 	path = ".";
-	ret = dsn::utils::filesystem::get_files(path, file_list, true);
+	ret = dsn::utils::filesystem::get_subfiles(path, file_list, true);
 	EXPECT_TRUE(ret);
 	EXPECT_TRUE(file_list.size() >= 3);
 	file_list.clear();
 
 	path = "../../";
-	ret = dsn::utils::filesystem::get_files(path, file_list, true);
+	ret = dsn::utils::filesystem::get_subfiles(path, file_list, true);
 	EXPECT_TRUE(ret);
 	EXPECT_TRUE(file_list.size() >= 3);
 	file_list.clear();
 
 	path = "./file_utils_temp/";
-	ret = dsn::utils::filesystem::get_files(path, file_list, true);
+	ret = dsn::utils::filesystem::get_subfiles(path, file_list, true);
 	EXPECT_TRUE(ret);
 	EXPECT_TRUE(file_list.size() == 3);
 	file_list.clear();
 
 	path = "./file_utils_temp/a/";
-	ret = dsn::utils::filesystem::get_files(path, file_list, false);
+	ret = dsn::utils::filesystem::get_subfiles(path, file_list, false);
 	EXPECT_TRUE(ret);
 	EXPECT_TRUE(file_list.size() == 2);
 	file_list.clear();

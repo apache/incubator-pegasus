@@ -27,7 +27,6 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "replica_stub.h"
-#include <boost/filesystem.hpp>
 #include <dsn/internal/factory_store.h>
 
 # ifdef __TITLE__
@@ -55,6 +54,7 @@ error_code replica::initialize_on_new(const char* app_type, global_partition_id 
 	if (!dsn::utils::filesystem::create_directory(_dir))
 	{
 		dassert(false, "Fail to create directory %s.", _dir.c_str());
+		return ERR_FILE_OPERATION_FAILED;
 	}
 
     error_code err = init_app_and_prepare_list(app_type, true);
@@ -104,9 +104,17 @@ error_code replica::initialize_on_load(const char* dir, bool renameDirOnFailure)
         // GCed later
         char newPath[256];
         sprintf(newPath, "%s.%x.err", dir, random32(0, (uint32_t)-1));  
-        dsn::utils::filesystem::remove_path(newPath);
-        boost::filesystem::rename(dir, newPath);
-        derror( "move bad replica from '%s' to '%s'", dir, newPath);
+		if (dsn::utils::filesystem::remove_path(newPath)
+			&& dsn::utils::filesystem::rename_path(dir, newPath)
+			)
+		{
+			derror("move bad replica from '%s' to '%s'", dir, newPath);
+		}
+		else
+		{
+			derror("Fail to move bad replica from '%s' to '%s'", dir, newPath);
+			//return ERR_FILE_OPERATION_FAILED;
+		}
     }
 
     return err;

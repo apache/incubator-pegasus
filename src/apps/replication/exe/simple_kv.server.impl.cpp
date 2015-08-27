@@ -26,7 +26,6 @@
 #include "simple_kv.server.impl.h"
 #include <fstream>
 #include <sstream>
-#include <boost/filesystem.hpp>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -107,7 +106,10 @@ namespace dsn {
                 zauto_lock l(_lock);
                 if (clear_state)
                 {
-                    boost::filesystem::remove_all(data_dir());
+					if (!dsn::utils::filesystem::remove_path(data_dir()))
+					{
+						dassert(false, "Fail to delete directory %s.", data_dir().c_str());
+					}
                 }
                 return 0;
             }
@@ -121,12 +123,16 @@ namespace dsn {
 
                 decree maxVersion = 0;
                 std::string name;
-                boost::filesystem::directory_iterator endtr;
-                for (boost::filesystem::directory_iterator it(data_dir());
-                    it != endtr;
-                    ++it)
+
+				std::vector<std::string> sub_list;
+				auto& path = data_dir();
+				if (!dsn::utils::filesystem::get_subfiles(path, sub_list, false))
+				{
+					dassert(false, "Fail to get subfiles in %s.", path.c_str());
+				}
+				for (auto& fpath : sub_list)
                 {
-                    auto s = it->path().filename().string();
+					auto&& s = dsn::utils::filesystem::get_file_name(fpath);
                     if (s.substr(0, strlen("checkpoint.")) != std::string("checkpoint."))
                         continue;
 
@@ -137,6 +143,7 @@ namespace dsn {
                         name = data_dir() + "/" + s;
                     }
                 }
+				sub_list.clear();
 
                 if (maxVersion > 0)
                 {

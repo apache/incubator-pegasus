@@ -115,7 +115,7 @@ namespace dsn {
                 }
                 else
                 {
-					if (!dsn::utils::filesystem::get_files(folder, file_list, true))
+					if (!dsn::utils::filesystem::get_subfiles(folder, file_list, true))
 					{
 						err = ERR_FILE_OPERATION_FAILED;
 					}

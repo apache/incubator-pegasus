@@ -312,10 +312,19 @@ namespace dsn {
 
 			extern std::string remove_file_name(const std::string& path);
 
+			extern std::string get_file_name(const std::string& path);
+
+			extern std::string path_combine(const std::string& path1, const std::string& path2);
+
 			extern bool get_normalized_path(const std::string& path, std::string& npath);
 
-			//int (const char* fpath, int typeflag)
-			typedef std::function<int(const char*, int)> ftw_handler;
+			struct FTW
+			{
+				int base;
+				int level;
+			};
+			//int (const char* fpath, int typeflags, truct FTW *ftwbuf)
+			typedef std::function<int(const char*, int, struct FTW*)> ftw_handler;
 
 			extern bool file_tree_walk(
 				const std::string& dirpath,
@@ -329,7 +338,11 @@ namespace dsn {
 
 			extern bool file_exists(const std::string& path);
 
-			extern bool get_files(const std::string& path, std::vector<std::string>& file_list, bool recursive);
+			extern bool get_subfiles(const std::string& path, std::vector<std::string>& sub_list, bool recursive);
+
+			extern bool get_subdirectories(const std::string& path, std::vector<std::string>& sub_list, bool recursive);
+
+			extern bool get_subpaths(const std::string& path, std::vector<std::string>& sub_list, bool recursive);
 
 			extern bool remove_path(const std::string& path);
 			

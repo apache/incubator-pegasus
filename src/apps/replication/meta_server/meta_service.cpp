@@ -27,7 +27,6 @@
 #include "server_state.h"
 #include "load_balancer.h"
 #include "meta_server_failure_detector.h"
-#include <boost/filesystem.hpp>
 #include <sys/stat.h>
 
 # ifdef __TITLE__
