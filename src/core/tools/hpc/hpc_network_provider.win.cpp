@@ -66,8 +66,7 @@ namespace dsn
                 dwarn("setsockopt SO_DONTLINGER failed, err = %d", ::GetLastError());
             }
             
-            //streaming data using overlapped I/O should set the send buffer to zero
-            int buflen = 0;
+            int buflen = 8 * 1024 * 1024;
             if (setsockopt(s, SOL_SOCKET, SO_SNDBUF, (char*)&buflen, sizeof(buflen)) != 0)
             {
                 dwarn("setsockopt SO_SNDBUF failed, err = %d", ::GetLastError());
@@ -79,7 +78,7 @@ namespace dsn
                 dwarn("setsockopt SO_RCVBUF failed, err = %d", ::GetLastError());
             }
 
-            int keepalive = 0;
+            int keepalive = 1;
             if (setsockopt(s, SOL_SOCKET, SO_KEEPALIVE, (char*)&keepalive, sizeof(keepalive)) != 0)
             {
                 dwarn("setsockopt SO_KEEPALIVE failed, err = %d", ::GetLastError());

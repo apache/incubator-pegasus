@@ -73,7 +73,7 @@ namespace dsn
                 dwarn("setsockopt SO_RCVBUF failed, err = %s", strerror(errno));
             }
 
-            int keepalive = 0;
+            int keepalive = 1;
             if (setsockopt(s, SOL_SOCKET, SO_KEEPALIVE, (char*)&keepalive, sizeof(keepalive)) != 0)
             {
                 dwarn("setsockopt SO_KEEPALIVE failed, err = %s", strerror(errno));
@@ -333,6 +333,11 @@ namespace dsn
 
                     if (_sending_next_offset < total_length)
                     {
+                        if (err == EAGAIN || err == EWOULDBLOCK)
+                        {
+                            return;
+                        }
+
                         // try next while(true) loop to continue sending current msg
                     }
 
