@@ -139,6 +139,7 @@ namespace dsn {
             struct sockaddr_in                     _peer_addr;
             io_looper*                             _looper;
 
+            ::dsn::utils::ex_lock_nr_spin          _event_lock;
             void on_events(uint32_t events);
 # endif
         };
