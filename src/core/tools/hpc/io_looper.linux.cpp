@@ -169,7 +169,6 @@ namespace dsn
                 {
                     if (errno == EINTR)
                     {
-                        derror("epoll_wait loop with EINTR, continue ....");
                         continue;
                     }                        
                     else

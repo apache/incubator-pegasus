@@ -29,38 +29,54 @@
 # include <dsn/internal/priority_queue.h>
 # include <dsn/internal/message_parser.h>
 # include <boost/asio.hpp>
+# include "asio_net_provider.h"
 
 namespace dsn {
     namespace tools {
 
-        class net_io
+        class asio_rpc_session : public rpc_session
         {
         public:
-            net_io(const dsn_address_t& remote_addr,
+            virtual ~asio_rpc_session();
+            virtual void send(message_ex* msg) override { return write(msg); }
+
+        // client
+        public:
+            asio_rpc_session(
+                asio_network_provider& net,
                 boost::asio::ip::tcp::socket& socket,
-                std::shared_ptr<dsn::message_parser>& parser,
+                const dsn_address_t& remote_addr,
+                rpc_client_matcher_ptr& matcher,
+                std::shared_ptr<message_parser>& parser,
+                boost::asio::io_service& ios
+                );
+            virtual void connect() override;   
+
+        // server
+        public:
+            asio_rpc_session(
+                asio_network_provider& net,
+                const dsn_address_t& remote_addr,
+                boost::asio::ip::tcp::socket& socket,
+                std::shared_ptr<message_parser>& parser,
                 boost::asio::io_service& ios);
-            virtual ~net_io();
-
-            virtual void write(message_ex* msg);
-            void close();
-            void start_read(size_t sz = 256) { do_read(sz); }
-
-        protected:
-            void do_read(size_t sz = 256);
-            void set_options();
             
-            virtual void on_failure() = 0;     
-            virtual void on_message_read(message_ex* msg) = 0;
-            virtual void add_reference() = 0;
-            virtual void release_reference() = 0;
-            virtual void on_write_completed(message_ex* msg) = 0;
+        private:
+            void do_read(size_t sz = 256);
+            void write(message_ex* msg);
+            void on_failure();
+            void set_options();  
+            void on_message_read(message_ex* msg)
+            {
+                if (is_client())
+                    on_recv_reply(msg->header->id, msg, 0);
+                else
+                    on_recv_request(msg, 0);
+            }
 
-        protected:
-
+        private:
             boost::asio::io_service              &_io_service;
             boost::asio::ip::tcp::socket         _socket;
-            dsn_address_t                        _remote_address;
             std::shared_ptr<dsn::message_parser> _parser;
         };
     }

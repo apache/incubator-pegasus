@@ -166,43 +166,60 @@ namespace dsn {
         virtual ~connection_oriented_network() {}
 
         // server session management
-        rpc_server_session_ptr get_server_session(const dsn_address_t& ep);
-        void on_server_session_accepted(rpc_server_session_ptr& s);
-        void on_server_session_disconnected(rpc_server_session_ptr& s);
+        rpc_session_ptr get_server_session(const dsn_address_t& ep);
+        void on_server_session_accepted(rpc_session_ptr& s);
+        void on_server_session_disconnected(rpc_session_ptr& s);
 
         // client session management
-        rpc_client_session_ptr get_client_session(const dsn_address_t& ep);
-        void on_client_session_disconnected(rpc_client_session_ptr& s);
+        rpc_session_ptr get_client_session(const dsn_address_t& ep);
+        void on_client_session_disconnected(rpc_session_ptr& s);
 
         // called upon RPC call, rpc client session is created on demand
         virtual void call(message_ex* request, rpc_response_task* call);
 
         // to be defined
-        virtual rpc_client_session_ptr create_client_session(const dsn_address_t& server_addr) = 0;
+        virtual rpc_session_ptr create_client_session(const dsn_address_t& server_addr) = 0;
 
     protected:
-        typedef std::unordered_map<dsn_address_t, rpc_client_session_ptr> client_sessions;
+        typedef std::unordered_map<dsn_address_t, rpc_session_ptr> client_sessions;
         client_sessions               _clients;
         utils::rw_lock_nr             _clients_lock;
 
-        typedef std::unordered_map<dsn_address_t, rpc_server_session_ptr> server_sessions;
+        typedef std::unordered_map<dsn_address_t, rpc_session_ptr> server_sessions;
         server_sessions               _servers;
         utils::rw_lock_nr             _servers_lock;
     };
 
     //
-    // 
+    // session managements (both client and server types)
     //
     class rpc_session : public ref_counter
     {
     public:
-        rpc_session(connection_oriented_network& net, const dsn_address_t& remote_addr);
         virtual ~rpc_session();
-
-        void send_message(message_ex* msg);
-        void on_send_completed(message_ex* msg);
-        bool has_pending_out_msgs();
                 
+        bool has_pending_out_msgs();
+        bool is_client() const { return _matcher.get() != nullptr; }
+        const dsn_address_t& remote_address() const { return _remote_addr; }
+        connection_oriented_network& net() const { return _net; }
+        void send_message(message_ex* msg);
+
+    // for client session
+    public:        
+        rpc_session(connection_oriented_network& net, const dsn_address_t& remote_addr, rpc_client_matcher_ptr& matcher);
+        bool on_recv_reply(uint64_t key, message_ex* reply, int delay_ms);
+        bool on_disconnected();
+        void call(message_ex* request, rpc_response_task* call);
+        
+        virtual void connect() = 0;
+        
+    // for server session
+    public:        
+        rpc_session(connection_oriented_network& net, const dsn_address_t& remote_addr);
+        void on_recv_request(message_ex* msg, int delay_ms);
+
+    // shared
+    protected:
         // always call on_send_completed later
         virtual void send(message_ex* msg) = 0;
 
@@ -212,63 +229,28 @@ namespace dsn {
         void set_disconnected();
         bool is_disconnected() const { return _connect_state == SS_DISCONNECTED; }
         bool is_connecting() const { return _connect_state == SS_CONNECTING; }
-        bool is_connected() const { return _connect_state == SS_CONNECTED; }
+        bool is_connected() const { return _connect_state == SS_CONNECTED; }        
+        void on_send_completed(message_ex* msg);
 
+    protected:
         connection_oriented_network        &_net;
         dsn_address_t                      _remote_addr;
         std::atomic<int>                   _reconnect_count_after_last_success;
+        rpc_client_matcher_ptr             _matcher; // client used only
 
     private:
-        // TODO: expose the queue to be customizable
-        ::dsn::utils::ex_lock_nr_spin      _lock;        
-        bool                               _is_sending_next;
-        dlink                              _messages;
-
         enum session_state
         {
             SS_CONNECTING,
             SS_CONNECTED,
             SS_DISCONNECTED
         };
+
+        // TODO: expose the queue to be customizable
+        ::dsn::utils::ex_lock_nr_spin      _lock;        
+        bool                               _is_sending_next;
+        dlink                              _messages;        
         session_state                      _connect_state;
+        uint64_t                           _message_sent;
     };
-
-    //
-    // session management on the client side
-    //
-    class rpc_client_session : public rpc_session
-    {
-    public:
-        rpc_client_session(connection_oriented_network& net, const dsn_address_t& remote_addr, rpc_client_matcher_ptr& matcher);
-        bool on_recv_reply(uint64_t key, message_ex* reply, int delay_ms);
-        bool on_disconnected();
-        void call(message_ex* request, rpc_response_task* call);
-        const dsn_address_t& remote_address() const { return _remote_addr; }
-        connection_oriented_network& net() const { return _net; }
-
-        virtual void connect() = 0;
-
-        // always call on_send_completed later
-        virtual void send(message_ex* msg) = 0;
-
-    protected:
-        rpc_client_matcher_ptr              _matcher;
-    };
-
-
-    //
-    // session management on the server side
-    //
-    class rpc_server_session : public rpc_session
-    {
-    public:
-        rpc_server_session(connection_oriented_network& net, const dsn_address_t& remote_addr);
-        void on_recv_request(message_ex* msg, int delay_ms);
-        void on_disconnected();
-        const dsn_address_t& remote_address() const { return _remote_addr; }
-
-        // always call on_send_completed later
-        virtual void send(message_ex* reply_msg) = 0;
-    };
-
 }

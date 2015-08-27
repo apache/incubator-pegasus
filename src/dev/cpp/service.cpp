@@ -32,14 +32,6 @@
 
 namespace dsn 
 {
-
-    static std::map<std::string, service_app*> dsn_apps;
-
-    void service_app::register_for_debugging()
-    {
-        dsn_apps[name()] = this;
-    }
-
     class service_objects : public ::dsn::utils::singleton<service_objects>
     {
     public:
@@ -55,12 +47,24 @@ namespace dsn
             _services.erase(obj);
         }
 
+        void add_app(service_app* obj)
+        {
+            std::lock_guard<std::mutex> l(_lock);
+            _apps[obj->name()] = obj;
+        }
+
     private:
         std::mutex            _lock;
         std::set<servicelet*> _services;
+        std::map<std::string, service_app*> _apps;
     };
 
-    static service_objects* dsn_services = &(service_objects::instance());
+    static service_objects* dsn_apps = &(service_objects::instance());
+
+    void service_app::register_for_debugging()
+    {
+        service_objects::instance().add_app(this);
+    }
 
     servicelet::servicelet(int task_bucket_count)
     {
