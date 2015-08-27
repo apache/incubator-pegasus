@@ -25,7 +25,6 @@
  */
 # include "simple_logger.h"
 # include <sstream>
-# include <boost/filesystem.hpp>
 
 namespace dsn {
     namespace tools {
@@ -107,12 +106,15 @@ namespace dsn {
                 false, "whether to use short header (excluding file/function etc.)");
 
             // check existing log files
-            boost::filesystem::directory_iterator endtr;
-            for (boost::filesystem::directory_iterator it(std::string("./"));
-                it != endtr;
-                ++it)
+			std::vector<std::string> sub_list;
+			std::string path = "./";
+			if (!dsn::utils::filesystem::get_subfiles(path, sub_list, false))
+			{
+				dassert(false, "Fail to get subfiles in %s.", path.c_str());
+			}			 
+            for (auto& fpath : sub_list)
             {
-                auto name = it->path().filename().string();
+				auto&& name = dsn::utils::filesystem::get_file_name(fpath);
                 if (name.length() <= 8 ||
                     name.substr(0, 4) != "log.")
                     continue;
@@ -127,6 +129,7 @@ namespace dsn {
                 if (_start_index == 0 || index < _start_index)
                     _start_index = index;
             }
+			sub_list.clear();
 
             if (_start_index == 0)
                 _start_index = _index;

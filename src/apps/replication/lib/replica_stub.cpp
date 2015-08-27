@@ -730,35 +730,35 @@ void replica_stub::on_gc()
     
     // gc on-disk rps
 
-	std::vector<std::string> dir_list;
-	if (!dsn::utils::filesystem::get_subdirectories(_dir, dir_list, false))
+	std::vector<std::string> sub_list;
+	if (!dsn::utils::filesystem::get_subdirectories(_dir, sub_list, false))
 	{
 		dassert(false, "Fail to get subdirectories in %s.", _dir.c_str());
 	}
 	std::string ext = ".err";
-	for (auto& dpath : dir_list)
+	for (auto& fpath : sub_list)
 	{
-		auto&& name = dsn::utils::filesystem::get_file_name(dpath);
+		auto&& name = dsn::utils::filesystem::get_file_name(fpath);
 		if ((name.length() > ext.length())
 			&& (name.compare((name.length() - ext.length()), std::string::npos, ext) == 0)
 			)
 		{
 			time_t mt;
-			if (!dsn::utils::filesystem::last_write_time(dpath, mt))
+			if (!dsn::utils::filesystem::last_write_time(fpath, mt))
 			{
-				dassert(false, "Fail to get last write time of %s.", dpath.c_str());
+				dassert(false, "Fail to get last write time of %s.", fpath.c_str());
 			}
 
 			if (mt > ::time(0) + _options.gc_disk_error_replica_interval_seconds)
 			{
-				if (!dsn::utils::filesystem::remove_path(dpath))
+				if (!dsn::utils::filesystem::remove_path(fpath))
 				{
-					dassert(false, "Fail to delete directory %s.", dpath.c_str());
+					dassert(false, "Fail to delete directory %s.", fpath.c_str());
 				}
 			}
 		}
 	}
-	dir_list.clear();
+	sub_list.clear();
 
 #if 0
     boost::filesystem::directory_iterator endtr;
