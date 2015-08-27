@@ -337,7 +337,7 @@ namespace dsn
             _sending_next_offset = 0;
         }
 
-        void hpc_rpc_session::bind_looper(io_looper* looper)
+        void hpc_rpc_session::bind_looper(io_looper* looper, bool delay)
         {
             looper->bind_io_handle((dsn_handle_t)_socket, &_ready_event);
         }

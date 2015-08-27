@@ -217,6 +217,7 @@ namespace dsn {
         connection_oriented_network        &_net;
         dsn_address_t                      _remote_addr;
         std::atomic<int>                   _reconnect_count_after_last_success;
+        uint64_t                           _message_sent;
 
     private:
         // TODO: expose the queue to be customizable

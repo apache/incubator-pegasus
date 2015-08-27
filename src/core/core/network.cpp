@@ -40,6 +40,7 @@ namespace dsn {
         _is_sending_next = false;
         _connect_state = SS_DISCONNECTED;
         _reconnect_count_after_last_success = 0;
+        _message_sent = 0;
     }
 
     rpc_session::~rpc_session()
@@ -112,10 +113,11 @@ namespace dsn {
         {
             utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
             if (nullptr != msg)
-            {
+            {                
                 dassert(_is_sending_next && &msg->dl == _messages.next(),
                     "sent msg must be the first msg in send queue");
                 msg->dl.remove();
+                _message_sent++;
                 _is_sending_next = false;
             }
             

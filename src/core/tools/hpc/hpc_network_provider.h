@@ -87,7 +87,7 @@ namespace dsn {
                 std::shared_ptr<dsn::message_parser>& parser
                 );
 
-            void bind_looper(io_looper* looper);
+            void bind_looper(io_looper* looper, bool delay = false);
             void do_read(int sz = 256);
             void do_write(message_ex* msg);
             void close();
@@ -150,6 +150,7 @@ namespace dsn {
             // use _ready_event on linux, so this is only used on windows
             hpc_network_provider::ready_event      _connect_event;
 # else
+            ::dsn::utils::ex_lock_nr_spin      _event_lock;
             void on_events(uint32_t events);
 # endif
 
