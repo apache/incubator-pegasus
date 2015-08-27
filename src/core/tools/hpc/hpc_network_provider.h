@@ -106,7 +106,11 @@ namespace dsn {
         public:
             virtual void send(message_ex* msg) override
             {
+# ifdef _WIN32
                 do_write(msg);
+# else
+                do_safe_write(msg);
+# endif
             }
 
             void bind_looper(io_looper* looper, bool delay = false);
@@ -139,8 +143,13 @@ namespace dsn {
             struct sockaddr_in                     _peer_addr;
             io_looper*                             _looper;
 
-            ::dsn::utils::ex_lock_nr_spin          _event_lock;
-            void on_events(uint32_t events);
+            // due to the bad design of EPOLLET, we need to
+            // use locks to avoid concurrent send/recv
+            ::dsn::utils::ex_lock_nr_spin          _send_lock;
+            ::dsn::utils::ex_lock_nr_spin          _recv_lock;
+
+            void on_send_recv_events_ready(uint32_t events);
+            void do_safe_write(message_ex* msg);
 # endif
         };
     }
