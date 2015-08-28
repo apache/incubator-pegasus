@@ -346,8 +346,10 @@ namespace dsn
                     {
                         _sending_msg = nullptr;
 
+                        _send_lock.unlock(); // avoid recursion
                         // try next msg recursively
                         on_send_completed(msg);
+                        _send_lock.lock();
                         return;
                     }
                 }
