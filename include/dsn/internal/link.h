@@ -109,6 +109,20 @@ public:
         return (this);
     }
 
+    dlink* remove_and_get_next()
+    {
+        if (!is_alone())
+        {
+            auto next = this->_next;
+            this->_next->_prev = this->_prev;
+            this->_prev->_next = this->_next;
+            _next = _prev = this;
+            return next;
+        }
+        else
+            return nullptr;
+    }
+
 private:
     dlink* _next;
     dlink* _prev;

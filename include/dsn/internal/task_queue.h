@@ -51,7 +51,8 @@ public:
 
     const std::string & get_name() { return _name; }    
     task_worker_pool* pool() const { return _pool; }
-    bool              is_shared() const;
+    bool              is_shared() const { return _worker_count > 1; }
+    int               worker_count() const { return _worker_count; }
     task_worker*      owner_worker() const { return _owner_worker; } // when not is_shared()
     int               index() const { return _index; }
     admission_controller* controller() const { return _controller; }
@@ -67,6 +68,7 @@ private:
     std::string            _name;
     int                    _index;
     admission_controller*  _controller;
+    int                    _worker_count;
 };
 
 } // end namespace

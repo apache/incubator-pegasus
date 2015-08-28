@@ -48,9 +48,10 @@ namespace dsn
             virtual void  enqueue(task* task);
             virtual task* dequeue();
             virtual int   count() const { return _remote_count.load(); }
+
+            void add_timer(task* timer); // return next firing delay ms
             
         private:
-            bool                          _is_shared;
             std::atomic<int>              _remote_count;
 
             // tasks from remote threads
@@ -60,7 +61,11 @@ namespace dsn
             // tasks from local thread
             dlink                         _local_tasks;
 
-            // TODO: timer tasks
+            // timers
+            std::atomic<uint64_t>          _remote_timer_tasks_count;
+            ::dsn::utils::ex_lock_nr_spin  _remote_timer_tasks_lock;
+            std::map<uint64_t, task*>      _remote_timer_tasks; // ts (ms) => task
+            std::map<uint64_t, task*>      _local_timer_tasks;
         };
 
         class io_looper_task_worker : public task_worker
@@ -69,5 +74,35 @@ namespace dsn
             io_looper_task_worker(task_worker_pool* pool, task_queue* q, int index, task_worker* inner_provider);
             virtual void loop();
         };
+
+        class io_looper_timer_service : public timer_service
+        {
+        public:
+            io_looper_timer_service(service_node* node, timer_service* inner_provider)
+                : timer_service(node, inner_provider)
+            {
+                _q = nullptr;
+            }
+
+            virtual void start(io_modifer& ctx)
+            {
+                _q = dynamic_cast<io_looper_task_queue*>(ctx.queue);
+                dassert(_q != nullptr, 
+                    "this is used only together with io_looper_task_queue with IOE_PER_QUEUE mode");
+            }
+
+            // after milliseconds, the provider should call task->enqueue()        
+            virtual void add_timer(task* task)
+            {
+                _q->add_timer(task);
+            }
+
+        private:
+            io_looper_task_queue *_q;
+        };
+
+        // ------------------ inline implementation --------------------
+        
+
     }
 }

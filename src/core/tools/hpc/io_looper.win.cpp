@@ -120,7 +120,7 @@ namespace dsn
 
             while (true)
             {
-                BOOL r = ::GetQueuedCompletionStatus(_io_queue, &io_size, &completion_key, &lolp, INFINITE);
+                BOOL r = ::GetQueuedCompletionStatus(_io_queue, &io_size, &completion_key, &lolp, 1); // 1ms timeout for timers
 
                 // everything goes fine
                 if (r)
@@ -138,15 +138,10 @@ namespace dsn
                         break;
                     }
 
-                    /*
-                    If *lpOverlapped is NULL, the function did not dequeue a completion packet from
-                    the completion port. In this case, the function does not store information in the 
-                    variables pointed to by the lpNumberOfBytes and lpCompletionKey parameters, 
-                    and their values are indeterminate.
-                    */
+                    // only possible for timeout
                     if (NULL == lolp)
                     {
-                        dassert(false, "unhandled case!!!");
+                        handle_local_queues();
                         continue;
                     }
                 }

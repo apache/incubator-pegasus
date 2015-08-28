@@ -28,8 +28,10 @@
 # include <dsn/tool_api.h>
 # include <atomic>
 
-namespace dsn {
-    namespace tools {
+namespace dsn 
+{
+    namespace tools
+    {
         class hpc_task_queue : public task_queue
         {
         public:

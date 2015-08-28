@@ -164,8 +164,12 @@ namespace dsn
 
             while (true)
             {
-                int nfds = epoll_wait(_io_queue, _events, max_event_count, -1);
-                if (-1 == nfds)
+                int nfds = epoll_wait(_io_queue, _events, max_event_count, 1); // 1ms for timers
+                if (nfds == 0) // timeout
+                {
+                    handle_local_queues();
+                }
+                else if (-1 == nfds)
                 {
                     if (errno == EINTR)
                     {

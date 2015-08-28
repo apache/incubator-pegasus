@@ -97,5 +97,7 @@ namespace dsn
 # endif
             std::vector<std::thread*> _workers;
         };
+
+        // --------------- inline implementation -------------------------
     }
 }

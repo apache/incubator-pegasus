@@ -78,7 +78,6 @@ namespace dsn
         io_looper_task_queue::io_looper_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider)
             : task_queue(pool, index, inner_provider)
         {
-            _is_shared = is_shared();
             _remote_count = 0;
         }
 
@@ -99,6 +98,70 @@ namespace dsn
 
         void io_looper_task_queue::handle_local_queues()
         {
+            // execute local timers
+            uint64_t nts = ::dsn::task::get_current_env()->now_ns() / 1000000;
+            while (_local_timer_tasks.size() > 0)
+            {
+                auto it = _local_timer_tasks.begin();
+                if (it->first <= nts)
+                {
+                    task* t = it->second;
+                    _local_timer_tasks.erase(it);
+
+                    while (true)
+                    {
+                        t->exec_internal();
+                        auto n = t->_task_queue_dl.remove_and_get_next();
+                        if (!n)
+                            break;
+
+                        t = CONTAINING_RECORD(n, task, _task_queue_dl);
+                    }
+                }
+                else
+                    break;
+            }
+
+            // execute shared timers
+            while (_remote_timer_tasks_count.load() > 0)
+            {
+                task* t = nullptr;
+                {
+                    utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_remote_timer_tasks_lock);
+                    auto it = _remote_timer_tasks.begin();
+                    if (it->first <= nts)
+                    {
+                        t = it->second;
+                        _remote_timer_tasks.erase(it);
+                    }                     
+                    else
+                        break;
+                }
+
+                while (true)
+                {
+                    _remote_timer_tasks_count--;
+                    t->exec_internal();
+                    auto n = t->_task_queue_dl.remove_and_get_next();
+                    if (!n)
+                        break;
+
+                    t = CONTAINING_RECORD(n, task, _task_queue_dl);
+                }
+            }
+
+            // execute local queue
+            while (true)
+            {
+                dlink *t = _local_tasks.next();
+                if (t == &_local_tasks)
+                    break;
+
+                t->remove();
+                task* ts = CONTAINING_RECORD(t, task, _task_queue_dl);
+                ts->exec_internal();
+            }
+
             // execute shared queue
             while (true)
             {
@@ -115,27 +178,43 @@ namespace dsn
                 task* ts = CONTAINING_RECORD(t, task, _task_queue_dl);
                 ts->exec_internal();
             }
+        }
 
-            // execute local queue
-            while (true)
+        void io_looper_task_queue::add_timer(task* timer)
+        {
+            uint64_t ts_ms = dsn_now_ms() + timer->delay_milliseconds();
+            timer->set_delay(0);
+
+            // put into locked queue when it is shared or from remote threads
+            if (is_shared() || task::get_current_worker() != owner_worker())
             {
-                dlink *t = _local_tasks.next();
-                if (t == &_local_tasks)
-                    break;
+                {
+                    utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_remote_timer_tasks_lock);
+                    auto pr = _remote_timer_tasks.insert(std::map<uint64_t, task*>::value_type(ts_ms, timer));
+                    if (!pr.second)
+                    {
+                        timer->_task_queue_dl.insert_before(&pr.first->second->_task_queue_dl);
+                    }
+                }
 
-                t->remove();
-                task* ts = CONTAINING_RECORD(t, task, _task_queue_dl);
-                ts->exec_internal();
+                _remote_timer_tasks_count++;
             }
 
-            // TODO: execute timers
-
+            // put into local queue
+            else
+            {
+                auto pr = _local_timer_tasks.insert(std::map<uint64_t, task*>::value_type(ts_ms, timer));
+                if (!pr.second)
+                {
+                    timer->_task_queue_dl.insert_before(&pr.first->second->_task_queue_dl);
+                }
+            }
         }
 
         void io_looper_task_queue::enqueue(task* task)
         {
             // put into locked queue when it is shared or from remote threads
-            if (_is_shared || task::get_current_worker() != this->owner_worker())
+            if (is_shared() || task::get_current_worker() != this->owner_worker())
             {
                 {
                     utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);

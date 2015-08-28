@@ -45,6 +45,7 @@ namespace dsn {
             register_component_provider<hpc_network_provider>("dsn::tools::hpc_network_provider");
             register_component_provider<io_looper_task_queue>("dsn::tools::io_looper_task_queue");
             register_component_provider<io_looper_task_worker>("dsn::tools::io_looper_task_worker");
+            register_component_provider<io_looper_timer_service>("dsn::tools::io_looper_timer_service");
 # endif
         }
     }
