@@ -229,15 +229,10 @@ namespace dsn
                         this->on_read_completed(msg);
                         msg = _parser->get_message_on_receive(0, read_next);
                     }
-
-                    if (err == EAGAIN || err == EWOULDBLOCK)
-                    {
-                        break;
-                    }
                 }
                 else
                 {
-                    if (err != EAGAIN && err != EWOULDBLOCK && err != EINPROGRESS)
+                    if (err != EAGAIN && err != EWOULDBLOCK)
                     {
                         derror("recv failed, err = %s", strerror(err));
                         on_failure();
@@ -316,7 +311,7 @@ namespace dsn
 
                 if (sz < 0)
                 {
-                    if (err != EAGAIN && err != EWOULDBLOCK && err != EINPROGRESS)
+                    if (err != EAGAIN && err != EWOULDBLOCK)
                     {
                         derror("sendmsg failed, err = %s", strerror(err));
                         on_failure();                        
@@ -333,11 +328,6 @@ namespace dsn
 
                     if (_sending_next_offset < total_length)
                     {
-                        if (err == EAGAIN || err == EWOULDBLOCK)
-                        {
-                            return;
-                        }
-
                         // try next while(true) loop to continue sending current msg
                     }
 
