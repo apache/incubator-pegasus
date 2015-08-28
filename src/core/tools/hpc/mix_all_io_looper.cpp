@@ -123,11 +123,14 @@ namespace dsn
             }
 
             // execute shared timers
-            while (_remote_timer_tasks_count.load() > 0)
+            while (_remote_timer_tasks_count.load(std::memory_order_relaxed) > 0)
             {
                 task* t = nullptr;
                 {
                     utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_remote_timer_tasks_lock);
+                    if (_remote_timer_tasks.size() == 0)
+                        break;
+
                     auto it = _remote_timer_tasks.begin();
                     if (it->first <= nts)
                     {
@@ -138,15 +141,17 @@ namespace dsn
                         break;
                 }
 
-                while (true)
+                while (t)
                 {
                     _remote_timer_tasks_count--;
                     t->exec_internal();
                     auto n = t->_task_queue_dl.remove_and_get_next();
                     if (!n)
                         break;
-
-                    t = CONTAINING_RECORD(n, task, _task_queue_dl);
+                    else
+                    {
+                        t = CONTAINING_RECORD(n, task, _task_queue_dl);
+                    }   
                 }
             }
 
