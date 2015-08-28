@@ -67,10 +67,17 @@ namespace dsn
 
     void rpc_session::set_connected()
     {
-        utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
-        dassert(_connect_state == SS_CONNECTING, "session must be connecting");
-        _connect_state = SS_CONNECTED;
-        _reconnect_count_after_last_success = 0;
+        {
+            utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+            dassert(_connect_state == SS_CONNECTING, "session must be connecting");
+            _connect_state = SS_CONNECTED;
+            _reconnect_count_after_last_success = 0;
+        }
+
+        dwarn("client session connected to %s:%hu",
+            remote_address().name,
+            remote_address().port
+            );
     }
 
     void rpc_session::set_disconnected()
@@ -298,7 +305,9 @@ namespace dsn
 
         // init connection if necessary
         if (new_client) 
+        {
             client->connect();
+        }
 
         // rpc call
         client->call(request, call);
@@ -313,7 +322,7 @@ namespace dsn
 
     void connection_oriented_network::on_server_session_accepted(rpc_session_ptr& s)
     {
-        dinfo("server session %s:%hu accepted", s->remote_address().name, s->remote_address().port);
+        dwarn("server session %s:%hu accepted", s->remote_address().name, s->remote_address().port);
 
         utils::auto_write_lock l(_servers_lock);
         _servers.insert(server_sessions::value_type(s->remote_address(), s));
@@ -335,7 +344,7 @@ namespace dsn
 
         if (r)
         {
-            dinfo("server session %s:%hu disconnected", 
+            dwarn("server session %s:%hu disconnected",
                 s->remote_address().name,
                 s->remote_address().port
                 );
@@ -364,7 +373,7 @@ namespace dsn
 
         if (r)
         {
-            dinfo("client session %s:%hu disconnected", s->remote_address().name, 
+            dwarn("client session %s:%hu disconnected", s->remote_address().name,
                 s->remote_address().port
                 );
         }

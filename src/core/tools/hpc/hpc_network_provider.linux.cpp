@@ -1,28 +1,28 @@
 /*
-* The MIT License (MIT)
-*
-* Copyright (c) 2015 Microsoft Corporation
-*
-* -=- Robust Distributed System Nucleus (rDSN) -=-
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
-*/
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Microsoft Corporation
+ * 
+ * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 
 # ifdef __linux__
 
@@ -213,7 +213,8 @@ namespace dsn
 
                 int sz = recv(_socket, ptr, remaining, 0);
                 int err = errno;
-                dinfo("call recv on %s:%hu, return %d, err = %s",
+                dinfo("(s = %d) call recv on %s:%hu, return %d, err = %s",
+                    _socket,
                     _remote_addr.name,
                     _remote_addr.port,
                     sz,
@@ -234,7 +235,7 @@ namespace dsn
                 {
                     if (err != EAGAIN && err != EWOULDBLOCK)
                     {
-                        derror("recv failed, err = %s", strerror(err));
+                        derror("(s = %d) recv failed, err = %s", _socket, strerror(err));
                         on_failure();
                     }
                     break;
@@ -302,7 +303,8 @@ namespace dsn
 
                 int sz = sendmsg(_socket, &hdr, MSG_NOSIGNAL);
                 int err = errno;
-                dinfo("call sendmsg on %s:%hu, return %d, err = %s",
+                dinfo("(s = %d) call sendmsg on %s:%hu, return %d, err = %s",
+                    _socket,
                     _remote_addr.name,
                     _remote_addr.port,
                     sz,
@@ -313,7 +315,7 @@ namespace dsn
                 {
                     if (err != EAGAIN && err != EWOULDBLOCK)
                     {
-                        derror("sendmsg failed, err = %s", strerror(err));
+                        derror("(s = %d) sendmsg failed, err = %s", _socket, strerror(err));
                         on_failure();                        
                     }
                     else
@@ -350,19 +352,19 @@ namespace dsn
         {
             if (-1 != _socket)
             {
-                _looper->unbind_io_handle((dsn_handle_t)(intptr_t)_socket);
                 ::close(_socket);
-                dinfo("close socket %p", this);
+                dinfo("(s = %d) close socket %p", _socket, this);
                 _socket = -1;
             }
         }
 
         void hpc_rpc_session::on_send_recv_events_ready(uint32_t events)
         {
-            // send/recv error
+            // shutdown or send/recv error
             if ((events & EPOLLHUP) || (events & EPOLLRDHUP) || (events & EPOLLERR))
             {
-                dinfo("epoll failure on %s:%u, events = %x",
+                dinfo("(s = %d) epoll failure on %s:%u, events = %x",
+                    _socket,
                     _remote_addr.name,
                     _remote_addr.port,
                     events
@@ -374,7 +376,8 @@ namespace dsn
             //  send
             if (events & EPOLLOUT)
             {
-                dinfo("epoll EPOLLOUT on %s:%u, events = %x",
+                dinfo("(s = %d) epoll EPOLLOUT on %s:%u, events = %x",
+                    _socket,
                     _remote_addr.name,
                     _remote_addr.port,
                     events
@@ -386,7 +389,8 @@ namespace dsn
             // recv
             if (events & EPOLLIN)
             {
-                dinfo("epoll EPOLLIN on %s:%u, events = %x",
+                dinfo("(s = %d) epoll EPOLLIN on %s:%u, events = %x",
+                    _socket,
                     _remote_addr.name,
                     _remote_addr.port,
                     events
@@ -420,72 +424,94 @@ namespace dsn
             _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
             {
                 uint32_t events = (uint32_t)lolp_or_events;
-               
-                if (is_disconnected())
+                this->on_connect_events_ready(events);
+            };
+        }
+
+        void hpc_rpc_session::on_connect_events_ready(uint32_t events)
+        {
+            dassert(is_connecting(), "session must be connecting at this time");
+
+            dinfo("(s = %d) epoll for connect to %s:%u, events = %x",
+                _socket,
+                _remote_addr.name,
+                _remote_addr.port,
+                events
+                );
+
+            if ((events & EPOLLOUT)
+                && !(events & EPOLLERR)
+                && !(events & EPOLLHUP)
+                )
+            {
+                socklen_t addr_len = (socklen_t)sizeof(_peer_addr);
+                if (getpeername(_socket, (struct sockaddr*)&_peer_addr, &addr_len) == -1)
                 {
-                    dinfo("skip epoll events %x as the connection %s:%hu is disconnected",
-                        events,
-                        _remote_addr.name,
-                        _remote_addr.port
-                        );
-                    return;
+                    dassert(false, "(s = %d) (client) getpeername failed, err = %s",
+                        _socket, strerror(errno));
                 }
 
-                if (is_connecting())
+                dinfo("(s = %d) client session %s:%u connected",
+                    _socket,
+                    _remote_addr.name,
+                    _remote_addr.port
+                    );
+
+                set_connected();
+
+                // change callback event, and add EPOLLIN event for recv
+                _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
                 {
-                    dinfo("epoll for connect to %s:%u, events = %x",
+                    uint32_t events = (uint32_t)lolp_or_events;
+
+                    dinfo("(s = %d) (client) epoll for send/recv to %s:%u, events = %x",
+                        _socket,
                         _remote_addr.name,
                         _remote_addr.port,
                         events
                         );
 
-                    if ((events & EPOLLOUT)
-                        && !(events & EPOLLERR)
-                        && !(events & EPOLLHUP)
-                        )
-                    {
-                        socklen_t addr_len = (socklen_t)sizeof(_peer_addr);
-                        if (getpeername(_socket, (struct sockaddr*)&_peer_addr, &addr_len) == -1)
-                        {
-                            dassert(false, "(client) getpeername failed, err = %s", strerror(errno));
-                        }
+                    this->on_send_recv_events_ready(events);
+                };
 
-                        dinfo("client session %s:%u connected",
-                            _remote_addr.name,
-                            _remote_addr.port
-                            );
+                struct epoll_event e;
+                e.data.ptr = &_ready_event;
+                e.events = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLET;
 
-                        // unbind for connect
-                        _looper->unbind_io_handle((dsn_handle_t)(intptr_t)_socket);
-
-                        // bind for send/recv
-                        _looper->bind_io_handle((dsn_handle_t)(intptr_t)_socket, &_ready_event,
-                            EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLET);
-                        set_connected();
-                    }
-                    else
-                    {
-                        int err = 0;
-                        socklen_t err_len = (socklen_t)sizeof(err);
-
-                        if (getsockopt(_socket, SOL_SOCKET, SO_ERROR, (void*)&err, &err_len) < 0)
-                        {
-                            dassert(false, "getsockopt for SO_ERROR failed, err = %s", strerror(errno));
-                        }
-
-                        derror("connect failed (in epoll), err = %s", strerror(err));
-                        on_failure();
-                    }
-
+                if (epoll_ctl((int)(intptr_t)_looper->native_handle(),
+                    EPOLL_CTL_MOD, _socket, &e) < 0)
+                {
+                    derror("(s = %d) (client) EPOLL_CTL_MOD failed, err = %s",
+                        _socket,
+                        strerror(errno)
+                        );
+                    on_failure();
                     return;
                 }
 
-                this->on_send_recv_events_ready(events);
-            };
+                // start first round send
+                do_safe_write(nullptr);
+            }
+            else
+            {
+                int err = 0;
+                socklen_t err_len = (socklen_t)sizeof(err);
+
+                if (getsockopt(_socket, SOL_SOCKET, SO_ERROR, (void*)&err, &err_len) < 0)
+                {
+                    dassert(false, "getsockopt for SO_ERROR failed, err = %s", strerror(errno));
+                }
+
+                derror("(s = %d) connect failed (in epoll), err = %s", _socket, strerror(err));
+                on_failure();
+            }
         }
 
         void hpc_rpc_session::on_failure()
         {
+            // TODO: this is not right, need a global reference somewhere
+            // hold a reference to ensure close() can be executed normally
+            rpc_session_ptr sp = this;
             _looper->unbind_io_handle((dsn_handle_t)(intptr_t)_socket);
             if (on_disconnected())
                 close();            
@@ -505,7 +531,8 @@ namespace dsn
 
             int rt = ::connect(_socket, (struct sockaddr*)&addr, (int)sizeof(addr));
             int err = errno;
-            dinfo("call connect to %s:%hu, return %d, err = %s",
+            dinfo("(s = %d) call connect to %s:%hu, return %d, err = %s",
+                _socket,
                 _remote_addr.name,
                 _remote_addr.port,
                 rt,
@@ -514,7 +541,7 @@ namespace dsn
 
             if (rt == -1 && err != EINPROGRESS)
             {
-                dwarn("connect failed, socket = %d, err = %s", (int)_socket, strerror(err));
+                dwarn("(s = %d) connect failed, err = %s", _socket, strerror(err));
                 on_failure();
             }
 
@@ -523,6 +550,7 @@ namespace dsn
                 EPOLLOUT | EPOLLET);
         }
 
+        // server
         hpc_rpc_session::hpc_rpc_session(
             socket_t sock,
             std::shared_ptr<dsn::message_parser>& parser,
@@ -551,6 +579,12 @@ namespace dsn
             _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
             {
                 uint32_t events = (uint32_t)lolp_or_events;
+                dinfo("(s = %d) (server) epoll for send/recv to %s:%u, events = %x",
+                    _socket,
+                    _remote_addr.name,
+                    _remote_addr.port,
+                    events
+                    );
                 this->on_send_recv_events_ready(events);
             };
         }

@@ -37,7 +37,7 @@ namespace dsn
         io_looper::io_looper()
         {
             _io_queue = 0;
-            _local_notification_fd = eventfd(0, EFD_NONBLOCK | EFD_SEMAPHORE);
+            _local_notification_fd = eventfd(0, EFD_NONBLOCK);
         }
 
         io_looper::~io_looper(void)
@@ -51,10 +51,14 @@ namespace dsn
             int fd = (int)(intptr_t)(handle);
 
             int flags = fcntl(fd, F_GETFL, 0);
-            dassert (flags != -1, "fcntl failed, err = %s", strerror(errno));
-            flags |= O_NONBLOCK;
-            flags = fcntl(fd, F_SETFL, flags);
-            dassert (flags != -1, "fcntl failed, err = %s", strerror(errno));
+            dassert (flags != -1, "fcntl failed, err = %s, fd = %d", strerror(errno), fd);
+
+            if (!(flags & O_NONBLOCK))
+            {
+                flags |= O_NONBLOCK;
+                flags = fcntl(fd, F_SETFL, flags);
+                dassert(flags != -1, "fcntl failed, err = %s, fd = %d", strerror(errno), fd);
+           }
 
             struct epoll_event e;
             e.data.ptr = cb;
@@ -62,7 +66,7 @@ namespace dsn
             
             if (epoll_ctl(_io_queue, EPOLL_CTL_ADD, fd, &e) < 0)
             {
-                derror("bind io handler to completion port failed, err = %s", strerror(errno));
+                derror("bind io handler to completion port failed, err = %s, fd = %d", strerror(errno), fd);
                 return ERR_BIND_IOCP_FAILED;
             }
             else
@@ -75,7 +79,7 @@ namespace dsn
 
             if (epoll_ctl(_io_queue, EPOLL_CTL_DEL, fd, NULL) < 0)
             {
-                derror("unbind io handler to completion port failed, err = %s", strerror(errno));
+                derror("unbind io handler to completion port failed, err = %s, fd = %d", strerror(errno), fd);
                 return ERR_BIND_IOCP_FAILED;
             }
             else
@@ -109,17 +113,17 @@ namespace dsn
 
                 if (read(_local_notification_fd, &notify_count, sizeof(notify_count)) != sizeof(notify_count))
                 {
-                    dassert(false, "read number of aio completion from eventfd failed, err = %s",
-                        strerror(errno)
-                        );
+                    // possibly consumed already by others
+                    // e.g., two contiguous write with two read, 
+                    // the second read will read nothing
+                    return;
                 }
-
-                dinfo("exec local");
 
                 this->handle_local_queues();
             };
 
-            bind_io_handle((dsn_handle_t)(intptr_t)_local_notification_fd, &_local_notification_callback, EPOLLIN | EPOLLET);
+            bind_io_handle((dsn_handle_t)(intptr_t)_local_notification_fd, &_local_notification_callback, 
+                EPOLLIN | EPOLLET);
         }
 
         void io_looper::start(service_node* node, int worker_count)
@@ -185,7 +189,7 @@ namespace dsn
                 for (int i = 0; i < nfds; i++)
                 {
                     auto cb = (io_loop_callback*)_events[i].data.ptr;
-                    dinfo("epoll_wait get events %x, cb = %p", _events[i].events, cb);
+                    // dinfo("epoll_wait get events %x, cb = %p", _events[i].events, cb);
                     (*cb)(0, 0, (uintptr_t)_events[i].events);
                 }
             }

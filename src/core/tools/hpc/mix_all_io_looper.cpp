@@ -110,8 +110,8 @@ namespace dsn
 
                     while (true)
                     {
-                        t->exec_internal();
                         auto n = t->_task_queue_dl.remove_and_get_next();
+                        t->exec_internal();                        
                         if (!n)
                             break;
 
@@ -144,8 +144,8 @@ namespace dsn
                 while (t)
                 {
                     _remote_timer_tasks_count--;
-                    t->exec_internal();
-                    auto n = t->_task_queue_dl.remove_and_get_next();
+                    auto n = t->_task_queue_dl.remove_and_get_next(); 
+                    t->exec_internal();                    
                     if (!n)
                         break;
                     else
