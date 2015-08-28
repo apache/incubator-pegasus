@@ -40,44 +40,6 @@
 # define close_ _close
 # define stat_ _stat64
 
-enum
-{
-	FTW_F,        /* Regular file.  */
-#define FTW_F    FTW_F
-	FTW_D,        /* Directory.  */
-#define FTW_D    FTW_D
-	FTW_DNR,      /* Unreadable directory.  */
-#define FTW_DNR  FTW_DNR
-	FTW_NS,       /* Unstatable file.  */
-#define FTW_NS   FTW_NS
-
-	FTW_SL,       /* Symbolic link.  */
-# define FTW_SL  FTW_SL
-				  /* These flags are only passed from the `nftw' function.  */
-	FTW_DP,       /* Directory, all subdirs have been visited. */
-# define FTW_DP  FTW_DP
-	FTW_SLN       /* Symbolic link naming non-existing file.  */
-# define FTW_SLN FTW_SLN
-};
-
-enum
-{
-	FTW_CONTINUE = 0, /* Continue with next sibling or for FTW_D with the
-					  first child.  */
-# define FTW_CONTINUE   FTW_CONTINUE
-	FTW_STOP = 1,     /* Return from `ftw' or `nftw' with FTW_STOP as return
-					  value.  */
-# define FTW_STOP   FTW_STOP
-	FTW_SKIP_SUBTREE = 2, /* Only meaningful for FTW_D: Don't walk through the
-						  subtree, instead just continue with its next
-						  sibling. */
-# define FTW_SKIP_SUBTREE FTW_SKIP_SUBTREE
-	FTW_SKIP_SIBLINGS = 3,/* Continue with FTW_DP callback for current directory
-						  (if FTW_DEPTH) and then its siblings.  */
-# define FTW_SKIP_SIBLINGS FTW_SKIP_SIBLINGS
-};
-
-
 #ifndef __S_ISTYPE
 # define __S_ISTYPE(mode, mask)  (((mode) & S_IFMT) == (mask))
 #endif
@@ -98,25 +60,11 @@ enum
 
 # include <sys/stat.h>
 
-#ifndef _XOPEN_SOURCE
-# define _XOPEN_SOURCE 500
-#endif
-
 # define getcwd_ getcwd
 # define rmdir_ rmdir
 # define mkdir_(path) mkdir(path, 0775)
 # define close_ close
 # define stat_ stat
-
-# include <ftw.h>
-
-#ifndef FTW_CONTINUE
-# define FTW_CONTINUE 0
-#endif
-
-#ifndef FTW_STOP
-# define FTW_STOP 1
-#endif
 
 #endif
 

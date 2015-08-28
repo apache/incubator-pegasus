@@ -34,6 +34,68 @@
 # endif
 # define __TITLE__ "utils"
 
+# ifdef __cplusplus
+extern "C" {
+# endif
+
+# ifdef _WIN32
+
+enum
+{
+	FTW_F,        /* Regular file.  */
+#define FTW_F    FTW_F
+	FTW_D,        /* Directory.  */
+#define FTW_D    FTW_D
+	FTW_DNR,      /* Unreadable directory.  */
+#define FTW_DNR  FTW_DNR
+	FTW_NS,       /* Unstatable file.  */
+#define FTW_NS   FTW_NS
+
+	FTW_SL,       /* Symbolic link.  */
+# define FTW_SL  FTW_SL
+					/* These flags are only passed from the `nftw' function.  */
+	FTW_DP,       /* Directory, all subdirs have been visited. */
+# define FTW_DP  FTW_DP
+	FTW_SLN       /* Symbolic link naming non-existing file.  */
+# define FTW_SLN FTW_SLN
+};
+
+struct FTW
+{
+	int base;
+	int level;
+};
+
+# else
+
+#ifndef _XOPEN_SOURCE
+# define _XOPEN_SOURCE 500
+#endif
+
+# include <ftw.h>
+
+# endif
+
+#ifndef FTW_CONTINUE
+# define FTW_CONTINUE 0
+#endif
+
+#ifndef FTW_STOP
+# define FTW_STOP 1
+#endif
+
+#ifndef FTW_SKIP_SUBTREE
+# define FTW_SKIP_SUBTREE 2
+#endif
+
+#ifndef FTW_SKIP_SIBLINGS
+# define FTW_SKIP_SIBLINGS 3
+#endif
+
+# ifdef __cplusplus
+}
+# endif
+
 namespace dsn {
 
     class blob
@@ -318,12 +380,7 @@ namespace dsn {
 
 			extern bool get_normalized_path(const std::string& path, std::string& npath);
 
-			struct FTW
-			{
-				int base;
-				int level;
-			};
-			//int (const char* fpath, int typeflags, truct FTW *ftwbuf)
+			//int (const char* fpath, int typeflags, struct FTW *ftwbuf)
 			typedef std::function<int(const char*, int, struct FTW*)> ftw_handler;
 
 			extern bool file_tree_walk(
