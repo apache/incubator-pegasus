@@ -309,7 +309,7 @@ void meta_service::update_configuration(dsn_message_t req, dsn_message_t resp)
     uint64_t offset;
     int len = (int)sz + sizeof(int32_t);
     
-    char* buffer = (char*)malloc(len);
+    char* buffer = new char[len];
     *(int32_t*)buffer = (int)sz;
     memcpy(buffer + sizeof(int32_t), ptr, sz);
 

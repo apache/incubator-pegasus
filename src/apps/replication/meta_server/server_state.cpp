@@ -70,7 +70,7 @@ void server_state::load(const char* chk_point)
     int32_t len;
     ::fread((void*)&len, sizeof(int32_t), 1, fp);
 
-    std::shared_ptr<char> buffer((char*)malloc(len));
+    std::shared_ptr<char> buffer(new char[len]);
     ::fread((void*)buffer.get(), len, 1, fp);
 
     blob bb(buffer, 0, len);

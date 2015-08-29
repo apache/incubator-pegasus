@@ -275,7 +275,7 @@ namespace  dsn
             // optimization: zero-copy
             if (!blob.buffer_ptr())
             {
-                std::shared_ptr<char> buffer((char*)malloc(len));
+                std::shared_ptr<char> buffer(new char[len]);
                 memcpy(buffer.get(), blob.data(), blob.length());
                 blob = ::dsn::blob(buffer, 0, blob.length());
             }
@@ -391,7 +391,7 @@ namespace  dsn
 
     void binary_writer::create_new_buffer(size_t size, /*out*/blob& bb)
     {
-        std::shared_ptr<char> ptr((char*)malloc(size));
+        std::shared_ptr<char> ptr(new char[size]);
         bb.assign(ptr, 0, (int)size);
     }
 
@@ -415,7 +415,7 @@ namespace  dsn
         }
         else
         {
-            std::shared_ptr<char> bptr((char*)malloc(_total_size));
+            std::shared_ptr<char> bptr(new char[_total_size]);
             blob bb(bptr, _total_size);
             const char* ptr = bb.data();
 
