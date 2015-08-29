@@ -48,7 +48,7 @@ namespace dsn
             dsn_handle_t handle,
             io_loop_callback* cb,
             unsigned int events,
-            rpc_counter* ctx
+            ref_counter* ctx
             )
         {
             events; // not used on windows
