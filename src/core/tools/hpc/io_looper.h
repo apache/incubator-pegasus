@@ -68,9 +68,14 @@ namespace dsn
 
             void create_completion_queue();
 
-            error_code bind_io_handle(dsn_handle_t handle, io_loop_callback* cb, unsigned int events = 0);
+            error_code bind_io_handle(
+                dsn_handle_t handle, 
+                io_loop_callback* cb, 
+                unsigned int events = 0,
+                ref_counter* ctx = nullptr
+                );
             
-            error_code unbind_io_handle(dsn_handle_t handle);
+            error_code unbind_io_handle(dsn_handle_t handle, io_loop_callback* cb = nullptr);
 
             void notify_local_execution();
             
@@ -85,17 +90,28 @@ namespace dsn
             virtual void stop();
 
             virtual void handle_local_queues() {}
-
+            
         private:
-# ifdef _WIN32
-            HANDLE _io_queue;
-# else
-            int    _io_queue;
-            struct epoll_event _events[100];
-            int    _local_notification_fd;
-            io_loop_callback _local_notification_callback;
-# endif
             std::vector<std::thread*> _workers;
+# ifdef _WIN32
+            HANDLE                    _io_queue;
+# endif
+# ifdef __linux__
+            int                       _io_queue;
+            struct epoll_event        _events[100];
+            int                       _local_notification_fd;
+            io_loop_callback          _local_notification_callback;
+
+            //
+            // epoll notifications are not per-op, so we have to
+            // use a look-up layer to ensure the callback context
+            // is correctly referenced when the callback is executed.
+            //
+            typedef std::unordered_map<io_loop_callback*, ref_counter*> io_sessions;
+            ::dsn::utils::ex_lock_nr_spin _io_sessions_lock;
+            io_sessions                   _io_sessions;
+# endif
+            
         };
 
         // --------------- inline implementation -------------------------

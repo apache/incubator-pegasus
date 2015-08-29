@@ -44,9 +44,15 @@ namespace dsn
             stop();
         }
 
-        error_code io_looper::bind_io_handle(dsn_handle_t handle, io_loop_callback* cb, unsigned int events)
+        error_code io_looper::bind_io_handle(
+            dsn_handle_t handle,
+            io_loop_callback* cb,
+            unsigned int events,
+            rpc_counter* ctx
+            )
         {
             events; // not used on windows
+            ctx; // not used on windows
             if (NULL == ::CreateIoCompletionPort((HANDLE)handle, _io_queue, (ULONG_PTR)cb, 0))
             {
                 derror("bind io handler to completion port failed, err = %d", ::GetLastError());
@@ -56,7 +62,7 @@ namespace dsn
                 return ERR_OK;
         }
 
-        error_code io_looper::unbind_io_handle(dsn_handle_t handle)
+        error_code io_looper::unbind_io_handle(dsn_handle_t handle, io_loop_callback* cb)
         {
             // nothing to do
             return ERR_OK;

@@ -95,7 +95,7 @@ hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provid
 
     memset(&_ctx, 0, sizeof(_ctx));
     auto ret = io_setup(128, &_ctx); // 128 concurrent events
-    dassert(ret == 0, "io_setup error, ret = %d", ret);
+    dassert(ret == 0, "io_setup error, err = %s", strerror(-ret));
 
     _event_fd = eventfd(0, EFD_NONBLOCK);
     _looper = nullptr;
@@ -110,7 +110,7 @@ void hpc_aio_provider::start(io_modifer& ctx)
 hpc_aio_provider::~hpc_aio_provider()
 {
     auto ret = io_destroy(_ctx);
-    dassert(ret == 0, "io_destroy error, ret = %d", ret);
+    dassert(ret == 0, "io_destroy error, err = %s", strerror(-ret));
 
     ::close(_event_fd);
 }
@@ -181,9 +181,9 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, __out_p
     if (ret != 1)
     {
         if (ret < 0)
-            derror("io_submit error, ret = %d", ret);
+            derror("io_submit error, err = %s", strerror(-ret));
         else
-            derror("could not sumbit IOs, ret = %d", ret);
+            derror("could not sumbit IOs, err = %s", strerror(-ret));
 
         if (async)
         {
@@ -218,7 +218,7 @@ void hpc_aio_provider::complete_aio(struct iocb* io, int bytes, int err)
     linux_disk_aio_context* aio = CONTAINING_RECORD(io, linux_disk_aio_context, cb);
     if (err != 0)
     {
-        derror("aio error, err = %d", err);
+        derror("aio error, err = %s", strerror(err));
     }
 
     if (!aio->evt)

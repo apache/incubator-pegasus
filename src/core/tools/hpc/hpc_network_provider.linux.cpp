@@ -145,7 +145,9 @@ namespace dsn
 
                 // bind for accept
                 _looper->bind_io_handle((dsn_handle_t)(intptr_t)_listen_fd, &_accept_event.callback,
-                    EPOLLIN | EPOLLET);
+                    EPOLLIN | EPOLLET, 
+                    nullptr // network_provider is a global object
+                    );
             }
 
             return ERR_OK;
@@ -170,24 +172,31 @@ namespace dsn
 
         void hpc_network_provider::do_accept()
         {
-            struct sockaddr_in addr;
-            socklen_t addr_len = (socklen_t)sizeof(addr);
-            socket_t s = ::accept(_listen_fd, (struct sockaddr*)&addr, &addr_len);
-            if (s != -1)
-            {                
-                dsn_address_t client_addr;
-                dsn_address_build_ipv4(&client_addr, ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
-
-                auto parser = new_message_parser();
-                auto rs = new hpc_rpc_session(s, parser, *this, client_addr);
-                rs->bind_looper(_looper);
-
-                rpc_session_ptr s1(rs);
-                this->on_server_session_accepted(s1);
-            }
-            else
+            while (true)
             {
-                derror("accept failed, err = %s", strerror(errno));
+                struct sockaddr_in addr;
+                socklen_t addr_len = (socklen_t)sizeof(addr);
+                socket_t s = ::accept(_listen_fd, (struct sockaddr*)&addr, &addr_len);
+                if (s != -1)
+                {
+                    dsn_address_t client_addr;
+                    dsn_address_build_ipv4(&client_addr, ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
+
+                    auto parser = new_message_parser();
+                    auto rs = new hpc_rpc_session(s, parser, *this, client_addr);
+                    rs->bind_looper(_looper);
+
+                    rpc_session_ptr s1(rs);
+                    this->on_server_session_accepted(s1);
+                }
+                else
+                {
+                    if (errno != EAGAIN && errno != EWOULDBLOCK)
+                    {
+                        derror("accept failed, err = %s", strerror(errno));
+                    }                    
+                    break;
+                }
             }
         }
 
@@ -198,13 +207,15 @@ namespace dsn
             {
                 // bind for send/recv
                 looper->bind_io_handle((dsn_handle_t)(intptr_t)_socket, &_ready_event,
-                    EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLET);
+                    EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLET,
+                    this
+                    );
             }   
         }
 
         void hpc_rpc_session::do_read(int read_next)
         {
-            utils::auto_lock<utils::ex_lock_nr_spin> l(_recv_lock);
+            utils::auto_lock<utils::ex_lock_nr> l(_send_lock);
 
             while (true)
             {
@@ -245,7 +256,7 @@ namespace dsn
 
         void hpc_rpc_session::do_safe_write(message_ex* msg)
         {
-            utils::auto_lock<utils::ex_lock_nr_spin> l(_send_lock);
+            utils::auto_lock<utils::ex_lock_nr> l(_send_lock);
 
             if (nullptr == msg)
             {
@@ -424,7 +435,10 @@ namespace dsn
             _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
             {
                 uint32_t events = (uint32_t)lolp_or_events;
-                this->on_connect_events_ready(events);
+                if (is_connecting())
+                    this->on_connect_events_ready(events);
+                else
+                    this->on_send_recv_events_ready(events);
             };
         }
 
@@ -458,22 +472,7 @@ namespace dsn
                     );
 
                 set_connected();
-
-                // change callback event, and add EPOLLIN event for recv
-                _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
-                {
-                    uint32_t events = (uint32_t)lolp_or_events;
-
-                    dinfo("(s = %d) (client) epoll for send/recv to %s:%u, events = %x",
-                        _socket,
-                        _remote_addr.name,
-                        _remote_addr.port,
-                        events
-                        );
-
-                    this->on_send_recv_events_ready(events);
-                };
-
+                
                 struct epoll_event e;
                 e.data.ptr = &_ready_event;
                 e.events = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLET;
@@ -509,10 +508,7 @@ namespace dsn
 
         void hpc_rpc_session::on_failure()
         {
-            // TODO: this is not right, need a global reference somewhere
-            // hold a reference to ensure close() can be executed normally
-            rpc_session_ptr sp = this;
-            _looper->unbind_io_handle((dsn_handle_t)(intptr_t)_socket);
+            _looper->unbind_io_handle((dsn_handle_t)(intptr_t)_socket, &_ready_event);
             if (on_disconnected())
                 close();            
         }
@@ -543,11 +539,14 @@ namespace dsn
             {
                 dwarn("(s = %d) connect failed, err = %s", _socket, strerror(err));
                 on_failure();
+                return;
             }
 
             // bind for connect
             _looper->bind_io_handle((dsn_handle_t)(intptr_t)_socket, &_ready_event,
-                EPOLLOUT | EPOLLET);
+                EPOLLOUT | EPOLLET,
+                this
+                );
         }
 
         // server

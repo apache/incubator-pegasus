@@ -46,7 +46,12 @@ namespace dsn
             close(_local_notification_fd);
         }
 
-        error_code io_looper::bind_io_handle(dsn_handle_t handle, io_loop_callback* cb, unsigned int events)
+        error_code io_looper::bind_io_handle(
+            dsn_handle_t handle,
+            io_loop_callback* cb,
+            unsigned int events,
+            ref_counter* ctx
+            )
         {
             int fd = (int)(intptr_t)(handle);
 
@@ -58,32 +63,59 @@ namespace dsn
                 flags |= O_NONBLOCK;
                 flags = fcntl(fd, F_SETFL, flags);
                 dassert(flags != -1, "fcntl failed, err = %s, fd = %d", strerror(errno), fd);
-           }
+            }
+            
+            uintptr_t cb0 = (uintptr_t)cb;
+            dassert((cb0 & 0x1) == 0, "the least one bit must be zero for the callback address");
 
+            if (ctx)
+            {
+                cb0 |= 0x1; // has ref_counter
+
+                utils::auto_lock<utils::ex_lock_nr_spin> l(_io_sessions_lock);
+                auto pr = _io_sessions.insert(io_sessions::value_type(cb, ctx));
+                dassert(pr.second, "the callback must not be registered before");
+            }
+            
             struct epoll_event e;
-            e.data.ptr = cb;
+            e.data.ptr = (void*)cb0;
             e.events = events;
             
             if (epoll_ctl(_io_queue, EPOLL_CTL_ADD, fd, &e) < 0)
             {
-                derror("bind io handler to completion port failed, err = %s, fd = %d", strerror(errno), fd);
+                derror("bind io handler to epoll_wait failed, err = %s, fd = %d", strerror(errno), fd);
+
+                if (ctx)
+                {
+                    utils::auto_lock<utils::ex_lock_nr_spin> l(_io_sessions_lock);
+                    auto r = _io_sessions.erase(cb);
+                    dassert(r > 0, "the callback must be present");
+                }
                 return ERR_BIND_IOCP_FAILED;
             }
             else
                 return ERR_OK;
         }
-
-        error_code io_looper::unbind_io_handle(dsn_handle_t handle)
+        
+        error_code io_looper::unbind_io_handle(dsn_handle_t handle, io_loop_callback* cb)
         {
             int fd = (int)(intptr_t)handle;
-
+            
             if (epoll_ctl(_io_queue, EPOLL_CTL_DEL, fd, NULL) < 0)
             {
-                derror("unbind io handler to completion port failed, err = %s, fd = %d", strerror(errno), fd);
+                derror("unbind io handler to epoll_wait failed, err = %s, fd = %d", strerror(errno), fd);
                 return ERR_BIND_IOCP_FAILED;
             }
             else
+            {
+                if (cb)
+                {
+                    utils::auto_lock<utils::ex_lock_nr_spin> l(_io_sessions_lock);
+                    auto r = _io_sessions.erase(cb);
+                    dassert(r > 0, "the callback must be present");
+                }
                 return ERR_OK;
+            }                
         }
 
         void io_looper::notify_local_execution()
@@ -189,8 +221,43 @@ namespace dsn
                 for (int i = 0; i < nfds; i++)
                 {
                     auto cb = (io_loop_callback*)_events[i].data.ptr;
-                    // dinfo("epoll_wait get events %x, cb = %p", _events[i].events, cb);
-                    (*cb)(0, 0, (uintptr_t)_events[i].events);
+                    dinfo("epoll_wait get events %x, cb = %p", _events[i].events, cb);
+
+                    uintptr_t cb0 = (uintptr_t)cb;
+
+                    // for those with ref_counter register entries
+                    if (cb0 & 0x1)
+                    {
+                        cb = (io_loop_callback*)(cb0 - 1);
+
+                        ref_counter* robj;
+                        {
+
+                            utils::auto_lock<utils::ex_lock_nr_spin> l(_io_sessions_lock);
+                            auto it = _io_sessions.find(cb);
+                            robj = it != _io_sessions.end() ? it->second : nullptr;
+                        }
+
+                        if (robj)
+                        {
+                            // make sure callback is protected by ref counting
+                            robj->add_ref();
+                            (*cb)(0, 0, (uintptr_t)_events[i].events);
+                            robj->release_ref();
+                        }
+                        else
+                        {
+                            // context is gone (unregistered), let's skip
+                            dwarn("epoll_wait event %x skipped as session is gone, cb = %p",
+                                _events[i].events,
+                                cb
+                                );
+                        }
+                    }
+                    else
+                    {
+                        (*cb)(0, 0, (uintptr_t)_events[i].events);
+                    }
                 }
             }
         }

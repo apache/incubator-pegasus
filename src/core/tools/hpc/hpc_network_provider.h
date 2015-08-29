@@ -145,8 +145,8 @@ namespace dsn {
 
             // due to the bad design of EPOLLET, we need to
             // use locks to avoid concurrent send/recv
-            ::dsn::utils::ex_lock_nr_spin          _send_lock;
-            ::dsn::utils::ex_lock_nr_spin          _recv_lock;
+            ::dsn::utils::ex_lock_nr               _send_lock;
+            ::dsn::utils::ex_lock_nr               _recv_lock;
 
             void on_connect_events_ready(uint32_t events);
             void on_send_recv_events_ready(uint32_t events);

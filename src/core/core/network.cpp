@@ -120,8 +120,6 @@ namespace dsn
             
             if (!_messages.is_alone() && !_is_sending_next)
             {
-                dassert(SS_CONNECTED == _connect_state,
-                    "send message only when session is connected");
                 _is_sending_next = true;
                 next_msg = CONTAINING_RECORD(_messages.next(), message_ex, dl);
             }
@@ -322,15 +320,35 @@ namespace dsn
 
     void connection_oriented_network::on_server_session_accepted(rpc_session_ptr& s)
     {
-        dwarn("server session %s:%hu accepted", s->remote_address().name, s->remote_address().port);
+        int scount = 0;
+        {
+            utils::auto_write_lock l(_servers_lock);
+            auto pr = _servers.insert(server_sessions::value_type(s->remote_address(), s));
+            if (pr.second)
+            {
+                // nothing to do 
+            }
+            else
+            {
+                pr.first->second = s;
+                dwarn("server session on %s:%hu already exists, preempted",
+                    s->remote_address().name,
+                    s->remote_address().port
+                    );
+            }
+            scount = (int)_servers.size();
+        }
 
-        utils::auto_write_lock l(_servers_lock);
-        _servers.insert(server_sessions::value_type(s->remote_address(), s));
-
+        dwarn("server session %s:%hu accepted (%d in total)", 
+            s->remote_address().name, 
+            s->remote_address().port,
+            scount
+            );
     }
 
     void connection_oriented_network::on_server_session_disconnected(rpc_session_ptr& s)
     {
+        int scount;
         bool r = false;
         {
             utils::auto_write_lock l(_servers_lock);
@@ -339,14 +357,16 @@ namespace dsn
             {
                 _servers.erase(it);
                 r = true;
-            }                
+            }      
+            scount = (int)_servers.size();
         }
 
         if (r)
         {
-            dwarn("server session %s:%hu disconnected",
+            dwarn("server session %s:%hu disconnected (%d in total)",
                 s->remote_address().name,
-                s->remote_address().port
+                s->remote_address().port,
+                scount
                 );
         }
     }
@@ -360,6 +380,7 @@ namespace dsn
 
     void connection_oriented_network::on_client_session_disconnected(rpc_session_ptr& s)
     {
+        int scount;
         bool r = false;
         {
             utils::auto_write_lock l(_clients_lock);
@@ -369,12 +390,13 @@ namespace dsn
                 _clients.erase(it);
                 r = true;
             }
+            scount = (int)_clients.size();
         }
 
         if (r)
         {
-            dwarn("client session %s:%hu disconnected", s->remote_address().name,
-                s->remote_address().port
+            dwarn("client session %s:%hu disconnected (%d in total)", s->remote_address().name,
+                s->remote_address().port, scount
                 );
         }
     }
