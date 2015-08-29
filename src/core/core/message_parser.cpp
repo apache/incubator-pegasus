@@ -41,6 +41,7 @@ namespace dsn {
 
     void message_parser::create_new_buffer(int sz)
     {
+        dassert(sz > 0, "cannot allocate buffer with size 0");
         std::shared_ptr<char> buffer((char*)::malloc(sz));
         _read_buffer.assign(buffer, 0, sz);
         _read_buffer_occupied = 0;

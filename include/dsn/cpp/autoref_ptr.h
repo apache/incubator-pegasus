@@ -26,6 +26,7 @@
 #pragma once
 
 # include <atomic>
+# include <dsn/service_api_c.h>
 
 namespace dsn
 {
@@ -35,10 +36,19 @@ namespace dsn
         ref_counter()
         {
             _counter = 0;
+            _magic = 0xdeadbeef;
         }
 
         virtual ~ref_counter()
         {
+            if (_magic != 0xdeadbeef)
+            {
+                dassert(false, "memory corrupted, could be double free or others");
+            }
+            else
+            {
+                _magic = 0xfacedead;
+            }
         }
 
         void add_ref()
@@ -58,7 +68,8 @@ namespace dsn
         }
 
     private:
-        std::atomic<long> _counter;
+        int _magic;
+        std::atomic<long> _counter;        
     };
 
     template<typename T>  // T : ref_counter

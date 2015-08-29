@@ -235,13 +235,14 @@ namespace dsn
 
                             utils::auto_lock<utils::ex_lock_nr_spin> l(_io_sessions_lock);
                             auto it = _io_sessions.find(cb);
-                            robj = it != _io_sessions.end() ? it->second : nullptr;
+                            robj = (it != _io_sessions.end() ? it->second : nullptr);
+
+                            // make sure callback is protected by ref counting
+                            if (robj) robj->add_ref();
                         }
 
                         if (robj)
                         {
-                            // make sure callback is protected by ref counting
-                            robj->add_ref();
                             (*cb)(0, 0, (uintptr_t)_events[i].events);
                             robj->release_ref();
                         }
