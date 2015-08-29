@@ -166,8 +166,9 @@ namespace dsn
             auto sock = create_tcp_socket(&addr);
             dassert(sock != -1, "create client tcp socket failed!");
             auto client = new hpc_rpc_session(sock, parser, *this, server_addr, matcher);
+            rpc_session_ptr c(client);
             client->bind_looper(_looper, true);
-            return client;
+            return c;
         }
 
         void hpc_network_provider::do_accept()
@@ -184,9 +185,9 @@ namespace dsn
 
                     auto parser = new_message_parser();
                     auto rs = new hpc_rpc_session(s, parser, *this, client_addr);
-                    rs->bind_looper(_looper);
-
                     rpc_session_ptr s1(rs);
+
+                    rs->bind_looper(_looper);
                     this->on_server_session_accepted(s1);
                 }
                 else

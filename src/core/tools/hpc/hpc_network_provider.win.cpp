@@ -243,8 +243,9 @@ namespace dsn
 
             auto sock = create_tcp_socket(&addr);
             auto client = new hpc_rpc_session(sock, parser, *this, server_addr, matcher);
+            rpc_session_ptr c(client);
             client->bind_looper(_looper);
-            return client;
+            return c;
         }
 
         void hpc_network_provider::do_accept()
@@ -285,9 +286,9 @@ namespace dsn
 
                     auto parser = new_message_parser();
                     auto s = new hpc_rpc_session(_accept_sock, parser, *this, client_addr);
+                    rpc_session_ptr s1(s);
                     s->bind_looper(_looper);
 
-                    rpc_session_ptr s1(s);
                     this->on_server_session_accepted(s1);
 
                     s->do_read();
