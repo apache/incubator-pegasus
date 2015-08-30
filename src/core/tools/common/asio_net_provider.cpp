@@ -59,8 +59,7 @@ namespace dsn {
             }
 
             _acceptor = nullptr;
-            _socket.reset(new boost::asio::ip::tcp::socket(_io_service));
-            
+                        
             dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP, "invalid given channel %s", channel.to_string());
 
             dsn_address_build(&_address, boost::asio::ip::host_name().c_str(), port);
@@ -89,28 +88,31 @@ namespace dsn {
         {
             auto matcher = new_client_matcher();
             auto parser = new_message_parser();
-            auto sock = boost::asio::ip::tcp::socket(_io_service);
+            auto sock = std::shared_ptr<boost::asio::ip::tcp::socket>(new boost::asio::ip::tcp::socket(_io_service));
             return rpc_session_ptr(new asio_rpc_session(*this, sock, server_addr, matcher, parser));
         }
 
         void asio_network_provider::do_accept()
         {
-            _acceptor->async_accept(*_socket,
-                [this](boost::system::error_code ec)
+            auto socket = std::shared_ptr<boost::asio::ip::tcp::socket>(
+                new boost::asio::ip::tcp::socket(_io_service));
+
+            _acceptor->async_accept(*socket,
+                [this, socket](boost::system::error_code ec)
             {
                 if (!ec)
                 {
                     dsn_address_t client_addr;
-                    client_addr.ip = _socket->remote_endpoint().address().to_v4().to_ulong();
-                    client_addr.port = _socket->remote_endpoint().port();
+                    client_addr.ip = socket->remote_endpoint().address().to_v4().to_ulong();
+                    client_addr.port = socket->remote_endpoint().port();
 
                     // TODO: convert ip to host name
-                    strncpy(client_addr.name, _socket->remote_endpoint().address().to_string().c_str(),
+                    strncpy(client_addr.name, socket->remote_endpoint().address().to_string().c_str(),
                         sizeof(client_addr.name) / sizeof(char));
 
                     auto parser = new_message_parser();
-                    auto sock = std::move(*_socket);
-                    auto s = rpc_session_ptr(new asio_rpc_session(*this, client_addr, sock, parser));
+                    rpc_session_ptr s = new asio_rpc_session(*this, client_addr, 
+                        (std::shared_ptr<boost::asio::ip::tcp::socket>&)socket, parser);
                     this->on_server_session_accepted(s);
                 }
 

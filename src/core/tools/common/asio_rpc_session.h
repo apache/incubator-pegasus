@@ -44,7 +44,7 @@ namespace dsn {
         public:
             asio_rpc_session(
                 asio_network_provider& net,
-                boost::asio::ip::tcp::socket& socket,
+                std::shared_ptr<boost::asio::ip::tcp::socket>& socket,
                 const dsn_address_t& remote_addr,
                 rpc_client_matcher_ptr& matcher,
                 std::shared_ptr<message_parser>& parser
@@ -56,7 +56,7 @@ namespace dsn {
             asio_rpc_session(
                 asio_network_provider& net,
                 const dsn_address_t& remote_addr,
-                boost::asio::ip::tcp::socket& socket,
+                std::shared_ptr<boost::asio::ip::tcp::socket>& socket,
                 std::shared_ptr<message_parser>& parser
                 );
             
@@ -74,7 +74,7 @@ namespace dsn {
             }
 
         private:
-            boost::asio::ip::tcp::socket         _socket;
+            std::shared_ptr<boost::asio::ip::tcp::socket> _socket;
             std::shared_ptr<dsn::message_parser> _parser;
         };
     }

@@ -40,23 +40,23 @@ namespace dsn {
 
         void asio_rpc_session::set_options()
         {
-            if (_socket.is_open())
+            if (_socket->is_open())
             {
                 try {
                     boost::asio::socket_base::send_buffer_size option, option2(16 * 1024 * 1024);
-                    _socket.get_option(option);
+                    _socket->get_option(option);
                     int old = option.value();
-                    _socket.set_option(option2);
-                    _socket.get_option(option);
+                    _socket->set_option(option2);
+                    _socket->get_option(option);
 
                     /*ddebug("boost asio send buffer size is %u, set as 16MB, now is %u",
                     old, option.value());*/
 
                     boost::asio::socket_base::receive_buffer_size option3, option4(16 * 1024 * 1024);
-                    _socket.get_option(option3);
+                    _socket->get_option(option3);
                     old = option3.value();
-                    _socket.set_option(option4);
-                    _socket.get_option(option3);
+                    _socket->set_option(option4);
+                    _socket->get_option(option3);
                     /*ddebug("boost asio recv buffer size is %u, set as 16MB, now is %u",
                     old, option.value());*/
                 }
@@ -78,7 +78,7 @@ namespace dsn {
             void* ptr = _parser->read_buffer_ptr((int)sz);
             int remaining = _parser->read_buffer_capacity();
 
-            _socket.async_read_some(boost::asio::buffer(ptr, remaining),
+            _socket->async_read_some(boost::asio::buffer(ptr, remaining),
                 [this](boost::system::error_code ec, std::size_t length)
             {
                 if (!!ec)
@@ -122,7 +122,7 @@ namespace dsn {
             }
 
             add_ref();
-            boost::asio::async_write(_socket, buffers2,
+            boost::asio::async_write(*_socket, buffers2,
                 [this, msg](boost::system::error_code ec, std::size_t length)
             {
                 if (!!ec)
@@ -140,14 +140,14 @@ namespace dsn {
         
         asio_rpc_session::asio_rpc_session(
             asio_network_provider& net,
-            boost::asio::ip::tcp::socket& socket,
+            std::shared_ptr<boost::asio::ip::tcp::socket>& socket,
             const dsn_address_t& remote_addr,
             rpc_client_matcher_ptr& matcher,
             std::shared_ptr<message_parser>& parser
             )
             :
             rpc_session(net, remote_addr, matcher),
-            _socket(std::move(socket)),
+            _socket(socket),
             _parser(parser)            
         {
             set_options();
@@ -158,7 +158,7 @@ namespace dsn {
             if (on_disconnected())
             {
                 try {
-                    _socket.shutdown(boost::asio::socket_base::shutdown_type::shutdown_both);
+                    _socket->shutdown(boost::asio::socket_base::shutdown_type::shutdown_both);
                 }
                 catch (std::exception& ex)
                 {
@@ -170,7 +170,7 @@ namespace dsn {
                     );*/
                 }
 
-                _socket.close();
+                _socket->close();
             }
         }
 
@@ -182,7 +182,7 @@ namespace dsn {
                     boost::asio::ip::address_v4(_remote_addr.ip), _remote_addr.port);
 
                 add_ref();
-                _socket.async_connect(ep, [this](boost::system::error_code ec)
+                _socket->async_connect(ep, [this](boost::system::error_code ec)
                 {
                     if (!ec)
                     {
@@ -211,12 +211,12 @@ namespace dsn {
         asio_rpc_session::asio_rpc_session(
             asio_network_provider& net,
             const dsn_address_t& remote_addr,
-            boost::asio::ip::tcp::socket& socket,
+            std::shared_ptr<boost::asio::ip::tcp::socket>& socket,
             std::shared_ptr<message_parser>& parser
             )
             :
             rpc_session(net, remote_addr),
-            _socket(std::move(socket)),
+            _socket(socket),
             _parser(parser)
         {
             set_options();
