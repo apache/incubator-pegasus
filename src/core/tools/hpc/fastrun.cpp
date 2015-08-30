@@ -44,12 +44,7 @@ namespace dsn
                 spec.env_factory_name = ("dsn::tools::hpc_env_provider");
 
             if (spec.timer_factory_name == "")
-            {
-                if (spec.io_mode == IOE_PER_QUEUE)
-                    spec.timer_factory_name = ("dsn::tools::io_looper_timer_service");
-                else
-                    spec.timer_factory_name = ("dsn::tools::simple_timer_service");                    
-            }   
+                spec.timer_factory_name = ("dsn::tools::io_looper_timer_service");
 
             network_client_config cs;
             cs.factory_name = "dsn::tools::hpc_network_provider";
@@ -96,24 +91,11 @@ namespace dsn
             {
                 threadpool_spec& tspec = *it;
 
-                if (spec.io_mode == IOE_PER_QUEUE)
-                {
-                    if (tspec.worker_factory_name == "")
-                        tspec.worker_factory_name = ("dsn::tools::io_looper_task_worker");
+                if (tspec.worker_factory_name == "")
+                    tspec.worker_factory_name = ("dsn::tools::io_looper_task_worker");
 
-                    if (tspec.queue_factory_name == "")
-                        tspec.queue_factory_name = ("dsn::tools::io_looper_task_queue");
-                }
-                else
-                {
-                    dassert(spec.io_mode == IOE_PER_NODE, "");
-
-                    if (tspec.worker_factory_name == "")
-                        tspec.worker_factory_name = ("dsn::task_worker");
-
-                    if (tspec.queue_factory_name == "")
-                        tspec.queue_factory_name = ("dsn::tools::hpc_task_queue");
-                }
+                if (tspec.queue_factory_name == "")
+                    tspec.queue_factory_name = ("dsn::tools::io_looper_task_queue");
             }
 
         }

@@ -371,7 +371,7 @@ bool service_spec::init_app_specs()
 
             // fix ports_gap when necessary
             int ports_gap = app.ports_gap;
-            switch (io_mode)
+            switch (rpc_io_mode)
             {
             case IOE_PER_NODE:
                 ports_gap *= 1;
@@ -448,7 +448,7 @@ bool service_spec::init_app_specs()
 
 int service_spec::get_ports_delta(int app_id, dsn_threadpool_code_t pool, int queue_index) const
 {
-    dassert(io_mode == IOE_PER_QUEUE, "only used for IOE_PER_QUEUE mode");
+    dassert(rpc_io_mode == IOE_PER_QUEUE, "only used for IOE_PER_QUEUE mode");
 
     auto& aps = app_specs[app_id - 1];
     int number_of_ioes = 0;

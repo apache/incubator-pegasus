@@ -45,13 +45,19 @@ namespace dsn
                 || (
                     // assuming wait is with the same thread when the io call is emitted
                     // in this case io notificaiton is received by the current thread
-                    ::dsn::tools::spec().io_mode == IOE_PER_QUEUE
+                    (waitee->spec().type == TASK_TYPE_AIO &&
+                    ::dsn::tools::spec().disk_io_mode == IOE_PER_QUEUE)
                    )
                 )
 
                 // callee is not empty or we are using IOE_PER_QUEUE mode (io received by current thread)
                 && (!waitee->is_empty()
-                    || ::dsn::tools::spec().io_mode == IOE_PER_QUEUE
+                || ((waitee->spec().type == TASK_TYPE_AIO &&
+                    ::dsn::tools::spec().disk_io_mode == IOE_PER_QUEUE) 
+                    ||
+                    (waitee->spec().type == TASK_TYPE_RPC_RESPONSE &&
+                    ::dsn::tools::spec().rpc_io_mode == IOE_PER_QUEUE)
+                   )
                 )
 
                 // not much concurrency in the current pool
@@ -59,14 +65,15 @@ namespace dsn
                     || task::get_current_worker()->pool_spec().worker_count == 1)
                 )
             {
-                if (::dsn::tools::spec().io_mode == IOE_PER_QUEUE
+                if ((::dsn::tools::spec().rpc_io_mode == IOE_PER_QUEUE
+                    || ::dsn::tools::spec().disk_io_mode == IOE_PER_QUEUE)
                     && (task::get_current_worker()->pool_spec().partitioned
                         || task::get_current_worker()->pool_spec().worker_count == 1)
                         )
                 {
                     dassert(false, 
                         "cannot call task wait in worker thread '%s' that also serves as io thread "
-                        "(io_mode == IOE_PER_QUEUE) "
+                        "(disk/rpc_io_mode == IOE_PER_QUEUE) "
                         "when the thread pool is partitioned or the worker thread number is 1",
                         task::get_current_worker()->name().c_str()
                         );

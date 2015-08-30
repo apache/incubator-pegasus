@@ -109,7 +109,7 @@ void task_worker_pool::start()
         wk->start();
 
     // setup cached ptrs for fast timer service access
-    if (service_engine::fast_instance().spec().io_mode == IOE_PER_QUEUE)
+    if (service_engine::fast_instance().spec().timer_io_mode == IOE_PER_QUEUE)
     {
         for (size_t i = 0; i < _queues.size(); i++)
         {

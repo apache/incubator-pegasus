@@ -33,7 +33,7 @@ namespace dsn
 {
     namespace tools
     {
-        extern io_looper* get_io_looper(service_node* node, task_queue* q);
+        extern io_looper* get_io_looper(service_node* node, task_queue* q, ioe_mode mode);
 
         class io_looper_task_queue : public task_queue, public io_looper
         {
@@ -48,9 +48,13 @@ namespace dsn
             virtual void  enqueue(task* task);
             virtual task* dequeue();
             virtual int   count() const { return _remote_count.load(); }
+        
+        protected:
+            virtual bool is_shared_timer_queue() override
+            {
+                return is_shared() || task::get_current_worker() != owner_worker();
+            }
 
-            void add_timer(task* timer); // return next firing delay ms
-            
         private:
             std::atomic<int>              _remote_count;
 
@@ -60,12 +64,6 @@ namespace dsn
 
             // tasks from local thread
             dlink                         _local_tasks;
-
-            // timers
-            std::atomic<uint64_t>          _remote_timer_tasks_count;
-            ::dsn::utils::ex_lock_nr_spin  _remote_timer_tasks_lock;
-            std::map<uint64_t, task*>      _remote_timer_tasks; // ts (ms) => task
-            std::map<uint64_t, task*>      _local_timer_tasks;
         };
 
         class io_looper_task_worker : public task_worker
@@ -81,24 +79,23 @@ namespace dsn
             io_looper_timer_service(service_node* node, timer_service* inner_provider)
                 : timer_service(node, inner_provider)
             {
-                _q = nullptr;
+                _looper = nullptr;
             }
 
             virtual void start(io_modifer& ctx)
             {
-                _q = dynamic_cast<io_looper_task_queue*>(ctx.queue);
-                dassert(_q != nullptr, 
-                    "this is used only together with io_looper_task_queue with IOE_PER_QUEUE mode");
+                _looper = get_io_looper(node(), ctx.queue, ctx.mode);
+                dassert(_looper != nullptr, "correspondent looper is empty");
             }
 
             // after milliseconds, the provider should call task->enqueue()        
             virtual void add_timer(task* task)
             {
-                _q->add_timer(task);
+                _looper->add_timer(task);
             }
 
         private:
-            io_looper_task_queue *_q;
+            io_looper *_looper;
         };
 
         // ------------------ inline implementation --------------------

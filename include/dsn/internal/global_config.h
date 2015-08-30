@@ -146,8 +146,11 @@ struct service_spec
     std::list<std::string>       rwlock_nr_aspects;
     std::list<std::string>       semaphore_aspects;
 
-    ioe_mode                     io_mode;
-    int                          io_worker_count;
+    ioe_mode                     disk_io_mode; // whether disk is per node or per queue
+    ioe_mode                     rpc_io_mode; // whether rpc is per node or per queue
+    ioe_mode                     nfs_io_mode; // whether nfs is per node or per queue
+    ioe_mode                     timer_io_mode; // whether timer is per node or per queue
+    int                          io_worker_count; // for disk and rpc when per node
         
     network_client_configs        network_default_client_cfs; // default network configed by tools
     network_server_configs        network_default_server_cfs; // default network configed by tools
@@ -187,8 +190,14 @@ CONFIG_BEGIN(service_spec)
     CONFIG_FLD_STRING_LIST(rwlock_nr_aspects, "non-recursive rwlock aspect providers, usually for tooling purpose")
     CONFIG_FLD_STRING_LIST(semaphore_aspects, "semaphore aspect providers, usually for tooling purpose")
 
-    CONFIG_FLD_ENUM(ioe_mode, io_mode, IOE_PER_NODE, IOE_INVALID, false,
-        "io engine mode: IOE_PER_NODE, or IOE_PER_QUEUE")
+    CONFIG_FLD_ENUM(ioe_mode, disk_io_mode, IOE_PER_NODE, IOE_INVALID, false,
+        "how many disk engines? IOE_PER_NODE, or IOE_PER_QUEUE")
+    CONFIG_FLD_ENUM(ioe_mode, rpc_io_mode, IOE_PER_NODE, IOE_INVALID, false,
+        "how many rpc engines? IOE_PER_NODE, or IOE_PER_QUEUE")
+    CONFIG_FLD_ENUM(ioe_mode, nfs_io_mode, IOE_PER_NODE, IOE_INVALID, false,
+        "how many nfs engines? IOE_PER_NODE, or IOE_PER_QUEUE")
+    CONFIG_FLD_ENUM(ioe_mode, timer_io_mode, IOE_PER_NODE, IOE_INVALID, false,
+        "how many disk timer services? IOE_PER_NODE, or IOE_PER_QUEUE")
     CONFIG_FLD(int, uint64, io_worker_count, 2, "io thread count, only for IOE_PER_NODE; "
         "for IOE_PER_QUEUE, task workers are served as io threads")
 CONFIG_END

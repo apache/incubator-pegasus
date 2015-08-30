@@ -62,11 +62,7 @@ public:
 
         io_engine()
         {
-            q = nullptr;
-            rpc = nullptr;
-            disk = nullptr;
-            nfs = nullptr;
-            tsvc = nullptr;
+            memset((void*)this, 0, sizeof(io_engine));
         }
     };
 
@@ -98,15 +94,14 @@ private:
     service_app_spec _app_spec;
     task_engine*     _computation;
 
-    ioe_mode                                    _io_mode;
     io_engine                                   _per_node_io;
     std::unordered_map<task_queue*, io_engine>  _per_queue_ios;
     std::list<io_engine>                        _ios; // all ios
 
 private:
-    error_code init_io_engine(io_engine& io);
+    error_code init_io_engine(io_engine& io, ioe_mode mode);
     error_code start_io_engine_in_main(const io_engine& io);
-    void get_io(task_queue* q, __out_param io_engine& io) const;
+    void get_io(ioe_mode mode, task_queue* q, __out_param io_engine& io) const;
 };
 
 typedef std::map<int, service_node*> service_nodes_by_app_id;

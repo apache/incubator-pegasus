@@ -104,7 +104,7 @@ namespace dsn
             if (_listen_fd != -1)
                 return ERR_SERVICE_ALREADY_RUNNING;
 
-            _looper = get_io_looper(node(), ctx.queue);
+            _looper = get_io_looper(node(), ctx.queue, ctx.mode);
 
             dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP,
                 "invalid given channel %s", channel.to_string());

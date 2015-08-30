@@ -95,7 +95,7 @@ namespace dsn
                     sprintf(buffer, "%s.io-loop.%d", name, i);
                     task_worker::set_name(buffer);
                     
-                    this->loop_ios(); 
+                    this->loop_worker(); 
                 });
                 _workers.push_back(thr);
             }
@@ -117,7 +117,7 @@ namespace dsn
             _workers.clear();
         }
 
-        void io_looper::loop_ios()
+        void io_looper::loop_worker()
         {
             DWORD io_size;
             uintptr_t completion_key;

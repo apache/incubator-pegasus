@@ -198,7 +198,9 @@ namespace dsn {
                     }
                     else
                     {
-                        derror("network client session connect failed, error = %s",
+                        derror("client session connect to %s:%hu failed, error = %s",
+                            _remote_addr.name,
+                            _remote_addr.port,
                             ec.message().c_str()
                             );
                         on_failure();

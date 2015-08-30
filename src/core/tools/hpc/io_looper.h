@@ -83,14 +83,20 @@ namespace dsn
 
             dsn_handle_t native_handle() { return (dsn_handle_t)(uintptr_t)(_io_queue); }
 
-            void loop_ios();
+            void loop_worker();
 
             virtual void start(service_node* node, int worker_count);
 
             virtual void stop();
 
-            virtual void handle_local_queues() {}
-            
+            virtual void handle_local_queues() { exec_timer_tasks(false); }
+
+            void add_timer(task* timer); // return next firing delay ms
+
+        protected:
+            virtual bool is_shared_timer_queue() { return true; }
+            void exec_timer_tasks(bool local_exec);
+
         private:
             std::vector<std::thread*> _workers;
 # ifdef _WIN32
@@ -111,7 +117,11 @@ namespace dsn
             ::dsn::utils::ex_lock_nr_spin _io_sessions_lock;
             io_sessions                   _io_sessions;
 # endif
-            
+            // timers
+            std::atomic<uint64_t>          _remote_timer_tasks_count;
+            ::dsn::utils::ex_lock_nr_spin  _remote_timer_tasks_lock;
+            std::map<uint64_t, task*>      _remote_timer_tasks; // ts (ms) => task
+            std::map<uint64_t, task*>      _local_timer_tasks;
         };
 
         // --------------- inline implementation -------------------------
