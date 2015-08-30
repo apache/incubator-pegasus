@@ -90,7 +90,7 @@ namespace dsn {
             auto matcher = new_client_matcher();
             auto parser = new_message_parser();
             auto sock = boost::asio::ip::tcp::socket(_io_service);
-            return rpc_session_ptr(new asio_rpc_session(*this, sock, server_addr, matcher, parser, _io_service));
+            return rpc_session_ptr(new asio_rpc_session(*this, sock, server_addr, matcher, parser));
         }
 
         void asio_network_provider::do_accept()
@@ -110,7 +110,7 @@ namespace dsn {
 
                     auto parser = new_message_parser();
                     auto sock = std::move(*_socket);
-                    auto s = rpc_session_ptr(new asio_rpc_session(*this, client_addr, sock, parser, _io_service));
+                    auto s = rpc_session_ptr(new asio_rpc_session(*this, client_addr, sock, parser));
                     this->on_server_session_accepted(s);
                 }
 

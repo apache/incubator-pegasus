@@ -143,11 +143,10 @@ namespace dsn {
             boost::asio::ip::tcp::socket& socket,
             const dsn_address_t& remote_addr,
             rpc_client_matcher_ptr& matcher,
-            std::shared_ptr<message_parser>& parser,
-            boost::asio::io_service& ios)
+            std::shared_ptr<message_parser>& parser
+            )
             :
             rpc_session(net, remote_addr, matcher),
-            _io_service(ios),
             _socket(std::move(socket)),
             _parser(parser)            
         {
@@ -213,12 +212,10 @@ namespace dsn {
             asio_network_provider& net,
             const dsn_address_t& remote_addr,
             boost::asio::ip::tcp::socket& socket,
-            std::shared_ptr<message_parser>& parser,
-            boost::asio::io_service& ios
+            std::shared_ptr<message_parser>& parser
             )
             :
             rpc_session(net, remote_addr),
-            _io_service(ios),
             _socket(std::move(socket)),
             _parser(parser)
         {

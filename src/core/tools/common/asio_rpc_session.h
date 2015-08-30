@@ -47,8 +47,7 @@ namespace dsn {
                 boost::asio::ip::tcp::socket& socket,
                 const dsn_address_t& remote_addr,
                 rpc_client_matcher_ptr& matcher,
-                std::shared_ptr<message_parser>& parser,
-                boost::asio::io_service& ios
+                std::shared_ptr<message_parser>& parser
                 );
             virtual void connect() override;   
 
@@ -58,8 +57,8 @@ namespace dsn {
                 asio_network_provider& net,
                 const dsn_address_t& remote_addr,
                 boost::asio::ip::tcp::socket& socket,
-                std::shared_ptr<message_parser>& parser,
-                boost::asio::io_service& ios);
+                std::shared_ptr<message_parser>& parser
+                );
             
         private:
             void do_read(size_t sz = 256);
@@ -75,7 +74,6 @@ namespace dsn {
             }
 
         private:
-            boost::asio::io_service              &_io_service;
             boost::asio::ip::tcp::socket         _socket;
             std::shared_ptr<dsn::message_parser> _parser;
         };
