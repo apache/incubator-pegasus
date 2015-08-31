@@ -28,28 +28,189 @@
 # include <dsn/service_api_c.h>
 # include <unordered_map>
 
+namespace dsn
+{
+    class rpc_address
+    {
+    public:
+        rpc_address(uint32_t ip, uint16_t port);
+        rpc_address(uint32_t* ipv6, uint16_t port);
+        rpc_address(const char* uri, uint16_t port);
+        rpc_address(dsn_host_type_t type, const char* name, uint16_t port); 
+        
+        rpc_address();
+        rpc_address(const rpc_address& addr);
+        rpc_address(rpc_address&& addr);
+        rpc_address(dsn_address_t& addr);
+        rpc_address& operator=(const dsn_address_t& addr);
+
+        dsn_host_type_t type() const { return _addr.type; }
+        const dsn_address_t& c_addr() const { return _addr; }
+        dsn_address_t* c_addr_ptr() { return &_addr; }
+        uint32_t ip() const { return _addr.ip; }
+        uint16_t port() const { return _addr.port; }
+        const uint32_t* ipv6() const { return &_addr.ipv6[0]; }
+        const char* uri() const { return _addr.uri; }
+        const char* name() const;
+        const std::string& str_name() const;
+        bool is_invalid() const { return _addr.type == HOST_TYPE_INVALID; }
+        void set_invalid() { _addr.type = HOST_TYPE_INVALID; }
+
+        bool operator == (const ::dsn::rpc_address& r) const;
+        bool operator != (const ::dsn::rpc_address& r) const;
+        bool operator <  (const ::dsn::rpc_address& r) const;
+        
+    private:
+        dsn_address_t       _addr;
+        mutable std::string _name;
+    };
+
+    // ------------- inline implementation -------------------
+    inline rpc_address::rpc_address(uint32_t ip, uint16_t port)
+    {
+        _addr.type = HOST_TYPE_IPV4;
+        _addr.ip = ip;
+        _addr.port = port;
+    }
+
+    inline rpc_address::rpc_address(uint32_t* ipv6, uint16_t port)
+    {
+        _addr.type = HOST_TYPE_IPV6;
+        memcpy((void*)_addr.ipv6, (const void*)ipv6, sizeof(_addr.ipv6));
+        _addr.port = port;
+    }
+
+    inline rpc_address::rpc_address(const char* uri, uint16_t port)
+    {
+        _name = uri;
+        _addr.type = HOST_TYPE_URI;
+        _addr.uri = _name.c_str();
+        _addr.port = port;
+    }
+
+    inline rpc_address::rpc_address(dsn_host_type_t type, const char* name, uint16_t port)
+    {
+        _addr.type = type;
+        _name = name;
+        _addr.port = port;    
+        dsn_host_from_name(type, name, &_addr);
+    }
+
+    inline rpc_address::rpc_address()
+    {
+        set_invalid();
+    }
+
+    inline rpc_address::rpc_address(const rpc_address& addr)
+    {
+        _addr = addr._addr;
+        _name = addr._name;
+    }
+
+    inline rpc_address::rpc_address(rpc_address&& addr)
+    {
+        _addr = addr._addr;
+        _name = std::move(addr._name);
+    }
+
+    inline rpc_address::rpc_address(dsn_address_t& addr)
+    {
+        _addr = addr;
+    }
+
+    inline rpc_address& rpc_address::operator=(const dsn_address_t& addr)
+    {
+        _addr = addr;
+        return *this;
+    }
+
+    inline const char* rpc_address::name() const
+    {        
+        if (_name.length() == 0)
+        {
+            _name.resize(16);
+            dsn_host_to_name(&_addr, (char*)_name.c_str(), 16);
+        }   
+        return _name.c_str(); 
+    }
+
+    inline const std::string& rpc_address::str_name() const
+    {
+        if (_name.length() == 0)
+        {
+            _name.resize(16);
+            dsn_host_to_name(&_addr, (char*)_name.c_str(), 16);
+        }
+        return _name; 
+    }
+    
+    inline bool rpc_address::operator == (const ::dsn::rpc_address& r) const
+    {
+        if (_addr.type != r.type())
+            return false;
+
+        switch (_addr.type)
+        {
+        case HOST_TYPE_IPV4:
+            return _addr.ip == r.ip() && _addr.port == r.port();
+        case HOST_TYPE_IPV6:
+            return memcmp((const void*)_addr.ipv6, (const void*)r._addr.ipv6, sizeof(_addr.ipv6)) == 0 && _addr.port == r.port();
+        case HOST_TYPE_URI:
+            return strcmp(_addr.uri, r.uri()) == 0 && _addr.port == r.port();
+        default:
+            return true;
+        }
+    }
+
+    inline bool rpc_address::operator != (const ::dsn::rpc_address& r) const
+    {
+        return !(*this == r);
+    }
+
+    inline bool rpc_address::operator < (const ::dsn::rpc_address& r) const
+    {
+        if (_addr.type != r.type())
+            return _addr.type < r.type();
+
+        int c = 0;
+        switch (_addr.type)
+        {
+        case HOST_TYPE_IPV4:
+            return _addr.ip < r.ip() || (_addr.ip == r.ip() && _addr.port < r.port());
+        case HOST_TYPE_IPV6:
+            c = memcmp((const void*)_addr.ipv6, (const void*)r._addr.ipv6, sizeof(_addr.ipv6));
+            return c < 0 || (c == 0 && _addr.port < r.port());
+        case HOST_TYPE_URI:
+            c = strcmp(_addr.uri, r.uri());
+            return c < 0 || (c == 0 && _addr.port < r.port());
+        default:
+            return true;
+        }
+    }
+}
+
 namespace std
 {
     template<>
-    struct hash<dsn_address_t> {
-        size_t operator()(const dsn_address_t &ep) const {
-            return std::hash<uint32_t>()(ep.ip) ^ std::hash<uint16_t>()(ep.port);
+    struct hash<::dsn::rpc_address> 
+    {
+        size_t operator()(const ::dsn::rpc_address &ep) const 
+        {
+            switch (ep.type())
+            {
+            case HOST_TYPE_IPV4:
+                return std::hash<uint32_t>()(ep.ip()) ^ std::hash<uint16_t>()(ep.port());
+            case HOST_TYPE_IPV6:
+                return std::hash<uint32_t>()(ep.ipv6()[0]) 
+                    ^ std::hash<uint32_t>()(ep.ipv6()[1])
+                    ^ std::hash<uint32_t>()(ep.ipv6()[2])
+                    ^ std::hash<uint32_t>()(ep.ipv6()[3])
+                    ^ std::hash<uint16_t>()(ep.port());
+            case HOST_TYPE_URI:
+                return std::hash<string>()(ep.str_name()) ^ std::hash<uint16_t>()(ep.port());
+            default:
+                return 0;
+            }
         }
     };
 }
-
-inline bool operator == (const dsn_address_t& l, const dsn_address_t& r)
-{
-    return l.ip == r.ip && l.port == r.port;
-}
-
-inline bool operator != (const dsn_address_t& l, const dsn_address_t& r)
-{
-    return !(l == r);
-}
-
-inline bool operator < (const dsn_address_t& l, const dsn_address_t& r)
-{
-    return l.ip < r.ip || (l.ip == r.ip && l.port < r.port);
-}
-

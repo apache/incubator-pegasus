@@ -31,7 +31,7 @@ namespace dsn { namespace replication {
 using namespace ::dsn::service;
 
 void replication_app_client_base::load_meta_servers(
-        __out_param std::vector<dsn_address_t>& servers
+        __out_param std::vector<::dsn::rpc_address>& servers
         )
 {
     // read meta_servers from machine list file
@@ -50,15 +50,14 @@ void replication_app_client_base::load_meta_servers(
         auto pos1 = s.find_first_of(':');
         if (pos1 != std::string::npos)
         {
-            dsn_address_t ep;
-            dsn_address_build(&ep, s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
+            ::dsn::rpc_address ep(HOST_TYPE_IPV4, s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
             servers.push_back(ep);
         }
     }
 }
 
 replication_app_client_base::replication_app_client_base(
-    const std::vector<dsn_address_t>& meta_servers, 
+    const std::vector<::dsn::rpc_address>& meta_servers, 
     const char* app_name
     )
 {
@@ -67,7 +66,7 @@ replication_app_client_base::replication_app_client_base(
 
     _app_id = -1;
     _app_partition_count = -1;
-    _last_contact_point = dsn_address_invalid;
+    _last_contact_point.set_invalid();
 }
 
 replication_app_client_base::~replication_app_client_base()
@@ -227,7 +226,7 @@ void replication_app_client_base::call(request_context_ptr request, bool no_dela
     else
         timeout_ms = static_cast<int>(request->timeout_ts_us - nts) / 1000;
 
-    dsn_address_t addr;
+    ::dsn::rpc_address addr;
     int app_id;
 
     error_code err = get_address(
@@ -241,7 +240,7 @@ void replication_app_client_base::call(request_context_ptr request, bool no_dela
     // target node in cache
     if (err == ERR_OK)
     {
-        dbg_dassert(addr != dsn_address_invalid, "");
+        dbg_dassert(addr.is_invalid() == false, "");
         dassert(app_id > 0, "");
 
         if (request->header_pos != 0)
@@ -398,7 +397,7 @@ Retry:
     call(rc.get(), false);
 }
 
-error_code replication_app_client_base::get_address(int pidx, bool is_write, __out_param dsn_address_t& addr, __out_param int& app_id, read_semantic_t semantic)
+error_code replication_app_client_base::get_address(int pidx, bool is_write, __out_param ::dsn::rpc_address& addr, __out_param int& app_id, read_semantic_t semantic)
 {
     error_code err;
     partition_configuration config;
@@ -429,7 +428,7 @@ error_code replication_app_client_base::get_address(int pidx, bool is_write, __o
             addr = get_read_address(semantic, config);
         }
 
-        if (dsn_address_invalid == addr)
+        if (addr.is_invalid())
         {
             err = ERR_IO_PENDING;
         }
@@ -446,7 +445,7 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
         if (resp.err == ERR_OK)
         {
             zauto_write_lock l(_config_lock);
-            dsn_msg_from_address(response, &_last_contact_point);
+            dsn_msg_from_address(response, _last_contact_point.c_addr_ptr());
 
             if (resp.partitions.size() > 0)
             {
@@ -499,7 +498,7 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
     }
 }
 
-dsn_address_t replication_app_client_base::get_read_address(read_semantic_t semantic, const partition_configuration& config)
+::dsn::rpc_address replication_app_client_base::get_read_address(read_semantic_t semantic, const partition_configuration& config)
 {
     if (semantic == read_semantic_t::ReadLastUpdate)
         return config.primary;
@@ -509,7 +508,7 @@ dsn_address_t replication_app_client_base::get_read_address(read_semantic_t sema
     {
         bool has_primary = false;
         int N = static_cast<int>(config.secondaries.size());
-        if (config.primary != dsn_address_invalid)
+        if (config.primary.is_invalid() == false)
         {
             N++;
             has_primary = true;

@@ -30,6 +30,7 @@
 # include <dsn/internal/extensible_object.h>
 # include <dsn/internal/task_spec.h>
 # include <dsn/cpp/auto_codes.h>
+# include <dsn/cpp/address.h>
 # include <dsn/internal/link.h>
 
 namespace dsn 
@@ -85,8 +86,8 @@ namespace dsn
 
         // by rpc and network
         rpc_session_ptr server_session;
-        dsn_address_t          from_address;
-        dsn_address_t          to_address;
+        ::dsn::rpc_address          from_address;
+        ::dsn::rpc_address          to_address;
         uint16_t               local_rpc_code;
 
         // by message queuing

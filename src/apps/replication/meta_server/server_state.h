@@ -38,7 +38,7 @@ namespace dsn {
     }
 }
 
-typedef std::list<std::pair<dsn_address_t, bool>> node_states;
+typedef std::list<std::pair<::dsn::rpc_address, bool>> node_states;
 
 struct app_state
 {
@@ -61,10 +61,10 @@ public:
 
     void get_node_state(__out_param node_states& nodes);
     void set_node_state(const node_states& nodes, __out_param machine_fail_updates* pris);
-    bool get_meta_server_primary(__out_param dsn_address_t& node);
+    bool get_meta_server_primary(__out_param ::dsn::rpc_address& node);
 
-    void add_meta_node(const dsn_address_t& node);
-    void remove_meta_node(const dsn_address_t& node);
+    void add_meta_node(const ::dsn::rpc_address& node);
+    void remove_meta_node(const ::dsn::rpc_address& node);
     void switch_meta_primary();
 
     void load(const char* chk_point);
@@ -88,21 +88,21 @@ private:
     struct node_state
     {
         bool                          is_alive;
-        dsn_address_t                address;
+        ::dsn::rpc_address            address;
         std::set<global_partition_id> primaries;
         std::set<global_partition_id> partitions;
     };
 
-    mutable zrwlock_nr                   _lock;
-    std::unordered_map<dsn_address_t, node_state>   _nodes;
-    std::vector<app_state>            _apps;
+    mutable zrwlock_nr                                 _lock;
+    std::unordered_map<::dsn::rpc_address, node_state> _nodes;
+    std::vector<app_state>                             _apps;
 
     int                               _node_live_count;
     int                               _node_live_percentage_threshold_for_update;
     std::atomic<bool>                 _freeze;
 
     mutable zrwlock_nr                _meta_lock;
-    std::vector<dsn_address_t>       _meta_servers;
+    std::vector<::dsn::rpc_address>   _meta_servers;
     int                               _leader_index;
 
     friend class load_balancer;

@@ -471,14 +471,9 @@ DSN_API bool dsn_semaphore_wait_timeout(dsn_handle_t s, int timeout_milliseconds
 //------------------------------------------------------------------------------
 
 // rpc calls
-DSN_API void dsn_address_get_invalid(/*out*/ dsn_address_t* paddr)
-{
-    *paddr = dsn_address_invalid;
-}
-
 DSN_API dsn_address_t dsn_primary_address()
 {
-    return ::dsn::task::get_current_rpc()->primary_address();
+    return ::dsn::task::get_current_rpc()->primary_address().c_addr();
 }
 
 DSN_API void dsn_primary_address2(dsn_address_t* paddr)
@@ -508,7 +503,7 @@ DSN_API dsn_task_t dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_r
     return new ::dsn::rpc_response_task(msg, cb, param, reply_hash);
 }
 
-DSN_API void dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call, dsn_task_tracker_t tracker)
+DSN_API void dsn_rpc_call(const dsn_address_t* server, dsn_task_t rpc_call, dsn_task_tracker_t tracker)
 {
     ::dsn::rpc_response_task* task = (::dsn::rpc_response_task*)rpc_call;
     dassert(task->spec().type == TASK_TYPE_RPC_RESPONSE, "");
@@ -518,15 +513,15 @@ DSN_API void dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call, dsn_task_tr
 
     // TODO: remove this parameter in future
     auto msg = task->get_request();
-    msg->to_address = server;
+    msg->to_address = *server;
     rpc->call(msg, task);
 }
 
-DSN_API dsn_message_t dsn_rpc_call_wait(dsn_address_t server, dsn_message_t request)
+DSN_API dsn_message_t dsn_rpc_call_wait(const dsn_address_t* server, dsn_message_t request)
 {
     auto rpc = ::dsn::task::get_current_rpc();
     auto msg = ((::dsn::message_ex*)request);
-    msg->to_address = server;
+    msg->to_address = *server;
 
     ::dsn::rpc_response_task* rtask = new ::dsn::rpc_response_task(msg, nullptr, nullptr, 0);
     rtask->add_ref();
@@ -546,11 +541,11 @@ DSN_API dsn_message_t dsn_rpc_call_wait(dsn_address_t server, dsn_message_t requ
     }
 }
 
-DSN_API void dsn_rpc_call_one_way(dsn_address_t server, dsn_message_t request)
+DSN_API void dsn_rpc_call_one_way(const dsn_address_t* server, dsn_message_t request)
 {
     auto rpc = ::dsn::task::get_current_rpc();
     auto msg = ((::dsn::message_ex*)request);
-    msg->to_address = server;
+    msg->to_address = *server;
 
     rpc->call(msg, nullptr);
 }
@@ -632,11 +627,11 @@ DSN_API void dsn_file_write(dsn_handle_t file, const char* buffer, int count, ui
     ::dsn::task::get_current_disk()->write(callback);
 }
 
-DSN_API void dsn_file_copy_remote_directory(dsn_address_t remote, const char* source_dir, 
+DSN_API void dsn_file_copy_remote_directory(const dsn_address_t* remote, const char* source_dir, 
     const char* dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker)
 {
     std::shared_ptr<::dsn::remote_copy_request> rci(new ::dsn::remote_copy_request());
-    rci->source = remote;
+    rci->source = *remote;
     rci->source_dir = source_dir;
     rci->files.clear();
     rci->dest_dir = dest_dir;
@@ -647,10 +642,10 @@ DSN_API void dsn_file_copy_remote_directory(dsn_address_t remote, const char* so
     return ::dsn::task::get_current_nfs()->call(rci, callback);
 }
 
-DSN_API void dsn_file_copy_remote_files(dsn_address_t remote, const char* source_dir, const char** source_files, const char* dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker)
+DSN_API void dsn_file_copy_remote_files(const dsn_address_t* remote, const char* source_dir, const char** source_files, const char* dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker)
 {
     std::shared_ptr<::dsn::remote_copy_request> rci(new ::dsn::remote_copy_request());
-    rci->source = remote;
+    rci->source = *remote;
     rci->source_dir = source_dir;
 
     rci->files.clear();

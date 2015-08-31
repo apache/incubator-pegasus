@@ -62,7 +62,7 @@ namespace dsn
     namespace rpc
     {   
         task_ptr call(
-            const dsn_address_t& server,
+            const ::dsn::rpc_address& server,
             dsn_message_t request,
             servicelet* owner,
             rpc_reply_handler callback,
@@ -81,7 +81,7 @@ namespace dsn
                 reply_hash
                 );
             tsk->set_task_info(t);
-            dsn_rpc_call(server, t, owner ? owner->tracker() : nullptr);
+            dsn_rpc_call(&server.c_addr(), t, owner ? owner->tracker() : nullptr);
 
             return tsk;
         }
@@ -145,7 +145,7 @@ namespace dsn
 
 
         task_ptr copy_remote_files(
-            const dsn_address_t& remote,
+            const ::dsn::rpc_address& remote,
             const std::string& source_dir,
             std::vector<std::string>& files,  // empty for all
             const std::string& dest_dir,
@@ -170,7 +170,7 @@ namespace dsn
 
             if (files.empty())
             {
-                dsn_file_copy_remote_directory(remote, source_dir.c_str(), dest_dir.c_str(), overwrite, t, owner ? owner->tracker() : nullptr);
+                dsn_file_copy_remote_directory(&remote.c_addr(), source_dir.c_str(), dest_dir.c_str(), overwrite, t, owner ? owner->tracker() : nullptr);
             }
             else
             {
@@ -181,7 +181,7 @@ namespace dsn
                 }
                 *ptr = nullptr;
 
-                dsn_file_copy_remote_files(remote, source_dir.c_str(), ptr, dest_dir.c_str(), overwrite, t, owner ? owner->tracker() : nullptr);
+                dsn_file_copy_remote_files(&remote.c_addr(), source_dir.c_str(), ptr, dest_dir.c_str(), overwrite, t, owner ? owner->tracker() : nullptr);
             }
             return tsk;
         }

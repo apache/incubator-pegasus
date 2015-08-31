@@ -15,8 +15,8 @@ class <?=$svc->name?>_client
     : public virtual ::dsn::servicelet
 {
 public:
-    <?=$svc->name?>_client(const dsn_address_t& server) { _server = server; }
-    <?=$svc->name?>_client() { _server = dsn_address_invalid; }
+    <?=$svc->name?>_client(const ::dsn::rpc_address& server) { _server = server; }
+    <?=$svc->name?>_client() { }
     virtual ~<?=$svc->name?>_client() {}
 
 <?php foreach ($svc->functions as $f) { ?>
@@ -26,7 +26,7 @@ public:
     void <?=$f->name?>(
         const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
         int hash = 0,
-        const dsn_address_t *p_server_addr = nullptr)
+        const ::dsn::rpc_address *p_server_addr = nullptr)
     {
         ::dsn::rpc::call_one_way_typed(p_server_addr ? *p_server_addr : _server, 
             <?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash);
@@ -38,7 +38,7 @@ public:
         __out_param <?=$f->get_cpp_return_type()?>& resp, 
         int timeout_milliseconds = 0, 
         int hash = 0,
-        const dsn_address_t *p_server_addr = nullptr)
+        const ::dsn::rpc_address *p_server_addr = nullptr)
     {
         dsn::message_ptr response;
         auto err = ::dsn::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
@@ -57,7 +57,7 @@ public:
         int timeout_milliseconds = 0, 
         int reply_hash = 0,
         int request_hash = 0,
-        const dsn_address_t *p_server_addr = nullptr)
+        const ::dsn::rpc_address *p_server_addr = nullptr)
     {
         return ::dsn::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
@@ -90,7 +90,7 @@ public:
         int timeout_milliseconds = 0, 
         int reply_hash = 0,
         int request_hash = 0,
-        const dsn_address_t *p_server_addr = nullptr)
+        const ::dsn::rpc_address *p_server_addr = nullptr)
     {
         return ::dsn::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
@@ -120,7 +120,7 @@ public:
 <?php } ?>
 
 private:
-    dsn_address_t _server;
+    ::dsn::rpc_address _server;
 };
 
 <?php } ?>

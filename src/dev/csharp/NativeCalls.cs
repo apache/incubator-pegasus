@@ -80,14 +80,25 @@ namespace dsn.dev.csharp
         LOG_LEVEL_INVALID
     };
 
+    
+    public enum dsn_host_type_t
+    {
+        HOST_TYPE_IPV4,  // 4 bytes
+        HOST_TYPE_IPV6,  // 16 bytes
+        HOST_TYPE_URI,   // customized bytes
+        HOST_TYPE_COUNT,
+        HOST_TYPE_INVALID
+    };
+
+
     [StructLayout(LayoutKind.Sequential, Pack = 4, CharSet = CharSet.Ansi)]        
     public struct dsn_address_t
     {
-        public System.UInt32 ip;
-        public System.UInt16 port;
+        dsn_host_type_t type;
+        UInt16          port; 
 
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 16)]
-        public string name;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 4)]
+        public UInt32[] host;
     };
 
     public static class Native
@@ -360,8 +371,6 @@ namespace dsn.dev.csharp
         //------------------------------------------------------------------------------
 
         // rpc address utilities
-        [DllImport(DSN_CORE_DLL, CallingConvention = CallingConvention.Cdecl)]
-        public extern static void          dsn_address_get_invalid(out dsn_address_t addr);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static void          dsn_address_build(out dsn_address_t ep, string host, System.UInt16 port);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
@@ -418,11 +427,11 @@ namespace dsn.dev.csharp
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static dsn_task_t    dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, IntPtr param, int reply_hash);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static void          dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call, dsn_task_tracker_t tracker);
+        public extern static void          dsn_rpc_call(ref dsn_address_t server, dsn_task_t rpc_call, dsn_task_tracker_t tracker);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static dsn_message_t dsn_rpc_call_wait(dsn_address_t server, dsn_message_t request); // returned msg must be explicitly msg_release_ref
+        public extern static dsn_message_t dsn_rpc_call_wait(ref dsn_address_t server, dsn_message_t request); // returned msg must be explicitly msg_release_ref
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static void          dsn_rpc_call_one_way(dsn_address_t server, dsn_message_t request);
+        public extern static void          dsn_rpc_call_one_way(ref dsn_address_t server, dsn_message_t request);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static void          dsn_rpc_reply(dsn_message_t response);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
@@ -446,9 +455,9 @@ namespace dsn.dev.csharp
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static void         dsn_file_write(dsn_handle_t file, byte[] buffer, int count, UInt64 offset, dsn_task_t cb, dsn_task_tracker_t tracker);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static void         dsn_file_copy_remote_directory(dsn_address_t remote, string source_dir, string dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker);
+        public extern static void         dsn_file_copy_remote_directory(ref dsn_address_t remote, string source_dir, string dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static void         dsn_file_copy_remote_files(dsn_address_t remote, string source_dir, string[] source_files, string dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker);
+        public extern static void         dsn_file_copy_remote_files(ref dsn_address_t remote, string source_dir, string[] source_files, string dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static size_t       dsn_file_get_io_size(dsn_task_t cb_task);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]

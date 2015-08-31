@@ -44,8 +44,6 @@
 
 # include <mutex>
 
-DSN_API dsn_address_t dsn_address_invalid = {0, 0, "invalid"};
-
 static void net_init()
 {
     static std::once_flag flag;
@@ -66,31 +64,10 @@ static void net_init()
 DSN_API void dsn_address_build(dsn_address_t* ep, const char* host, uint16_t port)
 {
     net_init();
-    
-    ep->port = port;
-    if (host != ep->name)
-    {
-        strncpy(ep->name, host, sizeof(ep->name));
-        ep->name[sizeof(ep->name) - 1] = '\0';
-    }
-    
-    sockaddr_in addr;
-    memset(&addr,0,sizeof(addr));
-    addr.sin_family = AF_INET;
-    
-    if ((addr.sin_addr.s_addr = inet_addr(host)) == (unsigned int)(-1))
-    {
-        hostent* hp = gethostbyname(host);
-        if (hp != 0) 
-        {
-            memcpy((void*)&(addr.sin_addr.s_addr), (const void*)hp->h_addr, (size_t)hp->h_length);
-        }
-    }
-    
-    // network order
-    ep->ip = (uint32_t)ntohl(addr.sin_addr.s_addr);
-}
 
+    ::dsn::rpc_address addr(HOST_TYPE_IPV4, host, port);
+    *ep = addr.c_addr();
+}
 
 DSN_API void dsn_address_build_ipv4(
     /*out*/ dsn_address_t* ep,
@@ -99,17 +76,92 @@ DSN_API void dsn_address_build_ipv4(
     )
 {
     net_init();
-    ep->ip = ipv4;
-    ep->port = port;
+    ::dsn::rpc_address addr(ipv4, port);
+    *ep = addr.c_addr();
+}
 
-    uint32_t addr = htonl(ipv4);
-    auto host = gethostbyaddr((char*)&addr, 4, AF_INET);
-    if (host == nullptr)
+
+// ip etc. to name
+DSN_API void dsn_host_to_name(const dsn_address_t* addr, /*out*/ char* name_buffer, int length)
+{
+    switch (addr->type)
     {
-        sprintf(ep->name, "%u.%u.%u.%u", (ipv4 >> 24) & 0xff, (ipv4 >> 16) & 0xff, (ipv4 >> 8) & 0xff, ipv4 & 0xff);
+    case HOST_TYPE_IPV4:
+    {
+        uint32_t nip = htonl(addr->ip);
+
+        // TODO: using global cache
+        auto host = gethostbyaddr((char*)&nip, 4, AF_INET);
+        if (host == nullptr)
+        {
+# if defined(_WIN32)
+            sprintf_s(
+# else
+            std::snprintf(
+# endif
+                name_buffer, (size_t)length,
+                "%u.%u.%u.%u\0",
+                nip & 0xff,
+                (nip >> 8) & 0xff,
+                (nip >> 16) & 0xff,
+                (nip >> 24) & 0xff
+                );
+        }
+        else
+        {
+            strncpy(name_buffer, host->h_name, length);
+        }
+        name_buffer[length - 1] = '\0';
     }
-    else
+    break;
+    case HOST_TYPE_IPV6:
+        dassert(false, "to be implemented");
+        break;
+    case HOST_TYPE_URI:
+        dassert(false, "to be implemented");
+        break;
+    default:
+        break;
+    }
+}
+
+// name to ip etc.
+DSN_API void dsn_host_from_name(dsn_host_type_t type, const char* name, /*out*/ dsn_address_t* daddr)
+{
+    sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+
+    daddr->type = type;
+    switch (type)
     {
-        strncpy(ep->name, host->h_name, sizeof(ep->name));
+    case HOST_TYPE_IPV4:
+        addr.sin_family = AF_INET;
+        if ((addr.sin_addr.s_addr = inet_addr(name)) == (unsigned int)(-1))
+        {
+            hostent* hp = gethostbyname(name);
+            if (hp != 0)
+            {
+                memcpy(
+                    (void*)&(addr.sin_addr.s_addr),
+                    (const void*)hp->h_addr,
+                    (size_t)hp->h_length
+                    );
+            }
+        }
+
+        // network order
+        daddr->ip = (uint32_t)ntohl(addr.sin_addr.s_addr);
+        break;
+
+    case HOST_TYPE_IPV6:
+        dassert(false, "to be implemented");
+        break;
+
+    case HOST_TYPE_URI:
+        daddr->uri = name;
+        break;
+
+    default:
+        break;
     }
 }

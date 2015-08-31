@@ -109,8 +109,8 @@ namespace dsn
             dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP,
                 "invalid given channel %s", channel.to_string());
 
-            gethostname(_address.name, sizeof(_address.name));
-            dsn_address_build(&_address, _address.name, port);
+            gethostname(_address.name(), sizeof(_address.name));
+            dsn_address_build(&_address, _address.name(), port);
 
             if (!client_only)
             {
@@ -153,7 +153,7 @@ namespace dsn
             return ERR_OK;
         }
 
-        rpc_session_ptr hpc_network_provider::create_client_session(const dsn_address_t& server_addr)
+        rpc_session_ptr hpc_network_provider::create_client_session(const ::dsn::rpc_address& server_addr)
         {
             auto matcher = new_client_matcher();
             auto parser = new_message_parser();
@@ -180,7 +180,7 @@ namespace dsn
                 socket_t s = ::accept(_listen_fd, (struct sockaddr*)&addr, &addr_len);
                 if (s != -1)
                 {
-                    dsn_address_t client_addr;
+                    ::dsn::rpc_address client_addr;
                     dsn_address_build_ipv4(&client_addr, ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
 
                     auto parser = new_message_parser();
@@ -227,8 +227,8 @@ namespace dsn
                 int err = errno;
                 dinfo("(s = %d) call recv on %s:%hu, return %d, err = %s",
                     _socket,
-                    _remote_addr.name,
-                    _remote_addr.port,
+                    _remote_addr.name(),
+                    _remote_addr.port(),
                     sz,
                     strerror(err)
                     );
@@ -317,8 +317,8 @@ namespace dsn
                 int err = errno;
                 dinfo("(s = %d) call sendmsg on %s:%hu, return %d, err = %s",
                     _socket,
-                    _remote_addr.name,
-                    _remote_addr.port,
+                    _remote_addr.name(),
+                    _remote_addr.port(),
                     sz,
                     strerror(err)
                     );
@@ -377,8 +377,8 @@ namespace dsn
             {
                 dinfo("(s = %d) epoll failure on %s:%hu, events = %x",
                     _socket,
-                    _remote_addr.name,
-                    _remote_addr.port,
+                    _remote_addr.name(),
+                    _remote_addr.port(),
                     events
                     );
                 on_failure();
@@ -390,8 +390,8 @@ namespace dsn
             {
                 dinfo("(s = %d) epoll EPOLLOUT on %s:%hu, events = %x",
                     _socket,
-                    _remote_addr.name,
-                    _remote_addr.port,
+                    _remote_addr.name(),
+                    _remote_addr.port(),
                     events
                     );
 
@@ -403,8 +403,8 @@ namespace dsn
             {
                 dinfo("(s = %d) epoll EPOLLIN on %s:%hu, events = %x",
                     _socket,
-                    _remote_addr.name,
-                    _remote_addr.port,
+                    _remote_addr.name(),
+                    _remote_addr.port(),
                     events
                     );
 
@@ -417,7 +417,7 @@ namespace dsn
             socket_t sock,
             std::shared_ptr<dsn::message_parser>& parser,
             connection_oriented_network& net,
-            const dsn_address_t& remote_addr,
+            const ::dsn::rpc_address& remote_addr,
             rpc_client_matcher_ptr& matcher
             )
             : rpc_session(net, remote_addr, matcher),
@@ -449,8 +449,8 @@ namespace dsn
 
             dinfo("(s = %d) epoll for connect to %s:%hu, events = %x",
                 _socket,
-                _remote_addr.name,
-                _remote_addr.port,
+                _remote_addr.name(),
+                _remote_addr.port(),
                 events
                 );
 
@@ -468,8 +468,8 @@ namespace dsn
 
                 dinfo("(s = %d) client session %s:%hu connected",
                     _socket,
-                    _remote_addr.name,
-                    _remote_addr.port
+                    _remote_addr.name(),
+                    _remote_addr.port()
                     );
 
                 set_connected();
@@ -524,14 +524,14 @@ namespace dsn
             struct sockaddr_in addr;
             addr.sin_family = AF_INET;
             addr.sin_addr.s_addr = htonl(_remote_addr.ip);
-            addr.sin_port = htons(_remote_addr.port);
+            addr.sin_port = htons(_remote_addr.port());
 
             int rt = ::connect(_socket, (struct sockaddr*)&addr, (int)sizeof(addr));
             int err = errno;
             dinfo("(s = %d) call connect to %s:%hu, return %d, err = %s",
                 _socket,
-                _remote_addr.name,
-                _remote_addr.port,
+                _remote_addr.name(),
+                _remote_addr.port(),
                 rt,
                 strerror(err)
                 );
@@ -555,7 +555,7 @@ namespace dsn
             socket_t sock,
             std::shared_ptr<dsn::message_parser>& parser,
             connection_oriented_network& net,
-            const dsn_address_t& remote_addr
+            const ::dsn::rpc_address& remote_addr
             )
             : rpc_session(net, remote_addr),
             _socket(sock), _parser(parser)
@@ -581,8 +581,8 @@ namespace dsn
                 uint32_t events = (uint32_t)lolp_or_events;
                 dinfo("(s = %d) (server) epoll for send/recv to %s:%hu, events = %x",
                     _socket,
-                    _remote_addr.name,
-                    _remote_addr.port,
+                    _remote_addr.name(),
+                    _remote_addr.port(),
                     events
                     );
                 this->on_send_recv_events_ready(events);

@@ -45,7 +45,7 @@ void replica::on_config_proposal(configuration_update_request& proposal)
         "%s: on_config_proposal %s for %s:%hu", 
         name(),
         enum_to_string(proposal.type),
-        proposal.node.name, proposal.node.port
+        proposal.node.name(), proposal.node.port()
         );
 
     if (proposal.config.ballot < get_ballot())
@@ -167,12 +167,12 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     rpc::call_one_way_typed(proposal.node, RPC_LEARN_ADD_LEARNER, request, gpid_to_hash(get_gpid()));
 }
 
-void replica::upgrade_to_secondary_on_primary(const dsn_address_t& node)
+void replica::upgrade_to_secondary_on_primary(const ::dsn::rpc_address& node)
 {
     ddebug(
             "%s: upgrade potential secondary %s:%hu to secondary",
             name(),
-            node.name, node.port
+            node.name(), node.port()
             );
 
     partition_configuration newConfig = _primary_states.membership;
@@ -196,7 +196,7 @@ void replica::downgrade_to_secondary_on_primary(configuration_update_request& pr
     dassert (proposal.config.secondaries == _primary_states.membership.secondaries, "");
     dassert (proposal.node == proposal.config.primary, "");
 
-    proposal.config.primary = dsn_address_invalid;
+    proposal.config.primary.set_invalid();
     proposal.config.secondaries.push_back(proposal.node);
 
     update_configuration_on_meta_server(CT_DOWNGRADE_TO_SECONDARY, proposal.node, proposal.config);
@@ -215,7 +215,7 @@ void replica::downgrade_to_inactive_on_primary(configuration_update_request& pro
 
     if (proposal.node == proposal.config.primary)
     {
-        proposal.config.primary = dsn_address_invalid;
+        proposal.config.primary.set_invalid();
     }
     else
     {
@@ -243,7 +243,7 @@ void replica::remove(configuration_update_request& proposal)
     {
     case PS_PRIMARY:
         dassert (proposal.config.primary == proposal.node, "");
-        proposal.config.primary = dsn_address_invalid;
+        proposal.config.primary.set_invalid();
         break;
     case PS_SECONDARY:
         {
@@ -272,7 +272,7 @@ void replica::on_remove(const replica_configuration& request)
     update_local_configuration(request);
 }
 
-void replica::update_configuration_on_meta_server(config_type type, const dsn_address_t& node, partition_configuration& newConfig)
+void replica::update_configuration_on_meta_server(config_type type, const ::dsn::rpc_address& node, partition_configuration& newConfig)
 {
     newConfig.last_committed_decree = last_committed_decree();
 
@@ -702,7 +702,7 @@ void replica::on_config_sync(const partition_configuration& config)
         if (status() == PS_INACTIVE && !_inactive_is_transient)
         {
             if (config.primary == primary_address() // dead primary
-                || config.primary == dsn_address_invalid // primary is dead (otherwise let primary remove this)
+                || config.primary.is_invalid() // primary is dead (otherwise let primary remove this)
                 )
             {
                 _stub->remove_replica_on_meta_server(config);

@@ -194,8 +194,9 @@ namespace dsn
             dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP, 
                 "invalid given channel %s", channel.to_string());
 
-            gethostname(_address.name, sizeof(_address.name));
-            dsn_address_build(&_address, _address.name, port);
+            char name[128];
+            gethostname(name, sizeof(name));
+            _address = ::dsn::rpc_address(HOST_TYPE_IPV4, name, port);
 
             if (!client_only)
             {
@@ -231,7 +232,7 @@ namespace dsn
             return ERR_OK;
         }
 
-        rpc_session_ptr hpc_network_provider::create_client_session(const dsn_address_t& server_addr)
+        rpc_session_ptr hpc_network_provider::create_client_session(const ::dsn::rpc_address& server_addr)
         {
             auto matcher = new_client_matcher();
             auto parser = new_message_parser();
@@ -281,8 +282,8 @@ namespace dsn
                         dassert(false, "getpeername failed, err = %d", ::WSAGetLastError());
                     }
 
-                    dsn_address_t client_addr;
-                    dsn_address_build_ipv4(&client_addr, ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
+                    ::dsn::rpc_address client_addr;
+                    dsn_address_build_ipv4(client_addr.c_addr_ptr(), ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
 
                     auto parser = new_message_parser();
                     auto s = new hpc_rpc_session(_accept_sock, parser, *this, client_addr);
@@ -477,7 +478,7 @@ namespace dsn
             socket_t sock,
             std::shared_ptr<dsn::message_parser>& parser,
             connection_oriented_network& net,
-            const dsn_address_t& remote_addr,
+            const ::dsn::rpc_address& remote_addr,
             rpc_client_matcher_ptr& matcher
             )
             : rpc_session(net, remote_addr, matcher),
@@ -509,8 +510,8 @@ namespace dsn
                 else
                 {
                     dinfo("client session %s:%hu connected",
-                        _remote_addr.name,
-                        _remote_addr.port
+                        _remote_addr.name(),
+                        _remote_addr.port()
                         );
 
                     set_connected();
@@ -523,8 +524,8 @@ namespace dsn
 
             struct sockaddr_in addr;
             addr.sin_family = AF_INET;
-            addr.sin_addr.s_addr = htonl(_remote_addr.ip);
-            addr.sin_port = htons(_remote_addr.port);
+            addr.sin_addr.s_addr = htonl(_remote_addr.ip());
+            addr.sin_port = htons(_remote_addr.port());
 
             this->add_ref(); // released in _connect_event.callback
             BOOL rt = s_lpfnConnectEx(
@@ -550,7 +551,7 @@ namespace dsn
             socket_t sock,
             std::shared_ptr<dsn::message_parser>& parser,
             connection_oriented_network& net,
-            const dsn_address_t& remote_addr
+            const ::dsn::rpc_address& remote_addr
             )
             : rpc_session(net, remote_addr),
             _socket(sock), _parser(parser)

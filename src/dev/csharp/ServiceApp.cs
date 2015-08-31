@@ -13,7 +13,6 @@ namespace dsn.dev.csharp
         {
             _started = false;
             _address = new RpcAddress();
-            Native.dsn_address_get_invalid(out _address.addr);
             _gch = GCHandle.Alloc(this);
         }
 

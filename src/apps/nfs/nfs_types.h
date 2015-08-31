@@ -91,7 +91,7 @@ namespace dsn {
         // ---------- copy_request -------------
         struct copy_request
         {
-            dsn_address_t source;
+            ::dsn::rpc_address source;
             std::string source_dir;
             std::string dst_dir;
             std::string file_name;
@@ -159,7 +159,7 @@ namespace dsn {
         // ---------- get_file_size_request -------------
         struct get_file_size_request
         {
-            dsn_address_t source;
+            ::dsn::rpc_address source;
             std::string dst_dir;
             std::vector< std::string> file_list;
             std::string source_dir;

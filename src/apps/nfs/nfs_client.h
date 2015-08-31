@@ -8,8 +8,8 @@ class nfs_client
     : public virtual ::dsn::servicelet
 {
 public:
-    nfs_client(const dsn_address_t& server) { _server = server; }
-    nfs_client() { _server = dsn_address_invalid; }
+    nfs_client(const ::dsn::rpc_address& server) { _server = server; }
+    nfs_client() {  }
     virtual ~nfs_client() {}
 
 
@@ -20,7 +20,7 @@ public:
         __out_param copy_response& resp, 
         int timeout_milliseconds = 0, 
         int hash = 0,
-        const dsn_address_t *p_server_addr = nullptr)
+        const ::dsn::rpc_address *p_server_addr = nullptr)
     {
         ::dsn::message_ptr response;
         auto err = ::dsn::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
@@ -39,7 +39,7 @@ public:
         int timeout_milliseconds = 0, 
         int reply_hash = 0,
         int request_hash = 0,
-        const dsn_address_t *p_server_addr = nullptr)
+        const ::dsn::rpc_address *p_server_addr = nullptr)
     {
         return ::dsn::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
@@ -72,7 +72,7 @@ public:
         int timeout_milliseconds = 0, 
         int reply_hash = 0,
         int request_hash = 0,
-        const dsn_address_t *p_server_addr = nullptr)
+        const ::dsn::rpc_address *p_server_addr = nullptr)
     {
         return ::dsn::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
@@ -106,7 +106,7 @@ public:
         __out_param get_file_size_response& resp, 
         int timeout_milliseconds = 0, 
         int hash = 0,
-        const dsn_address_t *p_server_addr = nullptr)
+        const ::dsn::rpc_address *p_server_addr = nullptr)
     {
         ::dsn::message_ptr response;
         auto err = ::dsn::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
@@ -125,7 +125,7 @@ public:
         int timeout_milliseconds = 0, 
         int reply_hash = 0,
         int request_hash = 0,
-        const dsn_address_t *p_server_addr = nullptr)
+        const ::dsn::rpc_address *p_server_addr = nullptr)
     {
         return ::dsn::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
@@ -158,7 +158,7 @@ public:
         int timeout_milliseconds = 0, 
         int reply_hash = 0,
         int request_hash = 0,
-        const dsn_address_t *p_server_addr = nullptr)
+        const ::dsn::rpc_address *p_server_addr = nullptr)
     {
         return ::dsn::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
@@ -186,7 +186,7 @@ public:
     
 
 private:
-    dsn_address_t _server;
+    ::dsn::rpc_address _server;
 };
 
 } } 

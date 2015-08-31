@@ -12,8 +12,8 @@ class cli_client
     : public virtual ::dsn::servicelet
 {
 public:
-    cli_client(const dsn_address_t& server) { _server = server; }
-    cli_client() { _server = dsn_address_invalid; }
+    cli_client(const ::dsn::rpc_address& server) { _server = server; }
+    cli_client() {  }
     virtual ~cli_client() {}
 
 
@@ -24,7 +24,7 @@ public:
         __out_param std::string& resp, 
         int timeout_milliseconds = 0, 
         int hash = 0,
-        const dsn_address_t *p_server_addr = nullptr)
+        const ::dsn::rpc_address *p_server_addr = nullptr)
     {
         ::dsn::message_ptr response;
 
@@ -45,7 +45,7 @@ public:
         int timeout_milliseconds = 0, 
         int reply_hash = 0,
         int request_hash = 0,
-        const dsn_address_t *p_server_addr = nullptr)
+        const ::dsn::rpc_address *p_server_addr = nullptr)
     {
         return ::dsn::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
@@ -78,7 +78,7 @@ public:
         int timeout_milliseconds = 0, 
         int reply_hash = 0,
         int request_hash = 0,
-        const dsn_address_t *p_server_addr = nullptr)
+        const ::dsn::rpc_address *p_server_addr = nullptr)
     {
         return ::dsn::rpc::call_typed(
                     p_server_addr ? *p_server_addr : _server, 
@@ -106,7 +106,7 @@ public:
     
 
 private:
-    dsn_address_t _server;
+    ::dsn::rpc_address _server;
 };
 
 } 

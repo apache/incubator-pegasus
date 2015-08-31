@@ -288,7 +288,7 @@ bool task::cancel(bool wait_until_finished, /*out*/ bool* finished /*= nullptr*/
     {
         /*dwarn(
             "task %s (id=%016llx) cannot cancel itself",                
-            spec().name,
+            spec().name(),
             id()
             );*/
 

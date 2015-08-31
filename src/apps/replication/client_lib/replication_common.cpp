@@ -83,8 +83,7 @@ void replication_options::read_meta_servers()
         auto pos1 = s.find_first_of(':');
         if (pos1 != std::string::npos)
         {
-            dsn_address_t ep;
-            dsn_address_build(&ep, s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
+            ::dsn::rpc_address ep(HOST_TYPE_IPV4, s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
             meta_servers.push_back(ep);
         }
     }
@@ -259,7 +258,7 @@ void replication_options::sanity_check()
     dassert (staleness_for_start_prepare_for_potential_secondary >= staleness_for_commit, "");
 }
    
-/*static*/ bool replica_helper::remove_node(const dsn_address_t& node, __inout_param std::vector<dsn_address_t>& nodeList)
+/*static*/ bool replica_helper::remove_node(const ::dsn::rpc_address& node, __inout_param std::vector<::dsn::rpc_address>& nodeList)
 {
     auto it = std::find(nodeList.begin(), nodeList.end(), node);
     if (it != nodeList.end())
@@ -273,7 +272,7 @@ void replication_options::sanity_check()
     }
 }
 
-/*static*/ bool replica_helper::get_replica_config(const partition_configuration& partition_config, const dsn_address_t& node, __out_param replica_configuration& replica_config)
+/*static*/ bool replica_helper::get_replica_config(const partition_configuration& partition_config, const ::dsn::rpc_address& node, __out_param replica_configuration& replica_config)
 {
     replica_config.gpid = partition_config.gpid;
     replica_config.primary = partition_config.primary;

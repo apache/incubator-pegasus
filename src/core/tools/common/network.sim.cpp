@@ -38,9 +38,9 @@
 namespace dsn { namespace tools {
 
     // multiple machines connect to the same switch, 10 should be >= than rpc_channel::max_value() + 1
-    static utils::safe_singleton_store<dsn_address_t, sim_network_provider*> s_switch[10]; 
+    static utils::safe_singleton_store<::dsn::rpc_address, sim_network_provider*> s_switch[10]; 
 
-    sim_client_session::sim_client_session(sim_network_provider& net, const dsn_address_t& remote_addr, rpc_client_matcher_ptr& matcher)
+    sim_client_session::sim_client_session(sim_network_provider& net, const ::dsn::rpc_address& remote_addr, rpc_client_matcher_ptr& matcher)
         : rpc_session(net, remote_addr, matcher)
     {}
 
@@ -74,8 +74,8 @@ namespace dsn { namespace tools {
         if (!s_switch[task_spec::get(msg->local_rpc_code)->rpc_call_channel].get(msg->to_address, rnet))
         {
             dwarn("cannot find destination node %s:%hu in simulator", 
-                msg->to_address.name, 
-                msg->to_address.port
+                msg->to_address.name(), 
+                msg->to_address.port()
                 );
             return;
         }
@@ -102,7 +102,7 @@ namespace dsn { namespace tools {
         on_send_completed(msg);
     }
 
-    sim_server_session::sim_server_session(sim_network_provider& net, const dsn_address_t& remote_addr, rpc_session_ptr& client)
+    sim_server_session::sim_server_session(sim_network_provider& net, const ::dsn::rpc_address& remote_addr, rpc_session_ptr& client)
         : rpc_session(net, remote_addr)
     {
         _client = client;
@@ -127,7 +127,7 @@ namespace dsn { namespace tools {
     sim_network_provider::sim_network_provider(rpc_engine* rpc, network* inner_provider)
         : connection_oriented_network(rpc, inner_provider)
     {
-        dsn_address_build(&_address, "localhost", 1);
+        _address = ::dsn::rpc_address(HOST_TYPE_IPV4, "localhost", 1);
 
         _min_message_delay_microseconds = 1;
         _max_message_delay_microseconds = 100000;
@@ -148,10 +148,10 @@ namespace dsn { namespace tools {
     { 
         dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP, "invalid given channel %s", channel.to_string());
 
-        dsn_address_build(&_address, boost::asio::ip::host_name().c_str(), port);
+        _address = ::dsn::rpc_address(HOST_TYPE_IPV4, boost::asio::ip::host_name().c_str(), port);
 
-        dsn_address_t ep2;
-        dsn_address_build(&ep2, "localhost", port);
+        ::dsn::rpc_address ep2;
+        ep2 = ::dsn::rpc_address(HOST_TYPE_IPV4, "localhost", port);
       
         if (!client_only)
         {

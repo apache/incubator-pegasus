@@ -75,8 +75,8 @@ namespace dsn
         }
 
         dwarn("client session connected to %s:%hu",
-            remote_address().name,
-            remote_address().port
+            remote_address().name(),
+            remote_address().port()
             );
     }
 
@@ -149,7 +149,7 @@ namespace dsn
     }
 
     // client
-    rpc_session::rpc_session(connection_oriented_network& net, const dsn_address_t& remote_addr, rpc_client_matcher_ptr& matcher)
+    rpc_session::rpc_session(connection_oriented_network& net, const ::dsn::rpc_address& remote_addr, rpc_client_matcher_ptr& matcher)
         : _net(net), _remote_addr(remote_addr)
     {
         _matcher = matcher;
@@ -160,7 +160,7 @@ namespace dsn
     }
 
     // server
-    rpc_session::rpc_session(connection_oriented_network& net, const dsn_address_t& remote_addr)
+    rpc_session::rpc_session(connection_oriented_network& net, const ::dsn::rpc_address& remote_addr)
         : _net(net), _remote_addr(remote_addr)
     {
         _matcher = nullptr;
@@ -221,7 +221,7 @@ namespace dsn
     void rpc_session::on_recv_request(message_ex* msg, int delay_ms)
     {
         msg->from_address = remote_address();
-        msg->from_address.port = msg->header->client.port;
+        msg->from_address.c_addr_ptr()->port = msg->header->client.port;
         msg->to_address = _net.address();
 
         msg->server_session = this;
@@ -272,7 +272,7 @@ namespace dsn
     void connection_oriented_network::call(message_ex* request, rpc_response_task* call)
     {
         rpc_session_ptr client = nullptr;
-        dsn_address_t& to = request->to_address;
+        ::dsn::rpc_address& to = request->to_address;
         bool new_client = false;
 
         // TODO: thread-local client ptr cache
@@ -311,7 +311,7 @@ namespace dsn
         client->call(request, call);
     }
 
-    rpc_session_ptr connection_oriented_network::get_server_session(const dsn_address_t& ep)
+    rpc_session_ptr connection_oriented_network::get_server_session(const ::dsn::rpc_address& ep)
     {
         utils::auto_read_lock l(_servers_lock);
         auto it = _servers.find(ep);
@@ -332,16 +332,16 @@ namespace dsn
             {
                 pr.first->second = s;
                 dwarn("server session on %s:%hu already exists, preempted",
-                    s->remote_address().name,
-                    s->remote_address().port
+                    s->remote_address().name(),
+                    s->remote_address().port()
                     );
             }
             scount = (int)_servers.size();
         }
 
         dwarn("server session %s:%hu accepted (%d in total)", 
-            s->remote_address().name, 
-            s->remote_address().port,
+            s->remote_address().name(), 
+            s->remote_address().port(),
             scount
             );
     }
@@ -364,14 +364,14 @@ namespace dsn
         if (r)
         {
             dwarn("server session %s:%hu disconnected (%d in total)",
-                s->remote_address().name,
-                s->remote_address().port,
+                s->remote_address().name(),
+                s->remote_address().port(),
                 scount
                 );
         }
     }
 
-    rpc_session_ptr connection_oriented_network::get_client_session(const dsn_address_t& ep)
+    rpc_session_ptr connection_oriented_network::get_client_session(const ::dsn::rpc_address& ep)
     {
         utils::auto_read_lock l(_clients_lock);
         auto it = _clients.find(ep);
@@ -395,8 +395,8 @@ namespace dsn
 
         if (r)
         {
-            dwarn("client session %s:%hu disconnected (%d in total)", s->remote_address().name,
-                s->remote_address().port, scount
+            dwarn("client session %s:%hu disconnected (%d in total)", s->remote_address().name(),
+                s->remote_address().port(), scount
                 );
         }
     }

@@ -37,8 +37,8 @@ namespace dsn {
             asio_network_provider(rpc_engine* srv, network* inner_provider);
 
             virtual error_code start(rpc_channel channel, int port, bool client_only, io_modifer& ctx);
-            virtual const dsn_address_t& address() { return _address;  }
-            virtual rpc_session_ptr create_client_session(const dsn_address_t& server_addr);
+            virtual const ::dsn::rpc_address& address() { return _address;  }
+            virtual rpc_session_ptr create_client_session(const ::dsn::rpc_address& server_addr);
 
         private:
             void do_accept();
@@ -49,7 +49,7 @@ namespace dsn {
             std::shared_ptr<boost::asio::ip::tcp::acceptor> _acceptor;            
             boost::asio::io_service                         _io_service;
             std::vector<std::shared_ptr<std::thread>>       _workers;
-            dsn_address_t                                   _address;
+            ::dsn::rpc_address                                   _address;
         };
 
     }

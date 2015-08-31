@@ -167,7 +167,6 @@ namespace dsn {
         dassert (_config != nullptr, "");
 
         _is_running = false;
-        _local_primary_address = dsn_address_invalid;
         _message_crc_required = config->get_value<bool>(
             "network", "message_crc_required", false,
             "whether crc is enabled for network messages");
@@ -330,7 +329,7 @@ namespace dsn {
         }
 
         _local_primary_address = _client_nets[0][0]->address();
-        _local_primary_address.port = aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id + ctx.port_shift_value;
+        _local_primary_address.c_addr_ptr()->port = aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id + ctx.port_shift_value;
 
         _is_running = true;
         return ERR_OK;
@@ -395,8 +394,8 @@ namespace dsn {
             dwarn(
                 "recv unknown message with type %s from %s:%hu",
                 msg->header->rpc_name,
-                msg->from_address.name,
-                msg->from_address.port
+                msg->from_address.name(),
+                msg->from_address.port()
                 );
         }
     }
@@ -414,7 +413,7 @@ namespace dsn {
             hdr.rpc_name
             );
 
-        hdr.client.port = primary_address().port;
+        hdr.client.port = primary_address().port();
         hdr.rpc_id = utils::get_random64();
         request->from_address = primary_address();
 

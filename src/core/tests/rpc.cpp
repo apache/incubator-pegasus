@@ -33,8 +33,7 @@ TEST(core, rpc)
 {
     int req = 0;
     std::string result;
-    dsn_address_t server;
-    dsn_address_build(&server, "localhost", 20101);
+    ::dsn::rpc_address server(HOST_TYPE_IPV4, "localhost", 20101);
 
     ::dsn::message_ptr response;
     auto err = ::dsn::rpc::call_typed_wait(

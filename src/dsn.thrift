@@ -1,7 +1,7 @@
 namespace cpp dsn
 
 // place holder
-struct end_point
+struct address
 {
 }
 

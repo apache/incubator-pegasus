@@ -70,7 +70,7 @@ namespace dsn {
         //
         // the named address (when client_only is true)
         //
-        virtual const dsn_address_t& address() = 0;
+        virtual const ::dsn::rpc_address& address() = 0;
 
         //
         // this is where the upper rpc engine calls down for a RPC call
@@ -166,26 +166,26 @@ namespace dsn {
         virtual ~connection_oriented_network() {}
 
         // server session management
-        rpc_session_ptr get_server_session(const dsn_address_t& ep);
+        rpc_session_ptr get_server_session(const ::dsn::rpc_address& ep);
         void on_server_session_accepted(rpc_session_ptr& s);
         void on_server_session_disconnected(rpc_session_ptr& s);
 
         // client session management
-        rpc_session_ptr get_client_session(const dsn_address_t& ep);
+        rpc_session_ptr get_client_session(const ::dsn::rpc_address& ep);
         void on_client_session_disconnected(rpc_session_ptr& s);
 
         // called upon RPC call, rpc client session is created on demand
         virtual void call(message_ex* request, rpc_response_task* call);
 
         // to be defined
-        virtual rpc_session_ptr create_client_session(const dsn_address_t& server_addr) = 0;
+        virtual rpc_session_ptr create_client_session(const ::dsn::rpc_address& server_addr) = 0;
 
     protected:
-        typedef std::unordered_map<dsn_address_t, rpc_session_ptr> client_sessions;
+        typedef std::unordered_map<::dsn::rpc_address, rpc_session_ptr> client_sessions;
         client_sessions               _clients;
         utils::rw_lock_nr             _clients_lock;
 
-        typedef std::unordered_map<dsn_address_t, rpc_session_ptr> server_sessions;
+        typedef std::unordered_map<::dsn::rpc_address, rpc_session_ptr> server_sessions;
         server_sessions               _servers;
         utils::rw_lock_nr             _servers_lock;
     };
@@ -200,13 +200,13 @@ namespace dsn {
                 
         bool has_pending_out_msgs();
         bool is_client() const { return _matcher.get() != nullptr; }
-        const dsn_address_t& remote_address() const { return _remote_addr; }
+        const ::dsn::rpc_address& remote_address() const { return _remote_addr; }
         connection_oriented_network& net() const { return _net; }
         void send_message(message_ex* msg);
 
     // for client session
     public:        
-        rpc_session(connection_oriented_network& net, const dsn_address_t& remote_addr, rpc_client_matcher_ptr& matcher);
+        rpc_session(connection_oriented_network& net, const ::dsn::rpc_address& remote_addr, rpc_client_matcher_ptr& matcher);
         bool on_recv_reply(uint64_t key, message_ex* reply, int delay_ms);
         bool on_disconnected();
         void call(message_ex* request, rpc_response_task* call);
@@ -215,7 +215,7 @@ namespace dsn {
         
     // for server session
     public:        
-        rpc_session(connection_oriented_network& net, const dsn_address_t& remote_addr);
+        rpc_session(connection_oriented_network& net, const ::dsn::rpc_address& remote_addr);
         void on_recv_request(message_ex* msg, int delay_ms);
 
     // shared
@@ -234,7 +234,7 @@ namespace dsn {
 
     protected:
         connection_oriented_network        &_net;
-        dsn_address_t                      _remote_addr;
+        ::dsn::rpc_address                      _remote_addr;
         std::atomic<int>                   _reconnect_count_after_last_success;
         rpc_client_matcher_ptr             _matcher; // client used only
 

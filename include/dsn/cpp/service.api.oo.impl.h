@@ -282,7 +282,7 @@ namespace dsn
         // ------------- inline implementation ----------------
         template<typename TRequest>
         inline void call_one_way_typed(
-            const dsn_address_t& server,
+            const ::dsn::rpc_address& server,
             dsn_task_code_t code,
             const TRequest& req,
             int hash
@@ -290,13 +290,13 @@ namespace dsn
         {
             dsn_message_t msg = dsn_msg_create_request(code, 0, hash);
             ::marshall(msg, req);
-            dsn_rpc_call_one_way(server, msg);
+            dsn_rpc_call_one_way(&server.c_addr(), msg);
         }
 
         template<typename TRequest>
         ::dsn::error_code call_typed_wait(
             /*out*/ ::dsn::message_ptr* response,
-            const dsn_address_t& server,
+            const ::dsn::rpc_address& server,
             dsn_task_code_t code,
             const TRequest& req,
             int hash,
@@ -307,7 +307,7 @@ namespace dsn
             dsn_message_t msg = dsn_msg_create_request(code, timeout_milliseconds, hash);                
             ::marshall(msg, req);
 
-            auto resp = dsn_rpc_call_wait(server, msg);
+            auto resp = dsn_rpc_call_wait(&server.c_addr(), msg);
             if (resp != nullptr)
             {
                 if (response)
@@ -322,7 +322,7 @@ namespace dsn
 
         template<typename T, typename TRequest, typename TResponse>
         inline task_ptr call_typed(
-            const dsn_address_t& server,
+            const ::dsn::rpc_address& server,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
             T* owner,
@@ -338,13 +338,13 @@ namespace dsn
             auto t = internal_use_only::create_rpc_call<T, TRequest, TResponse>(
                 msg, req, owner, callback, reply_hash);
                
-            dsn_rpc_call(server, t->native_handle(), owner ? ((servicelet*)owner)->tracker() : nullptr);
+            dsn_rpc_call(&server.c_addr(), t->native_handle(), owner ? ((servicelet*)owner)->tracker() : nullptr);
             return t;
         }
 
         template<typename TRequest, typename TResponse>
         inline task_ptr call_typed(
-            const dsn_address_t& server,
+            const ::dsn::rpc_address& server,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
             servicelet* owner,
@@ -360,13 +360,13 @@ namespace dsn
             auto t = internal_use_only::create_rpc_call<TRequest, TResponse>(
                 msg, req, owner, callback, reply_hash);
 
-            dsn_rpc_call(server, t->native_handle(), owner ? ((servicelet*)owner)->tracker() : nullptr);
+            dsn_rpc_call(&server.c_addr(), t->native_handle(), owner ? ((servicelet*)owner)->tracker() : nullptr);
             return t;
         }
 
         template<typename T, typename TRequest, typename TResponse>
         inline task_ptr call_typed(
-            const dsn_address_t& server,
+            const ::dsn::rpc_address& server,
             dsn_task_code_t code,
             const TRequest& req,
             T* owner,
@@ -383,13 +383,13 @@ namespace dsn
             auto t = internal_use_only::create_rpc_call<T, TResponse>(
                 msg, owner, callback, context, reply_hash);
 
-            dsn_rpc_call(server, t->native_handle(), owner ? ((servicelet*)owner)->tracker() : nullptr);
+            dsn_rpc_call(&server.c_addr(), t->native_handle(), owner ? ((servicelet*)owner)->tracker() : nullptr);
             return t;
         }
 
         template<typename TRequest, typename TResponse>
         inline task_ptr call_typed(
-            const dsn_address_t& server,
+            const ::dsn::rpc_address& server,
             dsn_task_code_t code,
             const TRequest& req,
             servicelet* owner,
@@ -406,7 +406,7 @@ namespace dsn
             auto t = internal_use_only::create_rpc_call<TResponse>(
                 msg, owner, callback, context, reply_hash);
 
-            dsn_rpc_call(server, t->native_handle(), owner ? ((servicelet*)owner)->tracker() : nullptr);
+            dsn_rpc_call(&server.c_addr(), t->native_handle(), owner ? ((servicelet*)owner)->tracker() : nullptr);
             return t;
         }
 

@@ -87,7 +87,7 @@ namespace dsn
         // no callback
         template<typename TRequest>
         void call_one_way_typed(
-            const dsn_address_t& server,
+            const ::dsn::rpc_address& server,
             dsn_task_code_t code,
             const TRequest& req,
             int hash = 0
@@ -96,7 +96,7 @@ namespace dsn
         template<typename TRequest>
         ::dsn::error_code call_typed_wait(
             /*out*/ ::dsn::message_ptr* response,
-            const dsn_address_t& server,
+            const ::dsn::rpc_address& server,
             dsn_task_code_t code,
             const TRequest& req,
             int hash = 0,
@@ -107,7 +107,7 @@ namespace dsn
         //  void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)
         template<typename T, typename TRequest, typename TResponse>
         task_ptr call_typed(
-            const dsn_address_t& server,
+            const ::dsn::rpc_address& server,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
             T* owner,
@@ -121,7 +121,7 @@ namespace dsn
         //  std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)>
         template<typename TRequest, typename TResponse>
         task_ptr call_typed(
-            const dsn_address_t& server,
+            const ::dsn::rpc_address& server,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
             servicelet* owner,
@@ -135,7 +135,7 @@ namespace dsn
         //   void (T::*)(error_code, const TResponse&, void*);
         template<typename T, typename TRequest, typename TResponse>
         task_ptr call_typed(
-            const dsn_address_t& server,
+            const ::dsn::rpc_address& server,
             dsn_task_code_t code,
             const TRequest& req,
             T* owner,
@@ -150,7 +150,7 @@ namespace dsn
         //  std::function<void(error_code, const TResponse&, void*)>
         template<typename TRequest, typename TResponse>
         task_ptr call_typed(
-            const dsn_address_t& server,
+            const ::dsn::rpc_address& server,
             dsn_task_code_t code,
             const TRequest& req,
             servicelet* owner,
@@ -164,7 +164,7 @@ namespace dsn
         // callback type 4:
         //  std::function<void(error_code, dsn_message_t, dsn_message_t)>
         task_ptr call(
-            const dsn_address_t& server,
+            const ::dsn::rpc_address& server,
             dsn_message_t request,
             servicelet* owner,
             rpc_reply_handler callback,
@@ -229,7 +229,7 @@ namespace dsn
         }
 
         task_ptr copy_remote_files(
-            const dsn_address_t& remote,
+            const ::dsn::rpc_address& remote,
             const std::string& source_dir,
             std::vector<std::string>& files,  // empty for all
             const std::string& dest_dir,
@@ -241,7 +241,7 @@ namespace dsn
             );
 
         inline task_ptr copy_remote_directory(
-            const dsn_address_t& remote,
+            const ::dsn::rpc_address& remote,
             const std::string& source_dir,
             const std::string& dest_dir,
             bool overwrite,

@@ -48,7 +48,7 @@ public:
         if (argc < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        std::vector<dsn_address_t> meta_servers;
+        std::vector<::dsn::rpc_address> meta_servers;
         ::dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
         
         _simple_kv_client = new simple_kv_client(meta_servers, argv[1]);
@@ -122,7 +122,7 @@ public:
         if (argc < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        std::vector<dsn_address_t> meta_servers;
+        std::vector<::dsn::rpc_address> meta_servers;
         ::dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
 
         _simple_kv_client = new simple_kv_perf_test_client(meta_servers, argv[1]);

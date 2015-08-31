@@ -14,7 +14,7 @@ class <?=$svc->name?>_perf_test_client
 {
 public:
     <?=$svc->name?>_perf_test_client(
-        const dsn_address_t& server)
+        const ::dsn::rpc_address& server)
         : <?=$svc->name?>_client(server)
     {
     }

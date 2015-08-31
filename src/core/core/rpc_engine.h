@@ -63,7 +63,7 @@ public:
     // information inquery
     //
     service_node* node() const { return _node; }
-    const dsn_address_t& primary_address() const { return _local_primary_address; }
+    const ::dsn::rpc_address& primary_address() const { return _local_primary_address; }
 
 private:
     network* create_network(
@@ -77,7 +77,7 @@ private:
     service_node                          *_node;
     std::vector<std::vector<network*>>    _client_nets; // <format, <CHANNEL, network*>>
     std::unordered_map<int, std::vector<network*>>  _server_nets; // <port, <CHANNEL, network*>>
-    dsn_address_t                             _local_primary_address;
+    ::dsn::rpc_address                             _local_primary_address;
 
     typedef std::unordered_map<std::string, rpc_handler_ptr> rpc_handlers;
     rpc_handlers                  _handlers;

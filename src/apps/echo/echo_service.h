@@ -90,7 +90,7 @@ public:
         if (argc < 3)
             return ERR_INVALID_PARAMETERS;
 
-        dsn_address_build(&_server, argv[1], (uint16_t)atoi(argv[2]));
+        dsn_address_build(_server.c_addr_ptr(), argv[1], (uint16_t)atoi(argv[2]));
 
         if (_bench == "echo")
         {
@@ -242,7 +242,7 @@ private:
 
     std::string _bench;
     bool _test_local_queue;
-    dsn_address_t _server;
+    ::dsn::rpc_address _server;
     int _seq;
     int _message_size;
     int _concurrency;

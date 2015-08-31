@@ -188,9 +188,13 @@ namespace dsn.dev.csharp
         public RpcAddress()
         {
             addr = new dsn_address_t();
-            addr.ip = 0;
-            addr.port = 0;
-            addr.name = "invalid";
+        }
+
+        public RpcAddress(string host, UInt16 port)
+        {
+            addr = new dsn_address_t();
+            addr.host = new UInt32[4];
+            Native.dsn_address_build(out addr, host, port);
         }
 
         public static implicit operator dsn_address_t(RpcAddress c)

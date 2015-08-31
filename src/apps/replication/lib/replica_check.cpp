@@ -75,7 +75,7 @@ void replica::broadcast_group_check()
         if (it->first == primary_address())
             continue;
 
-        dsn_address_t addr = it->first;
+        ::dsn::rpc_address addr = it->first;
         std::shared_ptr<group_check_request> request(new group_check_request);
 
         request->app_type = _primary_states.membership.app_type;
@@ -102,7 +102,7 @@ void replica::broadcast_group_check()
         _primary_states.group_check_pending_replies[addr] = callback_task;
 
         ddebug(
-            "%s: init_group_check for %s:%hu", name(), addr.name, addr.port
+            "%s: init_group_check for %s:%hu", name(), addr.name(), addr.port()
         );
     }
 }
@@ -113,7 +113,7 @@ void replica::on_group_check(const group_check_request& request, __out_param gro
 
     ddebug(
         "%s: on_group_check from %s:%hu",
-        name(), request.config.primary.name, request.config.primary.port
+        name(), request.config.primary.name(), request.config.primary.port()
         );
     
     if (request.config.ballot < get_ballot())

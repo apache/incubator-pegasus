@@ -37,7 +37,7 @@ namespace dsn
 
             struct params
             {
-                std::vector<dsn_address_t> servers;
+                std::vector<::dsn::rpc_address> servers;
                 rpc_reply_handler callback;
 
                 // internal callback contexts
@@ -46,9 +46,9 @@ namespace dsn
                 int         reply_hash;
             };
 
-            static dsn_address_t get_next_server(const dsn_address_t& currentServer, const std::vector<dsn_address_t>& servers)
+            static ::dsn::rpc_address get_next_server(const ::dsn::rpc_address& currentServer, const std::vector<::dsn::rpc_address>& servers)
             {
-                if (currentServer == dsn_address_invalid)
+                if (currentServer.is_invalid())
                 {
                     return servers[dsn_random32(0, static_cast<int>(servers.size()) * 13) % static_cast<int>(servers.size())];
                 }
@@ -95,8 +95,8 @@ namespace dsn
         } // end namespace rpc_replicated_impl 
 
         dsn::task_ptr call_replicated(
-            const dsn_address_t& first_server,
-            const std::vector<dsn_address_t>& servers,
+            const ::dsn::rpc_address& first_server,
+            const std::vector<::dsn::rpc_address>& servers,
             dsn_message_t request,
 
             // reply
@@ -105,8 +105,8 @@ namespace dsn
             int reply_hash
             )
         {
-            dsn_address_t first = first_server;
-            if (first == dsn_address_invalid)
+            ::dsn::rpc_address first = first_server;
+            if (first.is_invalid())
             {
                 first = rpc_replicated_impl::get_next_server(first_server, servers);
             }

@@ -138,7 +138,7 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
             "%s: on_learn %s:%hu, learner state is lost due to DDD, "
             "with its appCommittedDecree = %llu vs localCommittedDecree = %llu, "
             "so we learn from scratch by setting learnStartDecree = 0",
-            name(), request.learner.name, request.learner.port,
+            name(), request.learner.name(), request.learner.port(),
             request.last_committed_decree_in_app, localCommittedDecree
             );
         learnStartDecree = 0; // 0 means learn from scratch
@@ -147,7 +147,7 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
     ddebug(
         "%s: on_learn %s:%hu, with localCommittedDecree = %llu, "
         "localAppC/DDecree = <%llu, %llu>, learnStartDecree = %llu",
-        name(), request.learner.name, request.learner.port,
+        name(), request.learner.name(), request.learner.port(),
         localCommittedDecree, _app->last_committed_decree(), _app->last_durable_decree(),
         learnStartDecree
         );
@@ -170,7 +170,7 @@ void replica::on_learn(const learn_request& request, __out_param learn_response&
 
             ddebug(
                 "%s: on_learn %s:%hu, set prepareStartDecree = %llu",
-                name(), request.learner.name, request.learner.port,
+                name(), request.learner.name(), request.learner.port(),
                 localCommittedDecree + 1
             );
         }
@@ -385,7 +385,7 @@ void replica::handle_learning_error(error_code err)
     update_local_configuration_with_no_ballot_change(PS_ERROR);
 }
 
-void replica::handle_learning_succeeded_on_primary(const dsn_address_t& node, uint64_t learnSignature)
+void replica::handle_learning_succeeded_on_primary(const ::dsn::rpc_address& node, uint64_t learnSignature)
 {
     auto it = _primary_states.learners.find(node);
     if (it != _primary_states.learners.end() && it->second.signature == learnSignature)

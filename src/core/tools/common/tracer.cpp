@@ -60,10 +60,10 @@ namespace dsn {
                 ddebug("%s EXEC BEGIN, task_id = %016llx, %s:%hu => %s:%hu, rpc_id = %016llx",
                     this_->spec().name.c_str(),
                     this_->id(),
-                    tsk->get_request()->from_address.name,
-                    tsk->get_request()->from_address.port,
-                    tsk->get_request()->to_address.name,
-                    tsk->get_request()->to_address.port,
+                    tsk->get_request()->from_address.name(),
+                    tsk->get_request()->from_address.port(),
+                    tsk->get_request()->to_address.name(),
+                    tsk->get_request()->to_address.port(),
                     tsk->get_request()->header->rpc_id
                     );
             }
@@ -74,10 +74,10 @@ namespace dsn {
                 ddebug("%s EXEC BEGIN, task_id = %016llx, %s:%hu => %s:%hu, rpc_id = %016llx",
                     this_->spec().name.c_str(),
                     this_->id(),
-                    tsk->get_request()->to_address.name,
-                    tsk->get_request()->to_address.port,
-                    tsk->get_request()->from_address.name,
-                    tsk->get_request()->from_address.port,
+                    tsk->get_request()->to_address.name(),
+                    tsk->get_request()->to_address.port(),
+                    tsk->get_request()->from_address.name(),
+                    tsk->get_request()->from_address.port(),
                     tsk->get_request()->header->rpc_id
                     );
             }
@@ -141,10 +141,10 @@ namespace dsn {
             ddebug(
                 "%s RPC.CALL: %s:%hu => %s:%hu, rpc_id = %016llx, callback_task = %016llx, timeout = %d ms",
                 hdr.rpc_name,
-                req->from_address.name,
-                req->from_address.port,
-                req->to_address.name,
-                req->to_address.port,
+                req->from_address.name(),
+                req->from_address.port(),
+                req->to_address.name(),
+                req->to_address.port(),
                 hdr.rpc_id,
                 callee ? callee->id() : 0,
                 hdr.client.timeout_ms
@@ -156,10 +156,10 @@ namespace dsn {
             ddebug("%s RPC.REQUEST.ENQUEUE, task_id = %016llx, %s:%hu => %s:%hu, rpc_id = %016llx",
                 callee->spec().name.c_str(),
                 callee->id(),
-                callee->get_request()->from_address.name,
-                callee->get_request()->from_address.port,
-                callee->get_request()->to_address.name,
-                callee->get_request()->to_address.port,
+                callee->get_request()->from_address.name(),
+                callee->get_request()->from_address.port(),
+                callee->get_request()->to_address.name(),
+                callee->get_request()->to_address.port(),
                 callee->get_request()->header->rpc_id
                 );
         }
@@ -172,10 +172,10 @@ namespace dsn {
             ddebug(
                 "%s RPC.REPLY: %s:%hu => %s:%hu, rpc_id = %016llx",
                 hdr.rpc_name,
-                msg->from_address.name,
-                msg->from_address.port,
-                msg->to_address.name,
-                msg->to_address.port,
+                msg->from_address.name(),
+                msg->from_address.port(),
+                msg->to_address.name(),
+                msg->to_address.port(),
                 hdr.rpc_id
                 );
         }
@@ -185,10 +185,10 @@ namespace dsn {
             ddebug("%s RPC.RESPONSE.ENQUEUE, task_id = %016llx, %s:%hu => %s:%hu, rpc_id = %016llx",
                 resp->spec().name.c_str(),
                 resp->id(),
-                resp->get_request()->to_address.name,
-                resp->get_request()->to_address.port,
-                resp->get_request()->from_address.name,
-                resp->get_request()->from_address.port,
+                resp->get_request()->to_address.name(),
+                resp->get_request()->to_address.port(),
+                resp->get_request()->from_address.name(),
+                resp->get_request()->from_address.port(),
                 resp->get_request()->header->rpc_id
                 );
         }

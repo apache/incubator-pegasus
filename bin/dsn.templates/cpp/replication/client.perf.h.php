@@ -14,7 +14,7 @@ class <?=$svc->name?>_perf_test_client
 {
 public:
     <?=$svc->name?>_perf_test_client(
-        const std::vector<dsn_address_t>& meta_servers,
+        const std::vector<::dsn::address>& meta_servers,
         const char* app_name)
         : <?=$svc->name?>_client(meta_servers, app_name)
     {

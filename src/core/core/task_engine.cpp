@@ -151,7 +151,7 @@ void task_worker_pool::enqueue(task* t)
     {
         int idx = (_spec.partitioned ? t->hash() % _queues.size() : 0);
         task_queue* q = _queues[idx];
-        //dinfo("%s pool::enqueue %s (%016llx)", _node->name(), task->spec().name, task->id());
+        //dinfo("%s pool::enqueue %s (%016llx)", _node->name(), task->spec().name(), task->id());
         auto controller = _controllers[idx];
         if (controller != nullptr)
         {

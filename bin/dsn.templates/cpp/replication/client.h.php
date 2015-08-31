@@ -16,7 +16,7 @@ class <?=$svc->name?>_client
 {
 public:
     <?=$svc->name?>_client(
-        const std::vector<dsn_address_t>& meta_servers,
+        const std::vector<::dsn::address>& meta_servers,
         const char* app_name)
         : ::dsn::replication::replication_app_client_base(meta_servers, app_name) 
     {

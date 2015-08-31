@@ -63,8 +63,8 @@ namespace dsn {
                 catch (std::exception& ex)
                 {
                     dwarn("network session %x:%hu set socket option failed, err = %s",
-                        remote_address().ip,
-                        remote_address().port,
+                        remote_address().ip(),
+                        remote_address().port(),
                         ex.what()
                         );
                 }
@@ -141,7 +141,7 @@ namespace dsn {
         asio_rpc_session::asio_rpc_session(
             asio_network_provider& net,
             std::shared_ptr<boost::asio::ip::tcp::socket>& socket,
-            const dsn_address_t& remote_addr,
+            const ::dsn::rpc_address& remote_addr,
             rpc_client_matcher_ptr& matcher,
             std::shared_ptr<message_parser>& parser
             )
@@ -165,7 +165,7 @@ namespace dsn {
                     ex;
                     /*dwarn("network session %s:%hu exits failed, err = %s",
                     remote_address().to_ip_string().c_str(),
-                    static_cast<int>remote_address().port,
+                    static_cast<int>remote_address().port(),
                     ex.what()
                     );*/
                 }
@@ -179,7 +179,7 @@ namespace dsn {
             if (try_connecting())
             {
                 boost::asio::ip::tcp::endpoint ep(
-                    boost::asio::ip::address_v4(_remote_addr.ip), _remote_addr.port);
+                    boost::asio::ip::address_v4(_remote_addr.ip()), _remote_addr.port());
 
                 add_ref();
                 _socket->async_connect(ep, [this](boost::system::error_code ec)
@@ -187,8 +187,8 @@ namespace dsn {
                     if (!ec)
                     {
                         dinfo("client session %s:%hu connected",
-                            _remote_addr.name,
-                            _remote_addr.port
+                            _remote_addr.name(),
+                            _remote_addr.port()
                             );
 
                         set_options();
@@ -199,8 +199,8 @@ namespace dsn {
                     else
                     {
                         derror("client session connect to %s:%hu failed, error = %s",
-                            _remote_addr.name,
-                            _remote_addr.port,
+                            _remote_addr.name(),
+                            _remote_addr.port(),
                             ec.message().c_str()
                             );
                         on_failure();
@@ -212,7 +212,7 @@ namespace dsn {
 
         asio_rpc_session::asio_rpc_session(
             asio_network_provider& net,
-            const dsn_address_t& remote_addr,
+            const ::dsn::rpc_address& remote_addr,
             std::shared_ptr<boost::asio::ip::tcp::socket>& socket,
             std::shared_ptr<message_parser>& parser
             )

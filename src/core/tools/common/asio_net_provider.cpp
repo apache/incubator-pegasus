@@ -62,12 +62,12 @@ namespace dsn {
                         
             dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP, "invalid given channel %s", channel.to_string());
 
-            dsn_address_build(&_address, boost::asio::ip::host_name().c_str(), port);
+            _address = ::dsn::rpc_address(HOST_TYPE_IPV4, boost::asio::ip::host_name().c_str(), port);
 
             if (!client_only)
             {
                 auto v4_addr = boost::asio::ip::address_v4::any(); //(ntohl(_address.ip));
-                ::boost::asio::ip::tcp::endpoint ep(v4_addr, _address.port);
+                ::boost::asio::ip::tcp::endpoint ep(v4_addr, _address.port());
 
                 try
                 {
@@ -84,7 +84,7 @@ namespace dsn {
             return ERR_OK;
         }
 
-        rpc_session_ptr asio_network_provider::create_client_session(const dsn_address_t& server_addr)
+        rpc_session_ptr asio_network_provider::create_client_session(const ::dsn::rpc_address& server_addr)
         {
             auto matcher = new_client_matcher();
             auto parser = new_message_parser();
@@ -102,13 +102,9 @@ namespace dsn {
             {
                 if (!ec)
                 {
-                    dsn_address_t client_addr;
-                    client_addr.ip = socket->remote_endpoint().address().to_v4().to_ulong();
-                    client_addr.port = socket->remote_endpoint().port();
-
-                    // TODO: convert ip to host name
-                    strncpy(client_addr.name, socket->remote_endpoint().address().to_string().c_str(),
-                        sizeof(client_addr.name) / sizeof(char));
+                    auto ip = socket->remote_endpoint().address().to_v4().to_ulong();
+                    auto port = socket->remote_endpoint().port();
+                    ::dsn::rpc_address client_addr(ip, port);
 
                     auto parser = new_message_parser();
                     rpc_session_ptr s = new asio_rpc_session(*this, client_addr, 

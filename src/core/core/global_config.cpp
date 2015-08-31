@@ -175,8 +175,8 @@ static bool build_server_network_confs(
             /*            
             port = 0 for default setting in [apps..default]
             port.channel = header_format, network_provider_name,buffer_block_size
-            network.server.port.RPC_CHANNEL_TCP = NET_HDR_DSN, dsn::tools::asio_network_provider,65536
-            network.server.port.RPC_CHANNEL_UDP = NET_HDR_DSN, dsn::tools::asio_network_provider,65536
+            network.server.port().RPC_CHANNEL_TCP = NET_HDR_DSN, dsn::tools::asio_network_provider,65536
+            network.server.port().RPC_CHANNEL_UDP = NET_HDR_DSN, dsn::tools::asio_network_provider,65536
             */
 
             rpc_channel ch = rpc_channel::from_string(k3.c_str(), RPC_CHANNEL_TCP);

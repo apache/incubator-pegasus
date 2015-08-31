@@ -200,30 +200,31 @@ typedef enum dsn_host_type_t
 {
     HOST_TYPE_IPV4,  // 4 bytes
     HOST_TYPE_IPV6,  // 16 bytes
-    HOST_TYPE_URL,   // customized bytes
+    HOST_TYPE_URI,   // customized bytes
     HOST_TYPE_COUNT,
     HOST_TYPE_INVALID
 } dsn_host_type_t;
 
 //
-// TODO: support other host types
+// dsn_address_t is passed by copy-by-value in general
+// so callers must be in charge of releasing @uri when
+// host type is HOST_TYPE_URI.
 //
+
+#pragma pack(push, 4)
 typedef struct dsn_address_t
 {
-    /*dsn_host_type_t type;
+    dsn_host_type_t type;
+    uint16_t        port;
     union {
         uint32_t   ip;
         uint32_t   ipv6[4];
         struct {
-            const char *url;
-            void (*deletor)(const char*);
+            const char *uri;
         };
-    };*/
-
-    uint32_t ip;
-    uint16_t port;
-    char     name[DSN_MAX_ADDRESS_NAME_LENGTH]; // for verbose debugging
+    }; 
 } dsn_address_t;
+#pragma pack(pop)
 
 //------------------------------------------------------------------------------
 //
@@ -492,7 +493,17 @@ extern DSN_API bool         dsn_semaphore_wait_timeout(
 //------------------------------------------------------------------------------
 
 // rpc address utilities
-extern DSN_API dsn_address_t dsn_address_invalid;
+
+extern DSN_API void          dsn_host_to_name(
+                                const dsn_address_t* addr, 
+                                /*out*/ char* name_buffer, 
+                                int length
+                                );
+extern DSN_API void          dsn_host_from_name(
+                                dsn_host_type_t type, 
+                                const char* name, 
+                                /*out*/ dsn_address_t* daddr
+                                );
 extern DSN_API void          dsn_address_build(
                                 /*out*/ dsn_address_t* ep, 
                                 const char* host, 
@@ -504,7 +515,6 @@ extern DSN_API void          dsn_address_build_ipv4(
                                 uint16_t port
                                 );
 extern DSN_API dsn_address_t dsn_primary_address();
-extern DSN_API void          dsn_address_get_invalid(/*out*/ dsn_address_t* paddr);
 extern DSN_API void          dsn_primary_address2(/*out*/ dsn_address_t* paddr);
     
 // rpc message and buffer management
@@ -548,7 +558,7 @@ extern DSN_API void          dsn_msg_query_request(
                                 /*out*/ int* phash
                                 );
 
-// apps write rpc message as this:
+// apps write rpc message as follows:
 //   void* ptr;
 //   size_t size;
 //   dsn_msg_write_next(msg, &ptr, &size, min_size);
@@ -568,7 +578,7 @@ extern DSN_API void          dsn_msg_write_next(
 // commit the write buffer after the message content is written
 extern DSN_API void          dsn_msg_write_commit(dsn_message_t msg, size_t size);
 
-// apps read rpc message as this:
+// apps read rpc message as follows:
 //   void* ptr;
 //   size_t size;
 //   dsn_msg_read_next(msg, &ptr, &size);
@@ -592,36 +602,51 @@ extern DSN_API void          dsn_msg_to_address(
                                 dsn_message_t msg, 
                                 /*out*/ dsn_address_t* ep
                                 );
-    
-// rpc calls
+
+//
+// server-side rpc calls
+//
 extern DSN_API bool          dsn_rpc_register_handler(
                                 dsn_task_code_t code, 
                                 const char* name,
                                 dsn_rpc_request_handler_t cb, 
                                 void* param
                                 );
+
 // return void* param on dsn_rpc_register_handler  
 extern DSN_API void*         dsn_rpc_unregiser_handler(dsn_task_code_t code);
 
+// reply with a response which is created using dsn_msg_create_response
+extern DSN_API void          dsn_rpc_reply(dsn_message_t response);
+
+
+//
+// client-side rpc calls
+//
+// create a callback task to be used in dsn_rpc_call (@rpc-call)
 extern DSN_API dsn_task_t    dsn_rpc_create_response_task(
                                 dsn_message_t request, 
                                 dsn_rpc_response_handler_t cb, 
                                 void* param, 
                                 int reply_hash
                                 );
+
+// tracker can be empty
 extern DSN_API void          dsn_rpc_call(
-                                dsn_address_t server, 
+                                const dsn_address_t* server,
                                 dsn_task_t rpc_call, 
                                 dsn_task_tracker_t tracker
                                 );
 
 // WARNING: returned msg must be explicitly msg_release_ref
-extern DSN_API dsn_message_t dsn_rpc_call_wait(dsn_address_t server, dsn_message_t request);
-extern DSN_API void          dsn_rpc_call_one_way(dsn_address_t server, dsn_message_t request);
-extern DSN_API void          dsn_rpc_reply(dsn_message_t response);
+extern DSN_API dsn_message_t dsn_rpc_call_wait(const dsn_address_t* server, dsn_message_t request);
+extern DSN_API void          dsn_rpc_call_one_way(const dsn_address_t* server, dsn_message_t request);
+
 
 // WARNING: returned msg must be explicitly msg_release_ref
 extern DSN_API dsn_message_t dsn_rpc_get_response(dsn_task_t rpc_call);
+
+// this is to mimic a response is received when no real rpc is called
 extern DSN_API void          dsn_rpc_enqueue_response(
                                 dsn_task_t rpc_call, 
                                 dsn_error_t err, 
@@ -658,7 +683,7 @@ extern DSN_API void         dsn_file_write(
                                 dsn_task_tracker_t tracker
                                 );
 extern DSN_API void         dsn_file_copy_remote_directory(
-                                dsn_address_t remote, 
+                                const dsn_address_t* remote, 
                                 const char* source_dir, 
                                 const char* dest_dir,
                                 bool overwrite, 
@@ -666,7 +691,7 @@ extern DSN_API void         dsn_file_copy_remote_directory(
                                 dsn_task_tracker_t tracker
                                 );
 extern DSN_API void         dsn_file_copy_remote_files(
-                                dsn_address_t remote, 
+                                const dsn_address_t* remote,
                                 const char* source_dir, 
                                 const char** source_files, 
                                 const char* dest_dir, 
@@ -727,7 +752,6 @@ inline double   dsn_probability()
 #define dbg_dassert(x, ...) 
 #endif
 
-        
 # ifdef __cplusplus
 }
 # endif

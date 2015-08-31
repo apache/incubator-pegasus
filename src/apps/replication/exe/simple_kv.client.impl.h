@@ -34,7 +34,7 @@ namespace dsn {
             class simple_kv_client_impl : public simple_kv_client
             {
             public:
-                simple_kv_client_impl(const std::vector<dsn_address_t>& meta_servers);
+                simple_kv_client_impl(const std::vector<::dsn::rpc_address>& meta_servers);
                 ~simple_kv_client_impl(void);
 
             protected:
