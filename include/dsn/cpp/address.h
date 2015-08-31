@@ -40,7 +40,7 @@ namespace dsn
         
         rpc_address();
         rpc_address(const rpc_address& addr);
-        rpc_address(rpc_address&& addr);
+        //rpc_address(rpc_address&& addr);
         rpc_address(dsn_address_t& addr);
         rpc_address& operator=(const dsn_address_t& addr);
 
@@ -107,11 +107,11 @@ namespace dsn
         _name = addr._name;
     }
 
-    inline rpc_address::rpc_address(rpc_address&& addr)
-    {
-        _addr = addr._addr;
-        _name = std::move(addr._name);
-    }
+    //inline rpc_address::rpc_address(rpc_address&& addr)
+    //{
+    //    _addr = addr._addr;
+    //    _name = std::move(addr._name);
+    //}
 
     inline rpc_address::rpc_address(dsn_address_t& addr)
     {

@@ -109,8 +109,9 @@ namespace dsn
             dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP,
                 "invalid given channel %s", channel.to_string());
 
-            gethostname(_address.name(), sizeof(_address.name));
-            dsn_address_build(&_address, _address.name(), port);
+            char hostname[128];
+            gethostname(hostname, sizeof(hostname));
+            _address = ::dsn::rpc_address(HOST_TYPE_IPV4, hostname, port);
 
             if (!client_only)
             {
@@ -180,8 +181,7 @@ namespace dsn
                 socket_t s = ::accept(_listen_fd, (struct sockaddr*)&addr, &addr_len);
                 if (s != -1)
                 {
-                    ::dsn::rpc_address client_addr;
-                    dsn_address_build_ipv4(&client_addr, ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
+                    ::dsn::rpc_address client_addr(ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
 
                     auto parser = new_message_parser();
                     auto rs = new hpc_rpc_session(s, parser, *this, client_addr);
@@ -523,7 +523,7 @@ namespace dsn
 
             struct sockaddr_in addr;
             addr.sin_family = AF_INET;
-            addr.sin_addr.s_addr = htonl(_remote_addr.ip);
+            addr.sin_addr.s_addr = htonl(_remote_addr.ip());
             addr.sin_port = htons(_remote_addr.port());
 
             int rt = ::connect(_socket, (struct sockaddr*)&addr, (int)sizeof(addr));

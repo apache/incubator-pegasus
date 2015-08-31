@@ -62,7 +62,11 @@ namespace dsn
         virtual ~servicelet();
         dsn_task_tracker_t tracker() const { return _tracker; }
 
-        static ::dsn::rpc_address primary_address() { return dsn_primary_address(); }
+        static ::dsn::rpc_address primary_address() 
+        {
+            dsn_address_t addr = dsn_primary_address(); 
+            return ::dsn::rpc_address(addr); 
+        }
         static uint32_t random32(uint32_t min, uint32_t max) { return dsn_random32(min, max); }
         static uint64_t random64(uint64_t min, uint64_t max) { return dsn_random64(min, max); }
         static uint64_t now_ns() { return dsn_now_ns(); }

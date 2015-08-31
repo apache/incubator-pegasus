@@ -75,7 +75,7 @@ namespace dsn
                 std::shared_ptr<TResponse> resp(nullptr);
                 if (code == ERR_OK)
                 {
-                    dsn_msg_from_address(response, &srv);
+                    dsn_msg_from_address(response, srv.c_addr_ptr());
                     resp.reset(new TResponse);
                     ::unmarshall(response, *resp);
                 }
