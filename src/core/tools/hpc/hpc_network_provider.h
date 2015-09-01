@@ -148,8 +148,8 @@ namespace dsn {
             ::dsn::utils::ex_lock_nr               _send_lock;
             ::dsn::utils::ex_lock_nr               _recv_lock;
 
-            void on_connect_events_ready(uint32_t events);
-            void on_send_recv_events_ready(uint32_t events);
+            void on_connect_events_ready(uintptr_t lolp_or_events);
+            void on_send_recv_events_ready(uintptr_t lolp_or_events);
             void do_safe_write(message_ex* msg);
 # endif
         };

@@ -370,8 +370,9 @@ namespace dsn
             }
         }
 
-        void hpc_rpc_session::on_send_recv_events_ready(uint32_t events)
+        void hpc_rpc_session::on_send_recv_events_ready(uintptr_t lolp_or_events)
         {
+            uint32_t events = (uint32_t)lolp_or_events;
             // shutdown or send/recv error
             if ((events & EPOLLHUP) || (events & EPOLLRDHUP) || (events & EPOLLERR))
             {
@@ -435,18 +436,17 @@ namespace dsn
 
             _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
             {
-                uint32_t events = (uint32_t)lolp_or_events;
                 if (is_connecting())
-                    this->on_connect_events_ready(events);
+                    this->on_connect_events_ready(lolp_or_events);
                 else
-                    this->on_send_recv_events_ready(events);
+                    this->on_send_recv_events_ready(lolp_or_events);
             };
         }
 
-        void hpc_rpc_session::on_connect_events_ready(uint32_t events)
+        void hpc_rpc_session::on_connect_events_ready(uintptr_t lolp_or_events)
         {
             dassert(is_connecting(), "session must be connecting at this time");
-
+            uint32_t events = (uint32_t)lolp_or_events;
             dinfo("(s = %d) epoll for connect to %s:%hu, events = %x",
                 _socket,
                 _remote_addr.name(),
