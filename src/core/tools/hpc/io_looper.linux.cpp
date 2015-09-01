@@ -24,10 +24,9 @@
  * THE SOFTWARE.
  */
 
-# include "io_looper.h"
-
 # if defined(__linux__)
 
+# include "io_looper.h"
 # include <sys/eventfd.h>
 
 namespace dsn
