@@ -784,12 +784,12 @@ namespace dsn {
 
 				if (!dsn::utils::filesystem::get_normalized_path(path1, npath1))
 				{
-					return false;
+					return "";
 				}
 
 				if (!dsn::utils::filesystem::get_normalized_path(path2, npath2))
 				{
-					return false;
+					return "";
 				}
 
 				if (npath1.empty())
