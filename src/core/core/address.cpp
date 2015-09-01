@@ -100,7 +100,7 @@ DSN_API void dsn_host_to_name(const dsn_address_t* addr, /*out*/ char* name_buff
             std::snprintf(
 # endif
                 name_buffer, (size_t)length,
-                "%u.%u.%u.%u\0",
+                "%u.%u.%u.%u",
                 nip & 0xff,
                 (nip >> 8) & 0xff,
                 (nip >> 16) & 0xff,
