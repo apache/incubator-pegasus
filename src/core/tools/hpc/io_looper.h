@@ -74,6 +74,8 @@ namespace dsn
 
             void create_completion_queue();
 
+            void close_completion_queue();
+
             error_code bind_io_handle(
                 dsn_handle_t handle, 
                 io_loop_callback* cb, 
@@ -111,12 +113,12 @@ namespace dsn
             int                       _io_queue;
 # ifdef __linux__
             struct epoll_event        _events[100];
+            int                       _local_notification_fd;
+            io_loop_callback          _local_notification_callback;
 # endif
 # if defined(__APPLE__) || defined(__FreeBSD__)
             struct kevent            _events[100];  
 # endif
-            int                       _local_notification_fd;
-            io_loop_callback          _local_notification_callback;
 
             //
             // epoll notifications are not per-op, so we have to

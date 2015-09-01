@@ -158,6 +158,15 @@ namespace dsn
                 EPOLLIN | EPOLLET);
         }
 
+        void io_looper::close_completion_queue()
+        {
+            if (_io_queue != 0)
+            {
+                ::close(_io_queue);
+                _io_queue = 0;
+            }
+        }
+
         void io_looper::start(service_node* node, int worker_count)
         {
             create_completion_queue();
@@ -181,17 +190,17 @@ namespace dsn
 
         void io_looper::stop()
         {
-            if (0 == _io_queue)
-                return;
+            close_completion_queue();
 
-            close(_io_queue);
-            _io_queue = 0;
-            for (auto thr : _workers)
+            if (_workers.size() > 0)
             {
-                thr->join();
-                delete thr;
+                for (auto thr : _workers)
+                {
+                    thr->join();
+                    delete thr;
+                }
+                _workers.clear();
             }
-            _workers.clear();
         }
 
         void io_looper::loop_worker()
