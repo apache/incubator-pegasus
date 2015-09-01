@@ -244,10 +244,16 @@ namespace dsn
 
                             utils::auto_lock<utils::ex_lock_nr_spin> l(_io_sessions_lock);
                             auto it = _io_sessions.find(cb);
-                            robj = (it != _io_sessions.end() ? it->second : nullptr);
-
-                            // make sure callback is protected by ref counting
-                            if (robj) robj->add_ref();
+                            if (it != _io_sessions.end())
+                            {
+                                robj = it->second;
+                                // make sure callback is protected by ref counting
+                                robj->add_ref();
+                            }
+                            else
+                            {
+                                robj = nullptr;
+                            }
                         }
 
                         if (robj)
