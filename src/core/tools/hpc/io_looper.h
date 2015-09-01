@@ -118,7 +118,7 @@ namespace dsn
             struct epoll_event        _events[IO_LOOPER_MAX_EVENT_COUNT];
 # elif defined(__APPLE__) || defined(__FreeBSD__)
             struct kevent             _events[IO_LOOPER_MAX_EVENT_COUNT];
-            stdext::hash_set<short>   _filters;
+            std::unordered_set<short> _filters;
 # endif
 
             int                       _local_notification_fd;
