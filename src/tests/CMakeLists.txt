@@ -24,7 +24,7 @@ else()
     set(MY_PROJ_LIBS gtest)
 endif()
 
-set(MY_BOOST_PACKAGES system filesystem)
+set(MY_BOOST_PACKAGES system)
 
 set(MY_PROJ_LIB_PATH "")
 

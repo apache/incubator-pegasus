@@ -260,6 +260,7 @@ function(dsn_add_project)
                 set(TEMP_LIBS dsn.dev.cpp dsn.core)
             endif()
             set(MY_PROJ_LIBS ${MY_PROJ_LIBS} ${MY_BOOST_LIBS} ${TEMP_LIBS})
+			message(STATUS "MY_PROJ_LIBS = ${MY_PROJ_LIBS}")
         endif()
      endif()
 
@@ -365,21 +366,13 @@ macro(ms_setup_boost STATIC_LINK PACKAGES BOOST_LIBS)
 endmacro(ms_setup_boost)
 
 function(dsn_setup_packages)
-    set(DSN_BOOST_PACKAGES 
-        system
-        )
-    set(DSN_BOOST_LIBS "")
-    ms_setup_boost(TRUE "${DSN_BOOST_PACKAGES}" DSN_BOOST_LIBS)
-    if(DEFINED DSN_DEBUG_CMAKE)
-        message(STATUS "DSN_BOOST_LIBS = ${DSN_BOOST_LIBS}")
-    endif()
-    
     if(UNIX)
         set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
     endif()
     find_package(Threads REQUIRED)
         
     set(DSN_SYSTEM_LIBS "")
+	if(FALSE)
     if(UNIX AND (NOT APPLE))
 		find_library(DSN_LIB_RT NAMES librt.a rt)
 		if(DSN_LIB_RT STREQUAL "")
@@ -398,10 +391,11 @@ function(dsn_setup_packages)
 		set(DSN_LIB_AIO aio)
 		set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} ${DSN_LIB_AIO})
     endif()
+    endif()
+
     set(DSN_SYSTEM_LIBS
         ${DSN_SYSTEM_LIBS}
         ${CMAKE_THREAD_LIBS_INIT}
-        ${DSN_BOOST_LIBS}
         CACHE STRING "rDSN system libs" FORCE
     )
 endfunction(dsn_setup_packages)

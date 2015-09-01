@@ -11,7 +11,7 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH "")
 
-set(MY_BOOST_PACKAGES system filesystem)
+set(MY_BOOST_PACKAGES system)
 
 set(MY_PROJ_LIBS dsn.replication.global_checker dsn.replication dsn.replication.meta_server dsn.replication.clientlib dsn.failure_detector)
 
