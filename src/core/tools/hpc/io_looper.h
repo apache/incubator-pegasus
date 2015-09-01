@@ -31,13 +31,19 @@
 # include <dsn/ports.h>
 # include <dsn/tool_api.h>
 
-#ifndef _WIN32
+# ifndef _WIN32
 
-#ifdef __linux__
+# ifdef __linux__
 # include <sys/epoll.h>
-#endif
+# endif
 
-#endif
+# if defined(__APPLE__) || defined(__FreeBSD__)
+# include <sys/types.h>
+# include <sys/event.h>
+# include <sys/time.h>
+# endif
+
+# endif
 
 namespace dsn
 {
@@ -101,10 +107,14 @@ namespace dsn
             std::vector<std::thread*> _workers;
 # ifdef _WIN32
             HANDLE                    _io_queue;
-# endif
-# ifdef __linux__
+# else
             int                       _io_queue;
+# ifdef __linux__
             struct epoll_event        _events[100];
+# endif
+# if defined(__APPLE__) || defined(__FreeBSD__)
+            struct kevent            _events[100];  
+# endif
             int                       _local_notification_fd;
             io_loop_callback          _local_notification_callback;
 
