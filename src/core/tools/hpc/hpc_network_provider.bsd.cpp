@@ -376,34 +376,35 @@ namespace dsn
 
         void hpc_rpc_session::on_send_recv_events_ready(uintptr_t lolp_or_events)
         {
+            struct kevent& ev = *((kevent*)lolp_or_events);
             // shutdown or send/recv error
-            if ((events & EPOLLHUP) || (events & EPOLLRDHUP) || (events & EPOLLERR))
+            if (((ev.flags == EV_ERROR) || (ev.flags == EV_EOF))
             {
                 dinfo("(s = %d) epoll failure on %s:%hu, events = %x",
                     _socket,
                     _remote_addr.name(),
                     _remote_addr.port(),
-                    events
+                    ev.filter
                     );
                 on_failure();
                 return;
             }
 
             //  send
-            if (events & EPOLLOUT)
+            if (ev.filter == EVFILT_WRITE)
             {
                 dinfo("(s = %d) epoll EPOLLOUT on %s:%hu, events = %x",
                     _socket,
                     _remote_addr.name(),
                     _remote_addr.port(),
-                    events
+                    ev.filter
                     );
 
                 do_safe_write(nullptr);
             }
 
             // recv
-            if (events & EPOLLIN)
+            if (ev.filter == EVFILT_READ)
             {
                 dinfo("(s = %d) epoll EPOLLIN on %s:%hu, events = %x",
                     _socket,
