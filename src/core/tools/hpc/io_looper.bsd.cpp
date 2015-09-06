@@ -86,7 +86,7 @@ namespace dsn
             }
             
             struct kevent e;
-            EV_SET(&e, fd, events, (EV_ADD | EV_CLEAR), 0, 0, (void*)cb0);
+            EV_SET(&e, fd, events, (EV_ADD | EV_ENABLE | EV_CLEAR), 0, 0, (void*)cb0);
             
             if (kevent(_io_queue, &e, 1, nullptr, 0, nullptr) == -1)
             {
