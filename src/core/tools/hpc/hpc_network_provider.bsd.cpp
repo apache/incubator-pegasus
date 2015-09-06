@@ -203,7 +203,7 @@ namespace dsn
 
         void hpc_rpc_session::bind_looper(io_looper* looper, bool delay)
         {
-            static short[] filters = { EVFILT_READ, EVFILT_WRITE };
+            static short filters[] = { EVFILT_READ, EVFILT_WRITE };
             _looper = looper;
             if (!delay)
             {
@@ -376,9 +376,9 @@ namespace dsn
 
         void hpc_rpc_session::on_send_recv_events_ready(uintptr_t lolp_or_events)
         {
-            struct kevent& ev = *((kevent*)lolp_or_events);
+            struct kevent& ev = *((struct kevent*)lolp_or_events);
             // shutdown or send/recv error
-            if (((ev.flags == EV_ERROR) || (ev.flags == EV_EOF))
+            if ((ev.flags == EV_ERROR) || (ev.flags == EV_EOF))
             {
                 dinfo("(s = %d) epoll failure on %s:%hu, events = %x",
                     _socket,
@@ -410,7 +410,7 @@ namespace dsn
                     _socket,
                     _remote_addr.name(),
                     _remote_addr.port(),
-                    events
+                    ev.filter 
                     );
 
                 do_read();
@@ -451,7 +451,7 @@ namespace dsn
         {
             dassert(is_connecting(), "session must be connecting at this time");
 
-            struct kevent& ev = *((kevent*)lolp_or_events);
+            struct kevent& ev = *((struct kevent*)lolp_or_events);
             dinfo("(s = %d) epoll for connect to %s:%hu, events = %x",
                 _socket,
                 _remote_addr.name(),
@@ -480,10 +480,10 @@ namespace dsn
                 set_connected();
                 
                 struct kevent e;
-                static short[] filters = { EVFILT_READ, EVFILT_WRITE };
+                static short filters[] = { EVFILT_READ, EVFILT_WRITE };
                 for (auto filter : filters)
                 {
-                    EV_SET(&e, (int)(intptr_t)_looper->native_handle(), filter, (EV_ADD | EV_CLEAR), 0, 0, (void*)_ready_event);
+                    EV_SET(&e, (int)(intptr_t)_looper->native_handle(), filter, (EV_ADD | EV_CLEAR), 0, 0, (void*)&_ready_event);
 
                     //TODO where is the ctx?
                     if (_looper->bind_io_handle(
