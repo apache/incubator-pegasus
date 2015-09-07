@@ -62,7 +62,7 @@ hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provid
     {
         auto e = (struct kevent*)lolp_or_events;
         auto io = (struct aiocb*)(e->ident);
-        complete_aio(io, 0, 0);
+        complete_aio(io);
     };
 
     _looper = nullptr;
@@ -112,7 +112,7 @@ error_code hpc_aio_provider::close(dsn_handle_t hFile)
 
 disk_aio* hpc_aio_provider::prepare_aio_context(aio_task* tsk)
 {
-    disk_aio* r = new posix_disk_aio_context;
+    auto r = new posix_disk_aio_context;
     bzero((char*)&r->cb, sizeof(r->cb));
     r->tsk = tsk;
     r->evt = nullptr;
@@ -138,7 +138,7 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, __out_p
 
     // set up callback
     aio->cb.aio_sigevent.sigev_notify = SIGEV_KEVENT;
-    aio->cb.aio_sigevent.sigev_notify_kqueue = (int)_looper->native_handle();
+    aio->cb.aio_sigevent.sigev_notify_kqueue = (int)(uintptr_t)_looper->native_handle();
     aio->cb.aio_sigevent.sigev_notify_kevent_flags = EV_CLEAR;
     //aio->cb.aio_sigevent.sigev_notify_function = aio_completed;
     //aio->cb.aio_sigevent.sigev_notify_attributes = nullptr;
@@ -200,7 +200,7 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, __out_p
     }
 }
 
-void hpc_aio_provider::complete_aio(struct aiocb* io, int bytes, int err)
+void hpc_aio_provider::complete_aio(struct aiocb* io)
 {
     auto ctx = (posix_disk_aio_context *)(io->aio_sigevent.sigev_value.sival_ptr);
 
