@@ -27,6 +27,11 @@
 # include "gtest/gtest.h"
 # include <dsn/service_api_cpp.h>
 
+# ifndef _WIN32
+# include <sys/types.h>
+# include <signal.h>
+# endif
+
 class test_client : public ::dsn::service_app
 {
 public:
