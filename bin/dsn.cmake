@@ -260,7 +260,7 @@ function(dsn_add_project)
                 set(TEMP_LIBS dsn.dev.cpp dsn.core)
             endif()
             set(MY_PROJ_LIBS ${MY_PROJ_LIBS} ${MY_BOOST_LIBS} ${TEMP_LIBS})
-			message(STATUS "MY_PROJ_LIBS = ${MY_PROJ_LIBS}")
+			#message(STATUS "MY_PROJ_LIBS = ${MY_PROJ_LIBS}")
         endif()
      endif()
 

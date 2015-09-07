@@ -41,6 +41,7 @@
 # include <sys/types.h>
 # include <sys/event.h>
 # include <sys/time.h>
+# include <unordered_set>
 # endif
 
 # endif
@@ -111,14 +112,17 @@ namespace dsn
             HANDLE                    _io_queue;
 # else
             int                       _io_queue;
+
+# define IO_LOOPER_MAX_EVENT_COUNT 128
 # ifdef __linux__
-            struct epoll_event        _events[100];
+            struct epoll_event        _events[IO_LOOPER_MAX_EVENT_COUNT];
+# elif defined(__APPLE__) || defined(__FreeBSD__)
+            struct kevent             _events[IO_LOOPER_MAX_EVENT_COUNT];
+            std::unordered_set<short> _filters;
+# endif
+
             int                       _local_notification_fd;
             io_loop_callback          _local_notification_callback;
-# endif
-# if defined(__APPLE__) || defined(__FreeBSD__)
-            struct kevent            _events[100];  
-# endif
 
             //
             // epoll notifications are not per-op, so we have to

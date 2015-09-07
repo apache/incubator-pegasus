@@ -40,13 +40,11 @@ namespace dsn {
             register_component_provider<hpc_task_queue>("dsn::tools::hpc_task_queue");
             register_component_provider<hpc_env_provider>("dsn::tools::hpc_env_provider");
             
-# if defined(_WIN32) || defined(__linux__)
             register_component_provider<hpc_aio_provider>("dsn::tools::hpc_aio_provider");
             register_component_provider<hpc_network_provider>("dsn::tools::hpc_network_provider");
             register_component_provider<io_looper_task_queue>("dsn::tools::io_looper_task_queue");
             register_component_provider<io_looper_task_worker>("dsn::tools::io_looper_task_worker");
             register_component_provider<io_looper_timer_service>("dsn::tools::io_looper_timer_service");
-# endif
         }
     }
 }

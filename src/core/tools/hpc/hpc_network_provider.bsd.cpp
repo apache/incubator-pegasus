@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-# ifdef __linux__
+# if defined(__APPLE__) || defined(__FreeBSD__)
 
 # include "hpc_network_provider.h"
 # include "mix_all_io_looper.h"
@@ -146,7 +146,7 @@ namespace dsn
 
                 // bind for accept
                 _looper->bind_io_handle((dsn_handle_t)(intptr_t)_listen_fd, &_accept_event.callback,
-                    EPOLLIN | EPOLLET, 
+                    EVFILT_READ,
                     nullptr // network_provider is a global object
                     );
             }
@@ -203,14 +203,18 @@ namespace dsn
 
         void hpc_rpc_session::bind_looper(io_looper* looper, bool delay)
         {
+            static short filters[] = { EVFILT_READ, EVFILT_WRITE };
             _looper = looper;
             if (!delay)
             {
                 // bind for send/recv
-                looper->bind_io_handle((dsn_handle_t)(intptr_t)_socket, &_ready_event,
-                    EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLET,
-                    this
-                    );
+                for (short filter : filters)
+                {
+                    looper->bind_io_handle((dsn_handle_t)(intptr_t)_socket, &_ready_event,
+                        filter,
+                        this
+                        );
+                }
             }   
         }
 
@@ -372,41 +376,41 @@ namespace dsn
 
         void hpc_rpc_session::on_send_recv_events_ready(uintptr_t lolp_or_events)
         {
-            uint32_t events = (uint32_t)lolp_or_events;
+            struct kevent& ev = *((struct kevent*)lolp_or_events);
             // shutdown or send/recv error
-            if ((events & EPOLLHUP) || (events & EPOLLRDHUP) || (events & EPOLLERR))
+            if ((ev.flags == EV_ERROR) || (ev.flags == EV_EOF))
             {
                 dinfo("(s = %d) epoll failure on %s:%hu, events = %x",
                     _socket,
                     _remote_addr.name(),
                     _remote_addr.port(),
-                    events
+                    ev.filter
                     );
                 on_failure();
                 return;
             }
 
             //  send
-            if (events & EPOLLOUT)
+            if (ev.filter == EVFILT_WRITE)
             {
                 dinfo("(s = %d) epoll EPOLLOUT on %s:%hu, events = %x",
                     _socket,
                     _remote_addr.name(),
                     _remote_addr.port(),
-                    events
+                    ev.filter
                     );
 
                 do_safe_write(nullptr);
             }
 
             // recv
-            if (events & EPOLLIN)
+            if (ev.filter == EVFILT_READ)
             {
                 dinfo("(s = %d) epoll EPOLLIN on %s:%hu, events = %x",
                     _socket,
                     _remote_addr.name(),
                     _remote_addr.port(),
-                    events
+                    ev.filter 
                     );
 
                 do_read();
@@ -446,17 +450,18 @@ namespace dsn
         void hpc_rpc_session::on_connect_events_ready(uintptr_t lolp_or_events)
         {
             dassert(is_connecting(), "session must be connecting at this time");
-            uint32_t events = (uint32_t)lolp_or_events;
+
+            struct kevent& ev = *((struct kevent*)lolp_or_events);
             dinfo("(s = %d) epoll for connect to %s:%hu, events = %x",
                 _socket,
                 _remote_addr.name(),
                 _remote_addr.port(),
-                events
+                ev.filter
                 );
 
-            if ((events & EPOLLOUT)
-                && !(events & EPOLLERR)
-                && !(events & EPOLLHUP)
+            if ((ev.filter == EVFILT_WRITE)
+                && (ev.flags != EV_ERROR)
+                && (ev.flags != EV_EOF)
                 )
             {
                 socklen_t addr_len = (socklen_t)sizeof(_peer_addr);
@@ -474,19 +479,22 @@ namespace dsn
 
                 set_connected();
                 
-                struct epoll_event e;
-                e.data.ptr = &_ready_event;
-                e.events = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLET;
-
-                if (epoll_ctl((int)(intptr_t)_looper->native_handle(),
-                    EPOLL_CTL_MOD, _socket, &e) < 0)
+                struct kevent e;
+                static short filters[] = { EVFILT_READ, EVFILT_WRITE };
+                for (auto filter : filters)
                 {
-                    derror("(s = %d) (client) EPOLL_CTL_MOD failed, err = %s",
-                        _socket,
-                        strerror(errno)
-                        );
-                    on_failure();
-                    return;
+                    EV_SET(&e, (int)(intptr_t)_looper->native_handle(), filter, (EV_ADD | EV_CLEAR), 0, 0, (void*)&_ready_event);
+
+                    //TODO where is the ctx?
+                    if (_looper->bind_io_handle(
+                        (dsn_handle_t)(intptr_t)_socket,
+                        &_ready_event,
+                        filter
+                        ) != ERR_OK)
+                    {
+                        on_failure();
+                        return;
+                    }
                 }
 
                 // start first round send
@@ -545,7 +553,7 @@ namespace dsn
 
             // bind for connect
             _looper->bind_io_handle((dsn_handle_t)(intptr_t)_socket, &_ready_event,
-                EPOLLOUT | EPOLLET,
+                EVFILT_WRITE,
                 this
                 );
         }

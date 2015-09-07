@@ -33,6 +33,10 @@
 # include <libaio.h>
 # endif
 
+# if defined(__APPLE__) || defined(__FreeBSD__)
+# include <aio.h>
+# endif
+
 namespace dsn {
     namespace tools {
         class hpc_aio_provider : public aio_provider
@@ -60,7 +64,9 @@ namespace dsn {
 
             io_context_t _ctx;
             int          _event_fd;
-# endif 
+# elif defined(__APPLE__) || defined(__FreeBSD__)
+            void complete_aio(struct aiocb* io);
+# endif
         };
     }
 }

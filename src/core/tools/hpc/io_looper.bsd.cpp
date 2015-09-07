@@ -24,10 +24,11 @@
  * THE SOFTWARE.
  */
 
-# if defined(__linux__)
+# if defined(__APPLE__) || defined(__FreeBSD__)
 
 # include "io_looper.h"
-# include <sys/eventfd.h>
+
+# define IO_LOOPER_USER_NOTIFICATION_FD (-10)
 
 namespace dsn
 {
@@ -36,13 +37,16 @@ namespace dsn
         io_looper::io_looper()
         {
             _io_queue = 0;
-            _local_notification_fd = eventfd(0, EFD_NONBLOCK);
+            _local_notification_fd = IO_LOOPER_USER_NOTIFICATION_FD;
+            _filters.insert(EVFILT_READ);
+            _filters.insert(EVFILT_WRITE);
+            _filters.insert(EVFILT_AIO);
+            _filters.insert(EVFILT_USER);
         }
 
         io_looper::~io_looper(void)
         {
             stop();
-            close(_local_notification_fd);
         }
 
         error_code io_looper::bind_io_handle(
@@ -52,6 +56,11 @@ namespace dsn
             ref_counter* ctx
             )
         {
+            if (_filters.find((short)events) == _filters.end())
+            {
+                dassert(false, "The filter %d is unsupported.", events);
+            }
+
             int fd = (int)(intptr_t)(handle);
 
             int flags = fcntl(fd, F_GETFL, 0);
@@ -76,11 +85,10 @@ namespace dsn
                 dassert(pr.second, "the callback must not be registered before");
             }
             
-            struct epoll_event e;
-            e.data.ptr = (void*)cb0;
-            e.events = events;
+            struct kevent e;
+            EV_SET(&e, fd, events, (EV_ADD | EV_ENABLE | EV_CLEAR), 0, 0, (void*)cb0);
             
-            if (epoll_ctl(_io_queue, EPOLL_CTL_ADD, fd, &e) < 0)
+            if (kevent(_io_queue, &e, 1, nullptr, 0, nullptr) == -1)
             {
                 derror("bind io handler to epoll_wait failed, err = %s, fd = %d", strerror(errno), fd);
 
@@ -100,27 +108,38 @@ namespace dsn
         {
             int fd = (int)(intptr_t)handle;
             
-            if (epoll_ctl(_io_queue, EPOLL_CTL_DEL, fd, NULL) < 0)
+            struct kevent e;
+            for (short filter : _filters)
             {
-                derror("unbind io handler to epoll_wait failed, err = %s, fd = %d", strerror(errno), fd);
-                return ERR_BIND_IOCP_FAILED;
-            }
-            else
-            {
-                if (cb)
+                EV_SET(&e, fd, filter, EV_DELETE, 0, 0, nullptr);
+                if (kevent(_io_queue, &e, 1, nullptr, 0, nullptr) == -1)
                 {
-                    utils::auto_lock<utils::ex_lock_nr_spin> l(_io_sessions_lock);
-                    auto r = _io_sessions.erase(cb);
-                    dassert(r > 0, "the callback must be present");
+                    if (errno != ENOENT)
+                    {
+                        derror("unbind io handler to epoll_wait failed, err = %s, fd = %d", strerror(errno), fd);
+                        return ERR_BIND_IOCP_FAILED;
+                    }
                 }
-                return ERR_OK;
-            }                
+                else
+                {
+                    if (cb)
+                    {
+                        utils::auto_lock<utils::ex_lock_nr_spin> l(_io_sessions_lock);
+                        auto r = _io_sessions.erase(cb);
+                        dassert(r > 0, "the callback must be present");
+                    }
+                }
+            }
+
+            return ERR_OK;
         }
 
         void io_looper::notify_local_execution()
         {
-            int64_t c = 1;
-            if (::write(_local_notification_fd, &c, sizeof(c)) < 0)
+            struct kevent e;
+            EV_SET(&e, IO_LOOPER_USER_NOTIFICATION_FD, EVFILT_USER, 0, (NOTE_FFCOPY | NOTE_TRIGGER), 0, nullptr);
+
+            if (kevent(_io_queue, &e, 1, nullptr, 0, nullptr) == -1)
             {
                 dassert(false, "post local notification via eventfd failed, err = %s", strerror(errno));
             }
@@ -129,9 +148,8 @@ namespace dsn
 
         void io_looper::create_completion_queue()
         {
-            const int max_event_count = sizeof(_events) / sizeof(struct epoll_event);
-
-            _io_queue = epoll_create(max_event_count);
+            _io_queue = ::kqueue();
+            dassert(_io_queue != -1, "Fail to create kqueue");
 
             _local_notification_callback = [this](
                 int native_error,
@@ -139,22 +157,11 @@ namespace dsn
                 uintptr_t lolp_or_events
                 )
             {
-                uint32_t events = (uint32_t)lolp_or_events;
-                int64_t notify_count = 0;
-
-                if (read(_local_notification_fd, &notify_count, sizeof(notify_count)) != sizeof(notify_count))
-                {
-                    // possibly consumed already by others
-                    // e.g., two contiguous write with two read, 
-                    // the second read will read nothing
-                    return;
-                }
-
                 this->handle_local_queues();
             };
 
             bind_io_handle((dsn_handle_t)(intptr_t)_local_notification_fd, &_local_notification_callback, 
-                EPOLLIN | EPOLLET);
+                EVFILT_USER);
         }
 
         void io_looper::close_completion_queue()
@@ -204,14 +211,15 @@ namespace dsn
 
         void io_looper::loop_worker()
         {
-            const int max_event_count = sizeof(_events) / sizeof(struct epoll_event);
+            struct timespec ts = { 0, 1000000 };
 
             while (true)
             {
-                int nfds = epoll_wait(_io_queue, _events, max_event_count, 1); // 1ms for timers
+                int nfds = kevent(_io_queue, nullptr, 0, _events, IO_LOOPER_MAX_EVENT_COUNT, &ts); // 1ms for timers
                 if (nfds == 0) // timeout
                 {
                     handle_local_queues();
+                    continue;
                 }
                 else if (-1 == nfds)
                 {
@@ -228,8 +236,8 @@ namespace dsn
 
                 for (int i = 0; i < nfds; i++)
                 {
-                    auto cb = (io_loop_callback*)_events[i].data.ptr;
-                    dinfo("epoll_wait get events %x, cb = %p", _events[i].events, cb);
+                    auto cb = (io_loop_callback*)_events[i].udata;
+                    dinfo("kevent get events %x, cb = %p", _events[i].filter, cb);
 
                     uintptr_t cb0 = (uintptr_t)cb;
 
@@ -257,21 +265,21 @@ namespace dsn
 
                         if (robj)
                         {
-                            (*cb)(0, 0, (uintptr_t)_events[i].events);
+                            (*cb)(0, 0, (uintptr_t)&_events[i]);
                             robj->release_ref();
                         }
                         else
                         {
                             // context is gone (unregistered), let's skip
-                            dwarn("epoll_wait event %x skipped as session is gone, cb = %p",
-                                _events[i].events,
+                            dwarn("kevent event %x skipped as session is gone, cb = %p",
+                                _events[i].filter,
                                 cb
                                 );
                         }
                     }
                     else
                     {
-                        (*cb)(0, 0, (uintptr_t)_events[i].events);
+                        (*cb)(0, 0, (uintptr_t)&_events[i]);
                     }
                 }
             }

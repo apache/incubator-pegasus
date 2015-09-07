@@ -24,9 +24,9 @@
  * THE SOFTWARE.
  */
 
-# include "io_looper.h"
-
 # ifdef _WIN32
+
+# include "io_looper.h"
 
 # define NON_IO_TASK_NOTIFICATION_KEY 2
 
