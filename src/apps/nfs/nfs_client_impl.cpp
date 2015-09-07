@@ -30,7 +30,7 @@ namespace dsn {
             if (err != ::dsn::ERR_OK)
             {
                 derror("remote copy request failed");
-                ureq->nfs_task->enqueue(err, 0, ureq->nfs_task->node());
+                ureq->nfs_task->enqueue(err, 0);
                 delete ureq;
                 return;
             }
@@ -39,7 +39,7 @@ namespace dsn {
             if (err != ::dsn::ERR_OK)
             {
                 derror("remote copy request failed");
-                ureq->nfs_task->enqueue(err, 0, ureq->nfs_task->node());
+                ureq->nfs_task->enqueue(err, 0);
                 delete ureq;
                 return;
             }
@@ -403,7 +403,7 @@ namespace dsn {
             }
 
             req->file_context_map.clear();
-            req->nfs_task->enqueue(err, 0, req->nfs_task->node());
+            req->nfs_task->enqueue(err, 0);
 
             delete req;
 

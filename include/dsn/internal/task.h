@@ -176,7 +176,7 @@ private:
 class timer_task : public task
 {
 public:
-    timer_task(dsn_task_code_t code, dsn_task_handler_t cb, void* param, uint32_t interval_milliseconds, int hash = 0);
+    timer_task(dsn_task_code_t code, dsn_task_handler_t cb, void* param, uint32_t interval_milliseconds, int hash = 0, service_node* node = nullptr);
     virtual void exec();
     
 private:
@@ -245,7 +245,7 @@ protected:
 class rpc_response_task : public task
 {
 public:
-    rpc_response_task(message_ex* request, dsn_rpc_response_handler_t cb, void* param, int hash = 0);
+    rpc_response_task(message_ex* request, dsn_rpc_response_handler_t cb, void* param, int hash = 0, service_node* node = nullptr);
     ~rpc_response_task();
 
     void             enqueue(error_code err, message_ex* reply);
@@ -305,10 +305,10 @@ public:
 class aio_task : public task
 {
 public:
-    aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash = 0);
+    aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash = 0, service_node* node = nullptr);
     ~aio_task();
 
-    void            enqueue(error_code err, size_t transferred_size, service_node* node);
+    void            enqueue(error_code err, size_t transferred_size);
     size_t          get_transferred_size() const { return _transferred_size; }
     disk_aio*       aio() { return _aio; }
 

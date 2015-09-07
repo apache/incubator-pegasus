@@ -402,8 +402,8 @@ void task::enqueue(task_worker_pool* pool)
     }
 }
 
-timer_task::timer_task(dsn_task_code_t code, dsn_task_handler_t cb, void* param, uint32_t interval_milliseconds, int hash)
-    : task(code, hash), 
+timer_task::timer_task(dsn_task_code_t code, dsn_task_handler_t cb, void* param, uint32_t interval_milliseconds, int hash, service_node* node)
+    : task(code, hash, node), 
     _interval_milliseconds(interval_milliseconds),
     _cb(cb),
     _param(param)
@@ -451,9 +451,9 @@ void rpc_request_task::enqueue()
     task::enqueue(node()->computation()->get_pool(spec().pool_code));
 }
 
-rpc_response_task::rpc_response_task(message_ex* request, dsn_rpc_response_handler_t cb, void* param, int hash)
+rpc_response_task::rpc_response_task(message_ex* request, dsn_rpc_response_handler_t cb, void* param, int hash, service_node* node)
     : task(task_spec::get(request->local_rpc_code)->rpc_paired_code, 
-           hash == 0 ? request->header->client.hash : hash)
+           hash == 0 ? request->header->client.hash : hash, node)
 {
     _cb = cb;
     _param = param;
@@ -507,8 +507,8 @@ void rpc_response_task::enqueue(error_code err, message_ex* reply)
     }
 }
 
-aio_task::aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash)
-    : task(code, hash)
+aio_task::aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash, service_node* node)
+    : task(code, hash, node)
 {
     _cb = cb;
     _param = param;
@@ -525,21 +525,14 @@ aio_task::~aio_task()
     delete _aio;
 }
 
-void aio_task::enqueue(error_code err, size_t transferred_size, service_node* node)
+void aio_task::enqueue(error_code err, size_t transferred_size)
 {
     set_error_code(err);
     _transferred_size = transferred_size;
 
     spec().on_aio_enqueue.execute(this);
 
-    if (node != nullptr)
-    {
-        task::enqueue(node->computation()->get_pool(spec().pool_code));
-    }
-    else
-    {
-        task::enqueue();
-    }
+    task::enqueue(node()->computation()->get_pool(spec().pool_code));
 }
 
 } // end namespace

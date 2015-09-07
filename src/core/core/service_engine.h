@@ -74,6 +74,11 @@ public:
     nfs_node* nfs(task_queue* q) const;
     timer_service* tsvc(task_queue* q) const;
 
+    rpc_engine*  node_rpc() const { return _per_node_io.rpc; }
+    disk_engine* node_disk() const { return _per_node_io.disk; }
+    nfs_node* node_nfs() const { return _per_node_io.nfs; }
+    timer_service* node_tsvc() const { return _per_node_io.tsvc; }
+
     task_engine* computation() const { return _computation; }
     const std::list<io_engine>& ios() const { return _ios; }
     void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, /*out*/ std::stringstream& ss);
