@@ -808,7 +808,7 @@ void log_file::close()
 error_code log_file::read_next_log_entry(int64_t local_offset, /*out*/::dsn::blob& bb)
 {
     dassert (_is_read, "log file must be of read mode");
-    int64_t loffset = (int64_t)tell((int)(uintptr_t)(_handle));
+    int64_t loffset = (int64_t)lseek((int)(uintptr_t)(_handle), 0, SEEK_CUR);
     dassert(
         loffset == local_offset, 
         "file offset is not correct: %lld vs %lld",
