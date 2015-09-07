@@ -83,7 +83,7 @@ namespace dsn {
                 return "";
         }
 
-        void split_args(const char* args, __out_param std::vector<std::string>& sargs, char splitter)
+        void split_args(const char* args, /*out*/ std::vector<std::string>& sargs, char splitter)
         {
             sargs.clear();
 
@@ -118,7 +118,7 @@ namespace dsn {
             }
         }
         
-        void split_args(const char* args, __out_param std::list<std::string>& sargs, char splitter)
+        void split_args(const char* args, /*out*/ std::list<std::string>& sargs, char splitter)
         {
             sargs.clear();
 
@@ -243,7 +243,7 @@ namespace  dsn
         _remaining_size = _size;
     }
 
-    int binary_reader::read(__out_param std::string& s)
+    int binary_reader::read(/*out*/ std::string& s)
     {
         int len;
         if (0 == read(len))

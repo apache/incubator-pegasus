@@ -44,7 +44,7 @@ public:
             "whether to send empty reply or echo the whole incoming request");
     }
 
-    void on_echo(const std::string& req, __out_param std::string& resp)
+    void on_echo(const std::string& req, /*out*/ std::string& resp)
     {
         if (!_empty_reply)
             resp = req;

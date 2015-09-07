@@ -31,7 +31,7 @@ namespace dsn { namespace replication {
 using namespace ::dsn::service;
 
 void replication_app_client_base::load_meta_servers(
-        __out_param std::vector<::dsn::rpc_address>& servers
+        /*out*/ std::vector<::dsn::rpc_address>& servers
         )
 {
     // read meta_servers from machine list file
@@ -397,7 +397,7 @@ Retry:
     call(rc.get(), false);
 }
 
-error_code replication_app_client_base::get_address(int pidx, bool is_write, __out_param ::dsn::rpc_address& addr, __out_param int& app_id, read_semantic_t semantic)
+error_code replication_app_client_base::get_address(int pidx, bool is_write, /*out*/ ::dsn::rpc_address& addr, /*out*/ int& app_id, read_semantic_t semantic)
 {
     error_code err;
     partition_configuration config;

@@ -80,11 +80,16 @@ public:
     int32_t fd_lease_seconds;
     int32_t fd_grace_seconds;
 
+    bool    log_shared;
+    bool    log_private;
     int32_t log_file_size_mb;
     int32_t log_buffer_size_mb;
     int32_t log_pending_max_ms;
     bool    log_batch_write;
-    int32_t log_max_concurrent_writes;
+    int32_t log_file_size_mb_private;
+    int32_t log_buffer_size_mb_private;
+    int32_t log_pending_max_ms_private;
+    bool    log_batch_write_private;
 
     int32_t config_sync_interval_ms;
     bool    config_sync_disabled;
@@ -102,8 +107,8 @@ private:
 class replica_helper
 {
 public:
-    static bool remove_node(const ::dsn::rpc_address& node, __inout_param std::vector<::dsn::rpc_address>& nodeList);
-    static bool get_replica_config(const partition_configuration& partition_config, const ::dsn::rpc_address& node, __out_param replica_configuration& replica_config);
+    static bool remove_node(const ::dsn::rpc_address& node, /*inout*/ std::vector<::dsn::rpc_address>& nodeList);
+    static bool get_replica_config(const partition_configuration& partition_config, const ::dsn::rpc_address& node, /*out*/ replica_configuration& replica_config);
 };
 
 }} // namespace

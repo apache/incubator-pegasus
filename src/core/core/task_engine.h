@@ -63,7 +63,7 @@ public:
     bool shared_same_worker_with_current_task(task* task) const;
     task_engine* engine() const { return _owner; }
     service_node* node() const { return _node; }
-    void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, __out_param std::stringstream& ss);
+    void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, /*out*/ std::stringstream& ss);
     std::vector<task_queue*>& queues() { return _queues; }
     std::vector<task_worker*>& workers() { return _workers; }
 
@@ -103,7 +103,7 @@ public:
     bool is_started() const { return _is_running; }
 
     service_node* node() const { return _node; }
-    void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, __out_param std::stringstream& ss);
+    void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, /*out*/ std::stringstream& ss);
     
 private:
     std::vector<task_worker_pool*> _pools;

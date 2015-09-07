@@ -40,6 +40,7 @@ namespace dsn {
                 : simple_kv_service(replica), _lock(true)
             {
                 _test_file_learning = false;
+                set_delta_state_learning_supported();
             }
 
             // RPC_SIMPLE_KV_READ
@@ -231,7 +232,7 @@ namespace dsn {
             }
 
             // helper routines to accelerate learning
-            int simple_kv_service_impl::get_learn_state(decree start, const blob& learn_req, __out_param learn_state& state)
+            int simple_kv_service_impl::get_learn_state(decree start, const blob& learn_req, /*out*/ learn_state& state)
             {
                 ::dsn::binary_writer writer;
 

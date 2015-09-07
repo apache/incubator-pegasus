@@ -42,7 +42,7 @@ namespace dsn { namespace replication {
     class replication_app_client_base : public virtual servicelet
     {
     public:
-        static void load_meta_servers(__out_param std::vector<::dsn::rpc_address>& servers);
+        static void load_meta_servers(/*out*/ std::vector<::dsn::rpc_address>& servers);
 
     public:
         replication_app_client_base(        
@@ -386,7 +386,7 @@ namespace dsn { namespace replication {
 
     private:
         void call(request_context_ptr request, bool no_delay = true);
-        error_code get_address(int pidx, bool is_write, __out_param ::dsn::rpc_address& addr, __out_param int& app_id, read_semantic_t semantic = read_semantic_t::ReadLastUpdate);
+        error_code get_address(int pidx, bool is_write, /*out*/ ::dsn::rpc_address& addr, /*out*/ int& app_id, read_semantic_t semantic = read_semantic_t::ReadLastUpdate);
         void query_partition_configuration_reply(error_code err, dsn_message_t request, dsn_message_t response, int pidx);
         void replica_rw_reply(error_code err, dsn_message_t request, dsn_message_t response, request_context_ptr& rc);
         void end_request(request_context_ptr& request, error_code err, dsn_message_t resp);

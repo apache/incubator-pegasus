@@ -33,8 +33,14 @@ public:
     ::dsn::error_code start(int argc, char** argv)
     {
         testing::InitGoogleTest(&argc, argv);
-        auto ret = RUN_ALL_TESTS();
-        exit(0);
+        RUN_ALL_TESTS();
+
+        // exit without any destruction
+# if defined(_WIN32)
+        ::ExitProcess(0);
+# else
+        kill(getpid(), SIGKILL);
+# endif
         return ::dsn::ERR_OK;
     }
 
@@ -47,7 +53,7 @@ public:
 GTEST_API_ int main(int argc, char **argv) 
 {
     // register all possible services
-    dsn::register_app<test_client>("test.client");
+    dsn::register_app<test_client>("test");
     
     // specify what services and tools will run in config file, then run
     dsn_run_config("config-test.ini", true);

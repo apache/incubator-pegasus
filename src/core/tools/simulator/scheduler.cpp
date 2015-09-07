@@ -76,7 +76,7 @@ void event_wheel::add_system_event(uint64_t ts, std::function<void()> t)
     evts->push_back(entry);
 }
 
-std::vector<event_entry>* event_wheel::pop_next_events(__out_param uint64_t& ts)
+std::vector<event_entry>* event_wheel::pop_next_events(/*out*/ uint64_t& ts)
 {
     utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
 
@@ -110,7 +110,7 @@ scheduler::scheduler(void)
     for (int i = 0; i <= dsn_task_code_max(); i++)
     {
         task_spec::get(i)->on_task_wait_pre.put_back(scheduler::on_task_wait, "simulation.on_task_wait");
-        task_spec::get(i)->on_task_end.put_back(scheduler::on_task_end, "simulation.on_task_end");
+        task_spec::get(i)->on_task_wait_notified.put_back(scheduler::on_task_wait_notified, "simulation.on_task_wait_notified");
     }
 
     task_ext::register_ext(task_state_ext::deletor);
@@ -158,7 +158,7 @@ scheduler::~scheduler(void)
     }
 }
 
-/*static*/ void scheduler::on_task_end(task* task)
+/*static*/ void scheduler::on_task_wait_notified(task* task)
 {
     auto ts = task_ext::get(task);
     if (ts != nullptr)

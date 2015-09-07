@@ -91,7 +91,7 @@ namespace dsn {
     {
     }
 
-    message_ex* dsn_message_parser::get_message_on_receive(int read_length, __out_param int& read_next)
+    message_ex* dsn_message_parser::get_message_on_receive(int read_length, /*out*/ int& read_next)
     {
         mark_read(read_length);
 
@@ -127,7 +127,7 @@ namespace dsn {
         }
     }
 
-    int dsn_message_parser::prepare_buffers_on_send(message_ex* msg, int offset, __out_param send_buf* buffers)
+    int dsn_message_parser::prepare_buffers_on_send(message_ex* msg, int offset, /*out*/ send_buf* buffers)
     {
         int i = 0;        
         for (auto& buf : msg->buffers)

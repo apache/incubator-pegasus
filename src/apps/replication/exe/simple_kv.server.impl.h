@@ -47,7 +47,7 @@ namespace dsn {
                 virtual int  flush(bool force);
 
                 // helper routines to accelerate learning
-                virtual int get_learn_state(decree start, const blob& learn_req, __out_param learn_state& state);
+                virtual int get_learn_state(decree start, const blob& learn_req, /*out*/ learn_state& state);
                 virtual int apply_learn_state(learn_state& state);
 
             private:

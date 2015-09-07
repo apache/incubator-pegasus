@@ -283,7 +283,7 @@ error_code service_node::start()
     return err;
 }
 
-void service_node::get_io(ioe_mode mode, task_queue* q, __out_param io_engine& io) const
+void service_node::get_io(ioe_mode mode, task_queue* q, /*out*/ io_engine& io) const
 {
     switch (mode)
     {
@@ -341,7 +341,7 @@ timer_service* service_node::tsvc(task_queue* q) const
 void service_node::get_runtime_info(
     const std::string& indent, 
     const std::vector<std::string>& args, 
-    __out_param std::stringstream& ss
+    /*out*/ std::stringstream& ss
     )
 {
     ss << indent << name() << ":" << std::endl;

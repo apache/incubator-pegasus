@@ -59,9 +59,9 @@ public:
 
     void init_app();
 
-    void get_node_state(__out_param node_states& nodes);
-    void set_node_state(const node_states& nodes, __out_param machine_fail_updates* pris);
-    bool get_meta_server_primary(__out_param ::dsn::rpc_address& node);
+    void get_node_state(/*out*/ node_states& nodes);
+    void set_node_state(const node_states& nodes, /*out*/ machine_fail_updates* pris);
+    bool get_meta_server_primary(/*out*/ ::dsn::rpc_address& node);
 
     void add_meta_node(const ::dsn::rpc_address& node);
     void remove_meta_node(const ::dsn::rpc_address& node);
@@ -71,16 +71,16 @@ public:
     void save(const char* chk_point);
 
     // partition server & client => meta server
-    void query_configuration_by_node(configuration_query_by_node_request& request, __out_param configuration_query_by_node_response& response);
-    void query_configuration_by_index(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response);
-    void query_configuration_by_gpid(global_partition_id id, __out_param partition_configuration& config);
-    void update_configuration(configuration_update_request& request, __out_param configuration_update_response& response);
+    void query_configuration_by_node(configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response);
+    void query_configuration_by_index(configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response);
+    void query_configuration_by_gpid(global_partition_id id, /*out*/ partition_configuration& config);
+    void update_configuration(configuration_update_request& request, /*out*/ configuration_update_response& response);
     void unfree_if_possible_on_start();
     bool freezed() const { return _freeze.load(); }
     
 private:
     void check_consistency(global_partition_id gpid);
-    void update_configuration_internal(configuration_update_request& request, __out_param configuration_update_response& response);
+    void update_configuration_internal(configuration_update_request& request, /*out*/ configuration_update_response& response);
 
 private:
     friend class ::dsn::replication::replication_checker;

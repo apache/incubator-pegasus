@@ -235,12 +235,12 @@ void meta_service::on_request(dsn_message_t msg)
 }
 
 // partition server & client => meta server
-void meta_service::query_configuration_by_node(configuration_query_by_node_request& request, __out_param configuration_query_by_node_response& response)
+void meta_service::query_configuration_by_node(configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response)
 {
     _state->query_configuration_by_node(request, response);
 }
 
-void meta_service::query_configuration_by_index(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response)
+void meta_service::query_configuration_by_index(configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response)
 {
     _state->query_configuration_by_index(request, response);
 }
@@ -380,7 +380,7 @@ void meta_service::on_log_completed(error_code err, size_t size,
     }
 }
 
-void meta_service::update_configuration(configuration_update_request& request, __out_param configuration_update_response& response)
+void meta_service::update_configuration(configuration_update_request& request, /*out*/ configuration_update_response& response)
 {
     _state->update_configuration(request, response);
 

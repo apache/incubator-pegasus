@@ -225,7 +225,7 @@ void hpc_aio_provider::aio(aio_task* aio_tsk)
     err.end_tracking();
 }
 
-error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, __out_param uint32_t* pbytes /*= nullptr*/)
+error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/ uint32_t* pbytes /*= nullptr*/)
 {
     auto aio = (windows_disk_aio_context*)aio_tsk->aio();
     BOOL r = FALSE;

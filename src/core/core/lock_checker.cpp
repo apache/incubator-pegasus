@@ -14,7 +14,7 @@ namespace dsn
         {
             if (zlock_exclusive_count + zlock_shared_count > 0)
             {
-                dassert(false, "wait inside locks may lead to deadlocks - current thread owns %u exclusive locks and %u shared locks now.",
+                dwarn("wait inside locks may lead to deadlocks - current thread owns %u exclusive locks and %u shared locks now.",
                     zlock_exclusive_count, zlock_shared_count
                     );
             }
@@ -24,7 +24,7 @@ namespace dsn
         {
             if (zlock_exclusive_count + zlock_shared_count > 0)
             {
-                dassert(false, "locks should not be hold at this point - current thread owns %u exclusive locks and %u shared locks now.",
+                dwarn("locks should not be hold at this point - current thread owns %u exclusive locks and %u shared locks now.",
                     zlock_exclusive_count, zlock_shared_count
                     );
             }
@@ -71,7 +71,7 @@ namespace dsn
                         || task::get_current_worker()->pool_spec().worker_count == 1)
                         )
                 {
-                    dassert(false, 
+                    dwarn(
                         "cannot call task wait in worker thread '%s' that also serves as io thread "
                         "(disk/rpc_io_mode == IOE_PER_QUEUE) "
                         "when the thread pool is partitioned or the worker thread number is 1",
@@ -80,7 +80,8 @@ namespace dsn
                 }
                 else
                 {
-                    dassert(false, "task %s waits for another task %s sharing the same thread pool "
+                    dwarn(
+                        "task %s waits for another task %s sharing the same thread pool "
                         "- will lead to deadlocks easily (e.g., when worker_count = 1 or when the pool is partitioned)",
                         dsn_task_code_to_string(task::get_current_task()->spec().code),
                         dsn_task_code_to_string(waitee->spec().code)

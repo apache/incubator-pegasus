@@ -189,20 +189,20 @@ namespace dsn {
         binary_reader() {}
         void init(blob& bb);
 
-        template<typename T> int read_pod(__out_param T& val);
-        template<typename T> int read(__out_param T& val) { dassert(false, "read of this type is not implemented"); return 0; }
-        int read(__out_param int8_t& val) { return read_pod(val); }
-        int read(__out_param uint8_t& val) { return read_pod(val); }
-        int read(__out_param int16_t& val) { return read_pod(val); }
-        int read(__out_param uint16_t& val) { return read_pod(val); }
-        int read(__out_param int32_t& val) { return read_pod(val); }
-        int read(__out_param uint32_t& val) { return read_pod(val); }
-        int read(__out_param int64_t& val) { return read_pod(val); }
-        int read(__out_param uint64_t& val) { return read_pod(val); }
-        int read(__out_param bool& val) { return read_pod(val); }
+        template<typename T> int read_pod(/*out*/ T& val);
+        template<typename T> int read(/*out*/ T& val) { dassert(false, "read of this type is not implemented"); return 0; }
+        int read(/*out*/ int8_t& val) { return read_pod(val); }
+        int read(/*out*/ uint8_t& val) { return read_pod(val); }
+        int read(/*out*/ int16_t& val) { return read_pod(val); }
+        int read(/*out*/ uint16_t& val) { return read_pod(val); }
+        int read(/*out*/ int32_t& val) { return read_pod(val); }
+        int read(/*out*/ uint32_t& val) { return read_pod(val); }
+        int read(/*out*/ int64_t& val) { return read_pod(val); }
+        int read(/*out*/ uint64_t& val) { return read_pod(val); }
+        int read(/*out*/ bool& val) { return read_pod(val); }
 
-        int read(__out_param error_code& err) { int val; int ret = read_pod(val); err = val; return ret; }
-        int read(__out_param std::string& s);
+        int read(/*out*/ error_code& err) { int val; int ret = read_pod(val); err = val; return ret; }
+        int read(/*out*/ std::string& s);
         int read(char* buffer, int sz);
         int read(blob& blob);
 
@@ -251,7 +251,7 @@ namespace dsn {
         bool next(void** data, int* size);
         bool backup(int count);
 
-        void get_buffers(__out_param std::vector<blob>& buffers);
+        void get_buffers(/*out*/ std::vector<blob>& buffers);
         int  get_buffer_count() const { return static_cast<int>(_buffers.size()); }
         blob get_buffer();
         blob get_first_buffer() const;
@@ -278,7 +278,7 @@ namespace dsn {
 
     //--------------- inline implementation -------------------
     template<typename T>
-    inline int binary_reader::read_pod(__out_param T& val)
+    inline int binary_reader::read_pod(/*out*/ T& val)
     {
         if (sizeof(T) <= get_remaining_size())
         {
@@ -300,7 +300,7 @@ namespace dsn {
         write((char*)&val, static_cast<int>(sizeof(T)));
     }
 
-    inline void binary_writer::get_buffers(__out_param std::vector<blob>& buffers)
+    inline void binary_writer::get_buffers(/*out*/ std::vector<blob>& buffers)
     {
         commit();
         buffers = _buffers;
@@ -330,8 +330,8 @@ namespace dsn {
 namespace dsn {
     namespace utils {
 
-        extern void split_args(const char* args, __out_param std::vector<std::string>& sargs, char splitter = ' ');
-        extern void split_args(const char* args, __out_param std::list<std::string>& sargs, char splitter = ' ');
+        extern void split_args(const char* args, /*out*/ std::vector<std::string>& sargs, char splitter = ' ');
+        extern void split_args(const char* args, /*out*/ std::list<std::string>& sargs, char splitter = ' ');
         extern std::string replace_string(std::string subject, const std::string& search, const std::string& replace);
         extern std::string get_last_component(const std::string& input, char splitters[]);
 

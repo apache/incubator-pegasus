@@ -36,26 +36,30 @@
 namespace dsn { namespace replication {
 
 // for replica::load(..) only
-replica::replica(replica_stub* stub, replication_options& options)
+replica::replica(replica_stub* stub, const char* path)
 : serverlet<replica>("replica")
 {
     dassert (stub, "");
     _stub = stub;
     _app = nullptr;
-        
-    _options = options;
+    _dir = path;
+    _options = &stub->options();
 
     init_state();
 }
 
-// for create new replica only used in replica_stub::on_config_proposal
-replica::replica(replica_stub* stub, global_partition_id gpid, replication_options& options)
+// for replica::newr(...) only
+replica::replica(replica_stub* stub, global_partition_id gpid, const char* app_type)
 : serverlet<replica>("replica")
 {
     dassert (stub, "");
     _stub = stub;
-    _app = nullptr;    
-    _options = options;
+    _app = nullptr;
+
+    char buffer[256];
+    sprintf(buffer, "%u.%u.%s", gpid.app_id, gpid.pidx, app_type);
+    _dir = _stub->dir() + "/" + buffer;
+    _options = &stub->options();
 
     init_state();
     _config.gpid = gpid;
@@ -64,16 +68,15 @@ replica::replica(replica_stub* stub, global_partition_id gpid, replication_optio
 void replica::init_state()
 {
     _inactive_is_transient = false;
-    _log = nullptr;
     _prepare_list = new prepare_list(
         0, 
-        _options.staleness_for_start_prepare_for_potential_secondary,
+        _options->staleness_for_start_prepare_for_potential_secondary,
         std::bind(
             &replica::execute_mutation,
             this,
             std::placeholders::_1
             ),
-        _options.prepare_ack_on_secondary_before_logging_allowed
+        _options->prepare_ack_on_secondary_before_logging_allowed
     );
 
     _config.ballot = 0;
@@ -82,6 +85,37 @@ void replica::init_state()
     _config.status = PS_INACTIVE;
     _primary_states.membership.ballot = 0;
     _last_config_change_time_ms = now_ms();
+    _2pc_logger = nullptr;
+    _log = nullptr;
+
+    error_code err = ERR_OK;
+    if (_options->log_private)
+    {
+        _log = new mutation_log(
+            _options->log_buffer_size_mb,
+            _options->log_pending_max_ms,
+            _options->log_file_size_mb,
+            _options->log_batch_write
+            );
+
+        std::string log_dir = dir() + "/log";
+        err = _log->initialize(log_dir.c_str());
+        dassert(err == ERR_OK, "");        
+    }
+
+    // setup 2pc logger
+    if (_options->log_shared)
+    { 
+        _2pc_logger = _stub->_log;
+    }
+    else if (_options->log_private)
+    {
+        _2pc_logger = _log;
+    }
+    else
+    {
+        _2pc_logger = nullptr;
+    }
 }
 
 replica::~replica(void)
@@ -188,7 +222,7 @@ mutation_ptr replica::new_mutation(decree decree)
     return mu;
 }
 
-bool replica::group_configuration(__out_param partition_configuration& config) const
+bool replica::group_configuration(/*out*/ partition_configuration& config) const
 {
     if (PS_PRIMARY != status())
         return false;
@@ -208,7 +242,7 @@ decree replica::last_prepared_decree() const
         auto mu = _prepare_list->get_mutation_by_decree(start + 1);
         if (mu == nullptr 
             || mu->data.header.ballot < lastBallot 
-            || (!mu->is_logged() && !_options.prepare_ack_on_secondary_before_logging_allowed)
+            || (!mu->is_logged() && !_options->prepare_ack_on_secondary_before_logging_allowed)
             )
             break;
 
@@ -228,6 +262,14 @@ void replica::close()
     cleanup_preparing_mutations(true);
     _primary_states.cleanup();
     _potential_secondary_states.cleanup(true);
+
+    if (_log != nullptr)
+    {
+        _log->close();
+        delete _log;
+        _log = nullptr;
+    }
+    _2pc_logger = nullptr;
 
     if (_app != nullptr)
     {

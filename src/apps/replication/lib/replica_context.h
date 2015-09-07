@@ -44,8 +44,8 @@ public:
     void cleanup(bool clean_pending_mutations = true);
        
     void reset_membership(const partition_configuration& config, bool clear_learners);
-    bool get_replica_config(const ::dsn::rpc_address& node, __out_param replica_configuration& config);
-    void get_replica_config(partition_status status, __out_param replica_configuration& config);
+    bool get_replica_config(const ::dsn::rpc_address& node, /*out*/ replica_configuration& config);
+    void get_replica_config(partition_status status, /*out*/ replica_configuration& config);
     bool check_exist(const ::dsn::rpc_address& node, partition_status status);
     partition_status get_node_status(const ::dsn::rpc_address& addr) const;
 

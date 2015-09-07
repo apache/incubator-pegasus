@@ -43,7 +43,7 @@ public:
     // - synchronous 
     ::dsn::error_code ping(
         const ::dsn::fd::beacon_msg& beacon, 
-        __out_param ::dsn::fd::beacon_ack& resp, 
+        /*out*/ ::dsn::fd::beacon_ack& resp, 
         int timeout_milliseconds = 0, 
         int hash = 0,
         const ::dsn::rpc_address *p_server_addr = nullptr)

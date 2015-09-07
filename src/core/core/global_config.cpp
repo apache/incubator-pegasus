@@ -39,7 +39,7 @@ namespace dsn {
 
 static bool build_client_network_confs(
     const char* section, 
-    __out_param network_client_configs& nss,
+    /*out*/ network_client_configs& nss,
     network_client_configs* default_spec)
 {
     nss.clear();
@@ -119,7 +119,7 @@ static bool build_client_network_confs(
 
 static bool build_server_network_confs(
     const char* section,
-    __out_param network_server_configs& nss,
+    /*out*/ network_server_configs& nss,
     network_server_configs* default_spec,
     const std::vector<int>& ports,
     bool is_template)

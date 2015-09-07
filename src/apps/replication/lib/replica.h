@@ -54,9 +54,11 @@ public:
     //
     //    routines for replica stub
     //
-    static replica* load(replica_stub* stub, const char* dir, replication_options& options, bool renameDirOnFailure);    
-    static replica* newr(replica_stub* stub, const char* app_type, global_partition_id gpid, replication_options& options);    
+    static replica* load(replica_stub* stub, const char* dir, bool rename_dir_on_failure);    
+    static replica* newr(replica_stub* stub, const char* app_type, global_partition_id gpid);    
     void replay_mutation(mutation_ptr& mu);
+    error_code replay_private_log();
+    void start_private_log_service();
     void reset_prepare_list_after_replay();
     // return false when update fails or replica is going to be closed
     bool update_local_configuration_with_no_ballot_change(partition_status status);
@@ -79,11 +81,11 @@ public:
     //    messages from peers (primary or secondary)
     //
     void on_prepare(dsn_message_t request);    
-    void on_learn(const learn_request& request, __out_param learn_response& response);
+    void on_learn(const learn_request& request, /*out*/ learn_response& response);
     void on_learn_completion_notification(const group_check_response& report);
     void on_add_learner(const group_check_request& request);
     void on_remove(const replica_configuration& request);
-    void on_group_check(const group_check_request& request, __out_param group_check_response& response);
+    void on_group_check(const group_check_request& request, /*out*/ group_check_response& response);
 
     //
     //    messsages from liveness monitor
@@ -107,7 +109,7 @@ public:
     decree last_prepared_decree() const;
     decree last_durable_decree() const;    
     const std::string& dir() const { return _dir; }
-    bool group_configuration(__out_param partition_configuration& config) const;
+    bool group_configuration(/*out*/ partition_configuration& config) const;
     uint64_t last_config_change_time_milliseconds() const { return _last_config_change_time_ms; }
     const char* name() const { return _name; }
         
@@ -120,10 +122,10 @@ private:
     
     // initialization
     error_code init_app_and_prepare_list(const char* app_type, bool create_new);
-    error_code initialize_on_load(const char* dir, bool renameDirOnFailure);
-    error_code initialize_on_new(const char* app_type, global_partition_id gpid);
-    replica(replica_stub* stub, replication_options& options); // for replica::load(..) only
-    replica(replica_stub* stub, global_partition_id gpid, replication_options& options); // for replica::newr(...) only
+    error_code initialize_on_load(const char* dir, bool rename_dir_on_failure);
+    error_code initialize_on_new(const char* app_type, global_partition_id gpid);    
+    replica(replica_stub* stub, const char* dir); // for replica::load(..) only
+    replica(replica_stub* stub, global_partition_id gpid, const char* app_type); // for replica::newr(...) only
         
     /////////////////////////////////////////////////////////////////
     // 2pc
@@ -142,7 +144,7 @@ private:
     void on_copy_remote_state_completed(error_code err, size_t size, std::shared_ptr<learn_response> resp);
     void on_learn_remote_state_completed(error_code err);
     void handle_learning_error(error_code err);
-    void handle_learning_succeeded_on_primary(const ::dsn::rpc_address& node, uint64_t learnSignature);
+    void handle_learning_succeeded_on_primary(const ::dsn::rpc_address& node, uint64_t learn_signature);
     void notify_learn_completion();
         
     /////////////////////////////////////////////////////////////////
@@ -183,8 +185,9 @@ private:
     // prepare list
     prepare_list*           _prepare_list;
 
-    // private log (if enabled)
+    // log (shared or private, depends on config)
     mutation_log*           _log;
+    mutation_log*           _2pc_logger; // logging on 2pc
 
     // application
     replication_app_base*   _app;
@@ -193,7 +196,7 @@ private:
     replica_stub*           _stub;
     std::string             _dir;
     char                    _name[256]; // app.index @ host:port
-    replication_options     _options;
+    replication_options     *_options;
     
     // replica status specific states
     primary_context             _primary_states;

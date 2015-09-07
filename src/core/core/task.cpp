@@ -148,6 +148,7 @@ void task::exec_internal()
 {
     task_state READY_STATE = TASK_STATE_READY;
     task_state RUNNING_STATE = TASK_STATE_RUNNING;
+    bool notify_if_necessary = true;
 
     if (_state.compare_exchange_strong(READY_STATE, TASK_STATE_RUNNING))
     {
@@ -163,16 +164,6 @@ void task::exec_internal()
         if (_state.compare_exchange_strong(RUNNING_STATE, TASK_STATE_FINISHED))
         {
             _spec->on_task_end.execute(this);
-
-            // signal_waiters(); [
-            // inline for performance
-            void* evt = _wait_event.load();
-            if (evt != nullptr)
-            {
-                auto nevt = (utils::notify_event*)evt;
-                nevt->notify();
-            }
-            // ]
         }
 
         // for timer
@@ -180,6 +171,7 @@ void task::exec_internal()
         {
             if (!_wait_for_cancel)
             {
+                notify_if_necessary = false;
                 _spec->on_task_end.execute(this);
                 enqueue();
             }   
@@ -187,16 +179,6 @@ void task::exec_internal()
             {
                 _state.compare_exchange_strong(READY_STATE, TASK_STATE_CANCELLED);
                 _spec->on_task_end.execute(this);
-
-                // signal_waiters(); [
-                // inline for performance
-                void* evt = _wait_event.load();
-                if (evt != nullptr)
-                {
-                    auto nevt = (utils::notify_event*)evt;
-                    nevt->notify();
-                }
-                // ]
             }
         }
         
@@ -207,6 +189,20 @@ void task::exec_internal()
         // task cancelled, so
         _error.end_tracking();
     }
+    
+    // signal_waiters(); [
+    // inline for performance
+    if (notify_if_necessary)
+    {
+        void* evt = _wait_event.load();
+        if (evt != nullptr)
+        {
+            auto nevt = (utils::notify_event*)evt;
+            nevt->notify();
+            spec().on_task_wait_notified.execute(this);
+        }
+    }    
+    // ]
 
     if (!_spec->allow_inline && !_is_null)
     {
@@ -257,11 +253,7 @@ bool task::wait(int timeout_milliseconds, bool on_cancel)
         }
     }
 
-    if (!spec().on_task_wait_pre.execute(task::get_current_task(), this, (uint32_t)timeout_milliseconds, true))
-    {
-        spec().on_task_wait_post.execute(task::get_current_task(), this, false);
-        return false;
-    }
+    spec().on_task_wait_pre.execute(task::get_current_task(), this, (uint32_t)timeout_milliseconds);
 
     bool ret = (state() >= TASK_STATE_FINISHED);
     if (!ret)

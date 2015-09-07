@@ -96,7 +96,7 @@ public:
     int  master_count() const { return static_cast<int>(_masters.size()); }
     
 protected:
-    void on_ping_internal(const beacon_msg& beacon, __out_param beacon_ack& ack);
+    void on_ping_internal(const beacon_msg& beacon, /*out*/ beacon_ack& ack);
 
     bool is_time_greater_than(uint64_t ts, uint64_t base); 
 

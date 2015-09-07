@@ -27,7 +27,7 @@ namespace dsn {
             ::dsn::marshall_rpc_args<copy_request>(&proto, val, &copy_request::write);
         };
 
-        inline void unmarshall(::dsn::binary_reader& reader, __out_param copy_request& val)
+        inline void unmarshall(::dsn::binary_reader& reader, /*out*/ copy_request& val)
         {
             boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
             ::apache::thrift::protocol::TBinaryProtocol proto(transport);
@@ -42,7 +42,7 @@ namespace dsn {
             ::dsn::marshall_rpc_args<copy_response>(&proto, val, &copy_response::write);
         };
 
-        inline void unmarshall(::dsn::binary_reader& reader, __out_param copy_response& val)
+        inline void unmarshall(::dsn::binary_reader& reader, /*out*/ copy_response& val)
         {
             boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
             ::apache::thrift::protocol::TBinaryProtocol proto(transport);
@@ -57,7 +57,7 @@ namespace dsn {
             ::dsn::marshall_rpc_args<get_file_size_request>(&proto, val, &get_file_size_request::write);
         };
 
-        inline void unmarshall(::dsn::binary_reader& reader, __out_param get_file_size_request& val)
+        inline void unmarshall(::dsn::binary_reader& reader, /*out*/ get_file_size_request& val)
         {
             boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
             ::apache::thrift::protocol::TBinaryProtocol proto(transport);
@@ -72,7 +72,7 @@ namespace dsn {
             ::dsn::marshall_rpc_args<get_file_size_response>(&proto, val, &get_file_size_response::write);
         };
 
-        inline void unmarshall(::dsn::binary_reader& reader, __out_param get_file_size_response& val)
+        inline void unmarshall(::dsn::binary_reader& reader, /*out*/ get_file_size_response& val)
         {
             boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
             ::apache::thrift::protocol::TBinaryProtocol proto(transport);
@@ -113,7 +113,7 @@ namespace dsn {
             marshall(writer, val.overwrite);
         };
 
-        inline void unmarshall(::dsn::binary_reader& reader, __out_param copy_request& val)
+        inline void unmarshall(::dsn::binary_reader& reader, /*out*/ copy_request& val)
         {
             unmarshall(reader, val.source);
             unmarshall(reader, val.source_dir);
@@ -146,7 +146,7 @@ namespace dsn {
             marshall(writer, val.size);
         };
 
-        inline void unmarshall(::dsn::binary_reader& reader, __out_param copy_response& val)
+        inline void unmarshall(::dsn::binary_reader& reader, /*out*/ copy_response& val)
         {
             unmarshall(reader, val.error);
             unmarshall(reader, val.file_name);
@@ -175,7 +175,7 @@ namespace dsn {
             marshall(writer, val.overwrite);
         };
 
-        inline void unmarshall(::dsn::binary_reader& reader, __out_param get_file_size_request& val)
+        inline void unmarshall(::dsn::binary_reader& reader, /*out*/ get_file_size_request& val)
         {
             unmarshall(reader, val.source);
             unmarshall(reader, val.dst_dir);
@@ -199,7 +199,7 @@ namespace dsn {
             marshall(writer, val.size_list);
         };
 
-        inline void unmarshall(::dsn::binary_reader& reader, __out_param get_file_size_response& val)
+        inline void unmarshall(::dsn::binary_reader& reader, /*out*/ get_file_size_response& val)
         {
             unmarshall(reader, val.error);
             unmarshall(reader, val.file_list);

@@ -46,7 +46,7 @@ namespace dsn
         int read_buffer_capacity() const;
 
         // afer read, see if we can compose a message
-        virtual message_ex* get_message_on_receive(int read_length, __out_param int& read_next) = 0;
+        virtual message_ex* get_message_on_receive(int read_length, /*out*/ int& read_next) = 0;
 
         // before send, prepare buffer
         // be compatible with WSABUF on windows and iovec on linux
@@ -66,9 +66,9 @@ namespace dsn
 
         // caller must ensure buffers length is correct as get_send_buffers_count_and_total_length(...);
         // return buffer count used
-        virtual int prepare_buffers_on_send(message_ex* msg, int offset, __out_param send_buf* buffers) = 0;
+        virtual int prepare_buffers_on_send(message_ex* msg, int offset, /*out*/ send_buf* buffers) = 0;
 
-        virtual int get_send_buffers_count_and_total_length(message_ex* msg, __out_param int* total_length) = 0;
+        virtual int get_send_buffers_count_and_total_length(message_ex* msg, /*out*/ int* total_length) = 0;
         
     protected:
         void create_new_buffer(int sz);
@@ -85,10 +85,10 @@ namespace dsn
     public:
         dsn_message_parser(int buffer_block_size);
 
-        virtual message_ex* get_message_on_receive(int read_length, __out_param int& read_next);
+        virtual message_ex* get_message_on_receive(int read_length, /*out*/ int& read_next);
 
-        virtual int prepare_buffers_on_send(message_ex* msg, int offset, __out_param send_buf* buffers) override;
+        virtual int prepare_buffers_on_send(message_ex* msg, int offset, /*out*/ send_buf* buffers) override;
 
-        virtual int get_send_buffers_count_and_total_length(message_ex* msg, __out_param int* total_length) override;
+        virtual int get_send_buffers_count_and_total_length(message_ex* msg, /*out*/ int* total_length) override;
     };
 }

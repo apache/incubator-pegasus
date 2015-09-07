@@ -40,7 +40,7 @@
     {\
     writer.write((const char*)&val, static_cast<int>(sizeof(val))); \
     }\
-    inline void unmarshall(::dsn::binary_reader& reader, __out_param T& val)\
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ T& val)\
     {\
     reader.read((char*)&val, static_cast<int>(sizeof(T))); \
     }
@@ -53,7 +53,7 @@ inline void marshall(dsn_message_t msg, const T& val)
 }
 
 template<typename T>
-inline void unmarshall(dsn_message_t msg, __out_param T& val)
+inline void unmarshall(dsn_message_t msg, /*out*/ T& val)
 {
     ::dsn::msg_binary_reader reader(msg);
     unmarshall(reader, val);
@@ -84,7 +84,7 @@ namespace dsn {
         marshall(writer, err);
     }
 
-    inline void unmarshall(::dsn::binary_reader& reader, __out_param error_code& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ error_code& val)
     {
         int err;
         unmarshall(reader, err);
@@ -92,7 +92,7 @@ namespace dsn {
     }
 
     // end point
-    inline void unmarshall(::dsn::binary_reader& reader, __out_param ::dsn::rpc_address& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ ::dsn::rpc_address& val)
     {
         dsn_host_type_t type;        
         uint16_t port;
@@ -141,14 +141,14 @@ namespace dsn {
         writer.write(val);
     }
 
-    inline void unmarshall(::dsn::binary_reader& reader, __out_param std::string& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ std::string& val)
     {
         reader.read(val);
     }
 
     // end point
     //extern inline void marshall(::dsn::binary_writer& writer, const ::dsn::rpc_address& val);
-    //extern inline void unmarshall(::dsn::binary_reader& reader, __out_param ::dsn::rpc_address& val);
+    //extern inline void unmarshall(::dsn::binary_reader& reader, /*out*/ ::dsn::rpc_address& val);
 
     // blob
     inline void marshall(::dsn::binary_writer& writer, const blob& val)
@@ -156,7 +156,7 @@ namespace dsn {
         writer.write(val);
     }
 
-    inline void unmarshall(::dsn::binary_reader& reader, __out_param blob& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ blob& val)
     {
         reader.read(val);
     }
@@ -174,7 +174,7 @@ namespace dsn {
     }
 
     template<typename T>
-    inline void unmarshall(::dsn::binary_reader& reader, __out_param std::list<T>& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ std::list<T>& val)
     {
         int sz;
         unmarshall(reader, sz);
@@ -198,7 +198,7 @@ namespace dsn {
     }
 
     template<typename T>
-    inline void unmarshall(::dsn::binary_reader& reader, __out_param std::vector<T>& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ std::vector<T>& val)
     {
         int sz;
         unmarshall(reader, sz);
@@ -222,7 +222,7 @@ namespace dsn {
     }
 
     template<typename T>
-    inline void unmarshall(::dsn::binary_reader& reader, __out_param std::set<T, std::less<T>, std::allocator<T>>& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ std::set<T, std::less<T>, std::allocator<T>>& val)
     {
         int sz;
         unmarshall(reader, sz);

@@ -230,7 +230,7 @@ bool task_worker_pool::shared_same_worker_with_current_task(task* tsk) const
     }
 }
 
-void task_worker_pool::get_runtime_info(const std::string& indent, const std::vector<std::string>& args, __out_param std::stringstream& ss)
+void task_worker_pool::get_runtime_info(const std::string& indent, const std::vector<std::string>& args, /*out*/ std::stringstream& ss)
 {
     std::string indent2 = indent + "\t";
     ss << indent << "contains " << _workers.size() << " threads with " << _queues.size() << " queues" << std::endl;
@@ -288,7 +288,7 @@ void task_engine::start()
     _is_running = true;
 }
 
-void task_engine::get_runtime_info(const std::string& indent, const std::vector<std::string>& args, __out_param std::stringstream& ss)
+void task_engine::get_runtime_info(const std::string& indent, const std::vector<std::string>& args, /*out*/ std::stringstream& ss)
 {
     std::string indent2 = indent + "\t";
     for (auto& p : _pools)

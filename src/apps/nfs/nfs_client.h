@@ -17,7 +17,7 @@ public:
     // - synchronous 
     ::dsn::error_code copy(
         const copy_request& request, 
-        __out_param copy_response& resp, 
+        /*out*/ copy_response& resp, 
         int timeout_milliseconds = 0, 
         int hash = 0,
         const ::dsn::rpc_address *p_server_addr = nullptr)
@@ -103,7 +103,7 @@ public:
     // - synchronous 
     ::dsn::error_code get_file_size(
         const get_file_size_request& request, 
-        __out_param get_file_size_response& resp, 
+        /*out*/ get_file_size_response& resp, 
         int timeout_milliseconds = 0, 
         int hash = 0,
         const ::dsn::rpc_address *p_server_addr = nullptr)

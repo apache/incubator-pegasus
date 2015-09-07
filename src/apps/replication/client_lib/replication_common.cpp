@@ -32,31 +32,41 @@ replication_options::replication_options()
 {
     prepare_timeout_ms_for_secondaries = 1000;
     prepare_timeout_ms_for_potential_secondaries = 3000;
-    staleness_for_commit = 10;
-    staleness_for_start_prepare_for_potential_secondary = 110;
-    mutation_2pc_min_replica_count = 1;
     prepare_list_max_size_mb = 250;
     prepare_ack_on_secondary_before_logging_allowed = false;
 
+    staleness_for_commit = 10;
+    staleness_for_start_prepare_for_potential_secondary = 110;
+    
+    mutation_2pc_min_replica_count = 1;    
+
     group_check_internal_ms = 100000;
     group_check_disabled = false;
+
     gc_interval_ms = 30 * 1000; // 30000 milliseconds
     gc_disabled = false;
     gc_memory_replica_interval_ms = 5 * 60 * 1000; // 5 minutes
     gc_disk_error_replica_interval_seconds = 48 * 3600 * 1000; // 48 hrs
-    log_batch_write = true;
-    log_max_concurrent_writes = 4;
+    
     fd_disabled = false;
     //_options.meta_servers = ...;
     fd_check_interval_seconds = 5;
     fd_beacon_interval_seconds = 3;
     fd_lease_seconds = 10;
     fd_grace_seconds = 15;
+
     working_dir = ".";
         
     log_buffer_size_mb = 1;
     log_pending_max_ms = 100;
     log_file_size_mb = 32;
+    log_batch_write = true;
+    log_buffer_size_mb_private = 1;
+    log_pending_max_ms_private = 100;
+    log_file_size_mb_private = 32;
+    log_batch_write_private = true;
+    log_shared = true;
+    log_private = false;
     
     config_sync_interval_ms = 30000;
     config_sync_disabled = false;
@@ -227,11 +237,46 @@ void replication_options::initialize()
         log_batch_write,
         "whether to batch write the incoming logs"
         );
-    log_max_concurrent_writes =
-        (int)dsn_config_get_value_uint64("replication", 
-        "log_max_concurrent_writes", 
-        log_max_concurrent_writes,
-        "maximum concurrent log writes"
+
+    log_file_size_mb_private =
+        (int)dsn_config_get_value_uint64("replication",
+        "log_file_size_mb_private",
+        log_file_size_mb_private,
+        "maximum log segment file size (MB) for private log"
+        );
+    log_buffer_size_mb_private =
+        (int)dsn_config_get_value_uint64("replication",
+        "log_buffer_size_mb_private",
+        log_buffer_size_mb_private,
+        "log buffer size (MB) for batching incoming logs for private log"
+        );
+    log_pending_max_ms_private =
+        (int)dsn_config_get_value_uint64("replication",
+        "log_pending_max_ms_private",
+        log_pending_max_ms_private,
+        "maximum duration (ms) the log entries reside in the buffer for batching for private log"
+        );
+    log_batch_write_private =
+        dsn_config_get_value_bool("replication",
+        "log_batch_write_private",
+        log_batch_write_private,
+        "whether to batch write the incoming logs for private log"
+        );
+
+    log_shared =
+        dsn_config_get_value_bool("replication",
+        "log_shared",
+        log_shared,
+        "whether to use shared replication log"
+        );
+
+    log_private =
+        dsn_config_get_value_bool("replication",
+        "log_private",
+        log_private,
+        "whether to use private repliation log, "
+        "when enabled together with log_shared, this log "
+        "serves as the splitting log of the global log for each relica"
         );
 
      config_sync_disabled =
@@ -258,7 +303,7 @@ void replication_options::sanity_check()
     dassert (staleness_for_start_prepare_for_potential_secondary >= staleness_for_commit, "");
 }
    
-/*static*/ bool replica_helper::remove_node(const ::dsn::rpc_address& node, __inout_param std::vector<::dsn::rpc_address>& nodeList)
+/*static*/ bool replica_helper::remove_node(const ::dsn::rpc_address& node, /*inout*/ std::vector<::dsn::rpc_address>& nodeList)
 {
     auto it = std::find(nodeList.begin(), nodeList.end(), node);
     if (it != nodeList.end())
@@ -272,7 +317,7 @@ void replication_options::sanity_check()
     }
 }
 
-/*static*/ bool replica_helper::get_replica_config(const partition_configuration& partition_config, const ::dsn::rpc_address& node, __out_param replica_configuration& replica_config)
+/*static*/ bool replica_helper::get_replica_config(const partition_configuration& partition_config, const ::dsn::rpc_address& node, /*out*/ replica_configuration& replica_config)
 {
     replica_config.gpid = partition_config.gpid;
     replica_config.primary = partition_config.primary;

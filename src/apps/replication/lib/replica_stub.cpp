@@ -62,6 +62,7 @@ void replica_stub::initialize(bool clear/* = false*/)
 
 void replica_stub::initialize(const replication_options& opts, bool clear/* = false*/)
 {
+    error_code err = ERR_OK;
     zauto_lock l(_replicas_lock);
 
     // init dirs
@@ -87,10 +88,10 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 		dassert(false, "Fail to get absolute path from %s.", _dir.c_str());
 	}
 	_dir = temp;
-    std::string logDir = _dir + "/log";
-	if (!dsn::utils::filesystem::create_directory(logDir))
+    std::string log_dir = _dir + "/log";
+	if (!dsn::utils::filesystem::create_directory(log_dir))
 	{
-		dassert(false, "Fail to create directory %s.", logDir.c_str());
+		dassert(false, "Fail to create directory %s.", log_dir.c_str());
 	}
 
     // init rps
@@ -110,7 +111,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 			)
 			continue;
 
-		auto r = replica::load(this, name.c_str(), _options, true);
+		auto r = replica::load(this, name.c_str(), true);
 		if (r != nullptr)
 		{
 			ddebug("%u.%u @ %s:%hu: load replica success with durable decree = %llu from '%s'",
@@ -120,54 +121,68 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 				name.c_str()
 				);
 			rps[r->get_gpid()] = r;
+
+            // when private log is used for reliability
+            if (!_options.log_shared && _options.log_private)
+            {
+                r->replay_private_log();
+            }
 		}
 	}
 	file_list.clear();
 
-    // init logs
-    _log = new mutation_log(opts.log_buffer_size_mb, opts.log_pending_max_ms, opts.log_file_size_mb, opts.log_batch_write, opts.log_max_concurrent_writes);
-    error_code err = _log->initialize(logDir.c_str());
-    dassert (err == ERR_OK, "");
-    
-    err = _log->replay(
-        std::bind(&replica_stub::replay_mutation, this, std::placeholders::_1, &rps)
-        );
-    
-    for (auto it = rps.begin(); it != rps.end(); it++)
+    // init logs when is_shared
+    _log = nullptr;
+    if (_options.log_shared)
     {
-        it->second->reset_prepare_list_after_replay();
+        _log = new mutation_log(
+            opts.log_buffer_size_mb, 
+            opts.log_pending_max_ms, 
+            opts.log_file_size_mb, 
+            opts.log_batch_write
+            );
+        err = _log->initialize(log_dir.c_str());
+        dassert(err == ERR_OK, "");
+        err = _log->replay(
+            std::bind(&replica_stub::replay_mutation, this, std::placeholders::_1, &rps)
+            );
 
-        if (err == ERR_OK)
+        for (auto it = rps.begin(); it != rps.end(); it++)
         {
-            derror(
-                "%u.%u @ %s:%hu: initialized, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
-                it->first.app_id, it->first.pidx,
-                primary_address().name(), primary_address().port(),
-                it->second->last_durable_decree(),
-                it->second->last_committed_decree(),
-                it->second->max_prepared_decree(),
-                it->second->get_ballot()
-                );
+            it->second->reset_prepare_list_after_replay();
 
-            it->second->set_inactive_state_transient(true);
+            if (err == ERR_OK)
+            {
+                derror(
+                    "%u.%u @ %s:%hu: global log initialized, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
+                    it->first.app_id, it->first.pidx,
+                    primary_address().name(), primary_address().port(),
+                    it->second->last_durable_decree(),
+                    it->second->last_committed_decree(),
+                    it->second->max_prepared_decree(),
+                    it->second->get_ballot()
+                    );
+
+                it->second->set_inactive_state_transient(true);
+            }
+            else
+            {
+                derror(
+                    "%u.%u @ %s:%hu: global log initialized with log error, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
+                    it->first.app_id, it->first.pidx,
+                    primary_address().name(), primary_address().port(),
+                    it->second->last_durable_decree(),
+                    it->second->last_committed_decree(),
+                    it->second->max_prepared_decree(),
+                    it->second->get_ballot()
+                    );
+
+                it->second->set_inactive_state_transient(false);
+            }
         }
-        else
-        {
-            derror(
-                "%u.%u @ %s:%hu: initialized with log error, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
-                it->first.app_id, it->first.pidx,
-                primary_address().name(), primary_address().port(),
-                it->second->last_durable_decree(),
-                it->second->last_committed_decree(),
-                it->second->max_prepared_decree(),
-                it->second->get_ballot()
-                );
+    }    
 
-            it->second->set_inactive_state_transient(false);
-        }
-    }
-
-    // start log serving    
+    // gc
     if (false == _options.gc_disabled)
     {
         _gc_timer_task = tasking::enqueue(
@@ -180,18 +195,28 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             );
     }
 
-    multi_partition_decrees initMaxDecrees; // for log truncate
-    for (auto it = rps.begin(); it != rps.end(); it++)
+    // start log serving    
+    if (nullptr != _log)
     {
-        initMaxDecrees[it->second->get_gpid()] = it->second->max_prepared_decree();
+        multi_partition_decrees init_max_decrees; // for log truncate
+        for (auto it = rps.begin(); it != rps.end(); it++)
+        {
+            init_max_decrees[it->second->get_gpid()] = it->second->max_prepared_decree();
+        }
+        err = _log->start_write_service(init_max_decrees, _options.staleness_for_commit);
+        dassert(err == ERR_OK, "");
     }
-    err = _log->start_write_service(initMaxDecrees, _options.staleness_for_commit);
-    dassert (err == ERR_OK, "");
+
+    if (_options.log_private)
+    {
+        for (auto& r : rps)
+        {
+            r.second->start_private_log_service();
+        }
+    }
 
     // attach rps
-    _replicas = rps;
-
-    rps.clear();
+    _replicas = std::move(rps);
 
     // start timer for configuration sync
     if (!_options.config_sync_disabled)
@@ -249,7 +274,7 @@ replica_ptr replica_stub::get_replica(global_partition_id gpid, bool new_when_po
         else
         {
             dassert (app_type, "");
-            replica* rep = replica::newr(this, app_type, gpid, _options);
+            replica* rep = replica::newr(this, app_type, gpid);
             if (rep != nullptr) 
             {
                 add_replica(rep);
@@ -336,7 +361,7 @@ void replica_stub::on_config_proposal(const configuration_update_request& propos
     }
 }
 
-void replica_stub::on_query_decree(const query_replica_decree_request& req, __out_param query_replica_decree_response& resp)
+void replica_stub::on_query_decree(const query_replica_decree_request& req, /*out*/ query_replica_decree_response& resp)
 {
     replica_ptr rep = get_replica(req.gpid);
     if (rep != nullptr)
@@ -378,7 +403,7 @@ void replica_stub::on_prepare(dsn_message_t request)
     }
 }
 
-void replica_stub::on_group_check(const group_check_request& request, __out_param group_check_response& response)
+void replica_stub::on_group_check(const group_check_request& request, /*out*/ group_check_response& response)
 {
     if (!is_connected()) return;
 
@@ -405,7 +430,7 @@ void replica_stub::on_group_check(const group_check_request& request, __out_para
     }
 }
 
-void replica_stub::on_learn(const learn_request& request, __out_param learn_response& response)
+void replica_stub::on_learn(const learn_request& request, /*out*/ learn_response& response)
 {
     replica_ptr rep = get_replica(request.gpid);
     if (rep != nullptr)
@@ -844,8 +869,8 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
 
     dwarn("open replica '%s'", dr.c_str());
 
-    replica_ptr rep = replica::load(this, dr.c_str(), _options, true);
-    if (rep == nullptr) rep = replica::newr(this, app_type.c_str(), gpid, _options);
+    replica_ptr rep = replica::load(this, dr.c_str(), true);
+    if (rep == nullptr) rep = replica::newr(this, app_type.c_str(), gpid);
     dassert (rep != nullptr, "");
         
     {

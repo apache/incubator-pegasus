@@ -37,7 +37,7 @@ namespace dsn { namespace replication {
 
 class mutation_log;
 class replication_failure_detector;
-
+typedef std::unordered_map<global_partition_id, replica_ptr> replicas;
 // from, new replica config, isClosing
 typedef std::function<void (const ::dsn::rpc_address&, const replica_configuration&, bool)> replica_state_subscriber;
 
@@ -66,7 +66,7 @@ public:
     //    messages from meta server
     //
     void on_config_proposal(const configuration_update_request& proposal);
-    void on_query_decree(const query_replica_decree_request& req, __out_param query_replica_decree_response& resp);
+    void on_query_decree(const query_replica_decree_request& req, /*out*/ query_replica_decree_response& resp);
         
     //
     //    messages from peers (primary or secondary)
@@ -75,11 +75,11 @@ public:
     //        - learn
     //
     void on_prepare(dsn_message_t request);    
-    void on_learn(const learn_request& request, __out_param learn_response& response);
+    void on_learn(const learn_request& request, /*out*/ learn_response& response);
     void on_learn_completion_notification(const group_check_response& report);
     void on_add_learner(const group_check_request& request);
     void on_remove(const replica_configuration& request);
-    void on_group_check(const group_check_request& request, __out_param group_check_response& response);
+    void on_group_check(const group_check_request& request, /*out*/ group_check_response& response);
 
     //
     //    local messages
@@ -130,8 +130,7 @@ private:
     void notify_replica_state_update(const replica_configuration& config, bool isClosing);
 
 private:
-    friend class ::dsn::replication::replication_checker;
-    typedef std::unordered_map<global_partition_id, replica_ptr> replicas;
+    friend class ::dsn::replication::replication_checker;    
     typedef std::unordered_map<global_partition_id, ::dsn::task_ptr> opening_replicas;
     typedef std::unordered_map<global_partition_id, std::pair<::dsn::task_ptr, replica_ptr>> closing_replicas; // <close, replica>
 

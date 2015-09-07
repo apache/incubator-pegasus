@@ -49,7 +49,7 @@ namespace dsn {
             virtual void start(io_modifer& ctx) override;
 
         protected:
-            error_code aio_internal(aio_task* aio, bool async, __out_param uint32_t* pbytes = nullptr);
+            error_code aio_internal(aio_task* aio, bool async, /*out*/ uint32_t* pbytes = nullptr);
 
         private:            
             io_looper *_looper;

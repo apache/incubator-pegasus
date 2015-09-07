@@ -140,7 +140,7 @@ namespace dsn {
             }
         }
 
-        error_code native_linux_aio_provider::aio_internal(aio_task* aio_tsk, bool async, __out_param uint32_t* pbytes /*= nullptr*/)
+        error_code native_linux_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/ uint32_t* pbytes /*= nullptr*/)
         {
             struct iocb *cbs[1];
             linux_disk_aio_context * aio;

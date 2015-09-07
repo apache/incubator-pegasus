@@ -39,7 +39,7 @@ void replica::init_group_check()
 {
     check_hashed_access();
 
-    if (PS_PRIMARY != status() || _options.group_check_disabled)
+    if (PS_PRIMARY != status() || _options->group_check_disabled)
         return;
 
     dassert (nullptr == _primary_states.group_check_task, "");
@@ -49,7 +49,7 @@ void replica::init_group_check()
             &replica::broadcast_group_check,
             gpid_to_hash(get_gpid()),
             0,
-            _options.group_check_internal_ms
+            _options->group_check_internal_ms
             );
 }
 
@@ -107,7 +107,7 @@ void replica::broadcast_group_check()
     }
 }
 
-void replica::on_group_check(const group_check_request& request, __out_param group_check_response& response)
+void replica::on_group_check(const group_check_request& request, /*out*/ group_check_response& response)
 {
     check_hashed_access();
 
@@ -198,7 +198,7 @@ void replica::on_group_check_reply(error_code err, std::shared_ptr<group_check_r
 // for testing purpose only
 void replica::send_group_check_once_for_test(int delay_milliseconds)
 {
-    dassert (_options.group_check_disabled, "");
+    dassert (_options->group_check_disabled, "");
 
     _primary_states.group_check_task = tasking::enqueue(
             LPC_GROUP_CHECK,

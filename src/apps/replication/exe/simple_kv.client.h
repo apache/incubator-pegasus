@@ -51,7 +51,7 @@ public:
     // - synchronous 
     ::dsn::error_code read(
         const std::string& key, 
-        __out_param std::string& resp, 
+        /*out*/ std::string& resp, 
         int timeout_milliseconds = 0
         )
     {
@@ -141,7 +141,7 @@ public:
     // - synchronous 
     ::dsn::error_code write(
         const ::dsn::replication::application::kv_pair& pr, 
-        __out_param int32_t& resp, 
+        /*out*/ int32_t& resp, 
         int timeout_milliseconds = 0
         )
     {
@@ -229,7 +229,7 @@ public:
     // - synchronous 
     ::dsn::error_code append(
         const ::dsn::replication::application::kv_pair& pr, 
-        __out_param int32_t& resp, 
+        /*out*/ int32_t& resp, 
         int timeout_milliseconds = 0
         )
     {

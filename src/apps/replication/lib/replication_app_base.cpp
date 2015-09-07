@@ -45,6 +45,7 @@ replication_app_base::replication_app_base(replica* replica)
     _physical_error = 0;
     _dir_data = replica->dir() + "/data";
     _dir_learn = replica->dir() + "/learn";
+    _is_delta_state_learning_supported = false;
 
     _replica = replica;
     _last_committed_decree = _last_durable_decree = 0;

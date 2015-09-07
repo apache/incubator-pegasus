@@ -76,7 +76,7 @@ public:
 
     task_engine* computation() const { return _computation; }
     const std::list<io_engine>& ios() const { return _ios; }
-    void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, __out_param std::stringstream& ss);
+    void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, /*out*/ std::stringstream& ss);
     error_code start_io_engine_in_node_start_task(const io_engine& io);
 
     ::dsn::error_code start();
@@ -101,7 +101,7 @@ private:
 private:
     error_code init_io_engine(io_engine& io, ioe_mode mode);
     error_code start_io_engine_in_main(const io_engine& io);
-    void get_io(ioe_mode mode, task_queue* q, __out_param io_engine& io) const;
+    void get_io(ioe_mode mode, task_queue* q, /*out*/ io_engine& io) const;
 };
 
 typedef std::map<int, service_node*> service_nodes_by_app_id;

@@ -267,7 +267,7 @@ bool failure_detector::remove_from_allow_list( const ::dsn::rpc_address& node)
     return _allow_list.erase(node) > 0;
 }
 
-void failure_detector::on_ping_internal(const beacon_msg& beacon, __out_param beacon_ack& ack)
+void failure_detector::on_ping_internal(const beacon_msg& beacon, /*out*/ beacon_ack& ack)
 {
     ack.is_master = true;
     ack.this_node = beacon.to;

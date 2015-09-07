@@ -171,7 +171,8 @@ public:
     join_point<void, task*>                      on_task_end;
     join_point<void, task*>                      on_task_cancelled;
 
-    join_point<bool, task*, task*, uint32_t>     on_task_wait_pre;
+    join_point<void, task*, task*, uint32_t>     on_task_wait_pre; // waitor, waitee, timeout
+    join_point<void, task*>                      on_task_wait_notified;
     join_point<void, task*, task*, bool>         on_task_wait_post; // wait succeeded or timedout
     join_point<void, task*, task*, bool>         on_task_cancel_post; // cancel succeeded or not
     
@@ -230,7 +231,7 @@ struct threadpool_spec
     threadpool_spec(const threadpool_spec& source);
     threadpool_spec& operator=(const threadpool_spec& source);
 
-    static bool init(__out_param std::vector<threadpool_spec>& specs);
+    static bool init(/*out*/ std::vector<threadpool_spec>& specs);
 };
 
 CONFIG_BEGIN(threadpool_spec)

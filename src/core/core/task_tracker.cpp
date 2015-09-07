@@ -72,7 +72,8 @@ namespace dsn
                 switch (prepare_state)
                 {
                 case trackable_task::OWNER_DELETE_NOT_LOCKED:
-                    dsn_task_wait(tcm->_task);
+                    dsn_task_wait(tcm->_task); // wait inside spin lock: dangerous!!!
+                                               // do not run model checking at this point
                     tcm->owner_delete_commit();
                     break;
                 case trackable_task::OWNER_DELETE_LOCKED:

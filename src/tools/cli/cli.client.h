@@ -21,7 +21,7 @@ public:
     // - synchronous 
     ::dsn::error_code call(
         const command& c, 
-        __out_param std::string& resp, 
+        /*out*/ std::string& resp, 
         int timeout_milliseconds = 0, 
         int hash = 0,
         const ::dsn::rpc_address *p_server_addr = nullptr)

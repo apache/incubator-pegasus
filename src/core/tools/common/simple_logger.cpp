@@ -66,11 +66,22 @@ namespace dsn {
             }
             else
             {
-                fprintf(fp, "%6s.%7s.%05d: ",
-                    task::get_current_node_name(),
-                    "io-thrd",
-                    tid
-                    );
+                if (nullptr != task::get_current_worker())
+                {
+                    fprintf(fp, "%6s.%7s%u: ",
+                        task::get_current_node_name(),
+                        task::get_current_worker()->pool_spec().name.c_str(),
+                        task::get_current_worker()->index()
+                        );
+                }
+                else
+                {
+                    fprintf(fp, "%6s.%7s.%05d: ",
+                        task::get_current_node_name(),
+                        "io-thrd",
+                        tid
+                        );
+                }
             }
         }
 

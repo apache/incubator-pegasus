@@ -43,7 +43,7 @@ public:
 
     void add_event(uint64_t ts, task* t);
     void add_system_event(uint64_t ts, std::function<void()> t);
-    std::vector<event_entry>* pop_next_events(__out_param uint64_t& ts);
+    std::vector<event_entry>* pop_next_events(/*out*/ uint64_t& ts);
     void clear();
     bool has_more_events() const {  utils::auto_lock<::dsn::utils::ex_lock> l(_lock); return _events.size() > 0; }
 
@@ -125,7 +125,7 @@ private:
     static void on_task_worker_create(task_worker* worker);
     static void on_task_worker_start(task_worker* worker);
     static void on_task_wait(task* waitor, task* waitee, uint32_t timeout_milliseconds);
-    static void on_task_end(task* task);
+    static void on_task_wait_notified(task* task);
 };
 
 // ------------------  inline implementation ----------------------------

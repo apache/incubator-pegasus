@@ -40,7 +40,7 @@ void marshall(binary_writer& writer, const app_state& val)
     marshall(writer, val.partitions);
 }
 
-void unmarshall(binary_reader& reader, __out_param app_state& val)
+void unmarshall(binary_reader& reader, /*out*/ app_state& val)
 {
     unmarshall(reader, val.app_type);
     unmarshall(reader, val.app_name);
@@ -171,7 +171,7 @@ void server_state::init_app()
     _apps.push_back(app);
 }
 
-void server_state::get_node_state(__out_param node_states& nodes)
+void server_state::get_node_state(/*out*/ node_states& nodes)
 {
     zauto_read_lock l(_lock);
     for (auto it = _nodes.begin(); it != _nodes.end(); it++)
@@ -180,7 +180,7 @@ void server_state::get_node_state(__out_param node_states& nodes)
     }
 }
 
-void server_state::set_node_state(const node_states& nodes, __out_param machine_fail_updates* pris)
+void server_state::set_node_state(const node_states& nodes, /*out*/ machine_fail_updates* pris)
 {
     zauto_write_lock l(_lock);
 
@@ -250,7 +250,7 @@ void server_state::unfree_if_possible_on_start()
     dinfo("live replica server # is %d, freeze = %s", _node_live_count, _freeze ? "true" : "false");
 }
 
-bool server_state::get_meta_server_primary(__out_param ::dsn::rpc_address& node)
+bool server_state::get_meta_server_primary(/*out*/ ::dsn::rpc_address& node)
 {
     zauto_read_lock l(_meta_lock);
     if (-1 == _leader_index)
@@ -314,7 +314,7 @@ void server_state::switch_meta_primary()
 }
 
 // partition server & client => meta server
-void server_state::query_configuration_by_node(configuration_query_by_node_request& request, __out_param configuration_query_by_node_response& response)
+void server_state::query_configuration_by_node(configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response)
 {
     zauto_read_lock l(_lock);
     auto it = _nodes.find(request.node);
@@ -333,13 +333,13 @@ void server_state::query_configuration_by_node(configuration_query_by_node_reque
     }
 }
 
-void server_state::query_configuration_by_gpid(global_partition_id id, __out_param partition_configuration& config)
+void server_state::query_configuration_by_gpid(global_partition_id id, /*out*/ partition_configuration& config)
 {
     zauto_read_lock l(_lock);
     config = _apps[id.app_id - 1].partitions[id.pidx];
 }
 
-void server_state::query_configuration_by_index(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response)
+void server_state::query_configuration_by_index(configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response)
 {
     zauto_read_lock l(_lock);
 
@@ -366,14 +366,14 @@ void server_state::query_configuration_by_index(configuration_query_by_index_req
     response.err = ERR_OBJECT_NOT_FOUND;
 }
 
-void server_state::update_configuration(configuration_update_request& request, __out_param configuration_update_response& response)
+void server_state::update_configuration(configuration_update_request& request, /*out*/ configuration_update_response& response)
 {
     zauto_write_lock l(_lock);
 
     update_configuration_internal(request, response);
 }
 
-void server_state::update_configuration_internal(configuration_update_request& request, __out_param configuration_update_response& response)
+void server_state::update_configuration_internal(configuration_update_request& request, /*out*/ configuration_update_response& response)
 {
     app_state& app = _apps[request.config.gpid.app_id - 1];
     partition_configuration& old = app.partitions[request.config.gpid.pidx];

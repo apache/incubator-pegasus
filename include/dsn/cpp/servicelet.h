@@ -198,16 +198,22 @@ namespace dsn
         static void exec_rpc_response(dsn_error_t err, dsn_message_t req, dsn_message_t resp, void* task)
         {
             safe_task* t = (safe_task*)task;
-            t->_handler(err, req, resp);
-            t->_handler = nullptr;
+            if (t->_handler)
+            {
+                t->_handler(err, req, resp);
+                t->_handler = nullptr;
+            }
             t->release_ref(); // added upon callback exec_rpc_response registration
         }
 
         static void exec_aio(dsn_error_t err, size_t sz, void* task)
         {
             safe_task* t = (safe_task*)task;
-            t->_handler(err, sz);
-            t->_handler = nullptr;
+            if (t->_handler)
+            {
+                t->_handler(err, sz);
+                t->_handler = nullptr;
+            }
             t->release_ref(); // added upon callback exec_aio registration
         }
             
