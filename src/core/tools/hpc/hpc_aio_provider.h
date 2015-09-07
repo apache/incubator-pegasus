@@ -60,7 +60,9 @@ namespace dsn {
 
             io_context_t _ctx;
             int          _event_fd;
-# endif 
+# elif defined(__APPLE__) || defined(__FreeBSD__)
+            void complete_aio(struct aiocb* io, int bytes, int err);
+# endif
         };
     }
 }
