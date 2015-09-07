@@ -202,7 +202,7 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, __out_p
 
 void hpc_aio_provider::complete_aio(struct aiocb* io, int bytes, int err)
 {
-    auto ctx = (posix_disk_aio_context *)io->aio_sigevent.sigev_value.sival_ptr;
+    auto ctx = (posix_disk_aio_context *)(io->aio_sigevent.sigev_value.sival_ptr);
 
     int err = aio_error(&ctx->cb);
     if (err != EINPROGRESS)
