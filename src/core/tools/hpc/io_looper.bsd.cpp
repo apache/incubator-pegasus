@@ -56,23 +56,35 @@ namespace dsn
             ref_counter* ctx
             )
         {
-            if (_filters.find((short)events) == _filters.end())
-            {
-                dassert(false, "The filter %d is unsupported.", events);
-            }
-
             int fd = (int)(intptr_t)(handle);
 
-            int flags = fcntl(fd, F_GETFL, 0);
-            dassert (flags != -1, "fcntl failed, err = %s, fd = %d", strerror(errno), fd);
-
-            if (!(flags & O_NONBLOCK))
+            if (fd < 0)
             {
-                flags |= O_NONBLOCK;
-                flags = fcntl(fd, F_SETFL, flags);
-                dassert(flags != -1, "fcntl failed, err = %s, fd = %d", strerror(errno), fd);
+                if (fd != IO_LOOPER_USER_NOTIFICATION_FD)
+                {
+                    return ERR_INVALID_PARAMETERS;
+                }
             }
-            
+
+            if (_filters.find((short)events) == _filters.end())
+            {
+                derror("The filter %d is unsupported.", events);
+                return ERR_INVALID_PARAMETERS;
+            }
+
+            if (fd > 0)
+            {
+                int flags = fcntl(fd, F_GETFL, 0);
+                dassert (flags != -1, "fcntl failed, err = %s, fd = %d", strerror(errno), fd);
+
+                if (!(flags & O_NONBLOCK))
+                {
+                    flags |= O_NONBLOCK;
+                    flags = fcntl(fd, F_SETFL, flags);
+                    dassert(flags != -1, "fcntl failed, err = %s, fd = %d", strerror(errno), fd);
+                }
+            }
+
             uintptr_t cb0 = (uintptr_t)cb;
             dassert((cb0 & 0x1) == 0, "the least one bit must be zero for the callback address");
 
