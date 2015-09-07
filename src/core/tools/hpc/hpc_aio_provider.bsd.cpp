@@ -61,7 +61,7 @@ hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provid
         )
     {
         auto e = (struct kevent*)lolp_or_events;
-        auto io = (struct aiocb*)e->ident;
+        auto io = (struct aiocb*)(e->ident);
         complete_aio(io, 0, 0);
     };
 
@@ -93,7 +93,7 @@ dsn_handle_t hpc_aio_provider::open(const char* file_name, int oflag, int pmode)
         dassert(false, "Unable to bind aio handle.");
     }
 
-    return (dsn_handle_t)(uintptr_t)ret;
+    return handle;
 }
 
 error_code hpc_aio_provider::close(dsn_handle_t hFile)
@@ -112,7 +112,7 @@ error_code hpc_aio_provider::close(dsn_handle_t hFile)
 
 disk_aio* hpc_aio_provider::prepare_aio_context(aio_task* tsk)
 {
-    auto r = new posix_disk_aio_context;
+    disk_aio* r = new posix_disk_aio_context;
     bzero((char*)&r->cb, sizeof(r->cb));
     r->tsk = tsk;
     r->evt = nullptr;
