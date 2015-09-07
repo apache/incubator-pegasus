@@ -176,7 +176,10 @@ namespace dsn {
                     aio->evt->wait();
                     delete aio->evt;
                     aio->evt = nullptr;
-                    *pbytes = aio->bytes;
+					if (pbytes != nullptr)
+					{
+						*pbytes = aio->bytes;
+					}
                     return aio->err;
                 }
             }
