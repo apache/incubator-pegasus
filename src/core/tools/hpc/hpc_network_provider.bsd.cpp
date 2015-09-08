@@ -574,14 +574,14 @@ namespace dsn
 
             _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
             {
-                uint32_t events = (uint32_t)lolp_or_events;
-                dinfo("(s = %d) (server) epoll for send/recv to %s:%hu, events = %x",
+                struct kevent& e = *((struct kevent*)lolp_or_events);
+                dinfo("(s = %d) (server) epoll for send/recv to %s:%hu, events = %d",
                     _socket,
                     _remote_addr.name(),
                     _remote_addr.port(),
-                    events
+                    e.filter
                     );
-                this->on_send_recv_events_ready(events);
+                this->on_send_recv_events_ready(lolp_or_events);
             };
         }
     }
