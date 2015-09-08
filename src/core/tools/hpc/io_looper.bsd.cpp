@@ -36,7 +36,7 @@ namespace dsn
     {
         io_looper::io_looper()
         {
-            _io_queue = 0;
+            _io_queue = -1;
             _local_notification_fd = IO_LOOPER_USER_NOTIFICATION_FD;
             _filters.insert(EVFILT_READ);
             _filters.insert(EVFILT_WRITE);
@@ -56,6 +56,11 @@ namespace dsn
             ref_counter* ctx
             )
         {
+            if (cb == nullptr)
+            {
+                return ERR_INVALID_PARAMETERS;
+            }
+
             int fd = (int)(intptr_t)(handle);
 
             if (fd < 0)
@@ -149,7 +154,7 @@ namespace dsn
         void io_looper::notify_local_execution()
         {
             struct kevent e;
-            EV_SET(&e, IO_LOOPER_USER_NOTIFICATION_FD, EVFILT_USER, 0, (NOTE_FFCOPY | NOTE_TRIGGER), 0, nullptr);
+            EV_SET(&e, _local_notification_fd, EVFILT_USER, 0, (NOTE_FFCOPY | NOTE_TRIGGER), 0, &_local_notification_callback);
 
             if (kevent(_io_queue, &e, 1, nullptr, 0, nullptr) == -1)
             {
