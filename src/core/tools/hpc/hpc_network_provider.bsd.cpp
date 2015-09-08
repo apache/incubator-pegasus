@@ -378,7 +378,7 @@ namespace dsn
         {
             struct kevent& ev = *((struct kevent*)lolp_or_events);
             // shutdown or send/recv error
-            if ((ev.flags == EV_ERROR) || (ev.flags == EV_EOF))
+            if (((ev.flags & EV_ERROR) != 0) || ((ev.flags & EV_EOF) != 0))
             {
                 dinfo("(s = %d) epoll failure on %s:%hu, events = %x",
                     _socket,
@@ -460,8 +460,8 @@ namespace dsn
                 );
 
             if ((ev.filter == EVFILT_WRITE)
-                && (ev.flags != EV_ERROR)
-                && (ev.flags != EV_EOF)
+                && ((ev.flags & EV_ERROR) == 0)
+                && ((ev.flags & EV_EOF) == 0)
                 )
             {
                 socklen_t addr_len = (socklen_t)sizeof(_peer_addr);
