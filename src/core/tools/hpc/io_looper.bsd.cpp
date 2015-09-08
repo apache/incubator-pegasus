@@ -41,6 +41,7 @@ namespace dsn
             _filters.insert(EVFILT_READ);
             _filters.insert(EVFILT_WRITE);
             _filters.insert(EVFILT_AIO);
+            _filters.insert(EVFILT_READ_WRITE);
             _filters.insert(EVFILT_USER);
         }
 
@@ -56,24 +57,30 @@ namespace dsn
             ref_counter* ctx
             )
         {
+            int fd;
+            short filters[2];
+            int nr_filters;
+            struct kevent e;           
+
             if (cb == nullptr)
             {
+                derror("cb == nullptr");
                 return ERR_INVALID_PARAMETERS;
             }
 
-            int fd = (int)(intptr_t)(handle);
-
+            fd = (int)(intptr_t)(handle);
             if (fd < 0)
             {
                 if (fd != IO_LOOPER_USER_NOTIFICATION_FD)
                 {
+                    derror("The fd %d is less than 0.", fd);
                     return ERR_INVALID_PARAMETERS;
                 }
             }
 
             if (_filters.find((short)events) == _filters.end())
             {
-                derror("The filter %d is unsupported.", events);
+                derror("The filter %u is unsupported.", events);
                 return ERR_INVALID_PARAMETERS;
             }
 
@@ -102,48 +109,70 @@ namespace dsn
                 dassert(pr.second, "the callback must not be registered before");
             }
             
-            struct kevent e;
-            EV_SET(&e, fd, events, (EV_ADD | EV_ENABLE | EV_CLEAR), 0, 0, (void*)cb0);
-            
-            if (kevent(_io_queue, &e, 1, nullptr, 0, nullptr) == -1)
+            if ((short)events == EVFILT_READ_WRITE)
             {
-                derror("bind io handler to epoll_wait failed, err = %s, fd = %d", strerror(errno), fd);
-
-                if (ctx)
-                {
-                    utils::auto_lock<utils::ex_lock_nr_spin> l(_io_sessions_lock);
-                    auto r = _io_sessions.erase(cb);
-                    dassert(r > 0, "the callback must be present");
-                }
-                return ERR_BIND_IOCP_FAILED;
+                filters[0] = EVFILT_READ;
+                filters[1] = EVFILT_WRITE;
+                nr_filters = 2;
             }
             else
-                return ERR_OK;
+            {
+                filters[0] = (short)events;
+                nr_filters = 1;
+            }
+
+            for (int i = 0; i < nr_filters; i++)
+            {
+                EV_SET(&e, fd, filters[i], (EV_ADD | EV_ENABLE | EV_CLEAR), 0, 0, (void*)cb0);
+
+                if (kevent(_io_queue, &e, 1, nullptr, 0, nullptr) == -1)
+                {
+                    derror("bind io handler to kqueue failed, err = %s, fd = %d", strerror(errno), fd);
+
+                    if (ctx)
+                    {
+                        utils::auto_lock<utils::ex_lock_nr_spin> l(_io_sessions_lock);
+                        auto r = _io_sessions.erase(cb);
+                        dassert(r > 0, "the callback must be present");
+                    }
+
+                    for (int j = 0; j < i; j++)
+                    {
+                        EV_SET(&e, fd, filters[j], EV_DELETE, 0, 0, nullptr);
+                        if (kevent(_io_queue, &e, 1, nullptr, 0, nullptr) == -1)
+                        {
+                            derror("Unregister kqueue failed, filter = %d, err = %s, fd = %d", filters[j], strerror(errno), fd);
+                        }
+                    }
+
+                    return ERR_BIND_IOCP_FAILED;
+                }
+            }
+
+            return ERR_OK;
         }
         
         error_code io_looper::unbind_io_handle(dsn_handle_t handle, io_loop_callback* cb)
         {
             int fd = (int)(intptr_t)handle;
-            
             struct kevent e;
-            for (short filter : _filters)
+            
+            if (cb)
+            {
+                utils::auto_lock<utils::ex_lock_nr_spin> l(_io_sessions_lock);
+                auto r = _io_sessions.erase(cb);
+                dassert(r > 0, "the callback must be present");
+            }
+
+            for (auto filter : _filters)
             {
                 EV_SET(&e, fd, filter, EV_DELETE, 0, 0, nullptr);
                 if (kevent(_io_queue, &e, 1, nullptr, 0, nullptr) == -1)
                 {
                     if (errno != ENOENT)
                     {
-                        derror("unbind io handler to epoll_wait failed, err = %s, fd = %d", strerror(errno), fd);
+                        derror("unbind io handler to kqueue failed, err = %s, fd = %d", strerror(errno), fd);
                         return ERR_BIND_IOCP_FAILED;
-                    }
-                }
-                else
-                {
-                    if (cb)
-                    {
-                        utils::auto_lock<utils::ex_lock_nr_spin> l(_io_sessions_lock);
-                        auto r = _io_sessions.erase(cb);
-                        dassert(r > 0, "the callback must be present");
                     }
                 }
             }
@@ -183,10 +212,11 @@ namespace dsn
 
         void io_looper::close_completion_queue()
         {
-            if (_io_queue != 0)
+            if (_io_queue != -1)
             {
+		unbind_io_handle((dsn_handle_t)(intptr_t)_local_notification_fd, &_local_notification_callback);
                 ::close(_io_queue);
-                _io_queue = 0;
+                _io_queue = -1;
             }
         }
 

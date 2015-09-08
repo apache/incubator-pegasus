@@ -42,6 +42,9 @@
 # include <sys/event.h>
 # include <sys/time.h>
 # include <unordered_set>
+# ifndef EVFILT_READ_WRITE
+# define EVFILT_READ_WRITE (-EVFILT_SYSCOUNT - 10)
+# endif
 # endif
 
 # endif
@@ -118,7 +121,8 @@ namespace dsn
             struct epoll_event        _events[IO_LOOPER_MAX_EVENT_COUNT];
 # elif defined(__APPLE__) || defined(__FreeBSD__)
             struct kevent             _events[IO_LOOPER_MAX_EVENT_COUNT];
-            std::unordered_set<short> _filters;
+            typedef std::unordered_set<short> kqueue_filters;
+            kqueue_filters            _filters;
 # endif
 
             int                       _local_notification_fd;
