@@ -47,47 +47,11 @@ namespace dsn
     typedef std::function<void(dsn_message_t)> rpc_request_handler;
     class safe_task_handle;
     typedef ::dsn::ref_ptr<::dsn::safe_task_handle> task_ptr;
-
     
-
-    //
-    // servicelet is the base class for RPC service and client
-    // there can be multiple servicelet in the system, mostly
-    // defined during initialization in main
-    //
-    class servicelet
-    {
-    public:
-        servicelet(int task_bucket_count = 13);
-        virtual ~servicelet();
-        dsn_task_tracker_t tracker() const { return _tracker; }
-
-        static ::dsn::rpc_address primary_address() 
-        {
-            dsn_address_t addr = dsn_primary_address(); 
-            return ::dsn::rpc_address(addr); 
-        }
-        static uint32_t random32(uint32_t min, uint32_t max) { return dsn_random32(min, max); }
-        static uint64_t random64(uint64_t min, uint64_t max) { return dsn_random64(min, max); }
-        static uint64_t now_ns() { return dsn_now_ns(); }
-        static uint64_t now_us() { return dsn_now_us(); }
-        static uint64_t now_ms() { return dsn_now_ms(); }
-            
-    protected:
-        void check_hashed_access();
-
-    private:
-        int                            _last_id;
-        std::set<dsn_task_code_t>      _events;
-        int                            _access_thread_id;
-        bool                           _access_thread_id_inited;
-        dsn_task_tracker_t             _tracker;
-    };
-
     //
     // basic cpp task wrapper
     // which manages the task handle
-    // and the interaction with task context manager, servicelet
+    // and the interaction with task context manager, clientlet
     //        
     class safe_task_handle : public ::dsn::ref_counter
     {

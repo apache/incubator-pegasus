@@ -526,7 +526,8 @@ DSN_API dsn_message_t dsn_rpc_call_wait(const dsn_address_t* server, dsn_message
     auto msg = ((::dsn::message_ex*)request);
     msg->to_address = *server;
 
-    ::dsn::rpc_response_task* rtask = new ::dsn::rpc_response_task(msg, nullptr, nullptr, 0, (::dsn::service_node*)app);
+    ::dsn::rpc_response_task* rtask = 
+        new ::dsn::rpc_response_task(msg, nullptr, nullptr, 0, (::dsn::service_node*)app);
     rtask->add_ref();
     rpc->call(msg, rtask);
     rtask->wait();
@@ -701,12 +702,14 @@ DSN_API void dsn_file_task_enqueue(dsn_task_t cb_task, dsn_error_t err, size_t s
 //------------------------------------------------------------------------------
 DSN_API uint64_t dsn_now_ns()
 {
-    return ::dsn::task::get_current_env()->now_ns();
+    //return ::dsn::task::get_current_env()->now_ns();
+    return ::dsn::service_engine::instance().env()->now_ns();
 }
 
 DSN_API uint64_t dsn_random64(uint64_t min, uint64_t max) // [min, max]
 {
-    return ::dsn::task::get_current_env()->random64(min, max);
+    //return ::dsn::task::get_current_env()->random64(min, max);
+    return ::dsn::service_engine::instance().env()->random64(min, max);
 }
 
 //------------------------------------------------------------------------------
@@ -759,7 +762,7 @@ DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init)
     {
         printf("invalid options for dsn_run\n"
             "// run the system with arguments\n"
-            "//   config [-cargs k1=v1;k2=v2] [-app app_name] [-app_index index]\n"
+            "//   config [-cargs k1=v1;k2=v2] [-app app_name] [-app_index index (1,2,3...)]\n"
             "// e.g., config.ini -app replica -app_index 1 to start the first replica as a new process\n"
             "//       config.ini -app replica to start ALL replicas (count specified in config) as a new process\n"
             "//       config.ini -app replica -cargs replica-port=34556 to start with %%replica-port%% var in config.ini\n"

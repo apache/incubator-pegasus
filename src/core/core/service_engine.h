@@ -67,7 +67,7 @@ public:
     };
 
 public:    
-    service_node(service_app_spec& app_spec, void* app_context);
+    service_node(service_app_spec& app_spec);
        
     rpc_engine*  rpc(task_queue* q) const;
     disk_engine* disk(task_queue* q) const;
@@ -85,6 +85,7 @@ public:
     error_code start_io_engine_in_node_start_task(const io_engine& io);
 
     ::dsn::error_code start();
+    dsn_error_t start_app(int argc, char** argv);
 
     int id() const { return _app_spec.id; }
     const char* name() const { return _app_spec.name.c_str(); }

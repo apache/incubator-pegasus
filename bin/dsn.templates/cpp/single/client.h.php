@@ -12,10 +12,17 @@ $file_prefix = $argv[3];
 
 <?php foreach ($_PROG->services as $svc) { ?>
 class <?=$svc->name?>_client 
-    : public virtual ::dsn::servicelet
+    : public virtual ::dsn::clientlet
 {
 public:
     <?=$svc->name?>_client(const ::dsn::rpc_address& server) { _server = server; }
+    
+    // when the client is used in non-rDSN threads
+    <?=$svc->name?>_client(const char* host_app_type, int host_app_index, const ::dsn::rpc_address& server)
+        : ::dsn::clientlet(host_app_type, host_app_index)
+    { 
+        _server = server; 
+    }
     <?=$svc->name?>_client() { }
     virtual ~<?=$svc->name?>_client() {}
 
@@ -29,20 +36,20 @@ public:
         const ::dsn::rpc_address *p_server_addr = nullptr)
     {
         ::dsn::rpc::call_one_way_typed(p_server_addr ? *p_server_addr : _server, 
-            <?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash);
+            <?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash, app());
     }
 <?php    } else { ?>
     // - synchronous 
     ::dsn::error_code <?=$f->name?>(
         const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
-        __out_param <?=$f->get_cpp_return_type()?>& resp, 
+        /*out*/ <?=$f->get_cpp_return_type()?>& resp, 
         int timeout_milliseconds = 0, 
         int hash = 0,
         const ::dsn::rpc_address *p_server_addr = nullptr)
     {
         dsn::message_ptr response;
         auto err = ::dsn::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
-            <?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash, timeout_milliseconds);
+            <?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash, timeout_milliseconds, app());
         if (err == ::dsn::ERR_OK)
         {
             ::unmarshall(response.get_msg(), resp);
@@ -68,7 +75,8 @@ public:
                     context,
                     request_hash, 
                     timeout_milliseconds, 
-                    reply_hash
+                    reply_hash,
+                    app()
                     );
     }
 
@@ -100,7 +108,8 @@ public:
                     &<?=$svc->name?>_client::end_<?=$f->name?>2, 
                     request_hash, 
                     timeout_milliseconds, 
-                    reply_hash
+                    reply_hash,
+                    app()
                     );
     }
 

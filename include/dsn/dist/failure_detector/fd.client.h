@@ -24,14 +24,14 @@
  * THE SOFTWARE.
  */
 # pragma once
-# include <dsn/cpp/service.api.oo.h>
+# include <dsn/cpp/clientlet.h>
 # include <dsn/dist/failure_detector/fd.code.definition.h>
 # include <iostream>
 
 
 namespace dsn { namespace fd { 
 class failure_detector_client 
-    : public virtual ::dsn::servicelet
+    : public virtual ::dsn::clientlet
 {
 public:
     failure_detector_client(const ::dsn::rpc_address& server) { _server = server; }

@@ -73,7 +73,7 @@ namespace dsn {
                     args_ptr[i] = ((char*)args[i].c_str());
                 }
 
-                err = sp.role.start(_node->get_app_context_ptr(), argc, &args_ptr[0]);
+                err = _node->start_app(argc, &args_ptr[0]);
                 dassert(err == ERR_OK, "start app failed, err = %s", err.to_string());
             }
             else

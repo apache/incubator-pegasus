@@ -48,7 +48,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
 <?php foreach ($_PROG->services as $svc) { ?>
             _<?=$svc->name?>Client= new <?=$svc->name?>Client(_server);
 <?php } ?>
-            _timer = Servicelet.CallAsync2(<?=$_PROG->name?>Helper.<?=$_PROG->get_test_task_code()?>, null, this.OnTestTimer, 0, 0, 1000);
+            _timer = Clientlet.CallAsync2(<?=$_PROG->name?>Helper.<?=$_PROG->get_test_task_code()?>, null, this.OnTestTimer, 0, 0, 1000);
             return ErrorCode.ERR_OK;
         }
 
@@ -99,7 +99,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
 <?php foreach ($_PROG->services as $svc) { ?>
     class <?=$svc->name?>_perf_testClientApp :
         public ::dsn::service_app<<?=$svc->name?>_perf_testClientApp>, 
-        public virtual ::dsn::service::servicelet
+        public virtual ::dsn::service::clientlet
     {
     public:
         <?=$svc->name?>_perf_testClientApp()

@@ -25,7 +25,7 @@
  */
 # pragma once
 
-# include <dsn/cpp/service.api.oo.h>
+# include <dsn/cpp/clientlet.h>
 # include <dsn/cpp/service_app.h>
 
 namespace dsn 
@@ -68,7 +68,7 @@ namespace dsn
     };
 
     template <typename T> // where T : serverlet<T>
-    class serverlet : public virtual servicelet
+    class serverlet : public virtual clientlet
     {
     public:
         serverlet(const char* nm, int task_bucket_count = 8);
@@ -108,7 +108,7 @@ namespace dsn
     // ------------- inline implementation ----------------
     template<typename T>
     inline serverlet<T>::serverlet(const char* nm, int task_bucket_count)
-        : _name(nm), servicelet(task_bucket_count)
+        : _name(nm), clientlet(task_bucket_count)
     {
     }
 

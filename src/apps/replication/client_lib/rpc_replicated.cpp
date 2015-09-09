@@ -42,7 +42,7 @@ namespace dsn
 
                 // internal callback contexts
                 std::function<void(error_code, dsn_message_t, dsn_message_t)> internal_cb;
-                servicelet* svc;
+                clientlet* svc;
                 int         reply_hash;
             };
 
@@ -100,7 +100,7 @@ namespace dsn
             dsn_message_t request,
 
             // reply
-            servicelet* svc,
+            clientlet* svc,
             rpc_reply_handler callback,
             int reply_hash
             )

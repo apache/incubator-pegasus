@@ -54,21 +54,6 @@ namespace echo.csharp
         private EchoServiceServer _server;
     }
 
-    public static class RpcStreamHelper
-    {
-        public static void Read(this RpcReadStream s, out string v)
-        {
-            StreamReader reader = new StreamReader(s);
-            v = reader.ReadToEnd();
-        }
-        
-        public static void Write(this RpcWriteStream s, string v)
-        {
-            var bytes = Encoding.UTF8.GetBytes(v);
-            s.Write(bytes, 0, bytes.Length);
-        }
-    }
-    
     public class EchoServiceServer : Serverlet<EchoServiceServer>
     {
         public EchoServiceServer()
@@ -97,8 +82,17 @@ namespace echo.csharp
         }
     }
 
-    public class EchoServiceClient : Servicelet
+    public class EchoServiceClient : Clientlet
     {
+        public EchoServiceClient()
+        {
+
+        }
+
+        public EchoServiceClient(string app_type, int app_index)
+            : base(app_type, app_index)
+        {
+        }
         public void Start(string[] argv)
         {
             _last_ts = DateTime.Now;

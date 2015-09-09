@@ -30,7 +30,7 @@
 
 namespace dsn { namespace replication { namespace application { 
 // client app example
-class simple_kv_client_app : public ::dsn::service_app, public virtual ::dsn::servicelet
+class simple_kv_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
 {
 public:
     simple_kv_client_app()
@@ -104,7 +104,7 @@ private:
 };
 
 
-class simple_kv_perf_test_client_app : public ::dsn::service_app, public virtual ::dsn::servicelet
+class simple_kv_perf_test_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
 {
 public:
     simple_kv_perf_test_client_app()

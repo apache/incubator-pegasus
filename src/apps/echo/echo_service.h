@@ -71,7 +71,7 @@ class echo_client : public serverlet<echo_client>, public service_app
 {
 public:
     echo_client()
-        : servicelet(8), serverlet<echo_client>("echo_client")
+        : clientlet(8), serverlet<echo_client>("echo_client")
     {
         _message_size = (int)dsn_config_get_value_uint64("apps.client", "message_size", 1024, "message size");
         _concurrency = (int)dsn_config_get_value_uint64("apps.client", "concurrency", 1, "concurrency for the test");

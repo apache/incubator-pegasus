@@ -1,5 +1,5 @@
 # pragma once
-# include <dsn/cpp/service.api.oo.h>
+# include <dsn/service_api_cpp.h>
 # include "cli.types.h"
 # include <iostream>
 
@@ -9,7 +9,7 @@ namespace dsn {
     DEFINE_TASK_CODE_RPC(RPC_DSN_CLI_CALL, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT);
 
 class cli_client 
-    : public virtual ::dsn::servicelet
+    : public virtual ::dsn::clientlet
 {
 public:
     cli_client(const ::dsn::rpc_address& server) { _server = server; }

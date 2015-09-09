@@ -44,11 +44,11 @@ using namespace dsn::utils;
 
 namespace dsn {
 
-service_node::service_node(service_app_spec& app_spec, void* app_context)
+service_node::service_node(service_app_spec& app_spec)
 {
     _computation = nullptr;
-    _app_context_ptr = app_context;
     _app_spec = app_spec;
+    _app_context_ptr = _app_spec.role.create(_app_spec.role.name.c_str());
 }
 
 bool service_node::rpc_register_handler(rpc_handler_ptr& handler)
@@ -232,6 +232,11 @@ error_code service_node::start_io_engine_in_node_start_task(const io_engine& io)
     }
 
     return err;
+}
+
+dsn_error_t service_node::start_app(int argc, char** argv)
+{    
+    return _app_spec.role.start(_app_context_ptr, argc, argv);
 }
 
 error_code service_node::start()
@@ -463,9 +468,8 @@ service_node* service_engine::start_node(service_app_spec& app_spec)
                     );
             }
         }
-        
-        void* app_context = app_spec.role.create(app_spec.role.name.c_str());
-        auto node = new service_node(app_spec, app_context);
+                
+        auto node = new service_node(app_spec);
         error_code err = node->start();
         dassert (err == ERR_OK, "service node start failed, err = %s", err.to_string());
         

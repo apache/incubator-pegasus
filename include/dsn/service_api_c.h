@@ -40,6 +40,8 @@
 
 # ifdef __cplusplus
 extern "C" {
+# else
+# include <stdbool.h>
 # endif
 
 # if defined(DSN_IN_CORE)
@@ -750,17 +752,17 @@ extern DSN_API void         dsn_file_task_enqueue(
 extern DSN_API uint64_t dsn_now_ns();
 extern DSN_API uint64_t dsn_random64(uint64_t min, uint64_t max); // [min, max]
 
-inline uint64_t dsn_now_us() { return dsn_now_ns() / 1000; }
-inline uint64_t dsn_now_ms() { return dsn_now_ns() / 1000000; }
+__inline uint64_t dsn_now_us() { return dsn_now_ns() / 1000; }
+__inline uint64_t dsn_now_ms() { return dsn_now_ns() / 1000000; }
 
-inline uint32_t dsn_random32(uint32_t min, uint32_t max) 
+__inline uint32_t dsn_random32(uint32_t min, uint32_t max)
 {
-    return static_cast<uint32_t>(dsn_random64(min, max)); 
+    return (uint32_t)(dsn_random64(min, max)); 
 }
 
-inline double   dsn_probability() 
+__inline double   dsn_probability()
 {
-    return static_cast<double>(dsn_random64(0, 1000000000)) / 1000000000.0; 
+    return (double)(dsn_random64(0, 1000000000)) / 1000000000.0; 
 }
 
 //------------------------------------------------------------------------------

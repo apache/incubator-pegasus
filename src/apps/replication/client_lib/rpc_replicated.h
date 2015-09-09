@@ -41,7 +41,7 @@ namespace dsn
             std::shared_ptr<TRequest>& req,
 
             // callback
-            servicelet* owner,
+            clientlet* owner,
             std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&, const ::dsn::rpc_address&)> callback,
             int request_hash = 0,
             int timeout_milliseconds = 0,
@@ -54,7 +54,7 @@ namespace dsn
             dsn_message_t request,
 
             // reply
-            servicelet* svc,
+            clientlet* svc,
             rpc_reply_handler callback,
             int reply_hash = 0
             );
@@ -93,7 +93,7 @@ namespace dsn
             std::shared_ptr<TRequest>& req,
 
             // callback
-            servicelet* owner,
+            clientlet* owner,
             std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&, const ::dsn::rpc_address&)> callback,
             int request_hash,
             int timeout_milliseconds,

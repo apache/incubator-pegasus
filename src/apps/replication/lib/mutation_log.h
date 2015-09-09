@@ -56,7 +56,7 @@ struct log_file_header
     int64_t  start_global_offset;
 };
 
-class mutation_log : public virtual servicelet
+class mutation_log : public virtual clientlet
 {
 public:
     // mutationPtr
@@ -101,7 +101,7 @@ public:
     // return value: nullptr for error
     ::dsn::task_ptr append(mutation_ptr& mu,
             dsn_task_code_t callback_code,
-            servicelet* callback_host,
+            clientlet* callback_host,
             aio_handler callback,
             int hash = 0);
 
@@ -207,7 +207,7 @@ public:
                     blob& bb,
                     int64_t offset,
                     dsn_task_code_t evt,  // to indicate which thread pool to execute the callback
-                    servicelet* callback_host,
+                    clientlet* callback_host,
                     aio_handler callback,                    
                     int hash
                     );

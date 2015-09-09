@@ -452,7 +452,7 @@ void mutation_log::close()
 ::dsn::task_ptr mutation_log::append(
                         mutation_ptr& mu,
                         dsn_task_code_t callback_code,
-                        servicelet* callback_host,
+                        clientlet* callback_host,
                         aio_handler callback,
                         int hash
                         )
@@ -879,7 +879,7 @@ std::shared_ptr<binary_writer> log_file::prepare_log_entry()
                 blob& bb,
                 int64_t offset,
                 dsn_task_code_t evt,  // to indicate which thread pool to execute the callback
-                servicelet* callback_host,
+                clientlet* callback_host,
                 aio_handler callback,
                 int hash
                 )

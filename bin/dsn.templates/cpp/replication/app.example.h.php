@@ -13,7 +13,7 @@ $file_prefix = $argv[3];
 // client app example
 class <?=$_PROG->name?>_client_app : 
     public ::dsn::service_app,
-    public virtual ::dsn::servicelet
+    public virtual ::dsn::clientlet
 {
 public:
     <?=$_PROG->name?>_client_app()
@@ -33,7 +33,7 @@ public:
         if (argc < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        std::vector<::dsn::address> meta_servers;
+        std::vector<::dsn::rpc_address> meta_servers;
         ::dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
         
 <?php foreach ($_PROG->services as $svc) { ?>
@@ -93,7 +93,7 @@ private:
 <?php foreach ($_PROG->services as $svc) { ?>
 class <?=$svc->name?>_perf_test_client_app : 
     public ::dsn::service_app,
-    public virtual ::dsn::servicelet
+    public virtual ::dsn::clientlet
 {
 public:
     <?=$svc->name?>_perf_test_client_app()
@@ -111,7 +111,7 @@ public:
         if (argc < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        std::vector<::dsn::address> meta_servers;
+        std::vector<::dsn::rpc_address> meta_servers;
         ::dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
 
         _<?=$svc->name?>_client = new <?=$svc->name?>_perf_test_client(meta_servers, argv[1]);

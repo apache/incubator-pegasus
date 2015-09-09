@@ -5,7 +5,7 @@
 
 namespace dsn { namespace service { 
 class nfs_client 
-    : public virtual ::dsn::servicelet
+    : public virtual ::dsn::clientlet
 {
 public:
     nfs_client(const ::dsn::rpc_address& server) { _server = server; }

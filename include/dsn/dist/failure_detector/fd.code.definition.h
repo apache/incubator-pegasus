@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 # pragma once
-# include <dsn/cpp/servicelet.h>
+# include <dsn/cpp/clientlet.h>
 # include <dsn/dist/failure_detector/fd.types.h>
 
 namespace dsn { namespace fd { 

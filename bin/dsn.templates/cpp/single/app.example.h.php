@@ -42,7 +42,7 @@ private:
 // client app example
 class <?=$_PROG->name?>_client_app : 
     public ::dsn::service_app, 
-    public virtual ::dsn::servicelet
+    public virtual ::dsn::clientlet
 {
 public:
     <?=$_PROG->name?>_client_app() 
@@ -120,7 +120,7 @@ private:
 <?php foreach ($_PROG->services as $svc) { ?>
 class <?=$svc->name?>_perf_test_client_app :
     public ::dsn::service_app, 
-    public virtual ::dsn::servicelet
+    public virtual ::dsn::clientlet
 {
 public:
     <?=$svc->name?>_perf_test_client_app()

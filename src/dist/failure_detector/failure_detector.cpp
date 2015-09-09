@@ -271,7 +271,7 @@ void failure_detector::on_ping_internal(const beacon_msg& beacon, /*out*/ beacon
 {
     ack.is_master = true;
     ack.this_node = beacon.to;
-    ack.primary_node = primary_address();
+    primary_address(ack.primary_node);
     ack.time = beacon.time;
     ack.allowed = true;
 
@@ -466,7 +466,7 @@ void failure_detector::send_beacon(const ::dsn::rpc_address& target, uint64_t ti
 {
     beacon_msg beacon;
     beacon.time = time;
-    beacon.from = primary_address();
+    primary_address(beacon.from);
     beacon.to = target;
 
     begin_ping(

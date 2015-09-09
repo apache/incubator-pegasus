@@ -16,9 +16,20 @@ class <?=$svc->name?>_client
 {
 public:
     <?=$svc->name?>_client(
-        const std::vector<::dsn::address>& meta_servers,
-        const char* app_name)
-        : ::dsn::replication::replication_app_client_base(meta_servers, app_name) 
+        const std::vector<::dsn::rpc_address>& meta_servers,
+        const char* replicated_app_name)
+        : ::dsn::replication::replication_app_client_base(meta_servers, replicated_app_name) 
+    {
+    }
+    
+    // when the client is used in non-rDSN threads
+    <?=$svc->name?>_client(
+        const std::vector<::dsn::rpc_address>& meta_servers,
+        const char* replicated_app_name,
+        const char* host_app_type,
+        int host_app_index
+        )
+        : ::dsn::replication::replication_app_client_base(meta_servers, replicated_app_name, host_app_type, host_app_index) 
     {
     }
     
@@ -60,7 +71,7 @@ foreach ($keys as $k => $v)
     // - synchronous 
     ::dsn::error_code <?=$f->name?>(
         const <?=$f->get_first_param()->get_cpp_type()?>& <?=$f->get_first_param()->name?>, 
-        __out_param <?=$f->get_cpp_return_type()?>& resp, 
+        /*out*/ <?=$f->get_cpp_return_type()?>& resp, 
         int timeout_milliseconds = 0<?=$f->is_write ? "":", ". PHP_EOL."        ::dsn::replication::read_semantic_t read_semantic = ::dsn::replication::read_semantic_t::ReadLastUpdate"?> 
         )
     {

@@ -39,15 +39,26 @@ namespace dsn { namespace replication {
     DEFINE_ERR_CODE(ERR_REPLICATION_FAILURE)
     
 #pragma pack(push, 4)
-    class replication_app_client_base : public virtual servicelet
+    class replication_app_client_base : public virtual clientlet
     {
     public:
         static void load_meta_servers(/*out*/ std::vector<::dsn::rpc_address>& servers);
 
     public:
+        // used inside rDSN apps
         replication_app_client_base(        
             const std::vector<::dsn::rpc_address>& meta_servers, 
-            const char* app_name
+            const char* replicated_app_name, 
+            int task_bucket_count = 13
+            );
+
+        // used outside rDSN app models (e.g., when used in external app's threads)
+        replication_app_client_base(
+            const std::vector<::dsn::rpc_address>& meta_servers,
+            const char* replicated_app_name,
+            const char* host_app_type, 
+            int host_app_index,
+            int task_bucket_count = 13            
             );
 
         ~replication_app_client_base();
@@ -75,7 +86,8 @@ namespace dsn { namespace replication {
                 req,
                 owner,
                 callback,
-                reply_hash
+                reply_hash,
+                app()
                 );
 
             auto rc = create_write_context(partition_index, code, msg, task, reply_hash);
@@ -91,7 +103,7 @@ namespace dsn { namespace replication {
             std::shared_ptr<TRequest>& req,
 
             // callback
-            servicelet* owner,
+            clientlet* owner,
             std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
 
             // other specific parameters   
@@ -107,7 +119,8 @@ namespace dsn { namespace replication {
                 req,
                 owner,
                 callback,
-                reply_hash
+                reply_hash,
+                app()
                 );
 
             auto rc = create_write_context(partition_index, code, msg, task, reply_hash);
@@ -140,7 +153,8 @@ namespace dsn { namespace replication {
                 owner,
                 callback,
                 context,
-                reply_hash
+                reply_hash,
+                app()
                 );
             auto rc = create_write_context(partition_index, code, msg, task, reply_hash);
             ::marshall(msg, req);
@@ -155,7 +169,7 @@ namespace dsn { namespace replication {
             const TRequest& req,
 
             // callback
-            servicelet* owner,
+            clientlet* owner,
             std::function<void(error_code, const TResponse&, void*)> callback,
             void* context,
 
@@ -169,10 +183,10 @@ namespace dsn { namespace replication {
             
             auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
                 msg,
-                owner,
                 callback,
                 context,
-                reply_hash
+                reply_hash,
+                app()
                 );
 
             auto rc = create_write_context(partition_index, code, msg, task, reply_hash);
@@ -206,7 +220,8 @@ namespace dsn { namespace replication {
                 req,
                 owner,
                 callback,
-                reply_hash
+                reply_hash,
+                app()
                 );
 
             auto rc = create_read_context(partition_index, code, msg, task, read_semantic, snapshot_decree, reply_hash);
@@ -222,7 +237,7 @@ namespace dsn { namespace replication {
             std::shared_ptr<TRequest>& req,
 
             // callback
-            servicelet* owner,
+            clientlet* owner,
             std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
 
             // other specific parameters   
@@ -240,7 +255,8 @@ namespace dsn { namespace replication {
                 req,
                 owner,
                 callback,
-                reply_hash
+                reply_hash,
+                app()
                 );
 
             auto rc = create_read_context(partition_index, code, msg, task, read_semantic, snapshot_decree, reply_hash);
@@ -275,7 +291,8 @@ namespace dsn { namespace replication {
                 owner,
                 callback,
                 context,
-                reply_hash
+                reply_hash,
+                app()
                 );
 
             auto rc = create_read_context(partition_index, code, msg, task, read_semantic, snapshot_decree, reply_hash);
@@ -291,7 +308,7 @@ namespace dsn { namespace replication {
             const TRequest& req,
 
             // callback
-            servicelet* owner,
+            clientlet* owner,
             std::function<void(error_code, const TResponse&, void*)> callback,
             void* context,
 
@@ -307,10 +324,10 @@ namespace dsn { namespace replication {
             
             auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
                 msg,
-                owner,
                 callback,
                 context,
-                reply_hash
+                reply_hash,
+                app()
                 );
 
             auto rc = create_read_context(partition_index, code, msg, task, read_semantic, snapshot_decree, reply_hash);
@@ -376,13 +393,13 @@ namespace dsn { namespace replication {
 
     private:
         std::string                             _app_name;
-        std::vector<::dsn::rpc_address>                  _meta_servers;
+        std::vector<::dsn::rpc_address>         _meta_servers;
         
         mutable zrwlock_nr                      _config_lock;
         std::unordered_map<int, partition_configuration> _config_cache;
         int                                     _app_id;
         int                                     _app_partition_count;
-        ::dsn::rpc_address                               _last_contact_point;
+        ::dsn::rpc_address                      _last_contact_point;
 
     private:
         void call(request_context_ptr request, bool no_delay = true);
