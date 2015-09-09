@@ -147,6 +147,11 @@ DSN_API void dsn_host_from_name(dsn_host_type_t type, const char* name, /*out*/ 
                     (size_t)hp->h_length
                     );
             }
+            else
+            {
+                int err = h_errno;
+                dassert(false, "Fail to get host by name. error = %s.", ::hstrerror(err));
+            }
         }
 
         // network order
