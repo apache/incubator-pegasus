@@ -45,9 +45,11 @@ namespace dsn {
             virtual error_code close(dsn_handle_t hFile);
             virtual void    aio(aio_task* aio);            
             virtual disk_aio* prepare_aio_context(aio_task* tsk);
+            
+            virtual void start(io_modifer& ctx) override {}
 
         protected:
-            error_code aio_internal(aio_task* aio, bool async, __out_param uint32_t* pbytes = nullptr);
+            error_code aio_internal(aio_task* aio, bool async, /*out*/ uint32_t* pbytes = nullptr);
 
         private:
             friend void aio_completed(sigval sigval);

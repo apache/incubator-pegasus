@@ -41,25 +41,46 @@ void event_wheel::add_event(uint64_t ts, task* t)
 {
     utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
 
-    std::vector<task*>* evts;
+    std::vector<event_entry>* evts;
     auto itr = _events.find(ts);
     if (itr != _events.end())
         evts = itr->second;
     else
     {
-        evts = new std::vector<task*>();
+        evts = new std::vector<event_entry>();
         _events.insert(std::make_pair(ts, evts));
     }
     
-    evts->push_back(t);
-
+    event_entry entry;
+    entry.app_task = t;
+    evts->push_back(entry);
 }
 
-std::vector<task*>* event_wheel::pop_next_events(__out_param uint64_t& ts)
+void event_wheel::add_system_event(uint64_t ts, std::function<void()> t)
 {
     utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
 
-    std::vector<task*>* evts = NULL;
+    std::vector<event_entry>* evts;
+    auto itr = _events.find(ts);
+    if (itr != _events.end())
+        evts = itr->second;
+    else
+    {
+        evts = new std::vector<event_entry>();
+        _events.insert(std::make_pair(ts, evts));
+    }
+
+    event_entry entry;
+    entry.system_task = std::move(t);
+    entry.app_task = nullptr;
+    evts->push_back(entry);
+}
+
+std::vector<event_entry>* event_wheel::pop_next_events(/*out*/ uint64_t& ts)
+{
+    utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
+
+    std::vector<event_entry>* evts = NULL;
     auto itr = _events.begin();
     if (itr != _events.end()){
         evts = itr->second;
@@ -89,7 +110,7 @@ scheduler::scheduler(void)
     for (int i = 0; i <= dsn_task_code_max(); i++)
     {
         task_spec::get(i)->on_task_wait_pre.put_back(scheduler::on_task_wait, "simulation.on_task_wait");
-        task_spec::get(i)->on_task_end.put_back(scheduler::on_task_end, "simulation.on_task_end");
+        task_spec::get(i)->on_task_wait_notified.put_back(scheduler::on_task_wait_notified, "simulation.on_task_wait_notified");
     }
 
     task_ext::register_ext(task_state_ext::deletor);
@@ -123,7 +144,7 @@ scheduler::~scheduler(void)
 {
     if (waitor == nullptr)
         return;
-
+    
     if (waitee->state() < task_state::TASK_STATE_FINISHED)
     {
         auto ts = task_ext::get_inited(waitee);
@@ -137,7 +158,7 @@ scheduler::~scheduler(void)
     }
 }
 
-/*static*/ void scheduler::on_task_end(task* task)
+/*static*/ void scheduler::on_task_wait_notified(task* task)
 {
     auto ts = task_ext::get(task);
     if (ts != nullptr)
@@ -157,6 +178,11 @@ void scheduler::add_task(task* tsk, task_queue* q)
     auto delay = (uint64_t)tsk->delay_milliseconds() * 1000000;
     tsk->set_delay(0);
     _wheel.add_event(now_ns() + delay, tsk);
+}
+
+void scheduler::add_system_event(uint64_t ts_ns, std::function<void()> t)
+{
+    _wheel.add_system_event(ts_ns, t);
 }
 
 void scheduler::start()
@@ -254,16 +280,24 @@ void scheduler::schedule()
             // randomize the events, and see
             std::random_shuffle(events->begin(), events->end(), [](int n) { return dsn_random32(0, n - 1); });
 
-            for (auto it = events->begin(); it != events->end(); it++)
+            for (auto e : *events)
             {
-                task* t = *it;
-
+                if (e.app_task != nullptr)
                 {
-                    node_scoper ns(t->node());
-                    t->enqueue();
-                }
+                    task* t = e.app_task;
 
-                t->release_ref(); // added by previous t->enqueue from app
+                    {
+                        node_scoper ns(t->node());
+                        t->enqueue();
+                    }
+
+                    t->release_ref(); // added by previous t->enqueue from app
+                }
+                else
+                {
+                    dassert(e.system_task != nullptr, "app and system tasks cannot be both empty");
+                    e.system_task();
+                }
             }
 
             delete events;

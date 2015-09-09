@@ -37,7 +37,7 @@ public:
     disk_engine(service_node* node);
     ~disk_engine();
 
-    void start(aio_provider* provider);
+    void start(aio_provider* provider, io_modifer& ctx);
 
     // asynchonous file read/write
     dsn_handle_t    open(const char* fileName, int flag, int pmode);

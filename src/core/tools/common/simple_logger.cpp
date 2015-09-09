@@ -25,7 +25,6 @@
  */
 # include "simple_logger.h"
 # include <sstream>
-# include <boost/filesystem.hpp>
 
 namespace dsn {
     namespace tools {
@@ -67,11 +66,22 @@ namespace dsn {
             }
             else
             {
-                fprintf(fp, "%6s.%7s.%05d: ",
-                    task::get_current_node_name(),
-                    "io-thrd",
-                    tid
-                    );
+                if (nullptr != task::get_current_worker())
+                {
+                    fprintf(fp, "%6s.%7s%u: ",
+                        task::get_current_node_name(),
+                        task::get_current_worker()->pool_spec().name.c_str(),
+                        task::get_current_worker()->index()
+                        );
+                }
+                else
+                {
+                    fprintf(fp, "%6s.%7s.%05d: ",
+                        task::get_current_node_name(),
+                        "io-thrd",
+                        tid
+                        );
+                }
             }
         }
 
@@ -107,12 +117,15 @@ namespace dsn {
                 false, "whether to use short header (excluding file/function etc.)");
 
             // check existing log files
-            boost::filesystem::directory_iterator endtr;
-            for (boost::filesystem::directory_iterator it(std::string("./"));
-                it != endtr;
-                ++it)
+			std::vector<std::string> sub_list;
+			std::string path = "./";
+			if (!dsn::utils::filesystem::get_subfiles(path, sub_list, false))
+			{
+				dassert(false, "Fail to get subfiles in %s.", path.c_str());
+			}			 
+            for (auto& fpath : sub_list)
             {
-                auto name = it->path().filename().string();
+				auto&& name = dsn::utils::filesystem::get_file_name(fpath);
                 if (name.length() <= 8 ||
                     name.substr(0, 4) != "log.")
                     continue;
@@ -127,6 +140,7 @@ namespace dsn {
                 if (_start_index == 0 || index < _start_index)
                     _start_index = index;
             }
+			sub_list.clear();
 
             if (_start_index == 0)
                 _start_index = _index;
@@ -150,9 +164,10 @@ namespace dsn {
             {
                 std::stringstream str2;
                 str2 << "log." << _start_index++ << ".txt";
-                boost::filesystem::path dp = str2.str();
-                if (::dsn::utils::is_file_or_dir_exist(str2.str().c_str()))
-                    boost::filesystem::remove(dp);
+				if (!dsn::utils::filesystem::remove_path(str2.str()))
+				{
+					dassert(false, "Fail to remove file %s.", str2.str().c_str());
+				}
             }
         }
 

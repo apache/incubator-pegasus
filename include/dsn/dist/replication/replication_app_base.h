@@ -55,7 +55,8 @@ public:
     virtual ~replication_app_base() {}
 
     //
-    // Interfaces to be implemented by app, most of them return error code.
+    // Interfaces to be implemented by app, 
+    // most of them return error code (0 for success).
     //
 
     //
@@ -93,7 +94,7 @@ public:
     //
     // Helper routines to accelerate learning.
     // 
-    virtual void prepare_learning_request(__out_param ::dsn::blob& learn_req) {}
+    virtual void prepare_learning_request(/*out*/ ::dsn::blob& learn_req) {}
 
     // 
     // Learn [start, infinite) from remote replicas.
@@ -106,8 +107,11 @@ public:
     // Postconditions:
     // * after apply_learn_state() done, last_committed_decree() >= last_durable_decree()
     //
-    virtual int  get_learn_state(::dsn::replication::decree start,
-            const ::dsn::blob& learn_req, __out_param ::dsn::replication::learn_state& state) = 0;
+    virtual int  get_learn_state(
+        ::dsn::replication::decree start,
+        const ::dsn::blob& learn_req,
+        /*out*/ ::dsn::replication::learn_state& state
+        ) = 0;
     virtual int  apply_learn_state(::dsn::replication::learn_state& state) = 0;
 
     //
@@ -122,10 +126,13 @@ public:
     //   
     const std::string& data_dir() const { return _dir_data; }
     const std::string& learn_dir() const { return _dir_learn; }
+    bool is_delta_state_learning_supported() const { return _is_delta_state_learning_supported; }
+
     //
     // set physical error (e.g., disk error) so that the app is dropped by replication later
     //
     void set_physical_error(int err) { _physical_error = err; }
+    void set_delta_state_learning_supported() { _is_delta_state_learning_supported = true; }
 
 protected:
     template<typename T, typename TRequest, typename TResponse> 
@@ -157,6 +164,7 @@ private:
     replica*    _replica;
     std::unordered_map<int, std::function<void(binary_reader&, dsn_message_t)> > _handlers;
     int         _physical_error; // physical error (e.g., io error) indicates the app needs to be dropped
+    bool        _is_delta_state_learning_supported;
 
 protected:
     std::atomic<decree> _last_committed_decree;

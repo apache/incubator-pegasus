@@ -10,7 +10,7 @@ using dsn.dev.csharp;
 namespace <?=$_PROG->get_csharp_namespace()?> 
 {
 <?php foreach ($_PROG->services as $svc) { ?>
-    public class <?=$svc->name?>Client : Servicelet
+    public class <?=$svc->name?>Client : Clientlet
     {
         private RpcAddress _server;
         

@@ -41,7 +41,10 @@ public:
     //
     // management routines
     //
-    ::dsn::error_code start(const service_app_spec& spec);
+    ::dsn::error_code start(
+        const service_app_spec& spec, 
+        io_modifer& ctx
+        );
 
     //
     // rpc registrations
@@ -60,17 +63,21 @@ public:
     // information inquery
     //
     service_node* node() const { return _node; }
-    const dsn_address_t& primary_address() const { return _local_primary_address; }
+    const ::dsn::rpc_address& primary_address() const { return _local_primary_address; }
 
 private:
-    network* create_network(const network_server_config& netcs, bool client_only);
+    network* create_network(
+        const network_server_config& netcs, 
+        bool client_only,
+        io_modifer& ctx
+        );
 
 private:
     configuration_ptr                     _config;    
     service_node                          *_node;
     std::vector<std::vector<network*>>    _client_nets; // <format, <CHANNEL, network*>>
     std::unordered_map<int, std::vector<network*>>  _server_nets; // <port, <CHANNEL, network*>>
-    dsn_address_t                             _local_primary_address;
+    ::dsn::rpc_address                             _local_primary_address;
 
     typedef std::unordered_map<std::string, rpc_handler_ptr> rpc_handlers;
     rpc_handlers                  _handlers;

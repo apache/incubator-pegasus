@@ -1,0 +1,88 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Microsoft Corporation
+ * 
+ * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+# pragma once
+
+# include <dsn/service_api_cpp.h>
+# include <dsn/internal/task.h>
+# include <dsn/internal/task_worker.h>
+
+using namespace ::dsn;
+
+DEFINE_THREAD_POOL_CODE(THREAD_POOL_TEST_SERVER)
+DEFINE_TASK_CODE_RPC(RPC_TEST_HASH, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
+
+extern int g_test_count;
+extern dsn_app_t g_app;
+
+inline void exec_tests()
+{    
+    auto ret = RUN_ALL_TESTS();
+    g_test_count++;
+}
+
+class test_client :
+    public ::dsn::serverlet<test_client>,
+    public ::dsn::service_app    
+{
+public:
+    test_client()
+        : ::dsn::serverlet<test_client>("test-server", 7)
+    {
+
+    }
+
+    void on_rpc_test(const int& test_id, ::dsn::rpc_replier<std::string>& replier)
+    {
+        std::string r = ::dsn::task::get_current_worker()->name();
+        replier(r);
+    }
+
+    ::dsn::error_code start(int argc, char** argv)
+    {
+        // server
+        if (argc == 1)
+        {
+            register_async_rpc_handler(RPC_TEST_HASH, "rpc.test.hash", &test_client::on_rpc_test);
+        }
+
+        // client
+        else
+        {
+            std::cout << "=========================================================== " << std::endl;
+            std::cout << "================== run in rDSN threads ==================== " << std::endl;
+            std::cout << "=========================================================== " << std::endl;
+            exec_tests();
+        }
+        
+        return ::dsn::ERR_OK;
+    }
+
+    void stop(bool cleanup = false)
+    {
+
+    }
+};

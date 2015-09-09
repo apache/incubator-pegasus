@@ -288,7 +288,7 @@ namespace dsn {
 
             void   calc(boost::shared_ptr<compute_context>& ctx)
             {
-                uint64_t _num = _tail > MAX_QUEUE_LENGTH ? MAX_QUEUE_LENGTH : _tail;
+                int _num = _tail > MAX_QUEUE_LENGTH ? MAX_QUEUE_LENGTH : _tail;
 
                 if (_num == 0)
                     return;

@@ -26,7 +26,7 @@ namespace dsn {
         ::dsn::marshall_rpc_args<command>(&proto, val, &command::write);
     };
 
-    inline void unmarshall(::dsn::binary_reader& reader, __out_param command& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ command& val)
     {
         boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
@@ -52,7 +52,7 @@ namespace dsn {
         marshall(writer, val.arguments);
     };
 
-    inline void unmarshall(::dsn::binary_reader& reader, __out_param command& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ command& val)
     {
         unmarshall(reader, val.cmd);
         unmarshall(reader, val.arguments);

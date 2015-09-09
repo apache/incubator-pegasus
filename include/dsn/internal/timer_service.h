@@ -44,6 +44,8 @@ namespace dsn
             _node = node;
         }
 
+        virtual void start(io_modifer& ctx) = 0;
+
         // after milliseconds, the provider should call task->enqueue()        
         virtual void add_timer(task* task) = 0;
 

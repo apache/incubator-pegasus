@@ -24,11 +24,19 @@ else()
     set(MY_PROJ_LIBS gtest)
 endif()
 
-set(MY_BOOST_PACKAGES system filesystem)
+set(MY_PROJ_LIBS 
+	dsn.replication.meta_server
+	dsn.replication
+	dsn.replication.clientlib
+	dsn.failure_detector	
+	${MY_PROJ_LIBS}
+	)
+
+set(MY_BOOST_PACKAGES system)
 
 set(MY_PROJ_LIB_PATH "")
 
 # Extra files that will be installed
-set(MY_BINPLACES "")
+set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config-test.ini")
 
 dsn_add_executable()

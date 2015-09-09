@@ -40,7 +40,6 @@ public:
     {
         _name = name;
         _count = 0;
-        _peeked_item = nullptr;
     }
 
     virtual long enqueue(T obj, uint32_t priority)
@@ -54,36 +53,6 @@ public:
         }
     }
 
-    virtual T peek()
-    {
-        auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
-
-        // already peeked
-        if (nullptr != _peeked_item)
-            return nullptr;
-
-        else
-        {
-            long ct = 0;
-            _peeked_item = dequeue_impl(ct);
-            return _peeked_item;
-        }
-    }
-
-    virtual T dequeue_peeked()
-    {
-        auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
-        auto c = _peeked_item;
-        _peeked_item = nullptr;
-        return c;
-    }
-
-    bool is_peeked()
-    {
-        auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
-        return _peeked_item != nullptr;
-    }
-
     virtual T dequeue()
     {
         auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
@@ -91,7 +60,7 @@ public:
         return dequeue_impl(ct);
     }
 
-    virtual T dequeue(__out_param long& ct)
+    virtual T dequeue(/*out*/ long& ct)
     {
         auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
         return dequeue_impl(ct);
@@ -102,7 +71,7 @@ public:
     long count() const { auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock); return _count; }
 
 protected:
-    T dequeue_impl(__out_param long& ct, bool pop = true)
+    T dequeue_impl(/*out*/ long& ct, bool pop = true)
     {
         if (_count == 0)
         {
@@ -128,7 +97,6 @@ protected:
 
 protected:
     std::string   _name;
-    T             _peeked_item;
     TQueue        _items[priority_count];
     long          _count;
     mutable utils::ex_lock_nr_spin _lock;
@@ -150,7 +118,7 @@ public:
         return r;
     }
 
-    virtual T dequeue(__out_param long& ct, int millieseconds = TIME_MS_MAX)
+    virtual T dequeue(/*out*/ long& ct, int millieseconds = TIME_MS_MAX)
     {
         _sema.wait();
         return priority_queue<T, priority_count, TQueue>::dequeue(ct);

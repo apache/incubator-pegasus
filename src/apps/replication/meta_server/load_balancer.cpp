@@ -63,9 +63,9 @@ void load_balancer::run(global_partition_id gpid)
     run_lb(pc);
 }
 
-dsn_address_t load_balancer::find_minimal_load_machine(bool primaryOnly)
+::dsn::rpc_address load_balancer::find_minimal_load_machine(bool primaryOnly)
 {
-    std::vector<std::pair<dsn_address_t, int>> stats;
+    std::vector<std::pair<::dsn::rpc_address, int>> stats;
 
     for (auto it = _state->_nodes.begin(); it != _state->_nodes.end(); it++)
     {
@@ -77,14 +77,14 @@ dsn_address_t load_balancer::find_minimal_load_machine(bool primaryOnly)
     }
 
     
-    std::sort(stats.begin(), stats.end(), [](const std::pair<dsn_address_t, int>& l, const std::pair<dsn_address_t, int>& r)
+    std::sort(stats.begin(), stats.end(), [](const std::pair<::dsn::rpc_address, int>& l, const std::pair<::dsn::rpc_address, int>& r)
     {
         return l.second < r.second;
     });
 
     if (stats.empty())
     {
-        return dsn_address_invalid;
+        return ::dsn::rpc_address();
     }
 
     int candidate_count = 1;
@@ -108,7 +108,7 @@ void load_balancer::run_lb(partition_configuration& pc)
     configuration_update_request proposal;
     proposal.config = pc;
 
-    if (pc.primary == dsn_address_invalid)
+    if (pc.primary.is_invalid())
     {
         if (pc.secondaries.size() > 0)
         {
@@ -121,7 +121,7 @@ void load_balancer::run_lb(partition_configuration& pc)
             proposal.type = CT_ASSIGN_PRIMARY;
         }
 
-        if (proposal.node != dsn_address_invalid)
+        if (proposal.node.is_invalid() == false)
         {
             send_proposal(proposal.node, proposal);
         }
@@ -131,7 +131,7 @@ void load_balancer::run_lb(partition_configuration& pc)
     {
         proposal.type = CT_ADD_SECONDARY;
         proposal.node = find_minimal_load_machine(false);
-        if (proposal.node != dsn_address_invalid && 
+        if (proposal.node.is_invalid() == false && 
             proposal.node != pc.primary &&
             std::find(pc.secondaries.begin(), pc.secondaries.end(), proposal.node) == pc.secondaries.end())
         {
@@ -145,12 +145,12 @@ void load_balancer::run_lb(partition_configuration& pc)
 }
 
 // meta server => partition server
-void load_balancer::send_proposal(const dsn_address_t& node, const configuration_update_request& proposal)
+void load_balancer::send_proposal(const ::dsn::rpc_address& node, const configuration_update_request& proposal)
 {
     dinfo("send proposal %s of %s:%hu, current ballot = %lld", 
         enum_to_string(proposal.type),
-        proposal.node.name,
-        proposal.node.port,
+        proposal.node.name(),
+        proposal.node.port(),
         proposal.config.ballot
         );
 

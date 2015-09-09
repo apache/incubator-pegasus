@@ -32,15 +32,145 @@
 # endif
 # define __TITLE__ "rpc_session"
 
-namespace dsn {
-
-    rpc_client_session::rpc_client_session(connection_oriented_network& net, const dsn_address_t& remote_addr, rpc_client_matcher_ptr& matcher)
-        : _net(net), _remote_addr(remote_addr), _matcher(matcher)
+namespace dsn 
+{
+    rpc_session::~rpc_session()
     {
-        _disconnected = false;
+        dlink* msg = nullptr;
+        while (true)
+        {
+            {
+                utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+                msg = _messages.next();
+                if (msg == &_messages)
+                    break;
+
+                msg->remove();
+            }
+            // added in rpc_engine::reply (for server) or rpc_session::call (for client)
+            auto rmsg = CONTAINING_RECORD(msg, message_ex, dl);
+            rmsg->release_ref();
+        }
     }
 
-    void rpc_client_session::call(message_ex* request, rpc_response_task* call)
+    bool rpc_session::try_connecting()
+    {
+        utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+        if (_connect_state == SS_DISCONNECTED)
+        {
+            _connect_state = SS_CONNECTING;
+            return true;
+        }
+        else
+            return false;
+    }
+
+    void rpc_session::set_connected()
+    {
+        {
+            utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+            dassert(_connect_state == SS_CONNECTING, "session must be connecting");
+            _connect_state = SS_CONNECTED;
+            _reconnect_count_after_last_success = 0;
+        }
+
+        dwarn("client session connected to %s:%hu",
+            remote_address().name(),
+            remote_address().port()
+            );
+    }
+
+    void rpc_session::set_disconnected()
+    {
+        utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+        _connect_state = SS_DISCONNECTED;
+    }
+    
+    void rpc_session::send_message(message_ex* msg)
+    {
+        {
+            utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+            msg->dl.insert_before(&_messages);
+            if (SS_CONNECTED == _connect_state && !_is_sending_next)
+            {
+                _is_sending_next = true;
+                msg = CONTAINING_RECORD(_messages.next(), message_ex, dl);
+            }
+            else
+            {
+                return;
+            }
+        }
+
+        this->send(msg);
+    }
+    
+    void rpc_session::on_send_completed(message_ex* msg)
+    {
+        message_ex* next_msg;
+        {
+            utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+            if (nullptr != msg)
+            {
+                dassert(_is_sending_next && &msg->dl == _messages.next(),
+                    "sent msg must be the first msg in send queue");
+                msg->dl.remove();
+                _is_sending_next = false;                
+            }
+            
+            if (!_messages.is_alone() && !_is_sending_next)
+            {
+                _is_sending_next = true;
+                next_msg = CONTAINING_RECORD(_messages.next(), message_ex, dl);
+            }
+            else
+            {
+                next_msg = nullptr;
+            }
+        }
+
+        // for old msg
+        // added in rpc_engine::reply (for server) or rpc_session::call (for client)
+        if (msg)
+        {
+            msg->release_ref(); 
+            _message_sent++;
+        }        
+
+        // for next send
+        if (next_msg)
+            this->send(next_msg);
+    }
+
+    bool rpc_session::has_pending_out_msgs()
+    {
+        utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+        return !_messages.is_alone();
+    }
+
+    // client
+    rpc_session::rpc_session(connection_oriented_network& net, const ::dsn::rpc_address& remote_addr, rpc_client_matcher_ptr& matcher)
+        : _net(net), _remote_addr(remote_addr)
+    {
+        _matcher = matcher;
+        _is_sending_next = false;
+        _connect_state = SS_DISCONNECTED;
+        _reconnect_count_after_last_success = 0;
+        _message_sent = 0;
+    }
+
+    // server
+    rpc_session::rpc_session(connection_oriented_network& net, const ::dsn::rpc_address& remote_addr)
+        : _net(net), _remote_addr(remote_addr)
+    {
+        _matcher = nullptr;
+        _is_sending_next = false;
+        _connect_state = SS_CONNECTED;
+        _reconnect_count_after_last_success = 0;
+        _message_sent = 0;
+    }
+
+    void rpc_session::call(message_ex* request, rpc_response_task* call)
     {
         if (call != nullptr)
         {
@@ -48,18 +178,36 @@ namespace dsn {
         }
 
         request->add_ref(); // released in on_send_completed
-        send(request);
+        send_message(request);
     }
 
-    void rpc_client_session::on_disconnected()
+    bool rpc_session::on_disconnected()
     {
-        _disconnected = true;
+        if (is_client())
+        {
+            // still connecting, let's retry
+            if (is_connecting() && ++_reconnect_count_after_last_success < 3
+                )
+            {
+                set_disconnected();
+                connect();
+                return false;
+            }
 
-        rpc_client_session_ptr sp = this;
-        _net.on_client_session_disconnected(sp);
+            set_disconnected();
+            rpc_session_ptr sp = this;
+            _net.on_client_session_disconnected(sp);
+        }
+        
+        else
+        {
+            rpc_session_ptr sp = this;
+            _net.on_server_session_disconnected(sp);
+        }
+        return true;
     }
 
-    bool rpc_client_session::on_recv_reply(uint64_t key, message_ex* reply, int delay_ms)
+    bool rpc_session::on_recv_reply(uint64_t key, message_ex* reply, int delay_ms)
     {
         if (reply != nullptr)
         {
@@ -70,28 +218,16 @@ namespace dsn {
         return _matcher->on_recv_reply(key, reply, delay_ms);
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-
-    rpc_server_session::rpc_server_session(connection_oriented_network& net, const dsn_address_t& remote_addr)
-        : _remote_addr(remote_addr), _net(net)
-    {
-    }
-
-    void rpc_server_session::on_recv_request(message_ex* msg, int delay_ms)
+    void rpc_session::on_recv_request(message_ex* msg, int delay_ms)
     {
         msg->from_address = remote_address();
-        msg->from_address.port = msg->header->client.port;
+        msg->from_address.c_addr_ptr()->port = msg->header->client.port;
         msg->to_address = _net.address();
 
         msg->server_session = this;
         return _net.on_recv_request(msg, delay_ms);
     }
-
-    void rpc_server_session::on_disconnected()
-    {
-        rpc_server_session_ptr sp = this;
-        return _net.on_server_session_disconnected(sp);
-    }
+       
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     network::network(rpc_engine* srv, network* inner_provider)
@@ -135,8 +271,8 @@ namespace dsn {
 
     void connection_oriented_network::call(message_ex* request, rpc_response_task* call)
     {
-        rpc_client_session_ptr client = nullptr;
-        dsn_address_t& to = request->to_address;
+        rpc_session_ptr client = nullptr;
+        ::dsn::rpc_address& to = request->to_address;
         bool new_client = false;
 
         // TODO: thread-local client ptr cache
@@ -167,30 +303,52 @@ namespace dsn {
 
         // init connection if necessary
         if (new_client) 
+        {
             client->connect();
+        }
 
         // rpc call
         client->call(request, call);
     }
 
-    rpc_server_session_ptr connection_oriented_network::get_server_session(const dsn_address_t& ep)
+    rpc_session_ptr connection_oriented_network::get_server_session(const ::dsn::rpc_address& ep)
     {
         utils::auto_read_lock l(_servers_lock);
         auto it = _servers.find(ep);
         return it != _servers.end() ? it->second : nullptr;
     }
 
-    void connection_oriented_network::on_server_session_accepted(rpc_server_session_ptr& s)
+    void connection_oriented_network::on_server_session_accepted(rpc_session_ptr& s)
     {
-        dinfo("server session %s:%hu accepted", s->remote_address().name, s->remote_address().port);
+        int scount = 0;
+        {
+            utils::auto_write_lock l(_servers_lock);
+            auto pr = _servers.insert(server_sessions::value_type(s->remote_address(), s));
+            if (pr.second)
+            {
+                // nothing to do 
+            }
+            else
+            {
+                pr.first->second = s;
+                dwarn("server session on %s:%hu already exists, preempted",
+                    s->remote_address().name(),
+                    s->remote_address().port()
+                    );
+            }
+            scount = (int)_servers.size();
+        }
 
-        utils::auto_write_lock l(_servers_lock);
-        _servers.insert(server_sessions::value_type(s->remote_address(), s));
-
+        dwarn("server session %s:%hu accepted (%d in total)", 
+            s->remote_address().name(), 
+            s->remote_address().port(),
+            scount
+            );
     }
 
-    void connection_oriented_network::on_server_session_disconnected(rpc_server_session_ptr& s)
+    void connection_oriented_network::on_server_session_disconnected(rpc_session_ptr& s)
     {
+        int scount;
         bool r = false;
         {
             utils::auto_write_lock l(_servers_lock);
@@ -199,27 +357,30 @@ namespace dsn {
             {
                 _servers.erase(it);
                 r = true;
-            }                
+            }      
+            scount = (int)_servers.size();
         }
 
         if (r)
         {
-            dinfo("server session %s:%hu disconnected", 
-                s->remote_address().name,
-                s->remote_address().port
+            dwarn("server session %s:%hu disconnected (%d in total)",
+                s->remote_address().name(),
+                s->remote_address().port(),
+                scount
                 );
         }
     }
 
-    rpc_client_session_ptr connection_oriented_network::get_client_session(const dsn_address_t& ep)
+    rpc_session_ptr connection_oriented_network::get_client_session(const ::dsn::rpc_address& ep)
     {
         utils::auto_read_lock l(_clients_lock);
         auto it = _clients.find(ep);
         return it != _clients.end() ? it->second : nullptr;
     }
 
-    void connection_oriented_network::on_client_session_disconnected(rpc_client_session_ptr& s)
+    void connection_oriented_network::on_client_session_disconnected(rpc_session_ptr& s)
     {
+        int scount;
         bool r = false;
         {
             utils::auto_write_lock l(_clients_lock);
@@ -229,12 +390,13 @@ namespace dsn {
                 _clients.erase(it);
                 r = true;
             }
+            scount = (int)_clients.size();
         }
 
         if (r)
         {
-            dinfo("client session %s:%hu disconnected", s->remote_address().name, 
-                s->remote_address().port
+            dwarn("client session %s:%hu disconnected (%d in total)", s->remote_address().name(),
+                s->remote_address().port(), scount
                 );
         }
     }

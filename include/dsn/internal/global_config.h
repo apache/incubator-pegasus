@@ -67,9 +67,9 @@ typedef std::map<network_server_config, network_server_config> network_server_co
 
 typedef struct service_app_role
 {
-    std::string   name; // type name
-    dsn_app_create create;
-    dsn_app_start start;
+    std::string     name; // type name
+    dsn_app_create  create;
+    dsn_app_start   start;
     dsn_app_destroy destroy;
 
 } service_app_role;
@@ -87,8 +87,8 @@ struct service_app_spec
     int                  delay_seconds;
     bool                 run;
     int                  count; // index = 1,2,...,count
+    int                  ports_gap; // when count > 1 or service_spec.io_mode != IOE_PER_NODE
     std::string          dmodule; // when the service is a dynamcially loaded module
-
     service_app_role     role;
 
     network_client_configs network_client_confs;
@@ -101,13 +101,13 @@ struct service_app_spec
         service_app_spec* default_value,
         network_client_configs* default_client_nets = nullptr,
         network_server_configs* default_server_nets = nullptr
-        );
+        );    
 };
 
 CONFIG_BEGIN(service_app_spec)
     CONFIG_FLD_STRING(type, "", "app type name, as given when registering by dsn_register_app_role")
     CONFIG_FLD_STRING(arguments, "", "arguments for the app instances")
-    CONFIG_FLD_STRING(dmodule, "", "path of a dynamic library which implement this app role, and register itself upon loaded")    
+    CONFIG_FLD_STRING(dmodule, "", "path of a dynamic library which implement this app role, and register itself upon loaded")
     CONFIG_FLD_INT_LIST(ports, "RPC server listening ports needed for this app")
     CONFIG_FLD_ID_LIST(threadpool_code2, pools, "thread pools need to be started")
     CONFIG_FLD(int, uint64, delay_seconds, 0, "delay seconds for when the apps should be started")
@@ -145,6 +145,12 @@ struct service_spec
     std::list<std::string>       lock_nr_aspects;
     std::list<std::string>       rwlock_nr_aspects;
     std::list<std::string>       semaphore_aspects;
+
+    ioe_mode                     disk_io_mode; // whether disk is per node or per queue
+    ioe_mode                     rpc_io_mode; // whether rpc is per node or per queue
+    ioe_mode                     nfs_io_mode; // whether nfs is per node or per queue
+    ioe_mode                     timer_io_mode; // whether timer is per node or per queue
+    int                          io_worker_count; // for disk and rpc when per node
         
     network_client_configs        network_default_client_cfs; // default network configed by tools
     network_server_configs        network_default_server_cfs; // default network configed by tools
@@ -154,6 +160,7 @@ struct service_spec
     service_spec() {}
     bool init();
     bool init_app_specs();
+    int get_ports_delta(int app_id, dsn_threadpool_code_t pool, int queue_index) const;
 };
 
 CONFIG_BEGIN(service_spec)
@@ -182,6 +189,17 @@ CONFIG_BEGIN(service_spec)
     CONFIG_FLD_STRING_LIST(lock_nr_aspects, "non-recurisve lock aspect providers, usually for tooling purpose")
     CONFIG_FLD_STRING_LIST(rwlock_nr_aspects, "non-recursive rwlock aspect providers, usually for tooling purpose")
     CONFIG_FLD_STRING_LIST(semaphore_aspects, "semaphore aspect providers, usually for tooling purpose")
+
+    CONFIG_FLD_ENUM(ioe_mode, disk_io_mode, IOE_PER_NODE, IOE_INVALID, false,
+        "how many disk engines? IOE_PER_NODE, or IOE_PER_QUEUE")
+    CONFIG_FLD_ENUM(ioe_mode, rpc_io_mode, IOE_PER_NODE, IOE_INVALID, false,
+        "how many rpc engines? IOE_PER_NODE, or IOE_PER_QUEUE")
+    CONFIG_FLD_ENUM(ioe_mode, nfs_io_mode, IOE_PER_NODE, IOE_INVALID, false,
+        "how many nfs engines? IOE_PER_NODE, or IOE_PER_QUEUE")
+    CONFIG_FLD_ENUM(ioe_mode, timer_io_mode, IOE_PER_NODE, IOE_INVALID, false,
+        "how many disk timer services? IOE_PER_NODE, or IOE_PER_QUEUE")
+    CONFIG_FLD(int, uint64, io_worker_count, 2, "io thread count, only for IOE_PER_NODE; "
+        "for IOE_PER_QUEUE, task workers are served as io threads")
 CONFIG_END
 
 enum sys_exit_type

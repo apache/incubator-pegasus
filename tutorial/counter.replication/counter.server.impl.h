@@ -55,7 +55,7 @@ namespace dsn {
             //
             // helper routines to accelerate learning
             // 
-            virtual int  get_learn_state(decree start, const blob& learn_request, __out_param learn_state& state);  // must be thread-safe
+            virtual int  get_learn_state(decree start, const blob& learn_request, /*out*/ learn_state& state);  // must be thread-safe
             virtual int  apply_learn_state(learn_state& state);  // must be thread-safe, and last_committed_decree must equal to last_durable_decree after learning
 
         private:

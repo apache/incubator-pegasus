@@ -265,7 +265,7 @@ template<> inline bool configuration::get_value<bool>(const char* section, const
 # define CONFIG_BEGIN(t_struct) \
     inline bool read_config(\
     const char* section, \
-    __out_param t_struct& val, \
+    /*out*/ t_struct& val, \
     t_struct* default_value = nullptr\
     ) \
 {

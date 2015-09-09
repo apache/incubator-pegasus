@@ -26,7 +26,7 @@ namespace dsn { namespace fd {
         ::dsn::marshall_rpc_args<beacon_msg>(&proto, val, &beacon_msg::write);
     };
 
-    inline void unmarshall(::dsn::binary_reader& reader, __out_param beacon_msg& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ beacon_msg& val)
     {
         boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
@@ -41,7 +41,7 @@ namespace dsn { namespace fd {
         ::dsn::marshall_rpc_args<beacon_ack>(&proto, val, &beacon_ack::write);
     };
 
-    inline void unmarshall(::dsn::binary_reader& reader, __out_param beacon_ack& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ beacon_ack& val)
     {
         boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
@@ -58,8 +58,8 @@ namespace dsn { namespace fd {
     struct beacon_msg
     {
         int64_t time;
-        ::dsn::end_point from;
-        ::dsn::end_point to;
+        ::dsn::rpc_address from;
+        ::dsn::rpc_address to;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const beacon_msg& val)
@@ -69,7 +69,7 @@ namespace dsn { namespace fd {
         marshall(writer, val.to);
     };
 
-    inline void unmarshall(::dsn::binary_reader& reader, __out_param beacon_msg& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ beacon_msg& val)
     {
         unmarshall(reader, val.time);
         unmarshall(reader, val.from);
@@ -80,8 +80,8 @@ namespace dsn { namespace fd {
     struct beacon_ack
     {
         int64_t time;
-        ::dsn::end_point this_node;
-        ::dsn::end_point primary_node;
+        ::dsn::rpc_address this_node;
+        ::dsn::rpc_address primary_node;
         bool is_master;
         bool allowed;
     };
@@ -95,7 +95,7 @@ namespace dsn { namespace fd {
         marshall(writer, val.allowed);
     };
 
-    inline void unmarshall(::dsn::binary_reader& reader, __out_param beacon_ack& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ beacon_ack& val)
     {
         unmarshall(reader, val.time);
         unmarshall(reader, val.this_node);

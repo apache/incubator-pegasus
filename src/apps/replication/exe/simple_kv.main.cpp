@@ -30,7 +30,7 @@
 // framework specific tools
 # include <dsn/dist/replication/replication.global_check.h>
 
-int main(int argc, char** argv)
+void module_init()
 {
     // register replication application provider
     dsn::replication::register_replica_provider<::dsn::replication::application::simple_kv_service_impl>("simple_kv");
@@ -40,10 +40,24 @@ int main(int argc, char** argv)
     dsn::register_app<::dsn::replication::replication_service_app>("replica");
     dsn::register_app<::dsn::replication::application::simple_kv_client_app>("client");
     dsn::register_app<::dsn::replication::application::simple_kv_perf_test_client_app>("client.perf.test");
-        
+
     dsn::replication::install_checkers();
+}
+
+
+# ifndef DSN_RUN_USE_SVCHOST
+
+int main(int argc, char** argv)
+{
+    module_init();
 
     // specify what services and tools will run in config file, then run
     dsn_run(argc, argv, true);
     return 0;
 }
+
+# else
+
+# include <dsn/internal/module_int.cpp.h>
+
+# endif

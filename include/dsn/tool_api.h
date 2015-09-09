@@ -153,6 +153,7 @@ template <typename T> T* get_toollet(const char* name) { return (T*)internal_use
 tool_app* get_current_tool();
 configuration_ptr config();
 const service_spec& spec();
+const char* get_service_node_name(service_node* node);
 bool is_engine_ready();
 
 // --------- inline implementation -----------------------------

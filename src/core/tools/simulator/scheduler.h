@@ -30,18 +30,25 @@
 
 namespace dsn { namespace tools {
 
+struct event_entry
+{
+    task*                 app_task;
+    std::function<void()> system_task;
+};
+
 class event_wheel
 {
 public:
     ~event_wheel() { clear(); }
 
     void add_event(uint64_t ts, task* t);
-    std::vector<task*>* pop_next_events(__out_param uint64_t& ts);
+    void add_system_event(uint64_t ts, std::function<void()> t);
+    std::vector<event_entry>* pop_next_events(/*out*/ uint64_t& ts);
     void clear();
     bool has_more_events() const {  utils::auto_lock<::dsn::utils::ex_lock> l(_lock); return _events.size() > 0; }
 
 private:
-    typedef std::map<uint64_t, std::vector<task*>*>  Events;
+    typedef std::map<uint64_t, std::vector<event_entry>*>  Events;
     Events _events;
     mutable ::dsn::utils::ex_lock _lock;
 };
@@ -73,6 +80,7 @@ public:
 
     void reset();
     void add_task(task* task, task_queue* q);
+    void add_system_event(uint64_t ts_ns, std::function<void()> t);
 
     // TODO: time delay for true, true
     void wait_schedule(bool in_continue, bool is_continue_ready = false);
@@ -117,7 +125,7 @@ private:
     static void on_task_worker_create(task_worker* worker);
     static void on_task_worker_start(task_worker* worker);
     static void on_task_wait(task* waitor, task* waitee, uint32_t timeout_milliseconds);
-    static void on_task_end(task* task);
+    static void on_task_wait_notified(task* task);
 };
 
 // ------------------  inline implementation ----------------------------

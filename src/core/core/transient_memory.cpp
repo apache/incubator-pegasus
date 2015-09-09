@@ -52,7 +52,7 @@ namespace dsn
 
         tls_trans_memory.remain_bytes = (min_size > tls_trans_mem_default_block_bytes ? 
                 min_size : tls_trans_mem_default_block_bytes);
-        tls_trans_memory.block->reset((char*)::malloc(tls_trans_memory.remain_bytes));
+        tls_trans_memory.block->reset(new char[tls_trans_memory.remain_bytes]);
         tls_trans_memory.next = tls_trans_memory.block->get();
     }
 }

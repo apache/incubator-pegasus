@@ -34,32 +34,32 @@ class replica_stub;
 class replication_failure_detector  : public dsn::fd::failure_detector
 {
 public:
-    replication_failure_detector(replica_stub* stub, std::vector<dsn_address_t>& meta_servers);
+    replication_failure_detector(replica_stub* stub, std::vector<::dsn::rpc_address>& meta_servers);
     ~replication_failure_detector(void);
 
     virtual void end_ping(::dsn::error_code err, const fd::beacon_ack& ack, void* context);
 
      // client side
-    virtual void on_master_disconnected( const std::vector<dsn_address_t>& nodes );
-    virtual void on_master_connected( const dsn_address_t& node);
+    virtual void on_master_disconnected( const std::vector<::dsn::rpc_address>& nodes );
+    virtual void on_master_connected( const ::dsn::rpc_address& node);
 
     // server side
-    virtual void on_worker_disconnected( const std::vector<dsn_address_t>& nodes ) { dassert (false, ""); }
-    virtual void on_worker_connected( const dsn_address_t& node )  { dassert (false, ""); }
+    virtual void on_worker_disconnected( const std::vector<::dsn::rpc_address>& nodes ) { dassert (false, ""); }
+    virtual void on_worker_connected( const ::dsn::rpc_address& node )  { dassert (false, ""); }
 
-    dsn_address_t current_server_contact() const { zauto_lock l(_meta_lock); return _current_meta_server; }
-    std::vector<dsn_address_t> get_servers() const  { zauto_lock l(_meta_lock); return _meta_servers; }
-
-private:
-    dsn_address_t find_next_meta_server(dsn_address_t current);
+    ::dsn::rpc_address current_server_contact() const { zauto_lock l(_meta_lock); return _current_meta_server; }
+    std::vector<::dsn::rpc_address> get_servers() const  { zauto_lock l(_meta_lock); return _meta_servers; }
 
 private:
-    typedef std::set<dsn_address_t> end_points;
+    ::dsn::rpc_address find_next_meta_server(::dsn::rpc_address current);
+
+private:
+    typedef std::set<::dsn::rpc_address> end_points;
 
     mutable zlock           _meta_lock;
-    dsn_address_t               _current_meta_server;
+    ::dsn::rpc_address               _current_meta_server;
 
-    std::vector<dsn_address_t>  _meta_servers;
+    std::vector<::dsn::rpc_address>  _meta_servers;
     replica_stub            *_stub;
 };
 

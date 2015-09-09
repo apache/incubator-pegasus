@@ -50,13 +50,14 @@ disk_engine::~disk_engine()
 {
 }
 
-void disk_engine::start(aio_provider* provider)
+void disk_engine::start(aio_provider* provider, io_modifer& ctx)
 {
     auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
     if (_is_running)
         return;  
 
     _provider = provider;
+    _provider->start(ctx);
     _is_running = true;
 }
 
@@ -91,7 +92,7 @@ void disk_engine::start_io(aio_task* aio_tsk)
         auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
         if (!_is_running)
         {
-            aio_tsk->enqueue(ERR_SERVICE_NOT_FOUND, 0, _node);
+            aio_tsk->enqueue(ERR_SERVICE_NOT_FOUND, 0);
             return;
         }
        
@@ -107,7 +108,7 @@ void disk_engine::start_io(aio_task* aio_tsk)
     }
     else
     {
-        aio_tsk->enqueue(ERR_FILE_OPERATION_FAILED, 0, _node);
+        aio_tsk->enqueue(ERR_FILE_OPERATION_FAILED, 0);
     }
 }
 
@@ -130,7 +131,7 @@ void disk_engine::complete_io(aio_task* aio, error_code err, uint32_t bytes, int
         _request_count--;
     }
     
-    aio->enqueue(err, bytes, _node);
+    aio->enqueue(err, bytes);
     aio->release_ref(); // added in start_io
 }
 

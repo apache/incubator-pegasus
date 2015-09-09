@@ -47,10 +47,9 @@ namespace dsn {
             if (_start)
             {
                 error_code err;
-                if (_node->nfs())
+                for (auto& io : _node->ios())
                 {
-                    err = _node->nfs()->start();
-                    dassert(err == ERR_OK, "start nfs failed, err = %s", err.to_string());
+                    _node->start_io_engine_in_node_start_task(io);
                 }
                 
                 std::vector<std::string> args;
@@ -74,7 +73,7 @@ namespace dsn {
                     args_ptr[i] = ((char*)args[i].c_str());
                 }
 
-                err = sp.role.start(_node->get_app_context_ptr(), argc, &args_ptr[0]);
+                err = _node->start_app(argc, &args_ptr[0]);
                 dassert(err == ERR_OK, "start app failed, err = %s", err.to_string());
             }
             else
@@ -142,6 +141,11 @@ namespace dsn {
         const service_spec& spec()
         {
             return service_engine::fast_instance().spec();
+        }
+
+        const char* get_service_node_name(service_node* node)
+        {
+            return node->name();
         }
 
         join_point<void, configuration_ptr> sys_init_before_app_created("system.init.1");

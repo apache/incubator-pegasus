@@ -39,7 +39,7 @@ void replica::init_group_check()
 {
     check_hashed_access();
 
-    if (PS_PRIMARY != status() || _options.group_check_disabled)
+    if (PS_PRIMARY != status() || _options->group_check_disabled)
         return;
 
     dassert (nullptr == _primary_states.group_check_task, "");
@@ -49,7 +49,7 @@ void replica::init_group_check()
             &replica::broadcast_group_check,
             gpid_to_hash(get_gpid()),
             0,
-            _options.group_check_internal_ms
+            _options->group_check_internal_ms
             );
 }
 
@@ -75,7 +75,7 @@ void replica::broadcast_group_check()
         if (it->first == primary_address())
             continue;
 
-        dsn_address_t addr = it->first;
+        ::dsn::rpc_address addr = it->first;
         std::shared_ptr<group_check_request> request(new group_check_request);
 
         request->app_type = _primary_states.membership.app_type;
@@ -102,18 +102,18 @@ void replica::broadcast_group_check()
         _primary_states.group_check_pending_replies[addr] = callback_task;
 
         ddebug(
-            "%s: init_group_check for %s:%hu", name(), addr.name, addr.port
+            "%s: init_group_check for %s:%hu", name(), addr.name(), addr.port()
         );
     }
 }
 
-void replica::on_group_check(const group_check_request& request, __out_param group_check_response& response)
+void replica::on_group_check(const group_check_request& request, /*out*/ group_check_response& response)
 {
     check_hashed_access();
 
     ddebug(
         "%s: on_group_check from %s:%hu",
-        name(), request.config.primary.name, request.config.primary.port
+        name(), request.config.primary.name(), request.config.primary.port()
         );
     
     if (request.config.ballot < get_ballot())
@@ -198,7 +198,7 @@ void replica::on_group_check_reply(error_code err, std::shared_ptr<group_check_r
 // for testing purpose only
 void replica::send_group_check_once_for_test(int delay_milliseconds)
 {
-    dassert (_options.group_check_disabled, "");
+    dassert (_options->group_check_disabled, "");
 
     _primary_states.group_check_task = tasking::enqueue(
             LPC_GROUP_CHECK,

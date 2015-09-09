@@ -33,7 +33,7 @@ namespace dsn.dev.csharp
         private Marshaller _marshaller;
     }
 
-    public class Serverlet<T> : Servicelet
+    public class Serverlet<T> : Clientlet
         where T : Serverlet<T>
     {
         public Serverlet(string name, int task_bucket_count = 13)

@@ -107,7 +107,7 @@ namespace dsn {
     }
 
     template<typename T>
-    void unmarshall(binary_reader& reader, __out_param T& val)
+    void unmarshall(binary_reader& reader, /*out*/ T& val)
     {
         gproto_binary_reader rd2(reader);
         ::google::protobuf::io::CodedInputStream is(&rd2);

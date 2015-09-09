@@ -45,9 +45,12 @@ configuration::configuration(const char* file_name, const char* arguments)
     FILE* fd = ::fopen(file_name, "rb");
     if (fd == nullptr) 
     {
-        char cdir[FILENAME_MAX];
-        getcwd_(cdir, sizeof(cdir));
-        printf("Cannot open file %s in %s, err=%s", file_name, cdir, strerror(errno));
+		std::string cdir;
+		if (!dsn::utils::filesystem::get_current_directory(cdir))
+		{
+			dassert(false, "Fail to get current working directory.");
+		}
+        printf("Cannot open file %s in %s, err=%s", file_name, cdir.c_str(), strerror(errno));
         return;
     }
     ::fseek(fd, 0, SEEK_END);

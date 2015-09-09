@@ -45,6 +45,10 @@
 # include "crc.h"
 # include <fstream>
 
+# ifndef _WIN32
+# include <signal.h>
+# endif
+
 //
 // global state
 //
@@ -245,16 +249,16 @@ DSN_API uint32_t dsn_crc32_concatenate(uint32_t xy_init, uint32_t x_init, uint32
 // // TODO: what can be configured for a thread pool
 //
 //------------------------------------------------------------------------------
-DSN_API dsn_task_t dsn_task_create(dsn_task_code_t code, dsn_task_handler_t cb, void* param, int hash)
+DSN_API dsn_task_t dsn_task_create(dsn_task_code_t code, dsn_task_handler_t cb, void* param, int hash, dsn_app_t app)
 {
-    auto t = new ::dsn::task_c(code, cb, param, hash);
+    auto t = new ::dsn::task_c(code, cb, param, hash, (::dsn::service_node*)app);
     return t;
 }
 
 DSN_API dsn_task_t dsn_task_create_timer(dsn_task_code_t code, dsn_task_handler_t cb, 
-    void* param, int hash, int interval_milliseconds)
+    void* param, int hash, int interval_milliseconds, dsn_app_t app)
 {
-    auto t = new ::dsn::timer_task(code, cb, param, interval_milliseconds, hash);
+    auto t = new ::dsn::timer_task(code, cb, param, interval_milliseconds, hash, (::dsn::service_node*)app);
     return t;
 }
 
@@ -471,101 +475,85 @@ DSN_API bool dsn_semaphore_wait_timeout(dsn_handle_t s, int timeout_milliseconds
 //------------------------------------------------------------------------------
 
 // rpc calls
-DSN_API void dsn_address_get_invalid(/*out*/ dsn_address_t* paddr)
+DSN_API dsn_address_t dsn_primary_address(dsn_app_t app)
 {
-    *paddr = dsn_address_invalid;
+    auto rpc = app ? ((dsn::service_node*)app)->node_rpc() : ::dsn::task::get_current_rpc();
+    return rpc->primary_address().c_addr();
 }
 
-DSN_API dsn_address_t dsn_primary_address()
+DSN_API void dsn_primary_address2(dsn_address_t* paddr, dsn_app_t app)
 {
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
-    return tsk->node()->rpc()->primary_address();
+    *paddr = dsn_primary_address(app);
 }
 
-DSN_API void dsn_primary_address2(dsn_address_t* paddr)
+DSN_API bool dsn_rpc_register_handler(dsn_task_code_t code, const char* name, dsn_rpc_request_handler_t cb, void* param, dsn_app_t app)
 {
-    *paddr = dsn_primary_address();
-}
-
-DSN_API bool dsn_rpc_register_handler(dsn_task_code_t code, const char* name, dsn_rpc_request_handler_t cb, void* param)
-{
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
     ::dsn::rpc_handler_ptr h(new ::dsn::rpc_handler_info(code));
     h->name = std::string(name);
     h->c_handler = cb;
     h->parameter = param;
 
-    return tsk->node()->rpc()->register_rpc_handler(h);
+    auto node = app ? (::dsn::service_node*)app : ::dsn::task::get_current_node();
+    return node->rpc_register_handler(h);
 }
 
-DSN_API void* dsn_rpc_unregiser_handler(dsn_task_code_t code)
+DSN_API void* dsn_rpc_unregiser_handler(dsn_task_code_t code, dsn_app_t app)
 {
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
-    auto h = tsk->node()->rpc()->unregister_rpc_handler(code);
+    auto node = app ? (::dsn::service_node*)app : ::dsn::task::get_current_node();
+    auto h = node->rpc_unregister_handler(code);
     return h->parameter;
 }
 
-DSN_API dsn_task_t dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, void* param, int reply_hash)
+DSN_API dsn_task_t dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, void* param, int reply_hash, dsn_app_t app)
 {
     auto msg = ((::dsn::message_ex*)request);
-    return new ::dsn::rpc_response_task(msg, cb, param, reply_hash);
+    return new ::dsn::rpc_response_task(msg, cb, param, reply_hash, (::dsn::service_node*)app);
 }
 
-DSN_API void dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call, dsn_task_tracker_t tracker)
+DSN_API void dsn_rpc_call(const dsn_address_t* server, dsn_task_t rpc_call, dsn_task_tracker_t tracker, dsn_app_t app)
 {
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
     ::dsn::rpc_response_task* task = (::dsn::rpc_response_task*)rpc_call;
     dassert(task->spec().type == TASK_TYPE_RPC_RESPONSE, "");
     task->set_tracker((dsn::task_tracker*)tracker);
 
-    auto rpc = tsk->node()->rpc();
+    auto rpc = app ? ((dsn::service_node*)app)->node_rpc() : ::dsn::task::get_current_rpc();
 
     // TODO: remove this parameter in future
     auto msg = task->get_request();
-    msg->to_address = server;
+    msg->to_address = *server;
     rpc->call(msg, task);
 }
 
-DSN_API dsn_message_t dsn_rpc_call_wait(dsn_address_t server, dsn_message_t request)
+DSN_API dsn_message_t dsn_rpc_call_wait(const dsn_address_t* server, dsn_message_t request, dsn_app_t app)
 {
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
-    auto rpc = tsk->node()->rpc();
+    auto rpc = app ? ((dsn::service_node*)app)->node_rpc() : ::dsn::task::get_current_rpc();
     auto msg = ((::dsn::message_ex*)request);
-    msg->to_address = server;
+    msg->to_address = *server;
 
-    ::dsn::rpc_response_task* rtask = new ::dsn::rpc_response_task(msg, nullptr, nullptr, 0);
+    ::dsn::rpc_response_task* rtask = 
+        new ::dsn::rpc_response_task(msg, nullptr, nullptr, 0, (::dsn::service_node*)app);
+    rtask->add_ref();
     rpc->call(msg, rtask);
     rtask->wait();
     if (rtask->error() == ::dsn::ERR_OK)
     {
         auto msg = rtask->get_response();
         msg->add_ref(); // released by callers
+        rtask->release_ref(); // added above
         return msg;
     }
     else
     {
+        rtask->release_ref(); // added above
         return nullptr;
     }
 }
 
-DSN_API void dsn_rpc_call_one_way(dsn_address_t server, dsn_message_t request)
+DSN_API void dsn_rpc_call_one_way(const dsn_address_t* server, dsn_message_t request, dsn_app_t app)
 {
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
-    auto rpc = tsk->node()->rpc();
+    auto rpc = app ? ((dsn::service_node*)app)->node_rpc() : ::dsn::task::get_current_rpc();
     auto msg = ((::dsn::message_ex*)request);
-    msg->to_address = server;
+    msg->to_address = *server;
 
     rpc->call(msg, nullptr);
 }
@@ -604,32 +592,27 @@ DSN_API void dsn_rpc_enqueue_response(dsn_task_t rpc_call, dsn_error_t err, dsn_
 // file operations
 //
 //------------------------------------------------------------------------------
-DSN_API dsn_handle_t dsn_file_open(const char* file_name, int flag, int pmode)
+DSN_API dsn_handle_t dsn_file_open(const char* file_name, int flag, int pmode, dsn_app_t app)
 {
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
-    return tsk->node()->disk()->open(file_name, flag, pmode);
+    auto disk = ::dsn::task::get_current_disk();
+    if (!disk) disk = ((::dsn::service_node*)app)->node_disk();
+    return disk->open(file_name, flag, pmode);
 }
 
-DSN_API dsn_error_t dsn_file_close(dsn_handle_t file)
+DSN_API dsn_error_t dsn_file_close(dsn_handle_t file, dsn_app_t app)
 {
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
-    return tsk->node()->disk()->close(file);
+    auto disk = ::dsn::task::get_current_disk();
+    if (!disk) disk = ((::dsn::service_node*)app)->node_disk();
+    return disk->close(file);
 }
 
-DSN_API dsn_task_t dsn_file_create_aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash)
+DSN_API dsn_task_t dsn_file_create_aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash, dsn_app_t app)
 {
-    return new ::dsn::aio_task(code, cb, param, hash);
+    return new ::dsn::aio_task(code, cb, param, hash, (dsn::service_node*)app);
 }
 
 DSN_API void dsn_file_read(dsn_handle_t file, char* buffer, int count, uint64_t offset, dsn_task_t cb, dsn_task_tracker_t tracker)
 {
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
     ::dsn::aio_task* callback((::dsn::aio_task*)cb);
     callback->set_tracker((dsn::task_tracker*)tracker);
     callback->aio()->buffer = buffer;
@@ -639,14 +622,13 @@ DSN_API void dsn_file_read(dsn_handle_t file, char* buffer, int count, uint64_t 
     callback->aio()->file_offset = offset;
     callback->aio()->type = ::dsn::AIO_Read;
 
-    tsk->node()->disk()->read(callback);
+    auto disk = ::dsn::task::get_current_disk();
+    if (!disk) disk = callback->node()->node_disk();
+    disk->read(callback);
 }
 
 DSN_API void dsn_file_write(dsn_handle_t file, const char* buffer, int count, uint64_t offset, dsn_task_t cb, dsn_task_tracker_t tracker)
 {
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
     ::dsn::aio_task* callback((::dsn::aio_task*)cb);
     callback->set_tracker((dsn::task_tracker*)tracker);
     callback->aio()->buffer = (char*)buffer;
@@ -656,31 +638,33 @@ DSN_API void dsn_file_write(dsn_handle_t file, const char* buffer, int count, ui
     callback->aio()->file_offset = offset;
     callback->aio()->type = ::dsn::AIO_Write;
 
-    tsk->node()->disk()->write(callback);
+    auto disk = ::dsn::task::get_current_disk();
+    if (!disk) disk = callback->node()->node_disk();
+    disk->write(callback);
 }
 
-DSN_API void dsn_file_copy_remote_directory(dsn_address_t remote, const char* source_dir, 
+DSN_API void dsn_file_copy_remote_directory(const dsn_address_t* remote, const char* source_dir, 
     const char* dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker)
 {
     std::shared_ptr<::dsn::remote_copy_request> rci(new ::dsn::remote_copy_request());
-    rci->source = remote;
+    rci->source = *remote;
     rci->source_dir = source_dir;
     rci->files.clear();
     rci->dest_dir = dest_dir;
     rci->overwrite = overwrite;
 
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
     ::dsn::aio_task* callback((::dsn::aio_task*)cb);
     callback->set_tracker((dsn::task_tracker*)tracker);
-    return tsk->node()->nfs()->call(rci, callback);
+
+    auto nfs = ::dsn::task::get_current_nfs();
+    if (!nfs) nfs = callback->node()->node_nfs();
+    nfs->call(rci, callback);
 }
 
-DSN_API void dsn_file_copy_remote_files(dsn_address_t remote, const char* source_dir, const char** source_files, const char* dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker)
+DSN_API void dsn_file_copy_remote_files(const dsn_address_t* remote, const char* source_dir, const char** source_files, const char* dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker)
 {
     std::shared_ptr<::dsn::remote_copy_request> rci(new ::dsn::remote_copy_request());
-    rci->source = remote;
+    rci->source = *remote;
     rci->source_dir = source_dir;
 
     rci->files.clear();
@@ -694,12 +678,12 @@ DSN_API void dsn_file_copy_remote_files(dsn_address_t remote, const char* source
     rci->dest_dir = dest_dir;
     rci->overwrite = overwrite;
 
-    auto tsk = ::dsn::task::get_current_task();
-    dassert(tsk != nullptr, "this function can only be invoked inside tasks");
-
     ::dsn::aio_task* callback((::dsn::aio_task*)cb);
     callback->set_tracker((dsn::task_tracker*)tracker);
-    return tsk->node()->nfs()->call(rci, callback);
+
+    auto nfs = ::dsn::task::get_current_nfs();
+    if (!nfs) nfs = callback->node()->node_nfs();
+    nfs->call(rci, callback);
 }
 
 DSN_API size_t dsn_file_get_io_size(dsn_task_t cb_task)
@@ -714,7 +698,7 @@ DSN_API void dsn_file_task_enqueue(dsn_task_t cb_task, dsn_error_t err, size_t s
     ::dsn::task* task = (::dsn::task*)cb_task;
     dassert(task->spec().type == TASK_TYPE_AIO, "");
 
-    ((::dsn::aio_task*)task)->enqueue(err, size, nullptr);
+    ((::dsn::aio_task*)task)->enqueue(err, size);
 }
 
 //------------------------------------------------------------------------------
@@ -724,12 +708,14 @@ DSN_API void dsn_file_task_enqueue(dsn_task_t cb_task, dsn_error_t err, size_t s
 //------------------------------------------------------------------------------
 DSN_API uint64_t dsn_now_ns()
 {
-    return ::dsn::service_engine::fast_instance().env()->now_ns();
+    //return ::dsn::task::get_current_env()->now_ns();
+    return ::dsn::service_engine::instance().env()->now_ns();
 }
 
 DSN_API uint64_t dsn_random64(uint64_t min, uint64_t max) // [min, max]
 {
-    return ::dsn::service_engine::fast_instance().env()->random64(min, max);
+    //return ::dsn::task::get_current_env()->random64(min, max);
+    return ::dsn::service_engine::instance().env()->random64(min, max);
 }
 
 //------------------------------------------------------------------------------
@@ -756,6 +742,29 @@ DSN_API bool dsn_run_config(const char* config, bool sleep_after_init)
     return run(config, nullptr, sleep_after_init, name, -1);
 }
 
+DSN_API void dsn_terminate()
+{
+# if defined(_WIN32)
+    ::ExitProcess(0);
+# else
+    kill(getpid(), SIGKILL);
+# endif
+}
+
+DSN_API dsn_app_t dsn_query_app(const char* app_name, int index)
+{
+    auto nodes = ::dsn::service_engine::instance().get_all_nodes();
+    for (auto& n : nodes)
+    {
+        if (n.second->spec().name == std::string(app_name) ||            
+            (n.second->spec().name.substr(0, strlen(app_name)) == std::string(app_name)
+            && n.second->spec().index == index)
+            )
+            return n.second;
+    }
+    return nullptr;
+}
+
 //
 // run the system with arguments
 //   config [-cargs k1=v1;k2=v2] [-app app_name] [-app_index index]
@@ -770,7 +779,7 @@ DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init)
     {
         printf("invalid options for dsn_run\n"
             "// run the system with arguments\n"
-            "//   config [-cargs k1=v1;k2=v2] [-app app_name] [-app_index index]\n"
+            "//   config [-cargs k1=v1;k2=v2] [-app app_name] [-app_index index (1,2,3...)]\n"
             "// e.g., config.ini -app replica -app_index 1 to start the first replica as a new process\n"
             "//       config.ini -app replica to start ALL replicas (count specified in config) as a new process\n"
             "//       config.ini -app replica -cargs replica-port=34556 to start with %%replica-port%% var in config.ini\n"
@@ -839,6 +848,10 @@ namespace dsn {
 extern void dsn_log_init();
 bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_name, int app_index)
 {
+    memset((void*)&dsn::tls_dsn, 0, sizeof(dsn::tls_dsn));
+    dsn::tls_dsn.magic = 0xdeadbeef;
+    dsn::tls_dsn.worker_index = -1;
+
     dsn_all.engine_ready = false;
     dsn_all.config_completed = false;
     dsn_all.tool = nullptr;
@@ -873,13 +886,22 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
 #endif
         getchar();
     }
-
+    
     // setup coredump
-    if (!::dsn::utils::is_file_or_dir_exist(spec.coredump_dir.c_str()))
+	auto& coredump_dir = spec.coredump_dir;
+	dassert(!dsn::utils::filesystem::file_exists(coredump_dir), "%s should not be a file.", coredump_dir.c_str());
+    if (!dsn::utils::filesystem::directory_exists(coredump_dir.c_str()))
     {
-        mkdir_(spec.coredump_dir.c_str());
+		if (!dsn::utils::filesystem::create_directory(coredump_dir))
+		{
+			dassert(false, "Fail to create %s.", coredump_dir.c_str());
+		}
     }
-    std::string cdir = ::dsn::utils::get_absolute_path(spec.coredump_dir.c_str());
+	std::string cdir;
+	if (!dsn::utils::filesystem::get_absolute_path(coredump_dir.c_str(), cdir))
+	{
+		dassert(false, "Fail to get absolute path from %s.", coredump_dir.c_str());
+	}
     ::dsn::utils::coredump::init(cdir.c_str());
 
     // init tools

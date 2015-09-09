@@ -1,6 +1,5 @@
 # include "nfs_server_impl.h"
 # include <cstdlib>
-# include <boost/filesystem.hpp>
 # include <sys/stat.h>
 
 namespace dsn {
@@ -110,25 +109,33 @@ namespace dsn {
             std::string folder = request.source_dir;
             if (request.file_list.size() == 0) // return all file size in the destination file folder
             {
-                if (!::dsn::utils::is_file_or_dir_exist(folder.c_str()))
+                if (!dsn::utils::filesystem::directory_exists(folder))
                 {
                     err = ERR_OBJECT_NOT_FOUND;
                 }
                 else
                 {
-                    get_file_names(folder, file_list);
-                    for (size_t i = 0; i < file_list.size(); i++)
-                    {
-                        struct stat st;
-                        ::stat(file_list[i].c_str(), &st);
+					if (!dsn::utils::filesystem::get_subfiles(folder, file_list, true))
+					{
+						err = ERR_FILE_OPERATION_FAILED;
+					}
+					else
+					{
+						for (auto& fpath : file_list)
+						{
+							// TODO: using uint64 instead as file ma
+							// Done
+							int64_t sz;
+							if (!dsn::utils::filesystem::file_size(fpath, sz))
+							{
+								dassert(false, "Fail to get file size of %s.", fpath.c_str());
+							}
 
-                        // TODO: using uint64 instead as file ma
-                        // Done
-                        uint64_t size = st.st_size;
-
-                        resp.size_list.push_back(size);
-                        resp.file_list.push_back(file_list[i].substr(request.source_dir.length(), file_list[i].length() - 1));
-                    }
+							resp.size_list.push_back((uint64_t)sz);
+							resp.file_list.push_back(fpath.substr(request.source_dir.length(), fpath.length() - 1));
+						}
+						file_list.clear();
+					}
                 }
             }
             else // return file size in the request file folder
@@ -180,18 +187,5 @@ namespace dsn {
                     it++;
             }
         }
-
-        void nfs_service_impl::get_file_names(std::string dir, std::vector<std::string>& file_list)
-        {
-            boost::filesystem::recursive_directory_iterator it(dir), end;
-            for (; it != end; ++it)
-            {
-                if (!boost::filesystem::is_directory(*it))
-                {
-                    file_list.push_back(it->path().string());
-                }
-            }
-        }
-
     }
 }

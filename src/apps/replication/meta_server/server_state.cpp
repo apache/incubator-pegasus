@@ -40,7 +40,7 @@ void marshall(binary_writer& writer, const app_state& val)
     marshall(writer, val.partitions);
 }
 
-void unmarshall(binary_reader& reader, __out_param app_state& val)
+void unmarshall(binary_reader& reader, /*out*/ app_state& val)
 {
     unmarshall(reader, val.app_type);
     unmarshall(reader, val.app_name);
@@ -70,7 +70,7 @@ void server_state::load(const char* chk_point)
     int32_t len;
     ::fread((void*)&len, sizeof(int32_t), 1, fp);
 
-    std::shared_ptr<char> buffer((char*)malloc(len));
+    std::shared_ptr<char> buffer(new char[len]);
     ::fread((void*)buffer.get(), len, 1, fp);
 
     blob bb(buffer, 0, len);
@@ -85,7 +85,7 @@ void server_state::load(const char* chk_point)
     {
         auto& ps = app.partitions[i];
 
-        if (ps.primary != dsn_address_invalid)
+        if (ps.primary.is_invalid() == false)
         {
             _nodes[ps.primary].primaries.insert(ps.gpid);
             _nodes[ps.primary].partitions.insert(ps.gpid);
@@ -93,7 +93,7 @@ void server_state::load(const char* chk_point)
         
         for (auto& ep : ps.secondaries)
         {
-            dassert(ep != dsn_address_invalid, "");
+            dassert(ep.is_invalid() == false, "");
             _nodes[ep].partitions.insert(ps.gpid);
         }
     }
@@ -163,7 +163,7 @@ void server_state::init_app()
         ps.gpid.pidx = i;
         ps.last_committed_decree = 0;
         ps.max_replica_count = max_replica_count;
-        ps.primary = dsn_address_invalid;
+        ps.primary.set_invalid();
         
         app.partitions.push_back(ps);
     }
@@ -171,7 +171,7 @@ void server_state::init_app()
     _apps.push_back(app);
 }
 
-void server_state::get_node_state(__out_param node_states& nodes)
+void server_state::get_node_state(/*out*/ node_states& nodes)
 {
     zauto_read_lock l(_lock);
     for (auto it = _nodes.begin(); it != _nodes.end(); it++)
@@ -180,7 +180,7 @@ void server_state::get_node_state(__out_param node_states& nodes)
     }
 }
 
-void server_state::set_node_state(const node_states& nodes, __out_param machine_fail_updates* pris)
+void server_state::set_node_state(const node_states& nodes, /*out*/ machine_fail_updates* pris)
 {
     zauto_write_lock l(_lock);
 
@@ -188,7 +188,7 @@ void server_state::set_node_state(const node_states& nodes, __out_param machine_
     
     for (auto& itr : nodes)
     {
-        dassert(itr.first != dsn_address_invalid, "");
+        dassert(itr.first.is_invalid() == false, "");
 
         auto it = _nodes.find(itr.first);
         if (it != _nodes.end())
@@ -216,7 +216,7 @@ void server_state::set_node_state(const node_states& nodes, __out_param machine_
                         request->type = CT_DOWNGRADE_TO_INACTIVE;
                         request->config = old;
                         request->config.ballot++;
-                        request->config.primary = dsn_address_invalid;
+                        request->config.primary.set_invalid();
 
                         (*pris)[pri] = request;
                     }
@@ -250,7 +250,7 @@ void server_state::unfree_if_possible_on_start()
     dinfo("live replica server # is %d, freeze = %s", _node_live_count, _freeze ? "true" : "false");
 }
 
-bool server_state::get_meta_server_primary(__out_param dsn_address_t& node)
+bool server_state::get_meta_server_primary(/*out*/ ::dsn::rpc_address& node)
 {
     zauto_read_lock l(_meta_lock);
     if (-1 == _leader_index)
@@ -262,7 +262,7 @@ bool server_state::get_meta_server_primary(__out_param dsn_address_t& node)
     }
 }
 
-void server_state::add_meta_node(const dsn_address_t& node)
+void server_state::add_meta_node(const ::dsn::rpc_address& node)
 {
     zauto_write_lock l(_meta_lock);
     
@@ -271,7 +271,7 @@ void server_state::add_meta_node(const dsn_address_t& node)
         _leader_index = 0;
 }
 
-void server_state::remove_meta_node(const dsn_address_t& node)
+void server_state::remove_meta_node(const ::dsn::rpc_address& node)
 {
     zauto_write_lock l(_meta_lock);
     
@@ -293,7 +293,7 @@ void server_state::remove_meta_node(const dsn_address_t& node)
         }
     }
 
-    dassert (false, "cannot find node '%s:%hu' in server state", node.name, node.port);
+    dassert (false, "cannot find node '%s:%hu' in server state", node.name(), node.port());
 }
 
 void server_state::switch_meta_primary()
@@ -314,7 +314,7 @@ void server_state::switch_meta_primary()
 }
 
 // partition server & client => meta server
-void server_state::query_configuration_by_node(configuration_query_by_node_request& request, __out_param configuration_query_by_node_response& response)
+void server_state::query_configuration_by_node(configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response)
 {
     zauto_read_lock l(_lock);
     auto it = _nodes.find(request.node);
@@ -333,13 +333,13 @@ void server_state::query_configuration_by_node(configuration_query_by_node_reque
     }
 }
 
-void server_state::query_configuration_by_gpid(global_partition_id id, __out_param partition_configuration& config)
+void server_state::query_configuration_by_gpid(global_partition_id id, /*out*/ partition_configuration& config)
 {
     zauto_read_lock l(_lock);
     config = _apps[id.app_id - 1].partitions[id.pidx];
 }
 
-void server_state::query_configuration_by_index(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response)
+void server_state::query_configuration_by_index(configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response)
 {
     zauto_read_lock l(_lock);
 
@@ -366,14 +366,14 @@ void server_state::query_configuration_by_index(configuration_query_by_index_req
     response.err = ERR_OBJECT_NOT_FOUND;
 }
 
-void server_state::update_configuration(configuration_update_request& request, __out_param configuration_update_response& response)
+void server_state::update_configuration(configuration_update_request& request, /*out*/ configuration_update_response& response)
 {
     zauto_write_lock l(_lock);
 
     update_configuration_internal(request, response);
 }
 
-void server_state::update_configuration_internal(configuration_update_request& request, __out_param configuration_update_response& response)
+void server_state::update_configuration_internal(configuration_update_request& request, /*out*/ configuration_update_response& response)
 {
     app_state& app = _apps[request.config.gpid.app_id - 1];
     partition_configuration& old = app.partitions[request.config.gpid.pidx];
@@ -441,10 +441,10 @@ void server_state::update_configuration_internal(configuration_update_request& r
         old = request.config;
 
         std::stringstream cf;
-        cf << "{primary:" << request.config.primary.name << ":" << request.config.primary.port << ", secondaries = [";
+        cf << "{primary:" << request.config.primary.name() << ":" << request.config.primary.port() << ", secondaries = [";
         for (auto& s : request.config.secondaries)
         {
-            cf << s.name << ":" << s.port << ",";
+            cf << s.name() << ":" << s.port() << ",";
         }
         cf << "]}";
 
@@ -472,7 +472,7 @@ void server_state::check_consistency(global_partition_id gpid)
     app_state& app = _apps[gpid.app_id - 1];
     partition_configuration& config = app.partitions[gpid.pidx];
 
-    if (config.primary != dsn_address_invalid)
+    if (config.primary.is_invalid() == false)
     {
         auto it = _nodes.find(config.primary);
         dassert(it != _nodes.end(), "");

@@ -30,24 +30,26 @@
 namespace dsn { namespace tools {
 
     class sim_network_provider;
-    class sim_client_session : public rpc_client_session
+    class sim_client_session : public rpc_session
     {
     public:
-        sim_client_session(sim_network_provider& net, const dsn_address_t& remote_addr, rpc_client_matcher_ptr& matcher);
+        sim_client_session(sim_network_provider& net, const ::dsn::rpc_address& remote_addr, rpc_client_matcher_ptr& matcher);
 
         virtual void connect();
         virtual void send(message_ex* msg);
     };
 
-    class sim_server_session : public rpc_server_session
+    class sim_server_session : public rpc_session
     {
     public:
-        sim_server_session(sim_network_provider& net, const dsn_address_t& remote_addr, rpc_client_session_ptr& client);
+        sim_server_session(sim_network_provider& net, const ::dsn::rpc_address& remote_addr, rpc_session_ptr& client);
 
         virtual void send(message_ex* reply_msg);
 
+        virtual void connect() {}
+
     private:
-        rpc_client_session_ptr _client;
+        rpc_session_ptr _client;
     };
 
     class sim_network_provider : public connection_oriented_network
@@ -56,20 +58,20 @@ namespace dsn { namespace tools {
         sim_network_provider(rpc_engine* rpc, network* inner_provider);
         ~sim_network_provider(void) {}
 
-        virtual error_code start(rpc_channel channel, int port, bool client_only);
+        virtual error_code start(rpc_channel channel, int port, bool client_only, io_modifer& ctx);
     
-        virtual const dsn_address_t& address() { return _address; }
+        virtual const ::dsn::rpc_address& address() { return _address; }
 
-        virtual rpc_client_session_ptr create_client_session(const dsn_address_t& server_addr)
+        virtual rpc_session_ptr create_client_session(const ::dsn::rpc_address& server_addr)
         {
             auto matcher = new_client_matcher();
-            return rpc_client_session_ptr(new sim_client_session(*this, server_addr, matcher));
+            return rpc_session_ptr(new sim_client_session(*this, server_addr, matcher));
         }
 
         uint32_t net_delay_milliseconds() const;
 
     private:
-        dsn_address_t    _address;
+        ::dsn::rpc_address    _address;
         uint32_t     _min_message_delay_microseconds;
         uint32_t     _max_message_delay_microseconds;
     };

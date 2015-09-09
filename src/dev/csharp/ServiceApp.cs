@@ -13,7 +13,6 @@ namespace dsn.dev.csharp
         {
             _started = false;
             _address = new RpcAddress();
-            Native.dsn_address_get_invalid(out _address.addr);
             _gch = GCHandle.Alloc(this);
         }
 
@@ -37,7 +36,7 @@ namespace dsn.dev.csharp
         private string        _name;
         private GCHandle      _gch;
 
-        private static IntPtr AppCreate<T>()
+        private static IntPtr AppCreate<T>(string tname)
             where T : ServiceApp, new()
         {
             ServiceApp app = new T();
