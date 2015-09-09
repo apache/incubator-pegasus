@@ -156,13 +156,7 @@ namespace dsn
         {
             int fd = (int)(intptr_t)handle;
             struct kevent e;
-            
-            if (cb)
-            {
-                utils::auto_lock<utils::ex_lock_nr_spin> l(_io_sessions_lock);
-                auto r = _io_sessions.erase(cb);
-                dassert(r > 0, "the callback must be present");
-            }
+            int cnt = 0;
 
             for (auto filter : _filters)
             {
@@ -175,6 +169,23 @@ namespace dsn
                         return ERR_BIND_IOCP_FAILED;
                     }
                 }
+                else
+                {
+                    cnt++;
+                }
+            }
+
+            if (cnt == 0)
+            {
+                derror("fd = %d has not been binded yet.", fd);
+                return ERR_BIND_IOCP_FAILED;
+            }
+
+            if (cb)
+            {
+                utils::auto_lock<utils::ex_lock_nr_spin> l(_io_sessions_lock);
+                auto r = _io_sessions.erase(cb);
+                dassert(r > 0, "the callback must be present");
             }
 
             return ERR_OK;
