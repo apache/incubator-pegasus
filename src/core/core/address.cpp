@@ -139,18 +139,14 @@ DSN_API void dsn_host_from_name(dsn_host_type_t type, const char* name, /*out*/ 
         if ((addr.sin_addr.s_addr = inet_addr(name)) == (unsigned int)(-1))
         {
             hostent* hp = gethostbyname(name);
-            if (hp != 0)
+            dassert(hp != nullptr, "gethostbyname failed, err = %s.", ::hstrerror(h_errno));
+            if (hp != nullptr)
             {
                 memcpy(
                     (void*)&(addr.sin_addr.s_addr),
                     (const void*)hp->h_addr,
                     (size_t)hp->h_length
                     );
-            }
-            else
-            {
-                int err = h_errno;
-                dassert(false, "Fail to get host by name. error = %s.", ::hstrerror(err));
             }
         }
 
