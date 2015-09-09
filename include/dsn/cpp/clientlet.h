@@ -40,7 +40,7 @@ namespace dsn
         clientlet(int task_bucket_count = 13);
 
         // used outside rDSN app models (e.g., when used in external app's threads)
-        clientlet(const char* host_app_type, int host_app_index, int task_bucket_count = 13);
+        clientlet(const char* host_app_name, int host_app_index, int task_bucket_count = 13);
         
         virtual ~clientlet();
 

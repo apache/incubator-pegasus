@@ -49,8 +49,8 @@ namespace dsn {
     class rpc_timeout_task : public task
     {
     public:
-        rpc_timeout_task(rpc_client_matcher* matcher, uint64_t id) 
-            : task(LPC_RPC_TIMEOUT)
+        rpc_timeout_task(rpc_client_matcher* matcher, uint64_t id, service_node* node) 
+            : task(LPC_RPC_TIMEOUT, 0, node)
         {
             _matcher = matcher;
             _id = id;
@@ -141,7 +141,7 @@ namespace dsn {
         message_header& hdr = *request->header;
 
         dbg_dassert(call != nullptr, "rpc response task cannot be empty");
-        timeout_task = (new rpc_timeout_task(this, hdr.id));
+        timeout_task = (new rpc_timeout_task(this, hdr.id, call->node()));
 
         {
             utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock);

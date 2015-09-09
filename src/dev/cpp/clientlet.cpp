@@ -74,14 +74,14 @@ namespace dsn
         service_objects::instance().add(this);
     }
 
-    clientlet::clientlet(const char* host_app_type, int host_app_index, int task_bucket_count)
+    clientlet::clientlet(const char* host_app_name, int host_app_index, int task_bucket_count)
     {
         _tracker = dsn_task_tracker_create(task_bucket_count);
         _access_thread_id_inited = false;
-        _app = dsn_query_app(host_app_type, host_app_index);
+        _app = dsn_query_app(host_app_name, host_app_index);
         
         dassert(_app != nullptr, "cannot find given rDSN app %s.%d",
-            host_app_type, host_app_index);
+            host_app_name, host_app_index);
 
         service_objects::instance().add(this);
     }

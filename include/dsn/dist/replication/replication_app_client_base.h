@@ -56,7 +56,7 @@ namespace dsn { namespace replication {
         replication_app_client_base(
             const std::vector<::dsn::rpc_address>& meta_servers,
             const char* replicated_app_name,
-            const char* host_app_type, 
+            const char* host_app_name, 
             int host_app_index,
             int task_bucket_count = 13            
             );

@@ -56,8 +56,13 @@ void module_init()
     dsn::tools::register_toollet<dsn::tools::fault_injector>("fault_injector");
 }
 
+int g_test_count = 0;
+dsn_app_t g_app = nullptr;
+
 GTEST_API_ int main(int argc, char **argv) 
 {
+    testing::InitGoogleTest(&argc, argv);
+
     // register all tools
     module_init();
 
@@ -65,6 +70,25 @@ GTEST_API_ int main(int argc, char **argv)
     dsn::register_app<test_client>("test");
     
     // specify what services and tools will run in config file, then run
-    dsn_run(argc, argv, true);
+    dsn_run(argc, argv, false);
+
+    // run in-rDSN tests
+    while (g_test_count == 0)
+    {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+
+    // run out-rDSN tests
+    std::cout << "=========================================================== " << std::endl;
+    std::cout << "================== run in non-rDSN threads ================ " << std::endl;
+    std::cout << "=========================================================== " << std::endl;
+
+    // set host app for the non-in-rDSN-thread api calls
+    g_app = dsn_query_app("client", 1);
+    exec_tests();
+    
+    // exit without any destruction
+    dsn_terminate();
+
     return 0;    
 }

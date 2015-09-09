@@ -30,15 +30,19 @@
 # include <dsn/internal/task.h>
 # include <dsn/internal/task_worker.h>
 
-# ifndef _WIN32
-# include <signal.h>
-# endif
-
 using namespace ::dsn;
 
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_TEST_SERVER)
 DEFINE_TASK_CODE_RPC(RPC_TEST_HASH, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
 
+extern int g_test_count;
+extern dsn_app_t g_app;
+
+inline void exec_tests()
+{    
+    auto ret = RUN_ALL_TESTS();
+    g_test_count++;
+}
 
 class test_client :
     public ::dsn::serverlet<test_client>,
@@ -68,15 +72,10 @@ public:
         // client
         else
         {
-            testing::InitGoogleTest(&argc, argv);
-            auto ret = RUN_ALL_TESTS();
-
-            // exit without any destruction
-# if defined(_WIN32)
-            ::ExitProcess(0);
-# else
-            kill(getpid(), SIGKILL);
-# endif
+            std::cout << "=========================================================== " << std::endl;
+            std::cout << "================== run in rDSN threads ==================== " << std::endl;
+            std::cout << "=========================================================== " << std::endl;
+            exec_tests();
         }
         
         return ::dsn::ERR_OK;

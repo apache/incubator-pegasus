@@ -249,7 +249,7 @@ public:
     ~rpc_response_task();
 
     void             enqueue(error_code err, message_ex* reply);
-    virtual void     enqueue() { task::enqueue(_caller_pool); } // re-enqueue after above enqueue
+    virtual void     enqueue(); // re-enqueue after above enqueue, e.g., after delay
     message_ex*      get_request() { return _request; }
     message_ex*      get_response() { return _response; }
 

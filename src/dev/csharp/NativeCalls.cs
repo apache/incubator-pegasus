@@ -176,7 +176,7 @@ namespace dsn.dev.csharp
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static int  dsn_register_app_checker(string name, dsn_checker_create create, dsn_checker_apply apply);
         [DllImport(DSN_CORE_DLL, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static dsn_app_t dsn_query_app(string type_name, int index); // index starts from 1
+        public extern static dsn_app_t dsn_query_app(string app_name, int index); // index starts from 1
         [DllImport(DSN_CORE_DLL, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static bool dsn_run_config(string config, bool sleep_after_init);
         //
