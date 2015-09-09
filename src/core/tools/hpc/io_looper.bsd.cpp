@@ -40,7 +40,7 @@ namespace dsn
             _local_notification_fd = IO_LOOPER_USER_NOTIFICATION_FD;
             _filters.insert(EVFILT_READ);
             _filters.insert(EVFILT_WRITE);
-            _filters.insert(EVFILT_AIO);
+            //_filters.insert(EVFILT_AIO);
             _filters.insert(EVFILT_READ_WRITE);
             _filters.insert(EVFILT_USER);
         }
