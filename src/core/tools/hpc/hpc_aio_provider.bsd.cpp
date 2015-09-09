@@ -79,34 +79,13 @@ hpc_aio_provider::~hpc_aio_provider()
 
 dsn_handle_t hpc_aio_provider::open(const char* file_name, int oflag, int pmode)
 {
-    dsn_handle_t handle;
-    dsn_handle_t invalid_handle = (dsn_handle_t)(uintptr_t)(-1);
-
-    handle = (dsn_handle_t)(uintptr_t)::open(file_name, oflag, pmode);
-    if (handle == invalid_handle)
-    {
-        return invalid_handle;
-    }
-
-    if (_looper->bind_io_handle(handle, &_callback, EVFILT_AIO) != ERR_OK)
-    {
-        dassert(false, "Unable to bind aio handle.");
-    }
-
-    return handle;
+    // No need to bind handle since EVFILT_AIO is registered when aio_* is called.
+    return  (dsn_handle_t)(uintptr_t)::open(file_name, oflag, pmode);
 }
 
 error_code hpc_aio_provider::close(dsn_handle_t hFile)
 {
-    // TODO: handle failure
-    auto error = _looper->unbind_io_handle(hFile, &_callback);
-    if (error != ERR_OK)
-    {
-        return error;
-    }
-
-    error = ::close((int)(uintptr_t)(hFile)) == 0 ? ERR_OK : ERR_FILE_OPERATION_FAILED;
-
+    auto error = (::close((int)(uintptr_t)(hFile)) == 0) ? ERR_OK : ERR_FILE_OPERATION_FAILED;
     return error;
 }
 
@@ -140,9 +119,7 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
     aio->cb.aio_sigevent.sigev_notify = SIGEV_KEVENT;
     aio->cb.aio_sigevent.sigev_notify_kqueue = (int)(uintptr_t)_looper->native_handle();
     aio->cb.aio_sigevent.sigev_notify_kevent_flags = EV_CLEAR;
-    //aio->cb.aio_sigevent.sigev_notify_function = aio_completed;
-    //aio->cb.aio_sigevent.sigev_notify_attributes = nullptr;
-    aio->cb.aio_sigevent.sigev_value.sival_ptr = aio;
+    aio->cb.aio_sigevent.sigev_value.sival_ptr = &_callback;
 
     if (!async)
     {
@@ -202,7 +179,7 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
 
 void hpc_aio_provider::complete_aio(struct aiocb* io)
 {
-    auto ctx = (posix_disk_aio_context *)(io->aio_sigevent.sigev_value.sival_ptr);
+    posix_disk_aio_context* ctx = CONTAINING_RECORD(io, posix_disk_aio_context, cb);
 
     int err = aio_error(&ctx->cb);
     if (err != EINPROGRESS)
