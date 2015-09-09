@@ -138,8 +138,15 @@ DSN_API void dsn_host_from_name(dsn_host_type_t type, const char* name, /*out*/ 
         addr.sin_family = AF_INET;
         if ((addr.sin_addr.s_addr = inet_addr(name)) == (unsigned int)(-1))
         {
-            hostent* hp = gethostbyname(name);
-            dassert(hp != nullptr, "gethostbyname failed, err = %s.", ::hstrerror(h_errno));
+            hostent* hp = ::gethostbyname(name);
+            dassert(hp != nullptr, "gethostbyname failed, name = %s, err = %d.", name,
+# ifdef _WIN32
+		(int)::WSAGetLastError()
+# else
+		h_errno
+# endif
+		);
+
             if (hp != nullptr)
             {
                 memcpy(
