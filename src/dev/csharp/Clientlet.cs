@@ -147,6 +147,29 @@ namespace dsn.dev.csharp
             Native.dsn_task_call(task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero, delay_milliseconds);
             return ret;
         }
+
+        public static SafeTaskHandle CallAsync3(
+            TaskCode evt,
+            Clientlet callbackOwner,
+            task_handler callback,
+            int hash = 0,
+            int delay_milliseconds = 0,
+            int timer_interval_milliseconds = 0,
+            dsn_app_t app = default(dsn_app_t)
+            )
+        {
+            int idx = GlobalInterOpLookupTable.Put(callback);
+            IntPtr task;
+
+            if (timer_interval_milliseconds == 0)
+                task = Native.dsn_task_create(evt, _c_task_handler_holder, (IntPtr)idx, hash, app);
+            else
+                task = Native.dsn_task_create_timer(evt, _c_task_handler_holder, (IntPtr)idx, hash, timer_interval_milliseconds, app);
+
+            var ret = new SafeTaskHandle(task);
+            Native.dsn_task_call(task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero, delay_milliseconds);
+            return ret;
+        }
                 
         // no callback
         public void RpcCallOneWay(
