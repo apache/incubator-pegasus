@@ -45,6 +45,10 @@
 # include "crc.h"
 # include <fstream>
 
+# ifndef _WIN32
+# include <signal.h>
+# endif
+
 //
 // global state
 //
@@ -590,13 +594,15 @@ DSN_API void dsn_rpc_enqueue_response(dsn_task_t rpc_call, dsn_error_t err, dsn_
 //------------------------------------------------------------------------------
 DSN_API dsn_handle_t dsn_file_open(const char* file_name, int flag, int pmode, dsn_app_t app)
 {
-    auto disk = app ? ((::dsn::service_node*)app)->node_disk() : ::dsn::task::get_current_disk();
+    auto disk = ::dsn::task::get_current_disk();
+    if (!disk) disk = ((::dsn::service_node*)app)->node_disk();
     return disk->open(file_name, flag, pmode);
 }
 
 DSN_API dsn_error_t dsn_file_close(dsn_handle_t file, dsn_app_t app)
 {
-    auto disk = app ? ((::dsn::service_node*)app)->node_disk() : ::dsn::task::get_current_disk();
+    auto disk = ::dsn::task::get_current_disk();
+    if (!disk) disk = ((::dsn::service_node*)app)->node_disk();
     return disk->close(file);
 }
 
@@ -736,13 +742,24 @@ DSN_API bool dsn_run_config(const char* config, bool sleep_after_init)
     return run(config, nullptr, sleep_after_init, name, -1);
 }
 
-DSN_API dsn_app_t dsn_query_app(const char* type_name, int index)
+DSN_API void dsn_terminate()
+{
+# if defined(_WIN32)
+    ::ExitProcess(0);
+# else
+    kill(getpid(), SIGKILL);
+# endif
+}
+
+DSN_API dsn_app_t dsn_query_app(const char* app_name, int index)
 {
     auto nodes = ::dsn::service_engine::instance().get_all_nodes();
     for (auto& n : nodes)
     {
-        if (n.second->spec().type == std::string(type_name)
+        if (n.second->spec().name == std::string(app_name) ||            
+            (n.second->spec().name.substr(0, strlen(app_name)) == std::string(app_name)
             && n.second->spec().index == index)
+            )
             return n.second;
     }
     return nullptr;

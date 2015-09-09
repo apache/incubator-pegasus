@@ -494,7 +494,7 @@ void rpc_response_task::enqueue(error_code err, message_ex* reply)
 
     if (spec().on_rpc_response_enqueue.execute(this, true))
     {
-        task::enqueue(_caller_pool);
+        rpc_response_task::enqueue();
     }
 
     // release the task when necessary
@@ -504,6 +504,19 @@ void rpc_response_task::enqueue(error_code err, message_ex* reply)
         //         (2) upper apps may call add_ref already
         this->add_ref();
         this->release_ref();
+    }
+}
+
+void rpc_response_task::enqueue()
+{
+    if (_caller_pool)
+        task::enqueue(_caller_pool);
+
+    // possible when it is called in non-rDSN threads
+    else
+    {
+        auto pool = node()->computation()->get_pool(spec().pool_code);
+        task::enqueue(pool);
     }
 }
 
@@ -517,7 +530,9 @@ aio_task::aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int 
     dassert (TASK_TYPE_AIO == spec().type, "task must be of AIO type, please use DEFINE_TASK_CODE_AIO to define the task code");
     set_error_code(ERR_IO_PENDING);
 
-    _aio = task::get_current_disk()->prepare_aio_context(this);
+    auto disk = task::get_current_disk();
+    if (!disk) disk = node->node_disk();
+    _aio = disk->prepare_aio_context(this);
 }
 
 aio_task::~aio_task()

@@ -30,13 +30,13 @@ namespace dsn.dev.csharp
         }
 
         // use explicitly specified app as the host app
-        public Clientlet(string host_app_type, int host_app_index, int task_bucket_count = 13)
+        public Clientlet(string host_app_name, int host_app_index, int task_bucket_count = 13)
             : base(IntPtr.Zero, true)
         {
             SetHandle(Native.dsn_task_tracker_create(task_bucket_count));
             _access_thread_id_inited = false;
-            _app = Native.dsn_query_app(host_app_type, host_app_index);
-            Logging.dassert(_app != IntPtr.Zero, "cannot find host app " + host_app_type + "." + host_app_index);
+            _app = Native.dsn_query_app(host_app_name, host_app_index);
+            Logging.dassert(_app != IntPtr.Zero, "cannot find host app " + host_app_name + "." + host_app_index);
         }
 
         protected override bool ReleaseHandle()

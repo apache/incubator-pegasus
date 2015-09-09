@@ -252,7 +252,7 @@ extern DSN_API void      dsn_register_app_checker(
                             dsn_checker_apply apply
                             );
 extern DSN_API dsn_app_t dsn_query_app(
-                            const char* type_name, // registered at dsn_register_app_role
+                            const char* app_name, // specified in config file as [apps.xxx] name = %app_name%
                             int index // start from 1, when there are multiple instances
                             );
 extern DSN_API bool      dsn_run_config(
@@ -271,6 +271,7 @@ extern DSN_API bool      dsn_run_config(
 // Note the argc, argv folllows the C main convention that argv[0] is the executable name
 //
 extern DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init DEFAULT(false));
+extern DSN_API void dsn_terminate();
 extern DSN_API int  dsn_get_all_apps(dsn_app_info* info_buffer, int count); // return real app count
 
 //------------------------------------------------------------------------------
