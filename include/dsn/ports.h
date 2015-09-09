@@ -32,26 +32,18 @@
 # include <Winsock2.h>
 # include <ws2tcpip.h>
 # include <Windows.h>
-# include <direct.h>
 # pragma comment(lib, "ws2_32.lib")
 
 __pragma(warning(disable:4127))
 
-#define __thread __declspec(thread)
-#define __selectany __declspec(selectany) extern 
-#define getcwd_ _getcwd
-#define rmdir_ _rmdir
-#define mkdir_ _mkdir
+# define __thread __declspec(thread)
+# define __selectany __declspec(selectany) extern 
 
 # elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
 
 # include <unistd.h>
-# include <sys/stat.h>
 
 # define __selectany __attribute__((weak)) extern 
-#define getcwd_ getcwd
-#define rmdir_ rmdir
-#define mkdir_(path) mkdir(path, 0775)
 
 # ifndef O_BINARY
 # define O_BINARY 0
@@ -88,9 +80,8 @@ __pragma(warning(disable:4127))
 #define PROVIDER_TYPE_MAIN 0
 #define PROVIDER_TYPE_ASPECT 1
 
-
 # ifndef TIME_MS_MAX
-# define TIME_MS_MAX INT_MAX
+# define TIME_MS_MAX UINT_MAX
 # endif
 
 # ifndef FIELD_OFFSET
@@ -109,16 +100,4 @@ __pragma(warning(disable:4127))
 # ifndef ARRAYSIZE
 # define ARRAYSIZE(a) \
     ((sizeof(a) / sizeof(*(a))) / static_cast<size_t>(!(sizeof(a) % sizeof(*(a)))))
-# endif
-
-# ifndef __in_param
-# define __in_param
-# endif
-
-# ifndef __out_param
-# define __out_param
-# endif
-
-# ifndef __inout_param
-# define __inout_param
 # endif

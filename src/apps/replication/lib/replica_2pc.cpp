@@ -58,7 +58,7 @@ void replica::init_prepare(mutation_ptr& mu)
     error_code err = ERR_OK;
     uint8_t count = 0;
     
-    if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 < _options.mutation_2pc_min_replica_count)
+    if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 < _options->mutation_2pc_min_replica_count)
     {
         err = ERR_NOT_ENOUGH_MEMBER;
         goto ErrOut;
@@ -77,7 +77,7 @@ void replica::init_prepare(mutation_ptr& mu)
     ddebug("%s: mutation %s init_prepare", name(), mu->name());
 
     // check bounded staleness
-    if (mu->data.header.decree > last_committed_decree() + _options.staleness_for_commit)
+    if (mu->data.header.decree > last_committed_decree() + _options->staleness_for_commit)
     {
         err = ERR_CAPACITY_EXCEEDED;
         goto ErrOut;
@@ -97,7 +97,7 @@ void replica::init_prepare(mutation_ptr& mu)
     mu->set_left_secondary_ack_count((unsigned int)_primary_states.membership.secondaries.size());
     for (auto it = _primary_states.membership.secondaries.begin(); it != _primary_states.membership.secondaries.end(); it++)
     {
-        send_prepare_message(*it, PS_SECONDARY, mu, _options.prepare_timeout_ms_for_secondaries);
+        send_prepare_message(*it, PS_SECONDARY, mu, _options->prepare_timeout_ms_for_secondaries);
     }
 
     count = 0;
@@ -105,7 +105,7 @@ void replica::init_prepare(mutation_ptr& mu)
     {
         if (it->second.prepare_start_decree != invalid_decree && mu->data.header.decree >= it->second.prepare_start_decree)
         {
-            send_prepare_message(it->first, PS_POTENTIAL_SECONDARY, mu, _options.prepare_timeout_ms_for_potential_secondaries);
+            send_prepare_message(it->first, PS_POTENTIAL_SECONDARY, mu, _options->prepare_timeout_ms_for_potential_secondaries);
             count++;
         }
     }    
@@ -119,16 +119,24 @@ void replica::init_prepare(mutation_ptr& mu)
     // local log
     dassert (mu->data.header.log_offset == invalid_offset, "");
     dassert (mu->log_task() == nullptr, "");
-    mu->log_task() = _stub->_log->append(mu,
-        LPC_WRITE_REPLICATION_LOG,
-        this,
-        std::bind(&replica::on_append_log_completed, this, mu, 
-            std::placeholders::_1, 
-            std::placeholders::_2),
-        gpid_to_hash(get_gpid())
-        );
 
-    dassert(nullptr != mu->log_task(), "");
+    if (_2pc_logger)
+    {
+        mu->log_task() = _2pc_logger->append(mu,
+            LPC_WRITE_REPLICATION_LOG,
+            this,
+            std::bind(&replica::on_append_log_completed, this, mu,
+            std::placeholders::_1,
+            std::placeholders::_2),
+            gpid_to_hash(get_gpid())
+            );
+
+        dassert(nullptr != mu->log_task(), "");
+    }
+    else
+    {
+        on_append_log_completed(mu, ERR_OK, 0);
+    }
     return;
 
 ErrOut:
@@ -136,7 +144,7 @@ ErrOut:
     return;
 }
 
-void replica::send_prepare_message(const dsn_address_t& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds)
+void replica::send_prepare_message(const ::dsn::rpc_address& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds)
 {
     dsn_message_t msg = dsn_msg_create_request(RPC_PREPARE, timeout_milliseconds, gpid_to_hash(get_gpid()));
     replica_configuration rconfig;
@@ -163,7 +171,7 @@ void replica::send_prepare_message(const dsn_address_t& addr, partition_status s
     ddebug( 
         "%s: mutation %s send_prepare_message to %s:%hu as %s", 
         name(), mu->name(),
-        addr.name, addr.port,
+        addr.name(), addr.port(),
         enum_to_string(rconfig.status)
         );
 }
@@ -173,7 +181,7 @@ void replica::do_possible_commit_on_primary(mutation_ptr& mu)
     dassert (_config.ballot == mu->data.header.ballot, "");
     dassert (PS_PRIMARY == status(), "");
 
-    if (mu->is_ready_for_commit(_options.prepare_ack_on_secondary_before_logging_allowed))
+    if (mu->is_ready_for_commit(_options->prepare_ack_on_secondary_before_logging_allowed))
     {
         _prepare_list->commit(mu->data.header.decree, false);
     }
@@ -262,7 +270,7 @@ void replica::on_prepare(dsn_message_t request)
     {
         ddebug( "%s: mutation %s redundant prepare skipped", name(), mu->name());
 
-        if (mu2->is_logged() || _options.prepare_ack_on_secondary_before_logging_allowed)
+        if (mu2->is_logged() || _options->prepare_ack_on_secondary_before_logging_allowed)
         {
             ack_prepare_message(ERR_OK, mu);
         }
@@ -274,31 +282,38 @@ void replica::on_prepare(dsn_message_t request)
 
     if (PS_POTENTIAL_SECONDARY == status())
     {
-        dassert (mu->data.header.decree <= last_committed_decree() + _options.staleness_for_start_prepare_for_potential_secondary, "");
+        dassert (mu->data.header.decree <= last_committed_decree() + _options->staleness_for_start_prepare_for_potential_secondary, "");
     }
     else
     {
         dassert (PS_SECONDARY == status(), "");
-        dassert (mu->data.header.decree <= last_committed_decree() + _options.staleness_for_commit, "");
+        dassert (mu->data.header.decree <= last_committed_decree() + _options->staleness_for_commit, "");
     }
 
     // ack without logging
-    if (_options.prepare_ack_on_secondary_before_logging_allowed)
+    if (_options->prepare_ack_on_secondary_before_logging_allowed)
     {
         ack_prepare_message(err, mu);
     }
     
     // write log
-    dassert (mu->log_task() == nullptr, "");
+    if (_2pc_logger)
+    {
+        dassert(mu->log_task() == nullptr, "");
 
-    mu->log_task() = _stub->_log->append(mu,
-        LPC_WRITE_REPLICATION_LOG,
-        this,
-        std::bind(&replica::on_append_log_completed, this, mu, std::placeholders::_1, std::placeholders::_2),
-        gpid_to_hash(get_gpid())
-        );
+        mu->log_task() = _2pc_logger->append(mu,
+            LPC_WRITE_REPLICATION_LOG,
+            this,
+            std::bind(&replica::on_append_log_completed, this, mu, std::placeholders::_1, std::placeholders::_2),
+            gpid_to_hash(get_gpid())
+            );
 
-    dassert(mu->log_task() != nullptr, "");
+        dassert(mu->log_task() != nullptr, "");
+    }
+    else
+    {
+        on_append_log_completed(mu, ERR_OK, 0);
+    }
 }
 
 void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t size)
@@ -337,7 +352,7 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
             handle_local_failure(err);
         }
 
-        if (!_options.prepare_ack_on_secondary_before_logging_allowed)
+        if (!_options->prepare_ack_on_secondary_before_logging_allowed)
         {
             ack_prepare_message(err, mu);
         }
@@ -347,6 +362,17 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
     default:
         dassert (false, "");
         break;
+    }
+
+    // write local private log if necessary
+    if (_log && _2pc_logger != _log)
+    {
+        _log->append(mu,
+            LPC_WRITE_REPLICATION_LOG,
+            nullptr,
+            nullptr,
+            gpid_to_hash(get_gpid())
+            );
     }
 }
 
@@ -363,8 +389,8 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
     
     dassert (mu->data.header.ballot == get_ballot(), "");
 
-    dsn_address_t node;
-    dsn_msg_to_address(request, &node);
+    ::dsn::rpc_address node;
+    dsn_msg_to_address(request, node.c_addr_ptr());
     partition_status st = _primary_states.get_node_status(node);
 
     // handle reply
@@ -383,7 +409,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
     ddebug(
         "%s: mutation %s on_prepare_reply from %s:%hu, err = %s",
         name(), mu->name(),
-        node.name, node.port,
+        node.name(), node.port(),
         resp.err.to_string()
         );
        
@@ -423,13 +449,13 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
         // retry for INACTIVE state when there are still time
         if (resp.err == ERR_INACTIVE_STATE
             && !mu->is_prepare_close_to_timeout(2, targetStatus == PS_SECONDARY ? 
-            _options.prepare_timeout_ms_for_secondaries :
-            _options.prepare_timeout_ms_for_potential_secondaries)
+            _options->prepare_timeout_ms_for_secondaries :
+            _options->prepare_timeout_ms_for_potential_secondaries)
             )
         {
             send_prepare_message(node, targetStatus, mu, targetStatus == PS_SECONDARY ?
-                _options.prepare_timeout_ms_for_secondaries :
-                _options.prepare_timeout_ms_for_potential_secondaries);
+                _options->prepare_timeout_ms_for_secondaries :
+                _options->prepare_timeout_ms_for_potential_secondaries);
             return;
         }
 

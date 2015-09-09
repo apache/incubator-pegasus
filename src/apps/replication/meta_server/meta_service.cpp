@@ -27,7 +27,6 @@
 #include "server_state.h"
 #include "load_balancer.h"
 #include "meta_server_failure_detector.h"
-#include <boost/filesystem.hpp>
 #include <sys/stat.h>
 
 # ifdef __TITLE__
@@ -57,12 +56,22 @@ void meta_service::start(const char* data_dir, bool clean_state)
     dassert(!_started, "meta service is already started");
 
     _data_dir = data_dir;
+	std::string checkpoint_path = _data_dir + "/checkpoint";
+	std::string oplog_path = _data_dir + "/oplog";
+
 
     if (clean_state)
     {
         try {
-            boost::filesystem::remove(_data_dir + "/checkpoint");
-            boost::filesystem::remove(_data_dir + "/oplog");
+			if (!dsn::utils::filesystem::remove_path(checkpoint_path))
+			{
+				dassert(false, "Fail to remove file %s.", checkpoint_path.c_str());
+			}
+
+			if (!dsn::utils::filesystem::remove_path(oplog_path))
+			{
+				dassert(false, "Fail to remove file %s.", oplog_path.c_str());
+			}
         }
         catch (std::exception& ex)
         {
@@ -71,21 +80,24 @@ void meta_service::start(const char* data_dir, bool clean_state)
     }
     else
     {
-        if (!::dsn::utils::is_file_or_dir_exist(_data_dir.c_str()))
+		if (!dsn::utils::filesystem::create_directory(_data_dir))
+		{
+			dassert(false, "Fail to create directory %s.", _data_dir.c_str());
+		}
+
+        if (dsn::utils::filesystem::file_exists(checkpoint_path))
         {
-            mkdir_(_data_dir.c_str());
+            _state->load(checkpoint_path.c_str());
         }
 
-        if (::dsn::utils::is_file_or_dir_exist((_data_dir + "/checkpoint").c_str()))
+        if (dsn::utils::filesystem::file_exists(oplog_path))
         {
-            _state->load((_data_dir + "/checkpoint").c_str());
-        }
-
-        if (::dsn::utils::is_file_or_dir_exist((_data_dir + "/oplog").c_str()))
-        {
-            replay_log((_data_dir + "/oplog").c_str());
-            _state->save((_data_dir + "/checkpoint").c_str());
-            boost::filesystem::remove(_data_dir + "/oplog");
+            replay_log(oplog_path.c_str());
+            _state->save(checkpoint_path.c_str());
+			if (!dsn::utils::filesystem::remove_path(oplog_path))
+			{
+				dassert(false, "Fail to remove file %s.", oplog_path.c_str());
+			}
         }
     }
 
@@ -94,7 +106,7 @@ void meta_service::start(const char* data_dir, bool clean_state)
     _balancer = new load_balancer(_state);            
     _failure_detector = new meta_server_failure_detector(_state, this);
     
-    dsn_address_t primary;
+    ::dsn::rpc_address primary;
     if (_state->get_meta_server_primary(primary) && primary == primary_address())
     {
         _failure_detector->set_primary(true);
@@ -165,10 +177,11 @@ void meta_service::on_request(dsn_message_t msg)
 
     dsn_address_t faddr;
     dsn_msg_from_address(msg, &faddr);
+    ::dsn::rpc_address faddr2(faddr);
     dinfo("recv meta request %s from %s:%hu", 
         dsn_task_code_to_string(hdr.rpc_tag),
-        faddr.name,
-        faddr.port
+        faddr2.name(),
+        faddr2.port()
         );
 
     dsn_message_t resp = dsn_msg_create_response(msg);
@@ -222,12 +235,12 @@ void meta_service::on_request(dsn_message_t msg)
 }
 
 // partition server & client => meta server
-void meta_service::query_configuration_by_node(configuration_query_by_node_request& request, __out_param configuration_query_by_node_response& response)
+void meta_service::query_configuration_by_node(configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response)
 {
     _state->query_configuration_by_node(request, response);
 }
 
-void meta_service::query_configuration_by_index(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response)
+void meta_service::query_configuration_by_index(configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response)
 {
     _state->query_configuration_by_index(request, response);
 }
@@ -297,7 +310,7 @@ void meta_service::update_configuration(dsn_message_t req, dsn_message_t resp)
     uint64_t offset;
     int len = (int)sz + sizeof(int32_t);
     
-    char* buffer = (char*)malloc(len);
+    char* buffer = new char[len];
     *(int32_t*)buffer = (int)sz;
     memcpy(buffer + sizeof(int32_t), ptr, sz);
 
@@ -367,7 +380,7 @@ void meta_service::on_log_completed(error_code err, size_t size,
     }
 }
 
-void meta_service::update_configuration(configuration_update_request& request, __out_param configuration_update_response& response)
+void meta_service::update_configuration(configuration_update_request& request, /*out*/ configuration_update_response& response)
 {
     _state->update_configuration(request, response);
 
@@ -383,7 +396,7 @@ void meta_service::on_load_balance_timer()
     if (_state->freezed())
         return;
 
-    dsn_address_t primary;
+    ::dsn::rpc_address primary;
     if (_state->get_meta_server_primary(primary) && primary == primary_address())
     {
         _failure_detector->set_primary(true);
@@ -397,7 +410,7 @@ void meta_service::on_load_balance_timer()
 
 void meta_service::on_config_changed(global_partition_id gpid)
 {
-    dsn_address_t primary;
+    ::dsn::rpc_address primary;
     if (_state->get_meta_server_primary(primary) && primary == primary_address())
     {
         _failure_detector->set_primary(true);

@@ -26,7 +26,6 @@
 #include "simple_kv.server.impl.h"
 #include <fstream>
 #include <sstream>
-#include <boost/filesystem.hpp>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -41,6 +40,7 @@ namespace dsn {
                 : simple_kv_service(replica), _lock(true)
             {
                 _test_file_learning = false;
+                set_delta_state_learning_supported();
             }
 
             // RPC_SIMPLE_KV_READ
@@ -91,8 +91,9 @@ namespace dsn {
                 zauto_lock l(_lock);
                 if (create_new)
                 {
-                    boost::filesystem::remove_all(data_dir());
-                    mkdir_(data_dir().c_str());
+					auto& dir = data_dir();
+					dsn::utils::filesystem::remove_path(dir);
+					dsn::utils::filesystem::create_directory(dir);
                 }
                 else
                 {
@@ -106,7 +107,10 @@ namespace dsn {
                 zauto_lock l(_lock);
                 if (clear_state)
                 {
-                    boost::filesystem::remove_all(data_dir());
+					if (!dsn::utils::filesystem::remove_path(data_dir()))
+					{
+						dassert(false, "Fail to delete directory %s.", data_dir().c_str());
+					}
                 }
                 return 0;
             }
@@ -120,12 +124,16 @@ namespace dsn {
 
                 decree maxVersion = 0;
                 std::string name;
-                boost::filesystem::directory_iterator endtr;
-                for (boost::filesystem::directory_iterator it(data_dir());
-                    it != endtr;
-                    ++it)
+
+				std::vector<std::string> sub_list;
+				auto& path = data_dir();
+				if (!dsn::utils::filesystem::get_subfiles(path, sub_list, false))
+				{
+					dassert(false, "Fail to get subfiles in %s.", path.c_str());
+				}
+				for (auto& fpath : sub_list)
                 {
-                    auto s = it->path().filename().string();
+					auto&& s = dsn::utils::filesystem::get_file_name(fpath);
                     if (s.substr(0, strlen("checkpoint.")) != std::string("checkpoint."))
                         continue;
 
@@ -136,6 +144,7 @@ namespace dsn {
                         name = data_dir() + "/" + s;
                     }
                 }
+				sub_list.clear();
 
                 if (maxVersion > 0)
                 {
@@ -223,7 +232,7 @@ namespace dsn {
             }
 
             // helper routines to accelerate learning
-            int simple_kv_service_impl::get_learn_state(decree start, const blob& learn_req, __out_param learn_state& state)
+            int simple_kv_service_impl::get_learn_state(decree start, const blob& learn_req, /*out*/ learn_state& state)
             {
                 ::dsn::binary_writer writer;
 
@@ -308,7 +317,7 @@ namespace dsn {
                 {
                     dassert(state.files.size() == 1, "");
                     std::string fn = learn_dir() + "/" + state.files[0];
-                    ret = ::dsn::utils::is_file_or_dir_exist(fn.c_str());
+                    ret = dsn::utils::filesystem::path_exists(fn.c_str());
                     if (ret)
                     {
                         std::string s;

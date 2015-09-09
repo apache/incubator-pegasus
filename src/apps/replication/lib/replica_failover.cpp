@@ -52,14 +52,14 @@ void replica::handle_local_failure(error_code error)
     update_local_configuration_with_no_ballot_change(PS_ERROR);
 }
 
-void replica::handle_remote_failure(partition_status st, const dsn_address_t& node, error_code error)
+void replica::handle_remote_failure(partition_status st, const ::dsn::rpc_address& node, error_code error)
 {    
     derror(
         "%s: handle remote failure error %s, status = %s, node = %s:%hu",
         name(),
         error.to_string(),
         enum_to_string(st),
-        node.name, node.port
+        node.name(), node.port()
         );
     error.end_tracking();
 

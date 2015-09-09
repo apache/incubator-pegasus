@@ -91,7 +91,7 @@ namespace dsn {
         }
     }
 
-    bool command_manager::run_command(const std::string& cmdline, __out_param std::string& output)
+    bool command_manager::run_command(const std::string& cmdline, /*out*/ std::string& output)
     {
         std::string scmd = cmdline;
         std::vector<std::string> args;
@@ -110,7 +110,7 @@ namespace dsn {
         return run_command(args[0], args2, output);
     }
 
-    bool command_manager::run_command(const std::string& cmd, const std::vector<std::string>& args, __out_param std::string& output)
+    bool command_manager::run_command(const std::string& cmd, const std::vector<std::string>& args, /*out*/ std::string& output)
     {
         command* h = nullptr;
         {

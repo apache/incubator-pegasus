@@ -105,12 +105,12 @@ DSN_API void dsn_msg_release_ref(dsn_message_t msg)
 
 DSN_API void dsn_msg_from_address(dsn_message_t msg, /*out*/ dsn_address_t* ep)
 {
-    *ep = ((::dsn::message_ex*)msg)->from_address;
+    *ep = ((::dsn::message_ex*)msg)->from_address.c_addr();
 }
 
 DSN_API void dsn_msg_to_address(dsn_message_t msg, /*out*/ dsn_address_t* ep)
 {
-    *ep = ((::dsn::message_ex*)msg)->to_address;
+    *ep = ((::dsn::message_ex*)msg)->to_address.c_addr();
 }
 
 namespace dsn {
@@ -285,11 +285,6 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
     hdr.id = new_id();
 
     msg->local_rpc_code = (uint16_t)rpc_code;
-    msg->from_address.name[0] = '\0';
-    msg->from_address.port = 0;
-    msg->to_address.name[0] = '\0';
-    msg->to_address.port = 0;
-
     return msg;
 }
 

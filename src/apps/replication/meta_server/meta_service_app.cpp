@@ -68,7 +68,7 @@ namespace dsn {
                     delete _service;
                     _service = nullptr;
 
-                    dsn_address_t primary;
+                    ::dsn::rpc_address primary;
                     if (!_reliable_state->get_meta_server_primary(primary))
                     {
                         delete _reliable_state;

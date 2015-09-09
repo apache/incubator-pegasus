@@ -38,20 +38,21 @@
 namespace dsn { namespace tools {
 
     // multiple machines connect to the same switch, 10 should be >= than rpc_channel::max_value() + 1
-    static utils::safe_singleton_store<dsn_address_t, sim_network_provider*> s_switch[10]; 
+    static utils::safe_singleton_store<::dsn::rpc_address, sim_network_provider*> s_switch[10]; 
 
-    sim_client_session::sim_client_session(sim_network_provider& net, const dsn_address_t& remote_addr, rpc_client_matcher_ptr& matcher)
-        : rpc_client_session(net, remote_addr, matcher)
+    sim_client_session::sim_client_session(sim_network_provider& net, const ::dsn::rpc_address& remote_addr, rpc_client_matcher_ptr& matcher)
+        : rpc_session(net, remote_addr, matcher)
     {}
 
     void sim_client_session::connect() 
     {
-        // nothing to do
+        if (try_connecting())
+           set_connected();
     }
 
     static message_ex* virtual_send_message(message_ex* msg)
     {
-        std::shared_ptr<char> buffer((char*)malloc(msg->header->body_length + sizeof(message_header)));
+        std::shared_ptr<char> buffer(new char[msg->header->body_length + sizeof(message_header)]);
         char* tmp = buffer.get();
 
         for (auto& buf : msg->buffers)
@@ -73,8 +74,8 @@ namespace dsn { namespace tools {
         if (!s_switch[task_spec::get(msg->local_rpc_code)->rpc_call_channel].get(msg->to_address, rnet))
         {
             dwarn("cannot find destination node %s:%hu in simulator", 
-                msg->to_address.name, 
-                msg->to_address.port
+                msg->to_address.name(), 
+                msg->to_address.port()
                 );
             return;
         }
@@ -82,7 +83,7 @@ namespace dsn { namespace tools {
         auto server_session = rnet->get_server_session(_net.address());
         if (nullptr == server_session)
         {
-            rpc_client_session_ptr cptr = this;
+            rpc_session_ptr cptr = this;
             server_session = new sim_server_session(*rnet, _net.address(), cptr);
             rnet->on_server_session_accepted(server_session);
         }
@@ -101,8 +102,8 @@ namespace dsn { namespace tools {
         on_send_completed(msg);
     }
 
-    sim_server_session::sim_server_session(sim_network_provider& net, const dsn_address_t& remote_addr, rpc_client_session_ptr& client)
-        : rpc_server_session(net, remote_addr)
+    sim_server_session::sim_server_session(sim_network_provider& net, const ::dsn::rpc_address& remote_addr, rpc_session_ptr& client)
+        : rpc_session(net, remote_addr)
     {
         _client = client;
     }
@@ -126,7 +127,7 @@ namespace dsn { namespace tools {
     sim_network_provider::sim_network_provider(rpc_engine* rpc, network* inner_provider)
         : connection_oriented_network(rpc, inner_provider)
     {
-        dsn_address_build(&_address, "localhost", 1);
+        _address = ::dsn::rpc_address(HOST_TYPE_IPV4, "localhost", 1);
 
         _min_message_delay_microseconds = 1;
         _max_message_delay_microseconds = 100000;
@@ -143,14 +144,14 @@ namespace dsn { namespace tools {
         }
     }
 
-    error_code sim_network_provider::start(rpc_channel channel, int port, bool client_only)
+    error_code sim_network_provider::start(rpc_channel channel, int port, bool client_only, io_modifer& ctx)
     { 
         dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP, "invalid given channel %s", channel.to_string());
 
-        dsn_address_build(&_address, boost::asio::ip::host_name().c_str(), port);
+        _address = ::dsn::rpc_address(HOST_TYPE_IPV4, boost::asio::ip::host_name().c_str(), port);
 
-        dsn_address_t ep2;
-        dsn_address_build(&ep2, "localhost", port);
+        ::dsn::rpc_address ep2;
+        ep2 = ::dsn::rpc_address(HOST_TYPE_IPV4, "localhost", port);
       
         if (!client_only)
         {

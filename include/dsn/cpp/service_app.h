@@ -34,7 +34,7 @@ namespace dsn
     class service_app
     {
     public:
-        service_app() : _started(false) { _address = dsn_address_invalid; }
+        service_app() : _started(false) { }
 
         virtual ~service_app(void) {}
 
@@ -44,7 +44,7 @@ namespace dsn
 
         bool is_started() const { return _started; }
 
-        const dsn_address_t& primary_address() const { return _address; }
+        const ::dsn::rpc_address& primary_address() const { return _address; }
 
         const std::string& name() const { return _name; }
 
@@ -53,13 +53,14 @@ namespace dsn
 
     private:
         bool          _started;
-        dsn_address_t _address;
+        ::dsn::rpc_address _address;
         std::string   _name;
 
     public:
         template<typename TServiceApp>
-        static void* app_create()
+        static void* app_create(const char* tname)
         {
+            tname;
             auto svc =  new TServiceApp();
             return (void*)(dynamic_cast<service_app*>(svc));
         }

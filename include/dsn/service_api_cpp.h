@@ -31,8 +31,8 @@
 # include <dsn/cpp/serialization.h>
 # include <dsn/cpp/msg_binary_io.h>
 # include <dsn/cpp/zlocks.h>
+# include <dsn/cpp/clientlet.h>
 # include <dsn/cpp/serverlet.h>
-# include <dsn/cpp/service.api.oo.h>
 # include <dsn/cpp/service_app.h>
 # include <dsn/cpp/address.h>
 # include <dsn/cpp/perf_test_helper.h>

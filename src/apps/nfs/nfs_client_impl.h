@@ -105,7 +105,7 @@ namespace dsn {
             };
                         
         public:
-            nfs_client_impl(nfs_opts& opts) : nfs_client(dsn_address_invalid), _opts(opts)
+            nfs_client_impl(nfs_opts& opts) : _opts(opts)
             {
                 _concurrent_copy_request_count = 0;
                 _concurrent_local_write_count = 0;

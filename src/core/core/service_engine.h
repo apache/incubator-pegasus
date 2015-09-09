@@ -30,6 +30,7 @@
 # include <dsn/internal/global_config.h>
 # include <dsn/cpp/auto_codes.h>
 # include <sstream>
+# include <dsn/internal/synchronize.h>
 
 namespace dsn { 
 
@@ -40,32 +41,73 @@ class env_provider;
 class logging_provider;
 class nfs_node;
 class memory_provider;
+class task_queue;
+class task_worker_pool;
+class timer_service;
+class aio_provider;
 
 class service_node
 {
+public:
+    struct io_engine
+    {        
+        rpc_engine*      rpc;
+        disk_engine*     disk;
+        nfs_node*        nfs;
+        timer_service*   tsvc;
+
+        task_queue*      q;
+        task_worker_pool *pool;
+        aio_provider     *aio;
+
+        io_engine()
+        {
+            memset((void*)this, 0, sizeof(io_engine));
+        }
+    };
+
 public:    
-    service_node(service_app_spec& app_spec, void* app_context);
-    
+    service_node(service_app_spec& app_spec);
+       
+    rpc_engine*  rpc(task_queue* q) const;
+    disk_engine* disk(task_queue* q) const;
+    nfs_node* nfs(task_queue* q) const;
+    timer_service* tsvc(task_queue* q) const;
+
+    rpc_engine*  node_rpc() const { return _per_node_io.rpc; }
+    disk_engine* node_disk() const { return _per_node_io.disk; }
+    nfs_node* node_nfs() const { return _per_node_io.nfs; }
+    timer_service* node_tsvc() const { return _per_node_io.tsvc; }
+
     task_engine* computation() const { return _computation; }
-    rpc_engine*  rpc() const { return _rpc; }
-    disk_engine* disk() const { return _disk; }
-    nfs_node* nfs() const { return _nfs; }
-    void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, __out_param std::stringstream& ss);
+    const std::list<io_engine>& ios() const { return _ios; }
+    void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, /*out*/ std::stringstream& ss);
+    error_code start_io_engine_in_node_start_task(const io_engine& io);
 
     ::dsn::error_code start();
+    dsn_error_t start_app(int argc, char** argv);
 
     int id() const { return _app_spec.id; }
     const char* name() const { return _app_spec.name.c_str(); }
     const service_app_spec& spec() const { return _app_spec;  }
     void* get_app_context_ptr() const { return _app_context_ptr; }
-    
+
+    bool  rpc_register_handler(rpc_handler_ptr& handler);
+    rpc_handler_ptr rpc_unregister_handler(dsn_task_code_t rpc_code);
+
 private:
     void*            _app_context_ptr; // app start returns this value and used by app stop
     service_app_spec _app_spec;
     task_engine*     _computation;
-    rpc_engine*      _rpc;
-    disk_engine*     _disk;
-    nfs_node*        _nfs;
+
+    io_engine                                   _per_node_io;
+    std::unordered_map<task_queue*, io_engine>  _per_queue_ios;
+    std::list<io_engine>                        _ios; // all ios
+
+private:
+    error_code init_io_engine(io_engine& io, ioe_mode mode);
+    error_code start_io_engine_in_main(const io_engine& io);
+    void get_io(ioe_mode mode, task_queue* q, /*out*/ io_engine& io) const;
 };
 
 typedef std::map<int, service_node*> service_nodes_by_app_id;

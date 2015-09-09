@@ -51,7 +51,7 @@ namespace dsn { namespace replication { namespace application {
         ::dsn::marshall_rpc_args<kv_pair>(&proto, val, &kv_pair::write);
     };
 
-    inline void unmarshall(::dsn::binary_reader& reader, __out_param kv_pair& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ kv_pair& val)
     {
         boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
@@ -77,7 +77,7 @@ namespace dsn { namespace replication { namespace application {
         marshall(writer, val.value);
     };
 
-    inline void unmarshall(::dsn::binary_reader& reader, __out_param kv_pair& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ kv_pair& val)
     {
         unmarshall(reader, val.key);
         unmarshall(reader, val.value);

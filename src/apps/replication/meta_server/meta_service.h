@@ -55,14 +55,14 @@ private:
     void replay_log(const char* log);
 
     // partition server & client => meta server
-    void query_configuration_by_node(configuration_query_by_node_request& request, __out_param configuration_query_by_node_response& response);
-    void query_configuration_by_index(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response);
+    void query_configuration_by_node(configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response);
+    void query_configuration_by_index(configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response);
 
     // update configuration
     void update_configuration(dsn_message_t req, dsn_message_t resp);
     void update_configuration(std::shared_ptr<configuration_update_request>& update);
     void on_log_completed(error_code err, size_t size, blob buffer, std::shared_ptr<configuration_update_request> req, dsn_message_t resp);
-    void update_configuration(configuration_update_request& request, __out_param configuration_update_response& response);
+    void update_configuration(configuration_update_request& request, /*out*/ configuration_update_response& response);
       
     // load balance actions
     void on_load_balance_start();

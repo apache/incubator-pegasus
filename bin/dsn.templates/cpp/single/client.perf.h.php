@@ -7,14 +7,15 @@ $file_prefix = $argv[3];
 
 # include "<?=$file_prefix?>.client.h"
 
-<?=$_PROG->get_cpp_namespace_begin()?>
-<?php foreach ($_PROG->services as $svc) { ?>
+<?=$_PROG->get_cpp_namespace_begin()?> 
+<?php foreach ($_PROG->services as $svc) { ?> 
 class <?=$svc->name?>_perf_test_client
-    : public <?=$svc->name?>_client, public ::dsn::service::perf_client_helper<<?=$svc->name?>_perf_test_client>
+    : public <?=$svc->name?>_client, 
+      public ::dsn::service::perf_client_helper<<?=$svc->name?>_perf_test_client>
 {
 public:
     <?=$svc->name?>_perf_test_client(
-        const dsn_address_t& server)
+        const ::dsn::rpc_address& server)
         : <?=$svc->name?>_client(server)
     {
     }

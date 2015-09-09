@@ -28,6 +28,7 @@
 # include <dsn/internal/env_provider.h>
 # include <dsn/cpp/utils.h>
 # include <dsn/internal/synchronize.h>
+# include <dsn/tool/node_scoper.h>
 
 # include "task_engine.h"
 # include "service_engine.h"
@@ -43,50 +44,7 @@
 
 namespace dsn 
 {
-    namespace lock_checker
-    {
-        __thread int zlock_exclusive_count = 0;
-        __thread int zlock_shared_count = 0;
-
-        void check_wait_safety()
-        {
-            if (zlock_exclusive_count + zlock_shared_count > 0)
-            {
-                dassert(false, "wait inside locks may lead to deadlocks - current thread owns %u exclusive locks and %u shared locks now.",
-                    zlock_exclusive_count, zlock_shared_count
-                    );
-            }
-        }
-
-        void check_dangling_lock()
-        {
-            if (zlock_exclusive_count + zlock_shared_count > 0)
-            {
-                dassert(false, "locks should not be hold at this point - current thread owns %u exclusive locks and %u shared locks now.",
-                    zlock_exclusive_count, zlock_shared_count
-                    );
-            }
-        }
-
-        void check_wait_task(task* waitee)
-        {
-            check_wait_safety();
-
-            if (nullptr != task::get_current_task() && !waitee->is_empty())
-            {
-                if (TASK_TYPE_RPC_RESPONSE == waitee->spec().type ||
-                    task::get_current_task()->spec().pool_code == waitee->spec().pool_code)
-                {
-                    dassert(false, "task %s waits for another task %s sharing the same thread pool - will lead to deadlocks easily (e.g., when worker_count = 1 or when the pool is partitioned)",
-                        dsn_task_code_to_string(task::get_current_task()->spec().code),
-                        dsn_task_code_to_string(waitee->spec().code)
-                        );
-                }
-            }
-        }
-    }
-
-__thread struct __tls_task_info__ tls_task_info;
+__thread struct __tls_dsn__ tls_dsn;
 __thread struct
 {
     int magic;
@@ -94,17 +52,46 @@ __thread struct
     int last_task_id; // 32bits
 } tls_task_id;
 
-/*static*/ void task::set_current_worker(task_worker* worker, service_node* node)
+/*static*/ void task::set_tls_dsn_context(
+    service_node* node,  // cannot be null
+    task_worker* worker, // null for io or timer threads if they are not worker threads
+    task_queue* queue    // owner queue if io_mode == IOE_PER_QUEUE
+    )
 {
-    if (tls_task_info.magic != 0xdeadbeef)
+    if (tls_dsn.magic != 0xdeadbeef)
     {
-        tls_task_info.magic = 0xdeadbeef;
+        tls_dsn.magic = 0xdeadbeef;
     }
 
-    tls_task_info.worker = worker;
-    tls_task_info.worker_index = worker ? worker->index() : -1;
-    tls_task_info.current_task = nullptr;
-    tls_task_info.current_node = worker ? worker->pool()->node() : node;
+    dassert(node, "service node cannot be empty");
+    
+    if (worker != nullptr)
+    {
+        dassert(worker->pool()->node() == node, 
+            "worker not belonging to the given node: %s vs %s",
+            worker->pool()->node()->name(),
+            node->name()
+            );
+    }
+
+    if (queue != nullptr)
+    {
+        dassert(queue->pool()->node() == node,
+            "queue not belonging to the given node: %s vs %s",
+            queue->pool()->node()->name(),
+            node->name()
+            );
+    }
+
+    tls_dsn.node = node;
+    tls_dsn.worker = worker;
+    tls_dsn.worker_index = worker ? worker->index() : -1;
+    tls_dsn.current_task = nullptr;
+    tls_dsn.rpc = node->rpc(queue ? queue : (worker ? worker->queue() : nullptr));
+    tls_dsn.disk = node->disk(queue ? queue : (worker ? worker->queue() : nullptr));
+    tls_dsn.env = service_engine::fast_instance().env();
+    tls_dsn.nfs = node->nfs(queue ? queue : (worker ? worker->queue() : nullptr));
+    tls_dsn.tsvc = node->tsvc(queue ? queue : (worker ? worker->queue() : nullptr));
 }
 
 task::task(dsn_task_code_t code, int hash, service_node* node)
@@ -137,7 +124,7 @@ task::task(dsn_task_code_t code, int hash, service_node* node)
         if (worker_idx == -1)
         {
             worker_idx = ::dsn::utils::get_current_tid();
-            // tls_task_info.worker_index = worker_idx;
+            // tls_dsn.worker_index = worker_idx;
         }
         tls_task_id.node_pool_thread_ids |= ((uint64_t)(uint16_t)worker_idx) << 32; // next 16 bits for thread id
 
@@ -161,13 +148,14 @@ void task::exec_internal()
 {
     task_state READY_STATE = TASK_STATE_READY;
     task_state RUNNING_STATE = TASK_STATE_RUNNING;
+    bool notify_if_necessary = true;
 
     if (_state.compare_exchange_strong(READY_STATE, TASK_STATE_RUNNING))
     {
-        dassert(tls_task_info.magic == 0xdeadbeef, "thread is not inited with task::set_current_worker");
+        dassert(tls_dsn.magic == 0xdeadbeef, "thread is not inited with task::set_tls_dsn_context");
 
-        task* parent_task = tls_task_info.current_task;
-        tls_task_info.current_task = this;
+        task* parent_task = tls_dsn.current_task;
+        tls_dsn.current_task = this;
 
         _spec->on_task_begin.execute(this);
 
@@ -176,16 +164,6 @@ void task::exec_internal()
         if (_state.compare_exchange_strong(RUNNING_STATE, TASK_STATE_FINISHED))
         {
             _spec->on_task_end.execute(this);
-
-            // signal_waiters(); [
-            // inline for performance
-            void* evt = _wait_event.load();
-            if (evt != nullptr)
-            {
-                auto nevt = (utils::notify_event*)evt;
-                nevt->notify();
-            }
-            // ]
         }
 
         // for timer
@@ -193,6 +171,7 @@ void task::exec_internal()
         {
             if (!_wait_for_cancel)
             {
+                notify_if_necessary = false;
                 _spec->on_task_end.execute(this);
                 enqueue();
             }   
@@ -200,26 +179,30 @@ void task::exec_internal()
             {
                 _state.compare_exchange_strong(READY_STATE, TASK_STATE_CANCELLED);
                 _spec->on_task_end.execute(this);
-
-                // signal_waiters(); [
-                // inline for performance
-                void* evt = _wait_event.load();
-                if (evt != nullptr)
-                {
-                    auto nevt = (utils::notify_event*)evt;
-                    nevt->notify();
-                }
-                // ]
             }
         }
         
-        tls_task_info.current_task = parent_task;
+        tls_dsn.current_task = parent_task;
     }
     else
     {
         // task cancelled, so
         _error.end_tracking();
     }
+    
+    // signal_waiters(); [
+    // inline for performance
+    if (notify_if_necessary)
+    {
+        void* evt = _wait_event.load();
+        if (evt != nullptr)
+        {
+            auto nevt = (utils::notify_event*)evt;
+            nevt->notify();
+            spec().on_task_wait_notified.execute(this);
+        }
+    }    
+    // ]
 
     if (!_spec->allow_inline && !_is_null)
     {
@@ -243,12 +226,6 @@ void task::signal_waiters()
 bool task::wait(int timeout_milliseconds, bool on_cancel)
 {
     dassert (this != task::get_current_task(), "task cannot wait itself");
-
-    if (!spec().on_task_wait_pre.execute(task::get_current_task(), this, (uint32_t)timeout_milliseconds, true))
-    {
-        spec().on_task_wait_post.execute(task::get_current_task(), this, false);
-        return false;
-    }
 
     auto cs = state();
     if (!on_cancel)
@@ -276,6 +253,8 @@ bool task::wait(int timeout_milliseconds, bool on_cancel)
         }
     }
 
+    spec().on_task_wait_pre.execute(task::get_current_task(), this, (uint32_t)timeout_milliseconds);
+
     bool ret = (state() >= TASK_STATE_FINISHED);
     if (!ret)
     {
@@ -301,7 +280,7 @@ bool task::cancel(bool wait_until_finished, /*out*/ bool* finished /*= nullptr*/
     {
         /*dwarn(
             "task %s (id=%016llx) cannot cancel itself",                
-            spec().name,
+            spec().name(),
             id()
             );*/
 
@@ -384,7 +363,7 @@ void task::enqueue(task_worker_pool* pool)
     // for delayed tasks, refering to timer service
     if (_delay_milliseconds != 0)
     {
-        pool->timer_svc()->add_timer(this);
+        pool->add_timer(this);
         return;
     }
     
@@ -396,7 +375,15 @@ void task::enqueue(task_worker_pool* pool)
     // fast execution
     if (_spec->allow_inline || _spec->fast_execution_in_network_thread || _is_null)
     {
-        exec_internal();
+        if (_node != task::get_current_node())
+        {
+            tools::node_scoper ns(_node);
+            exec_internal();
+        }
+        else
+        {
+            exec_internal();
+        }
     }
 
     // normal path
@@ -415,8 +402,8 @@ void task::enqueue(task_worker_pool* pool)
     }
 }
 
-timer_task::timer_task(dsn_task_code_t code, dsn_task_handler_t cb, void* param, uint32_t interval_milliseconds, int hash)
-    : task(code, hash), 
+timer_task::timer_task(dsn_task_code_t code, dsn_task_handler_t cb, void* param, uint32_t interval_milliseconds, int hash, service_node* node)
+    : task(code, hash, node), 
     _interval_milliseconds(interval_milliseconds),
     _cb(cb),
     _param(param)
@@ -464,9 +451,9 @@ void rpc_request_task::enqueue()
     task::enqueue(node()->computation()->get_pool(spec().pool_code));
 }
 
-rpc_response_task::rpc_response_task(message_ex* request, dsn_rpc_response_handler_t cb, void* param, int hash)
+rpc_response_task::rpc_response_task(message_ex* request, dsn_rpc_response_handler_t cb, void* param, int hash, service_node* node)
     : task(task_spec::get(request->local_rpc_code)->rpc_paired_code, 
-           hash == 0 ? request->header->client.hash : hash)
+           hash == 0 ? request->header->client.hash : hash, node)
 {
     _cb = cb;
     _param = param;
@@ -507,7 +494,7 @@ void rpc_response_task::enqueue(error_code err, message_ex* reply)
 
     if (spec().on_rpc_response_enqueue.execute(this, true))
     {
-        task::enqueue(_caller_pool);
+        rpc_response_task::enqueue();
     }
 
     // release the task when necessary
@@ -520,8 +507,21 @@ void rpc_response_task::enqueue(error_code err, message_ex* reply)
     }
 }
 
-aio_task::aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash)
-    : task(code, hash)
+void rpc_response_task::enqueue()
+{
+    if (_caller_pool)
+        task::enqueue(_caller_pool);
+
+    // possible when it is called in non-rDSN threads
+    else
+    {
+        auto pool = node()->computation()->get_pool(spec().pool_code);
+        task::enqueue(pool);
+    }
+}
+
+aio_task::aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash, service_node* node)
+    : task(code, hash, node)
 {
     _cb = cb;
     _param = param;
@@ -530,7 +530,9 @@ aio_task::aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int 
     dassert (TASK_TYPE_AIO == spec().type, "task must be of AIO type, please use DEFINE_TASK_CODE_AIO to define the task code");
     set_error_code(ERR_IO_PENDING);
 
-    _aio = node()->disk()->prepare_aio_context(this);
+    auto disk = task::get_current_disk();
+    if (!disk) disk = node->node_disk();
+    _aio = disk->prepare_aio_context(this);
 }
 
 aio_task::~aio_task()
@@ -538,21 +540,14 @@ aio_task::~aio_task()
     delete _aio;
 }
 
-void aio_task::enqueue(error_code err, size_t transferred_size, service_node* node)
+void aio_task::enqueue(error_code err, size_t transferred_size)
 {
     set_error_code(err);
     _transferred_size = transferred_size;
 
     spec().on_aio_enqueue.execute(this);
 
-    if (node != nullptr)
-    {
-        task::enqueue(node->computation()->get_pool(spec().pool_code));
-    }
-    else
-    {
-        task::enqueue();
-    }
+    task::enqueue(node()->computation()->get_pool(spec().pool_code));
 }
 
 } // end namespace

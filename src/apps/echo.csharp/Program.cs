@@ -54,21 +54,6 @@ namespace echo.csharp
         private EchoServiceServer _server;
     }
 
-    public static class RpcStreamHelper
-    {
-        public static void Read(this RpcReadStream s, out string v)
-        {
-            StreamReader reader = new StreamReader(s);
-            v = reader.ReadToEnd();
-        }
-        
-        public static void Write(this RpcWriteStream s, string v)
-        {
-            var bytes = Encoding.UTF8.GetBytes(v);
-            s.Write(bytes, 0, bytes.Length);
-        }
-    }
-    
     public class EchoServiceServer : Serverlet<EchoServiceServer>
     {
         public EchoServiceServer()
@@ -97,8 +82,17 @@ namespace echo.csharp
         }
     }
 
-    public class EchoServiceClient : Servicelet
+    public class EchoServiceClient : Clientlet
     {
+        public EchoServiceClient()
+        {
+
+        }
+
+        public EchoServiceClient(string app_type, int app_index)
+            : base(app_type, app_index)
+        {
+        }
         public void Start(string[] argv)
         {
             _last_ts = DateTime.Now;
@@ -108,8 +102,7 @@ namespace echo.csharp
                 throw new Exception("wrong usage: EchoServiceClient server-host server-port");                
             }
 
-            _server = new RpcAddress();
-            Native.dsn_address_build(out _server.addr, argv[1], ushort.Parse(argv[2]));
+            _server = new RpcAddress(argv[1], ushort.Parse(argv[2]));
 
             //CallAsync(EchoClientApp.LPC_ECHO_TIMER1, this,  this.OnTimer1, 0, 0);
             CallAsync(EchoClientApp.LPC_ECHO_TIMER2, this, () => this.OnTimer2(100), 0, 0);

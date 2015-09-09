@@ -42,7 +42,7 @@ private:
 // client app example
 class <?=$_PROG->name?>_client_app : 
     public ::dsn::service_app, 
-    public virtual ::dsn::servicelet
+    public virtual ::dsn::clientlet
 {
 public:
     <?=$_PROG->name?>_client_app() 
@@ -62,7 +62,7 @@ public:
         if (argc < 3)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        dsn_address_build(&_server, argv[1], (uint16_t)atoi(argv[2]));
+        dsn_address_build(_server.c_addr_ptr(), argv[1], (uint16_t)atoi(argv[2]));
 <?php foreach ($_PROG->services as $svc) { ?>
         _<?=$svc->name?>_client = new <?=$svc->name?>_client(_server);
 <?php } ?>
@@ -110,7 +110,7 @@ foreach ($_PROG->services as $svc)
 
 private:
     ::dsn::task_ptr _timer;
-    dsn_address_t _server;
+    ::dsn::rpc_address _server;
     
 <?php foreach ($_PROG->services as $svc) { ?>
     <?=$svc->name?>_client *_<?=$svc->name?>_client;
@@ -120,7 +120,7 @@ private:
 <?php foreach ($_PROG->services as $svc) { ?>
 class <?=$svc->name?>_perf_test_client_app :
     public ::dsn::service_app, 
-    public virtual ::dsn::servicelet
+    public virtual ::dsn::clientlet
 {
 public:
     <?=$svc->name?>_perf_test_client_app()
@@ -138,7 +138,7 @@ public:
         if (argc < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        dsn_address_build(&_server, argv[1], (uint16_t)atoi(argv[2]));
+        dsn_address_build(_server.c_addr_ptr(), argv[1], (uint16_t)atoi(argv[2]));
 
         _<?=$svc->name?>_client = new <?=$svc->name?>_perf_test_client(_server);
         _<?=$svc->name?>_client->start_test();
@@ -156,7 +156,7 @@ public:
     
 private:
     <?=$svc->name?>_perf_test_client *_<?=$svc->name?>_client;
-    dsn_address_t _server;
+    ::dsn::rpc_address _server;
 };
 <?php } ?>
 

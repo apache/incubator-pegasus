@@ -27,12 +27,12 @@ run = true
 pools = THREAD_POOL_DEFAULT
 
 <?php foreach ($_PROG->services as $svc) { ?>
-[apps.client.<?=$svc->name?>.perf.test]
-name = client.<?=$svc->name?>.perf
-type = client.<?=$svc->name?>.perf.test
-arguments = localhost 27001
-count = 1
-run = false
+[apps.client.<?=$svc->name?>.perf.test] 
+name = client.<?=$svc->name?>.perf 
+type = client.<?=$svc->name?>.perf.test 
+arguments = localhost 27001 
+count = 1 
+run = false 
 <?php } ?>
 
 [core]

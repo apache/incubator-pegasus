@@ -252,7 +252,11 @@ namespace dsn
             // therefore we change derror to dwarn
             if (!_used)
             {
-                dlog(LOG_LEVEL_WARNING, "error-code", "error code is not handled");
+                if (_internal_code != 0)
+                {
+                    dlog(LOG_LEVEL_ERROR, "error-code",
+                        "error code is not handled, err = %s", to_string());
+                }
             }
         }
     # endif
@@ -318,6 +322,8 @@ namespace dsn
     DEFINE_ERR_CODE(ERR_ADDRESS_ALREADY_USED)
     DEFINE_ERR_CODE(ERR_STATE_FREEZED)
     DEFINE_ERR_CODE(ERR_LOCAL_APP_FAILURE)
+    DEFINE_ERR_CODE(ERR_BIND_IOCP_FAILED)
+    DEFINE_ERR_CODE(ERR_NETWORK_START_FAILED)
 
 } // end namespace
 

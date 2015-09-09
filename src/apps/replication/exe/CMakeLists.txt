@@ -11,13 +11,19 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH "")
 
-set(MY_BOOST_PACKAGES system filesystem)
+set(MY_BOOST_PACKAGES system)
 
 set(MY_PROJ_LIBS dsn.replication.global_checker dsn.replication dsn.replication.meta_server dsn.replication.clientlib dsn.failure_detector)
 
 set(MY_PROJ_LIB_PATH "")
 
+set(INI_FILES "")
+file(GLOB
+	INI_FILES
+	"${CMAKE_CURRENT_SOURCE_DIR}/*.ini"
+	)
+
 # Extra files that will be installed
-set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini" "${CMAKE_CURRENT_SOURCE_DIR}/test.cmd" "${CMAKE_CURRENT_SOURCE_DIR}/vconfig.ini" "${CMAKE_CURRENT_SOURCE_DIR}/vtest.cmd")
+set(MY_BINPLACES ${INI_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/test.cmd" "${CMAKE_CURRENT_SOURCE_DIR}/vtest.cmd")
 
 dsn_add_executable()

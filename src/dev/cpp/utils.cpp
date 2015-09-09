@@ -64,56 +64,6 @@ namespace dsn {
 # endif 
         }
 
-        bool is_file_or_dir_exist(const char* path)
-        {
-# if defined(_WIN32)
-            struct _stat32 buffer;
-            return _stat32(path, &buffer) == 0;
-# else
-            struct stat buffer;
-            return stat(path, &buffer) == 0;
-# endif
-        }
-
-        bool remove_dir(const char* path, bool recursive)
-        {
-            if (!recursive)
-                return rmdir_(path) == 0;
-            else
-            {
-                dassert(!"not implemented", "not implmented");
-                return 0;
-            }
-        }
-
-        std::string get_absolute_path(const char* path)
-        {
-# if defined(_WIN32)
-            char* component;
-            char absoluate_path[1024];
-            if (0 == ::GetFullPathNameA(path, 1024, absoluate_path, &component))
-                return "";
-            else
-                return std::string(absoluate_path);
-# else
-            char* rpath = realpath(path, nullptr);
-            if (rpath == nullptr)
-                return "";
-            else
-            {
-                std::string apath = rpath;
-                free(rpath);
-                return apath;
-            }
-# endif
-        }
-
-        std::string remove_file_name(const char* path)
-        {
-            std::string path0(path);
-            return path0.substr(0, path0.find_last_of("\\/"));
-        }
-
         std::string get_last_component(const std::string& input, char splitters[])
         {
             int index = -1;
@@ -133,7 +83,7 @@ namespace dsn {
                 return "";
         }
 
-        void split_args(const char* args, __out_param std::vector<std::string>& sargs, char splitter)
+        void split_args(const char* args, /*out*/ std::vector<std::string>& sargs, char splitter)
         {
             sargs.clear();
 
@@ -168,7 +118,7 @@ namespace dsn {
             }
         }
         
-        void split_args(const char* args, __out_param std::list<std::string>& sargs, char splitter)
+        void split_args(const char* args, /*out*/ std::list<std::string>& sargs, char splitter)
         {
             sargs.clear();
 
@@ -293,7 +243,7 @@ namespace  dsn
         _remaining_size = _size;
     }
 
-    int binary_reader::read(__out_param std::string& s)
+    int binary_reader::read(/*out*/ std::string& s)
     {
         int len;
         if (0 == read(len))
@@ -321,6 +271,15 @@ namespace  dsn
         if (len <= get_remaining_size())
         {
             blob = _blob.range(static_cast<int>(_ptr - _blob.data()), len);
+
+            // optimization: zero-copy
+            if (!blob.buffer_ptr())
+            {
+                std::shared_ptr<char> buffer(new char[len]);
+                memcpy(buffer.get(), blob.data(), blob.length());
+                blob = ::dsn::blob(buffer, 0, blob.length());
+            }
+            
             _ptr += len;
             _remaining_size -= len;
             return len + sizeof(len);
@@ -432,7 +391,7 @@ namespace  dsn
 
     void binary_writer::create_new_buffer(size_t size, /*out*/blob& bb)
     {
-        std::shared_ptr<char> ptr((char*)malloc(size));
+        std::shared_ptr<char> ptr(new char[size]);
         bb.assign(ptr, 0, (int)size);
     }
 
@@ -456,7 +415,7 @@ namespace  dsn
         }
         else
         {
-            std::shared_ptr<char> bptr((char*)malloc(_total_size));
+            std::shared_ptr<char> bptr(new char[_total_size]);
             blob bb(bptr, _total_size);
             const char* ptr = bb.data();
 
