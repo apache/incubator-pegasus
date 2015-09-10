@@ -145,9 +145,12 @@ namespace dsn.dev.csharp
 
     public class SafeTaskHandle : SafeHandleZeroIsInvalid
     {
-        public SafeTaskHandle(dsn_task_t nativeHandle)
+        private int _callback_index = -1;
+        
+        public SafeTaskHandle(dsn_task_t nativeHandle, int callback_index)
             : base(nativeHandle, true)
         {
+            _callback_index = callback_index;
             Native.dsn_task_add_ref(nativeHandle);
         }
 
@@ -159,12 +162,24 @@ namespace dsn.dev.csharp
 
         public bool Cancel(bool waitFinished)
         {
-            return Native.dsn_task_cancel(handle, waitFinished);
+            if (Native.dsn_task_cancel(handle, waitFinished))
+            {
+                GlobalInterOpLookupTable.GetRelease(_callback_index);
+                return true;
+            }
+            else
+                return false;
         }
 
         public bool Cancel(bool waitFinished, out bool finished)
         {
-            return Native.dsn_task_cancel2(handle, waitFinished, out finished);
+            if (Native.dsn_task_cancel2(handle, waitFinished, out finished))
+            {
+                GlobalInterOpLookupTable.GetRelease(_callback_index);
+                return true;
+            }
+            else
+                return false;
         }
 
         public void Wait()

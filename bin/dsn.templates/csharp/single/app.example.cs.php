@@ -29,7 +29,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
         }
 
 <?php foreach ($_PROG->services as $svc) { ?>
-        private <?=$svc->name?>Server _<?=$svc->name?>Server;
+        private <?=$svc->name?>Server _<?=$svc->name?>Server = new <?=$svc->name?>Server();
 <?php } ?>
     }
 

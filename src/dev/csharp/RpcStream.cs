@@ -220,7 +220,7 @@ namespace dsn.dev.csharp
 
     public static partial class RpcStreamIoHelper
     {
-        public static void Read(this RpcReadStream rs, out UInt64 val)
+        public static void Read(this Stream rs, out UInt64 val)
         {
             using (BinaryReader reader = new BinaryReader(rs))
             {
@@ -228,7 +228,7 @@ namespace dsn.dev.csharp
             }
         }
 
-        public static void Write(this RpcWriteStream ws, UInt64 val)
+        public static void Write(this Stream ws, UInt64 val)
         {
             using (BinaryWriter writer = new BinaryWriter(ws))
             {
@@ -236,7 +236,7 @@ namespace dsn.dev.csharp
             }
         }
 
-        public static void Read(this RpcReadStream rs, out UInt32 val)
+        public static void Read(this Stream rs, out UInt32 val)
         {
             using (BinaryReader reader = new BinaryReader(rs))
             {
@@ -244,7 +244,7 @@ namespace dsn.dev.csharp
             }
         }
 
-        public static void Write(this RpcWriteStream ws, UInt32 val)
+        public static void Write(this Stream ws, UInt32 val)
         {
             using (BinaryWriter writer = new BinaryWriter(ws))
             {
@@ -252,7 +252,7 @@ namespace dsn.dev.csharp
             }
         }
 
-        public static void Read(this RpcReadStream rs, out UInt16 val)
+        public static void Read(this Stream rs, out UInt16 val)
         {
             using (BinaryReader reader = new BinaryReader(rs))
             {
@@ -260,7 +260,7 @@ namespace dsn.dev.csharp
             }
         }
 
-        public static void Write(this RpcWriteStream ws, UInt16 val)
+        public static void Write(this Stream ws, UInt16 val)
         {
             using (BinaryWriter writer = new BinaryWriter(ws))
             {
@@ -268,7 +268,7 @@ namespace dsn.dev.csharp
             }
         }
 
-        public static void Read(this RpcReadStream rs, out byte val)
+        public static void Read(this Stream rs, out byte val)
         {
             using (BinaryReader reader = new BinaryReader(rs))
             {
@@ -276,7 +276,7 @@ namespace dsn.dev.csharp
             }
         }
 
-        public static void Write(this RpcWriteStream ws, byte val)
+        public static void Write(this Stream ws, byte val)
         {
             using (BinaryWriter writer = new BinaryWriter(ws))
             {
@@ -284,7 +284,7 @@ namespace dsn.dev.csharp
             }
         }
 
-        public static void Read(this RpcReadStream rs, out Int64 val)
+        public static void Read(this Stream rs, out Int64 val)
         {
             using (BinaryReader reader = new BinaryReader(rs))
             {
@@ -292,7 +292,7 @@ namespace dsn.dev.csharp
             }
         }
 
-        public static void Write(this RpcWriteStream ws, Int64 val)
+        public static void Write(this Stream ws, Int64 val)
         {
             using (BinaryWriter writer = new BinaryWriter(ws))
             {
@@ -300,7 +300,7 @@ namespace dsn.dev.csharp
             }
         }
 
-        public static void Read(this RpcReadStream rs, out Int32 val)
+        public static void Read(this Stream rs, out Int32 val)
         {
             using (BinaryReader reader = new BinaryReader(rs))
             {
@@ -308,7 +308,7 @@ namespace dsn.dev.csharp
             }
         }
 
-        public static void Write(this RpcWriteStream ws, Int32 val)
+        public static void Write(this Stream ws, Int32 val)
         {
             using (BinaryWriter writer = new BinaryWriter(ws))
             {
@@ -316,7 +316,7 @@ namespace dsn.dev.csharp
             }
         }
 
-        public static void Read(this RpcReadStream rs, out Int16 val)
+        public static void Read(this Stream rs, out Int16 val)
         {
             using (BinaryReader reader = new BinaryReader(rs))
             {
@@ -324,7 +324,7 @@ namespace dsn.dev.csharp
             }
         }
 
-        public static void Write(this RpcWriteStream ws, Int16 val)
+        public static void Write(this Stream ws, Int16 val)
         {
             using (BinaryWriter writer = new BinaryWriter(ws))
             {
@@ -332,7 +332,7 @@ namespace dsn.dev.csharp
             }
         }
 
-        public static void Read(this RpcReadStream rs, out sbyte val)
+        public static void Read(this Stream rs, out sbyte val)
         {
             using (BinaryReader reader = new BinaryReader(rs))
             {
@@ -340,7 +340,7 @@ namespace dsn.dev.csharp
             }
         }
 
-        public static void Write(this RpcWriteStream ws, sbyte val)
+        public static void Write(this Stream ws, sbyte val)
         {
             using (BinaryWriter writer = new BinaryWriter(ws))
             {
@@ -348,7 +348,7 @@ namespace dsn.dev.csharp
             }
         }
 
-        public static void Read(this RpcReadStream rs, out bool val)
+        public static void Read(this Stream rs, out bool val)
         {
             using (BinaryReader reader = new BinaryReader(rs))
             {
@@ -356,7 +356,7 @@ namespace dsn.dev.csharp
             }
         }
 
-        public static void Write(this RpcWriteStream ws, bool val)
+        public static void Write(this Stream ws, bool val)
         {
             using (BinaryWriter writer = new BinaryWriter(ws))
             {
@@ -364,7 +364,7 @@ namespace dsn.dev.csharp
             }
         }
 
-        public static void Read(this RpcReadStream rs, out double val)
+        public static void Read(this Stream rs, out double val)
         {
             using (BinaryReader reader = new BinaryReader(rs))
             {
@@ -372,7 +372,7 @@ namespace dsn.dev.csharp
             }
         }
 
-        public static void Write(this RpcWriteStream ws, double val)
+        public static void Write(this Stream ws, double val)
         {
             using (BinaryWriter writer = new BinaryWriter(ws))
             {
@@ -380,7 +380,7 @@ namespace dsn.dev.csharp
             }
         }
 
-        public static void Read(this RpcReadStream rs, out float val)
+        public static void Read(this Stream rs, out float val)
         {
             using (BinaryReader reader = new BinaryReader(rs))
             {
@@ -388,7 +388,7 @@ namespace dsn.dev.csharp
             }
         }
 
-        public static void Write(this RpcWriteStream ws, float val)
+        public static void Write(this Stream ws, float val)
         {
             using (BinaryWriter writer = new BinaryWriter(ws))
             {
@@ -396,7 +396,7 @@ namespace dsn.dev.csharp
             }
         }
 
-        public static void Read(this RpcReadStream rs, out string val)
+        public static void Read(this Stream rs, out string val)
         {
             using (BinaryReader reader = new BinaryReader(rs))
             {
@@ -404,7 +404,7 @@ namespace dsn.dev.csharp
             }
         }
 
-        public static void Write(this RpcWriteStream ws, string val)
+        public static void Write(this Stream ws, string val)
         {
             using (BinaryWriter writer = new BinaryWriter(ws))
             {

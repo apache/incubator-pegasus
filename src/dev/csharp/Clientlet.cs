@@ -100,25 +100,26 @@ namespace dsn.dev.csharp
             hr();
         }
 
+        static void c_timer_task_handler(IntPtr h)
+        {
+            int idx2 = (int)h;
+            var hr = GlobalInterOpLookupTable.Get(idx2) as task_handler;
+            hr();
+        }
+
         static dsn_task_handler_t _c_task_handler_holder = c_task_handler;
+        static dsn_task_handler_t _c_timer_task_handler_holder = c_timer_task_handler;
 
         public void CallAsync(
             TaskCode evt,
             Clientlet callbackOwner,
             task_handler callback,
             int hash = 0,
-            int delay_milliseconds = 0,
-            int timer_interval_milliseconds = 0
+            int delay_milliseconds = 0
             )
         {
             int idx = GlobalInterOpLookupTable.Put(callback);
-            IntPtr task;
-
-            if (timer_interval_milliseconds == 0)
-                task = Native.dsn_task_create(evt, _c_task_handler_holder, (IntPtr)idx, hash, _app);
-            else
-                task = Native.dsn_task_create_timer(evt, _c_task_handler_holder, (IntPtr)idx, hash, timer_interval_milliseconds, _app);
-
+            IntPtr task = Native.dsn_task_create(evt, _c_task_handler_holder, (IntPtr)idx, hash, _app);
             Native.dsn_task_call(task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero, delay_milliseconds);
         }
 
@@ -137,13 +138,14 @@ namespace dsn.dev.csharp
         {
             int idx = GlobalInterOpLookupTable.Put(callback);
             IntPtr task;
+            SafeTaskHandle ret;
 
             if (timer_interval_milliseconds == 0)
                 task = Native.dsn_task_create(evt, _c_task_handler_holder, (IntPtr)idx, hash, _app);
             else
-                task = Native.dsn_task_create_timer(evt, _c_task_handler_holder, (IntPtr)idx, hash, timer_interval_milliseconds, _app);
+                task = Native.dsn_task_create_timer(evt, _c_timer_task_handler_holder, (IntPtr)idx, hash, timer_interval_milliseconds, _app);
 
-            var ret = new SafeTaskHandle(task);
+            ret = new SafeTaskHandle(task, idx);
             Native.dsn_task_call(task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero, delay_milliseconds);
             return ret;
         }
@@ -164,9 +166,9 @@ namespace dsn.dev.csharp
             if (timer_interval_milliseconds == 0)
                 task = Native.dsn_task_create(evt, _c_task_handler_holder, (IntPtr)idx, hash, app);
             else
-                task = Native.dsn_task_create_timer(evt, _c_task_handler_holder, (IntPtr)idx, hash, timer_interval_milliseconds, app);
+                task = Native.dsn_task_create_timer(evt, _c_timer_task_handler_holder, (IntPtr)idx, hash, timer_interval_milliseconds, app);
 
-            var ret = new SafeTaskHandle(task);
+            var ret = new SafeTaskHandle(task, idx);
             Native.dsn_task_call(task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero, delay_milliseconds);
             return ret;
         }
@@ -266,7 +268,7 @@ namespace dsn.dev.csharp
                 replyHash
                 );
 
-            var ret = new SafeTaskHandle(task);
+            var ret = new SafeTaskHandle(task, idx);
             Native.dsn_rpc_call(ref server.addr, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero, _app);
             return ret;
         }
@@ -294,7 +296,7 @@ namespace dsn.dev.csharp
 
         static dsn_aio_handler_t _c_aio_handler_holder = c_aio_handler;
 
-        public dsn_task_t FileRead(
+        public SafeTaskHandle FileRead(
             dsn_handle_t hFile,
             byte[] buffer,
             int count,
@@ -308,10 +310,10 @@ namespace dsn.dev.csharp
             int idx = GlobalInterOpLookupTable.Put(callback);
             dsn_task_t task = Native.dsn_file_create_aio_task(callbackCode, _c_aio_handler_holder, (IntPtr)idx, hash, _app);
             Native.dsn_file_read(hFile, buffer, count, offset, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
-            return task;
+            return new SafeTaskHandle(task, idx);
         }
 
-        public dsn_task_t FileWrite(
+        public SafeTaskHandle FileWrite(
             dsn_handle_t hFile,
             byte[] buffer,
             int count,
@@ -325,10 +327,10 @@ namespace dsn.dev.csharp
             int idx = GlobalInterOpLookupTable.Put(callback);
             dsn_task_t task = Native.dsn_file_create_aio_task(callbackCode, _c_aio_handler_holder, (IntPtr)idx, hash, _app);
             Native.dsn_file_write(hFile, buffer, count, offset, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
-            return task;
+            return new SafeTaskHandle(task, idx);
         }
 
-        public dsn_task_t CopyRemoteFiles(
+        public SafeTaskHandle CopyRemoteFiles(
             dsn_address_t remote,
             string source_dir,
             string[] files,
@@ -343,10 +345,10 @@ namespace dsn.dev.csharp
             int idx = GlobalInterOpLookupTable.Put(callback);
             dsn_task_t task = Native.dsn_file_create_aio_task(callbackCode, _c_aio_handler_holder, (IntPtr)idx, hash, _app);
             Native.dsn_file_copy_remote_files(ref remote, source_dir, files, dest_dir, overwrite, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
-            return task;
+            return new SafeTaskHandle(task, idx);
         }
 
-        public dsn_task_t CopyRemoteDirectory(
+        public SafeTaskHandle CopyRemoteDirectory(
             dsn_address_t remote,
             string source_dir,
             string dest_dir,
@@ -360,7 +362,7 @@ namespace dsn.dev.csharp
             int idx = GlobalInterOpLookupTable.Put(callback);
             dsn_task_t task = Native.dsn_file_create_aio_task(callbackCode, _c_aio_handler_holder, (IntPtr)idx, hash, _app);
             Native.dsn_file_copy_remote_directory(ref remote, source_dir, dest_dir, overwrite, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
-            return task;
+            return new SafeTaskHandle(task, idx);
         }            
     };
 }
