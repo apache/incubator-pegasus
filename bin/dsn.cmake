@@ -100,17 +100,21 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
             set(MY_CSC "xbuild")
         endif()
         if(DSN_BUILD_RUNTIME)
-            set(DSN_CORE_DLL "${OUTPUT_DIRECTORY}/lib/dsn.core.*")
+            set(DSN_CORE_DLL_FILES "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/")
         else()
-            set(DSN_CORE_DLL "${DSN_ROOT}/lib/libdsn.core.*")
+            set(DSN_CORE_DLL_FILES "${DSN_ROOT}/lib/")
         endif()
-        file(GLOB DSN_CORE_DLL "${DSN_CORE_DLL}")
+        if (NOT MSVC)
+            set(DSN_CORE_DLL_FILES "${DSN_CORE_DLL_FILES}lib")
+        endif()
+        set(DSN_CORE_DLL_FILES "${DSN_CORE_DLL_FILES}dsn.core.*")
+        file(GLOB DSN_CORE_DLL_FILES "${DSN_CORE_DLL_FILES}")
         execute_process(
             COMMAND ${MY_CSC} "${CMAKE_CURRENT_BINARY_DIR}/${PROJ_NAME}.csproj"
             )
-        execute_process(
-            COMMAND ${CMAKE_COMMAND} -E copy ${DSN_CORE_DLL} "${OUTPUT_DIRECTORY}/"
-            )
+        foreach(CORE_FILE ${DSN_CORE_DLL_FILES})
+            execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${CORE_FILE} "${OUTPUT_DIRECTORY}/")
+        endforeach()
     endif()
                
     if((PROJ_TYPE STREQUAL "EXECUTABLE") AND (NOT (PROJ_BINPLACES STREQUAL "")))
