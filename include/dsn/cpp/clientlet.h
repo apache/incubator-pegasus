@@ -139,7 +139,7 @@ namespace dsn
 
         template<typename TRequest>
         ::dsn::error_code call_typed_wait(
-            /*out*/ ::dsn::message_ptr* response,
+            /*out*/ ::dsn::rpc_read_stream* response,
             const ::dsn::rpc_address& server,
             dsn_task_code_t code,
             const TRequest& req,
@@ -580,7 +580,7 @@ namespace dsn
 
         template<typename TRequest>
         inline ::dsn::error_code call_typed_wait(
-            /*out*/ ::dsn::message_ptr* response,
+            /*out*/ ::dsn::rpc_read_stream* response,
             const ::dsn::rpc_address& server,
             dsn_task_code_t code,
             const TRequest& req,
@@ -596,7 +596,9 @@ namespace dsn
             if (resp != nullptr)
             {
                 if (response)
-                    (*response).reset((char*)resp);
+                {
+                    response->assign(resp, true);
+                }   
                 else
                     dsn_msg_release_ref(resp);
                 return ::dsn::ERR_OK;

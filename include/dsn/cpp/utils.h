@@ -187,6 +187,9 @@ namespace dsn {
 
         // or delayed init
         binary_reader() {}
+
+        virtual ~binary_reader() {}
+
         void init(blob& bb);
 
         template<typename T> int read_pod(/*out*/ T& val);
@@ -228,7 +231,8 @@ namespace dsn {
     public:
         binary_writer(int reserved_buffer_size = 0);
         binary_writer(blob& buffer);
-        ~binary_writer();
+
+        virtual ~binary_writer();
 
         template<typename T> void write_pod(const T& val);
         template<typename T> void write(const T& val) { dassert(false, "write of this type is not implemented"); }

@@ -301,7 +301,7 @@ void replica::update_configuration_on_meta_server(config_type type, const ::dsn:
     request->node = node;
 
     {
-        msg_binary_writer writer(msg);
+        rpc_write_stream writer(msg);
         marshall(writer, hdr);
         marshall(writer, *request);
     }

@@ -28,7 +28,7 @@
 # include <dsn/service_api_c.h>
 # include <dsn/cpp/utils.h>
 # include <dsn/cpp/address.h>
-# include <dsn/cpp/msg_binary_io.h>
+# include <dsn/cpp/rpc_stream.h>
 # include <list>
 # include <map>
 # include <set>
@@ -48,16 +48,28 @@
 template<typename T>
 inline void marshall(dsn_message_t msg, const T& val)
 {
-    ::dsn::msg_binary_writer writer(msg);
+    ::dsn::rpc_write_stream writer(msg);
     marshall(writer, val);
 }
 
 template<typename T>
 inline void unmarshall(dsn_message_t msg, /*out*/ T& val)
 {
-    ::dsn::msg_binary_reader reader(msg);
+    ::dsn::rpc_read_stream reader(msg);
     unmarshall(reader, val);
 }
+
+//template<typename T>
+//inline void marshall(::dsn::rpc_write_stream writer, const T& val)
+//{
+//    marshall(writer, val);
+//}
+//
+//template<typename T>
+//inline void unmarshall(::dsn::rpc_read_stream reader, /*out*/ T& val)
+//{
+//    unmarshall(reader, val);
+//}
 
 namespace dsn {
     

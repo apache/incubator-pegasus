@@ -214,12 +214,6 @@ typedef enum dsn_host_type_t
     HOST_TYPE_INVALID
 } dsn_host_type_t;
 
-//
-// dsn_address_t is passed by copy-by-value in general
-// so callers must be in charge of releasing @uri when
-// host type is HOST_TYPE_URI.
-//
-
 #pragma pack(push, 4)
 typedef struct dsn_address_t
 {
@@ -765,6 +759,39 @@ __inline double   dsn_probability()
 {
     return (double)(dsn_random64(0, 1000000000)) / 1000000000.0; 
 }
+
+//------------------------------------------------------------------------------
+//
+// service model (partition + replication)
+//
+//------------------------------------------------------------------------------
+
+typedef struct __app_flag__
+{
+    uint32_t is_partitioned   : 1;
+    uint32_t is_stateful      : 1;
+    uint32_t is_replicated    : 1;
+    uint32_t use_virtual_node : 1;
+} dsn_app_flag;
+
+typedef struct __app_id__
+{
+    uint32_t app_id;
+    uint32_t partition_id;
+} dsn_app_id;
+
+typedef struct __app_role__
+{
+    const char*     type_name;    
+    dsn_app_flag    flag;
+    dsn_app_create  create;
+    dsn_app_start   start;
+    dsn_app_destroy destroy;
+
+    // dsn_app_checkpointer
+    // dsn_app_load_balancer
+    // dsn_app_xxx
+} dsn_app_role;
 
 //------------------------------------------------------------------------------
 //
