@@ -39,6 +39,10 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
 		set(OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
 	endif()
 
+    if(DEFINED DSN_DEBUG_CMAKE)
+        message(STATUS "OUTPUT_DIRECTORY = ${OUTPUT_DIRECTORY}")
+    endif()
+
     if(PROJ_LANG STREQUAL "CXX")
         if(NOT (PROJ_INC_PATH STREQUAL ""))
             include_directories(${PROJ_INC_PATH})
