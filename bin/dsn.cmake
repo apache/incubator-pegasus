@@ -94,6 +94,24 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
 			"${CMAKE_CURRENT_BINARY_DIR}/${PROJ_NAME}.csproj"
             TYPE FAE04EC0-301F-11D3-BF4B-00C04F79EFBC
             )
+        if(MSVC)
+            set(MY_CSC "msbuild.exe")
+        else()
+            set(MY_CSC "xbuild")
+        endif()
+        if(DSN_BUILD_RUNTIME)
+            set(DSN_CORE_DLL "${OUTPUT_DIRECTORY}")
+        else()
+            set(DSN_CORE_DLL "${DSN_ROOT}")
+        endif()
+        #set(DSN_CORE_DLL "${DSN_CORE_DLL}/lib/libdsn.core.*")
+        file(GLOB DSN_CORE_DLL "${DSN_CORE_DLL}/lib/libdsn.core.*")
+        execute_process(
+            COMMAND ${MY_CSC} "${CMAKE_CURRENT_BINARY_DIR}/${PROJ_NAME}.csproj"
+            )
+        execute_process(
+            COMMAND ${CMAKE_COMMAND} -E copy ${DSN_CORE_DLL} "${OUTPUT_DIRECTORY}/"
+            )
     endif()
                
     if((PROJ_TYPE STREQUAL "EXECUTABLE") AND (NOT (PROJ_BINPLACES STREQUAL "")))
@@ -471,7 +489,7 @@ function(dsn_common_setup)
     endif()
 
     if(NOT DEFINED DSN_BUILD_RUNTIME)
-        set(DSN_BUILD_RUNTIME 0)
+        set(DSN_BUILD_RUNTIME FALSE)
     endif()
     
     set(BUILD_SHARED_LIBS OFF)
