@@ -40,7 +40,8 @@ namespace dsn
     public:
         safe_handle(void* handle, bool is_owner)
         {
-            assign(handle, is_owner);
+            _handle = handle;
+            _is_owner = is_owner;
         }
 
         safe_handle()

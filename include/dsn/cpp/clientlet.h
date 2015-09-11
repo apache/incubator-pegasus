@@ -597,7 +597,7 @@ namespace dsn
             {
                 if (response)
                 {
-                    response->assign(resp, true);
+                    response->set_read_msg(resp);
                 }   
                 else
                     dsn_msg_release_ref(resp);
