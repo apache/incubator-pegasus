@@ -93,12 +93,11 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
     endif()
                
     if((PROJ_TYPE STREQUAL "EXECUTABLE") AND (NOT (PROJ_BINPLACES STREQUAL "")))
-        set(BINPLACE_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/")
         foreach(BF ${PROJ_BINPLACES})
             add_custom_command(
                 TARGET ${PROJ_NAME}
                 POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy ${BF} "${BINPLACE_DIR}"
+                COMMAND ${CMAKE_COMMAND} -E copy ${BF} "${OUTPUT_DIRECTORY}/"
                 )
             if(DO_INSTALL)
                 install(FILES ${BF} DESTINATION "${INSTALL_DIR}")
@@ -468,7 +467,7 @@ function(dsn_common_setup)
     endif()
 
     if(NOT DEFINED DSN_BUILD_RUNTIME)
-        message(FATAL_ERROR "DSN_BUILD_RUNTIME is not defined.")
+        set(DSN_BUILD_RUNTIME 0)
     endif()
     
     set(BUILD_SHARED_LIBS OFF)
