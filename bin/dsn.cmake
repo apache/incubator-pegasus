@@ -100,12 +100,11 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
             set(MY_CSC "xbuild")
         endif()
         if(DSN_BUILD_RUNTIME)
-            set(DSN_CORE_DLL "${OUTPUT_DIRECTORY}")
+            set(DSN_CORE_DLL "${OUTPUT_DIRECTORY}/lib/dsn.core.*")
         else()
-            set(DSN_CORE_DLL "${DSN_ROOT}")
+            set(DSN_CORE_DLL "${DSN_ROOT}/lib/libdsn.core.*")
         endif()
-        #set(DSN_CORE_DLL "${DSN_CORE_DLL}/lib/libdsn.core.*")
-        file(GLOB DSN_CORE_DLL "${DSN_CORE_DLL}/lib/libdsn.core.*")
+        file(GLOB DSN_CORE_DLL "${DSN_CORE_DLL}")
         execute_process(
             COMMAND ${MY_CSC} "${CMAKE_CURRENT_BINARY_DIR}/${PROJ_NAME}.csproj"
             )
