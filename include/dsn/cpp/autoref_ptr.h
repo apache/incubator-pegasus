@@ -69,7 +69,18 @@ namespace dsn
 
     private:
         int _magic;
-        std::atomic<long> _counter;        
+        std::atomic<long> _counter;   
+
+    public:
+        ref_counter(const ref_counter&)
+        {
+            dassert(false, "this is not allowed");
+        }
+
+        ref_counter& operator=(const ref_counter&)
+        {
+            dassert(false, "this is not allowed");
+        }
     };
 
     template<typename T>  // T : ref_counter

@@ -2,7 +2,7 @@
 require_once($argv[1]); // type.php
 require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
-$dsn_root = dirname(dirname(dirname(__DIR__)));
+$dsn_root = dirname(dirname(dirname(dirname(__DIR__))));
 $dsn_root = str_replace('\\', '/', $dsn_root);
 ?>
 cmake_minimum_required(VERSION 2.8.8)
@@ -37,4 +37,4 @@ set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
 set(MY_BOOST_PACKAGES "")
 
 dsn_common_setup()
-dsn_add_executable()
+dsn_add_cs_executable()

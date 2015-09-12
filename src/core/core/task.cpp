@@ -45,12 +45,6 @@
 namespace dsn 
 {
 __thread struct __tls_dsn__ tls_dsn;
-__thread struct
-{
-    int magic;
-    uint64_t node_pool_thread_ids; // 8,8,16 bits
-    int last_task_id; // 32bits
-} tls_task_id;
 
 /*static*/ void task::set_tls_dsn_context(
     service_node* node,  // cannot be null
@@ -58,40 +52,50 @@ __thread struct
     task_queue* queue    // owner queue if io_mode == IOE_PER_QUEUE
     )
 {
-    if (tls_dsn.magic != 0xdeadbeef)
+    memset((void*)&dsn::tls_dsn, 0, sizeof(dsn::tls_dsn));
+    dsn::tls_dsn.magic = 0xdeadbeef;
+    dsn::tls_dsn.worker_index = -1;
+
+    if (node)
     {
-        tls_dsn.magic = 0xdeadbeef;
+        if (worker != nullptr)
+        {
+            dassert(worker->pool()->node() == node,
+                "worker not belonging to the given node: %s vs %s",
+                worker->pool()->node()->name(),
+                node->name()
+                );
+        }
+
+        if (queue != nullptr)
+        {
+            dassert(queue->pool()->node() == node,
+                "queue not belonging to the given node: %s vs %s",
+                queue->pool()->node()->name(),
+                node->name()
+                );
+        }
+
+        tls_dsn.node = node;
+        tls_dsn.worker = worker;
+        tls_dsn.worker_index = worker ? worker->index() : -1;
+        tls_dsn.current_task = nullptr;
+        tls_dsn.rpc = node->rpc(queue ? queue : (worker ? worker->queue() : nullptr));
+        tls_dsn.disk = node->disk(queue ? queue : (worker ? worker->queue() : nullptr));
+        tls_dsn.env = service_engine::fast_instance().env();
+        tls_dsn.nfs = node->nfs(queue ? queue : (worker ? worker->queue() : nullptr));
+        tls_dsn.tsvc = node->tsvc(queue ? queue : (worker ? worker->queue() : nullptr));
     }
 
-    dassert(node, "service node cannot be empty");
-    
-    if (worker != nullptr)
+    tls_dsn.node_pool_thread_ids = (node ? ((uint64_t)(uint8_t)node->id()) : 0) << (64 - 8); // high 8 bits for node id
+    tls_dsn.node_pool_thread_ids |= (worker ? ((uint64_t)(uint8_t)(int)worker->pool_spec().pool_code) : 0) << (64 - 8 - 8); // next 8 bits for pool id
+    auto worker_idx = worker ? worker->index() : -1;
+    if (worker_idx == -1)
     {
-        dassert(worker->pool()->node() == node, 
-            "worker not belonging to the given node: %s vs %s",
-            worker->pool()->node()->name(),
-            node->name()
-            );
+        worker_idx = ::dsn::utils::get_current_tid();
     }
-
-    if (queue != nullptr)
-    {
-        dassert(queue->pool()->node() == node,
-            "queue not belonging to the given node: %s vs %s",
-            queue->pool()->node()->name(),
-            node->name()
-            );
-    }
-
-    tls_dsn.node = node;
-    tls_dsn.worker = worker;
-    tls_dsn.worker_index = worker ? worker->index() : -1;
-    tls_dsn.current_task = nullptr;
-    tls_dsn.rpc = node->rpc(queue ? queue : (worker ? worker->queue() : nullptr));
-    tls_dsn.disk = node->disk(queue ? queue : (worker ? worker->queue() : nullptr));
-    tls_dsn.env = service_engine::fast_instance().env();
-    tls_dsn.nfs = node->nfs(queue ? queue : (worker ? worker->queue() : nullptr));
-    tls_dsn.tsvc = node->tsvc(queue ? queue : (worker ? worker->queue() : nullptr));
+    tls_dsn.node_pool_thread_ids |= ((uint64_t)(uint16_t)worker_idx) << 32; // next 16 bits for thread id
+    tls_dsn.last_lower32_task_id = 0;
 }
 
 task::task(dsn_task_code_t code, int hash, service_node* node)
@@ -116,23 +120,12 @@ task::task(dsn_task_code_t code, int hash, service_node* node)
         _node = p->node();
     }
 
-    if (tls_task_id.magic != 0xdeadbeef)
+    if (tls_dsn.magic != 0xdeadbeef)
     {
-        tls_task_id.node_pool_thread_ids = ((uint64_t)(uint8_t)_node->id()) << (64 - 8); // high 8 bits for node id
-        tls_task_id.node_pool_thread_ids |= ((uint64_t)(uint8_t)(int)_spec->pool_code) << (64 - 8 - 8); // next 8 bits for pool id
-        auto worker_idx = task::get_current_worker_index();
-        if (worker_idx == -1)
-        {
-            worker_idx = ::dsn::utils::get_current_tid();
-            // tls_dsn.worker_index = worker_idx;
-        }
-        tls_task_id.node_pool_thread_ids |= ((uint64_t)(uint16_t)worker_idx) << 32; // next 16 bits for thread id
-
-        tls_task_id.last_task_id = 0;
-        tls_task_id.magic = 0xdeadbeef;
+        task::set_tls_dsn_context(nullptr, nullptr, nullptr);
     }
 
-    _task_id = tls_task_id.node_pool_thread_ids + (++tls_task_id.last_task_id);
+    _task_id = tls_dsn.node_pool_thread_ids + (++tls_dsn.last_lower32_task_id);
 }
 
 task::~task()

@@ -47,12 +47,12 @@ public:
         int hash = 0,
         const ::dsn::rpc_address *p_server_addr = nullptr)
     {
-        dsn::message_ptr response;
+        dsn::rpc_read_stream response;
         auto err = ::dsn::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
             <?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash, timeout_milliseconds, app());
         if (err == ::dsn::ERR_OK)
         {
-            ::unmarshall(response.get_msg(), resp);
+            unmarshall(response, resp);
         }
         return err;
     }

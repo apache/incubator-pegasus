@@ -56,7 +56,11 @@ namespace <?=$_PROG->get_csharp_namespace()?>
                 return;
             }
             
-            On<?=$f->name?>(<?=$f->get_first_param()->name?>, new RpcReplier<<?=$f->get_csharp_return_type()?>>(response, (s, r) => {s.Write(r);}));
+            On<?=$f->name?>(<?=$f->get_first_param()->name?>, new RpcReplier<<?=$f->get_csharp_return_type()?>>(response, (s, r) => 
+            {
+                s.Write(r);
+                s.Flush();
+            }));
         }
         
         protected virtual void On<?=$f->name?>(<?=$f->get_first_param()->get_csharp_type()?> <?=$f->get_first_param()->name?>, RpcReplier<<?=$f->get_csharp_return_type()?>> replier)

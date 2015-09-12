@@ -151,7 +151,7 @@ void replica::send_prepare_message(const ::dsn::rpc_address& addr, partition_sta
     _primary_states.get_replica_config(status, rconfig);
 
     {
-        msg_binary_writer writer(msg);
+        rpc_write_stream writer(msg);
         marshall(writer, get_gpid());
         marshall(writer, rconfig);
         mu->write_to(writer);
@@ -195,7 +195,7 @@ void replica::on_prepare(dsn_message_t request)
     mutation_ptr mu;
 
     {
-        msg_binary_reader reader(request);
+        rpc_read_stream reader(request);
         unmarshall(reader, rconfig);
         mu = mutation::read_from(reader, request);
     }

@@ -29,7 +29,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
         }
 
 <?php foreach ($_PROG->services as $svc) { ?>
-        private <?=$svc->name?>Server _<?=$svc->name?>Server;
+        private <?=$svc->name?>Server _<?=$svc->name?>Server = new <?=$svc->name?>Server();
 <?php } ?>
     }
 
@@ -46,9 +46,9 @@ namespace <?=$_PROG->get_csharp_namespace()?>
             Native.dsn_address_build(out _server.addr, args[1], ushort.Parse(args[2]));
 
 <?php foreach ($_PROG->services as $svc) { ?>
-            _<?=$svc->name?>Client= new <?=$svc->name?>Client(_server);
+            _<?=$svc->name?>Client = new <?=$svc->name?>Client(_server);
 <?php } ?>
-            _timer = Clientlet.CallAsync2(<?=$_PROG->name?>Helper.<?=$_PROG->get_test_task_code()?>, null, this.OnTestTimer, 0, 0, 1000);
+            _timer = Clientlet.CallAsync3(<?=$_PROG->name?>Helper.<?=$_PROG->get_test_task_code()?>, null, this.OnTestTimer, 0, 0, 1000);
             return ErrorCode.ERR_OK;
         }
 

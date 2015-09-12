@@ -164,7 +164,7 @@ error_code service_node::init_io_engine(io_engine& io, ioe_mode mode)
     }
     else
     {
-        dwarn("nfs not started coz [core] start_nfs = false");
+        ddebug("nfs not started coz [core] start_nfs = false");
     }
 
     return err;
