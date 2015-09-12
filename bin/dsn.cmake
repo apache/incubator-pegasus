@@ -494,7 +494,14 @@ function(dsn_common_setup)
     if(NOT DEFINED DSN_BUILD_RUNTIME)
         set(DSN_BUILD_RUNTIME FALSE)
     endif()
-    
+	
+	message (STATUS "Installation directory: CMAKE_INSTALL_PREFIX = " ${CMAKE_INSTALL_PREFIX})	
+	set(DSN_ROOT2 "$ENV{DSN_ROOT}")
+	if((EXISTS "${DSN_ROOT2}/"))
+		set(CMAKE_INSTALL_PREFIX ${DSN_ROOT2} CACHE STRING "" FORCE)
+		message (STATUS "Installation directory redefined w/ ENV{DSN_ROOT}: " ${CMAKE_INSTALL_PREFIX})	
+	endif()
+	
     set(BUILD_SHARED_LIBS OFF)
     dsn_setup_version()
     ms_check_cxx11_support()
