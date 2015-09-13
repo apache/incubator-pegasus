@@ -39,6 +39,10 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
 		set(OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
 	endif()
 
+    if(DEFINED DSN_DEBUG_CMAKE)
+        message(STATUS "OUTPUT_DIRECTORY = ${OUTPUT_DIRECTORY}")
+    endif()
+
     if(PROJ_LANG STREQUAL "CXX")
         if(NOT (PROJ_INC_PATH STREQUAL ""))
             include_directories(${PROJ_INC_PATH})
@@ -90,15 +94,35 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
 			"${CMAKE_CURRENT_BINARY_DIR}/${PROJ_NAME}.csproj"
             TYPE FAE04EC0-301F-11D3-BF4B-00C04F79EFBC
             )
+        if(MSVC)
+            set(MY_CSC "msbuild.exe")
+        else()
+            set(MY_CSC "xbuild")
+        endif()
+        if(DSN_BUILD_RUNTIME)
+            set(DSN_CORE_DLL_FILES "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/")
+        else()
+            set(DSN_CORE_DLL_FILES "${DSN_ROOT}/lib/")
+        endif()
+        if (NOT MSVC)
+            set(DSN_CORE_DLL_FILES "${DSN_CORE_DLL_FILES}lib")
+        endif()
+        set(DSN_CORE_DLL_FILES "${DSN_CORE_DLL_FILES}dsn.core.*")
+        file(GLOB DSN_CORE_DLL_FILES "${DSN_CORE_DLL_FILES}")
+        execute_process(
+            COMMAND ${MY_CSC} "${CMAKE_CURRENT_BINARY_DIR}/${PROJ_NAME}.csproj"
+            )
+        foreach(CORE_FILE ${DSN_CORE_DLL_FILES})
+            execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${CORE_FILE} "${OUTPUT_DIRECTORY}/")
+        endforeach()
     endif()
                
     if((PROJ_TYPE STREQUAL "EXECUTABLE") AND (NOT (PROJ_BINPLACES STREQUAL "")))
-        set(BINPLACE_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/")
         foreach(BF ${PROJ_BINPLACES})
             add_custom_command(
                 TARGET ${PROJ_NAME}
                 POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy ${BF} "${BINPLACE_DIR}"
+                COMMAND ${CMAKE_COMMAND} -E copy ${BF} "${OUTPUT_DIRECTORY}/"
                 )
             if(DO_INSTALL)
                 install(FILES ${BF} DESTINATION "${INSTALL_DIR}")
@@ -468,9 +492,16 @@ function(dsn_common_setup)
     endif()
 
     if(NOT DEFINED DSN_BUILD_RUNTIME)
-        message(FATAL_ERROR "DSN_BUILD_RUNTIME is not defined.")
+        set(DSN_BUILD_RUNTIME FALSE)
     endif()
-    
+	
+	message (STATUS "Installation directory: CMAKE_INSTALL_PREFIX = " ${CMAKE_INSTALL_PREFIX})	
+	set(DSN_ROOT2 "$ENV{DSN_ROOT}")
+	if((EXISTS "${DSN_ROOT2}/"))
+		set(CMAKE_INSTALL_PREFIX ${DSN_ROOT2} CACHE STRING "" FORCE)
+		message (STATUS "Installation directory redefined w/ ENV{DSN_ROOT}: " ${CMAKE_INSTALL_PREFIX})	
+	endif()
+	
     set(BUILD_SHARED_LIBS OFF)
     dsn_setup_version()
     ms_check_cxx11_support()

@@ -29,7 +29,7 @@
 # include <dsn/ports.h>
 # include <dsn/cpp/auto_codes.h>
 # include <dsn/cpp/serialization.h>
-# include <dsn/cpp/msg_binary_io.h>
+# include <dsn/cpp/rpc_stream.h>
 # include <dsn/cpp/zlocks.h>
 # include <dsn/cpp/clientlet.h>
 # include <dsn/cpp/serverlet.h>

@@ -1,14 +1,45 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+﻿<?php
+require_once($argv[1]); // type.php
+require_once($argv[2]); // program.php
+$file_prefix = $argv[3];
+$dsn_root = dirname(dirname(dirname(dirname(__DIR__))));
+$dsn_root = str_replace('\\', '/', $dsn_root);
+
+function getGUID()
+{
+    if (function_exists('com_create_guid'))
+    {
+        return com_create_guid();
+    }
+    else
+    {
+        mt_srand((double)microtime()*10000);//optional for php 4.2.0 and up.
+        $charid = strtoupper(md5(uniqid(rand(), true)));
+        $hyphen = chr(45);// "-"
+        $uuid = chr(123)// "{"
+            .substr($charid, 0, 8).$hyphen
+            .substr($charid, 8, 4).$hyphen
+            .substr($charid,12, 4).$hyphen
+            .substr($charid,16, 4).$hyphen
+            .substr($charid,20,12)
+            .chr(125);// "}"
+        return $uuid;
+    }
+}
+
+$appguid = getGUID();
+echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>".PHP_EOL;
+?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{1243D2B1-6270-47FE-A886-8F0B0CEBA9E5}</ProjectGuid>
+    <ProjectGuid><?=$appguid?></ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>echo.csharp</RootNamespace>
-    <AssemblyName>echo.csharp</AssemblyName>
+    <RootNamespace><?=$_PROG->name?></RootNamespace>
+    <AssemblyName><?=$_PROG->name?></AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -17,23 +48,25 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>${MY_OUTPUT_DIRECTORY}\</OutputPath>
+    <OutputPath>${MY_OUTPUT_DIRECTORY}</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>${MY_OUTPUT_DIRECTORY}\</OutputPath>
+    <OutputPath>${MY_OUTPUT_DIRECTORY}</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <DebugSymbols>true</DebugSymbols>
-    <OutputPath>${MY_OUTPUT_DIRECTORY}\</OutputPath>
+    <OutputPath>${MY_OUTPUT_DIRECTORY}</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <DebugType>full</DebugType>
     <PlatformTarget>x64</PlatformTarget>
@@ -42,7 +75,7 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
-    <OutputPath>${MY_OUTPUT_DIRECTORY}\</OutputPath>
+    <OutputPath>${MY_OUTPUT_DIRECTORY}</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
@@ -53,7 +86,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
     <DebugSymbols>true</DebugSymbols>
-    <OutputPath>${MY_OUTPUT_DIRECTORY}\</OutputPath>
+    <OutputPath>${MY_OUTPUT_DIRECTORY}</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <DebugType>full</DebugType>
     <PlatformTarget>x86</PlatformTarget>
@@ -62,7 +95,7 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
-    <OutputPath>${MY_OUTPUT_DIRECTORY}\</OutputPath>
+    <OutputPath>${MY_OUTPUT_DIRECTORY}</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
@@ -73,6 +106,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="dsn.dev.csharp">
+        <HintPath><?=$dsn_root?>/lib/dsn.dev.csharp.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="${MY_PROJ_SRC}" />
@@ -84,12 +121,6 @@
     <None Include="${MY_CURRENT_SOURCE_DIR}\config.ini">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\dev\csharp\dsn.dev.csharp.csproj">
-      <Project>{41e40377-e430-42f8-910e-155053ee64e3}</Project>
-      <Name>dsn.dev.csharp</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

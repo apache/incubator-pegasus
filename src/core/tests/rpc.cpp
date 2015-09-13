@@ -35,7 +35,7 @@ TEST(core, rpc)
     std::string result;
     ::dsn::rpc_address server(HOST_TYPE_IPV4, "localhost", 20101);
 
-    ::dsn::message_ptr response;
+    ::dsn::rpc_read_stream response;
     auto err = ::dsn::rpc::call_typed_wait(
         &response,
         server,
@@ -47,6 +47,6 @@ TEST(core, rpc)
         );
     EXPECT_TRUE(err == ERR_OK);
 
-    ::unmarshall(response.get(), result);
+    unmarshall(response, result);
     EXPECT_TRUE(result.substr(0, result.length() - 2) == "server.THREAD_POOL_TEST_SERVER");
 }

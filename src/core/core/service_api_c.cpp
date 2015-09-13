@@ -594,15 +594,13 @@ DSN_API void dsn_rpc_enqueue_response(dsn_task_t rpc_call, dsn_error_t err, dsn_
 //------------------------------------------------------------------------------
 DSN_API dsn_handle_t dsn_file_open(const char* file_name, int flag, int pmode, dsn_app_t app)
 {
-    auto disk = ::dsn::task::get_current_disk();
-    if (!disk) disk = ((::dsn::service_node*)app)->node_disk();
+    auto disk = app ? ((::dsn::service_node*)app)->node_disk() : ::dsn::task::get_current_disk();
     return disk->open(file_name, flag, pmode);
 }
 
 DSN_API dsn_error_t dsn_file_close(dsn_handle_t file, dsn_app_t app)
 {
-    auto disk = ::dsn::task::get_current_disk();
-    if (!disk) disk = ((::dsn::service_node*)app)->node_disk();
+    auto disk = app ? ((::dsn::service_node*)app)->node_disk() : ::dsn::task::get_current_disk();
     return disk->close(file);
 }
 
@@ -622,7 +620,7 @@ DSN_API void dsn_file_read(dsn_handle_t file, char* buffer, int count, uint64_t 
     callback->aio()->file_offset = offset;
     callback->aio()->type = ::dsn::AIO_Read;
 
-    auto disk = ::dsn::task::get_current_disk();
+    auto disk = ::dsn::task::get_current_disk2();
     if (!disk) disk = callback->node()->node_disk();
     disk->read(callback);
 }
@@ -638,7 +636,7 @@ DSN_API void dsn_file_write(dsn_handle_t file, const char* buffer, int count, ui
     callback->aio()->file_offset = offset;
     callback->aio()->type = ::dsn::AIO_Write;
 
-    auto disk = ::dsn::task::get_current_disk();
+    auto disk = ::dsn::task::get_current_disk2();
     if (!disk) disk = callback->node()->node_disk();
     disk->write(callback);
 }
@@ -656,7 +654,7 @@ DSN_API void dsn_file_copy_remote_directory(const dsn_address_t* remote, const c
     ::dsn::aio_task* callback((::dsn::aio_task*)cb);
     callback->set_tracker((dsn::task_tracker*)tracker);
 
-    auto nfs = ::dsn::task::get_current_nfs();
+    auto nfs = ::dsn::task::get_current_nfs2();
     if (!nfs) nfs = callback->node()->node_nfs();
     nfs->call(rci, callback);
 }
@@ -681,7 +679,7 @@ DSN_API void dsn_file_copy_remote_files(const dsn_address_t* remote, const char*
     ::dsn::aio_task* callback((::dsn::aio_task*)cb);
     callback->set_tracker((dsn::task_tracker*)tracker);
 
-    auto nfs = ::dsn::task::get_current_nfs();
+    auto nfs = ::dsn::task::get_current_nfs2();
     if (!nfs) nfs = callback->node()->node_nfs();
     nfs->call(rci, callback);
 }
@@ -848,9 +846,7 @@ namespace dsn {
 extern void dsn_log_init();
 bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_name, int app_index)
 {
-    memset((void*)&dsn::tls_dsn, 0, sizeof(dsn::tls_dsn));
-    dsn::tls_dsn.magic = 0xdeadbeef;
-    dsn::tls_dsn.worker_index = -1;
+    ::dsn::task::set_tls_dsn_context(nullptr, nullptr, nullptr);
 
     dsn_all.engine_ready = false;
     dsn_all.config_completed = false;

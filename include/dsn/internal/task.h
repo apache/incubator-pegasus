@@ -71,6 +71,9 @@ struct __tls_dsn__
     env_provider  *env;
     nfs_node      *nfs;
     timer_service *tsvc;
+
+    uint64_t      node_pool_thread_ids; // 8,8,16 bits
+    int           last_lower32_task_id; // 32bits
 };
 
 extern __thread struct __tls_dsn__ tls_dsn;
@@ -114,8 +117,10 @@ public:
     static const char*      get_current_node_name();
     static rpc_engine*      get_current_rpc();
     static disk_engine*     get_current_disk();
+    static disk_engine*     get_current_disk2();
     static env_provider*    get_current_env();
     static nfs_node*        get_current_nfs();
+    static nfs_node*        get_current_nfs2();
     static timer_service*   get_current_tsvc();
 
     static void             set_tls_dsn_context(
@@ -375,6 +380,11 @@ __inline /*static*/ disk_engine* task::get_current_disk()
     return tls_dsn.disk;
 }
 
+__inline /*static*/ disk_engine* task::get_current_disk2()
+{
+    return tls_dsn.magic == 0xdeadbeef ? tls_dsn.disk : nullptr;
+}
+
 __inline /*static*/ env_provider* task::get_current_env()
 {
     dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
@@ -385,6 +395,11 @@ __inline /*static*/ nfs_node* task::get_current_nfs()
 {
     dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
     return tls_dsn.nfs;
+}
+
+__inline /*static*/ nfs_node* task::get_current_nfs2()
+{
+    return tls_dsn.magic == 0xdeadbeef ? tls_dsn.nfs : nullptr;
 }
 
 __inline /*static*/ timer_service* task::get_current_tsvc()

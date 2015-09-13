@@ -29,7 +29,7 @@
 # include <sstream>
 # include <dsn/cpp/utils.h>
 # include <dsn/cpp/serialization.h>
-# include <dsn/cpp/msg_binary_io.h>
+# include <dsn/cpp/rpc_stream.h>
 # include "service_engine.h"
 
 # ifdef __TITLE__
@@ -167,8 +167,7 @@ namespace dsn {
 
     void command_manager::on_remote_cli(dsn_message_t req)
     {
-        auto msg = (message_ex*)req;
-        msg_binary_reader reader(msg);
+        rpc_read_stream reader(req);
 
         std::string cmd;
         unmarshall(reader, cmd);

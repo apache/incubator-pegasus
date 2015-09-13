@@ -175,13 +175,12 @@ void meta_service::on_request(dsn_message_t msg)
     if (is_primary) is_primary = (primary_address() == rhdr.primary_address);
     rhdr.err = ERR_OK;
 
-    dsn_address_t faddr;
-    dsn_msg_from_address(msg, &faddr);
-    ::dsn::rpc_address faddr2(faddr);
+    ::dsn::rpc_address faddr;
+    dsn_msg_from_address(msg, faddr.c_addr_ptr());
     dinfo("recv meta request %s from %s:%hu", 
         dsn_task_code_to_string(hdr.rpc_tag),
-        faddr2.name(),
-        faddr2.port()
+        faddr.name(),
+        faddr.port()
         );
 
     dsn_message_t resp = dsn_msg_create_response(msg);

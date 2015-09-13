@@ -27,15 +27,33 @@
 
 # include <dsn/cpp/utils.h>
 # include <dsn/service_api_c.h>
+# include <dsn/cpp/auto_codes.h>
 
 namespace dsn
 {
-    class msg_binary_reader : public binary_reader
+    class rpc_read_stream;
+    class rpc_write_stream;
+    typedef ::dsn::ref_ptr<rpc_read_stream> rpc_read_stream_ptr;
+    typedef ::dsn::ref_ptr<rpc_write_stream> rpc_write_stream_ptr;
+
+    class rpc_read_stream : 
+        public safe_handle<dsn_msg_release_ref>, 
+        public binary_reader
     {
     public:
-        msg_binary_reader(dsn_message_t msg)
-            : _msg(msg)
+        rpc_read_stream(dsn_message_t msg)
         {
+            set_read_msg(msg);
+        }
+
+        rpc_read_stream()
+        {        
+        }
+
+        void set_read_msg(dsn_message_t msg)
+        {
+            assign(msg, false);
+
             void* ptr;
             size_t size;
             bool r = dsn_msg_read_next(msg, &ptr, &size);
@@ -45,26 +63,34 @@ namespace dsn
             init(bb);
         }
 
-        ~msg_binary_reader()
+        ~rpc_read_stream()
         {
-            dsn_msg_read_commit(_msg, (size_t)(total_size() - get_remaining_size()));
+            dsn_msg_read_commit(native_handle(), (size_t)(total_size() - get_remaining_size()));
         }
-
-    private:
-        dsn_message_t _msg;
     };
 
-    class msg_binary_writer : public binary_writer
+    class rpc_write_stream :
+        public safe_handle<dsn_msg_release_ref>,
+        public binary_writer
     {
     public:
-        msg_binary_writer(dsn_message_t msg)
-            : _msg(msg)
+        // for response
+        rpc_write_stream(dsn_message_t msg)
+            : safe_handle<dsn_msg_release_ref>(msg, false)
         {
             _last_write_next_committed = true;
             _last_write_next_total_size = 0;
         }
 
-        // write buffer for msg_binary_writer is allocated from
+        // for request
+        rpc_write_stream(task_code code, int timeout_ms = 0, int hash = DSN_INVALID_HASH)
+            : safe_handle<dsn_msg_release_ref>(dsn_msg_create_request(code, timeout_ms, hash), false)
+        {
+            _last_write_next_committed = true;
+            _last_write_next_total_size = 0;
+        }
+
+        // write buffer for rpc_write_stream is allocated from
         // a per-thread pool, and it is expected that
         // the per-thread pool cannot allocated two outstanding
         // buffers at the same time.
@@ -74,12 +100,12 @@ namespace dsn
         {
             if (!_last_write_next_committed)
             {
-                dsn_msg_write_commit(_msg, (size_t)(total_size() - _last_write_next_total_size));
+                dsn_msg_write_commit(native_handle(), (size_t)(total_size() - _last_write_next_total_size));
                 _last_write_next_committed = true;
             }
         }
 
-        ~msg_binary_writer()
+        ~rpc_write_stream()
         {
             commit_buffer();
         }
@@ -91,7 +117,7 @@ namespace dsn
 
             void* ptr;
             size_t sz;
-            dsn_msg_write_next(_msg, &ptr, &sz, size);
+            dsn_msg_write_next(native_handle(), &ptr, &sz, size);
             dbg_dassert(sz >= size, "allocated buffer size must be not less than the required size");
             bb.assign((const char*)ptr, 0, (int)sz);
 
@@ -100,7 +126,6 @@ namespace dsn
         }
 
     private:
-        dsn_message_t _msg;
         bool          _last_write_next_committed;
         int           _last_write_next_total_size;
     };

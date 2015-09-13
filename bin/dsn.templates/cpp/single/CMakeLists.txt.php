@@ -14,8 +14,6 @@ endif()
 
 include("${DSN_ROOT}/bin/dsn.cmake")
 
-set(DSN_BUILD_RUNTIME 0)
-
 set(MY_PROJ_NAME "<?=$_PROG->name?>")
 project(${MY_PROJ_NAME} C CXX)
 
