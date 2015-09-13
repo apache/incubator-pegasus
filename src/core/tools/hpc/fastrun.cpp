@@ -99,7 +99,7 @@ namespace dsn
 
                 if (tspec.worker_factory_name == "")
                     tspec.worker_factory_name = use_mixed_queue ? ("dsn::tools::io_looper_task_worker")
-                                                                 : "dsn::tools::task_worker";
+                                                                 : "dsn::task_worker";
 
                 if (tspec.queue_factory_name == "")
                     tspec.queue_factory_name = use_mixed_queue ? ("dsn::tools::io_looper_task_queue")
