@@ -497,7 +497,7 @@ function(dsn_common_setup)
     
     message (STATUS "Installation directory: CMAKE_INSTALL_PREFIX = " ${CMAKE_INSTALL_PREFIX})    
     set(DSN_ROOT2 "$ENV{DSN_ROOT}")
-    if((EXISTS "${DSN_ROOT2}/"))
+    if((NOT (DSN_ROOT2 STREQUAL "")) AND (EXISTS "${DSN_ROOT2}/"))
         set(CMAKE_INSTALL_PREFIX ${DSN_ROOT2} CACHE STRING "" FORCE)
         message (STATUS "Installation directory redefined w/ ENV{DSN_ROOT}: " ${CMAKE_INSTALL_PREFIX})    
     endif()
