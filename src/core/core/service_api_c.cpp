@@ -1010,7 +1010,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
         dsn_all.config->dump(*os);
         return oss.str();
     });
-
+    
     // invoke customized init after apps are created
     dsn::tools::sys_init_after_app_created.execute(::dsn::service_engine::fast_instance().spec().config);
 

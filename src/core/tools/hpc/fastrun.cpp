@@ -32,6 +32,14 @@ namespace dsn
     {
         void fastrun::install(service_spec& spec)
         {
+            bool use_mixed_queue = false;
+            if (spec.disk_io_mode == IOE_PER_QUEUE ||
+                spec.rpc_io_mode == IOE_PER_QUEUE ||
+                spec.nfs_io_mode == IOE_PER_QUEUE ||
+                spec.timer_io_mode == IOE_PER_QUEUE
+                )
+                use_mixed_queue = true;
+
             if (spec.aio_factory_name == "")
             {
                 spec.aio_factory_name = ("dsn::tools::hpc_aio_provider");
@@ -41,7 +49,8 @@ namespace dsn
                 spec.env_factory_name = ("dsn::tools::hpc_env_provider");
 
             if (spec.timer_factory_name == "")
-                spec.timer_factory_name = ("dsn::tools::io_looper_timer_service");
+                spec.timer_factory_name = use_mixed_queue ? ("dsn::tools::io_looper_timer_service")
+                                                           : "dsn::tools::simple_timer_service";
 
             network_client_config cs;
             cs.factory_name = "dsn::tools::hpc_network_provider";
@@ -89,10 +98,12 @@ namespace dsn
                 threadpool_spec& tspec = *it;
 
                 if (tspec.worker_factory_name == "")
-                    tspec.worker_factory_name = ("dsn::tools::io_looper_task_worker");
+                    tspec.worker_factory_name = use_mixed_queue ? ("dsn::tools::io_looper_task_worker")
+                                                                 : "dsn::tools::task_worker";
 
                 if (tspec.queue_factory_name == "")
-                    tspec.queue_factory_name = ("dsn::tools::io_looper_task_queue");
+                    tspec.queue_factory_name = use_mixed_queue ? ("dsn::tools::io_looper_task_queue")
+                                                                : "dsn::tools::hpc_task_queue";
             }
 
         }

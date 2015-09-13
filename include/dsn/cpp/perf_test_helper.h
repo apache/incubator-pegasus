@@ -26,15 +26,17 @@
 # pragma once
 
 # include <dsn/service_api_cpp.h>
+# include <dsn/cpp/utils.h>
 # include <sstream>
 # include <atomic>
 # include <vector>
-# include <dsn/internal/configuration.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
 # define __TITLE__ "perf.test.helper"
+
+# define INVALID_DURATION_US 0xdeadbeefdeadbeefULL
 
 namespace dsn {
     namespace service {
@@ -42,21 +44,19 @@ namespace dsn {
         struct perf_test_opts
         {
             int  perf_test_rounds;
-            // perf_test_concurrent_count is used only when perf_test_concurrent is true:
-            //   - if perf_test_concurrent_count == 0, means concurrency grow exponentially.
-            //   - if perf_test_concurrent_count >  0, means concurrency maintained to a fixed number.
-            bool perf_test_concurrent;
-            int  perf_test_concurrent_count;
+            // perf_test_concurrency:
+            //   - if perf_test_concurrency == 0, means concurrency grow exponentially.
+            //   - if perf_test_concurrency >  0, means concurrency maintained to a fixed number.            
+            std::vector<int> perf_test_concurrency;
             std::vector<int> perf_test_payload_bytes;
             std::vector<int> perf_test_timeouts_ms;
         };
 
         CONFIG_BEGIN(perf_test_opts)
-            CONFIG_FLD(int, uint64, perf_test_rounds, 10000, "how many rounds of test for each rpc request")            
-            CONFIG_FLD(bool, bool, perf_test_concurrent, true, "whether the rpc request should be issued concurrently")
-            CONFIG_FLD(int, uint64, perf_test_concurrent_count, 10, "0 for expotentially growing concurrenty, >0 for fixed")
-            CONFIG_FLD_INT_LIST(perf_test_payload_bytes, "byte size of each rpc request test")
-            CONFIG_FLD_INT_LIST(perf_test_timeouts_ms, "timeout (ms) for each rpc call")
+            CONFIG_FLD(int, uint64, perf_test_rounds, 100, "how many rounds of test for $each item in concurrency$ rpc request")            
+            CONFIG_FLD_INT_LIST(perf_test_concurrency, "concurrency list: 0 for expotentially growing concurrenty, >0 for fixed")
+            CONFIG_FLD_INT_LIST(perf_test_payload_bytes, "size list: byte size of each rpc request test")
+            CONFIG_FLD_INT_LIST(perf_test_timeouts_ms, "timeout list: timeout (ms) for each rpc call")
         CONFIG_END
         
         template<typename T>
@@ -70,9 +70,16 @@ namespace dsn {
                     dassert(false, "read configuration failed for section [task..default]");
                 }
 
+                if (_default_opts.perf_test_concurrency.size() == 0)
+                {
+                    const int ccs[] = { 1, 100, 1000 };
+                    for (size_t i = 0; i < sizeof(ccs) / sizeof(int); i++)
+                        _default_opts.perf_test_concurrency.push_back(ccs[i]);
+                }
+
                 if (_default_opts.perf_test_timeouts_ms.size() == 0)
                 {
-                    const int timeouts_ms[] = { 1, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000 };
+                    const int timeouts_ms[] = { 1, 1000, 10000 };
                     for (size_t i = 0; i < sizeof(timeouts_ms) / sizeof(int); i++)
                         _default_opts.perf_test_timeouts_ms.push_back(timeouts_ms[i]);
                 }
@@ -89,34 +96,32 @@ namespace dsn {
             {
                 int  rounds;
                 int  payload_bytes;
-                bool concurrent;
-                int  concurrent_count;
+                int  concurrency;
                 int  timeout_ms;
 
                 // statistics 
                 std::atomic<int> timeout_rounds;
                 std::atomic<int> error_rounds;
                 int    succ_rounds;                
-                double succ_latency_avg_us;
+                double succ_latency_avg_ns;
                 double succ_qps;
-                int    min_latency_us;
-                int    max_latency_us;
+                int    min_latency_ns;
+                int    max_latency_ns;
 
                 perf_test_case& operator = (const perf_test_case& r)
                 {
                     rounds = r.rounds;
                     payload_bytes = r.payload_bytes;
                     timeout_ms = r.timeout_ms;
-                    concurrent = r.concurrent;
-                    concurrent_count = r.concurrent_count;
+                    concurrency = r.concurrency;
 
                     timeout_rounds.store(r.timeout_rounds.load());
                     error_rounds.store(r.error_rounds.load());
                     succ_rounds = r.succ_rounds;
-                    succ_latency_avg_us = r.succ_latency_avg_us;
+                    succ_latency_avg_ns = r.succ_latency_avg_ns;
                     succ_qps = r.succ_qps;
-                    min_latency_us = r.min_latency_us;
-                    max_latency_us = r.max_latency_us;
+                    min_latency_ns = r.min_latency_ns;
+                    max_latency_ns = r.max_latency_ns;
                     return *this;
                 }
 
@@ -151,13 +156,15 @@ namespace dsn {
                     int last_index = static_cast<int>(opt.perf_test_timeouts_ms.size()) - 1;                    
                     for (int i = last_index; i >= 0; i--)
                     {
-                        perf_test_case c;
-                        c.rounds = opt.perf_test_rounds;
-                        c.payload_bytes = bytes;
-                        c.timeout_ms = opt.perf_test_timeouts_ms[i];
-                        c.concurrent = opt.perf_test_concurrent;
-                        c.concurrent_count = opt.perf_test_concurrent_count;
-                        s.cases.push_back(c);
+                        for (auto& cc : opt.perf_test_concurrency)
+                        {
+                            perf_test_case c;
+                            c.rounds = opt.perf_test_rounds * cc;
+                            c.payload_bytes = bytes;
+                            c.timeout_ms = opt.perf_test_timeouts_ms[i];
+                            c.concurrency = cc;
+                            s.cases.push_back(c);
+                        }
                     }
                 }
             }
@@ -178,7 +185,7 @@ namespace dsn {
                     return nullptr;
 
                 ++_live_rpc_count;
-                _rounds_latency_us[id - 1] = dsn_now_us();
+                _rounds_latency_rdtsc[id - 1] = ::dsn::utils::get_current_rdtsc();
                 return (void*)(size_t)(id);
             }
 
@@ -193,11 +200,17 @@ namespace dsn {
                     else
                         _current_case->error_rounds++;
 
-                    _rounds_latency_us[id - 1] = 0;
+                    _rounds_latency_rdtsc[id - 1] = INVALID_DURATION_US;
                 }
                 else
                 {
-                    _rounds_latency_us[id - 1] = dsn_now_us() - _rounds_latency_us[id - 1];
+                    auto dt = ::dsn::utils::get_current_rdtsc() - _rounds_latency_rdtsc[id - 1];
+                    _rounds_latency_rdtsc[id - 1] = dt;
+
+                    /*if (dt > 0)
+                    {
+                        dinfo("duration (us): %llu ", dt);
+                    } */
                 }
 
                 // if completed
@@ -207,29 +220,21 @@ namespace dsn {
                     return;
                 }
 
-                // conincontinue further waves
-                if (_current_case->concurrent)
+                // continue further waves
+                if (_current_case->concurrency == 0)
                 {
-                    if (_current_case->concurrent_count == 0)
-                    {
-                        // exponential increase
-                        _suits[_current_suit_index].send_one(_current_case->payload_bytes);
-                        _suits[_current_suit_index].send_one(_current_case->payload_bytes);
-                    }
-                    else
-                    {
-                        // maintain fixed concurrent number
-                        while (_rounds_req < _current_case->rounds
-                               && _live_rpc_count < _current_case->concurrent_count)
-                        {
-                            _suits[_current_suit_index].send_one(_current_case->payload_bytes);
-                        }
-                    }
+                    // exponentially increase
+                    _suits[_current_suit_index].send_one(_current_case->payload_bytes);
+                    _suits[_current_suit_index].send_one(_current_case->payload_bytes);
                 }
                 else
                 {
-                    // always one live request
-                    _suits[_current_suit_index].send_one(_current_case->payload_bytes);
+                    // maintain fixed concurrent number
+                    while (_rounds_req < _current_case->rounds
+                        && _live_rpc_count < _current_case->concurrency)
+                    {
+                        _suits[_current_suit_index].send_one(_current_case->payload_bytes);
+                    }
                 }
             }
             
@@ -238,19 +243,23 @@ namespace dsn {
             {
                 int sc = 0;
                 double sum = 0.0;
-                uint64_t lmin_us = 10000000000ULL;
-                uint64_t lmax_us = 0;
-                for (auto& t : _rounds_latency_us)
+                uint64_t lmin_rdtsc = UINT64_MAX;
+                uint64_t lmax_rdtsc = 0;
+                uint64_t nts = dsn_now_ns();
+                uint64_t nts_rdtsc = ::dsn::utils::get_current_rdtsc();
+                double   rdtsc_per_ns = (double)(nts_rdtsc - _case_start_ts_rdtsc) / (double)(nts - _case_start_ts_ns);
+
+                for (auto& t : _rounds_latency_rdtsc)
                 {
-                    if (t != 0)
+                    if (t != INVALID_DURATION_US)
                     {
                         sc++;
                         sum += static_cast<double>(t);
 
-                        if (t < lmin_us)
-                            lmin_us = t;
-                        if (t > lmax_us)
-                            lmax_us = t;
+                        if (t < lmin_rdtsc)
+                            lmin_rdtsc = t;
+                        if (t > lmax_rdtsc)
+                            lmax_rdtsc = t;
                     }
                 }
                 
@@ -259,17 +268,17 @@ namespace dsn {
                 cs.succ_rounds = cs.rounds - cs.timeout_rounds - cs.error_rounds;
                 //dassert(cs.succ_rounds == sc, "cs.succ_rounds vs sc = %d vs %d", cs.succ_rounds, sc);
 
-                cs.succ_latency_avg_us = sum / (double)sc;
-                cs.succ_qps = (double)sc / ((double)(dsn_now_us() - _case_start_ts_us) / 1000.0 / 1000.0);
-                cs.min_latency_us = static_cast<int>(lmin_us);
-                cs.max_latency_us = static_cast<int>(lmax_us);
+                cs.succ_latency_avg_ns = sum / (double)sc;
+                cs.succ_qps = (double)sc / ((double)(nts - _case_start_ts_ns) / 1000.0 / 1000.0 / 1000.0);
+                cs.min_latency_ns = static_cast<int>((double)(lmin_rdtsc) / rdtsc_per_ns);
+                cs.max_latency_ns = static_cast<int>((double)(lmax_rdtsc) / rdtsc_per_ns);
 
                 std::stringstream ss;
                 ss << "TEST " << _name
                     << ", tmo/err/suc(#): " << cs.timeout_rounds << "/" << cs.error_rounds << "/" << cs.succ_rounds
-                    << ", latency(us): " << cs.succ_latency_avg_us << "(avg), "
-                    << cs.min_latency_us << "(min), "
-                    << cs.max_latency_us << "(max)"
+                    << ", latency(ns): " << cs.succ_latency_avg_ns << "(avg), "
+                    << cs.min_latency_ns << "(min), "
+                    << cs.max_latency_ns << "(max)"
                     << ", qps: " << cs.succ_qps << "#/s"
                     << ", timeout(ms) " << cs.timeout_ms
                     << ", payload(byte) " << cs.payload_bytes
@@ -303,14 +312,13 @@ namespace dsn {
                             {
                                 ss << "TEST " << s.name
                                    << ", rounds " << _current_case->rounds
-                                   << ", concurrent " << (_current_case->concurrent ? "true" : "false")
-                                   << ", concurrent_count " << _current_case->concurrent_count
+                                   << ", concurrency " << _current_case->concurrency
                                    << ", timeout(ms) " << _current_case->timeout_ms
                                    << ", payload(byte) " << _current_case->payload_bytes
                                    << ", timeout/err/succ: " << cs.timeout_rounds << "/" << cs.error_rounds << "/" << cs.succ_rounds
-                                   << ", latency(us): " << cs.succ_latency_avg_us << "(avg), "
-                                   << cs.min_latency_us << "(min), "
-                                   << cs.max_latency_us << "(max)"
+                                   << ", latency(ns): " << cs.succ_latency_avg_ns << "(avg), "
+                                   << cs.min_latency_ns << "(min), "
+                                   << cs.max_latency_ns << "(max)"
                                    << ", qps: " << cs.succ_qps << "#/s"
                                    << std::endl;
                             }
@@ -333,18 +341,18 @@ namespace dsn {
                 _current_case = &cs;
                 cs.timeout_rounds = 0;
                 cs.error_rounds = 0;
-                _case_start_ts_us = dsn_now_us();
+                _case_start_ts_ns = dsn_now_ns();
+                _case_start_ts_rdtsc = ::dsn::utils::get_current_rdtsc();
 
                 _live_rpc_count = 0;
                 _rounds_req = 0;
                 _rounds_resp = 0;
-                _rounds_latency_us.resize(cs.rounds, 0);
+                _rounds_latency_rdtsc.resize(cs.rounds, 0);
 
                 std::stringstream ss;
                 ss << "TEST " << _name
                    << ", rounds " << _current_case->rounds
-                   << ", concurrent " << (_current_case->concurrent ? "true" : "false")
-                   << ", concurrent_count " << _current_case->concurrent_count
+                   << ", concurrency " << _current_case->concurrency
                    << ", timeout(ms) " << _current_case->timeout_ms
                    << ", payload(byte) " << _current_case->payload_bytes;
                 dwarn(ss.str().c_str());
@@ -367,9 +375,10 @@ namespace dsn {
             std::atomic<int> _live_rpc_count;
             std::atomic<int> _rounds_req;
             std::atomic<int> _rounds_resp;
-            std::vector<uint64_t> _rounds_latency_us;
+            std::vector<uint64_t> _rounds_latency_rdtsc;
 
-            uint64_t         _case_start_ts_us;
+            uint64_t         _case_start_ts_ns;
+            uint64_t         _case_start_ts_rdtsc;
 
             std::vector<perf_test_suite> _suits;
             int                         _current_suit_index;

@@ -133,6 +133,10 @@ namespace dsn
         // added in rpc_engine::reply (for server) or rpc_session::call (for client)
         if (msg)
         {
+            /*dinfo("msg %s for rpc %llx is now sent",
+                task_spec::get(msg->local_rpc_code)->name.c_str(), 
+                msg->header->rpc_id
+                );*/
             msg->release_ref(); 
             _message_sent++;
         }        

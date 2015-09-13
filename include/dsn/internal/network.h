@@ -234,7 +234,7 @@ namespace dsn {
 
     protected:
         connection_oriented_network        &_net;
-        ::dsn::rpc_address                      _remote_addr;
+        ::dsn::rpc_address                 _remote_addr;
         std::atomic<int>                   _reconnect_count_after_last_success;
         rpc_client_matcher_ptr             _matcher; // client used only
 

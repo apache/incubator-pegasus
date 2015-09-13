@@ -58,14 +58,16 @@ namespace dsn
         uint64_t      rpc_id;
         char          rpc_name[DSN_MAX_TASK_CODE_NAME_LENGTH];
 
-        // info from client => server
         union
         {
             struct
             {
-                int32_t  timeout_ms;
-                int32_t  hash;
-                uint16_t port;
+                dsn_app_id app_id;
+                uint64_t   flag_context; // flag-dependent context
+                int32_t    timeout_ms;
+                int32_t    hash;
+                uint16_t   port;
+                uint16_t   flag;
             } client;
 
             struct
@@ -85,9 +87,9 @@ namespace dsn
                                         // header not included for *recieved* 
 
         // by rpc and network
-        rpc_session_ptr server_session;
-        ::dsn::rpc_address          from_address;
-        ::dsn::rpc_address          to_address;
+        rpc_session_ptr        server_session;
+        ::dsn::rpc_address     from_address;
+        ::dsn::rpc_address     to_address;
         uint16_t               local_rpc_code;
 
         // by message queuing

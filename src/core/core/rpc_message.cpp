@@ -113,6 +113,20 @@ DSN_API void dsn_msg_to_address(dsn_message_t msg, /*out*/ dsn_address_t* ep)
     *ep = ((::dsn::message_ex*)msg)->to_address.c_addr();
 }
 
+DSN_API void dsn_msg_set_service_context(
+    dsn_message_t msg,
+    dsn_app_id app_id,
+    uint16_t flag,
+    uint64_t flag_context
+    )
+{
+    auto msg2 = (::dsn::message_ex*)msg;
+    auto& c = msg2->header->client;
+    c.app_id = app_id;
+    c.flag = flag;
+    c.flag_context = flag_context;
+}
+
 namespace dsn {
 
 std::atomic<uint64_t> message_ex::_id(0);
