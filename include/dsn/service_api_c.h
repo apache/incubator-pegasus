@@ -220,7 +220,7 @@ typedef struct dsn_address_t
     dsn_host_type_t type;
     uint16_t        port;
     union {
-        uint32_t   ip;
+        uint32_t   ip; // ipv4 in host byte order
         uint32_t   ipv6[4];
         struct {
             const char *uri;
