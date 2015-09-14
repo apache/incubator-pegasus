@@ -290,7 +290,7 @@ namespace dsn
             if (_sending_msg == nullptr)
             {
                 _sending_msg = msg;
-                _sending_next_offset = 0;
+                _sending_buffer_start_index = 0;
             }
 
             // continue old msg
@@ -300,19 +300,15 @@ namespace dsn
             }
 
             // prepare send buffer, make sure header is already in the buffer
-            int total_length = 0;
-            int buffer_count = _parser->get_send_buffers_count_and_total_length(msg, &total_length);
-            auto buffers = (dsn_message_parser::send_buf*)alloca(buffer_count * sizeof(dsn_message_parser::send_buf));
-
             while (true)
             {
-                int count = _parser->prepare_buffers_on_send(msg, _sending_next_offset, buffers);
+                int buffer_count = (int)_sending_buffers.size() - _sending_buffer_start_index;
                 struct msghdr hdr;
                 memset((void*)&hdr, 0, sizeof(hdr));
                 hdr.msg_name = (void*)&_peer_addr;
                 hdr.msg_namelen = (socklen_t)sizeof(_peer_addr);
-                hdr.msg_iov = (struct iovec*)buffers;
-                hdr.msg_iovlen = (size_t)count;
+                hdr.msg_iov = (struct iovec*)&_sending_buffers[_sending_buffer_start_index];
+                hdr.msg_iovlen = (size_t)buffer_count;
 
                 int sz = sendmsg(_socket, &hdr, MSG_NOSIGNAL);
                 int err = errno;
@@ -339,16 +335,29 @@ namespace dsn
                 }
                 else
                 {
-                    _sending_next_offset += sz;
-
-                    if (_sending_next_offset < total_length)
+                    int len = (int)sz;
+                    int buf_i = _sending_buffer_start_index;
+                    while (len > 0)
                     {
-                        // try next while(true) loop to continue sending current msg
+                        auto& buf = _sending_buffers[buf_i];
+                        if (len >= (int)buf.sz)
+                        {
+                            buf_i++;
+                            len -= (int)buf.sz;
+                        }
+                        else
+                        {
+                            buf.buf = (char*)buf.buf + len;
+                            buf.sz -= len;
+                            break;
+                        }
                     }
+                    _sending_buffer_start_index = buf_i;
 
                     // message completed, continue next message
-                    else
+                    if (_sending_buffer_start_index == (int)_sending_buffers.size())
                     {
+                        dassert(len == 0, "buffer must be sent completely");
                         _sending_msg = nullptr;
 
                         _send_lock.unlock(); // avoid recursion
@@ -356,6 +365,11 @@ namespace dsn
                         on_send_completed(msg);
                         _send_lock.lock();
                         return;
+                    }
+
+                    else
+                    {
+                        // try next while(true) loop to continue sending current msg
                     }
                 }
             }
@@ -422,12 +436,12 @@ namespace dsn
             const ::dsn::rpc_address& remote_addr,
             rpc_client_matcher_ptr& matcher
             )
-            : rpc_session(net, remote_addr, matcher),
-             _socket(sock), _parser(parser)
+            : rpc_session(net, remote_addr, matcher, parser),
+             _socket(sock)
         {
             dassert(sock != -1, "invalid given socket handle");
             _sending_msg = nullptr;
-            _sending_next_offset = 0;
+            _sending_buffer_start_index = 0;
             _looper = nullptr;
 
             memset((void*)&_peer_addr, 0, sizeof(_peer_addr));
@@ -554,12 +568,12 @@ namespace dsn
             connection_oriented_network& net,
             const ::dsn::rpc_address& remote_addr
             )
-            : rpc_session(net, remote_addr),
-            _socket(sock), _parser(parser)
+            : rpc_session(net, remote_addr, parser),
+            _socket(sock)
         {
             dassert(sock != -1, "invalid given socket handle");
             _sending_msg = nullptr;
-            _sending_next_offset = 0;
+            _sending_buffer_start_index = 0;
             _looper = nullptr;
 
             memset((void*)&_peer_addr, 0, sizeof(_peer_addr));
