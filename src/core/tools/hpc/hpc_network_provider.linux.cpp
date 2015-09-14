@@ -348,6 +348,7 @@ namespace dsn
                         else
                         {
                             buf.buf = (char*)buf.buf + len;
+                            buf.sz -= len;
                             break;
                         }
                     }
@@ -435,8 +436,8 @@ namespace dsn
             const ::dsn::rpc_address& remote_addr,
             rpc_client_matcher_ptr& matcher
             )
-            : rpc_session(net, remote_addr, matcher),
-             _socket(sock), _parser(parser)
+            : rpc_session(net, remote_addr, matcher, parser),
+             _socket(sock)
         {
             dassert(sock != -1, "invalid given socket handle");
             _sending_msg = nullptr;
@@ -571,8 +572,8 @@ namespace dsn
             connection_oriented_network& net,
             const ::dsn::rpc_address& remote_addr
             )
-            : rpc_session(net, remote_addr),
-            _socket(sock), _parser(parser)
+            : rpc_session(net, remote_addr, parser),
+            _socket(sock)
         {
             dassert(sock != -1, "invalid given socket handle");
             _sending_msg = nullptr;
