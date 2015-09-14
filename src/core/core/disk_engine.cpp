@@ -40,7 +40,6 @@ namespace dsn {
 //----------------- disk_engine ------------------------
 disk_engine::disk_engine(service_node* node)
 {
-    _request_count = 0;
     _is_running = false;    
     _provider = nullptr;
     _node = node;        
@@ -52,7 +51,6 @@ disk_engine::~disk_engine()
 
 void disk_engine::start(aio_provider* provider, io_modifer& ctx)
 {
-    auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
     if (_is_running)
         return;  
 
@@ -87,16 +85,11 @@ void disk_engine::start_io(aio_task* aio_tsk)
 {
     auto aio = aio_tsk->aio();
     aio->engine = this;
-    
+
+    if (!_is_running)
     {
-        auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
-        if (!_is_running)
-        {
-            aio_tsk->enqueue(ERR_SERVICE_NOT_FOUND, 0);
-            return;
-        }
-       
-        _request_count++;
+        aio_tsk->enqueue(ERR_SERVICE_NOT_FOUND, 0);
+        return;
     }
 
     // TODO: profiling, throttling here 
@@ -104,6 +97,7 @@ void disk_engine::start_io(aio_task* aio_tsk)
     if (aio_tsk->spec().on_aio_call.execute(task::get_current_task(), aio_tsk, true))
     {
         aio_tsk->add_ref(); // released in complete_io
+        _request_count++;
         return _provider->aio(aio_tsk); 
     }
     else
@@ -126,13 +120,9 @@ void disk_engine::complete_io(aio_task* aio, error_code err, uint32_t bytes, int
                     );
     }
     
-    {
-        auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
-        _request_count--;
-    }
-    
     aio->enqueue(err, bytes);
     aio->release_ref(); // added in start_io
+    _request_count--;
 }
 
 

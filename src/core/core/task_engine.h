@@ -40,7 +40,7 @@ class task_worker;
 
 //
 // a task_worker_pool is a set of TaskWorkers share the same configs;
-// they may even share the same task_queue when partitioned == true
+// they may even share the same task_queue when partitioned == false
 //
 class task_worker_pool
 {
