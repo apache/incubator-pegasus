@@ -182,6 +182,7 @@ namespace dsn
             load_socket_functions();
             _listen_fd = INVALID_SOCKET;
             _looper = nullptr;
+            _max_buffer_block_count_per_send = 64;
         }
         
         error_code hpc_network_provider::start(rpc_channel channel, int port, bool client_only, io_modifer& ctx)
@@ -406,14 +407,28 @@ namespace dsn
                 }
                 else
                 {
-                    _sending_next_offset += length;
-
-                    int total_length = 0;
-                    int buffer_count = _parser->get_send_buffers_count_and_total_length(_sending_msg, &total_length);
+                    int len = (int)length;
+                    int buf_i = _sending_buffer_start_index;
+                    while (len > 0)
+                    {
+                        auto& buf = _sending_buffers[buf_i];
+                        if (len >= (int)buf.sz)
+                        {
+                            buf_i++;
+                            len -= (int)buf.sz;
+                        }
+                        else
+                        {
+                            buf.buf = (char*)buf.buf + len;
+                            break;
+                        }
+                    }
+                    _sending_buffer_start_index = buf_i;
 
                     // message completed, continue next message
-                    if (_sending_next_offset == total_length)
+                    if (_sending_buffer_start_index == (int)_sending_buffers.size())
                     {
+                        dassert(len == 0, "buffer must be sent completely");
                         auto lmsg = _sending_msg;
                         _sending_msg = nullptr;
                         on_send_completed(lmsg);
@@ -431,7 +446,7 @@ namespace dsn
             {
                 dassert(_sending_msg == nullptr, "only one sending msg is possible");
                 _sending_msg = msg;
-                _sending_next_offset = 0;
+                _sending_buffer_start_index = 0;
             }
 
             // continue old msg
@@ -440,18 +455,13 @@ namespace dsn
                 // nothing to do
             }
 
-            // prepare send buffer, make sure header is already in the buffer
-            int total_length = 0;
-            int buffer_count = _parser->get_send_buffers_count_and_total_length(msg, &total_length);
-            auto buffers = (dsn_message_parser::send_buf*)alloca(buffer_count * sizeof(dsn_message_parser::send_buf));
-            int count = _parser->prepare_buffers_on_send(msg, _sending_next_offset, buffers);
-            
+            int buffer_count = (int)_sending_buffers.size() - _sending_buffer_start_index;
             static_assert (sizeof(dsn_message_parser::send_buf) == sizeof(WSABUF), "make sure they are compatible");
 
             DWORD bytes = 0;
             int rt = WSASend(
                 _socket,
-                (LPWSABUF)buffers,
+                (LPWSABUF)&_sending_buffers[_sending_buffer_start_index],
                 (DWORD)buffer_count,
                 &bytes,
                 0,
@@ -481,11 +491,11 @@ namespace dsn
             const ::dsn::rpc_address& remote_addr,
             rpc_client_matcher_ptr& matcher
             )
-            : rpc_session(net, remote_addr, matcher),
-            _socket(sock), _parser(parser)
+            : rpc_session(net, remote_addr, matcher, parser),
+            _socket(sock)
         {
             _sending_msg = nullptr;
-            _sending_next_offset = 0;
+            _sending_buffer_start_index = 0;
         }
 
         void hpc_rpc_session::on_failure()
@@ -553,11 +563,11 @@ namespace dsn
             connection_oriented_network& net,
             const ::dsn::rpc_address& remote_addr
             )
-            : rpc_session(net, remote_addr),
-            _socket(sock), _parser(parser)
+            : rpc_session(net, remote_addr, parser),
+            _socket(sock)
         {
             _sending_msg = nullptr;
-            _sending_next_offset = 0;
+            _sending_buffer_start_index = 0;
         }
     }
 }

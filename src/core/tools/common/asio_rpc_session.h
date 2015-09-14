@@ -38,7 +38,7 @@ namespace dsn {
         {
         public:
             virtual ~asio_rpc_session();
-            virtual void send(message_ex* msg) override { return write(msg); }
+            virtual void send(message_ex* msgs) override { return write(msgs); }
 
         // client
         public:
@@ -62,7 +62,7 @@ namespace dsn {
             
         private:
             void do_read(size_t sz = 256);
-            void write(message_ex* msg);
+            void write(message_ex* msgs);
             void on_failure();
             void set_options();  
             void on_message_read(message_ex* msg)
@@ -74,8 +74,7 @@ namespace dsn {
             }
 
         private:
-            std::shared_ptr<boost::asio::ip::tcp::socket> _socket;
-            std::shared_ptr<dsn::message_parser> _parser;
+            std::shared_ptr<boost::asio::ip::tcp::socket> _socket;            
         };
     }
 }

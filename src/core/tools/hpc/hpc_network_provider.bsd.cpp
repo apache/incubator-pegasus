@@ -97,6 +97,7 @@ namespace dsn
         {
             _listen_fd = -1;
             _looper = nullptr;
+            _max_buffer_block_count_per_send = 1; // TODO: after fixing we can increase it
         }
 
         error_code hpc_network_provider::start(rpc_channel channel, int port, bool client_only, io_modifer& ctx)

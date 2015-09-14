@@ -103,27 +103,22 @@ namespace dsn {
             });
         }
         
-        void asio_rpc_session::write(message_ex* msg)
+        void asio_rpc_session::write(message_ex* msgs)
         {
-            // make sure header is already in the buffer
-            // make sure header is already in the buffer
-            int tlen;
-            int buffer_count = _parser->get_send_buffers_count_and_total_length(msg, &tlen);
-            auto buffers = (dsn_message_parser::send_buf*)alloca(buffer_count * sizeof(dsn_message_parser::send_buf));
-
-            int c = _parser->prepare_buffers_on_send(msg, 0, buffers);
-            
+            dassert(msgs == _sending_msgs, "incorrect sending msg");
             std::vector<boost::asio::const_buffer> buffers2;
-            buffers2.resize(c);
-
-            for (int i = 0; i < c; i++)
+            int bcount = (int)_sending_buffers.size();
+            
+            // prepare buffers
+            buffers2.resize(bcount);            
+            for (int i = 0; i < bcount; i++)
             {
-                buffers2[i] = boost::asio::const_buffer(buffers[i].buf, buffers[i].sz);
+                buffers2[i] = boost::asio::const_buffer(_sending_buffers[i].buf, _sending_buffers[i].sz);
             }
 
             add_ref();
             boost::asio::async_write(*_socket, buffers2,
-                [this, msg](boost::system::error_code ec, std::size_t length)
+                [this, msgs](boost::system::error_code ec, std::size_t length)
             {
                 if (!!ec)
                 {
@@ -131,7 +126,7 @@ namespace dsn {
                 }
                 else
                 {
-                    on_send_completed(msg);
+                    on_send_completed(msgs);
                 }
 
                 release_ref();
@@ -146,9 +141,8 @@ namespace dsn {
             std::shared_ptr<message_parser>& parser
             )
             :
-            rpc_session(net, remote_addr, matcher),
-            _socket(socket),
-            _parser(parser)            
+            rpc_session(net, remote_addr, matcher, parser),
+            _socket(socket)            
         {
             set_options();
         }
@@ -217,9 +211,8 @@ namespace dsn {
             std::shared_ptr<message_parser>& parser
             )
             :
-            rpc_session(net, remote_addr),
-            _socket(socket),
-            _parser(parser)
+            rpc_session(net, remote_addr, parser),
+            _socket(socket)
         {
             set_options();
             do_read();

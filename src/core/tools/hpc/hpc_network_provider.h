@@ -104,12 +104,12 @@ namespace dsn {
             
         // shared
         public:
-            virtual void send(message_ex* msg) override
+            virtual void send(message_ex* msgs) override
             {
 # ifdef _WIN32
-                do_write(msg);
+                do_write(msgs);
 # else
-                do_safe_write(msg);
+                do_safe_write(msgs);
 # endif
             }
 
@@ -117,7 +117,7 @@ namespace dsn {
             void do_read(int sz = 256);
 
         private:            
-            void do_write(message_ex* msg);
+            void do_write(message_ex* msgs);
             void close();
             void on_failure();
             void on_read_completed(message_ex* msg)
@@ -130,14 +130,13 @@ namespace dsn {
             
         protected:
             socket_t                               _socket;
-            std::shared_ptr<dsn::message_parser>   _parser;
-            message_ex*                            _sending_msg;
-            int                                    _sending_next_offset;
+            message_ex*                            _sending_msg;            
+            int                                    _sending_buffer_start_index;
 
 # ifdef _WIN32
             hpc_network_provider::ready_event      _read_event;
             hpc_network_provider::ready_event      _write_event;
-            hpc_network_provider::ready_event      _connect_event;
+            hpc_network_provider::ready_event      _connect_event;            
 # else
             io_loop_callback                       _ready_event;            
             struct sockaddr_in                     _peer_addr;
@@ -148,9 +147,13 @@ namespace dsn {
             ::dsn::utils::ex_lock_nr               _send_lock;
             ::dsn::utils::ex_lock_nr               _recv_lock;
 
+# if defined(__APPLE__) || defined(__FreeBSD__)
+            int                                    _sending_next_offset;
+# endif
+
             void on_connect_events_ready(uintptr_t lolp_or_events);
             void on_send_recv_events_ready(uintptr_t lolp_or_events);
-            void do_safe_write(message_ex* msg);
+            void do_safe_write(message_ex* msgs);
 # endif
         };
     }

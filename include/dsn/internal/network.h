@@ -105,10 +105,14 @@ namespace dsn {
         //
         std::shared_ptr<message_parser> new_message_parser();
 
+
+        int max_buffer_block_count_per_send() const { return _max_buffer_block_count_per_send; }
+
     protected:
         rpc_engine                    *_engine;
         network_header_format         _parser_type;
         int                           _message_buffer_block_size;
+        int                           _max_buffer_block_count_per_send;
 
     private:
         friend class rpc_engine;
@@ -206,7 +210,12 @@ namespace dsn {
 
     // for client session
     public:        
-        rpc_session(connection_oriented_network& net, const ::dsn::rpc_address& remote_addr, rpc_client_matcher_ptr& matcher);
+        rpc_session(
+            connection_oriented_network& net, 
+            const ::dsn::rpc_address& remote_addr, 
+            rpc_client_matcher_ptr& matcher,
+            std::shared_ptr<message_parser>& parser
+            );
         bool on_recv_reply(uint64_t key, message_ex* reply, int delay_ms);
         bool on_disconnected();
         void call(message_ex* request, rpc_response_task* call);
@@ -215,13 +224,18 @@ namespace dsn {
         
     // for server session
     public:        
-        rpc_session(connection_oriented_network& net, const ::dsn::rpc_address& remote_addr);
+        rpc_session(
+            connection_oriented_network& net, 
+            const ::dsn::rpc_address& remote_addr,
+            std::shared_ptr<message_parser>& parser
+            );
         void on_recv_request(message_ex* msg, int delay_ms);
 
     // shared
-    protected:
+    protected:        
+        // send msgs (double-linked list)
         // always call on_send_completed later
-        virtual void send(message_ex* msg) = 0;
+        virtual void send(message_ex* msgs) = 0;
 
     protected:
         bool try_connecting(); // return true when it is permitted
@@ -232,11 +246,19 @@ namespace dsn {
         bool is_connected() const { return _connect_state == SS_CONNECTED; }        
         void on_send_completed(message_ex* msg);
 
+    private:
+        message_ex* unlink_message_for_send();
+
     protected:
         connection_oriented_network        &_net;
         ::dsn::rpc_address                 _remote_addr;
         std::atomic<int>                   _reconnect_count_after_last_success;
         rpc_client_matcher_ptr             _matcher; // client used only
+        int                                _max_buffer_block_count_per_send;        
+        std::shared_ptr<dsn::message_parser> _parser;
+
+        std::vector<message_parser::send_buf> _sending_buffers;
+        message_ex                         *_sending_msgs;
 
     private:
         enum session_state
@@ -251,6 +273,6 @@ namespace dsn {
         bool                               _is_sending_next;
         dlink                              _messages;        
         session_state                      _connect_state;
-        uint64_t                           _message_sent;
+        uint64_t                           _message_sent;        
     };
 }
