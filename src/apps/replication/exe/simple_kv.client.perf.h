@@ -73,12 +73,12 @@ namespace dsn {
 
                 virtual int get_partition_index(const std::string& key) 
                 {
-                    return (int)0; // dsn_random32(0, 7);
+                    return (int)dsn_random32(0, SKV_PARTITION_COUNT - 1);
                 }
 
                 virtual int get_partition_index(const ::dsn::replication::application::kv_pair& key)
                 {
-                    return (int)0; // dsn_random32(0, 7);
+                    return (int)dsn_random32(0, SKV_PARTITION_COUNT - 1);
                 }
                                 
                 void send_one_read(int payload_bytes)

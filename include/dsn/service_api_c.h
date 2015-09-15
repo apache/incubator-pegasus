@@ -793,12 +793,18 @@ typedef struct __app_role__
     // dsn_app_xxx
 } dsn_app_role;
 
-extern DSN_API void          dsn_msg_set_service_context(
+extern DSN_API void          dsn_msg_set_context(
                                 dsn_message_t msg,
-                                dsn_app_id app_id,
-                                uint16_t flag,
-                                uint64_t flag_context
+                                uint64_t context,
+                                uint64_t context2
                                 );
+
+extern DSN_API void         dsn_msg_get_context(
+                                dsn_message_t msg,
+                                /*out*/ uint64_t* context,
+                                /*out*/ uint64_t* context2
+                                );
+
 //------------------------------------------------------------------------------
 //
 // common marocs
