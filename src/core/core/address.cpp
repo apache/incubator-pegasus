@@ -185,7 +185,7 @@ DSN_API void dsn_host_from_name(dsn_host_type_t type, const char* name, /*out*/ 
             }
         }
 
-        // network order
+        // converts from network byte order to host byte order
         daddr->ip = (uint32_t)ntohl(addr.sin_addr.s_addr);
         break;
 
