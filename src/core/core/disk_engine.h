@@ -54,12 +54,11 @@ private:
     void complete_io(aio_task* aio, error_code err, uint32_t bytes, int delay_milliseconds = 0);
 
 private:
-    bool           _is_running;
+    volatile bool   _is_running;
     aio_provider    *_provider;
     service_node    *_node;
 
-    ::dsn::utils::ex_lock_nr _lock;
-    int                      _request_count;
+    std::atomic<int>         _request_count;
 };
 
 } // end namespace
