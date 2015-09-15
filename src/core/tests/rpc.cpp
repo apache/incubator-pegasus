@@ -42,8 +42,7 @@ TEST(core, rpc)
         RPC_TEST_HASH,
         req,
         1,
-        0,
-        g_app
+        0
         );
     EXPECT_TRUE(err == ERR_OK);
 

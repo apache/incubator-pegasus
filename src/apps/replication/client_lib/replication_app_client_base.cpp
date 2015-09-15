@@ -71,23 +71,6 @@ replication_app_client_base::replication_app_client_base(
     _last_contact_point.set_invalid();
 }
 
-replication_app_client_base::replication_app_client_base(
-    const std::vector<::dsn::rpc_address>& meta_servers,
-    const char* app_name,
-    const char* host_app_name,
-    int host_app_index,
-    int task_bucket_count/* = 13*/
-    )
-    : clientlet(host_app_name, host_app_index, task_bucket_count)
-{
-    _app_name = std::string(app_name);
-    _meta_servers = meta_servers;
-
-    _app_id = -1;
-    _app_partition_count = -1;
-    _last_contact_point.set_invalid();
-}
-
 replication_app_client_base::~replication_app_client_base()
 {
     clear_all_pending_tasks();

@@ -8,14 +8,7 @@ class echo_client
     : public virtual ::dsn::clientlet
 {
 public:
-    echo_client(const ::dsn::rpc_address& server) { _server = server; }
-    
-    // when the client is used in non-rDSN threads
-    echo_client(const char* host_app_type, int host_app_index, const ::dsn::rpc_address& server)
-        : ::dsn::clientlet(host_app_type, host_app_index)
-    { 
-        _server = server; 
-    }
+    echo_client(const ::dsn::rpc_address& server) { _server = server; }    
     echo_client() { }
     virtual ~echo_client() {}
 
@@ -31,7 +24,7 @@ public:
     {
         ::dsn::rpc_read_stream response;
         auto err = ::dsn::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
-            RPC_ECHO_ECHO_PING, val, hash, timeout_milliseconds, app());
+            RPC_ECHO_ECHO_PING, val, hash, timeout_milliseconds);
         if (err == ::dsn::ERR_OK)
         {
             unmarshall(response, resp);
@@ -57,8 +50,7 @@ public:
                     context,
                     request_hash, 
                     timeout_milliseconds, 
-                    reply_hash,
-                    app()
+                    reply_hash
                     );
     }
 
@@ -93,8 +85,7 @@ public:
                     &echo_client::end_ping2, 
                     request_hash, 
                     timeout_milliseconds, 
-                    reply_hash,
-                    app()
+                    reply_hash
                     );
     }
 

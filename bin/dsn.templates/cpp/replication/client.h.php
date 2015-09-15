@@ -21,18 +21,7 @@ public:
         : ::dsn::replication::replication_app_client_base(meta_servers, replicated_app_name) 
     {
     }
-    
-    // when the client is used in non-rDSN threads
-    <?=$svc->name?>_client(
-        const std::vector<::dsn::rpc_address>& meta_servers,
-        const char* replicated_app_name,
-        const char* host_app_type,
-        int host_app_index
-        )
-        : ::dsn::replication::replication_app_client_base(meta_servers, replicated_app_name, host_app_type, host_app_index) 
-    {
-    }
-    
+	
     virtual ~<?=$svc->name?>_client() {}
     
     // from requests to partition index

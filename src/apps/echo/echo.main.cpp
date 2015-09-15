@@ -19,8 +19,9 @@ int main(int argc, char** argv)
     dsn_run(argc, argv, true);
 
     // TODO: external echo lib test
+    dsn_mimic_app("client", 1);
     dsn::rpc_address server_addr("localhost", 27001);
-    dsn::example::echo_client client("client", 1, server_addr);
+    dsn::example::echo_client client(server_addr);
     std::string resp;
 
     client.ping("hihihihihihii", resp);
