@@ -734,7 +734,7 @@ DSN_API void dsn_terminate()
 
 DSN_API bool dsn_mimic_app(const char* app_name, int index)
 {
-    auto worker = ::dsn::task::get_current_worker();
+    auto worker = ::dsn::task::get_current_worker2();
     dassert(worker == nullptr, "cannot call dsn_mimic_app in rDSN threads");
 
     auto cnode = ::dsn::task::get_current_node2();

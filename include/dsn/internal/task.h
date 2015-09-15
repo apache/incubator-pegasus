@@ -112,6 +112,7 @@ public:
     static task*            get_current_task();
     static uint64_t         get_current_task_id();
     static task_worker*     get_current_worker();
+    static task_worker*     get_current_worker2();
     static service_node*    get_current_node();
     static service_node*    get_current_node2();
     static int              get_current_worker_index();
@@ -353,6 +354,11 @@ __inline /*static*/ task_worker* task::get_current_worker()
 {
     dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
     return tls_dsn.worker;
+}
+
+__inline /*static*/ task_worker* task::get_current_worker2()
+{
+    return tls_dsn.magic == 0xdeadbeef ? tls_dsn.worker : nullptr;
 }
 
 __inline /*static*/ service_node* task::get_current_node()
