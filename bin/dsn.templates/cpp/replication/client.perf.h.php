@@ -11,7 +11,7 @@ $file_prefix = $argv[3];
 <?php foreach ($_PROG->services as $svc) { ?> 
 class <?=$svc->name?>_perf_test_client 
     : public <?=$svc->name?>_client, 
-      public ::dsn::service::perf_client_helper<<?=$svc->name?>_perf_test_client>
+      public ::dsn::service::perf_client_helper 
 {
 public:
     <?=$svc->name?>_perf_test_client(

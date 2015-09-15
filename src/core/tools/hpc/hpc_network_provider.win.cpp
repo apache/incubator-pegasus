@@ -420,6 +420,7 @@ namespace dsn
                         else
                         {
                             buf.buf = (char*)buf.buf + len;
+                            buf.sz -= (uint32_t)len;
                             break;
                         }
                     }

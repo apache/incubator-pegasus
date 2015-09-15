@@ -57,7 +57,7 @@ namespace dsn
         while (true)
         {
             {
-                utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+                utils::auto_lock<utils::ex_lock_nr> l(_lock);
                 msg = _messages.next();
                 if (msg == &_messages)
                     break;
@@ -72,7 +72,7 @@ namespace dsn
 
     bool rpc_session::try_connecting()
     {
-        utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+        utils::auto_lock<utils::ex_lock_nr> l(_lock);
         if (_connect_state == SS_DISCONNECTED)
         {
             _connect_state = SS_CONNECTING;
@@ -85,7 +85,7 @@ namespace dsn
     void rpc_session::set_connected()
     {
         {
-            utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+            utils::auto_lock<utils::ex_lock_nr> l(_lock);
             dassert(_connect_state == SS_CONNECTING, "session must be connecting");
             _connect_state = SS_CONNECTED;
             _reconnect_count_after_last_success = 0;
@@ -99,7 +99,7 @@ namespace dsn
 
     void rpc_session::set_disconnected()
     {
-        utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+        utils::auto_lock<utils::ex_lock_nr> l(_lock);
         _connect_state = SS_DISCONNECTED;
     }
 
@@ -149,7 +149,7 @@ namespace dsn
     void rpc_session::send_message(message_ex* msg)
     {
         {
-            utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+            utils::auto_lock<utils::ex_lock_nr> l(_lock);
             msg->dl.insert_before(&_messages);
             if (SS_CONNECTED == _connect_state && !_is_sending_next)
             {
@@ -170,7 +170,7 @@ namespace dsn
     {
         message_ex* next_msg;
         {
-            utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+            utils::auto_lock<utils::ex_lock_nr> l(_lock);
             if (nullptr != msg)
             {
                 dassert(_is_sending_next && msg == _sending_msgs,
@@ -222,7 +222,7 @@ namespace dsn
 
     bool rpc_session::has_pending_out_msgs()
     {
-        utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+        utils::auto_lock<utils::ex_lock_nr> l(_lock);
         return !_messages.is_alone();
     }
 

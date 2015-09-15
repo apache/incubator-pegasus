@@ -126,6 +126,7 @@ namespace dsn {
     // (3) or we have certain cases we want RPC responses from node which is not the initial target node
     //     the RPC request message is sent to. In this case, a shared rpc_engine level matcher is used.
     //
+    #define MATCHER_BUCKET_NR 13
     class rpc_client_matcher : public ref_counter
     {
     public:
@@ -156,8 +157,8 @@ namespace dsn {
             task*                 timeout_task;
         };
         typedef std::unordered_map<uint64_t, match_entry> rpc_requests;
-        rpc_requests                  _requests;
-        ::dsn::utils::ex_lock_nr_spin _requests_lock;
+        rpc_requests                  _requests[MATCHER_BUCKET_NR];
+        ::dsn::utils::ex_lock_nr_spin _requests_lock[MATCHER_BUCKET_NR];
     };
     
     //
@@ -269,7 +270,7 @@ namespace dsn {
         };
 
         // TODO: expose the queue to be customizable
-        ::dsn::utils::ex_lock_nr_spin      _lock;        
+        ::dsn::utils::ex_lock_nr           _lock;
         bool                               _is_sending_next;
         dlink                              _messages;        
         session_state                      _connect_state;
