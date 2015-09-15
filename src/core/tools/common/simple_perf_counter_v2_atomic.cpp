@@ -88,7 +88,7 @@ namespace dsn {
             perf_counter_rate_v2_atomic(const char *section, const char *name, perf_counter_type type)
                 : perf_counter(section, name, type), _rate(0)
             {
-                _last_time = ::dsn::utils::get_current_physical_time_ns();
+                _last_time = ::dsn::utils::get_current_rdtsc();
                 for (int i = 0; i < DIVIDE_CONTAINER; i++)
                 {
                     _val[i].store(0, std::memory_order_relaxed);
@@ -120,7 +120,7 @@ namespace dsn {
                     val += static_cast<double>(_val[i].load(std::memory_order_relaxed));
                 }
 
-                uint64_t now = ::dsn::utils::get_current_physical_time_ns();
+                uint64_t now = ::dsn::utils::get_current_rdtsc();
                 double interval = (now - _last_time) / 1e9;
                 if (interval <= 0.1)
                     return _rate;

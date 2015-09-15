@@ -68,7 +68,10 @@ namespace dsn {
 
     rpc_client_matcher::~rpc_client_matcher()
     {
-        dassert(_requests.size() == 0, "all rpc enries must be removed before the matcher ends");
+        for (int i = 0; i < MATCHER_BUCKET_NR; i++)
+        {
+            dassert(_requests[i].size() == 0, "all rpc enries must be removed before the matcher ends");
+        }
     }
 
     bool rpc_client_matcher::on_recv_reply(uint64_t key, message_ex* reply, int delay_ms)
@@ -77,16 +80,17 @@ namespace dsn {
 
         rpc_response_task* call;
         task* timeout_task;
+        int bucket_index = key % MATCHER_BUCKET_NR;
 
         {
-            utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock);
-            auto it = _requests.find(key);
-            if (it != _requests.end())
+            utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
+            auto it = _requests[bucket_index].find(key);
+            if (it != _requests[bucket_index].end())
             {
                 call = it->second.resp_task;
                 timeout_task = it->second.timeout_task;
                 timeout_task->add_ref(); // released below in the same function
-                _requests.erase(it);
+                _requests[bucket_index].erase(it);
             }
             else
             {
@@ -114,14 +118,15 @@ namespace dsn {
     void rpc_client_matcher::on_rpc_timeout(uint64_t key)
     {
         rpc_response_task* call;
+        int bucket_index = key % MATCHER_BUCKET_NR;
 
         {
-            utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock);
-            auto it = _requests.find(key);
-            if (it != _requests.end())
+            utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
+            auto it = _requests[bucket_index].find(key);
+            if (it != _requests[bucket_index].end())
             {
                 call = it->second.resp_task;
-                _requests.erase(it);
+                _requests[bucket_index].erase(it);
             }
             else
             {
@@ -139,13 +144,14 @@ namespace dsn {
     {
         task* timeout_task;
         message_header& hdr = *request->header;
+        int bucket_index = hdr.id % MATCHER_BUCKET_NR;
 
         dbg_dassert(call != nullptr, "rpc response task cannot be empty");
         timeout_task = (new rpc_timeout_task(this, hdr.id, call->node()));
 
         {
-            utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock);
-            auto pr = _requests.insert(rpc_requests::value_type(hdr.id, match_entry()));
+            utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
+            auto pr = _requests[bucket_index].insert(rpc_requests::value_type(hdr.id, match_entry()));
             dassert (pr.second, "the message is already on the fly!!!");
             pr.first->second.resp_task = call;
             pr.first->second.timeout_task = timeout_task;

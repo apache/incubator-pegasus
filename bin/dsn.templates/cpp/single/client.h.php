@@ -16,13 +16,6 @@ class <?=$svc->name?>_client
 {
 public:
     <?=$svc->name?>_client(const ::dsn::rpc_address& server) { _server = server; }
-    
-    // when the client is used in non-rDSN threads
-    <?=$svc->name?>_client(const char* host_app_type, int host_app_index, const ::dsn::rpc_address& server)
-        : ::dsn::clientlet(host_app_type, host_app_index)
-    { 
-        _server = server; 
-    }
     <?=$svc->name?>_client() { }
     virtual ~<?=$svc->name?>_client() {}
 
@@ -36,7 +29,7 @@ public:
         const ::dsn::rpc_address *p_server_addr = nullptr)
     {
         ::dsn::rpc::call_one_way_typed(p_server_addr ? *p_server_addr : _server, 
-            <?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash, app());
+            <?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash);
     }
 <?php    } else { ?>
     // - synchronous 
@@ -49,7 +42,7 @@ public:
     {
         dsn::rpc_read_stream response;
         auto err = ::dsn::rpc::call_typed_wait(&response, p_server_addr ? *p_server_addr : _server,
-            <?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash, timeout_milliseconds, app());
+            <?=$f->get_rpc_code()?>, <?=$f->get_first_param()->name?>, hash, timeout_milliseconds);
         if (err == ::dsn::ERR_OK)
         {
             unmarshall(response, resp);
@@ -75,8 +68,7 @@ public:
                     context,
                     request_hash, 
                     timeout_milliseconds, 
-                    reply_hash,
-                    app()
+                    reply_hash
                     );
     }
 
@@ -108,8 +100,7 @@ public:
                     &<?=$svc->name?>_client::end_<?=$f->name?>2, 
                     request_hash, 
                     timeout_milliseconds, 
-                    reply_hash,
-                    app()
+                    reply_hash
                     );
     }
 

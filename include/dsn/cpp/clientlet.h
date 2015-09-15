@@ -36,18 +36,12 @@ namespace dsn
     class clientlet
     {
     public:
-        // used inside rDSN apps
         clientlet(int task_bucket_count = 13);
-
-        // used outside rDSN app models (e.g., when used in external app's threads)
-        clientlet(const char* host_app_name, int host_app_index, int task_bucket_count = 13);
-        
         virtual ~clientlet();
 
-        dsn_app_t app() const { return _app; }
         dsn_task_tracker_t tracker() const { return _tracker; }
-        void primary_address(rpc_address& addr) { dsn_primary_address2(addr.c_addr_ptr(), _app); }
-        rpc_address primary_address() { rpc_address addr; dsn_primary_address2(addr.c_addr_ptr(), _app); return addr; }
+        void primary_address(rpc_address& addr) { dsn_primary_address2(addr.c_addr_ptr()); }
+        rpc_address primary_address() { rpc_address addr; dsn_primary_address2(addr.c_addr_ptr()); return addr; }
 
         static uint32_t random32(uint32_t min, uint32_t max) { return dsn_random32(min, max); }
         static uint64_t random64(uint64_t min, uint64_t max) { return dsn_random64(min, max); }
@@ -62,7 +56,6 @@ namespace dsn
         int                            _access_thread_id;
         bool                           _access_thread_id_inited;
         dsn_task_tracker_t             _tracker;
-        dsn_app_t                      _app;
     };
 
     // common APIs
@@ -75,8 +68,7 @@ namespace dsn
             task_handler callback,
             int hash = 0,
             int delay_milliseconds = 0,
-            int timer_interval_milliseconds = 0,
-            dsn_app_t app = nullptr
+            int timer_interval_milliseconds = 0
             );
 
 
@@ -88,8 +80,7 @@ namespace dsn
             //TParam param,
             int hash = 0,
             int delay_milliseconds = 0,
-            int timer_interval_milliseconds = 0,
-            dsn_app_t app = nullptr
+            int timer_interval_milliseconds = 0
             )
         {
             task_handler h = std::bind(callback, owner);
@@ -99,8 +90,7 @@ namespace dsn
                 h,
                 hash,
                 delay_milliseconds,
-                timer_interval_milliseconds,
-                app
+                timer_interval_milliseconds
                 );
         }
     }
@@ -113,8 +103,7 @@ namespace dsn
             dsn_message_t request,
             clientlet* svc,
             rpc_reply_handler callback,
-            int reply_hash = 0,
-            dsn_app_t app = nullptr
+            int reply_hash = 0
             );
 
         //
@@ -133,8 +122,7 @@ namespace dsn
             const ::dsn::rpc_address& server,
             dsn_task_code_t code,
             const TRequest& req,
-            int hash = 0,
-            dsn_app_t app = nullptr
+            int hash = 0
             );
 
         template<typename TRequest>
@@ -144,8 +132,7 @@ namespace dsn
             dsn_task_code_t code,
             const TRequest& req,
             int hash = 0,
-            int timeout_milliseconds = 0,
-            dsn_app_t app = nullptr
+            int timeout_milliseconds = 0
             );
 
         //  std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)>
@@ -158,8 +145,7 @@ namespace dsn
             std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
             int request_hash = 0,
             int timeout_milliseconds = 0,
-            int reply_hash = 0,
-            dsn_app_t app = nullptr
+            int reply_hash = 0
             );
 
         //  std::function<void(error_code, const TResponse&, void*)>
@@ -173,8 +159,7 @@ namespace dsn
             void* context,
             int request_hash = 0,
             int timeout_milliseconds = 0,
-            int reply_hash = 0,
-            dsn_app_t app = nullptr
+            int reply_hash = 0
             );
 
         // void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)
@@ -188,8 +173,7 @@ namespace dsn
             void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&),
             int request_hash = 0,
             int timeout_milliseconds = 0,
-            int reply_hash = 0,
-            dsn_app_t app = nullptr
+            int reply_hash = 0
             );
 
         // void (T::*)(error_code, const TResponse&, void*);
@@ -204,8 +188,7 @@ namespace dsn
             void* context,
             int request_hash = 0,
             int timeout_milliseconds = 0,
-            int reply_hash = 0,
-            dsn_app_t app = nullptr
+            int reply_hash = 0
             );
     }
     
@@ -219,8 +202,7 @@ namespace dsn
             dsn_task_code_t callback_code,
             clientlet* svc,
             aio_handler callback,
-            int hash = 0,
-            dsn_app_t app = nullptr
+            int hash = 0
             );
 
         task_ptr write(
@@ -231,8 +213,7 @@ namespace dsn
             dsn_task_code_t callback_code,
             clientlet* svc,
             aio_handler callback,
-            int hash = 0,
-            dsn_app_t app = nullptr
+            int hash = 0
             );
 
 
@@ -245,8 +226,7 @@ namespace dsn
             dsn_task_code_t callback_code,
             T* owner,
             void(T::*callback)(error_code, uint32_t),
-            int hash = 0,
-            dsn_app_t app = nullptr
+            int hash = 0
             )
         {
             aio_handler h = std::bind(callback, owner, std::placeholders::_1, std::placeholders::_2);
@@ -262,12 +242,11 @@ namespace dsn
             dsn_task_code_t callback_code,
             T* owner,
             void(T::*callback)(error_code, uint32_t),
-            int hash = 0,
-            dsn_app_t app = nullptr
+            int hash = 0
             )
         {
             aio_handler h = std::bind(callback, owner, std::placeholders::_1, std::placeholders::_2);
-            return file::write(hFile, buffer, count, offset, callback_code, owner, h, hash, app);
+            return file::write(hFile, buffer, count, offset, callback_code, owner, h, hash);
         }
 
         task_ptr copy_remote_files(
@@ -279,8 +258,7 @@ namespace dsn
             dsn_task_code_t callback_code,
             clientlet* svc,
             aio_handler callback,
-            int hash = 0,
-            dsn_app_t app = nullptr
+            int hash = 0
             );
 
         inline task_ptr copy_remote_directory(
@@ -291,14 +269,13 @@ namespace dsn
             dsn_task_code_t callback_code,
             clientlet* svc,
             aio_handler callback,
-            int hash = 0,
-            dsn_app_t app = nullptr
+            int hash = 0
             )
         {
             std::vector<std::string> files;
             return copy_remote_files(
                 remote, source_dir, files, dest_dir, overwrite,
-                callback_code, svc, callback, hash, app
+                callback_code, svc, callback, hash
                 );
         }
     }
@@ -373,8 +350,7 @@ namespace dsn
 
             inline task_ptr create_empty_rpc_call(
                 dsn_message_t msg,
-                int reply_hash,
-                dsn_app_t app
+                int reply_hash
                 )
             {
                 auto task = new safe_task_handle();
@@ -382,8 +358,7 @@ namespace dsn
                     msg,
                     nullptr,
                     nullptr,
-                    reply_hash,
-                    app
+                    reply_hash
                     );
                 task->set_task_info(t);
                 return task;
@@ -395,8 +370,7 @@ namespace dsn
                 std::shared_ptr<TRequest>& req,
                 T* owner,
                 void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&),
-                int reply_hash,
-                dsn_app_t app
+                int reply_hash
                 )
             {
                 if (callback != nullptr)
@@ -422,15 +396,14 @@ namespace dsn
                         msg,
                         safe_task<rpc_reply_handler >::exec_rpc_response,
                         (void*)task,
-                        reply_hash,
-                        app
+                        reply_hash
                         );
                     task->set_task_info(t);
                     return task;
                 }
                 else
                 {
-                    return create_empty_rpc_call(msg, reply_hash, app);
+                    return create_empty_rpc_call(msg, reply_hash);
                 }
             }
 
@@ -439,8 +412,7 @@ namespace dsn
                 dsn_message_t msg,
                 std::shared_ptr<TRequest>& req,
                 std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)>& callback,
-                int reply_hash,
-                dsn_app_t app
+                int reply_hash
                 )
             {
                 if (callback != nullptr)
@@ -465,15 +437,14 @@ namespace dsn
                         msg,
                         safe_task<rpc_reply_handler >::exec_rpc_response,
                         (void*)task,
-                        reply_hash,
-                        app
+                        reply_hash
                         );
                     task->set_task_info(t);
                     return task;
                 }
                 else
                 {
-                    return create_empty_rpc_call(msg, reply_hash, app);
+                    return create_empty_rpc_call(msg, reply_hash);
                 }
             }
 
@@ -483,8 +454,7 @@ namespace dsn
                 T* owner,
                 void(T::*callback)(error_code, const TResponse&, void*),
                 void* context,
-                int reply_hash,
-                dsn_app_t app
+                int reply_hash
                 )
             {
                 if (callback != nullptr)
@@ -509,15 +479,14 @@ namespace dsn
                         msg,
                         safe_task<rpc_reply_handler >::exec_rpc_response,
                         (void*)task,
-                        reply_hash,
-                        app
+                        reply_hash
                         );
                     task->set_task_info(t);
                     return task;
                 }
                 else
                 {
-                    return create_empty_rpc_call(msg, reply_hash, app);
+                    return create_empty_rpc_call(msg, reply_hash);
                 }
             }
 
@@ -526,8 +495,7 @@ namespace dsn
                 dsn_message_t msg,
                 std::function<void(error_code, const TResponse&, void*)>& callback,
                 void* context,
-                int reply_hash,
-                dsn_app_t app
+                int reply_hash
                 )
             {
                 if (callback != nullptr)
@@ -551,15 +519,14 @@ namespace dsn
                         msg,
                         safe_task<rpc_reply_handler >::exec_rpc_response,
                         (void*)task,
-                        reply_hash,
-                        app
+                        reply_hash
                         );
                     task->set_task_info(t);
                     return task;
                 }
                 else
                 {
-                    return create_empty_rpc_call(msg, reply_hash, app);
+                    return create_empty_rpc_call(msg, reply_hash);
                 }
             }
         }
@@ -569,13 +536,12 @@ namespace dsn
             const ::dsn::rpc_address& server,
             dsn_task_code_t code,
             const TRequest& req,
-            int hash,
-            dsn_app_t app
+            int hash
             )
         {
             dsn_message_t msg = dsn_msg_create_request(code, 0, hash);
             ::marshall(msg, req);
-            dsn_rpc_call_one_way(&server.c_addr(), msg, app);
+            dsn_rpc_call_one_way(&server.c_addr(), msg);
         }
 
         template<typename TRequest>
@@ -585,14 +551,13 @@ namespace dsn
             dsn_task_code_t code,
             const TRequest& req,
             int hash,
-            int timeout_milliseconds /*= 0*/,
-            dsn_app_t app
+            int timeout_milliseconds /*= 0*/
             )
         {
             dsn_message_t msg = dsn_msg_create_request(code, timeout_milliseconds, hash);
             ::marshall(msg, req);
 
-            auto resp = dsn_rpc_call_wait(&server.c_addr(), msg, app);
+            auto resp = dsn_rpc_call_wait(&server.c_addr(), msg);
             if (resp != nullptr)
             {
                 if (response)
@@ -616,17 +581,16 @@ namespace dsn
             void (T::*callback)(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&),
             int request_hash /*= 0*/,
             int timeout_milliseconds /*= 0*/,
-            int reply_hash /*= 0*/,
-            dsn_app_t app
+            int reply_hash /*= 0*/
             )
         {
             dsn_message_t msg = dsn_msg_create_request(code, timeout_milliseconds, request_hash);
             ::marshall(msg, *req);
 
             auto t = internal_use_only::create_rpc_call<T, TRequest, TResponse>(
-                msg, req, owner, callback, reply_hash, app);
+                msg, req, owner, callback, reply_hash);
 
-            dsn_rpc_call(&server.c_addr(), t->native_handle(), owner ? owner->tracker() : nullptr, app);
+            dsn_rpc_call(&server.c_addr(), t->native_handle(), owner ? owner->tracker() : nullptr);
             return t;
         }
 
@@ -642,17 +606,16 @@ namespace dsn
             void* context,
             int request_hash /*= 0*/,
             int timeout_milliseconds /*= 0*/,
-            int reply_hash /*= 0*/,
-            dsn_app_t app
+            int reply_hash /*= 0*/
             )
         {
             dsn_message_t msg = dsn_msg_create_request(code, timeout_milliseconds, request_hash);
             ::marshall(msg, req);
 
             auto t = internal_use_only::create_rpc_call<T, TResponse>(
-                msg, owner, callback, context, reply_hash, app);
+                msg, owner, callback, context, reply_hash);
 
-            dsn_rpc_call(&server.c_addr(), t->native_handle(), owner ? owner->tracker() : nullptr, app);
+            dsn_rpc_call(&server.c_addr(), t->native_handle(), owner ? owner->tracker() : nullptr);
             return t;
         }
 
@@ -665,17 +628,16 @@ namespace dsn
             std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
             int request_hash/* = 0*/,
             int timeout_milliseconds /*= 0*/,
-            int reply_hash /*= 0*/,
-            dsn_app_t app
+            int reply_hash /*= 0*/
             )
         {
             dsn_message_t msg = dsn_msg_create_request(code, timeout_milliseconds, request_hash);
             marshall(msg, *req);
 
             auto t = internal_use_only::create_rpc_call<TRequest, TResponse>(
-                msg, req, owner, callback, reply_hash, app);
+                msg, req, owner, callback, reply_hash);
 
-            dsn_rpc_call(&server.c_addr(), t->native_handle(), owner ? owner->tracker() : nullptr, app);
+            dsn_rpc_call(&server.c_addr(), t->native_handle(), owner ? owner->tracker() : nullptr);
             return t;
         }
 
@@ -689,17 +651,16 @@ namespace dsn
             void* context,
             int request_hash/* = 0*/,
             int timeout_milliseconds /*= 0*/,
-            int reply_hash /*= 0*/,
-            dsn_app_t app
+            int reply_hash /*= 0*/
             )
         {
             dsn_message_t msg = dsn_msg_create_request(code, timeout_milliseconds, request_hash);
             marshall(msg, req);
 
             auto t = internal_use_only::create_rpc_call<TResponse>(
-                msg, owner, callback, context, reply_hash, app);
+                msg, owner, callback, context, reply_hash);
 
-            dsn_rpc_call(&server.c_addr(), t->native_handle(), owner ? owner->tracker() : nullptr, app);
+            dsn_rpc_call(&server.c_addr(), t->native_handle(), owner ? owner->tracker() : nullptr);
             return t;
         }
     }

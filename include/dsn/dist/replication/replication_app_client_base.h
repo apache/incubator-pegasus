@@ -45,22 +45,11 @@ namespace dsn { namespace replication {
         static void load_meta_servers(/*out*/ std::vector<::dsn::rpc_address>& servers);
 
     public:
-        // used inside rDSN apps
         replication_app_client_base(        
             const std::vector<::dsn::rpc_address>& meta_servers, 
             const char* replicated_app_name, 
             int task_bucket_count = 13
             );
-
-        // used outside rDSN app models (e.g., when used in external app's threads)
-        replication_app_client_base(
-            const std::vector<::dsn::rpc_address>& meta_servers,
-            const char* replicated_app_name,
-            const char* host_app_name, 
-            int host_app_index,
-            int task_bucket_count = 13            
-            );
-
         ~replication_app_client_base();
 
         template<typename T, typename TRequest, typename TResponse>
@@ -86,8 +75,7 @@ namespace dsn { namespace replication {
                 req,
                 owner,
                 callback,
-                reply_hash,
-                app()
+                reply_hash
                 );
 
             auto rc = create_write_context(partition_index, code, msg, task, reply_hash);
@@ -119,8 +107,7 @@ namespace dsn { namespace replication {
                 req,
                 owner,
                 callback,
-                reply_hash,
-                app()
+                reply_hash
                 );
 
             auto rc = create_write_context(partition_index, code, msg, task, reply_hash);
@@ -153,8 +140,7 @@ namespace dsn { namespace replication {
                 owner,
                 callback,
                 context,
-                reply_hash,
-                app()
+                reply_hash
                 );
             auto rc = create_write_context(partition_index, code, msg, task, reply_hash);
             ::marshall(msg, req);
@@ -185,8 +171,7 @@ namespace dsn { namespace replication {
                 msg,
                 callback,
                 context,
-                reply_hash,
-                app()
+                reply_hash
                 );
 
             auto rc = create_write_context(partition_index, code, msg, task, reply_hash);
@@ -220,8 +205,7 @@ namespace dsn { namespace replication {
                 req,
                 owner,
                 callback,
-                reply_hash,
-                app()
+                reply_hash
                 );
 
             auto rc = create_read_context(partition_index, code, msg, task, read_semantic, snapshot_decree, reply_hash);
@@ -255,8 +239,7 @@ namespace dsn { namespace replication {
                 req,
                 owner,
                 callback,
-                reply_hash,
-                app()
+                reply_hash
                 );
 
             auto rc = create_read_context(partition_index, code, msg, task, read_semantic, snapshot_decree, reply_hash);
@@ -291,8 +274,7 @@ namespace dsn { namespace replication {
                 owner,
                 callback,
                 context,
-                reply_hash,
-                app()
+                reply_hash
                 );
 
             auto rc = create_read_context(partition_index, code, msg, task, read_semantic, snapshot_decree, reply_hash);
@@ -326,8 +308,7 @@ namespace dsn { namespace replication {
                 msg,
                 callback,
                 context,
-                reply_hash,
-                app()
+                reply_hash
                 );
 
             auto rc = create_read_context(partition_index, code, msg, task, read_semantic, snapshot_decree, reply_hash);

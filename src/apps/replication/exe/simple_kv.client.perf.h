@@ -32,7 +32,7 @@ namespace dsn {
 
             class simple_kv_perf_test_client
                 : public simple_kv_client, 
-                  public ::dsn::service::perf_client_helper<simple_kv_perf_test_client>
+                  public ::dsn::service::perf_client_helper
             {
             public:
                 simple_kv_perf_test_client(
@@ -73,12 +73,12 @@ namespace dsn {
 
                 virtual int get_partition_index(const std::string& key) 
                 {
-                    return (int)0; // dsn_random32(0, 7);
+                    return (int)dsn_random32(0, SKV_PARTITION_COUNT - 1);
                 }
 
                 virtual int get_partition_index(const ::dsn::replication::application::kv_pair& key)
                 {
-                    return (int)0; // dsn_random32(0, 7);
+                    return (int)dsn_random32(0, SKV_PARTITION_COUNT - 1);
                 }
                                 
                 void send_one_read(int payload_bytes)

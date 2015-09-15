@@ -80,6 +80,7 @@ namespace dsn
         ref_counter& operator=(const ref_counter&)
         {
             dassert(false, "this is not allowed");
+            return *this;
         }
     };
 

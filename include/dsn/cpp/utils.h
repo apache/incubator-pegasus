@@ -347,6 +347,17 @@ namespace dsn {
 
         extern uint64_t get_current_physical_time_ns();
 
+        inline uint64_t get_current_rdtsc()
+        {
+# ifdef _WIN32
+            return __rdtsc();
+# else
+            unsigned hi, lo;
+            __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
+            return ((unsigned long long)lo) | (((unsigned long long)hi) << 32);
+# endif
+        }
+
         extern void time_ms_to_string(uint64_t ts_ms, char* str);
 
         extern int get_current_tid_internal();
