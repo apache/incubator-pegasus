@@ -246,7 +246,7 @@ namespace dsn
             )
         {
             aio_handler h = std::bind(callback, owner, std::placeholders::_1, std::placeholders::_2);
-            return file::write(hFile, buffer, count, offset, callback_code, owner, h, hash, app);
+            return file::write(hFile, buffer, count, offset, callback_code, owner, h, hash);
         }
 
         task_ptr copy_remote_files(
@@ -635,7 +635,7 @@ namespace dsn
             marshall(msg, *req);
 
             auto t = internal_use_only::create_rpc_call<TRequest, TResponse>(
-                msg, req, owner, callback, reply_hash, app);
+                msg, req, owner, callback, reply_hash);
 
             dsn_rpc_call(&server.c_addr(), t->native_handle(), owner ? owner->tracker() : nullptr);
             return t;
