@@ -157,7 +157,7 @@ namespace dsn
 
         rpc_session_ptr hpc_network_provider::create_client_session(const ::dsn::rpc_address& server_addr)
         {
-            auto matcher = new_client_matcher();
+            auto matcher = get_client_matcher();
             auto parser = new_message_parser();
 
             struct sockaddr_in addr;

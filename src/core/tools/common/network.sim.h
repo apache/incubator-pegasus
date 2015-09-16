@@ -74,7 +74,7 @@ namespace dsn { namespace tools {
 
         virtual rpc_session_ptr create_client_session(const ::dsn::rpc_address& server_addr)
         {
-            auto matcher = new_client_matcher();
+            auto matcher = get_client_matcher();
             auto parser = new_message_parser();
             return rpc_session_ptr(new sim_client_session(*this, server_addr, matcher, parser));
         }

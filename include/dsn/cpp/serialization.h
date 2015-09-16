@@ -104,25 +104,18 @@ namespace dsn {
     }
 
     // end point
-    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ ::dsn::rpc_address& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ dsn_address_t& val)
     {
-        dsn_host_type_t type;        
-        uint16_t port;
-        reader.read_pod(type);
-        reader.read_pod(port);
+        reader.read_pod(val.type);
+        reader.read_pod(val.port);
         
-        switch (type)
+        switch (val.type)
         {
         case HOST_TYPE_INVALID:
-            val.set_invalid();
             break;
         case HOST_TYPE_IPV4:
             {
-                uint32_t ip;
-                reader.read_pod(ip);
-                val.c_addr_ptr()->type = type;
-                val.c_addr_ptr()->ip = ip;
-                val.c_addr_ptr()->port = port;
+                reader.read_pod(val.ip);
             }
             break;
         default:
@@ -130,21 +123,31 @@ namespace dsn {
         }
     }
 
-    inline void marshall(::dsn::binary_writer& writer, const ::dsn::rpc_address& val)
+    inline void marshall(::dsn::binary_writer& writer, const dsn_address_t& val)
     {
-        writer.write_pod(val.type());
-        writer.write_pod(val.port());
+        writer.write_pod(val.type);
+        writer.write_pod(val.port);
 
-        switch (val.type())
+        switch (val.type)
         {
         case HOST_TYPE_INVALID:
             break;
         case HOST_TYPE_IPV4:
-            writer.write_pod(val.ip());
+            writer.write_pod(val.ip);
             break;
         default:
             dassert(false, "not implemented yet");
         }
+    }
+
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ ::dsn::rpc_address& val)
+    {
+        unmarshall(reader, *val.c_addr_ptr());
+    }
+
+    inline void marshall(::dsn::binary_writer& writer, const ::dsn::rpc_address& val)
+    {
+        marshall(writer, val.c_addr());
     }
     
     // std::string

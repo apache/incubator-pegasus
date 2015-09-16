@@ -628,6 +628,9 @@ extern DSN_API void*         dsn_rpc_unregiser_handler(
 // reply with a response which is created using dsn_msg_create_response
 extern DSN_API void          dsn_rpc_reply(dsn_message_t response);
 
+// forward the request to another server instead
+extern DSN_API void          dsn_rpc_forward(dsn_message_t request, dsn_address_t* addr);
+
 
 //
 // client-side rpc calls

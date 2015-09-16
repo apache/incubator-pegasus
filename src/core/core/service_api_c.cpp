@@ -28,6 +28,7 @@
 # include <dsn/tool_api.h>
 # include <dsn/internal/enum_helper.h>
 # include <dsn/cpp/auto_codes.h>
+# include <dsn/cpp/serialization.h>
 # include <dsn/internal/task_spec.h>
 # include <dsn/internal/zlock_provider.h>
 # include <dsn/internal/nfs.h>
@@ -557,6 +558,13 @@ DSN_API void dsn_rpc_reply(dsn_message_t response)
     ::dsn::rpc_engine::reply(msg);
 }
 
+DSN_API void dsn_rpc_forward(dsn_message_t request, dsn_address_t* addr)
+{
+    auto resp = dsn_msg_create_response(request);
+    ::marshall(resp, *addr);
+    ::dsn::rpc_engine::reply((::dsn::message_ex*)resp, ::dsn::ERR_TALK_TO_OTHERS);
+}
+
 DSN_API dsn_message_t dsn_rpc_get_response(dsn_task_t rpc_call)
 {
     ::dsn::rpc_response_task* task = (::dsn::rpc_response_task*)rpc_call;
@@ -767,6 +775,8 @@ DSN_API bool dsn_mimic_app(const char* app_name, int index)
             return true;
         }
     }
+
+    derror("cannot find host app %s with index %d", app_name, index);
     return false;
 }
 

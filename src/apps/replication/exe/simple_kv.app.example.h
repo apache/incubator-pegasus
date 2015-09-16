@@ -93,7 +93,7 @@ public:
 
             if (err == ERR_OK && err2 == ERR_OK)
             {
-                dassert(v == req.value, "data is inconsistent!");
+                //dassert(v == req.value, "data is inconsistent!");
             }
         }
     }

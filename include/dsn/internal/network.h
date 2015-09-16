@@ -93,10 +93,10 @@ namespace dsn {
         void on_recv_request(message_ex* msg, int delay_ms);
         
         //
-        // create a client matcher for matching RPC request and RPC response,
+        // get a client matcher for matching RPC request and RPC response,
         // see rpc_client_matcher for details
         //
-        rpc_client_matcher_ptr new_client_matcher();
+        rpc_client_matcher_ptr get_client_matcher();
 
         //
         // create a message parser for
@@ -126,10 +126,19 @@ namespace dsn {
     // (3) or we have certain cases we want RPC responses from node which is not the initial target node
     //     the RPC request message is sent to. In this case, a shared rpc_engine level matcher is used.
     //
+    // WE NOW USE option (3) so as to enable more features and the performance should not be degraded (due to 
+    // less std::shared_ptr<rpc_client_matcher> operations in rpc_timeout_task
+    //
     #define MATCHER_BUCKET_NR 13
     class rpc_client_matcher : public ref_counter
     {
     public:
+        rpc_client_matcher(rpc_engine* engine)
+            :_engine(engine)
+        {
+
+        }
+
         ~rpc_client_matcher();
 
         //
@@ -151,6 +160,7 @@ namespace dsn {
         void on_rpc_timeout(uint64_t key);
 
     private:
+        rpc_engine*               _engine;
         struct match_entry
         {
             rpc_response_task*    resp_task;

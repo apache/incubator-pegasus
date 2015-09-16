@@ -35,6 +35,7 @@
 # include <dsn/internal/perf_counters.h>
 # include <dsn/internal/factory_store.h>
 # include <dsn/internal/task_queue.h>
+# include <dsn/cpp/serialization.h>
 # include <set>
 
 # ifdef __TITLE__
@@ -62,8 +63,11 @@ namespace dsn {
         }
 
     private:
-        rpc_client_matcher_ptr _matcher;
-        uint64_t               _id;
+        // use the following if the matcher is per rpc session
+        // rpc_client_matcher_ptr _matcher;
+
+        rpc_client_matcher* _matcher;
+        uint64_t            _id;
     };
 
     rpc_client_matcher::~rpc_client_matcher()
@@ -77,7 +81,7 @@ namespace dsn {
     bool rpc_client_matcher::on_recv_reply(uint64_t key, message_ex* reply, int delay_ms)
     {
         dassert(reply != nullptr, "cannot receive an empty reply message");
-
+        
         rpc_response_task* call;
         task* timeout_task;
         int bucket_index = key % MATCHER_BUCKET_NR;
@@ -104,12 +108,20 @@ namespace dsn {
         dbg_dassert(call != nullptr, "rpc response task cannot be empty");
         if (timeout_task != task::get_current_task())
         {
-            timeout_task->cancel(true);
+            timeout_task->cancel(false); // no need to wait
         }
-        timeout_task->release_ref();
-            
-        call->set_delay(delay_ms);
-        call->enqueue(reply->error(), reply);
+        timeout_task->release_ref(); // added above in the same function
+        
+        if (reply->error() == ERR_TALK_TO_OTHERS)
+        {
+            ::unmarshall((dsn_message_t)reply, *call->get_request()->to_address.c_addr_ptr());
+            _engine->call(call->get_request(), call);
+        }
+        else
+        {
+            call->set_delay(delay_ms);
+            call->enqueue(reply->error(), reply);
+        }
 
         call->release_ref(); // added in on_call
         return true;
@@ -176,6 +188,7 @@ namespace dsn {
         _message_crc_required = config->get_value<bool>(
             "network", "message_crc_required", false,
             "whether crc is enabled for network messages");
+        _rpc_matcher = new rpc_client_matcher(this);
     }
     
     //
@@ -444,7 +457,7 @@ namespace dsn {
         net->call(request, call);
     }
 
-    void rpc_engine::reply(message_ex* response)
+    void rpc_engine::reply(message_ex* response, error_code err)
     {
         response->add_ref();  // released in on_send_completed
 
@@ -457,6 +470,7 @@ namespace dsn {
             return;
         }   
 
+        response->header->server.error = err;
         response->seal(_message_crc_required);
 
         auto sp = task_spec::get(response->local_rpc_code);

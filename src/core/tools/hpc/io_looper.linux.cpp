@@ -103,6 +103,13 @@ namespace dsn
             if (epoll_ctl(_io_queue, EPOLL_CTL_DEL, fd, NULL) < 0)
             {
                 derror("unbind io handler to epoll_wait failed, err = %s, fd = %d", strerror(errno), fd);
+
+                // in case the fd is already invalid
+                if (cb)
+                {
+                    utils::auto_lock<utils::ex_lock_nr_spin> l(_io_sessions_lock);
+                    _io_sessions.erase(cb);
+                }
                 return ERR_BIND_IOCP_FAILED;
             }
             else

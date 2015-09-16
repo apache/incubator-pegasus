@@ -344,9 +344,10 @@ namespace dsn
         return _engine->on_recv_request(msg, delay_ms);
     }
     
-    rpc_client_matcher_ptr network::new_client_matcher()
+    rpc_client_matcher_ptr network::get_client_matcher()
     {
-        return rpc_client_matcher_ptr(new rpc_client_matcher());
+        //return rpc_client_matcher_ptr(new rpc_client_matcher(_engine));
+        return _engine->matcher();
     }
 
     std::shared_ptr<message_parser> network::new_message_parser()

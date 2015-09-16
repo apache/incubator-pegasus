@@ -86,7 +86,7 @@ namespace dsn {
 
         rpc_session_ptr asio_network_provider::create_client_session(const ::dsn::rpc_address& server_addr)
         {
-            auto matcher = new_client_matcher();
+            auto matcher = get_client_matcher();
             auto parser = new_message_parser();
             auto sock = std::shared_ptr<boost::asio::ip::tcp::socket>(new boost::asio::ip::tcp::socket(_io_service));
             return rpc_session_ptr(new asio_rpc_session(*this, sock, server_addr, matcher, parser));
