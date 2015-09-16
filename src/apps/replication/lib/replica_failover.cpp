@@ -64,7 +64,7 @@ void replica::handle_remote_failure(partition_status st, const ::dsn::rpc_addres
     error.end_tracking();
 
     dassert (status() == PS_PRIMARY, "");
-    dassert (node != primary_address(), "");
+    dassert (node != _primary_address, "");
 
     switch (st)
     {

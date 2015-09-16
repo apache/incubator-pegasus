@@ -27,6 +27,7 @@
 
 # include <dsn/service_api_c.h>
 # include <unordered_map>
+# include <string.h> // for memcpy()
 
 namespace dsn
 {

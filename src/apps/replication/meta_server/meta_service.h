@@ -47,14 +47,23 @@ public:
     meta_service(server_state* state);
     ~meta_service(void);
 
+    // start meta service:
+    // * recover old state from 'checkpoint' and 'oplog' files
+    // * create load balancer and failure detector
+    // * register rpc handler: RPC_CM_CALL --> on_request()
+    // * start load balancer and failure detector
     void start(const char* data_dir, bool clean_state);
+
     bool stop();
 
 private:
+    // entry and dispatcher for all rpc request
     void on_request(dsn_message_t request);
+    // replay 'oplog' when do recovery
     void replay_log(const char* log);
 
     // partition server & client => meta server
+    // query partition configuration
     void query_configuration_by_node(configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response);
     void query_configuration_by_index(configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response);
 

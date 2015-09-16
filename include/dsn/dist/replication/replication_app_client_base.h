@@ -333,7 +333,7 @@ namespace dsn { namespace replication {
             uint64_t              timeout_ts_us; // timeout at this timing point
             dsn_message_t         request;
 
-            zlock                 lock; // [
+            ::dsn::service::zlock lock; // [
             dsn::task_ptr         timeout_timer; // when partition config is unknown at the first place            
             bool                  completed;
             // ]
@@ -350,8 +350,8 @@ namespace dsn { namespace replication {
 
         typedef std::unordered_map<int, partition_context*> pending_requests;
         
-        mutable zlock     _requests_lock;
-        pending_requests  _pending_requests;        
+        mutable ::dsn::service::zlock  _requests_lock;
+        pending_requests               _pending_requests;
 
     private:
         request_context* create_write_context(
@@ -376,7 +376,7 @@ namespace dsn { namespace replication {
         std::string                             _app_name;
         std::vector<::dsn::rpc_address>         _meta_servers;
         
-        mutable zrwlock_nr                      _config_lock;
+        mutable ::dsn::service::zrwlock_nr      _config_lock;
         std::unordered_map<int, partition_configuration> _config_cache;
         int                                     _app_id;
         int                                     _app_partition_count;

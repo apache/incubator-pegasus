@@ -49,7 +49,7 @@ namespace dsn {
                 }
 
             private:
-                nfs_node_simple* _nfs_node_impl;
+                ::dsn::service::nfs_node_simple* _nfs_node_impl;
             };
 
             // client app example
@@ -74,7 +74,8 @@ namespace dsn {
                     dsn_address_build(_server.c_addr_ptr(), argv[1], (uint16_t)atoi(argv[2]));
 
                     //on_request_timer();
-                    _request_timer = ::dsn::tasking::enqueue(LPC_NFS_REQUEST_TIMER, this, &nfs_client_app::on_request_timer, 0, 0, 1000);
+                    _request_timer = ::dsn::tasking::enqueue(::dsn::service::LPC_NFS_REQUEST_TIMER,
+                                                             this, &nfs_client_app::on_request_timer, 0, 0, 1000);
 
                     return ::dsn::ERR_OK;
                 }
@@ -93,7 +94,8 @@ namespace dsn {
                     std::vector<std::string> files; // empty is for all
                     bool overwrite = true;
                     
-                    file::copy_remote_files(_server, source_dir, files, dest_dir, overwrite, LPC_NFS_COPY_FILE, nullptr,
+                    file::copy_remote_files(_server, source_dir, files, dest_dir, overwrite,
+                        ::dsn::service::LPC_NFS_COPY_FILE, nullptr,
                         std::bind(&nfs_client_app::internal_copy_callback,
                         this,
                         std::placeholders::_1,

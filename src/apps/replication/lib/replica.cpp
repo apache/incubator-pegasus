@@ -43,6 +43,7 @@ replica::replica(replica_stub* stub, const char* path)
     _stub = stub;
     _app = nullptr;
     _dir = path;
+    _primary_address = primary_address();
     _options = &stub->options();
 
     init_state();
@@ -59,6 +60,7 @@ replica::replica(replica_stub* stub, global_partition_id gpid, const char* app_t
     char buffer[256];
     sprintf(buffer, "%u.%u.%s", gpid.app_id, gpid.pidx, app_type);
     _dir = _stub->dir() + "/" + buffer;
+    _primary_address = primary_address();
     _options = &stub->options();
 
     init_state();
@@ -150,7 +152,8 @@ void replica::on_client_read(const read_request_header& meta, dsn_message_t requ
     dassert (_app != nullptr, "");
 
     rpc_read_stream reader(request);
-    _app->dispatch_rpc_call(meta.code, reader, dsn_msg_create_response(request));
+    _app->dispatch_rpc_call(dsn_task_code_from_string(meta.code.c_str(), TASK_CODE_INVALID),
+                            reader, dsn_msg_create_response(request));
 }
 
 void replica::response_client_message(dsn_message_t request, error_code error, decree d/* = invalid_decree*/)

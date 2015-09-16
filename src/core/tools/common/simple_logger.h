@@ -36,8 +36,8 @@ namespace dsn {
         class screen_logger : public logging_provider
         {
         public:
-            screen_logger() { }
-            virtual ~screen_logger(void) { }
+            screen_logger();
+            virtual ~screen_logger(void);
 
             virtual void dsn_logv(const char *file,
                 const char *function,
@@ -52,6 +52,7 @@ namespace dsn {
 
         private:
             ::dsn::utils::ex_lock_nr _lock;
+            bool _short_header;
         };
 
 
@@ -82,6 +83,7 @@ namespace dsn {
             int _index;
             int _lines;
             bool _short_header;
+            bool _fast_flush;
         };
 
     }

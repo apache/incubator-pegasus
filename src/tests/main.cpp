@@ -38,7 +38,7 @@ public:
     ::dsn::error_code start(int argc, char** argv)
     {
         testing::InitGoogleTest(&argc, argv);
-        RUN_ALL_TESTS();
+        auto ret = RUN_ALL_TESTS();
 
         // exit without any destruction
 # if defined(_WIN32)

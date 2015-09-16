@@ -82,7 +82,7 @@ void replica::init_learn(uint64_t signature)
     request->gpid = get_gpid();
     request->last_committed_decree_in_app = _app->last_committed_decree();
     request->last_committed_decree_in_prepare_list = _prepare_list->last_committed_decree();
-    request->learner = primary_address();
+    request->learner = _primary_address;
     request->signature = _potential_secondary_states.learning_signature;
     _app->prepare_learning_request(request->app_specific_learn_request);
 
@@ -96,8 +96,9 @@ void replica::init_learn(uint64_t signature)
         );
 
     ddebug(
-        "%s: init_learn with lastAppC/DDecree = <%llu,%llu>, lastCDecree = %llu, learnState = %s",
-        name(),
+        "%s: init_learn with primaryAddr = [%s:%hu], lastAppC/DDecree = <%llu,%llu>, "
+        "lastCDecree = %llu, learnState = %s",
+        name(), _config.primary.name(), _config.primary.port(),
         _app->last_committed_decree(),
         _app->last_durable_decree(),
         last_committed_decree(),
@@ -500,7 +501,7 @@ void replica::notify_learn_completion()
     report.last_committed_decree_in_prepare_list = last_committed_decree();
     report.learner_signature = _potential_secondary_states.learning_signature;
     report.learner_status_ = _potential_secondary_states.learning_status;
-    report.node = primary_address();
+    report.node = _primary_address;
 
     ddebug(
         "%s: notify_learn_completion with lastAppC/DDecree = <%llu,%llu>, "

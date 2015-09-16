@@ -265,7 +265,7 @@ namespace dsn {
 
                 if (ctx.queue)
                 {
-                    dwarn("[%s.%s] network client started at port %u, channel = %s, fmt = %s ...",
+                    ddebug("[%s.%s] network client started at port %u, channel = %s, fmt = %s ...",
                         node()->name(),
                         ctx.queue->get_name().c_str(),
                         (uint32_t)(cs.port + ctx.port_shift_value),
@@ -275,7 +275,7 @@ namespace dsn {
                 }
                 else
                 {
-                    dwarn("[%s] network client started at port %u, channel = %s, fmt = %s ...",
+                    ddebug("[%s] network client started at port %u, channel = %s, fmt = %s ...",
                         node()->name(),
                         (uint32_t)(cs.port + ctx.port_shift_value),
                         cs.channel.to_string(),
@@ -336,6 +336,9 @@ namespace dsn {
 
         _local_primary_address = _client_nets[0][0]->address();
         _local_primary_address.c_addr_ptr()->port = aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id + ctx.port_shift_value;
+
+        ddebug("service_node=[%s], primary_address=[%s:%hu]",
+               _node->name(), _local_primary_address.name(), _local_primary_address.port());
 
         _is_running = true;
         return ERR_OK;

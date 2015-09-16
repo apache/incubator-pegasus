@@ -57,7 +57,7 @@ namespace dsn {
             private:
                 typedef std::map<std::string, std::string> simple_kv;
                 simple_kv _store;
-                zlock     _lock;
+                ::dsn::service::zlock _lock;
                 bool      _test_file_learning;
             };
 

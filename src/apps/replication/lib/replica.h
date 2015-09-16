@@ -195,6 +195,7 @@ private:
     // constants
     replica_stub*           _stub;
     std::string             _dir;
+    ::dsn::rpc_address      _primary_address;
     char                    _name[256]; // app.index @ host:port
     replication_options     *_options;
     
