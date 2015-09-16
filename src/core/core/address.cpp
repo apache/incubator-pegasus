@@ -201,3 +201,38 @@ DSN_API void dsn_host_from_name(dsn_host_type_t type, const char* name, /*out*/ 
         break;
     }
 }
+
+namespace dsn {
+bool rpc_address::use_ip_as_name = false;
+void rpc_address::ip_to_name(const dsn_address_t* addr, char* name_buffer, int length)
+{
+    switch (addr->type)
+    {
+    case HOST_TYPE_IPV4:
+    {
+        uint32_t nip = htonl(addr->ip);
+# if defined(_WIN32)
+        sprintf_s(
+# else
+        std::snprintf(
+# endif
+            name_buffer, (size_t)length,
+            "%u.%u.%u.%u",
+            nip & 0xff,
+            (nip >> 8) & 0xff,
+            (nip >> 16) & 0xff,
+            (nip >> 24) & 0xff
+            );
+    }
+    break;
+    case HOST_TYPE_IPV6:
+        dassert(false, "to be implemented");
+        break;
+    case HOST_TYPE_URI:
+        dassert(false, "should not be here");
+        break;
+    default:
+        break;
+    }
+}
+}

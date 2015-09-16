@@ -28,6 +28,9 @@
 # else
 # include <sys/socket.h>
 # include <netdb.h>
+# include <ifaddrs.h>
+# include <netinet/in.h>
+# include <arpa/inet.h>
 # endif
 
 # include "rpc_engine.h"
@@ -334,7 +337,10 @@ namespace dsn {
             }
         }
 
-        _local_primary_address = _client_nets[0][0]->address();
+        if (rpc_address::use_ip_as_name)
+            get_local_ip(_local_primary_address.c_addr_ptr());
+        else
+            _local_primary_address = _client_nets[0][0]->address();
         _local_primary_address.c_addr_ptr()->port = aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id + ctx.port_shift_value;
 
         ddebug("service_node=[%s], primary_address=[%s:%hu]",
@@ -473,4 +479,37 @@ namespace dsn {
                 
         s->send_message(response);
     }
+
+    void rpc_engine::get_local_ip(dsn_address_t* addr)
+    {
+# ifdef _WIN32
+        dassert(false, "not implemented");
+# else
+        std::string interface = dsn_config_get_value_string(
+                    "network", "primary_interface",
+                    "eth0", "network interface name used to init primary ip address");
+
+        struct ifaddrs* ifa = nullptr;
+        getifaddrs(&ifa);
+
+        struct ifaddrs* i = ifa;
+        while (i != nullptr)
+        {
+            if (i->ifa_addr->sa_family == AF_INET && i->ifa_name == interface)
+            {
+                addr->type = HOST_TYPE_IPV4;
+                addr->ip = (uint32_t)ntohl(((struct sockaddr_in *)i->ifa_addr)->sin_addr.s_addr);
+                break;
+            }
+            i = i->ifa_next;
+        }
+        dassert(i != nullptr, "get local ip failed, interface_name=", interface.c_str());
+
+        if (ifa != nullptr)
+        {
+            // remember to free it
+            freeifaddrs(ifa);
+        }
+    }
+#endif
 }

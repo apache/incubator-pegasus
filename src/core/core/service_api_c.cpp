@@ -889,6 +889,10 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
 #endif
         getchar();
     }
+
+    // init rpc_address::use_ip_as_name
+    dsn::rpc_address::use_ip_as_name = dsn_all.config->get_value<bool>(
+        "network", "use_ip_as_name", false, "use ip address as rpc_address's name");
     
     // setup coredump
 	auto& coredump_dir = spec.coredump_dir;

@@ -34,6 +34,9 @@ namespace dsn
     class rpc_address
     {
     public:
+        static bool use_ip_as_name; // use ip address as rpc_address's name
+
+    public:
         rpc_address(uint32_t ip, uint16_t port);
         rpc_address(uint32_t* ipv6, uint16_t port);
         rpc_address(const char* uri, uint16_t port);
@@ -60,7 +63,10 @@ namespace dsn
         bool operator == (const ::dsn::rpc_address& r) const;
         bool operator != (const ::dsn::rpc_address& r) const;
         bool operator <  (const ::dsn::rpc_address& r) const;
-        
+
+    private:
+        static void ip_to_name(const dsn_address_t* addr, char* name_buffer, int length);
+
     private:
         dsn_address_t       _addr;
         mutable std::string _name;
@@ -92,9 +98,12 @@ namespace dsn
     inline rpc_address::rpc_address(dsn_host_type_t type, const char* name, uint16_t port)
     {
         _addr.type = type;
-        _name = name;
         _addr.port = port;    
         dsn_host_from_name(type, name, &_addr);
+        if (!use_ip_as_name)
+        {
+            _name = name;
+        }
     }
 
     inline rpc_address::rpc_address()
@@ -129,8 +138,16 @@ namespace dsn
     {        
         if (_name.length() == 0)
         {
-            _name.resize(16);
-            dsn_host_to_name(&_addr, (char*)_name.c_str(), 16);
+            char buf[16];
+            if (use_ip_as_name)
+            {
+                ip_to_name(&_addr, buf, 16);
+            }
+            else
+            {
+                dsn_host_to_name(&_addr, buf, 16);
+            }
+            _name.assign(buf);
         }   
         return _name.c_str(); 
     }
@@ -139,8 +156,16 @@ namespace dsn
     {
         if (_name.length() == 0)
         {
-            _name.resize(16);
-            dsn_host_to_name(&_addr, (char*)_name.c_str(), 16);
+            char buf[16];
+            if (use_ip_as_name)
+            {
+                ip_to_name(&_addr, buf, 16);
+            }
+            else
+            {
+                dsn_host_to_name(&_addr, buf, 16);
+            }
+            _name.assign(buf);
         }
         return _name; 
     }
