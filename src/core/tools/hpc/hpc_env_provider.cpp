@@ -38,7 +38,16 @@ namespace dsn
         hpc_env_provider::hpc_env_provider(env_provider* inner_provider)
             : env_provider(inner_provider)
         {
+            _ns_start = utils::get_current_physical_time_ns();
+# if defined(_WIN32)
+            ::QueryPerformanceCounter((LARGE_INTEGER*)&_tick_start);
 
+            uint64_t freq;
+            ::QueryPerformanceFrequency((LARGE_INTEGER*)&freq);
+            _tick_frequency_per_ns = (double)freq / 1000.0 / 1000.0 / 1000.0;
+# else
+            // TODO:
+# endif
         }
     }
 }

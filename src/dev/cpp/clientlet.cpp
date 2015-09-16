@@ -70,22 +70,9 @@ namespace dsn
     {
         _tracker = dsn_task_tracker_create(task_bucket_count);
         _access_thread_id_inited = false;
-        _app = 0;
         service_objects::instance().add(this);
     }
-
-    clientlet::clientlet(const char* host_app_name, int host_app_index, int task_bucket_count)
-    {
-        _tracker = dsn_task_tracker_create(task_bucket_count);
-        _access_thread_id_inited = false;
-        _app = dsn_query_app(host_app_name, host_app_index);
-        
-        dassert(_app != nullptr, "cannot find given rDSN app %s.%d",
-            host_app_name, host_app_index);
-
-        service_objects::instance().add(this);
-    }
-
+    
     clientlet::~clientlet()
     {
         dsn_task_tracker_destroy(_tracker);
@@ -114,8 +101,7 @@ namespace dsn
             task_handler callback,
             int hash /*= 0*/,
             int delay_milliseconds /*= 0*/,
-            int timer_interval_milliseconds /*= 0*/,
-            dsn_app_t app /*= nullptr*/
+            int timer_interval_milliseconds /*= 0*/
             )
         {
             dsn_task_t t;
@@ -125,11 +111,11 @@ namespace dsn
             if (timer_interval_milliseconds != 0)
             {
                 t = dsn_task_create_timer(evt, safe_task<task_handler>::exec, 
-                    tsk, hash, timer_interval_milliseconds, app);
+                    tsk, hash, timer_interval_milliseconds);
             }
             else
             {
-                t = dsn_task_create(evt, safe_task<task_handler>::exec, tsk, hash, app);
+                t = dsn_task_create(evt, safe_task<task_handler>::exec, tsk, hash);
             }
 
             tsk->set_task_info(t);
@@ -146,8 +132,7 @@ namespace dsn
             dsn_message_t request,
             clientlet* svc,
             rpc_reply_handler callback,
-            int reply_hash,
-            dsn_app_t app
+            int reply_hash
             )
         {
             task_ptr tsk = new safe_task<rpc_reply_handler >(callback);
@@ -159,11 +144,10 @@ namespace dsn
                 request,
                 callback != nullptr ? safe_task<rpc_reply_handler >::exec_rpc_response : nullptr,
                 (void*)tsk,
-                reply_hash,
-                app
+                reply_hash
                 );
             tsk->set_task_info(t);
-            dsn_rpc_call(&server.c_addr(), t, svc ? svc->tracker() : nullptr, app);
+            dsn_rpc_call(&server.c_addr(), t, svc ? svc->tracker() : nullptr);
 
             return tsk;
         }
@@ -179,8 +163,7 @@ namespace dsn
             dsn_task_code_t callback_code,
             clientlet* svc,
             aio_handler callback,
-            int hash /*= 0*/,
-            dsn_app_t app /*= nullptr*/
+            int hash /*= 0*/
             )
         {
             task_ptr tsk = new safe_task<aio_handler>(callback);
@@ -190,7 +173,7 @@ namespace dsn
 
             dsn_task_t t = dsn_file_create_aio_task(callback_code,
                 callback != nullptr ? safe_task<aio_handler>::exec_aio : nullptr,
-                tsk, hash, app
+                tsk, hash
                 );
 
             tsk->set_task_info(t);
@@ -207,8 +190,7 @@ namespace dsn
             dsn_task_code_t callback_code,
             clientlet* svc,
             aio_handler callback,
-            int hash /*= 0*/,
-            dsn_app_t app /*= nullptr*/
+            int hash /*= 0*/
             )
         {
             task_ptr tsk = new safe_task<aio_handler>(callback);
@@ -218,7 +200,7 @@ namespace dsn
 
             dsn_task_t t = dsn_file_create_aio_task(callback_code,
                 callback != nullptr ? safe_task<aio_handler>::exec_aio : nullptr,
-                tsk, hash, app
+                tsk, hash
                 );
 
             tsk->set_task_info(t);
@@ -236,8 +218,7 @@ namespace dsn
             dsn_task_code_t callback_code,
             clientlet* svc,
             aio_handler callback,
-            int hash /*= 0*/,
-            dsn_app_t app /*= nullptr*/
+            int hash /*= 0*/
             )
         {
             task_ptr tsk = new safe_task<aio_handler>(callback);
@@ -247,7 +228,7 @@ namespace dsn
 
             dsn_task_t t = dsn_file_create_aio_task(callback_code,
                 callback != nullptr ? safe_task<aio_handler>::exec_aio : nullptr,
-                tsk, hash, app
+                tsk, hash
                 );
 
             tsk->set_task_info(t);

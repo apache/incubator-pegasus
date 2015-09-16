@@ -39,10 +39,10 @@ TEST(core, aio)
     int len = (int)strlen(buffer);
 
     // write
-    auto fp = dsn_file_open("tmp", O_RDWR | O_CREAT | O_BINARY, 0666, g_app);
+    auto fp = dsn_file_open("tmp", O_RDWR | O_CREAT | O_BINARY, 0666);
     
-    auto t1 = ::dsn::file::write(fp, buffer, len, 0, LPC_AIO_TEST, nullptr, nullptr, 0, g_app);
-    auto t2 = ::dsn::file::write(fp, buffer, len, len, LPC_AIO_TEST, nullptr, nullptr, 0, g_app);
+    auto t1 = ::dsn::file::write(fp, buffer, len, 0, LPC_AIO_TEST, nullptr, nullptr, 0);
+    auto t2 = ::dsn::file::write(fp, buffer, len, len, LPC_AIO_TEST, nullptr, nullptr, 0);
     
     bool r = t1->wait();
     EXPECT_TRUE(r);
@@ -50,8 +50,8 @@ TEST(core, aio)
     r = t2->wait();
     EXPECT_TRUE(r);
 
-    t1 = ::dsn::file::write(fp, buffer, len, 0, LPC_AIO_TEST, nullptr, nullptr, 0, g_app);
-    t2 = ::dsn::file::write(fp, buffer, len, len, LPC_AIO_TEST, nullptr, nullptr, 0, g_app);
+    t1 = ::dsn::file::write(fp, buffer, len, 0, LPC_AIO_TEST, nullptr, nullptr, 0);
+    t2 = ::dsn::file::write(fp, buffer, len, len, LPC_AIO_TEST, nullptr, nullptr, 0);
 
     r = t1->wait();
     EXPECT_TRUE(r);
@@ -59,26 +59,15 @@ TEST(core, aio)
     r = t2->wait();
     EXPECT_TRUE(r);
 
-    auto err = dsn_file_close(fp, g_app);
+    auto err = dsn_file_close(fp);
     EXPECT_TRUE(err == ERR_OK);
 
     // read
     char* buffer2 = (char*)alloca((size_t)len);
-    fp = dsn_file_open("tmp", O_RDONLY | O_BINARY, 0666, g_app);
+    fp = dsn_file_open("tmp", O_RDONLY | O_BINARY, 0666);
 
-    t1 = ::dsn::file::read(fp, buffer2, len, 0, LPC_AIO_TEST, nullptr, nullptr, 0, g_app);
-    t2 = ::dsn::file::read(fp, buffer2, len, len, LPC_AIO_TEST, nullptr, nullptr, 0, g_app);
-
-    r = t1->wait();
-    EXPECT_TRUE(r);
-
-    r = t2->wait();
-    EXPECT_TRUE(r);
-
-    EXPECT_TRUE(memcmp(buffer, buffer2, len) == 0);
-
-    t1 = ::dsn::file::read(fp, buffer2, len, 0, LPC_AIO_TEST, nullptr, nullptr, 0, g_app);
-    t2 = ::dsn::file::read(fp, buffer2, len, len, LPC_AIO_TEST, nullptr, nullptr, 0, g_app);
+    t1 = ::dsn::file::read(fp, buffer2, len, 0, LPC_AIO_TEST, nullptr, nullptr, 0);
+    t2 = ::dsn::file::read(fp, buffer2, len, len, LPC_AIO_TEST, nullptr, nullptr, 0);
 
     r = t1->wait();
     EXPECT_TRUE(r);
@@ -88,6 +77,17 @@ TEST(core, aio)
 
     EXPECT_TRUE(memcmp(buffer, buffer2, len) == 0);
 
-    err = dsn_file_close(fp, g_app);
+    t1 = ::dsn::file::read(fp, buffer2, len, 0, LPC_AIO_TEST, nullptr, nullptr, 0);
+    t2 = ::dsn::file::read(fp, buffer2, len, len, LPC_AIO_TEST, nullptr, nullptr, 0);
+
+    r = t1->wait();
+    EXPECT_TRUE(r);
+
+    r = t2->wait();
+    EXPECT_TRUE(r);
+
+    EXPECT_TRUE(memcmp(buffer, buffer2, len) == 0);
+
+    err = dsn_file_close(fp);
     EXPECT_TRUE(err == ERR_OK);
 }

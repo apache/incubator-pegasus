@@ -105,7 +105,7 @@ public:
             aio_handler callback,
             int hash = 0);
 
-    // remove entry <gpid, decree> from _init_prepared_decrees
+    // remove entry <gpid, decree> from _previous_log_prepared_decrees
     // when a partition is removed. 
     void on_partition_removed(global_partition_id gpid);
 
@@ -163,7 +163,7 @@ private:
     int64_t                     _global_end_offset;
     
     // for gc and learning
-    multi_partition_decrees     _init_prepared_decrees;
+    multi_partition_decrees     _previous_log_prepared_decrees;
     int                         _max_staleness_for_commit;
 
     // bufferring
@@ -217,7 +217,7 @@ public:
     int64_t start_offset() const  { return _start_offset; }
     int   index() const { return _index; }
     const std::string& path() const { return _path; }
-    const multi_partition_decrees& init_prepare_decrees() { return _init_prepared_decrees; }
+    const multi_partition_decrees& previous_log_prepared_decrees() { return _previous_log_prepared_decrees; }
     log_file_header& header() { return _header;}
 
     int read_header(binary_reader& reader);
@@ -236,7 +236,7 @@ private:
     int           _index;
 
     // for gc
-    multi_partition_decrees _init_prepared_decrees;    
+    multi_partition_decrees _previous_log_prepared_decrees;    
     log_file_header         _header;
 };
 

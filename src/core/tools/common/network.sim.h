@@ -33,16 +33,26 @@ namespace dsn { namespace tools {
     class sim_client_session : public rpc_session
     {
     public:
-        sim_client_session(sim_network_provider& net, const ::dsn::rpc_address& remote_addr, rpc_client_matcher_ptr& matcher);
+        sim_client_session(
+            sim_network_provider& net, 
+            const ::dsn::rpc_address& remote_addr, 
+            rpc_client_matcher_ptr& matcher, 
+            std::shared_ptr<message_parser>& parser
+            );
 
         virtual void connect();
-        virtual void send(message_ex* msg);
+        virtual void send(message_ex* msgs);
     };
 
     class sim_server_session : public rpc_session
     {
     public:
-        sim_server_session(sim_network_provider& net, const ::dsn::rpc_address& remote_addr, rpc_session_ptr& client);
+        sim_server_session(
+            sim_network_provider& net, 
+            const ::dsn::rpc_address& remote_addr, 
+            rpc_session_ptr& client, 
+            std::shared_ptr<message_parser>& parser
+            );
 
         virtual void send(message_ex* reply_msg);
 
@@ -65,7 +75,8 @@ namespace dsn { namespace tools {
         virtual rpc_session_ptr create_client_session(const ::dsn::rpc_address& server_addr)
         {
             auto matcher = new_client_matcher();
-            return rpc_session_ptr(new sim_client_session(*this, server_addr, matcher));
+            auto parser = new_message_parser();
+            return rpc_session_ptr(new sim_client_session(*this, server_addr, matcher, parser));
         }
 
         uint32_t net_delay_milliseconds() const;

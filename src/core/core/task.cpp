@@ -114,10 +114,10 @@ task::task(dsn_task_code_t code, int hash, service_node* node)
     }
     else
     {
-        auto p = get_current_task();
+        auto p = get_current_node();
         dassert(p != nullptr, "tasks without explicit service node "
-            "can only be created inside other tasks");
-        _node = p->node();
+            "can only be created inside threads which is attached to specific node");
+        _node = p;
     }
 
     if (tls_dsn.magic != 0xdeadbeef)

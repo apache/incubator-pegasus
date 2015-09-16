@@ -5,7 +5,7 @@
 namespace dsn { namespace example { 
 
 class echo_perf_test_client
-    : public echo_client, public ::dsn::service::perf_client_helper<echo_perf_test_client>
+    : public echo_client, public ::dsn::service::perf_client_helper
 {
 public:
     echo_perf_test_client(

@@ -43,6 +43,14 @@
 # endif
 
 # include <mutex>
+# include <unordered_map>
+# include <dsn/internal/singleton.h>
+# include <dsn/internal/synchronize.h>
+
+static ::dsn::utils::rw_lock_nr s_name_cache_ipv4_lock;
+static std::unordered_map<uint32_t, std::string> s_name_cache_ipv4;
+
+//static std::unordered_map<uint128_t, std::string> s_name_cache_ipv6;
 
 static void net_init()
 {
@@ -80,7 +88,6 @@ DSN_API void dsn_address_build_ipv4(
     *ep = addr.c_addr();
 }
 
-
 // ip etc. to name
 DSN_API void dsn_host_to_name(const dsn_address_t* addr, /*out*/ char* name_buffer, int length)
 {
@@ -88,8 +95,19 @@ DSN_API void dsn_host_to_name(const dsn_address_t* addr, /*out*/ char* name_buff
     {
     case HOST_TYPE_IPV4:
     {
-        uint32_t nip = htonl(addr->ip);
+        // query cache
+        s_name_cache_ipv4_lock.lock_read();
+        auto it = s_name_cache_ipv4.find(addr->ip);
+        if (it != s_name_cache_ipv4.end())
+        {
+            strncpy(name_buffer, it->second.c_str(), length);
+            s_name_cache_ipv4_lock.unlock_read();
+            return;
+        }
+        s_name_cache_ipv4_lock.unlock_read();
 
+        // if not cache hit
+        uint32_t nip = htonl(addr->ip);
         // TODO: using global cache
         auto host = gethostbyaddr((char*)&nip, 4, AF_INET);
         if (host == nullptr)
@@ -112,6 +130,15 @@ DSN_API void dsn_host_to_name(const dsn_address_t* addr, /*out*/ char* name_buff
             strncpy(name_buffer, host->h_name, length);
         }
         name_buffer[length - 1] = '\0';
+
+        // update cache
+        s_name_cache_ipv4_lock.lock_write();
+        it = s_name_cache_ipv4.find(addr->ip);
+        if (it == s_name_cache_ipv4.end())
+        {
+            s_name_cache_ipv4[addr->ip] = std::string(name_buffer);
+        }
+        s_name_cache_ipv4_lock.unlock_write();
     }
     break;
     case HOST_TYPE_IPV6:

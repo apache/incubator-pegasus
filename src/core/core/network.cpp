@@ -37,10 +37,27 @@ namespace dsn
     rpc_session::~rpc_session()
     {
         dlink* msg = nullptr;
+
+        if (_sending_msgs)
+        {
+            auto hdr = &_sending_msgs->dl;
+            msg = hdr;
+            do
+            {
+                // added in rpc_engine::reply (for server) or rpc_session::call (for client)
+                auto rmsg = CONTAINING_RECORD(msg, message_ex, dl);
+                msg = msg->next();
+                rmsg->dl.remove();                
+                rmsg->release_ref();
+            } while (msg != hdr);
+
+            _sending_msgs = nullptr;
+        }
+
         while (true)
         {
             {
-                utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+                utils::auto_lock<utils::ex_lock_nr> l(_lock);
                 msg = _messages.next();
                 if (msg == &_messages)
                     break;
@@ -55,7 +72,7 @@ namespace dsn
 
     bool rpc_session::try_connecting()
     {
-        utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+        utils::auto_lock<utils::ex_lock_nr> l(_lock);
         if (_connect_state == SS_DISCONNECTED)
         {
             _connect_state = SS_CONNECTING;
@@ -68,7 +85,7 @@ namespace dsn
     void rpc_session::set_connected()
     {
         {
-            utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+            utils::auto_lock<utils::ex_lock_nr> l(_lock);
             dassert(_connect_state == SS_CONNECTING, "session must be connecting");
             _connect_state = SS_CONNECTED;
             _reconnect_count_after_last_success = 0;
@@ -82,19 +99,62 @@ namespace dsn
 
     void rpc_session::set_disconnected()
     {
-        utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+        utils::auto_lock<utils::ex_lock_nr> l(_lock);
         _connect_state = SS_DISCONNECTED;
+    }
+
+    inline message_ex* rpc_session::unlink_message_for_send()
+    {
+        auto n = _messages.next();
+        auto msg = CONTAINING_RECORD(n, message_ex, dl);        
+        int bcount = 0;
+        int tlen = 0;
+        dlink* last_msg = nullptr;
+
+        _sending_buffers.clear();
+
+        do
+        {
+            auto lmsg = CONTAINING_RECORD(n, message_ex, dl);            
+            auto lcount = _parser->get_send_buffers_count_and_total_length(lmsg, &tlen);
+            if (bcount > 0 && bcount + lcount > _max_buffer_block_count_per_send)
+            {
+                last_msg = n;
+                break;
+            }   
+
+            _sending_buffers.resize(bcount + lcount);
+            _parser->prepare_buffers_on_send(lmsg, 0, &_sending_buffers[bcount]);
+            bcount += lcount;
+
+            n = n->next();
+        } while (n != &_messages);
+
+        // all pending messages are included for sending
+        if (nullptr == last_msg)
+        {
+            _messages.remove();
+        }
+
+        // part of the message are included
+        else
+        {
+            auto rmsg = _messages.range_remove(last_msg->prev());
+            dassert(rmsg == &msg->dl, "must return the next sending msg");
+        }
+
+        return msg;
     }
     
     void rpc_session::send_message(message_ex* msg)
     {
         {
-            utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+            utils::auto_lock<utils::ex_lock_nr> l(_lock);
             msg->dl.insert_before(&_messages);
             if (SS_CONNECTED == _connect_state && !_is_sending_next)
             {
                 _is_sending_next = true;
-                msg = CONTAINING_RECORD(_messages.next(), message_ex, dl);
+                _sending_msgs = unlink_message_for_send();
             }
             else
             {
@@ -102,26 +162,27 @@ namespace dsn
             }
         }
 
-        this->send(msg);
+        // send msgs (double-linked list)
+        this->send(_sending_msgs);
     }
     
     void rpc_session::on_send_completed(message_ex* msg)
     {
         message_ex* next_msg;
         {
-            utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+            utils::auto_lock<utils::ex_lock_nr> l(_lock);
             if (nullptr != msg)
             {
-                dassert(_is_sending_next && &msg->dl == _messages.next(),
-                    "sent msg must be the first msg in send queue");
-                msg->dl.remove();
-                _is_sending_next = false;                
+                dassert(_is_sending_next && msg == _sending_msgs,
+                    "sent msg must be sending");
+                _is_sending_next = false; 
+                _sending_msgs = nullptr;
             }
             
             if (!_messages.is_alone() && !_is_sending_next)
             {
                 _is_sending_next = true;
-                next_msg = CONTAINING_RECORD(_messages.next(), message_ex, dl);
+                next_msg = _sending_msgs = unlink_message_for_send();
             }
             else
             {
@@ -129,45 +190,75 @@ namespace dsn
             }
         }
 
-        // for old msg
+        // for next send messages (double-linked list)
+        if (next_msg)
+            this->send(next_msg);
+
+        // for old msgs
         // added in rpc_engine::reply (for server) or rpc_session::call (for client)
         if (msg)
         {
-            msg->release_ref(); 
-            _message_sent++;
-        }        
+            while (true)
+            {
+                /*dinfo("msg %s for rpc %llx is now sent",
+                task_spec::get(msg->local_rpc_code)->name.c_str(),
+                msg->header->rpc_id
+                );*/
+                _message_sent++;
 
-        // for next send
-        if (next_msg)
-            this->send(next_msg);
+                if (msg->dl.is_alone())
+                {
+                    msg->release_ref();
+                    break;
+                }
+
+                auto msg2 = CONTAINING_RECORD(msg->dl.next(), message_ex, dl);
+                msg->dl.remove();
+                msg->release_ref();
+                msg = msg2;
+            }
+        }
     }
 
     bool rpc_session::has_pending_out_msgs()
     {
-        utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
+        utils::auto_lock<utils::ex_lock_nr> l(_lock);
         return !_messages.is_alone();
     }
 
     // client
-    rpc_session::rpc_session(connection_oriented_network& net, const ::dsn::rpc_address& remote_addr, rpc_client_matcher_ptr& matcher)
-        : _net(net), _remote_addr(remote_addr)
+    rpc_session::rpc_session(
+        connection_oriented_network& net,
+        const ::dsn::rpc_address& remote_addr,
+        rpc_client_matcher_ptr& matcher,
+        std::shared_ptr<message_parser>& parser
+        )
+        : _net(net), _remote_addr(remote_addr), _parser(parser)
     {
         _matcher = matcher;
+        _sending_msgs = nullptr;
         _is_sending_next = false;
         _connect_state = SS_DISCONNECTED;
         _reconnect_count_after_last_success = 0;
         _message_sent = 0;
+        _max_buffer_block_count_per_send = net.max_buffer_block_count_per_send();
     }
 
     // server
-    rpc_session::rpc_session(connection_oriented_network& net, const ::dsn::rpc_address& remote_addr)
-        : _net(net), _remote_addr(remote_addr)
+    rpc_session::rpc_session(
+        connection_oriented_network& net, 
+        const ::dsn::rpc_address& remote_addr,
+        std::shared_ptr<message_parser>& parser
+        )
+        : _net(net), _remote_addr(remote_addr), _parser(parser)
     {
         _matcher = nullptr;
+        _sending_msgs = nullptr;
         _is_sending_next = false;
         _connect_state = SS_CONNECTED;
         _reconnect_count_after_last_success = 0;
         _message_sent = 0;
+        _max_buffer_block_count_per_send = net.max_buffer_block_count_per_send();
     }
 
     void rpc_session::call(message_ex* request, rpc_response_task* call)
@@ -234,6 +325,7 @@ namespace dsn
         : _engine(srv), _parser_type(NET_HDR_DSN)
     {   
         _message_buffer_block_size = 1024 * 64;
+        _max_buffer_block_count_per_send = 64; // TODO: windows, how about the other platforms?
     }
 
     void network::reset_parser(network_header_format name, int message_buffer_block_size)

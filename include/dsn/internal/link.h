@@ -123,6 +123,32 @@ public:
             return nullptr;
     }
 
+    /*
+     *   BEFORE range_remove:
+     *    this <=> [from <=> ... <=> to] <=> x ...
+     *
+     *   AFTER range_remove:
+     *    this <=> x ...
+     *    from <=> ... <=> to <=> from
+     *
+     *    return from;
+     *
+     *   caller must ensure *to* is valid
+     */
+    dlink* range_remove(dlink* to)
+    {
+        auto from = this->next();
+        auto x = to->next();
+
+        this->_next = x;
+        x->_prev = this;
+
+        to->_next = from;
+        from->_prev = to;
+
+        return from;
+    }
+
 private:
     dlink* _next;
     dlink* _prev;

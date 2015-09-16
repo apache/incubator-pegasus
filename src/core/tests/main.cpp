@@ -57,7 +57,6 @@ void module_init()
 }
 
 int g_test_count = 0;
-dsn_app_t g_app = nullptr;
 
 GTEST_API_ int main(int argc, char **argv) 
 {
@@ -79,7 +78,7 @@ GTEST_API_ int main(int argc, char **argv)
     }
 
     // set host app for the non-in-rDSN-thread api calls
-    g_app = dsn_query_app("client", 1);
+    dsn_mimic_app("client", 1);
 
     // run out-rDSN tests in Main thread
     std::cout << "=========================================================== " << std::endl;
@@ -92,6 +91,7 @@ GTEST_API_ int main(int argc, char **argv)
     std::cout << "================== run in non-rDSN threads ================ " << std::endl;
     std::cout << "=========================================================== " << std::endl;
     std::thread t([](){
+        dsn_mimic_app("client", 1);
         exec_tests();
     });
     t.join();

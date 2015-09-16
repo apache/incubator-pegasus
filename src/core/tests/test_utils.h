@@ -36,7 +36,6 @@ DEFINE_THREAD_POOL_CODE(THREAD_POOL_TEST_SERVER)
 DEFINE_TASK_CODE_RPC(RPC_TEST_HASH, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
 
 extern int g_test_count;
-extern dsn_app_t g_app;
 
 inline void exec_tests()
 {    

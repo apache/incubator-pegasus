@@ -112,15 +112,15 @@ public:
     static task*            get_current_task();
     static uint64_t         get_current_task_id();
     static task_worker*     get_current_worker();
+    static task_worker*     get_current_worker2();
     static service_node*    get_current_node();
+    static service_node*    get_current_node2();
     static int              get_current_worker_index();
     static const char*      get_current_node_name();
     static rpc_engine*      get_current_rpc();
     static disk_engine*     get_current_disk();
-    static disk_engine*     get_current_disk2();
     static env_provider*    get_current_env();
     static nfs_node*        get_current_nfs();
-    static nfs_node*        get_current_nfs2();
     static timer_service*   get_current_tsvc();
 
     static void             set_tls_dsn_context(
@@ -356,11 +356,21 @@ __inline /*static*/ task_worker* task::get_current_worker()
     return tls_dsn.worker;
 }
 
+__inline /*static*/ task_worker* task::get_current_worker2()
+{
+    return tls_dsn.magic == 0xdeadbeef ? tls_dsn.worker : nullptr;
+}
+
 __inline /*static*/ service_node* task::get_current_node()
 {
     dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
     return tls_dsn.node;
 }
+__inline /*static*/ service_node* task::get_current_node2()
+{
+    return tls_dsn.magic == 0xdeadbeef ? tls_dsn.node : nullptr;
+}
+
 
 __inline /*static*/ int task::get_current_worker_index()
 {
@@ -380,11 +390,6 @@ __inline /*static*/ disk_engine* task::get_current_disk()
     return tls_dsn.disk;
 }
 
-__inline /*static*/ disk_engine* task::get_current_disk2()
-{
-    return tls_dsn.magic == 0xdeadbeef ? tls_dsn.disk : nullptr;
-}
-
 __inline /*static*/ env_provider* task::get_current_env()
 {
     dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
@@ -395,11 +400,6 @@ __inline /*static*/ nfs_node* task::get_current_nfs()
 {
     dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
     return tls_dsn.nfs;
-}
-
-__inline /*static*/ nfs_node* task::get_current_nfs2()
-{
-    return tls_dsn.magic == 0xdeadbeef ? tls_dsn.nfs : nullptr;
 }
 
 __inline /*static*/ timer_service* task::get_current_tsvc()

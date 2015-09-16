@@ -40,8 +40,13 @@ namespace dsn { namespace tools {
     // multiple machines connect to the same switch, 10 should be >= than rpc_channel::max_value() + 1
     static utils::safe_singleton_store<::dsn::rpc_address, sim_network_provider*> s_switch[10]; 
 
-    sim_client_session::sim_client_session(sim_network_provider& net, const ::dsn::rpc_address& remote_addr, rpc_client_matcher_ptr& matcher)
-        : rpc_session(net, remote_addr, matcher)
+    sim_client_session::sim_client_session(
+        sim_network_provider& net, 
+        const ::dsn::rpc_address& remote_addr, 
+        rpc_client_matcher_ptr& matcher,
+        std::shared_ptr<message_parser>& parser
+        )
+        : rpc_session(net, remote_addr, matcher, parser)
     {}
 
     void sim_client_session::connect() 
@@ -68,42 +73,56 @@ namespace dsn { namespace tools {
         return recv_msg;
     }
 
-    void sim_client_session::send(message_ex* msg)
+    void sim_client_session::send(message_ex* msgs)
     {
-        sim_network_provider* rnet = nullptr;
-        if (!s_switch[task_spec::get(msg->local_rpc_code)->rpc_call_channel].get(msg->to_address, rnet))
+        auto msg = msgs;
+        do 
         {
-            dwarn("cannot find destination node %s:%hu in simulator", 
-                msg->to_address.name(), 
-                msg->to_address.port()
-                );
-            return;
-        }
-        
-        auto server_session = rnet->get_server_session(_net.address());
-        if (nullptr == server_session)
-        {
-            rpc_session_ptr cptr = this;
-            server_session = new sim_server_session(*rnet, _net.address(), cptr);
-            rnet->on_server_session_accepted(server_session);
-        }
+            sim_network_provider* rnet = nullptr;
+            if (!s_switch[task_spec::get(msg->local_rpc_code)->rpc_call_channel].get(msg->to_address, rnet))
+            {
+                dwarn("cannot find destination node %s:%hu in simulator",
+                    msg->to_address.name(),
+                    msg->to_address.port()
+                    );
+            }
+            else
+            {
+                auto server_session = rnet->get_server_session(_net.address());
+                if (nullptr == server_session)
+                {
+                    rpc_session_ptr cptr = this;
+                    auto parser = _net.new_message_parser();
+                    server_session = new sim_server_session(*rnet, _net.address(), cptr, parser);
+                    rnet->on_server_session_accepted(server_session);
+                }
 
-        message_ex* recv_msg = virtual_send_message(msg);
+                message_ex* recv_msg = virtual_send_message(msg);
 
-        {
-            node_scoper ns(rnet->node());
+                {
+                    node_scoper ns(rnet->node());
 
-            server_session->on_recv_request(recv_msg,
-                recv_msg->from_address == recv_msg->to_address ?
-                0 : rnet->net_delay_milliseconds()
-                );
-        }
-        
-        on_send_completed(msg);
+                    server_session->on_recv_request(recv_msg,
+                        recv_msg->from_address == recv_msg->to_address ?
+                        0 : rnet->net_delay_milliseconds()
+                        );
+                }
+            }
+            
+            msg = CONTAINING_RECORD(msg->dl.next(), message_ex, dl);
+
+        } while (msg != msgs);
+
+        on_send_completed(msgs);
     }
 
-    sim_server_session::sim_server_session(sim_network_provider& net, const ::dsn::rpc_address& remote_addr, rpc_session_ptr& client)
-        : rpc_session(net, remote_addr)
+    sim_server_session::sim_server_session(
+        sim_network_provider& net, 
+        const ::dsn::rpc_address& remote_addr,
+        rpc_session_ptr& client,
+        std::shared_ptr<message_parser>& parser
+        )
+        : rpc_session(net, remote_addr, parser)
     {
         _client = client;
     }
