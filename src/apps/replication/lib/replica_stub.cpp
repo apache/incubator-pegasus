@@ -492,19 +492,14 @@ void replica_stub::query_configuration_by_node()
         _config_query_task->cancel(false);
     }
 
-    dsn_message_t msg = dsn_msg_create_request(RPC_CM_CALL, 0, 0);
-
-    meta_request_header hdr;
-    hdr.rpc_tag = RPC_CM_QUERY_NODE_PARTITIONS;
-    ::marshall(msg, hdr);
+    dsn_message_t msg = dsn_msg_create_request(RPC_CM_QUERY_NODE_PARTITIONS, 0, 0);
 
     configuration_query_by_node_request req;
     req.node = primary_address();
     ::marshall(msg, req);
 
-    _config_query_task = rpc::call_replicated(
-        _failure_detector->current_server_contact(),
-        _failure_detector->get_servers(),
+    _config_query_task = rpc::call(
+        _failure_detector->get_servers().address(),
         msg,
         this,
         std::bind(&replica_stub::on_node_query_reply, this, 
@@ -645,10 +640,7 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, global_p
 
 void replica_stub::remove_replica_on_meta_server(const partition_configuration& config)
 {
-    dsn_message_t msg = dsn_msg_create_request(RPC_CM_CALL, 0, 0);
-    meta_request_header hdr;
-    hdr.rpc_tag = RPC_CM_UPDATE_PARTITION_CONFIGURATION;
-    ::marshall(msg, hdr);
+    dsn_message_t msg = dsn_msg_create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION, 0, 0);
 
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
     request->config = config;
@@ -670,9 +662,8 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
 
     ::marshall(msg, *request);
 
-    rpc::call_replicated(
-        _failure_detector->current_server_contact(),
-        _failure_detector->get_servers(),
+    rpc::call(
+        _failure_detector->get_servers().address(),
         msg,
         nullptr,
         nullptr

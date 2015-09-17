@@ -130,6 +130,24 @@ void meta_service::start(const char* data_dir, bool clean_state)
         );
 
     dassert(err == ERR_OK, "FD start failed, err = %s", err.to_string());
+
+    register_rpc_handler(
+        RPC_CM_QUERY_NODE_PARTITIONS,
+        "RPC_CM_QUERY_NODE_PARTITIONS",
+        &meta_service::query_configuration_by_node
+        );
+
+    register_rpc_handler(
+        RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX,
+        "RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX",
+        &meta_service::query_configuration_by_index
+        );
+
+    register_rpc_handler(
+        RPC_CM_UPDATE_PARTITION_CONFIGURATION,
+        "RPC_CM_UPDATE_PARTITION_CONFIGURATION",
+        &meta_service::update_configuration
+        );
 }
 
 bool meta_service::stop()
@@ -175,6 +193,12 @@ void meta_service::on_request(dsn_message_t msg)
     if (is_primary) is_primary = (primary_address() == rhdr.primary_address);
     rhdr.err = ERR_OK;
 
+    if (!is_primary)
+    {
+        dsn_rpc_forward(msg, rhdr.primary_address.c_addr_ptr());
+        return;
+    }
+
     ::dsn::rpc_address faddr;
     dsn_msg_from_address(msg, faddr.c_addr_ptr());
     dinfo("recv meta request %s from %s:%hu", 
@@ -184,12 +208,7 @@ void meta_service::on_request(dsn_message_t msg)
         );
 
     dsn_message_t resp = dsn_msg_create_response(msg);
-    if (!is_primary)
-    {
-        rhdr.err = ERR_TALK_TO_OTHERS;        
-        ::marshall(resp, rhdr);
-    }
-    else if (!_started)
+    if (!_started)
     {
         rhdr.err = ERR_SERVICE_NOT_ACTIVE;
         ::marshall(resp, rhdr);
@@ -234,12 +253,12 @@ void meta_service::on_request(dsn_message_t msg)
 }
 
 // partition server & client => meta server
-void meta_service::query_configuration_by_node(configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response)
+void meta_service::query_configuration_by_node(const configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response)
 {
     _state->query_configuration_by_node(request, response);
 }
 
-void meta_service::query_configuration_by_index(configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response)
+void meta_service::query_configuration_by_index(const configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response)
 {
     _state->query_configuration_by_index(request, response);
 }
@@ -379,7 +398,7 @@ void meta_service::on_log_completed(error_code err, size_t size,
     }
 }
 
-void meta_service::update_configuration(configuration_update_request& request, /*out*/ configuration_update_response& response)
+void meta_service::update_configuration(const configuration_update_request& request, /*out*/ configuration_update_response& response)
 {
     _state->update_configuration(request, response);
 

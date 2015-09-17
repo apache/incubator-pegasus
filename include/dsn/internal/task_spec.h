@@ -110,6 +110,21 @@ ENUM_BEGIN(ioe_mode, IOE_INVALID)
     ENUM_REG(IOE_PER_QUEUE)
 ENUM_END(ioe_mode)
 
+typedef enum grpc_mode_t
+{
+    GRPC_TO_LEADER,  // the rpc is sent to the leader (if exist)
+    GRPC_TO_ALL,     // the rpc is sent to all
+    GRPC_TO_ANY,     // the rpc is sent to one of the group member
+    GRPC_TARGET_COUNT,
+    GRPC_TARGET_INVALID
+} grpc_mode_t;
+
+ENUM_BEGIN(grpc_mode_t, GRPC_TARGET_INVALID)
+    ENUM_REG(GRPC_TO_LEADER)
+    ENUM_REG(GRPC_TO_ALL)
+    ENUM_REG(GRPC_TO_ANY)
+ENUM_END(grpc_mode_t)
+
 // define network header format for RPC
 DEFINE_CUSTOMIZED_ID_TYPE(network_header_format);
 DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_DSN);
@@ -156,6 +171,7 @@ public:
 
     // configurable [
     dsn_task_priority_t    priority;
+    grpc_mode_t            grpc_mode; // used when a rpc request is sent to a group address
     dsn_threadpool_code_t  pool_code;
     bool                   allow_inline; // allow task executed in other thread pools or tasks
     bool                   fast_execution_in_network_thread;
@@ -203,6 +219,7 @@ public:
 
 CONFIG_BEGIN(task_spec)
     CONFIG_FLD_ENUM(dsn_task_priority_t, priority, TASK_PRIORITY_COMMON, TASK_PRIORITY_INVALID, true, "task priority")
+    CONFIG_FLD_ENUM(grpc_mode_t, grpc_mode, GRPC_TO_LEADER, GRPC_TARGET_INVALID, false, "group rpc mode: GRPC_TO_LEADER, GRPC_TO_ALL, GRPC_TO_ANY")
     CONFIG_FLD_ID(threadpool_code2, pool_code, THREAD_POOL_DEFAULT, true, "thread pool to execute the task")
     CONFIG_FLD(bool, bool, allow_inline, false, "whether the task can be executed inlined with the caller task")
     CONFIG_FLD(bool, bool, fast_execution_in_network_thread, false, "whether the rpc task can be executed in network threads directly")

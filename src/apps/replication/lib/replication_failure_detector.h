@@ -47,20 +47,13 @@ public:
     virtual void on_worker_disconnected( const std::vector<::dsn::rpc_address>& nodes ) { dassert (false, ""); }
     virtual void on_worker_connected( const ::dsn::rpc_address& node )  { dassert (false, ""); }
 
-    ::dsn::rpc_address current_server_contact() const { zauto_lock l(_meta_lock); return _current_meta_server; }
-    std::vector<::dsn::rpc_address> get_servers() const  { zauto_lock l(_meta_lock); return _meta_servers; }
+    const ::dsn::rpc_address& current_server_contact() const { zauto_lock l(_meta_lock); return _meta_servers.leader(); }
+    const ::dsn::rpc_group_address& get_servers() const  { zauto_lock l(_meta_lock); return _meta_servers; }
 
 private:
-    ::dsn::rpc_address find_next_meta_server(::dsn::rpc_address current);
-
-private:
-    typedef std::set<::dsn::rpc_address> end_points;
-
-    mutable zlock           _meta_lock;
-    ::dsn::rpc_address               _current_meta_server;
-
-    std::vector<::dsn::rpc_address>  _meta_servers;
-    replica_stub            *_stub;
+    mutable zlock            _meta_lock;
+    ::dsn::rpc_group_address _meta_servers;
+    replica_stub             *_stub;
 };
 
 }} // end namespace

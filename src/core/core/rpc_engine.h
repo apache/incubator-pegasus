@@ -55,7 +55,7 @@ public:
     //
     // rpc routines
     //
-    void call(message_ex* request, rpc_response_task* call);
+    void call(message_ex* request, rpc_response_task* call);    
     void on_recv_request(message_ex* msg, int delay_ms);
     static void reply(message_ex* response, error_code err = ERR_OK);
 
@@ -66,6 +66,9 @@ public:
     const ::dsn::rpc_address& primary_address() const { return _local_primary_address; }
     rpc_client_matcher_ptr matcher() { return _rpc_matcher; }
 
+    // call with ip address only
+    void call(const rpc_address& addr, message_ex* request, rpc_response_task* call, bool reset_request_id);
+
 private:
     network* create_network(
         const network_server_config& netcs, 
@@ -74,19 +77,18 @@ private:
         );
 
 private:
-    configuration_ptr                     _config;    
-    service_node                          *_node;
-    std::vector<std::vector<network*>>    _client_nets; // <format, <CHANNEL, network*>>
+    configuration_ptr                               _config;    
+    service_node                                    *_node;
+    std::vector<std::vector<network*>>              _client_nets; // <format, <CHANNEL, network*>>
     std::unordered_map<int, std::vector<network*>>  _server_nets; // <port, <CHANNEL, network*>>
-    ::dsn::rpc_address                             _local_primary_address;
-    rpc_client_matcher_ptr                _rpc_matcher;
+    ::dsn::rpc_address                              _local_primary_address;
+    rpc_client_matcher_ptr                          _rpc_matcher;
 
     typedef std::unordered_map<std::string, rpc_handler_ptr> rpc_handlers;
     rpc_handlers                  _handlers;
     utils::rw_lock_nr             _handlers_lock;
     
-    bool                          _is_running;
-
+    volatile bool                 _is_running;
     static bool                   _message_crc_required;
 };
 

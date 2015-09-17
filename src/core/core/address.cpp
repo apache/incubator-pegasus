@@ -88,6 +88,15 @@ DSN_API void dsn_address_build_ipv4(
     *ep = addr.c_addr();
 }
 
+DSN_API void dsn_address_build_group(
+    /*out*/ dsn_address_t* ep,
+    dsn_group_t g
+    )
+{
+    ::dsn::rpc_address addr(g);
+    *ep = addr.c_addr();
+}
+
 // ip etc. to name
 DSN_API void dsn_host_to_name(const dsn_address_t* addr, /*out*/ char* name_buffer, int length)
 {
@@ -147,6 +156,9 @@ DSN_API void dsn_host_to_name(const dsn_address_t* addr, /*out*/ char* name_buff
     case HOST_TYPE_URI:
         dassert(false, "to be implemented");
         break;
+    case HOST_TYPE_GROUP:
+        strncpy(name_buffer, ((::dsn::rpc_group_address*)(addr->group))->name(), length);
+        break;
     default:
         break;
     }
@@ -197,7 +209,52 @@ DSN_API void dsn_host_from_name(dsn_host_type_t type, const char* name, /*out*/ 
         daddr->uri = name;
         break;
 
+    case HOST_TYPE_GROUP:
+        dassert(false, "to be implemented");
+        break;
+
     default:
         break;
     }
+}
+
+
+DSN_API dsn_group_t dsn_group_build(const char* name) // must be paired with release later
+{
+    auto g = new ::dsn::rpc_group_address(name);
+    g->add_ref();
+    return g;
+}
+
+DSN_API void dsn_group_add_ref(dsn_group_t g)
+{
+    auto grp = (::dsn::rpc_group_address*)(g);
+    grp->add_ref();
+}
+
+DSN_API bool dsn_group_add(dsn_group_t g, dsn_address_t* ep)
+{
+    auto grp = (::dsn::rpc_group_address*)(g);
+    ::dsn::rpc_address addr(*ep);
+    return grp->add(addr);
+}
+
+DSN_API void dsn_group_set_leader(dsn_group_t g, dsn_address_t* ep)
+{
+    auto grp = (::dsn::rpc_group_address*)(g);
+    ::dsn::rpc_address addr(*ep);
+    grp->set_leader(addr);
+}
+
+DSN_API bool dsn_group_remove(dsn_group_t g, dsn_address_t* ep)
+{
+    auto grp = (::dsn::rpc_group_address*)(g);
+    ::dsn::rpc_address addr(*ep);
+    return grp->remove(addr);
+}
+
+DSN_API void dsn_group_release(dsn_group_t g)
+{
+    auto grp = (::dsn::rpc_group_address*)(g);
+    grp->release_ref();
 }

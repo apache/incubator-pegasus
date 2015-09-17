@@ -89,7 +89,7 @@ namespace dsn {
                         int port = atoi(args[2].c_str());
                         _timeout_seconds = atoi(args[3].c_str());
 
-                        dsn_address_build(_target.c_addr_ptr(), machine.c_str(), port);
+                        _target = rpc_address(HOST_TYPE_IPV4, machine.c_str(), port);
 
                         std::cout << "remote target is set to " << machine << ":" << port << ", timeout = " << _timeout_seconds << " seconds" <<std::endl;
                         continue;

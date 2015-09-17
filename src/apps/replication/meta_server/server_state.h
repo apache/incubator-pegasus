@@ -71,16 +71,16 @@ public:
     void save(const char* chk_point);
 
     // partition server & client => meta server
-    void query_configuration_by_node(configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response);
-    void query_configuration_by_index(configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response);
+    void query_configuration_by_node(const configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response);
+    void query_configuration_by_index(const configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response);
     void query_configuration_by_gpid(global_partition_id id, /*out*/ partition_configuration& config);
-    void update_configuration(configuration_update_request& request, /*out*/ configuration_update_response& response);
+    void update_configuration(const configuration_update_request& request, /*out*/ configuration_update_response& response);
     void unfree_if_possible_on_start();
     bool freezed() const { return _freeze.load(); }
     
 private:
     void check_consistency(global_partition_id gpid);
-    void update_configuration_internal(configuration_update_request& request, /*out*/ configuration_update_response& response);
+    void update_configuration_internal(const configuration_update_request& request, /*out*/ configuration_update_response& response);
 
 private:
     friend class ::dsn::replication::replication_checker;

@@ -75,7 +75,7 @@ namespace dsn
                     err.end_tracking();
                     ::unmarshall(response, header);
 
-                    if (header.err == ERR_TALK_TO_OTHERS)
+                    if (header.err == ERR_FORWARD_TO_OTHERS)
                     {
                         rpc::call(header.primary_address, request, ps->svc, ps->internal_cb, ps->reply_hash);
                         return;

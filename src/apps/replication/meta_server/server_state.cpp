@@ -314,7 +314,7 @@ void server_state::switch_meta_primary()
 }
 
 // partition server & client => meta server
-void server_state::query_configuration_by_node(configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response)
+void server_state::query_configuration_by_node(const configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response)
 {
     zauto_read_lock l(_lock);
     auto it = _nodes.find(request.node);
@@ -339,7 +339,7 @@ void server_state::query_configuration_by_gpid(global_partition_id id, /*out*/ p
     config = _apps[id.app_id - 1].partitions[id.pidx];
 }
 
-void server_state::query_configuration_by_index(configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response)
+void server_state::query_configuration_by_index(const configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response)
 {
     zauto_read_lock l(_lock);
 
@@ -366,14 +366,14 @@ void server_state::query_configuration_by_index(configuration_query_by_index_req
     response.err = ERR_OBJECT_NOT_FOUND;
 }
 
-void server_state::update_configuration(configuration_update_request& request, /*out*/ configuration_update_response& response)
+void server_state::update_configuration(const configuration_update_request& request, /*out*/ configuration_update_response& response)
 {
     zauto_write_lock l(_lock);
 
     update_configuration_internal(request, response);
 }
 
-void server_state::update_configuration_internal(configuration_update_request& request, /*out*/ configuration_update_response& response)
+void server_state::update_configuration_internal(const configuration_update_request& request, /*out*/ configuration_update_response& response)
 {
     app_state& app = _apps[request.config.gpid.app_id - 1];
     partition_configuration& old = app.partitions[request.config.gpid.pidx];

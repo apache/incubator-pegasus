@@ -79,11 +79,11 @@ namespace dsn { namespace tools {
         do 
         {
             sim_network_provider* rnet = nullptr;
-            if (!s_switch[task_spec::get(msg->local_rpc_code)->rpc_call_channel].get(msg->to_address, rnet))
+            if (!s_switch[task_spec::get(msg->local_rpc_code)->rpc_call_channel].get(remote_address(), rnet))
             {
                 dwarn("cannot find destination node %s:%hu in simulator",
-                    msg->to_address.name(),
-                    msg->to_address.port()
+                    remote_address().name(),
+                    remote_address().port()
                     );
             }
             else
@@ -103,7 +103,7 @@ namespace dsn { namespace tools {
                     node_scoper ns(rnet->node());
 
                     server_session->on_recv_request(recv_msg,
-                        recv_msg->from_address == recv_msg->to_address ?
+                        remote_address() == recv_msg->from_address ?
                         0 : rnet->net_delay_milliseconds()
                         );
                 }
@@ -135,7 +135,7 @@ namespace dsn { namespace tools {
             node_scoper ns(_client->net().node());
 
             _client->on_recv_reply(recv_msg->header->id, recv_msg,
-                recv_msg->from_address == recv_msg->to_address ?
+                remote_address() == recv_msg->to_address ?
                 0 : (static_cast<sim_network_provider*>(&_net))->net_delay_milliseconds()
                 );
         }

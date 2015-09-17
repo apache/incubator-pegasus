@@ -112,7 +112,7 @@ namespace dsn {
         }
         timeout_task->release_ref(); // added above in the same function
         
-        if (reply->error() == ERR_TALK_TO_OTHERS)
+        if (reply->error() == ERR_FORWARD_TO_OTHERS)
         {
             ::unmarshall((dsn_message_t)reply, *call->get_request()->to_address.c_addr_ptr());
             _engine->call(call->get_request(), call);
@@ -422,21 +422,14 @@ namespace dsn {
     void rpc_engine::call(message_ex* request, rpc_response_task* call)
     {
         auto sp = task_spec::get(request->local_rpc_code);
-        auto& named_nets = _client_nets[sp->rpc_call_header_format];
-        network* net = named_nets[sp->rpc_call_channel];
         auto& hdr = *request->header;
 
-        dassert(nullptr != net, "network not present for rpc channel '%s' with format '%s' used by rpc %s",
-            sp->rpc_call_channel.to_string(),
-            sp->rpc_call_header_format.to_string(),
-            hdr.rpc_name
-            );
-
+        hdr.client.host_ipv4 = primary_address().ip();
         hdr.client.port = primary_address().port();
-        hdr.rpc_id = utils::get_random64();
-        request->from_address = primary_address();
-
+        hdr.rpc_id = utils::get_random64();        
         request->seal(_message_crc_required);
+
+        request->from_address = primary_address();
 
         if (!sp->on_rpc_call.execute(task::get_current_task(), request, call, true))
         {
@@ -454,7 +447,73 @@ namespace dsn {
             return;
         }
 
-        net->call(request, call);
+        auto& named_nets = _client_nets[sp->rpc_call_header_format];
+        network* net = named_nets[sp->rpc_call_channel];
+
+        dassert(nullptr != net, "network not present for rpc channel '%s' with format '%s' used by rpc %s",
+            sp->rpc_call_channel.to_string(),
+            sp->rpc_call_header_format.to_string(),
+            hdr.rpc_name
+            );
+
+        switch (request->to_address.type())
+        {
+        case HOST_TYPE_IPV4:
+            net->call(request->to_address, request, call);
+            break;
+        case HOST_TYPE_IPV6:
+            dassert(false, "ipv6 support is to be implemented");
+            break;
+        case HOST_TYPE_URI:
+            dassert(false, "uri as host support is to be implemented");
+            break;
+        case HOST_TYPE_GROUP:
+            switch (sp->grpc_mode)
+            {
+            case GRPC_TO_LEADER:
+                net->call(request->to_address.group_address()->leader_always_valid(), request, call);
+                break;
+            case GRPC_TO_ANY:
+                // TODO: performance optimization
+                net->call(request->to_address.group_address()->random_member(), request, call);
+                break;
+            case GRPC_TO_ALL:
+                dassert(false, "to be implemented");
+                break;
+            default:
+                dassert(false, "invalid group rpc mode %s", enum_to_string(sp->grpc_mode));
+            }
+            break;
+        default:
+            dassert(false, "invalid target address type %d", (int)request->to_address.type());
+            break;
+        }
+        return;
+    }
+
+    void rpc_engine::call(const rpc_address& addr, message_ex* request, rpc_response_task* call, bool reset_request_id)
+    {
+        auto sp = task_spec::get(request->local_rpc_code);
+        auto& named_nets = _client_nets[sp->rpc_call_header_format];
+        network* net = named_nets[sp->rpc_call_channel];
+        auto& hdr = *request->header;
+        
+        dassert(nullptr != net, "network not present for rpc channel '%s' with format '%s' used by rpc %s",
+            sp->rpc_call_channel.to_string(),
+            sp->rpc_call_header_format.to_string(),
+            hdr.rpc_name
+            );
+
+        dbg_dassert(addr.type() == HOST_TYPE_IPV4, "only IPV4 is now supported");
+
+        if (reset_request_id)
+        {
+            hdr.id = message_ex::new_id();
+            request->seal(_message_crc_required);
+        }
+            
+        request->from_address = primary_address();
+        net->call(addr, request, call);
     }
 
     void rpc_engine::reply(message_ex* response, error_code err)

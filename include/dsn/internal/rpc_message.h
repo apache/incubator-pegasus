@@ -66,6 +66,7 @@ namespace dsn
             {
                 int32_t    timeout_ms;
                 int32_t    hash;
+                uint32_t   host_ipv4;
                 uint16_t   port;
             } client;
 

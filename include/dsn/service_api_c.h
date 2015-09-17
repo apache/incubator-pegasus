@@ -117,6 +117,7 @@ typedef void*       dsn_handle_t;
 typedef void*       dsn_task_t;
 typedef void*       dsn_task_tracker_t;
 typedef void*       dsn_message_t; 
+typedef void*       dsn_group_t;
 
 // all computation in rDSN are as tasks or events, 
 // i.e., in event-driven programming
@@ -203,12 +204,12 @@ typedef enum dsn_log_level_t
     LOG_LEVEL_INVALID
 } dsn_log_level_t;
 
-
 typedef enum dsn_host_type_t
 {
     HOST_TYPE_IPV4,  // 4 bytes
     HOST_TYPE_IPV6,  // 16 bytes
     HOST_TYPE_URI,   // customized bytes
+    HOST_TYPE_GROUP, // reference to an address group
     HOST_TYPE_COUNT,
     HOST_TYPE_INVALID
 } dsn_host_type_t;
@@ -219,11 +220,10 @@ typedef struct dsn_address_t
     dsn_host_type_t type;
     uint16_t        port;
     union {
-        uint32_t   ip; // ipv4 in host byte order
-        uint32_t   ipv6[4];
-        struct {
-            const char *uri;
-        };
+        uint32_t    ip;    // ipv4 in host byte order
+        uint32_t    ipv6[4];
+        const char  *uri;
+        dsn_group_t group; // port is ignored
     }; 
 } dsn_address_t;
 #pragma pack(pop)
@@ -521,8 +521,19 @@ extern DSN_API void          dsn_address_build_ipv4(
                                 uint32_t ipv4,
                                 uint16_t port
                                 );
+extern DSN_API void          dsn_address_build_group(
+                                /*out*/ dsn_address_t* ep,
+                                dsn_group_t g
+                                );
 extern DSN_API dsn_address_t dsn_primary_address();
 extern DSN_API void          dsn_primary_address2(/*out*/ dsn_address_t* paddr);
+
+extern DSN_API dsn_group_t   dsn_group_build(const char* name); // must be paired with release later
+extern DSN_API void          dsn_group_add_ref(dsn_group_t g);
+extern DSN_API bool          dsn_group_add(dsn_group_t g, dsn_address_t* ep);
+extern DSN_API bool          dsn_group_remove(dsn_group_t g, dsn_address_t* ep);
+extern DSN_API void          dsn_group_set_leader(dsn_group_t g, dsn_address_t* ep);
+extern DSN_API void          dsn_group_release(dsn_group_t g);
 
 // rpc message and buffer management
 //
