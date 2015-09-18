@@ -530,9 +530,12 @@ extern DSN_API void          dsn_primary_address2(/*out*/ dsn_address_t* paddr);
 
 extern DSN_API dsn_group_t   dsn_group_build(const char* name); // must be paired with release later
 extern DSN_API void          dsn_group_add_ref(dsn_group_t g);
-extern DSN_API bool          dsn_group_add(dsn_group_t g, dsn_address_t* ep);
-extern DSN_API bool          dsn_group_remove(dsn_group_t g, dsn_address_t* ep);
-extern DSN_API void          dsn_group_set_leader(dsn_group_t g, dsn_address_t* ep);
+extern DSN_API bool          dsn_group_add(dsn_group_t g, const dsn_address_t* ep);
+extern DSN_API bool          dsn_group_remove(dsn_group_t g, const dsn_address_t* ep);
+extern DSN_API void          dsn_group_set_leader(dsn_group_t g, const dsn_address_t* ep);
+extern DSN_API dsn_address_t dsn_group_get_leader(dsn_group_t g);
+extern DSN_API bool          dsn_group_is_leader(dsn_group_t g, const dsn_address_t* ep);
+extern DSN_API dsn_address_t dsn_group_next(dsn_group_t g, const dsn_address_t* ep);
 extern DSN_API void          dsn_group_release(dsn_group_t g);
 
 // rpc message and buffer management

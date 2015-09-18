@@ -373,8 +373,8 @@ namespace dsn { namespace replication {
             );
 
     private:
-        std::string                             _app_name;
-        rpc_group_address                       _meta_servers;
+        std::string      _app_name;
+        dsn::rpc_address _meta_servers;
         
         mutable zrwlock_nr                      _config_lock;
         std::unordered_map<int, partition_configuration> _config_cache;

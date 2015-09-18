@@ -62,12 +62,12 @@ replication_app_client_base::replication_app_client_base(
     int task_bucket_count/* = 13*/
     )
     : clientlet(task_bucket_count)
-    , _meta_servers("meta.servers")
+    , _meta_servers(dsn_group_build("meta.servers"), false)
 {
     _app_name = std::string(app_name); 
 
     for (auto& m : meta_servers)
-        _meta_servers.add(m);
+        dsn_group_add(_meta_servers.group_handle(), &m.c_addr());
 
     _app_id = -1;
     _app_partition_count = -1;
@@ -344,8 +344,9 @@ void replication_app_client_base::call(request_context_ptr request, bool no_dela
             req.partition_indices.push_back(request->partition_index);
             ::marshall(msg, req);
             
+            rpc_address target(_meta_servers);
             it->second->query_config_task = rpc::call(
-                _meta_servers.address(),
+                target,
                 msg,
 
                 this,

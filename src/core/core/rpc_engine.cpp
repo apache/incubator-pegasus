@@ -32,6 +32,7 @@
 
 # include "rpc_engine.h"
 # include "service_engine.h"
+# include "group_address.h"
 # include <dsn/internal/perf_counters.h>
 # include <dsn/internal/factory_store.h>
 # include <dsn/internal/task_queue.h>
@@ -445,7 +446,7 @@ namespace dsn {
             {
             case GRPC_TO_LEADER:
                 // TODO: auto-changed leader
-                call_ip(request->server_address.group_address()->leader_always_valid(), request, call);
+                call_ip(request->server_address.group_address()->possible_leader(), request, call);
                 break;
             case GRPC_TO_ANY:
                 // TODO: performance optimization
@@ -455,7 +456,7 @@ namespace dsn {
                 dassert(false, "to be implemented");
                 break;
             default:
-                dassert(false, "invalid group rpc mode %s", enum_to_string(sp->grpc_mode));
+                dassert(false, "invalid group rpc mode %d", (int)(sp->grpc_mode));
             }
             break;
         default:
@@ -467,6 +468,9 @@ namespace dsn {
 
     void rpc_engine::call_ip(const rpc_address& addr, message_ex* request, rpc_response_task* call, bool reset_request_id)
     {
+        request->from_address = primary_address();
+        request->to_address = addr;
+
         auto sp = task_spec::get(request->local_rpc_code);
         auto& hdr = *request->header; 
         if (!sp->on_rpc_call.execute(task::get_current_task(), request, call, true))
@@ -502,8 +506,6 @@ namespace dsn {
             request->seal(_message_crc_required);
         }
             
-        request->from_address = primary_address();
-        request->to_address = addr;
         net->call(request, call);
     }
 

@@ -304,8 +304,9 @@ void replica::update_configuration_on_meta_server(config_type type, const ::dsn:
         _primary_states.reconfiguration_task->cancel(true);
     }
 
+    rpc_address target(_stub->_failure_detector->get_servers());
     _primary_states.reconfiguration_task = rpc::call(
-        _stub->_failure_detector->get_servers().address(),
+        target,
         msg,        
         this,
         std::bind(&replica::on_update_configuration_on_meta_server_reply, this,
@@ -344,8 +345,9 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
             req->config.ballot
             );
 
+        rpc_address target(_stub->_failure_detector->get_servers());
         _primary_states.reconfiguration_task = rpc::call(
-            _stub->_failure_detector->get_servers().address(),
+            target,
             request,
             this,
             std::bind(&replica::on_update_configuration_on_meta_server_reply, this, 

@@ -498,8 +498,9 @@ void replica_stub::query_configuration_by_node()
     req.node = primary_address();
     ::marshall(msg, req);
 
+    rpc_address target(_failure_detector->get_servers());
     _config_query_task = rpc::call(
-        _failure_detector->get_servers().address(),
+        target,
         msg,
         this,
         std::bind(&replica_stub::on_node_query_reply, this, 
@@ -662,8 +663,9 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
 
     ::marshall(msg, *request);
 
+    rpc_address target(_failure_detector->get_servers());
     rpc::call(
-        _failure_detector->get_servers().address(),
+        _failure_detector->get_servers(),
         msg,
         nullptr,
         nullptr

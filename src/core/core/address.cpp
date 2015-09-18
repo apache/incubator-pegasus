@@ -27,6 +27,7 @@
 # include <dsn/ports.h>
 # include <dsn/service_api_c.h>
 # include <dsn/cpp/address.h>
+# include "group_address.h"
 
 # ifdef _WIN32
 
@@ -218,7 +219,6 @@ DSN_API void dsn_host_from_name(dsn_host_type_t type, const char* name, /*out*/ 
     }
 }
 
-
 DSN_API dsn_group_t dsn_group_build(const char* name) // must be paired with release later
 {
     auto g = new ::dsn::rpc_group_address(name);
@@ -232,21 +232,40 @@ DSN_API void dsn_group_add_ref(dsn_group_t g)
     grp->add_ref();
 }
 
-DSN_API bool dsn_group_add(dsn_group_t g, dsn_address_t* ep)
+DSN_API bool dsn_group_add(dsn_group_t g, const dsn_address_t* ep)
 {
     auto grp = (::dsn::rpc_group_address*)(g);
     ::dsn::rpc_address addr(*ep);
     return grp->add(addr);
 }
 
-DSN_API void dsn_group_set_leader(dsn_group_t g, dsn_address_t* ep)
+DSN_API void dsn_group_set_leader(dsn_group_t g, const dsn_address_t* ep)
 {
     auto grp = (::dsn::rpc_group_address*)(g);
     ::dsn::rpc_address addr(*ep);
     grp->set_leader(addr);
 }
 
-DSN_API bool dsn_group_remove(dsn_group_t g, dsn_address_t* ep)
+DSN_API dsn_address_t dsn_group_get_leader(dsn_group_t g)
+{
+    auto grp = (::dsn::rpc_group_address*)(g);
+    return grp->leader().c_addr();
+}
+
+DSN_API bool dsn_group_is_leader(dsn_group_t g, const dsn_address_t* ep)
+{
+    auto grp = (::dsn::rpc_group_address*)(g);
+    return grp->leader() == *ep;
+}
+
+DSN_API dsn_address_t dsn_group_next(dsn_group_t g, const dsn_address_t* ep)
+{
+    auto grp = (::dsn::rpc_group_address*)(g);
+    ::dsn::rpc_address addr(*ep);
+    return grp->next(addr).c_addr();
+}
+
+DSN_API bool dsn_group_remove(dsn_group_t g, const dsn_address_t* ep)
 {
     auto grp = (::dsn::rpc_group_address*)(g);
     ::dsn::rpc_address addr(*ep);
