@@ -62,13 +62,15 @@ replication_app_client_base::replication_app_client_base(
     int task_bucket_count/* = 13*/
     )
     : clientlet(task_bucket_count)
+    , _meta_servers("meta.servers")
 {
-    _app_name = std::string(app_name);   
-    _meta_servers = meta_servers;
+    _app_name = std::string(app_name); 
+
+    for (auto& m : meta_servers)
+        _meta_servers.add(m);
 
     _app_id = -1;
     _app_partition_count = -1;
-    _last_contact_point.set_invalid();
 }
 
 replication_app_client_base::~replication_app_client_base()
@@ -335,20 +337,15 @@ void replication_app_client_base::call(request_context_ptr request, bool no_dela
         // init configuration query task if necessary
         if (it->second->query_config_task == nullptr)
         {
-            dsn_message_t msg = dsn_msg_create_request(RPC_CM_CALL, 0, 0);
-
-            meta_request_header hdr;
-            hdr.rpc_tag = RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX;
-            ::marshall(msg, hdr);
+            dsn_message_t msg = dsn_msg_create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, 0, 0);
 
             configuration_query_by_index_request req;
             req.app_name = _app_name;
             req.partition_indices.push_back(request->partition_index);
             ::marshall(msg, req);
             
-            it->second->query_config_task = rpc::call_replicated(
-                _last_contact_point,
-                _meta_servers,
+            it->second->query_config_task = rpc::call(
+                _meta_servers.address(),
                 msg,
 
                 this,
@@ -447,8 +444,6 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
         if (resp.err == ERR_OK)
         {
             zauto_write_lock l(_config_lock);
-            dsn_msg_from_address(response, _last_contact_point.c_addr_ptr());
-
             if (resp.partitions.size() > 0)
             {
                 if (_app_id != -1 && _app_id != resp.partitions[0].gpid.app_id)

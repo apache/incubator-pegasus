@@ -105,6 +105,8 @@ namespace dsn
             int reply_hash
             )
         {
+            dassert(false, "this api is not obsolete, pls use normal rpc::call with rpc_group_address instead");
+
             ::dsn::rpc_address first = first_server;
             if (first.is_invalid())
             {

@@ -288,42 +288,6 @@ void replica::update_configuration_on_meta_server(config_type type, const ::dsn:
     // for simplicity at the cost of certain write throughput
     update_local_configuration_with_no_ballot_change(PS_INACTIVE);
     set_inactive_state_transient(true);
-/*
-    dsn_message_t msg = dsn_msg_create_request(RPC_CM_CALL, 0, 0);
-    
-    meta_request_header hdr;
-    hdr.rpc_tag = RPC_CM_UPDATE_PARTITION_CONFIGURATION;
-
-    std::shared_ptr<configuration_update_request> request(new configuration_update_request);
-    request->config = newConfig;
-    request->config.ballot++;
-    request->type = type;
-    request->node = node;
-
-    {
-        rpc_write_stream writer(msg);
-        marshall(writer, hdr);
-        marshall(writer, *request);
-    }
-
-    if (nullptr != _primary_states.reconfiguration_task)
-    {
-        _primary_states.reconfiguration_task->cancel(true);
-    }
-
-    _primary_states.reconfiguration_task = rpc::call_replicated(
-        _stub->_failure_detector->current_server_contact(),
-        _stub->_failure_detector->get_servers(),
-        msg,
-        this,
-        std::bind(&replica::on_update_configuration_on_meta_server_reply, this,
-        std::placeholders::_1,
-        std::placeholders::_2,
-        std::placeholders::_3,
-        request),
-        gpid_to_hash(get_gpid())
-        );*/
-
 
     dsn_message_t msg = dsn_msg_create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION, 0, 0);
     
@@ -364,6 +328,13 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
         return;
     }
 
+    configuration_update_response resp;
+    if (err == ERR_OK)
+    {
+        ::unmarshall(response, resp);
+        err = resp.err;
+    }
+
     if (err != ERR_OK)
     {
         ddebug(
@@ -386,9 +357,6 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
             );
         return;
     }
-
-    configuration_update_response resp;
-    ::unmarshall(response, resp);
 
     ddebug(
         "%s: update configuration reply with err %s, ballot %lld, local %lld",

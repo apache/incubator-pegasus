@@ -106,15 +106,8 @@ void meta_service::start(const char* data_dir, bool clean_state)
     _balancer = new load_balancer(_state);            
     _failure_detector = new meta_server_failure_detector(_state, this);
     
-    ::dsn::rpc_address primary;
-    if (_state->get_meta_server_primary(primary) && primary == primary_address())
-    {
-        _failure_detector->set_primary(true);
-    }   
-    else
-        _failure_detector->set_primary(false);
-
-    register_rpc_handler(RPC_CM_CALL, "RPC_CM_CALL", &meta_service::on_request);
+    // TODO: use zookeeper for leader election
+    _failure_detector->set_primary(primary_address());
 
     // make sure the delay is larger than fd.grace to ensure 
     // all machines are in the correct state (assuming connected initially)
@@ -134,19 +127,19 @@ void meta_service::start(const char* data_dir, bool clean_state)
     register_rpc_handler(
         RPC_CM_QUERY_NODE_PARTITIONS,
         "RPC_CM_QUERY_NODE_PARTITIONS",
-        &meta_service::query_configuration_by_node
+        &meta_service::on_query_configuration_by_node
         );
 
     register_rpc_handler(
         RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX,
         "RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX",
-        &meta_service::query_configuration_by_index
+        &meta_service::on_query_configuration_by_index
         );
 
     register_rpc_handler(
         RPC_CM_UPDATE_PARTITION_CONFIGURATION,
         "RPC_CM_UPDATE_PARTITION_CONFIGURATION",
-        &meta_service::update_configuration
+        &meta_service::on_update_configuration
         );
 }
 
@@ -163,7 +156,11 @@ bool meta_service::stop()
     {
         _balancer_timer->cancel(true);
     }
-    unregister_rpc_handler(RPC_CM_CALL);
+    
+    unregister_rpc_handler(RPC_CM_QUERY_NODE_PARTITIONS);
+    unregister_rpc_handler(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
+    unregister_rpc_handler(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
+
     delete _balancer;
     _balancer = nullptr;
     return true;
@@ -183,84 +180,124 @@ void meta_service::on_load_balance_start()
     _started = true;
 }
 
-void meta_service::on_request(dsn_message_t msg)
-{
-    meta_request_header hdr;
-    ::unmarshall(msg, hdr);
-
-    meta_response_header rhdr;
-    bool is_primary = _state->get_meta_server_primary(rhdr.primary_address);
-    if (is_primary) is_primary = (primary_address() == rhdr.primary_address);
-    rhdr.err = ERR_OK;
-
-    if (!is_primary)
-    {
-        dsn_rpc_forward(msg, rhdr.primary_address.c_addr_ptr());
-        return;
-    }
-
-    ::dsn::rpc_address faddr;
-    dsn_msg_from_address(msg, faddr.c_addr_ptr());
-    dinfo("recv meta request %s from %s:%hu", 
-        dsn_task_code_to_string(hdr.rpc_tag),
-        faddr.name(),
-        faddr.port()
-        );
-
-    dsn_message_t resp = dsn_msg_create_response(msg);
-    if (!_started)
-    {
-        rhdr.err = ERR_SERVICE_NOT_ACTIVE;
-        ::marshall(resp, rhdr);
-    }
-    else if (hdr.rpc_tag == RPC_CM_QUERY_NODE_PARTITIONS)
-    {
-        configuration_query_by_node_request request;
-        configuration_query_by_node_response response;
-        ::unmarshall(msg, request);
-
-        query_configuration_by_node(request, response);
-
-        ::marshall(resp, rhdr);
-        ::marshall(resp, response);
-    }
-
-    else if (hdr.rpc_tag == RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX)
-    {
-        configuration_query_by_index_request request;
-        configuration_query_by_index_response response;
-        unmarshall(msg, request);
-
-        query_configuration_by_index(request, response);
-        
-        ::marshall(resp, rhdr);
-        ::marshall(resp, response);
-    }
-
-    else  if (hdr.rpc_tag == RPC_CM_UPDATE_PARTITION_CONFIGURATION)
-    {
-        update_configuration(msg, resp);
-        rhdr.err.end_tracking();
-        return;
-    }
-    
-    else
-    {
-        dassert(false, "unknown rpc tag %x (%s)", hdr.rpc_tag, dsn_task_code_to_string(hdr.rpc_tag));
-    }
-
-    dsn_rpc_reply(resp);
-}
+//void meta_service::on_request(dsn_message_t msg)
+//{
+//    meta_request_header hdr;
+//    ::unmarshall(msg, hdr);
+//        
+//    meta_response_header rhdr;
+//    rhdr.err = ERR_OK;
+//    _failure_detector->get_primary(rhdr.primary_address);
+//
+//    bool is_primary = _failure_detector->is_primary();
+//    if (!is_primary)
+//    {
+//        dsn_rpc_forward(msg, rhdr.primary_address.c_addr_ptr());
+//        return;
+//    }
+//
+//    ::dsn::rpc_address faddr;
+//    dsn_msg_from_address(msg, faddr.c_addr_ptr());
+//    dinfo("recv meta request %s from %s:%hu", 
+//        dsn_task_code_to_string(hdr.rpc_tag),
+//        faddr.name(),
+//        faddr.port()
+//        );
+//
+//    dsn_message_t resp = dsn_msg_create_response(msg);
+//    if (!_started)
+//    {
+//        rhdr.err = ERR_SERVICE_NOT_ACTIVE;
+//        ::marshall(resp, rhdr);
+//    }
+//    else if (hdr.rpc_tag == RPC_CM_QUERY_NODE_PARTITIONS)
+//    {
+//        configuration_query_by_node_request request;
+//        configuration_query_by_node_response response;
+//        ::unmarshall(msg, request);
+//
+//        query_configuration_by_node(request, response);
+//
+//        ::marshall(resp, rhdr);
+//        ::marshall(resp, response);
+//    }
+//
+//    else if (hdr.rpc_tag == RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX)
+//    {
+//        configuration_query_by_index_request request;
+//        configuration_query_by_index_response response;
+//        unmarshall(msg, request);
+//
+//        query_configuration_by_index(request, response);
+//        
+//        ::marshall(resp, rhdr);
+//        ::marshall(resp, response);
+//    }
+//
+//    else  if (hdr.rpc_tag == RPC_CM_UPDATE_PARTITION_CONFIGURATION)
+//    {
+//        update_configuration(msg, resp);
+//        rhdr.err.end_tracking();
+//        return;
+//    }
+//    
+//    else
+//    {
+//        dassert(false, "unknown rpc tag %x (%s)", hdr.rpc_tag, dsn_task_code_to_string(hdr.rpc_tag));
+//    }
+//
+//    dsn_rpc_reply(resp);
+//}
 
 // partition server & client => meta server
-void meta_service::query_configuration_by_node(const configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response)
+void meta_service::on_query_configuration_by_node(dsn_message_t msg)
 {
+    if (!_started)
+    {
+        configuration_query_by_node_response response;
+        response.err = ERR_SERVICE_NOT_ACTIVE;
+        reply(msg, response);
+        return;
+    }
+
+    if (!_failure_detector->is_primary())
+    {
+        rpc_address primary;
+        _failure_detector->get_primary(primary);
+        dsn_rpc_forward(msg, primary.c_addr_ptr());
+        return;
+    }
+
+    configuration_query_by_node_response response;
+    configuration_query_by_node_request request;
+    ::unmarshall(msg, request);
     _state->query_configuration_by_node(request, response);
+    reply(msg, response);    
 }
 
-void meta_service::query_configuration_by_index(const configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response)
+void meta_service::on_query_configuration_by_index(dsn_message_t msg)
 {
+    if (!_started)
+    {
+        configuration_query_by_index_response response;
+        response.err = ERR_SERVICE_NOT_ACTIVE;
+        reply(msg, response);
+        return;
+    }
+
+    if (!_failure_detector->is_primary())
+    {
+        rpc_address primary;
+        _failure_detector->get_primary(primary);
+        dsn_rpc_forward(msg, primary.c_addr_ptr());
+        return;
+    }
+        
+    configuration_query_by_index_response response;
+    configuration_query_by_index_request request;
+    ::unmarshall(msg, request);
     _state->query_configuration_by_index(request, response);
+    reply(msg, response);
 }
 
 void meta_service::replay_log(const char* log)
@@ -297,14 +334,26 @@ void meta_service::replay_log(const char* log)
     ::fclose(fp);
 }
 
-void meta_service::update_configuration(dsn_message_t req, dsn_message_t resp)
+void meta_service::on_update_configuration(dsn_message_t req)
 {
+    if (!_started)
+    {
+        configuration_update_response response;
+        response.err = ERR_SERVICE_NOT_ACTIVE;
+        reply(req, response);
+        return;
+    }
+
+    if (!_failure_detector->is_primary())
+    {
+        rpc_address primary;
+        _failure_detector->get_primary(primary);
+        dsn_rpc_forward(req, primary.c_addr_ptr());
+        return;
+    }
+
     if (_state->freezed())
     {
-        meta_response_header rhdr;
-        rhdr.err = ERR_OK;
-        rhdr.primary_address = primary_address();
-
         configuration_update_request request;
         configuration_update_response response;
         
@@ -313,10 +362,7 @@ void meta_service::update_configuration(dsn_message_t req, dsn_message_t resp)
         response.err = ERR_STATE_FREEZED;
         _state->query_configuration_by_gpid(request.config.gpid, response.config);
 
-        ::marshall(resp, rhdr);
-        ::marshall(resp, response);
-
-        dsn_rpc_reply(resp);
+        reply(req, response);
         return;
     }
 
@@ -346,7 +392,7 @@ void meta_service::update_configuration(dsn_message_t req, dsn_message_t resp)
 
         file::write(_log, buffer, len, offset, LPC_CM_LOG_UPDATE, this,
             std::bind(&meta_service::on_log_completed, this, 
-            std::placeholders::_1, std::placeholders::_2, bb2, request, resp));
+            std::placeholders::_1, std::placeholders::_2, bb2, request, dsn_msg_create_response(req)));
     }
 }
 
@@ -383,13 +429,7 @@ void meta_service::on_log_completed(error_code err, size_t size,
 
     if (resp != nullptr)
     {
-        meta_response_header rhdr;
-        rhdr.err = err;
-        rhdr.primary_address = primary_address();
-
-        marshall(resp, rhdr);
         marshall(resp, response);
-
         dsn_rpc_reply(resp);
     }
     else
@@ -414,28 +454,16 @@ void meta_service::on_load_balance_timer()
     if (_state->freezed())
         return;
 
-    ::dsn::rpc_address primary;
-    if (_state->get_meta_server_primary(primary) && primary == primary_address())
+    if (_failure_detector->is_primary())
     {
-        _failure_detector->set_primary(true);
         _balancer->run();
-    }
-    else
-    {
-        _failure_detector->set_primary(false);
     }
 }
 
 void meta_service::on_config_changed(global_partition_id gpid)
 {
-    ::dsn::rpc_address primary;
-    if (_state->get_meta_server_primary(primary) && primary == primary_address())
+    if (_failure_detector->is_primary())
     {
-        _failure_detector->set_primary(true);
         _balancer->run(gpid);
-    }
-    else
-    {
-        _failure_detector->set_primary(false);
     }
 }

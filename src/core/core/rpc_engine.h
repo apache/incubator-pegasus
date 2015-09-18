@@ -67,7 +67,7 @@ public:
     rpc_client_matcher_ptr matcher() { return _rpc_matcher; }
 
     // call with ip address only
-    void call(const rpc_address& addr, message_ex* request, rpc_response_task* call, bool reset_request_id);
+    void call_ip(const rpc_address& addr, message_ex* request, rpc_response_task* call, bool reset_request_id = false);
 
 private:
     network* create_network(

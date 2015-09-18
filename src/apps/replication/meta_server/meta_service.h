@@ -51,15 +51,16 @@ public:
     bool stop();
 
 private:
-    void on_request(dsn_message_t request);
+    // void on_request(dsn_message_t request);
     void replay_log(const char* log);
 
     // partition server & client => meta server
-    void query_configuration_by_node(const configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response);
-    void query_configuration_by_index(const configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response);
+    void on_query_configuration_by_node(dsn_message_t req);
+    void on_query_configuration_by_index(dsn_message_t req);
 
     // update configuration
-    void update_configuration(dsn_message_t req, dsn_message_t resp);
+    void on_update_configuration(dsn_message_t req);
+
     void update_configuration(std::shared_ptr<configuration_update_request>& update);
     void on_log_completed(error_code err, size_t size, blob buffer, std::shared_ptr<configuration_update_request> req, dsn_message_t resp);
     void update_configuration(const configuration_update_request& request, /*out*/ configuration_update_response& response);

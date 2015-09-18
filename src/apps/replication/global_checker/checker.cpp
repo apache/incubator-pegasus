@@ -112,7 +112,7 @@ namespace dsn {
                 std::unordered_map<global_partition_id, ::dsn::rpc_address> primaries_from_meta_server;
                 std::unordered_map<global_partition_id, ::dsn::rpc_address> primaries_from_replica_servers;
 
-                for (auto& app : meta->_reliable_state->_apps)
+                for (auto& app : meta->_state->_apps)
                 {
                     for (int i = 0; i < app.partition_count; i++)
                     {

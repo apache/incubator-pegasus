@@ -81,7 +81,7 @@ namespace dsn {
         //   call - the RPC response callback task to be invoked either timeout or response is received
         //          null when this is a one-way RPC call.
         //
-        virtual void call(const rpc_address& to, message_ex* request, rpc_response_task* call) = 0;
+        virtual void call(message_ex* request, rpc_response_task* call) = 0;
                 
         //
         // utilities
@@ -191,7 +191,7 @@ namespace dsn {
         void on_client_session_disconnected(rpc_session_ptr& s);
 
         // called upon RPC call, rpc client session is created on demand
-        virtual void call(const rpc_address& to, message_ex* request, rpc_response_task* call);
+        virtual void call(message_ex* request, rpc_response_task* call);
 
         // to be defined
         virtual rpc_session_ptr create_client_session(const ::dsn::rpc_address& server_addr) = 0;

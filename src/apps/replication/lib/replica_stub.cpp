@@ -554,7 +554,7 @@ void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, ds
             return;
         
         configuration_query_by_node_response resp;
-        ::unmarshall(response, resp);     
+        ::unmarshall(response, resp);
 
         if (resp.err != ERR_OK)
             return;

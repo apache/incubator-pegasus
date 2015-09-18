@@ -516,14 +516,14 @@ DSN_API void dsn_rpc_call(const dsn_address_t* server, dsn_task_t rpc_call, dsn_
 
     // TODO: remove this parameter in future
     auto msg = task->get_request();
-    msg->to_address = *server;
+    msg->server_address = *server;
     ::dsn::task::get_current_rpc()->call(msg, task);
 }
 
 DSN_API dsn_message_t dsn_rpc_call_wait(const dsn_address_t* server, dsn_message_t request)
 {
     auto msg = ((::dsn::message_ex*)request);
-    msg->to_address = *server;
+    msg->server_address = *server;
 
     ::dsn::rpc_response_task* rtask = 
         new ::dsn::rpc_response_task(msg, nullptr, nullptr, 0);
@@ -547,7 +547,7 @@ DSN_API dsn_message_t dsn_rpc_call_wait(const dsn_address_t* server, dsn_message
 DSN_API void dsn_rpc_call_one_way(const dsn_address_t* server, dsn_message_t request)
 {
     auto msg = ((::dsn::message_ex*)request);
-    msg->to_address = *server;
+    msg->server_address = *server;
 
     ::dsn::task::get_current_rpc()->call(msg, nullptr);
 }

@@ -48,8 +48,15 @@ public:
     meta_server_failure_detector(server_state* state, meta_service* svc);
     ~meta_server_failure_detector(void);
 
-    virtual bool set_primary(bool is_primary = false);
-    bool is_primary() const;
+    bool is_primary() const { return _is_primary; }
+
+    void get_primary(/*out*/ rpc_address& primary)
+    {
+        dsn::utils::auto_lock<zlock> l(_primary_address_lock);
+        primary = _primary_address;
+    }
+    
+    void set_primary(const rpc_address& primary);    
 
     // client side
     virtual void on_master_disconnected(const std::vector<::dsn::rpc_address>& nodes)
@@ -71,7 +78,11 @@ public:
 private:
     friend class ::dsn::replication::replication_checker;
 
-    bool         _is_primary;
+    volatile bool _is_primary;
+
+    zlock         _primary_address_lock;
+    rpc_address   _primary_address;
+
     server_state *_state;
     meta_service *_svc;
 };

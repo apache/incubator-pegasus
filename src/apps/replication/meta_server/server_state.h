@@ -61,11 +61,6 @@ public:
 
     void get_node_state(/*out*/ node_states& nodes);
     void set_node_state(const node_states& nodes, /*out*/ machine_fail_updates* pris);
-    bool get_meta_server_primary(/*out*/ ::dsn::rpc_address& node);
-
-    void add_meta_node(const ::dsn::rpc_address& node);
-    void remove_meta_node(const ::dsn::rpc_address& node);
-    void switch_meta_primary();
 
     void load(const char* chk_point);
     void save(const char* chk_point);
@@ -93,6 +88,7 @@ private:
         std::set<global_partition_id> partitions;
     };
 
+    friend class load_balancer;
     mutable zrwlock_nr                                 _lock;
     std::unordered_map<::dsn::rpc_address, node_state> _nodes;
     std::vector<app_state>                             _apps;
@@ -100,11 +96,5 @@ private:
     int                               _node_live_count;
     int                               _node_live_percentage_threshold_for_update;
     std::atomic<bool>                 _freeze;
-
-    mutable zrwlock_nr                _meta_lock;
-    std::vector<::dsn::rpc_address>   _meta_servers;
-    int                               _leader_index;
-
-    friend class load_balancer;
 };
 

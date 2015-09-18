@@ -89,10 +89,16 @@ void meta_server_failure_detector::on_worker_connected(const ::dsn::rpc_address&
     _state->set_node_state(states, nullptr);
 }
 
-bool meta_server_failure_detector::set_primary(bool is_primary /*= false*/)
+void meta_server_failure_detector::set_primary(const rpc_address& primary)
 {
-    bool bRet = true;
-    if (is_primary && !_is_primary)
+    bool old = _is_primary;
+    {
+        utils::auto_lock<zlock> l(_primary_address_lock);
+        _primary_address = primary;
+        _is_primary = (primary == primary_address());
+    }
+
+    if (!old && _is_primary)
     {
         node_states ns;
         _state->get_node_state(ns);
@@ -101,23 +107,14 @@ bool meta_server_failure_detector::set_primary(bool is_primary /*= false*/)
         {
             register_worker(pr.first, pr.second);
         }
-
-        _is_primary = true;
     }
 
-    if (!is_primary && _is_primary)
+    if (old && !_is_primary)
     {
         clear_workers();
-        _is_primary = false;
     }
-
-    return bRet;
 }
 
-bool meta_server_failure_detector::is_primary() const
-{
-    return _is_primary;
-}
 
 void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::rpc_replier<fd::beacon_ack>& reply)
 {
@@ -125,19 +122,9 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::
     ack.this_node = beacon.to;
     if (!is_primary())
     {
-        ::dsn::rpc_address master;
-        if (_state->get_meta_server_primary(master))
-        {
-            ack.time = beacon.time;
-            ack.is_master = false;
-            ack.primary_node = master;
-        }
-        else
-        {
-            ack.time = beacon.time;
-            ack.is_master = false;
-            ack.primary_node.set_invalid();
-        }
+        ack.time = beacon.time;
+        ack.is_master = false;
+        ack.primary_node = _primary_address;
     }
     else
     {

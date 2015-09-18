@@ -362,10 +362,11 @@ namespace dsn
     {
     }
 
-    void connection_oriented_network::call(const rpc_address& to, message_ex* request, rpc_response_task* call)
+    void connection_oriented_network::call(message_ex* request, rpc_response_task* call)
     {
         rpc_session_ptr client = nullptr;
         bool new_client = false;
+        auto& to = request->to_address;
 
         // TODO: thread-local client ptr cache
         {

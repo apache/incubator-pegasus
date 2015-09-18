@@ -114,8 +114,9 @@ namespace dsn {
         
         if (reply->error() == ERR_FORWARD_TO_OTHERS)
         {
-            ::unmarshall((dsn_message_t)reply, *call->get_request()->to_address.c_addr_ptr());
-            _engine->call(call->get_request(), call);
+            rpc_address addr;
+            ::unmarshall((dsn_message_t)reply, addr);
+            _engine->call_ip(addr, call->get_request(), call, true);
         }
         else
         {
@@ -424,42 +425,14 @@ namespace dsn {
         auto sp = task_spec::get(request->local_rpc_code);
         auto& hdr = *request->header;
 
-        hdr.client.host_ipv4 = primary_address().ip();
         hdr.client.port = primary_address().port();
         hdr.rpc_id = utils::get_random64();        
         request->seal(_message_crc_required);
-
-        request->from_address = primary_address();
-
-        if (!sp->on_rpc_call.execute(task::get_current_task(), request, call, true))
-        {
-            if (call != nullptr)
-            {
-                call->set_delay(hdr.client.timeout_ms);
-                call->enqueue(ERR_TIMEOUT, nullptr);
-            }   
-            else
-            {
-                // as ref_count for request may be zero
-                request->add_ref();
-                request->release_ref();
-            }
-            return;
-        }
-
-        auto& named_nets = _client_nets[sp->rpc_call_header_format];
-        network* net = named_nets[sp->rpc_call_channel];
-
-        dassert(nullptr != net, "network not present for rpc channel '%s' with format '%s' used by rpc %s",
-            sp->rpc_call_channel.to_string(),
-            sp->rpc_call_header_format.to_string(),
-            hdr.rpc_name
-            );
-
-        switch (request->to_address.type())
+        
+        switch (request->server_address.type())
         {
         case HOST_TYPE_IPV4:
-            net->call(request->to_address, request, call);
+            call_ip(request->server_address, request, call);
             break;
         case HOST_TYPE_IPV6:
             dassert(false, "ipv6 support is to be implemented");
@@ -471,11 +444,12 @@ namespace dsn {
             switch (sp->grpc_mode)
             {
             case GRPC_TO_LEADER:
-                net->call(request->to_address.group_address()->leader_always_valid(), request, call);
+                // TODO: auto-changed leader
+                call_ip(request->server_address.group_address()->leader_always_valid(), request, call);
                 break;
             case GRPC_TO_ANY:
                 // TODO: performance optimization
-                net->call(request->to_address.group_address()->random_member(), request, call);
+                call_ip(request->server_address.group_address()->random_member(), request, call);
                 break;
             case GRPC_TO_ALL:
                 dassert(false, "to be implemented");
@@ -485,18 +459,34 @@ namespace dsn {
             }
             break;
         default:
-            dassert(false, "invalid target address type %d", (int)request->to_address.type());
+            dassert(false, "invalid target address type %d", (int)request->server_address.type());
             break;
         }
         return;
     }
 
-    void rpc_engine::call(const rpc_address& addr, message_ex* request, rpc_response_task* call, bool reset_request_id)
+    void rpc_engine::call_ip(const rpc_address& addr, message_ex* request, rpc_response_task* call, bool reset_request_id)
     {
         auto sp = task_spec::get(request->local_rpc_code);
+        auto& hdr = *request->header; 
+        if (!sp->on_rpc_call.execute(task::get_current_task(), request, call, true))
+        {
+            if (call != nullptr)
+            {
+                call->set_delay(hdr.client.timeout_ms);
+                call->enqueue(ERR_TIMEOUT, nullptr);
+            }
+            else
+            {
+                // as ref_count for request may be zero
+                request->add_ref();
+                request->release_ref();
+            }
+            return;
+        }
+
         auto& named_nets = _client_nets[sp->rpc_call_header_format];
         network* net = named_nets[sp->rpc_call_channel];
-        auto& hdr = *request->header;
         
         dassert(nullptr != net, "network not present for rpc channel '%s' with format '%s' used by rpc %s",
             sp->rpc_call_channel.to_string(),
@@ -513,7 +503,8 @@ namespace dsn {
         }
             
         request->from_address = primary_address();
-        net->call(addr, request, call);
+        request->to_address = addr;
+        net->call(request, call);
     }
 
     void rpc_engine::reply(message_ex* response, error_code err)

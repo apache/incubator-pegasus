@@ -116,6 +116,9 @@ namespace std
 
 namespace dsn
 {
+    //
+    // TODO: thread safety and dll interface support
+    //
     class rpc_group_address : public ref_counter
     {
     public:
@@ -129,7 +132,7 @@ namespace dsn
         const std::vector<rpc_address>& members() const { return _members; }
         const rpc_address& random_member() const { return _members[dsn_random32(0, (uint32_t)_members.size()-1)]; }
         const rpc_address& next(const rpc_address& current) const;
-        const rpc_address& leader() const { return _leader; }
+        const rpc_address& leader() const { return _leader_index >= 0 ? _members[_leader_index] : _invalid; };
         const rpc_address& leader_always_valid();
         const char* name() const { return _name.c_str(); }
         const rpc_address& address() const { return _group_address; }
@@ -137,9 +140,10 @@ namespace dsn
     private:
         typedef std::vector<rpc_address> members_t;
         members_t _members;
-        rpc_address _leader;
+        int         _leader_index;
         std::string _name;
         rpc_address _group_address;
+        rpc_address _invalid;
     };
 
     // ------------- inline implementation -------------------
@@ -331,7 +335,7 @@ namespace dsn
     inline rpc_group_address::rpc_group_address(const char* name)
     {
         _name = name;
-        _leader.set_invalid();
+        _leader_index = -1;
         _group_address.assign(handle());
     }
 
@@ -350,25 +354,30 @@ namespace dsn
     {
         if (addr.is_invalid())
         {
-            _leader.set_invalid();
+            _leader_index = -1;
         }
         else
         {
-            if (_members.end() == std::find(_members.begin(), _members.end(), addr))
+            for (int i = 0; i < (int)_members.size(); i++)
             {
-                _members.push_back(addr);
+                if (_members[i] == addr)
+                {
+                    _leader_index = i;
+                    return;
+                }
             }
-            _leader = addr;
+
+            _members.push_back(addr);
+            _leader_index = (int)(_members.size() - 1);
         }
     }
 
     inline const rpc_address& rpc_group_address::leader_always_valid()
     {
-        if (_leader.is_invalid())
-        {
-            _leader = random_member();
-        }
-        return _leader;
+        if (_leader_index == -1)
+            return random_member();
+        else
+            return _members[_leader_index];
     }
 
     inline bool rpc_group_address::remove(const rpc_address& addr)
@@ -377,11 +386,11 @@ namespace dsn
         bool r = (it != _members.end());
         if (r)
         {
+            if (-1 != _leader_index && addr == _members[_leader_index])
+                _leader_index = -1;
+
             _members.erase(it);
         }
-
-        if (r && addr == _leader)
-            _leader.set_invalid();
         return r;
     }
 

@@ -52,7 +52,6 @@ void unmarshall(binary_reader& reader, /*out*/ app_state& val)
 
 server_state::server_state(void)
 {
-    _leader_index = -1;
     _node_live_count = 0;
     _freeze = true;
     _node_live_percentage_threshold_for_update = 65;
@@ -248,69 +247,6 @@ void server_state::unfree_if_possible_on_start()
     zauto_write_lock l(_lock);
     _freeze = (_node_live_count * 100 < _node_live_percentage_threshold_for_update * static_cast<int>(_nodes.size()));
     dinfo("live replica server # is %d, freeze = %s", _node_live_count, _freeze ? "true" : "false");
-}
-
-bool server_state::get_meta_server_primary(/*out*/ ::dsn::rpc_address& node)
-{
-    zauto_read_lock l(_meta_lock);
-    if (-1 == _leader_index)
-        return false;
-    else
-    {
-        node = _meta_servers[_leader_index];
-        return true;
-    }
-}
-
-void server_state::add_meta_node(const ::dsn::rpc_address& node)
-{
-    zauto_write_lock l(_meta_lock);
-    
-    _meta_servers.push_back(node);
-    if (1 == _meta_servers.size())
-        _leader_index = 0;
-}
-
-void server_state::remove_meta_node(const ::dsn::rpc_address& node)
-{
-    zauto_write_lock l(_meta_lock);
-    
-    int i = -1;
-    for (auto it = _meta_servers.begin(); it != _meta_servers.end(); it++)
-    {
-        i++;
-        if (*it == node)
-        {
-            _meta_servers.erase(it);
-            if (_meta_servers.size() == 0)
-                _leader_index = -1;
-
-            else if (i == _leader_index)
-            {
-                _leader_index = dsn_random32(0, (uint32_t)_meta_servers.size() - 1);
-            }
-            return;
-        }
-    }
-
-    dassert (false, "cannot find node '%s:%hu' in server state", node.name(), node.port());
-}
-
-void server_state::switch_meta_primary()
-{
-    zauto_write_lock l(_meta_lock);
-    if (1 == _meta_servers.size())
-        return;
-
-    while (true)
-    {
-        int r = dsn_random32(0, (uint32_t)_meta_servers.size() - 1);
-        if (r != _leader_index)
-        {
-            _leader_index = r;
-            return;
-        }
-    }
 }
 
 // partition server & client => meta server
