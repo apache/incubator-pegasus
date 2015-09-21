@@ -738,14 +738,29 @@ void replica_stub::on_gc()
     }
 
     // gc log
-    multi_partition_decrees durable_decrees, max_seen_decrees;
-    for (auto it = rs.begin(); it != rs.end(); it++)
+    if (_options.log_shared)
     {
-        durable_decrees[it->first] = it->second->last_durable_decree();
-        max_seen_decrees[it->first] = it->second->max_prepared_decree();
+        multi_partition_decrees durable_decrees, max_seen_decrees;
+        for (auto it = rs.begin(); it != rs.end(); it++)
+        {
+            durable_decrees[it->first] = it->second->last_durable_decree();
+            max_seen_decrees[it->first] = it->second->max_prepared_decree();
+        }
+        _log->garbage_collection(durable_decrees, max_seen_decrees);
     }
-    _log->garbage_collection(durable_decrees, max_seen_decrees);
     
+    if (_options.log_private)
+    {
+        for (auto it = rs.begin(); it != rs.end(); it++)
+        {
+            multi_partition_decrees durable_decrees, max_seen_decrees;
+            durable_decrees[it->first] = it->second->last_durable_decree();
+            max_seen_decrees[it->first] = it->second->max_prepared_decree();
+
+            it->second->log()->garbage_collection(durable_decrees, max_seen_decrees);
+        }
+    }
+
     // gc on-disk rps
 
 	std::vector<std::string> sub_list;
@@ -1026,7 +1041,6 @@ void replica_stub::close()
     if (_log != nullptr)
     {
         _log->close();
-        delete _log;
         _log = nullptr;
     }
 }

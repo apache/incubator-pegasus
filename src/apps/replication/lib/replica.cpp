@@ -266,7 +266,6 @@ void replica::close()
     if (_log != nullptr)
     {
         _log->close();
-        delete _log;
         _log = nullptr;
     }
     _2pc_logger = nullptr;

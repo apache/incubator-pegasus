@@ -139,7 +139,7 @@ private:
     opening_replicas            _opening_replicas;
     closing_replicas            _closing_replicas;
     
-    mutation_log                *_log;
+    mutation_log_ptr            _log;
     std::string                 _dir;
 
     replication_failure_detector *_failure_detector;

@@ -112,6 +112,7 @@ public:
     bool group_configuration(/*out*/ partition_configuration& config) const;
     uint64_t last_config_change_time_milliseconds() const { return _last_config_change_time_ms; }
     const char* name() const { return _name; }
+    mutation_log_ptr log() const { return _log; }
         
 private:
     // common helpers
@@ -186,8 +187,8 @@ private:
     prepare_list*           _prepare_list;
 
     // log (shared or private, depends on config)
-    mutation_log*           _log;
-    mutation_log*           _2pc_logger; // logging on 2pc
+    mutation_log_ptr        _log;
+    mutation_log_ptr        _2pc_logger; // logging on 2pc
 
     // application
     replication_app_base*   _app;

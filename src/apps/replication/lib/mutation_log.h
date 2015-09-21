@@ -56,7 +56,7 @@ struct log_file_header
     int64_t  start_global_offset;
 };
 
-class mutation_log : public virtual clientlet
+class mutation_log : public virtual clientlet, public ref_counter
 {
 public:
     // mutationPtr

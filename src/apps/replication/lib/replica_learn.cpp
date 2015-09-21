@@ -195,6 +195,7 @@ void replica::on_learn(const learn_request& request, /*out*/ learn_response& res
             request.app_specific_learn_request, 
             response.state
             );
+
         if (lerr != 0)
         {
             response.err = ERR_GET_LEARN_STATE_FALED;
@@ -216,6 +217,7 @@ void replica::on_learn(const learn_request& request, /*out*/ learn_response& res
             request.app_specific_learn_request,
             response.state
             );
+        response.base_local_dir = _app->data_dir();
     }
 
     // learn replication log
@@ -228,6 +230,7 @@ void replica::on_learn(const learn_request& request, /*out*/ learn_response& res
             );
 
         _log->get_learn_state(get_gpid(), learn_start_decree, response.state);
+        response.base_local_dir = _log->dir();
     }
 
     for (auto& file : response.state.files)
