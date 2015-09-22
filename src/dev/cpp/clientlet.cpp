@@ -241,6 +241,7 @@ namespace dsn
             else
             {
                 const char** ptr = (const char**)alloca(sizeof(const char*) * (files.size() + 1));
+                const char** ptr_base = ptr;
                 for (auto& f : files)
                 {
                     *ptr++ = f.c_str();
@@ -248,7 +249,7 @@ namespace dsn
                 *ptr = nullptr;
 
                 dsn_file_copy_remote_files(
-                    &remote.c_addr(), source_dir.c_str(), ptr, 
+                    &remote.c_addr(), source_dir.c_str(), ptr_base,
                     dest_dir.c_str(), overwrite, t, svc ? svc->tracker() : nullptr
                     );
             }

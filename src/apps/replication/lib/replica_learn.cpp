@@ -328,16 +328,11 @@ void replica::on_copy_remote_state_completed(
 {   
     learn_state lstate;
     lstate.meta = resp->state.meta;
-    if (err2 == ERR_OK)
+    if (err2 == ERR_OK && (lstate.meta.size() > 0 || resp->state.files.size() > 0))
     {
         for (auto& f : resp->state.files)
         {
-            std::string file;
-            if (dir().back() == '/' || f.front() == '/')
-                file = dir() + f;
-            else
-                file = dir() + '/' + f;
-
+            std::string file = utils::filesystem::path_combine(_app->learn_dir(), f);
             lstate.files.push_back(file);
         }
 
@@ -360,10 +355,16 @@ void replica::on_copy_remote_state_completed(
         }
         else
         {
+            bool is_log = false;
+            if (lstate.files.size() > 0)
+            {
+                auto fname = utils::filesystem::get_file_name(lstate.files[0]);
+                if (fname.substr(0, 4) == std::string("log."))
+                    is_log = true;
+            }
+
             // apply checkpoint
-            if (lstate.files.size() > 0 &&
-                lstate.files[0].substr(lstate.files[0].length() - 4) != ".log"
-                )
+            if (!is_log)
             {
                 _app->apply_learn_state(lstate);
             }
@@ -426,7 +427,7 @@ void replica::on_copy_remote_state_completed(
             err2 = ERR_LOCAL_APP_FAILURE;
         }
     } 
-    else 
+    else if (err2 != ERR_OK)
     {
         derror(
                 "%s: transfer %d files to %s failed, err = %s",

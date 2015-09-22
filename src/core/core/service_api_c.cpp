@@ -665,6 +665,11 @@ DSN_API void dsn_file_copy_remote_files(const dsn_address_t* remote, const char*
     {
         rci->files.push_back(std::string(*p));
         p++;
+
+        dinfo("copy remote file %s from %s", 
+            *(p-1),
+            rci->source.name()
+            );
     }
 
     rci->dest_dir = dest_dir;

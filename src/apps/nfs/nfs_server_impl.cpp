@@ -9,7 +9,7 @@ namespace dsn {
         {
             //dinfo(">>> on call RPC_COPY end, exec RPC_NFS_COPY");
 
-            std::string file_path = request.source_dir + request.file_name;            
+            std::string file_path = dsn::utils::filesystem::path_combine(request.source_dir, request.file_name);
             dsn_handle_t hfile;
 
             {
@@ -142,12 +142,12 @@ namespace dsn {
             {
                 for (size_t i = 0; i < request.file_list.size(); i++)
                 {
-                    std::string file_path = folder + request.file_list[i];
+                    std::string file_path = dsn::utils::filesystem::path_combine(folder, request.file_list[i]);
 
                     struct stat st;
                     if (0 != ::stat(file_path.c_str(), &st))
                     {
-                        derror("file open %s error!", file_path.c_str());
+                        derror("file open %s failed, err = %s", file_path.c_str(), strerror(errno));
                         err = ERR_OBJECT_NOT_FOUND;
                         break;
                     }
