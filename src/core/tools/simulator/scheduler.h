@@ -97,6 +97,11 @@ public:
         {
             delete (task_state_ext*)p;
         }
+
+        task_state_ext()
+        {
+            queue = nullptr;
+        };
     };
     typedef object_extension_helper<sim_worker_state, task_worker> task_worker_ext;
     typedef object_extension_helper<task_state_ext, task> task_ext;

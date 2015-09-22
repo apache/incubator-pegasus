@@ -24,6 +24,7 @@
  * THE SOFTWARE.
  */
 # include <dsn/internal/task_tracker.h>
+# include <dsn/internal/task.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -63,17 +64,25 @@ namespace dsn
                     if (n != &_outstanding_tasks[i])
                     {
                         tcm = CONTAINING_RECORD(n, trackable_task, _dl);
+
+                        // try to get the lock
                         prepare_state = tcm->owner_delete_prepare();
                     }
                     else
                         break; // assuming nobody is putting tasks into it anymore
                 }
 
+                task* tsk;
                 switch (prepare_state)
                 {
+                // tracker get the lock
                 case trackable_task::OWNER_DELETE_NOT_LOCKED:
-                    dsn_task_wait(tcm->_task); // wait inside spin lock: dangerous!!!
+                    tsk = (task*)(tcm->_task);
+                    tsk->add_ref();    // released after delete commit           
                     tcm->owner_delete_commit();
+
+                    tsk->wait(); // wait outside the delete spin lock
+                    tsk->release_ref(); // added before delete commit
                     break;
                 case trackable_task::OWNER_DELETE_LOCKED:
                 case trackable_task::OWNER_DELETE_FINISHED:
