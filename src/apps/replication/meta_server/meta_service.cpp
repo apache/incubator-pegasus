@@ -243,7 +243,7 @@ void meta_service::on_load_balance_start()
 //    
 //    else
 //    {
-//        dassert(false, "unknown rpc tag %x (%s)", hdr.rpc_tag, dsn_task_code_to_string(hdr.rpc_tag));
+//        dassert(false, "unknown rpc tag 0x%x (%s)", hdr.rpc_tag, dsn_task_code_to_string(hdr.rpc_tag));
 //    }
 //
 //    dsn_rpc_reply(resp);

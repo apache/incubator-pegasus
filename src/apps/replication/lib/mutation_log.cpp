@@ -572,11 +572,8 @@ void mutation_log::get_learn_state(
             continue;
         }
 
-        // always learn the current log (callers need to avoid this if this is unnecessary)
-        if (log != cfile)
-        {
+        if (log->end_offset() > log->start_offset())
             learn_files.push_back(log->path());
-        }
 
         skip_next = (log->previous_log_prepared_decrees().size() == 0);
         if (skip_next)

@@ -397,7 +397,7 @@ void replica::on_copy_remote_state_completed(
         }
 
         ddebug(
-                "%s: learning %d files to %s, err = %x, "
+                "%s: learning %d files to %s, err = 0x%x, "
                 "appCommit(%llu => %llu), appDurable(%llu => %llu), "
                 "remoteCommit(%llu), prepareStart(%llu), currentState(%s)",
                 name(), resp->state.files.size(), _dir.c_str(), err,

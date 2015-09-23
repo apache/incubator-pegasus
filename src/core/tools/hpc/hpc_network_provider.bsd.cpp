@@ -391,7 +391,7 @@ namespace dsn
             // shutdown or send/recv error
             if (((e.flags & EV_ERROR) != 0) || ((e.flags & EV_EOF) != 0))
             {
-                dinfo("(s = %d) epoll failure on %s:%hu, events = %x",
+                dinfo("(s = %d) epoll failure on %s:%hu, events = 0x%x",
                     _socket,
                     _remote_addr.name(),
                     _remote_addr.port(),
@@ -404,7 +404,7 @@ namespace dsn
             //  send
             if (e.filter == EVFILT_WRITE)
             {
-                dinfo("(s = %d) kqueue EVFILT_WRITE on %s:%hu, events = %x",
+                dinfo("(s = %d) kqueue EVFILT_WRITE on %s:%hu, events = 0x%x",
                     _socket,
                     _remote_addr.name(),
                     _remote_addr.port(),
@@ -417,7 +417,7 @@ namespace dsn
             // recv
             if (e.filter == EVFILT_READ)
             {
-                dinfo("(s = %d) kqueue EVFILT_READ on %s:%hu, events = %x",
+                dinfo("(s = %d) kqueue EVFILT_READ on %s:%hu, events = 0x%x",
                     _socket,
                     _remote_addr.name(),
                     _remote_addr.port(),
@@ -463,7 +463,7 @@ namespace dsn
             dassert(is_connecting(), "session must be connecting at this time");
 
             struct kevent& e = *((struct kevent*)lolp_or_events);
-            dinfo("(s = %d) epoll for connect to %s:%hu, events = %x",
+            dinfo("(s = %d) epoll for connect to %s:%hu, events = 0x%x",
                 _socket,
                 _remote_addr.name(),
                 _remote_addr.port(),

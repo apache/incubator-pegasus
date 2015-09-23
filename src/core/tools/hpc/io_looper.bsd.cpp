@@ -295,7 +295,7 @@ namespace dsn
                 for (int i = 0; i < nfds; i++)
                 {
                     auto cb = (io_loop_callback*)_events[i].udata;
-                    dinfo("kevent get events %x, cb = %p", _events[i].filter, cb);
+                    dinfo("kevent get events 0x%x, cb = %p", _events[i].filter, cb);
 
                     uintptr_t cb0 = (uintptr_t)cb;
 
@@ -329,7 +329,7 @@ namespace dsn
                         else
                         {
                             // context is gone (unregistered), let's skip
-                            dwarn("kevent event %x skipped as session is gone, cb = %p",
+                            dwarn("kevent event 0x%x skipped as session is gone, cb = %p",
                                 _events[i].filter,
                                 cb
                                 );

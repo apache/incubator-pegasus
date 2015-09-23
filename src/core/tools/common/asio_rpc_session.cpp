@@ -62,7 +62,7 @@ namespace dsn {
                 }
                 catch (std::exception& ex)
                 {
-                    dwarn("network session %x:%hu set socket option failed, err = %s",
+                    dwarn("network session 0x%x:%hu set socket option failed, err = %s",
                         remote_address().ip(),
                         remote_address().port(),
                         ex.what()

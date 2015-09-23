@@ -391,7 +391,7 @@ namespace dsn
             // shutdown or send/recv error
             if ((events & EPOLLHUP) || (events & EPOLLRDHUP) || (events & EPOLLERR))
             {
-                dinfo("(s = %d) epoll failure on %s:%hu, events = %x",
+                dinfo("(s = %d) epoll failure on %s:%hu, events = 0x%x",
                     _socket,
                     _remote_addr.name(),
                     _remote_addr.port(),
@@ -404,7 +404,7 @@ namespace dsn
             //  send
             if (events & EPOLLOUT)
             {
-                dinfo("(s = %d) epoll EPOLLOUT on %s:%hu, events = %x",
+                dinfo("(s = %d) epoll EPOLLOUT on %s:%hu, events = 0x%x",
                     _socket,
                     _remote_addr.name(),
                     _remote_addr.port(),
@@ -417,7 +417,7 @@ namespace dsn
             // recv
             if (events & EPOLLIN)
             {
-                dinfo("(s = %d) epoll EPOLLIN on %s:%hu, events = %x",
+                dinfo("(s = %d) epoll EPOLLIN on %s:%hu, events = 0x%x",
                     _socket,
                     _remote_addr.name(),
                     _remote_addr.port(),
@@ -462,7 +462,7 @@ namespace dsn
         {
             dassert(is_connecting(), "session must be connecting at this time");
             uint32_t events = (uint32_t)lolp_or_events;
-            dinfo("(s = %d) epoll for connect to %s:%hu, events = %x",
+            dinfo("(s = %d) epoll for connect to %s:%hu, events = 0x%x",
                 _socket,
                 _remote_addr.name(),
                 _remote_addr.port(),
@@ -594,7 +594,7 @@ namespace dsn
             _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
             {
                 uint32_t events = (uint32_t)lolp_or_events;
-                dinfo("(s = %d) (server) epoll for send/recv to %s:%hu, events = %x",
+                dinfo("(s = %d) (server) epoll for send/recv to %s:%hu, events = 0x%x",
                     _socket,
                     _remote_addr.name(),
                     _remote_addr.port(),

@@ -370,7 +370,7 @@ void server_state::update_configuration_internal(const configuration_update_requ
             node.partitions.insert(old.gpid);
             break;
         default:
-            dassert(false, "invalid config type %x", static_cast<int>(request.type));
+            dassert(false, "invalid config type 0x%x", static_cast<int>(request.type));
         }
         
         // update to new config
