@@ -70,7 +70,7 @@ void replica::init_state()
     _inactive_is_transient = false;
     _prepare_list = new prepare_list(
         0, 
-        _options->staleness_for_start_prepare_for_potential_secondary,
+        _options->max_mutation_count_in_prepare_list,
         std::bind(
             &replica::execute_mutation,
             this,
@@ -85,37 +85,7 @@ void replica::init_state()
     _config.status = PS_INACTIVE;
     _primary_states.membership.ballot = 0;
     _last_config_change_time_ms = now_ms();
-    _2pc_logger = nullptr;
-    _log = nullptr;
-
-    error_code err = ERR_OK;
-    if (_options->log_private)
-    {
-        _log = new mutation_log(
-            _options->log_buffer_size_mb,
-            _options->log_pending_max_ms,
-            _options->log_file_size_mb,
-            _options->log_batch_write
-            );
-
-        std::string log_dir = dir() + "/log";
-        err = _log->initialize(log_dir.c_str());
-        dassert(err == ERR_OK, "");        
-    }
-
-    // setup 2pc logger
-    if (_options->log_shared)
-    { 
-        _2pc_logger = _stub->_log;
-    }
-    else if (_options->log_private)
-    {
-        _2pc_logger = _log;
-    }
-    else
-    {
-        _2pc_logger = nullptr;
-    }
+    _commit_log = nullptr;
 }
 
 replica::~replica(void)
@@ -164,11 +134,21 @@ void replica::response_client_message(dsn_message_t request, error_code error, d
     reply(request, error);
 }
 
+void replica::check_state_completeness()
+{
+    /*auto d = _2pc_logger->min_must_in_log_decree(get_gpid());
+    if (d <= _options->staleness_for_commit)
+        d = 0;
+
+    dassert(d <= _app->last_durable_decree() + 1, "");*/
+}
+
 void replica::execute_mutation(mutation_ptr& mu)
 {
     dassert (nullptr != _app, "");
 
     error_code err = ERR_OK;
+    bool write = true;
     switch (status())
     {
     case PS_INACTIVE:
@@ -178,29 +158,25 @@ void replica::execute_mutation(mutation_ptr& mu)
     case PS_PRIMARY:
     case PS_SECONDARY:
         {
+        check_state_completeness();
         dassert (_app->last_committed_decree() + 1 == mu->data.header.decree, "");
         err = _app->write_internal(mu);
         }
         break;
     case PS_POTENTIAL_SECONDARY:
-        if (LearningSucceeded == _potential_secondary_states.learning_status)
+        if (mu->data.header.decree == _app->last_committed_decree() + 1)
         {
-            if (mu->data.header.decree == _app->last_committed_decree() + 1)
-            {
-                err = _app->write_internal(mu); 
-            }
-            else
-            {
-                dassert (mu->data.header.decree <= _app->last_committed_decree(), "");
-            }
+            dassert(_potential_secondary_states.learning_status >= LearningWithPrepare, "");
+            err = _app->write_internal(mu);
         }
         else
         {
-            // drop mutations as learning will catch up
-            ddebug("%s: mutation %s skipped coz learing buffer overflow", name(), mu->name());
+            write = false;
+            dassert(mu->data.header.decree <= _app->last_committed_decree(), "");
         }
         break;
     case PS_ERROR:
+        write = false;
         break;
     }
     
@@ -209,6 +185,23 @@ void replica::execute_mutation(mutation_ptr& mu)
     if (err != ERR_OK)
     {
         handle_local_failure(err);
+    }
+
+    // write local commit log if necessary
+    else if (write && _commit_log)
+    {
+        _commit_log->append(mu,
+            LPC_WRITE_REPLICATION_LOG,
+            this,
+            [this](error_code err, size_t size)
+            {
+                if (err != ERR_OK)
+                {
+                    handle_local_failure(err);
+                }
+            },
+            gpid_to_hash(get_gpid())
+            );
     }
 }
 
@@ -263,12 +256,11 @@ void replica::close()
     _primary_states.cleanup();
     _potential_secondary_states.cleanup(true);
 
-    if (_log != nullptr)
+    if (_commit_log != nullptr)
     {
-        _log->close();
-        _log = nullptr;
+        _commit_log->close();
+        _commit_log = nullptr;
     }
-    _2pc_logger = nullptr;
 
     if (_app != nullptr)
     {

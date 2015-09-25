@@ -46,9 +46,7 @@ prepare_list::prepare_list(
 
 void prepare_list::sanity_check()
 {
-    dassert (
-        last_committed_decree() <= min_decree(), ""
-        );
+
 }
 
 void prepare_list::reset(decree init_decree)
@@ -68,7 +66,13 @@ void prepare_list::truncate(decree init_decree)
 
 error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
 {
-    dassert (mu->data.header.decree > last_committed_decree(), "");
+    decree d = mu->data.header.decree;
+    dassert (d > last_committed_decree(), "");
+
+    while (d - min_decree() >= capacity() && last_committed_decree() > min_decree())
+    {
+        pop_min();
+    }   
 
     error_code err;
     switch (status)
@@ -154,9 +158,6 @@ bool prepare_list::commit(decree d, bool force)
             _last_committed_decree++;
             _committer(mu);
 
-            dassert (mutation_cache::min_decree() == _last_committed_decree, "");
-            pop_min();
-
             mu = mutation_cache::get_mutation_by_decree(_last_committed_decree + 1);
         }
     }
@@ -173,9 +174,6 @@ bool prepare_list::commit(decree d, bool force)
 
             _last_committed_decree++;
             _committer(mu);
-
-            dassert (mutation_cache::min_decree() == _last_committed_decree, "");
-            pop_min();
         }
     }
 

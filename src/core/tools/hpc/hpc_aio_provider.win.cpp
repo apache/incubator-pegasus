@@ -60,7 +60,8 @@ hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provid
         )
     {
         windows_disk_aio_context* ctx = CONTAINING_RECORD(lolp_or_events, windows_disk_aio_context, olp);
-        error_code err = native_error == ERROR_SUCCESS ? ERR_OK : ERR_FILE_OPERATION_FAILED;
+        error_code err = native_error == ERROR_SUCCESS ? ERR_OK : 
+            (native_error == ERROR_HANDLE_EOF ? ERR_HANDLE_EOF : ERR_FILE_OPERATION_FAILED);
         if (!ctx->evt)
         {
             aio_task* aio(ctx->tsk);
@@ -87,7 +88,7 @@ hpc_aio_provider::~hpc_aio_provider()
 dsn_handle_t hpc_aio_provider::open(const char* file_name, int oflag, int pmode)
 {
     DWORD dwDesiredAccess = 0;
-    DWORD dwShareMode = FILE_SHARE_READ;
+    DWORD dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
     DWORD dwCreationDisposition = 0;
     DWORD dwFlagsAndAttributes = FILE_FLAG_OVERLAPPED;
 
@@ -255,15 +256,18 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
 
     if (!r)
     {
-        int err = ::GetLastError();
+        int native_error = ::GetLastError();
         
-        if (err != ERROR_IO_PENDING)
+        if (native_error != ERROR_IO_PENDING)
         {
-            derror("file operation failed, err = %u", err);
+            derror("file operation failed, err = %u", native_error);
+
+            error_code err = native_error == ERROR_SUCCESS ? ERR_OK :
+                (native_error == ERROR_HANDLE_EOF ? ERR_HANDLE_EOF : ERR_FILE_OPERATION_FAILED);
 
             if (async)
             {
-                complete_io(aio_tsk, ERR_FILE_OPERATION_FAILED, 0);
+                complete_io(aio_tsk, err, 0);
             }
             else
             {
@@ -271,7 +275,7 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
                 aio->evt = nullptr;
             }
 
-            return ERR_FILE_OPERATION_FAILED;
+            return err;
         }
     }
 

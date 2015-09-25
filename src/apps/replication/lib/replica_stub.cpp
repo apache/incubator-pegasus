@@ -63,7 +63,7 @@ void replica_stub::initialize(bool clear/* = false*/)
 void replica_stub::initialize(const replication_options& opts, bool clear/* = false*/)
 {
     error_code err = ERR_OK;
-    zauto_lock l(_replicas_lock);
+    //zauto_lock l(_replicas_lock);
 
     // init dirs
     set_options(opts);
@@ -96,14 +96,14 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 
     // init rps
     replicas rps;
-	std::vector<std::string> file_list;
+	std::vector<std::string> dir_list;
 
-	if (!dsn::utils::filesystem::get_subfiles(dir(), file_list, false))
+	if (!dsn::utils::filesystem::get_subdirectories(dir(), dir_list, false))
 	{
 		dassert(false, "Fail to get files in %s.", dir().c_str());
 	}
 
-	for (auto& name : file_list)
+	for (auto& name : dir_list)
 	{
 		if (name.length() >= 4 &&
 			(name.substr(name.length() - strlen("log")) == "log" ||
@@ -114,73 +114,99 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 		auto r = replica::load(this, name.c_str(), true);
 		if (r != nullptr)
 		{
-			ddebug("%u.%u @ %s:%hu: load replica success with durable decree = %llu from '%s'",
+			ddebug("%u.%u @ %s:%hu: load replica success with durable/commit decree = %llu / %llu from '%s'",
 				r->get_gpid().app_id, r->get_gpid().pidx,
 				primary_address().name(), primary_address().port(),
 				r->last_durable_decree(),
+                r->last_committed_decree(),
 				name.c_str()
 				);
 			rps[r->get_gpid()] = r;
-
-            // when private log is used for reliability
-            if (!_options.log_shared && _options.log_private)
-            {
-                r->replay_private_log();
-            }
 		}
 	}
-	file_list.clear();
+	dir_list.clear();
 
     // init logs when is_shared
-    _log = nullptr;
-    if (_options.log_shared)
-    {
-        _log = new mutation_log(
-            opts.log_buffer_size_mb, 
-            opts.log_pending_max_ms, 
-            opts.log_file_size_mb, 
-            opts.log_batch_write
-            );
-        err = _log->initialize(log_dir.c_str());
-        dassert(err == ERR_OK, "");
-        err = _log->replay(
-            std::bind(&replica_stub::replay_mutation, this, std::placeholders::_1, &rps)
-            );
-
-        for (auto it = rps.begin(); it != rps.end(); it++)
+    _log = new mutation_log(
+        opts.log_buffer_size_mb,
+        opts.log_pending_max_ms,
+        opts.log_file_size_mb,
+        opts.log_batch_write
+        );
+    err = _log->initialize(log_dir.c_str());
+    dassert(err == ERR_OK, "");
+    err = _log->replay(
+        [&rps](mutation_ptr& mu)
         {
-            it->second->reset_prepare_list_after_replay();
-
-            if (err == ERR_OK)
+            auto it = rps.find(mu->data.header.gpid);
+            if (it != rps.end())
             {
-                derror(
-                    "%u.%u @ %s:%hu: global log initialized, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
-                    it->first.app_id, it->first.pidx,
-                    primary_address().name(), primary_address().port(),
-                    it->second->last_durable_decree(),
-                    it->second->last_committed_decree(),
-                    it->second->max_prepared_decree(),
-                    it->second->get_ballot()
-                    );
-
-                it->second->set_inactive_state_transient(true);
-            }
-            else
-            {
-                derror(
-                    "%u.%u @ %s:%hu: global log initialized with log error, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
-                    it->first.app_id, it->first.pidx,
-                    primary_address().name(), primary_address().port(),
-                    it->second->last_durable_decree(),
-                    it->second->last_committed_decree(),
-                    it->second->max_prepared_decree(),
-                    it->second->get_ballot()
-                    );
-
-                it->second->set_inactive_state_transient(false);
+                it->second->replay_mutation(mu);
             }
         }
-    }    
+        );
+
+    if (err != ERR_OK)
+    {
+        derror(
+            "%s:%hu: replication log replay failed, err %s, clear all logs ...",
+            primary_address().name(), primary_address().port(),
+            err.to_string()
+            );
+
+        // restart log service
+        _log->close();
+        
+        std::string err_log_path = log_dir + ".err";
+        if (utils::filesystem::directory_exists(err_log_path))
+            utils::filesystem::remove_path(err_log_path);
+
+        utils::filesystem::rename_path(log_dir, err_log_path);
+        utils::filesystem::create_directory(log_dir);
+
+        _log = new mutation_log(
+            opts.log_buffer_size_mb,
+            opts.log_pending_max_ms,
+            opts.log_file_size_mb,
+            opts.log_batch_write
+            );
+        auto lerr = _log->initialize(log_dir.c_str());
+        dassert(lerr == ERR_OK, "");
+    }
+
+    for (auto it = rps.begin(); it != rps.end(); it++)
+    {
+        it->second->reset_prepare_list_after_replay();
+
+        if (err == ERR_OK)
+        {
+            dwarn(
+                "%u.%u @ %s:%hu: global log initialized, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
+                it->first.app_id, it->first.pidx,
+                primary_address().name(), primary_address().port(),
+                it->second->last_durable_decree(),
+                it->second->last_committed_decree(),
+                it->second->max_prepared_decree(),
+                it->second->get_ballot()
+                );
+
+            it->second->set_inactive_state_transient(true);
+        }
+        else
+        {
+            dwarn(
+                "%u.%u @ %s:%hu: global log initialized with log error, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
+                it->first.app_id, it->first.pidx,
+                primary_address().name(), primary_address().port(),
+                it->second->last_durable_decree(),
+                it->second->last_committed_decree(),
+                it->second->max_prepared_decree(),
+                it->second->get_ballot()
+                );
+
+            it->second->set_inactive_state_transient(false);
+        }
+    }
 
     // gc
     if (false == _options.gc_disabled)
@@ -196,24 +222,13 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     }
 
     // start log serving    
-    if (nullptr != _log)
+    multi_partition_decrees init_max_decrees; // for log truncate
+    for (auto it = rps.begin(); it != rps.end(); it++)
     {
-        multi_partition_decrees init_max_decrees; // for log truncate
-        for (auto it = rps.begin(); it != rps.end(); it++)
-        {
-            init_max_decrees[it->second->get_gpid()] = it->second->max_prepared_decree();
-        }
-        err = _log->start_write_service(init_max_decrees, _options.staleness_for_commit);
-        dassert(err == ERR_OK, "");
+        init_max_decrees[it->second->get_gpid()] = it->second->max_prepared_decree();
     }
-
-    if (_options.log_private)
-    {
-        for (auto& r : rps)
-        {
-            r.second->start_private_log_service();
-        }
-    }
+    err = _log->start_write_service(init_max_decrees, _options.staleness_for_commit);
+    dassert(err == ERR_OK, "");
 
     // attach rps
     _replicas = std::move(rps);
@@ -249,15 +264,6 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     else
     {
         _state = NS_Connected;
-    }
-}
-
-void replica_stub::replay_mutation(mutation_ptr& mu, replicas* rps)
-{
-    auto it = rps->find(mu->data.header.gpid);
-    if (it != rps->end())
-    {
-        it->second->replay_mutation(mu);
     }
 }
 
@@ -430,16 +436,21 @@ void replica_stub::on_group_check(const group_check_request& request, /*out*/ gr
     }
 }
 
-void replica_stub::on_learn(const learn_request& request, /*out*/ learn_response& response)
+void replica_stub::on_learn(dsn_message_t msg)
 {
+    learn_request request;
+    ::unmarshall(msg, request);
+
     replica_ptr rep = get_replica(request.gpid);
     if (rep != nullptr)
     {
-        rep->on_learn(request, response);
+        rep->on_learn(msg, request);
     }
     else
     {
+        learn_response response;
         response.err = ERR_OBJECT_NOT_FOUND;
+        reply(msg, response);
     }
 }
 
@@ -737,32 +748,28 @@ void replica_stub::on_gc()
         rs = _replicas;
     }
 
-    // gc log
-    if (_options.log_shared)
+    // gc prepare log
+    multi_partition_decrees durable_decrees, max_seen_decrees;
+    for (auto it = rs.begin(); it != rs.end(); it++)
     {
-        multi_partition_decrees durable_decrees, max_seen_decrees;
-        for (auto it = rs.begin(); it != rs.end(); it++)
-        {
-            durable_decrees[it->first] = it->second->last_durable_decree();
-            max_seen_decrees[it->first] = it->second->max_prepared_decree();
-        }
-        _log->garbage_collection(durable_decrees, max_seen_decrees);
+        durable_decrees[it->first] = it->second->last_durable_decree();
+        max_seen_decrees[it->first] = it->second->max_prepared_decree();
     }
+    _log->garbage_collection(durable_decrees, max_seen_decrees);
     
-    if (_options.log_private)
+    // gc commit log
+    if (_options.log_per_app_commit)
     {
         for (auto it = rs.begin(); it != rs.end(); it++)
         {
-            multi_partition_decrees durable_decrees, max_seen_decrees;
-            durable_decrees[it->first] = it->second->last_durable_decree();
-            max_seen_decrees[it->first] = it->second->max_prepared_decree();
-
-            it->second->log()->garbage_collection(durable_decrees, max_seen_decrees);
+            it->second->commit_log()->garbage_collection_when_as_commit_logs(
+                it->first,
+                it->second->last_durable_decree()
+                );
         }
     }
 
     // gc on-disk rps
-
 	std::vector<std::string> sub_list;
 	if (!dsn::utils::filesystem::get_subdirectories(_dir, sub_list, false))
 	{

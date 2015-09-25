@@ -32,9 +32,6 @@ public:
     void send_one_ping(int payload_bytes)
     {
         void* ctx = prepare_send_one();
-        if (!ctx)
-            return;
-
         std::string req;
         req.resize(payload_bytes, 'v');
 

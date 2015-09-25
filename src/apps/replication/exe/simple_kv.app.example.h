@@ -93,7 +93,10 @@ public:
 
             if (err == ERR_OK && err2 == ERR_OK)
             {
-                //dassert(v == req.value, "data is inconsistent!");
+                if (1 == SKV_PARTITION_COUNT)
+                {
+                    dassert(v == req.value, "data is inconsistent!");
+                }
             }
         }
     }

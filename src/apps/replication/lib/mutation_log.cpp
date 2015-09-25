@@ -84,7 +84,7 @@ void mutation_log::reset()
 
 error_code mutation_log::initialize(const char* dir)
 {
-    zauto_lock l(_lock);
+    // zauto_lock l(_lock);
 
     //create dir if necessary
 	if (!dsn::utils::filesystem::create_directory(dir))
@@ -271,6 +271,18 @@ void mutation_log::internal_write_callback(
     blob data
     )
 {
+    auto hdr = (log_block_header*)data.data();
+    dassert(hdr->magic == 0xdeadbeef, "header magic is changed: 0x%x", hdr->magic);
+
+    if (err == ERR_OK)
+    {
+        dassert((int)size == data.length(), 
+            "log write size must equal to the given size: %d vs %d",
+            (int)size,
+            data.length()
+            );
+    }
+
     for (auto& cb : *callbacks)
     {
         cb->enqueue_aio(err, size);
@@ -280,31 +292,19 @@ void mutation_log::internal_write_callback(
 /*static*/ error_code mutation_log::replay(
     log_file_ptr log,
     replay_callback callback,
-    /*out*/ int64_t& end_offset
+    /*out*/ int64_t& offset
     )
 {
-    end_offset = log->start_offset();
+    offset = log->start_offset();
 
     ::dsn::blob bb;    
     error_code err = log->read_next_log_entry(0, bb);
     if (err != ERR_OK)
     {
-        if (err == ERR_HANDLE_EOF)
-        {
-            err = ERR_OK;
-        }
-        else
-        {
-            derror(
-                "read log failed for %s, err = %s",
-                log->path().c_str(), err.to_string());
-        }        
         return err;
     }
 
     std::shared_ptr<binary_reader> reader(new binary_reader(bb));
-    int64_t offset = log->start_offset();
-
     offset += sizeof(log_block_header);
     offset += log->read_header(*reader);
     if (!log->is_right_header())
@@ -335,17 +335,6 @@ void mutation_log::internal_write_callback(
         err = log->read_next_log_entry(offset - log->start_offset(), bb);
         if (err != ERR_OK)
         {
-            if (err != ERR_HANDLE_EOF)
-            {
-                derror(
-                    "read log entry failed for %s, err = %s",
-                    log->path().c_str(), err.to_string()
-                    );
-            }
-            else
-            {
-                err = ERR_OK;
-            }
             break;
         }
 
@@ -353,13 +342,12 @@ void mutation_log::internal_write_callback(
         offset += sizeof(log_block_header);
     }
 
-    end_offset = offset;
     return err;
 }
 
 error_code mutation_log::replay(replay_callback callback)
 {
-    zauto_lock l(_lock);
+    //zauto_lock l(_lock);
 
     int64_t offset = start_offset();
     error_code err = ERR_OK;
@@ -382,24 +370,51 @@ error_code mutation_log::replay(replay_callback callback)
 
         log->close();
 
-        // tail data corruption is checked by next file's offset checking
-        if (err != ERR_INVALID_DATA && err != ERR_OK)
+        if (err == ERR_INVALID_DATA || err == ERR_FILE_OPERATION_FAILED)
             break;
+        else
+        {
+            // for other error codes, they are all checked by next loop or after loop
+            dassert(err == ERR_OK
+                || err == ERR_INCOMPLETE_DATA
+                || err == ERR_HANDLE_EOF
+                ,
+                "unhandled error code: %s",
+                err.to_string()
+                );
+        }
     }
 
-    if (err == ERR_INVALID_DATA && offset + 
-        _last_log_file->header().log_buffer_size_bytes >= end_offset())
+    if (err == ERR_OK)
     {
-        // remove bad data at tail, but still we may
-        // lose data so error code remains unchanged
+        dassert(end_offset() == offset,
+            "make sure the global end offset is correct: %lld vs %lld",
+            end_offset(),
+            offset
+            );
+    }
+    else if (err == ERR_HANDLE_EOF || err == ERR_INCOMPLETE_DATA)
+    {
+        // incomplete tail block
+        if (offset + _last_log_file->header().log_buffer_size_bytes > end_offset())
+        {            
+            err = ERR_OK;
+        }
+
+        // data lost
+        else
+        {   
+            err = ERR_INCOMPLETE_DATA;
+        }
+
+        // fix end offset so later log writing can be continued
         _global_end_offset = offset;
     }
-    else if (err == ERR_OK)
+    else
     {
-        dassert (end_offset() == offset, 
-            "make sure the global end offset is correct");
+        // data failure
     }
-
+    
     return err;
 }
 
@@ -545,7 +560,7 @@ void mutation_log::on_partition_removed(global_partition_id gpid)
     _previous_log_prepared_decrees.erase(gpid);
 }
 
-void mutation_log::get_learn_state(
+void mutation_log::get_learn_state_when_as_commit_logs(
     global_partition_id gpid,
     ::dsn::replication::decree start,
     /*out*/ ::dsn::replication::learn_state& state
@@ -579,12 +594,10 @@ void mutation_log::get_learn_state(
         if (skip_next)
             continue;
 
-        decree init_prepare_decree_before_this = log->previous_log_prepared_decrees().begin()->second;
-        decree max_prepared_decree_before_this =
-            init_prepare_decree_before_this + log->header().max_staleness_for_commit - 1;
+        decree last_commit = log->previous_log_prepared_decrees().begin()->second;
 
         // when all possible decress are not needed 
-        if (max_prepared_decree_before_this < start)
+        if (last_commit < start)
         {
             // skip all older logs
             break;
@@ -600,6 +613,72 @@ void mutation_log::get_learn_state(
     {
         state.files.push_back(*it);
     }
+}
+
+int mutation_log::garbage_collection_when_as_commit_logs(
+    global_partition_id gpid,
+    decree durable_d
+    )
+{
+    std::map<int, log_file_ptr> files;
+    std::map<int, log_file_ptr>::reverse_iterator itr;
+
+    {
+        zauto_lock l(_lock);
+        files = _log_files;
+        if (nullptr != _current_log_file)
+        {
+            files.erase(_current_log_file->index());
+        }
+    }
+
+    for (itr = files.rbegin(); itr != files.rend(); itr++)
+    {
+        log_file_ptr& log = itr->second;
+
+        auto it3 = log->previous_log_prepared_decrees().find(gpid);
+        if (it3 == log->previous_log_prepared_decrees().end())
+        {
+            // new partition, ok to delete older logs
+            break;
+        }
+        else
+        {
+            decree last_commit = it3->second;
+
+            // when all possible decress are covered by durable decress
+            if (durable_d >= last_commit)
+            {
+                // ok to delete older logs
+                break;
+            }
+        }
+    }
+
+    if (itr != files.rend()) itr++;
+
+    int count = 0;
+    for (; itr != files.rend(); itr++)
+    {
+        itr->second->close();
+
+        auto& fpath = itr->second->path();
+        ddebug("remove log segment %s", fpath.c_str());
+
+        if (!dsn::utils::filesystem::remove_path(fpath))
+        {
+            derror("Fail to remove %s.", fpath.c_str());
+        }
+
+        count++;
+
+        {
+            zauto_lock l(_lock);
+            _log_files.erase(itr->first);
+        }
+    }
+
+    return count;
 }
 
 int mutation_log::garbage_collection(
@@ -698,7 +777,6 @@ int mutation_log::garbage_collection(
     return count;
 }
 
-
 std::map<int, log_file_ptr>& mutation_log::get_logfiles_for_test()
 {
     return _log_files;
@@ -730,7 +808,7 @@ std::map<int, log_file_ptr>& mutation_log::get_logfiles_for_test()
         return nullptr;
     }
 
-    dsn_handle_t hfile = (dsn_handle_t)(uintptr_t)::open(path, O_RDONLY | O_BINARY, 0);
+    dsn_handle_t hfile = (dsn_handle_t)(uintptr_t)dsn_file_open(path, O_RDONLY | O_BINARY, 0);
 
     if (hfile == 0)
     {
@@ -758,8 +836,6 @@ std::map<int, log_file_ptr>& mutation_log::get_logfiles_for_test()
     binary_reader reader(hdr_blob);
     lf->read_header(reader);
 
-    // reset to file begin
-    lseek((int)(uintptr_t)(lf->_handle), 0, SEEK_SET);
     return lf;
 }
 
@@ -817,17 +893,12 @@ void log_file::close()
 {
     if (0 != _handle)
     {
-        if (_is_read)
-            ::close((int)(uintptr_t)(_handle));
-        else
-        {
-            error_code err = dsn_file_close(_handle);
-            dassert(
-                err == ERR_OK, 
-                "dsn_file_close failed, err = %s",
-                err.to_string()
-                );
-        }
+        error_code err = dsn_file_close(_handle);
+        dassert(
+            err == ERR_OK,
+            "dsn_file_close failed, err = %s",
+            err.to_string()
+            );
 
         _handle = 0;
     }
@@ -836,54 +907,51 @@ void log_file::close()
 error_code log_file::read_next_log_entry(int64_t local_offset, /*out*/::dsn::blob& bb)
 {
     dassert (_is_read, "log file must be of read mode");
-    int64_t loffset = (int64_t)lseek((int)(uintptr_t)(_handle), 0, SEEK_CUR);
-    dassert(
-        loffset == local_offset, 
-        "file offset is not correct: %lld vs %lld",
-        loffset, 
-        local_offset
-        );
-
+    
     log_block_header hdr;    
-    int read_count = ::read(
-        (int)(uintptr_t)(_handle),
-        &hdr,
-        sizeof(log_block_header)
-        );
+    auto tsk = file::read(_handle, (char*)&hdr, (int)sizeof(log_block_header), 
+        local_offset, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr);
+    tsk->wait();
 
-    if (sizeof(log_block_header) != read_count)
+    auto read_count = tsk->io_size();
+    auto err = tsk->error();
+    if (err != ERR_OK || read_count != sizeof(log_block_header))
     {
-        if (read_count > 0)
+        derror("read data failed, size = %d vs %d, err = %s, local_offset = %lld",
+            read_count, (int)sizeof(log_block_header), err.to_string(), local_offset);
+
+        if (err == ERR_HANDLE_EOF)
         {
-            derror("incomplete read data, size = %d vs %d",
-                read_count, sizeof(log_block_header));
-            return ERR_INVALID_DATA;
+            err = read_count == 0 ? ERR_HANDLE_EOF : ERR_INCOMPLETE_DATA;
         }
-        else
-        {
-            return ERR_HANDLE_EOF;
-        }
+
+        return err;
     }
 
     if (hdr.magic != 0xdeadbeef)
     {
-        derror("invalid data header");
+        derror("invalid data header magic: 0x%x", hdr.magic);
         return ERR_INVALID_DATA;
     }
 
     std::shared_ptr<char> data(new char[hdr.length]);
     bb.assign(data, 0, hdr.length);
 
-    read_count = ::read(
-        (int)(uintptr_t)(_handle),
-        (void*)(char*)bb.data(),
-        hdr.length
-        );
+    tsk = file::read(_handle, (char*)bb.data(), (int)hdr.length,
+        local_offset + read_count, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr);
+    tsk->wait();
 
-    if (hdr.length != read_count)
+    read_count = tsk->io_size();
+    err = tsk->error();
+    if (err != ERR_OK || hdr.length != read_count)
     {
-        derror("incomplete read data, size = %d vs %d", read_count, hdr.length);
-        return ERR_INVALID_DATA;
+        derror("read data failed, size = %d vs %d, err = %s, local_offset = %lld",
+            read_count, (int)hdr.length, err.to_string(), local_offset);
+
+        if (err == ERR_OK || err == ERR_HANDLE_EOF)
+            err = ERR_INCOMPLETE_DATA;
+
+        return err;
     }
     
     auto crc = dsn_crc32_compute((const void*)bb.data(), (size_t)hdr.length, 0);

@@ -80,14 +80,16 @@ public:
     potential_secondary_context() :
         learning_signature(0),
         learning_round_is_running(false),
-        learning_status(learner_status::Learning_INVALID)
+        learning_status(learner_status::Learning_INVALID),
+        learning_start_prepare_decree(invalid_decree)
     {}
     bool cleanup(bool force);
 
 public:
     uint64_t        learning_signature;
     learner_status  learning_status;
-    volatile bool learning_round_is_running;
+    volatile bool   learning_round_is_running;
+    decree          learning_start_prepare_decree;
 
     ::dsn::task_ptr       learning_task;
     ::dsn::task_ptr       learn_remote_files_task;

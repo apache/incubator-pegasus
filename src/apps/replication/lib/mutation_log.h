@@ -118,10 +118,15 @@ public:
             multi_partition_decrees& max_seen_decrees
             );
 
+    int garbage_collection_when_as_commit_logs(
+        global_partition_id gpid, 
+        decree durable_d
+        );
+
     //
-    //  when this is a private log, log files are learned by remote replicas
+    //  when this is a commit log, log files are learned by remote replicas
     //
-    void get_learn_state(
+    void get_learn_state_when_as_commit_logs(
         global_partition_id gpid,
         ::dsn::replication::decree start,
         /*out*/ ::dsn::replication::learn_state& state
@@ -132,7 +137,6 @@ public:
     const std::string& dir() const {return _dir;}
     int64_t end_offset() const { return _global_end_offset; }
     int64_t start_offset() const { return _global_start_offset; }
-
     std::map<int, log_file_ptr>& get_logfiles_for_test();
 
 private:
@@ -148,7 +152,7 @@ private:
     error_code write_pending_mutations(bool create_new_log_when_necessary = true);
 
 private:
-    zlock                     _lock;
+    mutable zlock             _lock;
     int64_t                   _max_log_file_size_in_bytes;            
     std::string               _dir;    
     bool                      _batch_write;

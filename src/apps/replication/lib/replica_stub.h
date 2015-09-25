@@ -75,7 +75,7 @@ public:
     //        - learn
     //
     void on_prepare(dsn_message_t request);    
-    void on_learn(const learn_request& request, /*out*/ learn_response& response);
+    void on_learn(dsn_message_t msg);
     void on_learn_completion_notification(const group_check_response& report);
     void on_add_learner(const group_check_request& request);
     void on_remove(const replica_configuration& request);
@@ -158,7 +158,6 @@ private:
 private:    
     friend class replica;
     void response_client_error(dsn_message_t request, int error);
-    void replay_mutation(mutation_ptr& mu, replicas* rps);
 };
 //------------ inline impl ----------------------
 

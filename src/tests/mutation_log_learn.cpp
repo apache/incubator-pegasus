@@ -74,7 +74,7 @@ TEST(replication, log_learn)
 
         // learning
         learn_state state;
-        mlog->get_learn_state(gpid, durable_decree + 1, state);
+        mlog->get_learn_state_when_as_commit_logs(gpid, durable_decree + 1, state);
 
         int64_t offset = 0;
         std::set<decree> learned_decress;

@@ -636,22 +636,22 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         dassert (false, "invalid execution path");
     }
 
+    dwarn(
+        "%s: status change %s @ %lld => %s @ %lld, pre(%llu, %llu), app(%llu, %llu), duration=%llu ms",
+        name(),
+        enum_to_string(old_status),
+        old_ballot,
+        enum_to_string(status()),
+        get_ballot(),
+        _prepare_list->max_decree(),
+        _prepare_list->last_committed_decree(),
+        _app->last_committed_decree(),
+        _app->last_durable_decree(),
+        _last_config_change_time_ms - oldTs
+        );
+
     if (status() != old_status)
     {
-        ddebug(
-            "%s: status change %s @ %lld => %s @ %lld, pre(%llu, %llu), app(%llu, %llu), duration=%llu ms",
-            name(),
-            enum_to_string(old_status),
-            old_ballot,
-            enum_to_string(status()),
-            get_ballot(),
-            _prepare_list->max_decree(),
-            _prepare_list->last_committed_decree(),
-            _app->last_committed_decree(),
-            _app->last_durable_decree(),
-            _last_config_change_time_ms - oldTs
-            );
-
         bool isClosing = (status() == PS_ERROR || (status() == PS_INACTIVE && get_ballot() > old_ballot));
         _stub->notify_replica_state_update(config, isClosing);
 

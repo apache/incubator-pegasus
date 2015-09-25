@@ -57,8 +57,7 @@ public:
     static replica* load(replica_stub* stub, const char* dir, bool rename_dir_on_failure);    
     static replica* newr(replica_stub* stub, const char* app_type, global_partition_id gpid);    
     void replay_mutation(mutation_ptr& mu);
-    error_code replay_private_log();
-    void start_private_log_service();
+    error_code init_commit_log_service();
     void reset_prepare_list_after_replay();
     // return false when update fails or replica is going to be closed
     bool update_local_configuration_with_no_ballot_change(partition_status status);
@@ -81,7 +80,7 @@ public:
     //    messages from peers (primary or secondary)
     //
     void on_prepare(dsn_message_t request);    
-    void on_learn(const learn_request& request, /*out*/ learn_response& response);
+    void on_learn(dsn_message_t msg, const learn_request& request);
     void on_learn_completion_notification(const group_check_response& report);
     void on_add_learner(const group_check_request& request);
     void on_remove(const replica_configuration& request);
@@ -112,7 +111,7 @@ public:
     bool group_configuration(/*out*/ partition_configuration& config) const;
     uint64_t last_config_change_time_milliseconds() const { return _last_config_change_time_ms; }
     const char* name() const { return _name; }
-    mutation_log_ptr log() const { return _log; }
+    mutation_log_ptr commit_log() const { return _commit_log; }
         
 private:
     // common helpers
@@ -120,6 +119,7 @@ private:
     void response_client_message(dsn_message_t request, error_code error, decree decree = -1);    
     void execute_mutation(mutation_ptr& mu);
     mutation_ptr new_mutation(decree decree);
+    void check_state_completeness();
     
     // initialization
     error_code init_app_and_prepare_list(const char* app_type, bool create_new);
@@ -186,9 +186,8 @@ private:
     // prepare list
     prepare_list*           _prepare_list;
 
-    // log (shared or private, depends on config)
-    mutation_log_ptr        _log;
-    mutation_log_ptr        _2pc_logger; // logging on 2pc
+    // commit log (may be empty, depending on config)
+    mutation_log_ptr        _commit_log;
 
     // application
     replication_app_base*   _app;

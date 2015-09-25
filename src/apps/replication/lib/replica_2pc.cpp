@@ -120,23 +120,16 @@ void replica::init_prepare(mutation_ptr& mu)
     dassert (mu->data.header.log_offset == invalid_offset, "");
     dassert (mu->log_task() == nullptr, "");
 
-    if (_2pc_logger)
-    {
-        mu->log_task() = _2pc_logger->append(mu,
-            LPC_WRITE_REPLICATION_LOG,
-            this,
-            std::bind(&replica::on_append_log_completed, this, mu,
-            std::placeholders::_1,
-            std::placeholders::_2),
-            gpid_to_hash(get_gpid())
-            );
+    mu->log_task() = _stub->_log->append(mu,
+        LPC_WRITE_REPLICATION_LOG,
+        this,
+        std::bind(&replica::on_append_log_completed, this, mu,
+        std::placeholders::_1,
+        std::placeholders::_2),
+        gpid_to_hash(get_gpid())
+        );
 
-        dassert(nullptr != mu->log_task(), "");
-    }
-    else
-    {
-        on_append_log_completed(mu, ERR_OK, 0);
-    }
+    dassert(nullptr != mu->log_task(), "");
     return;
 
 ErrOut:
@@ -282,7 +275,7 @@ void replica::on_prepare(dsn_message_t request)
 
     if (PS_POTENTIAL_SECONDARY == status())
     {
-        dassert (mu->data.header.decree <= last_committed_decree() + _options->staleness_for_start_prepare_for_potential_secondary, "");
+        dassert (mu->data.header.decree <= last_committed_decree() + _options->max_mutation_count_in_prepare_list, "");
     }
     else
     {
@@ -297,23 +290,16 @@ void replica::on_prepare(dsn_message_t request)
     }
     
     // write log
-    if (_2pc_logger)
-    {
-        dassert(mu->log_task() == nullptr, "");
+    dassert(mu->log_task() == nullptr, "");
 
-        mu->log_task() = _2pc_logger->append(mu,
-            LPC_WRITE_REPLICATION_LOG,
-            this,
-            std::bind(&replica::on_append_log_completed, this, mu, std::placeholders::_1, std::placeholders::_2),
-            gpid_to_hash(get_gpid())
-            );
+    mu->log_task() = _stub->_log->append(mu,
+        LPC_WRITE_REPLICATION_LOG,
+        this,
+        std::bind(&replica::on_append_log_completed, this, mu, std::placeholders::_1, std::placeholders::_2),
+        gpid_to_hash(get_gpid())
+        );
 
-        dassert(mu->log_task() != nullptr, "");
-    }
-    else
-    {
-        on_append_log_completed(mu, ERR_OK, 0);
-    }
+    dassert(mu->log_task() != nullptr, "");
 }
 
 void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t size)
@@ -362,17 +348,6 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
     default:
         dassert (false, "");
         break;
-    }
-
-    // write local private log if necessary
-    if (_log && _2pc_logger != _log)
-    {
-        _log->append(mu,
-            LPC_WRITE_REPLICATION_LOG,
-            nullptr,
-            nullptr,
-            gpid_to_hash(get_gpid())
-            );
     }
 }
 

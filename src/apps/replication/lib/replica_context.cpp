@@ -175,6 +175,7 @@ bool potential_secondary_context::cleanup(bool force)
 
     learning_signature = 0;
     learning_round_is_running = false;
+    learning_start_prepare_decree = invalid_decree;
     return true;
 }
 

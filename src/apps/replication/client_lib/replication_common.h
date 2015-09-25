@@ -63,7 +63,7 @@ public:
     bool    prepare_ack_on_secondary_before_logging_allowed;
         
     int32_t staleness_for_commit;
-    int32_t staleness_for_start_prepare_for_potential_secondary;
+    int32_t max_mutation_count_in_prepare_list;
     int32_t mutation_2pc_min_replica_count;
     
     bool    group_check_disabled;
@@ -80,8 +80,7 @@ public:
     int32_t fd_lease_seconds;
     int32_t fd_grace_seconds;
 
-    bool    log_shared;
-    bool    log_private;
+    bool    log_per_app_commit;
     int32_t log_file_size_mb;
     int32_t log_buffer_size_mb;
     int32_t log_pending_max_ms;

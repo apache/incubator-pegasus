@@ -64,7 +64,7 @@ TEST(core, aio)
 
     // read
     char* buffer2 = (char*)alloca((size_t)len);
-    fp = dsn_file_open("tmp", O_RDONLY | O_BINARY, 0666);
+    fp = dsn_file_open("tmp", O_RDONLY | O_BINARY, 0);
 
     t1 = ::dsn::file::read(fp, buffer2, len, 0, LPC_AIO_TEST, nullptr, nullptr, 0);
     t2 = ::dsn::file::read(fp, buffer2, len, len, LPC_AIO_TEST, nullptr, nullptr, 0);
@@ -90,4 +90,16 @@ TEST(core, aio)
 
     err = dsn_file_close(fp);
     EXPECT_TRUE(err == ERR_OK);
+}
+
+TEST(core, aio_share)
+{
+    auto fp = dsn_file_open("tmp", O_WRONLY | O_CREAT | O_BINARY, 0666);
+    EXPECT_TRUE(fp != nullptr);
+
+    auto fp2 = dsn_file_open("tmp", O_RDONLY | O_BINARY, 0);
+    EXPECT_TRUE(fp2 != nullptr);
+
+    dsn_file_close(fp);
+    dsn_file_close(fp2);
 }
