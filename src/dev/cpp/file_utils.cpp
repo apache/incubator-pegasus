@@ -254,6 +254,13 @@ namespace dsn {
 
 						if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 						{
+                            ret = handler(info2.path.c_str(), FTW_D, &info2.ftw);
+                            if (ret != FTW_CONTINUE)
+                            {
+                                ::FindClose(hFind);
+                                return false;
+                            }
+
 							if (recursive)
 							{
 								queue.push_front(info2);
