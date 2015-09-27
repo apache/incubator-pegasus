@@ -34,9 +34,6 @@ namespace dsn
     class rpc_address
     {
     public:
-        static bool use_ip_as_name; // use ip address as rpc_address's name
-
-    public:
         rpc_address(uint32_t ip, uint16_t port);
         rpc_address(uint32_t* ipv6, uint16_t port);
         rpc_address(const char* uri, uint16_t port);
@@ -100,10 +97,8 @@ namespace dsn
         _addr.type = type;
         _addr.port = port;    
         dsn_host_from_name(type, name, &_addr);
-        if (!use_ip_as_name)
-        {
+        if (!dsn_address_use_ip_as_name)
             _name = name;
-        }
     }
 
     inline rpc_address::rpc_address()
@@ -138,15 +133,8 @@ namespace dsn
     {        
         if (_name.length() == 0)
         {
-            char buf[16];
-            if (use_ip_as_name)
-            {
-                ip_to_name(&_addr, buf, 16);
-            }
-            else
-            {
-                dsn_host_to_name(&_addr, buf, 16);
-            }
+            char buf[32];
+            dsn_host_to_name(&_addr, buf, sizeof(buf));
             _name.assign(buf);
         }   
         return _name.c_str(); 
@@ -156,15 +144,8 @@ namespace dsn
     {
         if (_name.length() == 0)
         {
-            char buf[16];
-            if (use_ip_as_name)
-            {
-                ip_to_name(&_addr, buf, 16);
-            }
-            else
-            {
-                dsn_host_to_name(&_addr, buf, 16);
-            }
+            char buf[32];
+            dsn_host_to_name(&_addr, buf, sizeof(buf));
             _name.assign(buf);
         }
         return _name; 
