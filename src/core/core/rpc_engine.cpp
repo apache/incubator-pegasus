@@ -336,10 +336,10 @@ namespace dsn {
 
         if (dsn_address_use_ip_as_name)
         {
-            std::string interface = dsn_config_get_value_string(
+            const char* interface = dsn_config_get_value_string(
                     "network", "primary_interface",
                     "eth0", "network interface name used to init primary ip address");
-            dsn_address_local(_local_primary_address.c_addr_ptr(), interface.c_str());
+            dsn_address_local(_local_primary_address.c_addr_ptr(), interface);
         }
         else
         {

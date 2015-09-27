@@ -114,6 +114,7 @@ DSN_API void dsn_host_to_name(const dsn_address_t* addr, /*out*/ char* name_buff
                 (nip >> 16) & 0xff,
                 (nip >> 24) & 0xff
                 );
+            return;
         }
 
         // query cache
