@@ -240,17 +240,20 @@ namespace dsn
             }
             else
             {
-                const char** ptr = (const char**)alloca(sizeof(const char*) * (files.size() + 1));
+                const char** ptr = (const char**)malloc(sizeof(const char*) * (files.size() + 1));
+                const char** p = ptr;
                 for (auto& f : files)
                 {
-                    *ptr++ = f.c_str();
+                    *p++ = f.c_str();
                 }
-                *ptr = nullptr;
+                *p = nullptr;
 
                 dsn_file_copy_remote_files(
                     &remote.c_addr(), source_dir.c_str(), ptr, 
                     dest_dir.c_str(), overwrite, t, svc ? svc->tracker() : nullptr
                     );
+
+                free(ptr);
             }
             return tsk;
         }

@@ -292,7 +292,7 @@ void replica::update_configuration_on_meta_server(config_type type, const ::dsn:
     dsn_message_t msg = dsn_msg_create_request(RPC_CM_CALL, 0, 0);
     
     meta_request_header hdr;
-    hdr.rpc_tag = RPC_CM_UPDATE_PARTITION_CONFIGURATION;
+    hdr.rpc_tag = dsn_task_code_to_string(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
 
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
     request->config = newConfig;

@@ -231,6 +231,9 @@ void rpc_address::ip_to_name(const dsn_address_t* addr, char* name_buffer, int l
     case HOST_TYPE_URI:
         dassert(false, "should not be here");
         break;
+    case HOST_TYPE_INVALID:
+        strncpy(name_buffer, "invalid_host", std::min(length, 13));
+        break;
     default:
         break;
     }

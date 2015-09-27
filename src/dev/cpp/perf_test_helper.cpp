@@ -13,6 +13,7 @@ namespace dsn {
         perf_client_helper::perf_client_helper()
         {
             _case_count = 0;
+            _live_rpc_count = 0;
 
             if (!read_config("task..default", _default_opts))
             {
@@ -123,6 +124,10 @@ namespace dsn {
                     finalize_case();
                 return;
             }
+            else
+            {
+                --_live_rpc_count;
+            }
             
             // continue further waves
             if (_current_case->concurrency == 0)
@@ -139,8 +144,6 @@ namespace dsn {
                     _suits[_current_suit_index].send_one(_current_case->payload_bytes);
                 }
             }
-
-            --_live_rpc_count;
         }
 
         void perf_client_helper::finalize_case()

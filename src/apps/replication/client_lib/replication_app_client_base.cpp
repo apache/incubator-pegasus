@@ -338,7 +338,7 @@ void replication_app_client_base::call(request_context_ptr request, bool no_dela
             dsn_message_t msg = dsn_msg_create_request(RPC_CM_CALL, 0, 0);
 
             meta_request_header hdr;
-            hdr.rpc_tag = RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX;
+            hdr.rpc_tag = dsn_task_code_to_string(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
             ::marshall(msg, hdr);
 
             configuration_query_by_index_request req;

@@ -343,7 +343,7 @@ namespace dsn {
             _local_primary_address = _client_nets[0][0]->address();
         _local_primary_address.c_addr_ptr()->port = aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id + ctx.port_shift_value;
 
-        ddebug("service_node=[%s], primary_address=[%s:%hu]",
+        ddebug("=== service_node=[%s], primary_address=[%s:%hu] ===",
                _node->name(), _local_primary_address.name(), _local_primary_address.port());
 
         _is_running = true;

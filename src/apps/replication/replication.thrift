@@ -168,7 +168,7 @@ enum config_type
 
 struct meta_request_header
 {
-    1:i32 rpc_tag;
+    1:string rpc_tag;
 }
 
 struct meta_response_header
