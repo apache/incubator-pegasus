@@ -43,7 +43,6 @@ replica::replica(replica_stub* stub, const char* path)
     _stub = stub;
     _app = nullptr;
     _dir = path;
-    _primary_address = primary_address();
     _options = &stub->options();
 
     init_state();
@@ -60,7 +59,6 @@ replica::replica(replica_stub* stub, global_partition_id gpid, const char* app_t
     char buffer[256];
     sprintf(buffer, "%u.%u.%s", gpid.app_id, gpid.pidx, app_type);
     _dir = _stub->dir() + "/" + buffer;
-    _primary_address = primary_address();
     _options = &stub->options();
 
     init_state();

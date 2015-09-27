@@ -47,7 +47,7 @@ error_code replica::initialize_on_new(const char* app_type, global_partition_id 
     _dir = _stub->dir() + "/" + buffer;
 
     sprintf(_name, "%u.%u@%s:%hu", _config.gpid.app_id, _config.gpid.pidx,
-            _primary_address.name(), _primary_address.port());
+            _stub->_primary_address.name(), _stub->_primary_address.port());
 
     if (dsn::utils::filesystem::directory_exists(_dir))
     {
@@ -105,7 +105,7 @@ error_code replica::initialize_on_load(const char* dir, bool rename_dir_on_failu
     _dir = dr;
 
     sprintf(_name, "%u.%u@%s:%hu", _config.gpid.app_id, _config.gpid.pidx,
-            _primary_address.name(), _primary_address.port());
+            _stub->_primary_address.name(), _stub->_primary_address.port());
 
     error_code err = init_app_and_prepare_list(app_type, false);
 
@@ -208,7 +208,7 @@ error_code replica::replay_private_log()
         derror(
             "%u.%u @ %s:%hu: local log initialized, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
             _config.gpid.app_id, _config.gpid.pidx,
-            _primary_address.name(), _primary_address.port(),
+            _stub->_primary_address.name(), _stub->_primary_address.port(),
             last_durable_decree(),
             last_committed_decree(),
             max_prepared_decree(),
@@ -222,7 +222,7 @@ error_code replica::replay_private_log()
         derror(
             "%u.%u @ %s:%hu: local log initialized with log error, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
             _config.gpid.app_id, _config.gpid.pidx,
-            _primary_address.name(), _primary_address.port(),
+            _stub->_primary_address.name(), _stub->_primary_address.port(),
             last_durable_decree(),
             last_committed_decree(),
             max_prepared_decree(),
