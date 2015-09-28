@@ -298,20 +298,6 @@ replica_ptr replica_stub::get_replica(int32_t app_id, int32_t partition_index)
     return get_replica(gpid);
 }
 
-void replica_stub::get_primary_replica_list(uint32_t p_tableID, std::vector<global_partition_id>& p_repilcaList)
-{
-    zauto_lock l(_replicas_lock);
-    for (auto it = _replicas.begin(); it != _replicas.end(); it++)
-    {
-        if (it->second->status() == PS_PRIMARY 
-            && (p_tableID == (uint32_t)-1 
-            || it->second->get_gpid().app_id == static_cast<int>(p_tableID) ))
-        {
-            p_repilcaList.push_back(it->second->get_gpid());
-        }
-    }
-}
-
 void replica_stub::on_client_write(dsn_message_t request)
 {
     write_request_header hdr;
@@ -968,6 +954,11 @@ void replica_stub::notify_replica_state_update(const replica_configuration& conf
             _replica_state_subscriber(primary_address(), config, isClosing);
         }
     }
+}
+
+void replica_stub::handle_log_failure(error_code err)
+{
+    // TODO:
 }
 
 void replica_stub::open_service()

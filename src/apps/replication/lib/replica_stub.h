@@ -103,10 +103,7 @@ public:
     replica_ptr get_replica(int32_t app_id, int32_t partition_index);
     replication_options& options() { return _options; }
     bool is_connected() const { return NS_Connected == _state; }
-
-    // p_tableID = MAX_UInt32 for replica of all tables.
-    void get_primary_replica_list(uint32_t p_tableID, std::vector<global_partition_id>& p_repilcaList);
-
+    
 private:    
     enum replica_node_state
     {
@@ -128,6 +125,7 @@ private:
     void add_replica(replica_ptr r);
     bool remove_replica(replica_ptr r);
     void notify_replica_state_update(const replica_configuration& config, bool isClosing);
+    void handle_log_failure(error_code err);
 
 private:
     friend class ::dsn::replication::replication_checker;    

@@ -349,6 +349,12 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
         dassert (false, "");
         break;
     }
+
+    // mutation log failure, propagted to all replicas
+    if (err != ERR_OK)
+    {
+        _stub->handle_log_failure(err);
+    }
 }
 
 void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, error_code err, dsn_message_t request, dsn_message_t reply)

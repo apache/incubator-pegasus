@@ -53,7 +53,7 @@ mutation::~mutation()
 
 void mutation::move_from(mutation_ptr& old)
 {
-    data.updates = std::move(old->data.updates);
+    data.updates = old->data.updates;
     rpc_code = old->rpc_code;
         
     _client_request = old->client_msg();

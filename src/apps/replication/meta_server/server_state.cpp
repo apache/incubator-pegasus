@@ -384,11 +384,13 @@ void server_state::update_configuration_internal(const configuration_update_requ
         }
         cf << "]}";
 
-        ddebug("%d.%d metaupdateok to ballot %lld, type = %s, config = %s",
+        ddebug("%d.%d metaupdateok to ballot %lld, type = %s, node = %s:%hu, config = %s",
             request.config.gpid.app_id,
             request.config.gpid.pidx,
             request.config.ballot,
             enum_to_string(request.type),
+            request.node.name(),
+            request.node.port(),
             cf.str().c_str()
             );
     }

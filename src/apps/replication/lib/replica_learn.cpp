@@ -137,7 +137,7 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
     decree local_committed_decree = last_committed_decree();
     decree learn_start_decree = request.last_committed_decree_in_app + 1;
     bool delayed_replay_prepare_list = false;
-    if (request.last_committed_decree_in_app > local_committed_decree)
+    if (request.last_committed_decree_in_app > last_prepared_decree())
     {
         dassert (
             false,
@@ -146,6 +146,13 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
             name(), request.learner.name(), request.learner.port(),
             request.last_committed_decree_in_app, local_committed_decree
             );
+    }
+
+    // mutations are previously committed already on learner (old primary)
+    else if (request.last_committed_decree_in_app > local_committed_decree)
+    {
+        _prepare_list->commit(request.last_committed_decree_in_app, false);
+        local_committed_decree = last_committed_decree();
     }
 
     ddebug(

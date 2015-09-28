@@ -213,10 +213,11 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
 
     // write block header
     auto bb = _pending_write->get_buffer();    
+
     uint64_t offset = end_offset() - bb.length();
     bool new_log_file = create_new_log_when_necessary
-        && end_offset() - _current_log_file->start_offset()
-        >= _max_log_file_size_in_bytes
+        && (end_offset() - _current_log_file->start_offset()
+        >= _max_log_file_size_in_bytes)
         ;
     
     auto aio = _current_log_file->commit_log_entry(
@@ -930,7 +931,7 @@ error_code log_file::read_next_log_entry(int64_t local_offset, /*out*/::dsn::blo
 
     if (hdr.magic != 0xdeadbeef)
     {
-        derror("invalid data header magic: 0x%x", hdr.magic);
+        dassert( false, "invalid data header magic: 0x%x", hdr.magic);
         return ERR_INVALID_DATA;
     }
 
@@ -1003,7 +1004,7 @@ std::shared_ptr<binary_writer> log_file::prepare_log_entry()
         hash
         );
     
-    _end_offset = offset + bb.length();    
+    _end_offset += bb.length();    
     return task;
 }
 

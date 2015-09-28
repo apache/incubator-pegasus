@@ -71,7 +71,7 @@ namespace dsn
         const char* name() const;
         const std::string& str_name() const;
         bool is_invalid() const { return _addr.type == HOST_TYPE_INVALID; }
-        void set_invalid() { clear(); _addr.type = HOST_TYPE_INVALID; }
+        void set_invalid() { clear(); }
 
         bool operator == (const ::dsn::rpc_address& r) const;
         bool operator != (const ::dsn::rpc_address& r) const;
@@ -268,6 +268,8 @@ namespace dsn
             dsn_group_release(_addr.group);
         }
         _addr.type = HOST_TYPE_INVALID;
+        _addr.ip = 0;
+        _addr.port = 0;
         _name.clear();
     }
 }
