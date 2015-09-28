@@ -77,6 +77,7 @@ namespace dsn
 
                     if (header.err == ERR_FORWARD_TO_OTHERS)
                     {
+                        dsn_msg_add_ref(request); // add for another round of rpc::call
                         rpc::call(header.primary_address, request, ps->svc, ps->internal_cb, ps->reply_hash);
                         return;
                     }

@@ -346,6 +346,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
             );
 
         rpc_address target(_stub->_failure_detector->get_servers());
+        dsn_msg_add_ref(request); // added for another round of rpc::call
         _primary_states.reconfiguration_task = rpc::call(
             target,
             request,

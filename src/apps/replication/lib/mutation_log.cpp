@@ -931,7 +931,7 @@ error_code log_file::read_next_log_entry(int64_t local_offset, /*out*/::dsn::blo
 
     if (hdr.magic != 0xdeadbeef)
     {
-        dassert( false, "invalid data header magic: 0x%x", hdr.magic);
+        derror("invalid data header magic: 0x%x", hdr.magic);
         return ERR_INVALID_DATA;
     }
 
