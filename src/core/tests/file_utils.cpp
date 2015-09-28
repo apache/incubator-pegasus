@@ -634,7 +634,7 @@ static void file_utils_test_path_exists()
 #endif
 }
 
-static void file_utils_test_get_files()
+static void file_utils_test_get_paths()
 {
 	std::string path;
 	bool ret;
@@ -668,10 +668,40 @@ static void file_utils_test_get_files()
 	EXPECT_TRUE(file_list.size() == 3);
 	file_list.clear();
 
+	path = "./file_utils_temp/";
+	ret = dsn::utils::filesystem::get_subdirectories(path, file_list, true);
+	EXPECT_TRUE(ret);
+	EXPECT_TRUE(file_list.size() == 7);
+	file_list.clear();
+
+	path = "./file_utils_temp/";
+	ret = dsn::utils::filesystem::get_subdirectories(path, file_list, false);
+	EXPECT_TRUE(ret);
+	EXPECT_TRUE(file_list.size() == 2);
+	file_list.clear();
+
+	path = "./file_utils_temp/";
+	ret = dsn::utils::filesystem::get_subpaths(path, file_list, true);
+	EXPECT_TRUE(ret);
+	EXPECT_TRUE(file_list.size() == 10);
+	file_list.clear();
+
+	path = "./file_utils_temp/";
+	ret = dsn::utils::filesystem::get_subpaths(path, file_list, false);
+	EXPECT_TRUE(ret);
+	EXPECT_TRUE(file_list.size() == 2);
+	file_list.clear();
+
 	path = "./file_utils_temp/a/";
 	ret = dsn::utils::filesystem::get_subfiles(path, file_list, false);
 	EXPECT_TRUE(ret);
 	EXPECT_TRUE(file_list.size() == 2);
+	file_list.clear();
+
+	path = "./file_utils_temp/a/";
+	ret = dsn::utils::filesystem::get_subpaths(path, file_list, false);
+	EXPECT_TRUE(ret);
+	EXPECT_TRUE(file_list.size() == 3);
 	file_list.clear();
 }
 
@@ -730,7 +760,7 @@ TEST(core, file_utils)
 	file_utils_test_create();
 	file_utils_test_file_size();
 	file_utils_test_path_exists();
-	file_utils_test_get_files();
+	file_utils_test_get_paths();
 	file_utils_test_rename();
 	file_utils_test_remove();
 	file_utils_test_cleanup();
