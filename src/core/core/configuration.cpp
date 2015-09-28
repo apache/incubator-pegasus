@@ -281,9 +281,10 @@ bool configuration::get_string_value_internal(const char* section, const char* k
                 it2->second->dsptr = dsptr;
 
             *ov = it2->second->value.c_str();
+            bool ret = it2->second->present ? true : false;
 
             _lock.unlock();
-            return it2->second->present ? true : false;
+            return ret;
         }
     }
     

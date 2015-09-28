@@ -835,7 +835,7 @@ DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init)
     if (!run(config, config_args.size() > 0 ? config_args.c_str() : nullptr, sleep_after_init, app_name, app_index))
     {
         printf("run the system failed\n");
-        exit(1);
+        dsn_terminate();
         return;
     }
 }
