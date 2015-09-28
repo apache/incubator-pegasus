@@ -32,8 +32,6 @@ replication_options::replication_options()
 {
     prepare_timeout_ms_for_secondaries = 1000;
     prepare_timeout_ms_for_potential_secondaries = 3000;
-    prepare_list_max_size_mb = 250;
-    prepare_ack_on_secondary_before_logging_allowed = false;
 
     staleness_for_commit = 10;
     max_mutation_count_in_prepare_list = 110;
@@ -65,7 +63,9 @@ replication_options::replication_options()
     log_pending_max_ms_private = 100;
     log_file_size_mb_private = 32;
     log_batch_write_private = true;
-    log_per_app_commit = true;
+
+    log_enable_private_commit = true;
+    log_enable_shared_prepare = true;
     
     config_sync_interval_ms = 30000;
     config_sync_disabled = false;
@@ -112,13 +112,7 @@ void replication_options::initialize()
         prepare_timeout_ms_for_potential_secondaries,
         "timeout (ms) for prepare message to potential secondaries in two phase commit"
         );
-    prepare_ack_on_secondary_before_logging_allowed =
-        dsn_config_get_value_bool("replication", 
-        "prepare_ack_on_secondary_before_logging_allowed", 
-        prepare_ack_on_secondary_before_logging_allowed,
-        "whether we need to ensure logging is completed before acking a prepare message"
-        );
-
+    
     staleness_for_commit =
         (int)dsn_config_get_value_uint64("replication", 
         "staleness_for_commit", 
@@ -137,12 +131,7 @@ void replication_options::initialize()
         mutation_2pc_min_replica_count,
         "minimum number of alive replicas under which write is allowed"
         );
-    prepare_list_max_size_mb =
-        (int)dsn_config_get_value_uint64("replication", 
-        "prepare_list_max_size_mb",
-        prepare_list_max_size_mb,
-        "maximum size (Mb) for prepare list"
-        );
+
     group_check_internal_ms =
         (int)dsn_config_get_value_uint64("replication",
         "group_check_internal_ms", 
@@ -262,12 +251,19 @@ void replication_options::initialize()
         "whether to batch write the incoming logs for private log"
         );
 
-    log_per_app_commit =
+    log_enable_private_commit =
         dsn_config_get_value_bool("replication",
-        "log_per_app_commit",
-        log_per_app_commit,
+        "log_enable_private_commit",
+        log_enable_private_commit,
         "whether to log committed mutations for each app, "
         "which is used for easier learning"
+        );
+
+    log_enable_shared_prepare =
+        dsn_config_get_value_bool("replication",
+        "log_enable_shared_prepare",
+        log_enable_shared_prepare,
+        "whether to log mutations before commit in a shared prepare log"
         );
 
      config_sync_disabled =

@@ -117,19 +117,27 @@ void replica::init_prepare(mutation_ptr& mu)
     // do_possible_commit_on_primary(mu);
 
     // local log
-    dassert (mu->data.header.log_offset == invalid_offset, "");
-    dassert (mu->log_task() == nullptr, "");
+    if (nullptr == _stub->_log)
+    {
+        mu->set_logged();
+        do_possible_commit_on_primary(mu);
+    }
+    else
+    {
+        dassert(mu->data.header.log_offset == invalid_offset, "");
+        dassert(mu->log_task() == nullptr, "");
 
-    mu->log_task() = _stub->_log->append(mu,
-        LPC_WRITE_REPLICATION_LOG,
-        this,
-        std::bind(&replica::on_append_log_completed, this, mu,
-        std::placeholders::_1,
-        std::placeholders::_2),
-        gpid_to_hash(get_gpid())
-        );
+        mu->log_task() = _stub->_log->append(mu,
+            LPC_WRITE_REPLICATION_LOG,
+            this,
+            std::bind(&replica::on_append_log_completed, this, mu,
+            std::placeholders::_1,
+            std::placeholders::_2),
+            gpid_to_hash(get_gpid())
+            );
 
-    dassert(nullptr != mu->log_task(), "");
+        dassert(nullptr != mu->log_task(), "");
+    }
     return;
 
 ErrOut:
@@ -174,7 +182,7 @@ void replica::do_possible_commit_on_primary(mutation_ptr& mu)
     dassert (_config.ballot == mu->data.header.ballot, "");
     dassert (PS_PRIMARY == status(), "");
 
-    if (mu->is_ready_for_commit(_options->prepare_ack_on_secondary_before_logging_allowed))
+    if (mu->is_ready_for_commit())
     {
         _prepare_list->commit(mu->data.header.decree, false);
     }
@@ -263,7 +271,7 @@ void replica::on_prepare(dsn_message_t request)
     {
         ddebug( "%s: mutation %s redundant prepare skipped", name(), mu->name());
 
-        if (mu2->is_logged() || _options->prepare_ack_on_secondary_before_logging_allowed)
+        if (mu2->is_logged())
         {
             ack_prepare_message(ERR_OK, mu);
         }
@@ -284,22 +292,26 @@ void replica::on_prepare(dsn_message_t request)
     }
 
     // ack without logging
-    if (_options->prepare_ack_on_secondary_before_logging_allowed)
+    if (nullptr == _stub->_log)
     {
+        mu->set_logged();
         ack_prepare_message(err, mu);
     }
     
     // write log
-    dassert(mu->log_task() == nullptr, "");
+    else
+    {
+        dassert(mu->log_task() == nullptr, "");
 
-    mu->log_task() = _stub->_log->append(mu,
-        LPC_WRITE_REPLICATION_LOG,
-        this,
-        std::bind(&replica::on_append_log_completed, this, mu, std::placeholders::_1, std::placeholders::_2),
-        gpid_to_hash(get_gpid())
-        );
+        mu->log_task() = _stub->_log->append(mu,
+            LPC_WRITE_REPLICATION_LOG,
+            this,
+            std::bind(&replica::on_append_log_completed, this, mu, std::placeholders::_1, std::placeholders::_2),
+            gpid_to_hash(get_gpid())
+            );
 
-    dassert(mu->log_task() != nullptr, "");
+        dassert(mu->log_task() != nullptr, "");
+    }
 }
 
 void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t size)
@@ -338,10 +350,7 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
             handle_local_failure(err);
         }
 
-        if (!_options->prepare_ack_on_secondary_before_logging_allowed)
-        {
-            ack_prepare_message(err, mu);
-        }
+        ack_prepare_message(err, mu);
         break;
     case PS_ERROR:
         break;

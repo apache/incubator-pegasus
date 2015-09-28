@@ -75,8 +75,7 @@ void replica::init_state()
             &replica::execute_mutation,
             this,
             std::placeholders::_1
-            ),
-        _options->prepare_ack_on_secondary_before_logging_allowed
+            )
     );
 
     _config.ballot = 0;
@@ -235,7 +234,7 @@ decree replica::last_prepared_decree() const
         auto mu = _prepare_list->get_mutation_by_decree(start + 1);
         if (mu == nullptr 
             || mu->data.header.ballot < lastBallot 
-            || (!mu->is_logged() && !_options->prepare_ack_on_secondary_before_logging_allowed)
+            || !mu->is_logged()
             )
             break;
 

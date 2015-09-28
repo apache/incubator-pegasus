@@ -155,7 +155,7 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
     {
         dassert (_app->last_durable_decree() == _app->last_committed_decree(), "");
 
-        if (_options->log_per_app_commit 
+        if (_options->log_enable_private_commit 
         || !_app->is_delta_state_learning_supported())
         {
             err = init_commit_log_service();

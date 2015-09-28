@@ -127,16 +127,18 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 	dir_list.clear();
 
     // init logs when is_shared
-    _log = new mutation_log(
-        opts.log_buffer_size_mb,
-        opts.log_pending_max_ms,
-        opts.log_file_size_mb,
-        opts.log_batch_write
-        );
-    err = _log->initialize(log_dir.c_str());
-    dassert(err == ERR_OK, "");
-    err = _log->replay(
-        [&rps](mutation_ptr& mu)
+    if (_options.log_enable_shared_prepare)
+    {
+        _log = new mutation_log(
+            opts.log_buffer_size_mb,
+            opts.log_pending_max_ms,
+            opts.log_file_size_mb,
+            opts.log_batch_write
+            );
+        err = _log->initialize(log_dir.c_str());
+        dassert(err == ERR_OK, "");
+        err = _log->replay(
+            [&rps](mutation_ptr& mu)
         {
             auto it = rps.find(mu->data.header.gpid);
             if (it != rps.end())
@@ -146,32 +148,37 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         }
         );
 
-    if (err != ERR_OK)
+        if (err != ERR_OK)
+        {
+            derror(
+                "%s:%hu: replication log replay failed, err %s, clear all logs ...",
+                primary_address().name(), primary_address().port(),
+                err.to_string()
+                );
+
+            // restart log service
+            _log->close();
+
+            std::string err_log_path = log_dir + ".err";
+            if (utils::filesystem::directory_exists(err_log_path))
+                utils::filesystem::remove_path(err_log_path);
+
+            utils::filesystem::rename_path(log_dir, err_log_path);
+            utils::filesystem::create_directory(log_dir);
+
+            _log = new mutation_log(
+                opts.log_buffer_size_mb,
+                opts.log_pending_max_ms,
+                opts.log_file_size_mb,
+                opts.log_batch_write
+                );
+            auto lerr = _log->initialize(log_dir.c_str());
+            dassert(lerr == ERR_OK, "");
+        }
+    }
+    else
     {
-        derror(
-            "%s:%hu: replication log replay failed, err %s, clear all logs ...",
-            primary_address().name(), primary_address().port(),
-            err.to_string()
-            );
-
-        // restart log service
-        _log->close();
-        
-        std::string err_log_path = log_dir + ".err";
-        if (utils::filesystem::directory_exists(err_log_path))
-            utils::filesystem::remove_path(err_log_path);
-
-        utils::filesystem::rename_path(log_dir, err_log_path);
-        utils::filesystem::create_directory(log_dir);
-
-        _log = new mutation_log(
-            opts.log_buffer_size_mb,
-            opts.log_pending_max_ms,
-            opts.log_file_size_mb,
-            opts.log_batch_write
-            );
-        auto lerr = _log->initialize(log_dir.c_str());
-        dassert(lerr == ERR_OK, "");
+        _log = nullptr;
     }
 
     for (auto it = rps.begin(); it != rps.end(); it++)
@@ -222,13 +229,16 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     }
 
     // start log serving    
-    multi_partition_decrees init_max_decrees; // for log truncate
-    for (auto it = rps.begin(); it != rps.end(); it++)
+    if (_log != nullptr)
     {
-        init_max_decrees[it->second->get_gpid()] = it->second->max_prepared_decree();
+        multi_partition_decrees init_max_decrees; // for log truncate
+        for (auto it = rps.begin(); it != rps.end(); it++)
+        {
+            init_max_decrees[it->second->get_gpid()] = it->second->max_prepared_decree();
+        }
+        err = _log->start_write_service(init_max_decrees, _options.staleness_for_commit);
+        dassert(err == ERR_OK, "");
     }
-    err = _log->start_write_service(init_max_decrees, _options.staleness_for_commit);
-    dassert(err == ERR_OK, "");
 
     // attach rps
     _replicas = std::move(rps);
@@ -735,16 +745,19 @@ void replica_stub::on_gc()
     }
 
     // gc prepare log
-    multi_partition_decrees durable_decrees, max_seen_decrees;
-    for (auto it = rs.begin(); it != rs.end(); it++)
+    if (_log != nullptr)
     {
-        durable_decrees[it->first] = it->second->last_durable_decree();
-        max_seen_decrees[it->first] = it->second->max_prepared_decree();
+        multi_partition_decrees durable_decrees, max_seen_decrees;
+        for (auto it = rs.begin(); it != rs.end(); it++)
+        {
+            durable_decrees[it->first] = it->second->last_durable_decree();
+            max_seen_decrees[it->first] = it->second->max_prepared_decree();
+        }
+        _log->garbage_collection(durable_decrees, max_seen_decrees);
     }
-    _log->garbage_collection(durable_decrees, max_seen_decrees);
     
     // gc commit log
-    if (_options.log_per_app_commit)
+    if (_options.log_enable_private_commit)
     {
         for (auto it = rs.begin(); it != rs.end(); it++)
         {

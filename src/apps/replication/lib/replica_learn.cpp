@@ -243,7 +243,7 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
     else
     {
         dassert(_commit_log != nullptr, 
-            "log_per_app_commit must be enabled for %s when the replicated app "
+            "log_enable_private_commit must be enabled for %s when the replicated app "
             "does not support delta state learning",
             name()
             );

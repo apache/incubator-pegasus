@@ -59,8 +59,6 @@ public:
 
     int32_t prepare_timeout_ms_for_secondaries;
     int32_t prepare_timeout_ms_for_potential_secondaries;
-    int32_t prepare_list_max_size_mb;
-    bool    prepare_ack_on_secondary_before_logging_allowed;
         
     int32_t staleness_for_commit;
     int32_t max_mutation_count_in_prepare_list;
@@ -80,7 +78,9 @@ public:
     int32_t fd_lease_seconds;
     int32_t fd_grace_seconds;
 
-    bool    log_per_app_commit;
+    bool    log_enable_private_commit;
+    bool    log_enable_shared_prepare;
+
     int32_t log_file_size_mb;
     int32_t log_buffer_size_mb;
     int32_t log_pending_max_ms;
