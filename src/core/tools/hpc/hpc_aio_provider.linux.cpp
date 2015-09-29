@@ -216,19 +216,25 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
 void hpc_aio_provider::complete_aio(struct iocb* io, int bytes, int err)
 {
     linux_disk_aio_context* aio = CONTAINING_RECORD(io, linux_disk_aio_context, cb);
+    error_code ec;
     if (err != 0)
     {
         derror("aio error, err = %s", strerror(err));
+        ec = ERR_FILE_OPERATION_FAILED;
+    }
+    else
+    {
+        ec = bytes > 0 ? ERR_OK : ERR_HANDLE_EOF;
     }
 
     if (!aio->evt)
     {
         aio_task* aio_ptr(aio->tsk);
-        aio->this_->complete_io(aio_ptr, (err == 0) ? ERR_OK : ERR_FILE_OPERATION_FAILED, bytes);
+        aio->this_->complete_io(aio_ptr, ec, bytes);
     }
     else
     {
-        aio->err = (err == 0) ? ERR_OK : ERR_FILE_OPERATION_FAILED;
+        aio->err = ec;
         aio->bytes = bytes;
         aio->evt->notify();
     }

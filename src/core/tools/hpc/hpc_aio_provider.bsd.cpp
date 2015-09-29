@@ -184,20 +184,26 @@ void hpc_aio_provider::complete_aio(struct aiocb* io)
     int err = aio_error(&ctx->cb);
     if (err != EINPROGRESS)
     {
+        size_t bytes = aio_return(&ctx->cb); // from e.g., read or write
+        error_code ec;
         if (err != 0)
         {
-            derror("file operation failed, errno = %d", errno);
-        }
-
-        size_t bytes = aio_return(&ctx->cb); // from e.g., read or write
-        if (!ctx->evt)
-        {
-            aio_task* aio(ctx->tsk);
-            ctx->this_->complete_io(aio, err == 0 ? ERR_OK : ERR_FILE_OPERATION_FAILED, bytes);
+            derror("aio error, err = %s", strerror(err));
+            ec = ERR_FILE_OPERATION_FAILED;
         }
         else
         {
-            ctx->err = err == 0 ? ERR_OK : ERR_FILE_OPERATION_FAILED;
+            ec = bytes > 0 ? ERR_OK : ERR_HANDLE_EOF;
+        }
+        
+        if (!ctx->evt)
+        {
+            aio_task* aio(ctx->tsk);
+            ctx->this_->complete_io(aio, ec, bytes);
+        }
+        else
+        {
+            ctx->err = ec;
             ctx->bytes = bytes;
             ctx->evt->notify();
         }

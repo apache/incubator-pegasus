@@ -226,8 +226,7 @@ namespace dsn
                 int err = errno;
                 dinfo("(s = %d) call recv on %s, return %d, err = %s",
                     _socket,
-                    _remote_addr.name(),
-                    _remote_addr.port(),
+                    _remote_addr.to_string(),
                     sz,
                     strerror(err)
                     );
@@ -312,8 +311,7 @@ namespace dsn
                 int err = errno;
                 dinfo("(s = %d) call sendmsg on %s, return %d, err = %s",
                     _socket,
-                    _remote_addr.name(),
-                    _remote_addr.port(),
+                    _remote_addr.to_string(),
                     sz,
                     strerror(err)
                     );
@@ -391,8 +389,7 @@ namespace dsn
             {
                 dinfo("(s = %d) epoll failure on %s, events = 0x%x",
                     _socket,
-                    _remote_addr.name(),
-                    _remote_addr.port(),
+                    _remote_addr.to_string(),
                     e.filter
                     );
                 on_failure();
@@ -404,8 +401,7 @@ namespace dsn
             {
                 dinfo("(s = %d) kqueue EVFILT_WRITE on %s, events = 0x%x",
                     _socket,
-                    _remote_addr.name(),
-                    _remote_addr.port(),
+                    _remote_addr.to_string(),
                     e.filter
                     );
 
@@ -417,8 +413,7 @@ namespace dsn
             {
                 dinfo("(s = %d) kqueue EVFILT_READ on %s, events = 0x%x",
                     _socket,
-                    _remote_addr.name(),
-                    _remote_addr.port(),
+                    _remote_addr.to_string(),
                     e.filter 
                     );
 
@@ -463,8 +458,7 @@ namespace dsn
             struct kevent& e = *((struct kevent*)lolp_or_events);
             dinfo("(s = %d) epoll for connect to %s, events = 0x%x",
                 _socket,
-                _remote_addr.name(),
-                _remote_addr.port(),
+                _remote_addr.to_string(),
                 e.filter
                 );
 
@@ -482,8 +476,7 @@ namespace dsn
 
                 dinfo("(s = %d) client session %s connected",
                     _socket,
-                    _remote_addr.name(),
-                    _remote_addr.port()
+                    _remote_addr.to_string()
                     );
 
                 set_connected();
@@ -539,8 +532,7 @@ namespace dsn
             int err = errno;
             dinfo("(s = %d) call connect to %s, return %d, err = %s",
                 _socket,
-                _remote_addr.name(),
-                _remote_addr.port(),
+                _remote_addr.to_string(),
                 rt,
                 strerror(err)
                 );
@@ -590,8 +582,7 @@ namespace dsn
                 struct kevent& e = *((struct kevent*)lolp_or_events);
                 dinfo("(s = %d) (server) epoll for send/recv to %s, events = %d",
                     _socket,
-                    _remote_addr.name(),
-                    _remote_addr.port(),
+                    _remote_addr.to_string(),
                     e.filter
                     );
                 this->on_send_recv_events_ready(lolp_or_events);

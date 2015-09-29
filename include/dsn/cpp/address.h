@@ -61,8 +61,8 @@ namespace dsn
         dsn_address_t* c_addr_ptr() { return &_addr; }
         uint32_t ip() const { return (uint32_t)_addr.u.v4.ip; }
         uint16_t port() const { return (uint16_t)_addr.u.v4.port; }
-        rpc_group_address* group_address() const { return (rpc_group_address*)_addr.u.group.group; }
-        dsn_group_t group_handle() const { return (dsn_group_t)_addr.u.group.group; }
+        rpc_group_address* group_address() const { return (rpc_group_address*)(uintptr_t)_addr.u.group.group; }
+        dsn_group_t group_handle() const { return (dsn_group_t)(uintptr_t)_addr.u.group.group; }
         const char* uri() const { return to_string(); }        
         bool is_invalid() const { return _addr.u.v4.type == HOST_TYPE_INVALID; }
         void set_invalid() { clear(); }
