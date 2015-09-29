@@ -481,11 +481,6 @@ DSN_API dsn_address_t dsn_primary_address()
     return ::dsn::task::get_current_rpc()->primary_address().c_addr();
 }
 
-DSN_API void dsn_primary_address2(dsn_address_t* paddr)
-{
-    *paddr = dsn_primary_address();
-}
-
 DSN_API bool dsn_rpc_register_handler(dsn_task_code_t code, const char* name, dsn_rpc_request_handler_t cb, void* param)
 {
     ::dsn::rpc_handler_ptr h(new ::dsn::rpc_handler_info(code));
@@ -508,7 +503,7 @@ DSN_API dsn_task_t dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_r
     return new ::dsn::rpc_response_task(msg, cb, param, reply_hash);
 }
 
-DSN_API void dsn_rpc_call(const dsn_address_t* server, dsn_task_t rpc_call, dsn_task_tracker_t tracker)
+DSN_API void dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call, dsn_task_tracker_t tracker)
 {
     ::dsn::rpc_response_task* task = (::dsn::rpc_response_task*)rpc_call;
     dassert(task->spec().type == TASK_TYPE_RPC_RESPONSE, "");
@@ -516,14 +511,14 @@ DSN_API void dsn_rpc_call(const dsn_address_t* server, dsn_task_t rpc_call, dsn_
 
     // TODO: remove this parameter in future
     auto msg = task->get_request();
-    msg->server_address = *server;
+    msg->server_address = server;
     ::dsn::task::get_current_rpc()->call(msg, task);
 }
 
-DSN_API dsn_message_t dsn_rpc_call_wait(const dsn_address_t* server, dsn_message_t request)
+DSN_API dsn_message_t dsn_rpc_call_wait(dsn_address_t server, dsn_message_t request)
 {
     auto msg = ((::dsn::message_ex*)request);
-    msg->server_address = *server;
+    msg->server_address = server;
 
     ::dsn::rpc_response_task* rtask = 
         new ::dsn::rpc_response_task(msg, nullptr, nullptr, 0);
@@ -544,10 +539,10 @@ DSN_API dsn_message_t dsn_rpc_call_wait(const dsn_address_t* server, dsn_message
     }
 }
 
-DSN_API void dsn_rpc_call_one_way(const dsn_address_t* server, dsn_message_t request)
+DSN_API void dsn_rpc_call_one_way(dsn_address_t server, dsn_message_t request)
 {
     auto msg = ((::dsn::message_ex*)request);
-    msg->server_address = *server;
+    msg->server_address = server;
 
     ::dsn::task::get_current_rpc()->call(msg, nullptr);
 }
@@ -558,11 +553,11 @@ DSN_API void dsn_rpc_reply(dsn_message_t response)
     ::dsn::rpc_engine::reply(msg);
 }
 
-DSN_API void dsn_rpc_forward(dsn_message_t request, dsn_address_t* addr)
+DSN_API void dsn_rpc_forward(dsn_message_t request, dsn_address_t addr)
 {
     // TODO: enable real forwarding
     auto resp = dsn_msg_create_response(request);
-    ::marshall(resp, *addr);
+    ::marshall(resp, addr);
     ::dsn::rpc_engine::reply((::dsn::message_ex*)resp, ::dsn::ERR_FORWARD_TO_OTHERS);
 }
 
@@ -637,11 +632,11 @@ DSN_API void dsn_file_write(dsn_handle_t file, const char* buffer, int count, ui
     ::dsn::task::get_current_disk()->write(callback);
 }
 
-DSN_API void dsn_file_copy_remote_directory(const dsn_address_t* remote, const char* source_dir, 
+DSN_API void dsn_file_copy_remote_directory(dsn_address_t remote, const char* source_dir, 
     const char* dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker)
 {
     std::shared_ptr<::dsn::remote_copy_request> rci(new ::dsn::remote_copy_request());
-    rci->source = *remote;
+    rci->source = remote;
     rci->source_dir = source_dir;
     rci->files.clear();
     rci->dest_dir = dest_dir;
@@ -653,10 +648,10 @@ DSN_API void dsn_file_copy_remote_directory(const dsn_address_t* remote, const c
     ::dsn::task::get_current_nfs()->call(rci, callback);
 }
 
-DSN_API void dsn_file_copy_remote_files(const dsn_address_t* remote, const char* source_dir, const char** source_files, const char* dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker)
+DSN_API void dsn_file_copy_remote_files(dsn_address_t remote, const char* source_dir, const char** source_files, const char* dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker)
 {
     std::shared_ptr<::dsn::remote_copy_request> rci(new ::dsn::remote_copy_request());
-    rci->source = *remote;
+    rci->source = remote;
     rci->source_dir = source_dir;
 
     rci->files.clear();
@@ -668,7 +663,7 @@ DSN_API void dsn_file_copy_remote_files(const dsn_address_t* remote, const char*
 
         dinfo("copy remote file %s from %s", 
             *(p-1),
-            rci->source.name()
+            rci->source.to_string()
             );
     }
 

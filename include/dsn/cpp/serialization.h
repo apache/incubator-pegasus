@@ -106,38 +106,12 @@ namespace dsn {
     // end point
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ dsn_address_t& val)
     {
-        reader.read_pod(val.type);
-        reader.read_pod(val.port);
-        
-        switch (val.type)
-        {
-        case HOST_TYPE_INVALID:
-            break;
-        case HOST_TYPE_IPV4:
-            {
-                reader.read_pod(val.ip);
-            }
-            break;
-        default:
-            dassert(false, "not implemented yet");
-        }
+        reader.read_pod(val);
     }
 
     inline void marshall(::dsn::binary_writer& writer, const dsn_address_t& val)
     {
-        writer.write_pod(val.type);
-        writer.write_pod(val.port);
-
-        switch (val.type)
-        {
-        case HOST_TYPE_INVALID:
-            break;
-        case HOST_TYPE_IPV4:
-            writer.write_pod(val.ip);
-            break;
-        default:
-            dassert(false, "not implemented yet");
-        }
+        writer.write_pod(val);
     }
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ ::dsn::rpc_address& val)
@@ -145,7 +119,7 @@ namespace dsn {
         unmarshall(reader, *val.c_addr_ptr());
     }
 
-    inline void marshall(::dsn::binary_writer& writer, const ::dsn::rpc_address& val)
+    inline void marshall(::dsn::binary_writer& writer, ::dsn::rpc_address val)
     {
         marshall(writer, val.c_addr());
     }
@@ -162,7 +136,7 @@ namespace dsn {
     }
 
     // end point
-    //extern inline void marshall(::dsn::binary_writer& writer, const ::dsn::rpc_address& val);
+    //extern inline void marshall(::dsn::binary_writer& writer, ::dsn::rpc_address val);
     //extern inline void unmarshall(::dsn::binary_reader& reader, /*out*/ ::dsn::rpc_address& val);
 
     // blob

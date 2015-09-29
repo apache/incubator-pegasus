@@ -141,9 +141,9 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
     {
         dassert (
             false,
-            "%s: on_learn %s:%hu, learner state is newer than learnee, "
+            "%s: on_learn %s, learner state is newer than learnee, "
             "with its appCommittedDecree = %llu vs local_committed_decree = %llu, ",
-            name(), request.learner.name(), request.learner.port(),
+            name(), request.learner.to_string(),
             request.last_committed_decree_in_app, local_committed_decree
             );
     }
@@ -156,11 +156,10 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
     }
 
     ddebug(
-        "%s: on_learn %s:%hu, with local_committed_decree = %llu, "
+        "%s: on_learn %s, with local_committed_decree = %llu, "
         "localAppC/DDecree = <%llu, %llu>, learn_start_decree = %llu",
         name(), 
-        request.learner.name(), 
-        request.learner.port(),
+        request.learner.to_string(),
         local_committed_decree, 
         _app->last_committed_decree(), 
         _app->last_durable_decree(),
@@ -189,8 +188,8 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
             delayed_replay_prepare_list = true;
             
             ddebug(
-                "%s: on_learn %s:%hu, set prepareStartDecree = %llu",
-                name(), request.learner.name(), request.learner.port(),
+                "%s: on_learn %s, set prepareStartDecree = %llu",
+                name(), request.learner.to_string(),
                 local_committed_decree + 1
             );
         }
@@ -571,7 +570,7 @@ void replica::handle_learning_error(error_code err)
 }
 
 void replica::handle_learning_succeeded_on_primary(
-    const ::dsn::rpc_address& node, 
+    ::dsn::rpc_address node, 
     uint64_t learn_signature
     )
 {

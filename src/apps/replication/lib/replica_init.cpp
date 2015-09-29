@@ -139,8 +139,7 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
 {
     dassert (nullptr == _app, "");
 
-    sprintf(_name, "%u.%u @ %s:%hu", _config.gpid.app_id, _config.gpid.pidx, primary_address().name(),
-        primary_address().port());
+    sprintf(_name, "%u.%u @ %s", _config.gpid.app_id, _config.gpid.pidx, primary_address().to_string());
 
     _app = ::dsn::utils::factory_store<replication_app_base>::create(app_type, PROVIDER_TYPE_MAIN, this);
     if (nullptr == _app)

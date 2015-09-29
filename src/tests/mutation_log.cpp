@@ -1,6 +1,7 @@
 # include "mutation_log.h"
 # include <gtest/gtest.h>
 
+using namespace ::dsn;
 using namespace ::dsn::replication;
 
 TEST(replication, log_file)

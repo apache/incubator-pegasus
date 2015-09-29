@@ -68,10 +68,7 @@ public:
     //  * set node state from live to unlive, and returns configuration_update_request to apply
     //  * set node state from unlive to live, and leaves load balancer to update configuration
     void set_node_state(const node_states& nodes, /*out*/ machine_fail_updates* pris);
-
-    // get primary meta server
-    bool get_meta_server_primary(/*out*/ ::dsn::rpc_address& node);
-
+    
     // load state from checkpoint file
     void load(const char* chk_point);
 
@@ -81,17 +78,17 @@ public:
     // partition server & client => meta server
 
     // query all partition configurations of a replica server
-    void query_configuration_by_node(configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response);
+    void query_configuration_by_node(const configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response);
 
     // query specified partition configurations by app_name and partition indexes
-    void query_configuration_by_index(configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response);
+    void query_configuration_by_index(const configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response);
 
     // query specified partition configuration by gpid
     void query_configuration_by_gpid(global_partition_id id, /*out*/ partition_configuration& config);
 
     // update partition configuration.
     // first persistent to log file, then apply to memory state
-    void update_configuration(configuration_update_request& request, /*out*/ configuration_update_response& response);
+    void update_configuration(const configuration_update_request& request, /*out*/ configuration_update_response& response);
 
     void unfree_if_possible_on_start();
 
@@ -103,7 +100,7 @@ private:
     void check_consistency(global_partition_id gpid);
 
     // do real work of update configuration
-    void update_configuration_internal(configuration_update_request& request, /*out*/ configuration_update_response& response);
+    void update_configuration_internal(const configuration_update_request& request, /*out*/ configuration_update_response& response);
 
 private:
     friend class ::dsn::replication::replication_checker;

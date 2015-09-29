@@ -46,7 +46,7 @@ namespace dsn
                 int         reply_hash;
             };
 
-            static ::dsn::rpc_address get_next_server(const ::dsn::rpc_address& currentServer, const std::vector<::dsn::rpc_address>& servers)
+            static ::dsn::rpc_address get_next_server(::dsn::rpc_address currentServer, const std::vector<::dsn::rpc_address>& servers)
             {
                 if (currentServer.is_invalid())
                 {
@@ -96,7 +96,7 @@ namespace dsn
         } // end namespace rpc_replicated_impl 
 
         dsn::task_ptr call_replicated(
-            const ::dsn::rpc_address& first_server,
+            ::dsn::rpc_address first_server,
             const std::vector<::dsn::rpc_address>& servers,
             dsn_message_t request,
 

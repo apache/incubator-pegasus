@@ -34,7 +34,7 @@ namespace dsn
         template<typename TRequest, typename TResponse>
         dsn::task_ptr call_typed_replicated(
             // servers
-            const ::dsn::rpc_address& first_server,
+            ::dsn::rpc_address first_server,
             const std::vector<::dsn::rpc_address>& servers,
             // request
             dsn_task_code_t code,
@@ -42,14 +42,14 @@ namespace dsn
 
             // callback
             clientlet* owner,
-            std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&, const ::dsn::rpc_address&)> callback,
+            std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&, ::dsn::rpc_address)> callback,
             int request_hash = 0,
             int timeout_milliseconds = 0,
             int reply_hash = 0
             );
 
         dsn::task_ptr call_replicated(
-            const ::dsn::rpc_address& first_server,
+            ::dsn::rpc_address first_server,
             const std::vector<::dsn::rpc_address>& servers,
             dsn_message_t request,
 
@@ -68,7 +68,7 @@ namespace dsn
                 dsn_message_t request,
                 dsn_message_t response,
                 std::shared_ptr<TRequest>& req,
-                std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&, const ::dsn::rpc_address&)> callback
+                std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&, ::dsn::rpc_address)> callback
                 )
             {
                 ::dsn::rpc_address srv;
@@ -86,7 +86,7 @@ namespace dsn
         template<typename TRequest, typename TResponse>
         inline dsn::task_ptr call_typed_replicated(
             // servers
-            const ::dsn::rpc_address& first_server,
+            ::dsn::rpc_address first_server,
             const std::vector<::dsn::rpc_address>& servers,
             // request
             dsn_task_code_t code,
@@ -94,7 +94,7 @@ namespace dsn
 
             // callback
             clientlet* owner,
-            std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&, const ::dsn::rpc_address&)> callback,
+            std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&, ::dsn::rpc_address)> callback,
             int request_hash,
             int timeout_milliseconds,
             int reply_hash

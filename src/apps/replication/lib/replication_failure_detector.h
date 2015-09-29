@@ -41,14 +41,14 @@ public:
 
      // client side
     virtual void on_master_disconnected( const std::vector<::dsn::rpc_address>& nodes );
-    virtual void on_master_connected( const ::dsn::rpc_address& node);
+    virtual void on_master_connected( ::dsn::rpc_address node);
 
     // server side
     virtual void on_worker_disconnected( const std::vector<::dsn::rpc_address>& nodes ) { dassert (false, ""); }
-    virtual void on_worker_connected( const ::dsn::rpc_address& node )  { dassert (false, ""); }
+    virtual void on_worker_connected( ::dsn::rpc_address node )  { dassert (false, ""); }
 
     ::dsn::rpc_address current_server_contact() const { zauto_lock l(_meta_lock); return dsn_group_get_leader(_meta_servers.group_handle()); }
-    const ::dsn::rpc_address& get_servers() const  { return _meta_servers; }
+    ::dsn::rpc_address get_servers() const  { return _meta_servers; }
 
 private:
     mutable zlock            _meta_lock;

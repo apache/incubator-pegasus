@@ -350,10 +350,10 @@ namespace dsn {
         }
 
         _local_primary_address = _client_nets[0][0]->address();
-        _local_primary_address.c_addr_ptr()->port = aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id + ctx.port_shift_value;
+        _local_primary_address.c_addr_ptr()->u.v4.port = aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id + ctx.port_shift_value;
 
-        ddebug("=== service_node=[%s], primary_address=[%s:%hu] ===",
-               _node->name(), _local_primary_address.name(), _local_primary_address.port());
+        ddebug("=== service_node=[%s], primary_address=[%s] ===",
+            _node->name(), _local_primary_address.to_string());
 
         _is_running = true;
         return ERR_OK;
@@ -416,10 +416,9 @@ namespace dsn {
         {
             // TODO: warning about this msg
             dwarn(
-                "recv unknown message with type %s from %s:%hu",
+                "recv unknown message with type %s from %s",
                 msg->header->rpc_name,
-                msg->from_address.name(),
-                msg->from_address.port()
+                msg->from_address.to_string()
                 );
         }
     }
@@ -437,9 +436,6 @@ namespace dsn {
         {
         case HOST_TYPE_IPV4:
             call_ip(request->server_address, request, call);
-            break;
-        case HOST_TYPE_IPV6:
-            dassert(false, "ipv6 support is to be implemented");
             break;
         case HOST_TYPE_URI:
             dassert(false, "uri as host support is to be implemented");
@@ -469,7 +465,7 @@ namespace dsn {
         return;
     }
 
-    void rpc_engine::call_ip(const rpc_address& addr, message_ex* request, rpc_response_task* call, bool reset_request_id)
+    void rpc_engine::call_ip(rpc_address addr, message_ex* request, rpc_response_task* call, bool reset_request_id)
     {
         request->from_address = primary_address();
         request->to_address = addr;

@@ -55,7 +55,7 @@ void meta_server_failure_detector::on_worker_disconnected(const std::vector<::ds
     {
         states.push_back(std::make_pair(n, false));
 
-        dwarn("client expired: %s:%hu", n.name(), n.port());
+        dwarn("client expired: %s", n.to_string());
     }
     
     machine_fail_updates pris;
@@ -63,17 +63,16 @@ void meta_server_failure_detector::on_worker_disconnected(const std::vector<::ds
     
     for (auto& pri : pris)
     {
-        dinfo("%d.%d primary node for %s:%hu is gone, update configuration on meta server", 
+        dinfo("%d.%d primary node for %s is gone, update configuration on meta server", 
             pri.first.app_id,
             pri.first.pidx,
-            pri.second->node.name(),
-            pri.second->node.port()
+            pri.second->node.to_string()
             );
         _svc->update_configuration(pri.second);
     }
 }
 
-void meta_server_failure_detector::on_worker_connected(const ::dsn::rpc_address& node)
+void meta_server_failure_detector::on_worker_connected(::dsn::rpc_address node)
 {
     if (!is_primary())
     {
@@ -84,12 +83,12 @@ void meta_server_failure_detector::on_worker_connected(const ::dsn::rpc_address&
     states.push_back(std::make_pair(node, true));
 
     dwarn("Client reconnected",
-        "Client %s:%hu", node.name(), node.port());
+        "Client %s", node.to_string());
 
     _state->set_node_state(states, nullptr);
 }
 
-void meta_server_failure_detector::set_primary(const rpc_address& primary)
+void meta_server_failure_detector::set_primary(rpc_address primary)
 {
     bool old = _is_primary;
     {

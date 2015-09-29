@@ -101,3 +101,11 @@ __pragma(warning(disable:4127))
 # define ARRAYSIZE(a) \
     ((sizeof(a) / sizeof(*(a))) / static_cast<size_t>(!(sizeof(a) % sizeof(*(a)))))
 # endif
+
+# ifndef snprintf_p
+# if defined(_WIN32)
+# define snprintf_p sprintf_s
+# else
+# define snprintf_p std::snprintf
+# endif
+# endif

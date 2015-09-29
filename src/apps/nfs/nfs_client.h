@@ -8,7 +8,7 @@ class nfs_client
     : public virtual ::dsn::clientlet
 {
 public:
-    nfs_client(const ::dsn::rpc_address& server) { _server = server; }
+    nfs_client(::dsn::rpc_address server) { _server = server; }
     nfs_client() {  }
     virtual ~nfs_client() {}
 

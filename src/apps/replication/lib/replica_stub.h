@@ -39,7 +39,7 @@ class mutation_log;
 class replication_failure_detector;
 typedef std::unordered_map<global_partition_id, replica_ptr> replicas;
 // from, new replica config, isClosing
-typedef std::function<void (const ::dsn::rpc_address&, const replica_configuration&, bool)> replica_state_subscriber;
+typedef std::function<void (::dsn::rpc_address, const replica_configuration&, bool)> replica_state_subscriber;
 
 class replica_stub : public serverlet<replica_stub>, public ref_counter
 {

@@ -103,14 +103,14 @@ DSN_API void dsn_msg_release_ref(dsn_message_t msg)
     ((::dsn::message_ex*)msg)->release_ref();
 }
 
-DSN_API void dsn_msg_from_address(dsn_message_t msg, /*out*/ dsn_address_t* ep)
+DSN_API dsn_address_t dsn_msg_from_address(dsn_message_t msg)
 {
-    *ep = ((::dsn::message_ex*)msg)->from_address.c_addr();
+    return ((::dsn::message_ex*)msg)->from_address.c_addr();
 }
 
-DSN_API void dsn_msg_to_address(dsn_message_t msg, /*out*/ dsn_address_t* ep)
+DSN_API dsn_address_t dsn_msg_to_address(dsn_message_t msg)
 {
-    *ep = ((::dsn::message_ex*)msg)->to_address.c_addr();
+    return ((::dsn::message_ex*)msg)->to_address.c_addr();
 }
 
 DSN_API void dsn_msg_set_context(

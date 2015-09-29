@@ -198,7 +198,7 @@ void meta_service::on_load_balance_start()
 //
 //    ::dsn::rpc_address faddr;
 //    dsn_msg_from_address(msg, faddr.c_addr_ptr());
-//    dinfo("recv meta request %s from %s:%hu", 
+//    dinfo("recv meta request %s from %s", 
 //        dsn_task_code_to_string(hdr.rpc_tag),
 //        faddr.name(),
 //        faddr.port()
@@ -262,9 +262,7 @@ void meta_service::on_query_configuration_by_node(dsn_message_t msg)
 
     if (!_failure_detector->is_primary())
     {
-        rpc_address primary;
-        _failure_detector->get_primary(primary);
-        dsn_rpc_forward(msg, primary.c_addr_ptr());
+        dsn_rpc_forward(msg, _failure_detector->get_primary().c_addr());
         return;
     }
 
@@ -287,9 +285,7 @@ void meta_service::on_query_configuration_by_index(dsn_message_t msg)
 
     if (!_failure_detector->is_primary())
     {
-        rpc_address primary;
-        _failure_detector->get_primary(primary);
-        dsn_rpc_forward(msg, primary.c_addr_ptr());
+        dsn_rpc_forward(msg, _failure_detector->get_primary().c_addr());
         return;
     }
         
@@ -346,9 +342,7 @@ void meta_service::on_update_configuration(dsn_message_t req)
 
     if (!_failure_detector->is_primary())
     {
-        rpc_address primary;
-        _failure_detector->get_primary(primary);
-        dsn_rpc_forward(req, primary.c_addr_ptr());
+        dsn_rpc_forward(req, _failure_detector->get_primary().c_addr());
         return;
     }
 

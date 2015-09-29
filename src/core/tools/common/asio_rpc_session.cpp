@@ -136,7 +136,7 @@ namespace dsn {
         asio_rpc_session::asio_rpc_session(
             asio_network_provider& net,
             std::shared_ptr<boost::asio::ip::tcp::socket>& socket,
-            const ::dsn::rpc_address& remote_addr,
+            ::dsn::rpc_address remote_addr,
             rpc_client_matcher_ptr& matcher,
             std::shared_ptr<message_parser>& parser
             )
@@ -157,7 +157,7 @@ namespace dsn {
                 catch (std::exception& ex)
                 {
                     ex;
-                    /*dwarn("network session %s:%hu exits failed, err = %s",
+                    /*dwarn("network session %s exits failed, err = %s",
                     remote_address().to_ip_string().c_str(),
                     static_cast<int>remote_address().port(),
                     ex.what()
@@ -180,9 +180,8 @@ namespace dsn {
                 {
                     if (!ec)
                     {
-                        dinfo("client session %s:%hu connected",
-                            _remote_addr.name(),
-                            _remote_addr.port()
+                        dinfo("client session %s connected",
+                            _remote_addr.to_string()
                             );
 
                         set_options();
@@ -192,9 +191,8 @@ namespace dsn {
                     }
                     else
                     {
-                        derror("client session connect to %s:%hu failed, error = %s",
-                            _remote_addr.name(),
-                            _remote_addr.port(),
+                        derror("client session connect to %s failed, error = %s",
+                            _remote_addr.to_string(),
                             ec.message().c_str()
                             );
                         on_failure();
@@ -206,7 +204,7 @@ namespace dsn {
 
         asio_rpc_session::asio_rpc_session(
             asio_network_provider& net,
-            const ::dsn::rpc_address& remote_addr,
+            ::dsn::rpc_address remote_addr,
             std::shared_ptr<boost::asio::ip::tcp::socket>& socket,
             std::shared_ptr<message_parser>& parser
             )

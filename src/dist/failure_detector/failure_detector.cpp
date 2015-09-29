@@ -89,7 +89,7 @@ error_code failure_detector::stop()
     return ERR_OK;
 }
 
-void failure_detector::register_master(const ::dsn::rpc_address& target)
+void failure_detector::register_master(::dsn::rpc_address target)
 {
     uint64_t now = now_ms();
 
@@ -100,23 +100,19 @@ void failure_detector::register_master(const ::dsn::rpc_address& target)
     auto ret = _masters.insert(std::make_pair(target, record));
     if (ret.second)
     {
-        dinfo(
-            "register_rpc_handler master successfully to %s:%hu",
-            target.name(), target.port());
+        dinfo("register_rpc_handler master successfully to %s", target.to_string());
     }
     else
     {
         // active the beacon again in case previously local node is not in target's allow list
         ret.first->second.rejected = false;
-        dinfo(
-            "master %s:%hu already registered",
-            target.name(), target.port());
+        dinfo("master %s already registered", target.to_string());
     }
 
     send_beacon(target, now_ms());
 }
 
-bool failure_detector::switch_master(const ::dsn::rpc_address& from, const ::dsn::rpc_address& to)
+bool failure_detector::switch_master(::dsn::rpc_address from, ::dsn::rpc_address to)
 {
     {
         zauto_lock l(_lock);
@@ -128,9 +124,9 @@ bool failure_detector::switch_master(const ::dsn::rpc_address& from, const ::dsn
             if (it2 != _masters.end())
             {
                 dinfo(
-                    "master switch, switch master from %s:%hu to %s:%hu failed as both are already registered",
-                    from.name(), from.port(),
-                    to.name(), to.port()
+                    "master switch, switch master from %s to %s failed as both are already registered",
+                    from.to_string(),
+                    to.to_string()
                     );
                 return false;
             }
@@ -141,17 +137,17 @@ bool failure_detector::switch_master(const ::dsn::rpc_address& from, const ::dsn
             _masters.erase(from);
 
             dinfo(
-                "master switch, switch master from %s:%hu to %s:%hu succeeded",
-                from.name(), from.port(),
-                to.name(), to.port()
+                "master switch, switch master from %s to %s succeeded",
+                from.to_string(),
+                to.to_string()
                 );
         }
         else
         {
             dinfo(
-                "master switch, switch master from %s:%hu to %s:%hu failed as the former has not been registered yet",
-                from.name(), from.port(),
-                to.name(), to.port()
+                "master switch, switch master from %s to %s failed as the former has not been registered yet",
+                from.to_string(),
+                to.to_string()
                 );
             return false;
         }
@@ -170,11 +166,11 @@ bool failure_detector::is_time_greater_than(uint64_t ts, uint64_t base)
         return false;
 }
 
-void failure_detector::report(const ::dsn::rpc_address& node, bool is_master, bool is_connected)
+void failure_detector::report(::dsn::rpc_address node, bool is_master, bool is_connected)
 {
-    ddebug("%s %s:%hu %sconnected", is_master ? "master":"worker", node.name(), node.port(), is_connected ? "" : "dis");
+    ddebug("%s %s %s connected", is_master ? "master":"worker", node.to_string(), is_connected ? "" : "dis");
 
-    printf ("%s %s:%hu %sconnected\n", is_master ? "master":"worker", node.name(), node.port(), is_connected ? "" : "dis");    
+    printf ("%s %s %s connected\n", is_master ? "master":"worker", node.to_string(), is_connected ? "" : "dis");    
 }
 
 /*
@@ -255,13 +251,13 @@ void failure_detector::process_all_records()
     }
 }
 
-void failure_detector::add_allow_list( const ::dsn::rpc_address& node)
+void failure_detector::add_allow_list( ::dsn::rpc_address node)
 {
     zauto_lock l(_lock);
     _allow_list.insert(node);
 }
 
-bool failure_detector::remove_from_allow_list( const ::dsn::rpc_address& node)
+bool failure_detector::remove_from_allow_list( ::dsn::rpc_address node)
 {
     zauto_lock l(_lock);
     return _allow_list.erase(node) > 0;
@@ -271,7 +267,7 @@ void failure_detector::on_ping_internal(const beacon_msg& beacon, /*out*/ beacon
 {
     ack.is_master = true;
     ack.this_node = beacon.to;
-    primary_address(ack.primary_node);
+    ack.primary_node = primary_address();
     ack.time = beacon.time;
     ack.allowed = true;
 
@@ -285,7 +281,7 @@ void failure_detector::on_ping_internal(const beacon_msg& beacon, /*out*/ beacon
     {
         if (_use_allow_list && _allow_list.find(node) == _allow_list.end())
         {
-            ddebug("Client %s:%hu is rejected", node.name(), node.port());
+            ddebug("Client %s is rejected", node.to_string());
             ack.allowed = false;
             return;
         }
@@ -335,7 +331,7 @@ void failure_detector::end_ping(::dsn::error_code err, const beacon_ack& ack, vo
     if ( itr == _masters.end() )
     {
         dwarn("Failure in process beacon ack in liveness monitor, received beacon ack without corresponding beacon record, remote node name[%s], local node name[%s]",
-            node.name(), primary_address().name());
+            node.to_string(), primary_address().to_string());
 
         return;
     }
@@ -343,7 +339,7 @@ void failure_detector::end_ping(::dsn::error_code err, const beacon_ack& ack, vo
     master_record& record = itr->second;
     if (!ack.allowed)
     {
-        ddebug( "Server %s:%hu rejected me as i'm not in its allow list, stop sending beacon message", node.name(), node.port());
+        ddebug("Server %s rejected me as i'm not in its allow list, stop sending beacon message", node.to_string());
         record.rejected = true;
         return;
     }
@@ -367,7 +363,7 @@ void failure_detector::end_ping(::dsn::error_code err, const beacon_ack& ack, vo
     }
 }
 
-bool failure_detector::unregister_master(const ::dsn::rpc_address & node)
+bool failure_detector::unregister_master(::dsn::rpc_address node)
 {
     zauto_lock l(_lock);
 
@@ -385,12 +381,12 @@ bool failure_detector::unregister_master(const ::dsn::rpc_address & node)
     }
 
     dinfo("remove send record sucessfully, removed node [%s], removed entry count [%u]",
-        node.name(), (uint32_t)count);
+        node.to_string(), (uint32_t)count);
     
     return ret;
 }
 
-bool failure_detector::is_master_connected( const ::dsn::rpc_address& node) const
+bool failure_detector::is_master_connected( ::dsn::rpc_address node) const
 {
     zauto_lock l(_lock);
     auto it = _masters.find(node);
@@ -400,7 +396,7 @@ bool failure_detector::is_master_connected( const ::dsn::rpc_address& node) cons
         return false;
 }
 
-void failure_detector::register_worker( const ::dsn::rpc_address& target, bool is_connected)
+void failure_detector::register_worker( ::dsn::rpc_address target, bool is_connected)
 {
     uint64_t now = now_ms();
 
@@ -412,19 +408,15 @@ void failure_detector::register_worker( const ::dsn::rpc_address& target, bool i
     auto ret = _workers.insert(std::make_pair(target, record));
     if ( ret.second )
     {
-        dinfo(
-            "register_rpc_handler worker successfully to %s:%hu",
-            target.name(), target.port());
+        dinfo("register_rpc_handler worker successfully to %s", target.to_string());
     }
     else
     {
-        dinfo(       
-            "worker already registered to %s:%hu",
-            target.name(), target.port());
+        dinfo("worker already registered to %s", target.to_string());
     }
 }
 
-bool failure_detector::unregister_worker(const ::dsn::rpc_address& node)
+bool failure_detector::unregister_worker(::dsn::rpc_address node)
 {
     zauto_lock l(_lock);
 
@@ -442,7 +434,7 @@ bool failure_detector::unregister_worker(const ::dsn::rpc_address& node)
     }
 
     dinfo("remove recv record sucessfully, removed node [%s], removed entry count [%u]",
-        node.name(), (uint32_t)count);
+        node.to_string(), (uint32_t)count);
     return ret;
 }
 
@@ -452,7 +444,7 @@ void failure_detector::clear_workers()
     _workers.clear();
 }
 
-bool failure_detector::is_worker_connected( const ::dsn::rpc_address& node) const
+bool failure_detector::is_worker_connected( ::dsn::rpc_address node) const
 {
     zauto_lock l(_lock);
     auto it = _workers.find(node);
@@ -462,11 +454,11 @@ bool failure_detector::is_worker_connected( const ::dsn::rpc_address& node) cons
         return false;
 }
 
-void failure_detector::send_beacon(const ::dsn::rpc_address& target, uint64_t time)
+void failure_detector::send_beacon(::dsn::rpc_address target, uint64_t time)
 {
     beacon_msg beacon;
     beacon.time = time;
-    primary_address(beacon.from);
+    beacon.from = primary_address();
     beacon.to = target;
 
     begin_ping(

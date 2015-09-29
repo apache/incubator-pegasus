@@ -145,7 +145,7 @@ ErrOut:
     return;
 }
 
-void replica::send_prepare_message(const ::dsn::rpc_address& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds)
+void replica::send_prepare_message(::dsn::rpc_address addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds)
 {
     dsn_message_t msg = dsn_msg_create_request(RPC_PREPARE, timeout_milliseconds, gpid_to_hash(get_gpid()));
     replica_configuration rconfig;
@@ -170,9 +170,9 @@ void replica::send_prepare_message(const ::dsn::rpc_address& addr, partition_sta
         );
 
     ddebug( 
-        "%s: mutation %s send_prepare_message to %s:%hu as %s", 
+        "%s: mutation %s send_prepare_message to %s as %s",  
         name(), mu->name(),
-        addr.name(), addr.port(),
+        addr.to_string(),
         enum_to_string(rconfig.status)
         );
 }
@@ -379,8 +379,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
     
     dassert (mu->data.header.ballot == get_ballot(), "");
 
-    ::dsn::rpc_address node;
-    dsn_msg_to_address(request, node.c_addr_ptr());
+    ::dsn::rpc_address node = dsn_msg_to_address(request);
     partition_status st = _primary_states.get_node_status(node);
 
     // handle reply
@@ -397,9 +396,9 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
     }
     
     ddebug(
-        "%s: mutation %s on_prepare_reply from %s:%hu, err = %s",
+        "%s: mutation %s on_prepare_reply from %s, err = %s",
         name(), mu->name(),
-        node.name(), node.port(),
+        node.to_string(),
         resp.err.to_string()
         );
        

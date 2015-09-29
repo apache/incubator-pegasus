@@ -145,12 +145,11 @@ void load_balancer::run_lb(partition_configuration& pc)
 }
 
 // meta server => partition server
-void load_balancer::send_proposal(const ::dsn::rpc_address& node, const configuration_update_request& proposal)
+void load_balancer::send_proposal(::dsn::rpc_address node, const configuration_update_request& proposal)
 {
-    dinfo("send proposal %s of %s:%hu, current ballot = %lld", 
+    dinfo("send proposal %s of %s, current ballot = %lld", 
         enum_to_string(proposal.type),
-        proposal.node.name(),
-        proposal.node.port(),
+        proposal.node.to_string(),
         proposal.config.ballot
         );
 

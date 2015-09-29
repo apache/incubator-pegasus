@@ -195,9 +195,7 @@ namespace dsn
             dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP, 
                 "invalid given channel %s", channel.to_string());
 
-            char name[128];
-            gethostname(name, sizeof(name));
-            _address = ::dsn::rpc_address(HOST_TYPE_IPV4, name, port);
+            _address.assign_ipv4(get_local_ipv4(), port);
 
             if (!client_only)
             {
@@ -233,7 +231,7 @@ namespace dsn
             return ERR_OK;
         }
 
-        rpc_session_ptr hpc_network_provider::create_client_session(const ::dsn::rpc_address& server_addr)
+        rpc_session_ptr hpc_network_provider::create_client_session(::dsn::rpc_address server_addr)
         {
             auto matcher = get_client_matcher();
             auto parser = new_message_parser();
@@ -283,8 +281,7 @@ namespace dsn
                         dassert(false, "getpeername failed, err = %d", ::WSAGetLastError());
                     }
 
-                    ::dsn::rpc_address client_addr;
-                    dsn_address_build_ipv4(client_addr.c_addr_ptr(), ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
+                    ::dsn::rpc_address client_addr(ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
 
                     auto parser = new_message_parser();
                     auto s = new hpc_rpc_session(_accept_sock, parser, *this, client_addr);
@@ -489,7 +486,7 @@ namespace dsn
             socket_t sock,
             std::shared_ptr<dsn::message_parser>& parser,
             connection_oriented_network& net,
-            const ::dsn::rpc_address& remote_addr,
+            ::dsn::rpc_address remote_addr,
             rpc_client_matcher_ptr& matcher
             )
             : rpc_session(net, remote_addr, matcher, parser),
@@ -520,9 +517,8 @@ namespace dsn
                 }
                 else
                 {
-                    dinfo("client session %s:%hu connected",
-                        _remote_addr.name(),
-                        _remote_addr.port()
+                    dinfo("client session %s connected",
+                        _remote_addr.to_string()
                         );
 
                     set_connected();
@@ -562,7 +558,7 @@ namespace dsn
             socket_t sock,
             std::shared_ptr<dsn::message_parser>& parser,
             connection_oriented_network& net,
-            const ::dsn::rpc_address& remote_addr
+            ::dsn::rpc_address remote_addr
             )
             : rpc_session(net, remote_addr, parser),
             _socket(sock)

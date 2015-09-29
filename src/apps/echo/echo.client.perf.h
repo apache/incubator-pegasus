@@ -9,7 +9,7 @@ class echo_perf_test_client
 {
 public:
     echo_perf_test_client(
-        const ::dsn::rpc_address& server)
+        ::dsn::rpc_address server)
         : echo_client(server)
     {
     }

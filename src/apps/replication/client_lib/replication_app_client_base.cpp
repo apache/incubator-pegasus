@@ -50,7 +50,7 @@ void replication_app_client_base::load_meta_servers(
         auto pos1 = s.find_first_of(':');
         if (pos1 != std::string::npos)
         {
-            ::dsn::rpc_address ep(HOST_TYPE_IPV4, s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
+            ::dsn::rpc_address ep(s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
             servers.push_back(ep);
         }
     }
@@ -62,12 +62,12 @@ replication_app_client_base::replication_app_client_base(
     int task_bucket_count/* = 13*/
     )
     : clientlet(task_bucket_count)
-    , _meta_servers(dsn_group_build("meta.servers"), false)
 {
+    _meta_servers.assign_group(dsn_group_build("meta.servers"));
     _app_name = std::string(app_name); 
 
     for (auto& m : meta_servers)
-        dsn_group_add(_meta_servers.group_handle(), &m.c_addr());
+        dsn_group_add(_meta_servers.group_handle(), m.c_addr());
 
     _app_id = -1;
     _app_partition_count = -1;
@@ -76,6 +76,7 @@ replication_app_client_base::replication_app_client_base(
 replication_app_client_base::~replication_app_client_base()
 {
     clear_all_pending_tasks();
+    dsn_group_destroy(_meta_servers.group_handle());
 }
 
 void replication_app_client_base::clear_all_pending_tasks()
@@ -118,7 +119,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->partition_index = partition_index;    
     rc->write_header.gpid.app_id = _app_id;
     rc->write_header.gpid.pidx = partition_index;
-    rc->write_header.code = code;
+    rc->write_header.code = dsn_task_code_to_string(code);
     rc->timeout_timer = nullptr;
     rc->timeout_ms = timeout_milliseconds;
     rc->timeout_ts_us = now_us() + timeout_milliseconds * 1000;
@@ -160,7 +161,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->partition_index = partition_index;
     rc->read_header.gpid.app_id = _app_id;
     rc->read_header.gpid.pidx = partition_index;
-    rc->read_header.code = code;
+    rc->read_header.code = dsn_task_code_to_string(code);
     rc->read_header.semantic = read_semantic;
     rc->read_header.version_decree = snapshot_decree;
     rc->timeout_timer = nullptr;

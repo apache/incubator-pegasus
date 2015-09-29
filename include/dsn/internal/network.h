@@ -70,7 +70,7 @@ namespace dsn {
         //
         // the named address (when client_only is true)
         //
-        virtual const ::dsn::rpc_address& address() = 0;
+        virtual ::dsn::rpc_address address() = 0;
 
         //
         // this is where the upper rpc engine calls down for a RPC call
@@ -108,6 +108,9 @@ namespace dsn {
 
 
         int max_buffer_block_count_per_send() const { return _max_buffer_block_count_per_send; }
+
+    protected:
+        static uint32_t get_local_ipv4();
 
     protected:
         rpc_engine                    *_engine;
@@ -182,19 +185,19 @@ namespace dsn {
         virtual ~connection_oriented_network() {}
 
         // server session management
-        rpc_session_ptr get_server_session(const ::dsn::rpc_address& ep);
+        rpc_session_ptr get_server_session(::dsn::rpc_address ep);
         void on_server_session_accepted(rpc_session_ptr& s);
         void on_server_session_disconnected(rpc_session_ptr& s);
 
         // client session management
-        rpc_session_ptr get_client_session(const ::dsn::rpc_address& ep);
+        rpc_session_ptr get_client_session(::dsn::rpc_address ep);
         void on_client_session_disconnected(rpc_session_ptr& s);
 
         // called upon RPC call, rpc client session is created on demand
         virtual void call(message_ex* request, rpc_response_task* call);
 
         // to be defined
-        virtual rpc_session_ptr create_client_session(const ::dsn::rpc_address& server_addr) = 0;
+        virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) = 0;
 
     protected:
         typedef std::unordered_map<::dsn::rpc_address, rpc_session_ptr> client_sessions;
@@ -216,7 +219,7 @@ namespace dsn {
                 
         bool has_pending_out_msgs();
         bool is_client() const { return _matcher.get() != nullptr; }
-        const ::dsn::rpc_address& remote_address() const { return _remote_addr; }
+        ::dsn::rpc_address remote_address() const { return _remote_addr; }
         connection_oriented_network& net() const { return _net; }
         void send_message(message_ex* msg);
 
@@ -224,7 +227,7 @@ namespace dsn {
     public:        
         rpc_session(
             connection_oriented_network& net, 
-            const ::dsn::rpc_address& remote_addr, 
+            ::dsn::rpc_address remote_addr, 
             rpc_client_matcher_ptr& matcher,
             std::shared_ptr<message_parser>& parser
             );
@@ -238,7 +241,7 @@ namespace dsn {
     public:        
         rpc_session(
             connection_oriented_network& net, 
-            const ::dsn::rpc_address& remote_addr,
+            ::dsn::rpc_address remote_addr,
             std::shared_ptr<message_parser>& parser
             );
         void on_recv_request(message_ex* msg, int delay_ms);

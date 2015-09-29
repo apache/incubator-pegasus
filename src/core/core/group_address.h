@@ -29,23 +29,23 @@
 
 namespace dsn
 {
-    class rpc_group_address : public ref_counter
+    class rpc_group_address
     {
     public:
         rpc_group_address(const char* name);
-        bool add(const rpc_address& addr);
-        void set_leader(const rpc_address& addr);
-        bool remove(const rpc_address& addr);
-        bool contains(const rpc_address& addr);
+        bool add(rpc_address addr);
+        void set_leader(rpc_address addr);
+        bool remove(rpc_address addr);
+        bool contains(rpc_address addr);
 
         dsn_group_t handle() const { return (dsn_group_t)this; }
         const std::vector<rpc_address>& members() const { return _members; }
-        const rpc_address& random_member() const { return _members[dsn_random32(0, (uint32_t)_members.size() - 1)]; }
-        const rpc_address& next(const rpc_address& current) const;
-        const rpc_address& leader() const { return _leader_index >= 0 ? _members[_leader_index] : _invalid; };
-        const rpc_address& possible_leader();
+        rpc_address random_member() const { return _members[dsn_random32(0, (uint32_t)_members.size() - 1)]; }
+        rpc_address next(rpc_address current) const;
+        rpc_address leader() const { return _leader_index >= 0 ? _members[_leader_index] : _invalid; };
+        rpc_address possible_leader();
         const char* name() const { return _name.c_str(); }
-        const rpc_address& address() const { return _group_address; }
+        rpc_address address() const { return _group_address; }
 
     private:
         typedef std::vector<rpc_address> members_t;
@@ -62,10 +62,10 @@ namespace dsn
     {
         _name = name;
         _leader_index = -1;
-        _group_address.assign(handle());
+        _group_address.assign_group(handle());
     }
 
-    inline bool rpc_group_address::add(const rpc_address& addr)
+    inline bool rpc_group_address::add(rpc_address addr)
     {
         if (_members.end() == std::find(_members.begin(), _members.end(), addr))
         {
@@ -76,7 +76,7 @@ namespace dsn
             return false;
     }
 
-    inline void rpc_group_address::set_leader(const rpc_address& addr)
+    inline void rpc_group_address::set_leader(rpc_address addr)
     {
         if (addr.is_invalid())
         {
@@ -98,7 +98,7 @@ namespace dsn
         }
     }
 
-    inline const rpc_address& rpc_group_address::possible_leader()
+    inline rpc_address rpc_group_address::possible_leader()
     {
         if (_leader_index == -1)
             return random_member();
@@ -106,7 +106,7 @@ namespace dsn
             return _members[_leader_index];
     }
 
-    inline bool rpc_group_address::remove(const rpc_address& addr)
+    inline bool rpc_group_address::remove(rpc_address addr)
     {
         auto it = std::find(_members.begin(), _members.end(), addr);
         bool r = (it != _members.end());
@@ -120,12 +120,12 @@ namespace dsn
         return r;
     }
 
-    inline bool rpc_group_address::contains(const rpc_address& addr)
+    inline bool rpc_group_address::contains(rpc_address addr)
     {
         return _members.end() != std::find(_members.begin(), _members.end(), addr);
     }
 
-    inline const rpc_address& rpc_group_address::next(const rpc_address& current) const
+    inline rpc_address rpc_group_address::next(rpc_address current) const
     {
         if (current.is_invalid())
             return random_member();

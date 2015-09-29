@@ -615,7 +615,7 @@ namespace dsn { namespace replication {
     struct read_request_header
     {
         global_partition_id gpid;
-        int32_t code;
+        std::string code;
         read_semantic_t semantic;
         int64_t version_decree;
     };
@@ -640,7 +640,7 @@ namespace dsn { namespace replication {
     struct write_request_header
     {
         global_partition_id gpid;
-        int32_t code;
+        std::string code;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const write_request_header& val)

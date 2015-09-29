@@ -377,20 +377,19 @@ void server_state::update_configuration_internal(const configuration_update_requ
         old = request.config;
 
         std::stringstream cf;
-        cf << "{primary:" << request.config.primary.name() << ":" << request.config.primary.port() << ", secondaries = [";
+        cf << "{primary:" << request.config.primary.to_string() << ", secondaries = [";
         for (auto& s : request.config.secondaries)
         {
-            cf << s.name() << ":" << s.port() << ",";
+            cf << s.to_string() << ",";
         }
         cf << "]}";
 
-        ddebug("%d.%d metaupdateok to ballot %lld, type = %s, node = %s:%hu, config = %s",
+        ddebug("%d.%d metaupdateok to ballot %lld, type = %s, node = %s, config = %s",
             request.config.gpid.app_id,
             request.config.gpid.pidx,
             request.config.ballot,
             enum_to_string(request.type),
-            request.node.name(),
-            request.node.port(),
+            request.node.to_string(),
             cf.str().c_str()
             );
     }

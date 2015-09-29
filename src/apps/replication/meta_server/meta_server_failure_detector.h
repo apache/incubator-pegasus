@@ -50,13 +50,13 @@ public:
 
     bool is_primary() const { return _is_primary; }
 
-    void get_primary(/*out*/ rpc_address& primary)
+    rpc_address get_primary()
     {
         dsn::utils::auto_lock<zlock> l(_primary_address_lock);
-        primary = _primary_address;
+        return _primary_address;
     }
     
-    void set_primary(const rpc_address& primary);    
+    void set_primary(rpc_address primary);    
 
     // client side
     virtual void on_master_disconnected(const std::vector<::dsn::rpc_address>& nodes)
@@ -64,14 +64,14 @@ public:
         dassert (false, "unsupported method");
     }
 
-    virtual void on_master_connected(const ::dsn::rpc_address& node)
+    virtual void on_master_connected(::dsn::rpc_address node)
     {
         dassert (false, "unsupported method");
     }
 
     // server side
     virtual void on_worker_disconnected(const std::vector<::dsn::rpc_address>& nodes);
-    virtual void on_worker_connected(const ::dsn::rpc_address& node);
+    virtual void on_worker_connected(::dsn::rpc_address node);
 
     virtual void on_ping(const fd::beacon_msg& beacon, ::dsn::rpc_replier<fd::beacon_ack>& reply);
 

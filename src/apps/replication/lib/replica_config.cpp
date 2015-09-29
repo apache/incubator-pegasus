@@ -42,10 +42,10 @@ void replica::on_config_proposal(configuration_update_request& proposal)
     check_hashed_access();
 
     ddebug(
-        "%s: on_config_proposal %s for %s:%hu", 
+        "%s: on_config_proposal %s for %s", 
         name(),
         enum_to_string(proposal.type),
-        proposal.node.name(), proposal.node.port()
+        proposal.node.to_string()
         );
 
     if (proposal.config.ballot < get_ballot())
@@ -167,12 +167,12 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     rpc::call_one_way_typed(proposal.node, RPC_LEARN_ADD_LEARNER, request, gpid_to_hash(get_gpid()));
 }
 
-void replica::upgrade_to_secondary_on_primary(const ::dsn::rpc_address& node)
+void replica::upgrade_to_secondary_on_primary(::dsn::rpc_address node)
 {
     ddebug(
-            "%s: upgrade potential secondary %s:%hu to secondary",
+            "%s: upgrade potential secondary %s to secondary",
             name(),
-            node.name(), node.port()
+            node.to_string()
             );
 
     partition_configuration newConfig = _primary_states.membership;
@@ -272,7 +272,7 @@ void replica::on_remove(const replica_configuration& request)
     update_local_configuration(request);
 }
 
-void replica::update_configuration_on_meta_server(config_type type, const ::dsn::rpc_address& node, partition_configuration& newConfig)
+void replica::update_configuration_on_meta_server(config_type type, ::dsn::rpc_address node, partition_configuration& newConfig)
 {
     newConfig.last_committed_decree = last_committed_decree();
 

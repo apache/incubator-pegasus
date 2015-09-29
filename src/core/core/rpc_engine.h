@@ -63,11 +63,11 @@ public:
     // information inquery
     //
     service_node* node() const { return _node; }
-    const ::dsn::rpc_address& primary_address() const { return _local_primary_address; }
+    ::dsn::rpc_address primary_address() const { return _local_primary_address; }
     rpc_client_matcher_ptr matcher() { return _rpc_matcher; }
 
     // call with ip address only
-    void call_ip(const rpc_address& addr, message_ex* request, rpc_response_task* call, bool reset_request_id = false);
+    void call_ip(rpc_address addr, message_ex* request, rpc_response_task* call, bool reset_request_id = false);
 
 private:
     network* create_network(

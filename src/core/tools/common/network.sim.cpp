@@ -42,7 +42,7 @@ namespace dsn { namespace tools {
 
     sim_client_session::sim_client_session(
         sim_network_provider& net, 
-        const ::dsn::rpc_address& remote_addr, 
+        ::dsn::rpc_address remote_addr, 
         rpc_client_matcher_ptr& matcher,
         std::shared_ptr<message_parser>& parser
         )
@@ -81,9 +81,8 @@ namespace dsn { namespace tools {
             sim_network_provider* rnet = nullptr;
             if (!s_switch[task_spec::get(msg->local_rpc_code)->rpc_call_channel].get(remote_address(), rnet))
             {
-                dwarn("cannot find destination node %s:%hu in simulator",
-                    remote_address().name(),
-                    remote_address().port()
+                dwarn("cannot find destination node %s in simulator",
+                    remote_address().to_string()
                     );
             }
             else
@@ -118,7 +117,7 @@ namespace dsn { namespace tools {
 
     sim_server_session::sim_server_session(
         sim_network_provider& net, 
-        const ::dsn::rpc_address& remote_addr,
+        ::dsn::rpc_address remote_addr,
         rpc_session_ptr& client,
         std::shared_ptr<message_parser>& parser
         )
@@ -146,7 +145,7 @@ namespace dsn { namespace tools {
     sim_network_provider::sim_network_provider(rpc_engine* rpc, network* inner_provider)
         : connection_oriented_network(rpc, inner_provider)
     {
-        _address = ::dsn::rpc_address(HOST_TYPE_IPV4, "localhost", 1);
+        _address.assign_ipv4("localhost", 1);
 
         _min_message_delay_microseconds = 1;
         _max_message_delay_microseconds = 100000;
@@ -167,10 +166,10 @@ namespace dsn { namespace tools {
     { 
         dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP, "invalid given channel %s", channel.to_string());
 
-        _address = ::dsn::rpc_address(HOST_TYPE_IPV4, boost::asio::ip::host_name().c_str(), port);
+        _address = ::dsn::rpc_address(boost::asio::ip::host_name().c_str(), port);
 
         ::dsn::rpc_address ep2;
-        ep2 = ::dsn::rpc_address(HOST_TYPE_IPV4, "localhost", port);
+        ep2 = ::dsn::rpc_address("localhost", port);
       
         if (!client_only)
         {

@@ -62,7 +62,7 @@ namespace dsn {
                         
             dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP, "invalid given channel %s", channel.to_string());
 
-            _address = ::dsn::rpc_address(HOST_TYPE_IPV4, boost::asio::ip::host_name().c_str(), port);
+            _address.assign_ipv4(get_local_ipv4(), port);
 
             if (!client_only)
             {
@@ -84,7 +84,7 @@ namespace dsn {
             return ERR_OK;
         }
 
-        rpc_session_ptr asio_network_provider::create_client_session(const ::dsn::rpc_address& server_addr)
+        rpc_session_ptr asio_network_provider::create_client_session(::dsn::rpc_address server_addr)
         {
             auto matcher = get_client_matcher();
             auto parser = new_message_parser();
