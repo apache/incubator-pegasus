@@ -57,25 +57,53 @@ public:
     server_state(void);
     ~server_state(void);
 
+    // init _app[1] by "[replication.app]" config
     void init_app();
 
+    // get node state std::list<std::pair<::dsn::rpc_address, bool>>
     void get_node_state(/*out*/ node_states& nodes);
+
+    // update node state, maybe:
+    //  * add new node
+    //  * set node state from live to unlive, and returns configuration_update_request to apply
+    //  * set node state from unlive to live, and leaves load balancer to update configuration
     void set_node_state(const node_states& nodes, /*out*/ machine_fail_updates* pris);
 
+    // get primary meta server
+    bool get_meta_server_primary(/*out*/ ::dsn::rpc_address& node);
+
+    // load state from checkpoint file
     void load(const char* chk_point);
+
+    // save state to checkpoint file
     void save(const char* chk_point);
 
     // partition server & client => meta server
-    void query_configuration_by_node(const configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response);
-    void query_configuration_by_index(const configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response);
+
+    // query all partition configurations of a replica server
+    void query_configuration_by_node(configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response);
+
+    // query specified partition configurations by app_name and partition indexes
+    void query_configuration_by_index(configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response);
+
+    // query specified partition configuration by gpid
     void query_configuration_by_gpid(global_partition_id id, /*out*/ partition_configuration& config);
-    void update_configuration(const configuration_update_request& request, /*out*/ configuration_update_response& response);
+
+    // update partition configuration.
+    // first persistent to log file, then apply to memory state
+    void update_configuration(configuration_update_request& request, /*out*/ configuration_update_response& response);
+
     void unfree_if_possible_on_start();
+
+    // if is freezed
     bool freezed() const { return _freeze.load(); }
     
 private:
+    // check consistency of memory state, between _nodes, _apps, _node_live_count
     void check_consistency(global_partition_id gpid);
-    void update_configuration_internal(const configuration_update_request& request, /*out*/ configuration_update_response& response);
+
+    // do real work of update configuration
+    void update_configuration_internal(configuration_update_request& request, /*out*/ configuration_update_response& response);
 
 private:
     friend class ::dsn::replication::replication_checker;
@@ -91,7 +119,7 @@ private:
     friend class load_balancer;
     mutable zrwlock_nr                                 _lock;
     std::unordered_map<::dsn::rpc_address, node_state> _nodes;
-    std::vector<app_state>                             _apps;
+    std::vector<app_state>                             _apps; // vec_index = app_id - 1
 
     int                               _node_live_count;
     int                               _node_live_percentage_threshold_for_update;

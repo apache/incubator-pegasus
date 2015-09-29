@@ -270,21 +270,21 @@ bool configuration::get_string_value_internal(const char* section, const char* k
         auto it2 = it->second.find(key);
         if (it2 != it->second.end())
         {
-            if (it2->second->present)
+            if (!it2->second->present)
             {
-                if (it2->second->dsptr.length() == 0)
+                dassert(it2->second->value == default_value,
+                        "different default value for [%s] %s: %s <--> %s",
+                        section, key, it2->second->value.c_str(), default_value);
+            }
+
+            if (it2->second->dsptr.length() == 0)
                 it2->second->dsptr = dsptr;
 
-                *ov = it2->second->value.c_str();
+            *ov = it2->second->value.c_str();
+            bool ret = it2->second->present ? true : false;
 
-                _lock.unlock();
-                return true;
-            }
-            else
-            {
-                _lock.unlock();
-                return false;
-            }
+            _lock.unlock();
+            return ret;
         }
     }
     

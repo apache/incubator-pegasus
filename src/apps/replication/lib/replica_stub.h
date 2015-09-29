@@ -139,6 +139,7 @@ private:
     
     mutation_log_ptr            _log;
     std::string                 _dir;
+    ::dsn::rpc_address          _primary_address;
 
     replication_failure_detector *_failure_detector;
     volatile replica_node_state   _state;

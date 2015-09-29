@@ -85,6 +85,16 @@ namespace dsn {
             }
         }
 
+        screen_logger::screen_logger()
+        {
+            _short_header = dsn_config_get_value_bool("tools.screen_logger", "short_header",
+                false, "whether to use short header (excluding file/function etc.)");
+        }
+
+        screen_logger::~screen_logger(void)
+        {
+        }
+
         void screen_logger::dsn_logv(const char *file,
             const char *function,
             const int line,
@@ -97,7 +107,10 @@ namespace dsn {
             utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
 
             print_header(stdout);
-            // printf("%s:%d:%s(): ", title, line, function);
+            if (!_short_header)
+            {
+                printf("%s:%d:%s(): ", title, line, function);
+            }
             vprintf(fmt, args);
             printf("\n");
         }
@@ -115,6 +128,8 @@ namespace dsn {
             _log = nullptr;
             _short_header = dsn_config_get_value_bool("tools.simple_logger", "short_header", 
                 false, "whether to use short header (excluding file/function etc.)");
+            _fast_flush = dsn_config_get_value_bool("tools.simple_logger", "fast_flush",
+                false, "whether to flush immediately");
 
             // check existing log files
 			std::vector<std::string> sub_list;
@@ -202,10 +217,10 @@ namespace dsn {
             if (!_short_header)
             {
                 fprintf(_log, "%s:%d:%s(): ", title, line, function);
-            }            
+            }
             vfprintf(_log, fmt, args);
             fprintf(_log, "\n");
-            if (log_level >= LOG_LEVEL_ERROR)
+            if (_fast_flush || log_level >= LOG_LEVEL_ERROR)
                 fflush(_log);
 
             if (log_level >= LOG_LEVEL_WARNING)

@@ -32,6 +32,8 @@
 # endif
 # define __TITLE__ "simple.kv"
 
+using namespace ::dsn::service;
+
 namespace dsn {
     namespace replication {
         namespace application {

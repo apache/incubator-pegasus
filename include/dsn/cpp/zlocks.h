@@ -31,8 +31,6 @@
 
 namespace dsn { namespace service {
 
-
-
 class zlock
 {
 public:

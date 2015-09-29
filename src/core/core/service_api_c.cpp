@@ -848,7 +848,12 @@ DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init)
         }
     }
 
-    run(config, config_args.size() > 0 ? config_args.c_str() : nullptr, sleep_after_init, app_name, app_index);
+    if (!run(config, config_args.size() > 0 ? config_args.c_str() : nullptr, sleep_after_init, app_name, app_index))
+    {
+        printf("run the system failed\n");
+        dsn_terminate();
+        return;
+    }
 }
 
 namespace dsn {

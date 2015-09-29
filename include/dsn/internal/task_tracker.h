@@ -30,11 +30,6 @@
 # include <dsn/internal/synchronize.h>
 # include <atomic>
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "task_tracker"
-
 namespace dsn 
 {
     // 

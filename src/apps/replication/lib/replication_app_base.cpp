@@ -62,6 +62,11 @@ replication_app_base::replication_app_base(replica* replica)
 	}
 }
 
+const char* replication_app_base::replica_name() const
+{
+    return _replica->name();
+}
+
 error_code replication_app_base::write_internal(mutation_ptr& mu)
 {
     dassert (mu->data.header.decree == last_committed_decree() + 1, "");

@@ -51,10 +51,11 @@ public:
     bool stop();
 
 private:
-    // void on_request(dsn_message_t request);
+    void on_request(dsn_message_t request);
     void replay_log(const char* log);
 
     // partition server & client => meta server
+    // query partition configuration
     void on_query_configuration_by_node(dsn_message_t req);
     void on_query_configuration_by_index(dsn_message_t req);
 

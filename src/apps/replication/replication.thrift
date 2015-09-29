@@ -56,8 +56,8 @@ struct replica_configuration
 
 struct prepare_msg
 {
-	1:replica_configuration config;
-	2:mutation_data         mu;
+    1:replica_configuration config;
+    2:mutation_data         mu;
 }
 
 enum read_semantic_t
@@ -70,15 +70,15 @@ enum read_semantic_t
 struct read_request_header
 {
     1:global_partition_id gpid;
-	2:i32                 code;
+    2:string              code;
     3:read_semantic_t     semantic = read_semantic_t.ReadLastUpdate;
     4:i64                 version_decree = -1;
 }
 
 struct write_request_header
 {
-	1:global_partition_id gpid;
-	2:i32                 code;
+    1:global_partition_id gpid;
+    2:string              code;
 }
 
 struct rw_response_header
@@ -156,7 +156,7 @@ enum config_type
 {
     CT_NONE,
     CT_ASSIGN_PRIMARY,
-	CT_UPGRADE_TO_PRIMARY,
+    CT_UPGRADE_TO_PRIMARY,
     CT_ADD_SECONDARY,
     CT_DOWNGRADE_TO_SECONDARY,
     CT_DOWNGRADE_TO_INACTIVE,
@@ -168,7 +168,7 @@ enum config_type
 
 struct meta_request_header
 {
-    1:i32 rpc_tag;
+    1:string rpc_tag;
 }
 
 struct meta_response_header
@@ -224,8 +224,8 @@ struct configuration_query_by_index_request
 struct configuration_query_by_index_response
 {
     1:dsn.error_code                err;
-	2:i32                           app_id;
-	3:i32                           partition_count;
+    2:i32                           app_id;
+    3:i32                           partition_count;
     4:list<partition_configuration> partitions;
 }
 
@@ -243,21 +243,21 @@ struct query_replica_decree_response
 
 service replica_s
 {
-	rw_response_header client_write(1:write_request_header req);
-	rw_response_header client_read(1:read_request_header req);	
-	prepare_ack prepare(1:prepare_msg request);
-	void config_proposal(1:configuration_update_request proposal);	
+    rw_response_header client_write(1:write_request_header req);
+    rw_response_header client_read(1:read_request_header req);
+    prepare_ack prepare(1:prepare_msg request);
+    void config_proposal(1:configuration_update_request proposal);
     learn_response learn(1:learn_request request);
     void learn_completion_notification(1:group_check_response report);
     void add_learner(1:group_check_request request);
     void remove(1:replica_configuration request);
     group_check_response group_check(1:group_check_request request);
-	query_replica_decree_response query_decree(1:query_replica_decree_request req);
+    query_replica_decree_response query_decree(1:query_replica_decree_request req);
 }
 
 service meta_s
 {
-	configuration_query_by_node_response query_configuration_by_node(1:configuration_query_by_node_request query);
-	configuration_query_by_index_response query_configuration_by_index(1:configuration_query_by_index_request query);
-	configuration_update_response update_configuration(1:configuration_update_request update);
+    configuration_query_by_node_response query_configuration_by_node(1:configuration_query_by_node_request query);
+    configuration_query_by_index_response query_configuration_by_index(1:configuration_query_by_index_request query);
+    configuration_update_response update_configuration(1:configuration_update_request update);
 }

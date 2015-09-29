@@ -37,8 +37,6 @@
 
 namespace dsn { namespace replication {
 
-using namespace ::dsn::service;
-
 class mutation;
 class replication_app_base
 {
@@ -124,6 +122,7 @@ public:
     //
     // utility functions to be used by app
     //   
+    const char* replica_name() const;
     const std::string& data_dir() const { return _dir_data; }
     const std::string& learn_dir() const { return _dir_learn; }
     bool is_delta_state_learning_supported() const { return _is_delta_state_learning_supported; }

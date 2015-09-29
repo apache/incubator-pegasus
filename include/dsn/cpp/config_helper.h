@@ -37,7 +37,7 @@
     }\
     else {\
     if (!type::is_exist(v.c_str())) {\
-        printf("invalid enum configuration '[%s] %s'", section, #fld); \
+        printf("invalid enum configuration '[%s] %s'\n", section, #fld); \
         return false; \
             }\
             else \
@@ -58,7 +58,7 @@
     else {\
     auto v2 = enum_from_string(v.c_str(), invalid_enum);\
     if (v2 == invalid_enum) {\
-        printf("invalid enum configuration '[%s] %s'", section, #fld); \
+        printf("invalid enum configuration '[%s] %s'\n", section, #fld); \
         return false; \
             }\
             else \
@@ -75,7 +75,7 @@
     ::dsn::utils::split_args(vv.c_str(), lv, ','); \
     for (auto& v : lv) {\
         if (!type::is_exist(v.c_str())) {\
-            printf("invalid enum configuration '[%s] %s'", section, #fld); \
+            printf("invalid enum configuration '[%s] %s'\n", section, #fld); \
             return false; \
                 } \
                 else \
