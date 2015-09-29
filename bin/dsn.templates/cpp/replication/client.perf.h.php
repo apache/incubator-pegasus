@@ -8,6 +8,7 @@ $file_prefix = $argv[3];
 # include "<?=$file_prefix?>.client.h"
 
 <?=$_PROG->get_cpp_namespace_begin()?> 
+
 <?php foreach ($_PROG->services as $svc) { ?> 
 class <?=$svc->name?>_perf_test_client 
     : public <?=$svc->name?>_client, 

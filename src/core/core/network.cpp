@@ -91,7 +91,7 @@ namespace dsn
             _reconnect_count_after_last_success = 0;
         }
 
-        dwarn("client session connected to %s:%hu",
+        dinfo("client session connected to %s:%hu",
             remote_address().name(),
             remote_address().port()
             );

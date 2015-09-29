@@ -116,7 +116,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->partition_index = partition_index;    
     rc->write_header.gpid.app_id = _app_id;
     rc->write_header.gpid.pidx = partition_index;
-    rc->write_header.code = code;
+    rc->write_header.code = dsn_task_code_to_string(code);
     rc->timeout_timer = nullptr;
     rc->timeout_ms = timeout_milliseconds;
     rc->timeout_ts_us = now_us() + timeout_milliseconds * 1000;
@@ -158,7 +158,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->partition_index = partition_index;
     rc->read_header.gpid.app_id = _app_id;
     rc->read_header.gpid.pidx = partition_index;
-    rc->read_header.code = code;
+    rc->read_header.code = dsn_task_code_to_string(code);
     rc->read_header.semantic = read_semantic;
     rc->read_header.version_decree = snapshot_decree;
     rc->timeout_timer = nullptr;
@@ -338,7 +338,7 @@ void replication_app_client_base::call(request_context_ptr request, bool no_dela
             dsn_message_t msg = dsn_msg_create_request(RPC_CM_CALL, 0, 0);
 
             meta_request_header hdr;
-            hdr.rpc_tag = RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX;
+            hdr.rpc_tag = dsn_task_code_to_string(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
             ::marshall(msg, hdr);
 
             configuration_query_by_index_request req;

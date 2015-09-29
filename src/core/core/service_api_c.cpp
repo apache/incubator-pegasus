@@ -832,7 +832,12 @@ DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init)
         }
     }
 
-    run(config, config_args.size() > 0 ? config_args.c_str() : nullptr, sleep_after_init, app_name, app_index);
+    if (!run(config, config_args.size() > 0 ? config_args.c_str() : nullptr, sleep_after_init, app_name, app_index))
+    {
+        printf("run the system failed\n");
+        dsn_terminate();
+        return;
+    }
 }
 
 namespace dsn {
@@ -889,6 +894,11 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
 #endif
         getchar();
     }
+
+    // init rpc_address::use_ip_as_name
+    bool use_ip_as_name = dsn_all.config->get_value<bool>(
+        "network", "use_ip_as_name", false, "use ip address as rpc_address's name");
+    dsn_address_use_ip_as_name = use_ip_as_name ? 1 : 0;
     
     // setup coredump
 	auto& coredump_dir = spec.coredump_dir;

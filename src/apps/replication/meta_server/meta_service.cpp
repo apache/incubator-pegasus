@@ -178,10 +178,12 @@ void meta_service::on_request(dsn_message_t msg)
     ::dsn::rpc_address faddr;
     dsn_msg_from_address(msg, faddr.c_addr_ptr());
     dinfo("recv meta request %s from %s:%hu", 
-        dsn_task_code_to_string(hdr.rpc_tag),
+        hdr.rpc_tag.c_str(),
         faddr.name(),
         faddr.port()
         );
+
+    int rpc_tag = dsn_task_code_from_string(hdr.rpc_tag.c_str(), TASK_CODE_INVALID);
 
     dsn_message_t resp = dsn_msg_create_response(msg);
     if (!is_primary)
@@ -194,7 +196,7 @@ void meta_service::on_request(dsn_message_t msg)
         rhdr.err = ERR_SERVICE_NOT_ACTIVE;
         ::marshall(resp, rhdr);
     }
-    else if (hdr.rpc_tag == RPC_CM_QUERY_NODE_PARTITIONS)
+    else if (rpc_tag == RPC_CM_QUERY_NODE_PARTITIONS)
     {
         configuration_query_by_node_request request;
         configuration_query_by_node_response response;
@@ -206,7 +208,7 @@ void meta_service::on_request(dsn_message_t msg)
         ::marshall(resp, response);
     }
 
-    else if (hdr.rpc_tag == RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX)
+    else if (rpc_tag == RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX)
     {
         configuration_query_by_index_request request;
         configuration_query_by_index_response response;
@@ -218,7 +220,7 @@ void meta_service::on_request(dsn_message_t msg)
         ::marshall(resp, response);
     }
 
-    else  if (hdr.rpc_tag == RPC_CM_UPDATE_PARTITION_CONFIGURATION)
+    else  if (rpc_tag == RPC_CM_UPDATE_PARTITION_CONFIGURATION)
     {
         update_configuration(msg, resp);
         rhdr.err.end_tracking();
@@ -227,7 +229,7 @@ void meta_service::on_request(dsn_message_t msg)
     
     else
     {
-        dassert(false, "unknown rpc tag %x (%s)", hdr.rpc_tag, dsn_task_code_to_string(hdr.rpc_tag));
+        dassert(false, "unknown rpc tag %x (%s)", rpc_tag, hdr.rpc_tag.c_str());
     }
 
     dsn_rpc_reply(resp);

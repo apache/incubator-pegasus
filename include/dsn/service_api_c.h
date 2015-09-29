@@ -500,7 +500,7 @@ extern DSN_API bool         dsn_semaphore_wait_timeout(
 //------------------------------------------------------------------------------
 
 // rpc address utilities
-
+extern DSN_API int           dsn_address_use_ip_as_name;
 extern DSN_API void          dsn_host_to_name(
                                 const dsn_address_t* addr, 
                                 /*out*/ char* name_buffer, 
@@ -520,6 +520,10 @@ extern DSN_API void          dsn_address_build_ipv4(
                                 /*out*/ dsn_address_t* ep,
                                 uint32_t ipv4,
                                 uint16_t port
+                                );
+extern DSN_API void          dsn_address_local(
+                                /*out*/ dsn_address_t* addr,
+                                const char* network_interface
                                 );
 extern DSN_API dsn_address_t dsn_primary_address();
 extern DSN_API void          dsn_primary_address2(/*out*/ dsn_address_t* paddr);

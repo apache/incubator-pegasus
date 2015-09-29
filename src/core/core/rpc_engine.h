@@ -72,6 +72,8 @@ private:
         io_modifer& ctx
         );
 
+    static void get_local_ip(dsn_address_t* addr);
+
 private:
     configuration_ptr                     _config;    
     service_node                          *_node;

@@ -36,20 +36,17 @@ namespace dsn {
             class nfs_server_app : public ::dsn::service_app, public virtual ::dsn::clientlet
             {
             public:
-                nfs_server_app(){}
+                nfs_server_app() {}
 
                 virtual ::dsn::error_code start(int argc, char** argv)
                 {
+                    // use builtin nfs_service by set [core] start_nfs = true
                     return ::dsn::ERR_OK;
                 }
 
                 virtual void stop(bool cleanup = false)
                 {
-                    _nfs_node_impl->stop();
                 }
-
-            private:
-                nfs_node_simple* _nfs_node_impl;
             };
 
             // client app example
@@ -59,6 +56,7 @@ namespace dsn {
                 nfs_client_app()
                 {
                     _req_index = 0;
+                    _is_copying = false;
                 }
 
                 ~nfs_client_app()
@@ -74,26 +72,32 @@ namespace dsn {
                     dsn_address_build(_server.c_addr_ptr(), argv[1], (uint16_t)atoi(argv[2]));
 
                     //on_request_timer();
-                    _request_timer = ::dsn::tasking::enqueue(LPC_NFS_REQUEST_TIMER, this, &nfs_client_app::on_request_timer, 0, 0, 1000);
+                    _request_timer = ::dsn::tasking::enqueue(::dsn::service::LPC_NFS_REQUEST_TIMER,
+                                                             this, &nfs_client_app::on_request_timer, 0, 0, 1000);
 
                     return ::dsn::ERR_OK;
                 }
 
                 virtual void stop(bool cleanup = false)
                 {
-                    _timer->cancel(true);
                     _request_timer->cancel(true);
                 }
 
                 void on_request_timer()
                 {
-                    std::string source_dir = "./src"; // add your path
-                    std::string dest_dir = "./dst"; // add your path
-                    std::string dest_dir2 = "./dst2"; // add your path
+                    if (_is_copying)
+                        return;
+
+                    _is_copying = true;
+
+                    std::string source_dir = "./"; // add your path
+                    std::string dest_dir = "./dst/"; // add your path
                     std::vector<std::string> files; // empty is for all
+                    files.push_back("dsn.nfs.test");
                     bool overwrite = true;
                     
-                    file::copy_remote_files(_server, source_dir, files, dest_dir, overwrite, LPC_NFS_COPY_FILE, nullptr,
+                    file::copy_remote_files(_server, source_dir, files, dest_dir, overwrite,
+                        ::dsn::service::LPC_NFS_COPY_FILE, nullptr,
                         std::bind(&nfs_client_app::internal_copy_callback,
                         this,
                         std::placeholders::_1,
@@ -101,32 +105,28 @@ namespace dsn {
                         ++_req_index
                         ));
 
-                    /*file::copy_remote_files(_server, source_dir, files, dest_dir2, overwrite, LPC_NFS_COPY_FILE, nullptr,
-                        std::bind(&nfs_client_app::internal_copy_callback,
-                        this,
-                        std::placeholders::_1,
-                        std::placeholders::_2
-                        ));*/
+                    ddebug("remote file copy request %d started", (int)_req_index);
                 }
 
                 void internal_copy_callback(error_code err, size_t size, int index)
                 {
                     if (err == ::dsn::ERR_OK)
                     {
-                        dinfo("remote file copy request %d completed", index);
+                        ddebug("remote file copy request %d completed", index);
                     }
                     else
                     {
                         derror("remote file copy request %d failed, err = %s", index, err.to_string());
                     }
+
+                    _is_copying = false;
                 }
             private:
-                ::dsn::task_ptr _timer;
                 ::dsn::task_ptr _request_timer;
 
                 ::dsn::rpc_address _server;
                 std::atomic<int> _req_index;
-
+                bool _is_copying;
             };
 
         }
