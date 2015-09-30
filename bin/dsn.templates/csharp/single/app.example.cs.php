@@ -43,7 +43,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
                 throw new Exception("wrong usage: server-host server-port");                
             }
 
-            Native.dsn_address_build(out _server.addr, args[1], ushort.Parse(args[2]));
+            _server.addr = Native.dsn_address_build(args[1], ushort.Parse(args[2]));
 
 <?php foreach ($_PROG->services as $svc) { ?>
             _<?=$svc->name?>Client = new <?=$svc->name?>Client(_server);
