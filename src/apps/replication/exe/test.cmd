@@ -4,7 +4,7 @@ copy /Y *.ini .\test
 copy /Y *.exe .\test
 copy /Y *.pdb .\test
 copy /Y *.cmd .\test
-copy /Y *.dll .\test
+copy /Y ..\..\Debug\*.dll .\test
 	
 for /l %%x in (1, 1, 42) do (
 	echo start test instance %%x 
