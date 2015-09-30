@@ -117,12 +117,17 @@ void replica::init_prepare(mutation_ptr& mu)
     // do_possible_commit_on_primary(mu);
 
     // local log
-    dassert (mu->data.header.log_offset == invalid_offset, "");
-    dassert (mu->log_task() == nullptr, "");
-
-    if (_2pc_logger)
+    if (nullptr == _stub->_log)
     {
-        mu->log_task() = _2pc_logger->append(mu,
+        mu->set_logged();
+        do_possible_commit_on_primary(mu);
+    }
+    else
+    {
+        dassert(mu->data.header.log_offset == invalid_offset, "");
+        dassert(mu->log_task() == nullptr, "");
+
+        mu->log_task() = _stub->_log->append(mu,
             LPC_WRITE_REPLICATION_LOG,
             this,
             std::bind(&replica::on_append_log_completed, this, mu,
@@ -133,10 +138,6 @@ void replica::init_prepare(mutation_ptr& mu)
 
         dassert(nullptr != mu->log_task(), "");
     }
-    else
-    {
-        on_append_log_completed(mu, ERR_OK, 0);
-    }
     return;
 
 ErrOut:
@@ -144,7 +145,7 @@ ErrOut:
     return;
 }
 
-void replica::send_prepare_message(const ::dsn::rpc_address& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds)
+void replica::send_prepare_message(::dsn::rpc_address addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds)
 {
     dsn_message_t msg = dsn_msg_create_request(RPC_PREPARE, timeout_milliseconds, gpid_to_hash(get_gpid()));
     replica_configuration rconfig;
@@ -169,9 +170,9 @@ void replica::send_prepare_message(const ::dsn::rpc_address& addr, partition_sta
         );
 
     ddebug( 
-        "%s: mutation %s send_prepare_message to %s:%hu as %s", 
+        "%s: mutation %s send_prepare_message to %s as %s",  
         name(), mu->name(),
-        addr.name(), addr.port(),
+        addr.to_string(),
         enum_to_string(rconfig.status)
         );
 }
@@ -181,7 +182,7 @@ void replica::do_possible_commit_on_primary(mutation_ptr& mu)
     dassert (_config.ballot == mu->data.header.ballot, "");
     dassert (PS_PRIMARY == status(), "");
 
-    if (mu->is_ready_for_commit(_options->prepare_ack_on_secondary_before_logging_allowed))
+    if (mu->is_ready_for_commit())
     {
         _prepare_list->commit(mu->data.header.decree, false);
     }
@@ -270,7 +271,7 @@ void replica::on_prepare(dsn_message_t request)
     {
         ddebug( "%s: mutation %s redundant prepare skipped", name(), mu->name());
 
-        if (mu2->is_logged() || _options->prepare_ack_on_secondary_before_logging_allowed)
+        if (mu2->is_logged())
         {
             ack_prepare_message(ERR_OK, mu);
         }
@@ -282,7 +283,7 @@ void replica::on_prepare(dsn_message_t request)
 
     if (PS_POTENTIAL_SECONDARY == status())
     {
-        dassert (mu->data.header.decree <= last_committed_decree() + _options->staleness_for_start_prepare_for_potential_secondary, "");
+        dassert (mu->data.header.decree <= last_committed_decree() + _options->max_mutation_count_in_prepare_list, "");
     }
     else
     {
@@ -291,17 +292,18 @@ void replica::on_prepare(dsn_message_t request)
     }
 
     // ack without logging
-    if (_options->prepare_ack_on_secondary_before_logging_allowed)
+    if (nullptr == _stub->_log)
     {
+        mu->set_logged();
         ack_prepare_message(err, mu);
     }
     
     // write log
-    if (_2pc_logger)
+    else
     {
         dassert(mu->log_task() == nullptr, "");
 
-        mu->log_task() = _2pc_logger->append(mu,
+        mu->log_task() = _stub->_log->append(mu,
             LPC_WRITE_REPLICATION_LOG,
             this,
             std::bind(&replica::on_append_log_completed, this, mu, std::placeholders::_1, std::placeholders::_2),
@@ -309,10 +311,6 @@ void replica::on_prepare(dsn_message_t request)
             );
 
         dassert(mu->log_task() != nullptr, "");
-    }
-    else
-    {
-        on_append_log_completed(mu, ERR_OK, 0);
     }
 }
 
@@ -352,10 +350,7 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
             handle_local_failure(err);
         }
 
-        if (!_options->prepare_ack_on_secondary_before_logging_allowed)
-        {
-            ack_prepare_message(err, mu);
-        }
+        ack_prepare_message(err, mu);
         break;
     case PS_ERROR:
         break;
@@ -364,15 +359,10 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
         break;
     }
 
-    // write local private log if necessary
-    if (_log && _2pc_logger != _log)
+    // mutation log failure, propagted to all replicas
+    if (err != ERR_OK)
     {
-        _log->append(mu,
-            LPC_WRITE_REPLICATION_LOG,
-            nullptr,
-            nullptr,
-            gpid_to_hash(get_gpid())
-            );
+        _stub->handle_log_failure(err);
     }
 }
 
@@ -389,8 +379,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
     
     dassert (mu->data.header.ballot == get_ballot(), "");
 
-    ::dsn::rpc_address node;
-    dsn_msg_to_address(request, node.c_addr_ptr());
+    ::dsn::rpc_address node = dsn_msg_to_address(request);
     partition_status st = _primary_states.get_node_status(node);
 
     // handle reply
@@ -407,9 +396,9 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
     }
     
     ddebug(
-        "%s: mutation %s on_prepare_reply from %s:%hu, err = %s",
+        "%s: mutation %s on_prepare_reply from %s, err = %s",
         name(), mu->name(),
-        node.name(), node.port(),
+        node.to_string(),
         resp.err.to_string()
         );
        

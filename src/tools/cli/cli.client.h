@@ -12,7 +12,7 @@ class cli_client
     : public virtual ::dsn::clientlet
 {
 public:
-    cli_client(const ::dsn::rpc_address& server) { _server = server; }
+    cli_client(::dsn::rpc_address server) { _server = server; }
     cli_client() {  }
     virtual ~cli_client() {}
 

@@ -47,6 +47,7 @@ public:
     decree  min_decree() const { return _start_decree; } 
     decree  max_decree() const { return _end_decree; }
     int     count() const { return _interval; }
+    int     capacity() const { return _max_count; }
 
 private:
     std::vector<mutation_ptr> _array;

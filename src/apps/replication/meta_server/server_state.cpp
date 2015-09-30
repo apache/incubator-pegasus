@@ -52,7 +52,6 @@ void unmarshall(binary_reader& reader, /*out*/ app_state& val)
 
 server_state::server_state(void)
 {
-    _leader_index = -1;
     _node_live_count = 0;
     _freeze = true;
     _node_live_percentage_threshold_for_update = 65;
@@ -250,71 +249,8 @@ void server_state::unfree_if_possible_on_start()
     dinfo("live replica server # is %d, freeze = %s", _node_live_count, _freeze ? "true" : "false");
 }
 
-bool server_state::get_meta_server_primary(/*out*/ ::dsn::rpc_address& node)
-{
-    zauto_read_lock l(_meta_lock);
-    if (-1 == _leader_index)
-        return false;
-    else
-    {
-        node = _meta_servers[_leader_index];
-        return true;
-    }
-}
-
-void server_state::add_meta_node(const ::dsn::rpc_address& node)
-{
-    zauto_write_lock l(_meta_lock);
-    
-    _meta_servers.push_back(node);
-    if (1 == _meta_servers.size())
-        _leader_index = 0;
-}
-
-void server_state::remove_meta_node(const ::dsn::rpc_address& node)
-{
-    zauto_write_lock l(_meta_lock);
-    
-    int i = -1;
-    for (auto it = _meta_servers.begin(); it != _meta_servers.end(); it++)
-    {
-        i++;
-        if (*it == node)
-        {
-            _meta_servers.erase(it);
-            if (_meta_servers.size() == 0)
-                _leader_index = -1;
-
-            else if (i == _leader_index)
-            {
-                _leader_index = dsn_random32(0, (uint32_t)_meta_servers.size() - 1);
-            }
-            return;
-        }
-    }
-
-    dassert (false, "cannot find node '%s:%hu' in server state", node.name(), node.port());
-}
-
-void server_state::switch_meta_primary()
-{
-    zauto_write_lock l(_meta_lock);
-    if (1 == _meta_servers.size())
-        return;
-
-    while (true)
-    {
-        int r = dsn_random32(0, (uint32_t)_meta_servers.size() - 1);
-        if (r != _leader_index)
-        {
-            _leader_index = r;
-            return;
-        }
-    }
-}
-
 // partition server & client => meta server
-void server_state::query_configuration_by_node(configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response)
+void server_state::query_configuration_by_node(const configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response)
 {
     zauto_read_lock l(_lock);
     auto it = _nodes.find(request.node);
@@ -339,7 +275,7 @@ void server_state::query_configuration_by_gpid(global_partition_id id, /*out*/ p
     config = _apps[id.app_id - 1].partitions[id.pidx];
 }
 
-void server_state::query_configuration_by_index(configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response)
+void server_state::query_configuration_by_index(const configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response)
 {
     zauto_read_lock l(_lock);
 
@@ -366,14 +302,14 @@ void server_state::query_configuration_by_index(configuration_query_by_index_req
     response.err = ERR_OBJECT_NOT_FOUND;
 }
 
-void server_state::update_configuration(configuration_update_request& request, /*out*/ configuration_update_response& response)
+void server_state::update_configuration(const configuration_update_request& request, /*out*/ configuration_update_response& response)
 {
     zauto_write_lock l(_lock);
 
     update_configuration_internal(request, response);
 }
 
-void server_state::update_configuration_internal(configuration_update_request& request, /*out*/ configuration_update_response& response)
+void server_state::update_configuration_internal(const configuration_update_request& request, /*out*/ configuration_update_response& response)
 {
     app_state& app = _apps[request.config.gpid.app_id - 1];
     partition_configuration& old = app.partitions[request.config.gpid.pidx];
@@ -434,25 +370,26 @@ void server_state::update_configuration_internal(configuration_update_request& r
             node.partitions.insert(old.gpid);
             break;
         default:
-            dassert(false, "invalid config type %x", static_cast<int>(request.type));
+            dassert(false, "invalid config type 0x%x", static_cast<int>(request.type));
         }
         
         // update to new config
         old = request.config;
 
         std::stringstream cf;
-        cf << "{primary:" << request.config.primary.name() << ":" << request.config.primary.port() << ", secondaries = [";
+        cf << "{primary:" << request.config.primary.to_string() << ", secondaries = [";
         for (auto& s : request.config.secondaries)
         {
-            cf << s.name() << ":" << s.port() << ",";
+            cf << s.to_string() << ",";
         }
         cf << "]}";
 
-        ddebug("%d.%d metaupdateok to ballot %lld, type = %s, config = %s",
+        ddebug("%d.%d metaupdateok to ballot %lld, type = %s, node = %s, config = %s",
             request.config.gpid.app_id,
             request.config.gpid.pidx,
             request.config.ballot,
             enum_to_string(request.type),
+            request.node.to_string(),
             cf.str().c_str()
             );
     }

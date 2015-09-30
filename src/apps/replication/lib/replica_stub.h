@@ -39,7 +39,7 @@ class mutation_log;
 class replication_failure_detector;
 typedef std::unordered_map<global_partition_id, replica_ptr> replicas;
 // from, new replica config, isClosing
-typedef std::function<void (const ::dsn::rpc_address&, const replica_configuration&, bool)> replica_state_subscriber;
+typedef std::function<void (::dsn::rpc_address, const replica_configuration&, bool)> replica_state_subscriber;
 
 class replica_stub : public serverlet<replica_stub>, public ref_counter
 {
@@ -75,7 +75,7 @@ public:
     //        - learn
     //
     void on_prepare(dsn_message_t request);    
-    void on_learn(const learn_request& request, /*out*/ learn_response& response);
+    void on_learn(dsn_message_t msg);
     void on_learn_completion_notification(const group_check_response& report);
     void on_add_learner(const group_check_request& request);
     void on_remove(const replica_configuration& request);
@@ -103,10 +103,7 @@ public:
     replica_ptr get_replica(int32_t app_id, int32_t partition_index);
     replication_options& options() { return _options; }
     bool is_connected() const { return NS_Connected == _state; }
-
-    // p_tableID = MAX_UInt32 for replica of all tables.
-    void get_primary_replica_list(uint32_t p_tableID, std::vector<global_partition_id>& p_repilcaList);
-
+    
 private:    
     enum replica_node_state
     {
@@ -128,6 +125,7 @@ private:
     void add_replica(replica_ptr r);
     bool remove_replica(replica_ptr r);
     void notify_replica_state_update(const replica_configuration& config, bool isClosing);
+    void handle_log_failure(error_code err);
 
 private:
     friend class ::dsn::replication::replication_checker;    
@@ -139,7 +137,7 @@ private:
     opening_replicas            _opening_replicas;
     closing_replicas            _closing_replicas;
     
-    mutation_log                *_log;
+    mutation_log_ptr            _log;
     std::string                 _dir;
     ::dsn::rpc_address          _primary_address;
 
@@ -159,7 +157,6 @@ private:
 private:    
     friend class replica;
     void response_client_error(dsn_message_t request, int error);
-    void replay_mutation(mutation_ptr& mu, replicas* rps);
 };
 //------------ inline impl ----------------------
 

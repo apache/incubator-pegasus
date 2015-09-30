@@ -117,6 +117,8 @@ typedef void*       dsn_handle_t;
 typedef void*       dsn_task_t;
 typedef void*       dsn_task_tracker_t;
 typedef void*       dsn_message_t; 
+typedef void*       dsn_group_t;
+typedef void*       dsn_uri_t;
 
 // all computation in rDSN are as tasks or events, 
 // i.e., in event-driven programming
@@ -203,30 +205,34 @@ typedef enum dsn_log_level_t
     LOG_LEVEL_INVALID
 } dsn_log_level_t;
 
-
 typedef enum dsn_host_type_t
 {
-    HOST_TYPE_IPV4,  // 4 bytes
-    HOST_TYPE_IPV6,  // 16 bytes
-    HOST_TYPE_URI,   // customized bytes
-    HOST_TYPE_COUNT,
-    HOST_TYPE_INVALID
+    HOST_TYPE_INVALID = 0,
+    HOST_TYPE_IPV4 = 1,  // 4 bytes
+    HOST_TYPE_GROUP = 2, // reference to an address group
+    HOST_TYPE_URI = 3,   // universal resource identifier    
+    HOST_TYPE_COUNT = 4    
 } dsn_host_type_t;
 
-#pragma pack(push, 4)
 typedef struct dsn_address_t
 {
-    dsn_host_type_t type;
-    uint16_t        port;
-    union {
-        uint32_t   ip; // ipv4 in host byte order
-        uint32_t   ipv6[4];
+    union u_t {
         struct {
-            const char *uri;
-        };
-    }; 
+            unsigned long long type : 2;
+            unsigned long long padding : 14;
+            unsigned long long port : 16;
+            unsigned long long ip : 32;
+        } v4;
+        struct {
+            unsigned long long type : 2;
+            unsigned long long uri : 62;   // dsn_uri_t
+        } uri;
+        struct {
+            unsigned long long type : 2;
+            unsigned long long group : 62; // dsn_group_t
+        } group;
+    } u;
 } dsn_address_t;
-#pragma pack(pop)
 
 //------------------------------------------------------------------------------
 //
@@ -500,33 +506,40 @@ extern DSN_API bool         dsn_semaphore_wait_timeout(
 //------------------------------------------------------------------------------
 
 // rpc address utilities
-extern DSN_API int           dsn_address_use_ip_as_name;
-extern DSN_API void          dsn_host_to_name(
-                                const dsn_address_t* addr, 
-                                /*out*/ char* name_buffer, 
-                                int length
-                                );
-extern DSN_API void          dsn_host_from_name(
-                                dsn_host_type_t type, 
-                                const char* name, 
-                                /*out*/ dsn_address_t* daddr
-                                );
-extern DSN_API void          dsn_address_build(
-                                /*out*/ dsn_address_t* ep, 
+extern DSN_API uint32_t      dsn_ipv4_from_host(const char* name);
+
+extern DSN_API uint32_t      dsn_ipv4_local(const char* network_interface);
+
+extern DSN_API dsn_address_t dsn_address_build(
                                 const char* host, 
                                 uint16_t port
                                 );
-extern DSN_API void          dsn_address_build_ipv4(
-                                /*out*/ dsn_address_t* ep,
+extern DSN_API dsn_address_t dsn_address_build_ipv4(
                                 uint32_t ipv4,
                                 uint16_t port
                                 );
-extern DSN_API void          dsn_address_local(
-                                /*out*/ dsn_address_t* addr,
-                                const char* network_interface
+extern DSN_API dsn_address_t dsn_address_build_group(
+                                dsn_group_t g
                                 );
+extern DSN_API dsn_address_t dsn_address_build_uri(
+                                dsn_uri_t uri
+                                );
+
+extern DSN_API const char*   dsn_address_to_string(dsn_address_t addr);
+
+extern DSN_API dsn_uri_t     dsn_uri_build(const char* url); // must be paired with destroy later
+extern DSN_API void          dsn_uri_destroy(dsn_uri_t uri);
+
+extern DSN_API dsn_group_t   dsn_group_build(const char* name); // must be paired with release later
+extern DSN_API bool          dsn_group_add(dsn_group_t g, dsn_address_t ep);
+extern DSN_API bool          dsn_group_remove(dsn_group_t g, dsn_address_t ep);
+extern DSN_API void          dsn_group_set_leader(dsn_group_t g, dsn_address_t ep);
+extern DSN_API dsn_address_t dsn_group_get_leader(dsn_group_t g);
+extern DSN_API bool          dsn_group_is_leader(dsn_group_t g, dsn_address_t ep);
+extern DSN_API dsn_address_t dsn_group_next(dsn_group_t g, dsn_address_t ep);
+extern DSN_API void          dsn_group_destroy(dsn_group_t g);
+
 extern DSN_API dsn_address_t dsn_primary_address();
-extern DSN_API void          dsn_primary_address2(/*out*/ dsn_address_t* paddr);
 
 // rpc message and buffer management
 //
@@ -605,14 +618,8 @@ extern DSN_API void          dsn_msg_read_commit(dsn_message_t msg, size_t size)
 
 extern DSN_API size_t        dsn_msg_body_size(dsn_message_t msg);
 extern DSN_API void*         dsn_msg_rw_ptr(dsn_message_t msg, size_t offset_begin);
-extern DSN_API void          dsn_msg_from_address(
-                                dsn_message_t msg, 
-                                /*out*/ dsn_address_t* ep
-                                );
-extern DSN_API void          dsn_msg_to_address(
-                                dsn_message_t msg, 
-                                /*out*/ dsn_address_t* ep
-                                );
+extern DSN_API dsn_address_t dsn_msg_from_address(dsn_message_t msg);
+extern DSN_API dsn_address_t dsn_msg_to_address(dsn_message_t msg);
 
 //
 // server-side rpc calls
@@ -632,6 +639,9 @@ extern DSN_API void*         dsn_rpc_unregiser_handler(
 // reply with a response which is created using dsn_msg_create_response
 extern DSN_API void          dsn_rpc_reply(dsn_message_t response);
 
+// forward the request to another server instead
+extern DSN_API void          dsn_rpc_forward(dsn_message_t request, dsn_address_t addr);
+
 
 //
 // client-side rpc calls
@@ -646,18 +656,18 @@ extern DSN_API dsn_task_t    dsn_rpc_create_response_task(
 
 // tracker can be empty
 extern DSN_API void          dsn_rpc_call(
-                                const dsn_address_t* server,
+                                dsn_address_t server,
                                 dsn_task_t rpc_call, 
                                 dsn_task_tracker_t tracker DEFAULT(nullptr)
                                 );
 
 // WARNING: returned msg must be explicitly msg_release_ref
 extern DSN_API dsn_message_t dsn_rpc_call_wait(
-                                const dsn_address_t* server, 
+                                dsn_address_t server, 
                                 dsn_message_t request
                                 );
 extern DSN_API void          dsn_rpc_call_one_way(
-                                const dsn_address_t* server, 
+                                dsn_address_t server, 
                                 dsn_message_t request
                                 );
 
@@ -707,7 +717,7 @@ extern DSN_API void         dsn_file_write(
                                 dsn_task_tracker_t tracker DEFAULT(nullptr)
                                 );
 extern DSN_API void         dsn_file_copy_remote_directory(
-                                const dsn_address_t* remote, 
+                                dsn_address_t remote, 
                                 const char* source_dir, 
                                 const char* dest_dir,
                                 bool overwrite, 
@@ -715,7 +725,7 @@ extern DSN_API void         dsn_file_copy_remote_directory(
                                 dsn_task_tracker_t tracker DEFAULT(nullptr)
                                 );
 extern DSN_API void         dsn_file_copy_remote_files(
-                                const dsn_address_t* remote,
+                                dsn_address_t remote,
                                 const char* source_dir, 
                                 const char** source_files, 
                                 const char* dest_dir, 
@@ -822,5 +832,11 @@ extern DSN_API void         dsn_msg_get_context(
 #endif
 
 # ifdef __cplusplus
+}
+
+inline void dsn_address_size_checker()
+{
+    static_assert (sizeof(dsn_address_t) == sizeof(uint64_t),
+        "sizeof(dsn_address_t) must equal to sizeof(uint64_t)");
 }
 # endif

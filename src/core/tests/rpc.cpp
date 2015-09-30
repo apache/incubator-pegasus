@@ -33,7 +33,7 @@ TEST(core, rpc)
 {
     int req = 0;
     std::string result;
-    ::dsn::rpc_address server(HOST_TYPE_IPV4, "localhost", 20101);
+    ::dsn::rpc_address server("localhost", 20101);
 
     ::dsn::rpc_read_stream response;
     auto err = ::dsn::rpc::call_typed_wait(

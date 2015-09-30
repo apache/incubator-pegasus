@@ -42,10 +42,10 @@ void replica::on_config_proposal(configuration_update_request& proposal)
     check_hashed_access();
 
     ddebug(
-        "%s: on_config_proposal %s for %s:%hu", 
+        "%s: on_config_proposal %s for %s", 
         name(),
         enum_to_string(proposal.type),
-        proposal.node.name(), proposal.node.port()
+        proposal.node.to_string()
         );
 
     if (proposal.config.ballot < get_ballot())
@@ -102,7 +102,7 @@ void replica::on_config_proposal(configuration_update_request& proposal)
 
 void replica::assign_primary(configuration_update_request& proposal)
 {
-    dassert(proposal.node == _stub->_primary_address, "");
+    dassert(proposal.node == primary_address(), "");
 
     if (status() == PS_PRIMARY)
     {
@@ -122,9 +122,9 @@ void replica::assign_primary(configuration_update_request& proposal)
         return;
     }
 
-    proposal.config.primary = _stub->_primary_address;
-    replica_helper::remove_node(_stub->_primary_address, proposal.config.secondaries);
-    replica_helper::remove_node(_stub->_primary_address, proposal.config.drop_outs);
+    proposal.config.primary = primary_address();
+    replica_helper::remove_node(primary_address(), proposal.config.secondaries);
+    replica_helper::remove_node(primary_address(), proposal.config.drop_outs);
 
     update_configuration_on_meta_server(proposal.type, proposal.node, proposal.config);
 }
@@ -167,12 +167,12 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     rpc::call_one_way_typed(proposal.node, RPC_LEARN_ADD_LEARNER, request, gpid_to_hash(get_gpid()));
 }
 
-void replica::upgrade_to_secondary_on_primary(const ::dsn::rpc_address& node)
+void replica::upgrade_to_secondary_on_primary(::dsn::rpc_address node)
 {
     ddebug(
-            "%s: upgrade potential secondary %s:%hu to secondary",
+            "%s: upgrade potential secondary %s to secondary",
             name(),
-            node.name(), node.port()
+            node.to_string()
             );
 
     partition_configuration newConfig = _primary_states.membership;
@@ -272,7 +272,7 @@ void replica::on_remove(const replica_configuration& request)
     update_local_configuration(request);
 }
 
-void replica::update_configuration_on_meta_server(config_type type, const ::dsn::rpc_address& node, partition_configuration& newConfig)
+void replica::update_configuration_on_meta_server(config_type type, ::dsn::rpc_address node, partition_configuration& newConfig)
 {
     newConfig.last_committed_decree = last_committed_decree();
 
@@ -289,32 +289,25 @@ void replica::update_configuration_on_meta_server(config_type type, const ::dsn:
     update_local_configuration_with_no_ballot_change(PS_INACTIVE);
     set_inactive_state_transient(true);
 
-    dsn_message_t msg = dsn_msg_create_request(RPC_CM_CALL, 0, 0);
+    dsn_message_t msg = dsn_msg_create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION, 0, 0);
     
-    meta_request_header hdr;
-    hdr.rpc_tag = dsn_task_code_to_string(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
-
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
     request->config = newConfig;
     request->config.ballot++;
     request->type = type;
     request->node = node;
 
-    {
-        rpc_write_stream writer(msg);
-        marshall(writer, hdr);
-        marshall(writer, *request);
-    }
+    ::marshall(msg, *request);
 
     if (nullptr != _primary_states.reconfiguration_task)
     {
         _primary_states.reconfiguration_task->cancel(true);
     }
 
-    _primary_states.reconfiguration_task = rpc::call_replicated(
-        _stub->_failure_detector->current_server_contact(),
-        _stub->_failure_detector->get_servers(),
-        msg,
+    rpc_address target(_stub->_failure_detector->get_servers());
+    _primary_states.reconfiguration_task = rpc::call(
+        target,
+        msg,        
         this,
         std::bind(&replica::on_update_configuration_on_meta_server_reply, this,
         std::placeholders::_1,
@@ -324,7 +317,6 @@ void replica::update_configuration_on_meta_server(config_type type, const ::dsn:
         gpid_to_hash(get_gpid())
         );
 }
-
 
 void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_message_t request, dsn_message_t response, std::shared_ptr<configuration_update_request> req)
 {
@@ -337,6 +329,13 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
         return;
     }
 
+    configuration_update_response resp;
+    if (err == ERR_OK)
+    {
+        ::unmarshall(response, resp);
+        err = resp.err;
+    }
+
     if (err != ERR_OK)
     {
         ddebug(
@@ -346,9 +345,10 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
             req->config.ballot
             );
 
-        _primary_states.reconfiguration_task = rpc::call_replicated(
-            _stub->_failure_detector->current_server_contact(),
-            _stub->_failure_detector->get_servers(),
+        rpc_address target(_stub->_failure_detector->get_servers());
+        dsn_msg_add_ref(request); // added for another round of rpc::call
+        _primary_states.reconfiguration_task = rpc::call(
+            target,
             request,
             this,
             std::bind(&replica::on_update_configuration_on_meta_server_reply, this, 
@@ -360,9 +360,6 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
             );
         return;
     }
-
-    configuration_update_response resp;
-    ::unmarshall(response, resp);
 
     ddebug(
         "%s: update configuration reply with err %s, ballot %lld, local %lld",
@@ -397,7 +394,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
         case CT_UPGRADE_TO_SECONDARY:
             break;
         case CT_REMOVE:
-            if (req->node != _stub->_primary_address)
+            if (req->node != primary_address())
             {
                 replica_configuration rconfig;
                 replica_helper::get_replica_config(resp.config, req->node, rconfig);
@@ -418,13 +415,13 @@ bool replica::update_configuration(const partition_configuration& config)
     dassert (config.ballot >= get_ballot(), "");
     
     replica_configuration rconfig;
-    replica_helper::get_replica_config(config, _stub->_primary_address, rconfig);
+    replica_helper::get_replica_config(config, primary_address(), rconfig);
 
     if (rconfig.status == PS_PRIMARY &&
         (rconfig.ballot > get_ballot() || status() != PS_PRIMARY)
         )
     {
-        _primary_states.reset_membership(config, config.primary != _stub->_primary_address);
+        _primary_states.reset_membership(config, config.primary != primary_address());
     }
 
     if (config.ballot > get_ballot() ||
@@ -640,22 +637,22 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         dassert (false, "invalid execution path");
     }
 
+    dwarn(
+        "%s: status change %s @ %lld => %s @ %lld, pre(%llu, %llu), app(%llu, %llu), duration=%llu ms",
+        name(),
+        enum_to_string(old_status),
+        old_ballot,
+        enum_to_string(status()),
+        get_ballot(),
+        _prepare_list->max_decree(),
+        _prepare_list->last_committed_decree(),
+        _app->last_committed_decree(),
+        _app->last_durable_decree(),
+        _last_config_change_time_ms - oldTs
+        );
+
     if (status() != old_status)
     {
-        ddebug(
-            "%s: status change %s @ %lld => %s @ %lld, pre(%llu, %llu), app(%llu, %llu), duration=%llu ms",
-            name(),
-            enum_to_string(old_status),
-            old_ballot,
-            enum_to_string(status()),
-            get_ballot(),
-            _prepare_list->max_decree(),
-            _prepare_list->last_committed_decree(),
-            _app->last_committed_decree(),
-            _app->last_durable_decree(),
-            _last_config_change_time_ms - oldTs
-            );
-
         bool isClosing = (status() == PS_ERROR || (status() == PS_INACTIVE && get_ballot() > old_ballot));
         _stub->notify_replica_state_update(config, isClosing);
 
@@ -701,7 +698,7 @@ void replica::on_config_sync(const partition_configuration& config)
 
         if (status() == PS_INACTIVE && !_inactive_is_transient)
         {
-            if (config.primary == _stub->_primary_address // dead primary
+            if (config.primary == primary_address() // dead primary
                 || config.primary.is_invalid() // primary is dead (otherwise let primary remove this)
                 )
             {
@@ -726,7 +723,7 @@ void replica::replay_prepare_list()
 
     for (decree decree = start; decree <= end; decree++)
     {
-        mutation_ptr old = _prepare_list->remove_mutation_by_decree(decree);
+        mutation_ptr old = _prepare_list->get_mutation_by_decree(decree);
         mutation_ptr mu = new_mutation(decree);
 
         if (old != nullptr)

@@ -46,7 +46,7 @@ namespace dsn
 
         bool is_started() const { return _started; }
 
-        const ::dsn::rpc_address& primary_address() const { return _address; }
+        ::dsn::rpc_address primary_address() const { return _address; }
 
         const std::string& name() const { return _name; }
 

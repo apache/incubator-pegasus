@@ -63,12 +63,11 @@ void replica_stub::initialize(bool clear/* = false*/)
 void replica_stub::initialize(const replication_options& opts, bool clear/* = false*/)
 {
     error_code err = ERR_OK;
-    zauto_lock l(_replicas_lock);
+    //zauto_lock l(_replicas_lock);
 
     // init dirs
     set_options(opts);
     _dir = _options.working_dir;
-    _primary_address = primary_address();
     
     if (clear)
     {
@@ -97,14 +96,14 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 
     // init rps
     replicas rps;
-	std::vector<std::string> file_list;
+	std::vector<std::string> dir_list;
 
-	if (!dsn::utils::filesystem::get_subfiles(dir(), file_list, false))
+	if (!dsn::utils::filesystem::get_subdirectories(dir(), dir_list, false))
 	{
 		dassert(false, "Fail to get files in %s.", dir().c_str());
 	}
 
-	for (auto& name : file_list)
+	for (auto& name : dir_list)
 	{
 		if (name.length() >= 4 &&
 			(name.substr(name.length() - strlen("log")) == "log" ||
@@ -115,73 +114,106 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 		auto r = replica::load(this, name.c_str(), true);
 		if (r != nullptr)
 		{
-			ddebug("%u.%u @ %s:%hu: load replica success with durable decree = %llu from '%s'",
+			ddebug("%u.%u @ %s: load replica success with durable/commit decree = %llu / %llu from '%s'",
 				r->get_gpid().app_id, r->get_gpid().pidx,
-				_primary_address.name(), _primary_address.port(),
+                primary_address().to_string(),
 				r->last_durable_decree(),
+                r->last_committed_decree(),
 				name.c_str()
 				);
 			rps[r->get_gpid()] = r;
-
-            // when private log is used for reliability
-            if (!_options.log_shared && _options.log_private)
-            {
-                r->replay_private_log();
-            }
 		}
 	}
-	file_list.clear();
+	dir_list.clear();
 
     // init logs when is_shared
-    _log = nullptr;
-    if (_options.log_shared)
+    if (_options.log_enable_shared_prepare)
     {
         _log = new mutation_log(
-            opts.log_buffer_size_mb, 
-            opts.log_pending_max_ms, 
-            opts.log_file_size_mb, 
+            opts.log_buffer_size_mb,
+            opts.log_pending_max_ms,
+            opts.log_file_size_mb,
             opts.log_batch_write
             );
         err = _log->initialize(log_dir.c_str());
         dassert(err == ERR_OK, "");
         err = _log->replay(
-            std::bind(&replica_stub::replay_mutation, this, std::placeholders::_1, &rps)
-            );
-
-        for (auto it = rps.begin(); it != rps.end(); it++)
+            [&rps](mutation_ptr& mu)
         {
-            it->second->reset_prepare_list_after_replay();
-
-            if (err == ERR_OK)
+            auto it = rps.find(mu->data.header.gpid);
+            if (it != rps.end())
             {
-                derror(
-                    "%u.%u @ %s:%hu: global log initialized, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
-                    it->first.app_id, it->first.pidx,
-                    _primary_address.name(), _primary_address.port(),
-                    it->second->last_durable_decree(),
-                    it->second->last_committed_decree(),
-                    it->second->max_prepared_decree(),
-                    it->second->get_ballot()
-                    );
-
-                it->second->set_inactive_state_transient(true);
-            }
-            else
-            {
-                derror(
-                    "%u.%u @ %s:%hu: global log initialized with log error, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
-                    it->first.app_id, it->first.pidx,
-                    _primary_address.name(), _primary_address.port(),
-                    it->second->last_durable_decree(),
-                    it->second->last_committed_decree(),
-                    it->second->max_prepared_decree(),
-                    it->second->get_ballot()
-                    );
-
-                it->second->set_inactive_state_transient(false);
+                it->second->replay_mutation(mu);
             }
         }
-    }    
+        );
+
+        if (err != ERR_OK)
+        {
+            derror(
+                "%s: replication log replay failed, err %s, clear all logs ...",
+                primary_address().to_string(),
+                err.to_string()
+                );
+
+            // restart log service
+            _log->close();
+
+            std::string err_log_path = log_dir + ".err";
+            if (utils::filesystem::directory_exists(err_log_path))
+                utils::filesystem::remove_path(err_log_path);
+
+            utils::filesystem::rename_path(log_dir, err_log_path);
+            utils::filesystem::create_directory(log_dir);
+
+            _log = new mutation_log(
+                opts.log_buffer_size_mb,
+                opts.log_pending_max_ms,
+                opts.log_file_size_mb,
+                opts.log_batch_write
+                );
+            auto lerr = _log->initialize(log_dir.c_str());
+            dassert(lerr == ERR_OK, "");
+        }
+    }
+    else
+    {
+        _log = nullptr;
+    }
+
+    for (auto it = rps.begin(); it != rps.end(); it++)
+    {
+        it->second->reset_prepare_list_after_replay();
+
+        if (err == ERR_OK)
+        {
+            dwarn(
+                "%u.%u @ %s: global log initialized, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
+                it->first.app_id, it->first.pidx,
+                primary_address().to_string(),
+                it->second->last_durable_decree(),
+                it->second->last_committed_decree(),
+                it->second->max_prepared_decree(),
+                it->second->get_ballot()
+                );
+
+            it->second->set_inactive_state_transient(true);
+        }
+        else
+        {
+            dwarn(
+                "%u.%u @ %s: global log initialized with log error, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
+                it->first.app_id, it->first.pidx,
+                primary_address().to_string(),
+                it->second->last_durable_decree(),
+                it->second->last_committed_decree(),
+                it->second->max_prepared_decree(),
+                it->second->get_ballot()
+                );
+
+            it->second->set_inactive_state_transient(false);
+        }
+    }
 
     // gc
     if (false == _options.gc_disabled)
@@ -197,7 +229,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     }
 
     // start log serving    
-    if (nullptr != _log)
+    if (_log != nullptr)
     {
         multi_partition_decrees init_max_decrees; // for log truncate
         for (auto it = rps.begin(); it != rps.end(); it++)
@@ -206,14 +238,6 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         }
         err = _log->start_write_service(init_max_decrees, _options.staleness_for_commit);
         dassert(err == ERR_OK, "");
-    }
-
-    if (_options.log_private)
-    {
-        for (auto& r : rps)
-        {
-            r.second->start_private_log_service();
-        }
     }
 
     // attach rps
@@ -253,15 +277,6 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     }
 }
 
-void replica_stub::replay_mutation(mutation_ptr& mu, replicas* rps)
-{
-    auto it = rps->find(mu->data.header.gpid);
-    if (it != rps->end())
-    {
-        it->second->replay_mutation(mu);
-    }
-}
-
 replica_ptr replica_stub::get_replica(global_partition_id gpid, bool new_when_possible, const char* app_type)
 {
     zauto_lock l(_replicas_lock);
@@ -291,20 +306,6 @@ replica_ptr replica_stub::get_replica(int32_t app_id, int32_t partition_index)
     gpid.app_id = app_id;
     gpid.pidx = partition_index;
     return get_replica(gpid);
-}
-
-void replica_stub::get_primary_replica_list(uint32_t p_tableID, std::vector<global_partition_id>& p_repilcaList)
-{
-    zauto_lock l(_replicas_lock);
-    for (auto it = _replicas.begin(); it != _replicas.end(); it++)
-    {
-        if (it->second->status() == PS_PRIMARY 
-            && (p_tableID == (uint32_t)-1 
-            || it->second->get_gpid().app_id == static_cast<int>(p_tableID) ))
-        {
-            p_repilcaList.push_back(it->second->get_gpid());
-        }
-    }
 }
 
 void replica_stub::on_client_write(dsn_message_t request)
@@ -341,11 +342,7 @@ void replica_stub::on_client_read(dsn_message_t request)
 
 void replica_stub::on_config_proposal(const configuration_update_request& proposal)
 {
-    if (!is_connected())
-    {
-        dwarn("on_config_proposal: not connected, ignore");
-        return;
-    }
+    if (!is_connected()) return;
 
     replica_ptr rep = get_replica(proposal.config.gpid, proposal.type == CT_ASSIGN_PRIMARY, proposal.config.app_type.c_str());
     if (rep == nullptr)
@@ -410,11 +407,7 @@ void replica_stub::on_prepare(dsn_message_t request)
 
 void replica_stub::on_group_check(const group_check_request& request, /*out*/ group_check_response& response)
 {
-    if (!is_connected())
-    {
-        dwarn("on_group_check: not connected, ignore");
-        return;
-    }
+    if (!is_connected()) return;
 
     replica_ptr rep = get_replica(request.config.gpid, request.config.status == PS_POTENTIAL_SECONDARY, request.app_type.c_str());
     if (rep != nullptr)
@@ -439,16 +432,21 @@ void replica_stub::on_group_check(const group_check_request& request, /*out*/ gr
     }
 }
 
-void replica_stub::on_learn(const learn_request& request, /*out*/ learn_response& response)
+void replica_stub::on_learn(dsn_message_t msg)
 {
+    learn_request request;
+    ::unmarshall(msg, request);
+
     replica_ptr rep = get_replica(request.gpid);
     if (rep != nullptr)
     {
-        rep->on_learn(request, response);
+        rep->on_learn(msg, request);
     }
     else
     {
+        learn_response response;
         response.err = ERR_OBJECT_NOT_FOUND;
+        reply(msg, response);
     }
 }
 
@@ -501,19 +499,15 @@ void replica_stub::query_configuration_by_node()
         _config_query_task->cancel(false);
     }
 
-    dsn_message_t msg = dsn_msg_create_request(RPC_CM_CALL, 0, 0);
-
-    meta_request_header hdr;
-    hdr.rpc_tag = dsn_task_code_to_string(RPC_CM_QUERY_NODE_PARTITIONS);
-    ::marshall(msg, hdr);
+    dsn_message_t msg = dsn_msg_create_request(RPC_CM_QUERY_NODE_PARTITIONS, 0, 0);
 
     configuration_query_by_node_request req;
-    req.node = _primary_address;
+    req.node = primary_address();
     ::marshall(msg, req);
 
-    _config_query_task = rpc::call_replicated(
-        _failure_detector->current_server_contact(),
-        _failure_detector->get_servers(),
+    rpc_address target(_failure_detector->get_servers());
+    _config_query_task = rpc::call(
+        target,
         msg,
         this,
         std::bind(&replica_stub::on_node_query_reply, this, 
@@ -527,8 +521,8 @@ void replica_stub::query_configuration_by_node()
 void replica_stub::on_meta_server_connected()
 {
     ddebug(
-        "%s:%hu: meta server connected",
-        _primary_address.name(), _primary_address.port()
+        "%s: meta server connected",
+        primary_address().to_string()
         );
 
     zauto_lock l(_replicas_lock);
@@ -542,8 +536,8 @@ void replica_stub::on_meta_server_connected()
 void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, dsn_message_t response)
 {
     ddebug(
-        "%s:%hu: node view replied, err = %s",
-        _primary_address.name(), _primary_address.port(),
+        "%s: node view replied, err = %s",
+        primary_address().to_string(),
         err.to_string()
         );    
 
@@ -568,7 +562,7 @@ void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, ds
             return;
         
         configuration_query_by_node_response resp;
-        ::unmarshall(response, resp);     
+        ::unmarshall(response, resp);
 
         if (resp.err != ERR_OK)
             return;
@@ -626,12 +620,12 @@ void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_, const par
     else
     {
         ddebug(
-            "%u.%u @ %s:%hu: replica not exists on replica server, remove it from meta server",
+            "%u.%u @ %s: replica not exists on replica server, remove it from meta server",
             config.gpid.app_id, config.gpid.pidx,
-            _primary_address.name(), _primary_address.port()
+            primary_address().to_string()
             );
 
-        if (config.primary == _primary_address)
+        if (config.primary == primary_address())
         {
             remove_replica_on_meta_server(config);
         }
@@ -644,9 +638,9 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, global_p
     if (replica != nullptr && replica->status() != PS_POTENTIAL_SECONDARY)
     {
         ddebug(
-            "%u.%u @ %s:%hu: replica not exists on meta server, removed",
+            "%u.%u @ %s: replica not exists on meta server, removed",
             gpid.app_id, gpid.pidx,
-            _primary_address.name(), _primary_address.port()
+            primary_address().to_string()
             );
         replica->update_local_configuration_with_no_ballot_change(PS_ERROR);
     }
@@ -654,22 +648,19 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, global_p
 
 void replica_stub::remove_replica_on_meta_server(const partition_configuration& config)
 {
-    dsn_message_t msg = dsn_msg_create_request(RPC_CM_CALL, 0, 0);
-    meta_request_header hdr;
-    hdr.rpc_tag = dsn_task_code_to_string(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
-    ::marshall(msg, hdr);
+    dsn_message_t msg = dsn_msg_create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION, 0, 0);
 
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
     request->config = config;
     request->config.ballot++;        
-    request->node = _primary_address;
+    request->node = primary_address();
     request->type = CT_DOWNGRADE_TO_INACTIVE;
 
-    if (_primary_address == config.primary)
+    if (primary_address() == config.primary)
     {
         request->config.primary.set_invalid();        
     }
-    else if (replica_helper::remove_node(_primary_address, request->config.secondaries))
+    else if (replica_helper::remove_node(primary_address(), request->config.secondaries))
     {
     }
     else
@@ -679,8 +670,8 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
 
     ::marshall(msg, *request);
 
-    rpc::call_replicated(
-        _failure_detector->current_server_contact(),
+    rpc_address target(_failure_detector->get_servers());
+    rpc::call(
         _failure_detector->get_servers(),
         msg,
         nullptr,
@@ -691,8 +682,8 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
 void replica_stub::on_meta_server_disconnected()
 {
     ddebug(
-        "%s:%hu: meta server disconnected",
-        _primary_address.name(), _primary_address.port()
+        "%s: meta server disconnected",
+        primary_address().to_string()
         );
     zauto_lock l(_replicas_lock);
     if (NS_Disconnected == _state)
@@ -753,17 +744,31 @@ void replica_stub::on_gc()
         rs = _replicas;
     }
 
-    // gc log
-    multi_partition_decrees durable_decrees, max_seen_decrees;
-    for (auto it = rs.begin(); it != rs.end(); it++)
+    // gc prepare log
+    if (_log != nullptr)
     {
-        durable_decrees[it->first] = it->second->last_durable_decree();
-        max_seen_decrees[it->first] = it->second->max_prepared_decree();
+        multi_partition_decrees durable_decrees, max_seen_decrees;
+        for (auto it = rs.begin(); it != rs.end(); it++)
+        {
+            durable_decrees[it->first] = it->second->last_durable_decree();
+            max_seen_decrees[it->first] = it->second->max_prepared_decree();
+        }
+        _log->garbage_collection(durable_decrees, max_seen_decrees);
     }
-    _log->garbage_collection(durable_decrees, max_seen_decrees);
     
-    // gc on-disk rps
+    // gc commit log
+    if (_options.log_enable_private_commit)
+    {
+        for (auto it = rs.begin(); it != rs.end(); it++)
+        {
+            it->second->commit_log()->garbage_collection_when_as_commit_logs(
+                it->first,
+                it->second->last_durable_decree()
+                );
+        }
+    }
 
+    // gc on-disk rps
 	std::vector<std::string> sub_list;
 	if (!dsn::utils::filesystem::get_subdirectories(_dir, sub_list, false))
 	{
@@ -892,7 +897,7 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
 
     if (nullptr != req)
     {
-        rpc::call_one_way_typed(_primary_address, RPC_LEARN_ADD_LEARNER, *req, gpid_to_hash(req->config.gpid));
+        rpc::call_one_way_typed(primary_address(), RPC_LEARN_ADD_LEARNER, *req, gpid_to_hash(req->config.gpid));
     }
 }
 
@@ -955,13 +960,18 @@ void replica_stub::notify_replica_state_update(const replica_configuration& conf
     {
         if (_is_long_subscriber)
         {
-            tasking::enqueue(LPC_REPLICA_STATE_CHANGE_NOTIFICATION, this, std::bind(_replica_state_subscriber, _primary_address, config, isClosing));
+            tasking::enqueue(LPC_REPLICA_STATE_CHANGE_NOTIFICATION, this, std::bind(_replica_state_subscriber, primary_address(), config, isClosing));
         }
         else
         {
-            _replica_state_subscriber(_primary_address, config, isClosing);
+            _replica_state_subscriber(primary_address(), config, isClosing);
         }
     }
+}
+
+void replica_stub::handle_log_failure(error_code err)
+{
+    // TODO:
 }
 
 void replica_stub::open_service()
@@ -1042,7 +1052,6 @@ void replica_stub::close()
     if (_log != nullptr)
     {
         _log->close();
-        delete _log;
         _log = nullptr;
     }
 }

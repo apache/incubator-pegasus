@@ -27,6 +27,7 @@
 #include "replica.h"
 #include "mutation.h"
 #include <dsn/internal/factory_store.h>
+#include "mutation_log.h"
 
 # ifdef __TITLE__
 # undef __TITLE__

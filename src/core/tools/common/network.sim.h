@@ -35,7 +35,7 @@ namespace dsn { namespace tools {
     public:
         sim_client_session(
             sim_network_provider& net, 
-            const ::dsn::rpc_address& remote_addr, 
+            ::dsn::rpc_address remote_addr, 
             rpc_client_matcher_ptr& matcher, 
             std::shared_ptr<message_parser>& parser
             );
@@ -49,7 +49,7 @@ namespace dsn { namespace tools {
     public:
         sim_server_session(
             sim_network_provider& net, 
-            const ::dsn::rpc_address& remote_addr, 
+            ::dsn::rpc_address remote_addr, 
             rpc_session_ptr& client, 
             std::shared_ptr<message_parser>& parser
             );
@@ -70,11 +70,11 @@ namespace dsn { namespace tools {
 
         virtual error_code start(rpc_channel channel, int port, bool client_only, io_modifer& ctx);
     
-        virtual const ::dsn::rpc_address& address() { return _address; }
+        virtual ::dsn::rpc_address address() { return _address; }
 
-        virtual rpc_session_ptr create_client_session(const ::dsn::rpc_address& server_addr)
+        virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr)
         {
-            auto matcher = new_client_matcher();
+            auto matcher = get_client_matcher();
             auto parser = new_message_parser();
             return rpc_session_ptr(new sim_client_session(*this, server_addr, matcher, parser));
         }

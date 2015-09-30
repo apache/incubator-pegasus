@@ -29,32 +29,23 @@
 namespace dsn { namespace replication {
 
 
-replication_failure_detector::replication_failure_detector(replica_stub* stub, std::vector<::dsn::rpc_address>& meta_servers)
+replication_failure_detector::replication_failure_detector(
+    replica_stub* stub, std::vector<::dsn::rpc_address>& meta_servers)
 {
+    _meta_servers.assign_group(dsn_group_build("meta.servers"));
     _stub = stub;
-    _meta_servers = meta_servers;
-    _current_meta_server = _meta_servers[random32(0, 100) % _meta_servers.size()];
+    for (auto& s : meta_servers)
+    {
+        dsn_group_add(_meta_servers.group_handle(), s.c_addr());
+    }
+
+    dsn_group_set_leader(_meta_servers.group_handle(),
+        meta_servers[random32(0, (uint32_t)meta_servers.size() - 1)].c_addr());
 }
 
 replication_failure_detector::~replication_failure_detector(void)
 {
-
-}
-
-::dsn::rpc_address replication_failure_detector::find_next_meta_server(::dsn::rpc_address current)
-{
-    if (current.is_invalid())
-        return _meta_servers[random32(0, 100) % _meta_servers.size()];
-    else
-    {
-        auto it = std::find(_meta_servers.begin(), _meta_servers.end(), current);
-        dassert (it != _meta_servers.end(), "");
-        it++;
-        if (it != _meta_servers.end())
-            return *it;
-        else
-            return _meta_servers.at(0);
-    }
+    dsn_group_destroy(_meta_servers.group_handle());
 }
 
 void replication_failure_detector::end_ping(::dsn::error_code err, const fd::beacon_ack& ack, void* context)
@@ -63,11 +54,11 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
 
     zauto_lock l(_meta_lock);
     
-    if (ack.this_node == _current_meta_server)
+    if (dsn_group_is_leader(_meta_servers.group_handle(), ack.this_node.c_addr()))
     {
         if (err != ERR_OK)
         {
-            ::dsn::rpc_address node = find_next_meta_server(ack.this_node);
+            rpc_address node = dsn_group_next(_meta_servers.group_handle(), ack.this_node.c_addr());
             if (ack.this_node != node)
             {
                 switch_master(ack.this_node, node);
@@ -97,7 +88,7 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
         }
         else 
         {
-            _current_meta_server = ack.this_node;
+            dsn_group_set_leader(_meta_servers.group_handle(), ack.this_node.c_addr());
         }
     }
 }
@@ -106,12 +97,13 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
 void replication_failure_detector::on_master_disconnected( const std::vector<::dsn::rpc_address>& nodes )
 {
     bool primaryDisconnected = false;
+    rpc_address leader = dsn_group_get_leader(_meta_servers.group_handle());
 
     {
     zauto_lock l(_meta_lock);
     for (auto it = nodes.begin(); it != nodes.end(); it++)
     {
-        if (_current_meta_server == *it)
+        if (leader == *it)
             primaryDisconnected = true;
     }
     }
@@ -122,13 +114,13 @@ void replication_failure_detector::on_master_disconnected( const std::vector<::d
     }
 }
 
-void replication_failure_detector::on_master_connected( const ::dsn::rpc_address& node)
+void replication_failure_detector::on_master_connected(::dsn::rpc_address node)
 {
     bool is_primary = false;
 
     {
     zauto_lock l(_meta_lock);
-    is_primary = (node == _current_meta_server);
+    is_primary = dsn_group_is_leader(_meta_servers.group_handle(), node.c_addr());
     }
 
     if (is_primary)

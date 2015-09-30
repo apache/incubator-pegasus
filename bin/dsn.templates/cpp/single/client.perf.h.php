@@ -16,7 +16,7 @@ class <?=$svc->name?>_perf_test_client
 {
 public:
     <?=$svc->name?>_perf_test_client(
-        const ::dsn::rpc_address& server)
+        ::dsn::rpc_address server)
         : <?=$svc->name?>_client(server)
     {
     }
@@ -42,9 +42,6 @@ public:
     void send_one_<?=$f->name?>(int payload_bytes)
     {
         void* ctx = prepare_send_one();
-        if (!ctx)
-            return;
-
         <?=$f->get_first_param()->get_cpp_type()?> req;
         // TODO: randomize the value of req
         // auto rs = random64(0, 10000000);

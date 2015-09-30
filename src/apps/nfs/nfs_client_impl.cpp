@@ -250,7 +250,7 @@ namespace dsn {
             }   
 
             // real write
-            std::string file_path = reqc->copy_req.dst_dir + reqc->file_ctx->file_name;
+            std::string file_path = dsn::utils::filesystem::path_combine(reqc->copy_req.dst_dir, reqc->file_ctx->file_name);
             std::string path = dsn::utils::filesystem::remove_file_name(file_path.c_str());
 			if (!dsn::utils::filesystem::create_directory(path))
             {

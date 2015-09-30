@@ -15,7 +15,7 @@ class <?=$svc->name?>_client
     : public virtual ::dsn::clientlet
 {
 public:
-    <?=$svc->name?>_client(const ::dsn::rpc_address& server) { _server = server; }
+    <?=$svc->name?>_client(::dsn::rpc_address server) { _server = server; }
     <?=$svc->name?>_client() { }
     virtual ~<?=$svc->name?>_client() {}
 

@@ -87,8 +87,9 @@ namespace dsn
 
         // by rpc and network
         rpc_session_ptr        server_session;
-        ::dsn::rpc_address     from_address;
-        ::dsn::rpc_address     to_address;
+        ::dsn::rpc_address     from_address;   // always ipv4/v6 address
+        ::dsn::rpc_address     to_address;     // always ipv4/v6 address
+        ::dsn::rpc_address     server_address; // used by requests, and may be of uri/group address
         uint16_t               local_rpc_code;
 
         // by message queuing

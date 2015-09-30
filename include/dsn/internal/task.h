@@ -74,6 +74,8 @@ struct __tls_dsn__
 
     uint64_t      node_pool_thread_ids; // 8,8,16 bits
     int           last_lower32_task_id; // 32bits
+
+    char          scatch_buffer[256]; // for temp to_string() etc.
 };
 
 extern __thread struct __tls_dsn__ tls_dsn;

@@ -46,9 +46,6 @@ error_code replica::initialize_on_new(const char* app_type, global_partition_id 
     _config.gpid = gpid;
     _dir = _stub->dir() + "/" + buffer;
 
-    sprintf(_name, "%u.%u@%s:%hu", _config.gpid.app_id, _config.gpid.pidx,
-            _stub->_primary_address.name(), _stub->_primary_address.port());
-
     if (dsn::utils::filesystem::directory_exists(_dir))
     {
         return ERR_PATH_ALREADY_EXIST;
@@ -62,10 +59,6 @@ error_code replica::initialize_on_new(const char* app_type, global_partition_id 
 
     error_code err = init_app_and_prepare_list(app_type, true);
     dassert (err == ERR_OK, "");
-
-    if (_options->log_private)
-        start_private_log_service();
-
     return err;
 }
 
@@ -104,9 +97,6 @@ error_code replica::initialize_on_load(const char* dir, bool rename_dir_on_failu
     _config.gpid = gpid;
     _dir = dr;
 
-    sprintf(_name, "%u.%u@%s:%hu", _config.gpid.app_id, _config.gpid.pidx,
-            _stub->_primary_address.name(), _stub->_primary_address.port());
-
     error_code err = init_app_and_prepare_list(app_type, false);
 
     if (err != ERR_OK && rename_dir_on_failure)
@@ -126,10 +116,6 @@ error_code replica::initialize_on_load(const char* dir, bool rename_dir_on_failu
 			//return ERR_FILE_OPERATION_FAILED;
 		}
     }
-
-    if (_options->log_private)
-        start_private_log_service();
-
     return err;
 }
 
@@ -153,6 +139,8 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
 {
     dassert (nullptr == _app, "");
 
+    sprintf(_name, "%u.%u @ %s", _config.gpid.app_id, _config.gpid.pidx, primary_address().to_string());
+
     _app = ::dsn::utils::factory_store<replication_app_base>::create(app_type, PROVIDER_TYPE_MAIN, this);
     if (nullptr == _app)
     {
@@ -165,9 +153,17 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
     if (err == ERR_OK)
     {
         dassert (_app->last_durable_decree() == _app->last_committed_decree(), "");
+
+        if (_options->log_enable_private_commit 
+        || !_app->is_delta_state_learning_supported())
+        {
+            err = init_commit_log_service();
+        }
+
         _prepare_list->reset(_app->last_committed_decree());
     }
-    else
+
+    if (err != ERR_OK)
     {
         derror( "open replica '%s' under '%s' failed, error = %d", app_type, dir().c_str(), lerr);
         delete _app;
@@ -177,40 +173,49 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
     return err;
 }
 
-void replica::start_private_log_service()
+error_code replica::init_commit_log_service()
 {
-    dassert(_log != nullptr, "private log must be present");
+    error_code err = ERR_OK;
+    
+    dassert(nullptr == _commit_log, "commit log must not be initialized yet");
 
-    multi_partition_decrees init_max_decrees; // for log truncate
-    init_max_decrees[get_gpid()] = max_prepared_decree();
-    error_code err = _log->start_write_service(init_max_decrees, _options->staleness_for_commit);
-    dassert(err == ERR_OK, "");
-}
-
-error_code replica::replay_private_log()
-{
-    replicas rps;
-    rps[get_gpid()] = this;
-
-    error_code err = _log->replay(
-        std::bind(&replica_stub::replay_mutation, _stub, std::placeholders::_1, &rps)
+    _commit_log = new mutation_log(
+        _options->log_buffer_size_mb,
+        _options->log_pending_max_ms,
+        _options->log_file_size_mb,
+        _options->log_batch_write
         );
 
-    if (!_options->log_shared)
-        reset_prepare_list_after_replay();
-    else
-    {
-        // let replica stub does this with global log
-    }
+    std::string log_dir = dir() + "/commit-log";
+    err = _commit_log->initialize(log_dir.c_str());
+    if (err != ERR_OK)
+        return err;
+
+    err = _commit_log->replay(
+        [this](mutation_ptr& mu)
+        {
+            if (mu->data.header.decree == _app->last_committed_decree() + 1)
+            {
+                _app->write_internal(mu);
+            }
+            else
+            {
+                ddebug("%s: mutation %s skipped coz unmached decree %llu vs %llu (last_committed)",
+                    name(), mu->name(),
+                    mu->data.header.decree,
+                    _app->last_committed_decree()
+                    );
+            }
+        }
+        );
 
     if (err == ERR_OK)
     {
         derror(
-            "%u.%u @ %s:%hu: local log initialized, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
-            _config.gpid.app_id, _config.gpid.pidx,
-            _stub->_primary_address.name(), _stub->_primary_address.port(),
-            last_durable_decree(),
-            last_committed_decree(),
+            "%s: local log initialized, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
+            name(),
+            _app->last_durable_decree(),
+            _app->last_committed_decree(),
             max_prepared_decree(),
             get_ballot()
             );
@@ -220,28 +225,60 @@ error_code replica::replay_private_log()
     else
     {
         derror(
-            "%u.%u @ %s:%hu: local log initialized with log error, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
-            _config.gpid.app_id, _config.gpid.pidx,
-            _stub->_primary_address.name(), _stub->_primary_address.port(),
-            last_durable_decree(),
-            last_committed_decree(),
+            "%s: local log initialized with log error, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
+            name(),
+            _app->last_durable_decree(),
+            _app->last_committed_decree(),
             max_prepared_decree(),
             get_ballot()
             );
 
         set_inactive_state_transient(false);
+
+        // restart commit log service
+        _commit_log->close();
+        
+        std::string err_log_path = log_dir + ".err";
+        if (utils::filesystem::directory_exists(err_log_path))
+            utils::filesystem::remove_path(err_log_path);
+
+        utils::filesystem::rename_path(log_dir, err_log_path);
+        utils::filesystem::create_directory(log_dir);
+
+        _commit_log = new mutation_log(
+            _options->log_buffer_size_mb,
+            _options->log_pending_max_ms,
+            _options->log_file_size_mb,
+            _options->log_batch_write
+            );
+
+        auto lerr = _commit_log->initialize(log_dir.c_str());
+        if (lerr != ERR_OK)
+            return lerr;
     }
+
+    multi_partition_decrees init_max_decrees; // for log truncate
+    init_max_decrees[get_gpid()] = _app->last_committed_decree();
+    
+    err = _commit_log->start_write_service(init_max_decrees, _options->staleness_for_commit);
     return err;
 }
 
 void replica::replay_mutation(mutation_ptr& mu)
 {
+    ddebug(
+        "%s: replay mutation ballot = %llu, decree = %llu, last_committed_decree = %llu",
+        name(),
+        mu->data.header.ballot,
+        mu->data.header.decree,
+        mu->data.header.last_committed_decree
+        );
+
     if (mu->data.header.decree <= last_committed_decree() ||
         mu->data.header.ballot < get_ballot())
     {
         return;
     }
-        
     
     if (mu->data.header.ballot > get_ballot())
     {
@@ -250,15 +287,6 @@ void replica::replay_mutation(mutation_ptr& mu)
     }
 
     // prepare
-    /*ddebug( 
-            "%u.%u @ %s:%hu: replay mutation ballot = %llu, decree = %llu, last_committed_decree = %llu",
-            get_gpid().app_id, get_gpid().pidx, 
-            address().name(), address().port(),
-            mu->data.header.ballot, 
-            mu->data.header.decree,
-            mu->data.header.last_committed_decree
-        );*/
-
     error_code err = _prepare_list->prepare(mu, PS_INACTIVE);
     dassert (err == ERR_OK, "");
 }

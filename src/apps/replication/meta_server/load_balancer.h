@@ -42,7 +42,7 @@ public:
 
 private:
     // meta server => partition server
-    void send_proposal(const ::dsn::rpc_address& node, const configuration_update_request& proposal);
+    void send_proposal(::dsn::rpc_address node, const configuration_update_request& proposal);
     void query_decree(std::shared_ptr<query_replica_decree_request> query);
     void on_query_decree_ack(error_code err, std::shared_ptr<query_replica_decree_request>& query, std::shared_ptr<query_replica_decree_response>& resp);
     

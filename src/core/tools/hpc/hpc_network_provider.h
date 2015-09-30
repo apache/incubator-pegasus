@@ -51,8 +51,8 @@ namespace dsn {
             hpc_network_provider(rpc_engine* srv, network* inner_provider);
 
             virtual error_code start(rpc_channel channel, int port, bool client_only, io_modifer& ctx);
-            virtual const ::dsn::rpc_address& address() { return _address;  }
-            virtual rpc_session_ptr create_client_session(const ::dsn::rpc_address& server_addr);
+            virtual ::dsn::rpc_address address() { return _address;  }
+            virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr);
             
         private:
             socket_t      _listen_fd;
@@ -87,7 +87,7 @@ namespace dsn {
                 socket_t sock,
                 std::shared_ptr<dsn::message_parser>& parser,
                 connection_oriented_network& net,
-                const ::dsn::rpc_address& remote_addr,
+                ::dsn::rpc_address remote_addr,
                 rpc_client_matcher_ptr& matcher
                 );
 
@@ -99,7 +99,7 @@ namespace dsn {
                 socket_t sock,
                 std::shared_ptr<dsn::message_parser>& parser,
                 connection_oriented_network& net,
-                const ::dsn::rpc_address& remote_addr
+                ::dsn::rpc_address remote_addr
                 );
             
         // shared

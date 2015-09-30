@@ -72,7 +72,7 @@ void replica::broadcast_group_check()
 
     for (auto it = _primary_states.statuses.begin(); it != _primary_states.statuses.end(); it++)
     {
-        if (it->first == _stub->_primary_address)
+        if (it->first == primary_address())
             continue;
 
         ::dsn::rpc_address addr = it->first;
@@ -102,7 +102,7 @@ void replica::broadcast_group_check()
         _primary_states.group_check_pending_replies[addr] = callback_task;
 
         ddebug(
-            "%s: init_group_check for %s:%hu", name(), addr.name(), addr.port()
+            "%s: init_group_check for %s", name(), addr.to_string()
         );
     }
 }
@@ -112,8 +112,8 @@ void replica::on_group_check(const group_check_request& request, /*out*/ group_c
     check_hashed_access();
 
     ddebug(
-        "%s: on_group_check from %s:%hu",
-        name(), request.config.primary.name(), request.config.primary.port()
+        "%s: on_group_check from %s",
+        name(), request.config.primary.to_string()
         );
     
     if (request.config.ballot < get_ballot())
@@ -150,7 +150,7 @@ void replica::on_group_check(const group_check_request& request, /*out*/ group_c
     }
     
     response.gpid = get_gpid();
-    response.node = _stub->_primary_address;
+    response.node = primary_address();
     response.err = ERR_OK;
     if (status() == PS_ERROR)
     {
