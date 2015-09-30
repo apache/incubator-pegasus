@@ -40,8 +40,7 @@ namespace dsn
         virtual ~clientlet();
 
         dsn_task_tracker_t tracker() const { return _tracker; }
-        void primary_address(rpc_address& addr) { dsn_primary_address2(addr.c_addr_ptr()); }
-        rpc_address primary_address() { rpc_address addr; dsn_primary_address2(addr.c_addr_ptr()); return addr; }
+        rpc_address primary_address() { return dsn_primary_address(); }
 
         static uint32_t random32(uint32_t min, uint32_t max) { return dsn_random32(min, max); }
         static uint64_t random64(uint64_t min, uint64_t max) { return dsn_random64(min, max); }
@@ -99,7 +98,7 @@ namespace dsn
     {
         //  std::function<void(error_code, dsn_message_t, dsn_message_t)>
         task_ptr call(
-            const ::dsn::rpc_address& server,
+            ::dsn::rpc_address server,
             dsn_message_t request,
             clientlet* svc,
             rpc_reply_handler callback,
@@ -119,7 +118,7 @@ namespace dsn
         // no callback
         template<typename TRequest>
         void call_one_way_typed(
-            const ::dsn::rpc_address& server,
+            ::dsn::rpc_address server,
             dsn_task_code_t code,
             const TRequest& req,
             int hash = 0
@@ -128,7 +127,7 @@ namespace dsn
         template<typename TRequest>
         ::dsn::error_code call_typed_wait(
             /*out*/ ::dsn::rpc_read_stream* response,
-            const ::dsn::rpc_address& server,
+            ::dsn::rpc_address server,
             dsn_task_code_t code,
             const TRequest& req,
             int hash = 0,
@@ -138,7 +137,7 @@ namespace dsn
         //  std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)>
         template<typename TRequest, typename TResponse>
         task_ptr call_typed(
-            const ::dsn::rpc_address& server,
+            ::dsn::rpc_address server,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
             clientlet* svc,
@@ -151,7 +150,7 @@ namespace dsn
         //  std::function<void(error_code, const TResponse&, void*)>
         template<typename TRequest, typename TResponse>
         task_ptr call_typed(
-            const ::dsn::rpc_address& server,
+            ::dsn::rpc_address server,
             dsn_task_code_t code,
             const TRequest& req,
             clientlet* svc,
@@ -166,7 +165,7 @@ namespace dsn
         // where T : public virtual clientlet
         template<typename T, typename TRequest, typename TResponse>
         task_ptr call_typed(
-            const ::dsn::rpc_address& server,
+            ::dsn::rpc_address server,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
             T* owner,
@@ -180,7 +179,7 @@ namespace dsn
         // where T : public virtual clientlet
         template<typename T, typename TRequest, typename TResponse>
         task_ptr call_typed(
-            const ::dsn::rpc_address& server,
+            ::dsn::rpc_address server,
             dsn_task_code_t code,
             const TRequest& req,
             T* owner,
@@ -250,7 +249,7 @@ namespace dsn
         }
 
         task_ptr copy_remote_files(
-            const ::dsn::rpc_address& remote,
+            ::dsn::rpc_address remote,
             const std::string& source_dir,
             std::vector<std::string>& files,  // empty for all
             const std::string& dest_dir,
@@ -262,7 +261,7 @@ namespace dsn
             );
 
         inline task_ptr copy_remote_directory(
-            const ::dsn::rpc_address& remote,
+            ::dsn::rpc_address remote,
             const std::string& source_dir,
             const std::string& dest_dir,
             bool overwrite,
@@ -533,7 +532,7 @@ namespace dsn
 
         template<typename TRequest>
         inline void call_one_way_typed(
-            const ::dsn::rpc_address& server,
+            ::dsn::rpc_address server,
             dsn_task_code_t code,
             const TRequest& req,
             int hash
@@ -541,13 +540,13 @@ namespace dsn
         {
             dsn_message_t msg = dsn_msg_create_request(code, 0, hash);
             ::marshall(msg, req);
-            dsn_rpc_call_one_way(&server.c_addr(), msg);
+            dsn_rpc_call_one_way(server.c_addr(), msg);
         }
 
         template<typename TRequest>
         inline ::dsn::error_code call_typed_wait(
             /*out*/ ::dsn::rpc_read_stream* response,
-            const ::dsn::rpc_address& server,
+            ::dsn::rpc_address server,
             dsn_task_code_t code,
             const TRequest& req,
             int hash,
@@ -557,7 +556,7 @@ namespace dsn
             dsn_message_t msg = dsn_msg_create_request(code, timeout_milliseconds, hash);
             ::marshall(msg, req);
 
-            auto resp = dsn_rpc_call_wait(&server.c_addr(), msg);
+            auto resp = dsn_rpc_call_wait(server.c_addr(), msg);
             if (resp != nullptr)
             {
                 if (response)
@@ -574,7 +573,7 @@ namespace dsn
 
         template<typename T, typename TRequest, typename TResponse>
         inline task_ptr call_typed(
-            const ::dsn::rpc_address& server,
+            ::dsn::rpc_address server,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
             T* owner,
@@ -590,7 +589,7 @@ namespace dsn
             auto t = internal_use_only::create_rpc_call<T, TRequest, TResponse>(
                 msg, req, owner, callback, reply_hash);
 
-            dsn_rpc_call(&server.c_addr(), t->native_handle(), owner ? owner->tracker() : nullptr);
+            dsn_rpc_call(server.c_addr(), t->native_handle(), owner ? owner->tracker() : nullptr);
             return t;
         }
 
@@ -598,7 +597,7 @@ namespace dsn
         //   void (T::*)(error_code, const TResponse&, void*);
         template<typename T, typename TRequest, typename TResponse>
         inline task_ptr call_typed(
-            const ::dsn::rpc_address& server,
+            ::dsn::rpc_address server,
             dsn_task_code_t code,
             const TRequest& req,
             T* owner,
@@ -615,13 +614,13 @@ namespace dsn
             auto t = internal_use_only::create_rpc_call<T, TResponse>(
                 msg, owner, callback, context, reply_hash);
 
-            dsn_rpc_call(&server.c_addr(), t->native_handle(), owner ? owner->tracker() : nullptr);
+            dsn_rpc_call(server.c_addr(), t->native_handle(), owner ? owner->tracker() : nullptr);
             return t;
         }
 
         template<typename TRequest, typename TResponse>
         inline task_ptr call_typed(
-            const ::dsn::rpc_address& server,
+            ::dsn::rpc_address server,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
             clientlet* owner,
@@ -637,13 +636,13 @@ namespace dsn
             auto t = internal_use_only::create_rpc_call<TRequest, TResponse>(
                 msg, req, owner, callback, reply_hash);
 
-            dsn_rpc_call(&server.c_addr(), t->native_handle(), owner ? owner->tracker() : nullptr);
+            dsn_rpc_call(server.c_addr(), t->native_handle(), owner ? owner->tracker() : nullptr);
             return t;
         }
 
         template<typename TRequest, typename TResponse>
         inline task_ptr call_typed(
-            const ::dsn::rpc_address& server,
+            ::dsn::rpc_address server,
             dsn_task_code_t code,
             const TRequest& req,
             clientlet* owner,
@@ -660,7 +659,7 @@ namespace dsn
             auto t = internal_use_only::create_rpc_call<TResponse>(
                 msg, owner, callback, context, reply_hash);
 
-            dsn_rpc_call(&server.c_addr(), t->native_handle(), owner ? owner->tracker() : nullptr);
+            dsn_rpc_call(server.c_addr(), t->native_handle(), owner ? owner->tracker() : nullptr);
             return t;
         }
     }

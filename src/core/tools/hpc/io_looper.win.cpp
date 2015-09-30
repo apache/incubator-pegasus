@@ -158,6 +158,8 @@ namespace dsn
                         handle_local_queues();
                         continue;
                     }
+
+                    dinfo("io operation failed in iocp, err = 0x%x", error);
                 }
 
                 if (NON_IO_TASK_NOTIFICATION_KEY == completion_key)

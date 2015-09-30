@@ -145,25 +145,27 @@ error_code service_node::init_io_engine(io_engine& io, ioe_mode mode)
         io.rpc = nullptr;
     
     // init nfs
-    if (mode == spec.nfs_io_mode)
+    io.nfs = nullptr;
+    if (spec.start_nfs)
     {
-        if (!spec.start_nfs)
-        {
-            ddebug("nfs not started coz [core] start_nfs = false");
-        }
-        else if (spec.nfs_factory_name == "")
+        if (spec.nfs_factory_name == "")
         {
             dwarn("nfs not started coz no nfs_factory_name is specified,"
                 " continue with no nfs");
         }
         else
         {
-            io.nfs = factory_store<nfs_node>::create(spec.nfs_factory_name.c_str(),
-                PROVIDER_TYPE_MAIN, this);
+            if (mode == spec.nfs_io_mode)
+            {
+                io.nfs = factory_store<nfs_node>::create(spec.nfs_factory_name.c_str(),
+                    PROVIDER_TYPE_MAIN, this);
+            }
         }
     }
     else
-        io.nfs = nullptr;
+    {
+        ddebug("nfs not started coz [core] start_nfs = false");
+    }
 
     return err;
 }

@@ -148,7 +148,8 @@ scheduler::~scheduler(void)
     if (waitee->state() < task_state::TASK_STATE_FINISHED)
     {
         auto ts = task_ext::get_inited(waitee);
-        ts->wait_threads.push_back(task_worker_ext::get(task::get_current_worker()));
+        auto wks = task_worker_ext::get(task::get_current_worker());
+        ts->wait_threads.push_back(wks);
 
         scheduler::instance().wait_schedule(true, false);
     }

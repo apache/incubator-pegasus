@@ -32,6 +32,7 @@
 # include "meta_server_failure_detector.h"
 # include "server_state.h"
 # include "replication_failure_detector.h"
+# include "mutation_log.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -112,7 +113,7 @@ namespace dsn {
                 std::unordered_map<global_partition_id, ::dsn::rpc_address> primaries_from_meta_server;
                 std::unordered_map<global_partition_id, ::dsn::rpc_address> primaries_from_replica_servers;
 
-                for (auto& app : meta->_reliable_state->_apps)
+                for (auto& app : meta->_state->_apps)
                 {
                     for (int i = 0; i < app.partition_count; i++)
                     {

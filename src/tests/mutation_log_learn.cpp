@@ -21,7 +21,7 @@ TEST(replication, log_learn)
         utils::filesystem::create_directory(logp);
 
         // writing logs
-        mutation_log* mlog = new mutation_log(
+        mutation_log_ptr mlog = new mutation_log(
             1,
             50,
             1,
@@ -62,8 +62,7 @@ TEST(replication, log_learn)
 
         mlog->garbage_collection(mdecrees, mdecrees2);
         mlog->close();
-        delete mlog;
-
+        
         // reading logs
         mlog = new mutation_log(
             1,
@@ -76,7 +75,7 @@ TEST(replication, log_learn)
 
         // learning
         learn_state state;
-        mlog->get_learn_state(gpid, durable_decree + 1, state);
+        mlog->get_learn_state_when_as_commit_logs(gpid, durable_decree + 1, state);
 
         int64_t offset = 0;
         std::set<decree> learned_decress;
@@ -110,8 +109,6 @@ TEST(replication, log_learn)
             auto it = learned_decress.find(s);
             EXPECT_TRUE(it != learned_decress.end());
         }
-
-        delete mlog;
 
         // clear all
         mdecrees.clear();

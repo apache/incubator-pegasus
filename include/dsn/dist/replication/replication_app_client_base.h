@@ -373,14 +373,13 @@ namespace dsn { namespace replication {
             );
 
     private:
-        std::string                             _app_name;
-        std::vector<::dsn::rpc_address>         _meta_servers;
+        std::string      _app_name;
+        dsn::rpc_address _meta_servers;
         
         mutable ::dsn::service::zrwlock_nr      _config_lock;
         std::unordered_map<int, partition_configuration> _config_cache;
         int                                     _app_id;
         int                                     _app_partition_count;
-        ::dsn::rpc_address                      _last_contact_point;
 
     private:
         void call(request_context_ptr request, bool no_delay = true);

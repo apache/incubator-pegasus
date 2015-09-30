@@ -103,6 +103,13 @@ namespace dsn
             if (epoll_ctl(_io_queue, EPOLL_CTL_DEL, fd, NULL) < 0)
             {
                 derror("unbind io handler to epoll_wait failed, err = %s, fd = %d", strerror(errno), fd);
+
+                // in case the fd is already invalid
+                if (cb)
+                {
+                    utils::auto_lock<utils::ex_lock_nr_spin> l(_io_sessions_lock);
+                    _io_sessions.erase(cb);
+                }
                 return ERR_BIND_IOCP_FAILED;
             }
             else
@@ -229,7 +236,7 @@ namespace dsn
                 for (int i = 0; i < nfds; i++)
                 {
                     auto cb = (io_loop_callback*)_events[i].data.ptr;
-                    dinfo("epoll_wait get events %x, cb = %p", _events[i].events, cb);
+                    dinfo("epoll_wait get events 0x%x, cb = %p", _events[i].events, cb);
 
                     uintptr_t cb0 = (uintptr_t)cb;
 
@@ -263,7 +270,7 @@ namespace dsn
                         else
                         {
                             // context is gone (unregistered), let's skip
-                            dwarn("epoll_wait event %x skipped as session is gone, cb = %p",
+                            dwarn("epoll_wait event 0x%x skipped as session is gone, cb = %p",
                                 _events[i].events,
                                 cb
                                 );

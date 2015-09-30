@@ -48,7 +48,7 @@ public:
         if (argc < 3)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        dsn_address_build(_server.c_addr_ptr(), argv[1], (uint16_t)atoi(argv[2]));
+        _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
         _echo_client = new echo_client(_server);
         _timer = ::dsn::tasking::enqueue(LPC_ECHO_TEST_TIMER, this, &echo_client_app::on_test_timer, 0, 0, 1000);
         return ::dsn::ERR_OK;
@@ -107,7 +107,7 @@ public:
         if (argc < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        dsn_address_build(_server.c_addr_ptr(), argv[1], (uint16_t)atoi(argv[2]));
+        _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
 
         _echo_client = new echo_perf_test_client(_server);
         _echo_client->start_test();

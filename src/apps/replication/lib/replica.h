@@ -57,8 +57,7 @@ public:
     static replica* load(replica_stub* stub, const char* dir, bool rename_dir_on_failure);    
     static replica* newr(replica_stub* stub, const char* app_type, global_partition_id gpid);    
     void replay_mutation(mutation_ptr& mu);
-    error_code replay_private_log();
-    void start_private_log_service();
+    error_code init_commit_log_service();
     void reset_prepare_list_after_replay();
     // return false when update fails or replica is going to be closed
     bool update_local_configuration_with_no_ballot_change(partition_status status);
@@ -81,7 +80,7 @@ public:
     //    messages from peers (primary or secondary)
     //
     void on_prepare(dsn_message_t request);    
-    void on_learn(const learn_request& request, /*out*/ learn_response& response);
+    void on_learn(dsn_message_t msg, const learn_request& request);
     void on_learn_completion_notification(const group_check_response& report);
     void on_add_learner(const group_check_request& request);
     void on_remove(const replica_configuration& request);
@@ -112,6 +111,7 @@ public:
     bool group_configuration(/*out*/ partition_configuration& config) const;
     uint64_t last_config_change_time_milliseconds() const { return _last_config_change_time_ms; }
     const char* name() const { return _name; }
+    mutation_log_ptr commit_log() const { return _commit_log; }
         
 private:
     // common helpers
@@ -119,6 +119,7 @@ private:
     void response_client_message(dsn_message_t request, error_code error, decree decree = -1);    
     void execute_mutation(mutation_ptr& mu);
     mutation_ptr new_mutation(decree decree);
+    void check_state_completeness();
     
     // initialization
     error_code init_app_and_prepare_list(const char* app_type, bool create_new);
@@ -130,7 +131,7 @@ private:
     /////////////////////////////////////////////////////////////////
     // 2pc
     void init_prepare(mutation_ptr& mu);
-    void send_prepare_message(const ::dsn::rpc_address& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds);
+    void send_prepare_message(::dsn::rpc_address addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds);
     void on_append_log_completed(mutation_ptr& mu, error_code err, size_t size);
     void on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, error_code err, dsn_message_t request, dsn_message_t reply);
     void do_possible_commit_on_primary(mutation_ptr& mu);    
@@ -144,23 +145,23 @@ private:
     void on_copy_remote_state_completed(error_code err, size_t size, std::shared_ptr<learn_response> resp);
     void on_learn_remote_state_completed(error_code err);
     void handle_learning_error(error_code err);
-    void handle_learning_succeeded_on_primary(const ::dsn::rpc_address& node, uint64_t learn_signature);
+    void handle_learning_succeeded_on_primary(::dsn::rpc_address node, uint64_t learn_signature);
     void notify_learn_completion();
         
     /////////////////////////////////////////////////////////////////
     // failure handling    
     void handle_local_failure(error_code error);
-    void handle_remote_failure(partition_status status, const ::dsn::rpc_address& node, error_code error);
+    void handle_remote_failure(partition_status status, ::dsn::rpc_address node, error_code error);
 
     /////////////////////////////////////////////////////////////////
     // reconfiguration
     void assign_primary(configuration_update_request& proposal);
     void add_potential_secondary(configuration_update_request& proposal);
-    void upgrade_to_secondary_on_primary(const ::dsn::rpc_address& node);
+    void upgrade_to_secondary_on_primary(::dsn::rpc_address node);
     void downgrade_to_secondary_on_primary(configuration_update_request& proposal);
     void downgrade_to_inactive_on_primary(configuration_update_request& proposal);
     void remove(configuration_update_request& proposal);
-    void update_configuration_on_meta_server(config_type type, const ::dsn::rpc_address& node, partition_configuration& newConfig);
+    void update_configuration_on_meta_server(config_type type, ::dsn::rpc_address node, partition_configuration& newConfig);
     void on_update_configuration_on_meta_server_reply(error_code err, dsn_message_t request, dsn_message_t response, std::shared_ptr<configuration_update_request> req);
     void replay_prepare_list();
     bool is_same_ballot_status_change_allowed(partition_status olds, partition_status news);
@@ -185,9 +186,8 @@ private:
     // prepare list
     prepare_list*           _prepare_list;
 
-    // log (shared or private, depends on config)
-    mutation_log*           _log;
-    mutation_log*           _2pc_logger; // logging on 2pc
+    // commit log (may be empty, depending on config)
+    mutation_log_ptr        _commit_log;
 
     // application
     replication_app_base*   _app;

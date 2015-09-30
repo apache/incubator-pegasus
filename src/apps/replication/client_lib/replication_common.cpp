@@ -37,11 +37,9 @@ replication_options::replication_options()
 {
     prepare_timeout_ms_for_secondaries = 1000;
     prepare_timeout_ms_for_potential_secondaries = 3000;
-    prepare_list_max_size_mb = 250;
-    prepare_ack_on_secondary_before_logging_allowed = false;
 
     staleness_for_commit = 10;
-    staleness_for_start_prepare_for_potential_secondary = 110;
+    max_mutation_count_in_prepare_list = 110;
     
     mutation_2pc_min_replica_count = 1;    
 
@@ -70,8 +68,9 @@ replication_options::replication_options()
     log_pending_max_ms_private = 100;
     log_file_size_mb_private = 32;
     log_batch_write_private = true;
-    log_shared = true;
-    log_private = false;
+
+    log_enable_private_commit = true;
+    log_enable_shared_prepare = true;
     
     config_sync_interval_ms = 30000;
     config_sync_disabled = false;
@@ -99,9 +98,9 @@ void replication_options::read_meta_servers()
         auto pos1 = s.find_first_of(':');
         if (pos1 != std::string::npos)
         {
-            ::dsn::rpc_address ep(HOST_TYPE_IPV4, s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
+            ::dsn::rpc_address ep(s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
             meta_servers.push_back(ep);
-            oss << "[" << ep.name() << ":" << ep.port() << "] ";
+            oss << "[" << ep.to_string() << "] ";
         }
     }
     ddebug("read meta servers from config: %s", oss.str().c_str());
@@ -121,24 +120,18 @@ void replication_options::initialize()
         prepare_timeout_ms_for_potential_secondaries,
         "timeout (ms) for prepare message to potential secondaries in two phase commit"
         );
-    prepare_ack_on_secondary_before_logging_allowed =
-        dsn_config_get_value_bool("replication", 
-        "prepare_ack_on_secondary_before_logging_allowed", 
-        prepare_ack_on_secondary_before_logging_allowed,
-        "whether we need to ensure logging is completed before acking a prepare message"
-        );
-
+    
     staleness_for_commit =
         (int)dsn_config_get_value_uint64("replication", 
         "staleness_for_commit", 
         staleness_for_commit,
         "how many concurrent two phase commit rounds are allowed"
         );
-    staleness_for_start_prepare_for_potential_secondary =
+    max_mutation_count_in_prepare_list =
         (int)dsn_config_get_value_uint64("replication", 
-        "staleness_for_start_prepare_for_potential_secondary", 
-        staleness_for_start_prepare_for_potential_secondary,
-        "within this decree gap we will start two phase commit for potential secondaries to catch up online traffic"
+        "max_mutation_count_in_prepare_list", 
+        max_mutation_count_in_prepare_list,
+        "maximum number of mutations in prepare list"
         );
     mutation_2pc_min_replica_count =
         (int)dsn_config_get_value_uint64("replication", 
@@ -146,12 +139,7 @@ void replication_options::initialize()
         mutation_2pc_min_replica_count,
         "minimum number of alive replicas under which write is allowed"
         );
-    prepare_list_max_size_mb =
-        (int)dsn_config_get_value_uint64("replication", 
-        "prepare_list_max_size_mb",
-        prepare_list_max_size_mb,
-        "maximum size (Mb) for prepare list"
-        );
+
     group_check_internal_ms =
         (int)dsn_config_get_value_uint64("replication",
         "group_check_internal_ms", 
@@ -271,20 +259,19 @@ void replication_options::initialize()
         "whether to batch write the incoming logs for private log"
         );
 
-    log_shared =
+    log_enable_private_commit =
         dsn_config_get_value_bool("replication",
-        "log_shared",
-        log_shared,
-        "whether to use shared replication log"
+        "log_enable_private_commit",
+        log_enable_private_commit,
+        "whether to log committed mutations for each app, "
+        "which is used for easier learning"
         );
 
-    log_private =
+    log_enable_shared_prepare =
         dsn_config_get_value_bool("replication",
-        "log_private",
-        log_private,
-        "whether to use private repliation log, "
-        "when enabled together with log_shared, this log "
-        "serves as the splitting log of the global log for each relica"
+        "log_enable_shared_prepare",
+        log_enable_shared_prepare,
+        "whether to log mutations before commit in a shared prepare log"
         );
 
      config_sync_disabled =
@@ -308,10 +295,10 @@ void replication_options::initialize()
 
 void replication_options::sanity_check()
 {
-    dassert (staleness_for_start_prepare_for_potential_secondary >= staleness_for_commit, "");
+    dassert (max_mutation_count_in_prepare_list >= staleness_for_commit, "");
 }
    
-/*static*/ bool replica_helper::remove_node(const ::dsn::rpc_address& node, /*inout*/ std::vector<::dsn::rpc_address>& nodeList)
+/*static*/ bool replica_helper::remove_node(::dsn::rpc_address node, /*inout*/ std::vector<::dsn::rpc_address>& nodeList)
 {
     auto it = std::find(nodeList.begin(), nodeList.end(), node);
     if (it != nodeList.end())
@@ -325,7 +312,7 @@ void replication_options::sanity_check()
     }
 }
 
-/*static*/ bool replica_helper::get_replica_config(const partition_configuration& partition_config, const ::dsn::rpc_address& node, /*out*/ replica_configuration& replica_config)
+/*static*/ bool replica_helper::get_replica_config(const partition_configuration& partition_config, ::dsn::rpc_address node, /*out*/ replica_configuration& replica_config)
 {
     replica_config.gpid = partition_config.gpid;
     replica_config.primary = partition_config.primary;

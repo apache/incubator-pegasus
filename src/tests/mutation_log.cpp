@@ -122,7 +122,7 @@ TEST(replication, mutation_log)
     utils::filesystem::create_directory(logp);
 
     // writing logs
-    mutation_log* mlog = new mutation_log(
+    mutation_log_ptr mlog = new mutation_log(
         1,
         50,
         4,
@@ -156,8 +156,7 @@ TEST(replication, mutation_log)
         mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
     }
 
-    mlog->close();
-    delete mlog;    
+    mlog->close(); 
 
     // reading logs
     mlog = new mutation_log(
@@ -187,8 +186,7 @@ TEST(replication, mutation_log)
         }
         );
     EXPECT_TRUE(mutation_index + 1 == (int)mutations.size());
-    delete mlog;
-
+ 
     // clear all
     utils::filesystem::remove_path(logp);
 }

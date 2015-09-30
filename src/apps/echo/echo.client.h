@@ -8,7 +8,7 @@ class echo_client
     : public virtual ::dsn::clientlet
 {
 public:
-    echo_client(const ::dsn::rpc_address& server) { _server = server; }    
+    echo_client(::dsn::rpc_address server) { _server = server; }    
     echo_client() { }
     virtual ~echo_client() {}
 

@@ -28,7 +28,7 @@
 # include "simple_kv.code.definition.h"
 # include <iostream>
 
-# define SKV_PARTITION_COUNT 8
+# define SKV_PARTITION_COUNT 1
 
 namespace dsn { namespace replication { namespace application { 
 class simple_kv_client 

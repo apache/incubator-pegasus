@@ -47,31 +47,24 @@ public:
     meta_service(server_state* state);
     ~meta_service(void);
 
-    // start meta service:
-    // * recover old state from 'checkpoint' and 'oplog' files
-    // * create load balancer and failure detector
-    // * register rpc handler: RPC_CM_CALL --> on_request()
-    // * start load balancer and failure detector
     void start(const char* data_dir, bool clean_state);
-
     bool stop();
 
 private:
-    // entry and dispatcher for all rpc request
     void on_request(dsn_message_t request);
-    // replay 'oplog' when do recovery
     void replay_log(const char* log);
 
     // partition server & client => meta server
     // query partition configuration
-    void query_configuration_by_node(configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response);
-    void query_configuration_by_index(configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response);
+    void on_query_configuration_by_node(dsn_message_t req);
+    void on_query_configuration_by_index(dsn_message_t req);
 
     // update configuration
-    void update_configuration(dsn_message_t req, dsn_message_t resp);
+    void on_update_configuration(dsn_message_t req);
+
     void update_configuration(std::shared_ptr<configuration_update_request>& update);
     void on_log_completed(error_code err, size_t size, blob buffer, std::shared_ptr<configuration_update_request> req, dsn_message_t resp);
-    void update_configuration(configuration_update_request& request, /*out*/ configuration_update_response& response);
+    void update_configuration(const configuration_update_request& request, /*out*/ configuration_update_response& response);
       
     // load balance actions
     void on_load_balance_start();
@@ -85,13 +78,13 @@ private:
     meta_server_failure_detector *_failure_detector;
     server_state                 *_state;
     load_balancer                *_balancer;
-    dsn::task_ptr   _balancer_timer;
+    dsn::task_ptr                _balancer_timer;
     replication_options          _opts;
     std::string                  _data_dir;
     bool                         _started;
 
     zlock                        _log_lock;
-    dsn_handle_t                     _log;
+    dsn_handle_t                 _log;
     uint64_t                     _offset;
 }; 
 

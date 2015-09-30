@@ -9,7 +9,7 @@ class echo_perf_test_client
 {
 public:
     echo_perf_test_client(
-        const ::dsn::rpc_address& server)
+        ::dsn::rpc_address server)
         : echo_client(server)
     {
     }
@@ -32,9 +32,6 @@ public:
     void send_one_ping(int payload_bytes)
     {
         void* ctx = prepare_send_one();
-        if (!ctx)
-            return;
-
         std::string req;
         req.resize(payload_bytes, 'v');
 

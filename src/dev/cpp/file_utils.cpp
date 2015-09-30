@@ -258,6 +258,10 @@ namespace dsn {
 							{
 								queue.push_front(info2);
 							}
+                            else
+                            {
+                                queue2.push_front(info2);
+                            }
 						}
 						else
 						{
@@ -431,7 +435,7 @@ namespace dsn {
 					ret = dsn::utils::filesystem::file_tree_walk(
 						npath, [&sub_list](const char* fpath, int typeflag, struct FTW* ftwbuf)
 					{
-						if ((typeflag == FTW_D) && (ftwbuf->level > 0))
+						if (((typeflag == FTW_D) || (typeflag == FTW_DP)) && (ftwbuf->level > 0))
 						{
 							sub_list.push_back(fpath);
 						}

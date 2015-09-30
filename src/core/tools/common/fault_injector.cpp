@@ -131,6 +131,7 @@ namespace dsn {
             case AIO_Read:
                 if (dsn_probability() < s_fj_opts[callee->spec().code].disk_read_fail_ratio)
                 {
+                    ddebug("fault inject %s", __FUNCTION__);
                     callee->set_error_code(ERR_FILE_OPERATION_FAILED);
                     return false;
                 }
@@ -138,6 +139,7 @@ namespace dsn {
             case AIO_Write:
                 if (dsn_probability() < s_fj_opts[callee->spec().code].disk_write_fail_ratio)
                 {
+                    ddebug("fault inject %s", __FUNCTION__);
                     callee->set_error_code(ERR_FILE_OPERATION_FAILED);
                     return false;
                 }
@@ -163,6 +165,7 @@ namespace dsn {
             fj_opt& opt = s_fj_opts[req->local_rpc_code];
             if (dsn_probability() < opt.rpc_request_drop_ratio)
             {
+                ddebug("fault inject %s", __FUNCTION__);
                 return false;
             }
             else
@@ -187,6 +190,7 @@ namespace dsn {
             fj_opt& opt = s_fj_opts[msg->local_rpc_code];
             if (dsn_probability() < opt.rpc_response_drop_ratio)
             {
+                ddebug("fault inject %s", __FUNCTION__);
                 return false;
             }
             else

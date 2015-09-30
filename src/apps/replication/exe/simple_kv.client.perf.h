@@ -84,9 +84,6 @@ namespace dsn {
                 void send_one_read(int payload_bytes)
                 {
                     void* ctx = prepare_send_one();
-                    if (!ctx)
-                        return;
-
                     auto rs = random64(0, 10000000);
                     std::stringstream ss;
                     ss << "key." << rs;
@@ -106,9 +103,6 @@ namespace dsn {
                 void send_one_write(int payload_bytes)
                 {
                     void* ctx = prepare_send_one();
-                    if (!ctx)
-                        return;
-
                     auto rs = random64(0, 10000000);
                     std::stringstream ss;
                     ss << "key." << rs;
@@ -131,9 +125,6 @@ namespace dsn {
                 void send_one_append(int payload_bytes)
                 {
                     void* ctx = prepare_send_one();
-                    if (!ctx)
-                        return;
-
                     auto rs = random64(0, 10000000);
                     std::stringstream ss;
                     ss << "key." << rs;

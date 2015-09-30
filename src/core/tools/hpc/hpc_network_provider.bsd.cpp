@@ -110,9 +110,7 @@ namespace dsn
             dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP,
                 "invalid given channel %s", channel.to_string());
 
-            char hostname[128];
-            gethostname(hostname, sizeof(hostname));
-            _address = ::dsn::rpc_address(HOST_TYPE_IPV4, hostname, port);
+            _address.assign_ipv4(get_local_ipv4(), port);
 
             if (!client_only)
             {
@@ -155,9 +153,9 @@ namespace dsn
             return ERR_OK;
         }
 
-        rpc_session_ptr hpc_network_provider::create_client_session(const ::dsn::rpc_address& server_addr)
+        rpc_session_ptr hpc_network_provider::create_client_session(::dsn::rpc_address server_addr)
         {
-            auto matcher = new_client_matcher();
+            auto matcher = get_client_matcher();
             auto parser = new_message_parser();
 
             struct sockaddr_in addr;
@@ -226,10 +224,9 @@ namespace dsn
 
                 int sz = recv(_socket, ptr, remaining, 0);
                 int err = errno;
-                dinfo("(s = %d) call recv on %s:%hu, return %d, err = %s",
+                dinfo("(s = %d) call recv on %s, return %d, err = %s",
                     _socket,
-                    _remote_addr.name(),
-                    _remote_addr.port(),
+                    _remote_addr.to_string(),
                     sz,
                     strerror(err)
                     );
@@ -312,10 +309,9 @@ namespace dsn
 
                 int sz = sendmsg(_socket, &hdr, MSG_NOSIGNAL);
                 int err = errno;
-                dinfo("(s = %d) call sendmsg on %s:%hu, return %d, err = %s",
+                dinfo("(s = %d) call sendmsg on %s, return %d, err = %s",
                     _socket,
-                    _remote_addr.name(),
-                    _remote_addr.port(),
+                    _remote_addr.to_string(),
                     sz,
                     strerror(err)
                     );
@@ -391,10 +387,9 @@ namespace dsn
             // shutdown or send/recv error
             if (((e.flags & EV_ERROR) != 0) || ((e.flags & EV_EOF) != 0))
             {
-                dinfo("(s = %d) epoll failure on %s:%hu, events = %x",
+                dinfo("(s = %d) epoll failure on %s, events = 0x%x",
                     _socket,
-                    _remote_addr.name(),
-                    _remote_addr.port(),
+                    _remote_addr.to_string(),
                     e.filter
                     );
                 on_failure();
@@ -404,10 +399,9 @@ namespace dsn
             //  send
             if (e.filter == EVFILT_WRITE)
             {
-                dinfo("(s = %d) kqueue EVFILT_WRITE on %s:%hu, events = %x",
+                dinfo("(s = %d) kqueue EVFILT_WRITE on %s, events = 0x%x",
                     _socket,
-                    _remote_addr.name(),
-                    _remote_addr.port(),
+                    _remote_addr.to_string(),
                     e.filter
                     );
 
@@ -417,10 +411,9 @@ namespace dsn
             // recv
             if (e.filter == EVFILT_READ)
             {
-                dinfo("(s = %d) kqueue EVFILT_READ on %s:%hu, events = %x",
+                dinfo("(s = %d) kqueue EVFILT_READ on %s, events = 0x%x",
                     _socket,
-                    _remote_addr.name(),
-                    _remote_addr.port(),
+                    _remote_addr.to_string(),
                     e.filter 
                     );
 
@@ -433,7 +426,7 @@ namespace dsn
             socket_t sock,
             std::shared_ptr<dsn::message_parser>& parser,
             connection_oriented_network& net,
-            const ::dsn::rpc_address& remote_addr,
+            ::dsn::rpc_address remote_addr,
             rpc_client_matcher_ptr& matcher
             )
             : rpc_session(net, remote_addr, matcher, parser),
@@ -463,10 +456,9 @@ namespace dsn
             dassert(is_connecting(), "session must be connecting at this time");
 
             struct kevent& e = *((struct kevent*)lolp_or_events);
-            dinfo("(s = %d) epoll for connect to %s:%hu, events = %x",
+            dinfo("(s = %d) epoll for connect to %s, events = 0x%x",
                 _socket,
-                _remote_addr.name(),
-                _remote_addr.port(),
+                _remote_addr.to_string(),
                 e.filter
                 );
 
@@ -482,10 +474,9 @@ namespace dsn
                         _socket, strerror(errno));
                 }
 
-                dinfo("(s = %d) client session %s:%hu connected",
+                dinfo("(s = %d) client session %s connected",
                     _socket,
-                    _remote_addr.name(),
-                    _remote_addr.port()
+                    _remote_addr.to_string()
                     );
 
                 set_connected();
@@ -539,10 +530,9 @@ namespace dsn
 
             int rt = ::connect(_socket, (struct sockaddr*)&addr, (int)sizeof(addr));
             int err = errno;
-            dinfo("(s = %d) call connect to %s:%hu, return %d, err = %s",
+            dinfo("(s = %d) call connect to %s, return %d, err = %s",
                 _socket,
-                _remote_addr.name(),
-                _remote_addr.port(),
+                _remote_addr.to_string(),
                 rt,
                 strerror(err)
                 );
@@ -566,7 +556,7 @@ namespace dsn
             socket_t sock,
             std::shared_ptr<dsn::message_parser>& parser,
             connection_oriented_network& net,
-            const ::dsn::rpc_address& remote_addr
+            ::dsn::rpc_address remote_addr
             )
             : rpc_session(net, remote_addr, parser),
             _socket(sock)
@@ -590,10 +580,9 @@ namespace dsn
             _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
             {
                 struct kevent& e = *((struct kevent*)lolp_or_events);
-                dinfo("(s = %d) (server) epoll for send/recv to %s:%hu, events = %d",
+                dinfo("(s = %d) (server) epoll for send/recv to %s, events = %d",
                     _socket,
-                    _remote_addr.name(),
-                    _remote_addr.port(),
+                    _remote_addr.to_string(),
                     e.filter
                     );
                 this->on_send_recv_events_ready(lolp_or_events);

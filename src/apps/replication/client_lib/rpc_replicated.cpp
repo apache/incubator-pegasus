@@ -46,7 +46,7 @@ namespace dsn
                 int         reply_hash;
             };
 
-            static ::dsn::rpc_address get_next_server(const ::dsn::rpc_address& currentServer, const std::vector<::dsn::rpc_address>& servers)
+            static ::dsn::rpc_address get_next_server(::dsn::rpc_address currentServer, const std::vector<::dsn::rpc_address>& servers)
             {
                 if (currentServer.is_invalid())
                 {
@@ -75,8 +75,9 @@ namespace dsn
                     err.end_tracking();
                     ::unmarshall(response, header);
 
-                    if (header.err == ERR_TALK_TO_OTHERS)
+                    if (header.err == ERR_FORWARD_TO_OTHERS)
                     {
+                        dsn_msg_add_ref(request); // add for another round of rpc::call
                         rpc::call(header.primary_address, request, ps->svc, ps->internal_cb, ps->reply_hash);
                         return;
                     }
@@ -95,7 +96,7 @@ namespace dsn
         } // end namespace rpc_replicated_impl 
 
         dsn::task_ptr call_replicated(
-            const ::dsn::rpc_address& first_server,
+            ::dsn::rpc_address first_server,
             const std::vector<::dsn::rpc_address>& servers,
             dsn_message_t request,
 
@@ -105,6 +106,8 @@ namespace dsn
             int reply_hash
             )
         {
+            dassert(false, "this api is not obsolete, pls use normal rpc::call with rpc_group_address instead");
+
             ::dsn::rpc_address first = first_server;
             if (first.is_invalid())
             {

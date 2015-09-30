@@ -69,7 +69,7 @@ namespace dsn {
                     if (argc < 2)
                         return ::dsn::ERR_INVALID_PARAMETERS;
 
-                    dsn_address_build(_server.c_addr_ptr(), argv[1], (uint16_t)atoi(argv[2]));
+                    _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
 
                     //on_request_timer();
                     _request_timer = ::dsn::tasking::enqueue(::dsn::service::LPC_NFS_REQUEST_TIMER,
