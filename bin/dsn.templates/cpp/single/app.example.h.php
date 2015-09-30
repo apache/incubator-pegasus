@@ -62,7 +62,7 @@ public:
         if (argc < 3)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        dsn_address_build(_server.c_addr_ptr(), argv[1], (uint16_t)atoi(argv[2]));
+        _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
 <?php foreach ($_PROG->services as $svc) { ?>
         _<?=$svc->name?>_client = new <?=$svc->name?>_client(_server);
 <?php } ?>
@@ -138,7 +138,7 @@ public:
         if (argc < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        dsn_address_build(_server.c_addr_ptr(), argv[1], (uint16_t)atoi(argv[2]));
+        _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
 
         _<?=$svc->name?>_client = new <?=$svc->name?>_perf_test_client(_server);
         _<?=$svc->name?>_client->start_test();
