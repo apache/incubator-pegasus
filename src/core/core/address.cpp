@@ -123,10 +123,7 @@ DSN_API uint32_t dsn_ipv4_local(const char* network_interface)
         if (ifa != nullptr)
         {
             // remember to free it
-            if (freeifaddrs(ifa) != 0)
-            {
-                derror("freeifaddrs failed, err = %s\n", strerror(errno));
-            }
+            freeifaddrs(ifa);
         }
     }
 #endif
