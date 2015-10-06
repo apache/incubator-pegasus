@@ -364,7 +364,10 @@ namespace dsn
         if (0 == ip)
         {
             char name[128];
-            gethostname(name, sizeof(name));
+            if (gethostname(name, sizeof(name)) != 0)
+            {
+                dassert(false, "gethostname failed, err = %s\n", strerror(errno));
+            }
             ip = dsn_ipv4_from_host(name);
         }
         return ip;
