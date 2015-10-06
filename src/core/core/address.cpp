@@ -98,30 +98,40 @@ DSN_API uint32_t dsn_ipv4_from_host(const char* name)
 
 DSN_API uint32_t dsn_ipv4_local(const char* network_interface)
 {
-# ifdef _WIN32
-    return 0;
-# else
+    uint32_t ret = 0;
+
+# ifndef _WIN32
     struct ifaddrs* ifa = nullptr;
-    getifaddrs(&ifa);
-
-    struct ifaddrs* i = ifa;
-    while (i != nullptr)
+    if (getifaddrs(&ifa) == 0)
     {
-        if (i->ifa_addr->sa_family == AF_INET && strcmp(i->ifa_name, network_interface) == 0)
+        struct ifaddrs* i = ifa;
+        while (i != nullptr)
         {
-            return  (uint32_t)ntohl(((struct sockaddr_in *)i->ifa_addr)->sin_addr.s_addr);
+            if (i->ifa_addr->sa_family == AF_INET && strcmp(i->ifa_name, network_interface) == 0)
+            {
+                ret = (uint32_t)ntohl(((struct sockaddr_in *)i->ifa_addr)->sin_addr.s_addr);
+                break;
+            }
+            i = i->ifa_next;
         }
-        i = i->ifa_next;
-    }
-    dassert(i != nullptr, "get local ip failed, network_interface=", network_interface);
 
-    if (ifa != nullptr)
-    {
-        // remember to free it
-        freeifaddrs(ifa);
+        if (i == nullptr)
+        {
+            derror("get local ip from network interfaces failed, network_interface = %s\n", network_interface);
+        }
+
+        if (ifa != nullptr)
+        {
+            // remember to free it
+            if (freeifaddrs(ifa) != 0)
+            {
+                derror("freeifaddrs failed, err = %s\n", strerror(errno));
+            }
+        }
     }
 #endif
-    return 0;
+
+    return ret;
 }
 
 DSN_API const char*   dsn_address_to_string(dsn_address_t addr)
