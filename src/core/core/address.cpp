@@ -142,10 +142,10 @@ DSN_API const char*   dsn_address_to_string(dsn_address_t addr)
         snprintf_p(
             p, sz,
             "%u.%u.%u.%u:%hu",
-            addr.u.v4.ip & 0xff,
-            ((uint32_t)addr.u.v4.ip >> 8) & 0xff,
-            ((uint32_t)addr.u.v4.ip >> 16) & 0xff,
             ((uint32_t)addr.u.v4.ip >> 24) & 0xff,
+            ((uint32_t)addr.u.v4.ip >> 16) & 0xff,
+            ((uint32_t)addr.u.v4.ip >> 8) & 0xff,
+            ((uint32_t)addr.u.v4.ip) & 0xff,
             (uint16_t)addr.u.v4.port
             );
         break;
