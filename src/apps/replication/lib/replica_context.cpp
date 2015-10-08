@@ -147,6 +147,15 @@ bool primary_context::check_exist(::dsn::rpc_address node, partition_status st)
     }
 }
 
+void secondary_context::cleanup()
+{
+    if (nullptr != checkpoint_task)
+    {
+        checkpoint_task->cancel(true);
+        checkpoint_task = nullptr;
+    }
+}
+
 bool potential_secondary_context::cleanup(bool force)
 {
     if (learn_remote_files_task != nullptr)

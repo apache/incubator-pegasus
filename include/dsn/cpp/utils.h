@@ -141,6 +141,8 @@ namespace dsn {
 
         std::shared_ptr<char> buffer() { return _holder; }
 
+        bool has_holder() const { return _holder.get() != nullptr; }
+
         const char* buffer_ptr() { return _holder.get(); }
 
         blob range(int offset) const

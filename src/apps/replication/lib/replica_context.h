@@ -73,6 +73,14 @@ public:
     decree       last_prepare_decree_on_new_primary; 
 };
 
+class secondary_context
+{
+public:
+    void cleanup();
+
+public:
+    ::dsn::task_ptr checkpoint_task;
+};
 
 class potential_secondary_context 
 {

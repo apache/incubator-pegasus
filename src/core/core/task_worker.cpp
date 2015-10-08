@@ -226,7 +226,7 @@ void task_worker::set_affinity(uint64_t affinity)
     dassert(affinity <= (((uint64_t)1 << nr_cpu) - 1),
         "There are %d cpus in total, while setting thread affinity to a nonexistent one.", nr_cpu);
 
-    int err;
+    int err = 0;
 # ifdef _WIN32
     if (::SetThreadAffinityMask(::GetCurrentThread(), static_cast<DWORD_PTR>(affinity)) == 0)
     {

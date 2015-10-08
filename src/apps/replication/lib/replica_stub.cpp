@@ -756,18 +756,6 @@ void replica_stub::on_gc()
         _log->garbage_collection(durable_decrees, max_seen_decrees);
     }
     
-    // gc commit log
-    if (_options.log_enable_private_commit)
-    {
-        for (auto it = rs.begin(); it != rs.end(); it++)
-        {
-            it->second->commit_log()->garbage_collection_when_as_commit_logs(
-                it->first,
-                it->second->last_durable_decree()
-                );
-        }
-    }
-
     // gc on-disk rps
 	std::vector<std::string> sub_list;
 	if (!dsn::utils::filesystem::get_subdirectories(_dir, sub_list, false))
