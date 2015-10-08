@@ -117,9 +117,9 @@ void replica::init_prepare(mutation_ptr& mu)
     // do_possible_commit_on_primary(mu);
 
     // local log
-    if (nullptr == _stub->_log)
+    if (nullptr == _stub->_log || mu->is_logged())
     {
-        mu->set_logged();
+        if (!mu->is_logged()) mu->set_logged();
         do_possible_commit_on_primary(mu);
     }
     else

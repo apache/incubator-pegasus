@@ -113,12 +113,15 @@ void replica::assign_primary(configuration_update_request& proposal)
         return;
     }
 
-    if (proposal.type == CT_UPGRADE_TO_PRIMARY && status() != PS_SECONDARY)
+    if (proposal.type == CT_UPGRADE_TO_PRIMARY 
+        && (status() != PS_SECONDARY || _secondary_states.checkpoint_task != nullptr))
     {
         dwarn(
-            "%s: invalid upgrade to primary proposal as the node is in %s",
+            "%s: invalid upgrade to primary proposal as the node is in %s or during checkpointing",
             name(),
             enum_to_string(status()));
+
+        // TODO: tell meta server so new primary is built more quickly
         return;
     }
 
@@ -515,6 +518,21 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
             }
         }
         break;
+    case PS_SECONDARY:
+        if (config.status != PS_SECONDARY
+            && _secondary_states.checkpoint_task != nullptr)
+        {
+            dwarn(
+                "%s: status change from %s @ %lld to %s @ %lld is not allowed coz checkpointing is still running",
+                name(),
+                enum_to_string(old_status),
+                old_ballot,
+                enum_to_string(config.status),
+                config.ballot
+                );
+            return false;
+        }
+        break;
     }
 
     uint64_t oldTs = _last_config_change_time_ms;
@@ -728,7 +746,7 @@ void replica::replay_prepare_list()
 
         if (old != nullptr)
         {
-            mu->move_from(old);
+            mu->copy_from(old);
         }
         else
         {

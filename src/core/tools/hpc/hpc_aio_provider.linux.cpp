@@ -122,9 +122,15 @@ dsn_handle_t hpc_aio_provider::open(const char* file_name, int oflag, int pmode)
 
 error_code hpc_aio_provider::close(dsn_handle_t hFile)
 {
-    // TODO: handle failure
-    ::close((int)(uintptr_t)(hFile));
-    return ERR_OK;
+    if (::close((int)(uintptr_t)(hFile)) == 0)
+    {
+        return ERR_OK;
+    }
+    else
+    {
+        derror("close file failed, err = %s\n", strerror(errno));
+        return ERR_FILE_OPERATION_FAILED;
+    }
 }
 
 disk_aio* hpc_aio_provider::prepare_aio_context(aio_task* tsk)
@@ -207,7 +213,10 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
             aio->evt->wait();
             delete aio->evt;
             aio->evt = nullptr;
-            *pbytes = aio->bytes;
+            if (pbytes != nullptr)
+            {
+                *pbytes = aio->bytes;
+            }
             return aio->err;
         }
     }

@@ -42,6 +42,7 @@ replica::replica(replica_stub* stub, const char* path)
     dassert (stub, "");
     _stub = stub;
     _app = nullptr;
+    _check_timer = nullptr;
     _dir = path;
     _options = &stub->options();
 
@@ -55,6 +56,7 @@ replica::replica(replica_stub* stub, global_partition_id gpid, const char* app_t
     dassert (stub, "");
     _stub = stub;
     _app = nullptr;
+    _check_timer = nullptr;
 
     char buffer[256];
     sprintf(buffer, "%u.%u.%s", gpid.app_id, gpid.pidx, app_type);
@@ -156,11 +158,25 @@ void replica::execute_mutation(mutation_ptr& mu)
             err = _app->write_internal(mu);
         break;
     case PS_PRIMARY:
-    case PS_SECONDARY:
         {
-        check_state_completeness();
-        dassert (_app->last_committed_decree() + 1 == mu->data.header.decree, "");
-        err = _app->write_internal(mu);
+            check_state_completeness();
+            dassert(_app->last_committed_decree() + 1 == mu->data.header.decree, "");
+            err = _app->write_internal(mu);
+        }
+        break;
+
+    case PS_SECONDARY:
+        if (_secondary_states.checkpoint_task == nullptr)
+        {
+            check_state_completeness();
+            dassert (_app->last_committed_decree() + 1 == mu->data.header.decree, "");
+            err = _app->write_internal(mu);
+        }
+        else
+        {
+            // make sure commit log saves the state
+            // catch-up will be done later after checkpoint task is fininished
+            dassert(_commit_log != nullptr, "");
         }
         break;
     case PS_POTENTIAL_SECONDARY:
@@ -247,6 +263,12 @@ decree replica::last_prepared_decree() const
 
 void replica::close()
 {
+    if (nullptr != _check_timer)
+    {
+        _check_timer->cancel(true);
+        _check_timer = nullptr;
+    }
+
     if (status() != PS_INACTIVE && status() != PS_ERROR)
     {
         update_local_configuration_with_no_ballot_change(PS_INACTIVE);
@@ -254,6 +276,7 @@ void replica::close()
 
     cleanup_preparing_mutations(true);
     _primary_states.cleanup();
+    _secondary_states.cleanup();
     _potential_secondary_states.cleanup(true);
 
     if (_commit_log != nullptr)

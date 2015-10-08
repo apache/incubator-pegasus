@@ -123,7 +123,8 @@ void replica::on_group_check(const group_check_request& request, /*out*/ group_c
     }
     else if (request.config.ballot > get_ballot())
     {
-        update_local_configuration(request.config);
+        if (!update_local_configuration(request.config))
+            return;
     }
     else if (is_same_ballot_status_change_allowed(status(), request.config.status))
     {

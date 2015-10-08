@@ -288,7 +288,10 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
         aio->evt->wait();
         delete aio->evt;
         aio->evt = nullptr;
-        *pbytes = aio->bytes;
+        if (pbytes != nullptr)
+        {
+            *pbytes = aio->bytes;
+        }
         return aio->err;
     }
 }

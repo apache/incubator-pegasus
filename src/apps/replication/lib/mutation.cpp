@@ -51,21 +51,26 @@ mutation::~mutation()
     }
 }
 
-void mutation::move_from(mutation_ptr& old)
+void mutation::copy_from(mutation_ptr& old)
 {
     data.updates = old->data.updates;
     rpc_code = old->rpc_code;
+    if (old->is_logged())
+    {
+        set_logged();
+        data.header.log_offset = old->data.header.log_offset;
+    }
         
     _client_request = old->client_msg();
     if (_client_request)
     {
-        old->_client_request = nullptr;
+        dsn_msg_add_ref(_client_request);
     }
 
     _prepare_request = old->prepare_msg();
     if (_prepare_request)
     {
-        old->_prepare_request = nullptr;
+        dsn_msg_add_ref(_prepare_request);
     }
 }
 
@@ -104,6 +109,11 @@ void mutation::set_client_request(dsn_task_code_t code, dsn_message_t request)
     {
         mu->_prepare_request = from;
         dsn_msg_add_ref(from); // released on dctor
+    }
+    else
+    {
+        dassert(mu->data.updates.at(0).has_holder(), 
+            "the buffer must has ownership");
     }
     
     sprintf(mu->_name, "%lld.%lld",
