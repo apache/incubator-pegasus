@@ -179,7 +179,7 @@ namespace dsn {
                 {
                     for (auto d = _app->last_committed_decree() + 1; d <= c; d++)
                     {
-                        auto& mu = _prepare_list->get_mutation_by_decree(d);
+                        auto mu = _prepare_list->get_mutation_by_decree(d);
                         dassert(nullptr != mu, "");
                         _app->write_internal(mu);
                     }
