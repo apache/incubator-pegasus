@@ -78,7 +78,7 @@ public:
     // initialization
     //
     error_code initialize(const char* dir);    
-    void reset();
+    void reset_as_commit_log(global_partition_id gpid, decree lcd);
     error_code start_write_service(
         multi_partition_decrees& init_max_decrees, 
         int max_staleness_for_commit
@@ -118,7 +118,7 @@ public:
             aio_handler callback,
             int hash = 0);
 
-    // remove entry <gpid, decree> from _previous_log_prepared_decrees
+    // remove entry <gpid, decree> from _previous_log_max_decrees
     // when a partition is removed. 
     void on_partition_removed(global_partition_id gpid);
 
@@ -151,6 +151,8 @@ public:
     int64_t end_offset() const { return _global_end_offset; }
     int64_t start_offset() const { return _global_start_offset; }
     std::map<int, log_file_ptr>& get_logfiles_for_test();
+    decree max_decree(global_partition_id gpid) const;
+    decree min_decree(global_partition_id gpid) const;
 
 private:
     //
@@ -180,7 +182,7 @@ private:
     int64_t                     _global_end_offset;
     
     // for gc and learning
-    multi_partition_decrees     _previous_log_prepared_decrees;
+    multi_partition_decrees     _previous_log_max_decrees;
     int                         _max_staleness_for_commit;
 
     // bufferring
@@ -234,7 +236,7 @@ public:
     int64_t start_offset() const  { return _start_offset; }
     int   index() const { return _index; }
     const std::string& path() const { return _path; }
-    const multi_partition_decrees& previous_log_prepared_decrees() { return _previous_log_prepared_decrees; }
+    const multi_partition_decrees& previous_log_max_decrees() { return _previous_log_max_decrees; }
     log_file_header& header() { return _header;}
 
     int read_header(binary_reader& reader);
@@ -253,7 +255,7 @@ private:
     int           _index;
 
     // for gc
-    multi_partition_decrees _previous_log_prepared_decrees;    
+    multi_partition_decrees _previous_log_max_decrees;    
     log_file_header         _header;
 };
 

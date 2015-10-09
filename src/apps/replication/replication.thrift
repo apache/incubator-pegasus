@@ -42,7 +42,7 @@ struct partition_configuration
     4:i32                    max_replica_count;
     5:dsn.address            primary;
     6:list<dsn.address>      secondaries;
-    7:list<dsn.address>      drop_outs;
+    7:list<dsn.address>      last_drops;
     8:i64                    last_committed_decree;
 }
 

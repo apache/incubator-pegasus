@@ -66,8 +66,10 @@ mutation_log::~mutation_log()
     close();
 }
 
-void mutation_log::reset()
+void mutation_log::reset_as_commit_log(global_partition_id gpid, decree lcd)
 {
+    close();
+
     _last_file_number = 0;
     _global_start_offset = 0;
     _global_end_offset = 0;
@@ -75,11 +77,20 @@ void mutation_log::reset()
     _last_log_file = nullptr;
     _current_log_file = nullptr;
 
+    _pending_write = nullptr;
+    
+
     for (auto& kv : _log_files)
     {
         kv.second->close();
+        utils::filesystem::remove_path(kv.second->path());
     }
     _log_files.clear();
+
+    _previous_log_max_decrees.clear();
+    _previous_log_max_decrees[gpid] = lcd;
+
+    start_write_service(_previous_log_max_decrees, _max_staleness_for_commit);
 }
 
 error_code mutation_log::initialize(const char* dir)
@@ -172,7 +183,7 @@ error_code mutation_log::create_new_log_file()
     create_new_pending_buffer();
     auto len = logf->write_header(
         *_pending_write, 
-        _previous_log_prepared_decrees, 
+        _previous_log_max_decrees, 
         static_cast<int>(_log_buffer_size_bytes)
         );
     _global_end_offset += len;
@@ -471,12 +482,39 @@ error_code mutation_log::start_write_service(
 {
     zauto_lock l(_lock);
 
-    _previous_log_prepared_decrees = init_max_decrees;
+    _previous_log_max_decrees = init_max_decrees;
     _max_staleness_for_commit = max_staleness_for_commit;
     _is_opened = true;
     
     dassert(_current_log_file == nullptr, "");
     return create_new_log_file();
+}
+
+decree mutation_log::max_decree(global_partition_id gpid) const
+{
+    zauto_lock l(_lock);
+
+    auto it = _previous_log_max_decrees.find(gpid);
+    if (it != _previous_log_max_decrees.end())
+        return it->second;
+    else
+        return 0;
+}
+
+decree mutation_log::min_decree(global_partition_id gpid) const
+{
+    zauto_lock l(_lock);
+
+    if (_log_files.size() == 0)
+        return 0;
+    else
+    {
+        auto it = _log_files.begin()->second->previous_log_max_decrees().find(gpid);
+        if (it != _log_files.begin()->second->previous_log_max_decrees().end())
+            return it->second;
+        else
+            return 0;
+    }
 }
 
 void mutation_log::close()
@@ -496,6 +534,7 @@ void mutation_log::close()
                 _pending_write_timer = nullptr;
                 write_pending_mutations(false);
             }
+            _pending_write = nullptr;
         }
     }
 
@@ -523,8 +562,8 @@ void mutation_log::close()
     zauto_lock l(_lock);
     dassert(_is_opened && nullptr != _current_log_file, "");
 
-    auto it = _previous_log_prepared_decrees.find(mu->data.header.gpid);
-    if (it != _previous_log_prepared_decrees.end())
+    auto it = _previous_log_max_decrees.find(mu->data.header.gpid);
+    if (it != _previous_log_max_decrees.end())
     {
         if (it->second < d)
         {
@@ -533,7 +572,7 @@ void mutation_log::close()
     }
     else
     {
-        _previous_log_prepared_decrees[mu->data.header.gpid] = d;
+        _previous_log_max_decrees[mu->data.header.gpid] = d;
     }
 
     if (_pending_write == nullptr)
@@ -603,7 +642,7 @@ void mutation_log::close()
 void mutation_log::on_partition_removed(global_partition_id gpid)
 {
     zauto_lock l(_lock);
-    _previous_log_prepared_decrees.erase(gpid);
+    _previous_log_max_decrees.erase(gpid);
 }
 
 void mutation_log::get_learn_state_when_as_commit_logs(
@@ -629,18 +668,18 @@ void mutation_log::get_learn_state_when_as_commit_logs(
         log_file_ptr& log = itr->second;
         if (skip_next)
         {
-            skip_next = (log->previous_log_prepared_decrees().size() == 0);
+            skip_next = (log->previous_log_max_decrees().size() == 0);
             continue;
         }
 
         if (log->end_offset() > log->start_offset())
             learn_files.push_back(log->path());
 
-        skip_next = (log->previous_log_prepared_decrees().size() == 0);
+        skip_next = (log->previous_log_max_decrees().size() == 0);
         if (skip_next)
             continue;
 
-        decree last_commit = log->previous_log_prepared_decrees().begin()->second;
+        decree last_commit = log->previous_log_max_decrees().begin()->second;
 
         // when all possible decress are not needed 
         if (last_commit < start)
@@ -649,8 +688,8 @@ void mutation_log::get_learn_state_when_as_commit_logs(
             break;
         }
 
-        dassert(log->previous_log_prepared_decrees().size() == 1
-            && log->previous_log_prepared_decrees().begin()->first == gpid,
+        dassert(log->previous_log_max_decrees().size() == 1
+            && log->previous_log_max_decrees().begin()->first == gpid,
             "the log must be private in this case");
     }
 
@@ -682,8 +721,8 @@ int mutation_log::garbage_collection_when_as_commit_logs(
     {
         log_file_ptr& log = itr->second;
 
-        auto it3 = log->previous_log_prepared_decrees().find(gpid);
-        if (it3 == log->previous_log_prepared_decrees().end())
+        auto it3 = log->previous_log_max_decrees().find(gpid);
+        if (it3 == log->previous_log_max_decrees().end())
         {
             // new partition, ok to delete older logs
             break;
@@ -764,8 +803,8 @@ int mutation_log::garbage_collection(
                 continue;
             }
 
-            auto it3 = log->previous_log_prepared_decrees().find(gpid);
-            if (it3 == log->previous_log_prepared_decrees().end())
+            auto it3 = log->previous_log_max_decrees().find(gpid);
+            if (it3 == log->previous_log_max_decrees().end())
             {
                 // new partition, ok to delete older logs
             }
@@ -1067,7 +1106,7 @@ int log_file::read_header(binary_reader& reader)
         reader.read_pod(gpid);
         reader.read(decree);
 
-        _previous_log_prepared_decrees[gpid] = decree;
+        _previous_log_max_decrees[gpid] = decree;
     }
 
     return static_cast<int>(
@@ -1088,7 +1127,7 @@ int log_file::write_header(
     int buffer_bytes
     )
 {
-    _previous_log_prepared_decrees = init_max_decrees;
+    _previous_log_max_decrees = init_max_decrees;
     
     _header.magic = 0xdeadbeef;
     _header.version = 0x1;
@@ -1098,9 +1137,9 @@ int log_file::write_header(
 
     writer.write_pod(_header);
     
-    int count = static_cast<int>(_previous_log_prepared_decrees.size());
+    int count = static_cast<int>(_previous_log_max_decrees.size());
     writer.write(count);
-    for (auto& kv : _previous_log_prepared_decrees)
+    for (auto& kv : _previous_log_max_decrees)
     {
         writer.write_pod(kv.first);
         writer.write(kv.second);

@@ -115,10 +115,25 @@ void load_balancer::run_lb(partition_configuration& pc)
             proposal.node = pc.secondaries[dsn_random32(0, static_cast<int>(pc.secondaries.size()) - 1)];
             proposal.type = CT_UPGRADE_TO_PRIMARY;
         }
-        else
+
+        else if (pc.last_drops.size() == 0)
         {
             proposal.node = find_minimal_load_machine(true);
             proposal.type = CT_ASSIGN_PRIMARY;
+        }
+
+        // DDD
+        else
+        {
+            proposal.node = *pc.last_drops.rbegin();
+            proposal.type = CT_ASSIGN_PRIMARY;
+
+            derror("%s.%d.%d enters DDD state, we are waiting for its last primary node %s to come back ...",
+                pc.app_type,
+                pc.gpid.app_id,
+                pc.gpid.pidx,
+                proposal.node.to_string()
+                );
         }
 
         if (proposal.node.is_invalid() == false)

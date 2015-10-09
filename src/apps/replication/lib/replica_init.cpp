@@ -69,6 +69,7 @@ error_code replica::initialize_on_new(const char* app_type, global_partition_id 
         return rep;
     else
     {
+        rep->close();
         delete rep;
         return nullptr;
     }
@@ -126,6 +127,7 @@ error_code replica::initialize_on_load(const char* dir, bool rename_dir_on_failu
     error_code err = rep->initialize_on_load(dir, rename_dir_on_failure);
     if (err != ERR_OK)
     {
+        rep->close();
         delete rep;
         return nullptr;
     }
@@ -152,15 +154,16 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
     error_code err = (lerr == 0 ? ERR_OK : ERR_LOCAL_APP_FAILURE);
     if (err == ERR_OK)
     {
-        dassert (_app->last_durable_decree() == _app->last_committed_decree(), "");
-
         if (_options->log_enable_private_commit 
         || !_app->is_delta_state_learning_supported())
         {
             err = init_commit_log_service();
         }
 
-        _prepare_list->reset(_app->last_committed_decree());
+        if (_commit_log && _commit_log->max_decree(get_gpid()) < _app->last_committed_decree())
+            _prepare_list->reset(_commit_log->max_decree(get_gpid()));
+        else
+            _prepare_list->reset(_app->last_committed_decree());
     }
 
     if (err != ERR_OK)
@@ -170,14 +173,17 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
         _app = nullptr;
     }
     
-    _check_timer = tasking::enqueue(
-        LPC_PER_REPLICA_CHECK_TIMER,
-        this,
-        &replica::on_check_timer,
-        gpid_to_hash(get_gpid()),
-        0,
-        5 * 60 * 1000 // check every five mins
-        );
+    if (nullptr != _check_timer && err == ERR_OK)
+    {
+        _check_timer = tasking::enqueue(
+            LPC_PER_REPLICA_CHECK_TIMER,
+            this,
+            &replica::on_check_timer,
+            gpid_to_hash(get_gpid()),
+            0,
+            5 * 60 * 1000 // check every five mins
+            );
+    }
 
     return err;
 }
@@ -200,10 +206,28 @@ error_code replica::init_commit_log_service()
     if (err != ERR_OK)
         return err;
 
+    err = _commit_log->garbage_collection_when_as_commit_logs(
+        get_gpid(),
+        _app->last_durable_decree()
+        );
+    if (err != ERR_OK)
+        return err;
+
+    decree last_cd = 0;
     err = _commit_log->replay(
-        [this](mutation_ptr& mu)
+        [this, &last_cd](mutation_ptr& mu)
         {
-            if (mu->data.header.decree == _app->last_committed_decree() + 1)
+            if (last_cd != 0)
+            {
+                dassert(mu->data.header.decree == last_cd + 1,
+                    "decrees in commit logs must be contiguous: %lld vs %lld",
+                    last_cd,
+                    mu->data.header.decree
+                    );
+            }
+            last_cd = mu->data.header.decree;
+                
+            if (last_cd == _app->last_committed_decree() + 1)
             {
                 _app->write_internal(mu);
             }
@@ -211,7 +235,7 @@ error_code replica::init_commit_log_service()
             {
                 ddebug("%s: mutation %s skipped coz unmached decree %llu vs %llu (last_committed)",
                     name(), mu->name(),
-                    mu->data.header.decree,
+                    last_cd,
                     _app->last_committed_decree()
                     );
             }
@@ -221,9 +245,10 @@ error_code replica::init_commit_log_service()
     if (err == ERR_OK)
     {
         derror(
-            "%s: local log initialized, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
+            "%s: local log initialized, durable = %lld, committed(log/app) = <%lld,%lld>, maxpd = %llu, ballot = %llu",
             name(),
             _app->last_durable_decree(),
+            (_commit_log ? _commit_log->max_decree(get_gpid()) : 0),
             _app->last_committed_decree(),
             max_prepared_decree(),
             get_ballot()
@@ -234,9 +259,10 @@ error_code replica::init_commit_log_service()
     else
     {
         derror(
-            "%s: local log initialized with log error, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
+            "%s: local log initialized with log error, durable = %lld, committed(log/app) = <%lld,%lld>, maxpd = %llu, ballot = %llu",
             name(),
             _app->last_durable_decree(),
+            (_commit_log ? _commit_log->max_decree(get_gpid()) : 0),
             _app->last_committed_decree(),
             max_prepared_decree(),
             get_ballot()
@@ -266,10 +292,10 @@ error_code replica::init_commit_log_service()
             return lerr;
     }
 
-    multi_partition_decrees init_max_decrees; // for log truncate
-    init_max_decrees[get_gpid()] = _app->last_committed_decree();
+    multi_partition_decrees init_previous_log_range_decrees; // for log truncate
+    init_previous_log_range_decrees[get_gpid()] = last_cd ? last_cd : _app->last_durable_decree();
     
-    err = _commit_log->start_write_service(init_max_decrees, _options->staleness_for_commit);
+    err = _commit_log->start_write_service(init_previous_log_range_decrees, _options->staleness_for_commit);
     return err;
 }
 
@@ -283,8 +309,8 @@ void replica::replay_mutation(mutation_ptr& mu)
         mu->data.header.last_committed_decree
         );
 
-    if (mu->data.header.decree <= last_committed_decree() ||
-        mu->data.header.ballot < get_ballot())
+    if (mu->data.header.decree <= last_committed_decree()
+        || mu->data.header.ballot < get_ballot())
     {
         return;
     }

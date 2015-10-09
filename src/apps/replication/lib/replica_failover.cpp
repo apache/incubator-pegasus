@@ -81,14 +81,7 @@ void replica::handle_remote_failure(partition_status st, ::dsn::rpc_address node
     case PS_POTENTIAL_SECONDARY:
         // potential secondary failure does not lead to ballot change
         // therefore, it is possible to have multiple exec here
-        if (_primary_states.learners.erase(node) > 0)
-        {
-            if (_primary_states.check_exist(node, PS_INACTIVE))
-                _primary_states.statuses[node] = PS_INACTIVE;
-            else
-                _primary_states.statuses.erase(node);
-        }
-        
+        _primary_states.learners.erase(node);
         break;
     case PS_INACTIVE:
     case PS_ERROR:

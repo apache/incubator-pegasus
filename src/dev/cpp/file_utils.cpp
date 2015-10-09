@@ -542,7 +542,15 @@ namespace dsn {
 
 			bool rename_path(const std::string& path1, const std::string& path2)
 			{
-				return (::rename(path1.c_str(), path2.c_str()) == 0);
+				bool ret = (::rename(path1.c_str(), path2.c_str()) == 0);
+                if (!ret)
+                {
+                    derror("rename from '%s' to '%s' failed, err = %s",
+                        path1.c_str(),
+                        path2.c_str(),
+                        strerror(errno));
+                }
+                return ret;
 			}
 
 			bool file_size(const std::string& path, int64_t& sz)

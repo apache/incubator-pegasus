@@ -127,7 +127,6 @@ void replica::assign_primary(configuration_update_request& proposal)
 
     proposal.config.primary = primary_address();
     replica_helper::remove_node(primary_address(), proposal.config.secondaries);
-    replica_helper::remove_node(primary_address(), proposal.config.drop_outs);
 
     update_configuration_on_meta_server(proposal.type, proposal.node, proposal.config);
 }
@@ -180,8 +179,6 @@ void replica::upgrade_to_secondary_on_primary(::dsn::rpc_address node)
 
     partition_configuration newConfig = _primary_states.membership;
 
-    // remove from drop out if there
-    replica_helper::remove_node(node, newConfig.drop_outs);
     // add secondary
     newConfig.secondaries.push_back(node);
 
@@ -226,7 +223,6 @@ void replica::downgrade_to_inactive_on_primary(configuration_update_request& pro
         dassert (rt, "");
     }
 
-    proposal.config.drop_outs.push_back(proposal.node);
     update_configuration_on_meta_server(CT_DOWNGRADE_TO_INACTIVE, proposal.node, proposal.config);
 }
 
@@ -255,10 +251,6 @@ void replica::remove(configuration_update_request& proposal)
         }
         break;
     case PS_POTENTIAL_SECONDARY:
-        {
-        auto rt = replica_helper::remove_node(proposal.node, proposal.config.drop_outs);
-        dassert (rt, "");
-        }
         break;
     }
 

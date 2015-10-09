@@ -64,6 +64,7 @@ void replica::init_learn(uint64_t signature)
         case LearningWithPrepare:
             if (_app->last_durable_decree() + 1 >= _potential_secondary_states.learning_start_prepare_decree)
             {
+                check_state_completeness();
                 _potential_secondary_states.learning_status = LearningSucceeded;
                 notify_learn_completion();
                 return;
@@ -321,6 +322,7 @@ void replica::on_learn_reply(
                 name(), _app->last_committed_decree(),
                 enum_to_string(_potential_secondary_states.learning_status)
                 );
+            _commit_log->reset_as_commit_log(get_gpid(), _app->last_committed_decree());
         }
 
         dassert(resp->state.meta.size() > 0, "learn mutation cache failed");
@@ -450,11 +452,23 @@ void replica::on_copy_remote_state_completed(
             else
             {
                 int64_t offset;
+                decree last_cd = 0;
+
                 err = mutation_log::replay(
                     lstate.files,
-                    [this](mutation_ptr& mu)
+                    [this, &last_cd](mutation_ptr& mu)
                     {
-                        if (mu->data.header.decree == _app->last_committed_decree() + 1)
+                        if (last_cd != 0)
+                        {
+                            dassert(mu->data.header.decree == last_cd + 1,
+                                "decrees in commit logs must be contiguous: %lld vs %lld",
+                                last_cd,
+                                mu->data.header.decree
+                                );
+                        }
+                        last_cd = mu->data.header.decree;
+
+                        if (last_cd == _app->last_committed_decree() + 1)
                         {
                             _app->write_internal(mu);
                         }
@@ -462,7 +476,7 @@ void replica::on_copy_remote_state_completed(
                         {
                             ddebug("%s: mutation %s skipped coz unmached decree %llu vs %llu (last_committed)",
                                 name(), mu->name(),
-                                mu->data.header.decree,
+                                last_cd,
                                 _app->last_committed_decree()
                                 );
                         }

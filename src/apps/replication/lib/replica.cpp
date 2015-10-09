@@ -138,11 +138,21 @@ void replica::response_client_message(dsn_message_t request, error_code error, d
 
 void replica::check_state_completeness()
 {
-    /*auto d = _2pc_logger->min_must_in_log_decree(get_gpid());
-    if (d <= _options->staleness_for_commit)
-        d = 0;
+    /* prepare commit durable */
+    dassert(max_prepared_decree() >= last_committed_decree(), "");
+    dassert(last_committed_decree() >= last_durable_decree(), "");
 
-    dassert(d <= _app->last_durable_decree() + 1, "");*/
+    if (nullptr != _stub->_log)
+    {
+        auto mind = _stub->_log->min_decree(get_gpid());
+        dassert(mind - _options->staleness_for_commit + 1 <= last_durable_decree(), "");
+    }
+
+    if (_commit_log == nullptr)
+    {   
+        auto mind = _commit_log->min_decree(get_gpid());
+        dassert(mind <= last_durable_decree(), "");
+    }
 }
 
 void replica::execute_mutation(mutation_ptr& mu)
@@ -151,16 +161,37 @@ void replica::execute_mutation(mutation_ptr& mu)
 
     error_code err = ERR_OK;
     bool write = true;
+    decree d = mu->data.header.decree;
+
     switch (status())
     {
     case PS_INACTIVE:
-        if (_app->last_committed_decree() + 1 == mu->data.header.decree)
+        if (_app->last_committed_decree() + 1 == d)
             err = _app->write_internal(mu);
+        else
+        {
+            //
+            // commit logs may be lost due to failure
+            // in this case, we fix commit logs using prepare log
+            // so that _app->last_committed_decree() == _commit_log->max_decree(gpid)
+            //
+            if (_commit_log && d == _commit_log->max_decree(get_gpid()) + 1)
+            {
+                dinfo("%s: commit log is incomplete (no %s), fix it by rewrite ...",
+                    name(),
+                    mu->name()
+                    );
+                write = true;
+            }   
+            else
+                write = false;
+            dassert(d <= _app->last_committed_decree(), "");
+        }   
         break;
     case PS_PRIMARY:
         {
             check_state_completeness();
-            dassert(_app->last_committed_decree() + 1 == mu->data.header.decree, "");
+            dassert(_app->last_committed_decree() + 1 == d, "");
             err = _app->write_internal(mu);
         }
         break;
@@ -169,7 +200,7 @@ void replica::execute_mutation(mutation_ptr& mu)
         if (_secondary_states.checkpoint_task == nullptr)
         {
             check_state_completeness();
-            dassert (_app->last_committed_decree() + 1 == mu->data.header.decree, "");
+            dassert (_app->last_committed_decree() + 1 == d, "");
             err = _app->write_internal(mu);
         }
         else
@@ -180,7 +211,7 @@ void replica::execute_mutation(mutation_ptr& mu)
         }
         break;
     case PS_POTENTIAL_SECONDARY:
-        if (mu->data.header.decree == _app->last_committed_decree() + 1)
+        if (d == _app->last_committed_decree() + 1)
         {
             dassert(_potential_secondary_states.learning_status >= LearningWithPrepare, "");
             err = _app->write_internal(mu);
@@ -188,7 +219,7 @@ void replica::execute_mutation(mutation_ptr& mu)
         else
         {
             write = false;
-            dassert(mu->data.header.decree <= _app->last_committed_decree(), "");
+            dassert(d <= _app->last_committed_decree(), "");
         }
         break;
     case PS_ERROR:

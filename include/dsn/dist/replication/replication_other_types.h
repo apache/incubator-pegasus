@@ -39,8 +39,8 @@ namespace dsn {
         typedef int64_t ballot;
         typedef int64_t decree;
 
-        #define invalid_ballot ((ballot)-1LL)
-        #define invalid_decree ((decree)-1LL)
+        #define invalid_ballot ((::dsn::replication::ballot)-1LL)
+        #define invalid_decree ((::dsn::replication::decree)-1LL)
         #define invalid_offset (-1LL)
 
         class replica;
