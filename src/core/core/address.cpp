@@ -150,10 +150,10 @@ DSN_API const char*   dsn_address_to_string(dsn_address_t addr)
             );
         break;
     case HOST_TYPE_URI:
-        p = (char*)(long)addr.u.uri.uri;
+        p = (char*)(uintptr_t)addr.u.uri.uri;
         break;
     case HOST_TYPE_GROUP:
-        p = (char*)(((dsn::rpc_group_address*)(long)(addr.u.group.group))->name());
+        p = (char*)(((dsn::rpc_group_address*)(uintptr_t)(addr.u.group.group))->name());
         break;
     default:
         p = (char*)"invalid address";
