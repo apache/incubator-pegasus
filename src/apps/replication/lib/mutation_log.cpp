@@ -346,28 +346,62 @@ void mutation_log::internal_write_callback(
     return err;
 }
 
-error_code mutation_log::replay(replay_callback callback)
+/*static*/ error_code mutation_log::replay(
+    std::vector<std::string>& log_files,
+    replay_callback callback,
+    /*out*/ int64_t& offset
+    )
 {
-    //zauto_lock l(_lock);
+    std::map<int, log_file_ptr> logs;
+    for (auto& fpath : log_files)
+    {
+        log_file_ptr log = log_file::open_read(fpath.c_str());
+        if (log == nullptr)
+        {
+            dwarn("Skip file %s during log init", fpath.c_str());
+            continue;
+        }
 
-    int64_t offset = start_offset();
+        dassert(logs.find(log->index()) == logs.end(), "");
+        logs[log->index()] = log;
+    }
+
+    return replay(logs, callback, offset);
+}
+
+
+/*static*/ error_code mutation_log::replay(
+    std::map<int, log_file_ptr>& logs,
+    replay_callback callback,
+    /*out*/ int64_t& offset
+    )
+{
+    int64_t g_start_offset = 0, g_end_offset = 0;
     error_code err = ERR_OK;
     std::shared_ptr<binary_reader> reader;
+    log_file_ptr last;
+    
+    if (logs.size() > 0)
+    {
+        g_start_offset = logs.begin()->second->start_offset();
+        g_end_offset = logs.rbegin()->second->end_offset();
+    }
+        
+    offset = g_start_offset;
 
-    for (auto& kv :_log_files)
+    for (auto& kv : logs)
     {
         log_file_ptr& log = kv.second;
 
         if (log->start_offset() != offset)
         {
-            derror("offset mismatch in log file offset and global offset %lld vs %lld", 
+            derror("offset mismatch in log file offset and global offset %lld vs %lld",
                 log->start_offset(), offset);
             return ERR_INVALID_DATA;
         }
 
-        _last_log_file = log;
-
-        err = replay(log, callback, offset);
+        last = log;
+        err = mutation_log::replay(log, callback, offset);
 
         log->close();
 
@@ -388,34 +422,45 @@ error_code mutation_log::replay(replay_callback callback)
 
     if (err == ERR_OK)
     {
-        dassert(end_offset() == offset,
+        dassert(g_end_offset == offset,
             "make sure the global end offset is correct: %lld vs %lld",
-            end_offset(),
+            g_end_offset,
             offset
             );
     }
     else if (err == ERR_HANDLE_EOF || err == ERR_INCOMPLETE_DATA)
     {
         // incomplete tail block
-        if (offset + _last_log_file->header().log_buffer_size_bytes > end_offset())
-        {            
+        if (offset + last->header().log_buffer_size_bytes > g_end_offset)
+        {
             err = ERR_OK;
         }
 
         // data lost
         else
-        {   
+        {
             err = ERR_INCOMPLETE_DATA;
         }
 
         // fix end offset so later log writing can be continued
-        _global_end_offset = offset;
+        g_end_offset = offset;
     }
     else
     {
         // data failure
     }
-    
+
+    return err;
+}
+
+error_code mutation_log::replay(replay_callback callback)
+{
+    int64_t offset = 0;
+    auto err = replay(_log_files, callback, offset);
+    if (_log_files.size() > 0)
+        _last_log_file = _log_files.rbegin()->second;
+
+    _global_end_offset = offset;
     return err;
 }
 

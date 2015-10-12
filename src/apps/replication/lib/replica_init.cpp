@@ -169,6 +169,15 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
         delete _app;
         _app = nullptr;
     }
+    
+    _check_timer = tasking::enqueue(
+        LPC_PER_REPLICA_CHECK_TIMER,
+        this,
+        &replica::on_check_timer,
+        gpid_to_hash(get_gpid()),
+        0,
+        5 * 60 * 1000 // check every five mins
+        );
 
     return err;
 }

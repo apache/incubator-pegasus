@@ -76,14 +76,14 @@ TEST(replication, log_learn)
         // learning
         learn_state state;
         mlog->get_learn_state_when_as_commit_logs(gpid, durable_decree + 1, state);
+        mlog->close();
+        mlog = nullptr;
 
         int64_t offset = 0;
         std::set<decree> learned_decress;
-        for (auto& f : state.files)
-        {
-            log_file_ptr log = log_file::open_read(f.c_str());
-            mutation_log::replay(log,
-                [&mutations, &learned_decress](mutation_ptr mu)
+        
+        mutation_log::replay(state.files,
+            [&mutations, &learned_decress](mutation_ptr mu)
             {
                 learned_decress.insert(mu->data.header.decree);
 
@@ -99,10 +99,8 @@ TEST(replication, log_learn)
                     mu->data.updates[0].length()) == 0
                     );
             },
-                offset
-                );
-            log->close();
-        }
+            offset
+            );
 
         for (decree s = durable_decree + 1; s < 1000; s++)
         {

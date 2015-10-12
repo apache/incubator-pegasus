@@ -120,7 +120,7 @@ private:
     void execute_mutation(mutation_ptr& mu);
     mutation_ptr new_mutation(decree decree);
     void check_state_completeness();
-    
+        
     // initialization
     error_code init_app_and_prepare_list(const char* app_type, bool create_new);
     error_code initialize_on_load(const char* dir, bool rename_dir_on_failure);
@@ -175,6 +175,15 @@ private:
     void init_group_check();
     void broadcast_group_check();
     void on_group_check_reply(error_code err, std::shared_ptr<group_check_request>& req, std::shared_ptr<group_check_response>& resp);
+
+    /////////////////////////////////////////////////////////////////
+    // check timer for gc, checkpointing etc.
+    void on_check_timer();
+    void gc();
+    void init_checkpoint();
+    void checkpoint();
+    void catch_up_with_local_commit_logs();
+    void on_checkpoint_completed(error_code err);
     
 private:
     friend class ::dsn::replication::replication_checker;
@@ -189,6 +198,9 @@ private:
     // commit log (may be empty, depending on config)
     mutation_log_ptr        _commit_log;
 
+    // local check timer for gc, checkpoint, etc.
+    dsn::task_ptr           _check_timer;
+
     // application
     replication_app_base*   _app;
 
@@ -200,6 +212,7 @@ private:
     
     // replica status specific states
     primary_context             _primary_states;
+    secondary_context           _secondary_states;
     potential_secondary_context _potential_secondary_states;
     bool                        _inactive_is_transient; // upgrade to P/S is allowed only iff true
 };

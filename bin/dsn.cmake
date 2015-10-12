@@ -27,7 +27,7 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
     if(PROJ_SRC STREQUAL "")
         message(FATAL_ERROR "No source files.")
     endif()
-    
+
     set(INSTALL_DIR "lib")
     if(PROJ_TYPE STREQUAL "EXECUTABLE")
         set(INSTALL_DIR "bin/${PROJ_NAME}")
@@ -80,6 +80,21 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
     endif()
     
     if(PROJ_LANG STREQUAL "CS")
+        #Check msbuild
+        if(MSVC)
+            set(MY_CSC "msbuild.exe")
+        else()
+            set(MY_CSC "xbuild")
+        endif()
+        get_filename_component(MY_CSC "${MY_CSC}" PROGRAM)
+        if(NOT EXISTS "${MY_CSC}")
+            if(MSVC)
+                message(FATAL_ERROR "Cannot find msbuild.exe. Please install Visual Studio and run cmake within Visual Studio build command console.")
+            else()
+                message(FATAL_ERROR "Cannot find xbuild. Please install mono and xbuild.")
+            endif()
+        endif()
+
         set(MY_PROJ_SRC "${PROJ_SRC}")
         set(MY_OUTPUT_DIRECTORY "${OUTPUT_DIRECTORY}")
         set(MY_CURRENT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -94,11 +109,6 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
             "${CMAKE_CURRENT_BINARY_DIR}/${PROJ_NAME}.csproj"
             TYPE FAE04EC0-301F-11D3-BF4B-00C04F79EFBC
             )
-        if(MSVC)
-            set(MY_CSC "msbuild.exe")
-        else()
-            set(MY_CSC "xbuild")
-        endif()
         if(DSN_BUILD_RUNTIME)
             set(DSN_CORE_DLL_FILES "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/")
         else()
@@ -117,8 +127,17 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
         endforeach()
     endif()
                
+    if(PROJ_LANG STREQUAL "JAVA")
+        add_jar(${PROJ_NAME}
+            SOURCES ${PROJ_SRC}
+            INCLUDE_JARS ${PROJ_LIBS}
+            OUTPUT_DIR ${OUTPUT_DIRECTORY}
+        )
+    endif()
+
     if((PROJ_TYPE STREQUAL "EXECUTABLE") AND (NOT (PROJ_BINPLACES STREQUAL "")))
         foreach(BF ${PROJ_BINPLACES})
+            get_filename_component(BF "${BF}" ABSOLUTE)
             add_custom_command(
                 TARGET ${PROJ_NAME}
                 POST_BUILD
@@ -217,6 +236,11 @@ macro(ms_find_source_files LANG SOURCE_DIR GLOB_OPTION PROJ_SRC)
             TEMP_PROJ_SRC
             "${SOURCE_DIR}/*.cs"
             )
+    elseif(${LANG} STREQUAL "JAVA")
+        file(${GLOB_OPTION}
+            TEMP_PROJ_SRC
+            "${SOURCE_DIR}/*.java"
+            )
     endif()
 
     if(DEFINED DSN_DEBUG_CMAKE)
@@ -308,14 +332,36 @@ endfunction(dsn_add_project)
 function(dsn_add_cs_shared_library)
     set(MY_PROJ_LANG "CS")
     set(MY_PROJ_TYPE "SHARED")
-    dsn_add_project()
+    dsn_add_cs_project()
 endfunction(dsn_add_cs_shared_library)
 
 function(dsn_add_cs_executable)
     set(MY_PROJ_LANG "CS")
     set(MY_PROJ_TYPE "EXECUTABLE")
-    dsn_add_project()
+    dsn_add_cs_project()
 endfunction(dsn_add_cs_executable)
+
+function(dsn_add_cs_project)
+    dsn_add_project()
+endfunction(dsn_add_cs_project)
+
+function(dsn_add_java_shared_library)
+    set(MY_PROJ_LANG "JAVA")
+    set(MY_PROJ_TYPE "SHARED")
+    dsn_add_java_project()
+endfunction(dsn_add_java_shared_library)
+
+function(dsn_add_java_executable)
+    set(MY_PROJ_LANG "JAVA")
+    set(MY_PROJ_TYPE "EXECUTABLE")
+    dsn_add_java_project()
+endfunction(dsn_add_java_executable)
+
+function(dsn_add_java_project)
+    find_package(Java REQUIRED)
+    include(UseJava)
+    dsn_add_project()
+endfunction(dsn_add_java_project)
 
 function(dsn_add_static_library)
     set(MY_PROJ_LANG "CXX")
@@ -427,7 +473,7 @@ endfunction(dsn_setup_packages)
 function(dsn_set_output_path)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin CACHE STRING "" FORCE)
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib CACHE STRING "" FORCE)
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY} CACHE STRING "" FORCE)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib CACHE STRING "" FORCE)
 endfunction(dsn_set_output_path)
 
 function(dsn_setup_version)

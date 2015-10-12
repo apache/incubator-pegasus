@@ -13,7 +13,7 @@ void module_init()
     dsn::replication::register_replica_provider<<?=$_PROG->get_cpp_namespace().$_PROG->name?>_service_impl>("<?=$_PROG->name?>");
 
     // register all possible services
-    dsn::register_app<::dsn::replication::meta_service_app>("meta");
+    dsn::register_app<::dsn::service::meta_service_app>("meta");
     dsn::register_app<::dsn::replication::replication_service_app>("replica");
     dsn::register_app<<?=$_PROG->get_cpp_namespace().$_PROG->name?>_client_app>("client");
 <?php foreach ($_PROG->services as $svc) { ?>

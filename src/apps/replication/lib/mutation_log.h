@@ -89,8 +89,21 @@ public:
     // replay
     //
     error_code replay(replay_callback callback);
+
     static error_code replay(
         log_file_ptr log,
+        replay_callback callback,
+        /*out*/ int64_t& end_offset
+        );
+
+    static error_code replay(
+        std::vector<std::string>& log_files,
+        replay_callback callback,
+        /*out*/ int64_t& end_offset
+        );
+
+    static error_code replay(
+        std::map<int, log_file_ptr>& log_files,
         replay_callback callback,
         /*out*/ int64_t& end_offset
         );

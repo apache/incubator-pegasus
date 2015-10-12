@@ -449,25 +449,10 @@ void replica::on_copy_remote_state_completed(
             // apply logs
             else
             {
-                dassert(_commit_log != nullptr,
-                    "log_private must be enabled for %s when the replicated app "
-                    "does not support delta state learning",
-                    name()
-                    );
-
-                mutation_log_ptr log = new mutation_log(
-                    _options->log_buffer_size_mb,
-                    _options->log_pending_max_ms,
-                    _options->log_file_size_mb,
-                    _options->log_batch_write
-                    );
-
-                std::string log_dir = _app->learn_dir();
-                err = log->initialize(log_dir.c_str());
-                if (err == ERR_OK)
-                {
-                    err = log->replay(
-                        [this](mutation_ptr& mu)
+                int64_t offset;
+                err = mutation_log::replay(
+                    lstate.files,
+                    [this](mutation_ptr& mu)
                     {
                         if (mu->data.header.decree == _app->last_committed_decree() + 1)
                         {
@@ -481,11 +466,9 @@ void replica::on_copy_remote_state_completed(
                                 _app->last_committed_decree()
                                 );
                         }
-                    }
+                    },
+                    offset
                     );
-                    log->close();
-                    log = nullptr;
-                }
             }
         }
     }
@@ -627,7 +610,9 @@ void replica::on_add_learner(const group_check_request& request)
     if (request.config.ballot > get_ballot()
         || is_same_ballot_status_change_allowed(status(), request.config.status))
     {
-        update_local_configuration(request.config, true);
+        if (!update_local_configuration(request.config, true))
+            return;
+
         dassert(PS_POTENTIAL_SECONDARY == status(), "");
         init_learn(request.learner_signature);
     }

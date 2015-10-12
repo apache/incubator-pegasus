@@ -51,6 +51,32 @@ struct posix_disk_aio_context : public disk_aio
     uint32_t bytes;
 };
 
+#ifndef io_prep_pread
+static inline void io_prep_pread(struct aiocb *iocb, int fd, void *buf, size_t count, long long offset)
+{
+    memset(iocb, 0, sizeof(*iocb));
+    iocb->aio_fildes = fd;
+    iocb->aio_lio_opcode = LIO_READ;
+    iocb->aio_reqprio = 0;
+    iocb->aio_buf = buf;
+    iocb->aio_nbytes = count;
+    iocb->aio_offset = offset;
+}
+#endif
+
+#ifndef io_prep_pwrite
+static inline void io_prep_pwrite(struct aiocb *iocb, int fd, void *buf, size_t count, long long offset)
+{
+    memset(iocb, 0, sizeof(*iocb));
+    iocb->aio_fildes = fd;
+    iocb->aio_lio_opcode = LIO_WRITE;
+    iocb->aio_reqprio = 0;
+    iocb->aio_buf = buf;
+    iocb->aio_nbytes = count;
+    iocb->aio_offset = offset;
+}
+#endif
+
 hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provider)
     : aio_provider(disk, inner_provider)
 {
@@ -85,8 +111,15 @@ dsn_handle_t hpc_aio_provider::open(const char* file_name, int oflag, int pmode)
 
 error_code hpc_aio_provider::close(dsn_handle_t hFile)
 {
-    auto error = (::close((int)(uintptr_t)(hFile)) == 0) ? ERR_OK : ERR_FILE_OPERATION_FAILED;
-    return error;
+    if (::close((int)(uintptr_t)(hFile)) == 0)
+    {
+        return ERR_OK;
+    }
+    else
+    {
+        derror("close file failed, err = %s\n", strerror(errno));
+        return ERR_FILE_OPERATION_FAILED;
+    }
 }
 
 disk_aio* hpc_aio_provider::prepare_aio_context(aio_task* tsk)
@@ -110,10 +143,6 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
     int r;
 
     aio->this_ = this;
-    aio->cb.aio_fildes = static_cast<int>((ssize_t)aio->file);
-    aio->cb.aio_buf = aio->buffer;
-    aio->cb.aio_nbytes = aio->buffer_size;
-    aio->cb.aio_offset = aio->file_offset;
 
     // set up callback
     aio->cb.aio_sigevent.sigev_notify = SIGEV_KEVENT;
@@ -131,9 +160,11 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
     switch (aio->type)
     {
     case AIO_Read:
+        io_prep_pread(&aio->cb, static_cast<int>((ssize_t)aio->file), aio->buffer, aio->buffer_size, aio->file_offset);
         r = aio_read(&aio->cb);
         break;
     case AIO_Write:
+        io_prep_pwrite(&aio->cb, static_cast<int>((ssize_t)aio->file), aio->buffer, aio->buffer_size, aio->file_offset);
         r = aio_write(&aio->cb);
         break;
     default:
