@@ -135,7 +135,7 @@ DSN_API const char*   dsn_address_to_string(dsn_address_t addr)
         snprintf_p(
             p, sz,
             "%u.%u.%u.%u:%hu",
-            addr.u.v4.ip & 0xff,
+            ((uint32_t)addr.u.v4.ip) & 0xff,
             ((uint32_t)addr.u.v4.ip >> 8) & 0xff,
             ((uint32_t)addr.u.v4.ip >> 16) & 0xff,
             ((uint32_t)addr.u.v4.ip >> 24) & 0xff,
@@ -143,13 +143,13 @@ DSN_API const char*   dsn_address_to_string(dsn_address_t addr)
             );
         break;
     case HOST_TYPE_URI:
-        p = (char*)addr.u.uri.uri;
+        p = (char*)(long)addr.u.uri.uri;
         break;
     case HOST_TYPE_GROUP:
-        p = (char*)(((dsn::rpc_group_address*)(addr.u.group.group))->name());
+        p = (char*)(((dsn::rpc_group_address*)(long)(addr.u.group.group))->name());
         break;
     default:
-        p = "invalid address";
+        p = (char*)"invalid address";
         break;
     }
 
