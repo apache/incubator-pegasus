@@ -68,13 +68,12 @@ namespace dsn {
         virtual error_code start(rpc_channel channel, int port, bool client_only, io_modifer& ctx) = 0;
 
         //
-        // the named address (when client_only is true)
+        // the named address
         //
         virtual ::dsn::rpc_address address() = 0;
 
         //
         // this is where the upper rpc engine calls down for a RPC call
-        //   to   - target address in IPV4, or IPV6
         //   request - the message to be sent, all meta info (e.g., timeout, server address are
         //             prepared ready in its header; use message_parser to extract
         //             blobs from message for sending

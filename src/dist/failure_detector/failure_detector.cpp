@@ -100,7 +100,7 @@ void failure_detector::register_master(::dsn::rpc_address target)
     auto ret = _masters.insert(std::make_pair(target, record));
     if (ret.second)
     {
-        dinfo("register_rpc_handler master successfully to %s", target.to_string());
+        dinfo("register master successfully to %s", target.to_string());
     }
     else
     {
