@@ -340,20 +340,23 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
             req->config.ballot
             );
 
-        rpc_address target(_stub->_failure_detector->get_servers());
-        dsn_msg_add_ref(request); // added for another round of rpc::call
-        _primary_states.reconfiguration_task = rpc::call(
-            target,
-            request,
-            this,
-            std::bind(&replica::on_update_configuration_on_meta_server_reply, this, 
-                std::placeholders::_1, 
-                std::placeholders::_2, 
-                std::placeholders::_3, 
+        if (err != ERR_INVALID_VERSION)
+        {
+            rpc_address target(_stub->_failure_detector->get_servers());
+            dsn_msg_add_ref(request); // added for another round of rpc::call
+            _primary_states.reconfiguration_task = rpc::call(
+                target,
+                request,
+                this,
+                std::bind(&replica::on_update_configuration_on_meta_server_reply, this,
+                std::placeholders::_1,
+                std::placeholders::_2,
+                std::placeholders::_3,
                 req),
-            gpid_to_hash(get_gpid())
-            );
-        return;
+                gpid_to_hash(get_gpid())
+                );
+            return;
+        }        
     }
 
     ddebug(
@@ -585,6 +588,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         case PS_SECONDARY:
             _prepare_list->truncate(_app->last_committed_decree());            
             _potential_secondary_states.cleanup(true);
+            check_state_completeness();
             break;
         case PS_POTENTIAL_SECONDARY:
             break;

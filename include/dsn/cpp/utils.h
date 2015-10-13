@@ -260,6 +260,7 @@ namespace dsn {
         void get_buffers(/*out*/ std::vector<blob>& buffers);
         int  get_buffer_count() const { return static_cast<int>(_buffers.size()); }
         blob get_buffer();
+        blob get_current_buffer(); // without commit, write can be continued on the last buffer
         blob get_first_buffer() const;
 
         int total_size() const { return _total_size; }

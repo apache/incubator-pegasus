@@ -136,6 +136,39 @@ void replica::response_client_message(dsn_message_t request, error_code error, d
     reply(request, error);
 }
 
+error_code replica::check_and_fix_commit_log_completeness()
+{
+    error_code err = ERR_OK;
+
+    auto mind = _commit_log->min_decree(get_gpid());
+    if (!(mind <= last_durable_decree()))
+    {
+        err = ERR_INCOMPLETE_DATA;
+        derror("%s: commit log is incomplete (min/durable): %lld vs %lld",
+            name(),
+            mind,
+            last_durable_decree()
+            );
+
+        _commit_log->reset_as_commit_log(get_gpid(), _app->last_durable_decree());
+    }
+
+    mind = _commit_log->max_decree(get_gpid());
+    if (!(mind >= _app->last_committed_decree()))
+    {
+        err = ERR_INCOMPLETE_DATA;
+
+        derror("%s: commit log is incomplete (max/commit): %lld vs %lld",
+            name(),
+            mind,
+            _app->last_committed_decree()
+            );
+
+        _commit_log->reset_as_commit_log(get_gpid(), _app->last_durable_decree());
+    }
+    return err;
+}
+
 void replica::check_state_completeness()
 {
     /* prepare commit durable */

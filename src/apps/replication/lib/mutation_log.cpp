@@ -42,7 +42,8 @@ mutation_log::mutation_log(
     uint32_t log_buffer_size_mb, 
     uint32_t log_pending_max_ms, 
     uint32_t max_log_file_mb, 
-    bool batch_write
+    bool batch_write,
+    bool is_commit_log
     )
 {
     _log_buffer_size_bytes = log_buffer_size_mb * 1024 * 1024;
@@ -53,6 +54,7 @@ mutation_log::mutation_log(
     _last_file_number = 0;
     _global_start_offset = 0;
     _global_end_offset = 0;
+    _is_commit_log = is_commit_log;
 
     _last_log_file = nullptr;
     _current_log_file = nullptr;
@@ -565,7 +567,12 @@ void mutation_log::close()
     auto it = _previous_log_max_decrees.find(mu->data.header.gpid);
     if (it != _previous_log_max_decrees.end())
     {
-        if (it->second < d)
+        if (_is_commit_log)
+        {
+            dassert(d == it->second + 1, "commit decress must be contiguous");
+            it->second = d;
+        }
+        else if (it->second < d)
         {
             it->second = d;
         }
@@ -657,10 +664,37 @@ void mutation_log::get_learn_state_when_as_commit_logs(
 
     {
         zauto_lock l(_lock);
+        auto it = _previous_log_max_decrees.find(gpid);
+        if (it == _previous_log_max_decrees.end() ||
+            it->second < start)
+            return;
+
         files = _log_files;
         cfile = _current_log_file;
-    }
 
+        // also learn pending buffers
+        if (_batch_write && _pending_write)
+        {
+            auto bb = _pending_write->get_current_buffer();
+            auto hdr = (log_block_header*)bb.data();
+            
+            if (hdr->local_offset == 0)
+            {
+                bb = bb.range(cfile->get_file_header_size() + sizeof(log_block_header));
+            }
+            else
+            {
+                bb = bb.range(sizeof(log_block_header));
+            }
+
+            state.meta.push_back(bb);
+        }
+    }
+    
+    // flush last file so learning can learn the on-disk state
+    cfile->flush();
+
+    // find all applicable files
     bool skip_next = false;
     std::list<std::string> learn_files;
     for (itr = files.rbegin(); itr != files.rend(); itr++)
@@ -1002,12 +1036,14 @@ error_code log_file::read_next_log_entry(int64_t local_offset, /*out*/::dsn::blo
     auto err = tsk->error();
     if (err != ERR_OK || read_count != sizeof(log_block_header))
     {
-        derror("read data failed, size = %d vs %d, err = %s, local_offset = %lld",
-            read_count, (int)sizeof(log_block_header), err.to_string(), local_offset);
-
         if (err == ERR_HANDLE_EOF)
         {
             err = read_count == 0 ? ERR_HANDLE_EOF : ERR_INCOMPLETE_DATA;
+        }
+        else
+        {
+            derror("read data block header failed, size = %d vs %d, err = %s, local_offset = %lld",
+                read_count, (int)sizeof(log_block_header), err.to_string(), local_offset);
         }
 
         return err;
@@ -1030,7 +1066,7 @@ error_code log_file::read_next_log_entry(int64_t local_offset, /*out*/::dsn::blo
     err = tsk->error();
     if (err != ERR_OK || hdr.length != read_count)
     {
-        derror("read data failed, size = %d vs %d, err = %s, local_offset = %lld",
+        derror("read data block body failed, size = %d vs %d, err = %s, local_offset = %lld",
             read_count, (int)hdr.length, err.to_string(), local_offset);
 
         if (err == ERR_OK || err == ERR_HANDLE_EOF)
@@ -1051,8 +1087,14 @@ error_code log_file::read_next_log_entry(int64_t local_offset, /*out*/::dsn::blo
 
 std::shared_ptr<binary_writer> log_file::prepare_log_entry()
 {
+    log_block_header hdr;
+    hdr.magic = 0xdeadbeef;
+    hdr.length = 0;
+    hdr.body_crc = 0;
+    hdr.local_offset = (uint32_t)(_end_offset - _start_offset);
+
     auto writer = new binary_writer();
-    writer->write_empty((int)sizeof(log_block_header));
+    writer->write_pod(hdr);
     return std::shared_ptr<binary_writer>(writer);
 }
 
@@ -1069,13 +1111,16 @@ std::shared_ptr<binary_writer> log_file::prepare_log_entry()
     dassert (offset == end_offset(), "");
 
     auto* hdr = (log_block_header*)bb.data();
-    hdr->magic = 0xdeadbeef;
+
+    dassert(bb.buffer_ptr() == bb.data(), "header must be at the beginning ofr the buffer");
+    dassert(hdr->magic == 0xdeadbeef, "");
+    dassert(hdr->local_offset == (uint32_t)(offset - start_offset()), "");
+
     hdr->length = bb.length() - sizeof(log_block_header);
     hdr->body_crc = dsn_crc32_compute(
         (const void*)(bb.data() + sizeof(log_block_header)),
         (size_t)hdr->length, 0
-        );
-    hdr->padding = 0;
+        );    
 
     auto task = file::write(
         _handle, 
@@ -1090,6 +1135,16 @@ std::shared_ptr<binary_writer> log_file::prepare_log_entry()
     
     _end_offset += bb.length();    
     return task;
+}
+
+void log_file::flush()
+{
+    // TODO: aio provide native_handle() method
+# ifdef _WIN32
+    ::FlushFileBuffers((HANDLE)_handle);
+# else
+    ::flush((int)(intptr_t)_handle);
+# endif
 }
 
 int log_file::read_header(binary_reader& reader)
@@ -1109,8 +1164,14 @@ int log_file::read_header(binary_reader& reader)
         _previous_log_max_decrees[gpid] = decree;
     }
 
+    return get_file_header_size();
+}
+
+int log_file::get_file_header_size() const
+{
+    int count = static_cast<int>(_previous_log_max_decrees.size());
     return static_cast<int>(
-        sizeof(_header) + sizeof(count) 
+        sizeof(log_file_header) + sizeof(count)
         + (sizeof(global_partition_id) + sizeof(decree))*count
         );
 }
@@ -1145,10 +1206,7 @@ int log_file::write_header(
         writer.write(kv.second);
     }
 
-    return static_cast<int>(
-        sizeof(_header)+sizeof(count)
-        +(sizeof(global_partition_id)+sizeof(decree))*count
-        );
+    return get_file_header_size();
 }
 
 }} // end namespace

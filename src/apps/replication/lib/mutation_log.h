@@ -43,7 +43,7 @@ struct log_block_header
     int32_t magic;
     int32_t length;
     int32_t body_crc;
-    int32_t padding;
+    uint32_t local_offset;
 };
 
 struct log_file_header
@@ -69,8 +69,9 @@ public:
     mutation_log(
         uint32_t log_buffer_size_mb, 
         uint32_t log_pending_max_ms, 
-        uint32_t max_log_file_mb = (uint64_t) MAX_LOG_FILESIZE, 
-        bool batch_write = true
+        uint32_t max_log_file_mb,
+        bool batch_write,
+        bool is_commit_log
         );
     virtual ~mutation_log();
     
@@ -172,6 +173,7 @@ private:
     std::string               _dir;    
     bool                      _batch_write;
     bool                      _is_opened;
+    bool                      _is_commit_log;
 
     // write & read
     int                         _last_file_number;
@@ -242,6 +244,8 @@ public:
     int read_header(binary_reader& reader);
     int write_header(binary_writer& writer, multi_partition_decrees& init_max_decrees, int bufferSizeBytes);
     bool is_right_header() const;
+    void flush();
+    int get_file_header_size() const;
     
 private:
     log_file(const char* path, dsn_handle_t handle, int index, int64_t start_offset, int max_staleness_for_commit, bool isRead);

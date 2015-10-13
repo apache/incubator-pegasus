@@ -25,6 +25,7 @@ TEST(replication, log_learn)
             1,
             50,
             1,
+            false,
             false
             );
 
@@ -68,7 +69,8 @@ TEST(replication, log_learn)
             1,
             50,
             1,
-            true
+            true,
+            false
             );
 
         mlog->initialize(logp.c_str());

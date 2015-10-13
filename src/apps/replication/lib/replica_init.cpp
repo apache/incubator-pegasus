@@ -160,15 +160,27 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
             err = init_commit_log_service();
         }
 
-        if (_commit_log && _commit_log->max_decree(get_gpid()) < _app->last_committed_decree())
-            _prepare_list->reset(_commit_log->max_decree(get_gpid()));
-        else
-            _prepare_list->reset(_app->last_committed_decree());
+        if (err == ERR_OK)
+        {
+            if (_commit_log && _commit_log->max_decree(get_gpid()) < _app->last_committed_decree())
+            {
+                derror("%s: commit log is incomplete (%lld vs %lld), to be fixed using prepare log replay later (if enabled)",
+                    name(),
+                    _commit_log->max_decree(get_gpid()),
+                    _app->last_committed_decree()
+                    );
+
+                _prepare_list->reset(_commit_log->max_decree(get_gpid()));
+            }
+            else
+                _prepare_list->reset(_app->last_committed_decree());
+        }
     }
 
     if (err != ERR_OK)
     {
-        derror( "open replica '%s' under '%s' failed, error = %d", app_type, dir().c_str(), lerr);
+        derror( "%s: open replica failed, error = %s", name(), err.to_string());
+        _app->close(false);
         delete _app;
         _app = nullptr;
     }
@@ -191,29 +203,29 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
 error_code replica::init_commit_log_service()
 {
     error_code err = ERR_OK;
-    
+    decree last_cd = 0;
+    multi_partition_decrees init_previous_log_range_decrees; // for log truncate
+
     dassert(nullptr == _commit_log, "commit log must not be initialized yet");
 
     _commit_log = new mutation_log(
         _options->log_buffer_size_mb,
         _options->log_pending_max_ms,
         _options->log_file_size_mb,
-        _options->log_batch_write
+        _options->log_batch_write,
+        true
         );
 
     std::string log_dir = dir() + "/commit-log";
     err = _commit_log->initialize(log_dir.c_str());
-    if (err != ERR_OK)
-        return err;
+    if (err != ERR_OK) goto err_out;
 
     err = _commit_log->garbage_collection_when_as_commit_logs(
         get_gpid(),
         _app->last_durable_decree()
         );
-    if (err != ERR_OK)
-        return err;
-
-    decree last_cd = 0;
+    if (err != ERR_OK) goto err_out;
+    
     err = _commit_log->replay(
         [this, &last_cd](mutation_ptr& mu)
         {
@@ -248,7 +260,7 @@ error_code replica::init_commit_log_service()
             "%s: local log initialized, durable = %lld, committed(log/app) = <%lld,%lld>, maxpd = %llu, ballot = %llu",
             name(),
             _app->last_durable_decree(),
-            (_commit_log ? _commit_log->max_decree(get_gpid()) : 0),
+            last_cd,
             _app->last_committed_decree(),
             max_prepared_decree(),
             get_ballot()
@@ -258,16 +270,6 @@ error_code replica::init_commit_log_service()
     }
     else
     {
-        derror(
-            "%s: local log initialized with log error, durable = %lld, committed(log/app) = <%lld,%lld>, maxpd = %llu, ballot = %llu",
-            name(),
-            _app->last_durable_decree(),
-            (_commit_log ? _commit_log->max_decree(get_gpid()) : 0),
-            _app->last_committed_decree(),
-            max_prepared_decree(),
-            get_ballot()
-            );
-
         set_inactive_state_transient(false);
 
         // restart commit log service
@@ -284,32 +286,50 @@ error_code replica::init_commit_log_service()
             _options->log_buffer_size_mb,
             _options->log_pending_max_ms,
             _options->log_file_size_mb,
-            _options->log_batch_write
+            _options->log_batch_write,
+            true
             );
 
-        auto lerr = _commit_log->initialize(log_dir.c_str());
-        if (lerr != ERR_OK)
-            return lerr;
+        err = _commit_log->initialize(log_dir.c_str());
     }
 
-    multi_partition_decrees init_previous_log_range_decrees; // for log truncate
-    init_previous_log_range_decrees[get_gpid()] = last_cd ? last_cd : _app->last_durable_decree();
-    
+    if (err != ERR_OK) goto err_out;
+        
+    init_previous_log_range_decrees[get_gpid()] = last_cd ? last_cd : _app->last_durable_decree();    
     err = _commit_log->start_write_service(init_previous_log_range_decrees, _options->staleness_for_commit);
+
+err_out:
+    if (err != ERR_OK)
+    {
+        derror(
+            "%s: local log initialized with log error, durable = %lld, committed(log/app) = <%lld,%lld>, maxpd = %llu, ballot = %llu",
+            name(),
+            _app->last_durable_decree(),
+            last_cd,
+            _app->last_committed_decree(),
+            max_prepared_decree(),
+            get_ballot()
+            );
+
+        _commit_log->close();
+        _commit_log = nullptr;
+    }
     return err;
 }
 
 void replica::replay_mutation(mutation_ptr& mu)
 {
+    auto d = mu->data.header.decree;
+
     ddebug(
         "%s: replay mutation ballot = %llu, decree = %llu, last_committed_decree = %llu",
         name(),
         mu->data.header.ballot,
-        mu->data.header.decree,
+        d,
         mu->data.header.last_committed_decree
         );
 
-    if (mu->data.header.decree <= last_committed_decree()
+    if (d <= last_committed_decree()
         || mu->data.header.ballot < get_ballot())
     {
         return;
@@ -336,14 +356,11 @@ void replica::set_inactive_state_transient(bool t)
 
 void replica::reset_prepare_list_after_replay()
 {
-    if (_prepare_list->min_decree() > _app->last_committed_decree() + 1)
-    {
-        _prepare_list->reset(_app->last_committed_decree());
-    }
-    else
-    {
-        _prepare_list->truncate(_app->last_committed_decree());
-    }
+    // fix commit log if possible
+    _prepare_list->commit(_app->last_committed_decree(), COMMIT_TO_DECREE_SOFT);
+
+    // align the prepare list and the app
+    _prepare_list->truncate(_app->last_committed_decree());
 }
 
 }} // namespace

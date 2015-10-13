@@ -184,7 +184,7 @@ void replica::do_possible_commit_on_primary(mutation_ptr& mu)
 
     if (mu->is_ready_for_commit())
     {
-        _prepare_list->commit(mu->data.header.decree, false);
+        _prepare_list->commit(mu->data.header.decree, COMMIT_ALL_READY);
     }
 }
 
@@ -244,7 +244,8 @@ void replica::on_prepare(dsn_message_t request)
 
     else if (PS_POTENTIAL_SECONDARY == status())
     {
-        if (_potential_secondary_states.learning_status != LearningWithPrepare && _potential_secondary_states.learning_status != LearningSucceeded)
+        if (_potential_secondary_states.learning_status != LearningWithPrepare
+            && _potential_secondary_states.learning_status != LearningSucceeded)
         {
             ddebug( 
                 "%s: mutation %s on_prepare to %s skipped, learnings state = %s",

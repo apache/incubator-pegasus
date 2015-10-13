@@ -88,7 +88,7 @@ namespace dsn {
         screen_logger::screen_logger()
         {
             _short_header = dsn_config_get_value_bool("tools.screen_logger", "short_header",
-                false, "whether to use short header (excluding file/function etc.)");
+                true, "whether to use short header (excluding file/function etc.)");
         }
 
         screen_logger::~screen_logger(void)
@@ -127,7 +127,7 @@ namespace dsn {
             _lines = 0;
             _log = nullptr;
             _short_header = dsn_config_get_value_bool("tools.simple_logger", "short_header", 
-                false, "whether to use short header (excluding file/function etc.)");
+                true, "whether to use short header (excluding file/function etc.)");
             _fast_flush = dsn_config_get_value_bool("tools.simple_logger", "fast_flush",
                 false, "whether to flush immediately");
 
