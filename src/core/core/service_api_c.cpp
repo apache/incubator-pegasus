@@ -494,7 +494,7 @@ DSN_API bool dsn_rpc_register_handler(dsn_task_code_t code, const char* name, ds
 DSN_API void* dsn_rpc_unregiser_handler(dsn_task_code_t code)
 {
     auto h = ::dsn::task::get_current_node()->rpc_unregister_handler(code);
-    return h->parameter;
+    return (h != nullptr) ? h->parameter : nullptr;
 }
 
 DSN_API dsn_task_t dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, void* param, int reply_hash)
