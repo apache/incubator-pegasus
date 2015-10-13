@@ -1143,7 +1143,7 @@ void log_file::flush()
 # ifdef _WIN32
     ::FlushFileBuffers((HANDLE)_handle);
 # else
-    ::flush((int)(intptr_t)_handle);
+    fsync((int)(intptr_t)_handle);
 # endif
 }
 

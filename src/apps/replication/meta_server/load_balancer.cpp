@@ -129,7 +129,7 @@ void load_balancer::run_lb(partition_configuration& pc)
             proposal.type = CT_ASSIGN_PRIMARY;
 
             derror("%s.%d.%d enters DDD state, we are waiting for its last primary node %s to come back ...",
-                pc.app_type,
+                pc.app_type.c_str(),
                 pc.gpid.app_id,
                 pc.gpid.pidx,
                 proposal.node.to_string()
