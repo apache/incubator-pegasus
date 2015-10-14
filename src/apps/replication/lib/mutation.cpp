@@ -110,10 +110,14 @@ void mutation::set_client_request(dsn_task_code_t code, dsn_message_t request)
         mu->_prepare_request = from;
         dsn_msg_add_ref(from); // released on dctor
     }
-    else
+    else if (mu->data.updates.size() > 0)
     {
         dassert(mu->data.updates.at(0).has_holder(), 
             "the buffer must has ownership");
+    }
+    else
+    {
+        dassert(mu->rpc_code == RPC_REPLICATION_WRITE_EMPTY, "must be RPC_REPLICATION_WRITE_EMPTY");
     }
     
     sprintf(mu->_name, "%lld.%lld",

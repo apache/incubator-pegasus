@@ -309,6 +309,29 @@ void server_state::update_configuration(const configuration_update_request& requ
     update_configuration_internal(request, response);
 }
 
+static void maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const rpc_address& node, bool is_add)
+{
+    auto it = std::find(drops.begin(), drops.end(), node);
+    if (is_add)
+    {
+        if (it != drops.end())
+            drops.erase(it);
+    }
+    else
+    {        
+        if (it == drops.end())
+        {
+            drops.push_back(node);
+            if (drops.size() > 3)
+                drops.erase(drops.begin());
+        }
+        else
+        {
+            dassert(false, "the node cannot be in drops set before this update", node.to_string());
+        }
+    }
+}
+
 void server_state::update_configuration_internal(const configuration_update_request& request, /*out*/ configuration_update_response& response)
 {
     app_state& app = _apps[request.config.gpid.app_id - 1];
@@ -373,12 +396,33 @@ void server_state::update_configuration_internal(const configuration_update_requ
             dassert(false, "invalid config type 0x%x", static_cast<int>(request.type));
         }
         
-        // update to new config
+        // maintain dropouts
+        auto drops = old.last_drops; 
+        switch (request.type)
+        {
+        case CT_ASSIGN_PRIMARY:
+        case CT_ADD_SECONDARY:
+        case CT_UPGRADE_TO_SECONDARY:
+            maintain_drops(drops, request.node, true);
+            break;
+        case CT_DOWNGRADE_TO_INACTIVE:
+        case CT_REMOVE:
+            maintain_drops(drops, request.node, false);
+            break;
+        }
+        
+        // update to new config        
         old = request.config;
-
+        old.last_drops = drops;
+        
         std::stringstream cf;
         cf << "{primary:" << request.config.primary.to_string() << ", secondaries = [";
         for (auto& s : request.config.secondaries)
+        {
+            cf << s.to_string() << ",";
+        }
+        cf << "], drops = [";
+        for (auto& s : drops)
         {
             cf << s.to_string() << ",";
         }
@@ -415,6 +459,9 @@ void server_state::check_consistency(global_partition_id gpid)
         dassert(it != _nodes.end(), "");
         dassert(it->second.primaries.find(gpid) != it->second.primaries.end(), "");
         dassert(it->second.partitions.find(gpid) != it->second.partitions.end(), "");
+
+        auto it2 = std::find(config.last_drops.begin(), config.last_drops.end(), config.primary);
+        dassert(it2 == config.last_drops.end(), "");
     }
     
     for (auto& ep : config.secondaries)
@@ -422,6 +469,9 @@ void server_state::check_consistency(global_partition_id gpid)
         auto it = _nodes.find(ep);
         dassert(it != _nodes.end(), "");
         dassert(it->second.partitions.find(gpid) != it->second.partitions.end(), "");
+
+        auto it2 = std::find(config.last_drops.begin(), config.last_drops.end(), ep);
+        dassert(it2 == config.last_drops.end(), "");
     }
 
     int lc = 0;

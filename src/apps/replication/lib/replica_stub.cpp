@@ -133,7 +133,8 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             opts.log_buffer_size_mb,
             opts.log_pending_max_ms,
             opts.log_file_size_mb,
-            opts.log_batch_write
+            opts.log_batch_write,
+            false
             );
         err = _log->initialize(log_dir.c_str());
         dassert(err == ERR_OK, "");
@@ -170,7 +171,8 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
                 opts.log_buffer_size_mb,
                 opts.log_pending_max_ms,
                 opts.log_file_size_mb,
-                opts.log_batch_write
+                opts.log_batch_write,
+                false
                 );
             auto lerr = _log->initialize(log_dir.c_str());
             dassert(lerr == ERR_OK, "");
@@ -183,8 +185,26 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 
     for (auto it = rps.begin(); it != rps.end(); it++)
     {
+        dwarn(
+            "%u.%u @ %s: global log initialized stage 1, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu,"
+            "app(c/d) = <%lld/%lld>",
+            it->first.app_id, it->first.pidx,
+            primary_address().to_string(),
+            it->second->last_durable_decree(),
+            it->second->last_committed_decree(),
+            it->second->max_prepared_decree(),
+            it->second->get_ballot(),
+            it->second->get_app()->last_committed_decree(),
+            it->second->get_app()->last_durable_decree()
+            );
+
         it->second->reset_prepare_list_after_replay();
 
+        if (_options.log_enable_private_commit)
+        {
+            err = it->second->check_and_fix_commit_log_completeness();
+        }
+        
         if (err == ERR_OK)
         {
             dwarn(

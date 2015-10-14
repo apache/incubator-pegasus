@@ -80,14 +80,24 @@ static struct _all_info_
 //
 //------------------------------------------------------------------------------
 struct dsn_error_placeholder {};
+class error_code_mgr : public ::dsn::utils::customized_id_mgr < dsn_error_placeholder >
+{
+public:
+    error_code_mgr()
+    {
+        auto err = register_id("ERR_OK"); // make sure ERR_OK is always registered first
+        dassert(0 == err, "");
+    }
+};
+
 DSN_API dsn_error_t dsn_error_register(const char* name)
 {
-    return static_cast<dsn_error_t>(::dsn::utils::customized_id_mgr<dsn_error_placeholder>::instance().register_id(name));
+    return static_cast<dsn_error_t>(error_code_mgr::instance().register_id(name));
 }
 
 DSN_API const char* dsn_error_to_string(dsn_error_t err)
 {
-    return ::dsn::utils::customized_id_mgr<dsn_error_placeholder>::instance().get_name(static_cast<int>(err));
+    return error_code_mgr::instance().get_name(static_cast<int>(err));
 }
 
 // use ::dsn::threadpool_code2; for parsing purpose
@@ -494,7 +504,7 @@ DSN_API bool dsn_rpc_register_handler(dsn_task_code_t code, const char* name, ds
 DSN_API void* dsn_rpc_unregiser_handler(dsn_task_code_t code)
 {
     auto h = ::dsn::task::get_current_node()->rpc_unregister_handler(code);
-    return h->parameter;
+    return (h != nullptr) ? h->parameter : nullptr;
 }
 
 DSN_API dsn_task_t dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, void* param, int reply_hash)
@@ -735,7 +745,7 @@ DSN_API bool dsn_run_config(const char* config, bool sleep_after_init)
 DSN_API void dsn_terminate()
 {
 # if defined(_WIN32)
-    ::ExitProcess(0);
+    ::TerminateProcess(::GetCurrentProcess(), 0);
 # else
     kill(getpid(), SIGKILL);
 # endif

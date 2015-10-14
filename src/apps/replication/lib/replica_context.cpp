@@ -91,14 +91,6 @@ void primary_context::reset_membership(const partition_configuration& config, bo
     {
         statuses[it->first] = PS_POTENTIAL_SECONDARY;
     }
-
-    for (auto it = config.drop_outs.begin(); it != config.drop_outs.end(); it++)
-    {
-        if (statuses.find(*it) == statuses.end())
-        {
-            statuses[*it] = PS_INACTIVE;
-        }
-    }
 }
 
 bool primary_context::get_replica_config(::dsn::rpc_address node, /*out*/ replica_configuration& config)
@@ -139,8 +131,6 @@ bool primary_context::check_exist(::dsn::rpc_address node, partition_status st)
         return std::find(membership.secondaries.begin(), membership.secondaries.end(), node) != membership.secondaries.end();
     case PS_POTENTIAL_SECONDARY:
         return learners.find(node) != learners.end();
-    case PS_INACTIVE:
-        return std::find(membership.drop_outs.begin(), membership.drop_outs.end(), node) != membership.drop_outs.end();
     default:
         dassert (false, "");
         return false;
