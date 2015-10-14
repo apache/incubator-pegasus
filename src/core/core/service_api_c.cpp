@@ -85,7 +85,8 @@ class error_code_mgr : public ::dsn::utils::customized_id_mgr < dsn_error_placeh
 public:
     error_code_mgr()
     {
-        register_id("ERR_OK"); // make sure ERR_OK is always registered first
+        auto err = register_id("ERR_OK"); // make sure ERR_OK is always registered first
+        dassert(0 == err, "");
     }
 };
 
