@@ -29,6 +29,7 @@
 
 namespace dsn {
 
+class task_worker;
 class task_worker_pool;
 class admission_controller;
 
@@ -42,22 +43,32 @@ public:
 
 public:
     task_queue(task_worker_pool* pool, int index, task_queue* inner_provider); 
+    ~task_queue() {}
     
-    virtual void     enqueue(task_ptr& task) = 0;
-    virtual task_ptr dequeue() = 0;
+    virtual void     enqueue(task* task) = 0;
+    virtual task*    dequeue() = 0;
     virtual int      count() const = 0;
 
     const std::string & get_name() { return _name; }    
     task_worker_pool* pool() const { return _pool; }
-    perf_counter_ptr& get_qps_counter() { return _qps_counter; }
+    bool              is_shared() const { return _worker_count > 1; }
+    int               worker_count() const { return _worker_count; }
+    task_worker*      owner_worker() const { return _owner_worker; } // when not is_shared()
+    int               index() const { return _index; }
     admission_controller* controller() const { return _controller; }
     void set_controller(admission_controller* controller) { _controller = controller; }
 
 private:
+    friend class task_worker_pool;
+    void set_owner_worker(task_worker* worker) { _owner_worker = worker; }
+
+private:
     task_worker_pool*      _pool;
+    task_worker*           _owner_worker;
     std::string            _name;
-    perf_counter_ptr       _qps_counter;
+    int                    _index;
     admission_controller*  _controller;
+    int                    _worker_count;
 };
 
 } // end namespace

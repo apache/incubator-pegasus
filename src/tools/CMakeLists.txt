@@ -1,2 +1,3 @@
-add_subdirectory(common)
-add_subdirectory(simulator)
+add_subdirectory(cli)
+add_subdirectory(svchost)
+

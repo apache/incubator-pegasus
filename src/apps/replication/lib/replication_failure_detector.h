@@ -34,33 +34,26 @@ class replica_stub;
 class replication_failure_detector  : public dsn::fd::failure_detector
 {
 public:
-    replication_failure_detector(replica_stub* stub, std::vector<end_point>& meta_servers);
+    replication_failure_detector(replica_stub* stub, std::vector<::dsn::rpc_address>& meta_servers);
     ~replication_failure_detector(void);
 
     virtual void end_ping(::dsn::error_code err, const fd::beacon_ack& ack, void* context);
 
      // client side
-    virtual void on_master_disconnected( const std::vector<end_point>& nodes );
-    virtual void on_master_connected( const end_point& node);
+    virtual void on_master_disconnected( const std::vector<::dsn::rpc_address>& nodes );
+    virtual void on_master_connected( ::dsn::rpc_address node);
 
     // server side
-    virtual void on_worker_disconnected( const std::vector<end_point>& nodes ) { dassert (false, ""); }
-    virtual void on_worker_connected( const end_point& node )  { dassert (false, ""); }
+    virtual void on_worker_disconnected( const std::vector<::dsn::rpc_address>& nodes ) { dassert (false, ""); }
+    virtual void on_worker_connected( ::dsn::rpc_address node )  { dassert (false, ""); }
 
-    end_point current_server_contact() const { zauto_lock l(_meta_lock); return _current_meta_server; }
-    std::vector<end_point> get_servers() const  { zauto_lock l(_meta_lock); return _meta_servers; }
-
-private:
-    end_point find_next_meta_server(end_point current);
+    ::dsn::rpc_address current_server_contact() const { zauto_lock l(_meta_lock); return dsn_group_get_leader(_meta_servers.group_handle()); }
+    ::dsn::rpc_address get_servers() const  { return _meta_servers; }
 
 private:
-    typedef std::set<end_point> end_points;
-
-    mutable zlock           _meta_lock;
-    end_point               _current_meta_server;
-
-    std::vector<end_point>  _meta_servers;
-    replica_stub            *_stub;
+    mutable zlock            _meta_lock;
+    dsn::rpc_address         _meta_servers;
+    replica_stub             *_stub;
 };
 
 }} // end namespace

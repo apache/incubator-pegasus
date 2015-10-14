@@ -25,84 +25,126 @@
  */
 # pragma once
 # include "simple_kv.client.h"
+# include "simple_kv.client.perf.h"
 # include "simple_kv.server.h"
 
 namespace dsn { namespace replication { namespace application { 
 // client app example
-class simple_kv_client_app : public ::dsn::service::service_app, public virtual ::dsn::service::servicelet
+class simple_kv_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
 {
 public:
-	simple_kv_client_app(::dsn::service_app_spec* s) 
-		: ::dsn::service::service_app(s) 
-	{
-		_simple_kv_client = nullptr;
-	}
-	
-	~simple_kv_client_app() 
-	{
-		stop();
-	}
+    simple_kv_client_app()
+    {
+        _simple_kv_client = nullptr;
+    }
+    
+    ~simple_kv_client_app() 
+    {
+        stop();
+    }
 
-	virtual ::dsn::error_code start(int argc, char** argv)
-	{
-		if (argc < 2)
-			return ::dsn::ERR_INVALID_PARAMETERS;
+    virtual ::dsn::error_code start(int argc, char** argv)
+    {
+        if (argc < 2)
+            return ::dsn::ERR_INVALID_PARAMETERS;
 
-		std::vector<::dsn::end_point> meta_servers;
-        auto cf = ::dsn::service::system::config();
-		::dsn::replication::replication_app_client_base::load_meta_servers(cf, meta_servers);
-		
-		_simple_kv_client = new simple_kv_client(meta_servers, argv[1]);
-		_timer = ::dsn::service::tasking::enqueue(LPC_SIMPLE_KV_TEST_TIMER, this, &simple_kv_client_app::on_test_timer, 0, 0, 1000);
-		return ::dsn::ERR_SUCCESS;
-	}
+        std::vector<::dsn::rpc_address> meta_servers;
+        ::dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
+        
+        _simple_kv_client = new simple_kv_client(meta_servers, argv[1]);
+        _timer = ::dsn::tasking::enqueue(LPC_SIMPLE_KV_TEST_TIMER, this, &simple_kv_client_app::on_test_timer, 0, 0, 1000);
+        return ::dsn::ERR_OK;
+    }
 
-	virtual void stop(bool cleanup = false)
-	{
-		_timer->cancel(true);
+    virtual void stop(bool cleanup = false)
+    {
+        _timer->cancel(true);
  
         if (_simple_kv_client != nullptr)
         {
-    		delete _simple_kv_client;
-    		_simple_kv_client = nullptr;
+            delete _simple_kv_client;
+            _simple_kv_client = nullptr;
         }
-	}
+    }
 
-	void on_test_timer()
-	{
+    void on_test_timer()
+    {
         char buffer[20];
-        sprintf(buffer, "value.%u", env::random32(0, 100));
+        sprintf(buffer, "value.%u", dsn_random32(0, 0));
 
         std::string value(buffer);
 
-		{
-			::dsn::replication::application::kv_pair req;
+        {
+            ::dsn::replication::application::kv_pair req;
             req.key = "key";
-            req.value = value;
+//            req.value.resize(512 * 1024, 'v');
+            req.value.append(value); // = value;
 
-			//sync:
-			int32_t resp;
-			auto err = _simple_kv_client->write(req, resp);
-			std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_WRITE end, write " << req.value << ", err = " << err.to_string() << std::endl;
-			//async: 
-			//_simple_kv_client->begin_write(req);
+            //sync:
+            int32_t resp;
+            auto err = _simple_kv_client->write(req, resp);
+            std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_WRITE end, write " << req.key << ", err = " << err.to_string() << std::endl;
+            //async: 
+            //_simple_kv_client->begin_write(req);
 
             std::string v;
             auto err2 = _simple_kv_client->read(req.key, v);
-            std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_READ end, read " << v << ", err = " << err2.to_string() << std::endl;
+            std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_READ end, read " << req.key << ", err = " << err2.to_string() << std::endl;
 
-            if (err == ERR_SUCCESS && err2 == ERR_SUCCESS)
+            if (err == ERR_OK && err2 == ERR_OK)
             {
-                dassert(v == value, "data is inconsistent!");
+                if (1 == SKV_PARTITION_COUNT)
+                {
+                    dassert(v == req.value, "data is inconsistent!");
+                }
             }
-		}
-	}
+        }
+    }
 
 private:
-	::dsn::task_ptr _timer;
-	::dsn::end_point _server;
-	
-	simple_kv_client *_simple_kv_client;
+    ::dsn::task_ptr _timer;
+    simple_kv_client *_simple_kv_client;
 };
+
+
+class simple_kv_perf_test_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
+{
+public:
+    simple_kv_perf_test_client_app()
+    {
+        _simple_kv_client = nullptr;
+    }
+
+    ~simple_kv_perf_test_client_app()
+    {
+        stop();
+    }
+
+    virtual ::dsn::error_code start(int argc, char** argv)
+    {
+        if (argc < 2)
+            return ::dsn::ERR_INVALID_PARAMETERS;
+
+        std::vector<::dsn::rpc_address> meta_servers;
+        ::dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
+
+        _simple_kv_client = new simple_kv_perf_test_client(meta_servers, argv[1]);
+        _simple_kv_client->start_test();
+        return ::dsn::ERR_OK;
+    }
+
+    virtual void stop(bool cleanup = false)
+    {
+        if (_simple_kv_client != nullptr)
+        {
+            delete _simple_kv_client;
+            _simple_kv_client = nullptr;
+        }
+    }
+    
+private:
+    simple_kv_perf_test_client *_simple_kv_client;
+};
+
 
 } } } 

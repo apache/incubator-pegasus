@@ -25,8 +25,8 @@
  */
 # pragma once
 
-# include <dsn/internal/logging.h>
-# include <dsn/internal/utils.h>
+# include <dsn/service_api_c.h>
+# include <dsn/cpp/utils.h>
 # include <vector>
 # include <atomic>
 
@@ -45,13 +45,13 @@ public:
         
     void set_extension(uint32_t id, uint64_t data)
     {
-        dbg_dassert(id < _count);
+        dbg_dassert(id < _count, "");
         _ptr[id] = data;
     }
 
     uint64_t& get_extension(uint32_t id)
     {
-        dbg_dassert(id < _count);
+        dbg_dassert(id < _count, "");
         return _ptr[id];
     }
 

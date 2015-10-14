@@ -29,6 +29,13 @@
 
 namespace dsn { namespace replication {
 
+enum commit_type
+{
+    COMMIT_TO_DECREE_HARD, // commit (last_committed, ...<mutations must be is_commit_ready..., d]
+    COMMIT_TO_DECREE_SOFT, // commit (last_committed, ...<if is_commit_ready mutations>.., d]
+    COMMIT_ALL_READY       // commit (last_committed, ...<all is_commit_ready mutations> ...]
+                           // - only valid when PS_SECONDARY or PS_PRIMARY
+};
 
 class prepare_list : public mutation_cache
 {
@@ -37,10 +44,12 @@ public:
 
 public:
     prepare_list(
-        decree init_decree, int max_count,
-        mutation_committer committer);
+        decree init_decree, 
+        int max_count,
+        mutation_committer committer
+        );
 
-    decree last_committed_decree() const { return _lastCommittedDecree; }
+    decree last_committed_decree() const { return _last_committed_decree; }
     void   reset(decree init_decree);
     void   truncate(decree init_decree);
     
@@ -48,14 +57,14 @@ public:
     // for two-phase commit
     //
     error_code prepare(mutation_ptr& mu, partition_status status); // unordered prepare
-    bool       commit(decree decree, bool force); // ordered commit
+    bool       commit(decree decree, commit_type ct); // ordered commit
     
 private:
     void sanity_check();
 
 private:
-    decree                   _lastCommittedDecree;    
-    mutation_committer        _committer;
+    decree                   _last_committed_decree;    
+    mutation_committer       _committer;
 };
  
 }} // namespace

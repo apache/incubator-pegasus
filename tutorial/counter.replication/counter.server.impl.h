@@ -37,10 +37,10 @@ namespace dsn {
             : public counter_service
         {
         public:
-            counter_service_impl(replica* replica, configuration_ptr& config);
+            counter_service_impl(replica* replica);
 
-            virtual void on_add(const ::dsn::example::count_op& op, ::dsn::service::rpc_replier<int32_t>& reply);
-            virtual void on_read(const std::string& name, ::dsn::service::rpc_replier<int32_t>& reply);
+            virtual void on_add(const ::dsn::example::count_op& op, ::dsn::rpc_replier<int32_t>& reply) override;
+            virtual void on_read(const std::string& name, ::dsn::rpc_replier<int32_t>& reply) override;
 
             //
             // interfaces to be implemented by app
@@ -55,7 +55,7 @@ namespace dsn {
             //
             // helper routines to accelerate learning
             // 
-            virtual int  get_learn_state(decree start, const blob& learn_request, __out_param learn_state& state);  // must be thread-safe
+            virtual int  get_learn_state(decree start, const blob& learn_request, /*out*/ learn_state& state);  // must be thread-safe
             virtual int  apply_learn_state(learn_state& state);  // must be thread-safe, and last_committed_decree must equal to last_durable_decree after learning
 
         private:

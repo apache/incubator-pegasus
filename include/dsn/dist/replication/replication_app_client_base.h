@@ -29,8 +29,7 @@
 // replication_app_client_base is the base class for clients for 
 // all app to be replicated using this library
 // 
-
-# include <dsn/serverlet.h>
+# include <dsn/service_api_cpp.h>
 # include <dsn/dist/replication/replication.types.h>
 # include <dsn/dist/replication/replication_other_types.h>
 # include <dsn/dist/replication/replication.codes.h>
@@ -40,23 +39,23 @@ namespace dsn { namespace replication {
     DEFINE_ERR_CODE(ERR_REPLICATION_FAILURE)
     
 #pragma pack(push, 4)
-    class replication_app_client_base : public virtual servicelet
+    class replication_app_client_base : public virtual clientlet
     {
     public:
-        static void load_meta_servers(configuration_ptr& cf, __out_param std::vector<end_point>& servers);
+        static void load_meta_servers(/*out*/ std::vector<::dsn::rpc_address>& servers);
 
     public:
         replication_app_client_base(        
-            const std::vector<end_point>& meta_servers, 
-            const char* app_name
+            const std::vector<::dsn::rpc_address>& meta_servers, 
+            const char* replicated_app_name, 
+            int task_bucket_count = 13
             );
-
         ~replication_app_client_base();
 
         template<typename T, typename TRequest, typename TResponse>
-        rpc_response_task_ptr write(
+        ::dsn::task_ptr write(
             int partition_index,
-            task_code code,
+            dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
 
             // callback
@@ -68,33 +67,31 @@ namespace dsn { namespace replication {
             int reply_hash = 0
             )
         {
-            timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
-            message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds);
             
-            rpc_response_task_ptr task; 
-            if (callback == nullptr) 
-                task = new rpc_response_task_empty(msg); 
-            else 
-                task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task1<T, TRequest, TResponse>(
-                owner,
+            dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds, 0);
+            
+            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
+                msg,
                 req,
+                owner,
                 callback,
-                msg
+                reply_hash
                 );
-            auto rc = create_write_context(partition_index, code, task, reply_hash);
-            marshall(msg->writer(), *req);
+
+            auto rc = create_write_context(partition_index, code, msg, task, reply_hash);
+            ::marshall(msg, *req);
             call(rc);
-            return task;
+            return std::move(task);
         }
         
         template<typename TRequest, typename TResponse>
-        rpc_response_task_ptr write(
+        ::dsn::task_ptr write(
             int partition_index,
-            task_code code,
+            dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
 
             // callback
-            servicelet* owner,
+            clientlet* owner,
             std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
 
             // other specific parameters   
@@ -102,29 +99,27 @@ namespace dsn { namespace replication {
             int reply_hash = 0
             )
         {
-            timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
-            message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds);
             
-            rpc_response_task_ptr task;
-            if (callback == nullptr)
-                task = new rpc_response_task_empty(msg);
-            else
-                task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task2<TRequest, TResponse>(
-                owner,
+            dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds, 0);
+            
+            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
+                msg,
                 req,
+                owner,
                 callback,
-                msg
+                reply_hash
                 );
-            auto rc = create_write_context(partition_index, code, task, reply_hash);
-            marshall(msg->writer(), *req);
+
+            auto rc = create_write_context(partition_index, code, msg, task, reply_hash);
+            ::marshall(msg, *req);
             call(rc);
-            return task;
+            return std::move(task);
         }
 
         template<typename T, typename TRequest, typename TResponse>
-        rpc_response_task_ptr write(
+        ::dsn::task_ptr write(
             int partition_index,
-            task_code code,
+            dsn_task_code_t code,
             const TRequest& req,
 
             // callback
@@ -137,33 +132,30 @@ namespace dsn { namespace replication {
             int reply_hash = 0
             )
         {
-            timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
-            message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds);
             
-            rpc_response_task_ptr task;
-            if (callback == nullptr)
-                task = new rpc_response_task_empty(msg);
-            else
-                task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task5<T, TResponse>(
+            dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds, 0);
+            
+            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
+                msg,
                 owner,
                 callback,
                 context,
-                msg
+                reply_hash
                 );
-            auto rc = create_write_context(partition_index, code, task, reply_hash);
-            marshall(msg->writer(), req);
+            auto rc = create_write_context(partition_index, code, msg, task, reply_hash);
+            ::marshall(msg, req);
             call(rc);
-            return task;
+            return std::move(task);
         }
 
         template<typename TRequest, typename TResponse>
-        rpc_response_task_ptr write(
+        ::dsn::task_ptr write(
             int partition_index,
-            task_code code,
+            dsn_task_code_t code,
             const TRequest& req,
 
             // callback
-            servicelet* owner,
+            clientlet* owner,
             std::function<void(error_code, const TResponse&, void*)> callback,
             void* context,
 
@@ -172,29 +164,26 @@ namespace dsn { namespace replication {
             int reply_hash = 0
             )
         {
-            timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
-            message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds);
             
-            rpc_response_task_ptr task;
-            if (callback == nullptr)
-                task = new rpc_response_task_empty(msg);
-            else
-                task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task3<TResponse>(
-                owner,
+            dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds, 0);
+            
+            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
+                msg,
                 callback,
                 context,
-                msg
+                reply_hash
                 );
-            auto rc = create_write_context(partition_index, code, task, reply_hash);
-            marshall(msg->writer(), req);
+
+            auto rc = create_write_context(partition_index, code, msg, task, reply_hash);
+            ::marshall(msg, req);
             call(rc);
-            return task;
+            return std::move(task);
         }
 
         template<typename T, typename TRequest, typename TResponse>
-        rpc_response_task_ptr read(
+        ::dsn::task_ptr read(
             int partition_index,
-            task_code code,
+            dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
 
             // callback
@@ -208,33 +197,31 @@ namespace dsn { namespace replication {
             decree snapshot_decree = invalid_decree // only used when ReadSnapshot
             )
         {
-            timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
-            message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds);
             
-            rpc_response_task_ptr task;
-            if (callback == nullptr)
-                task = new rpc_response_task_empty(msg);
-            else
-                task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task1<T, TRequest, TResponse>(
-                owner,
+            dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds, 0);
+            
+            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
+                msg,
                 req,
+                owner,
                 callback,
-                msg
+                reply_hash
                 );
-            auto rc = create_read_context(partition_index, code, task, read_semantic, snapshot_decree, reply_hash);
-            marshall(msg->writer(), *req);
+
+            auto rc = create_read_context(partition_index, code, msg, task, read_semantic, snapshot_decree, reply_hash);
+            ::marshall(msg, *req);
             call(rc);
-            return task;
+            return std::move(task);
         }
 
         template<typename TRequest, typename TResponse>
-        rpc_response_task_ptr read(
+        ::dsn::task_ptr read(
             int partition_index,
-            task_code code,
+            dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
 
             // callback
-            servicelet* owner,
+            clientlet* owner,
             std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
 
             // other specific parameters   
@@ -244,29 +231,27 @@ namespace dsn { namespace replication {
             decree snapshot_decree = invalid_decree // only used when ReadSnapshot
             )
         {
-            timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
-            message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds);
             
-            rpc_response_task_ptr task;
-            if (callback == nullptr)
-                task = new rpc_response_task_empty(msg);
-            else
-                task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task2<TRequest, TResponse>(
-                owner,
+            dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds, 0);
+            
+            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
+                msg,
                 req,
+                owner,
                 callback,
-                msg
+                reply_hash
                 );
-            auto rc = create_read_context(partition_index, code, task, read_semantic, snapshot_decree, reply_hash);
-            marshall(msg->writer(), *req);
+
+            auto rc = create_read_context(partition_index, code, msg, task, read_semantic, snapshot_decree, reply_hash);
+            ::marshall(msg *req);
             call(rc);
-            return task;
+            return std::move(task);
         }
 
         template<typename T, typename TRequest, typename TResponse>
-        rpc_response_task_ptr read(
+        ::dsn::task_ptr read(
             int partition_index,
-            task_code code,
+            dsn_task_code_t code,
             const TRequest& req,
 
             // callback
@@ -281,33 +266,31 @@ namespace dsn { namespace replication {
             decree snapshot_decree = invalid_decree // only used when ReadSnapshot
             )
         {
-            timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
-            message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds);
             
-            rpc_response_task_ptr task;
-            if (callback == nullptr)
-                task = new rpc_response_task_empty(msg);
-            else
-                task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task5<T, TResponse>(
+            dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds, 0);
+            
+            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
+                msg,
                 owner,
                 callback,
                 context,
-                msg
+                reply_hash
                 );
-            auto rc = create_read_context(partition_index, code, task, read_semantic, snapshot_decree, reply_hash);
-            marshall(msg->writer(), req);
+
+            auto rc = create_read_context(partition_index, code, msg, task, read_semantic, snapshot_decree, reply_hash);
+            ::marshall(msg, req);
             call(rc);
-            return task;
+            return std::move(task);
         }
 
         template<typename TRequest, typename TResponse>
-        rpc_response_task_ptr read(
+        ::dsn::task_ptr read(
             int partition_index,
-            task_code code,
+            dsn_task_code_t code,
             const TRequest& req,
 
             // callback
-            servicelet* owner,
+            clientlet* owner,
             std::function<void(error_code, const TResponse&, void*)> callback,
             void* context,
 
@@ -318,84 +301,93 @@ namespace dsn { namespace replication {
             decree snapshot_decree = invalid_decree // only used when ReadSnapshot
             )
         {
-            timeout_milliseconds = (timeout_milliseconds != 0 ? timeout_milliseconds : task_spec::get(code)->rpc_timeout_milliseconds);
-            message_ptr msg = message::create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds);
             
-            rpc_response_task_ptr task;
-            if (callback == nullptr)
-                task = new rpc_response_task_empty(msg);
-            else
-                task = new ::dsn::service::rpc::internal_use_only::service_rpc_response_task3<TResponse>(
-                owner,
+            dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds, 0);
+            
+            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
+                msg,
                 callback,
                 context,
-                msg
+                reply_hash
                 );
-            auto rc = create_read_context(partition_index, code, task, read_semantic, snapshot_decree, reply_hash);
-            marshall(msg->writer(), req);
+
+            auto rc = create_read_context(partition_index, code, msg, task, read_semantic, snapshot_decree, reply_hash);
+            ::marshall(msg, req);
             call(rc);
-            return task;
+            return std::move(task);
         }
 
         // get read address policy
-        virtual end_point get_read_address(read_semantic_t semantic, const partition_configuration& config);
+        virtual ::dsn::rpc_address get_read_address(read_semantic_t semantic, const partition_configuration& config);
         
-    private:
-        struct request_context
+    public:
+        struct request_context : public ref_counter
         {
             int                   partition_index;
-            rpc_response_task_ptr callback_task;
+            ::dsn::task_ptr callback_task;
             read_request_header   read_header;
             write_request_header  write_header;
             bool                  is_read;
-            uint16_t              header_pos; // write header after body is written
-            task_ptr              timeout_timer; // when partition config is unknown at the first place
+            char*                 header_pos; // write header after body is written
+            int                   timeout_ms; // init timeout
+            uint64_t              timeout_ts_us; // timeout at this timing point
+            dsn_message_t         request;
+
+            ::dsn::service::zlock lock; // [
+            dsn::task_ptr         timeout_timer; // when partition config is unknown at the first place            
+            bool                  completed;
+            // ]
         };
 
+        typedef ::dsn::ref_ptr<request_context> request_context_ptr;
+
+    private:
         struct partition_context
         {
-            rpc_response_task_ptr query_config_task;
-            std::list<request_context*> requests;
+            dsn::task_ptr     query_config_task;
+            std::list<request_context_ptr> requests;
         };
 
-        typedef std::map<int, partition_context*> pending_requests;
+        typedef std::unordered_map<int, partition_context*> pending_requests;
         
-        mutable zlock     _requests_lock;
-        pending_requests  _pending_requests;        
+        mutable ::dsn::service::zlock  _requests_lock;
+        pending_requests               _pending_requests;
 
     private:
         request_context* create_write_context(
             int partition_index,
-            task_code code,
-            rpc_response_task_ptr callback,
+            dsn_task_code_t code,
+            dsn_message_t request,
+            ::dsn::task_ptr& callback,
             int reply_hash = 0
             );
 
         request_context* create_read_context(
             int partition_index,
-            task_code code,
-            rpc_response_task_ptr callback,
+            dsn_task_code_t code,
+            dsn_message_t request,
+            ::dsn::task_ptr& callback,
             read_semantic_t read_semantic = ReadOutdated,
             decree snapshot_decree = invalid_decree, // only used when ReadSnapshot        
             int reply_hash = 0
             );
 
     private:
-        std::string                             _app_name;
-        std::vector<end_point>                  _meta_servers;
+        std::string      _app_name;
+        dsn::rpc_address _meta_servers;
         
-        mutable zrwlock                         _config_lock;
-        std::map<int,  partition_configuration> _config_cache;
+        mutable ::dsn::service::zrwlock_nr      _config_lock;
+        std::unordered_map<int, partition_configuration> _config_cache;
         int                                     _app_id;
-        end_point                               _last_contact_point;
+        int                                     _app_partition_count;
 
     private:
-        void call(request_context* request, bool no_delay = true);
-        error_code get_address(int pidx, bool is_write, __out_param end_point& addr, __out_param int& app_id, read_semantic_t semantic = read_semantic_t::ReadLastUpdate);
-        void on_user_request_timeout(request_context* rc);
-        void query_partition_configuration_reply(error_code err, message_ptr& request, message_ptr& response, int pidx);
-        void replica_rw_reply(error_code err, message_ptr& request, message_ptr& response, request_context* rc);
-        void end_request(request_context* request, error_code err, message_ptr& resp);
+        void call(request_context_ptr request, bool no_delay = true);
+        error_code get_address(int pidx, bool is_write, /*out*/ ::dsn::rpc_address& addr, /*out*/ int& app_id, read_semantic_t semantic = read_semantic_t::ReadLastUpdate);
+        void query_partition_configuration_reply(error_code err, dsn_message_t request, dsn_message_t response, int pidx);
+        void replica_rw_reply(error_code err, dsn_message_t request, dsn_message_t response, request_context_ptr& rc);
+        void end_request(request_context_ptr& request, error_code err, dsn_message_t resp);
+        void on_user_request_timeout(request_context_ptr& rc);
         void clear_all_pending_tasks();
     };
 #pragma pack(pop)

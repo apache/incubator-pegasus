@@ -34,15 +34,33 @@ namespace dsn { namespace replication {
 #define MAX_LOG_FILESIZE (32)
 
 class log_file;
-typedef boost::intrusive_ptr<log_file> log_file_ptr;
+typedef dsn::ref_ptr<log_file> log_file_ptr;
 
-typedef std::map<global_partition_id, decree> multi_partition_decrees;
+typedef std::unordered_map<global_partition_id, decree> multi_partition_decrees;
 
-class mutation_log : public virtual servicelet
+struct log_block_header
+{
+    int32_t magic;
+    int32_t length;
+    int32_t body_crc;
+    uint32_t local_offset;
+};
+
+struct log_file_header
+{
+    int32_t  magic;
+    int32_t  version;
+    int32_t  header_size;
+    int32_t  max_staleness_for_commit;
+    int32_t  log_buffer_size_bytes;
+    int64_t  start_global_offset;
+};
+
+class mutation_log : public virtual clientlet, public ref_counter
 {
 public:
     // mutationPtr
-    typedef std::function<void (mutation_ptr&)> ReplayCallback;
+    typedef std::function<void (mutation_ptr&)> replay_callback;
 
 public:
     //
@@ -51,65 +69,111 @@ public:
     mutation_log(
         uint32_t log_buffer_size_mb, 
         uint32_t log_pending_max_ms, 
-        uint32_t max_log_file_mb = (uint64_t) MAX_LOG_FILESIZE, 
-        bool batch_write = true, 
-        int write_task_max_count = 2
+        uint32_t max_log_file_mb,
+        bool batch_write,
+        bool is_commit_log
         );
     virtual ~mutation_log();
     
     //
     // initialization
     //
-    int initialize(const char* dir);
-    int replay(ReplayCallback callback);
-    void reset();
-    int  start_write_service(multi_partition_decrees& initMaxDecrees, int max_staleness_for_commit);
+    error_code initialize(const char* dir);    
+    void reset_as_commit_log(global_partition_id gpid, decree lcd);
+    error_code start_write_service(
+        multi_partition_decrees& init_max_decrees, 
+        int max_staleness_for_commit
+        );
     void close();
+
+    //
+    // replay
+    //
+    error_code replay(replay_callback callback);
+
+    static error_code replay(
+        log_file_ptr log,
+        replay_callback callback,
+        /*out*/ int64_t& end_offset
+        );
+
+    static error_code replay(
+        std::vector<std::string>& log_files,
+        replay_callback callback,
+        /*out*/ int64_t& end_offset
+        );
+
+    static error_code replay(
+        std::map<int, log_file_ptr>& log_files,
+        replay_callback callback,
+        /*out*/ int64_t& end_offset
+        );
        
     //
     // log mutation
     //
     // return value: nullptr for error
-    task_ptr append(mutation_ptr& mu, 
-            task_code callback_code,
-            servicelet* callback_host,
+    ::dsn::task_ptr append(mutation_ptr& mu,
+            dsn_task_code_t callback_code,
+            clientlet* callback_host,
             aio_handler callback,
             int hash = 0);
 
-    // Remove entry <gpid, decree> from m_initPreparedDecrees when a partition is removed. 
+    // remove entry <gpid, decree> from _previous_log_max_decrees
+    // when a partition is removed. 
     void on_partition_removed(global_partition_id gpid);
 
     //
-    //  garbage collection logs that are already covered by durable state on disk, return deleted log segment count
+    //  garbage collection logs that are already covered by 
+    //  durable state on disk, return deleted log segment count
     //
-    int garbage_collection(multi_partition_decrees& durable_decrees);
+    int garbage_collection(
+            multi_partition_decrees& durable_decrees, 
+            multi_partition_decrees& max_seen_decrees
+            );
+
+    int garbage_collection_when_as_commit_logs(
+        global_partition_id gpid, 
+        decree durable_d
+        );
+
+    //
+    //  when this is a commit log, log files are learned by remote replicas
+    //
+    void get_learn_state_when_as_commit_logs(
+        global_partition_id gpid,
+        ::dsn::replication::decree start,
+        /*out*/ ::dsn::replication::learn_state& state
+        );
 
     //
     //    other inquiry routines
     const std::string& dir() const {return _dir;}
-    int64_t              end_offset() const { return _global_end_offset; }
-    int64_t              start_offset() const { return _global_start_offset; }
-
+    int64_t end_offset() const { return _global_end_offset; }
+    int64_t start_offset() const { return _global_start_offset; }
     std::map<int, log_file_ptr>& get_logfiles_for_test();
+    decree max_decree(global_partition_id gpid) const;
+    decree min_decree(global_partition_id gpid) const;
 
 private:
     //
     //  internal helpers
     //
-    typedef std::shared_ptr<std::list<aio_task_ptr>> pending_callbacks_ptr;
+    typedef std::shared_ptr<std::list<::dsn::task_ptr>> pending_callbacks_ptr;
 
-    int  create_new_log_file();
+    error_code create_new_log_file();
     void create_new_pending_buffer();    
-    void internal_pending_write_timer(uint64_t id);
-    static void internal_write_callback(error_code err, uint32_t size, pending_callbacks_ptr callbacks, blob data);
-    int  write_pending_mutations(bool create_new_log_when_necessary = true);
+    void internal_pending_write_timer(binary_writer* w_ptr);
+    static void internal_write_callback(error_code err, size_t size, pending_callbacks_ptr callbacks, blob data);
+    error_code write_pending_mutations(bool create_new_log_when_necessary = true);
 
-private:    
-    
-    zlock                     _lock;
-    int64_t                     _max_log_file_size_in_bytes;            
+private:
+    mutable zlock             _lock;
+    int64_t                   _max_log_file_size_in_bytes;            
     std::string               _dir;    
     bool                      _batch_write;
+    bool                      _is_opened;
+    bool                      _is_commit_log;
 
     // write & read
     int                         _last_file_number;
@@ -119,59 +183,53 @@ private:
     int64_t                     _global_start_offset;
     int64_t                     _global_end_offset;
     
-    // gc
-    multi_partition_decrees     _init_prepared_decrees;
+    // for gc and learning
+    multi_partition_decrees     _previous_log_max_decrees;
     int                         _max_staleness_for_commit;
 
     // bufferring
     uint32_t                    _log_buffer_size_bytes;
     uint32_t                    _log_pending_max_milliseconds;
     
-    message_ptr                 _pending_write;
-    pending_callbacks_ptr       _pending_write_callbacks;
-    task_ptr                    _pending_write_timer;
-    
-    int                         _write_task_number;
+    std::shared_ptr<binary_writer> _pending_write;
+    pending_callbacks_ptr          _pending_write_callbacks;
+    ::dsn::task_ptr                _pending_write_timer; 
 };
 
-class log_file : public ref_object
+class log_file : public ref_counter
 {
-public:
-    struct log_file_header
-    {
-        int32_t  magic;
-        int32_t  version;
-        int32_t  header_size;
-        int32_t  max_staleness_for_commit;
-        int32_t  log_buffer_size_bytes;
-        int64_t  start_global_offset;
-    };
-
 public:    
     ~log_file() { close(); }
 
     //
     // file operations
     //
-    static log_file_ptr opend_read(const char* path);
-    static log_file_ptr create_write(const char* dir, int index, int64_t startOffset, int max_staleness_for_commit, int write_task_max_count = 2);
+    static log_file_ptr open_read(const char* path);
+    static log_file_ptr create_write(
+        const char* dir, 
+        int index, 
+        int64_t start_offset,
+        int max_staleness_for_commit
+        );
     void close();
 
     //
     // read routines
     //
-    int read_next_log_entry(__out_param ::dsn::blob& bb);
+    error_code read_next_log_entry(int64_t local_offset, /*out*/::dsn::blob& bb);
 
     //
     // write routines
     //
+    std::shared_ptr<binary_writer> prepare_log_entry();
+
     // return value: nullptr for error or immediate success (using ::GetLastError to get code), otherwise it is pending
-    aio_task_ptr write_log_entry(
+    ::dsn::task_ptr commit_log_entry(
                     blob& bb,
-                    task_code evt,  // to indicate which thread pool to execute the callback
-                    servicelet* callback_host,
-                    aio_handler callback,
                     int64_t offset,
+                    dsn_task_code_t evt,  // to indicate which thread pool to execute the callback
+                    clientlet* callback_host,
+                    aio_handler callback,                    
                     int hash
                     );
     
@@ -180,30 +238,29 @@ public:
     int64_t start_offset() const  { return _start_offset; }
     int   index() const { return _index; }
     const std::string& path() const { return _path; }
-    const multi_partition_decrees& init_prepare_decrees() { return _init_prepared_decrees; }
-    const log_file_header& header() const { return _header;}
+    const multi_partition_decrees& previous_log_max_decrees() { return _previous_log_max_decrees; }
+    log_file_header& header() { return _header;}
 
-    int  read_header(message_ptr& msg);
-    int  write_header(message_ptr& msg, multi_partition_decrees& initMaxDecrees, int bufferSizeBytes);    
+    int read_header(binary_reader& reader);
+    int write_header(binary_writer& writer, multi_partition_decrees& init_max_decrees, int bufferSizeBytes);
+    bool is_right_header() const;
+    void flush();
+    int get_file_header_size() const;
     
 private:
-    log_file(const char* path, handle_t handle, int index, int64_t startOffset, int max_staleness_for_commit, bool isRead, int write_task_max_count = 2);
+    log_file(const char* path, dsn_handle_t handle, int index, int64_t start_offset, int max_staleness_for_commit, bool isRead);
 
-protected:        
+private:        
     int64_t       _start_offset;
     int64_t       _end_offset;
-    handle_t      _handle;
+    dsn_handle_t  _handle;
     bool          _is_read;
     std::string   _path;
     int           _index;
-    std::vector<aio_task_ptr>  _write_tasks;
-    int                        _write_task_itr;    
 
     // for gc
-    multi_partition_decrees _init_prepared_decrees;    
+    multi_partition_decrees _previous_log_max_decrees;    
     log_file_header         _header;
 };
-
-DEFINE_REF_OBJECT(log_file)
 
 }} // namespace

@@ -1,0 +1,156 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Microsoft Corporation
+ * 
+ * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+#pragma once
+
+# include <dsn/tool_api.h>
+# include "io_looper.h"
+
+# ifdef _WIN32
+    typedef SOCKET socket_t;
+# else
+    # include <sys/types.h>
+    # include <sys/socket.h>
+    # include <netdb.h>
+    # include <arpa/inet.h>
+    typedef int socket_t;
+    # if defined(__FreeBSD__)
+        # include <netinet/in.h>
+    # endif
+# endif
+
+namespace dsn {
+    namespace tools {
+        
+
+        class hpc_network_provider : public connection_oriented_network
+        {
+        public:
+            hpc_network_provider(rpc_engine* srv, network* inner_provider);
+
+            virtual error_code start(rpc_channel channel, int port, bool client_only, io_modifer& ctx);
+            virtual ::dsn::rpc_address address() { return _address;  }
+            virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr);
+            
+        private:
+            socket_t      _listen_fd;
+            ::dsn::rpc_address _address;
+            io_looper     *_looper;
+            
+        private:
+            void do_accept();
+
+        public:
+            struct ready_event
+            {
+# ifdef _WIN32
+                OVERLAPPED olp;
+# endif
+                io_loop_callback callback;
+            };
+
+        private:            
+            ready_event      _accept_event;
+# ifdef _WIN32
+            socket_t         _accept_sock;
+            char             _accept_buffer[1024];
+# endif
+        };
+
+        class hpc_rpc_session : public rpc_session
+        {
+        // client
+        public:
+            hpc_rpc_session(
+                socket_t sock,
+                std::shared_ptr<dsn::message_parser>& parser,
+                connection_oriented_network& net,
+                ::dsn::rpc_address remote_addr,
+                rpc_client_matcher_ptr& matcher
+                );
+
+            virtual void connect() override;
+            
+        // server
+        public:
+            hpc_rpc_session(
+                socket_t sock,
+                std::shared_ptr<dsn::message_parser>& parser,
+                connection_oriented_network& net,
+                ::dsn::rpc_address remote_addr
+                );
+            
+        // shared
+        public:
+            virtual void send(message_ex* msgs) override
+            {
+# ifdef _WIN32
+                do_write(msgs);
+# else
+                do_safe_write(msgs);
+# endif
+            }
+
+            void bind_looper(io_looper* looper, bool delay = false);
+            void do_read(int sz = 256);
+
+        private:            
+            void do_write(message_ex* msgs);
+            void close();
+            void on_failure();
+            void on_read_completed(message_ex* msg)
+            {
+                if (is_client())
+                    on_recv_reply(msg->header->id, msg, 0);
+                else
+                    on_recv_request(msg, 0);
+            }
+            
+        protected:
+            socket_t                               _socket;
+            message_ex*                            _sending_msg;            
+            int                                    _sending_buffer_start_index;
+
+# ifdef _WIN32
+            hpc_network_provider::ready_event      _read_event;
+            hpc_network_provider::ready_event      _write_event;
+            hpc_network_provider::ready_event      _connect_event;            
+# else
+            io_loop_callback                       _ready_event;            
+            struct sockaddr_in                     _peer_addr;
+            io_looper*                             _looper;
+
+            // due to the bad design of EPOLLET, we need to
+            // use locks to avoid concurrent send/recv
+            ::dsn::utils::ex_lock_nr               _send_lock;
+            ::dsn::utils::ex_lock_nr               _recv_lock;
+
+            void on_connect_events_ready(uintptr_t lolp_or_events);
+            void on_send_recv_events_ready(uintptr_t lolp_or_events);
+            void do_safe_write(message_ex* msgs);
+# endif
+        };
+    }
+}

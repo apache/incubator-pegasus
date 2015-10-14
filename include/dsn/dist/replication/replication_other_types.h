@@ -39,21 +39,21 @@ namespace dsn {
         typedef int64_t ballot;
         typedef int64_t decree;
 
-        #define invalid_ballot ((ballot)-1LL)
-        #define invalid_decree ((decree)-1LL)
+        #define invalid_ballot ((::dsn::replication::ballot)-1LL)
+        #define invalid_decree ((::dsn::replication::decree)-1LL)
         #define invalid_offset (-1LL)
 
         class replica;
-        typedef boost::intrusive_ptr<replica> replica_ptr;
-				    
-		class replica_stub;
-		typedef boost::intrusive_ptr<replica_stub> replica_stub_ptr;
+        typedef dsn::ref_ptr<replica> replica_ptr;
+                    
+        class replica_stub;
+        typedef dsn::ref_ptr<replica_stub> replica_stub_ptr;
 
         class mutation;
-        typedef boost::intrusive_ptr<mutation> mutation_ptr;
+        typedef dsn::ref_ptr<mutation> mutation_ptr;
 
-
-
+        class mutation_log;
+        typedef dsn::ref_ptr<mutation_log> mutation_log_ptr;
     }
 } // namespace
 

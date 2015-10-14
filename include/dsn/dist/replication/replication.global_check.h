@@ -25,11 +25,9 @@
  */
 # pragma once
 
-# include <dsn/internal/configuration.h>
-
 namespace dsn {
     namespace replication 
     {
-        void install_checkers(configuration_ptr config);
+        void install_checkers();
     }
 }

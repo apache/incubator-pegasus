@@ -25,46 +25,55 @@
  */
 # pragma once
 
-# include <dsn/service_api.h>
+# include <dsn/service_api_c.h>
+# include <string>
+# include <dsn/cpp/utils.h>
+# include <dsn/internal/task.h>
 
 namespace dsn {
 
-	struct remote_copy_request
-	{
-		end_point   source;
-		std::string source_dir;
-		std::vector<std::string> files;
-		std::string dest_dir;
-		bool        overwrite;
-	};
+    struct remote_copy_request
+    {
+        ::dsn::rpc_address   source;
+        std::string source_dir;
+        std::vector<std::string> files;
+        std::string dest_dir;
+        bool        overwrite;
+    };
 
-	struct remote_copy_response
-	{
+    struct remote_copy_response
+    {
 
-	};
+    };
 
-	extern void marshall(::dsn::binary_writer& writer, const remote_copy_request& val, uint16_t pos = 0xffff);
+    extern void marshall(::dsn::binary_writer& writer, const remote_copy_request& val);
 
-	extern void unmarshall(::dsn::binary_reader& reader, __out_param remote_copy_request& val);
+    extern void unmarshall(::dsn::binary_reader& reader, /*out*/ remote_copy_request& val);
+    
+    class service_node;
+    class task_worker_pool;
+    class task_queue;
 
-	class nfs_node
-	{
-	public:
-		template <typename T> static nfs_node* create(service_node* node)
-		{
-			return new T(node);
-		}
+    class nfs_node
+    {
+    public:
+        template <typename T> static nfs_node* create(service_node* node)
+        {
+            return new T(node);
+        }
 
-	public:
-		nfs_node(service_node* node) : _node(node) {}
+    public:
+        nfs_node(service_node* node) : _node(node) {}
 
-        virtual error_code start() = 0;
+        virtual ::dsn::error_code start(io_modifer& ctx) = 0;
 
         virtual error_code stop() = 0;
 
-		virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task_ptr& callback) = 0;
+        virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task* callback) = 0;
+        
+        service_node* node() { return _node; }
 
-	protected:
-		service_node* _node;
-	};
+    protected:
+        service_node* _node;
+    };
 }

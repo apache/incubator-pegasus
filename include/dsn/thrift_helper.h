@@ -25,8 +25,7 @@
  */
 # pragma once
 
-# include <dsn/internal/dsn_types.h>
-# include <dsn/internal/utils.h>
+# include <dsn/service_api_cpp.h>
 # include <dsn/internal/message_parser.h>
 # include <dsn/tool_api.h>
 
@@ -100,7 +99,7 @@ namespace dsn {
             xfer += proto->writeFieldEnd(); \
             return xfer;\
         }\
-        inline int read_base(::apache::thrift::protocol::TProtocol* proto, __out_param TName& val, ::apache::thrift::protocol::TType ftype)\
+        inline int read_base(::apache::thrift::protocol::TProtocol* proto, /*out*/ TName& val, ::apache::thrift::protocol::TType ftype)\
         {\
             if (ftype == ::apache::thrift::protocol::TType::T_##TTag) return proto->read##TMethod(val); \
             else return proto->skip(ftype);\
@@ -126,7 +125,7 @@ namespace dsn {
     }
         
     template<typename TName>
-    inline uint32_t unmarshall_base(::apache::thrift::protocol::TProtocol* iproto, __out_param TName& val)
+    inline uint32_t unmarshall_base(::apache::thrift::protocol::TProtocol* iproto, /*out*/ TName& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -170,7 +169,7 @@ namespace dsn {
     }
 
     template<typename T>
-    void unmarshall(binary_reader& reader, __out_param T& val)
+    void unmarshall(binary_reader& reader, /*out*/ T& val)
     {
         boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
@@ -203,7 +202,7 @@ namespace dsn {
     template<typename T>
     uint32_t unmarshall_rpc_args(
         ::apache::thrift::protocol::TProtocol* iprot,
-        __out_param T& val,
+        /*out*/ T& val,
         uint32_t(T::*reader)(::apache::thrift::protocol::TProtocol*)
         )
     {
@@ -266,7 +265,7 @@ namespace dsn {
         {
         }
 
-        virtual void prepare_buffers_for_send(message_ptr& msg, __out_param std::vector<blob>& buffers)
+        virtual void prepare_buffers_for_send(dsn_message_t msg, /*out*/ std::vector<blob>& buffers)
         {
             // prepare head
             blob bb(_write_buffer_for_header, 0, 512);
@@ -289,14 +288,14 @@ namespace dsn {
             // finalize
             std::vector<blob> lbuffers;
             msg->writer().get_buffers(lbuffers);
-            if (lbuffers[0].length() == message_header::serialized_size())
+            if (lbuffers[0].length() == sizeof(message_header))
             {
                 lbuffers[0] = writer.get_buffer();
                 buffers = lbuffers;
             }
             else
             {
-                dassert(lbuffers[0].length() > message_header::serialized_size(), "");
+                dassert(lbuffers[0].length() > sizeof(message_header), "");
                 buffers.resize(lbuffers.size() + 1);
                 buffers[0] = writer.get_buffer();
 
@@ -304,7 +303,7 @@ namespace dsn {
                 {
                     if (i == 0)
                     {
-                        buffers[1] = lbuffers[0].range(message_header::serialized_size());
+                        buffers[1] = lbuffers[0].range(sizeof(message_header));
                     }
                     else
                     {
@@ -314,7 +313,7 @@ namespace dsn {
             }
         }
 
-        virtual message_ptr get_message_on_receive(int read_length, __out_param int& read_next)
+        virtual dsn_message_t get_message_on_receive(int read_length, /*out*/ int& read_next)
         {
             mark_read(read_length);
 
@@ -353,9 +352,9 @@ namespace dsn {
                 // msg done
                 int msg_sz = _read_buffer_occupied - reader.get_remaining_size() - hdr_sz;
                 auto msg_bb = _read_buffer.range(hdr_sz, msg_sz);
-                message_ptr msg = new message(msg_bb, false);
+                dsn_message_t msg = new message(msg_bb, false);
                 msg->header().id = msg->header().rpc_id = rseqid;
-                strcpy(msg->header().rpc_name, fname.c_str());
+                strncpy(msg->header().rpc_name, fname.c_str(), sizeof(msg->header().rpc_name));
                 msg->header().body_length = msg_sz;
 
                 _read_buffer = _read_buffer.range(msg_sz + hdr_sz);

@@ -25,157 +25,202 @@
  */
 # pragma once
 
-# include <dsn/internal/dsn_types.h>
-# include <mutex>
-# include <condition_variable>
-# include <boost/thread/shared_mutex.hpp>
-# include <dsn/internal/logging.h>
+# include <dsn/ports.h>
 
-namespace dsn { namespace utils {
+// using high performance versions from https://github.com/preshing/cpp11-on-multicore
 
-class rw_lock
-{
-public:
-    rw_lock() { }
-    ~rw_lock() {}
+# include <dsn/ext/hpc-locks/benaphore.h>
+# include <dsn/ext/hpc-locks/autoresetevent.h>
+# include <dsn/ext/hpc-locks/rwlock.h>
 
-    void lock_read() { _lock.lock_shared(); }
-    bool try_lock_read() { return _lock.try_lock_shared(); }
-    void unlock_read() { _lock.unlock_shared(); }
+namespace dsn {
+    namespace utils {
 
-    void lock_write() { _lock.lock(); }
-    bool try_lock_write() { return _lock.try_lock(); }
-    void unlock_write() { _lock.unlock(); }
-    
-private:
-    boost::shared_mutex _lock;
-};
-
-class notify_event
-{
-public:
-    notify_event() : _ready(false){}
-    void notify() { std::lock_guard<std::mutex> l(_lk); _ready = true; _cond.notify_all(); }
-    void wait()   { std::unique_lock<std::mutex> l(_lk); _cond.wait(l, [&]{return _ready; }); }
-    bool wait_for(int milliseconds)
-    { 
-        std::unique_lock<std::mutex> l(_lk); 
-        if (_ready)
+# if 0
+//# if defined(_WIN32)
+        class ex_lock
         {
-            return true;
-        }
-        else
+        public:
+            ex_lock() { ::InitializeCriticalSection(&_cs); }
+            ~ex_lock() { ::DeleteCriticalSection(&_cs); }
+            __inline void lock() { ::EnterCriticalSection(&_cs); }
+            __inline bool try_lock() { return ::TryEnterCriticalSection(&_cs) != 0; }
+            __inline void unlock() { ::LeaveCriticalSection(&_cs); }
+        private:
+            CRITICAL_SECTION _cs;
+        };
+# else
+        class ex_lock
         {
-            return std::cv_status::no_timeout == _cond.wait_for(l, std::chrono::milliseconds(milliseconds));
-        }
-    }
+        public:
+            __inline void lock() { _lock.lock(); }
+            __inline bool try_lock() { return _lock.tryLock(); }
+            __inline void unlock() { _lock.unlock(); }
+        private:
+            RecursiveBenaphore _lock;
+        };
+# endif
 
-private:
-    std::mutex _lk;
-    std::condition_variable _cond;
-    bool _ready;
-};
-
-
-class semaphore
-{
-public:  
-    semaphore(int initialCount = 0)
-        : _count(initialCount), _waits(0)
-    {
-    }
-
-    ~semaphore()
-    {
-    }
-
-public:
-    inline void signal() 
-    {
-        signal(1);
-    }
-
-    inline void signal(int count)
-    {
-        std::unique_lock<std::mutex> l(_lk);
-        _count += count;
-        if (_waits > 0)
+        class ex_lock_nr
         {
-            _cond.notify_one();
-        }
-    }
+        public:
+            __inline void lock() { _lock.lock(); }
+            __inline bool try_lock() { return _lock.tryLock(); }
+            __inline void unlock() { _lock.unlock(); }
+        private:
+            NonRecursiveBenaphore _lock;
+        };
 
-    inline bool wait()
-    {
-        return wait(TIME_MS_MAX);
-    }
-
-    inline bool wait(unsigned int milliseconds)
-    {
-        std::unique_lock<std::mutex> l(_lk);
-        if (_count == 0)
+        class ex_lock_nr_spin
         {
-            _waits++;
+        public:
+            __inline ex_lock_nr_spin()
+            {
+                _l = 0;
+            }
 
-            auto r = _cond.wait_for(l, std::chrono::milliseconds(milliseconds));
+            __inline void lock() 
+            {
+                while (!try_lock())
+                {
+                    while (_l.load(std::memory_order_consume) == 1)
+                    {
+                    }
+                }
+            }
 
-            _waits--;
-            if (r == std::cv_status::timeout)
-                return false;
-        }
+            __inline bool try_lock() 
+            { 
+                return 0 == _l.exchange(1, std::memory_order_acquire);
+            }
 
-        dassert (_count > 0, "semphoare must be greater than zero");
-        _count--;
-        return true;
+            __inline void unlock() 
+            {
+                _l.store(0, std::memory_order_release);
+            }
+
+        private:
+            std::atomic<int> _l;
+        };
+
+        class rw_lock_nr
+        {
+        public:
+            rw_lock_nr() { }
+            ~rw_lock_nr() {}
+
+            __inline void lock_read() { _lock.lockReader(); }
+            __inline void unlock_read() { _lock.unlockReader(); }
+
+            __inline void lock_write() { _lock.lockWriter(); }
+            __inline void unlock_write() { _lock.unlockWriter(); }
+
+        private:
+            NonRecursiveRWLock _lock;
+        };
+
+        class notify_event
+        {
+        public:
+            __inline void notify() { _ready.signal(); }
+            __inline void wait()   { _ready.wait(); }
+            __inline bool wait_for(int milliseconds) 
+            {
+                if (TIME_MS_MAX == milliseconds)
+                {
+                    _ready.wait();
+                    return true;
+                }
+                else
+                    return _ready.wait(milliseconds); 
+            }
+
+        private:
+            AutoResetEvent _ready;
+        };
+        
+        class semaphore
+        {
+        public:
+            semaphore(int initial_count = 0)
+                : _sema(initial_count, 128)
+            {
+            }
+
+            ~semaphore()
+            {
+            }
+
+        public:
+            inline void signal()
+            {
+                signal(1);
+            }
+
+            inline void signal(int count)
+            {
+                _sema.signal(count);
+            }
+
+            inline void wait()
+            {
+                return _sema.wait();
+            }
+
+            inline bool wait(int milliseconds)
+            {
+                if (TIME_MS_MAX == milliseconds)
+                {
+                    _sema.wait();
+                    return true;
+                }
+                else
+                    return _sema.wait(milliseconds);
+            }
+
+            inline bool release()
+            {
+                _sema.signal();
+                return true;
+            }
+
+        private:
+            LightweightSemaphore _sema;
+        };
+
+        //--------------------- helpers --------------------------------------
+        template<typename T>
+        class auto_lock
+        {
+        public:
+            auto_lock(T & lock) : _lock(&lock) { _lock->lock(); }
+            ~auto_lock() { _lock->unlock(); }
+
+        private:
+            T * _lock;
+
+            auto_lock(const auto_lock&);
+            auto_lock& operator=(const auto_lock&);
+        };
+
+        class auto_read_lock
+        {
+        public:
+            auto_read_lock(rw_lock_nr & lock) : _lock(&lock) { _lock->lock_read(); }
+            ~auto_read_lock() { _lock->unlock_read(); }
+
+        private:
+            rw_lock_nr * _lock;
+        };
+
+        class auto_write_lock
+        {
+        public:
+            auto_write_lock(rw_lock_nr & lock) : _lock(&lock) { _lock->lock_write(); }
+            ~auto_write_lock() { _lock->unlock_write(); }
+
+        private:
+            rw_lock_nr * _lock;
+        };
     }
-
-    inline bool release()
-    {
-        signal(1);
-        return true;
-    }    
-
-private:
-    std::mutex _lk;
-    std::condition_variable _cond;
-    int _count;
-    int _waits;
-};
-
-
-//--------------------- helpers --------------------------------------
-
-class auto_lock
-{
-public:
-    auto_lock(std::recursive_mutex & lock) : _lock(&lock) { _lock->lock(); }
-    ~auto_lock() { _lock->unlock(); }
-
-private:
-    std::recursive_mutex * _lock;
-
-    auto_lock(const auto_lock&);
-    auto_lock& operator=(const auto_lock&);
-};
-
-class auto_read_lock
-{
-public:
-    auto_read_lock(rw_lock & lock) : _lock(&lock) { _lock->lock_read(); }
-    ~auto_read_lock() { _lock->unlock_read(); }
-
-private:
-    rw_lock * _lock;
-};
-
-class auto_write_lock
-{
-public:
-    auto_write_lock(rw_lock & lock) : _lock(&lock) { _lock->lock_write(); }
-    ~auto_write_lock() { _lock->unlock_write(); }
-
-private:
-    rw_lock * _lock;
-};
-
-}} // end namespace
+}

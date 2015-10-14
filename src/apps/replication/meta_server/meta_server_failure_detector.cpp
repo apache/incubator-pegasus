@@ -27,7 +27,10 @@
 #include "server_state.h"
 #include "meta_service.h"
 
-#define __TITLE__ "MetaServer.FD"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "meta.server.FD"
 
 meta_server_failure_detector::meta_server_failure_detector(server_state* state, meta_service* svc)
 {
@@ -40,7 +43,7 @@ meta_server_failure_detector::~meta_server_failure_detector(void)
 {
 }
 
-void meta_server_failure_detector::on_worker_disconnected(const std::vector<end_point>& nodes)
+void meta_server_failure_detector::on_worker_disconnected(const std::vector<::dsn::rpc_address>& nodes)
 {
     if (!is_primary())
     {
@@ -52,7 +55,7 @@ void meta_server_failure_detector::on_worker_disconnected(const std::vector<end_
     {
         states.push_back(std::make_pair(n, false));
 
-        dwarn("client expired: %s:%hu", n.name.c_str(), n.port);
+        dwarn("client expired: %s", n.to_string());
     }
     
     machine_fail_updates pris;
@@ -60,11 +63,16 @@ void meta_server_failure_detector::on_worker_disconnected(const std::vector<end_
     
     for (auto& pri : pris)
     {
+        dinfo("%d.%d primary node for %s is gone, update configuration on meta server", 
+            pri.first.app_id,
+            pri.first.pidx,
+            pri.second->node.to_string()
+            );
         _svc->update_configuration(pri.second);
     }
 }
 
-void meta_server_failure_detector::on_worker_connected(const end_point& node)
+void meta_server_failure_detector::on_worker_connected(::dsn::rpc_address node)
 {
     if (!is_primary())
     {
@@ -75,15 +83,21 @@ void meta_server_failure_detector::on_worker_connected(const end_point& node)
     states.push_back(std::make_pair(node, true));
 
     dwarn("Client reconnected",
-        "Client %s:%hu", node.name.c_str(), node.port);
+        "Client %s", node.to_string());
 
     _state->set_node_state(states, nullptr);
 }
 
-bool meta_server_failure_detector::set_primary(bool is_primary /*= false*/)
+void meta_server_failure_detector::set_primary(rpc_address primary)
 {
-    bool bRet = true;
-    if (is_primary && !_is_primary)
+    bool old = _is_primary;
+    {
+        utils::auto_lock<zlock> l(_primary_address_lock);
+        _primary_address = primary;
+        _is_primary = (primary == primary_address());
+    }
+
+    if (!old && _is_primary)
     {
         node_states ns;
         _state->get_node_state(ns);
@@ -92,43 +106,24 @@ bool meta_server_failure_detector::set_primary(bool is_primary /*= false*/)
         {
             register_worker(pr.first, pr.second);
         }
-
-        _is_primary = true;
     }
 
-    if (!is_primary && _is_primary)
+    if (old && !_is_primary)
     {
         clear_workers();
-        _is_primary = false;
     }
-
-    return bRet;
 }
 
-bool meta_server_failure_detector::is_primary() const
-{
-    return _is_primary;
-}
 
-void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::service::rpc_replier<fd::beacon_ack>& reply)
+void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::rpc_replier<fd::beacon_ack>& reply)
 {
     fd::beacon_ack ack;
     ack.this_node = beacon.to;
     if (!is_primary())
     {
-        end_point master;
-        if (_state->get_meta_server_primary(master))
-        {
-            ack.time = beacon.time;
-            ack.is_master = false;
-            ack.primary_node = master;
-        }
-        else
-        {
-            ack.time = beacon.time;
-            ack.is_master = false;
-            ack.primary_node =  end_point::INVALID;
-        }
+        ack.time = beacon.time;
+        ack.is_master = false;
+        ack.primary_node = _primary_address;
     }
     else
     {

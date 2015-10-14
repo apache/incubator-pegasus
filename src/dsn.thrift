@@ -1,13 +1,17 @@
 namespace cpp dsn
 
-struct end_point
+// place holder
+struct address
 {
-	1: i32    ip;
-	2: i16    port;
-	3: string name;
 }
 
 // place holder
 struct blob
 {
 }
+
+// place holder
+struct error_code
+{
+}
+

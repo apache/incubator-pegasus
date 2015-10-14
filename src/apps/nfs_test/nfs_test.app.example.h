@@ -25,104 +25,110 @@
 */
 # pragma once
 # include <dsn/dist/replication.h>
-# include <dsn/service_api.h>
-
-# include "nfs_node_impl.h"
-# include "nfs_server_impl.h"
+# include <dsn/tool/nfs_node_simple.h>
+# include "nfs_code_definition.h"
 
 namespace dsn {
-	namespace replication {
-		namespace application {
+    namespace replication {
+        namespace application {
 
-			// server app example
-			class nfs_server_app : public ::dsn::service::service_app, public virtual ::dsn::service::servicelet
-			{
-			public:
-				nfs_server_app(::dsn::service_app_spec* s)
-					: ::dsn::service::service_app(s) {}
+            // server app example
+            class nfs_server_app : public ::dsn::service_app, public virtual ::dsn::clientlet
+            {
+            public:
+                nfs_server_app() {}
 
-				virtual ::dsn::error_code start(int argc, char** argv)
-				{
-					return ::dsn::ERR_SUCCESS;
-				}
+                virtual ::dsn::error_code start(int argc, char** argv)
+                {
+                    // use builtin nfs_service by set [core] start_nfs = true
+                    return ::dsn::ERR_OK;
+                }
 
-				virtual void stop(bool cleanup = false)
-				{
-					_nfs_node_impl->stop();
-				}
+                virtual void stop(bool cleanup = false)
+                {
+                }
+            };
 
-			private:
-				nfs_node_impl* _nfs_node_impl;
-			};
+            // client app example
+            class nfs_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
+            {
+            public:
+                nfs_client_app()
+                {
+                    _req_index = 0;
+                    _is_copying = false;
+                }
 
-			// client app example
-			class nfs_client_app : public ::dsn::service::service_app, public virtual ::dsn::service::servicelet
-			{
-			public:
-				nfs_client_app(::dsn::service_app_spec* s)
-					: ::dsn::service::service_app(s) {}
+                ~nfs_client_app()
+                {
+                    stop();
+                }
 
-				~nfs_client_app()
-				{
-					stop();
-				}
+                virtual ::dsn::error_code start(int argc, char** argv)
+                {
+                    if (argc < 2)
+                        return ::dsn::ERR_INVALID_PARAMETERS;
 
-				virtual ::dsn::error_code start(int argc, char** argv)
-				{
-					if (argc < 2)
-						return ::dsn::ERR_INVALID_PARAMETERS;
+                    _server.assign_ipv4(argv[1], (uint16_t)atoi(argv[2]));
 
-					_server = ::dsn::end_point(argv[1], (uint16_t)atoi(argv[2]));
+                    //on_request_timer();
+                    _request_timer = ::dsn::tasking::enqueue(::dsn::service::LPC_NFS_REQUEST_TIMER,
+                                                             this, &nfs_client_app::on_request_timer, 0, 0, 1000);
 
-					on_request_timer();
-					//_request_timer = ::dsn::service::tasking::enqueue(LPC_NFS_REQUEST_TIMER, this, &nfs_client_app::on_request_timer, 0, 0, 1000);
+                    return ::dsn::ERR_OK;
+                }
 
-					return ::dsn::ERR_SUCCESS;
-				}
+                virtual void stop(bool cleanup = false)
+                {
+                    _request_timer->cancel(true);
+                }
 
-				virtual void stop(bool cleanup = false)
-				{
-					_timer->cancel(true);
-					_request_timer->cancel(true);
-				}
+                void on_request_timer()
+                {
+                    if (_is_copying)
+                        return;
 
-				void on_request_timer()
-				{
-					std::string source_dir = ""; // add your path
-					std::string dest_dir = ""; // add your path
-					std::vector<std::string> files; // empty is for all
-					bool overwrite = true;
-					file::copy_remote_files(_server, source_dir, files, dest_dir, overwrite, LPC_NFS_COPY_FILE, nullptr,
-						std::bind(&nfs_client_app::internal_copy_callback,
-						this,
-						std::placeholders::_1,
-						std::placeholders::_2,
-						_server,
-						source_dir,
-						files,
-						dest_dir,
-						overwrite));
-				}
+                    _is_copying = true;
 
-				void internal_copy_callback(error_code err, uint32_t size, ::dsn::end_point _server, std::string source_dir, std::vector<std::string> files, std::string dest_dir, bool overwrite)
-				{
-					if (err == ::dsn::ERR_SUCCESS)
-					{
-						dinfo("copy request completed");
-					}
-					else
-					{
-						derror("%s", err.to_string());
-						dinfo("copy request failed");
-					}
-				}
-			private:
-				::dsn::task_ptr _timer;
-				::dsn::task_ptr _request_timer;
+                    std::string source_dir = "./"; // add your path
+                    std::string dest_dir = "./dst/"; // add your path
+                    std::vector<std::string> files; // empty is for all
+                    files.push_back("dsn.nfs.test");
+                    bool overwrite = true;
+                    
+                    file::copy_remote_files(_server, source_dir, files, dest_dir, overwrite,
+                        ::dsn::service::LPC_NFS_COPY_FILE, nullptr,
+                        std::bind(&nfs_client_app::internal_copy_callback,
+                        this,
+                        std::placeholders::_1,
+                        std::placeholders::_2,
+                        ++_req_index
+                        ));
 
-				::dsn::end_point _server;
-			};
+                    ddebug("remote file copy request %d started", (int)_req_index);
+                }
 
-		}
-	}
+                void internal_copy_callback(error_code err, size_t size, int index)
+                {
+                    if (err == ::dsn::ERR_OK)
+                    {
+                        ddebug("remote file copy request %d completed", index);
+                    }
+                    else
+                    {
+                        derror("remote file copy request %d failed, err = %s", index, err.to_string());
+                    }
+
+                    _is_copying = false;
+                }
+            private:
+                ::dsn::task_ptr _request_timer;
+
+                ::dsn::rpc_address _server;
+                std::atomic<int> _req_index;
+                bool _is_copying;
+            };
+
+        }
+    }
 }

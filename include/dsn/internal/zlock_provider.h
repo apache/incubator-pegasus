@@ -29,70 +29,89 @@
 
 namespace dsn { namespace service {
 class zlock;
-class zrwlock;
+class zrwlock_nr;
 class zsemaphore;
 }}
 
 namespace dsn {
 
-class lock_provider : public extensible_object<lock_provider, 4>
+class ilock
 {
 public:
-    template <typename T> static lock_provider* create(dsn::service::zlock *lock, lock_provider* inner_provider)
-    {
-        return new T(lock, inner_provider);
-    }
-
-public:
-    lock_provider(dsn::service::zlock *lock, lock_provider* inner_provider) { _inner_provider = inner_provider; }
-    virtual ~lock_provider() { if (nullptr != _inner_provider) delete _inner_provider; }
-
+    virtual ~ilock() {}
     virtual void lock() = 0;
     virtual bool try_lock() = 0;
     virtual void unlock() = 0;
+};
 
+class lock_provider : public ilock, public extensible_object<lock_provider, 4>
+{
+public:
+    template <typename T> static lock_provider* create(lock_provider* inner_provider)
+    {
+        return new T(inner_provider);
+    }
+
+public:
+    lock_provider(lock_provider* inner_provider) { _inner_provider = inner_provider; }
+    virtual ~lock_provider() { if (nullptr != _inner_provider) delete _inner_provider; }
     lock_provider* get_inner_provider() const { return _inner_provider; }
 
 private:
     lock_provider *_inner_provider;
 };
 
-class rwlock_provider : public extensible_object<lock_provider, 4>
+class lock_nr_provider : public ilock, public extensible_object<lock_nr_provider, 4>
 {
 public:
-    template <typename T> static rwlock_provider* create(dsn::service::zrwlock *lock, rwlock_provider* inner_provider)
+    template <typename T> static lock_nr_provider* create(lock_nr_provider* inner_provider)
     {
-        return new T(lock, inner_provider);
+        return new T(inner_provider);
     }
 
 public:
-    rwlock_provider(dsn::service::zrwlock *lock, rwlock_provider* inner_provider) { _inner_provider = inner_provider; }
-    virtual ~rwlock_provider() { if (nullptr != _inner_provider) delete _inner_provider; }
+    lock_nr_provider(lock_nr_provider* inner_provider) { _inner_provider = inner_provider; }
+    virtual ~lock_nr_provider() { if (nullptr != _inner_provider) delete _inner_provider; }
+    lock_nr_provider* get_inner_provider() const { return _inner_provider; }
+
+private:
+    lock_nr_provider *_inner_provider;
+};
+
+class rwlock_nr_provider : public extensible_object<rwlock_nr_provider, 4>
+{
+public:
+    template <typename T> static rwlock_nr_provider* create(rwlock_nr_provider* inner_provider)
+    {
+        return new T(inner_provider);
+    }
+
+public:
+    rwlock_nr_provider(rwlock_nr_provider* inner_provider) { _inner_provider = inner_provider; }
+    virtual ~rwlock_nr_provider() { if (nullptr != _inner_provider) delete _inner_provider; }
 
     virtual void lock_read() = 0;
-    virtual bool try_lock_read() = 0;
     virtual void unlock_read() = 0;
 
     virtual void lock_write() = 0;
-    virtual bool try_lock_write() = 0;
     virtual void unlock_write() = 0;
 
-    rwlock_provider* get_inner_provider() const { return _inner_provider; }
+    rwlock_nr_provider* get_inner_provider() const { return _inner_provider; }
 
 private:
-    rwlock_provider *_inner_provider;
+    rwlock_nr_provider *_inner_provider;
 };
 
-class semaphore_provider : public extensible_object<lock_provider, 4>
+class semaphore_provider : public extensible_object<semaphore_provider, 4>
 {
 public:
-    template <typename T> static semaphore_provider* create(dsn::service::zsemaphore *sema, int initCount, semaphore_provider* inner_provider)
+    template <typename T> static semaphore_provider* create(int initCount, semaphore_provider* inner_provider)
     {
-        return new T(sema, initCount, inner_provider);
+        return new T(initCount, inner_provider);
     }
 
 public:  
-    semaphore_provider(dsn::service::zsemaphore *sema, int initialCount, semaphore_provider* inner_provider) { _inner_provider = inner_provider; }
+    semaphore_provider(int initial_count, semaphore_provider* inner_provider) { _inner_provider = inner_provider; }
     virtual ~semaphore_provider() { if (nullptr != _inner_provider) delete _inner_provider; }
 
 public:

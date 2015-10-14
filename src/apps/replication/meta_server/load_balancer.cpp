@@ -26,10 +26,10 @@
 #include "load_balancer.h"
 #include <algorithm>
 
-bool MachineLoadComp(const std::pair<end_point, int>& l, const std::pair<end_point, int>& r)
-{
-    return l.second < r.second;
-}
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "load.balancer"
 
 load_balancer::load_balancer(server_state* state)
 : _state(state), serverlet<load_balancer>("load_balancer")
@@ -63,9 +63,9 @@ void load_balancer::run(global_partition_id gpid)
     run_lb(pc);
 }
 
-end_point load_balancer::find_minimal_load_machine(bool primaryOnly)
+::dsn::rpc_address load_balancer::find_minimal_load_machine(bool primaryOnly)
 {
-    std::vector<std::pair<end_point, int>> stats;
+    std::vector<std::pair<::dsn::rpc_address, int>> stats;
 
     for (auto it = _state->_nodes.begin(); it != _state->_nodes.end(); it++)
     {
@@ -77,29 +77,27 @@ end_point load_balancer::find_minimal_load_machine(bool primaryOnly)
     }
 
     
-    std::sort(stats.begin(), stats.end(), [](const std::pair<end_point, int>& l, const std::pair<end_point, int>& r)
+    std::sort(stats.begin(), stats.end(), [](const std::pair<::dsn::rpc_address, int>& l, const std::pair<::dsn::rpc_address, int>& r)
     {
         return l.second < r.second;
     });
-    
-    //std::sort(stats.begin(), stats.end(), MachineLoadComp);
 
     if (stats.empty())
     {
-        return end_point::INVALID;
+        return ::dsn::rpc_address();
     }
 
-    int candidateCount = 1;
+    int candidate_count = 1;
     int val = stats[0].second;
 
     for (size_t i = 1; i < stats.size(); i++)
     {
         if (stats[i].second > val)
             break;
-        candidateCount++;
+        candidate_count++;
     }
 
-    return stats[env::random32(0, candidateCount - 1)].first;
+    return stats[dsn_random32(0, candidate_count - 1)].first;
 }
 
 void load_balancer::run_lb(partition_configuration& pc)
@@ -110,19 +108,35 @@ void load_balancer::run_lb(partition_configuration& pc)
     configuration_update_request proposal;
     proposal.config = pc;
 
-    if (pc.primary == end_point::INVALID)
+    if (pc.primary.is_invalid())
     {
-        proposal.type = CT_ASSIGN_PRIMARY;
         if (pc.secondaries.size() > 0)
         {
-            proposal.node = pc.secondaries[env::random32(0, static_cast<int>(pc.secondaries.size()) - 1)];
-        }
-        else
-        {
-            proposal.node = find_minimal_load_machine(true);
+            proposal.node = pc.secondaries[dsn_random32(0, static_cast<int>(pc.secondaries.size()) - 1)];
+            proposal.type = CT_UPGRADE_TO_PRIMARY;
         }
 
-        if (proposal.node != end_point::INVALID)
+        else if (pc.last_drops.size() == 0)
+        {
+            proposal.node = find_minimal_load_machine(true);
+            proposal.type = CT_ASSIGN_PRIMARY;
+        }
+
+        // DDD
+        else
+        {
+            proposal.node = *pc.last_drops.rbegin();
+            proposal.type = CT_ASSIGN_PRIMARY;
+
+            derror("%s.%d.%d enters DDD state, we are waiting for its last primary node %s to come back ...",
+                pc.app_type.c_str(),
+                pc.gpid.app_id,
+                pc.gpid.pidx,
+                proposal.node.to_string()
+                );
+        }
+
+        if (proposal.node.is_invalid() == false)
         {
             send_proposal(proposal.node, proposal);
         }
@@ -132,7 +146,9 @@ void load_balancer::run_lb(partition_configuration& pc)
     {
         proposal.type = CT_ADD_SECONDARY;
         proposal.node = find_minimal_load_machine(false);
-        if (proposal.node != end_point::INVALID)
+        if (proposal.node.is_invalid() == false && 
+            proposal.node != pc.primary &&
+            std::find(pc.secondaries.begin(), pc.secondaries.end(), proposal.node) == pc.secondaries.end())
         {
             send_proposal(pc.primary, proposal);
         }
@@ -144,8 +160,14 @@ void load_balancer::run_lb(partition_configuration& pc)
 }
 
 // meta server => partition server
-void load_balancer::send_proposal(const end_point& node, const configuration_update_request& proposal)
+void load_balancer::send_proposal(::dsn::rpc_address node, const configuration_update_request& proposal)
 {
+    dinfo("send proposal %s of %s, current ballot = %lld", 
+        enum_to_string(proposal.type),
+        proposal.node.to_string(),
+        proposal.config.ballot
+        );
+
     rpc::call_one_way_typed(node, RPC_CONFIG_PROPOSAL, proposal, gpid_to_hash(proposal.config.gpid));
 }
 
@@ -156,7 +178,7 @@ void load_balancer::query_decree(std::shared_ptr<query_replica_decree_request> q
 
 void load_balancer::on_query_decree_ack(error_code err, std::shared_ptr<query_replica_decree_request>& query, std::shared_ptr<query_replica_decree_response>& resp)
 {
-    if (err)
+    if (err != ERR_OK)
     {
         tasking::enqueue(LPC_QUERY_PN_DECREE, this, std::bind(&load_balancer::query_decree, this, query), 0, 1000);
     }

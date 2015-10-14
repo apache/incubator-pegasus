@@ -25,8 +25,8 @@
  */
 # pragma once
 
-# include <dsn/internal/dsn_types.h>
-# include <dsn/internal/utils.h>
+# include <dsn/ports.h>
+# include <dsn/cpp/utils.h>
 
 # include <google/protobuf/stubs/common.h>
 # include <google/protobuf/io/zero_copy_stream.h>
@@ -107,7 +107,7 @@ namespace dsn {
     }
 
     template<typename T>
-    void unmarshall(binary_reader& reader, __out_param T& val)
+    void unmarshall(binary_reader& reader, /*out*/ T& val)
     {
         gproto_binary_reader rd2(reader);
         ::google::protobuf::io::CodedInputStream is(&rd2);

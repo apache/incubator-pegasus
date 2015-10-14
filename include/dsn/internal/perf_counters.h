@@ -66,9 +66,9 @@ private:
     typedef std::map<std::string, std::pair<perf_counter_ptr, perf_counter_type> > same_section_counters;
     typedef std::map<std::string, same_section_counters> all_counters;
 
-    mutable utils::rw_lock  _lock;
-    all_counters         _counters;
-    perf_counter_factory _factory;
+    mutable utils::rw_lock_nr  _lock;
+    all_counters               _counters;
+    perf_counter_factory       _factory;
 };
 
 }} // end namespace dsn::utils

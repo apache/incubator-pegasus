@@ -26,29 +26,31 @@
 #include "prepare_list.h"
 #include "mutation.h"
 
-#define __TITLE__ "prepare_list"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "prepare_list"
 
 namespace dsn { namespace replication {
 
 prepare_list::prepare_list(
         decree init_decree, int max_count,
-        mutation_committer committer)
+        mutation_committer committer
+        )
         : mutation_cache(init_decree, max_count)
 {
     _committer = committer;
-    _lastCommittedDecree = 0;
+    _last_committed_decree = 0;
 }
 
 void prepare_list::sanity_check()
 {
-    dassert (
-        last_committed_decree() <= min_decree(), ""
-        );
+
 }
 
 void prepare_list::reset(decree init_decree)
 {
-    _lastCommittedDecree = init_decree;
+    _last_committed_decree = init_decree;
     mutation_cache::reset(init_decree, true);
 }
 
@@ -58,12 +60,24 @@ void prepare_list::truncate(decree init_decree)
     {
         pop_min();
     }
-    _lastCommittedDecree = init_decree;
+
+    if (count() == 0)
+    {
+        mutation_cache::reset(init_decree, true);
+    }
+
+    _last_committed_decree = init_decree;
 }
 
 error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
 {
-    dassert (mu->data.header.decree > last_committed_decree(), "");
+    decree d = mu->data.header.decree;
+    dassert (d > last_committed_decree(), "");
+
+    while (d - min_decree() >= capacity() && last_committed_decree() > min_decree())
+    {
+        pop_min();
+    }   
 
     error_code err;
     switch (status)
@@ -72,38 +86,41 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
         return mutation_cache::put(mu);
 
     case PS_SECONDARY: 
-        commit(mu->data.header.last_committed_decree, true);
+    case PS_POTENTIAL_SECONDARY:
+        // all mutations with lower decree must be ready
+        commit(mu->data.header.last_committed_decree, COMMIT_TO_DECREE_HARD);
         err = mutation_cache::put(mu);
-        dassert (err == ERR_SUCCESS, "");
+        dassert (err == ERR_OK, "");
         return err;
 
-    case PS_POTENTIAL_SECONDARY:
-        while (true)
-        {
-            err = mutation_cache::put(mu);
-            if (err == ERR_CAPACITY_EXCEEDED)
-            {
-                dassert (min_decree() == last_committed_decree() + 1, "");
-                dassert (mu->data.header.last_committed_decree > last_committed_decree(), "");
-                commit (last_committed_decree() + 1, true);
-            }
-            else
-                break;
-        }
-        dassert (err == ERR_SUCCESS, "");
-        return err;
+    //// delayed commit - only when capacity is an issue
+    //case PS_POTENTIAL_SECONDARY:
+    //    while (true)
+    //    {
+    //        err = mutation_cache::put(mu);
+    //        if (err == ERR_CAPACITY_EXCEEDED)
+    //        {
+    //            dassert(mu->data.header.last_committed_decree >= min_decree(), "");
+    //            commit (min_decree(), true);
+    //            pop_min();
+    //        }
+    //        else
+    //            break;
+    //    }
+    //    dassert (err == ERR_OK, "");
+    //    return err;
      
     case PS_INACTIVE: // only possible during init  
-        err = ERR_SUCCESS;
+        err = ERR_OK;
         if (mu->data.header.last_committed_decree > max_decree())
         {
             reset(mu->data.header.last_committed_decree);
         }
-        else if (mu->data.header.last_committed_decree > _lastCommittedDecree)
+        else if (mu->data.header.last_committed_decree > _last_committed_decree)
         {
             for (decree d = last_committed_decree() + 1; d <= mu->data.header.last_committed_decree; d++)
             {
-                _lastCommittedDecree++;   
+                _last_committed_decree++;   
                 if (count() == 0)
                     break;
                 
@@ -115,12 +132,12 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
                 }
             }
 
-            dassert (_lastCommittedDecree == mu->data.header.last_committed_decree, "");
+            dassert (_last_committed_decree == mu->data.header.last_committed_decree, "");
             sanity_check();
         }
         
         err = mutation_cache::put(mu);
-        dassert (err == ERR_SUCCESS, "");
+        dassert (err == ERR_OK, "");
         return err;
 
     default:
@@ -132,46 +149,72 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
 //
 // ordered commit
 //
-bool prepare_list::commit(decree d, bool force)
+bool prepare_list::commit(decree d, commit_type ct)
 {
     if (d <= last_committed_decree())
         return false;
-
-    if (!force)
+    
+    switch (ct)
     {
-        if (d != last_committed_decree() + 1)
-            return false;
-
-        mutation_ptr mu = get_mutation_by_decree(last_committed_decree() + 1);
-
-        while (mu != nullptr && mu->is_ready_for_commit())
+    case COMMIT_TO_DECREE_HARD:
         {
-            _lastCommittedDecree++;
-            _committer(mu);
+            for (decree d0 = last_committed_decree() + 1; d0 <= d; d0++)
+            {
+                mutation_ptr mu = get_mutation_by_decree(d0);
+                dassert(mu != nullptr &&
+                    (mu->is_logged()),
+                    "mutation %lld is missing in prepare list",
+                    d0
+                    );
 
-            dassert (mutation_cache::min_decree() == _lastCommittedDecree, "");
-            pop_min();
+                _last_committed_decree++;
+                _committer(mu);
+            }
 
-            mu = mutation_cache::get_mutation_by_decree(_lastCommittedDecree + 1);
+            sanity_check();
+            return true;
         }
-    }
-    else
-    {
-        for (decree d0 = last_committed_decree() + 1; d0 <= d; d0++)
+    case COMMIT_TO_DECREE_SOFT:
         {
-            mutation_ptr mu = get_mutation_by_decree(d0);
-            dassert (mu != nullptr && mu->is_prepared(), "");
+            for (decree d0 = last_committed_decree() + 1; d0 <= d; d0++)
+            {
+                mutation_ptr mu = get_mutation_by_decree(d0);
+                if (mu != nullptr && mu->is_ready_for_commit())
+                {
+                    _last_committed_decree++;
+                    _committer(mu);
+                }
+                else
+                    break;
+            }
 
-            _lastCommittedDecree++;
-            _committer(mu);
-
-            dassert (mutation_cache::min_decree() == _lastCommittedDecree, "");
-            pop_min();
+            sanity_check();
+            return true;
         }
+    case COMMIT_ALL_READY:
+        {
+            if (d != last_committed_decree() + 1)
+                return false;
+
+            int count = 0;
+            mutation_ptr mu = get_mutation_by_decree(last_committed_decree() + 1);
+
+            while (mu != nullptr && mu->is_ready_for_commit())
+            {
+                _last_committed_decree++;
+                _committer(mu);
+                count++;
+                mu = mutation_cache::get_mutation_by_decree(_last_committed_decree + 1);
+            }
+
+            sanity_check();
+            return count > 0;
+        }
+    default:
+        dassert(false, "invalid commit type %d", (int)ct);
     }
 
-    sanity_check();
-    return true;
+    return false;
 }
 
 }} // namespace end

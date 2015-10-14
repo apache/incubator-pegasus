@@ -28,6 +28,7 @@
 
 #include "replication_common.h"
 #include <vector>
+#include <atomic>
 
 namespace dsn { namespace replication {
 
@@ -40,11 +41,13 @@ public:
     error_code   put(mutation_ptr& mu);
     mutation_ptr pop_min();
     mutation_ptr get_mutation_by_decree(decree decree);
+    mutation_ptr remove_mutation_by_decree(decree decree);
     void         reset(decree init_decree, bool clear_mutations);
 
     decree  min_decree() const { return _start_decree; } 
     decree  max_decree() const { return _end_decree; }
     int     count() const { return _interval; }
+    int     capacity() const { return _max_count; }
 
 private:
     std::vector<mutation_ptr> _array;
@@ -55,7 +58,7 @@ private:
     int          _start_idx;
     int          _end_idx;
     decree       _start_decree;
-    decree       _end_decree;
+    std::atomic<decree>  _end_decree;
 };
 
 }} // namespace

@@ -27,9 +27,12 @@
 #include "replica.h"
 #include "mutation.h"
 #include <dsn/internal/factory_store.h>
-#include <boost/filesystem.hpp>
+#include "mutation_log.h"
 
-#define __TITLE__ "TwoPhaseCommit"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "replica.2pc"
 
 namespace dsn { namespace replication {
 
@@ -38,64 +41,71 @@ void register_replica_provider(replica_app_factory f, const char* name)
     ::dsn::utils::factory_store<replication_app_base>::register_factory(name, f, PROVIDER_TYPE_MAIN);
 }
 
-replication_app_base::replication_app_base(replica* replica, configuration_ptr& config)
+replication_app_base::replication_app_base(replica* replica)
 {
+    _physical_error = 0;
     _dir_data = replica->dir() + "/data";
     _dir_learn = replica->dir() + "/learn";
+    _is_delta_state_learning_supported = false;
 
     _replica = replica;
     _last_committed_decree = _last_durable_decree = 0;
 
-    if (!boost::filesystem::exists(_dir_data))
-        boost::filesystem::create_directory(_dir_data);
+	if (!dsn::utils::filesystem::create_directory(_dir_data))
+	{
+		dassert(false, "Fail to create directory %s.", _dir_data.c_str());
+	}
 
-    if (!boost::filesystem::exists(_dir_learn))
-        boost::filesystem::create_directory(_dir_learn);
+	if (!dsn::utils::filesystem::create_directory(_dir_learn))
+	{
+		dassert(false, "Fail to create directory %s.", _dir_learn.c_str());
+	}
 }
 
-int replication_app_base::write_internal(mutation_ptr& mu, bool ack_client)
+const char* replication_app_base::replica_name() const
+{
+    return _replica->name();
+}
+
+error_code replication_app_base::write_internal(mutation_ptr& mu)
 {
     dassert (mu->data.header.decree == last_committed_decree() + 1, "");
 
-    int err = 0;
-    auto& msg = mu->client_request;
-    dispatch_rpc_call(
-        mu->rpc_code,
-        msg,
-        ack_client
-        );
-    
-    ++_last_committed_decree;
-    return err;
+    if (mu->rpc_code != RPC_REPLICATION_WRITE_EMPTY)
+    {
+        binary_reader reader(mu->data.updates[0]);
+        dsn_message_t resp = (mu->client_msg() ? dsn_msg_create_response(mu->client_msg()) : nullptr);
+        dispatch_rpc_call(mu->rpc_code, reader, resp);
+    }
+    else
+    {
+        on_empty_write();
+    }
+
+    if (_physical_error != 0)
+    {
+        derror("physical error %d occurs in replication local app %s", _physical_error, data_dir().c_str());
+    }
+
+    return _physical_error == 0 ? ERR_OK : ERR_LOCAL_APP_FAILURE;
 }
 
-int replication_app_base::dispatch_rpc_call(int code, message_ptr& request, bool ack_client)
+void replication_app_base::dispatch_rpc_call(int code, binary_reader& reader, dsn_message_t response)
 {
     auto it = _handlers.find(code);
     if (it != _handlers.end())
     {
-        if (ack_client)
+        if (response)
         {
-            message_ptr response = request->create_response();
-            int err = 0;
-            marshall(response->writer(), err);
-            it->second(request, response);
+            int err = 0; // replication layer error
+            ::marshall(response, err);            
         }
-        else
-        {
-            message_ptr response(nullptr);
-            it->second(request, response);
-        }
+        it->second(reader, response);
     }
-    else if (ack_client)
+    else
     {
-        message_ptr response = request->create_response();
-        error_code err = ERR_HANDLER_NOT_FOUND;
-        marshall(response->writer(), (int)err);
-        rpc::reply(response);
+        dassert(false, "cannot find handler for rpc code %d in %s", code, data_dir().c_str());
     }
-
-    return 0;
 }
 
 }} // end namespace

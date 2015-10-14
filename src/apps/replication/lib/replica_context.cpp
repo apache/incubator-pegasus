@@ -76,7 +76,7 @@ void primary_context::reset_membership(const partition_configuration& config, bo
 
     membership = config;
 
-    if (membership.primary != dsn::end_point::INVALID)
+    if (membership.primary.is_invalid() == false)
     {
         statuses[membership.primary] = PS_PRIMARY;
     }
@@ -91,17 +91,9 @@ void primary_context::reset_membership(const partition_configuration& config, bo
     {
         statuses[it->first] = PS_POTENTIAL_SECONDARY;
     }
-
-    for (auto it = config.drop_outs.begin(); it != config.drop_outs.end(); it++)
-    {
-        if (statuses.find(*it) == statuses.end())
-        {
-            statuses[*it] = PS_INACTIVE;
-        }
-    }
 }
 
-bool primary_context::get_replica_config(const end_point& node, __out_param replica_configuration& config)
+bool primary_context::get_replica_config(::dsn::rpc_address node, /*out*/ replica_configuration& config)
 {
     config.gpid = membership.gpid;
     config.primary = membership.primary;  
@@ -121,7 +113,7 @@ bool primary_context::get_replica_config(const end_point& node, __out_param repl
 }
 
 
-void primary_context::get_replica_config(partition_status st, __out_param replica_configuration& config)
+void primary_context::get_replica_config(partition_status st, /*out*/ replica_configuration& config)
 {
     config.gpid = membership.gpid;
     config.primary = membership.primary;  
@@ -129,7 +121,7 @@ void primary_context::get_replica_config(partition_status st, __out_param replic
     config.status = st;
 }
 
-bool primary_context::check_exist(const end_point& node, partition_status st)
+bool primary_context::check_exist(::dsn::rpc_address node, partition_status st)
 {
     switch (st)
     {
@@ -139,11 +131,18 @@ bool primary_context::check_exist(const end_point& node, partition_status st)
         return std::find(membership.secondaries.begin(), membership.secondaries.end(), node) != membership.secondaries.end();
     case PS_POTENTIAL_SECONDARY:
         return learners.find(node) != learners.end();
-    case PS_INACTIVE:
-        return std::find(membership.drop_outs.begin(), membership.drop_outs.end(), node) != membership.drop_outs.end();
     default:
         dassert (false, "");
         return false;
+    }
+}
+
+void secondary_context::cleanup()
+{
+    if (nullptr != checkpoint_task)
+    {
+        checkpoint_task->cancel(true);
+        checkpoint_task = nullptr;
     }
 }
 
@@ -151,7 +150,8 @@ bool potential_secondary_context::cleanup(bool force)
 {
     if (learn_remote_files_task != nullptr)
     {
-        bool clean_remote_learning = learn_remote_files_task->cancel(false);
+        bool clean_remote_learning;
+        learn_remote_files_task->cancel(false, &clean_remote_learning);
         if (force)
         {
             learn_remote_files_task->cancel(true);
@@ -174,6 +174,7 @@ bool potential_secondary_context::cleanup(bool force)
 
     learning_signature = 0;
     learning_round_is_running = false;
+    learning_start_prepare_decree = invalid_decree;
     return true;
 }
 

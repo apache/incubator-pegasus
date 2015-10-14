@@ -30,7 +30,7 @@ namespace dsn {
         namespace application {
 
 
-            simple_kv_client_impl::simple_kv_client_impl(const std::vector<end_point>& meta_servers)
+            simple_kv_client_impl::simple_kv_client_impl(const std::vector<::dsn::rpc_address>& meta_servers)
                 : simple_kv_client(meta_servers, "simple_kv")
             {
             }
@@ -43,14 +43,12 @@ namespace dsn {
 
             int simple_kv_client_impl::get_partition_index(const std::string& key)
             {
-                // TODO:
-                return 0;
+                return (int)dsn_random32(0, SKV_PARTITION_COUNT - 1);
             }
 
             int simple_kv_client_impl::get_partition_index(const kv_pair& pr)
             {
-                // TODO:
-                return 0;
+                return (int)dsn_random32(0, SKV_PARTITION_COUNT - 1);
             }
         }
     }

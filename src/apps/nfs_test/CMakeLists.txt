@@ -1,5 +1,21 @@
-set(DSN_APP_TARGET "dsn.nfs.test")
-set(DSN_EXTRA_LIBS dsn.tools.common)
-file(GLOB BINPLACE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
-dsn_add_executable(${DSN_APP_TARGET} "${BINPLACE_FILES}")
-include_directories(${PROJECT_SOURCE_DIR}/src/tools/common)
+set(MY_PROJ_NAME dsn.nfs.test)
+
+# Source files under CURRENT project directory will be automatically included.
+# You can manually set MY_PROJ_SRC to include source files under other directories.
+set(MY_PROJ_SRC "")
+
+# Search mode for source files under CURRENT project directory?
+# "GLOB_RECURSE" for recursive search
+# "GLOB" for non-recursive search
+set(MY_SRC_SEARCH_MODE "GLOB")
+
+set(MY_PROJ_INC_PATH ../nfs)
+
+set(MY_PROJ_LIBS dsn.nfs)
+
+set(MY_PROJ_LIB_PATH "")
+
+# Extra files that will be installed
+set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
+
+dsn_add_executable()

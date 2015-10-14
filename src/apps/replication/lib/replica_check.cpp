@@ -28,13 +28,18 @@
 #include "mutation_log.h"
 #include "replica_stub.h"
 
-#define __TITLE__ "GroupCheck"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "GroupCheck"
 
 namespace dsn { namespace replication {
 
 void replica::init_group_check()
 {
-    if (PS_PRIMARY != status() || _options.group_check_disabled)
+    check_hashed_access();
+
+    if (PS_PRIMARY != status() || _options->group_check_disabled)
         return;
 
     dassert (nullptr == _primary_states.group_check_task, "");
@@ -44,7 +49,7 @@ void replica::init_group_check()
             &replica::broadcast_group_check,
             gpid_to_hash(get_gpid()),
             0,
-            _options.group_check_internal_ms
+            _options->group_check_internal_ms
             );
 }
 
@@ -70,7 +75,7 @@ void replica::broadcast_group_check()
         if (it->first == primary_address())
             continue;
 
-        end_point addr = it->first;
+        ::dsn::rpc_address addr = it->first;
         std::shared_ptr<group_check_request> request(new group_check_request);
 
         request->app_type = _primary_states.membership.app_type;
@@ -85,7 +90,7 @@ void replica::broadcast_group_check()
             request->learner_signature = it2->second.signature;
         }
 
-        task_ptr callback_task = rpc::call_typed(
+        dsn::task_ptr callback_task = rpc::call_typed(
             addr,
             RPC_GROUP_CHECK,
             request,            
@@ -97,16 +102,18 @@ void replica::broadcast_group_check()
         _primary_states.group_check_pending_replies[addr] = callback_task;
 
         ddebug(
-            "%s: init_group_check for %s:%d", name(), addr.name.c_str(), addr.port
+            "%s: init_group_check for %s", name(), addr.to_string()
         );
     }
 }
 
-void replica::on_group_check(const group_check_request& request, __out_param group_check_response& response)
+void replica::on_group_check(const group_check_request& request, /*out*/ group_check_response& response)
 {
+    check_hashed_access();
+
     ddebug(
-        "%s: on_group_check from %s:%d",
-        name(), request.config.primary.name.c_str(), request.config.primary.port
+        "%s: on_group_check from %s",
+        name(), request.config.primary.to_string()
         );
     
     if (request.config.ballot < get_ballot())
@@ -116,7 +123,8 @@ void replica::on_group_check(const group_check_request& request, __out_param gro
     }
     else if (request.config.ballot > get_ballot())
     {
-        update_local_configuration(request.config);
+        if (!update_local_configuration(request.config))
+            return;
     }
     else if (is_same_ballot_status_change_allowed(status(), request.config.status))
     {
@@ -130,7 +138,7 @@ void replica::on_group_check(const group_check_request& request, __out_param gro
     case PS_SECONDARY:
         if (request.last_committed_decree > last_committed_decree())
         {
-            _prepare_list->commit(request.last_committed_decree, true);
+            _prepare_list->commit(request.last_committed_decree, COMMIT_TO_DECREE_HARD);
         }
         break;
     case PS_POTENTIAL_SECONDARY:
@@ -144,7 +152,7 @@ void replica::on_group_check(const group_check_request& request, __out_param gro
     
     response.gpid = get_gpid();
     response.node = primary_address();
-    response.err = ERR_SUCCESS;
+    response.err = ERR_OK;
     if (status() == PS_ERROR)
     {
         response.err = ERR_INVALID_STATE;
@@ -158,6 +166,8 @@ void replica::on_group_check(const group_check_request& request, __out_param gro
 
 void replica::on_group_check_reply(error_code err, std::shared_ptr<group_check_request>& req, std::shared_ptr<group_check_response>& resp)
 {
+    check_hashed_access();
+
     if (PS_PRIMARY != status() || req->config.ballot < get_ballot())
     {
         return;
@@ -166,13 +176,13 @@ void replica::on_group_check_reply(error_code err, std::shared_ptr<group_check_r
     auto r = _primary_states.group_check_pending_replies.erase(req->node);
     dassert (r == 1, "");
 
-    if (err)
+    if (err != ERR_OK)
     {
         handle_remote_failure(req->config.status, req->node, err);
     }
     else
     {
-        if (resp->err == ERR_SUCCESS)
+        if (resp->err == ERR_OK)
         {
             if (resp->learner_status_ == LearningSucceeded && req->config.status == PS_POTENTIAL_SECONDARY)
             {
@@ -189,7 +199,7 @@ void replica::on_group_check_reply(error_code err, std::shared_ptr<group_check_r
 // for testing purpose only
 void replica::send_group_check_once_for_test(int delay_milliseconds)
 {
-    dassert (_options.group_check_disabled, "");
+    dassert (_options->group_check_disabled, "");
 
     _primary_states.group_check_task = tasking::enqueue(
             LPC_GROUP_CHECK,

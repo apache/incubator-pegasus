@@ -25,27 +25,9 @@
  */
 #pragma once
 
-#include <dsn/tool_api.h>
-
-namespace dsn { namespace service { class service_app;  } }
+# include <dsn/tool_api.h>
 
 namespace dsn { namespace tools {
-
-class checker
-{
-public:
-    checker(const char* name);
-
-    virtual void check() = 0;
-
-    const std::string& name() const { return _name; }
-
-protected:
-    const std::map<std::string, ::dsn::service::service_app*>& _apps;
-
-private:
-    std::string _name;
-};
 
 class simulator : public tool_app
 {
@@ -59,7 +41,7 @@ public:
     
     virtual void run() override;
 
-    void add_checker(checker* chker);
+    void add_checker(const char* name, dsn_checker_create create, dsn_checker_apply apply);
 
 private:
     static void on_system_exit(sys_exit_type st);

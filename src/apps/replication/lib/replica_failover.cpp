@@ -28,16 +28,19 @@
 #include "mutation_log.h"
 #include "replica_stub.h"
 
-#define __TITLE__ "FailOver"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "FailOver"
 
 namespace dsn { namespace replication {
 
-void replica::handle_local_failure(int error)
+void replica::handle_local_failure(error_code error)
 {
     ddebug(
-        "%s: handle local failure error %x, status = %s",
+        "%s: handle local failure error %s, status = %s",
         name(),
-        error,
+        error.to_string(),
         enum_to_string(status())
         );
     
@@ -49,18 +52,19 @@ void replica::handle_local_failure(int error)
     update_local_configuration_with_no_ballot_change(PS_ERROR);
 }
 
-void replica::handle_remote_failure(partition_status st, const end_point& node, int error)
+void replica::handle_remote_failure(partition_status st, ::dsn::rpc_address node, error_code error)
 {    
-    ddebug(
-        "%s: handle remote failure error %u, status = %s, node = %s:%d",
+    derror(
+        "%s: handle remote failure error %s, status = %s, node = %s",
         name(),
-        error,
+        error.to_string(),
         enum_to_string(st),
-        node.name.c_str(), static_cast<int>(node.port)
+        node.to_string()
         );
+    error.end_tracking();
 
     dassert (status() == PS_PRIMARY, "");
-    dassert(node != primary_address(), "");
+    dassert (node != primary_address(), "");
 
     switch (st)
     {
@@ -77,14 +81,7 @@ void replica::handle_remote_failure(partition_status st, const end_point& node, 
     case PS_POTENTIAL_SECONDARY:
         // potential secondary failure does not lead to ballot change
         // therefore, it is possible to have multiple exec here
-        if (_primary_states.learners.erase(node) > 0)
-        {
-            if (_primary_states.check_exist(node, PS_INACTIVE))
-                _primary_states.statuses[node] = PS_INACTIVE;
-            else
-                _primary_states.statuses.erase(node);
-        }
-        
+        _primary_states.learners.erase(node);
         break;
     case PS_INACTIVE:
     case PS_ERROR:

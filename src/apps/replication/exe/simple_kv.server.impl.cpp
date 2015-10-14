@@ -26,22 +26,27 @@
 #include "simple_kv.server.impl.h"
 #include <fstream>
 #include <sstream>
-#include <boost/filesystem.hpp>
 
-#define __TITLE__ "simple.kv"
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "simple.kv"
+
+using namespace ::dsn::service;
 
 namespace dsn {
     namespace replication {
         namespace application {
             
-            simple_kv_service_impl::simple_kv_service_impl(replica* replica, configuration_ptr& cf)
-                : simple_kv_service(replica, cf)
+            simple_kv_service_impl::simple_kv_service_impl(replica* replica)
+                : simple_kv_service(replica), _lock(true)
             {
-                _test_file_learning = true;
+                _test_file_learning = false;
+                set_delta_state_learning_supported();
             }
 
             // RPC_SIMPLE_KV_READ
-            void simple_kv_service_impl::on_read(const std::string& key, ::dsn::service::rpc_replier<std::string>& reply)
+            void simple_kv_service_impl::on_read(const std::string& key, ::dsn::rpc_replier<std::string>& reply)
             {
                 zauto_lock l(_lock);
                 
@@ -58,16 +63,18 @@ namespace dsn {
             }
 
             // RPC_SIMPLE_KV_WRITE
-            void simple_kv_service_impl::on_write(const kv_pair& pr, ::dsn::service::rpc_replier<int32_t>& reply)
+            void simple_kv_service_impl::on_write(const kv_pair& pr, ::dsn::rpc_replier<int32_t>& reply)
             {
                 zauto_lock l(_lock);
                 _store[pr.key] = pr.value;
-                dinfo("write %s, decree = %lld\n", pr.value.c_str(), last_committed_decree());
-                reply(ERR_SUCCESS);
+                ++_last_committed_decree;
+
+                dinfo("write %s, decree = %lld\n", pr.key.c_str(), last_committed_decree());
+                reply(0);
             }
 
             // RPC_SIMPLE_KV_APPEND
-            void simple_kv_service_impl::on_append(const kv_pair& pr, ::dsn::service::rpc_replier<int32_t>& reply)
+            void simple_kv_service_impl::on_append(const kv_pair& pr, ::dsn::rpc_replier<int32_t>& reply)
             {
                 zauto_lock l(_lock);
                 auto it = _store.find(pr.key);
@@ -75,9 +82,10 @@ namespace dsn {
                     it->second.append(pr.value);
                 else
                     _store[pr.key] = pr.value;
+                ++_last_committed_decree;
 
-                dinfo("append %s, decree = %lld\n", pr.value.c_str(), last_committed_decree());
-                reply(ERR_SUCCESS);
+                dinfo("append %s, decree = %lld\n", pr.key.c_str(), last_committed_decree());
+                reply(0);
             }
             
             int simple_kv_service_impl::open(bool create_new)
@@ -85,8 +93,9 @@ namespace dsn {
                 zauto_lock l(_lock);
                 if (create_new)
                 {
-                    boost::filesystem::remove_all(data_dir());
-                    boost::filesystem::create_directory(data_dir());
+					auto& dir = data_dir();
+					dsn::utils::filesystem::remove_path(dir);
+					dsn::utils::filesystem::create_directory(dir);
                 }
                 else
                 {
@@ -100,7 +109,10 @@ namespace dsn {
                 zauto_lock l(_lock);
                 if (clear_state)
                 {
-                    boost::filesystem::remove_all(data_dir());
+					if (!dsn::utils::filesystem::remove_path(data_dir()))
+					{
+						dassert(false, "Fail to delete directory %s.", data_dir().c_str());
+					}
                 }
                 return 0;
             }
@@ -114,22 +126,27 @@ namespace dsn {
 
                 decree maxVersion = 0;
                 std::string name;
-                boost::filesystem::directory_iterator endtr;
-                for (boost::filesystem::directory_iterator it(data_dir());
-                    it != endtr;
-                    ++it)
+
+				std::vector<std::string> sub_list;
+				auto& path = data_dir();
+				if (!dsn::utils::filesystem::get_subfiles(path, sub_list, false))
+				{
+					dassert(false, "Fail to get subfiles in %s.", path.c_str());
+				}
+				for (auto& fpath : sub_list)
                 {
-                    auto s = it->path().filename().string();
+					auto&& s = dsn::utils::filesystem::get_file_name(fpath);
                     if (s.substr(0, strlen("checkpoint.")) != std::string("checkpoint."))
                         continue;
 
-                    decree version = atol(s.substr(strlen("checkpoint.")).c_str());
+                    decree version = static_cast<decree>(atoll(s.substr(strlen("checkpoint.")).c_str()));
                     if (version > maxVersion)
                     {
                         maxVersion = version;
                         name = data_dir() + "/" + s;
                     }
                 }
+				sub_list.clear();
 
                 if (maxVersion > 0)
                 {
@@ -141,17 +158,20 @@ namespace dsn {
             {
                 zauto_lock l(_lock);
 
-                std::ifstream is(name.c_str());
+                std::ifstream is(name.c_str(), std::ios::binary);
                 if (!is.is_open())
                     return;
-
-
+                
                 _store.clear();
 
-                uint32_t count;
+                uint64_t count;
+                int magic;
+                
                 is.read((char*)&count, sizeof(count));
+                is.read((char*)&magic, sizeof(magic)); 
+                dassert(magic == 0xdeadbeef, "invalid checkpoint");
 
-                for (uint32_t i = 0; i < count; i++)
+                for (uint64_t i = 0; i < count; i++)
                 {
                     std::string key;
                     std::string value;
@@ -179,17 +199,20 @@ namespace dsn {
 
                 if (last_committed_decree() == last_durable_decree())
                 {
-                    return ERR_SUCCESS;
+                    return 0;
                 }
 
                 // TODO: should use async write instead
                 char name[256];
                 sprintf(name, "%s/checkpoint.%lld", data_dir().c_str(), 
                         static_cast<long long int>(last_committed_decree()));
-                std::ofstream os(name);
+                std::ofstream os(name, std::ios::binary);
 
-                uint32_t count = (uint32_t)_store.size();
+                uint64_t count = (uint64_t)_store.size();
+                int magic = 0xdeadbeef;
+                
                 os.write((const char*)&count, (uint32_t)sizeof(count));
+                os.write((const char*)&magic, (uint32_t)sizeof(magic));
 
                 for (auto it = _store.begin(); it != _store.end(); it++)
                 {
@@ -207,11 +230,11 @@ namespace dsn {
                 }
 
                 _last_durable_decree = last_committed_decree();
-                return ERR_SUCCESS;
+                return 0;
             }
 
             // helper routines to accelerate learning
-            int simple_kv_service_impl::get_learn_state(decree start, const blob& learn_req, __out_param learn_state& state)
+            int simple_kv_service_impl::get_learn_state(decree start, const blob& learn_req, /*out*/ learn_state& state)
             {
                 ::dsn::binary_writer writer;
 
@@ -224,7 +247,7 @@ namespace dsn {
 
                 dassert(_last_committed_decree >= 0, "");
 
-                int count = static_cast<int>(_store.size());
+                uint64_t count = static_cast<uint64_t>(_store.size());
                 writer.write(count);
 
                 for (auto it = _store.begin(); it != _store.end(); it++)
@@ -242,7 +265,7 @@ namespace dsn {
                 if (_test_file_learning)
                 {
                     std::stringstream ss;                
-                    ss << env::random32(0, 10000);
+                    ss << dsn_random32(0, 10000);
 
                     auto learn_test_file = data_dir() + "/test_learning_" + ss.str() + ".txt";
                     state.files.push_back(learn_test_file);
@@ -252,7 +275,7 @@ namespace dsn {
                     fout.close();        
                 }
 
-                return ERR_SUCCESS;
+                return 0;
             }
 
             int simple_kv_service_impl::apply_learn_state(learn_state& state)
@@ -275,10 +298,10 @@ namespace dsn {
 
                 dassert(decree >= 0, "");
 
-                int count;
+                uint64_t count;
                 reader.read(count);
 
-                for (int i = 0; i < count; i++)
+                for (uint64_t i = 0; i < count; i++)
                 {
                     std::string key, value;
                     reader.read(key);
@@ -296,7 +319,7 @@ namespace dsn {
                 {
                     dassert(state.files.size() == 1, "");
                     std::string fn = learn_dir() + "/" + state.files[0];
-                    ret = boost::filesystem::exists(fn);
+                    ret = dsn::utils::filesystem::path_exists(fn.c_str());
                     if (ret)
                     {
                         std::string s;
@@ -313,8 +336,8 @@ namespace dsn {
                     }
                 }
 
-                if (ret) return ERR_SUCCESS;
-                else return ERR_LEARN_FILE_FALED;
+                if (ret) return 0;
+                else return ERR_LEARN_FILE_FALED.get();
             }
 
         }

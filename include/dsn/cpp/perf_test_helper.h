@@ -1,0 +1,161 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Microsoft Corporation
+ * 
+ * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+# pragma once
+
+# include <dsn/service_api_cpp.h>
+# include <dsn/cpp/utils.h>
+# include <sstream>
+# include <atomic>
+# include <vector>
+
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "perf.test.helper"
+
+# define INVALID_DURATION_US 0xdeadbeefdeadbeefULL
+
+namespace dsn {
+    namespace service {
+
+        struct perf_test_opts
+        {
+            int  perf_test_seconds;
+            // perf_test_concurrency:
+            //   - if perf_test_concurrency == 0, means concurrency grow exponentially.
+            //   - if perf_test_concurrency >  0, means concurrency maintained to a fixed number.            
+            std::vector<int> perf_test_concurrency;
+            std::vector<int> perf_test_payload_bytes;
+            std::vector<int> perf_test_timeouts_ms;
+        };
+
+        CONFIG_BEGIN(perf_test_opts)
+            CONFIG_FLD(int, uint64, perf_test_seconds, 10, "how long for each test case")
+            CONFIG_FLD_INT_LIST(perf_test_concurrency, "concurrency list: 0 for expotentially growing concurrenty, >0 for fixed")
+            CONFIG_FLD_INT_LIST(perf_test_payload_bytes, "size list: byte size of each rpc request test")
+            CONFIG_FLD_INT_LIST(perf_test_timeouts_ms, "timeout list: timeout (ms) for each rpc call")
+        CONFIG_END
+        
+        class perf_client_helper
+        {
+        protected:
+            perf_client_helper();
+
+            struct perf_test_case
+            {
+                int  id;
+                int  seconds;
+                int  payload_bytes;
+                int  concurrency;
+                int  timeout_ms;
+
+                // statistics 
+                std::atomic<int> timeout_rounds;
+                std::atomic<int> error_rounds;
+                std::atomic<int> succ_rounds;
+                std::atomic<uint64_t> succ_rounds_sum_ns;
+                std::atomic<uint64_t> min_latency_ns;
+                std::atomic<uint64_t> max_latency_ns;
+                double succ_latency_avg_ns;
+                double succ_qps;
+                double succ_throughput_MB_s;
+
+                perf_test_case& operator = (const perf_test_case& r)
+                {
+                    id = r.id;
+                    seconds = r.seconds;
+                    payload_bytes = r.payload_bytes;
+                    timeout_ms = r.timeout_ms;
+                    concurrency = r.concurrency;
+
+                    timeout_rounds.store(r.timeout_rounds.load());
+                    error_rounds.store(r.error_rounds.load());
+                    succ_rounds.store(r.succ_rounds.load());
+                    succ_rounds_sum_ns.store(r.succ_rounds_sum_ns.load());
+                    min_latency_ns.store(r.min_latency_ns.load());
+                    max_latency_ns.store(r.max_latency_ns.load());
+
+                    succ_latency_avg_ns = r.succ_latency_avg_ns;
+                    succ_qps = r.succ_qps;
+                    succ_throughput_MB_s = r.succ_throughput_MB_s;
+
+                    return *this;
+                }
+
+                perf_test_case(const perf_test_case& r)
+                {
+                    *this = r;
+                }
+
+                perf_test_case()
+                {}
+            };
+
+            struct perf_test_suite
+            {
+                const char* name;
+                const char* config_section;
+                std::function<void(int)> send_one;
+                std::vector<perf_test_case> cases;
+            };
+
+            void load_suite_config(perf_test_suite& s);
+
+            void start(const std::vector<perf_test_suite>& suits);
+
+            void* prepare_send_one();
+
+            void end_send_one(void* context, error_code err);
+            
+        private:
+            void finalize_case();
+
+            void start_next_case();
+
+        private:
+            perf_client_helper(const perf_client_helper&) = delete;
+            
+        protected:
+            int              _timeout_ms;
+
+        private:
+            perf_test_opts   _default_opts;
+            std::string      _name;            
+            perf_test_case   *_current_case;
+
+            volatile bool    _quiting_current_case;
+            std::atomic<int> _live_rpc_count;
+            uint64_t         _case_start_ts_ns;
+            uint64_t         _case_end_ts_ns;
+
+            std::vector<perf_test_suite> _suits;
+            int                         _current_suit_index;
+            int                         _current_case_index;
+            int                         _case_count;
+        };
+    }
+}
+

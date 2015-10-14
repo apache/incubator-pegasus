@@ -29,10 +29,19 @@
 
 namespace dsn { namespace replication {
 
-replication_service_app::replication_service_app(service_app_spec* s)
-    : service_app(s)
+replication_service_app::replication_service_app()
+    : service_app()
 {
     _stub = nullptr;
+
+#if 0
+    ::boost::filesystem::path pr("./");
+    if (!::boost::filesystem::exists(pr))
+    {
+        printf("we are avoiding a bug in boost file system here\n");
+        // http://boost.2283326.n4.nabble.com/filesystem-v3-v1-49-Path-constructor-issue-in-VS-Debug-configuration-td4463703.html
+    }
+#endif
 }
 
 replication_service_app::~replication_service_app(void)
@@ -42,13 +51,13 @@ replication_service_app::~replication_service_app(void)
 error_code replication_service_app::start(int argc, char** argv)
 {
     replication_options opts;
-    opts.initialize(system::config());
-    opts.working_dir = "./" + name();
+    opts.initialize();
+    opts.working_dir = std::string("./") + argv[0];
 
     _stub = new replica_stub();
-    _stub->initialize(opts, system::config());
+    _stub->initialize(opts);
     _stub->open_service();
-    return ERR_SUCCESS;
+    return ERR_OK;
 }
 
 void replication_service_app::stop(bool cleanup)

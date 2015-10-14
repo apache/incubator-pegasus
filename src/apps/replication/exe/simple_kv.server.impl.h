@@ -33,21 +33,21 @@ namespace dsn {
             class simple_kv_service_impl : public simple_kv_service
             {
             public:
-                simple_kv_service_impl(replica* replica, configuration_ptr& config);
+                simple_kv_service_impl(replica* replica);
 
                 // RPC_SIMPLE_KV_READ
-                virtual void on_read(const std::string& key, ::dsn::service::rpc_replier<std::string>& reply);
+                virtual void on_read(const std::string& key, ::dsn::rpc_replier<std::string>& reply);
                 // RPC_SIMPLE_KV_WRITE
-                virtual void on_write(const kv_pair& pr, ::dsn::service::rpc_replier<int32_t>& reply);
+                virtual void on_write(const kv_pair& pr, ::dsn::rpc_replier<int32_t>& reply);
                 // RPC_SIMPLE_KV_APPEND
-                virtual void on_append(const kv_pair& pr, ::dsn::service::rpc_replier<int32_t>& reply);
+                virtual void on_append(const kv_pair& pr, ::dsn::rpc_replier<int32_t>& reply);
 
                 virtual int  open(bool create_new);
                 virtual int  close(bool clear_state);
                 virtual int  flush(bool force);
 
                 // helper routines to accelerate learning
-                virtual int get_learn_state(decree start, const blob& learn_req, __out_param learn_state& state);
+                virtual int get_learn_state(decree start, const blob& learn_req, /*out*/ learn_state& state);
                 virtual int apply_learn_state(learn_state& state);
 
             private:
@@ -57,7 +57,7 @@ namespace dsn {
             private:
                 typedef std::map<std::string, std::string> simple_kv;
                 simple_kv _store;
-                zlock     _lock;
+                ::dsn::service::zlock _lock;
                 bool      _test_file_learning;
             };
 

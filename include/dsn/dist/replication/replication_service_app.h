@@ -25,22 +25,20 @@
  */
 #pragma once
 
-#include <dsn/service_api.h>
+#include <dsn/cpp/service_app.h>
 #include <dsn/dist/replication/replication_other_types.h>
-
-using namespace dsn::service;
-using namespace dsn;
 
 namespace dsn { namespace replication {
 
-class replication_service_app : public dsn::service::service_app
+class replication_checker;
+class replication_service_app : public ::dsn::service_app
 {
 public:
-    replication_service_app(service_app_spec* s);
+    replication_service_app();
 
     ~replication_service_app(void);
 
-    virtual error_code start(int argc, char** argv) override;
+    virtual ::dsn::error_code start(int argc, char** argv) override;
 
     virtual void stop(bool cleanup = false) override;
 

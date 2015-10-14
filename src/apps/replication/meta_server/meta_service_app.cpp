@@ -30,10 +30,7 @@
 namespace dsn {
     namespace service {
 
-        server_state * meta_service_app::_reliable_state = nullptr;
-
-        meta_service_app::meta_service_app(service_app_spec* s)
-            : service_app(s)
+        meta_service_app::meta_service_app()
         {
             _service = nullptr;
         }
@@ -43,39 +40,28 @@ namespace dsn {
 
         }
 
-        error_code meta_service_app::start(int argc, char** argv)
+        ::dsn::error_code meta_service_app::start(int argc, char** argv)
         {
-            if (nullptr == _reliable_state)
-            {
-                _reliable_state = new server_state();
-            }
+            _state = new server_state();
+            _service = new meta_service(_state);
 
-            _service = new meta_service(_reliable_state);
-
-            auto cf = system::config();
-            _reliable_state->init_app(cf);
-            _reliable_state->add_meta_node(_service->primary_address());
-            _service->start(name().c_str(), false);
-            return ERR_SUCCESS;
+            _state->init_app();
+            _service->start(argv[0], false);
+            return ERR_OK;
         }
 
         void meta_service_app::stop(bool cleanup)
         {
-            if (_reliable_state != nullptr)
+            if (_state != nullptr)
             {
                 if (_service != nullptr)
                 {
                     _service->stop();
-                    _reliable_state->remove_meta_node(_service->primary_address());
                     delete _service;
                     _service = nullptr;
 
-                    end_point primary;
-                    if (!_reliable_state->get_meta_server_primary(primary))
-                    {
-                        delete _reliable_state;
-                        _reliable_state = nullptr;
-                    }
+                    delete _state;
+                    _state = nullptr;
                 }
             }
             else

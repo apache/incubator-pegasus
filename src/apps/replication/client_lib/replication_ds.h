@@ -48,6 +48,7 @@ namespace dsn {
         
         ENUM_BEGIN(config_type, CT_NONE)
             ENUM_REG(CT_ASSIGN_PRIMARY)
+            ENUM_REG(CT_UPGRADE_TO_PRIMARY)
             ENUM_REG(CT_ADD_SECONDARY)
             ENUM_REG(CT_DOWNGRADE_TO_SECONDARY)
             ENUM_REG(CT_DOWNGRADE_TO_INACTIVE)
@@ -56,3 +57,13 @@ namespace dsn {
         ENUM_END(config_type)
     }
 } // end namespace dsn::replication
+
+namespace std
+{
+    template<>
+    struct hash<::dsn::replication::global_partition_id> {
+        size_t operator()(const ::dsn::replication::global_partition_id &gpid) const {
+            return std::hash<int>()(gpid.app_id) ^ std::hash<int>()(gpid.pidx);
+        }
+    };
+}

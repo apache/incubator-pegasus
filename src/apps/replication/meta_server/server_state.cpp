@@ -25,11 +25,13 @@
  */
 # include "server_state.h"
 # include <sstream>
-# include <dsn/internal/serialization.h>
 
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
 # define __TITLE__ "meta.server.state"
 
-void marshall(binary_writer& writer, const app_state& val, uint16_t pos = 0xffff)
+void marshall(binary_writer& writer, const app_state& val)
 {
     marshall(writer, val.app_type);
     marshall(writer, val.app_name);
@@ -38,7 +40,7 @@ void marshall(binary_writer& writer, const app_state& val, uint16_t pos = 0xffff
     marshall(writer, val.partitions);
 }
 
-void unmarshall(binary_reader& reader, __out_param app_state& val)
+void unmarshall(binary_reader& reader, /*out*/ app_state& val)
 {
     unmarshall(reader, val.app_type);
     unmarshall(reader, val.app_name);
@@ -50,7 +52,6 @@ void unmarshall(binary_reader& reader, __out_param app_state& val)
 
 server_state::server_state(void)
 {
-    _leader_index = -1;
     _node_live_count = 0;
     _freeze = true;
     _node_live_percentage_threshold_for_update = 65;
@@ -68,7 +69,7 @@ void server_state::load(const char* chk_point)
     int32_t len;
     ::fread((void*)&len, sizeof(int32_t), 1, fp);
 
-    std::shared_ptr<char> buffer((char*)malloc(len));
+    std::shared_ptr<char> buffer(new char[len]);
     ::fread((void*)buffer.get(), len, 1, fp);
 
     blob bb(buffer, 0, len);
@@ -83,7 +84,7 @@ void server_state::load(const char* chk_point)
     {
         auto& ps = app.partitions[i];
 
-        if (ps.primary != end_point::INVALID)
+        if (ps.primary.is_invalid() == false)
         {
             _nodes[ps.primary].primaries.insert(ps.gpid);
             _nodes[ps.primary].partitions.insert(ps.gpid);
@@ -91,7 +92,7 @@ void server_state::load(const char* chk_point)
         
         for (auto& ep : ps.secondaries)
         {
-            dassert(ep != end_point::INVALID, "");
+            dassert(ep.is_invalid() == false, "");
             _nodes[ep].partitions.insert(ps.gpid);
         }
     }
@@ -133,7 +134,7 @@ void server_state::save(const char* chk_point)
     ::fclose(fp);
 }
 
-void server_state::init_app(configuration_ptr& cf)
+void server_state::init_app()
 {
     zauto_write_lock l(_lock);
     if (_apps.size() > 0)
@@ -141,13 +142,17 @@ void server_state::init_app(configuration_ptr& cf)
 
     app_state app;
     app.app_id = 1;
-    app.app_name = cf->get_string_value("replication.app", "app_name", "");
+    app.app_name = dsn_config_get_value_string("replication.app",
+        "app_name", "", "replication app name");
     dassert(app.app_name.length() > 0, "'[replication.app] app_name' not specified");
-    app.app_type = cf->get_string_value("replication.app", "app_type", "");
+    app.app_type = dsn_config_get_value_string("replication.app",
+        "app_type", "", "replication app type-name");
     dassert(app.app_type.length() > 0, "'[replication.app] app_type' not specified");
-    app.partition_count = cf->get_value<int32_t>("replication.app", "partition_count", 1);
+    app.partition_count = (int)dsn_config_get_value_uint64("replication.app", 
+        "partition_count", 1, "how many partitions the app should have");
 
-    int32_t max_replica_count = cf->get_value<int32_t>("replication.app", "max_replica_count", 3);
+    int32_t max_replica_count = (int)dsn_config_get_value_uint64("replication.app",
+        "max_replica_count", 3, "maximum replica count for each partition");
     for (int i = 0; i < app.partition_count; i++)
     {
         partition_configuration ps;
@@ -157,14 +162,15 @@ void server_state::init_app(configuration_ptr& cf)
         ps.gpid.pidx = i;
         ps.last_committed_decree = 0;
         ps.max_replica_count = max_replica_count;
-
+        ps.primary.set_invalid();
+        
         app.partitions.push_back(ps);
     }
     
     _apps.push_back(app);
 }
 
-void server_state::get_node_state(__out_param node_states& nodes)
+void server_state::get_node_state(/*out*/ node_states& nodes)
 {
     zauto_read_lock l(_lock);
     for (auto it = _nodes.begin(); it != _nodes.end(); it++)
@@ -173,7 +179,7 @@ void server_state::get_node_state(__out_param node_states& nodes)
     }
 }
 
-void server_state::set_node_state(const node_states& nodes, __out_param machine_fail_updates* pris)
+void server_state::set_node_state(const node_states& nodes, /*out*/ machine_fail_updates* pris)
 {
     zauto_write_lock l(_lock);
 
@@ -181,7 +187,7 @@ void server_state::set_node_state(const node_states& nodes, __out_param machine_
     
     for (auto& itr : nodes)
     {
-        dassert(itr.first != end_point::INVALID, "");
+        dassert(itr.first.is_invalid() == false, "");
 
         auto it = _nodes.find(itr.first);
         if (it != _nodes.end())
@@ -209,7 +215,7 @@ void server_state::set_node_state(const node_states& nodes, __out_param machine_
                         request->type = CT_DOWNGRADE_TO_INACTIVE;
                         request->config = old;
                         request->config.ballot++;
-                        request->config.primary = end_point::INVALID;
+                        request->config.primary.set_invalid();
 
                         (*pris)[pri] = request;
                     }
@@ -236,79 +242,15 @@ void server_state::set_node_state(const node_states& nodes, __out_param machine_
     }
 }
 
-// used by unfree for the initial stage where machine states are all considered ALIVE but freeze = true
-void server_state::benign_unfree()
+void server_state::unfree_if_possible_on_start()
 {
     zauto_write_lock l(_lock);
     _freeze = (_node_live_count * 100 < _node_live_percentage_threshold_for_update * static_cast<int>(_nodes.size()));
     dinfo("live replica server # is %d, freeze = %s", _node_live_count, _freeze ? "true" : "false");
 }
 
-bool server_state::get_meta_server_primary(__out_param end_point& node)
-{
-    zauto_read_lock l(_meta_lock);
-    if (-1 == _leader_index)
-        return false;
-    else
-    {
-        node = _meta_servers[_leader_index];
-        return true;
-    }
-}
-
-void server_state::add_meta_node(const end_point& node)
-{
-    zauto_write_lock l(_meta_lock);
-    
-    _meta_servers.push_back(node);
-    if (1 == _meta_servers.size())
-        _leader_index = 0;
-}
-
-void server_state::remove_meta_node(const end_point& node)
-{
-    zauto_write_lock l(_meta_lock);
-    
-    int i = -1;
-    for (auto it = _meta_servers.begin(); it != _meta_servers.end(); it++)
-    {
-        i++;
-        if (*it == node)
-        {
-            _meta_servers.erase(it);
-            if (_meta_servers.size() == 0)
-                _leader_index = -1;
-
-            else if (i == _leader_index)
-            {
-                _leader_index = env::random32(0, (uint32_t)_meta_servers.size() - 1);
-            }
-            return;
-        }
-    }
-
-    dassert (false, "cannot find node '%s:%d' in server state", node.name.c_str(), static_cast<int>(node.port));
-}
-
-void server_state::switch_meta_primary()
-{
-    zauto_write_lock l(_meta_lock);
-    if (1 == _meta_servers.size())
-        return;
-
-    while (true)
-    {
-        int r = env::random32(0, (uint32_t)_meta_servers.size() - 1);
-        if (r != _leader_index)
-        {
-            _leader_index = r;
-            return;
-        }
-    }
-}
-
 // partition server & client => meta server
-void server_state::query_configuration_by_node(configuration_query_by_node_request& request, __out_param configuration_query_by_node_response& response)
+void server_state::query_configuration_by_node(const configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response)
 {
     zauto_read_lock l(_lock);
     auto it = _nodes.find(request.node);
@@ -318,7 +260,7 @@ void server_state::query_configuration_by_node(configuration_query_by_node_reque
     }
     else
     {
-        response.err = ERR_SUCCESS;
+        response.err = ERR_OK;
 
         for (auto& p : it->second.partitions)
         {
@@ -327,13 +269,13 @@ void server_state::query_configuration_by_node(configuration_query_by_node_reque
     }
 }
 
-void server_state::query_configuration_by_gpid(global_partition_id id, __out_param partition_configuration& config)
+void server_state::query_configuration_by_gpid(global_partition_id id, /*out*/ partition_configuration& config)
 {
     zauto_read_lock l(_lock);
     config = _apps[id.app_id - 1].partitions[id.pidx];
 }
 
-void server_state::query_configuration_by_index(configuration_query_by_index_request& request, __out_param configuration_query_by_index_response& response)
+void server_state::query_configuration_by_index(const configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response)
 {
     zauto_read_lock l(_lock);
 
@@ -342,7 +284,9 @@ void server_state::query_configuration_by_index(configuration_query_by_index_req
         app_state& kv = _apps[i];
         if (kv.app_name == request.app_name)
         {
-            response.err = ERR_SUCCESS;
+            response.err = ERR_OK;
+            response.app_id = static_cast<int>(i) + 1;
+            response.partition_count = kv.partition_count;
             app_state& app = kv;
             for (auto& idx : request.partition_indices)
             {
@@ -358,72 +302,138 @@ void server_state::query_configuration_by_index(configuration_query_by_index_req
     response.err = ERR_OBJECT_NOT_FOUND;
 }
 
-void server_state::update_configuration(configuration_update_request& request, __out_param configuration_update_response& response)
+void server_state::update_configuration(const configuration_update_request& request, /*out*/ configuration_update_response& response)
 {
     zauto_write_lock l(_lock);
 
     update_configuration_internal(request, response);
 }
 
-void server_state::update_configuration_internal(configuration_update_request& request, __out_param configuration_update_response& response)
+static void maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const rpc_address& node, bool is_add)
+{
+    auto it = std::find(drops.begin(), drops.end(), node);
+    if (is_add)
+    {
+        if (it != drops.end())
+            drops.erase(it);
+    }
+    else
+    {        
+        if (it == drops.end())
+        {
+            drops.push_back(node);
+            if (drops.size() > 3)
+                drops.erase(drops.begin());
+        }
+        else
+        {
+            dassert(false, "the node cannot be in drops set before this update", node.to_string());
+        }
+    }
+}
+
+void server_state::update_configuration_internal(const configuration_update_request& request, /*out*/ configuration_update_response& response)
 {
     app_state& app = _apps[request.config.gpid.app_id - 1];
     partition_configuration& old = app.partitions[request.config.gpid.pidx];
     if (old.ballot + 1 == request.config.ballot)
     {
-        response.err = ERR_SUCCESS;
-
-        // update to new config
-        old = request.config;
+        response.err = ERR_OK;
         response.config = request.config;
         
         auto it = _nodes.find(request.node);
         dassert(it != _nodes.end(), "");
         node_state& node = it->second;
 
-        const char* type = "unknown";
         switch (request.type)
         {
         case CT_ASSIGN_PRIMARY:
+# ifdef _DEBUG
+            dassert(old.primary != request.node, "");
+            dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end(), "");
+# endif
             node.partitions.insert(old.gpid);
             node.primaries.insert(old.gpid);
-            type = "assign primary";
+            break; 
+        case CT_UPGRADE_TO_PRIMARY:
+# ifdef _DEBUG
+            dassert(old.primary != request.node, "");
+            dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) != old.secondaries.end(), "");
+# endif
+            node.partitions.insert(old.gpid);
+            node.primaries.insert(old.gpid);
             break;
         case CT_ADD_SECONDARY:
-            node.partitions.insert(old.gpid);
-            type = "add secondary";
+            dassert(false, "invalid execution flow");
             break;
         case CT_DOWNGRADE_TO_SECONDARY:
+# ifdef _DEBUG
+            dassert(old.primary == request.node, "");
+            dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end(), "");
+# endif
             node.primaries.erase(old.gpid);
-            type = "downgrade to secondary";
             break;
         case CT_DOWNGRADE_TO_INACTIVE:
         case CT_REMOVE:
-            node.partitions.erase(old.gpid);
-            node.primaries.erase(old.gpid);
-            type = request.type == CT_REMOVE ? "remove" : "downgrade to inactive";
+# ifdef _DEBUG
+            dassert(old.primary == request.node || 
+                std::find(old.secondaries.begin(), old.secondaries.end(), request.node) != old.secondaries.end(), "");
+# endif
+            if (request.node == old.primary)
+            {
+                node.primaries.erase(old.gpid);
+            }
+            node.partitions.erase(old.gpid);            
             break;
         case CT_UPGRADE_TO_SECONDARY:
+# ifdef _DEBUG
+            dassert(old.primary != request.node, "");
+            dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end(), "");
+# endif
             node.partitions.insert(old.gpid);
-            type = "upgrade to secondary";
             break;
         default:
-            dassert(false, "invalid config type %x", static_cast<int>(request.type));
+            dassert(false, "invalid config type 0x%x", static_cast<int>(request.type));
         }
-
+        
+        // maintain dropouts
+        auto drops = old.last_drops; 
+        switch (request.type)
+        {
+        case CT_ASSIGN_PRIMARY:
+        case CT_ADD_SECONDARY:
+        case CT_UPGRADE_TO_SECONDARY:
+            maintain_drops(drops, request.node, true);
+            break;
+        case CT_DOWNGRADE_TO_INACTIVE:
+        case CT_REMOVE:
+            maintain_drops(drops, request.node, false);
+            break;
+        }
+        
+        // update to new config        
+        old = request.config;
+        old.last_drops = drops;
+        
         std::stringstream cf;
-        cf << "{primary:" << request.config.primary.name << ":" << request.config.primary.port << ", secondaries = [";
+        cf << "{primary:" << request.config.primary.to_string() << ", secondaries = [";
         for (auto& s : request.config.secondaries)
         {
-            cf << s.name << ":" << s.port << ",";
+            cf << s.to_string() << ",";
+        }
+        cf << "], drops = [";
+        for (auto& s : drops)
+        {
+            cf << s.to_string() << ",";
         }
         cf << "]}";
 
-        ddebug("%d.%d metaupdateok to ballot %lld, type = %s, config = %s",
+        ddebug("%d.%d metaupdateok to ballot %lld, type = %s, node = %s, config = %s",
             request.config.gpid.app_id,
             request.config.gpid.pidx,
             request.config.ballot,
-            type,
+            enum_to_string(request.type),
+            request.node.to_string(),
             cf.str().c_str()
             );
     }
@@ -443,12 +453,15 @@ void server_state::check_consistency(global_partition_id gpid)
     app_state& app = _apps[gpid.app_id - 1];
     partition_configuration& config = app.partitions[gpid.pidx];
 
-    if (config.primary != end_point::INVALID)
+    if (config.primary.is_invalid() == false)
     {
         auto it = _nodes.find(config.primary);
         dassert(it != _nodes.end(), "");
         dassert(it->second.primaries.find(gpid) != it->second.primaries.end(), "");
         dassert(it->second.partitions.find(gpid) != it->second.partitions.end(), "");
+
+        auto it2 = std::find(config.last_drops.begin(), config.last_drops.end(), config.primary);
+        dassert(it2 == config.last_drops.end(), "");
     }
     
     for (auto& ep : config.secondaries)
@@ -456,6 +469,9 @@ void server_state::check_consistency(global_partition_id gpid)
         auto it = _nodes.find(ep);
         dassert(it != _nodes.end(), "");
         dassert(it->second.partitions.find(gpid) != it->second.partitions.end(), "");
+
+        auto it2 = std::find(config.last_drops.begin(), config.last_drops.end(), ep);
+        dassert(it2 == config.last_drops.end(), "");
     }
 
     int lc = 0;
