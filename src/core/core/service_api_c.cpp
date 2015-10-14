@@ -80,14 +80,23 @@ static struct _all_info_
 //
 //------------------------------------------------------------------------------
 struct dsn_error_placeholder {};
+class error_code_mgr : public ::dsn::utils::customized_id_mgr < dsn_error_placeholder >
+{
+public:
+    error_code_mgr()
+    {
+        register_id("ERR_OK"); // make sure ERR_OK is always registered first
+    }
+};
+
 DSN_API dsn_error_t dsn_error_register(const char* name)
 {
-    return static_cast<dsn_error_t>(::dsn::utils::customized_id_mgr<dsn_error_placeholder>::instance().register_id(name));
+    return static_cast<dsn_error_t>(error_code_mgr::instance().register_id(name));
 }
 
 DSN_API const char* dsn_error_to_string(dsn_error_t err)
 {
-    return ::dsn::utils::customized_id_mgr<dsn_error_placeholder>::instance().get_name(static_cast<int>(err));
+    return error_code_mgr::instance().get_name(static_cast<int>(err));
 }
 
 // use ::dsn::threadpool_code2; for parsing purpose
@@ -735,7 +744,7 @@ DSN_API bool dsn_run_config(const char* config, bool sleep_after_init)
 DSN_API void dsn_terminate()
 {
 # if defined(_WIN32)
-    ::ExitProcess(0);
+    ::TerminateProcess(::GetCurrentProcess(), 0);
 # else
     kill(getpid(), SIGKILL);
 # endif
