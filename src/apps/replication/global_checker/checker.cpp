@@ -71,6 +71,7 @@ namespace dsn {
                 perfect_fd();
                 single_primary();
                 decree_orders();
+                state_completeness();
             }
 
         private:
@@ -85,6 +86,23 @@ namespace dsn {
                         return meta;
                 }
                 return nullptr;
+            }
+
+            void state_completeness()
+            {
+                for (auto& rs : _replica_servers)
+                {
+                    if (!rs->is_started())
+                        continue;
+
+                    for (auto& r : rs->_stub->_replicas)
+                    {
+                        if (r.second->status() == PS_PRIMARY || r.second->status() == PS_SECONDARY)
+                        {
+                            r.second->check_state_completeness();
+                        }
+                    }
+                }
             }
             
             void perfect_fd()

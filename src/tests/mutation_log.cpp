@@ -126,7 +126,8 @@ TEST(replication, mutation_log)
         1,
         50,
         4,
-        true
+        true,
+        false
         );
 
     mlog->initialize(logp.c_str());
@@ -163,7 +164,8 @@ TEST(replication, mutation_log)
         1,
         50,
         4,
-        true
+        true,
+        false
         );
 
     mlog->initialize(logp.c_str());

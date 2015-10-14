@@ -428,6 +428,33 @@ namespace  dsn
         }
     }
 
+    blob binary_writer::get_current_buffer()
+    {
+        if (_buffers.size() == 1)
+        {
+            return _current_offset > 0 ? _buffers[0].range(0, _current_offset) : _buffers[0];
+        }
+        else
+        {
+            std::shared_ptr<char> bptr(new char[_total_size]);
+            blob bb(bptr, _total_size);
+            const char* ptr = bb.data();
+
+            for (int i = 0; i < static_cast<int>(_buffers.size()); i++)
+            {
+                size_t len = (size_t)_buffers[i].length();
+                if (_current_offset > 0 && i + 1 == (int)_buffers.size())
+                {
+                    len = _current_offset;
+                }
+
+                memcpy((void*)ptr, (const void*)_buffers[i].data(), len);
+                ptr += _buffers[i].length();
+            }
+            return bb;
+        }
+    }
+
     void binary_writer::write_empty(int sz)
     {
         int sz0 = sz;

@@ -43,7 +43,7 @@ struct log_block_header
     int32_t magic;
     int32_t length;
     int32_t body_crc;
-    int32_t padding;
+    uint32_t local_offset;
 };
 
 struct log_file_header
@@ -69,8 +69,9 @@ public:
     mutation_log(
         uint32_t log_buffer_size_mb, 
         uint32_t log_pending_max_ms, 
-        uint32_t max_log_file_mb = (uint64_t) MAX_LOG_FILESIZE, 
-        bool batch_write = true
+        uint32_t max_log_file_mb,
+        bool batch_write,
+        bool is_commit_log
         );
     virtual ~mutation_log();
     
@@ -78,7 +79,7 @@ public:
     // initialization
     //
     error_code initialize(const char* dir);    
-    void reset();
+    void reset_as_commit_log(global_partition_id gpid, decree lcd);
     error_code start_write_service(
         multi_partition_decrees& init_max_decrees, 
         int max_staleness_for_commit
@@ -118,7 +119,7 @@ public:
             aio_handler callback,
             int hash = 0);
 
-    // remove entry <gpid, decree> from _previous_log_prepared_decrees
+    // remove entry <gpid, decree> from _previous_log_max_decrees
     // when a partition is removed. 
     void on_partition_removed(global_partition_id gpid);
 
@@ -151,6 +152,8 @@ public:
     int64_t end_offset() const { return _global_end_offset; }
     int64_t start_offset() const { return _global_start_offset; }
     std::map<int, log_file_ptr>& get_logfiles_for_test();
+    decree max_decree(global_partition_id gpid) const;
+    decree min_decree(global_partition_id gpid) const;
 
 private:
     //
@@ -170,6 +173,7 @@ private:
     std::string               _dir;    
     bool                      _batch_write;
     bool                      _is_opened;
+    bool                      _is_commit_log;
 
     // write & read
     int                         _last_file_number;
@@ -180,7 +184,7 @@ private:
     int64_t                     _global_end_offset;
     
     // for gc and learning
-    multi_partition_decrees     _previous_log_prepared_decrees;
+    multi_partition_decrees     _previous_log_max_decrees;
     int                         _max_staleness_for_commit;
 
     // bufferring
@@ -234,12 +238,14 @@ public:
     int64_t start_offset() const  { return _start_offset; }
     int   index() const { return _index; }
     const std::string& path() const { return _path; }
-    const multi_partition_decrees& previous_log_prepared_decrees() { return _previous_log_prepared_decrees; }
+    const multi_partition_decrees& previous_log_max_decrees() { return _previous_log_max_decrees; }
     log_file_header& header() { return _header;}
 
     int read_header(binary_reader& reader);
     int write_header(binary_writer& writer, multi_partition_decrees& init_max_decrees, int bufferSizeBytes);
     bool is_right_header() const;
+    void flush();
+    int get_file_header_size() const;
     
 private:
     log_file(const char* path, dsn_handle_t handle, int index, int64_t start_offset, int max_staleness_for_commit, bool isRead);
@@ -253,7 +259,7 @@ private:
     int           _index;
 
     // for gc
-    multi_partition_decrees _previous_log_prepared_decrees;    
+    multi_partition_decrees _previous_log_max_decrees;    
     log_file_header         _header;
 };
 

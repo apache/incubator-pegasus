@@ -123,11 +123,22 @@ namespace dsn {
                 );
 
             int64_t offset;
+            decree last_cd = 0;
             auto err = mutation_log::replay(
                 state.files,
-                    [this](mutation_ptr& mu)
+                    [this, &last_cd](mutation_ptr& mu)
                 {
-                    if (mu->data.header.decree == _app->last_committed_decree() + 1)
+                    if (last_cd != 0)
+                    {
+                        dassert(mu->data.header.decree == last_cd + 1,
+                            "decrees in commit logs must be contiguous: %lld vs %lld",
+                            last_cd,
+                            mu->data.header.decree
+                            );
+                    }
+                    last_cd = mu->data.header.decree;
+
+                    if (last_cd == _app->last_committed_decree() + 1)
                     {
                         _app->write_internal(mu);
                     }

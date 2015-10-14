@@ -138,7 +138,7 @@ void replica::on_group_check(const group_check_request& request, /*out*/ group_c
     case PS_SECONDARY:
         if (request.last_committed_decree > last_committed_decree())
         {
-            _prepare_list->commit(request.last_committed_decree, true);
+            _prepare_list->commit(request.last_committed_decree, COMMIT_TO_DECREE_HARD);
         }
         break;
     case PS_POTENTIAL_SECONDARY:

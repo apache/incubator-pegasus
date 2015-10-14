@@ -539,7 +539,7 @@ namespace dsn { namespace replication {
         int32_t max_replica_count;
         ::dsn::rpc_address primary;
         std::vector< ::dsn::rpc_address> secondaries;
-        std::vector< ::dsn::rpc_address> drop_outs;
+        std::vector< ::dsn::rpc_address> last_drops;
         int64_t last_committed_decree;
     };
 
@@ -551,7 +551,7 @@ namespace dsn { namespace replication {
         marshall(writer, val.max_replica_count);
         marshall(writer, val.primary);
         marshall(writer, val.secondaries);
-        marshall(writer, val.drop_outs);
+        marshall(writer, val.last_drops);
         marshall(writer, val.last_committed_decree);
     };
 
@@ -563,7 +563,7 @@ namespace dsn { namespace replication {
         unmarshall(reader, val.max_replica_count);
         unmarshall(reader, val.primary);
         unmarshall(reader, val.secondaries);
-        unmarshall(reader, val.drop_outs);
+        unmarshall(reader, val.last_drops);
         unmarshall(reader, val.last_committed_decree);
     };
 

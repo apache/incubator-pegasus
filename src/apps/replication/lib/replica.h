@@ -62,6 +62,8 @@ public:
     // return false when update fails or replica is going to be closed
     bool update_local_configuration_with_no_ballot_change(partition_status status);
     void set_inactive_state_transient(bool t);
+    void check_state_completeness();
+    error_code check_and_fix_commit_log_completeness();
     void close();
 
     //
@@ -118,8 +120,7 @@ private:
     void init_state();
     void response_client_message(dsn_message_t request, error_code error, decree decree = -1);    
     void execute_mutation(mutation_ptr& mu);
-    mutation_ptr new_mutation(decree decree);
-    void check_state_completeness();
+    mutation_ptr new_mutation(decree decree);    
         
     // initialization
     error_code init_app_and_prepare_list(const char* app_type, bool create_new);
