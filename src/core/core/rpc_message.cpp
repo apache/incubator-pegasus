@@ -54,7 +54,7 @@ DSN_API void dsn_msg_query_request(dsn_message_t msg, int* ptimeout_milliseconds
 {
     auto msg2 = (::dsn::message_ex*)msg;
     if (ptimeout_milliseconds) *ptimeout_milliseconds = msg2->header->client.timeout_ms;
-    if (phash) *phash = msg2->header->client.timeout_ms;
+    if (phash) *phash = msg2->header->client.hash;
 }
 
 DSN_API dsn_message_t dsn_msg_create_response(dsn_message_t request)
@@ -460,7 +460,7 @@ void* message_ex::rw_ptr(size_t offset_begin)
     for (int i = 0; i < i_max; i++)
     {
         size_t c_length = (size_t)(this->buffers[i].length());
-        if (offset_begin <= c_length)
+        if (offset_begin < c_length)
         {
             return (void*)(this->buffers[i].data() + offset_begin);
         }
