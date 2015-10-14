@@ -181,7 +181,7 @@ void replica::check_state_completeness()
         dassert(mind - _options->staleness_for_commit + 1 <= last_durable_decree(), "");
     }
 
-    if (_commit_log == nullptr)
+    if (_commit_log != nullptr)
     {   
         auto mind = _commit_log->min_decree(get_gpid());
         dassert(mind <= last_durable_decree(), "");
