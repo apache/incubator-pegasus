@@ -55,7 +55,7 @@ namespace dsn
         int         _leader_index;
         std::string _name;
         rpc_address _group_address;
-        rpc_address _invalid;
+        static const rpc_address _invalid;
     };
 
     // ------------------ inline implementation --------------------
