@@ -62,7 +62,7 @@ namespace dsn {
             else
                 return true;
 # elif defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
-            module_name += ".dll";
+            module_name = "lib" + module_name + ".so";
             if (nullptr == dlopen(module_name.c_str(), RTLD_LAZY))
             {
                 derror("load dynamic library '%s' failed, err = %s", module_name.c_str(), dlerror());
