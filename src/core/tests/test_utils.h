@@ -32,8 +32,14 @@
 
 using namespace ::dsn;
 
+#ifndef TEST_PORT_BEGIN
+#define TEST_PORT_BEGIN 20201
+#define TEST_PORT_END 20203
+#endif
+
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_TEST_SERVER)
 DEFINE_TASK_CODE_RPC(RPC_TEST_HASH, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
+DEFINE_TASK_CODE_RPC(RPC_TEST_STRING_COMMAND, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
 
 extern int g_test_count;
 
@@ -60,12 +66,40 @@ public:
         replier(r);
     }
 
+    void on_rpc_string_test(dsn_message_t message) {
+        std::string command;
+        ::unmarshall(message, command);
+
+        if (command == "expect_talk_to_others") {
+            dsn::rpc_address next_addr = dsn::service_app::primary_address();
+            if (next_addr.port() != TEST_PORT_END) {
+                next_addr.assign_ipv4(next_addr.ip(), next_addr.port()+1);
+                dsn_rpc_forward(message, next_addr.c_addr());
+            }
+            else {
+                std::string address = next_addr.to_string();
+                reply(message, std::string(next_addr.to_string()));
+            }
+        }
+        else if (command == "expect_no_reply") {
+            if (dsn::service_app::primary_address().port() == TEST_PORT_END)
+                reply(message, std::string(dsn::service_app::primary_address().to_string()));
+        }
+        else if (command.substr(0, 5) == "echo ") {
+            reply(message, command.substr(5));
+        }
+        else {
+            derror("unknown command");
+        }
+    }
+
     ::dsn::error_code start(int argc, char** argv)
     {
         // server
         if (argc == 1)
         {
             register_async_rpc_handler(RPC_TEST_HASH, "rpc.test.hash", &test_client::on_rpc_test);
+            register_rpc_handler(RPC_TEST_STRING_COMMAND, "rpc.test.string.command", &test_client::on_rpc_string_test);
         }
 
         // client
