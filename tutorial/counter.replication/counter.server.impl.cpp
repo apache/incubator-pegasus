@@ -33,7 +33,7 @@ namespace dsn {
 
 
         counter_service_impl::counter_service_impl(replica* replica)
-            : counter_service(replica)
+            : counter_service(replica), _lock(true)
         {
         }
 

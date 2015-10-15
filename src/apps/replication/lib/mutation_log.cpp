@@ -658,6 +658,8 @@ void mutation_log::get_learn_state_when_as_commit_logs(
     /*out*/ ::dsn::replication::learn_state& state
     )
 {
+    dassert(_is_commit_log, "this method is only valid for commit logs");
+
     std::map<int, log_file_ptr> files;
     std::map<int, log_file_ptr>::reverse_iterator itr;
     log_file_ptr cfile = nullptr;
@@ -665,7 +667,7 @@ void mutation_log::get_learn_state_when_as_commit_logs(
     {
         zauto_lock l(_lock);
         auto it = _previous_log_max_decrees.find(gpid);
-        if (it == _previous_log_max_decrees.end() ||
+        if (it != _previous_log_max_decrees.end() &&
             it->second < start)
             return;
 
@@ -692,7 +694,7 @@ void mutation_log::get_learn_state_when_as_commit_logs(
     }
     
     // flush last file so learning can learn the on-disk state
-    cfile->flush();
+    if (nullptr != cfile) cfile->flush();
 
     // find all applicable files
     bool skip_next = false;
@@ -739,6 +741,8 @@ int mutation_log::garbage_collection_when_as_commit_logs(
     decree durable_d
     )
 {
+    dassert(_is_commit_log, "this method is only valid for commit logs");
+
     std::map<int, log_file_ptr> files;
     std::map<int, log_file_ptr>::reverse_iterator itr;
 
@@ -805,6 +809,8 @@ int mutation_log::garbage_collection(
         multi_partition_decrees& max_seen_decrees
         )
 {
+    dassert(!_is_commit_log, "please call garbage_collection_when_as_commit_logs instead");
+
     std::map<int, log_file_ptr> files;
     std::map<int, log_file_ptr>::reverse_iterator itr;
     
