@@ -118,7 +118,7 @@ namespace dsn
         static message_ex* create_receive_message(blob& data);
         static message_ex* create_request(dsn_task_code_t rpc_code, int timeout_milliseconds = 0, int hash = 0);
         message_ex* create_response();
-
+        message_ex* copy();
 
         //
         // routines for buffer management

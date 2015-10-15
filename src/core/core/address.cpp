@@ -46,6 +46,11 @@
 
 # endif
 
+namespace dsn
+{
+    const rpc_address rpc_group_address::_invalid;
+}
+
 static void net_init()
 {
     static std::once_flag flag;
@@ -246,6 +251,13 @@ DSN_API dsn_address_t dsn_group_next(dsn_group_t g, dsn_address_t ep)
     auto grp = (::dsn::rpc_group_address*)(g);
     ::dsn::rpc_address addr(ep);
     return grp->next(addr).c_addr();
+}
+
+DSN_API dsn_address_t dsn_group_forward_leader(dsn_group_t g)
+{
+    auto grp = (::dsn::rpc_group_address*)(g);
+    grp->leader_forward();
+    return grp->leader().c_addr();
 }
 
 DSN_API bool dsn_group_remove(dsn_group_t g, dsn_address_t ep)

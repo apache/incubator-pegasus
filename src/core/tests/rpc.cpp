@@ -33,7 +33,6 @@
 #include <dsn/internal/priority_queue.h>
 #include <boost/lexical_cast.hpp>
 
-#include "../core/group_address.h"
 #include "test_utils.h"
 
 static ::dsn::rpc_address build_group() {
@@ -42,7 +41,8 @@ static ::dsn::rpc_address build_group() {
     for (uint16_t p = TEST_PORT_BEGIN; p<=TEST_PORT_END; ++p) {
         dsn_group_add(server_group.group_handle(), ::dsn::rpc_address("localhost", p).c_addr());
     }
-    server_group.group_address()->set_leader( ::dsn::rpc_address("localhost", TEST_PORT_BEGIN) );
+
+    dsn_group_set_leader(server_group.group_handle(), ::dsn::rpc_address("localhost", TEST_PORT_BEGIN).c_addr());
     return server_group;
 }
 
@@ -53,10 +53,17 @@ static void destroy_group(::dsn::rpc_address group) {
 static ::dsn::rpc_address dsn_address_from_string(const std::string& str) 
 {
     size_t pos = str.find(":");
-    dassert(pos != std::string::npos, "invalid_address=%s", str.c_str());
-    std::string host = str.substr(0, pos);
-    uint16_t port = boost::lexical_cast<uint16_t>(str.substr(pos+1));
-    return ::dsn::rpc_address(host.c_str(), port);
+    if (pos != std::string::npos)
+    {
+        std::string host = str.substr(0, pos);
+        uint16_t port = boost::lexical_cast<uint16_t>(str.substr(pos + 1));
+        return ::dsn::rpc_address(host.c_str(), port);
+    }
+    else
+    {
+        // invalid address
+        return ::dsn::rpc_address();
+    }
 }
 
 TEST(core, rpc)
@@ -118,8 +125,10 @@ static void rpc_group_callback(
         action_on_failure(err, req, resp);
 
         dsn::rpc_address group_addr = ((dsn::message_ex*)req)->server_address;
-        group_addr.group_address()->leader_forward();
-        dsn::task_ptr call_again = ::dsn::rpc::call(group_addr, req, nullptr,
+        dsn_group_forward_leader(group_addr.group_handle());
+
+        auto req_again = dsn_msg_copy(req);
+        dsn::task_ptr call_again = ::dsn::rpc::call(group_addr, req_again, nullptr,
                                                     std::bind(&rpc_group_callback,
                                                               std::placeholders::_1,
                                                               std::placeholders::_2,
@@ -181,7 +190,7 @@ TEST(core, send_to_invalid_address)
 {
     ::dsn::rpc_address group = build_group();
     /* here we assume 10.255.254.253:32766 is not assigned */
-    group.group_address()->set_leader( ::dsn::rpc_address("10.255.254.253", 32766) );
+    dsn_group_set_leader(group.group_handle(), ::dsn::rpc_address("10.255.254.253", 32766).c_addr());
 
     rpc_reply_handler action_on_succeed = [](error_code, dsn_message_t, dsn_message_t resp) {
         std::string hehe_str;
