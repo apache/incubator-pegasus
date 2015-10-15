@@ -291,6 +291,7 @@ message_ex* message_ex::copy()
     msg->to_address = to_address;
     msg->local_rpc_code = local_rpc_code;
     msg->buffers = buffers;
+    msg->_is_read = _is_read;
 
     // received message
     if (this->_is_read)
