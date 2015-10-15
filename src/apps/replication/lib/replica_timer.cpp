@@ -72,8 +72,8 @@ namespace dsn {
             dassert(nullptr != _commit_log, "log_enable_private_commit must be true for checkpointing");
 
             // TODO: when NOT to checkpoint, but use commit log replay to build the state
-           /* if (last_committed_decree() - last_durable_decree() < 10000)
-                return;*/
+            if (last_committed_decree() - last_durable_decree() < 10000)
+                return;
 
             // primary is downgraded to secondary for checkpointing as no write can be seen
             // during checkpointing (i.e., state is freezed)
@@ -108,8 +108,7 @@ namespace dsn {
                 LPC_CHECKPOINT_REPLICA_COMPLETED,
                 this,
                 [this]() { this->on_checkpoint_completed(ERR_OK); },
-                gpid_to_hash(get_gpid()),
-                random32(0, 1000*1000)
+                gpid_to_hash(get_gpid())
                 );
         }
 
@@ -158,8 +157,7 @@ namespace dsn {
                 LPC_CHECKPOINT_REPLICA_COMPLETED,
                 this,
                 [this, err]() { this->on_checkpoint_completed(err); },
-                gpid_to_hash(get_gpid()),
-                random32(0, 100 * 1000)
+                gpid_to_hash(get_gpid())
                 );
         }
 
