@@ -126,7 +126,9 @@ static void rpc_group_callback(
 
         dsn::rpc_address group_addr = ((dsn::message_ex*)req)->server_address;
         dsn_group_forward_leader(group_addr.group_handle());
-        dsn::task_ptr call_again = ::dsn::rpc::call(group_addr, req, nullptr,
+
+        auto req_again = dsn_msg_copy(req);
+        dsn::task_ptr call_again = ::dsn::rpc::call(group_addr, req_again, nullptr,
                                                     std::bind(&rpc_group_callback,
                                                               std::placeholders::_1,
                                                               std::placeholders::_2,
