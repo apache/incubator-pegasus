@@ -46,7 +46,7 @@ namespace dsn {
             ~hpc_aio_provider();
 
             virtual dsn_handle_t open(const char* file_name, int flag, int pmode);
-            virtual error_code   close(dsn_handle_t hFile);
+            virtual error_code   close(dsn_handle_t fh);
             virtual void         aio(aio_task* aio);            
             virtual disk_aio*    prepare_aio_context(aio_task* tsk);
 

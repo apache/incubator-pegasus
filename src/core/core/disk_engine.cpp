@@ -37,6 +37,13 @@ using namespace dsn::utils;
 
 namespace dsn {
 
+//----------------- disk_file ------------------------
+disk_file::disk_file(dsn_handle_t handle)
+    : _handle(handle)
+{
+
+}
+
 //----------------- disk_engine ------------------------
 disk_engine::disk_engine(service_node* node)
 {
@@ -61,23 +68,49 @@ void disk_engine::start(aio_provider* provider, io_modifer& ctx)
 
 dsn_handle_t disk_engine::open(const char* file_name, int flag, int pmode)
 {            
-    return _provider->open(file_name, flag, pmode);
+    dsn_handle_t nh = _provider->open(file_name, flag, pmode);
+    if (nh != nullptr)
+    {
+        return new disk_file(nh);
+    }
+    else
+    {
+        return nullptr;
+    }   
 }
 
-error_code disk_engine::close(dsn_handle_t hFile)
+error_code disk_engine::close(dsn_handle_t fh)
 {
-    return _provider->close(hFile);
+    if (nullptr != fh)
+    {
+        auto df = (disk_file*)fh;
+        auto ret = _provider->close(df->native_handle());
+        delete df;
+        return ret;
+    }
+    else
+    {
+        return ERR_INVALID_HANDLE;
+    }   
 }
 
 void disk_engine::read(aio_task* aio)
 {
-    aio->aio()->type = AIO_Read;    
+    aio->aio()->type = AIO_Read;   
+
+    auto df = (disk_file*)(aio->aio()->file);
+    aio->aio()->file = df->native_handle();
+
     return start_io(aio);
 }
 
 void disk_engine::write(aio_task* aio)
 {
     aio->aio()->type = AIO_Write;
+
+    auto df = (disk_file*)(aio->aio()->file);
+    aio->aio()->file = df->native_handle();
+
     return start_io(aio);
 }
 

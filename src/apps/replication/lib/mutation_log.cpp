@@ -569,7 +569,11 @@ void mutation_log::close()
     {
         if (_is_commit_log)
         {
-            dassert(d == it->second + 1, "commit decress must be contiguous");
+            dassert(d == it->second + 1,
+                "commit decress must be contiguous: %lld vs %lld",
+                it->second, d
+                );
+
             it->second = d;
         }
         else if (it->second < d)

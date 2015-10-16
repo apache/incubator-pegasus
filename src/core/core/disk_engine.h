@@ -31,6 +31,17 @@
 
 namespace dsn {
 
+class disk_file
+{
+public:
+    disk_file(dsn_handle_t handle);
+
+    dsn_handle_t native_handle() const { return _handle; }
+
+private:
+    dsn_handle_t _handle;
+};
+
 class disk_engine
 {
 public:
@@ -40,8 +51,8 @@ public:
     void start(aio_provider* provider, io_modifer& ctx);
 
     // asynchonous file read/write
-    dsn_handle_t    open(const char* fileName, int flag, int pmode);
-    error_code      close(dsn_handle_t hFile);
+    dsn_handle_t    open(const char* file_name, int flag, int pmode);
+    error_code      close(dsn_handle_t fh);
     void            read(aio_task* aio);
     void            write(aio_task* aio);  
 
