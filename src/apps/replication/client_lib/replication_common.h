@@ -84,11 +84,9 @@ public:
     int32_t log_file_size_mb;
     int32_t log_buffer_size_mb;
     int32_t log_pending_max_ms;
-    bool    log_batch_write;
     int32_t log_file_size_mb_private;
     int32_t log_buffer_size_mb_private;
     int32_t log_pending_max_ms_private;
-    bool    log_batch_write_private;
 
     int32_t config_sync_interval_ms;
     bool    config_sync_disabled;

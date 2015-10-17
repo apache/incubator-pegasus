@@ -122,11 +122,11 @@ dlink* disk_file::on_write_completed(dlink* wk, void* ctx, error_code err, size_
     auto ret = _write_queue.on_work_completed(wk, ctx);
     auto tail = wk;
     
-    do
+    while (true)
     {
         auto wk2 = wk->next();
         wk->remove();
-        
+
         auto aio = CONTAINING_RECORD(wk, aio_task, _task_queue_dl);
         if (err == ERR_OK)
         {
@@ -140,8 +140,11 @@ dlink* disk_file::on_write_completed(dlink* wk, void* ctx, error_code err, size_
 
         aio->release_ref(); // added in above write
 
-        wk = wk2;
-    } while (wk != tail);
+        if (wk == wk2)
+            break;
+        else
+            wk = wk2;
+    }
 
     return ret;
 }
@@ -317,8 +320,11 @@ void disk_engine::process_write(dlink* wk, uint32_t sz)
                 (size_t)(dio->buffer_size)
                 );
 
+            ptr += dio->buffer_size;
             current_wk = current_wk->next();
         } while (current_wk != wk);
+
+        dassert(ptr == (char*)bb.data() + bb.length(), "");
 
         // setup io task
         auto new_task = new batch_write_io_task(
@@ -328,9 +334,11 @@ void disk_engine::process_write(dlink* wk, uint32_t sz)
         auto dio = new_task->aio();
         dio->buffer = (void*)bb.data();
         dio->buffer_size = sz;
-        dio->file = dio->file;
-        dio->file_object = dio->file_object;
         dio->file_offset = aio->aio()->file_offset;
+
+        dio->file = aio->aio()->file;
+        dio->file_object = aio->aio()->file_object;
+        dio->engine = aio->aio()->engine;
         dio->type = AIO_Write;
 
         new_task->add_ref(); // released in complete_io

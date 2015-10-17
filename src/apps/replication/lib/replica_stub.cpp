@@ -133,7 +133,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             opts.log_buffer_size_mb,
             opts.log_pending_max_ms,
             opts.log_file_size_mb,
-            opts.log_batch_write,
+            false,
             false
             );
         err = _log->initialize(log_dir.c_str());
@@ -171,7 +171,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
                 opts.log_buffer_size_mb,
                 opts.log_pending_max_ms,
                 opts.log_file_size_mb,
-                opts.log_batch_write,
+                false,
                 false
                 );
             auto lerr = _log->initialize(log_dir.c_str());

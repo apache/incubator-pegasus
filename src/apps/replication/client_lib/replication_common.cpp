@@ -63,11 +63,9 @@ replication_options::replication_options()
     log_buffer_size_mb = 1;
     log_pending_max_ms = 100;
     log_file_size_mb = 32;
-    log_batch_write = true;
     log_buffer_size_mb_private = 1;
     log_pending_max_ms_private = 100;
     log_file_size_mb_private = 32;
-    log_batch_write_private = true;
 
     log_enable_private_commit = true;
     log_enable_shared_prepare = true;
@@ -227,12 +225,6 @@ void replication_options::initialize()
         log_pending_max_ms,
         "maximum duration (ms) the log entries reside in the buffer for batching"
         );
-    log_batch_write = 
-        dsn_config_get_value_bool("replication", 
-        "log_batch_write", 
-        log_batch_write,
-        "whether to batch write the incoming logs"
-        );
 
     log_file_size_mb_private =
         (int)dsn_config_get_value_uint64("replication",
@@ -251,12 +243,6 @@ void replication_options::initialize()
         "log_pending_max_ms_private",
         log_pending_max_ms_private,
         "maximum duration (ms) the log entries reside in the buffer for batching for private log"
-        );
-    log_batch_write_private =
-        dsn_config_get_value_bool("replication",
-        "log_batch_write_private",
-        log_batch_write_private,
-        "whether to batch write the incoming logs for private log"
         );
 
     log_enable_private_commit =

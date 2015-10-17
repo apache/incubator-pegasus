@@ -212,7 +212,7 @@ error_code replica::init_commit_log_service()
         _options->log_buffer_size_mb,
         _options->log_pending_max_ms,
         _options->log_file_size_mb,
-        _options->log_batch_write,
+        true,
         true
         );
 
@@ -286,7 +286,7 @@ error_code replica::init_commit_log_service()
             _options->log_buffer_size_mb,
             _options->log_pending_max_ms,
             _options->log_file_size_mb,
-            _options->log_batch_write,
+            true,
             true
             );
 
