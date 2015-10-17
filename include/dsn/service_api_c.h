@@ -172,6 +172,15 @@ struct dsn_app_info
     char  name[DSN_MAX_APP_TYPE_NAME_LENGTH]; // app name configed in config file
 };
 
+// the following ctrl code are used by dsn_file_ctrl
+typedef enum dsn_ctrl_code_t
+{
+    CTL_BATCH_INVALID,
+    CTL_BATCH_WRITE,            // (batch) set write batch size
+    CTL_MAX_CON_READ_OP_COUNT,  // (throttling) maximum concurrent read ops
+    CTL_MAX_CON_WRITE_OP_COUNT, // (throttling) maximum concurrent write ops
+} dsn_ctrl_code_t;
+
 typedef enum dsn_task_type_t
 {
     TASK_TYPE_RPC_REQUEST,   // task handling rpc request

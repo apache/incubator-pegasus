@@ -28,18 +28,43 @@
 # include "service_engine.h"
 # include <dsn/internal/synchronize.h>
 # include <dsn/internal/aio_provider.h>
+# include <dsn/internal/work_queue.h>
 
 namespace dsn {
+
+class disk_write_queue : public work_queue
+{
+public:
+    disk_write_queue()
+        : work_queue(2)
+    {
+        _max_batch_bytes = 1024 * 1024; // 1 MB
+    }
+
+private:
+    virtual dlink* unlink_next_workload(dlink& hdr, void* plength) override;
+
+private:
+    uint32_t _max_batch_bytes;
+};
 
 class disk_file
 {
 public:
     disk_file(dsn_handle_t handle);
+    void ctrl(dsn_ctrl_code_t code, int param);
+    dlink* read(aio_task* tsk);
+    dlink* write(aio_task* tsk, void* ctx);
 
+    dlink* on_read_completed(dlink* wk, error_code err, size_t size);
+    dlink* on_write_completed(dlink* wk, void* ctx, error_code err, size_t size);
+    
     dsn_handle_t native_handle() const { return _handle; }
 
 private:
-    dsn_handle_t _handle;
+    dsn_handle_t     _handle;
+    disk_write_queue _write_queue;
+    work_queue       _read_queue;
 };
 
 class disk_engine
@@ -56,20 +81,20 @@ public:
     void            read(aio_task* aio);
     void            write(aio_task* aio);  
 
+    void            ctrl(dsn_handle_t fh, dsn_ctrl_code_t code, int param);
     disk_aio*       prepare_aio_context(aio_task* tsk) { return _provider->prepare_aio_context(tsk); }
     service_node*   node() const { return _node; }
     
 private:
     friend class aio_provider;
-    void start_io(aio_task* aio);
+    friend class batch_write_io_task;
+    void process_write(dlink* wk, uint32_t sz);
     void complete_io(aio_task* aio, error_code err, uint32_t bytes, int delay_milliseconds = 0);
 
 private:
     volatile bool   _is_running;
     aio_provider    *_provider;
     service_node    *_node;
-
-    std::atomic<int>         _request_count;
 };
 
 } // end namespace
