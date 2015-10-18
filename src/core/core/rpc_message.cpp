@@ -43,6 +43,11 @@ DSN_API dsn_message_t dsn_msg_create_request(dsn_task_code_t rpc_code, int timeo
     return msg;
 }
 
+DSN_API dsn_message_t dsn_msg_copy(dsn_message_t msg)
+{
+    return msg ? ((::dsn::message_ex*)msg)->copy() : nullptr;
+}
+
 DSN_API void dsn_msg_update_request(dsn_message_t msg, int timeout_milliseconds, int hash)
 {
     auto msg2 = (::dsn::message_ex*)msg;
@@ -276,6 +281,33 @@ message_ex* message_ex::create_receive_message(blob& data)
     msg->buffers.push_back(data);
 
     dbg_dassert(msg->header->body_length > 0, "message %s is empty!", msg->header->rpc_name);
+    return msg;
+}
+
+message_ex* message_ex::copy()
+{
+    message_ex* msg = new message_ex();
+    msg->from_address = from_address;
+    msg->to_address = to_address;
+    msg->local_rpc_code = local_rpc_code;
+    msg->buffers = buffers;
+
+    // received message
+    if (this->_is_read)
+    {
+        // header is within buffer
+        msg->header = header;
+    }
+
+    // send message
+    else
+    {
+        // header is within buffer
+        msg->header = header;
+
+        msg->server_address = server_address;
+    }
+
     return msg;
 }
 

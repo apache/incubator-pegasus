@@ -44,6 +44,7 @@ namespace dsn
         rpc_address random_member() const { return _members.empty() ? _invalid : _members[dsn_random32(0, (uint32_t)_members.size() - 1)]; }
         rpc_address next(rpc_address current) const;
         rpc_address leader() const { return _leader_index >= 0 ? _members[_leader_index] : _invalid; };
+        void leader_forward();
         rpc_address possible_leader();
         const char* name() const { return _name.c_str(); }
         rpc_address address() const { return _group_address; }
@@ -54,7 +55,7 @@ namespace dsn
         int         _leader_index;
         std::string _name;
         rpc_address _group_address;
-        rpc_address _invalid;
+        static const rpc_address _invalid;
     };
 
     // ------------------ inline implementation --------------------
@@ -75,6 +76,11 @@ namespace dsn
         }
         else
             return false;
+    }
+
+    inline void rpc_group_address::leader_forward() {
+        if (_members.empty()) return;
+        _leader_index = (_leader_index+1)%_members.size();
     }
 
     inline void rpc_group_address::set_leader(rpc_address addr)
