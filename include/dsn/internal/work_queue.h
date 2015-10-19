@@ -36,13 +36,16 @@ namespace dsn {
         work_queue(int max_concurrent_op = 1)
             : _max_concurrent_op(max_concurrent_op)
         {
-            _runnings = new dlink*[_max_concurrent_op];
-            memset((void*)_runnings, 0, sizeof(dlink*)*_max_concurrent_op);
+            _current_op_count = 0;
         }
 
         ~work_queue()
         {
-            delete[] _runnings;
+            scope_lk l(_lock);
+            dassert(_current_op_count == 0 && _hdr.is_alone(), 
+                "work queue cannot be deleted when there are still %d running ops or pending work items in queue",
+                _current_op_count
+                );
         }
 
         // return not-null for what's to be run next
@@ -52,18 +55,13 @@ namespace dsn {
             dl->insert_before(&_hdr);
 
             // allocate slot and run
-            for (int i = 0; i < _max_concurrent_op; i++)
+            if (_current_op_count == _max_concurrent_op)
+                return nullptr;
+            else
             {
-                if (nullptr == _runnings[i])
-                {
-                    auto wk = unlink_next_workload(_hdr, ctx);
-                    _runnings[i] = wk;
-                    return wk;
-                }
+                _current_op_count++;
+                return unlink_next_workload(_hdr, ctx);
             }
-
-            // no empty slot for concurrent ops
-            return nullptr;
         }
 
         // called when the curren operation is completed,
@@ -71,21 +69,8 @@ namespace dsn {
         dlink* on_work_completed(dlink* running, void* ctx)
         {
             scope_lk l(_lock);
-            int i = 0;
-            for (; i < _max_concurrent_op; i++)
-            {
-                if (_runnings[i] == running)
-                {
-                    _runnings[i] = nullptr;
-                    break;
-                }
-            }
-
-            dassert(i < _max_concurrent_op,
-                "cannot find the given elements %p in running records",
-                running
-                );
-
+            _current_op_count--;
+            
             // no further workload
             if (_hdr.is_alone())
             {
@@ -95,9 +80,8 @@ namespace dsn {
             // run further workload
             else
             {
-                auto wk = unlink_next_workload(_hdr, ctx);
-                _runnings[i] = wk;
-                return wk;
+                _current_op_count++;
+                return unlink_next_workload(_hdr, ctx);
             }
         }
 
@@ -108,21 +92,16 @@ namespace dsn {
             return hdr.next()->remove();
         }
 
-        // make sure no ops is started yet when calling this
         void reset_max_concurrent_ops(int max_c)
         {
             _max_concurrent_op = max_c;
-            delete[] _runnings;
-            _runnings = new dlink*[max_c];
-            memset((void*)_runnings, 0, sizeof(dlink*)*_max_concurrent_op);
         }
-
 
     private:
         typedef utils::auto_lock<utils::ex_lock_nr_spin> scope_lk;
         utils::ex_lock_nr_spin _lock;
         dlink _hdr;
-        dlink **_runnings;
+        int _current_op_count;
 
         int _max_concurrent_op;
     };
