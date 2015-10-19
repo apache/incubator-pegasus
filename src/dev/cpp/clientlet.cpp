@@ -252,8 +252,6 @@ namespace dsn
                     remote.c_addr(), source_dir.c_str(), ptr_base,
                     dest_dir.c_str(), overwrite, t, svc ? svc->tracker() : nullptr
                     );
-
-                free(ptr_base);
             }
             return tsk;
         }

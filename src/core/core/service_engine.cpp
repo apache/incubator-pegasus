@@ -145,6 +145,7 @@ error_code service_node::init_io_engine(io_engine& io, ioe_mode mode)
         io.rpc = nullptr;
     
     // init nfs
+    io.nfs = nullptr;
     if (mode == spec.nfs_io_mode)
     {
         if (!spec.start_nfs)
@@ -162,8 +163,6 @@ error_code service_node::init_io_engine(io_engine& io, ioe_mode mode)
                 PROVIDER_TYPE_MAIN, this);
         }
     }
-    else
-        io.nfs = nullptr;
 
     return err;
 }

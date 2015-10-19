@@ -128,6 +128,11 @@ DSN_API int dsn_threadpool_code_max()
     return ::dsn::utils::customized_id_mgr<::dsn::threadpool_code2_>::instance().max_value();
 }
 
+DSN_API int dsn_threadpool_get_current_tid()
+{
+    return ::dsn::utils::get_current_tid();
+}
+
 struct task_code_placeholder { };
 DSN_API dsn_task_code_t dsn_task_code_register(const char* name, dsn_task_type_t type,
     dsn_task_priority_t pri, dsn_threadpool_code_t pool)
