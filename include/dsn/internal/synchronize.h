@@ -164,7 +164,7 @@ namespace dsn {
 
             inline void wait()
             {
-                return _sema.wait();
+                _sema.wait();
             }
 
             inline bool wait(int milliseconds)

@@ -75,6 +75,7 @@ protected:
     {
         if (_count == 0)
         {
+            ct = 0;
             return nullptr;
         }
 
@@ -120,7 +121,11 @@ public:
 
     virtual T dequeue(/*out*/ long& ct, int millieseconds = TIME_MS_MAX)
     {
-        _sema.wait();
+        if (!_sema.wait(millieseconds))
+        {
+            ct = 0;
+            return nullptr;
+        }
         return priority_queue<T, priority_count, TQueue>::dequeue(ct);
     }
     

@@ -23,54 +23,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-# include <iostream>
-# include "gtest/gtest.h"
-# include <dsn/service_api_cpp.h>
 
-# ifndef _WIN32
-# include <sys/types.h>
-# include <signal.h>
-# endif
+# include <../core/library_utils.h>
+# include <gtest/gtest.h>
 
-int g_test_count = 0;
+using namespace ::dsn;
 
-class test_client : public ::dsn::service_app
+TEST(core, load_dynamic_library)
 {
-public:
-    ::dsn::error_code start(int argc, char** argv)
-    {
-        testing::InitGoogleTest(&argc, argv);
-        auto ret = RUN_ALL_TESTS();
-        g_test_count = 1;
-/*
-        // exit without any destruction
-# if defined(_WIN32)
-        ::ExitProcess(0);
-# else
-        kill(getpid(), SIGKILL);
-# endif
-*/
-        return ::dsn::ERR_OK;
-    }
-
-    void stop(bool cleanup = false)
-    {
-
-    }
-};
-
-GTEST_API_ int main(int argc, char **argv) 
-{
-    // register all possible services
-    dsn::register_app<test_client>("test");
-    
-    // specify what services and tools will run in config file, then run
-    dsn_run_config("config-test.ini", false);
-
-    while (g_test_count == 0)
-    {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-
-    return 0;    
+    ASSERT_FALSE(dsn::utils::load_dynamic_library("not_exist_module"));
 }

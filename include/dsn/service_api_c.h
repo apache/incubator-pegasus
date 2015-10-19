@@ -296,6 +296,7 @@ extern DSN_API dsn_threadpool_code_t dsn_threadpool_code_from_string(
                                         dsn_threadpool_code_t default_code // when s is not registered
                                         );
 extern DSN_API int                   dsn_threadpool_code_max();
+extern DSN_API int                   dsn_threadpool_get_current_tid();
 extern DSN_API dsn_task_code_t       dsn_task_code_register(
                                         const char* name,          // task code name
                                         dsn_task_type_t type,
