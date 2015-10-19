@@ -25,10 +25,8 @@
  */
 #pragma once
 
-# include <dsn/tool_api.h>
-# include "io_looper.h"
-
 # ifdef _WIN32
+    # include <Winsock2.h>
     typedef SOCKET socket_t;
 # else
     # include <sys/types.h>
@@ -40,6 +38,11 @@
         # include <netinet/in.h>
     # endif
 # endif
+
+
+# include <dsn/tool_api.h>
+# include "io_looper.h"
+
 
 namespace dsn {
     namespace tools {
