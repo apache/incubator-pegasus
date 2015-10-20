@@ -314,12 +314,12 @@ namespace dsn {
 #endif
 			}
 
-			static bool path_exists(const std::string& npath, int type)
+			static bool path_exists(const std::string& path, int type)
 			{
 				bool ret;
 				struct stat_ st;
 
-				if (!dsn::utils::filesystem::get_stat(npath, st))
+				if (!dsn::utils::filesystem::get_stat(path, st))
 				{
 					return false;
 				}
@@ -345,53 +345,32 @@ namespace dsn {
 
 			bool path_exists(const std::string& path)
 			{
-				std::string npath;
-
 				if (path.empty())
 				{
 					return false;
 				}
 
-				if (!get_normalized_path(path, npath))
-				{
-					return false;
-				}
-
-				return dsn::utils::filesystem::path_exists(npath, FTW_NS);
+				return dsn::utils::filesystem::path_exists(path, FTW_NS);
 			}
 
 			bool directory_exists(const std::string& path)
 			{
-				std::string npath;
-
 				if (path.empty())
 				{
 					return false;
 				}
 
-				if (!get_normalized_path(path, npath))
-				{
-					return false;
-				}
-
-				return dsn::utils::filesystem::path_exists(npath, FTW_D);
+				return dsn::utils::filesystem::path_exists(path, FTW_D);
 			}
 
 			bool file_exists(const std::string& path)
 			{
-				std::string npath;
-
 				if (path.empty())
 				{
 					return false;
 				}
 
-				if (!get_normalized_path(path, npath))
-				{
-					return false;
-				}
-
-				return dsn::utils::filesystem::path_exists(npath, FTW_F);
+				return dsn::utils::filesystem::path_exists(path, FTW_F);
 			}
 
 			static bool get_subpaths(const std::string& path, std::vector<std::string>& sub_list, bool recursive, int typeflags)
@@ -558,19 +537,13 @@ namespace dsn {
 			bool file_size(const std::string& path, int64_t& sz)
 			{
 				struct stat_ st;
-				std::string npath;
 
 				if (path.empty())
 				{
 					return false;
 				}
 
-				if (!get_normalized_path(path, npath))
-				{
-					return false;
-				}
-
-				if (!dsn::utils::filesystem::get_stat(npath, st))
+				if (!dsn::utils::filesystem::get_stat(path, st))
 				{
 					return false;
 				}
