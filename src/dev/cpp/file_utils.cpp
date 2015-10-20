@@ -831,19 +831,13 @@ namespace dsn {
 			bool last_write_time(std::string& path, time_t& tm)
 			{
 				struct stat_ st;
-				std::string npath;
 
 				if (path.empty())
 				{
 					return false;
 				}
 
-				if (!get_normalized_path(path, npath))
-				{
-					return false;
-				}
-
-				if (!dsn::utils::filesystem::get_stat(npath, st))
+				if (!dsn::utils::filesystem::get_stat(path, st))
 				{
 					return false;
 				}
