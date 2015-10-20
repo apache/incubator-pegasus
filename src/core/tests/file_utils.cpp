@@ -495,7 +495,7 @@ static void file_utils_test_path_combine()
 #ifdef _WIN32
     EXPECT_TRUE(path == "c:\\Windows\\explorer.exe");
 #else
-    EXPECT_TRUE(path == "c:/Windows/explorer.exe");
+    EXPECT_TRUE(path == "c:/Windows\\explorer.exe");
 #endif
 
     path1 = "c:\\";
@@ -504,7 +504,7 @@ static void file_utils_test_path_combine()
 #ifdef _WIN32
     EXPECT_TRUE(path == "c:\\Windows\\explorer.exe");
 #else
-    EXPECT_TRUE(path == "c:/Windows/explorer.exe");
+    EXPECT_TRUE(path == "c:\\/Windows\\explorer.exe");
 #endif
 
     path1 = "/bin";
