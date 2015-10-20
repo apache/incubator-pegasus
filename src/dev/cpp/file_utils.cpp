@@ -542,10 +542,12 @@ namespace dsn {
 
 			bool rename_path(const std::string& path1, const std::string& path2)
 			{
-				bool ret = (::rename(path1.c_str(), path2.c_str()) == 0);
+                bool ret;
+                
+                ret = (::rename(path1.c_str(), path2.c_str()) == 0);
                 if (!ret)
                 {
-                    derror("rename from '%s' to '%s' failed, err = %s",
+                    dwarn("rename from '%s' to '%s' failed, err = %s",
                         path1.c_str(),
                         path2.c_str(),
                         strerror(errno));
@@ -765,6 +767,7 @@ namespace dsn {
 			std::string get_file_name(const std::string& path)
 			{
 				size_t len;
+                size_t last;
 				size_t pos;
 
 				len = path.length();
@@ -773,16 +776,26 @@ namespace dsn {
 					return "";
 				}
 
+                last = len - 1;
+
 				pos = path.find_last_of("\\/");
 
-				if (pos == len)
+				if (pos == last)
 				{
-					return "";
-				}
+                    return "";
+                }
 
 				if (pos == std::string::npos)
 				{
-					return path;
+#ifdef _WIN32
+                    pos = path.find_last_of(_FS_COLON);
+                    if (pos == last)
+                    {
+                        return "";
+                    }
+#else
+                    return path;
+#endif                        
 				}
 
 				return path.substr((pos + 1), (len - pos));
@@ -790,49 +803,43 @@ namespace dsn {
 
 			std::string path_combine(const std::string& path1, const std::string& path2)
 			{
-				char c;
-				std::string npath1;
-				std::string npath2;
+                bool ret;
+                char c;
+                std::string path3;
+                std::string npath;
 
-				if (!dsn::utils::filesystem::get_normalized_path(path1, npath1))
-				{
-					return "";
-				}
-
-				if (!dsn::utils::filesystem::get_normalized_path(path2, npath2))
-				{
-					return "";
-				}
-
-				if (npath1.empty())
-				{
-					return npath2;
-				}
-
-				if (npath2.empty())
-				{
-					return npath1;
-				}	
-
-				c = npath1[npath1.length() - 1];
-				if (!_FS_ISSEP(c)
+                if (path1.empty())
+                {
+                    ret = dsn::utils::filesystem::get_normalized_path(path2, npath);
+                }
+                else if (path2.empty())
+                {
+                    ret = dsn::utils::filesystem::get_normalized_path(path1, npath);
+                }
+                else
+                {
+                    path3 = path1;
+                    c = path1[path1.length() - 1];
 #ifdef _WIN32
-					&& (c != _FS_COLON)
+                    if (c != _FS_COLON)
+                    {
 #endif
-					)
-				{
-					npath1.append(1,
+                        path3.append(1,
 #ifdef _WIN32
-						_FS_BSLASH
+                            _FS_BSLASH
 #else
-						_FS_SLASH
+                            _FS_SLASH
 #endif
-						);
-				}
+                            );
+#ifdef _WIN32
+                    }
+#endif
+                    path3.append(path2);
 
-				npath1.append(npath2);
+                    ret = dsn::utils::filesystem::get_normalized_path(path3, npath);
+                }
 
-				return npath1;
+                return ret ? npath : "";
 			}
 
 			bool get_current_directory(std::string& path)
