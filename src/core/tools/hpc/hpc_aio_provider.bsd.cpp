@@ -144,12 +144,6 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
 
     aio->this_ = this;
 
-    // set up callback
-    aio->cb.aio_sigevent.sigev_notify = SIGEV_KEVENT;
-    aio->cb.aio_sigevent.sigev_notify_kqueue = (int)(uintptr_t)_looper->native_handle();
-    aio->cb.aio_sigevent.sigev_notify_kevent_flags = EV_CLEAR;
-    aio->cb.aio_sigevent.sigev_value.sival_ptr = &_callback;
-
     if (!async)
     {
         aio->evt = new utils::notify_event();
@@ -161,17 +155,22 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
     {
     case AIO_Read:
         io_prep_pread(&aio->cb, static_cast<int>((ssize_t)aio->file), aio->buffer, aio->buffer_size, aio->file_offset);
-        r = aio_read(&aio->cb);
         break;
     case AIO_Write:
         io_prep_pwrite(&aio->cb, static_cast<int>((ssize_t)aio->file), aio->buffer, aio->buffer_size, aio->file_offset);
-        r = aio_write(&aio->cb);
         break;
     default:
         dassert(false, "unknown aio type %u", static_cast<int>(aio->type));
         break;
     }
 
+    // set up callback
+    aio->cb.aio_sigevent.sigev_notify = SIGEV_KEVENT;
+    aio->cb.aio_sigevent.sigev_notify_kqueue = (int)(uintptr_t)_looper->native_handle();
+    aio->cb.aio_sigevent.sigev_notify_kevent_flags = EV_CLEAR;
+    aio->cb.aio_sigevent.sigev_value.sival_ptr = &_callback;
+
+    r = (aio->type == AIO_Read) ? aio_read(&aio->cb) : aio_write(&aio->cb);
     if (r != 0)
     {
         derror("file op failed, err = %d (%s). On FreeBSD, you may need to load"
