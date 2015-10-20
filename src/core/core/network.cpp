@@ -23,7 +23,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+# ifdef _WIN32
 # include <Winsock2.h>
+# endif
 # include <dsn/internal/network.h>
 # include <dsn/internal/factory_store.h>
 # include "rpc_engine.h"
