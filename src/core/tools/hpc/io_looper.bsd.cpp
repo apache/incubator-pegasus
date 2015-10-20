@@ -287,7 +287,7 @@ namespace dsn
                     }                        
                     else
                     {
-                        derror("epoll_wait loop exits, err = %s", strerror(errno));
+                        derror("kevent loop exits, err = %s", strerror(errno));
                         break;
                     }
                 }

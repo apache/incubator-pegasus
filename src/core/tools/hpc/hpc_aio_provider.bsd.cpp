@@ -106,7 +106,7 @@ hpc_aio_provider::~hpc_aio_provider()
 dsn_handle_t hpc_aio_provider::open(const char* file_name, int oflag, int pmode)
 {
     // No need to bind handle since EVFILT_AIO is registered when aio_* is called.
-    return  (dsn_handle_t)(uintptr_t)::open(file_name, oflag, pmode);
+    return  (dsn_handle_t)(uintptr_t)::open(file_name, (oflag | O_NONBLOCK), pmode);
 }
 
 error_code hpc_aio_provider::close(dsn_handle_t fh)
@@ -211,33 +211,32 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
 void hpc_aio_provider::complete_aio(struct aiocb* io)
 {
     posix_disk_aio_context* ctx = CONTAINING_RECORD(io, posix_disk_aio_context, cb);
+    error_code ec;
+    int bytes = 0;
 
     int err = aio_error(&ctx->cb);
-    if (err != EINPROGRESS)
+    if (err != 0)
     {
-        size_t bytes = aio_return(&ctx->cb); // from e.g., read or write
-        error_code ec;
-        if (err != 0)
-        {
-            derror("aio error, err = %s", strerror(err));
-            ec = ERR_FILE_OPERATION_FAILED;
-        }
-        else
-        {
-            ec = bytes > 0 ? ERR_OK : ERR_HANDLE_EOF;
-        }
-        
-        if (!ctx->evt)
-        {
-            aio_task* aio(ctx->tsk);
-            ctx->this_->complete_io(aio, ec, bytes);
-        }
-        else
-        {
-            ctx->err = ec;
-            ctx->bytes = bytes;
-            ctx->evt->notify();
-        }
+        derror("aio error, err = %s", strerror(err));
+        ec = ERR_FILE_OPERATION_FAILED;
+    }
+    else
+    {
+        bytes = aio_return(&ctx->cb); // from e.g., read or write
+        dassert(bytes >= 0, "bytes = %d.", bytes);
+        ec = bytes > 0 ? ERR_OK : ERR_HANDLE_EOF;
+    }
+
+    if (!ctx->evt)
+    {
+        aio_task* aio(ctx->tsk);
+        ctx->this_->complete_io(aio, ec, bytes);
+    }
+    else
+    {
+        ctx->err = ec;
+        ctx->bytes = bytes;
+        ctx->evt->notify();
     }
 }
 
