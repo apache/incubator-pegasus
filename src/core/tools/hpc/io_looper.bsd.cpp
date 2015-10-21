@@ -40,8 +40,10 @@ namespace dsn
             _local_notification_fd = IO_LOOPER_USER_NOTIFICATION_FD;
             _filters.insert(EVFILT_READ);
             _filters.insert(EVFILT_WRITE);
+            //EVFILT_AIO is automatically registered.
             //_filters.insert(EVFILT_AIO);
             _filters.insert(EVFILT_READ_WRITE);
+            //Internal use
             _filters.insert(EVFILT_USER);
         }
 
@@ -58,7 +60,8 @@ namespace dsn
             )
         {
             int fd;
-            short filters[2];
+            int filter;
+            int filters[2];
             int nr_filters;
             struct kevent e;           
 
@@ -68,20 +71,27 @@ namespace dsn
                 return ERR_INVALID_PARAMETERS;
             }
 
-            fd = (int)(intptr_t)(handle);
-            if (fd < 0)
+            filter = (int)events;
+            if (_filters.find(filter) == _filters.end())
             {
-                if (fd != IO_LOOPER_USER_NOTIFICATION_FD)
+                derror("The filter %d is unsupported.", filter);
+                return ERR_INVALID_PARAMETERS;
+            }
+
+            fd = (int)(intptr_t)(handle);
+            if (fd != IO_LOOPER_USER_NOTIFICATION_FD)
+            {
+                if (fd < 0)
                 {
                     derror("The fd %d is less than 0.", fd);
                     return ERR_INVALID_PARAMETERS;
                 }
-            }
 
-            if (_filters.find((short)events) == _filters.end())
-            {
-                derror("The filter %u is unsupported.", events);
-                return ERR_INVALID_PARAMETERS;
+                if (filter == EVFILT_USER)
+                {
+                    derror("EVFILT_USER is internally used.");
+                    return ERR_INVALID_PARAMETERS;
+                }
             }
 
             if (fd > 0)
@@ -109,7 +119,7 @@ namespace dsn
                 dassert(pr.second, "the callback must not be registered before");
             }
             
-            if ((short)events == EVFILT_READ_WRITE)
+            if (filter == EVFILT_READ_WRITE)
             {
                 filters[0] = EVFILT_READ;
                 filters[1] = EVFILT_WRITE;
@@ -117,7 +127,7 @@ namespace dsn
             }
             else
             {
-                filters[0] = (short)events;
+                filters[0] = filter;
                 nr_filters = 1;
             }
 
