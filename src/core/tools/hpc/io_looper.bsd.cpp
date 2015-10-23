@@ -82,7 +82,7 @@ namespace dsn
             {
                 if (fd < 0)
                 {
-                    derror("The fd %d is less than 0.", fd);
+                    derror("bind_io_handle: the fd %d is less than 0.", fd);
                     return ERR_INVALID_PARAMETERS;
                 }
 
@@ -132,7 +132,7 @@ namespace dsn
 
             for (int i = 0; i < nr_filters; i++)
             {
-                EV_SET(&e[i], fd, e[i].filter, (EV_ADD | EV_ENABLE | EV_CLEAR), 0, 0, (void*)cb0);
+                EV_SET(&e[i], fd, e[i].filter, (EV_ADD | EV_CLEAR), 0, 0, (void*)cb0);
             }
 
             if (kevent(_io_queue, e, nr_filters, nullptr, 0, nullptr) == -1)
@@ -157,7 +157,7 @@ namespace dsn
             {
                 if (fd < 0)
                 {
-                    derror("The fd %d is less than 0.", fd);
+                    derror("unbind_io_handle: the fd %d is less than 0.", fd);
                     return ERR_INVALID_PARAMETERS;
                 }
 
