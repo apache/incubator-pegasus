@@ -287,6 +287,7 @@ extern DSN_API dsn_threadpool_code_t dsn_threadpool_code_from_string(
                                         dsn_threadpool_code_t default_code // when s is not registered
                                         );
 extern DSN_API int                   dsn_threadpool_code_max();
+extern DSN_API int                   dsn_threadpool_get_current_tid();
 extern DSN_API dsn_task_code_t       dsn_task_code_register(
                                         const char* name,          // task code name
                                         dsn_task_type_t type,
@@ -537,6 +538,7 @@ extern DSN_API void          dsn_group_set_leader(dsn_group_t g, dsn_address_t e
 extern DSN_API dsn_address_t dsn_group_get_leader(dsn_group_t g);
 extern DSN_API bool          dsn_group_is_leader(dsn_group_t g, dsn_address_t ep);
 extern DSN_API dsn_address_t dsn_group_next(dsn_group_t g, dsn_address_t ep);
+extern DSN_API dsn_address_t dsn_group_forward_leader(dsn_group_t g);
 extern DSN_API void          dsn_group_destroy(dsn_group_t g);
 
 extern DSN_API dsn_address_t dsn_primary_address();
@@ -569,6 +571,7 @@ extern DSN_API dsn_message_t dsn_msg_create_request(
                                 int hash DEFAULT(DSN_INVALID_HASH)
                                 );
 extern DSN_API dsn_message_t dsn_msg_create_response(dsn_message_t request);
+extern DSN_API dsn_message_t dsn_msg_copy(dsn_message_t msg);
 extern DSN_API void          dsn_msg_add_ref(dsn_message_t msg);
 extern DSN_API void          dsn_msg_release_ref(dsn_message_t msg);
 extern DSN_API void          dsn_msg_update_request(

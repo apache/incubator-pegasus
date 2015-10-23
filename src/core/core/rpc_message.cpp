@@ -43,6 +43,11 @@ DSN_API dsn_message_t dsn_msg_create_request(dsn_task_code_t rpc_code, int timeo
     return msg;
 }
 
+DSN_API dsn_message_t dsn_msg_copy(dsn_message_t msg)
+{
+    return msg ? ((::dsn::message_ex*)msg)->copy() : nullptr;
+}
+
 DSN_API void dsn_msg_update_request(dsn_message_t msg, int timeout_milliseconds, int hash)
 {
     auto msg2 = (::dsn::message_ex*)msg;
@@ -54,7 +59,7 @@ DSN_API void dsn_msg_query_request(dsn_message_t msg, int* ptimeout_milliseconds
 {
     auto msg2 = (::dsn::message_ex*)msg;
     if (ptimeout_milliseconds) *ptimeout_milliseconds = msg2->header->client.timeout_ms;
-    if (phash) *phash = msg2->header->client.timeout_ms;
+    if (phash) *phash = msg2->header->client.hash;
 }
 
 DSN_API dsn_message_t dsn_msg_create_response(dsn_message_t request)
@@ -279,6 +284,33 @@ message_ex* message_ex::create_receive_message(blob& data)
     return msg;
 }
 
+message_ex* message_ex::copy()
+{
+    message_ex* msg = new message_ex();
+    msg->from_address = from_address;
+    msg->to_address = to_address;
+    msg->local_rpc_code = local_rpc_code;
+    msg->buffers = buffers;
+
+    // received message
+    if (this->_is_read)
+    {
+        // header is within buffer
+        msg->header = header;
+    }
+
+    // send message
+    else
+    {
+        // header is within buffer
+        msg->header = header;
+
+        msg->server_address = server_address;
+    }
+
+    return msg;
+}
+
 message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_milliseconds, int hash)
 {
     message_ex* msg = new message_ex();
@@ -460,7 +492,7 @@ void* message_ex::rw_ptr(size_t offset_begin)
     for (int i = 0; i < i_max; i++)
     {
         size_t c_length = (size_t)(this->buffers[i].length());
-        if (offset_begin <= c_length)
+        if (offset_begin < c_length)
         {
             return (void*)(this->buffers[i].data() + offset_begin);
         }

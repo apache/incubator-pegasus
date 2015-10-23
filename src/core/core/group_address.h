@@ -26,6 +26,7 @@
 # pragma once
 
 # include <dsn/cpp/address.h>
+# include <algorithm> // for std::find()
 
 namespace dsn
 {
@@ -40,7 +41,7 @@ namespace dsn
 
         dsn_group_t handle() const { return (dsn_group_t)this; }
         const std::vector<rpc_address>& members() const { return _members; }
-        rpc_address random_member() const { return _members[dsn_random32(0, (uint32_t)_members.size() - 1)]; }
+        rpc_address random_member() const { return _members.empty() ? _invalid : _members[dsn_random32(0, (uint32_t)_members.size() - 1)]; }
         rpc_address next(rpc_address current) const;
         rpc_address leader() const { return _leader_index >= 0 ? _members[_leader_index] : _invalid; };
         void leader_forward();
@@ -54,7 +55,7 @@ namespace dsn
         int         _leader_index;
         std::string _name;
         rpc_address _group_address;
-        rpc_address _invalid;
+        static const rpc_address _invalid;
     };
 
     // ------------------ inline implementation --------------------

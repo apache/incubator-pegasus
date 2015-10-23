@@ -46,21 +46,26 @@
 
 # endif
 
+namespace dsn
+{
+    const rpc_address rpc_group_address::_invalid;
+}
+
 static void net_init()
 {
+#ifdef _WIN32
     static std::once_flag flag;
     static bool flag_inited = false;
     if (!flag_inited)
     {
         std::call_once(flag, [&]()
         {
-#ifdef _WIN32
             WSADATA wsaData;
             WSAStartup(MAKEWORD(2, 2), &wsaData);
-#endif
             flag_inited = true;
         });
     }
+#endif
 }
 
 // name to ip etc.
@@ -135,19 +140,25 @@ DSN_API const char*   dsn_address_to_string(dsn_address_t addr)
 {
     char* p = dsn::tls_dsn.scatch_buffer;
     auto sz = sizeof(dsn::tls_dsn.scatch_buffer);
+    struct in_addr net_addr;
+# ifdef _WIN32
+    char* ip_str;
+# else
+    int ip_len;
+# endif
 
     switch (addr.u.v4.type)
     {
     case HOST_TYPE_IPV4:
-        snprintf_p(
-            p, sz,
-            "%u.%u.%u.%u:%hu",
-            ((uint32_t)addr.u.v4.ip >> 24) & 0xff,
-            ((uint32_t)addr.u.v4.ip >> 16) & 0xff,
-            ((uint32_t)addr.u.v4.ip >> 8) & 0xff,
-            ((uint32_t)addr.u.v4.ip) & 0xff,
-            (uint16_t)addr.u.v4.port
-            );
+        net_addr.s_addr = htonl((uint32_t)addr.u.v4.ip);
+# ifdef _WIN32
+        ip_str = inet_ntoa(net_addr);
+        snprintf_p(p, sz, "%s:%hu", ip_str, (uint16_t)addr.u.v4.port);
+# else
+        inet_ntop(AF_INET, &net_addr, p, sz);
+        ip_len = strlen(p);
+        snprintf_p(p + ip_len, sz - ip_len, ":%hu", (uint16_t)addr.u.v4.port);
+# endif
         break;
     case HOST_TYPE_URI:
         p = (char*)(uintptr_t)addr.u.uri.uri;
@@ -246,6 +257,13 @@ DSN_API dsn_address_t dsn_group_next(dsn_group_t g, dsn_address_t ep)
     auto grp = (::dsn::rpc_group_address*)(g);
     ::dsn::rpc_address addr(ep);
     return grp->next(addr).c_addr();
+}
+
+DSN_API dsn_address_t dsn_group_forward_leader(dsn_group_t g)
+{
+    auto grp = (::dsn::rpc_group_address*)(g);
+    grp->leader_forward();
+    return grp->leader().c_addr();
 }
 
 DSN_API bool dsn_group_remove(dsn_group_t g, dsn_address_t ep)

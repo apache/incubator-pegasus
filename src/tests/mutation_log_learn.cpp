@@ -26,7 +26,7 @@ TEST(replication, log_learn)
             50,
             1,
             false,
-            false
+            true
             );
 
         mlog->initialize(logp.c_str());
@@ -58,10 +58,7 @@ TEST(replication, log_learn)
 
         decree durable_decree = lp;
 
-        mdecrees[gpid] = durable_decree;
-        mdecrees2[gpid] = durable_decree + 4;
-
-        mlog->garbage_collection(mdecrees, mdecrees2);
+        mlog->garbage_collection_when_as_commit_logs(gpid, durable_decree);
         mlog->close();
         
         // reading logs
@@ -70,7 +67,7 @@ TEST(replication, log_learn)
             50,
             1,
             true,
-            false
+            true
             );
 
         mlog->initialize(logp.c_str());

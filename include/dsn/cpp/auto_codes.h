@@ -30,6 +30,8 @@
 # include <dsn/cpp/autoref_ptr.h>
 # include <memory>
 
+# define TRACK_ERROR_CODE 1 
+
 namespace dsn 
 {
     typedef void(*safe_handle_release)(void*);
@@ -208,7 +210,7 @@ namespace dsn
             _internal_code = dsn_error_register(name);
 
             dassert (name, "name for an error code cannot be empty");
-    # ifdef _DEBUG
+    # ifdef TRACK_ERROR_CODE
             _used = true;
     # endif
         }
@@ -217,7 +219,7 @@ namespace dsn
         {
             _internal_code = 0;
 
-    # ifdef _DEBUG
+    # ifdef TRACK_ERROR_CODE
             _used = true;
     # endif
         }
@@ -226,7 +228,7 @@ namespace dsn
         {
             _internal_code = err;
 
-# ifdef _DEBUG
+# ifdef TRACK_ERROR_CODE
             _used = false;
 # endif
         }
@@ -234,7 +236,7 @@ namespace dsn
         error_code(const error_code& err) 
         {
             _internal_code = err._internal_code;
-    # ifdef _DEBUG
+    # ifdef TRACK_ERROR_CODE
             _used = false;
             err._used = true;
     # endif
@@ -242,7 +244,7 @@ namespace dsn
 
         const char* to_string() const
         {
-    # ifdef _DEBUG
+    # ifdef TRACK_ERROR_CODE
             _used = true;
     # endif
             return dsn_error_to_string(_internal_code);
@@ -251,7 +253,7 @@ namespace dsn
         error_code& operator=(const error_code& source)
         {
             _internal_code = source._internal_code;
-    # ifdef _DEBUG
+    # ifdef TRACK_ERROR_CODE
             _used = false;
             source._used = true;
     # endif
@@ -260,7 +262,7 @@ namespace dsn
 
         bool operator == (const error_code& r)
         {
-    # ifdef _DEBUG
+    # ifdef TRACK_ERROR_CODE
             _used = true;
             r._used = true;
     # endif
@@ -273,7 +275,7 @@ namespace dsn
         }
        
     
-    # ifdef _DEBUG
+    # ifdef TRACK_ERROR_CODE
         ~error_code()
         {
             // in cases where error code is std::bind-ed as task callbacks,
@@ -292,7 +294,7 @@ namespace dsn
     
         dsn_error_t get() const
         {
-    # ifdef _DEBUG
+    # ifdef TRACK_ERROR_CODE
             _used = true;
     # endif
             return _internal_code;
@@ -300,7 +302,7 @@ namespace dsn
 
         operator dsn_error_t() const
         {
-    # ifdef _DEBUG
+    # ifdef TRACK_ERROR_CODE
             _used = true;
     # endif
             return _internal_code;
@@ -308,13 +310,13 @@ namespace dsn
 
         void end_tracking() const
         {
-    # ifdef _DEBUG
+    # ifdef TRACK_ERROR_CODE
             _used = true;
     # endif
         }
 
     private:
-    # ifdef _DEBUG
+    # ifdef TRACK_ERROR_CODE
         mutable bool _used;
     # endif
         dsn_error_t _internal_code;

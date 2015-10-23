@@ -80,14 +80,24 @@ static struct _all_info_
 //
 //------------------------------------------------------------------------------
 struct dsn_error_placeholder {};
+class error_code_mgr : public ::dsn::utils::customized_id_mgr < dsn_error_placeholder >
+{
+public:
+    error_code_mgr()
+    {
+        auto err = register_id("ERR_OK"); // make sure ERR_OK is always registered first
+        dassert(0 == err, "");
+    }
+};
+
 DSN_API dsn_error_t dsn_error_register(const char* name)
 {
-    return static_cast<dsn_error_t>(::dsn::utils::customized_id_mgr<dsn_error_placeholder>::instance().register_id(name));
+    return static_cast<dsn_error_t>(error_code_mgr::instance().register_id(name));
 }
 
 DSN_API const char* dsn_error_to_string(dsn_error_t err)
 {
-    return ::dsn::utils::customized_id_mgr<dsn_error_placeholder>::instance().get_name(static_cast<int>(err));
+    return error_code_mgr::instance().get_name(static_cast<int>(err));
 }
 
 // use ::dsn::threadpool_code2; for parsing purpose
@@ -118,7 +128,7 @@ DSN_API int dsn_threadpool_code_max()
     return ::dsn::utils::customized_id_mgr<::dsn::threadpool_code2_>::instance().max_value();
 }
 
-DSN_API int dsn_threadpool_get_current_tid() 
+DSN_API int dsn_threadpool_get_current_tid()
 {
     return ::dsn::utils::get_current_tid();
 }
@@ -139,6 +149,7 @@ DSN_API dsn_task_code_t dsn_task_code_register(const char* name, dsn_task_type_t
 DSN_API void dsn_task_code_query(dsn_task_code_t code, dsn_task_type_t *ptype, dsn_task_priority_t *ppri, dsn_threadpool_code_t *ppool)
 {
     auto sp = ::dsn::task_spec::get(code);
+    dassert(sp != nullptr, "");
     if (ptype) *ptype = sp->type;
     if (ppri) *ppri = sp->priority;
     if (ppool) *ppool = sp->pool_code;
@@ -147,12 +158,14 @@ DSN_API void dsn_task_code_query(dsn_task_code_t code, dsn_task_type_t *ptype, d
 DSN_API void dsn_task_code_set_threadpool(dsn_task_code_t code, dsn_threadpool_code_t pool)
 {
     auto sp = ::dsn::task_spec::get(code);
+    dassert(sp != nullptr, "");
     sp->pool_code = pool;
 }
 
 DSN_API void dsn_task_code_set_priority(dsn_task_code_t code, dsn_task_priority_t pri)
 {
     auto sp = ::dsn::task_spec::get(code);
+    dassert(sp != nullptr, "");
     sp->priority = pri;
 }
 
@@ -735,7 +748,7 @@ DSN_API bool dsn_run_config(const char* config, bool sleep_after_init)
 DSN_API void dsn_terminate()
 {
 # if defined(_WIN32)
-    ::ExitProcess(0);
+    ::TerminateProcess(::GetCurrentProcess(), 0);
 # else
     kill(getpid(), SIGKILL);
 # endif
@@ -875,9 +888,15 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
     dsn_all.config_completed = false;
     dsn_all.tool = nullptr;
     dsn_all.engine = &::dsn::service_engine::instance();
-    dsn_all.config.reset(new ::dsn::configuration(config_file, config_arguments));
+    dsn_all.config.reset(new ::dsn::configuration());
     dsn_all.memory = nullptr;
     dsn_all.magic = 0xdeadbeef;
+
+    if (!dsn_all.config->load(config_file, config_arguments))
+    {
+        printf("Fail to load config file %s\n", config_file);
+        return false;
+    }
 
     for (int i = 0; i <= dsn_task_code_max(); i++)
     {
@@ -905,7 +924,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
 #endif
         getchar();
     }
-    
+
     // setup coredump
 	auto& coredump_dir = spec.coredump_dir;
 	dassert(!dsn::utils::filesystem::file_exists(coredump_dir), "%s should not be a file.", coredump_dir.c_str());

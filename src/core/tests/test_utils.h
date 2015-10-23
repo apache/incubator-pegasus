@@ -77,7 +77,6 @@ public:
                 dsn_rpc_forward(message, next_addr.c_addr());
             }
             else {
-                std::string address = next_addr.to_string();
                 reply(message, std::string(next_addr.to_string()));
             }
         }

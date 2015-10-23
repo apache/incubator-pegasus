@@ -8,6 +8,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <cerrno>
 
 
 #if defined(_WIN32)
@@ -152,6 +153,7 @@ public:
  
     bool wait(int timeout_milliseconds)
     {
+        assert(timeout_milliseconds >= 0);
         struct timespec ts;
         clock_gettime(CLOCK_REALTIME, &ts);
         ts.tv_sec += timeout_milliseconds / 1000;
@@ -234,19 +236,18 @@ public:
     // Be careful! Should check the return value, and can consume iff the return value is true.
     bool wait(int timeout_milliseconds)
     {
-        if (tryWait())
-            return true;
         int oldCount = m_count.fetch_sub(1, std::memory_order_acquire);
         if (oldCount > 0)
             return true;
         if (m_sema.wait(timeout_milliseconds))
             return true;
-        signal(); // restore the substracted count
+        m_count.fetch_add(1, std::memory_order_release); // restore the substracted count
         return false;
     }
 
     void signal(int count = 1)
     {
+        assert(count >= 1);
         int oldCount = m_count.fetch_add(count, std::memory_order_release);
         int toRelease = -oldCount < count ? -oldCount : count;
         if (toRelease > 0)

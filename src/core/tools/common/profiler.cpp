@@ -111,10 +111,13 @@ namespace dsn {
         // return true means continue, otherwise early terminate with task::set_error_code
         static void profiler_on_aio_call(task* caller, aio_task* callee)
         {
-            auto& prof = s_spec_profilers[caller->spec().code];
-            if (prof.collect_call_count)
+            if (nullptr != caller)
             {
-                prof.call_counts[callee->spec().code]++;
+                auto& prof = s_spec_profilers[caller->spec().code];
+                if (prof.collect_call_count)
+                {
+                    prof.call_counts[callee->spec().code]++;
+                }
             }
 
             // time disk io starts
@@ -133,10 +136,13 @@ namespace dsn {
         // return true means continue, otherwise early terminate with task::set_error_code
         static void profiler_on_rpc_call(task* caller, message_ex* req, rpc_response_task* callee)
         {
-            auto& prof = s_spec_profilers[caller->spec().code];
-            if (prof.collect_call_count)
+            if (nullptr != caller)
             {
-                prof.call_counts[req->local_rpc_code]++;
+                auto& prof = s_spec_profilers[caller->spec().code];
+                if (prof.collect_call_count)
+                {
+                    prof.call_counts[req->local_rpc_code]++;
+                }
             }
 
             // time rpc starts

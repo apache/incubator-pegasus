@@ -45,20 +45,16 @@ typedef void (*config_file_change_notifier)(configuration_ptr);
 class configuration
 {
 public:
-    template <typename T> static configuration* create(const char* file_name)
-    {
-        return new T(file_name);
-    }
+    configuration();
 
-public:
+    ~configuration();
+
     // arguments: k1=v1;k2=v2;k3=v3; ...
     // e.g.,
     //    port = %port%
     //    timeout = %timeout%
     // arguments: port=23466;timeout=1000
-    configuration(const char* file_name, const char* arguments = nullptr);
-
-    ~configuration(void);
+    bool load(const char* file_name, const char* arguments = nullptr);
 
     void get_all_sections(std::vector<std::string>& sections);
 
@@ -194,8 +190,8 @@ template<> inline long configuration::get_value<long>(const char* section, const
     {
         if (strlen(value) > 2 && (value[0] == '0' && (value[1] == 'x' || value[1] == 'X')))
         {
-            int v;
-            sscanf(value, "0x%x", &v);
+            long v;
+            sscanf(value, "0x%lx", &v);
             return v;
         }
         else
