@@ -124,7 +124,7 @@ namespace dsn
             struct epoll_event        _events[IO_LOOPER_MAX_EVENT_COUNT];
 # elif defined(__APPLE__) || defined(__FreeBSD__)
             struct kevent             _events[IO_LOOPER_MAX_EVENT_COUNT];
-            typedef std::unordered_set<int> kqueue_filters;
+            typedef std::unordered_set<short> kqueue_filters;
             kqueue_filters            _filters;
 # endif
 

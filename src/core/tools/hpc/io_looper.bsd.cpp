@@ -60,10 +60,9 @@ namespace dsn
             )
         {
             int fd;
-            int filter;
-            int filters[2];
+            short filter;
             int nr_filters;
-            struct kevent e;           
+            struct kevent e[2];
 
             if (cb == nullptr)
             {
@@ -71,10 +70,10 @@ namespace dsn
                 return ERR_INVALID_PARAMETERS;
             }
 
-            filter = (int)events;
+            filter = (short)events;
             if (_filters.find(filter) == _filters.end())
             {
-                derror("The filter %d is unsupported.", filter);
+                derror("The filter %hd is unsupported.", filter);
                 return ERR_INVALID_PARAMETERS;
             }
 
@@ -121,42 +120,26 @@ namespace dsn
             
             if (filter == EVFILT_READ_WRITE)
             {
-                filters[0] = EVFILT_READ;
-                filters[1] = EVFILT_WRITE;
+                e[0].filter = EVFILT_READ;
+                e[1].filter = EVFILT_WRITE;
                 nr_filters = 2;
             }
             else
             {
-                filters[0] = filter;
+                e[0].filter = filter;
                 nr_filters = 1;
             }
 
             for (int i = 0; i < nr_filters; i++)
             {
-                EV_SET(&e, fd, filters[i], (EV_ADD | EV_ENABLE | EV_CLEAR), 0, 0, (void*)cb0);
+                EV_SET(&e[i], fd, e[i].filter, (EV_ADD | EV_ENABLE | EV_CLEAR), 0, 0, (void*)cb0);
+            }
 
-                if (kevent(_io_queue, &e, 1, nullptr, 0, nullptr) == -1)
-                {
-                    derror("bind io handler to kqueue failed, err = %s, fd = %d", strerror(errno), fd);
-
-                    if (ctx)
-                    {
-                        utils::auto_lock<utils::ex_lock_nr_spin> l(_io_sessions_lock);
-                        auto r = _io_sessions.erase(cb);
-                        dassert(r > 0, "the callback must be present");
-                    }
-
-                    for (int j = 0; j < i; j++)
-                    {
-                        EV_SET(&e, fd, filters[j], EV_DELETE, 0, 0, nullptr);
-                        if (kevent(_io_queue, &e, 1, nullptr, 0, nullptr) == -1)
-                        {
-                            derror("Unregister kqueue failed, filter = %d, err = %s, fd = %d", filters[j], strerror(errno), fd);
-                        }
-                    }
-
-                    return ERR_BIND_IOCP_FAILED;
-                }
+            if (kevent(_io_queue, e, nr_filters, nullptr, 0, nullptr) == -1)
+            {
+                derror("bind io handler to kqueue failed, err = %s, fd = %d", strerror(errno), fd);
+                unbind_io_handle(handle, cb);
+                return ERR_BIND_IOCP_FAILED;
             }
 
             return ERR_OK;
@@ -165,25 +148,39 @@ namespace dsn
         error_code io_looper::unbind_io_handle(dsn_handle_t handle, io_loop_callback* cb)
         {
             int fd = (int)(intptr_t)handle;
-            struct kevent e;
+            int nr_filters;
+            struct kevent e[2];
             int cnt = 0;
+            bool succ = true;
 
-            // in case the fd is already invalid
-            if (cb)
+            if (fd != IO_LOOPER_USER_NOTIFICATION_FD)
             {
-                utils::auto_lock<utils::ex_lock_nr_spin> l(_io_sessions_lock);
-                _io_sessions.erase(cb);
+                if (fd < 0)
+                {
+                    derror("The fd %d is less than 0.", fd);
+                    return ERR_INVALID_PARAMETERS;
+                }
+
+                e[0].filter = EVFILT_READ;
+                e[1].filter = EVFILT_WRITE;
+                nr_filters = 2;
+            }
+            else
+            {
+                e[0].filter = EVFILT_USER;
+                nr_filters = 1;
             }
 
-            for (auto filter : _filters)
+            for (int i = 0; i < nr_filters; i++)
             {
-                EV_SET(&e, fd, filter, EV_DELETE, 0, 0, nullptr);
-                if (kevent(_io_queue, &e, 1, nullptr, 0, nullptr) == -1)
+                EV_SET(&e[i], fd, e[i].filter, EV_DELETE, 0, 0, nullptr);
+
+                if (kevent(_io_queue, &e[i], 1, nullptr, 0, nullptr) == -1)
                 {
                     if (errno != ENOENT)
                     {
                         derror("unbind io handler to kqueue failed, err = %s, fd = %d", strerror(errno), fd);
-                        return ERR_BIND_IOCP_FAILED;
+                        succ = false;
                     }
                 }
                 else
@@ -192,13 +189,20 @@ namespace dsn
                 }
             }
 
-            if (cnt == 0)
+            if ((cnt == 0) && succ)
             {
-                derror("fd = %d has not been binded yet.", fd);
-                return ERR_BIND_IOCP_FAILED;
+                dwarn("fd = %d has not been bound yet.", fd);
             }
 
-            return ERR_OK;
+
+            // in case the fd is already invalid
+            if (cb)
+            {
+                utils::auto_lock<utils::ex_lock_nr_spin> l(_io_sessions_lock);
+                _io_sessions.erase(cb);
+            }
+
+            return (succ ? ERR_OK : ERR_BIND_IOCP_FAILED );
         }
 
         void io_looper::notify_local_execution()
