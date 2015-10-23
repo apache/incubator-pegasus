@@ -42,8 +42,11 @@
 # include <sys/event.h>
 # include <sys/time.h>
 # include <unordered_set>
+# ifndef EVFILT_NONE
+# define EVFILT_NONE (-EVFILT_SYSCOUNT - 10)
+# endif
 # ifndef EVFILT_READ_WRITE
-# define EVFILT_READ_WRITE (-EVFILT_SYSCOUNT - 10)
+# define EVFILT_READ_WRITE (EVFILT_NONE - 1)
 # endif
 # endif
 

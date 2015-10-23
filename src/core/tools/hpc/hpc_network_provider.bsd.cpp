@@ -387,7 +387,7 @@ namespace dsn
             // shutdown or send/recv error
             if (((e.flags & EV_ERROR) != 0) || ((e.flags & EV_EOF) != 0))
             {
-                dinfo("(s = %d) epoll failure on %s, events = 0x%x",
+                dinfo("(s = %d) kevent failure on %s, events = 0x%x",
                     _socket,
                     _remote_addr.to_string(),
                     e.filter
@@ -399,7 +399,7 @@ namespace dsn
             //  send
             if (e.filter == EVFILT_WRITE)
             {
-                dinfo("(s = %d) kqueue EVFILT_WRITE on %s, events = 0x%x",
+                dinfo("(s = %d) kevent EVFILT_WRITE on %s, events = 0x%x",
                     _socket,
                     _remote_addr.to_string(),
                     e.filter
@@ -411,7 +411,7 @@ namespace dsn
             // recv
             if (e.filter == EVFILT_READ)
             {
-                dinfo("(s = %d) kqueue EVFILT_READ on %s, events = 0x%x",
+                dinfo("(s = %d) kevent EVFILT_READ on %s, events = 0x%x",
                     _socket,
                     _remote_addr.to_string(),
                     e.filter 

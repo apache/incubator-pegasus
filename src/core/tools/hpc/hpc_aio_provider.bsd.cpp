@@ -144,12 +144,6 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
 
     aio->this_ = this;
 
-    // set up callback
-    aio->cb.aio_sigevent.sigev_notify = SIGEV_KEVENT;
-    aio->cb.aio_sigevent.sigev_notify_kqueue = (int)(uintptr_t)_looper->native_handle();
-    aio->cb.aio_sigevent.sigev_notify_kevent_flags = EV_CLEAR;
-    aio->cb.aio_sigevent.sigev_value.sival_ptr = &_callback;
-
     if (!async)
     {
         aio->evt = new utils::notify_event();
@@ -161,17 +155,22 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
     {
     case AIO_Read:
         io_prep_pread(&aio->cb, static_cast<int>((ssize_t)aio->file), aio->buffer, aio->buffer_size, aio->file_offset);
-        r = aio_read(&aio->cb);
         break;
     case AIO_Write:
         io_prep_pwrite(&aio->cb, static_cast<int>((ssize_t)aio->file), aio->buffer, aio->buffer_size, aio->file_offset);
-        r = aio_write(&aio->cb);
         break;
     default:
         dassert(false, "unknown aio type %u", static_cast<int>(aio->type));
         break;
     }
 
+    // set up callback
+    aio->cb.aio_sigevent.sigev_notify = SIGEV_KEVENT;
+    aio->cb.aio_sigevent.sigev_notify_kqueue = (int)(uintptr_t)_looper->native_handle();
+    aio->cb.aio_sigevent.sigev_notify_kevent_flags = EV_CLEAR;
+    aio->cb.aio_sigevent.sigev_value.sival_ptr = &_callback;
+
+    r = (aio->type == AIO_Read) ? aio_read(&aio->cb) : aio_write(&aio->cb);
     if (r != 0)
     {
         derror("file op failed, err = %d (%s). On FreeBSD, you may need to load"
@@ -211,33 +210,32 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
 void hpc_aio_provider::complete_aio(struct aiocb* io)
 {
     posix_disk_aio_context* ctx = CONTAINING_RECORD(io, posix_disk_aio_context, cb);
+    error_code ec;
+    int bytes = 0;
 
     int err = aio_error(&ctx->cb);
-    if (err != EINPROGRESS)
+    if (err != 0)
     {
-        size_t bytes = aio_return(&ctx->cb); // from e.g., read or write
-        error_code ec;
-        if (err != 0)
-        {
-            derror("aio error, err = %s", strerror(err));
-            ec = ERR_FILE_OPERATION_FAILED;
-        }
-        else
-        {
-            ec = bytes > 0 ? ERR_OK : ERR_HANDLE_EOF;
-        }
-        
-        if (!ctx->evt)
-        {
-            aio_task* aio(ctx->tsk);
-            ctx->this_->complete_io(aio, ec, bytes);
-        }
-        else
-        {
-            ctx->err = ec;
-            ctx->bytes = bytes;
-            ctx->evt->notify();
-        }
+        derror("aio error, err = %s", strerror(err));
+        ec = ERR_FILE_OPERATION_FAILED;
+    }
+    else
+    {
+        bytes = aio_return(&ctx->cb); // from e.g., read or write
+        dassert(bytes >= 0, "bytes = %d.", bytes);
+        ec = bytes > 0 ? ERR_OK : ERR_HANDLE_EOF;
+    }
+
+    if (!ctx->evt)
+    {
+        aio_task* aio(ctx->tsk);
+        ctx->this_->complete_io(aio, ec, bytes);
+    }
+    else
+    {
+        ctx->err = ec;
+        ctx->bytes = bytes;
+        ctx->evt->notify();
     }
 }
 
