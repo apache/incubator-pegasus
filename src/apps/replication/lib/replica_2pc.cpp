@@ -111,15 +111,8 @@ void replica::init_prepare(mutation_ptr& mu)
     }    
     mu->set_left_potential_secondary_ack_count(count);
 
-    // it is possible to do commit here when logging is not required for acking prepare.
-    // however, it is only possible when replica count == 1 at this moment in the
-    // replication group, and we don't want to do this as it is too fragile now.
-    // do_possible_commit_on_primary(mu);
-
-    // local log
-    if (nullptr == _stub->_log || mu->is_logged())
+    if (mu->is_logged())
     {
-        if (!mu->is_logged()) mu->set_logged();
         do_possible_commit_on_primary(mu);
     }
     else
@@ -244,8 +237,8 @@ void replica::on_prepare(dsn_message_t request)
 
     else if (PS_POTENTIAL_SECONDARY == status())
     {
-        if (_potential_secondary_states.learning_status != LearningWithPrepare
-            && _potential_secondary_states.learning_status != LearningSucceeded)
+        if (_potential_secondary_states.learning_status == LearningWithoutPrepare
+            || _potential_secondary_states.learning_status == LearningFailed)
         {
             ddebug( 
                 "%s: mutation %s on_prepare to %s skipped, learnings state = %s",
@@ -292,27 +285,13 @@ void replica::on_prepare(dsn_message_t request)
         dassert (mu->data.header.decree <= last_committed_decree() + _options->staleness_for_commit, "");
     }
 
-    // ack without logging
-    if (nullptr == _stub->_log)
-    {
-        mu->set_logged();
-        ack_prepare_message(err, mu);
-    }
-    
-    // write log
-    else
-    {
-        dassert(mu->log_task() == nullptr, "");
-
-        mu->log_task() = _stub->_log->append(mu,
-            LPC_WRITE_REPLICATION_LOG,
-            this,
-            std::bind(&replica::on_append_log_completed, this, mu, std::placeholders::_1, std::placeholders::_2),
-            gpid_to_hash(get_gpid())
-            );
-
-        dassert(mu->log_task() != nullptr, "");
-    }
+    dassert(mu->log_task() == nullptr, "");
+    mu->log_task() = _stub->_log->append(mu,
+        LPC_WRITE_REPLICATION_LOG,
+        this,
+        std::bind(&replica::on_append_log_completed, this, mu, std::placeholders::_1, std::placeholders::_2),
+        gpid_to_hash(get_gpid())
+        );
 }
 
 void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t size)
@@ -364,6 +343,23 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
     if (err != ERR_OK)
     {
         _stub->handle_log_failure(err);
+    }
+
+    // write local private log if necessary
+    else if (_private_log)
+    {
+        _private_log->append(mu,
+            LPC_WRITE_REPLICATION_LOG,
+            this,
+            [this](error_code err, size_t size)
+        {
+            if (err != ERR_OK)
+            {
+                handle_local_failure(err);
+            }
+        },
+            gpid_to_hash(get_gpid())
+            );
     }
 }
 

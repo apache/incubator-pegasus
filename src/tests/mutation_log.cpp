@@ -20,8 +20,7 @@ TEST(replication, log_file)
     log_file_ptr lf = log_file::create_write(
         "./",
         1,
-        offset,
-        10
+        offset
         );
 
     // write header + data block
@@ -80,7 +79,6 @@ TEST(replication, log_file)
         lf->read_header(reader);
 
         EXPECT_TRUE(lf->is_right_header());
-        EXPECT_TRUE(lf->header().max_staleness_for_commit == 10);
         EXPECT_TRUE(lf->header().log_buffer_size_bytes == 1024);
 
         std::string ss;
@@ -123,18 +121,14 @@ TEST(replication, mutation_log)
 
     // writing logs
     mutation_log_ptr mlog = new mutation_log(
+        logp,
+        false,
         1,
-        50,
-        4,
-        true,
-        false
+        4
         );
 
-    mlog->initialize(logp.c_str());
-    mlog->start_write_service(
-        mdecrees,
-        10
-        );
+    auto err = mlog->open(nullptr);
+    EXPECT_TRUE(err == ERR_OK);
 
     for (int i = 0; i < 1000; i++)
     {
@@ -161,17 +155,14 @@ TEST(replication, mutation_log)
 
     // reading logs
     mlog = new mutation_log(
+        logp,
+        false,
         1,
-        50,
-        4,
-        true,
-        false
+        4
         );
 
-    mlog->initialize(logp.c_str());
-
     int mutation_index = -1;
-    mlog->replay(        
+    mlog->open(        
         [&mutations, &mutation_index](mutation_ptr mu)
         {
             mutation_ptr wmu = mutations[++mutation_index];
@@ -185,10 +176,12 @@ TEST(replication, mutation_log)
                 (const void*)mu->data.updates[0].data(),
                 mu->data.updates[0].length()) == 0
                 );
+            return true;
         }
         );
     EXPECT_TRUE(mutation_index + 1 == (int)mutations.size());
- 
+    mlog->close();
+
     // clear all
     utils::filesystem::remove_path(logp);
 }

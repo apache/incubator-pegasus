@@ -38,6 +38,21 @@
 namespace dsn { namespace replication {
 
 class mutation;
+
+class replication_app_info
+{
+public:
+    int32_t magic;
+    int32_t crc;
+    ballot  init_ballot;
+    decree  init_decree;
+    int64_t init_offset_in_shared_log;
+
+public:
+    error_code load(const char* file);
+    error_code store(const char* file);
+};
+
 class replication_app_base
 {
 public:
@@ -154,9 +169,13 @@ private:
 private:
     // routines for replica internal usage
     friend class replica;
+    friend class replica_stub;
+    error_code open_internal(replica* r, bool create_new, int64_t log_offset);
     error_code write_internal(mutation_ptr& mu);
     void       dispatch_rpc_call(int code, binary_reader& reader, dsn_message_t response);
-    
+    replication_app_info& init_info() { return _info; }
+    error_code save_init_info(replica* r, int64_t log_offset);
+
 private:
     std::string _dir_data;
     std::string _dir_learn;
@@ -164,6 +183,7 @@ private:
     std::unordered_map<int, std::function<void(binary_reader&, dsn_message_t)> > _handlers;
     int         _physical_error; // physical error (e.g., io error) indicates the app needs to be dropped
     bool        _is_delta_state_learning_supported;
+    replication_app_info _info;
 
 protected:
     std::atomic<decree> _last_committed_decree;

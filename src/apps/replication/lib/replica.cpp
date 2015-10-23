@@ -86,7 +86,7 @@ void replica::init_state()
     _config.status = PS_INACTIVE;
     _primary_states.membership.ballot = 0;
     _last_config_change_time_ms = now_ms();
-    _commit_log = nullptr;
+    _private_log = nullptr;
 }
 
 replica::~replica(void)
@@ -136,38 +136,45 @@ void replica::response_client_message(dsn_message_t request, error_code error, d
     reply(request, error);
 }
 
-error_code replica::check_and_fix_commit_log_completeness()
-{
-    error_code err = ERR_OK;
-
-    auto mind = _commit_log->min_decree(get_gpid());
-    if (!(mind <= last_durable_decree()))
-    {
-        err = ERR_INCOMPLETE_DATA;
-        derror("%s: commit log is incomplete (min/durable): %lld vs %lld",
-            name(),
-            mind,
-            last_durable_decree()
-            );
-
-        _commit_log->reset_as_commit_log(get_gpid(), _app->last_durable_decree());
-    }
-
-    mind = _commit_log->max_decree(get_gpid());
-    if (!(mind >= _app->last_committed_decree()))
-    {
-        err = ERR_INCOMPLETE_DATA;
-
-        derror("%s: commit log is incomplete (max/commit): %lld vs %lld",
-            name(),
-            mind,
-            _app->last_committed_decree()
-            );
-
-        _commit_log->reset_as_commit_log(get_gpid(), _app->last_durable_decree());
-    }
-    return err;
-}
+//error_code replica::check_and_fix_private_log_completeness()
+//{
+//    error_code err = ERR_OK;
+//
+//    auto mind = _private_log->max_gced_decree(get_gpid());
+//    if (_prepare_list->max_decree())
+//
+//    if (!(mind <= last_durable_decree()))
+//    {
+//        err = ERR_INCOMPLETE_DATA;
+//        derror("%s: private log is incomplete (gced/durable): %lld vs %lld",
+//            name(),
+//            mind,
+//            last_durable_decree()
+//            );
+//    }
+//    else
+//    {
+//        mind = _private_log->max_decree(get_gpid());
+//        if (!(mind >= _app->last_committed_decree()))
+//        {
+//            err = ERR_INCOMPLETE_DATA;
+//            derror("%s: private log is incomplete (max/commit): %lld vs %lld",
+//                name(),
+//                mind,
+//                _app->last_committed_decree()
+//                );
+//        }
+//    }
+//    
+//    if (ERR_INCOMPLETE_DATA == err)
+//    {
+//        _private_log->close(true);
+//        _private_log->open(nullptr);
+//        _private_log->set_private(get_gpid(), _app->last_durable_decree());
+//    }
+//    
+//    return err;
+//}
 
 void replica::check_state_completeness()
 {
@@ -175,15 +182,12 @@ void replica::check_state_completeness()
     dassert(max_prepared_decree() >= last_committed_decree(), "");
     dassert(last_committed_decree() >= last_durable_decree(), "");
 
-    if (nullptr != _stub->_log)
-    {
-        auto mind = _stub->_log->min_decree(get_gpid());
-        dassert(mind - _options->staleness_for_commit + 1 <= last_durable_decree(), "");
-    }
+    auto mind = _stub->_log->max_gced_decree(get_gpid());
+    dassert(mind <= last_durable_decree(), "");
 
-    if (_commit_log != nullptr)
+    if (_private_log != nullptr)
     {   
-        auto mind = _commit_log->min_decree(get_gpid());
+        auto mind = _private_log->max_gced_decree(get_gpid());
         dassert(mind <= last_durable_decree(), "");
     }
 }
@@ -193,33 +197,24 @@ void replica::execute_mutation(mutation_ptr& mu)
     dassert (nullptr != _app, "");
 
     error_code err = ERR_OK;
-    bool write = true;
     decree d = mu->data.header.decree;
 
     switch (status())
     {
     case PS_INACTIVE:
         if (_app->last_committed_decree() + 1 == d)
+        {
             err = _app->write_internal(mu);
+        }
         else
         {
-            //
-            // commit logs may be lost due to failure
-            // in this case, we fix commit logs using prepare log
-            // so that _app->last_committed_decree() == _commit_log->max_decree(gpid)
-            //
-            if (_commit_log && d == _commit_log->max_decree(get_gpid()) + 1)
-            {
-                dinfo("%s: commit log is incomplete (no %s), fix it by rewrite ...",
-                    name(),
-                    mu->name()
-                    );
-                write = true;
-            }   
-            else
-                write = false;
-            dassert(d <= _app->last_committed_decree(), "");
-        }   
+            ddebug(
+                "%s: mutation %s commit to %s skipped, app.last_committed_decree = %lld",
+                name(), mu->name(),
+                enum_to_string(status()),
+                _app->last_committed_decree()
+                );
+        }
         break;
     case PS_PRIMARY:
         {
@@ -238,25 +233,40 @@ void replica::execute_mutation(mutation_ptr& mu)
         }
         else
         {
-            // make sure commit log saves the state
+            ddebug(
+                "%s: mutation %s commit to %s skipped, app.last_committed_decree = %lld",
+                name(), mu->name(),
+                enum_to_string(status()),
+                _app->last_committed_decree()
+                );
+
+            // make sure private log saves the state
             // catch-up will be done later after checkpoint task is fininished
-            dassert(_commit_log != nullptr, "");
+            dassert(_private_log != nullptr, "");            
         }
         break;
     case PS_POTENTIAL_SECONDARY:
-        if (d == _app->last_committed_decree() + 1)
+        if (_potential_secondary_states.learning_status == LearningSucceeded ||
+            _potential_secondary_states.learning_status == LearningWithPrepareTransient)
         {
-            dassert(_potential_secondary_states.learning_status >= LearningWithPrepare, "");
+            dassert(_app->last_committed_decree() + 1 == d, "");
             err = _app->write_internal(mu);
         }
         else
         {
-            write = false;
-            dassert(d <= _app->last_committed_decree(), "");
+            // prepare also happens with LearningWithPrepare, in this case
+            // make sure private log saves the state,
+            // catch-up will be done later after the checkpoint task is finished
+
+            ddebug(
+                "%s: mutation %s commit to %s skipped, app.last_committed_decree = %lld",
+                name(), mu->name(),
+                enum_to_string(status()),
+                _app->last_committed_decree()
+                );
         }
         break;
     case PS_ERROR:
-        write = false;
         break;
     }
     
@@ -265,23 +275,6 @@ void replica::execute_mutation(mutation_ptr& mu)
     if (err != ERR_OK)
     {
         handle_local_failure(err);
-    }
-
-    // write local commit log if necessary
-    else if (write && _commit_log)
-    {
-        _commit_log->append(mu,
-            LPC_WRITE_REPLICATION_LOG,
-            this,
-            [this](error_code err, size_t size)
-            {
-                if (err != ERR_OK)
-                {
-                    handle_local_failure(err);
-                }
-            },
-            gpid_to_hash(get_gpid())
-            );
     }
 }
 
@@ -343,10 +336,10 @@ void replica::close()
     _secondary_states.cleanup();
     _potential_secondary_states.cleanup(true);
 
-    if (_commit_log != nullptr)
+    if (_private_log != nullptr)
     {
-        _commit_log->close();
-        _commit_log = nullptr;
+        _private_log->close();
+        _private_log = nullptr;
     }
 
     if (_app != nullptr)

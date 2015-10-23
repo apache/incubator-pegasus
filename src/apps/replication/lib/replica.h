@@ -56,14 +56,15 @@ public:
     //
     static replica* load(replica_stub* stub, const char* dir, bool rename_dir_on_failure);    
     static replica* newr(replica_stub* stub, const char* app_type, global_partition_id gpid);    
-    void replay_mutation(mutation_ptr& mu);
-    error_code init_commit_log_service();
+    // return true when the mutation is valid for the current replica
+    bool replay_mutation(mutation_ptr& mu, bool is_private = true);
+    error_code init_private_log_service();
     void reset_prepare_list_after_replay();
     // return false when update fails or replica is going to be closed
     bool update_local_configuration_with_no_ballot_change(partition_status status);
     void set_inactive_state_transient(bool t);
     void check_state_completeness();
-    error_code check_and_fix_commit_log_completeness();
+    //error_code check_and_fix_private_log_completeness();
     void close();
 
     //
@@ -113,7 +114,7 @@ public:
     bool group_configuration(/*out*/ partition_configuration& config) const;
     uint64_t last_config_change_time_milliseconds() const { return _last_config_change_time_ms; }
     const char* name() const { return _name; }
-    mutation_log_ptr commit_log() const { return _commit_log; }
+    mutation_log_ptr private_log() const { return _private_log; }
         
 private:
     // common helpers
@@ -148,6 +149,7 @@ private:
     void handle_learning_error(error_code err);
     void handle_learning_succeeded_on_primary(::dsn::rpc_address node, uint64_t learn_signature);
     void notify_learn_completion();
+    error_code apply_learned_state_from_private_log(learn_state& state);
         
     /////////////////////////////////////////////////////////////////
     // failure handling    
@@ -183,7 +185,7 @@ private:
     void gc();
     void init_checkpoint();
     void checkpoint();
-    void catch_up_with_local_commit_logs();
+    void catch_up_with_private_logs(partition_status s);
     void on_checkpoint_completed(error_code err);
     
 private:
@@ -196,8 +198,8 @@ private:
     // prepare list
     prepare_list*           _prepare_list;
 
-    // commit log (may be empty, depending on config)
-    mutation_log_ptr        _commit_log;
+    // private prepare log (may be empty, depending on config)
+    mutation_log_ptr        _private_log;
 
     // local check timer for gc, checkpoint, etc.
     dsn::task_ptr           _check_timer;

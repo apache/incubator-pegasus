@@ -78,11 +78,10 @@ public:
     int32_t fd_lease_seconds;
     int32_t fd_grace_seconds;
 
-    bool    log_enable_private_commit;
-    bool    log_enable_shared_prepare;
+    bool    log_enable_private_prepare;
 
     int32_t log_file_size_mb;
-    int32_t log_buffer_size_mb;
+    int32_t log_batch_buffer_MB;
     int32_t log_pending_max_ms;
     int32_t log_file_size_mb_private;
     int32_t log_buffer_size_mb_private;

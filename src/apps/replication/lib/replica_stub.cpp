@@ -114,123 +114,119 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 		auto r = replica::load(this, name.c_str(), true);
 		if (r != nullptr)
 		{
-			ddebug("%u.%u @ %s: load replica success with durable/commit decree = %llu / %llu from '%s'",
+			ddebug("%u.%u @ %s: load replica '%s' success, <durable, commit> = <%llu, %llu>",
 				r->get_gpid().app_id, r->get_gpid().pidx,
                 primary_address().to_string(),
+                name.c_str(),
 				r->last_durable_decree(),
-                r->last_committed_decree(),
-				name.c_str()
+                r->last_committed_decree()				
 				);
 			rps[r->get_gpid()] = r;
 		}
 	}
 	dir_list.clear();
 
-    // init logs when is_shared
-    if (_options.log_enable_shared_prepare)
-    {
-        _log = new mutation_log(
-            opts.log_buffer_size_mb,
-            opts.log_pending_max_ms,
-            opts.log_file_size_mb,
-            false,
-            false
-            );
-        err = _log->initialize(log_dir.c_str());
-        dassert(err == ERR_OK, "");
-        err = _log->replay(
-            [&rps](mutation_ptr& mu)
+    // init shared prepare log
+    _log = new mutation_log(
+        log_dir,
+        false,
+        opts.log_batch_buffer_MB,
+        opts.log_file_size_mb
+        );
+
+    err = _log->open(
+        [&rps](mutation_ptr& mu)
         {
             auto it = rps.find(mu->data.header.gpid);
             if (it != rps.end())
             {
-                it->second->replay_mutation(mu);
+                return it->second->replay_mutation(mu, false);
             }
+            else
+                return false;
         }
         );
 
-        if (err != ERR_OK)
-        {
-            derror(
-                "%s: replication log replay failed, err %s, clear all logs ...",
-                primary_address().to_string(),
-                err.to_string()
-                );
-
-            // restart log service
-            _log->close();
-
-            std::string err_log_path = log_dir + ".err";
-            if (utils::filesystem::directory_exists(err_log_path))
-                utils::filesystem::remove_path(err_log_path);
-
-            utils::filesystem::rename_path(log_dir, err_log_path);
-            utils::filesystem::create_directory(log_dir);
-
-            _log = new mutation_log(
-                opts.log_buffer_size_mb,
-                opts.log_pending_max_ms,
-                opts.log_file_size_mb,
-                false,
-                false
-                );
-            auto lerr = _log->initialize(log_dir.c_str());
-            dassert(lerr == ERR_OK, "");
-        }
-    }
-    else
+    if (err != ERR_OK)
     {
-        _log = nullptr;
+        derror(
+            "%s: replication log replay failed, err %s, clear all logs ...",
+            primary_address().to_string(),
+            err.to_string()
+            );
+
+        // we must delete or update meta server the error for all replicas
+        // before we fix the logs
+        // otherwise, the next process restart may consider the replicas'
+        // state complete
+
+        // delete all replicas
+        // TODO: checkpoint latest state and update on meta server so learning is cheaper
+        for (auto it = rps.begin(); it != rps.end(); it++)
+        {
+            it->second->close();
+            std::string new_dir = it->second->dir() + ".err";
+            if (utils::filesystem::path_exists(new_dir))
+                utils::filesystem::remove_path(new_dir);
+
+            if (!utils::filesystem::rename_path(it->second->dir(), new_dir))
+            {
+                dassert(false, "we cannot recover from the above error, exit ...");
+            }
+        }
+        rps.clear();
+
+        // restart log service
+        _log->close(true);
+        auto lerr = _log->open(nullptr);
+        dassert(lerr == ERR_OK, "restart log service must succeed");    
     }
+    
 
     for (auto it = rps.begin(); it != rps.end(); it++)
     {
+        it->second->reset_prepare_list_after_replay();
+                
+        decree smax = invalid_decree;
+        decree pmax = invalid_decree;
+        if (_options.log_enable_private_prepare)
+        {
+            smax = _log->max_decree(it->first);
+            pmax = it->second->private_log()->max_decree(it->first);
+
+            // possible when shared log is covered by private log for this replica
+            if (smax == 0)
+            {
+                _log->update_max_decrees(it->first, pmax);
+                smax = pmax;
+            }
+        }
+
+        
+
         dwarn(
-            "%u.%u @ %s: global log initialized stage 1, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu,"
-            "app(c/d) = <%lld/%lld>",
+            "%u.%u @ %s: load replica with err %s, durable = %lld, committed = %llu, "
+            "maxpd = %llu, ballot = %llu, max(share) = %lld, max(private) = %lld, init_log_offset = %lld",
             it->first.app_id, it->first.pidx,
             primary_address().to_string(),
+            err.to_string(),
             it->second->last_durable_decree(),
             it->second->last_committed_decree(),
             it->second->max_prepared_decree(),
             it->second->get_ballot(),
-            it->second->get_app()->last_committed_decree(),
-            it->second->get_app()->last_durable_decree()
+            smax,
+            pmax,
+            it->second->get_app()->init_info().init_offset_in_shared_log
             );
 
-        it->second->reset_prepare_list_after_replay();
-
-        if (_options.log_enable_private_commit)
-        {
-            err = it->second->check_and_fix_commit_log_completeness();
-        }
-        
         if (err == ERR_OK)
-        {
-            dwarn(
-                "%u.%u @ %s: global log initialized, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
-                it->first.app_id, it->first.pidx,
-                primary_address().to_string(),
-                it->second->last_durable_decree(),
-                it->second->last_committed_decree(),
-                it->second->max_prepared_decree(),
-                it->second->get_ballot()
-                );
-
+        {            
+            dassert(smax == pmax, "incomplete private log state");
+            it->second->check_state_completeness();
             it->second->set_inactive_state_transient(true);
         }
         else
         {
-            dwarn(
-                "%u.%u @ %s: global log initialized with log error, durable = %lld, committed = %llu, maxpd = %llu, ballot = %llu",
-                it->first.app_id, it->first.pidx,
-                primary_address().to_string(),
-                it->second->last_durable_decree(),
-                it->second->last_committed_decree(),
-                it->second->max_prepared_decree(),
-                it->second->get_ballot()
-                );
-
             it->second->set_inactive_state_transient(false);
         }
     }
@@ -247,19 +243,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             _options.gc_interval_ms
             );
     }
-
-    // start log serving    
-    if (_log != nullptr)
-    {
-        multi_partition_decrees init_max_decrees; // for log truncate
-        for (auto it = rps.begin(); it != rps.end(); it++)
-        {
-            init_max_decrees[it->second->get_gpid()] = it->second->max_prepared_decree();
-        }
-        err = _log->start_write_service(init_max_decrees, _options.staleness_for_commit);
-        dassert(err == ERR_OK, "");
-    }
-
+    
     // attach rps
     _replicas = std::move(rps);
 
@@ -767,13 +751,16 @@ void replica_stub::on_gc()
     // gc prepare log
     if (_log != nullptr)
     {
-        multi_partition_decrees durable_decrees, max_seen_decrees;
+        multi_partition_decrees_ex durable_decrees;
         for (auto it = rs.begin(); it != rs.end(); it++)
         {
-            durable_decrees[it->first] = it->second->last_durable_decree();
-            max_seen_decrees[it->first] = it->second->max_prepared_decree();
+            log_replica_info ri;
+            ri.decree = it->second->last_durable_decree();
+            ri.log_start_offset = it->second->get_app()->_info.init_offset_in_shared_log;
+
+            durable_decrees[it->first] = ri;
         }
-        _log->garbage_collection(durable_decrees, max_seen_decrees);
+        _log->garbage_collection(durable_decrees);
     }
     
     // gc on-disk rps
@@ -894,7 +881,7 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
     replica_ptr rep = replica::load(this, dr.c_str(), true);
     if (rep == nullptr) rep = replica::newr(this, app_type.c_str(), gpid);
     dassert (rep != nullptr, "");
-        
+            
     {
         zauto_lock l(_replicas_lock);
         auto it = _replicas.find(gpid);
@@ -948,7 +935,8 @@ void replica_stub::close_replica(replica_ptr r)
 void replica_stub::add_replica(replica_ptr r)
 {
     zauto_lock l(_replicas_lock);
-    _replicas[r->get_gpid()] = r;
+    auto pr = _replicas.insert(replicas::value_type(r->get_gpid(), r));
+    dassert(pr.second, "replica %s is already in the collection", r->name());
 }
 
 bool replica_stub::remove_replica(replica_ptr r)
@@ -979,7 +967,7 @@ void replica_stub::notify_replica_state_update(const replica_configuration& conf
 
 void replica_stub::handle_log_failure(error_code err)
 {
-    // TODO:
+    dassert(false, "TODO: better log failure handling ...");
 }
 
 void replica_stub::open_service()

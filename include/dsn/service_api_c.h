@@ -706,6 +706,8 @@ extern DSN_API dsn_handle_t dsn_file_open(
 extern DSN_API dsn_error_t  dsn_file_close(
                                 dsn_handle_t file
                                 );
+// native handle: HANDLE for windows, int for non-windows
+extern DSN_API void*        dsn_file_native_handle(dsn_handle_t file);
 extern DSN_API dsn_task_t   dsn_file_create_aio_task(
                                 dsn_task_code_t code, 
                                 dsn_aio_handler_t cb, 
