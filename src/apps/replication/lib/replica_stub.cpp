@@ -876,8 +876,14 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
     dwarn("open replica '%s'", dr.c_str());
 
     replica_ptr rep = replica::load(this, dr.c_str(), true);
-    if (rep == nullptr) rep = replica::newr(this, app_type.c_str(), gpid);
-    dassert (rep != nullptr, "");
+
+    if (rep == nullptr)
+    {
+        rep = replica::newr(this, app_type.c_str(), gpid);
+    }
+
+    if (rep == nullptr)
+        return;
             
     {
         zauto_lock l(_replicas_lock);

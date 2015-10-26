@@ -48,6 +48,7 @@ error_code replica::initialize_on_new(const char* app_type, global_partition_id 
 
     if (dsn::utils::filesystem::directory_exists(_dir))
     {
+        derror("cannot allocate new replica @ %s, as the dir is already exists", _dir.c_str());
         return ERR_PATH_ALREADY_EXIST;
     }
 
@@ -113,7 +114,7 @@ error_code replica::initialize_on_load(const char* dir, bool rename_dir_on_failu
 		}
 		else
 		{
-			dassert (false, "Fail to move bad replica from '%s' to '%s'", dir, newPath);
+            err = ERR_FILE_OPERATION_FAILED;
 		}
     }
     return err;
