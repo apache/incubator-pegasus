@@ -102,6 +102,11 @@ error_code mutation_log::open(replay_callback callback)
 		return ERR_FILE_OPERATION_FAILED;
 	}
 
+    if (nullptr == callback)
+    {
+        dassert(file_list.size() == 0, "log must be empty if callback is not present");
+    }
+
 	for (auto& fpath : file_list)
 	{
 		log_file_ptr log = log_file::open_read(fpath.c_str());
@@ -165,6 +170,11 @@ error_code mutation_log::open(
 
 void mutation_log::close(bool clear_all)
 {
+    dinfo("close mutation log %s, clear_all = %s",
+        dir().c_str(),
+        clear_all ? "true" : "false"
+        );
+
     {
         zauto_lock l(_lock);
         _is_opened = false;
@@ -191,9 +201,11 @@ void mutation_log::close(bool clear_all)
         for (auto& kv : _log_files)
         {
             kv.second->close();
-            utils::filesystem::remove_path(kv.second->path());
         }
         _log_files.clear();
+        
+        auto lerr = utils::filesystem::remove_path(dir());
+        dassert(lerr, "remove log %s failed", dir().c_str());
     }
 
     // reset all states
@@ -542,7 +554,7 @@ decree mutation_log::max_decree(global_partition_id gpid) const
     }
 }
 
-decree mutation_log::max_gced_decree(global_partition_id gpid) const
+decree mutation_log::max_gced_decree(global_partition_id gpid, int64_t valid_start_offset) const
 {
     zauto_lock l(_lock);
     if (_log_files.size() == 0)
@@ -560,11 +572,19 @@ decree mutation_log::max_gced_decree(global_partition_id gpid) const
     }
     else
     {
-        auto it = _log_files.begin()->second->previous_log_max_decrees().find(gpid);
-        if (it != _log_files.begin()->second->previous_log_max_decrees().end())
-            return it->second;
-        else
-            return 0;
+        for (auto& log : _log_files)
+        {
+            // when invalid log exits, all new logs are preserved (not gced)
+            if (valid_start_offset > log.second->start_offset())
+                return 0;
+
+            auto it = log.second->previous_log_max_decrees().find(gpid);
+            if (it != log.second->previous_log_max_decrees().end())
+                return it->second;
+            else
+                return 0;
+        }
+        return 0;
     }
 }
 
@@ -685,18 +705,24 @@ void mutation_log::on_partition_removed(global_partition_id gpid)
     _shared_max_decrees.erase(gpid);
 }
 
-int64_t mutation_log::on_partition_added(global_partition_id gpid, decree max_d)
+int64_t mutation_log::on_partition_reset(global_partition_id gpid, decree max_d)
 {
-    dassert(!_is_private, "this method is only valid for shared logs");
-
     zauto_lock l(_lock);
-    auto it = _shared_max_decrees.insert(multi_partition_decrees::value_type(gpid, max_d));
-    if (!it.second)
+    if (_is_private)
     {
-        dwarn("replica %d.%d has shifted its max decree from %llu to %llu",
-            gpid.app_id, gpid.pidx, it.first->second, max_d
-            );
-        _shared_max_decrees[gpid] = max_d;
+        dassert(_private_gpid == gpid, "invalid gpid parameter");
+        _private_max_decree = max_d;
+    }
+    else
+    {
+        auto it = _shared_max_decrees.insert(multi_partition_decrees::value_type(gpid, max_d));
+        if (!it.second)
+        {
+            dwarn("replica %d.%d has shifted its max decree from %llu to %llu",
+                gpid.app_id, gpid.pidx, it.first->second, max_d
+                );
+            _shared_max_decrees[gpid] = max_d;
+        }        
     }
     return _global_end_offset;
 }
@@ -781,7 +807,8 @@ void mutation_log::get_learn_state(
 
 int mutation_log::garbage_collection(
     global_partition_id gpid,
-    decree durable_d
+    decree durable_d,
+    int64_t valid_start_offset
     )
 {
     dassert(_is_private, "this method is only valid for private logs");
@@ -801,8 +828,22 @@ int mutation_log::garbage_collection(
 
     for (itr = files.rbegin(); itr != files.rend(); itr++)
     {
+        // log is invalid, ok to delete
+        if (valid_start_offset >= itr->second->end_offset())
+        {
+            dinfo("gc @ %d.%d: max_offset for %s is %lld vs %lld as app.valid_start_offset.private,"
+                " safe to delete this and all older logs",
+                _private_gpid.app_id,
+                _private_gpid.pidx,
+                itr->second->path().c_str(),
+                itr->second->end_offset(),
+                valid_start_offset
+                );
+            break;
+        }
+
         // all decrees are durable, ok to delete
-        if (durable_d >= max_decree)
+        else if (durable_d >= max_decree)
         {
             dinfo("gc @ %d.%d: max_decree for %s is %lld vs %lld as app.durable decree,"
                 " safe to delete this and all older logs",

@@ -47,7 +47,7 @@ TEST(replication, log_learn)
 
         decree durable_decree = lp;
 
-        mlog->garbage_collection(gpid, durable_decree);
+        mlog->garbage_collection(gpid, durable_decree, 0);
         mlog->close();
         
         // reading logs

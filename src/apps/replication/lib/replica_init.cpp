@@ -113,8 +113,7 @@ error_code replica::initialize_on_load(const char* dir, bool rename_dir_on_failu
 		}
 		else
 		{
-			derror("Fail to move bad replica from '%s' to '%s'", dir, newPath);
-			//return ERR_FILE_OPERATION_FAILED;
+			dassert (false, "Fail to move bad replica from '%s' to '%s'", dir, newPath);
 		}
     }
     return err;
@@ -152,9 +151,17 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
 
     error_code err = _app->open_internal(
         this,
-        create_new,
-        create_new ? _stub->_log->end_offset() : 0
+        create_new
         );
+
+    if (err == ERR_OK && create_new)
+    {
+        err = _app->save_init_info(
+            this, 
+            _stub->_log->on_partition_reset(get_gpid(), _app->last_committed_decree()),
+            _private_log ? _private_log->on_partition_reset(get_gpid(), _app->last_committed_decree()) : 0
+            );
+    }
 
     if (err == ERR_OK)
     {
@@ -178,7 +185,9 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
                 );
         }
     }
-    else
+    
+
+    if (err != ERR_OK)
     {
         derror( "%s: open replica failed, error = %s", name(), err.to_string());
         _app->close(false);
@@ -248,15 +257,29 @@ error_code replica::init_private_log_service()
 bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
 {
     auto d = mu->data.header.decree;
-    if (!is_private && mu->data.header.log_offset < _app->init_info().init_offset_in_shared_log)
+    auto offset = mu->data.header.log_offset;
+    if (is_private && offset < _app->init_info().init_offset_in_private_log)
     {
         ddebug(
-            "%s: replay mutation skipped as offset is invalid, ballot = %llu, decree = %llu, last_committed_decree = %llu, offset = %lld",
+            "%s: replay mutation skipped1 as offset is invalid, ballot = %llu, decree = %llu, last_committed_decree = %llu, offset = %lld",
             name(),
             mu->data.header.ballot,
             d,
             mu->data.header.last_committed_decree,
-            mu->data.header.log_offset
+            offset
+            );
+        return false;
+    }
+    
+    if (!is_private && offset < _app->init_info().init_offset_in_shared_log)
+    {
+        ddebug(
+            "%s: replay mutation skipped2 as offset is invalid, ballot = %llu, decree = %llu, last_committed_decree = %llu, offset = %lld",
+            name(),
+            mu->data.header.ballot,
+            d,
+            mu->data.header.last_committed_decree,
+            offset
             );
         return false;
     }
@@ -264,12 +287,12 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     if (d <= last_committed_decree())
     {
         ddebug(
-            "%s: replay mutation skipped as decree is outdated, ballot = %llu, decree = %llu, last_committed_decree = %llu, offset = %lld",
+            "%s: replay mutation skipped3 as decree is outdated, ballot = %llu, decree = %llu, last_committed_decree = %llu, offset = %lld",
             name(),
             mu->data.header.ballot,
             d,
             mu->data.header.last_committed_decree,
-            mu->data.header.log_offset
+            offset
             );
         return true;
     }   
@@ -278,12 +301,12 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     if (old != nullptr && old->data.header.ballot >= mu->data.header.ballot)
     {
         ddebug(
-            "%s: replay mutation skipped as ballot is outdated, ballot = %llu, decree = %llu, last_committed_decree = %llu, offset = %lld",
+            "%s: replay mutation skipped4 as ballot is outdated, ballot = %llu, decree = %llu, last_committed_decree = %llu, offset = %lld",
             name(),
             mu->data.header.ballot,
             d,
             mu->data.header.last_committed_decree,
-            mu->data.header.log_offset
+            offset
             );
 
         return true;

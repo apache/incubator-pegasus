@@ -120,7 +120,7 @@ public:
     // when a partition is added/removed. 
     void    on_partition_removed(global_partition_id gpid);
     // return current offset, needs to be remebered by caller for gc usage
-    int64_t on_partition_added(global_partition_id gpid, decree max_d);
+    int64_t on_partition_reset(global_partition_id gpid, decree max_d);
 
     //
     //  garbage collection logs that are already covered by 
@@ -128,7 +128,7 @@ public:
     //
     int garbage_collection(multi_partition_decrees_ex& durable_decrees);
 
-    int garbage_collection(global_partition_id gpid, decree durable_d);
+    int garbage_collection(global_partition_id gpid, decree durable_d, int64_t valid_start_offset);
 
     //
     //  when this is a private log, log files are learned by remote replicas
@@ -149,7 +149,7 @@ public:
     decree max_decree(global_partition_id gpid) const;
 
     // maximum decree that is garbage collected
-    decree max_gced_decree(global_partition_id gpid) const;
+    decree max_gced_decree(global_partition_id gpid, int64_t valid_start_offset) const;
     
     // update
     void update_max_decrees(global_partition_id gpid, decree d);

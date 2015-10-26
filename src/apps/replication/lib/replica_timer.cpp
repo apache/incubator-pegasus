@@ -47,7 +47,8 @@ namespace dsn {
             if (_private_log)
                 _private_log->garbage_collection(
                     get_gpid(),
-                    _app->last_durable_decree()
+                    _app->last_durable_decree(),
+                    _app->init_info().init_offset_in_private_log
                     );
         }
 

@@ -476,11 +476,19 @@ namespace dsn {
 					if (typeflag != FTW_F)
 					{
 						succ = (::RemoveDirectoryA(fpath) == TRUE);
+                        if (!succ)
+                        {
+                            derror("remove directory %s failed, err = %d", fpath, ::GetLastError());
+                        }
 					}
 					else
 					{
 #endif
 						succ = (std::remove(fpath) == 0);
+                        if (!succ)
+                        {
+                            derror("remove file %s failed, err = %s", fpath, strerror(errno));
+                        }
 #ifdef _WIN32
 					}
 #endif
@@ -507,7 +515,12 @@ namespace dsn {
 
 				if (dsn::utils::filesystem::path_exists(npath, FTW_F))
 				{
-					return (std::remove(npath.c_str()) == 0);
+					bool ret = (std::remove(npath.c_str()) == 0);
+                    if (!ret)
+                    {
+                        derror("remove file %s failed, err = %s", npath.c_str(), strerror(errno));
+                    }
+                    return ret;
 				}
 				else if(dsn::utils::filesystem::path_exists(npath, FTW_D))
 				{

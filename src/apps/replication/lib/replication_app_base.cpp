@@ -140,16 +140,12 @@ const char* replication_app_base::replica_name() const
     return _replica->name();
 }
 
-error_code replication_app_base::open_internal(replica* r, bool create_new, int64_t log_offset)
+error_code replication_app_base::open_internal(replica* r, bool create_new)
 {
     auto err = open(create_new);
     if (err == 0)
     {
-        if (create_new)
-        {
-            err = save_init_info(r, log_offset);
-        }
-        else
+        if (!create_new)
         {
             std::string info_path = utils::filesystem::path_combine(r->dir(), ".info");
             err = _info.load(info_path.c_str());
@@ -181,13 +177,14 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
     return _physical_error == 0 ? ERR_OK : ERR_LOCAL_APP_FAILURE;
 }
 
-error_code replication_app_base::save_init_info(replica* r, int64_t log_offset)
+error_code replication_app_base::save_init_info(replica* r, int64_t shared_log_offset, int64_t private_log_offset)
 {
     _info.crc = 0;
     _info.magic = 0xdeadbeef;
     _info.init_ballot = r->get_ballot();
     _info.init_decree = r->last_committed_decree();
-    _info.init_offset_in_shared_log = log_offset;
+    _info.init_offset_in_shared_log = shared_log_offset;
+    _info.init_offset_in_shared_log = private_log_offset;
 
     std::string info_path = utils::filesystem::path_combine(r->dir(), ".info");
     return _info.store(info_path.c_str());

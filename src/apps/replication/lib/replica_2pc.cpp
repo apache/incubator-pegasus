@@ -346,7 +346,7 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
     }
 
     // write local private log if necessary
-    else if (_private_log)
+    else if (_private_log && status() != PS_ERROR)
     {
         _private_log->append(mu,
             LPC_WRITE_REPLICATION_LOG,

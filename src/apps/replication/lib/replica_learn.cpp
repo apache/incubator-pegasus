@@ -377,17 +377,9 @@ void replica::on_learn_reply(
             name(), _app->last_committed_decree(),
             enum_to_string(_potential_secondary_states.learning_status)
             );
-
-        // reset private log if necessary
-        if (_private_log)
-        {
-            _private_log->close(true);
-            _private_log->open(get_gpid(), nullptr, resp->prepare_start_decree - 1);
-        }   
-
-        dassert(resp->state.meta.size() > 0, "learn mutation cache failed");
-
+        
         // apply incoming prepare-list
+        dassert(resp->state.meta.size() > 0, "learn mutation cache failed");
         binary_reader reader(resp->state.meta[0]);
         while (!reader.is_eof())
         {
@@ -399,8 +391,7 @@ void replica::on_learn_reply(
         }
 
         // further states are synced using 2pc
-        _prepare_list->commit(resp->prepare_start_decree - 1, COMMIT_TO_DECREE_HARD);
-        _stub->_log->on_partition_added(get_gpid(), resp->prepare_start_decree - 1);
+        _prepare_list->commit(resp->prepare_start_decree - 1, COMMIT_TO_DECREE_HARD);        
         dassert(_prepare_list->last_committed_decree() == _app->last_committed_decree(), "");
         dassert(resp->state.files.size() == 0, "");
 
@@ -410,7 +401,13 @@ void replica::on_learn_reply(
             "state is incomplete");       
 
         // invalidate existing mutations in current logs
-        _app->init_info().init_offset_in_shared_log = _stub->_log->end_offset();        
+        _app->init_info().init_offset_in_shared_log = 
+            _stub->_log->on_partition_reset(get_gpid(), resp->prepare_start_decree - 1);
+        if (_private_log)
+        {
+            _app->init_info().init_offset_in_private_log  = 
+                _private_log->on_partition_reset(get_gpid(), resp->prepare_start_decree - 1);
+        }
 
         // go to next stage
         _potential_secondary_states.learning_status = LearningWithPrepare;        
@@ -557,7 +554,11 @@ void replica::on_copy_remote_state_completed(
         if (err == 0)
         {
             dassert(_app->last_committed_decree() == _app->last_durable_decree(), "");   
-            err = _app->save_init_info(this, _app->init_info().init_offset_in_shared_log);
+            err = _app->save_init_info(
+                this,
+                _app->init_info().init_offset_in_shared_log,
+                _app->init_info().init_offset_in_private_log
+                );
         }
         else
         {

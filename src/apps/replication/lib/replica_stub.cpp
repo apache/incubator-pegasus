@@ -187,22 +187,19 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     {
         it->second->reset_prepare_list_after_replay();
                 
-        decree smax = invalid_decree;
+        decree smax = _log->max_decree(it->first);
         decree pmax = invalid_decree;
         if (_options.log_enable_private_prepare)
         {
-            smax = _log->max_decree(it->first);
             pmax = it->second->private_log()->max_decree(it->first);
 
-            // possible when shared log is covered by private log for this replica
+            // possible when shared log is restarted
             if (smax == 0)
             {
                 _log->update_max_decrees(it->first, pmax);
                 smax = pmax;
             }
         }
-
-        
 
         dwarn(
             "%u.%u @ %s: load replica with err %s, durable = %lld, committed = %llu, "

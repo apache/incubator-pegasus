@@ -47,8 +47,10 @@ public:
     ballot  init_ballot;
     decree  init_decree;
     int64_t init_offset_in_shared_log;
+    int64_t init_offset_in_private_log;
 
 public:
+    replication_app_info() { memset((void*)this, 0, sizeof(*this)); }
     error_code load(const char* file);
     error_code store(const char* file);
 };
@@ -170,11 +172,11 @@ private:
     // routines for replica internal usage
     friend class replica;
     friend class replica_stub;
-    error_code open_internal(replica* r, bool create_new, int64_t log_offset);
+    error_code open_internal(replica* r, bool create_new);
     error_code write_internal(mutation_ptr& mu);
     void       dispatch_rpc_call(int code, binary_reader& reader, dsn_message_t response);
     replication_app_info& init_info() { return _info; }
-    error_code save_init_info(replica* r, int64_t log_offset);
+    error_code save_init_info(replica* r, int64_t shared_log_offset, int64_t private_log_offset);
 
 private:
     std::string _dir_data;
