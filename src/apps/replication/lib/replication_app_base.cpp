@@ -89,7 +89,7 @@ error_code replication_app_info::store(const char* file)
     std::ofstream os(tmp_file.c_str(), std::ios::binary);
     if (!os.is_open())
     {
-        derror("open file %s failed", tmp_file);
+        derror("open file %s failed", tmp_file.c_str());
         return ERR_FILE_OPERATION_FAILED;
     }
 

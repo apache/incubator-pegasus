@@ -38,7 +38,7 @@ typedef dsn::ref_ptr<log_file> log_file_ptr;
 
 struct log_replica_info
 {
-    decree  decree;
+    int64_t decree;
     int64_t log_start_offset;
 };
 
