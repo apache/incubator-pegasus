@@ -184,9 +184,7 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
 
     // prepare learn_start_decree
     decree local_committed_decree = last_committed_decree();
-    decree learn_start_decree = request.last_committed_decree_in_app + 1;
-    bool delayed_replay_prepare_list = false;
-
+    
     // TODO: learner machine has been down for a long time, and DDD MUST happened before
     // which leads to state lost. Now the lost state is back, what shall we do?
     if (request.last_committed_decree_in_app > last_prepared_decree())
@@ -207,6 +205,9 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
         _prepare_list->commit(request.last_committed_decree_in_app, COMMIT_TO_DECREE_HARD);
         local_committed_decree = last_committed_decree();
     }
+
+    decree learn_start_decree = request.last_committed_decree_in_app + 1;
+    bool delayed_replay_prepare_list = false;
 
     ddebug(
         "%s: on_learn %s, with local_committed_decree = %llu, "
