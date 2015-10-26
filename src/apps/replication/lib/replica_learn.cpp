@@ -191,13 +191,14 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
     // which leads to state lost. Now the lost state is back, what shall we do?
     if (request.last_committed_decree_in_app > last_prepared_decree())
     {
-        dassert (
-            false,
+        derror (
             "%s: on_learn %s, learner state is newer than learnee, "
-            "with its appCommittedDecree = %llu vs local_committed_decree = %llu, ",
+            "with its appCommittedDecree = %llu vs local_committed_decree = %llu, learn from scratch",
             name(), request.learner.to_string(),
             request.last_committed_decree_in_app, local_committed_decree
             );
+
+        *(decree*)&request.last_committed_decree_in_app = 0;
     }
 
     // mutations are previously committed already on learner (old primary)
@@ -362,6 +363,44 @@ void replica::on_learn_reply(
     if (status() != PS_POTENTIAL_SECONDARY)
     {
         return;
+    }
+
+    // local state is newer than learnee
+    if (resp->commit_decree < _app->last_committed_decree())
+    {
+        dwarn("%s: learner state is newer than learnee (primary): %lld vs %lld",
+            name(),
+            _app->last_committed_decree(),
+            resp->commit_decree            
+            );
+
+        auto lerr = _app->close(true);
+        if (lerr == 0)
+        {
+            lerr = _app->open(true);
+        }
+        
+        if (lerr != 0)
+        {
+            _potential_secondary_states.learn_remote_files_task = tasking::enqueue(
+                LPC_LEARN_REMOTE_DELTA_FILES,
+                this,
+                std::bind(&replica::on_copy_remote_state_completed, this, ERR_LOCAL_APP_FAILURE, 0, resp)
+                );
+            return;
+        }
+
+        // invalidate existing mutations in current logs
+        _app->init_info().init_offset_in_shared_log =
+            _stub->_log->on_partition_reset(get_gpid(), 0);
+        if (_private_log)
+        {
+            _app->init_info().init_offset_in_private_log =
+                _private_log->on_partition_reset(get_gpid(), 0);
+        }
+
+        // reset preparelist
+        _prepare_list->reset(_app->last_committed_decree());
     }
 
     if (resp->prepare_start_decree != invalid_decree)

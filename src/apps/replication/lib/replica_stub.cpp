@@ -883,7 +883,11 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
     }
 
     if (rep == nullptr)
+    {
+        zauto_lock l(_replicas_lock);
+        _opening_replicas.erase(gpid);
         return;
+    }
             
     {
         zauto_lock l(_replicas_lock);
