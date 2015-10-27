@@ -23,6 +23,22 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#pragma once
+# pragma once
 
-# include <dsn/dist/failure_detector/failure_detector.h>
+# include <dsn/service_api_cpp.h>
+
+namespace dsn
+{
+    namespace dist
+    {
+        // interface
+        class meta_state_service
+        {
+        public:
+            // void create_node(....callback..)
+            // void put(....callback..);
+            // void get(....callback..);
+            // void destroy_node(....callback..);
+        };
+    }
+}
