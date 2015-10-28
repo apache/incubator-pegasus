@@ -28,7 +28,6 @@
 #include <dsn/service_api_cpp.h>
 #include <string>
 #include <functional>
-#include <memory>
 #include <dsn/internal/task.h>
 
 namespace dsn

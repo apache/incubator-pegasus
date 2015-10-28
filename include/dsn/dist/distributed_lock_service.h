@@ -26,7 +26,8 @@
 # pragma once
 
 # include <dsn/service_api_cpp.h>
-# include <memory>
+# include <string>
+# include <functional>
 
 namespace dsn
 {
