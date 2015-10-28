@@ -37,13 +37,8 @@ namespace dsn
         {
         public:
             typedef void* lock_handle;
-            template<typename T>
-            static distributed_lock_service* open_service(std::shared_ptr<service_supplier> supplier)
-            {
-                return T::open(supplier);
-            }
 
-            virtual lock_handle create_lock(const std::string& lock_name);
+            virtual lock_handle create_lock(const std::string& lock_name) = 0;
             /*
              * try to get the lock:
              *     lock_name: the global lock_id

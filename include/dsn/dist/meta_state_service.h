@@ -41,17 +41,11 @@ namespace dsn
         public:
             typedef std::function<void (int ec, std::string&& ret_str)> err_string_callback;
             typedef std::function<void (int ec, std::vector<std::string>&& ret_strv)> err_stringv_callback;
-            typedef std::function<void (int ec, std::string&& ret_strv, int ret_i)> err_data_callback;
-            typedef std::function<void (int ec, int ret_i)> err_state_callback;
+            typedef std::function<void (int ec, std::string&& ret_strv, int ret)> err_data_callback;
+            typedef std::function<void (int ec, int ret)> err_state_callback;
             typedef std::function<void (int ec)> err_callback;
 
         public:
-            template<typename T>
-            static meta_state_service* open_service(std::shared_ptr<service_supplier> supplier) {
-                return T::open(supplier);
-            }
-
-            virtual ~meta_state_service() {}
             //create a dir
             virtual void amkdir(const std::string& znode,
                                 const err_string_callback& cb_create,
