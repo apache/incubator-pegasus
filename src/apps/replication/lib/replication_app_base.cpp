@@ -42,7 +42,7 @@ void register_replica_provider(replica_app_factory f, const char* name)
     ::dsn::utils::factory_store<replication_app_base>::register_factory(name, f, PROVIDER_TYPE_MAIN);
 }
 
-error_code replication_app_info::load(const char* file)
+error_code replica_log_info::load(const char* file)
 {
     std::ifstream is(file, std::ios::binary);
     if (!is.is_open())
@@ -75,7 +75,7 @@ error_code replication_app_info::load(const char* file)
     return ERR_OK;
 }
 
-error_code replication_app_info::store(const char* file)
+error_code replica_log_info::store(const char* file)
 {
     std::string ffile = std::string(file);
     std::string tmp_file = ffile + ".tmp";
@@ -105,11 +105,12 @@ error_code replication_app_info::store(const char* file)
         return ERR_FILE_OPERATION_FAILED;
     }
 
-    dinfo("update app init info in %s, ballot = %lld, decree = %lld, shared_log_offset = %lld",
+    dinfo("update app init info in %s, ballot = %lld, decree = %lld, log_offset<S,P> = <%lld,%lld>",
         ffile.c_str(),
         init_ballot,
         init_decree,
-        init_offset_in_shared_log
+        init_offset_in_shared_log,
+        init_offset_in_private_log
         );
     return ERR_OK;
 }
@@ -177,14 +178,14 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
     return _physical_error == 0 ? ERR_OK : ERR_LOCAL_APP_FAILURE;
 }
 
-error_code replication_app_base::save_init_info(replica* r, int64_t shared_log_offset, int64_t private_log_offset)
+error_code replication_app_base::update_log_info(replica* r, int64_t shared_log_offset, int64_t private_log_offset)
 {
     _info.crc = 0;
     _info.magic = 0xdeadbeef;
     _info.init_ballot = r->get_ballot();
     _info.init_decree = r->last_committed_decree();
     _info.init_offset_in_shared_log = shared_log_offset;
-    _info.init_offset_in_shared_log = private_log_offset;
+    _info.init_offset_in_private_log = private_log_offset;
 
     std::string info_path = utils::filesystem::path_combine(r->dir(), ".info");
     return _info.store(info_path.c_str());

@@ -48,7 +48,7 @@ namespace dsn {
                 _private_log->garbage_collection(
                     get_gpid(),
                     _app->last_durable_decree(),
-                    _app->init_info().init_offset_in_private_log
+                    _app->log_info().init_offset_in_private_log
                     );
         }
 
@@ -149,7 +149,10 @@ namespace dsn {
 
             // closing
             if (PS_SECONDARY != status())
+            {
+                _secondary_states.checkpoint_task = nullptr;
                 return;
+            }   
 
             // handle failure
             if (err != ERR_OK)

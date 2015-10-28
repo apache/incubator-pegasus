@@ -40,6 +40,18 @@ struct log_replica_info
 {
     int64_t decree;
     int64_t log_start_offset;
+
+    log_replica_info(int64_t d, int64_t o)
+    {
+        decree = d;
+        log_start_offset = o;
+    }
+
+    log_replica_info()
+    {
+        decree = 0;
+        log_start_offset = 0;
+    }
 };
 
 typedef std::unordered_map<global_partition_id, decree>
@@ -86,6 +98,8 @@ public:
     //
     // initialization
     //
+    void set_valid_log_offset_before_open(global_partition_id gpid, int64_t valid_start_offset);
+
     // for shared
     error_code open(replay_callback callback);
 
@@ -103,9 +117,7 @@ public:
         replay_callback callback,
         /*out*/ int64_t& end_offset
         );
-
-    
-       
+           
     //
     // log mutation
     //
@@ -154,6 +166,8 @@ public:
     // update
     void update_max_decrees(global_partition_id gpid, decree d);
 
+    void check_log_start_offset(global_partition_id gpid, int64_t valid_start_offset) const;
+
 private:
     //
     //  internal helpers
@@ -172,7 +186,7 @@ private:
 
     typedef std::shared_ptr<std::list<::dsn::task_ptr>> pending_callbacks_ptr;
     void init_states();    
-    error_code create_new_log_file();
+    error_code create_new_log_file();    
     void create_new_pending_buffer();    
     static void internal_write_callback(error_code err, size_t size, pending_callbacks_ptr callbacks, blob data);
     error_code write_pending_mutations(bool create_new_log_when_necessary = true);
@@ -200,9 +214,10 @@ private:
 
     // replica states
     bool                           _is_private;
-    multi_partition_decrees        _shared_max_decrees;
+    multi_partition_decrees_ex     _shared_max_decrees;
     global_partition_id            _private_gpid;
     decree                         _private_max_decree;
+    int64_t                        _private_valid_start_offset;
 };
 
 class log_file : public ref_counter
@@ -213,7 +228,7 @@ public:
     //
     // file operations
     //
-    static log_file_ptr open_read(const char* path);
+    static log_file_ptr open_read(const char* path, /*out*/ error_code& err);
     static log_file_ptr create_write(
         const char* dir, 
         int index, 
@@ -246,11 +261,11 @@ public:
     int64_t start_offset() const  { return _start_offset; }
     int   index() const { return _index; }
     const std::string& path() const { return _path; }
-    const multi_partition_decrees& previous_log_max_decrees() { return _previous_log_max_decrees; }
+    const multi_partition_decrees_ex& previous_log_max_decrees() { return _previous_log_max_decrees; }
     log_file_header& header() { return _header;}
 
     int read_header(binary_reader& reader);
-    int write_header(binary_writer& writer, multi_partition_decrees& init_max_decrees, int bufferSizeBytes);
+    int write_header(binary_writer& writer, multi_partition_decrees_ex& init_max_decrees, int bufferSizeBytes);
     bool is_right_header() const;
     void flush();
     int get_file_header_size() const;
@@ -267,8 +282,8 @@ private:
     int           _index;
 
     // for gc
-    multi_partition_decrees _previous_log_max_decrees;    
-    log_file_header         _header;
+    multi_partition_decrees_ex _previous_log_max_decrees;    
+    log_file_header            _header;
 };
 
 }} // namespace

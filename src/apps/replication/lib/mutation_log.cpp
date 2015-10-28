@@ -71,6 +71,7 @@ void mutation_log::init_states()
     _private_gpid.app_id = 0;
     _private_gpid.pidx = 0;
     _private_max_decree = 0;
+    _private_valid_start_offset = 0;
 }
 
 mutation_log::~mutation_log()
@@ -78,8 +79,24 @@ mutation_log::~mutation_log()
     close();
 }
 
+void mutation_log::set_valid_log_offset_before_open(global_partition_id gpid, int64_t valid_start_offset)
+{
+    zauto_lock l(_lock);
+
+    if (_is_private)
+    {
+        _private_gpid = gpid;
+        _private_valid_start_offset = valid_start_offset;
+    }
+    else
+    {
+        _shared_max_decrees[gpid] = log_replica_info(0, valid_start_offset);
+    }
+}
+
 error_code mutation_log::open(replay_callback callback)
 {
+    error_code err;
     dassert(nullptr == _current_log_file, 
         "the current log file must be null at this point");
 
@@ -109,11 +126,18 @@ error_code mutation_log::open(replay_callback callback)
 
 	for (auto& fpath : file_list)
 	{
-		log_file_ptr log = log_file::open_read(fpath.c_str());
+		log_file_ptr log = log_file::open_read(fpath.c_str(), err);
 		if (log == nullptr)
 		{
-			dwarn("Skip file %s during log init", fpath.c_str());
-			continue;
+            if (err == ERR_HANDLE_EOF)
+            {
+                dwarn("Skip file %s during log init", fpath.c_str());
+                continue;
+            }
+            else
+            {
+                return err;
+            }   
 		}
 
 		dassert(_log_files.find(log->index()) == _log_files.end(), "");
@@ -123,7 +147,7 @@ error_code mutation_log::open(replay_callback callback)
         
     // replay with the found files    
     int64_t offset = 0;
-    auto err = replay(
+    err = replay(
         _log_files,
         [this, callback](mutation_ptr& mu)
         {
@@ -160,7 +184,12 @@ error_code mutation_log::open(
     decree max_decree /*= invalid_decree*/)
 {
     dassert(_is_private, "this is only valid for private mutation log");
-    _private_gpid = gpid;
+    if (_private_gpid.app_id != 0)
+    {
+        dassert(_private_gpid == gpid, "invalid gpid");
+    }
+    else
+        _private_gpid = gpid;
 
     if (max_decree != invalid_decree)
         _private_max_decree = max_decree;
@@ -248,8 +277,8 @@ error_code mutation_log::create_new_log_file()
     int len = 0;
     if (_is_private)
     {
-        multi_partition_decrees ds;
-        ds[_private_gpid] = _private_max_decree;
+        multi_partition_decrees_ex ds;
+        ds[_private_gpid] = log_replica_info(_private_max_decree, _private_valid_start_offset);
         len = logf->write_header(
             *_pending_write,
             ds,
@@ -430,11 +459,19 @@ void mutation_log::internal_write_callback(
     std::map<int, log_file_ptr> logs;
     for (auto& fpath : log_files)
     {
-        log_file_ptr log = log_file::open_read(fpath.c_str());
+        error_code err;
+        log_file_ptr log = log_file::open_read(fpath.c_str(), err);
         if (log == nullptr)
         {
-            dwarn("Skip file %s during log init", fpath.c_str());
-            continue;
+            if (err == ERR_HANDLE_EOF)
+            {
+                dinfo("Skip file %s during log replay", fpath.c_str());
+                continue;
+            }
+            else
+            {
+                return err;
+            }
         }
 
         dassert(logs.find(log->index()) == logs.end(), "");
@@ -548,15 +585,44 @@ decree mutation_log::max_decree(global_partition_id gpid) const
     {
         auto it = _shared_max_decrees.find(gpid);
         if (it != _shared_max_decrees.end())
-            return it->second;
+            return it->second.decree;
         else
             return 0;
     }
 }
 
-decree mutation_log::max_gced_decree(global_partition_id gpid, int64_t valid_start_offset) const
+void mutation_log::check_log_start_offset(global_partition_id gpid, int64_t valid_start_offset) const
 {
     zauto_lock l(_lock);
+
+    if (_is_private)
+    {
+        dassert(valid_start_offset == _private_valid_start_offset,
+            "valid start offset mismatch: %lld vs %lld",
+            valid_start_offset,
+            _private_valid_start_offset
+            );
+    }
+    else
+    {
+        auto it = _shared_max_decrees.find(gpid);
+        if (it != _shared_max_decrees.end())
+        {
+            dassert(valid_start_offset == it->second.log_start_offset,
+                "valid start offset mismatch: %lld vs %lld",
+                valid_start_offset,
+                it->second.log_start_offset
+                );
+        }
+    }
+}
+
+decree mutation_log::max_gced_decree(global_partition_id gpid, int64_t valid_start_offset) const
+{
+    check_log_start_offset(gpid, valid_start_offset);
+
+    zauto_lock l(_lock);
+
     if (_log_files.size() == 0)
     {
         if (_is_private)
@@ -565,7 +631,7 @@ decree mutation_log::max_gced_decree(global_partition_id gpid, int64_t valid_sta
         {
             auto it = _shared_max_decrees.find(gpid);
             if (it != _shared_max_decrees.end())
-                return it->second;
+                return it->second.decree;
             else
                 return 0;
         }
@@ -580,7 +646,9 @@ decree mutation_log::max_gced_decree(global_partition_id gpid, int64_t valid_sta
 
             auto it = log.second->previous_log_max_decrees().find(gpid);
             if (it != log.second->previous_log_max_decrees().end())
-                return it->second;
+            {
+                return it->second.decree;
+            }   
             else
                 return 0;
         }
@@ -595,14 +663,18 @@ void mutation_log::update_max_decrees(global_partition_id gpid, decree d)
         auto it = _shared_max_decrees.find(gpid);
         if (it != _shared_max_decrees.end())
         {
-            if (it->second < d)
+            if (it->second.decree < d)
             {
-                it->second = d;
+                it->second.decree = d;
             }
         }
+        /*else if (!_is_opened)
+        {
+            _shared_max_decrees[gpid] = log_replica_info(d, _global_end_offset);
+        }*/
         else
         {
-            _shared_max_decrees[gpid] = d;
+            dassert(false, "replica has not been registered in the log before");            
         }
     }
     else
@@ -710,19 +782,25 @@ int64_t mutation_log::on_partition_reset(global_partition_id gpid, decree max_d)
     zauto_lock l(_lock);
     if (_is_private)
     {
-        dassert(_private_gpid == gpid, "invalid gpid parameter");
+        dassert(_private_gpid == gpid || _private_gpid.app_id == 0, "invalid gpid parameter");
+        _private_gpid = gpid;
         _private_max_decree = max_d;
+        _private_valid_start_offset = _global_end_offset;
     }
     else
     {
-        auto it = _shared_max_decrees.insert(multi_partition_decrees::value_type(gpid, max_d));
+        log_replica_info info(max_d, _global_end_offset);
+
+        auto it = _shared_max_decrees.insert(multi_partition_decrees_ex::value_type(gpid, info));
         if (!it.second)
         {
-            dwarn("replica %d.%d has shifted its max decree from %llu to %llu",
-                gpid.app_id, gpid.pidx, it.first->second, max_d
+            dwarn("replica %d.%d has shifted its max decree from %llu to %llu, valid_start_offset from %llu to %llu",
+                gpid.app_id, gpid.pidx,
+                it.first->second.decree, info.decree,
+                it.first->second.log_start_offset, info.log_start_offset
                 );
-            _shared_max_decrees[gpid] = max_d;
-        }        
+            _shared_max_decrees[gpid] = info;
+        }
     }
     return _global_end_offset;
 }
@@ -775,6 +853,9 @@ void mutation_log::get_learn_state(
     for (itr = files.rbegin(); itr != files.rend(); itr++)
     {
         log_file_ptr& log = itr->second;
+        if (log->end_offset() <= _private_valid_start_offset)
+            break;
+
         if (skip_next)
         {
             skip_next = (log->previous_log_max_decrees().size() == 0);
@@ -788,7 +869,7 @@ void mutation_log::get_learn_state(
         if (skip_next)
             continue;
 
-        decree last_max_decree = log->previous_log_max_decrees().begin()->second;
+        decree last_max_decree = log->previous_log_max_decrees().begin()->second.decree;
 
         // when all possible decress are not needed 
         if (last_max_decree < start)
@@ -861,7 +942,7 @@ int mutation_log::garbage_collection(
         auto it3 = log->previous_log_max_decrees().find(gpid);
         dassert(it3 != log->previous_log_max_decrees().end(), 
             "this is impossible for private logs");
-        max_decree = it3->second;
+        max_decree = it3->second.decree;
     }
 
     int count = 0;
@@ -898,7 +979,7 @@ int mutation_log::garbage_collection(multi_partition_decrees_ex& durable_decrees
 
     std::map<int, log_file_ptr> files;
     std::map<int, log_file_ptr>::reverse_iterator itr;
-    multi_partition_decrees max_decrees;
+    multi_partition_decrees_ex max_decrees;
     int current_file_index = -1;
 
     {
@@ -955,7 +1036,7 @@ int mutation_log::garbage_collection(multi_partition_decrees_ex& durable_decrees
                         log->end_offset()
                         );
                 }
-                else if (durable_decree >= it3->second)
+                else if (durable_decree >= it3->second.decree)
                 {
                     delete_ok_for_this_replica = true;
 
@@ -1031,7 +1112,7 @@ int mutation_log::garbage_collection(multi_partition_decrees_ex& durable_decrees
 }
 
 //------------------- log_file --------------------------
-/*static */log_file_ptr log_file::open_read(const char* path)
+/*static */log_file_ptr log_file::open_read(const char* path, /*out*/ error_code& err)
 {
     std::string pt = std::string(path);
     char splitters[] = { '\\', '/', 0 };
@@ -1044,6 +1125,7 @@ int mutation_log::garbage_collection(multi_partition_decrees_ex& durable_decrees
         && name.substr(name.length() - strlen(".removed")) == std::string(".removed"))
         )
     {
+        err = ERR_FILE_OPERATION_FAILED;
         dwarn( "invalid log path %s", path);
         return nullptr;
     }
@@ -1052,6 +1134,7 @@ int mutation_log::garbage_collection(multi_partition_decrees_ex& durable_decrees
     auto pos2 = name.find_first_of('.', pos + 1);
     if (pos2 == std::string::npos)
     {
+        err = ERR_FILE_OPERATION_FAILED;
         dwarn( "invalid log path %s", path);
         return nullptr;
     }
@@ -1060,6 +1143,7 @@ int mutation_log::garbage_collection(multi_partition_decrees_ex& durable_decrees
 
     if (hfile == 0)
     {
+        err = ERR_FILE_OPERATION_FAILED;
         dwarn("open log %s failed", path);
         return nullptr;
     }
@@ -1070,7 +1154,7 @@ int mutation_log::garbage_collection(multi_partition_decrees_ex& durable_decrees
     
     auto lf = new log_file(path, hfile, index, start_offset, true);
     blob hdr_blob;
-    auto err = lf->read_next_log_entry(0, hdr_blob);
+    err = lf->read_next_log_entry(0, hdr_blob);
     if (err != ERR_OK)
     {
         derror("read first log entry of file %s failed, err = %s",
@@ -1282,12 +1366,12 @@ int log_file::read_header(binary_reader& reader)
     for (int i = 0; i < count; i++)
     {
         global_partition_id gpid;
-        decree decree;
+        log_replica_info info;
         
         reader.read_pod(gpid);
-        reader.read(decree);
+        reader.read_pod(info);
 
-        _previous_log_max_decrees[gpid] = decree;
+        _previous_log_max_decrees[gpid] = info;
     }
 
     return get_file_header_size();
@@ -1298,7 +1382,7 @@ int log_file::get_file_header_size() const
     int count = static_cast<int>(_previous_log_max_decrees.size());
     return static_cast<int>(
         sizeof(log_file_header) + sizeof(count)
-        + (sizeof(global_partition_id) + sizeof(decree))*count
+        + (sizeof(global_partition_id) + sizeof(log_replica_info))*count
         );
 }
 
@@ -1310,7 +1394,7 @@ bool log_file::is_right_header() const
 
 int log_file::write_header(
     binary_writer& writer, 
-    multi_partition_decrees& init_max_decrees, 
+    multi_partition_decrees_ex& init_max_decrees, 
     int buffer_bytes
     )
 {
@@ -1329,7 +1413,7 @@ int log_file::write_header(
     for (auto& kv : _previous_log_max_decrees)
     {
         writer.write_pod(kv.first);
-        writer.write(kv.second);
+        writer.write_pod(kv.second);
     }
 
     return get_file_header_size();

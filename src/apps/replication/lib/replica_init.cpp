@@ -148,21 +148,11 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
     {
         return ERR_OBJECT_NOT_FOUND;
     }
-    dassert(nullptr != _app, "");
 
     error_code err = _app->open_internal(
         this,
         create_new
         );
-
-    if (err == ERR_OK && create_new)
-    {
-        err = _app->save_init_info(
-            this, 
-            _stub->_log->on_partition_reset(get_gpid(), _app->last_committed_decree()),
-            _private_log ? _private_log->on_partition_reset(get_gpid(), _app->last_committed_decree()) : 0
-            );
-    }
 
     if (err == ERR_OK)
     {
@@ -171,7 +161,75 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
         if (_options->log_enable_private_prepare
             || !_app->is_delta_state_learning_supported())
         {
-            err = init_private_log_service();
+            dassert(nullptr == _private_log, "private log must not be initialized yet");
+
+            std::string log_dir = utils::filesystem::path_combine(dir(), "log");
+
+            _private_log = new mutation_log(
+                log_dir,
+                true,
+                _options->log_batch_buffer_MB,
+                _options->log_file_size_mb
+                );
+        }
+
+        // sync vaid start log offset between app and logs
+        if (create_new)
+        {
+            err = _app->update_log_info(
+                this,
+                _stub->_log->on_partition_reset(get_gpid(), _app->last_committed_decree()),
+                _private_log ? _private_log->on_partition_reset(get_gpid(), _app->last_committed_decree()) : 0
+                );
+        }
+        else
+        {
+            _stub->_log->set_valid_log_offset_before_open(get_gpid(), _app->log_info().init_offset_in_shared_log);
+            if (_private_log)
+                _private_log->set_valid_log_offset_before_open(get_gpid(), _app->log_info().init_offset_in_private_log);
+        }
+
+        // replay the logs
+        if (nullptr != _private_log)
+        {
+            err = _private_log->open(
+                get_gpid(),
+                [this](mutation_ptr& mu)
+                {
+                    return replay_mutation(mu);
+                }
+            );
+
+            if (err == ERR_OK)
+            {
+                derror(
+                    "%s: private log initialized, durable = %lld, committed = %lld, maxpd = %llu, ballot = %llu, valid_offset = %lld",
+                    name(),
+                    _app->last_durable_decree(),
+                    _app->last_committed_decree(),
+                    max_prepared_decree(),
+                    get_ballot(),
+                    _app->log_info().init_offset_in_private_log
+                    );
+                _private_log->check_log_start_offset(get_gpid(), _app->log_info().init_offset_in_private_log);
+                set_inactive_state_transient(true);
+            }
+            else
+            {
+                derror(
+                    "%s: private log initialized with error, durable = %lld, committed = %lld, maxpd = %llu, ballot = %llu, valid_offset = %lld",
+                    name(),
+                    _app->last_durable_decree(),
+                    _app->last_committed_decree(),
+                    max_prepared_decree(),
+                    get_ballot(),
+                    _app->log_info().init_offset_in_private_log
+                    );
+
+                set_inactive_state_transient(false);
+
+                _private_log->close();
+            }
         }
 
         if (nullptr == _check_timer && err == ERR_OK)
@@ -199,67 +257,12 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
     return err;
 }
 
-error_code replica::init_private_log_service()
-{
-    error_code err = ERR_OK;
-    
-    dassert(nullptr == _private_log, "private log must not be initialized yet");
-
-    std::string log_dir = utils::filesystem::path_combine(dir(), "log");
-
-    _private_log = new mutation_log(
-        log_dir,
-        true,
-        _options->log_batch_buffer_MB,
-        _options->log_file_size_mb
-        );
-
-    err = _private_log->open(
-            get_gpid(),
-            [this](mutation_ptr& mu)
-            {
-                return replay_mutation(mu);
-            }
-            );
-    
-    if (err == ERR_OK)
-    {
-        derror(
-            "%s: private log initialized, durable = %lld, committed = %lld, maxpd = %llu, ballot = %llu",
-            name(),
-            _app->last_durable_decree(),
-            _app->last_committed_decree(),
-            max_prepared_decree(),
-            get_ballot()
-            );
-
-        set_inactive_state_transient(true);
-    }
-    else
-    {
-        derror(
-            "%s: private log initialized with error, durable = %lld, committed = %lld, maxpd = %llu, ballot = %llu",
-            name(),
-            _app->last_durable_decree(),
-            _app->last_committed_decree(),
-            max_prepared_decree(),
-            get_ballot()
-            );
-
-        set_inactive_state_transient(false);
-
-        _private_log->close();
-    }
-
-    return err;
-}
-
 // return false only when the log is invalid
 bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
 {
     auto d = mu->data.header.decree;
     auto offset = mu->data.header.log_offset;
-    if (is_private && offset < _app->init_info().init_offset_in_private_log)
+    if (is_private && offset < _app->log_info().init_offset_in_private_log)
     {
         ddebug(
             "%s: replay mutation skipped1 as offset is invalid, ballot = %llu, decree = %llu, last_committed_decree = %llu, offset = %lld",
@@ -272,7 +275,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
         return false;
     }
     
-    if (!is_private && offset < _app->init_info().init_offset_in_shared_log)
+    if (!is_private && offset < _app->log_info().init_offset_in_shared_log)
     {
         ddebug(
             "%s: replay mutation skipped2 as offset is invalid, ballot = %llu, decree = %llu, last_committed_decree = %llu, offset = %lld",

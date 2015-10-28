@@ -46,6 +46,7 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/, bo
     _is_long_subscriber = is_long_subscriber;
     _failure_detector = nullptr;
     _state = NS_Disconnected;
+    _log = nullptr;
 }
 
 replica_stub::~replica_stub(void)
@@ -93,6 +94,12 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 	{
 		dassert(false, "Fail to create directory %s.", log_dir.c_str());
 	}
+    _log = new mutation_log(
+        log_dir,
+        false,
+        opts.log_batch_buffer_MB,
+        opts.log_file_size_mb
+        );
 
     // init rps
     replicas rps;
@@ -127,13 +134,6 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 	dir_list.clear();
 
     // init shared prepare log
-    _log = new mutation_log(
-        log_dir,
-        false,
-        opts.log_batch_buffer_MB,
-        opts.log_file_size_mb
-        );
-
     err = _log->open(
         [&rps](mutation_ptr& mu)
         {
@@ -203,7 +203,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 
         dwarn(
             "%u.%u @ %s: load replica with err %s, durable = %lld, committed = %llu, "
-            "maxpd = %llu, ballot = %llu, max(share) = %lld, max(private) = %lld, init_log_offset = %lld",
+            "maxpd = %llu, ballot = %llu, max(share) = %lld, max(private) = %lld, log_offset = <%lld, %lld>",
             it->first.app_id, it->first.pidx,
             primary_address().to_string(),
             err.to_string(),
@@ -213,7 +213,8 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             it->second->get_ballot(),
             smax,
             pmax,
-            it->second->get_app()->init_info().init_offset_in_shared_log
+            it->second->get_app()->log_info().init_offset_in_shared_log,
+            it->second->get_app()->log_info().init_offset_in_private_log
             );
 
         if (err == ERR_OK)
