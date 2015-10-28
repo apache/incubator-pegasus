@@ -26,19 +26,43 @@
 # pragma once
 
 # include <dsn/service_api_cpp.h>
+# include <memory>
+# include "service_supplier.h"
 
 namespace dsn
 {
     namespace dist
     {
-        // interface
         class distributed_lock_service
         {
         public:
-            // void create_lock(..callback.);
-            // void lock(..callback.);
-            // void unlock(..callback.);
-            // void destroy_lock(..callback.);
+            typedef void* lock_handle;
+            template<typename T>
+            static distributed_lock_service* open_service(std::shared_ptr<service_supplier> supplier)
+            {
+                return T::open(supplier);
+            }
+
+            virtual lock_handle create_lock(const std::string& lock_name);
+            /*
+             * try to get the lock:
+             *     lock_name: the global lock_id
+             *     myself: the name of myself. If someone got the lock
+             *       service_supplier use it to notify others who got the
+             *       lock
+             *     lock_callback:
+                     (1) if try_lock error, the lock_callback is called, and
+                         user can get the error reason by ec
+                     (2) if the caller don't get the lock, the lock_callback is called.
+                         In this case, ec should be 0, and caller could know who got the
+                         lock by the value of "who"
+                     (3) if the caller get the lock, the lock_callback is called
+                         and who==myself
+             */
+            virtual void try_lock(lock_handle handle,
+                                  const std::string& myself,
+                                  const std::function<void (int ec, std::string&& who)>& lock_callback) = 0;
+            virtual void free_lock(lock_handle handle) = 0;
         };
     }
 }
