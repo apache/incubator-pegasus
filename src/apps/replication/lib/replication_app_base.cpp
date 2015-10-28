@@ -80,13 +80,7 @@ error_code replication_app_info::store(const char* file)
     std::string ffile = std::string(file);
     std::string tmp_file = ffile + ".tmp";
 
-    if (utils::filesystem::file_exists(ffile))
-        utils::filesystem::remove_path(ffile);
-
-    if (utils::filesystem::file_exists(tmp_file))
-        utils::filesystem::remove_path(tmp_file);
-
-    std::ofstream os(tmp_file.c_str(), std::ios::binary);
+    std::ofstream os(tmp_file.c_str(), (std::ofstream::out | std::ios::binary | std::ofstream::trunc));
     if (!os.is_open())
     {
         derror("open file %s failed", tmp_file.c_str());
@@ -100,7 +94,7 @@ error_code replication_app_info::store(const char* file)
     os.write((const char*)this, sizeof(*this));
     os.close();
 
-    if (!utils::filesystem::rename_path(tmp_file, ffile))
+    if (!utils::filesystem::rename_path(tmp_file, ffile, true))
     {
         return ERR_FILE_OPERATION_FAILED;
     }
