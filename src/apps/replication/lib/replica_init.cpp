@@ -106,9 +106,7 @@ error_code replica::initialize_on_load(const char* dir, bool rename_dir_on_failu
         // GCed later
         char newPath[256];
         sprintf(newPath, "%s.%x.err", dir, random32(0, (uint32_t)-1));  
-		if (dsn::utils::filesystem::remove_path(newPath)
-			&& dsn::utils::filesystem::rename_path(dir, newPath)
-			)
+		if (dsn::utils::filesystem::rename_path(dir, newPath, true))
 		{
 			derror("move bad replica from '%s' to '%s'", dir, newPath);
 		}

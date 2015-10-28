@@ -166,10 +166,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         {
             it->second->close();
             std::string new_dir = it->second->dir() + ".err";
-            if (utils::filesystem::path_exists(new_dir))
-                utils::filesystem::remove_path(new_dir);
-
-            if (!utils::filesystem::rename_path(it->second->dir(), new_dir))
+            if (!utils::filesystem::rename_path(it->second->dir(), new_dir, true))
             {
                 dassert(false, "we cannot recover from the above error, exit ...");
             }

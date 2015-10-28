@@ -518,7 +518,7 @@ namespace dsn {
 					bool ret = (std::remove(npath.c_str()) == 0);
                     if (!ret)
                     {
-                        derror("remove file %s failed, err = %s", npath.c_str(), strerror(errno));
+                        derror("remove file %s failed, err = %s", path.c_str(), strerror(errno));
                     }
                     return ret;
 				}
@@ -532,10 +532,26 @@ namespace dsn {
 				}
 			}
 
-			bool rename_path(const std::string& path1, const std::string& path2)
+			bool rename_path(const std::string& path1, const std::string& path2, bool overwrite)
 			{
                 bool ret;
                 
+                // We don't check this existence of path2 when overwrite is false
+                // since ::rename() will do this.
+                if (overwrite && dsn::utils::filesystem::path_exists(path2))
+                {
+                    ret = dsn::utils::filesystem::remove_path(path2);
+                    if (!ret)
+                    {
+                        dwarn("rename from '%s' to '%s' failed to remove the existed destinate path, err = %s",
+                        path1.c_str(),
+                        path2.c_str(),
+                        strerror(errno));
+
+                        return ret;
+                    }
+                }
+
                 ret = (::rename(path1.c_str(), path2.c_str()) == 0);
                 if (!ret)
                 {
@@ -544,6 +560,7 @@ namespace dsn {
                         path2.c_str(),
                         strerror(errno));
                 }
+
                 return ret;
 			}
 
