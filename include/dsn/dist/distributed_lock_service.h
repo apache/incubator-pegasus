@@ -27,7 +27,6 @@
 
 # include <dsn/service_api_cpp.h>
 # include <memory>
-# include "service_supplier.h"
 
 namespace dsn
 {
