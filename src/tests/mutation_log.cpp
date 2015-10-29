@@ -6,14 +6,15 @@ using namespace ::dsn::replication;
 
 TEST(replication, log_file)
 {
-    multi_partition_decrees mdecrees;
+    multi_partition_decrees_ex mdecrees;
     global_partition_id gpid = { 1, 0 };    
     std::string fpath = ".//log.1.100";
     int64_t offset = 100;
     std::string str = "hello, world!";
+    error_code err;
 
     // prepare
-    mdecrees[gpid] = 3;
+    mdecrees[gpid] = log_replica_info(3, 0);
     utils::filesystem::remove_path(fpath);
 
     // write log
@@ -63,7 +64,8 @@ TEST(replication, log_file)
 
     // read the file for test
     offset = 100;
-    lf = log_file::open_read(fpath.c_str());
+    lf = log_file::open_read(fpath.c_str(), err);
+    EXPECT_TRUE(err == ERR_OK);
     EXPECT_TRUE(lf != nullptr);
     EXPECT_TRUE(lf->index() == 1);
     EXPECT_TRUE(lf->start_offset() == 100);

@@ -294,7 +294,7 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
         }
     }
 
-    // learn replication commit logs
+    // learn private replication logs
     // in this case, the state on the PS is still incomplete
     else
     {
@@ -380,24 +380,28 @@ void replica::on_learn_reply(
         {
             lerr = _app->open(true);
         }
+
+        // invalidate existing mutations in current logs
+        if (lerr == 0)
+        {
+            err = _app->update_log_info(this,
+                _stub->_log->on_partition_reset(get_gpid(), 0),
+                _private_log ? _private_log->on_partition_reset(get_gpid(), 0) : 0
+                );
+        }
+        else
+        {
+            err = ERR_LOCAL_APP_FAILURE;
+        }
         
-        if (lerr != 0)
+        if (err != ERR_OK)
         {
             _potential_secondary_states.learn_remote_files_task = tasking::enqueue(
                 LPC_LEARN_REMOTE_DELTA_FILES,
                 this,
-                std::bind(&replica::on_copy_remote_state_completed, this, ERR_LOCAL_APP_FAILURE, 0, resp)
+                std::bind(&replica::on_copy_remote_state_completed, this, err, 0, resp)
                 );
             return;
-        }
-
-        // invalidate existing mutations in current logs
-        _app->init_info().init_offset_in_shared_log =
-            _stub->_log->on_partition_reset(get_gpid(), 0);
-        if (_private_log)
-        {
-            _app->init_info().init_offset_in_private_log =
-                _private_log->on_partition_reset(get_gpid(), 0);
         }
 
         // reset preparelist
@@ -441,20 +445,18 @@ void replica::on_learn_reply(
             "state is incomplete");       
 
         // invalidate existing mutations in current logs
-        _app->init_info().init_offset_in_shared_log = 
-            _stub->_log->on_partition_reset(get_gpid(), resp->prepare_start_decree - 1);
-        if (_private_log)
-        {
-            _app->init_info().init_offset_in_private_log  = 
-                _private_log->on_partition_reset(get_gpid(), resp->prepare_start_decree - 1);
-        }
+        err = _app->update_log_info(
+            this,
+            _stub->_log->on_partition_reset(get_gpid(), resp->prepare_start_decree - 1),
+            _private_log ? _private_log->on_partition_reset(get_gpid(), resp->prepare_start_decree - 1) : 0
+            );
 
         // go to next stage
         _potential_secondary_states.learning_status = LearningWithPrepare;        
         _potential_secondary_states.learn_remote_files_task = tasking::enqueue(
             LPC_LEARN_REMOTE_DELTA_FILES,
             this,
-            std::bind(&replica::on_copy_remote_state_completed, this, ERR_OK, 0, resp)
+            std::bind(&replica::on_copy_remote_state_completed, this, err, 0, resp)
             );
     }
    
@@ -593,12 +595,7 @@ void replica::on_copy_remote_state_completed(
             );
         if (err == 0)
         {
-            dassert(_app->last_committed_decree() == _app->last_durable_decree(), "");   
-            err = _app->save_init_info(
-                this,
-                _app->init_info().init_offset_in_shared_log,
-                _app->init_info().init_offset_in_private_log
-                );
+            dassert(_app->last_committed_decree() == _app->last_durable_decree(), "");
         }
         else
         {
@@ -617,7 +614,11 @@ void replica::on_copy_remote_state_completed(
 void replica::on_learn_remote_state_completed(error_code err)
 {
     check_hashed_access();
-    
+    if (_secondary_states.checkpoint_task != nullptr)
+    {
+        _secondary_states.checkpoint_task = nullptr;
+    }
+
     if (PS_POTENTIAL_SECONDARY != status())
         return;
 
@@ -750,7 +751,7 @@ error_code replica::apply_learned_state_from_private_log(learn_state& state)
         offset
         );
 
-    // apply in-buffer commit logs
+    // apply in-buffer private logs
     if (err == ERR_OK && state.meta.size() > 0)
     {
         dassert(state.meta.size() == 1, "only 1 buffered private log is allowed");
