@@ -308,6 +308,7 @@ namespace dsn
 
                 for (int i = 0; i < nfds; i++)
                 {
+                    dassert((_events[i].flags & EV_ERROR) == 0, "kevent should not be set EV_ERROR here.");
                     auto cb = (io_loop_callback*)_events[i].udata;
                     dinfo("kevent get events 0x%x, cb = %p", _events[i].filter, cb);
 
