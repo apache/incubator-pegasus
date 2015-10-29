@@ -44,25 +44,25 @@ namespace dsn
 
         public:
             //create a dir
-            virtual void amkdir(const std::string& node,
-                                const err_string_callback& cb_create,
-                                const std::string& value = std::string()) = 0;
+            virtual void create_direcotory(const std::string& dir_node,
+                                           const err_string_callback& cb_create,
+                                           const std::string& value = std::string()) = 0;
             //create a node which can't be a dir
-            virtual void acreate(const std::string& node,
-                                 const err_string_callback& cb_create,
-                                 const std::string& value = std::string()) = 0;
+            virtual void create_node(const std::string& node,
+                                     const err_string_callback& cb_create,
+                                     const std::string& value = std::string()) = 0;
             //delete a node/dir, and the dir may not be empty
-            virtual void adelete(const std::string& node,
-                                 const err_callback& cb_delete) = 0;
-            virtual void aexist(const std::string& node,
-                                const err_state_callback& cb_exist) = 0;
-            virtual void aget(const std::string& node,
-                              const err_data_callback& cb_get_data) = 0;
-            virtual void aset(const std::string& node,
-                              const std::string& value,
-                              const err_state_callback& cb_set_data) = 0;
-            virtual void aget_children(const std::string& node,
-                                       const err_stringv_callback& cb_list_node) = 0;
+            virtual void delete(const std::string& node_or_dir,
+                                const err_callback& cb_delete) = 0;
+            virtual void node_exist(const std::string& node_or_dir,
+                                    const err_state_callback& cb_exist) = 0;
+            virtual void get_data(const std::string& node_or_dir,
+                                  const err_data_callback& cb_get_data) = 0;
+            virtual void set_data(const std::string& node_or_dir,
+                                  const std::string& value,
+                                  const err_state_callback& cb_set_data) = 0;
+            virtual void get_children(const std::string& dir,
+                                      const err_stringv_callback& cb_list_node) = 0;
 
         };
     }
