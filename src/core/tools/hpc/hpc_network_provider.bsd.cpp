@@ -511,7 +511,10 @@ namespace dsn
 
         void hpc_rpc_session::on_failure()
         {
-            _looper->unbind_io_handle((dsn_handle_t)(intptr_t)_socket, &_ready_event);
+            if (_socket != -1)
+            {
+                _looper->unbind_io_handle((dsn_handle_t)(intptr_t)_socket, &_ready_event);
+            }
             if (on_disconnected())
                 close();            
         }
