@@ -278,6 +278,8 @@ namespace dsn
 
         void hpc_rpc_session::do_write(message_ex* msg)
         {
+            int flags;
+
             static_assert (sizeof(dsn_message_parser::send_buf) == sizeof(struct iovec), 
                 "make sure they are compatible");
 
@@ -296,6 +298,14 @@ namespace dsn
                 dassert(_sending_msg == msg, "only one sending msg is possible");
             }
 
+            flags =
+# ifdef __APPLE__
+                SO_NOSIGPIPE
+# else
+                MSG_NOSIGNAL
+# endif
+                ;
+
             // prepare send buffer, make sure header is already in the buffer
             while (true)
             {
@@ -307,7 +317,7 @@ namespace dsn
                 hdr.msg_iov = (struct iovec*)&_sending_buffers[_sending_buffer_start_index];
                 hdr.msg_iovlen = (size_t)buffer_count;
 
-                int sz = sendmsg(_socket, &hdr, MSG_NOSIGNAL);
+                int sz = sendmsg(_socket, &hdr, flags);
                 int err = errno;
                 dinfo("(s = %d) call sendmsg on %s, return %d, err = %s",
                     _socket,
