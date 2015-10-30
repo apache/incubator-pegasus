@@ -22,14 +22,6 @@ set(MY_PROJ_LIBS dsn.tools.nfs
                  dsn.corelib
    )
 
-if(UNIX AND (NOT APPLE))
-	set(MY_PROJ_LIBS ${MY_PROJ_LIBS} rt)
-endif()
-
-if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-	set(MY_PROJ_LIBS ${MY_PROJ_LIBS} dl aio)
-endif()
-
 set(MY_PROJ_LIB_PATH "")
 
 # Extra files that will be installed

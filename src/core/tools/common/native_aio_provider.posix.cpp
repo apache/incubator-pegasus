@@ -124,6 +124,9 @@ namespace dsn {
             int r;
 
             aio->this_ = this;
+            memset(&aio->cb, 0, sizeof(aio->cb));
+            aio->cb.aio_reqprio = 0;
+            aio->cb.aio_lio_opcode = (aio->type == AIO_Read ? LIO_READ : LIO_WRITE);
             aio->cb.aio_fildes = static_cast<int>((ssize_t)aio->file);
             aio->cb.aio_buf = aio->buffer;
             aio->cb.aio_nbytes = aio->buffer_size;

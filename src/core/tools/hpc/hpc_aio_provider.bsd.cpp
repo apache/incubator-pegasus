@@ -86,9 +86,32 @@ hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provid
         uintptr_t lolp_or_events
         )
     {
-        auto e = (struct kevent*)lolp_or_events;
-        auto io = (struct aiocb*)(e->ident);
-        complete_aio(io);
+        struct kevent* e;
+        struct aiocb* io;
+        int bytes;
+        int err;
+
+        e = (struct kevent*)lolp_or_events;
+        if (e->filter != EVFILT_AIO)
+        {
+            derror("Non-aio filter invokes the aio callback! e->filter = %hd", e->filter);
+            return;
+        }
+
+        io = (struct aiocb*)(e->ident);
+        err = aio_error(io);
+        if (err == EINPROGRESS)
+        {
+            return;
+        }
+
+        bytes = aio_return(io);
+        if (bytes == -1)
+        {
+            err = errno;
+        }
+
+        complete_aio(io, bytes, err);
     };
 
     _looper = nullptr;
@@ -207,13 +230,11 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
     }
 }
 
-void hpc_aio_provider::complete_aio(struct aiocb* io)
+void hpc_aio_provider::complete_aio(struct aiocb* io, int bytes, int err)
 {
     posix_disk_aio_context* ctx = CONTAINING_RECORD(io, posix_disk_aio_context, cb);
     error_code ec;
-    int bytes = 0;
 
-    int err = aio_error(&ctx->cb);
     if (err != 0)
     {
         derror("aio error, err = %s", strerror(err));
@@ -221,7 +242,6 @@ void hpc_aio_provider::complete_aio(struct aiocb* io)
     }
     else
     {
-        bytes = aio_return(&ctx->cb); // from e.g., read or write
         dassert(bytes >= 0, "bytes = %d.", bytes);
         ec = bytes > 0 ? ERR_OK : ERR_HANDLE_EOF;
     }
