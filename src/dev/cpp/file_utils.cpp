@@ -84,7 +84,8 @@ namespace dsn {
 
 			static __thread char tls_path_buffer[PATH_MAX];
 
-			static inline bool get_stat(const std::string& npath, struct stat_& st)
+			// npath need to be a normalized path
+			static inline bool get_stat_internal(const std::string& npath, struct stat_& st)
 			{
 				return (::stat_(npath.c_str(), &st) == 0);
 			}
@@ -314,12 +315,13 @@ namespace dsn {
 #endif
 			}
 
-			static bool path_exists(const std::string& path, int type)
+			// npath need to be a normalized path
+			static bool path_exists_internal(const std::string& npath, int type)
 			{
 				bool ret;
 				struct stat_ st;
 
-				if (!dsn::utils::filesystem::get_stat(path, st))
+				if (!dsn::utils::filesystem::get_stat_internal(npath, st))
 				{
 					return false;
 				}
@@ -345,32 +347,53 @@ namespace dsn {
 
 			bool path_exists(const std::string& path)
 			{
+				std::string npath;
+
 				if (path.empty())
 				{
 					return false;
 				}
 
-				return dsn::utils::filesystem::path_exists(path, FTW_NS);
+				if (!get_normalized_path(path, npath))
+				{
+					return false;
+				}
+
+				return dsn::utils::filesystem::path_exists_internal(npath, FTW_NS);
 			}
 
 			bool directory_exists(const std::string& path)
 			{
+				std::string npath;
+
 				if (path.empty())
 				{
 					return false;
 				}
 
-				return dsn::utils::filesystem::path_exists(path, FTW_D);
+				if (!get_normalized_path(path, npath))
+				{
+					return false;
+				}
+
+				return dsn::utils::filesystem::path_exists_internal(npath, FTW_D);
 			}
 
 			bool file_exists(const std::string& path)
 			{
+				std::string npath;
+
 				if (path.empty())
 				{
 					return false;
 				}
 
-				return dsn::utils::filesystem::path_exists(path, FTW_F);
+				if (!get_normalized_path(path, npath))
+				{
+					return false;
+				}
+
+				return dsn::utils::filesystem::path_exists_internal(npath, FTW_F);
 			}
 
 			static bool get_subpaths(const std::string& path, std::vector<std::string>& sub_list, bool recursive, int typeflags)
@@ -388,7 +411,7 @@ namespace dsn {
 					return false;
 				}
 
-				if (!dsn::utils::filesystem::path_exists(npath, FTW_D))
+				if (!dsn::utils::filesystem::path_exists_internal(npath, FTW_D))
 				{
 					return false;
 				}
@@ -513,7 +536,7 @@ namespace dsn {
 					return false;
 				}
 
-				if (dsn::utils::filesystem::path_exists(npath, FTW_F))
+				if (dsn::utils::filesystem::path_exists_internal(npath, FTW_F))
 				{
 					bool ret = (std::remove(npath.c_str()) == 0);
                     if (!ret)
@@ -522,7 +545,7 @@ namespace dsn {
                     }
                     return ret;
 				}
-				else if(dsn::utils::filesystem::path_exists(npath, FTW_D))
+				else if (dsn::utils::filesystem::path_exists_internal(npath, FTW_D))
 				{
 					return dsn::utils::filesystem::remove_directory(npath);
 				}
@@ -567,13 +590,19 @@ namespace dsn {
 			bool file_size(const std::string& path, int64_t& sz)
 			{
 				struct stat_ st;
+				std::string npath;
 
 				if (path.empty())
 				{
 					return false;
 				}
 
-				if (!dsn::utils::filesystem::get_stat(path, st))
+				if (!get_normalized_path(path, npath))
+				{
+					return false;
+				}
+
+				if (!dsn::utils::filesystem::get_stat_internal(npath, st))
 				{
 					return false;
 				}
@@ -606,12 +635,12 @@ namespace dsn {
 					return false;
 				}
 
-				if (dsn::utils::filesystem::path_exists(npath, FTW_D))
+				if (dsn::utils::filesystem::path_exists_internal(npath, FTW_D))
 				{
 					return true;
 				}
 
-				if (dsn::utils::filesystem::path_exists(npath, FTW_F))
+				if (dsn::utils::filesystem::path_exists_internal(npath, FTW_F))
 				{
 					return false;
 				}
@@ -643,7 +672,7 @@ namespace dsn {
 				{
 					auto ppath = npath.substr(0, pos++);
 					prev = pos;
-					if (!dsn::utils::filesystem::path_exists(ppath, FTW_D))
+					if (!dsn::utils::filesystem::path_exists_internal(ppath, FTW_D))
 					{
 						if (::mkdir_(ppath.c_str()) != 0)
 						{
@@ -686,12 +715,12 @@ namespace dsn {
 					return false;
 				}
 
-				if (dsn::utils::filesystem::path_exists(npath, FTW_F))					
+				if (dsn::utils::filesystem::path_exists_internal(npath, FTW_F))
 				{
 					return true;
 				}
 
-				if (dsn::utils::filesystem::path_exists(npath, FTW_D))
+				if (dsn::utils::filesystem::path_exists_internal(npath, FTW_D))
 				{
 					return false;
 				}
@@ -861,13 +890,19 @@ namespace dsn {
 			bool last_write_time(std::string& path, time_t& tm)
 			{
 				struct stat_ st;
+				std::string npath;
 
 				if (path.empty())
 				{
 					return false;
 				}
 
-				if (!dsn::utils::filesystem::get_stat(path, st))
+				if (!get_normalized_path(path, npath))
+				{
+					return false;
+				}
+
+				if (!dsn::utils::filesystem::get_stat_internal(npath, st))
 				{
 					return false;
 				}
