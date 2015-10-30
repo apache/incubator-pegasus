@@ -247,9 +247,12 @@ namespace dsn {
 
     // shared
     protected:        
-        // send msgs (double-linked list)
+        //
+        // sending messages are put in _sending_msgs
+        // buffer is prepared well in _sending_buffers
         // always call on_send_completed later
-        virtual void send(message_ex* msgs) = 0;
+        //
+        virtual void send(uint64_t signature) = 0;
 
     protected:
         bool try_connecting(); // return true when it is permitted
@@ -258,23 +261,28 @@ namespace dsn {
         bool is_disconnected() const { return _connect_state == SS_DISCONNECTED; }
         bool is_connecting() const { return _connect_state == SS_CONNECTING; }
         bool is_connected() const { return _connect_state == SS_CONNECTED; }        
-        void on_send_completed(message_ex* msg);
+        void on_send_completed(uint64_t signature = 0); // default value for nothing is sent
 
     private:
-        message_ex* unlink_message_for_send();
+        // return whether there are messages for sending        
+        bool unlink_message_for_send();
 
     protected:
+        // constant info
         connection_oriented_network        &_net;
         ::dsn::rpc_address                 _remote_addr;
-        std::atomic<int>                   _reconnect_count_after_last_success;
-        rpc_client_matcher_ptr             _matcher; // client used only
         int                                _max_buffer_block_count_per_send;        
         std::shared_ptr<dsn::message_parser> _parser;
 
+        // messages are currently being sent
+        // also locked by _lock later
         std::vector<message_parser::send_buf> _sending_buffers;
-        message_ex                         *_sending_msgs;
+        std::vector<message_ex*>              _sending_msgs;
 
     private:
+        std::atomic<int>                   _reconnect_count_after_last_success;
+        rpc_client_matcher_ptr             _matcher; // client used only
+
         enum session_state
         {
             SS_CONNECTING,
@@ -283,10 +291,11 @@ namespace dsn {
         };
 
         // TODO: expose the queue to be customizable
-        ::dsn::utils::ex_lock_nr           _lock;
+        ::dsn::utils::ex_lock_nr           _lock; // [
         bool                               _is_sending_next;
-        dlink                              _messages;        
+        slist<message_ex>                  _messages;
         session_state                      _connect_state;
-        uint64_t                           _message_sent;        
+        uint64_t                           _message_sent;     
+        // ]
     };
 }

@@ -32,6 +32,9 @@
 # endif
 # define __TITLE__ "linklist"
 
+//
+// assuming public T::T* next; exists and inited to nullptr in T::T(...)
+//
 template<typename T>
 class slist
 {
@@ -45,7 +48,7 @@ public:
     {
         if (_last)
         {
-            _last->_next = obj;
+            _last->next = obj;
             _last = obj;
         }
         else
@@ -70,9 +73,9 @@ public:
             if (_first == _last)
                 _first = _last = nullptr;
             else
-                _first = static_cast<T*>(_first->_next);
+                _first = static_cast<T*>(_first->next);
 
-            ret->_next = nullptr;
+            ret->next = nullptr;
             return ret;
         }
         else

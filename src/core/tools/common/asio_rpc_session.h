@@ -38,7 +38,7 @@ namespace dsn {
         {
         public:
             virtual ~asio_rpc_session();
-            virtual void send(message_ex* msgs) override { return write(msgs); }
+            virtual void send(uint64_t signature) override { return write(signature); }
 
         // client
         public:
@@ -62,7 +62,7 @@ namespace dsn {
             
         private:
             void do_read(size_t sz = 256);
-            void write(message_ex* msgs);
+            void write(uint64_t signature);
             void on_failure();
             void set_options();  
             void on_message_read(message_ex* msg)

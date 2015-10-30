@@ -107,12 +107,12 @@ namespace dsn {
             
         // shared
         public:
-            virtual void send(message_ex* msgs) override
+            virtual void send(uint64_t signature) override
             {
 # ifdef _WIN32
-                do_write(msgs);
+                do_write(signature);
 # else
-                do_safe_write(msgs);
+                do_safe_write(signature);
 # endif
             }
 
@@ -120,7 +120,7 @@ namespace dsn {
             void do_read(int sz = 256);
 
         private:            
-            void do_write(message_ex* msgs);
+            void do_write(uint64_t signature);
             void close();
             void on_failure();
             void on_read_completed(message_ex* msg)
@@ -133,7 +133,7 @@ namespace dsn {
             
         protected:
             socket_t                               _socket;
-            message_ex*                            _sending_msg;            
+            uint64_t                               _sending_signature;
             int                                    _sending_buffer_start_index;
 
 # ifdef _WIN32
@@ -152,7 +152,7 @@ namespace dsn {
 
             void on_connect_events_ready(uintptr_t lolp_or_events);
             void on_send_recv_events_ready(uintptr_t lolp_or_events);
-            void do_safe_write(message_ex* msgs);
+            void do_safe_write(uint64_t signature);
 # endif
         };
     }

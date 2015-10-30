@@ -105,7 +105,7 @@ namespace dsn
             task *t = _local_tasks.pop_all(), *next;
             while (t)
             {
-                next = t->_next;
+                next = t->next;
                 t->exec_internal();
                 t = next;
             }
@@ -118,7 +118,7 @@ namespace dsn
             
             while (t)
             {
-                next = t->_next;
+                next = t->next;
                 t->exec_internal();
                 t = next;
             }
@@ -138,7 +138,7 @@ namespace dsn
 
                     while (t)
                     {
-                        next = t->_next;
+                        next = t->next;
                         if (local_exec)
                             t->exec_internal();
                         else
@@ -177,7 +177,7 @@ namespace dsn
                 {
                     _remote_timer_tasks_count--;
                     
-                    next = t->_next;
+                    next = t->next;
 
                     if (local_exec)
                         t->exec_internal();

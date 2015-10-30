@@ -39,37 +39,31 @@ namespace dsn
 {
     rpc_session::~rpc_session()
     {
-        dlink* msg = nullptr;
-
-        if (_sending_msgs)
+        // for sending msgs
+        for (auto& msg : _sending_msgs)
         {
-            auto hdr = &_sending_msgs->dl;
-            msg = hdr;
-            do
-            {
-                // added in rpc_engine::reply (for server) or rpc_session::call (for client)
-                auto rmsg = CONTAINING_RECORD(msg, message_ex, dl);
-                msg = msg->next();
-                rmsg->dl.remove();                
-                rmsg->release_ref();
-            } while (msg != hdr);
-
-            _sending_msgs = nullptr;
+            msg->release_ref();
         }
+        _sending_buffers.clear();
+        _sending_msgs.clear();
 
         while (true)
         {
+            message_ex* msg;
             {
                 utils::auto_lock<utils::ex_lock_nr> l(_lock);
-                msg = _messages.next();
-                if (msg == &_messages)
+                msg = _messages.pop_all();
+                if (msg == nullptr)
                     break;
-
-                msg->remove();
             }
+
             // added in rpc_engine::reply (for server) or rpc_session::call (for client)
-            auto rmsg = CONTAINING_RECORD(msg, message_ex, dl);
-            rmsg->release_ref();
+            while (msg)
+            {
+                auto next = msg->next;
+                msg->release_ref();
+                msg = next;
+            }
         }
     }
 
@@ -103,58 +97,60 @@ namespace dsn
         _connect_state = SS_DISCONNECTED;
     }
 
-    inline message_ex* rpc_session::unlink_message_for_send()
+    inline bool rpc_session::unlink_message_for_send()
     {
-        auto n = _messages.next();
-        auto msg = CONTAINING_RECORD(n, message_ex, dl);        
         int bcount = 0;
         int tlen = 0;
-        dlink* last_msg = nullptr;
+        message_ex *current = _messages._first, *first = current, *last = nullptr;
 
-        _sending_buffers.clear();
+        dbg_dassert(0 == _sending_buffers.size(), "");
+        dbg_dassert(0 == _sending_msgs.size(), "");
 
-        do
+        while (current)
         {
-            auto lmsg = CONTAINING_RECORD(n, message_ex, dl);            
-            auto lcount = _parser->get_send_buffers_count_and_total_length(lmsg, &tlen);
+            auto lcount = _parser->get_send_buffers_count_and_total_length(current, &tlen);
             if (bcount > 0 && bcount + lcount > _max_buffer_block_count_per_send)
             {
-                last_msg = n;
                 break;
             }   
 
             _sending_buffers.resize(bcount + lcount);
-            _parser->prepare_buffers_on_send(lmsg, 0, &_sending_buffers[bcount]);
+            _parser->prepare_buffers_on_send(current, 0, &_sending_buffers[bcount]);
             bcount += lcount;
+            _sending_msgs.push_back(current);
 
-            n = n->next();
-        } while (n != &_messages);
+            last = current;
+            current = current->next;
+            last->next = nullptr;
+        }
 
-        // all pending messages are included for sending
-        if (nullptr == last_msg)
+        // no pending messages are included for sending
+        if (nullptr == last)
         {
-            _messages.remove();
+            return false;
         }
 
         // part of the message are included
         else
         {
-            auto rmsg = _messages.range_remove(last_msg->prev());
-            dassert(rmsg == &msg->dl, "must return the next sending msg");
+            _messages._first = current;
+            if (last == _messages._last)
+                _messages._last = nullptr;
+            return true;
         }
-
-        return msg;
     }
     
     void rpc_session::send_message(message_ex* msg)
     {
+        uint64_t sig;
         {
             utils::auto_lock<utils::ex_lock_nr> l(_lock);
-            msg->dl.insert_before(&_messages);
+            _messages.add(msg);
             if (SS_CONNECTED == _connect_state && !_is_sending_next)
             {
                 _is_sending_next = true;
-                _sending_msgs = unlink_message_for_send();
+                sig = _message_sent + 1;
+                unlink_message_for_send();
             }
             else
             {
@@ -162,68 +158,51 @@ namespace dsn
             }
         }
 
-        // send msgs (double-linked list)
-        this->send(_sending_msgs);
+        this->send(sig);
     }
     
-    void rpc_session::on_send_completed(message_ex* msg)
+    void rpc_session::on_send_completed(uint64_t signature)
     {
-        message_ex* next_msg;
+        uint64_t sig = 0;
         {
             utils::auto_lock<utils::ex_lock_nr> l(_lock);
-            if (nullptr != msg)
+            if (signature != 0)
             {
-                dassert(_is_sending_next && msg == _sending_msgs,
+                dassert(_is_sending_next 
+                    && _sending_msgs.size() > 0 
+                    && signature == _message_sent + 1, 
                     "sent msg must be sending");
+
                 _is_sending_next = false; 
-                _sending_msgs = nullptr;
+                
+                for (auto& msg : _sending_msgs)
+                {
+                    msg->release_ref();
+                    _message_sent++;
+                }
+                _sending_msgs.clear();
+                _sending_buffers.clear();
             }
             
-            if (!_messages.is_alone() && !_is_sending_next)
+            if (!_is_sending_next)
             {
-                _is_sending_next = true;
-                next_msg = _sending_msgs = unlink_message_for_send();
-            }
-            else
-            {
-                next_msg = nullptr;
+                if (unlink_message_for_send())
+                {
+                    sig = _message_sent + 1;
+                    _is_sending_next = true;
+                }
             }
         }
 
         // for next send messages (double-linked list)
-        if (next_msg)
-            this->send(next_msg);
-
-        // for old msgs
-        // added in rpc_engine::reply (for server) or rpc_session::call (for client)
-        if (msg)
-        {
-            while (true)
-            {
-                /*dinfo("msg %s for rpc %llx is now sent",
-                task_spec::get(msg->local_rpc_code)->name.c_str(),
-                msg->header->rpc_id
-                );*/
-                _message_sent++;
-
-                if (msg->dl.is_alone())
-                {
-                    msg->release_ref();
-                    break;
-                }
-
-                auto msg2 = CONTAINING_RECORD(msg->dl.next(), message_ex, dl);
-                msg->dl.remove();
-                msg->release_ref();
-                msg = msg2;
-            }
-        }
+        if (sig != 0)
+            this->send(sig);
     }
 
     bool rpc_session::has_pending_out_msgs()
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
-        return !_messages.is_alone();
+        return !_messages.is_empty();
     }
 
     // client
@@ -236,7 +215,6 @@ namespace dsn
         : _net(net), _remote_addr(remote_addr), _parser(parser)
     {
         _matcher = matcher;
-        _sending_msgs = nullptr;
         _is_sending_next = false;
         _connect_state = SS_DISCONNECTED;
         _reconnect_count_after_last_success = 0;
@@ -253,7 +231,6 @@ namespace dsn
         : _net(net), _remote_addr(remote_addr), _parser(parser)
     {
         _matcher = nullptr;
-        _sending_msgs = nullptr;
         _is_sending_next = false;
         _connect_state = SS_CONNECTED;
         _reconnect_count_after_last_success = 0;

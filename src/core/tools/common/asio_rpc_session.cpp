@@ -103,9 +103,8 @@ namespace dsn {
             });
         }
         
-        void asio_rpc_session::write(message_ex* msgs)
+        void asio_rpc_session::write(uint64_t signature)
         {
-            dassert(msgs == _sending_msgs, "incorrect sending msg");
             std::vector<boost::asio::const_buffer> buffers2;
             int bcount = (int)_sending_buffers.size();
             
@@ -118,7 +117,7 @@ namespace dsn {
 
             add_ref();
             boost::asio::async_write(*_socket, buffers2,
-                [this, msgs](boost::system::error_code ec, std::size_t length)
+                [this, signature](boost::system::error_code ec, std::size_t length)
             {
                 if (!!ec)
                 {
@@ -126,7 +125,7 @@ namespace dsn {
                 }
                 else
                 {
-                    on_send_completed(msgs);
+                    on_send_completed(signature);
                 }
 
                 release_ref();
@@ -186,7 +185,7 @@ namespace dsn {
 
                         set_options();
                         set_connected();
-                        on_send_completed(nullptr);
+                        on_send_completed();
                         do_read();
                     }
                     else

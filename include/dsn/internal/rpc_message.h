@@ -93,7 +93,7 @@ namespace dsn
         uint16_t               local_rpc_code;
 
         // by message queuing
-        dlink                  dl;
+        message_ex*            next;
 
     public:        
         //message_ex(blob bb, bool parse_hdr = true); // read 

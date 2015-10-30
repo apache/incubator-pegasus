@@ -390,7 +390,7 @@ namespace dsn
             //dinfo("WSARecv called, err = %d", rt);
         }
 
-        void hpc_rpc_session::do_write(message_ex* msg)
+        void hpc_rpc_session::do_write(uint64_t sig)
         {
             add_ref();
             
@@ -427,12 +427,12 @@ namespace dsn
                     if (_sending_buffer_start_index == (int)_sending_buffers.size())
                     {
                         dassert(len == 0, "buffer must be sent completely");
-                        auto lmsg = _sending_msg;
-                        _sending_msg = nullptr;
-                        on_send_completed(lmsg);
+                        auto sig = _sending_signature;
+                        _sending_signature = 0;
+                        on_send_completed(sig);
                     }
                     else
-                        do_write(_sending_msg);
+                        do_write(_sending_signature);
                 }
 
                 release_ref();
@@ -440,17 +440,17 @@ namespace dsn
             memset(&_write_event.olp, 0, sizeof(_write_event.olp));
             
             // new msg
-            if (_sending_msg != msg)
+            if (_sending_signature != sig)
             {
-                dassert(_sending_msg == nullptr, "only one sending msg is possible");
-                _sending_msg = msg;
+                dassert(_sending_signature == 0, "only one sending msg is possible");
+                _sending_signature = sig;
                 _sending_buffer_start_index = 0;
             }
 
             // continue old msg
             else
             {
-                // nothing to do
+                dassert(_sending_signature == sig, "only one sending msg is possible");
             }
 
             int buffer_count = (int)_sending_buffers.size() - _sending_buffer_start_index;
@@ -492,7 +492,7 @@ namespace dsn
             : rpc_session(net, remote_addr, matcher, parser),
             _socket(sock)
         {
-            _sending_msg = nullptr;
+            _sending_signature = 0;
             _sending_buffer_start_index = 0;
         }
 
@@ -522,7 +522,7 @@ namespace dsn
                         );
 
                     set_connected();
-                    on_send_completed(nullptr);
+                    on_send_completed();
                     do_read();
                 }
                 this->release_ref(); // added before ConnectEx
@@ -563,7 +563,7 @@ namespace dsn
             : rpc_session(net, remote_addr, parser),
             _socket(sock)
         {
-            _sending_msg = nullptr;
+            _sending_signature = 0;
             _sending_buffer_start_index = 0;
         }
     }

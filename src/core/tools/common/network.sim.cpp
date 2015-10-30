@@ -73,10 +73,9 @@ namespace dsn { namespace tools {
         return recv_msg;
     }
 
-    void sim_client_session::send(message_ex* msgs)
+    void sim_client_session::send(uint64_t sig)
     {
-        auto msg = msgs;
-        do 
+        for (auto& msg : _sending_msgs)
         {
             sim_network_provider* rnet = nullptr;
             if (!s_switch[task_spec::get(msg->local_rpc_code)->rpc_call_channel].get(remote_address(), rnet))
@@ -107,12 +106,9 @@ namespace dsn { namespace tools {
                         );
                 }
             }
-            
-            msg = CONTAINING_RECORD(msg->dl.next(), message_ex, dl);
+        }
 
-        } while (msg != msgs);
-
-        on_send_completed(msgs);
+        on_send_completed(sig);
     }
 
     sim_server_session::sim_server_session(
@@ -126,20 +122,23 @@ namespace dsn { namespace tools {
         _client = client;
     }
 
-    void sim_server_session::send(message_ex* reply_msg)
+    void sim_server_session::send(uint64_t sig)
     {
-        message_ex* recv_msg = virtual_send_message(reply_msg);
-
+        for (auto& msg : _sending_msgs)
         {
-            node_scoper ns(_client->net().node());
+            message_ex* recv_msg = virtual_send_message(msg);
 
-            _client->on_recv_reply(recv_msg->header->id, recv_msg,
-                recv_msg->to_address == recv_msg->from_address ?
-                0 : (static_cast<sim_network_provider*>(&_net))->net_delay_milliseconds()
-                );
-        }
+            {
+                node_scoper ns(_client->net().node());
 
-        on_send_completed(reply_msg);
+                _client->on_recv_reply(recv_msg->header->id, recv_msg,
+                    recv_msg->to_address == recv_msg->from_address ?
+                    0 : (static_cast<sim_network_provider*>(&_net))->net_delay_milliseconds()
+                    );
+            }
+        }        
+
+        on_send_completed(sig);
     }
 
     sim_network_provider::sim_network_provider(rpc_engine* rpc, network* inner_provider)

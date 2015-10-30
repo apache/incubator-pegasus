@@ -253,47 +253,47 @@ namespace dsn
             }
         }
 
-        void hpc_rpc_session::do_safe_write(message_ex* msg)
+        void hpc_rpc_session::do_safe_write(uint64_t sig)
         {
             utils::auto_lock<utils::ex_lock_nr> l(_send_lock);
 
-            if (nullptr == msg)
+            if (0 == sig)
             {
-                if (_sending_msg)
+                if (_sending_signature)
                 {
-                    do_write(_sending_msg);
+                    do_write(_sending_signature);
                 }
                 else
                 {
                     _send_lock.unlock(); // avoid recursion
-                    on_send_completed(nullptr); // send next msg if there is.
+                    on_send_completed(); // send next msg if there is.
                     _send_lock.lock();
                 }
             }
             else
             {
-                do_write(msg);
+                do_write(sig);
             }
         }
 
-        void hpc_rpc_session::do_write(message_ex* msg)
+        void hpc_rpc_session::do_write(uint64_t sig)
         {
             static_assert (sizeof(dsn_message_parser::send_buf) == sizeof(struct iovec), 
                 "make sure they are compatible");
 
-            dbg_dassert(msg != nullptr, "cannot send empty msg");
+            dbg_dassert(sig != 0, "cannot send empty msg");
                         
             // new msg
-            if (_sending_msg == nullptr)
+            if (_sending_signature == 0)
             {
-                _sending_msg = msg;
+                _sending_signature = sig;
                 _sending_buffer_start_index = 0;
             }
 
             // continue old msg
             else
             {
-                dassert(_sending_msg == msg, "only one sending msg is possible");
+                dassert(_sending_signature == sig, "only one sending msg is possible");
             }
 
             // prepare send buffer, make sure header is already in the buffer
@@ -354,11 +354,13 @@ namespace dsn
                     if (_sending_buffer_start_index == (int)_sending_buffers.size())
                     {
                         dassert(len == 0, "buffer must be sent completely");
-                        _sending_msg = nullptr;
+
+                        auto csig = _sending_signature;
+                        _sending_signature = 0;
 
                         _send_lock.unlock(); // avoid recursion
-                        // try next msg recursively
-                        on_send_completed(msg);
+                        // try next msg recursively                        
+                        on_send_completed(csig);
                         _send_lock.lock();
                         return;
                     }
@@ -433,7 +435,7 @@ namespace dsn
              _socket(sock)
         {
             dassert(sock != -1, "invalid given socket handle");
-            _sending_msg = nullptr;
+            _sending_signature = 0;
             _sending_buffer_start_index = 0;
             _looper = nullptr;
 
@@ -566,7 +568,7 @@ namespace dsn
             _socket(sock)
         {
             dassert(sock != -1, "invalid given socket handle");
-            _sending_msg = nullptr;
+            _sending_signature = 0;
             _sending_buffer_start_index = 0;
             _looper = nullptr;
 

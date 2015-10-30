@@ -320,7 +320,7 @@ void task_worker::loop()
             task* task = q->dequeue(), *next;
             while (task != nullptr)
             {
-                next = task->_next;
+                next = task->next;
                 task->exec_internal();
                 task = next;
             }

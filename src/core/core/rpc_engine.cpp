@@ -468,7 +468,6 @@ namespace dsn {
     void rpc_engine::call_ip(rpc_address addr, message_ex* request, rpc_response_task* call, bool reset_request_id)
     {
         dbg_dassert(addr.type() == HOST_TYPE_IPV4, "only IPV4 is now supported");
-        dbg_dassert(request->dl.is_alone(), "the request should not be in sending ...");
 
         request->from_address = primary_address();
         request->to_address = addr;

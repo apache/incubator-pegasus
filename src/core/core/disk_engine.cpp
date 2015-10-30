@@ -75,7 +75,7 @@ aio_task* disk_write_queue::unlink_next_workload(void* plength)
 
         // continue next
         last = current;
-        current = (aio_task*)current->_next;
+        current = (aio_task*)current->next;
     }
 
     // unlink [first, last] -> current
@@ -84,7 +84,7 @@ aio_task* disk_write_queue::unlink_next_workload(void* plength)
         _hdr._first = current;
         if (last == _hdr._last)
             _hdr._last = nullptr;
-        last->_next = nullptr;
+        last->next = nullptr;
     }
         
     return first;
@@ -115,7 +115,7 @@ aio_task* disk_file::write(aio_task* tsk, void* ctx)
 
 aio_task* disk_file::on_read_completed(aio_task* wk, error_code err, size_t size)
 {
-    dassert(wk->_next == nullptr, "");
+    dassert(wk->next == nullptr, "");
     auto ret = _read_queue.on_work_completed(wk, nullptr);
     wk->enqueue(err, size);
     wk->release_ref(); // added in above read
@@ -130,8 +130,8 @@ aio_task* disk_file::on_write_completed(aio_task* wk, void* ctx, error_code err,
     
     while (wk)
     {
-        aio_task* next = (aio_task*)wk->_next;
-        wk->_next = nullptr;
+        aio_task* next = (aio_task*)wk->next;
+        wk->next = nullptr;
 
         if (err == ERR_OK)
         {
@@ -318,7 +318,7 @@ void disk_engine::process_write(aio_task* aio, uint32_t sz)
                 );
 
             ptr += dio->buffer_size;
-            current_wk = (aio_task*)current_wk->_next;
+            current_wk = (aio_task*)current_wk->next;
         } while (current_wk);
 
         dassert(ptr == (char*)bb.data() + bb.length(), "");

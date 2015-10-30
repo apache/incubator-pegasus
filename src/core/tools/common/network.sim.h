@@ -41,7 +41,7 @@ namespace dsn { namespace tools {
             );
 
         virtual void connect();
-        virtual void send(message_ex* msgs);
+        virtual void send(uint64_t signature) override;
     };
 
     class sim_server_session : public rpc_session
@@ -54,7 +54,7 @@ namespace dsn { namespace tools {
             std::shared_ptr<message_parser>& parser
             );
 
-        virtual void send(message_ex* reply_msg);
+        virtual void send(uint64_t signature) override;
 
         virtual void connect() {}
 

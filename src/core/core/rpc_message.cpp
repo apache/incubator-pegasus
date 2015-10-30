@@ -151,6 +151,7 @@ message_ex::message_ex()
     _rw_offset = 0;
     header = nullptr;
     _is_read = false;
+    next = nullptr;
 }
 
 message_ex::~message_ex()
