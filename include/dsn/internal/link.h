@@ -32,34 +32,61 @@
 # endif
 # define __TITLE__ "linklist"
 
-class slink
+template<typename T>
+class slist
 {
 public:
-    slink() : _next(nullptr){}
-
-    slink* next() const { return _next; }
-    
-    void insert_after(slink* o) 
+    slist()
     {
-        slink* n = _next; 
-        _next = o; 
-        o->_next = n; 
+        _first = _last = nullptr;
     }
 
-    slink* remove_next() 
+    void add(T* obj)
     {
-        if (_next) 
+        if (_last)
         {
-            auto n = _next; 
-            _next = _next->_next; 
-            return n; 
+            _last->_next = obj;
+            _last = obj;
         }
-        else 
-            return nullptr; 
+        else
+        {
+            _first = _last = obj;
+        }
     }
 
-private:
-    slink *_next;
+    T* pop_all()
+    {
+        T* ret = _first;
+        _first = _last = nullptr;
+        return ret;
+    }
+
+    T* pop_one()
+    {
+        if (_first)
+        {
+            T* ret = _first;
+
+            if (_first == _last)
+                _first = _last = nullptr;
+            else
+                _first = static_cast<T*>(_first->_next);
+
+            ret->_next = nullptr;
+            return ret;
+        }
+        else
+            return nullptr;
+    }
+
+    bool is_empty() const
+    {
+        return _first == nullptr;
+    }
+
+public:
+    T* _first;
+    T* _last;
 };
 
 class dlink

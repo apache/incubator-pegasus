@@ -154,7 +154,7 @@ private:
 
 public:
     // used by task queue only
-    dlink                  _task_queue_dl;
+    task*                  _next;
 };
 
 class task_c : public task

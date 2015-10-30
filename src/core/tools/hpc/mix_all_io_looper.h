@@ -60,10 +60,10 @@ namespace dsn
 
             // tasks from remote threads
             ::dsn::utils::ex_lock_nr_spin _lock;
-            dlink                         _remote_tasks;
+            slist<task>                   _remote_tasks;
 
             // tasks from local thread
-            dlink                         _local_tasks;
+            slist<task>                   _local_tasks;
         };
 
         class io_looper_task_worker : public task_worker

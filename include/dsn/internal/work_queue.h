@@ -30,6 +30,7 @@
 
 namespace dsn {
 
+    template<typename T>
     class work_queue
     {
     public:
@@ -42,17 +43,17 @@ namespace dsn {
         ~work_queue()
         {
             scope_lk l(_lock);
-            dassert(_current_op_count == 0 && _hdr.is_alone(), 
+            dassert(_current_op_count == 0 && _hdr.is_empty(),
                 "work queue cannot be deleted when there are still %d running ops or pending work items in queue",
                 _current_op_count
                 );
         }
 
         // return not-null for what's to be run next
-        dlink* add_work(dlink* dl, void* ctx)
+        T* add_work(T* dl, void* ctx)
         {
             scope_lk l(_lock);
-            dl->insert_before(&_hdr);
+            _hdr.add(dl);
 
             // allocate slot and run
             if (_current_op_count == _max_concurrent_op)
@@ -60,19 +61,19 @@ namespace dsn {
             else
             {
                 _current_op_count++;
-                return unlink_next_workload(_hdr, ctx);
+                return unlink_next_workload(ctx);
             }
         }
 
         // called when the curren operation is completed,
         // which triggers further round of operations as returned
-        dlink* on_work_completed(dlink* running, void* ctx)
+        T* on_work_completed(T* running, void* ctx)
         {
             scope_lk l(_lock);
             _current_op_count--;
             
             // no further workload
-            if (_hdr.is_alone())
+            if (_hdr.is_empty())
             {
                 return nullptr;
             }
@@ -81,15 +82,15 @@ namespace dsn {
             else
             {
                 _current_op_count++;
-                return unlink_next_workload(_hdr, ctx);
+                return unlink_next_workload(ctx);
             }
         }
 
     protected:
         // lock is already hold
-        virtual dlink* unlink_next_workload(dlink& hdr, void* ctx)
+        virtual T* unlink_next_workload(void* ctx)
         {
-            return hdr.next()->remove();
+            return _hdr.pop_one();
         }
 
         void reset_max_concurrent_ops(int max_c)
@@ -99,11 +100,12 @@ namespace dsn {
 
     private:
         typedef utils::auto_lock<utils::ex_lock_nr_spin> scope_lk;
-        utils::ex_lock_nr_spin _lock;
-        dlink _hdr;
+        utils::ex_lock_nr_spin _lock;        
         int _current_op_count;
-
         int _max_concurrent_op;
+
+    protected:
+        slist<T> _hdr;
     };
 
 }

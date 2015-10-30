@@ -41,18 +41,16 @@ namespace dsn {
 DEFINE_TASK_CODE_AIO(LPC_AIO_BATCH_WRITE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
 //----------------- disk_file ------------------------
-dlink* disk_write_queue::unlink_next_workload(dlink& hdr, void* plength)
+aio_task* disk_write_queue::unlink_next_workload(void* plength)
 {
-    dlink* to = hdr.next();
-    dlink* current = to;
     uint64_t next_offset;
     uint32_t& sz = *(uint32_t*)plength;
     sz = 0;
 
-    while (current != &hdr)
+    aio_task *first = _hdr._first, *current = first, *last = first;
+    while (nullptr != current)
     {
-        aio_task* tsk = CONTAINING_RECORD(current, aio_task, _task_queue_dl);
-        auto io = tsk->aio();
+        auto io = current->aio();
         if (sz == 0)
         {
             sz = io->buffer_size;
@@ -66,7 +64,6 @@ dlink* disk_write_queue::unlink_next_workload(dlink& hdr, void* plength)
             {
                 sz += io->buffer_size;
                 next_offset += io->buffer_size;
-                to = current;
             }
 
             // no batch is possible
@@ -77,10 +74,20 @@ dlink* disk_write_queue::unlink_next_workload(dlink& hdr, void* plength)
         }
 
         // continue next
-        current = current->next();
+        last = current;
+        current = (aio_task*)current->_next;
     }
 
-    return hdr.range_remove(to);
+    // unlink [first, last] -> current
+    if (last)
+    {
+        _hdr._first = current;
+        if (last == _hdr._last)
+            _hdr._last = nullptr;
+        last->_next = nullptr;
+    }
+        
+    return first;
 }
 
 disk_file::disk_file(dsn_handle_t handle)
@@ -94,56 +101,51 @@ void disk_file::ctrl(dsn_ctrl_code_t code, int param)
 
 }
 
-dlink* disk_file::read(aio_task* tsk)
+aio_task* disk_file::read(aio_task* tsk)
 {
     tsk->add_ref(); // release on completion
-    return _read_queue.add_work(&tsk->_task_queue_dl, nullptr);
+    return _read_queue.add_work(tsk, nullptr);
 }
 
-dlink* disk_file::write(aio_task* tsk, void* ctx)
+aio_task* disk_file::write(aio_task* tsk, void* ctx)
 {
     tsk->add_ref(); // release on completion
-    return _write_queue.add_work(&tsk->_task_queue_dl, ctx);
+    return _write_queue.add_work(tsk, ctx);
 }
 
-dlink* disk_file::on_read_completed(dlink* wk, error_code err, size_t size)
+aio_task* disk_file::on_read_completed(aio_task* wk, error_code err, size_t size)
 {
-    dassert(wk->is_alone(), "");
+    dassert(wk->_next == nullptr, "");
     auto ret = _read_queue.on_work_completed(wk, nullptr);
-    auto aio = CONTAINING_RECORD(wk, aio_task, _task_queue_dl);
-    aio->enqueue(err, size);
-    aio->release_ref(); // added in above read
+    wk->enqueue(err, size);
+    wk->release_ref(); // added in above read
 
     return ret;
 }
 
-dlink* disk_file::on_write_completed(dlink* wk, void* ctx, error_code err, size_t size)
+aio_task* disk_file::on_write_completed(aio_task* wk, void* ctx, error_code err, size_t size)
 {
     auto ret = _write_queue.on_work_completed(wk, ctx);
     auto tail = wk;
     
-    while (true)
+    while (wk)
     {
-        auto wk2 = wk->next();
-        wk->remove();
+        aio_task* next = (aio_task*)wk->_next;
+        wk->_next = nullptr;
 
-        auto aio = CONTAINING_RECORD(wk, aio_task, _task_queue_dl);
         if (err == ERR_OK)
         {
-            aio->enqueue(err, (size_t)aio->aio()->buffer_size);
-            size -= (size_t)aio->aio()->buffer_size;
+            wk->enqueue(err, (size_t)wk->aio()->buffer_size);
+            size -= (size_t)wk->aio()->buffer_size;
         }
         else
         {
-            aio->enqueue(err, size);
+            wk->enqueue(err, size);
         }
 
-        aio->release_ref(); // added in above write
+        wk->release_ref(); // added in above write
 
-        if (wk == wk2)
-            break;
-        else
-            wk = wk2;
+        wk = next;
     }
 
     return ret;
@@ -232,15 +234,14 @@ void disk_engine::read(aio_task* aio)
     auto wk = df->read(aio);
     if (wk)
     {
-        aio = CONTAINING_RECORD(wk, aio_task, _task_queue_dl);
-        return _provider->aio(aio);
+        return _provider->aio(wk);
     }
 }
 
 class batch_write_io_task : public aio_task
 {
 public:
-    batch_write_io_task(dlink* tasks, blob& buffer)
+    batch_write_io_task(aio_task* tasks, blob& buffer)
         : aio_task(LPC_AIO_BATCH_WRITE, nullptr, tasks)
     {
         _buffer = buffer;
@@ -248,20 +249,18 @@ public:
     
     virtual void exec() override
     {
-        dlink* tasks = (dlink*)_param;
-        auto faio = CONTAINING_RECORD(tasks, aio_task, _task_queue_dl);
-        auto df = (disk_file*)faio->aio()->file_object;
+        aio_task* tasks = (aio_task*)_param;
+        auto df = (disk_file*)tasks->aio()->file_object;
         uint32_t sz;
 
         auto wk = df->on_write_completed(tasks, (void*)&sz, error(), _transferred_size);
         if (wk)
         {
-            faio->aio()->engine->process_write(wk, sz);
+            wk->aio()->engine->process_write(wk, sz);
         }
     }
 
 public:
-    dlink*       _tasks;
     blob         _buffer;
 };
 
@@ -294,10 +293,8 @@ void disk_engine::write(aio_task* aio)
     }
 }
 
-void disk_engine::process_write(dlink* wk, uint32_t sz)
+void disk_engine::process_write(aio_task* aio, uint32_t sz)
 {
-    auto aio = CONTAINING_RECORD(wk, aio_task, _task_queue_dl);
-
     // no batching
     if (aio->aio()->buffer_size == sz)
     {
@@ -310,10 +307,10 @@ void disk_engine::process_write(dlink* wk, uint32_t sz)
         // merge the buffers
         auto bb = tls_trans_mem_alloc_blob((size_t)sz);
         char* ptr = (char*)bb.data();
-        auto current_wk = wk;
+        auto current_wk = aio;
         do
         {
-            auto dio = CONTAINING_RECORD(current_wk, aio_task, _task_queue_dl)->aio();
+            auto dio = current_wk->aio();
             memcpy(
                 (void*)ptr,
                 (const void*)(dio->buffer),
@@ -321,14 +318,14 @@ void disk_engine::process_write(dlink* wk, uint32_t sz)
                 );
 
             ptr += dio->buffer_size;
-            current_wk = current_wk->next();
-        } while (current_wk != wk);
+            current_wk = (aio_task*)current_wk->_next;
+        } while (current_wk);
 
         dassert(ptr == (char*)bb.data() + bb.length(), "");
 
         // setup io task
         auto new_task = new batch_write_io_task(
-            wk,
+            aio,
             bb
             );
         auto dio = new_task->aio();
@@ -371,11 +368,10 @@ void disk_engine::complete_io(aio_task* aio, error_code err, uint32_t bytes, int
         auto df = (disk_file*)(aio->aio()->file_object);
         if (aio->aio()->type == AIO_Read)
         {
-            auto wk = df->on_read_completed(&aio->_task_queue_dl, err, (size_t)bytes);
+            auto wk = df->on_read_completed(aio, err, (size_t)bytes);
             if (wk)
             {
-                auto faio = CONTAINING_RECORD(wk, aio_task, _task_queue_dl);
-                _provider->aio(faio);
+                _provider->aio(wk);
             }            
         }
 
@@ -383,7 +379,7 @@ void disk_engine::complete_io(aio_task* aio, error_code err, uint32_t bytes, int
         else
         {
             uint32_t sz;
-            auto wk = df->on_write_completed(&aio->_task_queue_dl, (void*)&sz, err, (size_t)bytes);
+            auto wk = df->on_write_completed(aio, (void*)&sz, err, (size_t)bytes);
             if (wk)
             {
                 process_write(wk, sz);

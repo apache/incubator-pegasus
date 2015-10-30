@@ -141,10 +141,10 @@ namespace dsn
             io_sessions                   _io_sessions;
 # endif
             // timers
-            std::atomic<uint64_t>          _remote_timer_tasks_count;
-            ::dsn::utils::ex_lock_nr_spin  _remote_timer_tasks_lock;
-            std::map<uint64_t, task*>      _remote_timer_tasks; // ts (ms) => task
-            std::map<uint64_t, task*>      _local_timer_tasks;
+            std::atomic<uint64_t>           _remote_timer_tasks_count;
+            ::dsn::utils::ex_lock_nr_spin   _remote_timer_tasks_lock;
+            std::map<uint64_t, slist<task>> _remote_timer_tasks; // ts (ms) => task
+            std::map<uint64_t, slist<task>> _local_timer_tasks;
         };
 
         // --------------- inline implementation -------------------------

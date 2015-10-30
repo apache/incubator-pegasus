@@ -317,10 +317,12 @@ void task_worker::loop()
     //try {
         while (_is_running)
         {
-            task* task = q->dequeue();
-            if (task != nullptr)
+            task* task = q->dequeue(), *next;
+            while (task != nullptr)
             {
+                next = task->_next;
                 task->exec_internal();
+                task = next;
             }
         }
     /*}

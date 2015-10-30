@@ -43,11 +43,11 @@ TEST(core, dsn_threadpool_code)
 
     ASSERT_STREQ("THREAD_POOL_DEFAULT", dsn_threadpool_code_to_string(THREAD_POOL_DEFAULT));
     ASSERT_EQ(THREAD_POOL_DEFAULT, dsn_threadpool_code_from_string("THREAD_POOL_DEFAULT", THREAD_POOL_INVALID));
-    ASSERT_LT(THREAD_POOL_DEFAULT, dsn_threadpool_code_max());
+    ASSERT_LE(THREAD_POOL_DEFAULT, dsn_threadpool_code_max());
 
     ASSERT_STREQ("THREAD_POOL_FOR_TEST", dsn_threadpool_code_to_string(THREAD_POOL_FOR_TEST));
     ASSERT_EQ(THREAD_POOL_FOR_TEST, dsn_threadpool_code_from_string("THREAD_POOL_FOR_TEST", THREAD_POOL_INVALID));
-    ASSERT_LT(THREAD_POOL_FOR_TEST, dsn_threadpool_code_max());
+    ASSERT_LE(THREAD_POOL_FOR_TEST, dsn_threadpool_code_max());
 }
 
 DEFINE_TASK_CODE(TASK_CODE_COMPUTE_FOR_TEST, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT);
@@ -67,7 +67,7 @@ TEST(core, dsn_task_code)
 
     ASSERT_STREQ("TASK_CODE_COMPUTE_FOR_TEST", dsn_task_code_to_string(TASK_CODE_COMPUTE_FOR_TEST));
     ASSERT_EQ(TASK_CODE_COMPUTE_FOR_TEST, dsn_task_code_from_string("TASK_CODE_COMPUTE_FOR_TEST", TASK_CODE_INVALID));
-    ASSERT_LT(TASK_CODE_COMPUTE_FOR_TEST, dsn_task_code_max());
+    ASSERT_LE(TASK_CODE_COMPUTE_FOR_TEST, dsn_task_code_max());
     dsn_task_code_query(TASK_CODE_COMPUTE_FOR_TEST, &type, &pri, &pool);
     ASSERT_EQ(TASK_TYPE_COMPUTE, type);
     ASSERT_EQ(TASK_PRIORITY_HIGH, pri);
@@ -75,7 +75,7 @@ TEST(core, dsn_task_code)
 
     ASSERT_STREQ("TASK_CODE_AIO_FOR_TEST", dsn_task_code_to_string(TASK_CODE_AIO_FOR_TEST));
     ASSERT_EQ(TASK_CODE_AIO_FOR_TEST, dsn_task_code_from_string("TASK_CODE_AIO_FOR_TEST", TASK_CODE_INVALID));
-    ASSERT_LT(TASK_CODE_AIO_FOR_TEST, dsn_task_code_max());
+    ASSERT_LE(TASK_CODE_AIO_FOR_TEST, dsn_task_code_max());
     dsn_task_code_query(TASK_CODE_AIO_FOR_TEST, &type, &pri, &pool);
     ASSERT_EQ(TASK_TYPE_AIO, type);
     ASSERT_EQ(TASK_PRIORITY_COMMON, pri);
@@ -83,7 +83,7 @@ TEST(core, dsn_task_code)
 
     ASSERT_STREQ("TASK_CODE_RPC_FOR_TEST", dsn_task_code_to_string(TASK_CODE_RPC_FOR_TEST));
     ASSERT_EQ(TASK_CODE_RPC_FOR_TEST, dsn_task_code_from_string("TASK_CODE_RPC_FOR_TEST", TASK_CODE_INVALID));
-    ASSERT_LT(TASK_CODE_RPC_FOR_TEST, dsn_task_code_max());
+    ASSERT_LE(TASK_CODE_RPC_FOR_TEST, dsn_task_code_max());
     dsn_task_code_query(TASK_CODE_RPC_FOR_TEST, &type, &pri, &pool);
     ASSERT_EQ(TASK_TYPE_RPC_REQUEST, type);
     ASSERT_EQ(TASK_PRIORITY_LOW, pri);
@@ -91,7 +91,7 @@ TEST(core, dsn_task_code)
 
     ASSERT_STREQ("TASK_CODE_RPC_FOR_TEST_ACK", dsn_task_code_to_string(TASK_CODE_RPC_FOR_TEST_ACK));
     ASSERT_EQ(TASK_CODE_RPC_FOR_TEST_ACK, dsn_task_code_from_string("TASK_CODE_RPC_FOR_TEST_ACK", TASK_CODE_INVALID));
-    ASSERT_LT(TASK_CODE_RPC_FOR_TEST_ACK, dsn_task_code_max());
+    ASSERT_LE(TASK_CODE_RPC_FOR_TEST_ACK, dsn_task_code_max());
     dsn_task_code_query(TASK_CODE_RPC_FOR_TEST_ACK, &type, &pri, &pool);
     ASSERT_EQ(TASK_TYPE_RPC_RESPONSE, type);
     ASSERT_EQ(TASK_PRIORITY_LOW, pri);
