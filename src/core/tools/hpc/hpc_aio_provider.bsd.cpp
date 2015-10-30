@@ -100,7 +100,11 @@ hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provid
 
         io = (struct aiocb*)(e->ident);
         err = aio_error(io);
-        dassert(err != EINPROGRESS, "aio should not be in progress!");
+        if (err == EINPROGRESS)
+        {
+            return;
+        }
+
         bytes = aio_return(io);
         if (bytes == -1)
         {
@@ -186,7 +190,7 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
     // set up callback
     aio->cb.aio_sigevent.sigev_notify = SIGEV_KEVENT;
     aio->cb.aio_sigevent.sigev_notify_kqueue = (int)(uintptr_t)_looper->native_handle();
-    //aio->cb.aio_sigevent.sigev_notify_kevent_flags = EV_CLEAR;
+    aio->cb.aio_sigevent.sigev_notify_kevent_flags = EV_CLEAR;
     aio->cb.aio_sigevent.sigev_value.sival_ptr = &_callback;
 
     r = (aio->type == AIO_Read) ? aio_read(&aio->cb) : aio_write(&aio->cb);
