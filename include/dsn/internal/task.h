@@ -239,7 +239,7 @@ public:
     message_ex*  get_request() { return _request; }
     virtual void enqueue() override;
 
-    virtual void  exec()
+    virtual void  exec() override
     {
         _handler->run(_request);
     }

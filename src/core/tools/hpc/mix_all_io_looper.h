@@ -41,12 +41,12 @@ namespace dsn
             io_looper_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
             virtual ~io_looper_task_queue();
                         
-            virtual void  start(service_node* node, int worker_count);
-            virtual void  stop();
-            virtual void  handle_local_queues();
+            virtual void  start(service_node* node, int worker_count) override;
+            virtual void  stop() override;
+            virtual void  handle_local_queues() override;
 
-            virtual void  enqueue(task* task);
-            virtual task* dequeue();
+            virtual void  enqueue(task* task) override;
+            virtual task* dequeue()override;
         
         protected:
             virtual bool is_shared_timer_queue() override
