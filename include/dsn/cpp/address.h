@@ -31,6 +31,7 @@
 # include <unordered_set>
 # include <vector>
 # include <cstring> // for strcmp()
+# include <string>
 
 namespace dsn
 {
@@ -221,7 +222,7 @@ namespace std
             case HOST_TYPE_IPV4:
                 return std::hash<uint32_t>()(ep.ip()) ^ std::hash<uint16_t>()(ep.port());
             case HOST_TYPE_URI:
-                return std::hash<string>()(std::string(ep.to_string()));
+                return std::hash<std::string>()(std::string(ep.to_string()));
             case HOST_TYPE_GROUP:
                 return std::hash<void*>()(ep.group_address());
             default:

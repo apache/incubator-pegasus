@@ -421,7 +421,7 @@ namespace dsn {
 
 			extern bool remove_path(const std::string& path);
 			
-			extern bool rename_path(const std::string& path1, const std::string& path2);
+			extern bool rename_path(const std::string& path1, const std::string& path2, bool overwrite = false);
 
 			extern bool file_size(const std::string& path, int64_t& sz);
 

@@ -612,6 +612,13 @@ DSN_API dsn_error_t dsn_file_close(dsn_handle_t file)
     return ::dsn::task::get_current_disk()->close(file);
 }
 
+// native handle: HANDLE for windows, int for non-windows
+DSN_API void* dsn_file_native_handle(dsn_handle_t file)
+{
+    auto dfile = (::dsn::disk_file*)file;
+    return dfile->native_handle();
+}
+
 DSN_API dsn_task_t dsn_file_create_aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash)
 {
     return new ::dsn::aio_task(code, cb, param, hash);

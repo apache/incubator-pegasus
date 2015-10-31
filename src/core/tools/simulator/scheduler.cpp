@@ -252,7 +252,7 @@ void scheduler::schedule()
         for (auto& s : _threads)
         {
             if ((s->in_continuation && s->is_continuation_ready)
-                || (!s->in_continuation && s->worker->queue()->count() > 0)
+                || (!s->in_continuation && s->worker->queue()->approx_count() > 0)
                 )
             {
                 ready_workers.push_back(s->index);

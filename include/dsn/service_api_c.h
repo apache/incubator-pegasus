@@ -172,6 +172,15 @@ struct dsn_app_info
     char  name[DSN_MAX_APP_TYPE_NAME_LENGTH]; // app name configed in config file
 };
 
+// the following ctrl code are used by dsn_file_ctrl
+typedef enum dsn_ctrl_code_t
+{
+    CTL_BATCH_INVALID,
+    CTL_BATCH_WRITE,            // (batch) set write batch size
+    CTL_MAX_CON_READ_OP_COUNT,  // (throttling) maximum concurrent read ops
+    CTL_MAX_CON_WRITE_OP_COUNT, // (throttling) maximum concurrent write ops
+} dsn_ctrl_code_t;
+
 typedef enum dsn_task_type_t
 {
     TASK_TYPE_RPC_REQUEST,   // task handling rpc request
@@ -697,6 +706,8 @@ extern DSN_API dsn_handle_t dsn_file_open(
 extern DSN_API dsn_error_t  dsn_file_close(
                                 dsn_handle_t file
                                 );
+// native handle: HANDLE for windows, int for non-windows
+extern DSN_API void*        dsn_file_native_handle(dsn_handle_t file);
 extern DSN_API dsn_task_t   dsn_file_create_aio_task(
                                 dsn_task_code_t code, 
                                 dsn_aio_handler_t cb, 
@@ -823,7 +834,7 @@ extern DSN_API void         dsn_msg_get_context(
 #define derror(...) dlog(LOG_LEVEL_ERROR, __TITLE__, __VA_ARGS__)
 #define dfatal(...) dlog(LOG_LEVEL_FATAL, __TITLE__, __VA_ARGS__)
 #define dassert(x, ...) do { if (!(x)) {                    \
-            dlog(LOG_LEVEL_FATAL, "assert", #x);           \
+            dlog(LOG_LEVEL_FATAL, "assert", "assertion expression: "#x); \
             dlog(LOG_LEVEL_FATAL, "assert", __VA_ARGS__);  \
             dsn_coredump();       \
                 } } while (false)

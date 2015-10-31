@@ -50,7 +50,7 @@ public:
     service_node* node() const;
 
     virtual dsn_handle_t open(const char* file_name, int flag, int pmode) = 0;
-    virtual error_code   close(dsn_handle_t hFile) = 0;
+    virtual error_code   close(dsn_handle_t fh) = 0;
     virtual void         aio(aio_task* aio) = 0;
     virtual disk_aio*    prepare_aio_context(aio_task*) = 0;
 

@@ -41,13 +41,12 @@ namespace dsn
             io_looper_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
             virtual ~io_looper_task_queue();
                         
-            virtual void  start(service_node* node, int worker_count);
-            virtual void  stop();
-            virtual void  handle_local_queues();
+            virtual void  start(service_node* node, int worker_count) override;
+            virtual void  stop() override;
+            virtual void  handle_local_queues() override;
 
-            virtual void  enqueue(task* task);
-            virtual task* dequeue();
-            virtual int   count() const { return _remote_count.load(); }
+            virtual void  enqueue(task* task) override;
+            virtual task* dequeue()override;
         
         protected:
             virtual bool is_shared_timer_queue() override
@@ -60,10 +59,10 @@ namespace dsn
 
             // tasks from remote threads
             ::dsn::utils::ex_lock_nr_spin _lock;
-            dlink                         _remote_tasks;
+            slist<task>                   _remote_tasks;
 
             // tasks from local thread
-            dlink                         _local_tasks;
+            slist<task>                   _local_tasks;
         };
 
         class io_looper_task_worker : public task_worker

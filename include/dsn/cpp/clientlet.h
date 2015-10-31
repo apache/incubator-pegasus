@@ -194,7 +194,7 @@ namespace dsn
     namespace file
     {
         task_ptr read(
-            dsn_handle_t hFile,
+            dsn_handle_t fh,
             char* buffer,
             int count,
             uint64_t offset,
@@ -205,7 +205,7 @@ namespace dsn
             );
 
         task_ptr write(
-            dsn_handle_t hFile,
+            dsn_handle_t fh,
             const char* buffer,
             int count,
             uint64_t offset,
@@ -218,7 +218,7 @@ namespace dsn
 
         template<typename T> // where T : public virtual clientlet
         inline task_ptr read(
-            dsn_handle_t hFile,
+            dsn_handle_t fh,
             char* buffer,
             int count,
             uint64_t offset,
@@ -229,12 +229,12 @@ namespace dsn
             )
         {
             aio_handler h = std::bind(callback, owner, std::placeholders::_1, std::placeholders::_2);
-            return file::read(hFile, buffer, count, offset, callback_code, owner, h, hash);
+            return file::read(fh, buffer, count, offset, callback_code, owner, h, hash);
         }
 
         template<typename T> // where T : public virtual clientlet
         inline task_ptr write(
-            dsn_handle_t hFile,
+            dsn_handle_t fh,
             const char* buffer,
             int count,
             uint64_t offset,
@@ -245,7 +245,7 @@ namespace dsn
             )
         {
             aio_handler h = std::bind(callback, owner, std::placeholders::_1, std::placeholders::_2);
-            return file::write(hFile, buffer, count, offset, callback_code, owner, h, hash);
+            return file::write(fh, buffer, count, offset, callback_code, owner, h, hash);
         }
 
         task_ptr copy_remote_files(

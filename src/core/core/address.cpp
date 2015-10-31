@@ -24,14 +24,14 @@
  * THE SOFTWARE.
  */
 
-# include <dsn/ports.h>
-# include <dsn/service_api_c.h>
-# include <dsn/cpp/address.h>
-# include <dsn/internal/task.h>
-# include "group_address.h"
-
 # ifdef _WIN32
 
+# define _WINSOCK_DEPRECATED_NO_WARNINGS 1
+
+# include <Winsock2.h>
+# include <ws2tcpip.h>
+# include <Windows.h>
+# pragma comment(lib, "ws2_32.lib")
 
 # else
 # include <sys/socket.h>
@@ -45,6 +45,12 @@
 # endif
 
 # endif
+
+# include <dsn/ports.h>
+# include <dsn/service_api_c.h>
+# include <dsn/cpp/address.h>
+# include <dsn/internal/task.h>
+# include "group_address.h"
 
 namespace dsn
 {
