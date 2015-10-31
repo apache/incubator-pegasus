@@ -39,18 +39,14 @@
 # include "../tools/hpc/hpc_tail_logger.h"
 # include "../tools/common/simple_logger.h"
 
-
-
-
 using namespace ::dsn;
 const char str[64] = "this is a logging test for log %010d @ thread %010d";
 
-template<typename TLOGGER>
-void logv(TLOGGER &logger,const char* fmt, ...)
+void logv(dsn::logging_provider* logger,const char* fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
-	logger.dsn_logv(
+	logger->dsn_logv(
 		__FILE__,
 		__FUNCTION__,
 		__LINE__,
@@ -79,7 +75,7 @@ void logger_test(int thread_count, int record_count)
 			task::set_tls_dsn_context(task::get_current_node2(), nullptr, nullptr);
 			for (int j = 0; j < record_count; j++)
 			{
-				logv(logger, str, j, i);
+				logv(&logger, str, j, i);
 			}
 			
 		}));
@@ -111,48 +107,33 @@ void logger_test(int thread_count, int record_count)
 
 }
 
-TEST(core, hpc_logger_test)
-{
-	std::cout << "thread_count\t\t record_count\t\t speed" << std::endl;
-
-	auto threads_count = {1,2,4,10,20};
-	for (int i : threads_count)
-		logger_test<dsn::tools::hpc_logger>(i, 1000000);
-}
-
-
 TEST(core, simple_logger_test)
 {
 	std::cout << "thread_count\t\t record_count\t\t speed" << std::endl;
 
-	auto threads_count = { 1, 2, 4, 5, 10, 20 };
+	auto threads_count = { 1, 2,  5, 10 };
 	for (int i : threads_count)
 	{
-		logger_test<dsn::tools::simple_logger>(i, 1000000);
+		logger_test<dsn::tools::simple_logger>(i, 100000);
 	}
 }
 
-TEST(core, screen_logger_test)
+TEST(core, hpc_logger_test)
 {
-	std::cout << "thread_count\t\t record_count\t\t speed" << std::endl;
+    std::cout << "thread_count\t\t record_count\t\t speed" << std::endl;
 
-	auto threads_count = { 1, 2, 4, 5, 10, 20 };
-	for (int i : threads_count)
-	{
-		logger_test<dsn::tools::screen_logger>(i, 100000);
-	}
-
-
+    auto threads_count = { 1, 2, 5, 10 };
+    for (int i : threads_count)
+        logger_test<dsn::tools::hpc_logger>(i, 100000);
 }
 
 TEST(core, hpc_tail_logger_test)
 {
 	std::cout << "thread_count\t\t record_count\t\t speed" << std::endl;
 
-	auto threads_count = { 1, 2, 4, 5, 10, 20 };
+	auto threads_count = { 1, 2,  5, 10 };
 	for (int i : threads_count)
 	{
-		logger_test<dsn::tools::hpc_tail_logger>(i, 1000000);
+        logger_test<dsn::tools::hpc_tail_logger>(i, 10000);
 	}
-
 }
