@@ -100,10 +100,5 @@ namespace dsn
             dassert(t != nullptr, "dequeue does not return empty tasks");
             return t;
         }
-
-        int      simple_task_queue::count() const
-        {
-            return _samples.count();
-        }
     }
 }

@@ -36,11 +36,7 @@
 namespace dsn 
 {
     class rpc_session;
-    class rpc_session;
-    class rpc_client_matcher;
-
     typedef ::dsn::ref_ptr<rpc_session> rpc_session_ptr;
-    typedef ::dsn::ref_ptr<rpc_client_matcher> rpc_client_matcher_ptr;
 
     typedef struct dsn_buffer_t // binary compatible with WSABUF on windows
     {
@@ -86,14 +82,14 @@ namespace dsn
                                         // header not included for *recieved* 
 
         // by rpc and network
-        rpc_session_ptr        server_session;
+        rpc_session_ptr        io_session;     // send/recv session
         ::dsn::rpc_address     from_address;   // always ipv4/v6 address
         ::dsn::rpc_address     to_address;     // always ipv4/v6 address
         ::dsn::rpc_address     server_address; // used by requests, and may be of uri/group address
         uint16_t               local_rpc_code;
 
         // by message queuing
-        message_ex*            next;
+        dlink                  dl;
 
     public:        
         //message_ex(blob bb, bool parse_hdr = true); // read 

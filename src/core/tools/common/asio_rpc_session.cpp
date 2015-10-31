@@ -134,16 +134,17 @@ namespace dsn {
         
         asio_rpc_session::asio_rpc_session(
             asio_network_provider& net,
-            std::shared_ptr<boost::asio::ip::tcp::socket>& socket,
             ::dsn::rpc_address remote_addr,
-            rpc_client_matcher_ptr& matcher,
-            std::shared_ptr<message_parser>& parser
+            std::shared_ptr<boost::asio::ip::tcp::socket>& socket,
+            std::shared_ptr<message_parser>& parser,
+            bool is_client
             )
             :
-            rpc_session(net, remote_addr, matcher, parser),
-            _socket(socket)            
+            rpc_session(net, remote_addr, parser, is_client),
+            _socket(socket)
         {
             set_options();
+            if (!is_client) do_read();
         }
         
         void asio_rpc_session::on_failure()
@@ -199,20 +200,6 @@ namespace dsn {
                     release_ref();
                 });
             }
-        }
-
-        asio_rpc_session::asio_rpc_session(
-            asio_network_provider& net,
-            ::dsn::rpc_address remote_addr,
-            std::shared_ptr<boost::asio::ip::tcp::socket>& socket,
-            std::shared_ptr<message_parser>& parser
-            )
-            :
-            rpc_session(net, remote_addr, parser),
-            _socket(socket)
-        {
-            set_options();
-            do_read();
-        }
+        }   
     }
 }

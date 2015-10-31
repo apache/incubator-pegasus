@@ -36,7 +36,6 @@ namespace dsn { namespace tools {
         sim_client_session(
             sim_network_provider& net, 
             ::dsn::rpc_address remote_addr, 
-            rpc_client_matcher_ptr& matcher, 
             std::shared_ptr<message_parser>& parser
             );
 
@@ -74,9 +73,8 @@ namespace dsn { namespace tools {
 
         virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr)
         {
-            auto matcher = get_client_matcher();
             auto parser = new_message_parser();
-            return rpc_session_ptr(new sim_client_session(*this, server_addr, matcher, parser));
+            return rpc_session_ptr(new sim_client_session(*this, server_addr, parser));
         }
 
         uint32_t net_delay_milliseconds() const;

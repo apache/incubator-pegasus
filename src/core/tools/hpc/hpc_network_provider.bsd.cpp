@@ -155,7 +155,6 @@ namespace dsn
 
         rpc_session_ptr hpc_network_provider::create_client_session(::dsn::rpc_address server_addr)
         {
-            auto matcher = get_client_matcher();
             auto parser = new_message_parser();
 
             struct sockaddr_in addr;
@@ -165,7 +164,7 @@ namespace dsn
 
             auto sock = create_tcp_socket(&addr);
             dassert(sock != -1, "create client tcp socket failed!");
-            auto client = new hpc_rpc_session(sock, parser, *this, server_addr, matcher);
+            auto client = new hpc_rpc_session(sock, parser, *this, server_addr, true);
             rpc_session_ptr c(client);
             client->bind_looper(_looper, true);
             return c;
@@ -183,7 +182,7 @@ namespace dsn
                     ::dsn::rpc_address client_addr(ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
 
                     auto parser = new_message_parser();
-                    auto rs = new hpc_rpc_session(s, parser, *this, client_addr);
+                    auto rs = new hpc_rpc_session(s, parser, *this, client_addr, false);
                     rpc_session_ptr s1(rs);
 
                     rs->bind_looper(_looper);
@@ -438,9 +437,9 @@ namespace dsn
             std::shared_ptr<dsn::message_parser>& parser,
             connection_oriented_network& net,
             ::dsn::rpc_address remote_addr,
-            rpc_client_matcher_ptr& matcher
+            bool is_client
             )
-            : rpc_session(net, remote_addr, matcher, parser),
+            : rpc_session(net, remote_addr, parser, is_client),
              _socket(sock)
         {
             dassert(sock != -1, "invalid given socket handle");
@@ -453,15 +452,37 @@ namespace dsn
             _peer_addr.sin_addr.s_addr = INADDR_ANY;
             _peer_addr.sin_port = 0;
 
-            _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
+            if (is_client)
             {
-                if (is_connecting())
-                    this->on_connect_events_ready(lolp_or_events);
-                else
-                    this->on_send_recv_events_ready(lolp_or_events);
-            };
-        }
+                _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
+                {
+                    if (is_connecting())
+                        this->on_connect_events_ready(lolp_or_events);
+                    else
+                        this->on_send_recv_events_ready(lolp_or_events);
+                };
+            }
+            else
+            {
+                socklen_t addr_len = (socklen_t)sizeof(_peer_addr);
+                if (getpeername(_socket, (struct sockaddr*)&_peer_addr, &addr_len) == -1)
+                {
+                    dassert(false, "(server) getpeername failed, err = %s", strerror(errno));
+                }
 
+                _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
+                {
+                    struct kevent& e = *((struct kevent*)lolp_or_events);
+                    dinfo("(s = %d) (server) epoll for send/recv to %s, events = %d",
+                        _socket,
+                        _remote_addr.to_string(),
+                        e.filter
+                        );
+                    this->on_send_recv_events_ready(lolp_or_events);
+                };
+            }
+        }
+        
         void hpc_rpc_session::on_connect_events_ready(uintptr_t lolp_or_events)
         {
             dassert(is_connecting(), "session must be connecting at this time");
@@ -565,43 +586,7 @@ namespace dsn
                 );
         }
 
-        // server
-        hpc_rpc_session::hpc_rpc_session(
-            socket_t sock,
-            std::shared_ptr<dsn::message_parser>& parser,
-            connection_oriented_network& net,
-            ::dsn::rpc_address remote_addr
-            )
-            : rpc_session(net, remote_addr, parser),
-            _socket(sock)
-        {
-            dassert(sock != -1, "invalid given socket handle");
-            _sending_signature = 0;
-            _sending_buffer_start_index = 0;
-            _looper = nullptr;
-
-            memset((void*)&_peer_addr, 0, sizeof(_peer_addr));
-            _peer_addr.sin_family = AF_INET;
-            _peer_addr.sin_addr.s_addr = INADDR_ANY;
-            _peer_addr.sin_port = 0;
-
-            socklen_t addr_len = (socklen_t)sizeof(_peer_addr);
-            if (getpeername(_socket, (struct sockaddr*)&_peer_addr, &addr_len) == -1)
-            {
-                dassert(false, "(server) getpeername failed, err = %s", strerror(errno));
-            }
-
-            _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
-            {
-                struct kevent& e = *((struct kevent*)lolp_or_events);
-                dinfo("(s = %d) (server) epoll for send/recv to %s, events = %d",
-                    _socket,
-                    _remote_addr.to_string(),
-                    e.filter
-                    );
-                this->on_send_recv_events_ready(lolp_or_events);
-            };
-        }
+        
     }
 }
 

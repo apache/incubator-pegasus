@@ -51,7 +51,6 @@ public:
 
     virtual void     enqueue(task* task);
     virtual task*    dequeue();
-    virtual int      count() const { return static_cast<int>(_tasks.size()); }
 
 private:
     std::map<uint32_t, task*> _tasks;

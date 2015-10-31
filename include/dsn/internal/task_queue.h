@@ -47,8 +47,10 @@ public:
     
     virtual void     enqueue(task* task) = 0;
     virtual task*    dequeue() = 0;
-    virtual int      count() const = 0;
-
+    
+    int               approx_count() const { return _appro_count; }
+    void              decrease_count() { --_appro_count; }
+    void              increase_count() { ++_appro_count; }
     const std::string & get_name() { return _name; }    
     task_worker_pool* pool() const { return _pool; }
     bool              is_shared() const { return _worker_count > 1; }
@@ -69,6 +71,7 @@ private:
     int                    _index;
     admission_controller*  _controller;
     int                    _worker_count;
+    int                    _appro_count;
 };
 
 } // end namespace

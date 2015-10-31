@@ -71,6 +71,14 @@ namespace dsn
                 "buffer size for per-thread logging"
                 );
 
+            static bool register_it = false;
+            if (register_it)
+            {
+                return;
+            }
+
+            register_it = true;
+
             // register command for tail logging
             ::dsn::register_command("tail-log", 
                 "tail-log keyword back-seconds [back-start-seconds = 0] [tid1,tid2,...]", 

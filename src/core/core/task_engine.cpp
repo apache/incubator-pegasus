@@ -175,7 +175,7 @@ void task_worker_pool::enqueue(task* t)
         }
         else if (t->spec().type == TASK_TYPE_RPC_REQUEST && _spec.max_input_queue_length != 0xFFFFFFFFUL)
         {
-            while ((uint32_t)q->count() >= _spec.max_input_queue_length)
+            while ((uint32_t)q->approx_count() >= _spec.max_input_queue_length)
             {
                 // any customized rejection handler?
                 if (t->spec().rejection_handler != nullptr)
@@ -194,6 +194,7 @@ void task_worker_pool::enqueue(task* t)
             }
         }
 
+        q->increase_count();
         return q->enqueue(t);
     }
     else
@@ -239,7 +240,7 @@ void task_worker_pool::get_runtime_info(const std::string& indent, const std::ve
     {
         if (q)
         {
-            ss << indent2 << q->get_name() << " now has " << q->count() << " pending tasks" << std::endl;
+            ss << indent2 << q->get_name() << " now has " << q->approx_count() << " pending tasks" << std::endl;
         }
     }
 

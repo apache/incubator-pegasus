@@ -47,7 +47,6 @@ namespace dsn
 
             virtual void  enqueue(task* task);
             virtual task* dequeue();
-            virtual int   count() const { return _remote_count.load(); }
         
         protected:
             virtual bool is_shared_timer_queue() override

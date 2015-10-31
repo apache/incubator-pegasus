@@ -86,27 +86,21 @@ namespace dsn {
         {
         // client
         public:
+            virtual void connect() override;
+            
+        // server
+        public:
+
+        // shared
+        public:
             hpc_rpc_session(
                 socket_t sock,
                 std::shared_ptr<dsn::message_parser>& parser,
                 connection_oriented_network& net,
                 ::dsn::rpc_address remote_addr,
-                rpc_client_matcher_ptr& matcher
+                bool is_client
                 );
 
-            virtual void connect() override;
-            
-        // server
-        public:
-            hpc_rpc_session(
-                socket_t sock,
-                std::shared_ptr<dsn::message_parser>& parser,
-                connection_oriented_network& net,
-                ::dsn::rpc_address remote_addr
-                );
-            
-        // shared
-        public:
             virtual void send(uint64_t signature) override
             {
 # ifdef _WIN32

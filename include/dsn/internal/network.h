@@ -77,10 +77,8 @@ namespace dsn {
         //   request - the message to be sent, all meta info (e.g., timeout, server address are
         //             prepared ready in its header; use message_parser to extract
         //             blobs from message for sending
-        //   call - the RPC response callback task to be invoked either timeout or response is received
-        //          null when this is a one-way RPC call.
         //
-        virtual void call(message_ex* request, rpc_response_task* call) = 0;
+        virtual void send_message(message_ex* request) = 0;
                 
         //
         // utilities
@@ -93,19 +91,13 @@ namespace dsn {
         void on_recv_request(message_ex* msg, int delay_ms);
         
         //
-        // get a client matcher for matching RPC request and RPC response,
-        // see rpc_client_matcher for details
-        //
-        rpc_client_matcher_ptr get_client_matcher();
-
-        //
         // create a message parser for
         //  (1) extracing blob from a RPC request message for low layer'
         //  (2) parsing a incoming blob message to get the rpc_message
         //
         std::shared_ptr<message_parser> new_message_parser();
 
-
+        rpc_engine* engine() const { return _engine; }
         int max_buffer_block_count_per_send() const { return _max_buffer_block_count_per_send; }
 
     protected:
@@ -122,58 +114,6 @@ namespace dsn {
         void reset_parser(network_header_format name, int message_buffer_block_size);
     };
 
-    //
-    // client matcher for matching RPC request and RPC response, and handling timeout
-    // (1) the whole network may share a single client matcher,
-    // (2) or we usually prefere each <src, dst> pair use a client matcher to have better inquery performance
-    // (3) or we have certain cases we want RPC responses from node which is not the initial target node
-    //     the RPC request message is sent to. In this case, a shared rpc_engine level matcher is used.
-    //
-    // WE NOW USE option (3) so as to enable more features and the performance should not be degraded (due to 
-    // less std::shared_ptr<rpc_client_matcher> operations in rpc_timeout_task
-    //
-    #define MATCHER_BUCKET_NR 13
-    class rpc_client_matcher : public ref_counter
-    {
-    public:
-        rpc_client_matcher(rpc_engine* engine)
-            :_engine(engine)
-        {
-
-        }
-
-        ~rpc_client_matcher();
-
-        //
-        // when a two-way RPC call is made, register the requst id and the callback
-        // which also registers a timer for timeout tracking
-        //
-        void on_call(message_ex* request, rpc_response_task* call);
-
-        //
-        // when a RPC response is received, call this function to trigger calback
-        //  key - message.header.id
-        //  reply - rpc response message
-        //  delay_ms - sometimes we want to delay the delivery of the message for certain purposes
-        //
-        bool on_recv_reply(uint64_t key, message_ex* reply, int delay_ms);
-
-    private:
-        friend class rpc_timeout_task;
-        void on_rpc_timeout(uint64_t key);
-
-    private:
-        rpc_engine*               _engine;
-        struct match_entry
-        {
-            rpc_response_task*    resp_task;
-            task*                 timeout_task;
-        };
-        typedef std::unordered_map<uint64_t, match_entry> rpc_requests;
-        rpc_requests                  _requests[MATCHER_BUCKET_NR];
-        ::dsn::utils::ex_lock_nr_spin _requests_lock[MATCHER_BUCKET_NR];
-    };
-    
     //
     // an incomplete network implementation for connection oriented network, e.g., TCP
     //
@@ -193,7 +133,7 @@ namespace dsn {
         void on_client_session_disconnected(rpc_session_ptr& s);
 
         // called upon RPC call, rpc client session is created on demand
-        virtual void call(message_ex* request, rpc_response_task* call);
+        virtual void send_message(message_ex* request);
 
         // to be defined
         virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) = 0;
@@ -211,38 +151,34 @@ namespace dsn {
     //
     // session managements (both client and server types)
     //
+    class rpc_client_matcher;
     class rpc_session : public ref_counter
     {
     public:
+        rpc_session(
+            connection_oriented_network& net,
+            ::dsn::rpc_address remote_addr,
+            std::shared_ptr<message_parser>& parser,
+            bool is_client
+            );
         virtual ~rpc_session();
                 
         bool has_pending_out_msgs();
-        bool is_client() const { return _matcher.get() != nullptr; }
+        bool is_client() const { return _matcher != nullptr; }
         ::dsn::rpc_address remote_address() const { return _remote_addr; }
         connection_oriented_network& net() const { return _net; }
         void send_message(message_ex* msg);
+        bool cancel(message_ex* request);
 
     // for client session
-    public:        
-        rpc_session(
-            connection_oriented_network& net, 
-            ::dsn::rpc_address remote_addr, 
-            rpc_client_matcher_ptr& matcher,
-            std::shared_ptr<message_parser>& parser
-            );
+    public:
         bool on_recv_reply(uint64_t key, message_ex* reply, int delay_ms);
         bool on_disconnected();
-        void call(message_ex* request, rpc_response_task* call);
-        
+               
         virtual void connect() = 0;
         
     // for server session
-    public:        
-        rpc_session(
-            connection_oriented_network& net, 
-            ::dsn::rpc_address remote_addr,
-            std::shared_ptr<message_parser>& parser
-            );
+    public:
         void on_recv_request(message_ex* msg, int delay_ms);
 
     // shared
@@ -266,6 +202,7 @@ namespace dsn {
     private:
         // return whether there are messages for sending        
         bool unlink_message_for_send();
+        void clear(bool resend_msgs);
 
     protected:
         // constant info
@@ -281,7 +218,7 @@ namespace dsn {
 
     private:
         std::atomic<int>                   _reconnect_count_after_last_success;
-        rpc_client_matcher_ptr             _matcher; // client used only
+        rpc_client_matcher                 *_matcher; // client used only
 
         enum session_state
         {
@@ -293,7 +230,7 @@ namespace dsn {
         // TODO: expose the queue to be customizable
         ::dsn::utils::ex_lock_nr           _lock; // [
         bool                               _is_sending_next;
-        slist<message_ex>                  _messages;
+        dlink                              _messages;
         session_state                      _connect_state;
         uint64_t                           _message_sent;     
         // ]

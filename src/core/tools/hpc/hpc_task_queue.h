@@ -26,7 +26,7 @@
 #pragma once
 
 # include <dsn/tool_api.h>
-# include <atomic>
+# include <condition_variable>
 
 namespace dsn 
 {
@@ -39,16 +39,11 @@ namespace dsn
 
             virtual void     enqueue(task* task);
             virtual task*    dequeue();
-            virtual int      count() const { return _count.load(); }
 
-        private:
-            std::atomic<int>              _count;
-            
-            ::dsn::utils::ex_lock_nr_spin _lock;
+        private:            
+            utils::ex_lock_nr_spin        _lock;
+            std::condition_variable_any   _cond;
             slist<task>                   _tasks;
-            ::dsn::utils::semaphore       _sema;
-            //std::atomic<int> _counts[TASK_PRIORITY_COUNT];
-            //dlink            _tasks[TASK_PRIORITY_COUNT];
         };
     }
 }

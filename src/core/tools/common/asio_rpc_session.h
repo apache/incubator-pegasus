@@ -37,28 +37,18 @@ namespace dsn {
         class asio_rpc_session : public rpc_session
         {
         public:
+            asio_rpc_session(
+                asio_network_provider& net,
+                ::dsn::rpc_address remote_addr,
+                std::shared_ptr<boost::asio::ip::tcp::socket>& socket,
+                std::shared_ptr<message_parser>& parser,
+                bool is_client
+                );
             virtual ~asio_rpc_session();
             virtual void send(uint64_t signature) override { return write(signature); }
 
-        // client
         public:
-            asio_rpc_session(
-                asio_network_provider& net,
-                std::shared_ptr<boost::asio::ip::tcp::socket>& socket,
-                ::dsn::rpc_address remote_addr,
-                rpc_client_matcher_ptr& matcher,
-                std::shared_ptr<message_parser>& parser
-                );
-            virtual void connect() override;   
-
-        // server
-        public:
-            asio_rpc_session(
-                asio_network_provider& net,
-                ::dsn::rpc_address remote_addr,
-                std::shared_ptr<boost::asio::ip::tcp::socket>& socket,
-                std::shared_ptr<message_parser>& parser
-                );
+            virtual void connect() override;            
             
         private:
             void do_read(size_t sz = 256);

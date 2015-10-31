@@ -43,10 +43,9 @@ namespace dsn { namespace tools {
     sim_client_session::sim_client_session(
         sim_network_provider& net, 
         ::dsn::rpc_address remote_addr, 
-        rpc_client_matcher_ptr& matcher,
         std::shared_ptr<message_parser>& parser
         )
-        : rpc_session(net, remote_addr, matcher, parser)
+        : rpc_session(net, remote_addr, parser, true)
     {}
 
     void sim_client_session::connect() 
@@ -117,7 +116,7 @@ namespace dsn { namespace tools {
         rpc_session_ptr& client,
         std::shared_ptr<message_parser>& parser
         )
-        : rpc_session(net, remote_addr, parser)
+        : rpc_session(net, remote_addr, parser, false)
     {
         _client = client;
     }
