@@ -41,7 +41,7 @@ public:
     // after milliseconds, the provider should call task->enqueue()        
     virtual void add_timer(task* task) override;
 
-    virtual void start(io_modifer& ctx) {}
+    virtual void start(io_modifer& ctx) override {}
 };
 
 class sim_task_queue : public task_queue
@@ -51,7 +51,6 @@ public:
 
     virtual void     enqueue(task* task);
     virtual task*    dequeue();
-    virtual int      count() const { return static_cast<int>(_tasks.size()); }
 
 private:
     std::map<uint32_t, task*> _tasks;

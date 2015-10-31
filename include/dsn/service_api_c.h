@@ -172,6 +172,15 @@ struct dsn_app_info
     char  name[DSN_MAX_APP_TYPE_NAME_LENGTH]; // app name configed in config file
 };
 
+// the following ctrl code are used by dsn_file_ctrl
+typedef enum dsn_ctrl_code_t
+{
+    CTL_BATCH_INVALID,
+    CTL_BATCH_WRITE,            // (batch) set write batch size
+    CTL_MAX_CON_READ_OP_COUNT,  // (throttling) maximum concurrent read ops
+    CTL_MAX_CON_WRITE_OP_COUNT, // (throttling) maximum concurrent write ops
+} dsn_ctrl_code_t;
+
 typedef enum dsn_task_type_t
 {
     TASK_TYPE_RPC_REQUEST,   // task handling rpc request
@@ -287,6 +296,7 @@ extern DSN_API dsn_threadpool_code_t dsn_threadpool_code_from_string(
                                         dsn_threadpool_code_t default_code // when s is not registered
                                         );
 extern DSN_API int                   dsn_threadpool_code_max();
+extern DSN_API int                   dsn_threadpool_get_current_tid();
 extern DSN_API dsn_task_code_t       dsn_task_code_register(
                                         const char* name,          // task code name
                                         dsn_task_type_t type,
@@ -537,6 +547,7 @@ extern DSN_API void          dsn_group_set_leader(dsn_group_t g, dsn_address_t e
 extern DSN_API dsn_address_t dsn_group_get_leader(dsn_group_t g);
 extern DSN_API bool          dsn_group_is_leader(dsn_group_t g, dsn_address_t ep);
 extern DSN_API dsn_address_t dsn_group_next(dsn_group_t g, dsn_address_t ep);
+extern DSN_API dsn_address_t dsn_group_forward_leader(dsn_group_t g);
 extern DSN_API void          dsn_group_destroy(dsn_group_t g);
 
 extern DSN_API dsn_address_t dsn_primary_address();
@@ -569,6 +580,7 @@ extern DSN_API dsn_message_t dsn_msg_create_request(
                                 int hash DEFAULT(DSN_INVALID_HASH)
                                 );
 extern DSN_API dsn_message_t dsn_msg_create_response(dsn_message_t request);
+extern DSN_API dsn_message_t dsn_msg_copy(dsn_message_t msg);
 extern DSN_API void          dsn_msg_add_ref(dsn_message_t msg);
 extern DSN_API void          dsn_msg_release_ref(dsn_message_t msg);
 extern DSN_API void          dsn_msg_update_request(
@@ -694,6 +706,8 @@ extern DSN_API dsn_handle_t dsn_file_open(
 extern DSN_API dsn_error_t  dsn_file_close(
                                 dsn_handle_t file
                                 );
+// native handle: HANDLE for windows, int for non-windows
+extern DSN_API void*        dsn_file_native_handle(dsn_handle_t file);
 extern DSN_API dsn_task_t   dsn_file_create_aio_task(
                                 dsn_task_code_t code, 
                                 dsn_aio_handler_t cb, 
@@ -820,7 +834,7 @@ extern DSN_API void         dsn_msg_get_context(
 #define derror(...) dlog(LOG_LEVEL_ERROR, __TITLE__, __VA_ARGS__)
 #define dfatal(...) dlog(LOG_LEVEL_FATAL, __TITLE__, __VA_ARGS__)
 #define dassert(x, ...) do { if (!(x)) {                    \
-            dlog(LOG_LEVEL_FATAL, "assert", #x);           \
+            dlog(LOG_LEVEL_FATAL, "assert", "assertion expression: "#x); \
             dlog(LOG_LEVEL_FATAL, "assert", __VA_ARGS__);  \
             dsn_coredump();       \
                 } } while (false)

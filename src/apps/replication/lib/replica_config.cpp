@@ -518,12 +518,13 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
             && _secondary_states.checkpoint_task != nullptr)
         {
             dwarn(
-                "%s: status change from %s @ %lld to %s @ %lld is not allowed coz checkpointing is still running",
+                "%s: status change from %s @ %lld to %s @ %lld is not allowed coz checkpointing %p is still running",
                 name(),
                 enum_to_string(old_status),
                 old_ballot,
                 enum_to_string(config.status),
-                config.ballot
+                config.ballot,
+                _secondary_states.checkpoint_task->native_handle()
                 );
             return false;
         }

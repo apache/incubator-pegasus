@@ -48,7 +48,7 @@ public:
     void start();
     void stop();
 
-    virtual void loop(); // run tasks from _input_queueu
+    virtual void loop(); // run tasks from _input_queue
 
     // inquery
     const std::string& name() const { return _name; }

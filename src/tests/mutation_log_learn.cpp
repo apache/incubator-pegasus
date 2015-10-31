@@ -21,19 +21,8 @@ TEST(replication, log_learn)
         utils::filesystem::create_directory(logp);
 
         // writing logs
-        mutation_log_ptr mlog = new mutation_log(
-            1,
-            50,
-            1,
-            false,
-            false
-            );
-
-        mlog->initialize(logp.c_str());
-        mlog->start_write_service(
-            mdecrees,
-            10
-            );
+        mutation_log_ptr mlog = new mutation_log(logp, true, 1, 1);
+        mlog->open(gpid, nullptr);
 
         for (int i = 0; i < 1000; i++)
         {
@@ -58,26 +47,16 @@ TEST(replication, log_learn)
 
         decree durable_decree = lp;
 
-        mdecrees[gpid] = durable_decree;
-        mdecrees2[gpid] = durable_decree + 4;
-
-        mlog->garbage_collection(mdecrees, mdecrees2);
+        mlog->garbage_collection(gpid, durable_decree, 0);
         mlog->close();
         
         // reading logs
-        mlog = new mutation_log(
-            1,
-            50,
-            1,
-            true,
-            false
-            );
-
-        mlog->initialize(logp.c_str());
+        mlog = new mutation_log(logp, true, 1, 1);
+        mlog->open(gpid, nullptr);
 
         // learning
         learn_state state;
-        mlog->get_learn_state_when_as_commit_logs(gpid, durable_decree + 1, state);
+        mlog->get_learn_state(gpid, durable_decree + 1, state);
         mlog->close();
         mlog = nullptr;
 
@@ -100,6 +79,7 @@ TEST(replication, log_learn)
                     (const void*)mu->data.updates[0].data(),
                     mu->data.updates[0].length()) == 0
                     );
+                return true;
             },
             offset
             );

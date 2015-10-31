@@ -25,9 +25,9 @@ namespace dsn {
                 max_concurrent_local_writes = (int)dsn_config_get_value_uint64("nfs", "max_concurrent_local_writes", 
                     5, "maximum local file writes on nfs client");
                 file_close_expire_time_ms = (int)dsn_config_get_value_uint64("nfs", "file_close_expire_time_ms", 
-                    3 * 60 * 1000, "maximum idle time for an opening file on nfs server"); // TODO: what the difference between this and below
+                    3 * 60 * 1000, "maximum idle time for an opening file on nfs server");
                 file_close_timer_interval_ms_on_server = (int)dsn_config_get_value_uint64("nfs", "file_close_timer_interval_ms_on_server",
-                    2 * 60 * 1000, "maximum idle time for an opened file on nfs server");
+                    2 * 60 * 1000, "time interval for checking whether cached file handles need to be closed");
                 max_file_copy_request_count_per_file = (int)dsn_config_get_value_uint64("nfs", "max_file_copy_request_count_per_file", 
                     10, "maximum concurrent remote copy requests for the same file on nfs client"); // limit each file copy speed
             }

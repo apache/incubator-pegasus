@@ -60,17 +60,14 @@ replication_options::replication_options()
 
     working_dir = ".";
         
-    log_buffer_size_mb = 1;
+    log_batch_buffer_MB = 1;
     log_pending_max_ms = 100;
     log_file_size_mb = 32;
-    log_batch_write = true;
     log_buffer_size_mb_private = 1;
     log_pending_max_ms_private = 100;
     log_file_size_mb_private = 32;
-    log_batch_write_private = true;
 
-    log_enable_private_commit = true;
-    log_enable_shared_prepare = true;
+    log_enable_private_prepare = true;
     
     config_sync_interval_ms = 30000;
     config_sync_disabled = false;
@@ -215,10 +212,10 @@ void replication_options::initialize()
         log_file_size_mb,
         "maximum log segment file size (MB)"
         );
-    log_buffer_size_mb =
+    log_batch_buffer_MB =
         (int)dsn_config_get_value_uint64("replication", 
-        "log_buffer_size_mb", 
-        log_buffer_size_mb,
+        "log_batch_buffer_MB", 
+        log_batch_buffer_MB,
         "log buffer size (MB) for batching incoming logs"
         );
     log_pending_max_ms =
@@ -226,12 +223,6 @@ void replication_options::initialize()
         "log_pending_max_ms", 
         log_pending_max_ms,
         "maximum duration (ms) the log entries reside in the buffer for batching"
-        );
-    log_batch_write = 
-        dsn_config_get_value_bool("replication", 
-        "log_batch_write", 
-        log_batch_write,
-        "whether to batch write the incoming logs"
         );
 
     log_file_size_mb_private =
@@ -252,29 +243,16 @@ void replication_options::initialize()
         log_pending_max_ms_private,
         "maximum duration (ms) the log entries reside in the buffer for batching for private log"
         );
-    log_batch_write_private =
-        dsn_config_get_value_bool("replication",
-        "log_batch_write_private",
-        log_batch_write_private,
-        "whether to batch write the incoming logs for private log"
-        );
 
-    log_enable_private_commit =
+    log_enable_private_prepare =
         dsn_config_get_value_bool("replication",
-        "log_enable_private_commit",
-        log_enable_private_commit,
+        "log_enable_private_prepare",
+        log_enable_private_prepare,
         "whether to log committed mutations for each app, "
         "which is used for easier learning"
         );
 
-    log_enable_shared_prepare =
-        dsn_config_get_value_bool("replication",
-        "log_enable_shared_prepare",
-        log_enable_shared_prepare,
-        "whether to log mutations before commit in a shared prepare log"
-        );
-
-     config_sync_disabled =
+    config_sync_disabled =
         dsn_config_get_value_bool("replication", 
         "config_sync_disabled",
         config_sync_disabled,

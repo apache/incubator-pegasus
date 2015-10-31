@@ -54,7 +54,7 @@ namespace dsn {
             std::string module_name(module);
 # if defined(_WIN32)
             module_name += ".dll";
-            if (::LoadLibraryA(module_name.c_str()) != NULL)
+            if (::LoadLibraryA(module_name.c_str()) == NULL)
             {
                 derror("load dynamic library '%s' failed, err = %d", module_name.c_str(), ::GetLastError());
                 return false;
@@ -62,7 +62,7 @@ namespace dsn {
             else
                 return true;
 # elif defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
-            module_name += ".dll";
+            module_name = "lib" + module_name + ".so";
             if (nullptr == dlopen(module_name.c_str(), RTLD_LAZY))
             {
                 derror("load dynamic library '%s' failed, err = %s", module_name.c_str(), dlerror());

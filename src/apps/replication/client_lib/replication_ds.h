@@ -41,6 +41,7 @@ namespace dsn {
 
         ENUM_BEGIN(learner_status, Learning_INVALID)
             ENUM_REG(LearningWithoutPrepare)
+            ENUM_REG(LearningWithPrepareTransient)
             ENUM_REG(LearningWithPrepare)
             ENUM_REG(LearningSucceeded)
             ENUM_REG(LearningFailed)

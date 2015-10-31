@@ -181,7 +181,7 @@ namespace dsn {
     /*static*/ bool rpc_engine::_message_crc_required;
 
     rpc_engine::rpc_engine(configuration_ptr config, service_node* node)
-        : _config(config), _node(node)
+        : _config(config), _node(node), _rpc_matcher(this)
     {
         dassert (_node != nullptr, "");
         dassert (_config != nullptr, "");
@@ -190,7 +190,6 @@ namespace dsn {
         _message_crc_required = config->get_value<bool>(
             "network", "message_crc_required", false,
             "whether crc is enabled for network messages");
-        _rpc_matcher = new rpc_client_matcher(this);
     }
     
     //
@@ -467,6 +466,17 @@ namespace dsn {
 
     void rpc_engine::call_ip(rpc_address addr, message_ex* request, rpc_response_task* call, bool reset_request_id)
     {
+        dbg_dassert(addr.type() == HOST_TYPE_IPV4, "only IPV4 is now supported");
+        while (!request->dl.is_alone())
+        {
+            dwarn("msg request %s is in sending queue, try to pick out ...");
+            auto s = request->io_session;
+            if (s.get() != nullptr)
+            {
+                s->cancel(request);
+            }
+        }
+        
         request->from_address = primary_address();
         request->to_address = addr;
 
@@ -497,22 +507,22 @@ namespace dsn {
             hdr.rpc_name
             );
 
-        dbg_dassert(addr.type() == HOST_TYPE_IPV4, "only IPV4 is now supported");
-
         if (reset_request_id)
         {
             hdr.id = message_ex::new_id();
             request->seal(_message_crc_required);
         }
             
-        net->call(request, call);
+        if (call != nullptr)
+        {
+            _rpc_matcher.on_call(request, call);
+        }
+        net->send_message(request);
     }
 
     void rpc_engine::reply(message_ex* response, error_code err)
     {
-        response->add_ref();  // released in on_send_completed
-
-        auto s = response->server_session.get();
+        auto s = response->io_session.get();
         if (s == nullptr)
         {
             // do not delete above add and release here for cancellation
@@ -529,7 +539,6 @@ namespace dsn {
         {
             // do not delete above add and release here for cancellation
             // as response may initially have ref_count == 0
-            response->release_ref(); // added above
             return;
         }
                 

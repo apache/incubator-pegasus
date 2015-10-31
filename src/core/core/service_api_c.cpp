@@ -128,7 +128,7 @@ DSN_API int dsn_threadpool_code_max()
     return ::dsn::utils::customized_id_mgr<::dsn::threadpool_code2_>::instance().max_value();
 }
 
-DSN_API int dsn_threadpool_get_current_tid() 
+DSN_API int dsn_threadpool_get_current_tid()
 {
     return ::dsn::utils::get_current_tid();
 }
@@ -149,6 +149,7 @@ DSN_API dsn_task_code_t dsn_task_code_register(const char* name, dsn_task_type_t
 DSN_API void dsn_task_code_query(dsn_task_code_t code, dsn_task_type_t *ptype, dsn_task_priority_t *ppri, dsn_threadpool_code_t *ppool)
 {
     auto sp = ::dsn::task_spec::get(code);
+    dassert(sp != nullptr, "");
     if (ptype) *ptype = sp->type;
     if (ppri) *ppri = sp->priority;
     if (ppool) *ppool = sp->pool_code;
@@ -157,12 +158,14 @@ DSN_API void dsn_task_code_query(dsn_task_code_t code, dsn_task_type_t *ptype, d
 DSN_API void dsn_task_code_set_threadpool(dsn_task_code_t code, dsn_threadpool_code_t pool)
 {
     auto sp = ::dsn::task_spec::get(code);
+    dassert(sp != nullptr, "");
     sp->pool_code = pool;
 }
 
 DSN_API void dsn_task_code_set_priority(dsn_task_code_t code, dsn_task_priority_t pri)
 {
     auto sp = ::dsn::task_spec::get(code);
+    dassert(sp != nullptr, "");
     sp->priority = pri;
 }
 
@@ -609,6 +612,13 @@ DSN_API dsn_error_t dsn_file_close(dsn_handle_t file)
     return ::dsn::task::get_current_disk()->close(file);
 }
 
+// native handle: HANDLE for windows, int for non-windows
+DSN_API void* dsn_file_native_handle(dsn_handle_t file)
+{
+    auto dfile = (::dsn::disk_file*)file;
+    return dfile->native_handle();
+}
+
 DSN_API dsn_task_t dsn_file_create_aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash)
 {
     return new ::dsn::aio_task(code, cb, param, hash);
@@ -885,9 +895,15 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
     dsn_all.config_completed = false;
     dsn_all.tool = nullptr;
     dsn_all.engine = &::dsn::service_engine::instance();
-    dsn_all.config.reset(new ::dsn::configuration(config_file, config_arguments));
+    dsn_all.config.reset(new ::dsn::configuration());
     dsn_all.memory = nullptr;
     dsn_all.magic = 0xdeadbeef;
+
+    if (!dsn_all.config->load(config_file, config_arguments))
+    {
+        printf("Fail to load config file %s\n", config_file);
+        return false;
+    }
 
     for (int i = 0; i <= dsn_task_code_max(); i++)
     {
@@ -915,7 +931,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
 #endif
         getchar();
     }
-    
+
     // setup coredump
 	auto& coredump_dir = spec.coredump_dir;
 	dassert(!dsn::utils::filesystem::file_exists(coredump_dir), "%s should not be a file.", coredump_dir.c_str());

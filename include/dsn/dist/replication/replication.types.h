@@ -441,10 +441,11 @@ namespace dsn { namespace replication {
     enum learner_status
     {
         LearningWithoutPrepare = 0,
-        LearningWithPrepare = 1,
-        LearningSucceeded = 2,
-        LearningFailed = 3,
-        Learning_INVALID = 4,
+        LearningWithPrepareTransient = 1,
+        LearningWithPrepare = 2, // stage 2, preare while checkpinting
+        LearningSucceeded = 3,
+        LearningFailed = 4,
+        Learning_INVALID = 5,
     };
 
     DEFINE_POD_SERIALIZATION(learner_status);

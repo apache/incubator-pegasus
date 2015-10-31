@@ -154,7 +154,7 @@ private:
 
 public:
     // used by task queue only
-    dlink                  _task_queue_dl;
+    task*                  next;
 };
 
 class task_c : public task
@@ -239,7 +239,7 @@ public:
     message_ex*  get_request() { return _request; }
     virtual void enqueue() override;
 
-    virtual void  exec()
+    virtual void  exec() override
     {
         _handler->run(_request);
     }
@@ -304,6 +304,7 @@ public:
     // filled by frameworks
     aio_type     type;
     disk_engine *engine;
+    void*        file_object;
 
     disk_aio() : type(aio_type::AIO_Invalid) {}
     virtual ~disk_aio(){}
@@ -319,7 +320,7 @@ public:
     size_t          get_transferred_size() const { return _transferred_size; }
     disk_aio*       aio() { return _aio; }
 
-    void            exec() // aio completed
+    virtual void exec() override // aio completed
     {
         if (nullptr != _cb)
         {
@@ -331,7 +332,7 @@ public:
         }
     }
 
-private:
+protected:
     disk_aio*         _aio;
     size_t            _transferred_size;
     dsn_aio_handler_t _cb;

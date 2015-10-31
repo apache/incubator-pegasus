@@ -27,12 +27,7 @@
 
 #if defined(_WIN32)
 
-# define _WINSOCK_DEPRECATED_NO_WARNINGS 1
-
-# include <Winsock2.h>
-# include <ws2tcpip.h>
 # include <Windows.h>
-# pragma comment(lib, "ws2_32.lib")
 
 __pragma(warning(disable:4127))
 

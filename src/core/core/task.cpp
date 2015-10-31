@@ -107,6 +107,7 @@ task::task(dsn_task_code_t code, int hash, service_node* node)
     _delay_milliseconds = 0;
     _wait_for_cancel = false;
     _is_null = false;
+    next = nullptr;
     
     if (node != nullptr)
     {
