@@ -118,6 +118,7 @@ namespace dsn {
             rpc_address addr;
             ::unmarshall((dsn_message_t)reply, addr);
             _engine->call_ip(addr, call->get_request(), call, true);
+            delete reply;
         }
         else
         {
@@ -413,12 +414,14 @@ namespace dsn {
         }
         else
         {
-            // TODO: warning about this msg
             dwarn(
-                "recv unknown message with type %s from %s",
+                "recv unknown message with type %s from %s, rpc_id = %llx",
                 msg->header->rpc_name,
-                msg->from_address.to_string()
+                msg->from_address.to_string(),
+                msg->header->rpc_id
                 );
+
+            delete msg;
         }
     }
 
@@ -467,6 +470,8 @@ namespace dsn {
     void rpc_engine::call_ip(rpc_address addr, message_ex* request, rpc_response_task* call, bool reset_request_id)
     {
         dbg_dassert(addr.type() == HOST_TYPE_IPV4, "only IPV4 is now supported");
+        dbg_dassert(addr.port() >= 1024, "only server address can be called");
+
         while (!request->dl.is_alone())
         {
             dwarn("msg request %s is in sending queue, try to pick out ...");
@@ -484,6 +489,11 @@ namespace dsn {
         auto& hdr = *request->header; 
         if (!sp->on_rpc_call.execute(task::get_current_task(), request, call, true))
         {
+            ddebug("rpc request %s is dropped (fault inject), rpc_id = %llx",
+                request->header->rpc_name,
+                request->header->rpc_id
+                );
+
             if (call != nullptr)
             {
                 call->set_delay(hdr.client.timeout_ms);
@@ -517,6 +527,7 @@ namespace dsn {
         {
             _rpc_matcher.on_call(request, call);
         }
+
         net->send_message(request);
     }
 
@@ -525,9 +536,10 @@ namespace dsn {
         auto s = response->io_session.get();
         if (s == nullptr)
         {
-            // do not delete above add and release here for cancellation
+            // do not delete following add and release here for cancellation
             // as response may initially have ref_count == 0
-            response->release_ref(); // added above
+            response->add_ref();
+            response->release_ref(); 
             return;
         }   
 
@@ -537,8 +549,10 @@ namespace dsn {
         auto sp = task_spec::get(response->local_rpc_code);
         if (!sp->on_rpc_reply.execute(task::get_current_task(), response, true))
         {
-            // do not delete above add and release here for cancellation
+            // do not delete following add and release here for cancellation
             // as response may initially have ref_count == 0
+            response->add_ref();
+            response->release_ref();
             return;
         }
                 
