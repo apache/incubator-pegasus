@@ -415,7 +415,7 @@ namespace dsn
                     e.filter
                     );
 
-                do_safe_write(nullptr);
+                do_safe_write(0);
             }
 
             // recv
@@ -524,7 +524,7 @@ namespace dsn
                 }
 
                 // start first round send
-                do_safe_write(nullptr);
+                do_safe_write(0);
             }
             else
             {
