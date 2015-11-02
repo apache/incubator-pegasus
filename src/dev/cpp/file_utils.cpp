@@ -617,13 +617,33 @@ namespace dsn {
 				return true;
 			}
 
+            static int create_directory_component(const std::string& npath)
+            {
+                int err;
+
+                if (::mkdir_(npath.c_str()) == 0)
+                {
+                    return 0;
+                }
+
+                err = errno;
+                if (err != EEXIST)
+                {
+                    return err;
+                }
+
+                return (dsn::utils::filesystem::path_exists_internal(npath, FTW_F) ? EEXIST : 0);
+            }
+
 			bool create_directory(const std::string& path)
 			{
 				size_t prev = 0;
 				size_t pos;
 				char sep;
 				std::string npath;
+                std::string cpath;
 				size_t len;
+                int err;
 
 				if (path.empty())
 				{
@@ -635,15 +655,16 @@ namespace dsn {
 					return false;
 				}
 
-				if (dsn::utils::filesystem::path_exists_internal(npath, FTW_D))
-				{
-					return true;
-				}
-
-				if (dsn::utils::filesystem::path_exists_internal(npath, FTW_F))
-				{
-					return false;
-				}
+                err = dsn::utils::filesystem::create_directory_component(npath);
+                if (err == 0)
+                {
+                    return true;
+                }
+                else if (err != ENOENT)
+                {
+                    cpath = path;
+                    goto out_error;
+                }
 
 				len = npath.length();
 #ifdef _WIN32
@@ -670,26 +691,36 @@ namespace dsn {
 
 				while ((pos = npath.find_first_of(sep, prev)) != std::string::npos)
 				{
-					auto ppath = npath.substr(0, pos++);
+					cpath = npath.substr(0, pos++);
 					prev = pos;
-					if (!dsn::utils::filesystem::path_exists_internal(ppath, FTW_D))
-					{
-						if (::mkdir_(ppath.c_str()) != 0)
-						{
-							return false;
-						}
-					}
+
+                    err = dsn::utils::filesystem::create_directory_component(cpath);
+                    if (err != 0)
+                    {
+                        goto out_error;
+                    }
 				}
 
 				if (prev < len)
 				{
-					if (::mkdir_(npath.c_str()) != 0)
-					{
-						return false;
-					}
+                    err = dsn::utils::filesystem::create_directory_component(npath);
+                    if (err != 0)
+                    {
+                        cpath = npath;
+                        goto out_error;
+                    }
 				}
 
 				return true;
+
+out_error:
+                dwarn("create_directory %s failed due to cannot create the component: %s, err = %d, err string = %s",
+                    path.c_str(),
+                    cpath.c_str(),
+                    err,
+                    strerror(err)
+                    );
+                return false;
 			}
 
 
