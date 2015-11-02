@@ -36,9 +36,9 @@ namespace dsn
         class meta_state_service
         {
         public:
-            typedef std::function<void (dsn_error_t ec, std::string&& ret_str)> err_string_callback;
-            typedef std::function<void (dsn_error_t ec, std::vector<std::string>&& ret_strv)> err_stringv_callback;
-            typedef std::function<void (dsn_error_t ec)> err_callback;
+            typedef std::function<void (error_code ec, std::string&& ret_str)> err_string_callback;
+            typedef std::function<void (error_code ec, std::vector<std::string>&& ret_strv)> err_stringv_callback;
+            typedef std::function<void (error_code ec)> err_callback;
 
         public:
             /*
