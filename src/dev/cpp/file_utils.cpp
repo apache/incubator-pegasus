@@ -59,6 +59,7 @@
 #else
 
 # include <sys/stat.h>
+# include <errno.h>
 
 # define getcwd_ getcwd
 # define rmdir_ rmdir

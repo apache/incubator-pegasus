@@ -1,29 +1,28 @@
 /*
-* The MIT License (MIT)
-*
-* Copyright (c) 2015 Microsoft Corporation
-*
-* -=- Robust Distributed System Nucleus (rDSN) -=-
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
-*/
-
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Microsoft Corporation
+ * 
+ * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 
 /************************************************************
 *   hpc_logger (High-Performance Computing logger)
@@ -69,7 +68,7 @@
 *                                                             Daemon thread 
 *
 *                                                                   ||
-*                                                                   ===========>     hpc_log.x.txt
+*                                                                   ===========>     log.x.txt
 *
 *	Some other facts:
 *	1. The log file size is restricted, when max size is achieved, a new log file will be established.
@@ -91,59 +90,26 @@
 namespace dsn
 {
 	namespace tools
-	{
-		//store log ptr for each thread
-		typedef ::dsn::utils::safe_singleton_store<int, hpc_log_tls_info*> hpc_log_manager;
+	{		
+        typedef struct __hpc_log_info__
+        {
+            uint32_t magic;
+            char*    buffer;
+            char*    next_write_ptr;
+        } hpc_log_tls_info;
 
-		//log ptr for each thread
-		static __thread hpc_log_tls_info s_hpc_log_tls_info;
+        //log ptr for each thread
+        static __thread hpc_log_tls_info s_hpc_log_tls_info;
+
+        //store log ptr for each thread
+		typedef ::dsn::utils::safe_singleton_store<int, hpc_log_tls_info*> hpc_log_manager;
 
 		//daemon thread
 		void hpc_logger::log_thread()
 		{
-			_start_index = 0;
-			_index = 0;
+			std::list<buffer_info> saved_list;
 
-			// check existing log files and decide start_index
-			std::vector<std::string> sub_list;
-			std::string path = "./";
-			if (!dsn::utils::filesystem::get_subfiles(path, sub_list, false))
-			{
-				dassert(false, "Fail to get subfiles in %s.", path.c_str());
-			}
-
-			for (auto& fpath : sub_list)
-			{
-				auto&& name = dsn::utils::filesystem::get_file_name(fpath);
-				if (name.length() <= 10 ||
-					name.substr(0, 8) != "hpc_log.")
-					continue;
-
-				int index;
-				if (1 != sscanf(name.c_str(), "hpc_log.%d.txt", &index))
-					continue;
-
-				if (index > _index)
-					_index = index;
-
-				if (_start_index == 0 || index < _start_index)
-					_start_index = index;
-			}
-			sub_list.clear();
-
-			if (_start_index == 0)
-				_start_index = _index;
-
-			_index++;
-
-			std::stringstream log;
-			log << "hpc_log." << _index << ".txt";
-			_current_log = new std::ofstream(log.str().c_str(), std::ofstream::out | std::ofstream::app | std::ofstream::binary);
-
-
-			std::list<buffer_info*> saved_list;
-
-			while (!_stop_thread || _flush_finish_flag==1)
+			while (!_stop_thread)
 			{
 				_write_list_lock.lock();
 				_write_list_cond.wait(_write_list_lock, [=]{ return  _stop_thread || _write_list.size() > 0; });
@@ -151,32 +117,84 @@ namespace dsn
 				_write_list.clear();
 				_write_list_lock.unlock();
 				
-				if (_flush_finish_flag == true)
-				{
-					write_buffer_list(saved_list);
-					_flush_finish_flag = false;
-				}
-				else
-					write_buffer_list(saved_list);
+                write_buffer_list(saved_list);
 			}
 
-			_current_log->close();
-			delete _current_log;
+            _write_list_lock.lock();
+            saved_list = _write_list;
+            _write_list.clear();
+            _write_list_lock.unlock();
+
+            write_buffer_list(saved_list);
 		}
 
-		hpc_logger::hpc_logger() :_stop_thread(false), _flush_finish_flag(false)
+		hpc_logger::hpc_logger() 
+            : _stop_thread(false)
 		{
-
 			_per_thread_buffer_bytes = config()->get_value<int>(
 				"tools.hpc_logger",
 				"per_thread_buffer_bytes",
-				10 *1024* 1024, // 10 MB by default
+				64 * 1024, // 64 KB by default
 				"buffer size for per-thread logging"
 				);
 
+            _start_index = 0;
+            _index = 0;
+            _current_log_file_bytes = 0;
+
+            // check existing log files and decide start_index
+            std::vector<std::string> sub_list;
+            std::string path = "./";
+            if (!dsn::utils::filesystem::get_subfiles(path, sub_list, false))
+            {
+                dassert(false, "Fail to get subfiles in %s.", path.c_str());
+            }
+
+            for (auto& fpath : sub_list)
+            {
+                auto&& name = dsn::utils::filesystem::get_file_name(fpath);
+                if (name.length() <= 5 ||
+                    name.substr(0, 4) != "log.")
+                    continue;
+
+                int index;
+                if (1 != sscanf(name.c_str(), "log.%d.txt", &index))
+                    continue;
+
+                if (index > _index)
+                    _index = index;
+
+                if (_start_index == 0 || index < _start_index)
+                    _start_index = index;
+            }
+            sub_list.clear();
+
+            if (_start_index == 0)
+                _start_index = _index;
+
+            _current_log = nullptr;
+            create_log_file();
 			_log_thread = std::thread(&hpc_logger::log_thread, this);
-			
 		}
+
+        void hpc_logger::create_log_file()
+        {
+            std::stringstream log;
+            log << "log." << ++_index << ".txt";
+            _current_log = new std::ofstream(log.str().c_str(), std::ofstream::out | std::ofstream::app | std::ofstream::binary);
+            _current_log_file_bytes = 0;
+
+            // TODO: move gc out of criticial path
+            if (_index - _start_index > 20)
+            {
+                std::stringstream str2;
+                str2 << "log." << _start_index++ << ".txt";
+                if (!dsn::utils::filesystem::remove_path(str2.str()))
+                {
+                    dassert(false, "Fail to remove file %s.", str2.str().c_str());
+                }
+            }
+        }
 
 		hpc_logger::~hpc_logger(void)
 		{
@@ -186,20 +204,24 @@ namespace dsn
 				_write_list_cond.notify_one();
 				_log_thread.join();
 			}
+
+            _current_log->close();
+            delete _current_log;
 		}
 
 		void hpc_logger::flush()
 		{
+            //dangerous operation
 			//print retained log in the buffers of threads
-			hpc_log_flush_all_buffers_at_exit();
-			_flush_finish_flag = true;
+            //this is only used at process exit
+			flush_all_buffers_at_exit();
 
-			_stop_thread = true;
-			_write_list_cond.notify_one();
-			_log_thread.join();
+            _stop_thread = true;
+            _write_list_cond.notify_one();
+            _log_thread.join();
 		}
 
-		void hpc_logger::hpc_log_flush_all_buffers_at_exit()
+		void hpc_logger::flush_all_buffers_at_exit()
 		{
 			std::vector<int> threads;
 			hpc_log_manager::instance().get_all_keys(threads);
@@ -213,11 +235,8 @@ namespace dsn
 				buffer_push(log->buffer, static_cast<int>(log->next_write_ptr - log->buffer));
 
 				hpc_log_manager::instance().remove(tid);
-
 			}
-
 		}
-
 
 		void hpc_logger::dsn_logv(const char *file,
 			const char *function,
@@ -240,20 +259,16 @@ namespace dsn
 			// get enough write space >= 1K
 			if (s_hpc_log_tls_info.next_write_ptr + 1024 > s_hpc_log_tls_info.buffer + _per_thread_buffer_bytes)
 			{
-				//critical section begin
 				_write_list_lock.lock();
-
 				buffer_push(s_hpc_log_tls_info.buffer, static_cast<int>(s_hpc_log_tls_info.next_write_ptr - s_hpc_log_tls_info.buffer));
-
-				_write_list_cond.notify_one();
 				_write_list_lock.unlock();
-				//critical section end
+
+                _write_list_cond.notify_one();
 
 				s_hpc_log_tls_info.buffer = (char*)malloc(_per_thread_buffer_bytes);
 				s_hpc_log_tls_info.next_write_ptr = s_hpc_log_tls_info.buffer;
-				
-
 			}
+
 			char* ptr = s_hpc_log_tls_info.next_write_ptr;
 			char* ptr0 = ptr; // remember it
 			size_t capacity = static_cast<size_t>(s_hpc_log_tls_info.buffer + _per_thread_buffer_bytes - ptr);
@@ -304,14 +319,10 @@ namespace dsn
 			capacity -= wn;
 
 			// print body
-			wn = std::vsnprintf(ptr, capacity, fmt, args);
-			ptr += wn;
-			capacity -= wn;
-
-			// print body
-			wn = std::sprintf(ptr, "%s", "\n");
-			ptr += wn;
-			capacity -= wn;
+			wn = std::vsnprintf(ptr, capacity - 1, fmt, args);
+            *(ptr + wn) = '\n';
+			ptr += (wn + 1);
+			capacity -= (wn + 1);
 
 			// set next write ptr
 			s_hpc_log_tls_info.next_write_ptr = ptr;
@@ -319,54 +330,41 @@ namespace dsn
 			// dump critical logs on screen
 			if (log_level >= LOG_LEVEL_WARNING)
 			{
-				std::cout << ptr0 << std::endl;
+                std::cout.write(ptr0, ptr - ptr0);
 			}	
 		}
 		//log operation
 
 		void hpc_logger::buffer_push(char* buffer, int size)
 		{
-			buffer_info* new_buffer_info = (buffer_info*)malloc(sizeof(buffer_info));
-			new_buffer_info->buffer = buffer;
-			new_buffer_info->buffer_size = size;
+            buffer_info new_buffer_info;
+			new_buffer_info.buffer = buffer;
+			new_buffer_info.buffer_size = size;
 			_write_list.push_back(new_buffer_info);
 		}
 
-		void hpc_logger::write_buffer_list(std::list<buffer_info*>& llist)
+		void hpc_logger::write_buffer_list(std::list<buffer_info>& llist)
 		{
 			while (!llist.empty())
 			{
-				buffer_info* new_buffer_info = llist.front();
+				buffer_info new_buffer_info = llist.front();
+                llist.pop_front();
 
-				if (_current_log_file_bytes + new_buffer_info->buffer_size >= MAX_FILE_SIZE)
+				if (_current_log_file_bytes + new_buffer_info.buffer_size >= MAX_FILE_SIZE)
 				{
-
-					_current_log_file_bytes = 0;
-					_index++;
-
 					_current_log->close();
 					delete _current_log;
+                    _current_log = nullptr;
 
-					std::stringstream log;
-					log << "hpc_log." << _index << ".txt";
-					_current_log = new std::ofstream(log.str().c_str(), std::ofstream::out | std::ofstream::app | std::ofstream::binary);
+                    create_log_file();
 				}
 
-				_current_log->write(new_buffer_info->buffer, new_buffer_info->buffer_size);
+				_current_log->write(new_buffer_info.buffer, new_buffer_info.buffer_size);
 
-				_current_log_file_bytes += new_buffer_info->buffer_size;
+				_current_log_file_bytes += new_buffer_info.buffer_size;
 
-				free(new_buffer_info->buffer);
-				new_buffer_info->buffer = nullptr;
-				free(new_buffer_info);
-				new_buffer_info = nullptr;
-				llist.pop_front();
-
-
-
+				free(new_buffer_info.buffer);
 			}
-
-
 		}
 	}
 }

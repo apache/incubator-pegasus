@@ -75,7 +75,9 @@ struct __tls_dsn__
     uint64_t      node_pool_thread_ids; // 8,8,16 bits
     int           last_lower32_task_id; // 32bits
 
-    char          scatch_buffer[256]; // for temp to_string() etc.
+    char          scratch_buffer[4][256]; // for temp to_string() etc., 4 buffers in maximum
+    int           scratch_buffer_index;
+    char*         scratch_next() { return scratch_buffer[++scratch_buffer_index % 4]; }
 };
 
 extern __thread struct __tls_dsn__ tls_dsn;
@@ -154,7 +156,7 @@ private:
 
 public:
     // used by task queue only
-    dlink                  _task_queue_dl;
+    task*                  next;
 };
 
 class task_c : public task
@@ -239,7 +241,7 @@ public:
     message_ex*  get_request() { return _request; }
     virtual void enqueue() override;
 
-    virtual void  exec()
+    virtual void  exec() override
     {
         _handler->run(_request);
     }

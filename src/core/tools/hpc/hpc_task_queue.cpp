@@ -38,38 +38,28 @@ namespace dsn
         hpc_task_queue::hpc_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider)
             : task_queue(pool, index, inner_provider)
         {
-            _count = 0;
         }
         
         void hpc_task_queue::enqueue(task* task)
         {
+            dassert(task->next == nullptr, "task is not alone");
             {
                 utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
-
-                task->_task_queue_dl.insert_before(&_tasks);
+                _tasks.add(task);
             }
-
-            _count.fetch_add(1, std::memory_order_release);
-
-            _sema.signal();
+            _cond.notify_one();
         }
 
         task* hpc_task_queue::dequeue()
         {
-            _sema.wait();
+            task* t;
+            
+            _lock.lock();
+            _cond.wait(_lock, [=]{ return !_tasks.is_empty(); });
+            t = _tasks.pop_all();
+            _lock.unlock();
 
-            dlink *t;
-            {
-                utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
-                t = _tasks.next();
-                dassert(t != &_tasks, "task count = %d", count());
-                t->remove();
-            }
-
-            _count.fetch_sub(1, std::memory_order_release);
-
-            task* ts = CONTAINING_RECORD(t, task, _task_queue_dl);
-            return ts;
+            return t;
         }
     }
 }

@@ -54,7 +54,7 @@ namespace dsn {
             std::string module_name(module);
 # if defined(_WIN32)
             module_name += ".dll";
-            if (::LoadLibraryA(module_name.c_str()) != NULL)
+            if (::LoadLibraryA(module_name.c_str()) == NULL)
             {
                 derror("load dynamic library '%s' failed, err = %d", module_name.c_str(), ::GetLastError());
                 return false;

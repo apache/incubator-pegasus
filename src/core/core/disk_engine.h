@@ -32,7 +32,7 @@
 
 namespace dsn {
 
-class disk_write_queue : public work_queue
+class disk_write_queue : public work_queue<aio_task>
 {
 public:
     disk_write_queue()
@@ -42,7 +42,7 @@ public:
     }
 
 private:
-    virtual dlink* unlink_next_workload(dlink& hdr, void* plength) override;
+    virtual aio_task* unlink_next_workload(void* plength) override;
 
 private:
     uint32_t _max_batch_bytes;
@@ -53,18 +53,18 @@ class disk_file
 public:
     disk_file(dsn_handle_t handle);
     void ctrl(dsn_ctrl_code_t code, int param);
-    dlink* read(aio_task* tsk);
-    dlink* write(aio_task* tsk, void* ctx);
+    aio_task* read(aio_task* tsk);
+    aio_task* write(aio_task* tsk, void* ctx);
 
-    dlink* on_read_completed(dlink* wk, error_code err, size_t size);
-    dlink* on_write_completed(dlink* wk, void* ctx, error_code err, size_t size);
+    aio_task* on_read_completed(aio_task* wk, error_code err, size_t size);
+    aio_task* on_write_completed(aio_task* wk, void* ctx, error_code err, size_t size);
     
     dsn_handle_t native_handle() const { return _handle; }
 
 private:
     dsn_handle_t     _handle;
     disk_write_queue _write_queue;
-    work_queue       _read_queue;
+    work_queue<aio_task> _read_queue;
 };
 
 class disk_engine
@@ -88,7 +88,7 @@ public:
 private:
     friend class aio_provider;
     friend class batch_write_io_task;
-    void process_write(dlink* wk, uint32_t sz);
+    void process_write(aio_task* wk, uint32_t sz);
     void complete_io(aio_task* aio, error_code err, uint32_t bytes, int delay_milliseconds = 0);
 
 private:

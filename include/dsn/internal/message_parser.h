@@ -85,7 +85,7 @@ namespace dsn
     public:
         dsn_message_parser(int buffer_block_size);
 
-        virtual message_ex* get_message_on_receive(int read_length, /*out*/ int& read_next);
+        virtual message_ex* get_message_on_receive(int read_length, /*out*/ int& read_next) override;
 
         virtual int prepare_buffers_on_send(message_ex* msg, int offset, /*out*/ send_buf* buffers) override;
 

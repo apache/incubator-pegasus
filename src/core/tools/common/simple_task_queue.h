@@ -38,7 +38,6 @@ namespace dsn {
 
             virtual void     enqueue(task* task);
             virtual task*    dequeue();
-            virtual int      count() const;
 
         private:
             typedef utils::blocking_priority_queue<task*, TASK_PRIORITY_COUNT> tqueue;
