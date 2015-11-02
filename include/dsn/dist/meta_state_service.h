@@ -25,20 +25,73 @@
  */
 # pragma once
 
-# include <dsn/service_api_cpp.h>
+#include <dsn/service_api_cpp.h>
+#include <string>
+#include <functional>
 
 namespace dsn
 {
     namespace dist
     {
-        // interface
         class meta_state_service
         {
         public:
-            // void create_node(....callback..)
-            // void put(....callback..);
-            // void get(....callback..);
-            // void destroy_node(....callback..);
+            typedef std::function<void (error_code ec, std::string&& ret_str)> err_string_callback;
+            typedef std::function<void (error_code ec, std::vector<std::string>&& ret_strv)> err_stringv_callback;
+            typedef std::function<void (error_code ec)> err_callback;
+
+        public:
+            /*
+             * create a dir node
+             * node: the dir name with full path
+             * cb_create: create callback, ec to indicate success or failure reason
+             * value: the data value to store in the node
+             */
+            virtual void create_directory(const std::string& node,
+                                          const err_callback& cb_create,
+                                          const std::string& value = std::string()) = 0;
+            /*
+             * delete a dir, the directory may be empty or not
+             * node: the dir name with full path
+             * recursively_delete: true for recursively delete non-empty node,
+             *                     false for failure
+             * cb_delete: delete callback, ec to indicate success or failure reason
+             */
+            virtual void delete_directory(const std::string& node,
+                                          bool recursively_delete,
+                                          const err_callback& cb_delete) = 0;
+            /*
+             * check if the node dir exists
+             * node: the dir name with full path
+             * cb_exist: callback to indicate the check result
+             */
+            virtual void node_exist(const std::string& node,
+                                    const err_callback& cb_exist) = 0;
+            /*
+             * get the data in node
+             * node: dir name with full path
+             * cb_get_data: callback. If success, ec indicate the success and
+             *              node data is returned in ret_str
+             *              or-else user get the fail reason in ec
+             */
+            virtual void get_data(const std::string& node,
+                                  const err_string_callback& cb_get_data) = 0;
+            /*
+             * set the data of the node
+             * node: dir name with full path
+             * value: the value
+             * cb_set_data: the callback to indicate the set result
+             */
+            virtual void set_data(const std::string& node,
+                                  const std::string& value,
+                                  const err_callback& cb_set_data) = 0;
+            /*
+             * get all childrens of a node
+             * node: dir name with full path
+             * cb_get_children: if success, ret_strv store the node names of children
+             */
+            virtual void get_children(const std::string& node,
+                                      const err_stringv_callback& cb_get_children) = 0;
         };
     }
 }
