@@ -144,8 +144,8 @@ DSN_API uint32_t dsn_ipv4_local(const char* network_interface)
 
 DSN_API const char*   dsn_address_to_string(dsn_address_t addr)
 {
-    char* p = dsn::tls_dsn.scatch_buffer;
-    auto sz = sizeof(dsn::tls_dsn.scatch_buffer);
+    char* p = dsn::tls_dsn.scratch_next();
+    auto sz = sizeof(dsn::tls_dsn.scratch_buffer[0]);
     struct in_addr net_addr;
 # ifdef _WIN32
     char* ip_str;
