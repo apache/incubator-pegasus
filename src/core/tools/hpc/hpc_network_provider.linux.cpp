@@ -155,7 +155,6 @@ namespace dsn
 
         rpc_session_ptr hpc_network_provider::create_client_session(::dsn::rpc_address server_addr)
         {
-            auto matcher = get_client_matcher();
             auto parser = new_message_parser();
 
             struct sockaddr_in addr;
@@ -165,7 +164,7 @@ namespace dsn
 
             auto sock = create_tcp_socket(&addr);
             dassert(sock != -1, "create client tcp socket failed!");
-            auto client = new hpc_rpc_session(sock, parser, *this, server_addr, matcher);
+            auto client = new hpc_rpc_session(sock, parser, *this, server_addr, true);
             rpc_session_ptr c(client);
             client->bind_looper(_looper, true);
             return c;
@@ -183,7 +182,7 @@ namespace dsn
                     ::dsn::rpc_address client_addr(ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
 
                     auto parser = new_message_parser();
-                    auto rs = new hpc_rpc_session(s, parser, *this, client_addr);
+                    auto rs = new hpc_rpc_session(s, parser, *this, client_addr, false);
                     rpc_session_ptr s1(rs);
 
                     rs->bind_looper(_looper);
@@ -253,47 +252,47 @@ namespace dsn
             }
         }
 
-        void hpc_rpc_session::do_safe_write(message_ex* msg)
+        void hpc_rpc_session::do_safe_write(uint64_t sig)
         {
             utils::auto_lock<utils::ex_lock_nr> l(_send_lock);
 
-            if (nullptr == msg)
+            if (0 == sig)
             {
-                if (_sending_msg)
+                if (_sending_signature)
                 {
-                    do_write(_sending_msg);
+                    do_write(_sending_signature);
                 }
                 else
                 {
                     _send_lock.unlock(); // avoid recursion
-                    on_send_completed(nullptr); // send next msg if there is.
+                    on_send_completed(); // send next msg if there is.
                     _send_lock.lock();
                 }
             }
             else
             {
-                do_write(msg);
+                do_write(sig);
             }
         }
 
-        void hpc_rpc_session::do_write(message_ex* msg)
+        void hpc_rpc_session::do_write(uint64_t sig)
         {
             static_assert (sizeof(dsn_message_parser::send_buf) == sizeof(struct iovec), 
                 "make sure they are compatible");
 
-            dbg_dassert(msg != nullptr, "cannot send empty msg");
+            dbg_dassert(sig != 0, "cannot send empty msg");
                         
             // new msg
-            if (_sending_msg == nullptr)
+            if (_sending_signature == 0)
             {
-                _sending_msg = msg;
+                _sending_signature = sig;
                 _sending_buffer_start_index = 0;
             }
 
             // continue old msg
             else
             {
-                dassert(_sending_msg == msg, "only one sending msg is possible");
+                dassert(_sending_signature == sig, "only one sending msg is possible");
             }
 
             // prepare send buffer, make sure header is already in the buffer
@@ -354,11 +353,13 @@ namespace dsn
                     if (_sending_buffer_start_index == (int)_sending_buffers.size())
                     {
                         dassert(len == 0, "buffer must be sent completely");
-                        _sending_msg = nullptr;
+
+                        auto csig = _sending_signature;
+                        _sending_signature = 0;
 
                         _send_lock.unlock(); // avoid recursion
-                        // try next msg recursively
-                        on_send_completed(msg);
+                        // try next msg recursively                        
+                        on_send_completed(csig);
                         _send_lock.lock();
                         return;
                     }
@@ -405,7 +406,7 @@ namespace dsn
                     events
                     );
 
-                do_safe_write(nullptr);
+                do_safe_write(0);
             }
 
             // recv
@@ -421,19 +422,19 @@ namespace dsn
             }
         }
 
-        // client
+
         hpc_rpc_session::hpc_rpc_session(
             socket_t sock,
             std::shared_ptr<dsn::message_parser>& parser,
             connection_oriented_network& net,
             ::dsn::rpc_address remote_addr,
-            rpc_client_matcher_ptr& matcher
+            bool is_client
             )
-            : rpc_session(net, remote_addr, matcher, parser),
+            : rpc_session(net, remote_addr, parser, is_client),
              _socket(sock)
         {
             dassert(sock != -1, "invalid given socket handle");
-            _sending_msg = nullptr;
+            _sending_signature = 0;
             _sending_buffer_start_index = 0;
             _looper = nullptr;
 
@@ -442,13 +443,36 @@ namespace dsn
             _peer_addr.sin_addr.s_addr = INADDR_ANY;
             _peer_addr.sin_port = 0;
 
-            _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
+            if (is_client)
             {
-                if (is_connecting())
-                    this->on_connect_events_ready(lolp_or_events);
-                else
-                    this->on_send_recv_events_ready(lolp_or_events);
-            };
+                _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
+                {
+                    if (is_connecting())
+                        this->on_connect_events_ready(lolp_or_events);
+                    else
+                        this->on_send_recv_events_ready(lolp_or_events);
+                };
+            }
+            else
+            {
+                socklen_t addr_len = (socklen_t)sizeof(_peer_addr);
+                if (getpeername(_socket, (struct sockaddr*)&_peer_addr, &addr_len) == -1)
+                {
+                    dassert(false, "(server) getpeername failed, err = %s", strerror(errno));
+                }
+
+                _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
+                {
+                    uint32_t events = (uint32_t)lolp_or_events;
+                    dinfo("(s = %d) (server) epoll for send/recv to %s, events = 0x%x",
+                        _socket,
+                        _remote_addr.to_string(),
+                        events
+                        );
+                    this->on_send_recv_events_ready(events);
+                };
+            }
+            
         }
 
         void hpc_rpc_session::on_connect_events_ready(uintptr_t lolp_or_events)
@@ -496,7 +520,7 @@ namespace dsn
                 }
 
                 // start first round send
-                do_safe_write(nullptr);
+                do_safe_write(0);
             }
             else
             {
@@ -553,44 +577,6 @@ namespace dsn
                 EPOLLOUT | EPOLLET,
                 this
                 );
-        }
-
-        // server
-        hpc_rpc_session::hpc_rpc_session(
-            socket_t sock,
-            std::shared_ptr<dsn::message_parser>& parser,
-            connection_oriented_network& net,
-            ::dsn::rpc_address remote_addr
-            )
-            : rpc_session(net, remote_addr, parser),
-            _socket(sock)
-        {
-            dassert(sock != -1, "invalid given socket handle");
-            _sending_msg = nullptr;
-            _sending_buffer_start_index = 0;
-            _looper = nullptr;
-
-            memset((void*)&_peer_addr, 0, sizeof(_peer_addr));
-            _peer_addr.sin_family = AF_INET;
-            _peer_addr.sin_addr.s_addr = INADDR_ANY;
-            _peer_addr.sin_port = 0;
-
-            socklen_t addr_len = (socklen_t)sizeof(_peer_addr);
-            if (getpeername(_socket, (struct sockaddr*)&_peer_addr, &addr_len) == -1)
-            {
-                dassert(false, "(server) getpeername failed, err = %s", strerror(errno));
-            }
-
-            _ready_event = [this](int err, uint32_t length, uintptr_t lolp_or_events)
-            {
-                uint32_t events = (uint32_t)lolp_or_events;
-                dinfo("(s = %d) (server) epoll for send/recv to %s, events = 0x%x",
-                    _socket,
-                    _remote_addr.to_string(),
-                    events
-                    );
-                this->on_send_recv_events_ready(events);
-            };
         }
     }
 }

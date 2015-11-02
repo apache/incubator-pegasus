@@ -37,7 +37,7 @@ public:
     {
     }
 
-    void install(service_spec& s);
+    virtual void install(service_spec& s) override;
     
     virtual void run() override;
 

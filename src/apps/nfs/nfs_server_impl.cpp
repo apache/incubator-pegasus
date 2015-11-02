@@ -14,7 +14,7 @@ namespace dsn {
 
             {
                 zauto_lock l(_handles_map_lock);
-                auto it = _handles_map.find(request.file_name); // find file handle cache first
+                auto it = _handles_map.find(file_path); // find file handle cache first
 
                 if (it == _handles_map.end()) // not found
                 {
@@ -26,7 +26,7 @@ namespace dsn {
                         fh->file_handle = hfile;
                         fh->file_access_count = 1;
                         fh->last_access_time = dsn_now_ms();
-                        _handles_map.insert(std::pair<std::string, file_handle_info_on_server*>(request.file_name, fh));
+                        _handles_map.insert(std::pair<std::string, file_handle_info_on_server*>(file_path, fh));
                     }
                 }
                 else // found
@@ -36,6 +36,12 @@ namespace dsn {
                     it->second->last_access_time = dsn_now_ms();
                 }
             }
+
+            dinfo("nfs: copy file %s [%lld, %lld)",
+                file_path.c_str(),
+                request.offset,
+                request.offset + request.size
+                );
 
             if (hfile == 0)
             {
@@ -180,6 +186,7 @@ namespace dsn {
 
                     ::dsn::error_code err = dsn_file_close(fptr->file_handle);
                     dassert(err == ERR_OK, "dsn_file_close failed, err = %s", err.to_string());
+                    dinfo ("nfs: close file handle %s", it->first.c_str());
 
                     delete fptr;
                 }

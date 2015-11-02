@@ -43,6 +43,7 @@ task_queue::task_queue(task_worker_pool* pool, int index, task_queue* inner_prov
     _name.append(num);
     _owner_worker = nullptr;
     _worker_count = _pool->spec().partitioned ? 1 : _pool->spec().worker_count;
+    _appro_count = 0;
 }
 
 }

@@ -40,7 +40,7 @@ prepare_list::prepare_list(
         : mutation_cache(init_decree, max_count)
 {
     _committer = committer;
-    _last_committed_decree = 0;
+    _last_committed_decree = init_decree;
 }
 
 void prepare_list::sanity_check()

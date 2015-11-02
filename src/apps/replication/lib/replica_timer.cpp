@@ -44,10 +44,11 @@ namespace dsn {
 
         void replica::gc()
         {
-            if (_commit_log)
-                _commit_log->garbage_collection_when_as_commit_logs(
+            if (_private_log)
+                _private_log->garbage_collection(
                     get_gpid(),
-                    _app->last_durable_decree()
+                    _app->last_durable_decree(),
+                    _app->log_info().init_offset_in_private_log
                     );
         }
 
@@ -67,13 +68,13 @@ namespace dsn {
             if (_secondary_states.checkpoint_task != nullptr)
                 return;
 
-            // commit log must be enabled to make sure commits
+            // private log must be enabled to make sure commits
             // are not lost during checkpinting
-            dassert(nullptr != _commit_log, "log_enable_private_commit must be true for checkpointing");
+            dassert(nullptr != _private_log, "log_enable_private_prepare must be true for checkpointing");
 
-            // TODO: when NOT to checkpoint, but use commit log replay to build the state
-           /* if (last_committed_decree() - last_durable_decree() < 10000)
-                return;*/
+            // TODO: when NOT to checkpoint, but use private log replay to build the state
+            if (last_committed_decree() - last_durable_decree() < 10000)
+                return;
 
             // primary is downgraded to secondary for checkpointing as no write can be seen
             // during checkpointing (i.e., state is freezed)
@@ -102,64 +103,43 @@ namespace dsn {
 
         void replica::checkpoint()
         {
-            _app->flush(true);
+            auto lerr = _app->flush(true);
+            auto err = lerr == 0 ? ERR_OK : ERR_LOCAL_APP_FAILURE;
             
             tasking::enqueue(
                 LPC_CHECKPOINT_REPLICA_COMPLETED,
                 this,
-                [this]() { this->on_checkpoint_completed(ERR_OK); },
-                gpid_to_hash(get_gpid()),
-                random32(0, 1000*1000)
+                [this, err]() { this->on_checkpoint_completed(err); },
+                gpid_to_hash(get_gpid())
                 );
         }
 
-        void replica::catch_up_with_local_commit_logs()
+        void replica::catch_up_with_private_logs(partition_status s)
         {
             learn_state state;
-            _commit_log->get_learn_state_when_as_commit_logs(
+            _private_log->get_learn_state(
                 get_gpid(),
                 _app->last_committed_decree() + 1,
                 state
                 );
 
-            int64_t offset;
-            decree last_cd = 0;
-            auto err = mutation_log::replay(
-                state.files,
-                    [this, &last_cd](mutation_ptr& mu)
-                {
-                    if (last_cd != 0)
-                    {
-                        dassert(mu->data.header.decree == last_cd + 1,
-                            "decrees in commit logs must be contiguous: %lld vs %lld",
-                            last_cd,
-                            mu->data.header.decree
-                            );
-                    }
-                    last_cd = mu->data.header.decree;
-
-                    if (last_cd == _app->last_committed_decree() + 1)
-                    {
-                        _app->write_internal(mu);
-                    }
-                    else
-                    {
-                        ddebug("%s: mutation %s skipped coz unmached decree %llu vs %llu (last_committed)",
-                            name(), mu->name(),
-                            mu->data.header.decree,
-                            _app->last_committed_decree()
-                            );
-                    }
-                },
-                offset
-                );
+            auto err = apply_learned_state_from_private_log(state);
 
             tasking::enqueue(
                 LPC_CHECKPOINT_REPLICA_COMPLETED,
                 this,
-                [this, err]() { this->on_checkpoint_completed(err); },
-                gpid_to_hash(get_gpid()),
-                random32(0, 100 * 1000)
+                [this, err, s]() 
+                {
+                    if (PS_SECONDARY == s)
+                        this->on_checkpoint_completed(err);
+                    else if (PS_POTENTIAL_SECONDARY == s)
+                        this->on_learn_remote_state_completed(err);
+                    else
+                    {
+                        dassert(false, "invalid state %s", enum_to_string(s));
+                    }
+                },
+                gpid_to_hash(get_gpid())
                 );
         }
 
@@ -169,7 +149,10 @@ namespace dsn {
 
             // closing
             if (PS_SECONDARY != status())
+            {
+                _secondary_states.checkpoint_task = nullptr;
                 return;
+            }   
 
             // handle failure
             if (err != ERR_OK)
@@ -199,13 +182,13 @@ namespace dsn {
                     _secondary_states.checkpoint_task = nullptr;
                 }
 
-                // missed ones need to be loaded via commit logs
+                // missed ones need to be loaded via private logs
                 else
                 {
                     _secondary_states.checkpoint_task = tasking::enqueue(
                         LPC_CHECKPOINT_REPLICA,
                         this,
-                        &replica::catch_up_with_local_commit_logs,
+                        [this]() { this->catch_up_with_private_logs(PS_SECONDARY); },
                         gpid_to_hash(get_gpid())
                         );
                 }

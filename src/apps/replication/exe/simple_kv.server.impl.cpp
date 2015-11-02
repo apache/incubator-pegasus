@@ -42,7 +42,7 @@ namespace dsn {
                 : simple_kv_service(replica), _lock(true)
             {
                 _test_file_learning = false;
-                set_delta_state_learning_supported();
+                //set_delta_state_learning_supported();
             }
 
             // RPC_SIMPLE_KV_READ

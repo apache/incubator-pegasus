@@ -291,6 +291,7 @@ message_ex* message_ex::copy()
     msg->to_address = to_address;
     msg->local_rpc_code = local_rpc_code;
     msg->buffers = buffers;
+    msg->_is_read = _is_read;
 
     // received message
     if (this->_is_read)
@@ -360,7 +361,7 @@ message_ex* message_ex::create_response()
     msg->local_rpc_code = task_spec::get(local_rpc_code)->rpc_paired_code;
     msg->from_address = to_address;
     msg->to_address = from_address;
-    msg->server_session = server_session;
+    msg->io_session = io_session;
 
     // join point 
     task_spec::get(local_rpc_code)->on_rpc_create_response.execute(this, msg);

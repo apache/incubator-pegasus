@@ -190,9 +190,9 @@ dsn_handle_t native_win_aio_provider::open(const char* file_name, int oflag, int
     }
 }
 
-error_code native_win_aio_provider::close(dsn_handle_t hFile)
+error_code native_win_aio_provider::close(dsn_handle_t fh)
 {
-    if (::CloseHandle((HANDLE)(hFile)))
+    if (::CloseHandle((HANDLE)(fh)))
         return ERR_OK;
     else
     {

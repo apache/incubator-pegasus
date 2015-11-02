@@ -6,22 +6,22 @@ using namespace ::dsn::replication;
 
 TEST(replication, log_file)
 {
-    multi_partition_decrees mdecrees;
+    multi_partition_decrees_ex mdecrees;
     global_partition_id gpid = { 1, 0 };    
     std::string fpath = ".//log.1.100";
     int64_t offset = 100;
     std::string str = "hello, world!";
+    error_code err;
 
     // prepare
-    mdecrees[gpid] = 3;
+    mdecrees[gpid] = log_replica_info(3, 0);
     utils::filesystem::remove_path(fpath);
 
     // write log
     log_file_ptr lf = log_file::create_write(
         "./",
         1,
-        offset,
-        10
+        offset
         );
 
     // write header + data block
@@ -64,7 +64,8 @@ TEST(replication, log_file)
 
     // read the file for test
     offset = 100;
-    lf = log_file::open_read(fpath.c_str());
+    lf = log_file::open_read(fpath.c_str(), err);
+    EXPECT_TRUE(err == ERR_OK);
     EXPECT_TRUE(lf != nullptr);
     EXPECT_TRUE(lf->index() == 1);
     EXPECT_TRUE(lf->start_offset() == 100);
@@ -80,7 +81,6 @@ TEST(replication, log_file)
         lf->read_header(reader);
 
         EXPECT_TRUE(lf->is_right_header());
-        EXPECT_TRUE(lf->header().max_staleness_for_commit == 10);
         EXPECT_TRUE(lf->header().log_buffer_size_bytes == 1024);
 
         std::string ss;
@@ -123,18 +123,14 @@ TEST(replication, mutation_log)
 
     // writing logs
     mutation_log_ptr mlog = new mutation_log(
+        logp,
+        false,
         1,
-        50,
-        4,
-        true,
-        false
+        4
         );
 
-    mlog->initialize(logp.c_str());
-    mlog->start_write_service(
-        mdecrees,
-        10
-        );
+    auto err = mlog->open(nullptr);
+    EXPECT_TRUE(err == ERR_OK);
 
     for (int i = 0; i < 1000; i++)
     {
@@ -161,17 +157,14 @@ TEST(replication, mutation_log)
 
     // reading logs
     mlog = new mutation_log(
+        logp,
+        false,
         1,
-        50,
-        4,
-        true,
-        false
+        4
         );
 
-    mlog->initialize(logp.c_str());
-
     int mutation_index = -1;
-    mlog->replay(        
+    mlog->open(        
         [&mutations, &mutation_index](mutation_ptr mu)
         {
             mutation_ptr wmu = mutations[++mutation_index];
@@ -185,10 +178,12 @@ TEST(replication, mutation_log)
                 (const void*)mu->data.updates[0].data(),
                 mu->data.updates[0].length()) == 0
                 );
+            return true;
         }
         );
     EXPECT_TRUE(mutation_index + 1 == (int)mutations.size());
- 
+    mlog->close();
+
     // clear all
     utils::filesystem::remove_path(logp);
 }

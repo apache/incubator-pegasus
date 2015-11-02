@@ -43,7 +43,7 @@ namespace dsn {
             return (dsn_handle_t)(size_t)(1);
         }
 
-        error_code empty_aio_provider::close(dsn_handle_t hFile)
+        error_code empty_aio_provider::close(dsn_handle_t fh)
         {
             return ERR_OK;
         }

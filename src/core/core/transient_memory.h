@@ -74,4 +74,20 @@ namespace dsn
         tls_trans_memory.remain_bytes -= use_size;
         tls_trans_memory.committed = true;
     }
+
+    inline blob tls_trans_mem_alloc_blob(size_t sz)
+    {
+        void* ptr;
+        size_t sz2;
+        tls_trans_mem_next(&ptr, &sz2, sz);
+
+        ::dsn::blob buffer(
+            (*::dsn::tls_trans_memory.block),
+            (int)((char*)(ptr)-::dsn::tls_trans_memory.block->get()),
+            (int)sz
+            );
+
+        tls_trans_mem_commit(sz);
+        return buffer;
+    }
 }

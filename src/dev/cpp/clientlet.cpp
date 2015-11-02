@@ -156,7 +156,7 @@ namespace dsn
     namespace file
     {
         task_ptr read(
-            dsn_handle_t hFile,
+            dsn_handle_t fh,
             char* buffer,
             int count,
             uint64_t offset,
@@ -178,12 +178,12 @@ namespace dsn
 
             tsk->set_task_info(t);
 
-            dsn_file_read(hFile, buffer, count, offset, t, svc ? svc->tracker() : nullptr);
+            dsn_file_read(fh, buffer, count, offset, t, svc ? svc->tracker() : nullptr);
             return tsk;
         }
 
         task_ptr write(
-            dsn_handle_t hFile,
+            dsn_handle_t fh,
             const char* buffer,
             int count,
             uint64_t offset,
@@ -205,7 +205,7 @@ namespace dsn
 
             tsk->set_task_info(t);
 
-            dsn_file_write(hFile, buffer, count, offset, t, svc ? svc->tracker() : nullptr);
+            dsn_file_write(fh, buffer, count, offset, t, svc ? svc->tracker() : nullptr);
             return tsk;
         }
 

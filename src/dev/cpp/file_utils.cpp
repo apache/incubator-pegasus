@@ -59,6 +59,7 @@
 #else
 
 # include <sys/stat.h>
+# include <errno.h>
 
 # define getcwd_ getcwd
 # define rmdir_ rmdir
@@ -84,7 +85,8 @@ namespace dsn {
 
 			static __thread char tls_path_buffer[PATH_MAX];
 
-			static inline bool get_stat(const std::string& npath, struct stat_& st)
+			// npath need to be a normalized path
+			static inline bool get_stat_internal(const std::string& npath, struct stat_& st)
 			{
 				return (::stat_(npath.c_str(), &st) == 0);
 			}
@@ -314,12 +316,13 @@ namespace dsn {
 #endif
 			}
 
-			static bool path_exists(const std::string& npath, int type)
+			// npath need to be a normalized path
+			static bool path_exists_internal(const std::string& npath, int type)
 			{
 				bool ret;
 				struct stat_ st;
 
-				if (!dsn::utils::filesystem::get_stat(npath, st))
+				if (!dsn::utils::filesystem::get_stat_internal(npath, st))
 				{
 					return false;
 				}
@@ -357,7 +360,7 @@ namespace dsn {
 					return false;
 				}
 
-				return dsn::utils::filesystem::path_exists(npath, FTW_NS);
+				return dsn::utils::filesystem::path_exists_internal(npath, FTW_NS);
 			}
 
 			bool directory_exists(const std::string& path)
@@ -374,7 +377,7 @@ namespace dsn {
 					return false;
 				}
 
-				return dsn::utils::filesystem::path_exists(npath, FTW_D);
+				return dsn::utils::filesystem::path_exists_internal(npath, FTW_D);
 			}
 
 			bool file_exists(const std::string& path)
@@ -391,7 +394,7 @@ namespace dsn {
 					return false;
 				}
 
-				return dsn::utils::filesystem::path_exists(npath, FTW_F);
+				return dsn::utils::filesystem::path_exists_internal(npath, FTW_F);
 			}
 
 			static bool get_subpaths(const std::string& path, std::vector<std::string>& sub_list, bool recursive, int typeflags)
@@ -409,7 +412,7 @@ namespace dsn {
 					return false;
 				}
 
-				if (!dsn::utils::filesystem::path_exists(npath, FTW_D))
+				if (!dsn::utils::filesystem::path_exists_internal(npath, FTW_D))
 				{
 					return false;
 				}
@@ -497,11 +500,19 @@ namespace dsn {
 					if (typeflag != FTW_F)
 					{
 						succ = (::RemoveDirectoryA(fpath) == TRUE);
+                        if (!succ)
+                        {
+                            derror("remove directory %s failed, err = %d", fpath, ::GetLastError());
+                        }
 					}
 					else
 					{
 #endif
 						succ = (std::remove(fpath) == 0);
+                        if (!succ)
+                        {
+                            derror("remove file %s failed, err = %s", fpath, strerror(errno));
+                        }
 #ifdef _WIN32
 					}
 #endif
@@ -526,11 +537,16 @@ namespace dsn {
 					return false;
 				}
 
-				if (dsn::utils::filesystem::path_exists(npath, FTW_F))
+				if (dsn::utils::filesystem::path_exists_internal(npath, FTW_F))
 				{
-					return (std::remove(npath.c_str()) == 0);
+					bool ret = (std::remove(npath.c_str()) == 0);
+                    if (!ret)
+                    {
+                        derror("remove file %s failed, err = %s", path.c_str(), strerror(errno));
+                    }
+                    return ret;
 				}
-				else if(dsn::utils::filesystem::path_exists(npath, FTW_D))
+				else if (dsn::utils::filesystem::path_exists_internal(npath, FTW_D))
 				{
 					return dsn::utils::filesystem::remove_directory(npath);
 				}
@@ -540,16 +556,35 @@ namespace dsn {
 				}
 			}
 
-			bool rename_path(const std::string& path1, const std::string& path2)
+			bool rename_path(const std::string& path1, const std::string& path2, bool overwrite)
 			{
-				bool ret = (::rename(path1.c_str(), path2.c_str()) == 0);
+                bool ret;
+                
+                // We don't check this existence of path2 when overwrite is false
+                // since ::rename() will do this.
+                if (overwrite && dsn::utils::filesystem::path_exists(path2))
+                {
+                    ret = dsn::utils::filesystem::remove_path(path2);
+                    if (!ret)
+                    {
+                        dwarn("rename from '%s' to '%s' failed to remove the existed destinate path, err = %s",
+                        path1.c_str(),
+                        path2.c_str(),
+                        strerror(errno));
+
+                        return ret;
+                    }
+                }
+
+                ret = (::rename(path1.c_str(), path2.c_str()) == 0);
                 if (!ret)
                 {
-                    derror("rename from '%s' to '%s' failed, err = %s",
+                    dwarn("rename from '%s' to '%s' failed, err = %s",
                         path1.c_str(),
                         path2.c_str(),
                         strerror(errno));
                 }
+
                 return ret;
 			}
 
@@ -568,7 +603,7 @@ namespace dsn {
 					return false;
 				}
 
-				if (!dsn::utils::filesystem::get_stat(npath, st))
+				if (!dsn::utils::filesystem::get_stat_internal(npath, st))
 				{
 					return false;
 				}
@@ -601,12 +636,12 @@ namespace dsn {
 					return false;
 				}
 
-				if (dsn::utils::filesystem::path_exists(npath, FTW_D))
+				if (dsn::utils::filesystem::path_exists_internal(npath, FTW_D))
 				{
 					return true;
 				}
 
-				if (dsn::utils::filesystem::path_exists(npath, FTW_F))
+				if (dsn::utils::filesystem::path_exists_internal(npath, FTW_F))
 				{
 					return false;
 				}
@@ -638,7 +673,7 @@ namespace dsn {
 				{
 					auto ppath = npath.substr(0, pos++);
 					prev = pos;
-					if (!dsn::utils::filesystem::path_exists(ppath, FTW_D))
+					if (!dsn::utils::filesystem::path_exists_internal(ppath, FTW_D))
 					{
 						if (::mkdir_(ppath.c_str()) != 0)
 						{
@@ -681,12 +716,12 @@ namespace dsn {
 					return false;
 				}
 
-				if (dsn::utils::filesystem::path_exists(npath, FTW_F))					
+				if (dsn::utils::filesystem::path_exists_internal(npath, FTW_F))
 				{
 					return true;
 				}
 
-				if (dsn::utils::filesystem::path_exists(npath, FTW_D))
+				if (dsn::utils::filesystem::path_exists_internal(npath, FTW_D))
 				{
 					return false;
 				}
@@ -765,6 +800,7 @@ namespace dsn {
 			std::string get_file_name(const std::string& path)
 			{
 				size_t len;
+                size_t last;
 				size_t pos;
 
 				len = path.length();
@@ -773,16 +809,26 @@ namespace dsn {
 					return "";
 				}
 
+                last = len - 1;
+
 				pos = path.find_last_of("\\/");
 
-				if (pos == len)
+				if (pos == last)
 				{
-					return "";
-				}
+                    return "";
+                }
 
 				if (pos == std::string::npos)
 				{
-					return path;
+#ifdef _WIN32
+                    pos = path.find_last_of(_FS_COLON);
+                    if (pos == last)
+                    {
+                        return "";
+                    }
+#else
+                    return path;
+#endif                        
 				}
 
 				return path.substr((pos + 1), (len - pos));
@@ -790,49 +836,43 @@ namespace dsn {
 
 			std::string path_combine(const std::string& path1, const std::string& path2)
 			{
-				char c;
-				std::string npath1;
-				std::string npath2;
+                bool ret;
+                char c;
+                std::string path3;
+                std::string npath;
 
-				if (!dsn::utils::filesystem::get_normalized_path(path1, npath1))
-				{
-					return "";
-				}
-
-				if (!dsn::utils::filesystem::get_normalized_path(path2, npath2))
-				{
-					return "";
-				}
-
-				if (npath1.empty())
-				{
-					return npath2;
-				}
-
-				if (npath2.empty())
-				{
-					return npath1;
-				}	
-
-				c = npath1[npath1.length() - 1];
-				if (!_FS_ISSEP(c)
+                if (path1.empty())
+                {
+                    ret = dsn::utils::filesystem::get_normalized_path(path2, npath);
+                }
+                else if (path2.empty())
+                {
+                    ret = dsn::utils::filesystem::get_normalized_path(path1, npath);
+                }
+                else
+                {
+                    path3 = path1;
+                    c = path1[path1.length() - 1];
 #ifdef _WIN32
-					&& (c != _FS_COLON)
+                    if (c != _FS_COLON)
+                    {
 #endif
-					)
-				{
-					npath1.append(1,
+                        path3.append(1,
 #ifdef _WIN32
-						_FS_BSLASH
+                            _FS_BSLASH
 #else
-						_FS_SLASH
+                            _FS_SLASH
 #endif
-						);
-				}
+                            );
+#ifdef _WIN32
+                    }
+#endif
+                    path3.append(path2);
 
-				npath1.append(npath2);
+                    ret = dsn::utils::filesystem::get_normalized_path(path3, npath);
+                }
 
-				return npath1;
+                return ret ? npath : "";
 			}
 
 			bool get_current_directory(std::string& path)
@@ -863,7 +903,7 @@ namespace dsn {
 					return false;
 				}
 
-				if (!dsn::utils::filesystem::get_stat(npath, st))
+				if (!dsn::utils::filesystem::get_stat_internal(npath, st))
 				{
 					return false;
 				}

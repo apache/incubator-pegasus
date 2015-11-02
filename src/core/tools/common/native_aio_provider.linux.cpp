@@ -68,10 +68,10 @@ namespace dsn {
             return (dsn_handle_t)(uintptr_t)::open(file_name, flag, pmode);
         }
 
-        error_code native_linux_aio_provider::close(dsn_handle_t hFile)
+        error_code native_linux_aio_provider::close(dsn_handle_t fh)
         {
             // TODO: handle failure
-            ::close((int)(uintptr_t)(hFile));
+            ::close((int)(uintptr_t)(fh));
             return ERR_OK;
         }
 
