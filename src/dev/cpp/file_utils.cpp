@@ -104,7 +104,7 @@ namespace dsn {
                 return err;
             }
 
-            bool get_normalized_path(const std::string& path, std::string& npath)
+            int get_normalized_path(const std::string& path, std::string& npath)
             {
                 char sep;
                 size_t i;
@@ -115,7 +115,7 @@ namespace dsn {
                 if (path.empty())
                 {
                     npath = "";
-                    return true;
+                    return 0;
                 }
 
                 len = path.length();
@@ -164,7 +164,7 @@ namespace dsn {
                 dassert(tls_path_buffer[0] != _FS_NULL, "Normalized path cannot be empty!");
                 npath = tls_path_buffer;
 
-                return true;
+                return 0;
             }
 
 #ifndef _WIN32
@@ -221,9 +221,11 @@ namespace dsn {
                 win_ftw_info info;
                 win_ftw_info info2;
                 int ret;
+                int err;
 
                 info.path.reserve(PATH_MAX);
-                if (!dsn::utils::filesystem::get_normalized_path(dirpath, info.path))
+                err = dsn::utils::filesystem::get_normalized_path(dirpath, info.path);
+                if (err != 0)
                 {
                     return false;
                 }
@@ -364,13 +366,15 @@ namespace dsn {
             bool path_exists(const std::string& path)
             {
                 std::string npath;
+                int err;
 
                 if (path.empty())
                 {
                     return false;
                 }
 
-                if (!get_normalized_path(path, npath))
+                err = get_normalized_path(path, npath);
+                if (err != 0)
                 {
                     return false;
                 }
@@ -381,13 +385,15 @@ namespace dsn {
             bool directory_exists(const std::string& path)
             {
                 std::string npath;
+                int err;
 
                 if (path.empty())
                 {
                     return false;
                 }
 
-                if (!get_normalized_path(path, npath))
+                err = get_normalized_path(path, npath);
+                if (err != 0)
                 {
                     return false;
                 }
@@ -398,13 +404,15 @@ namespace dsn {
             bool file_exists(const std::string& path)
             {
                 std::string npath;
+                int err;
 
                 if (path.empty())
                 {
                     return false;
                 }
 
-                if (!get_normalized_path(path, npath))
+                err = get_normalized_path(path, npath);
+                if (err != 0)
                 {
                     return false;
                 }
@@ -416,13 +424,15 @@ namespace dsn {
             {
                 std::string npath;
                 bool ret;
+                int err;
 
                 if (path.empty())
                 {
                     return false;
                 }
 
-                if (!get_normalized_path(path, npath))
+                err = get_normalized_path(path, npath);
+                if (err != 0)
                 {
                     return false;
                 }
@@ -541,13 +551,15 @@ namespace dsn {
             bool remove_path(const std::string& path)
             {
                 std::string npath;
+                int err;
 
                 if (path.empty())
                 {
                     return false;
                 }
 
-                if (!get_normalized_path(path, npath))
+                err = get_normalized_path(path, npath);
+                if (err != 0)
                 {
                     return false;
                 }
@@ -614,7 +626,8 @@ namespace dsn {
                     return false;
                 }
 
-                if (!get_normalized_path(path, npath))
+                err = get_normalized_path(path, npath);
+                if (err != 0)
                 {
                     return false;
                 }
@@ -668,7 +681,8 @@ namespace dsn {
                     return false;
                 }
 
-                if (!get_normalized_path(path, npath))
+                err = get_normalized_path(path, npath);
+                if (err != 0)
                 {
                     return false;
                 }
@@ -748,6 +762,7 @@ out_error:
                 std::string npath;
                 int fd;
                 int mode;
+                int err;
 
                 if (path.empty())
                 {
@@ -759,7 +774,8 @@ out_error:
                     return false;
                 }
 
-                if (!get_normalized_path(path, npath))
+                err = get_normalized_path(path, npath);
+                if (err != 0)
                 {
                     return false;
                 }
@@ -884,18 +900,18 @@ out_error:
 
             std::string path_combine(const std::string& path1, const std::string& path2)
             {
-                bool ret;
+                int err;
                 char c;
                 std::string path3;
                 std::string npath;
 
                 if (path1.empty())
                 {
-                    ret = dsn::utils::filesystem::get_normalized_path(path2, npath);
+                    err = dsn::utils::filesystem::get_normalized_path(path2, npath);
                 }
                 else if (path2.empty())
                 {
-                    ret = dsn::utils::filesystem::get_normalized_path(path1, npath);
+                    err = dsn::utils::filesystem::get_normalized_path(path1, npath);
                 }
                 else
                 {
@@ -917,10 +933,10 @@ out_error:
 #endif
                     path3.append(path2);
 
-                    ret = dsn::utils::filesystem::get_normalized_path(path3, npath);
+                    err = dsn::utils::filesystem::get_normalized_path(path3, npath);
                 }
 
-                return ret ? npath : "";
+                return ((err == 0) ? npath : "");
             }
 
             bool get_current_directory(std::string& path)
@@ -947,7 +963,8 @@ out_error:
                     return false;
                 }
 
-                if (!get_normalized_path(path, npath))
+                err = get_normalized_path(path, npath);
+                if (err != 0)
                 {
                     return false;
                 }
