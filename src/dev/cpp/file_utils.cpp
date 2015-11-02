@@ -94,9 +94,8 @@ namespace dsn {
                 if (err != 0)
                 {
                     err = errno;
-                    dwarn("get_stat_internal %s failed, err = %d, err string = %s",
+                    dwarn("get_stat_internal %s failed, err = %s",
                         npath.c_str(),
-                        err,
                         strerror(err)
                         );
                 }
@@ -746,10 +745,9 @@ namespace dsn {
                 return true;
 
 out_error:
-                dwarn("create_directory %s failed due to cannot create the component: %s, err = %d, err string = %s",
+                dwarn("create_directory %s failed due to cannot create the component: %s, err = %s",
                     path.c_str(),
                     cpath.c_str(),
-                    err,
                     strerror(err)
                     );
                 return false;
@@ -813,10 +811,17 @@ out_error:
                 if (fd == -1)
 #endif
                 {
+                    err = errno;
+                    dwarn("create_file %s failed, err = %s", path.c_str(), strerror(err));
                     return false;
                 }
 
-                return (::close_(fd) == 0);
+                if (::close_(fd) != 0)
+                {
+                    dwarn("create_file %s, failed to close the file handle.", path.c_str());
+                }
+
+                return true;
             }
 
             bool get_absolute_path(const std::string& path1, std::string& path2)
