@@ -146,18 +146,21 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     dassert (!_primary_states.check_exist(proposal.node, PS_PRIMARY), "");
     dassert (!_primary_states.check_exist(proposal.node, PS_SECONDARY), "");
 
-    if (_primary_states.learners.find(proposal.node) != _primary_states.learners.end())
-    {
-        return;
-    }
-
     remote_learner_state state;
     state.prepare_start_decree = invalid_decree;
-    state.signature = random64(0, (uint64_t)(-1LL));
     state.timeout_task = nullptr; // TODO: add timer for learner task
 
-    _primary_states.learners[proposal.node] = state;
-    _primary_states.statuses[proposal.node] = PS_POTENTIAL_SECONDARY;
+    auto it = _primary_states.learners.find(proposal.node);
+    if (it != _primary_states.learners.end())
+    {
+        state.signature = it->second.signature;
+    }
+    else
+    {
+        state.signature = random64(0, (uint64_t)(-1LL));
+        _primary_states.learners[proposal.node] = state;
+        _primary_states.statuses[proposal.node] = PS_POTENTIAL_SECONDARY;
+    }
 
     group_check_request request;
     request.app_type = _primary_states.membership.app_type;

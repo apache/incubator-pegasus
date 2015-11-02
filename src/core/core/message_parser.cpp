@@ -106,7 +106,7 @@ namespace dsn {
                 auto msg_bb = _read_buffer.range(0, msg_sz);
                 message_ex* msg = message_ex::create_receive_message(msg_bb);
 
-                dassert(msg->is_right_header() && msg->is_right_body(), "");
+                dassert(msg->is_right_header() && msg->is_right_body(false), "");
 
                 _read_buffer = _read_buffer.range(msg_sz);
                 _read_buffer_occupied -= msg_sz;

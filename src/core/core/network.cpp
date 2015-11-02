@@ -263,6 +263,9 @@ namespace dsn
             set_disconnected();
             rpc_session_ptr sp = this;
             _net.on_client_session_disconnected(sp);
+
+            // reconnect with new socket
+            clear(++_reconnect_count_after_last_success < 3);
         }
         
         else
@@ -270,8 +273,6 @@ namespace dsn
             rpc_session_ptr sp = this;
             _net.on_server_session_disconnected(sp);
         }
-
-        clear(++_reconnect_count_after_last_success < 3);
         return true;
     }
 
