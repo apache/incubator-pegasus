@@ -320,7 +320,11 @@ void task_worker::loop()
             task* task = q->dequeue(), *next;
             while (task != nullptr)
             {
-                q->decrease_count();
+                if (q->decrease_count() < 0)
+                {
+                    // fix count approximation
+                    q->reset_count();
+                }
                 next = task->next;
                 task->next = nullptr;
                 task->exec_internal();
