@@ -1,0 +1,8 @@
+# pragma once
+
+# include <dsn/service_api_cpp.h>
+
+DEFINE_ERR_CODE(ERR_EXPIRED)
+DEFINE_ERR_CODE(ERR_LOCK_ALREADY_EXIST)
+DEFINE_ERR_CODE(ERR_HOLD_BY_OTHERS)
+

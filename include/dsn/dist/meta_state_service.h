@@ -36,34 +36,62 @@ namespace dsn
         class meta_state_service
         {
         public:
-            typedef std::function<void (int ec, std::string&& ret_str)> err_string_callback;
-            typedef std::function<void (int ec, std::vector<std::string>&& ret_strv)> err_stringv_callback;
-            typedef std::function<void (int ec, std::string&& ret_strv, int ret)> err_data_callback;
-            typedef std::function<void (int ec, int ret)> err_state_callback;
-            typedef std::function<void (int ec)> err_callback;
+            typedef std::function<void (dsn_error_t ec, std::string&& ret_str)> err_string_callback;
+            typedef std::function<void (dsn_error_t ec, std::vector<std::string>&& ret_strv)> err_stringv_callback;
+            typedef std::function<void (dsn_error_t ec)> err_callback;
 
         public:
-            //create a dir
-            virtual void create_direcotory(const std::string& dir_node,
-                                           const err_string_callback& cb_create,
-                                           const std::string& value = std::string()) = 0;
-            //create a node which can't be a dir
-            virtual void create_node(const std::string& node,
-                                     const err_string_callback& cb_create,
-                                     const std::string& value = std::string()) = 0;
-            //delete a node/dir, and the dir may not be empty
-            virtual void delete(const std::string& node_or_dir,
-                                const err_callback& cb_delete) = 0;
-            virtual void node_exist(const std::string& node_or_dir,
-                                    const err_state_callback& cb_exist) = 0;
-            virtual void get_data(const std::string& node_or_dir,
-                                  const err_data_callback& cb_get_data) = 0;
-            virtual void set_data(const std::string& node_or_dir,
+            /*
+             * create a dir node
+             * node: the dir name with full path
+             * cb_create: create callback, ec to indicate success or failure reason
+             * value: the data value to store in the node
+             */
+            virtual void create_directory(const std::string& node,
+                                          const err_callback& cb_create,
+                                          const std::string& value = std::string()) = 0;
+            /*
+             * delete a dir, the directory may be empty or not
+             * node: the dir name with full path
+             * recursively_delete: true for recursively delete non-empty node,
+             *                     false for failure
+             * cb_delete: delete callback, ec to indicate success or failure reason
+             */
+            virtual void delete_directory(const std::string& node,
+                                          bool recursively_delete,
+                                          const err_callback& cb_delete) = 0;
+            /*
+             * check if the node dir exists
+             * node: the dir name with full path
+             * cb_exist: callback to indicate the check result
+             */
+            virtual void node_exist(const std::string& node,
+                                    const err_callback& cb_exist) = 0;
+            /*
+             * get the data in node
+             * node: dir name with full path
+             * cb_get_data: callback. If success, ec indicate the success and
+             *              node data is returned in ret_str
+             *              or-else user get the fail reason in ec
+             */
+            virtual void get_data(const std::string& node,
+                                  const err_string_callback& cb_get_data) = 0;
+            /*
+             * set the data of the node
+             * node: dir name with full path
+             * value: the value
+             * cb_set_data: the callback to indicate the set result
+             */
+            virtual void set_data(const std::string& node,
                                   const std::string& value,
-                                  const err_state_callback& cb_set_data) = 0;
-            virtual void get_children(const std::string& dir,
-                                      const err_stringv_callback& cb_list_node) = 0;
-
+                                  const err_callback& cb_set_data) = 0;
+            /*
+             * get all childrens of a node
+             * node: dir name with full path
+             * cb_get_children: if success, ret_strv store the node names of children
+             */
+            virtual void get_children(const std::string& node,
+                                      const err_stringv_callback& cb_get_children) = 0;
         };
     }
 }
