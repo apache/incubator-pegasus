@@ -26,7 +26,7 @@ namespace dsn {
             struct callback_para
             {
                 dsn_handle_t hfile;
-                std::string file_name;
+                std::string file_path;
                 std::string dst_dir;
                 blob bb;
                 uint64_t offset;

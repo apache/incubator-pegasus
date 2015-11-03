@@ -48,7 +48,6 @@ namespace dsn {
                 derror("file open failed");
                 ::dsn::service::copy_response resp;
                 resp.error = ERR_OBJECT_NOT_FOUND;
-                resp.file_name = request.file_name;
                 reply(resp);
                 return;
             }
@@ -59,7 +58,7 @@ namespace dsn {
             std::shared_ptr<callback_para> cp(new callback_para(reply));
             cp->bb = bb;
             cp->dst_dir = request.dst_dir;
-            cp->file_name = request.file_name;
+            cp->file_path = file_path;
             cp->hfile = hfile;
             cp->offset = request.offset;
             cp->size = request.size;
@@ -85,7 +84,7 @@ namespace dsn {
         {
             {
                 zauto_lock l(_handles_map_lock);
-                auto it = _handles_map.find(cp->file_name);
+                auto it = _handles_map.find(cp->file_path);
 
                 if (it != _handles_map.end())
                 {
@@ -95,8 +94,6 @@ namespace dsn {
 
             ::dsn::service::copy_response resp;
             resp.error = err;
-            resp.file_name = cp->file_name;
-            resp.dst_dir = cp->dst_dir;
             resp.file_content = cp->bb;
             resp.offset = cp->offset;
             resp.size = cp->size;
@@ -179,15 +176,15 @@ namespace dsn {
             {
                 auto fptr = it->second;
 
+                // not used and expired
                 if (fptr->file_access_count == 0 
-                    && dsn_now_ms() - fptr->last_access_time > _opts.file_close_expire_time_ms) // not opened and expired
+                    && dsn_now_ms() - fptr->last_access_time > _opts.file_close_expire_time_ms)
                 {
+                    dinfo("nfs: close file handle %s", it->first.c_str());
                     it = _handles_map.erase(it);
 
                     ::dsn::error_code err = dsn_file_close(fptr->file_handle);
                     dassert(err == ERR_OK, "dsn_file_close failed, err = %s", err.to_string());
-                    dinfo ("nfs: close file handle %s", it->first.c_str());
-
                     delete fptr;
                 }
                 else

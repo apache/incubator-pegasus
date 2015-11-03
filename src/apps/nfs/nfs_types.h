@@ -129,8 +129,6 @@ namespace dsn {
         struct copy_response
         {
             error_code error;
-            std::string file_name;
-            std::string dst_dir;
             blob file_content;
             uint64_t offset;
             uint32_t size;
@@ -139,8 +137,6 @@ namespace dsn {
         inline void marshall(::dsn::binary_writer& writer, const copy_response& val)
         {
             marshall(writer, val.error);
-            marshall(writer, val.file_name);
-            marshall(writer, val.dst_dir);
             marshall(writer, val.file_content);
             marshall(writer, val.offset);
             marshall(writer, val.size);
@@ -149,8 +145,6 @@ namespace dsn {
         inline void unmarshall(::dsn::binary_reader& reader, /*out*/ copy_response& val)
         {
             unmarshall(reader, val.error);
-            unmarshall(reader, val.file_name);
-            unmarshall(reader, val.dst_dir);
             unmarshall(reader, val.file_content);
             unmarshall(reader, val.offset);
             unmarshall(reader, val.size);
