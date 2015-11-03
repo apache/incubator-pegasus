@@ -197,7 +197,7 @@ namespace dsn {
                     {
                         for (auto& cs : s.cases)
                         {
-                            ss << "TEST " << _name << "(" << cs.id << "/" << _case_count << ")::"
+                            ss << "TEST " << s.name << "(" << cs.id << "/" << _case_count << ")::"
                                 << "  concurency: " << cs.concurrency
                                 << ", timeout(ms): " << cs.timeout_ms
                                 << ", payload(byte): " << cs.payload_bytes
