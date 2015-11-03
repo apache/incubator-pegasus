@@ -49,8 +49,9 @@ public:
     virtual task*    dequeue() = 0;
     
     int               approx_count() const { return _appro_count; }
-    void              decrease_count() { --_appro_count; }
+    int               decrease_count() { return --_appro_count; }
     void              increase_count() { ++_appro_count; }
+    void              reset_count() { _appro_count = 0; }
     const std::string & get_name() { return _name; }    
     task_worker_pool* pool() const { return _pool; }
     bool              is_shared() const { return _worker_count > 1; }

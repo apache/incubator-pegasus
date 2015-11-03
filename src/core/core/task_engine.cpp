@@ -155,6 +155,7 @@ void task_worker_pool::enqueue(task* t)
         auto controller = _controllers[idx];
         if (controller != nullptr)
         {
+            int i = 0;
             while (!controller->is_task_accepted(t))
             {
                 // any customized rejection handler?
@@ -170,12 +171,18 @@ void task_worker_pool::enqueue(task* t)
                     return;
                 }
 
+                if (++i % 1000 == 0)
+                {
+                    dwarn("task queue %s cannot accept new task now, size = %d", 
+                        q->get_name().c_str(), q->approx_count());
+                }
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
         }
-        else if (t->spec().type == TASK_TYPE_RPC_REQUEST && _spec.max_input_queue_length != 0xFFFFFFFFUL)
+        else if (t->spec().type == TASK_TYPE_RPC_REQUEST && _spec.max_input_queue_length != 0x0FFFFFFFUL)
         {
-            while ((uint32_t)q->approx_count() >= _spec.max_input_queue_length)
+            int i = 0;
+            while (q->approx_count() >= _spec.max_input_queue_length)
             {
                 // any customized rejection handler?
                 if (t->spec().rejection_handler != nullptr)
@@ -190,6 +197,11 @@ void task_worker_pool::enqueue(task* t)
                     return;
                 }
 
+                if (++i % 1000 == 0)
+                {
+                    dwarn("task queue %s cannot accept new task now, size = %d",
+                        q->get_name().c_str(), q->approx_count());
+                }
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
         }

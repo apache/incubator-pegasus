@@ -145,6 +145,8 @@ namespace dsn
     
     void rpc_session::send_message(message_ex* msg)
     {
+        dinfo("%s: rpc_id = %llx, code = %s", __FUNCTION__, msg->header->rpc_id, msg->header->rpc_name);
+
         msg->add_ref(); // released in on_send_completed
         uint64_t sig;
         {
@@ -218,7 +220,7 @@ namespace dsn
             }
         }
 
-        // for next send messages (double-linked list)
+        // for next send messages
         if (sig != 0)
             this->send(sig);
     }
@@ -251,8 +253,7 @@ namespace dsn
         if (is_client())
         {
             // still connecting, let's retry
-            if (is_connecting() && ++_reconnect_count_after_last_success < 3
-                )
+            if (is_connecting() && ++_reconnect_count_after_last_success < 3)
             {
                 set_disconnected();
                 connect();
@@ -262,6 +263,9 @@ namespace dsn
             set_disconnected();
             rpc_session_ptr sp = this;
             _net.on_client_session_disconnected(sp);
+
+            // reconnect with new socket
+            clear(++_reconnect_count_after_last_success < 3);
         }
         
         else
@@ -269,13 +273,12 @@ namespace dsn
             rpc_session_ptr sp = this;
             _net.on_server_session_disconnected(sp);
         }
-
-        clear(++_reconnect_count_after_last_success < 3);
         return true;
     }
 
     bool rpc_session::on_recv_reply(uint64_t key, message_ex* reply, int delay_ms)
     {
+        dinfo("%s: rpc_id = %llx, code = %s", __FUNCTION__, reply->header->rpc_id, reply->header->rpc_name);
         if (reply != nullptr)
         {
             reply->from_address = remote_address();
@@ -287,6 +290,7 @@ namespace dsn
 
     void rpc_session::on_recv_request(message_ex* msg, int delay_ms)
     {
+        dinfo("%s: rpc_id = %llx, code = %s", __FUNCTION__, msg->header->rpc_id, msg->header->rpc_name);
         msg->from_address = remote_address();
         msg->from_address.c_addr_ptr()->u.v4.port = msg->header->client.port;
         msg->to_address = _net.address();

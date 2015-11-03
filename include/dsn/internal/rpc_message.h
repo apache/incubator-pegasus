@@ -99,7 +99,7 @@ namespace dsn
         // utility routines
         //
         bool is_right_header() const;
-        bool is_right_body() const;
+        bool is_right_body(bool is_write_msg) const;
         error_code error() const { return header->server.error; }        
         static uint64_t new_id() { return ++_id; }
         static bool is_right_header(char* hdr);
@@ -111,7 +111,7 @@ namespace dsn
         //
         // routines for create messages
         //
-        static message_ex* create_receive_message(blob& data);
+        static message_ex* create_receive_message(const blob& data);
         static message_ex* create_request(dsn_task_code_t rpc_code, int timeout_milliseconds = 0, int hash = 0);
         message_ex* create_response();
         message_ex* copy();
