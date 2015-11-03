@@ -1,3 +1,37 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Microsoft Corporation
+ * 
+ * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
 # pragma once
 
 //
@@ -129,8 +163,6 @@ namespace dsn {
         struct copy_response
         {
             error_code error;
-            std::string file_name;
-            std::string dst_dir;
             blob file_content;
             uint64_t offset;
             uint32_t size;
@@ -139,8 +171,6 @@ namespace dsn {
         inline void marshall(::dsn::binary_writer& writer, const copy_response& val)
         {
             marshall(writer, val.error);
-            marshall(writer, val.file_name);
-            marshall(writer, val.dst_dir);
             marshall(writer, val.file_content);
             marshall(writer, val.offset);
             marshall(writer, val.size);
@@ -149,8 +179,6 @@ namespace dsn {
         inline void unmarshall(::dsn::binary_reader& reader, /*out*/ copy_response& val)
         {
             unmarshall(reader, val.error);
-            unmarshall(reader, val.file_name);
-            unmarshall(reader, val.dst_dir);
             unmarshall(reader, val.file_content);
             unmarshall(reader, val.offset);
             unmarshall(reader, val.size);
