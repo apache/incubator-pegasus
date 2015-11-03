@@ -22,10 +22,17 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
- *
- * History
- *  - major revision from C++ in July, 2015 by @imzhenyu (Zhenyu.Guo@microsoft.com)
  */
+
+/*
+ * Description:
+ *     this file define the C Service API in rDSN layer 1, e.g., ZION.
+ *
+ * Revision history:
+ *     July, 2015, @imzhenyu (Zhenyu.Guo@microsoft.com), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <stdint.h>
