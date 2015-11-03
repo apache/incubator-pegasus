@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.8.8)
 include(bin/dsn.cmake)
+#cmake_policy(SET CMP0048 NEW)
+#project(dsn VERSION 1.0 LANGUAGES C CXX)
 project(dsn C CXX)
 set(DSN_BUILD_RUNTIME TRUE)
 dsn_common_setup()

@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/ports.h>
@@ -75,7 +85,9 @@ struct __tls_dsn__
     uint64_t      node_pool_thread_ids; // 8,8,16 bits
     int           last_lower32_task_id; // 32bits
 
-    char          scatch_buffer[256]; // for temp to_string() etc.
+    char          scratch_buffer[4][256]; // for temp to_string() etc., 4 buffers in maximum
+    int           scratch_buffer_index;
+    char*         scratch_next() { return scratch_buffer[++scratch_buffer_index % 4]; }
 };
 
 extern __thread struct __tls_dsn__ tls_dsn;

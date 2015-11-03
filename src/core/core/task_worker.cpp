@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include <dsn/internal/task_worker.h>
 # include "task_engine.h"
 # include <sstream>
@@ -320,7 +330,11 @@ void task_worker::loop()
             task* task = q->dequeue(), *next;
             while (task != nullptr)
             {
-                q->decrease_count();
+                if (q->decrease_count() < 0)
+                {
+                    // fix count approximation
+                    q->reset_count();
+                }
                 next = task->next;
                 task->next = nullptr;
                 task->exec_internal();

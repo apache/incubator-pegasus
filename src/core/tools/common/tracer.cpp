@@ -24,6 +24,16 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+
 #include <dsn/toollet/tracer.h>
 
 # ifdef __TITLE__
@@ -147,8 +157,9 @@ namespace dsn {
 
         static void tracer_on_rpc_request_enqueue(rpc_request_task* callee)
         {
-            ddebug("%s RPC.REQUEST.ENQUEUE, task_id = %016llx, %s => %s, rpc_id = %016llx",
+            ddebug("%s RPC.REQUEST.ENQUEUE (0x%p), task_id = %016llx, %s => %s, rpc_id = %016llx",
                 callee->spec().name.c_str(),
+                callee,
                 callee->id(),
                 callee->get_request()->from_address.to_string(),
                 callee->get_request()->to_address.to_string(),
@@ -211,8 +222,9 @@ namespace dsn {
                     "whether to trace when a task ends"))
                     spec->on_task_end.put_back(tracer_on_task_end, "tracer");
 
-                //if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_cancelled", true))
-                //    spec->on_task_cancelled.put_back(tracer_on_task_cancelled, "tracer");
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_cancelled", true,
+                    "whether to trace when a task is cancelled"))
+                    spec->on_task_cancelled.put_back(tracer_on_task_cancelled, "tracer");
 
                 //if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_wait_pre", true))
                     //spec->on_task_wait_pre.put_back(tracer_on_task_wait_pre, "tracer");

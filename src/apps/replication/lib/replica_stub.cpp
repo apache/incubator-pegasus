@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #include "replica.h"
 #include "replica_stub.h"
 #include "mutation_log.h"
@@ -286,6 +296,16 @@ replica_ptr replica_stub::get_replica(global_partition_id gpid, bool new_when_po
     {
         if (!new_when_possible)
             return nullptr;
+        else if (_opening_replicas.find(gpid) != _opening_replicas.end())
+        {
+            ddebug("cannot create new replica coz it is under open");
+            return nullptr;
+        }
+        else if (_closing_replicas.find(gpid) != _closing_replicas.end())
+        {
+            ddebug("cannot create new replica coz it is under close");
+            return nullptr;
+        }
         else
         {
             dassert (app_type, "");

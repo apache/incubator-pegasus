@@ -1,3 +1,37 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Microsoft Corporation
+ * 
+ * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
 # pragma once
 # include "nfs_client.h"
 # include <queue>
@@ -25,9 +59,9 @@ namespace dsn {
                 max_concurrent_local_writes = (int)dsn_config_get_value_uint64("nfs", "max_concurrent_local_writes", 
                     5, "maximum local file writes on nfs client");
                 file_close_expire_time_ms = (int)dsn_config_get_value_uint64("nfs", "file_close_expire_time_ms", 
-                    3 * 60 * 1000, "maximum idle time for an opening file on nfs server");
+                    60 * 1000, "maximum idle time for an opening file on nfs server");
                 file_close_timer_interval_ms_on_server = (int)dsn_config_get_value_uint64("nfs", "file_close_timer_interval_ms_on_server",
-                    2 * 60 * 1000, "time interval for checking whether cached file handles need to be closed");
+                    30 * 1000, "time interval for checking whether cached file handles need to be closed");
                 max_file_copy_request_count_per_file = (int)dsn_config_get_value_uint64("nfs", "max_file_copy_request_count_per_file", 
                     10, "maximum concurrent remote copy requests for the same file on nfs client"); // limit each file copy speed
             }

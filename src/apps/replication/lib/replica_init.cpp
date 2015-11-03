@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #include "replica.h"
 #include "mutation.h"
 #include "mutation_log.h"
@@ -46,7 +56,8 @@ error_code replica::initialize_on_new(const char* app_type, global_partition_id 
     _config.gpid = gpid;
     _dir = _stub->dir() + "/" + buffer;
 
-    if (dsn::utils::filesystem::directory_exists(_dir))
+    if (dsn::utils::filesystem::directory_exists(_dir) &&
+        !dsn::utils::filesystem::remove_path(_dir))
     {
         derror("cannot allocate new replica @ %s, as the dir is already exists", _dir.c_str());
         return ERR_PATH_ALREADY_EXIST;

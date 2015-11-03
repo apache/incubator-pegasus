@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/ports.h>
@@ -396,7 +406,7 @@ namespace dsn {
 
 			extern std::string path_combine(const std::string& path1, const std::string& path2);
 
-			extern bool get_normalized_path(const std::string& path, std::string& npath);
+			extern int get_normalized_path(const std::string& path, std::string& npath);
 
 			//int (const char* fpath, int typeflags, struct FTW *ftwbuf)
 			typedef std::function<int(const char*, int, struct FTW*)> ftw_handler;

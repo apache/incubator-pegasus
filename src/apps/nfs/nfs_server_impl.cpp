@@ -1,3 +1,37 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Microsoft Corporation
+ * 
+ * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
 # include "nfs_server_impl.h"
 # include <cstdlib>
 # include <sys/stat.h>
@@ -48,7 +82,6 @@ namespace dsn {
                 derror("file open failed");
                 ::dsn::service::copy_response resp;
                 resp.error = ERR_OBJECT_NOT_FOUND;
-                resp.file_name = request.file_name;
                 reply(resp);
                 return;
             }
@@ -59,7 +92,7 @@ namespace dsn {
             std::shared_ptr<callback_para> cp(new callback_para(reply));
             cp->bb = bb;
             cp->dst_dir = request.dst_dir;
-            cp->file_name = request.file_name;
+            cp->file_path = file_path;
             cp->hfile = hfile;
             cp->offset = request.offset;
             cp->size = request.size;
@@ -85,7 +118,7 @@ namespace dsn {
         {
             {
                 zauto_lock l(_handles_map_lock);
-                auto it = _handles_map.find(cp->file_name);
+                auto it = _handles_map.find(cp->file_path);
 
                 if (it != _handles_map.end())
                 {
@@ -95,8 +128,6 @@ namespace dsn {
 
             ::dsn::service::copy_response resp;
             resp.error = err;
-            resp.file_name = cp->file_name;
-            resp.dst_dir = cp->dst_dir;
             resp.file_content = cp->bb;
             resp.offset = cp->offset;
             resp.size = cp->size;
@@ -179,15 +210,15 @@ namespace dsn {
             {
                 auto fptr = it->second;
 
+                // not used and expired
                 if (fptr->file_access_count == 0 
-                    && dsn_now_ms() - fptr->last_access_time > _opts.file_close_expire_time_ms) // not opened and expired
+                    && dsn_now_ms() - fptr->last_access_time > _opts.file_close_expire_time_ms)
                 {
+                    dinfo("nfs: close file handle %s", it->first.c_str());
                     it = _handles_map.erase(it);
 
                     ::dsn::error_code err = dsn_file_close(fptr->file_handle);
                     dassert(err == ERR_OK, "dsn_file_close failed, err = %s", err.to_string());
-                    dinfo ("nfs: close file handle %s", it->first.c_str());
-
                     delete fptr;
                 }
                 else

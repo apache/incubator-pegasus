@@ -24,6 +24,16 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+
 # include <dsn/tool/simulator.h>
 # include "scheduler.h"
 

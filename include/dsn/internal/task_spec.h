@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/service_api_c.h>
@@ -236,7 +246,7 @@ struct threadpool_spec
     worker_priority_t       worker_priority;
     bool                    worker_share_core;
     uint64_t                worker_affinity_mask;
-    unsigned int            max_input_queue_length; // 0xFFFFFFFFUL by default
+    int                     max_input_queue_length; // 0x0FFFFFFFUL by default
     bool                    partitioned;         // false by default
     std::string             queue_factory_name;
     std::string             worker_factory_name;
@@ -259,7 +269,7 @@ CONFIG_BEGIN(threadpool_spec)
     CONFIG_FLD_ENUM(worker_priority_t, worker_priority, THREAD_xPRIORITY_NORMAL, THREAD_xPRIORITY_INVALID, false, "thread priority")
     CONFIG_FLD(bool, bool, worker_share_core, true, "whether the threads share all assigned cores")
     CONFIG_FLD(uint64_t, uint64, worker_affinity_mask, 0, "what CPU cores are assigned to this pool, 0 for all")
-    CONFIG_FLD(unsigned int, uint64, max_input_queue_length, 0xFFFFFFFFUL, "maximum (each) task queue length for this pool")
+    CONFIG_FLD(int, uint64, max_input_queue_length, 0x0FFFFFFFUL, "maximum (each) task queue length for this pool")
     CONFIG_FLD(bool, bool, partitioned, false, "whethe the threads share a single queue(partitioned=false) or not; the latter is usually for workload hash partitioning for avoiding locking")
     CONFIG_FLD_STRING(queue_factory_name, "", "task queue provider name")
     CONFIG_FLD_STRING(worker_factory_name, "", "task worker provider name")

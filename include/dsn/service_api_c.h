@@ -22,10 +22,17 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
- *
- * History
- *  - major revision from C++ in July, 2015 by @imzhenyu (Zhenyu.Guo@microsoft.com)
  */
+
+/*
+ * Description:
+ *     this file define the C Service API in rDSN layer 1, e.g., ZION.
+ *
+ * Revision history:
+ *     July, 2015, @imzhenyu (Zhenyu.Guo@microsoft.com), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <stdint.h>
@@ -164,6 +171,11 @@ typedef void*       (*dsn_checker_create)(      // return a checker
                                 );
 typedef void        (*dsn_checker_apply)(void*); // run the given checker
 
+// rDSN allows apps/tools to register commands into its command line interface,
+// which can be further probed via local/remote console, and also http services
+typedef const char* (*dsn_cli_handler)(int argc, const char** argv); // return cmd output
+typedef void        (*dsn_cli_free_handler)(const char* /*cmd output*/);
+
 struct dsn_app_info
 {
     void* app_context_ptr;                    // returned by dsn_app_create
@@ -281,6 +293,16 @@ extern DSN_API bool      dsn_run_config(
 extern DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init DEFAULT(false));
 extern DSN_API void dsn_terminate();
 extern DSN_API int  dsn_get_all_apps(dsn_app_info* info_buffer, int count); // return real app count
+
+extern DSN_API const char* dsn_cli_run(const char* command_line); // return command output
+extern DSN_API void        dsn_cli_free(const char* command_output);
+extern DSN_API void        dsn_cli_register(
+                            const char* command,
+                            const char* help_one_line,
+                            const char* help_long,
+                            dsn_cli_handler cmd_handler,
+                            dsn_cli_free_handler output_freer
+                            );
 
 //------------------------------------------------------------------------------
 //
