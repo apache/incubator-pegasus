@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     Network using kqueue on BSD.
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     2015-09-06, HX Lin(linmajia@live.com), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
