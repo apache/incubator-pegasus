@@ -49,7 +49,7 @@ static void file_utils_test_setup()
 
 static void file_utils_test_get_normalized_path()
 {
-	bool ret;
+	int ret;
 	std::string path;
 	std::string npath;
 	
