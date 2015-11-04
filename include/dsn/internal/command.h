@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     interface for command line interface in rDSN
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     May, 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 #pragma once

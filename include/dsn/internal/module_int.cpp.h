@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     self-execution code for dynamic linked libraries
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Aug., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 

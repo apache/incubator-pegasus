@@ -36,6 +36,7 @@
 # pragma once
 
 #include <dsn/service_api_cpp.h>
+#include <dsn/dist/error_code.h>
 #include <string>
 #include <functional>
 
@@ -57,9 +58,9 @@ namespace dsn
              * cb_create: create callback, ec to indicate success or failure reason
              * value: the data value to store in the node
              */
-            virtual void create_directory(const std::string& node,
-                                          const err_callback& cb_create,
-                                          const std::string& value = std::string()) = 0;
+            virtual void create_node(const std::string& node,
+                                     const err_callback& cb_create,
+                                     const std::string& value = std::string()) = 0;
             /*
              * delete a dir, the directory may be empty or not
              * node: the dir name with full path
@@ -67,9 +68,9 @@ namespace dsn
              *                     false for failure
              * cb_delete: delete callback, ec to indicate success or failure reason
              */
-            virtual void delete_directory(const std::string& node,
-                                          bool recursively_delete,
-                                          const err_callback& cb_delete) = 0;
+            virtual void delete_node(const std::string& node,
+                                     bool recursively_delete,
+                                     const err_callback& cb_delete) = 0;
             /*
              * check if the node dir exists
              * node: the dir name with full path

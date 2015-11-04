@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     c++ client side service API
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Sep., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 

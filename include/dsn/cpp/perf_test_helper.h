@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     helper class for automated performance test in zion
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Aug., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 

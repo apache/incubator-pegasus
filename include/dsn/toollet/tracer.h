@@ -26,10 +26,11 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     the tracer toollets traces all the asynchonous execution flow
+ *     in the system through the join-point mechanism
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 

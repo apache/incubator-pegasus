@@ -26,10 +26,11 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     define the interface of admissio controllers which is used to throttle the
+ *     traffic into the task thread pools
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 

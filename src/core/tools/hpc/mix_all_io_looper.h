@@ -26,15 +26,11 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     io + computation looper interface, so everything uses the same thread
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Aug., 2015, @imzhenyu (Zhenyu Guo), the first version
  *     xxxx-xx-xx, author, fix bug about xxx
- */
-/*
- * History:
- *      Aug., 2015, Zhenyu Guo created (zhenyu.guo@microsoft.com)
  */
 
 # include "io_looper.h"

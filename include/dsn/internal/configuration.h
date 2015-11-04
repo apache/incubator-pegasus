@@ -26,10 +26,11 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     configuration file interface
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     Jul., 2015, @imzhenyu (Zhenyu Guo), add parameter support
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
