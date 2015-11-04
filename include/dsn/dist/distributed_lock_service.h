@@ -36,6 +36,7 @@
 # pragma once
 
 # include <dsn/service_api_cpp.h>
+# include <dsn/dist/error_code.h>
 # include <string>
 # include <functional>
 # include <utility>
