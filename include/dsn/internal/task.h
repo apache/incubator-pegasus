@@ -26,10 +26,11 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     the task abstraction in zion, as well as the derived various types of
+ *     tasks in our system
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 

@@ -26,10 +26,46 @@
 
 /*
  * Description:
- *     this file define the C Service API in rDSN layer 1, e.g., ZION.
+ *     this file define the C Service API in rDSN layer 1, e.g., Zion.
+ *
+ * ------------------------------------------------------------------------------
+ * 
+ *  The service system call API for Zion
+ * -------------------------------------------
+ *  Summary:
+ *  (1) rich API for common distributed system development
+ *      - thread pools and tasking
+ *      - thread synchronization
+ *      - remote procedure calls
+ *      - asynchnous file operations
+ *      - envrionment inputs
+ *      - rDSN system and other utilities
+ *  (2) portable
+ *      - compilable on many platforms (currently linux, windows, FreeBSD, MacOS)
+ *      - system calls are in C so that later language wrappers are possibles.
+ *  (3) high performance
+ *      - all low level components can be plugged with the tool API (in C++)
+ *        besides the existing high performance providers;
+ *      - developers can also configure thread pools, thread numbers, thread/task
+ *        priorities, CPU core affinities, throttling policies etc. declaratively
+ *        to build a best threading model for upper apps.
+ *  (4) ease of intergration
+ *      - support many languages through language wrappers based this c interface
+ *      - easy support for existing protocols (thrift/protobuf etc.)
+ *      - integrate with existing platform infra with low level providers (plug-in),
+ *        such as loggers, performance counters, etc.
+ *  (5) rich debug, development tools and runtime policies support
+ *      - tool API with task granularity semantic for further tool and runtime policy development.
+ *      - rich existing tools, tracer, profiler, simulator, model checker, replayer, global checker
+ *  (7) PRINCIPLE: all non-determinims must be go through these system calls so that powerful
+ *      internal tools are possible - replay, model checking, replication, ...,
+ *      AND, it is still OK to call other DETERMINISTIC APIs for applications.
+ * 
+ * ------------------------------------------------------------------------------
  *
  * Revision history:
- *     July, 2015, @imzhenyu (Zhenyu.Guo@microsoft.com), first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version in cpp
+ *     July, 2015, @imzhenyu (Zhenyu Guo), refactor and refined in c
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -71,42 +107,6 @@ extern "C" {
 # define DSN_INVALID_HASH                  0xdeadbeef
 # define DSN_MAX_APP_TYPE_NAME_LENGTH      32
 # define DSN_MAX_APP_COUNT_IN_SAME_PROCESS 256
-
-//------------------------------------------------------------------------------
-//
-// The service system call API for rDSN
-//-------------------------------------------
-// Summary:
-// (1) rich API for common distributed system development
-//     - thread pools and tasking
-//     - thread synchronization
-//     - remote procedure calls
-//     - asynchnous file operations
-//     - envrionment inputs 
-//     - rDSN system and other utilities
-// (2) portable
-//     - compilable on many platforms (currently linux, windows, FreeBSD, MacOS)
-//     - system calls are in C so that later language wrappers are possibles.
-// (3) high performance
-//     - all low level components can be plugged with the tool API (in C++)
-//       besides the existing high performance providers; 
-//     - developers can also configure thread pools, thread numbers, thread/task 
-//       priorities, CPU core affinities, throttling policies etc. declaratively
-//       to build a best threading model for upper apps.
-// (4) ease of intergration
-//     - support many languages through language wrappers based this c interface
-//     - easy support for existing protocols (thrift/protobuf etc.)
-//     - integrate with existing platform infra with low level providers (plug-in),
-//       such as loggers, performance counters, etc.
-// (5) rich debug, development tools and runtime policies support
-//     - tool API with task granularity semantic for further tool and runtime policy development.
-//     - rich existing tools, tracer, profiler, simulator, model checker, replayer, global checker
-// (7) PRINCIPLE: all non-determinims must be go through these system calls so that powerful
-//     internal tools are possible - replay, model checking, replication, ...,
-//     AND, it is still OK to call other DETERMINISTIC APIs for applications.
-//
-//------------------------------------------------------------------------------
-
 
 //------------------------------------------------------------------------------
 //

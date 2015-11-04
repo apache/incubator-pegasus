@@ -26,10 +26,11 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     dynamic and seperated string to/from integer id mapping
+ *     in constrast to defining all enums in a single file
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 

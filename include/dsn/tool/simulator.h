@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     the simulation tool (include simulation, replay, model-checking, ...)
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 

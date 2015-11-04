@@ -26,10 +26,11 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     message parser base prototype, to support different kinds
+ *     of message headers (so as to interact with them)
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 

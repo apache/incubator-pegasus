@@ -26,10 +26,13 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     define the interface for implementing and plug-in the tools &
+ *     runtime components into Zion.
+ *     in Zion, both developement tools and runtime libraries 
+ *     (e.g., high performance components) are considered tools.
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 

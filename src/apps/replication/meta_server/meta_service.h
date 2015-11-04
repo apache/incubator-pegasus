@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     meta server service for EON (rDSN layer 2)
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     2015-03-09, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 

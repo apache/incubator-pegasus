@@ -26,10 +26,11 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     define address helper routines around dsn_address_t structure
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     July, 2015, @imzhenyu (Zhenyu Guo), first version
+ *     Aug., 2015, @imzhenyu (Zhenyu Guo), add group and uri address support
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
