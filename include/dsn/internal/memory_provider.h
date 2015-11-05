@@ -46,6 +46,8 @@ namespace dsn {
             return new T();
         }
 
+        typedef memory_provider* (*factory)();
+
     public:
         memory_provider() {}
         

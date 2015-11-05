@@ -71,6 +71,16 @@ namespace dsn
 
     namespace tasking 
     {
+        task_ptr create(
+            dsn_task_code_t evt,
+            task_handler callback,
+            int hash = 0,
+            int timer_interval_milliseconds = 0,
+            clientlet* svc = nullptr
+            );
+
+        void enqueue(task_ptr& tsk, int delay_milliseconds = 0);
+
         task_ptr enqueue(
             dsn_task_code_t evt,
             clientlet* svc,
@@ -79,7 +89,6 @@ namespace dsn
             int delay_milliseconds = 0,
             int timer_interval_milliseconds = 0
             );
-
 
         template<typename T> // where T : public virtual clientlet
         inline task_ptr enqueue(
@@ -405,7 +414,8 @@ namespace dsn
                         msg,
                         safe_task<rpc_reply_handler >::exec_rpc_response,
                         (void*)task,
-                        reply_hash
+                        reply_hash,
+                        owner ? owner->tracker() : nullptr
                         );
                     task->set_task_info(t);
                     return task;
@@ -421,7 +431,8 @@ namespace dsn
                 dsn_message_t msg,
                 std::shared_ptr<TRequest>& req,
                 std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)>& callback,
-                int reply_hash
+                int reply_hash,
+                clientlet* owner
                 )
             {
                 if (callback != nullptr)
@@ -446,7 +457,8 @@ namespace dsn
                         msg,
                         safe_task<rpc_reply_handler >::exec_rpc_response,
                         (void*)task,
-                        reply_hash
+                        reply_hash,
+                        owner ? owner->tracker() : nullptr
                         );
                     task->set_task_info(t);
                     return task;
@@ -488,7 +500,8 @@ namespace dsn
                         msg,
                         safe_task<rpc_reply_handler >::exec_rpc_response,
                         (void*)task,
-                        reply_hash
+                        reply_hash,
+                        owner ? owner->tracker() :  nullptr
                         );
                     task->set_task_info(t);
                     return task;
@@ -504,7 +517,8 @@ namespace dsn
                 dsn_message_t msg,
                 std::function<void(error_code, const TResponse&, void*)>& callback,
                 void* context,
-                int reply_hash
+                int reply_hash,
+                clientlet* owner
                 )
             {
                 if (callback != nullptr)
@@ -528,7 +542,8 @@ namespace dsn
                         msg,
                         safe_task<rpc_reply_handler >::exec_rpc_response,
                         (void*)task,
-                        reply_hash
+                        reply_hash,
+                        owner ? owner->tracker() : nullptr
                         );
                     task->set_task_info(t);
                     return task;
@@ -599,7 +614,7 @@ namespace dsn
             auto t = internal_use_only::create_rpc_call<T, TRequest, TResponse>(
                 msg, req, owner, callback, reply_hash);
 
-            dsn_rpc_call(server.c_addr(), t->native_handle(), owner ? owner->tracker() : nullptr);
+            dsn_rpc_call(server.c_addr(), t->native_handle());
             return t;
         }
 
@@ -624,7 +639,7 @@ namespace dsn
             auto t = internal_use_only::create_rpc_call<T, TResponse>(
                 msg, owner, callback, context, reply_hash);
 
-            dsn_rpc_call(server.c_addr(), t->native_handle(), owner ? owner->tracker() : nullptr);
+            dsn_rpc_call(server.c_addr(), t->native_handle());
             return t;
         }
 
@@ -646,7 +661,7 @@ namespace dsn
             auto t = internal_use_only::create_rpc_call<TRequest, TResponse>(
                 msg, req, owner, callback, reply_hash);
 
-            dsn_rpc_call(server.c_addr(), t->native_handle(), owner ? owner->tracker() : nullptr);
+            dsn_rpc_call(server.c_addr(), t->native_handle());
             return t;
         }
 
@@ -667,9 +682,9 @@ namespace dsn
             ::marshall(msg, req);
 
             auto t = internal_use_only::create_rpc_call<TResponse>(
-                msg, callback, context, reply_hash);
+                msg, callback, context, reply_hash, owner);
 
-            dsn_rpc_call(server.c_addr(), t->native_handle(), owner ? owner->tracker() : nullptr);
+            dsn_rpc_call(server.c_addr(), t->native_handle());
             return t;
         }
     }

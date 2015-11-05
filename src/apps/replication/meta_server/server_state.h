@@ -36,6 +36,7 @@
 #pragma once
 
 #include "replication_common.h"
+# include <dsn/dist/meta_state_service.h>
 #include <set>
 
 using namespace dsn;
@@ -68,7 +69,7 @@ public:
     ~server_state(void);
 
     // init _app[1] by "[replication.app]" config
-    void init_app();
+    void initialize();
 
     // get node state std::list<std::pair<::dsn::rpc_address, bool>>
     void get_node_state(/*out*/ node_states& nodes);
@@ -131,5 +132,7 @@ private:
     int                               _node_live_count;
     int                               _node_live_percentage_threshold_for_update;
     std::atomic<bool>                 _freeze;
+
+    ::dsn::dist::meta_state_service *_storage;
 };
 

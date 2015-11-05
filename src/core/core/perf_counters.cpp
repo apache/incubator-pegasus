@@ -117,7 +117,7 @@ bool perf_counters::remove_counter(const char* section, const char* name)
     return true;
 }
 
-void perf_counters::register_factory(perf_counter_factory factory)
+void perf_counters::register_factory(perf_counter::factory factory)
 {
     auto_write_lock l(_lock);
     _factory = factory;

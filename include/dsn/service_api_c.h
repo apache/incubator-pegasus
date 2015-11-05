@@ -441,29 +441,6 @@ extern DSN_API uint32_t              dsn_crc32_concatenate(
 extern DSN_API void        dsn_task_release_ref(dsn_task_t task);
 extern DSN_API void        dsn_task_add_ref(dsn_task_t task);
 
-// create a common asynchronous task
-// - code defines the thread pool which executes the callback
-//   i.e., [task.%code$] pool_code = THREAD_POOL_DEFAULT
-// - hash defines the thread with index hash % worker_count in the threadpool
-//   to execute the callback, when [threadpool.%pool_code%] partitioned = true
-//   
-extern DSN_API dsn_task_t  dsn_task_create(
-                            dsn_task_code_t code,               // task label
-                            dsn_task_handler_t cb,              // callback function
-                            void* param,                        // param to the callback
-                            int hash DEFAULT(DSN_INVALID_HASH) // hash to callback
-                            );
-extern DSN_API dsn_task_t  dsn_task_create_timer(
-                            dsn_task_code_t code, 
-                            dsn_task_handler_t cb, 
-                            void* param, 
-                            int hash,
-                            int interval_milliseconds          // timer period
-                            );
-// repeated declarations later in correpondent rpc and file sections
-//extern DSN_API dsn_task_t  dsn_rpc_create_response_task(...);
-//extern DSN_API dsn_task_t  dsn_file_create_aio_task(...);
-
 //
 // task trackers are used to track task context
 //
@@ -480,14 +457,38 @@ extern DSN_API void               dsn_task_tracker_destroy(dsn_task_tracker_t tr
 extern DSN_API void               dsn_task_tracker_cancel_all(dsn_task_tracker_t tracker);
 extern DSN_API void               dsn_task_tracker_wait_all(dsn_task_tracker_t tracker);
 
+// create a common asynchronous task
+// - code defines the thread pool which executes the callback
+//   i.e., [task.%code$] pool_code = THREAD_POOL_DEFAULT
+// - hash defines the thread with index hash % worker_count in the threadpool
+//   to execute the callback, when [threadpool.%pool_code%] partitioned = true
+//   
+extern DSN_API dsn_task_t  dsn_task_create(
+                            dsn_task_code_t code,               // task label
+                            dsn_task_handler_t cb,              // callback function
+                            void* param,                        // param to the callback
+                            int hash DEFAULT(DSN_INVALID_HASH), // hash to callback
+                            dsn_task_tracker_t tracker DEFAULT(nullptr)
+                            );
+extern DSN_API dsn_task_t  dsn_task_create_timer(
+                            dsn_task_code_t code, 
+                            dsn_task_handler_t cb, 
+                            void* param, 
+                            int hash,
+                            int interval_milliseconds,         // timer period
+                            dsn_task_tracker_t tracker DEFAULT(nullptr)
+                            );
+// repeated declarations later in correpondent rpc and file sections
+//extern DSN_API dsn_task_t  dsn_rpc_create_response_task(...);
+//extern DSN_API dsn_task_t  dsn_file_create_aio_task(...);
+
 //
 // common task 
 // - task: must be created by dsn_task_create or dsn_task_create_timer
 // - tracker: can be null. 
 //
 extern DSN_API void        dsn_task_call(
-                                dsn_task_t task, 
-                                dsn_task_tracker_t tracker DEFAULT(nullptr),
+                                dsn_task_t task,                                 
                                 int delay_milliseconds DEFAULT(0)
                                 );
 extern DSN_API bool        dsn_task_cancel(dsn_task_t task, bool wait_until_finished);
@@ -496,6 +497,7 @@ extern DSN_API bool        dsn_task_cancel2(
                                 bool wait_until_finished, 
                                 /*out*/ bool* finished
                                 );
+extern DSN_API void        dsn_task_cancel_current_timer();
 extern DSN_API bool        dsn_task_wait(dsn_task_t task); 
 extern DSN_API bool        dsn_task_wait_timeout(
                                 dsn_task_t task,
@@ -685,14 +687,14 @@ extern DSN_API dsn_task_t    dsn_rpc_create_response_task(
                                 dsn_message_t request, 
                                 dsn_rpc_response_handler_t cb, 
                                 void* param, 
-                                int reply_hash DEFAULT(DSN_INVALID_HASH)
+                                int reply_hash DEFAULT(DSN_INVALID_HASH),
+                                dsn_task_tracker_t tracker DEFAULT(nullptr)
                                 );
 
 // tracker can be empty
 extern DSN_API void          dsn_rpc_call(
                                 dsn_address_t server,
-                                dsn_task_t rpc_call, 
-                                dsn_task_tracker_t tracker DEFAULT(nullptr)
+                                dsn_task_t rpc_call
                                 );
 
 // WARNING: returned msg must be explicitly msg_release_ref
@@ -734,31 +736,29 @@ extern DSN_API dsn_task_t   dsn_file_create_aio_task(
                                 dsn_task_code_t code, 
                                 dsn_aio_handler_t cb, 
                                 void* param, 
-                                int hash
+                                int hash DEFAULT(0),
+                                dsn_task_tracker_t tracker DEFAULT(nullptr)
                                 );
 extern DSN_API void         dsn_file_read(
                                 dsn_handle_t file, 
                                 char* buffer, 
                                 int count, 
                                 uint64_t offset, 
-                                dsn_task_t cb, 
-                                dsn_task_tracker_t tracker DEFAULT(nullptr)
+                                dsn_task_t cb
                                 );
 extern DSN_API void         dsn_file_write(
                                 dsn_handle_t file, 
                                 const char* buffer, 
                                 int count, 
                                 uint64_t offset, 
-                                dsn_task_t cb, 
-                                dsn_task_tracker_t tracker DEFAULT(nullptr)
+                                dsn_task_t cb
                                 );
 extern DSN_API void         dsn_file_copy_remote_directory(
                                 dsn_address_t remote, 
                                 const char* source_dir, 
                                 const char* dest_dir,
                                 bool overwrite, 
-                                dsn_task_t cb, 
-                                dsn_task_tracker_t tracker DEFAULT(nullptr)
+                                dsn_task_t cb
                                 );
 extern DSN_API void         dsn_file_copy_remote_files(
                                 dsn_address_t remote,
@@ -766,8 +766,7 @@ extern DSN_API void         dsn_file_copy_remote_files(
                                 const char** source_files, 
                                 const char* dest_dir, 
                                 bool overwrite, 
-                                dsn_task_t cb, 
-                                dsn_task_tracker_t tracker DEFAULT(nullptr)
+                                dsn_task_t cb
                                 );
 extern DSN_API size_t       dsn_file_get_io_size(dsn_task_t cb_task);
 extern DSN_API void         dsn_file_task_enqueue(

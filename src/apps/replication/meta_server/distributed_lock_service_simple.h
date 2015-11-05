@@ -47,32 +47,35 @@ namespace dsn
             : public distributed_lock_service, public clientlet
         {
         public:
-            virtual void create_lock(const std::string& lock_id,
-                const err_callback& cb) override;
+            virtual error_code initialize() override;
 
-            virtual void destroy_lock(const std::string& lock_id,
-                const err_callback& cb) override;
-
-            virtual void lock(const std::string& lock_id,
+            virtual task_ptr lock(
+                const std::string& lock_id,
                 const std::string& myself_id,
                 bool create_if_not_exist,
+                task_code cb_code,
                 const err_string_callback& cb) override;
 
-            virtual void unlock(const std::string& lock_id,
+            virtual task_ptr unlock(
+                const std::string& lock_id,
                 const std::string& myself_id,
                 bool destroy,
+                task_code cb_code,
                 const err_callback& cb) override;
 
-            virtual void query_lock(const std::string& lock_id,
+            virtual task_ptr query_lock(
+                const std::string& lock_id,
+                task_code cb_code,
                 const err_string_callback& cb) override;
 
         private:
-            void random_lock_lease_expire();
+            void random_lock_lease_expire(const std::string& lock_id);
 
         private:
             struct lock_info
             {
                 std::string owner;
+                task_code code;
                 err_string_callback cb;
             };
             

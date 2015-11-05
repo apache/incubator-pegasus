@@ -33,9 +33,9 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#pragma once
+# pragma once
 
-#include "replication_common.h"
+# include "replication_common.h"
 
 using namespace dsn;
 using namespace dsn::service;
@@ -85,7 +85,7 @@ private:
     friend class meta_server_failure_detector;
     friend class ::dsn::replication::replication_checker;
 
-    meta_server_failure_detector *_failure_detector;
+    meta_server_failure_detector *_failure_detector;    
     server_state                 *_state;
     load_balancer                *_balancer;
     dsn::task_ptr                _balancer_timer;

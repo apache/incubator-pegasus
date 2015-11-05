@@ -36,6 +36,7 @@
 #include "meta_server_failure_detector.h"
 #include "server_state.h"
 #include "meta_service.h"
+#include <dsn/internal/factory_store.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -47,10 +48,16 @@ meta_server_failure_detector::meta_server_failure_detector(server_state* state, 
     _state = state;
     _svc = svc;
     _is_primary = false;
+
+    _lock_svc = dsn::utils::factory_store<::dsn::dist::distributed_lock_service>::create(
+        "distributed_lock_service_simple", // TODO: config
+        PROVIDER_TYPE_MAIN
+        );
 }
 
 meta_server_failure_detector::~meta_server_failure_detector(void)
 {
+    delete _lock_svc;
 }
 
 void meta_server_failure_detector::on_worker_disconnected(const std::vector<::dsn::rpc_address>& nodes)

@@ -55,6 +55,8 @@ public:
         return new T(disk, inner_provider);
     }
 
+    typedef aio_provider* (*factory)(disk_engine*, aio_provider*);
+
 public:
     aio_provider(disk_engine* disk, aio_provider* inner_provider);
     service_node* node() const;

@@ -36,7 +36,8 @@
 #pragma once
 
 # include <dsn/dist/failure_detector.h>
-#include "replication_common.h"
+# include <dsn/dist/distributed_lock_service.h>
+# include "replication_common.h"
 
 using namespace dsn;
 using namespace dsn::service;
@@ -66,7 +67,7 @@ public:
         return _primary_address;
     }
     
-    void set_primary(rpc_address primary);    
+    void set_primary(rpc_address primary);
 
     // client side
     virtual void on_master_disconnected(const std::vector<::dsn::rpc_address>& nodes)
@@ -95,5 +96,7 @@ private:
 
     server_state *_state;
     meta_service *_svc;
+
+    ::dsn::dist::distributed_lock_service *_lock_svc;
 };
 

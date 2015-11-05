@@ -64,7 +64,7 @@ meta_service::~meta_service(void)
 void meta_service::start(const char* data_dir, bool clean_state)
 {
     dassert(!_started, "meta service is already started");
-
+    
     _data_dir = data_dir;
 	std::string checkpoint_path = _data_dir + "/checkpoint";
 	std::string oplog_path = _data_dir + "/oplog";
@@ -189,75 +189,6 @@ void meta_service::on_load_balance_start()
 
     _started = true;
 }
-
-//void meta_service::on_request(dsn_message_t msg)
-//{
-//    meta_request_header hdr;
-//    ::unmarshall(msg, hdr);
-//        
-//    meta_response_header rhdr;
-//    rhdr.err = ERR_OK;
-//    _failure_detector->get_primary(rhdr.primary_address);
-//
-//    bool is_primary = _failure_detector->is_primary();
-//    if (!is_primary)
-//    {
-//        dsn_rpc_forward(msg, rhdr.primary_address.c_addr_ptr());
-//        return;
-//    }
-//
-//    ::dsn::rpc_address faddr;
-//    dsn_msg_from_address(msg, faddr.c_addr_ptr());
-//    dinfo("recv meta request %s from %s", 
-//        dsn_task_code_to_string(hdr.rpc_tag),
-//        faddr.name(),
-//        faddr.port()
-//        );
-//
-//    dsn_message_t resp = dsn_msg_create_response(msg);
-//    if (!_started)
-//    {
-//        rhdr.err = ERR_SERVICE_NOT_ACTIVE;
-//        ::marshall(resp, rhdr);
-//    }
-//    else if (hdr.rpc_tag == RPC_CM_QUERY_NODE_PARTITIONS)
-//    {
-//        configuration_query_by_node_request request;
-//        configuration_query_by_node_response response;
-//        ::unmarshall(msg, request);
-//
-//        query_configuration_by_node(request, response);
-//
-//        ::marshall(resp, rhdr);
-//        ::marshall(resp, response);
-//    }
-//
-//    else if (hdr.rpc_tag == RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX)
-//    {
-//        configuration_query_by_index_request request;
-//        configuration_query_by_index_response response;
-//        unmarshall(msg, request);
-//
-//        query_configuration_by_index(request, response);
-//        
-//        ::marshall(resp, rhdr);
-//        ::marshall(resp, response);
-//    }
-//
-//    else  if (hdr.rpc_tag == RPC_CM_UPDATE_PARTITION_CONFIGURATION)
-//    {
-//        update_configuration(msg, resp);
-//        rhdr.err.end_tracking();
-//        return;
-//    }
-//    
-//    else
-//    {
-//        dassert(false, "unknown rpc tag 0x%x (%s)", hdr.rpc_tag, dsn_task_code_to_string(hdr.rpc_tag));
-//    }
-//
-//    dsn_rpc_reply(resp);
-//}
 
 // partition server & client => meta server
 void meta_service::on_query_configuration_by_node(dsn_message_t msg)

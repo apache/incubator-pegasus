@@ -70,7 +70,7 @@ public:
         return remove_counter("dsn", name);
     }
 
-    void register_factory(perf_counter_factory factory);
+    void register_factory(perf_counter::factory factory);
 
 private:
     typedef std::map<std::string, std::pair<perf_counter_ptr, perf_counter_type> > same_section_counters;
@@ -78,7 +78,7 @@ private:
 
     mutable utils::rw_lock_nr  _lock;
     all_counters               _counters;
-    perf_counter_factory       _factory;
+    perf_counter::factory       _factory;
 };
 
 }} // end namespace dsn::utils
