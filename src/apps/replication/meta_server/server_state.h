@@ -62,7 +62,8 @@ struct app_state
 
 typedef std::unordered_map<global_partition_id, std::shared_ptr<configuration_update_request> > machine_fail_updates;
 
-class server_state 
+class server_state : 
+    public ::dsn::serverlet<server_state>
 {
 public:
     server_state(void);
@@ -70,6 +71,9 @@ public:
 
     // init _app[1] by "[replication.app]" config
     void initialize();
+
+    // when the server becomes the leader
+    error_code on_become_leader();
 
     // get node state std::list<std::pair<::dsn::rpc_address, bool>>
     void get_node_state(/*out*/ node_states& nodes);
@@ -99,14 +103,22 @@ public:
 
     // update partition configuration.
     // first persistent to log file, then apply to memory state
-    void update_configuration(const configuration_update_request& request, /*out*/ configuration_update_response& response);
+    //void update_configuration(const configuration_update_request& request, /*out*/ configuration_update_response& response);
+
+    void update_configuration(dsn_message_t request_msg, const blob& request_blob);
 
     void unfree_if_possible_on_start();
 
     // if is freezed
     bool freezed() const { return _freeze.load(); }
     
-private:
+private:    
+    // initialize apps in local cache and in remote storage
+    error_code initialize_apps();
+
+    // synchronize the latest state from meta state server (i.e., _storage)
+    error_code sync_apps_from_remote_storage();
+
     // check consistency of memory state, between _nodes, _apps, _node_live_count
     void check_consistency(global_partition_id gpid);
 

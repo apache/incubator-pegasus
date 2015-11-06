@@ -49,10 +49,13 @@ meta_server_failure_detector::meta_server_failure_detector(server_state* state, 
     _svc = svc;
     _is_primary = false;
 
+    // TODO: config
     _lock_svc = dsn::utils::factory_store<::dsn::dist::distributed_lock_service>::create(
-        "distributed_lock_service_simple", // TODO: config
+        "distributed_lock_service_simple",
         PROVIDER_TYPE_MAIN
         );
+    _primary_lock_id = "dsn.meta.server.leader";
+    _local_owner_id = primary_address().to_string();
 }
 
 meta_server_failure_detector::~meta_server_failure_detector(void)
@@ -85,7 +88,7 @@ void meta_server_failure_detector::on_worker_disconnected(const std::vector<::ds
             pri.first.pidx,
             pri.second->node.to_string()
             );
-        _svc->update_configuration(pri.second);
+        _svc->update_configuration_on_machine_failure(pri.second);
     }
 }
 
@@ -103,6 +106,42 @@ void meta_server_failure_detector::on_worker_connected(::dsn::rpc_address node)
         "Client %s", node.to_string());
 
     _state->set_node_state(states, nullptr);
+}
+
+DEFINE_TASK_CODE(LPC_META_SERVER_LEADER_LOCK_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_FD)
+
+void meta_server_failure_detector::init_lock_service()
+{
+    _lock_svc->lock(
+        _primary_lock_id,
+        _local_owner_id,
+        true,
+        LPC_META_SERVER_LEADER_LOCK_CALLBACK,
+        [this](error_code ec, const std::string& owner)
+        {
+            if (ec == ERR_OK)
+            {
+                dassert(owner == _local_owner_id, "");
+            }
+
+            if (owner != "")
+            {
+                rpc_address addr;
+                if (addr.from_string_ipv4(owner.c_str()))
+                {
+                    set_primary(addr);
+                }
+
+                if (owner == _local_owner_id)
+                {
+                    _state->on_become_leader();
+                }
+            }
+
+            // TODO: we also need notification when the lock owner is changed
+            // better to be implemented using watcher on meta state service
+        }
+    );
 }
 
 void meta_server_failure_detector::set_primary(rpc_address primary)

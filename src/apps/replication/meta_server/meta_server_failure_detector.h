@@ -67,8 +67,8 @@ public:
         return _primary_address;
     }
     
-    void set_primary(rpc_address primary);
-
+    void init_lock_service();
+    
     // client side
     virtual void on_master_disconnected(const std::vector<::dsn::rpc_address>& nodes)
     {
@@ -87,6 +87,9 @@ public:
     virtual void on_ping(const fd::beacon_msg& beacon, ::dsn::rpc_replier<fd::beacon_ack>& reply);
 
 private:
+    void set_primary(rpc_address primary);
+
+private:
     friend class ::dsn::replication::replication_checker;
 
     volatile bool _is_primary;
@@ -98,5 +101,7 @@ private:
     meta_service *_svc;
 
     ::dsn::dist::distributed_lock_service *_lock_svc;
+    std::string _primary_lock_id;
+    std::string _local_owner_id;
 };
 
