@@ -62,6 +62,8 @@ namespace dsn {
         {
             return new T(srv, inner_provider);
         }
+        
+        typedef network* (*factory)(rpc_engine*, network*);
 
     public:
         //

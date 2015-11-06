@@ -388,7 +388,7 @@ void service_engine::init_before_toollets(const service_spec& spec)
         spec.memory_factory_name.c_str(), PROVIDER_TYPE_MAIN
         );
     perf_counters::instance().register_factory(
-        factory_store<perf_counter>::get_factory<perf_counter_factory>(
+        factory_store<perf_counter>::get_factory<perf_counter::factory>(
         spec.perf_counter_factory_name.c_str(), PROVIDER_TYPE_MAIN
         )
         );

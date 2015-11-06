@@ -45,6 +45,7 @@ class admission_controller
 {
 public:
     template <typename T> static admission_controller* create(task_queue* q, const char* args);
+    typedef admission_controller* (*factory)(task_queue*, const char*);
 
 public:
     admission_controller(task_queue* q, std::vector<std::string>& sargs) : _queue(q) {}

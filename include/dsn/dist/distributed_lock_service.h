@@ -24,14 +24,21 @@
  * THE SOFTWARE.
  */
 
+
 /*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
+* Description:
+*     interface of the reliable distributed lock service
+*
+* Revision history:
+*     2015-10-28, Weijie Sun, first version
+*     2015-11-5, @imzhenyu (Zhenyu Guo), remove create and destroy API as they are
+*                unnecessary, adjust the interface, so that
+*                (1) return task_ptr for callers to cancel or wait;
+*                (2) add factory for provider registration; 
+*                (3) add cb_code parameter, then users can specify where the callback
+*                    should be executed
+*     xxxx-xx-xx, author, fix bug about xxx
+*/
 
 # pragma once
 
@@ -48,32 +55,25 @@ namespace dsn
         class distributed_lock_service
         {
         public:
+            template <typename T> static distributed_lock_service* create()
+            {
+                return new T();
+            }
+
+            typedef distributed_lock_service* (*factory)();
+
+        public:
             typedef std::function<void (error_code ec)> err_callback;
             typedef std::function<void (error_code ec, const std::string& owner_id)> err_string_callback;
+
             /*
-             * create a distributed lock
-             * lock_id: the distributed lock_id shared by all
-             * cb: control the return value, possible ec are:
-             *   ERR_OK, create lock ok
-             *   ERR_LOCK_ALREADY_EXIST, lock is created already
-             *   ERR_TIMEOUT, operation timeout
-             *   ERR_INVALID_PARAMETERS
+             * initialization routine
              */
-            virtual void create_lock(const std::string& lock_id,
-                                     const err_callback& cb) = 0;
-            /*
-             * destroy a distrubted lock
-             * possible ec:
-             *   ERR_OK, destroy the lock ok
-             *   ERR_OBJECT_NOT_FOUND, lock doesn't exist
-             *   ERR_TIMEOUT, operation timeout
-             *   ERR_HOLD_BY_OHTERS, someone else is holding or pending the lock
-             *   ERR_INVALID_PARAMETERS
-             */
-            virtual void destroy_lock(const std::string& lock_id,
-                                      const err_callback& cb) = 0;
+            virtual error_code initialize() = 0;
+            
             /*
              * lock
+             * cb_code: the task code specifies where to execute the callback
              * create_if_not_exist:
              *   if distributed lock for lock_id doesn't exist, try to create one
              *
@@ -81,6 +81,7 @@ namespace dsn
              *   ERR_INVALID_PARAMETERS, lock_id invalid, or cb==nullptr
              *   ERR_TIMEOUT, creating lock timeout if create_if_not_exist==true
              *   ERR_OK, the caller gets the lock, owner_id is ignored
+             *   ERR_OBJECT_NOT_FOUND, lock doesn't exist and create_if_not_exist == false
              *   ERR_HOLD_BY_OTHERS, another caller gets the lock, user can know
              *     the lock owner by owner_id
              *   ERR_RECURSIVE_LOCK, call "lock" again if it was called before in the process
@@ -94,12 +95,14 @@ namespace dsn
              *   (2) cb will never be called again after it returns ERR_EXPIRED
              *   (3) if cb returns ERR_OK, then ERR_HOLD_BY_OTHERS should never be returned
              */
-            virtual void lock(const std::string& lock_id,
+            virtual task_ptr lock(const std::string& lock_id,
                               const std::string& myself_id,
                               bool create_if_not_exist,
+                              task_code cb_code,
                               const err_string_callback& cb) = 0;
             /*
              * unlock
+             * cb_code: the task code specifies where to execute the callback
              * lock_id should be valid, and cb should not be empty
              *
              * possible ec:
@@ -112,11 +115,13 @@ namespace dsn
              *     is timout; if destroy==true, it may be unlock-op or destroy-op who times out.
              *     For the latter, user can use query_lock to check the status of the lock
              */
-            virtual void unlock(const std::string& lock_id,
+            virtual task_ptr unlock(const std::string& lock_id,
                                 const std::string& myself_id,
                                 bool destroy,
+                                task_code cb_code,
                                 const err_callback& cb) = 0;
             /*
+             * cb_code: the task code specifies where to execute the callback
              * cb shouldn't be empty
              * possible ec:
              *   ERR_OK: the lock is hold by someone, user can get the owner by
@@ -125,7 +130,8 @@ namespace dsn
              *   ERR_NO_OWNER, no one owns the lock
              *   ERR_TIMEOUT, operation timeout
              */
-            virtual void query_lock(const std::string& lock_id,
+            virtual task_ptr query_lock(const std::string& lock_id,
+                                    task_code cb_code,
                                     const err_string_callback& cb) = 0;
         };
     }

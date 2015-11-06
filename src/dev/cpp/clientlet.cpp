@@ -105,6 +105,37 @@ namespace dsn
 
     namespace tasking 
     {
+        task_ptr create(
+            dsn_task_code_t evt,            
+            task_handler callback,
+            int hash /*= 0*/,
+            int timer_interval_milliseconds /*= 0*/,
+            clientlet* svc
+            )
+        {
+            dsn_task_t t;
+            task_ptr tsk = new safe_task<task_handler>(callback, timer_interval_milliseconds != 0);
+
+            tsk->add_ref(); // released in exec callback
+            if (timer_interval_milliseconds != 0)
+            {
+                t = dsn_task_create_timer(evt, safe_task<task_handler>::exec,
+                    tsk, hash, timer_interval_milliseconds, svc ? svc->tracker() : nullptr);
+            }
+            else
+            {
+                t = dsn_task_create(evt, safe_task<task_handler>::exec, tsk, hash, svc ? svc->tracker() : nullptr);
+            }
+
+            tsk->set_task_info(t);
+            return tsk;
+        }
+
+        void enqueue(task_ptr& tsk, int delay_milliseconds)
+        {
+            dsn_task_call(tsk->native_handle(), delay_milliseconds);
+        }
+
         task_ptr enqueue(
             dsn_task_code_t evt,
             clientlet* svc,
@@ -120,17 +151,18 @@ namespace dsn
             tsk->add_ref(); // released in exec callback
             if (timer_interval_milliseconds != 0)
             {
-                t = dsn_task_create_timer(evt, safe_task<task_handler>::exec, 
-                    tsk, hash, timer_interval_milliseconds);
+                t = dsn_task_create_timer(evt, safe_task<task_handler>::exec,
+                    tsk, hash, timer_interval_milliseconds, svc ? svc->tracker() : nullptr);
             }
             else
             {
-                t = dsn_task_create(evt, safe_task<task_handler>::exec, tsk, hash);
+                t = dsn_task_create(evt, safe_task<task_handler>::exec, tsk, hash, svc ? svc->tracker() : nullptr);
             }
 
             tsk->set_task_info(t);
 
-            dsn_task_call(t, svc ? svc->tracker() : nullptr, delay_milliseconds);
+            dsn_task_call(tsk->native_handle(), delay_milliseconds);
+
             return tsk;
         }
     }
@@ -154,10 +186,11 @@ namespace dsn
                 request,
                 callback != nullptr ? safe_task<rpc_reply_handler >::exec_rpc_response : nullptr,
                 (void*)tsk,
-                reply_hash
+                reply_hash,
+                svc ? svc->tracker() : nullptr
                 );
             tsk->set_task_info(t);
-            dsn_rpc_call(server.c_addr(), t, svc ? svc->tracker() : nullptr);
+            dsn_rpc_call(server.c_addr(), t);
 
             return tsk;
         }
@@ -183,12 +216,12 @@ namespace dsn
 
             dsn_task_t t = dsn_file_create_aio_task(callback_code,
                 callback != nullptr ? safe_task<aio_handler>::exec_aio : nullptr,
-                tsk, hash
+                tsk, hash, svc ? svc->tracker() : nullptr
                 );
 
             tsk->set_task_info(t);
 
-            dsn_file_read(fh, buffer, count, offset, t, svc ? svc->tracker() : nullptr);
+            dsn_file_read(fh, buffer, count, offset, t);
             return tsk;
         }
 
@@ -210,12 +243,12 @@ namespace dsn
 
             dsn_task_t t = dsn_file_create_aio_task(callback_code,
                 callback != nullptr ? safe_task<aio_handler>::exec_aio : nullptr,
-                tsk, hash
+                tsk, hash, svc ? svc->tracker() : nullptr
                 );
 
             tsk->set_task_info(t);
 
-            dsn_file_write(fh, buffer, count, offset, t, svc ? svc->tracker() : nullptr);
+            dsn_file_write(fh, buffer, count, offset, t);
             return tsk;
         }
 
@@ -238,7 +271,7 @@ namespace dsn
 
             dsn_task_t t = dsn_file_create_aio_task(callback_code,
                 callback != nullptr ? safe_task<aio_handler>::exec_aio : nullptr,
-                tsk, hash
+                tsk, hash, svc ? svc->tracker() : nullptr
                 );
 
             tsk->set_task_info(t);
@@ -246,7 +279,7 @@ namespace dsn
             if (files.empty())
             {
                 dsn_file_copy_remote_directory(remote.c_addr(), source_dir.c_str(), dest_dir.c_str(),
-                    overwrite, t, svc ? svc->tracker() : nullptr);
+                    overwrite, t);
             }
             else
             {
@@ -260,7 +293,7 @@ namespace dsn
 
                 dsn_file_copy_remote_files(
                     remote.c_addr(), source_dir.c_str(), ptr_base,
-                    dest_dir.c_str(), overwrite, t, svc ? svc->tracker() : nullptr
+                    dest_dir.c_str(), overwrite, t
                     );
             }
             return tsk;

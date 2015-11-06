@@ -40,28 +40,59 @@ namespace dsn
 {
     namespace dist
     {
-        DEFINE_TASK_CODE(LPC_DIST_LOCK_SVC_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_META_SERVER);
+        DEFINE_TASK_CODE(LPC_DIST_LOCK_SVC_RANDOM_EXPIRE, TASK_PRIORITY_COMMON, THREAD_POOL_META_SERVER);
 
-        void distributed_lock_service_simple::create_lock(const std::string& lock_id,
-            const err_callback& cb)
+        void distributed_lock_service_simple::random_lock_lease_expire(const std::string& lock_id)
         {
-            dassert(!"not used", "");
+            lock_info li;
+
+            {
+                zauto_lock l(_lock);
+                auto it = _dlocks.find(lock_id);
+                if (it != _dlocks.end())
+                {
+                    if (it->second.cb != nullptr)
+                    {
+                        li.cb = it->second.cb;
+                        li.code = it->second.code;
+                        li.owner = it->second.owner;
+
+                        it->second.cb = nullptr;
+                        it->second.owner = "";
+                    }
+                    else
+                        return;
+                }
+                else
+                {
+                    dsn_task_cancel_current_timer();
+                    return;
+                }
+            }
+            
+            tasking::enqueue(
+                li.code,
+                nullptr,
+                [=](){li.cb(ERR_EXPIRED, li.owner); }
+            );
         }
 
-        void distributed_lock_service_simple::destroy_lock(const std::string& lock_id,
-            const err_callback& cb)
+        error_code distributed_lock_service_simple::initialize()
         {
-            dassert(!"not used", "");
+            return ERR_OK;
         }
 
-        void distributed_lock_service_simple::lock(const std::string& lock_id,
+        task_ptr distributed_lock_service_simple::lock(
+            const std::string& lock_id,
             const std::string& myself_id,
             bool create_if_not_exist,
+            task_code cb_code,
             const err_string_callback& cb)
         {
             lock_info li;
             error_code err;
             std::string cowner;
+            bool is_new = false;
 
             {
                 zauto_lock l(_lock);
@@ -74,9 +105,11 @@ namespace dsn
                     {
                         li.owner = myself_id;
                         li.cb = cb;
+                        li.code = cb_code;
                         _dlocks.insert(locks::value_type(lock_id, li));
                         err = ERR_OK;
                         cowner = myself_id;
+                        is_new = true;
                     }
                 }
                 else
@@ -93,22 +126,37 @@ namespace dsn
                     {
                         it->second.owner = myself_id;
                         it->second.cb = cb;
+                        it->second.code = cb_code;
                         err = ERR_OK;
                         cowner = myself_id;
                     }
                 }
             }
 
-            tasking::enqueue(
-                LPC_DIST_LOCK_SVC_CALLBACK,
+            if (is_new)
+            {
+                tasking::enqueue(
+                    LPC_DIST_LOCK_SVC_RANDOM_EXPIRE,
+                    this,
+                    [=](){ random_lock_lease_expire(lock_id); },
+                    0,
+                    1000,
+                    1000 * 60 * 5 // every 5 min
+                    );
+            }
+
+            return tasking::enqueue(
+                cb_code,
                 nullptr,
                 [=]() { cb(err, cowner); }
-            );
+                );
         }
 
-        void distributed_lock_service_simple::unlock(const std::string& lock_id,
+        task_ptr distributed_lock_service_simple::unlock(
+            const std::string& lock_id,
             const std::string& myself_id,
             bool destroy,
+            task_code cb_code,
             const err_callback& cb)
         {
             error_code err;
@@ -135,14 +183,16 @@ namespace dsn
                 }
             }
 
-            tasking::enqueue(
-                LPC_DIST_LOCK_SVC_CALLBACK,
+            return tasking::enqueue(
+                cb_code,
                 nullptr,
                 [=]() { cb(err); }
             );
         }
 
-        void distributed_lock_service_simple::query_lock(const std::string& lock_id,
+        task_ptr distributed_lock_service_simple::query_lock(
+            const std::string& lock_id,
+            task_code cb_code,
             const err_string_callback& cb)
         {
             error_code err;
@@ -162,8 +212,8 @@ namespace dsn
                 }
             }
 
-            tasking::enqueue(
-                LPC_DIST_LOCK_SVC_CALLBACK,
+            return tasking::enqueue(
+                cb_code,
                 nullptr,
                 [=]() { cb(err, cowner); }
             );

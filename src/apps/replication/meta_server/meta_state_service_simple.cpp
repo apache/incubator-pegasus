@@ -39,8 +39,6 @@ namespace dsn
 {
     namespace dist
     {
-        DEFINE_TASK_CODE(LPC_META_STATE_SVC_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_META_SERVER);
-
         // path: /, /n1/n2, /n1/n2/, /n2/n2/n3
         std::string meta_state_service_simple::normalize_path(const std::string& s)
         {
@@ -71,9 +69,18 @@ namespace dsn
             return ERR_OK;
         }
 
-        void meta_state_service_simple::create_node(const std::string& node,
-            const err_callback& cb_create,
-            const std::string& value)
+        error_code meta_state_service_simple::initialize()
+        {
+            // TODO: load on-disk files and recover the memory state
+            return ERR_OK;
+        }
+
+        task_ptr meta_state_service_simple::create_node(
+            const std::string& node,
+            task_code cb_code,
+            const err_callback& cb_create,            
+            const blob& value,
+            clientlet* tracker )
         {
             auto path = normalize_path(node);
 
@@ -83,15 +90,29 @@ namespace dsn
             {
                 _state_lock.unlock();
 
-                tasking::enqueue(
-                    LPC_META_STATE_SVC_CALLBACK,
-                    this,
+                return tasking::enqueue(
+                    cb_code,
+                    tracker,
                     [=]()
                     {
                         cb_create(ERR_NODE_ALREADY_EXIST);
                     }
                     );
-                return;
+
+                //// TODO: need aio logger is done first
+                //auto t = tasking::create(
+                //    cb_code,
+                //    [=]()
+                //    {
+                //        cb_create(ERR_NODE_ALREADY_EXIST);
+                //    },
+                //    0,
+                //    0
+                //    );
+                //return t;
+
+                //// after logger is done
+                //tasking::enqueue(t, tracker);                
             }
 
             std::string name, parent;
@@ -106,46 +127,61 @@ namespace dsn
 
             _state_lock.unlock();
 
-            tasking::enqueue(
-                LPC_META_STATE_SVC_CALLBACK,
-                this,
+            return tasking::enqueue(
+                cb_code,
+                tracker,
                 [=]()
-            {
-                cb_create(ERR_OK);
-            }
-            );
+                {
+                    cb_create(ERR_OK);
+                }
+                );
         }
 
-        void meta_state_service_simple::delete_node(const std::string& node,
+        task_ptr meta_state_service_simple::delete_node(
+            const std::string& node,
             bool recursively_delete,
-            const err_callback& cb_delete)
+            task_code cb_code,
+            const err_callback& cb_delete,
+            clientlet* tracker)
         {
-
+            return nullptr;
         }
 
-        void meta_state_service_simple::node_exist(const std::string& node,
-            const err_callback& cb_exist)
+        task_ptr meta_state_service_simple::node_exist(
+            const std::string& node,
+            task_code cb_code,
+            const err_callback& cb_exist,
+            clientlet* tracker)
         {
-
+            return nullptr;
         }
 
-        void meta_state_service_simple::get_data(const std::string& node,
-            const err_string_callback& cb_get_data)
+        task_ptr meta_state_service_simple::get_data(
+            const std::string& node,
+            task_code cb_code,
+            const err_value_callback& cb_get_data,
+            clientlet* tracker)
         {
-
+            return nullptr;
         }
 
-        void meta_state_service_simple::set_data(const std::string& node,
-            const std::string& value,
-            const err_callback& cb_set_data)
+        task_ptr meta_state_service_simple::set_data(
+            const std::string& node,
+            const blob& value,
+            task_code cb_code,
+            const err_callback& cb_set_data,
+            clientlet* tracker)
         {
-
+            return nullptr;
         }
 
-        void meta_state_service_simple::get_children(const std::string& node,
-            const err_stringv_callback& cb_get_children)
+        task_ptr meta_state_service_simple::get_children(
+            const std::string& node,
+            task_code cb_code,
+            const err_stringv_callback& cb_get_children,
+            clientlet* tracker)
         {
-
+            return nullptr;
         }
     }
 }

@@ -50,6 +50,8 @@ public:
         return new T(pool, q, index, inner_provider);
     }
 
+    typedef task_worker*  (*factory)(task_worker_pool*, task_queue*, int, task_worker*);
+
 public:
     task_worker(task_worker_pool* pool, task_queue* q, int index, task_worker* inner_provider);
     virtual ~task_worker(void);

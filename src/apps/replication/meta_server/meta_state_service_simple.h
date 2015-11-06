@@ -46,26 +46,49 @@ namespace dsn
             : public meta_state_service, public clientlet
         {
         public:
-            virtual void create_node(const std::string& node,
+            meta_state_service_simple() : _root("/", nullptr) {}
+
+            virtual error_code initialize() override;
+
+            virtual task_ptr create_node(
+                const std::string& node,
+                task_code cb_code,
                 const err_callback& cb_create,
-                const std::string& value = std::string()) override;
+                const blob& value = blob(),
+                clientlet* tracker = nullptr
+                ) override;
 
-            virtual void delete_node(const std::string& node,
+            virtual task_ptr delete_node(
+                const std::string& node,
                 bool recursively_delete,
-                const err_callback& cb_delete) override;
+                task_code cb_code,
+                const err_callback& cb_delete,
+                clientlet* tracker = nullptr) override;
 
-            virtual void node_exist(const std::string& node,
-                const err_callback& cb_exist) override;
+            virtual task_ptr node_exist(
+                const std::string& node,
+                task_code cb_code,
+                const err_callback& cb_exist,
+                clientlet* tracker = nullptr) override;
 
-            virtual void get_data(const std::string& node,
-                const err_string_callback& cb_get_data) override;
+            virtual task_ptr get_data(
+                const std::string& node,
+                task_code cb_code,
+                const err_value_callback& cb_get_data,
+                clientlet* tracker = nullptr) override;
 
-            virtual void set_data(const std::string& node,
-                const std::string& value,
-                const err_callback& cb_set_data) override;
+            virtual task_ptr set_data(
+                const std::string& node,
+                const blob& value,
+                task_code cb_code,
+                const err_callback& cb_set_data,
+                clientlet* tracker = nullptr) override;
 
-            virtual void get_children(const std::string& node,
-                const err_stringv_callback& cb_get_children) override;
+            virtual task_ptr get_children(
+                const std::string& node,
+                task_code cb_code,
+                const err_stringv_callback& cb_get_children,
+                clientlet* tracker = nullptr) override;
 
         private:
             std::string normalize_path(const std::string& s);

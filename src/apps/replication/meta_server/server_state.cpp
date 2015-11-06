@@ -34,6 +34,7 @@
  */
 
 # include "server_state.h"
+#include <dsn/internal/factory_store.h>
 # include <sstream>
 
 # ifdef __TITLE__
@@ -144,8 +145,111 @@ void server_state::save(const char* chk_point)
     ::fclose(fp);
 }
 
-void server_state::init_app()
+
+DEFINE_TASK_CODE(LPC_META_STATE_SVC_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_META_SERVER);
+
+void server_state::initialize()
 {
+    _storage = dsn::utils::factory_store<::dsn::dist::meta_state_service>::create(
+        "meta_state_service_simple",  // TODO: read config
+        PROVIDER_TYPE_MAIN
+        );
+
+    auto err = _storage->initialize();
+    dassert(err == ERR_OK, "meta state service initialization failed, err = %s", err.to_string());
+
+    // init apps,  /apps/app-id/partitions
+    
+    err = ERR_OK;
+    clientlet tracker;
+
+    // get all apps
+    std::string root = "/apps";    
+    _storage->get_children(root, LPC_META_STATE_SVC_CALLBACK,
+        [&](error_code ec, std::vector<std::string>&& apps)
+        {
+            if (ec == ERR_OK)
+            {
+                // get app info
+                for (auto& s : apps)
+                {                    
+                    auto app_path = root + "/" + s;
+                    _storage->get_data(
+                        app_path,
+                        LPC_META_STATE_SVC_CALLBACK,
+                        [&](error_code ec, blob& value)
+                        {
+                            if (ec == ERR_OK)
+                            {
+                                binary_reader reader(value);
+                                app_state state;
+                                unmarshall(reader, state);
+                                
+                                int app_id = state.app_id;
+
+                                {
+                                    zauto_write_lock l(_lock);
+                                    if (app_id > _apps.size())
+                                    {
+                                        _apps.resize(app_id - 1);
+                                    }
+                                    _apps[app_id - 1] = state;
+                                    _apps[app_id - 1].partitions.resize(state.partition_count);
+                                }
+
+                                // get partition info
+                                for (int i = 0; i < state.partition_count; i++)
+                                {                                    
+                                    std::stringstream ss;
+                                    ss << app_path << "/" << i;
+                                    auto par_path = ss.str();
+                                    _storage->get_data(
+                                        par_path,
+                                        LPC_META_STATE_SVC_CALLBACK,
+                                        [&, app_id,i](error_code ec, blob& value)
+                                        {
+                                            if (ec == ERR_OK)
+                                            {
+                                                binary_reader reader(value);
+                                                partition_configuration pc;
+                                                unmarshall(reader, pc);
+                                                _apps[app_id - 1].partitions[i] = pc;
+                                            }
+                                            else
+                                            {
+                                                derror("get partition info from meta state service failed, err = %s",
+                                                    ec.to_string());
+                                                err = ec;
+                                            }
+                                        },
+                                        &tracker
+                                    );
+                                }
+                            }
+                            else
+                            {
+                                derror("get app info from meta state service failed, err = %s",
+                                    ec.to_string());
+                                err = ec;
+                            }
+                        },
+                        &tracker
+                        );
+                }
+            }
+            else
+            {
+                derror("get root info from meta state service failed, err = %s",
+                    ec.to_string());
+                err = ec;
+            }   
+        },
+        &tracker
+    );
+    
+    // wait for all those tasks completed
+    dsn_task_tracker_wait_all(tracker.tracker());
+
     zauto_write_lock l(_lock);
     if (_apps.size() > 0)
         return;
@@ -346,8 +450,15 @@ void server_state::update_configuration_internal(const configuration_update_requ
 {
     app_state& app = _apps[request.config.gpid.app_id - 1];
     partition_configuration& old = app.partitions[request.config.gpid.pidx];
-    if (old.ballot + 1 == request.config.ballot)
+    if (old.ballot + 1 != request.config.ballot)
     {
+        response.err = ERR_INVALID_VERSION;
+        response.config = old;
+    }
+    else
+    {
+        // TODO: update _storage first
+
         response.err = ERR_OK;
         response.config = request.config;
         
@@ -447,11 +558,7 @@ void server_state::update_configuration_internal(const configuration_update_requ
             cf.str().c_str()
             );
     }
-    else
-    {
-        response.err = ERR_INVALID_VERSION;
-        response.config = old;
-    }
+    
 
 #ifdef _DEBUG
     check_consistency(request.config.gpid);

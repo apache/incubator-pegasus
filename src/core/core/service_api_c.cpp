@@ -272,16 +272,18 @@ DSN_API uint32_t dsn_crc32_concatenate(uint32_t xy_init, uint32_t x_init, uint32
 // // TODO: what can be configured for a thread pool
 //
 //------------------------------------------------------------------------------
-DSN_API dsn_task_t dsn_task_create(dsn_task_code_t code, dsn_task_handler_t cb, void* param, int hash)
+DSN_API dsn_task_t dsn_task_create(dsn_task_code_t code, dsn_task_handler_t cb, void* param, int hash, dsn_task_tracker_t tracker)
 {
     auto t = new ::dsn::task_c(code, cb, param, hash);
+    t->set_tracker((dsn::task_tracker*)tracker);
     return t;
 }
 
 DSN_API dsn_task_t dsn_task_create_timer(dsn_task_code_t code, dsn_task_handler_t cb, 
-    void* param, int hash, int interval_milliseconds)
+    void* param, int hash, int interval_milliseconds, dsn_task_tracker_t tracker)
 {
     auto t = new ::dsn::timer_task(code, cb, param, interval_milliseconds, hash);
+    t->set_tracker((dsn::task_tracker*)tracker);
     return t;
 }
 
@@ -305,12 +307,11 @@ DSN_API void dsn_task_tracker_wait_all(dsn_task_tracker_t tracker)
     ((::dsn::task_tracker*)tracker)->wait_outstanding_tasks();
 }
 
-DSN_API void dsn_task_call(dsn_task_t task, dsn_task_tracker_t tracker, int delay_milliseconds)
+DSN_API void dsn_task_call(dsn_task_t task, int delay_milliseconds)
 {
     auto t = ((::dsn::task*)(task));
     dassert(t->spec().type == TASK_TYPE_COMPUTE, "must be common or timer task");
 
-    t->set_tracker((::dsn::task_tracker*)tracker);
     t->set_delay(delay_milliseconds);
     t->enqueue();
 }
@@ -333,6 +334,15 @@ DSN_API bool dsn_task_cancel(dsn_task_t task, bool wait_until_finished)
 DSN_API bool dsn_task_cancel2(dsn_task_t task, bool wait_until_finished, bool* finished)
 {
     return ((::dsn::task*)(task))->cancel(wait_until_finished, finished);
+}
+
+DSN_API void dsn_task_cancel_current_timer()
+{
+    ::dsn::task* t = ::dsn::task::get_current_task();
+    if (nullptr != t)
+    {
+        t->cancel(false);
+    }
 }
 
 DSN_API bool dsn_task_wait(dsn_task_t task)
@@ -519,18 +529,19 @@ DSN_API void* dsn_rpc_unregiser_handler(dsn_task_code_t code)
     return (h != nullptr) ? h->parameter : nullptr;
 }
 
-DSN_API dsn_task_t dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, void* param, int reply_hash)
+DSN_API dsn_task_t dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, void* param, int reply_hash, dsn_task_tracker_t tracker)
 {
     auto msg = ((::dsn::message_ex*)request);
-    return new ::dsn::rpc_response_task(msg, cb, param, reply_hash);
+    auto t = new ::dsn::rpc_response_task(msg, cb, param, reply_hash);
+    t->set_tracker((dsn::task_tracker*)tracker);
+    return t;
 }
 
-DSN_API void dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call, dsn_task_tracker_t tracker)
+DSN_API void dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call)
 {
     ::dsn::rpc_response_task* task = (::dsn::rpc_response_task*)rpc_call;
     dassert(task->spec().type == TASK_TYPE_RPC_RESPONSE, "");
-    task->set_tracker((dsn::task_tracker*)tracker);
-
+    
     // TODO: remove this parameter in future
     auto msg = task->get_request();
     msg->server_address = server;
@@ -628,15 +639,16 @@ DSN_API void* dsn_file_native_handle(dsn_handle_t file)
     return dfile->native_handle();
 }
 
-DSN_API dsn_task_t dsn_file_create_aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash)
+DSN_API dsn_task_t dsn_file_create_aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash, dsn_task_tracker_t tracker)
 {
-    return new ::dsn::aio_task(code, cb, param, hash);
+    auto t = new ::dsn::aio_task(code, cb, param, hash);
+    t->set_tracker((dsn::task_tracker*)tracker);
+    return t;
 }
 
-DSN_API void dsn_file_read(dsn_handle_t file, char* buffer, int count, uint64_t offset, dsn_task_t cb, dsn_task_tracker_t tracker)
+DSN_API void dsn_file_read(dsn_handle_t file, char* buffer, int count, uint64_t offset, dsn_task_t cb)
 {
-    ::dsn::aio_task* callback((::dsn::aio_task*)cb);
-    callback->set_tracker((dsn::task_tracker*)tracker);
+    ::dsn::aio_task* callback((::dsn::aio_task*)cb);    
     callback->aio()->buffer = buffer;
     callback->aio()->buffer_size = count;
     callback->aio()->engine = nullptr;
@@ -647,10 +659,9 @@ DSN_API void dsn_file_read(dsn_handle_t file, char* buffer, int count, uint64_t 
     ::dsn::task::get_current_disk()->read(callback);
 }
 
-DSN_API void dsn_file_write(dsn_handle_t file, const char* buffer, int count, uint64_t offset, dsn_task_t cb, dsn_task_tracker_t tracker)
+DSN_API void dsn_file_write(dsn_handle_t file, const char* buffer, int count, uint64_t offset, dsn_task_t cb)
 {
     ::dsn::aio_task* callback((::dsn::aio_task*)cb);
-    callback->set_tracker((dsn::task_tracker*)tracker);
     callback->aio()->buffer = (char*)buffer;
     callback->aio()->buffer_size = count;
     callback->aio()->engine = nullptr;
@@ -662,7 +673,7 @@ DSN_API void dsn_file_write(dsn_handle_t file, const char* buffer, int count, ui
 }
 
 DSN_API void dsn_file_copy_remote_directory(dsn_address_t remote, const char* source_dir, 
-    const char* dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker)
+    const char* dest_dir, bool overwrite, dsn_task_t cb)
 {
     std::shared_ptr<::dsn::remote_copy_request> rci(new ::dsn::remote_copy_request());
     rci->source = remote;
@@ -672,12 +683,11 @@ DSN_API void dsn_file_copy_remote_directory(dsn_address_t remote, const char* so
     rci->overwrite = overwrite;
 
     ::dsn::aio_task* callback((::dsn::aio_task*)cb);
-    callback->set_tracker((dsn::task_tracker*)tracker);
 
     ::dsn::task::get_current_nfs()->call(rci, callback);
 }
 
-DSN_API void dsn_file_copy_remote_files(dsn_address_t remote, const char* source_dir, const char** source_files, const char* dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker)
+DSN_API void dsn_file_copy_remote_files(dsn_address_t remote, const char* source_dir, const char** source_files, const char* dest_dir, bool overwrite, dsn_task_t cb)
 {
     std::shared_ptr<::dsn::remote_copy_request> rci(new ::dsn::remote_copy_request());
     rci->source = remote;
@@ -700,7 +710,6 @@ DSN_API void dsn_file_copy_remote_files(dsn_address_t remote, const char* source
     rci->overwrite = overwrite;
 
     ::dsn::aio_task* callback((::dsn::aio_task*)cb);
-    callback->set_tracker((dsn::task_tracker*)tracker);
 
     ::dsn::task::get_current_nfs()->call(rci, callback);
 }
