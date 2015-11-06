@@ -90,6 +90,14 @@ namespace dsn
                 const err_stringv_callback& cb_get_children,
                 clientlet* tracker = nullptr) override;
 
+            virtual void watch(const std::string& node,
+                const std::string& watcher_id,
+                task_code cb_code,
+                const err_value_callback& cb_notify
+                ) override;
+
+            virtual void unwatch(const std::string& node, const std::string& watcher_id) override;
+
         private:
             std::string normalize_path(const std::string& s);
             error_code extract_name_parent_from_path(

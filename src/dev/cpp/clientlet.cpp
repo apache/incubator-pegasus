@@ -124,7 +124,8 @@ namespace dsn
             }
             else
             {
-                t = dsn_task_create(evt, safe_task<task_handler>::exec, tsk, hash, svc ? svc->tracker() : nullptr);
+                t = dsn_task_create(evt, safe_task<task_handler>::exec, 
+                    tsk, hash, svc ? svc->tracker() : nullptr);
             }
 
             tsk->set_task_info(t);

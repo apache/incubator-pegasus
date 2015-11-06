@@ -99,20 +99,21 @@ namespace dsn
                     }
                     );
 
-                //// TODO: need aio logger is done first
-                //auto t = tasking::create(
-                //    cb_code,
-                //    [=]()
-                //    {
-                //        cb_create(ERR_NODE_ALREADY_EXIST);
-                //    },
-                //    0,
-                //    0
-                //    );
-                //return t;
+                // TODO: need aio logger is done first
+                auto t = tasking::create(
+                    cb_code,
+                    [=]()
+                    {
+                        cb_create(ERR_NODE_ALREADY_EXIST);
+                    },
+                    0,
+                    0,
+                    tracker
+                    );
+                return t;
 
-                //// after logger is done
-                //tasking::enqueue(t, tracker);                
+                // after logger is done
+                tasking::enqueue(t, 0);                
             }
 
             std::string name, parent;
@@ -182,6 +183,20 @@ namespace dsn
             clientlet* tracker)
         {
             return nullptr;
+        }
+
+        void meta_state_service_simple::watch(const std::string& node,
+            const std::string& watcher_id,
+            task_code cb_code,
+            const err_value_callback& cb_notify
+            )
+        {
+            // TODO:
+        }
+
+        void meta_state_service_simple::unwatch(const std::string& node, const std::string& watcher_id)
+        {
+            // TODO:
         }
     }
 }
