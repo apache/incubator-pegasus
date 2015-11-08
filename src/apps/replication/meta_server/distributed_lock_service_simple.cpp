@@ -89,7 +89,7 @@ namespace dsn
             task_code cb_code,
             const err_string_callback& cb)
         {
-            lock_info li;
+            lock_info_ex li;
             error_code err;
             std::string cowner;
             bool is_new = false;
@@ -119,7 +119,15 @@ namespace dsn
                         if (it->second.owner == myself_id)
                             err = ERR_RECURSIVE_LOCK;
                         else
-                            err = ERR_HOLD_BY_OTHERS;
+                        {
+                            err = ERR_IO_PENDING;
+
+                            lock_info lis;
+                            lis.cb = cb;
+                            lis.owner = myself_id;
+                            lis.code = cb_code;
+                            it->second.pending_list.push_back(lis);
+                        }   
                         cowner = it->second.owner;
                     }
                     else

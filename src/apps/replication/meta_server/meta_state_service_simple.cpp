@@ -184,19 +184,5 @@ namespace dsn
         {
             return nullptr;
         }
-
-        void meta_state_service_simple::watch(const std::string& node,
-            const std::string& watcher_id,
-            task_code cb_code,
-            const err_value_callback& cb_notify
-            )
-        {
-            // TODO:
-        }
-
-        void meta_state_service_simple::unwatch(const std::string& node, const std::string& watcher_id)
-        {
-            // TODO:
-        }
     }
 }

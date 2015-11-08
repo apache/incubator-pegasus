@@ -78,8 +78,13 @@ namespace dsn
                 task_code code;
                 err_string_callback cb;
             };
+
+            struct lock_info_ex : public lock_info
+            {
+                std::vector<lock_info> pending_list;
+            };
             
-            typedef std::unordered_map<std::string, lock_info> locks;
+            typedef std::unordered_map<std::string, lock_info_ex> locks;
 
             zlock _lock;
             locks _dlocks; // lock -> owner

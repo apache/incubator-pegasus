@@ -80,10 +80,9 @@ namespace dsn
              * possible ec:
              *   ERR_INVALID_PARAMETERS, lock_id invalid, or cb==nullptr
              *   ERR_TIMEOUT, creating lock timeout if create_if_not_exist==true
-             *   ERR_OK, the caller gets the lock, owner_id is ignored
              *   ERR_OBJECT_NOT_FOUND, lock doesn't exist and create_if_not_exist == false
-             *   ERR_HOLD_BY_OTHERS, another caller gets the lock, user can know
-             *     the lock owner by owner_id
+             *
+             *   ERR_OK, the caller gets the lock, owner_id is ignored     
              *   ERR_RECURSIVE_LOCK, call "lock" again if it was called before in the process
              *     context with the same parameter pair.
              *   ERR_EXPIRED, the leasing period is expired. In this case, the lock is
@@ -109,8 +108,7 @@ namespace dsn
              *   ERR_INVALID_PARAMETERS
              *   ERR_OK, release the lock successfully; if destroy==true, it also implies
              *     that the lock is destroy successfully.
-             *   ERR_HOLD_BY_OTHERS, the lock is released successfully, but destroy-op is
-             *     failed as someone else is holding or pending the lock
+             *   ERR_HOLD_BY_OTHERS, the lock is hold by others
              *   ERR_TIMEOUT, operation timeout. If destroy==false, this implies the unlock-op
              *     is timout; if destroy==true, it may be unlock-op or destroy-op who times out.
              *     For the latter, user can use query_lock to check the status of the lock

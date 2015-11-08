@@ -142,23 +142,6 @@ namespace dsn
                                       task_code cb_code,
                                       const err_stringv_callback& cb_get_children,
                                       clientlet* tracker = nullptr) = 0;
-
-            /*
-             * put a one-time watch on the specific %node for %watcher_id
-             * when the value of the node gets updated, a notification
-             * callback is issued as specified by %cb_code and %cb_notify,
-             * and the watch is cleared
-             */
-            virtual void watch(const std::string& node,
-                            const std::string& watcher_id,
-                            task_code cb_code,
-                            const err_value_callback& cb_notify
-                            ) = 0;
-
-            /*
-             * remove a watch on the specific %node for %watcher_id before notification
-             */
-            virtual void unwatch(const std::string& node, const std::string& watcher_id) = 0;
         };
     }
 }
