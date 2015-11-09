@@ -229,7 +229,7 @@ namespace dsn
             return false;
         else
         {
-            auto host = str.substr(0, pos - 1);
+            auto host = str.substr(0, pos);
             auto port = atoi(str.substr(pos + 1).c_str());
             assign_ipv4(host.c_str(), (uint16_t)port);
             return true;
