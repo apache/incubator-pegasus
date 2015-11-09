@@ -60,6 +60,11 @@ meta_server_failure_detector::meta_server_failure_detector(server_state* state, 
 
 meta_server_failure_detector::~meta_server_failure_detector(void)
 {
+    auto t = _lock_grant_task;
+    if (t) t->cancel(true);
+    t = _lock_expire_task;
+    if (t) t->cancel(true);
+
     delete _lock_svc;
 }
 
@@ -112,35 +117,49 @@ DEFINE_TASK_CODE(LPC_META_SERVER_LEADER_LOCK_CALLBACK, TASK_PRIORITY_COMMON, THR
 
 void meta_server_failure_detector::init_lock_service()
 {
-    /*_lock_svc->lock(
+    auto tasks = 
+    _lock_svc->lock(
         _primary_lock_id,
         _local_owner_id,
         true,
-        LPC_META_SERVER_LEADER_LOCK_CALLBACK,
-        [this](error_code ec, const std::string& owner)
-        {
-            if (ec == ERR_OK)
-            {
-                dassert(owner == _local_owner_id, "");
-            }
 
-            if (owner != "")
+        // lock granted
+        LPC_META_SERVER_LEADER_LOCK_CALLBACK,
+        [this](error_code ec, const std::string& owner, uint64_t version)
+        {
+            if (ec == ERR_TIMEOUT)
             {
+                init_lock_service();
+            }
+            else
+            {
+                dassert(ec == ERR_OK, "unexpected return error %s", ec.to_string());
+                dassert(owner == _local_owner_id, "");
                 rpc_address addr;
                 if (addr.from_string_ipv4(owner.c_str()))
                 {
                     set_primary(addr);
                 }
 
-                if (owner == _local_owner_id)
-                {
-                    _state->on_become_leader();
-                }
+                _state->on_become_leader();
             }
         },
-            LPC_META_SERVER_LEADER_LOCK_CALLBACK,
-            nullptr
-    );*/
+
+        // lease expire
+        LPC_META_SERVER_LEADER_LOCK_CALLBACK,
+        [this](error_code ec, const std::string& owner, uint64_t version)
+        {
+            // reset primary
+            rpc_address addr;
+            set_primary(addr);
+
+            // set another round of service
+            init_lock_service();
+        }
+    );
+
+    _lock_grant_task = tasks.first;
+    _lock_expire_task = tasks.second;
 }
 
 void meta_server_failure_detector::set_primary(rpc_address primary)

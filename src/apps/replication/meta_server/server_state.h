@@ -105,7 +105,12 @@ public:
     // first persistent to log file, then apply to memory state
     //void update_configuration(const configuration_update_request& request, /*out*/ configuration_update_response& response);
 
-    void update_configuration(dsn_message_t request_msg, const blob& request_blob);
+    void update_configuration(
+        std::shared_ptr<configuration_update_request>& req,
+        dsn_message_t request_msg, 
+        const blob& request_blob, 
+        std::function<void()> callback
+        );
 
     void unfree_if_possible_on_start();
 
@@ -125,6 +130,9 @@ private:
     // do real work of update configuration
     void update_configuration_internal(const configuration_update_request& request, /*out*/ configuration_update_response& response);
 
+    // execute all pending requests according to ballot order
+    void exec_pending_requests();
+
 private:
     friend class ::dsn::replication::replication_checker;
 
@@ -140,11 +148,21 @@ private:
     mutable zrwlock_nr                                 _lock;
     std::unordered_map<::dsn::rpc_address, node_state> _nodes;
     std::vector<app_state>                             _apps; // vec_index = app_id - 1
-
+    
     int                               _node_live_count;
     int                               _node_live_percentage_threshold_for_update;
     std::atomic<bool>                 _freeze;
 
     ::dsn::dist::meta_state_service *_storage;
+    struct storage_work_item
+    {
+        uint64_t ballot;
+        std::shared_ptr<configuration_update_request> req;
+        dsn_message_t msg;
+        std::function<void()> callback;
+    };
+
+    mutable zlock                         _pending_requests_lock;
+    std::map<uint64_t, storage_work_item> _pending_requests;
 };
 

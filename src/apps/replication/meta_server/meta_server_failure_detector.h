@@ -101,6 +101,8 @@ private:
     meta_service *_svc;
 
     ::dsn::dist::distributed_lock_service *_lock_svc;
+    task_ptr    _lock_grant_task;
+    task_ptr    _lock_expire_task;
     std::string _primary_lock_id;
     std::string _local_owner_id;
 };

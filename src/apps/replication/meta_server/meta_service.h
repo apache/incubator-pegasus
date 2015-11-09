@@ -61,8 +61,6 @@ public:
     bool stop();
 
 private:
-    //void replay_log(const char* log);
-
     // partition server & client => meta server
     // query partition configuration
     void on_query_configuration_by_node(dsn_message_t req);
@@ -70,11 +68,8 @@ private:
 
     // update configuration
     void on_update_configuration(dsn_message_t req);
-
     void update_configuration_on_machine_failure(std::shared_ptr<configuration_update_request>& update);
-    //void on_log_completed(error_code err, size_t size, blob buffer, std::shared_ptr<configuration_update_request> req, dsn_message_t resp);
-    //void update_configuration(const configuration_update_request& request, /*out*/ configuration_update_response& response);
-      
+
     // load balance actions
     void on_load_balance_start();
     void on_load_balance_timer();
@@ -91,9 +86,5 @@ private:
     replication_options          _opts;
     std::string                  _data_dir;
     bool                         _started;
-
-    zlock                        _log_lock;
-    dsn_handle_t                 _log;
-    uint64_t                     _offset;
 }; 
 

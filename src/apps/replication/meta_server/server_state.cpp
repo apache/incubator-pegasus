@@ -503,15 +503,15 @@ void server_state::query_configuration_by_index(const configuration_query_by_ind
 
 DEFINE_TASK_CODE(LPC_META_SERVER_STATE_UPDATE_CALLBACK, TASK_PRIORITY_HIGH, THREAD_POOL_META_SERVER)
 
-void server_state::update_configuration(dsn_message_t request_msg, const blob& request_blob)
+void server_state::update_configuration(
+    std::shared_ptr<configuration_update_request>& req,
+    dsn_message_t request_msg, 
+    const blob& request_blob, 
+    std::function<void()> callback)
 {
     bool write;
     configuration_update_response response; 
     std::string partition_path; 
-    std::shared_ptr<configuration_update_request> req(new configuration_update_request);
-    binary_reader reader(request_blob);
-    
-    unmarshall(reader, *req);
 
     {
         zauto_read_lock l(_lock);
@@ -554,30 +554,67 @@ void server_state::update_configuration(dsn_message_t request_msg, const blob& r
             partition_path,
             request_blob,
             LPC_META_SERVER_STATE_UPDATE_CALLBACK,
-            [this, req, request_msg](error_code ec)
-            {
-                configuration_update_response resp;
+            [this, req, request_msg, callback](error_code ec)
+            {                
+                storage_work_item wi;
+                wi.ballot = req->config.ballot;
+                wi.req = req;
+                wi.msg = request_msg;
+                wi.callback = callback;
+
                 {
-                    zauto_write_lock l(_lock);
-                    update_configuration_internal(*req, resp);
+                    zauto_lock l(_pending_requests_lock);
+                    _pending_requests[wi.ballot] = wi;
                 }
 
-                if (request_msg)
-                {
-                    reply(request_msg, resp);
-                    dsn_msg_release_ref(request_msg);
-                }
+                exec_pending_requests();
             }
         );
     }
 }
 
-//void server_state::update_configuration(const configuration_update_request& request, /*out*/ configuration_update_response& response)
-//{
-//    zauto_write_lock l(_lock);
-//
-//    update_configuration_internal(request, response);
-//}
+void server_state::exec_pending_requests()
+{
+    do
+    {
+        storage_work_item wi;
+        {
+            zauto_lock l(_pending_requests_lock);
+            storage_work_item& fwi = _pending_requests.begin()->second;
+
+            {
+                zauto_read_lock l(_lock);
+                app_state& app = _apps[fwi.req->config.gpid.app_id - 1];
+                partition_configuration& old = app.partitions[fwi.req->config.gpid.pidx];
+                if (old.ballot + 1 != fwi.req->config.ballot)
+                {
+                    return;
+                }
+            }
+
+            wi = fwi;
+            _pending_requests.erase(_pending_requests.begin());
+        }
+        
+        configuration_update_response resp;
+        {
+            zauto_write_lock l(_lock);
+            update_configuration_internal(*wi.req, resp);
+        }
+
+        if (wi.msg)
+        {
+            reply(wi.msg, resp);
+            dsn_msg_release_ref(wi.msg);
+        }
+
+        if (wi.callback)
+        {
+            wi.callback();
+        }
+
+    } while (true);
+}
 
 static void maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const rpc_address& node, bool is_add)
 {
