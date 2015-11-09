@@ -212,8 +212,7 @@ namespace dsn
 
     inline void rpc_address::clear()
     {
-        _addr.u.v4.type = HOST_TYPE_INVALID;
-        _addr.u.uri.uri = 0;
+        _addr.u.value = 0;
     }
 
     inline const char* rpc_address::to_string() const

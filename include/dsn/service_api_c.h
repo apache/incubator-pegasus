@@ -252,6 +252,7 @@ typedef struct dsn_address_t
             unsigned long long type : 2;
             unsigned long long group : 62; // dsn_group_t
         } group;
+        uint64_t value;
     } u;
 } dsn_address_t;
 

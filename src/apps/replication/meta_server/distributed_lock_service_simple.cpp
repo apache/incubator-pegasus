@@ -63,6 +63,9 @@ namespace dsn
 
         void distributed_lock_service_simple::random_lock_lease_expire(const std::string& lock_id)
         {
+            // TODO: let's test without failure first
+            return;
+
             std::string owner;
             uint64_t version;
             lock_wait_info next;

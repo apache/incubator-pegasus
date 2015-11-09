@@ -138,10 +138,10 @@ void meta_server_failure_detector::init_lock_service()
                 rpc_address addr;
                 if (addr.from_string_ipv4(owner.c_str()))
                 {
+                    dassert(primary_address() == addr, "");
+                    _state->on_become_leader();
                     set_primary(addr);
                 }
-
-                _state->on_become_leader();
             }
         },
 
@@ -152,6 +152,7 @@ void meta_server_failure_detector::init_lock_service()
             // reset primary
             rpc_address addr;
             set_primary(addr);
+            _state->on_become_non_leader();
 
             // set another round of service
             init_lock_service();

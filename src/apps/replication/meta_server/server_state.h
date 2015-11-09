@@ -75,6 +75,9 @@ public:
     // when the server becomes the leader
     error_code on_become_leader();
 
+    // when the server becomes not-leader
+    void on_become_non_leader();
+
     // get node state std::list<std::pair<::dsn::rpc_address, bool>>
     void get_node_state(/*out*/ node_states& nodes);
 
@@ -152,6 +155,7 @@ private:
     int                               _node_live_count;
     int                               _node_live_percentage_threshold_for_update;
     std::atomic<bool>                 _freeze;
+    std::atomic<bool>                 _is_state_synced_with_storage;
 
     ::dsn::dist::meta_state_service *_storage;
     struct storage_work_item

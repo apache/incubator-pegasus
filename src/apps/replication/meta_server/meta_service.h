@@ -57,7 +57,7 @@ public:
     meta_service(server_state* state);
     ~meta_service(void);
 
-    void start(const char* data_dir, bool clean_state);
+    void start();
     bool stop();
 
 private:
@@ -84,7 +84,6 @@ private:
     load_balancer                *_balancer;
     dsn::task_ptr                _balancer_timer;
     replication_options          _opts;
-    std::string                  _data_dir;
     bool                         _started;
 }; 
 

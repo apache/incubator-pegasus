@@ -49,7 +49,6 @@ meta_service::meta_service(server_state* state)
 {
     _balancer = nullptr;
     _failure_detector = nullptr;
-    _data_dir = ".";
     _started = false;
 
     _opts.initialize();
@@ -59,56 +58,10 @@ meta_service::~meta_service(void)
 {
 }
 
-void meta_service::start(const char* data_dir, bool clean_state)
+void meta_service::start()
 {
     dassert(!_started, "meta service is already started");
     
-    _data_dir = data_dir;
-	std::string checkpoint_path = _data_dir + "/checkpoint";
-	std::string oplog_path = _data_dir + "/oplog";
-
-
-    if (clean_state)
-    {
-        try {
-			if (!dsn::utils::filesystem::remove_path(checkpoint_path))
-			{
-				dassert(false, "Fail to remove file %s.", checkpoint_path.c_str());
-			}
-
-			if (!dsn::utils::filesystem::remove_path(oplog_path))
-			{
-				dassert(false, "Fail to remove file %s.", oplog_path.c_str());
-			}
-        }
-        catch (std::exception& ex)
-        {
-            ex;
-        }
-    }
-    else
-    {
-		if (!dsn::utils::filesystem::create_directory(_data_dir))
-		{
-			dassert(false, "Fail to create directory %s.", _data_dir.c_str());
-		}
-
-        if (dsn::utils::filesystem::file_exists(checkpoint_path))
-        {
-            _state->load(checkpoint_path.c_str());
-        }
-
-        if (dsn::utils::filesystem::file_exists(oplog_path))
-        {
-            //replay_log(oplog_path.c_str());
-            _state->save(checkpoint_path.c_str());
-			if (!dsn::utils::filesystem::remove_path(oplog_path))
-			{
-				dassert(false, "Fail to remove file %s.", oplog_path.c_str());
-			}
-        }
-    }
-
     _balancer = new load_balancer(_state);            
     _failure_detector = new meta_server_failure_detector(_state, this);    
     _failure_detector->init_lock_service();

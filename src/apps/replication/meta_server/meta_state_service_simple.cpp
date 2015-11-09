@@ -64,12 +64,9 @@ namespace dsn
 
             name = s.substr(pos + 1);
             if (pos > 0)
-                parent = s.substr(pos - 1);
+                parent = s.substr(0, pos);
             else
-                parent = "";
-
-            // TODO: what if no parent
-
+                parent = "/";
             return ERR_OK;
         }
 
@@ -103,7 +100,7 @@ namespace dsn
 
             auto parent_it = _quick_map.find(parent);
             if (parent_it == _quick_map.end())
-                return ERR_INVALID_PARAMETERS;
+                return ERR_OBJECT_NOT_FOUND;
 
             state_node* n = new state_node(name, parent_it->second, value);
             parent_it->second->children.insert(quick_map::value_type(name, n));
@@ -119,7 +116,7 @@ namespace dsn
             zauto_lock _(_state_lock);
             auto me_it = _quick_map.find(path);
             if (me_it == _quick_map.end())
-                return ERR_INVALID_PARAMETERS;
+                return ERR_OBJECT_NOT_FOUND;
             if (!recursive && !me_it->second->children.empty())
                 return ERR_INVALID_PARAMETERS;
 
@@ -167,7 +164,7 @@ namespace dsn
             zauto_lock _(_state_lock);
             auto it = _quick_map.find(path);
             if (it == _quick_map.end())
-                return ERR_INVALID_PARAMETERS;
+                return ERR_OBJECT_NOT_FOUND;
             it->second->data = value;
             return ERR_OK;
         }
@@ -396,7 +393,7 @@ namespace dsn
                     tracker,
                     [=]()
                     {
-                        cb_get_data(ERR_INVALID_PARAMETERS, {});
+                        cb_get_data(ERR_OBJECT_NOT_FOUND, {});
                     }
                     );
             }
@@ -479,7 +476,7 @@ namespace dsn
                     tracker,
                     [=]()
                     {
-                        cb_get_children(ERR_INVALID_PARAMETERS, {});
+                        cb_get_children(ERR_OBJECT_NOT_FOUND, {});
                     }
                     );
             }

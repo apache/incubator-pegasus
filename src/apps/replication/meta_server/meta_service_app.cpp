@@ -91,7 +91,7 @@ namespace dsn {
             _service = new meta_service(_state);
 
             _state->initialize();
-            _service->start(argv[0], false);
+            _service->start();
             return ERR_OK;
         }
 

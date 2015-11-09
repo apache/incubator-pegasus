@@ -66,6 +66,7 @@ server_state::server_state(void)
 {
     _node_live_count = 0;
     _freeze = true;
+    _is_state_synced_with_storage = false;
     _node_live_percentage_threshold_for_update = 65;
 }
 
@@ -164,10 +165,20 @@ error_code server_state::on_become_leader()
 {
     zauto_write_lock l(_lock);
 
+    dassert(!_is_state_synced_with_storage.load(), "state must be out-dated at this stage");
     auto err = sync_apps_from_remote_storage();
     if (err == ERR_OBJECT_NOT_FOUND)
         err = initialize_apps();
+    
+    dassert(err == ERR_OK, "TODO: error handling");
+    _is_state_synced_with_storage = true;
     return err;
+}
+
+void server_state::on_become_non_leader()
+{
+    dassert(_is_state_synced_with_storage.load(), "state must be synced at this stage");
+    _is_state_synced_with_storage = false;
 }
 
 error_code server_state::initialize_apps()
@@ -194,7 +205,7 @@ error_code server_state::initialize_apps()
     );
     t->wait();
 
-    if (err != ERR_NODE_ALREADY_EXIST && err == ERR_OK)
+    if (err != ERR_NODE_ALREADY_EXIST && err != ERR_OK)
     {
         derror("create root node /apps in meta store failed, err = %s",
             err.to_string());
@@ -234,6 +245,8 @@ error_code server_state::initialize_apps()
                     ps.max_replica_count = max_replica_count;
                     ps.primary.set_invalid();
 
+                    app.partitions.push_back(ps);
+
                     binary_writer writer;
                     marshall(writer, ps);
 
@@ -268,6 +281,11 @@ error_code server_state::initialize_apps()
     
     // wait for all those tasks completed
     dsn_task_tracker_wait_all(tracker.tracker());
+
+    if (err == ERR_OK)
+    {
+        _apps.push_back(app);
+    }
 
     return err;
 }
@@ -372,6 +390,8 @@ error_code server_state::sync_apps_from_remote_storage()
 void server_state::get_node_state(/*out*/ node_states& nodes)
 {
     zauto_read_lock l(_lock);
+    dassert(this->_is_state_synced_with_storage.load(), "invalid state");
+
     for (auto it = _nodes.begin(); it != _nodes.end(); it++)
     {
         nodes.push_back(std::make_pair(it->first, it->second.is_alive));
@@ -381,6 +401,7 @@ void server_state::get_node_state(/*out*/ node_states& nodes)
 void server_state::set_node_state(const node_states& nodes, /*out*/ machine_fail_updates* pris)
 {
     zauto_write_lock l(_lock);
+    dassert(this->_is_state_synced_with_storage.load(), "invalid state");
 
     auto old_lc = _node_live_count;
     
@@ -452,6 +473,8 @@ void server_state::unfree_if_possible_on_start()
 void server_state::query_configuration_by_node(const configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response)
 {
     zauto_read_lock l(_lock);
+    dassert(this->_is_state_synced_with_storage.load(), "invalid state");
+
     auto it = _nodes.find(request.node);
     if (it == _nodes.end())
     {
@@ -471,12 +494,15 @@ void server_state::query_configuration_by_node(const configuration_query_by_node
 void server_state::query_configuration_by_gpid(global_partition_id id, /*out*/ partition_configuration& config)
 {
     zauto_read_lock l(_lock);
+    dassert(this->_is_state_synced_with_storage.load(), "invalid state");
+
     config = _apps[id.app_id - 1].partitions[id.pidx];
 }
 
 void server_state::query_configuration_by_index(const configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response)
 {
     zauto_read_lock l(_lock);
+    dassert(this->_is_state_synced_with_storage.load(), "invalid state");
 
     for (size_t i = 0; i < _apps.size(); i++)
     {
@@ -509,6 +535,8 @@ void server_state::update_configuration(
     const blob& request_blob, 
     std::function<void()> callback)
 {
+    dassert(this->_is_state_synced_with_storage.load(), "invalid state");
+
     bool write;
     configuration_update_response response; 
     std::string partition_path; 
@@ -580,6 +608,9 @@ void server_state::exec_pending_requests()
         storage_work_item wi;
         {
             zauto_lock l(_pending_requests_lock);
+            if (_pending_requests.size() == 0)
+                return;
+
             storage_work_item& fwi = _pending_requests.begin()->second;
 
             {
