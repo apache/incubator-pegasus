@@ -36,17 +36,21 @@
 # include <dsn/dist/meta_state_service.h>
 # include "replication_common.h"
 
+#include <queue>
+
 using namespace ::dsn::service;
 
 namespace dsn
 {
     namespace dist
     {
-        class meta_state_service_simple 
+        DEFINE_TASK_CODE_AIO(META_STATE_SERVICE_SIMPLE_INTERNAL_TASK, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT);
+
+        class meta_state_service_simple
             : public meta_state_service, public clientlet
         {
         public:
-            meta_state_service_simple() : _root("/", nullptr) {}
+            explicit meta_state_service_simple() : _root("/", nullptr), _quick_map({std::make_pair("/", &_root)}), _log(nullptr), _offset(0){}
 
             virtual error_code initialize() override;
 
@@ -91,14 +95,14 @@ namespace dsn
                 clientlet* tracker = nullptr) override;
 
         private:
-            std::string normalize_path(const std::string& s);
-            error_code extract_name_parent_from_path(
-                const std::string& s,
-                /*out*/ std::string& name,
-                /*out*/ std::string& parent
-                );
 
-        private:
+            struct operation
+            {
+                bool done;
+                std::function<void(bool)> cb;
+                operation(bool done, std::function<void(bool)>&&cb) : done(done), cb(std::move(cb)) {}
+            };
+
             struct state_node
             {
                 std::string name;
@@ -107,12 +111,36 @@ namespace dsn
                 state_node* parent;
                 std::unordered_map<std::string, state_node*> children;
 
-                state_node(const std::string& nm, state_node* pt)
-                    : name(nm), parent(pt)
+                state_node(const std::string& nm, state_node* pt, const dsn::blob& dt = {})
+                    : name(nm), parent(pt), data(dt)
                 {}
             };
+
+            enum class operation_type
+            {
+                create_node,
+                delete_node,
+                set_data,
+            };
+
+            static std::string normalize_path(const std::string& s);
+            static error_code extract_name_parent_from_path(
+                const std::string& s,
+                /*out*/ std::string& name,
+                /*out*/ std::string& parent
+                );
+
+            void log_continuation(operation* target_operation, bool succeed);
+
+            error_code create_node_internal(const std::string &node, const blob& blob);
+            error_code delete_node_internal(const std::string &node, bool recursive);
+            error_code set_data_internal(const std::string &node, const blob& blob);
+
             
             typedef std::unordered_map<std::string, state_node*> quick_map;
+
+            zlock _queue_lock;
+            std::queue<std::unique_ptr<operation>> _task_queue;
 
             zlock          _state_lock;
             state_node     _root;  // tree          
