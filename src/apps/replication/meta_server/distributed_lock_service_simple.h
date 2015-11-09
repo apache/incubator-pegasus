@@ -49,10 +49,19 @@ namespace dsn
         public:
             virtual error_code initialize() override;
 
-            virtual task_ptr lock(
+            virtual std::pair<task_ptr, task_ptr> lock(
                 const std::string& lock_id,
                 const std::string& myself_id,
                 bool create_if_not_exist,
+                task_code lock_cb_code,
+                const lock_callback& lock_cb,
+                task_code lease_expire_code,
+                const lock_callback& lease_expire_callback
+                ) override;
+
+            virtual task_ptr cancel_pending_lock(
+                const std::string& lock_id,
+                const std::string& myself_id,
                 task_code cb_code,
                 const lock_callback& cb) override;
 
@@ -62,13 +71,7 @@ namespace dsn
                 bool destroy,
                 task_code cb_code,
                 const err_callback& cb) override;
-
-            virtual task_ptr cancel_lock(
-                const std::string& lock_id,
-                const std::string& myself_id,
-                task_code cb_code,
-                const lock_callback& cb) override;
-
+            
             virtual task_ptr query_lock(
                 const std::string& lock_id,
                 task_code cb_code,
@@ -78,20 +81,22 @@ namespace dsn
             void random_lock_lease_expire(const std::string& lock_id);
 
         private:
+            struct lock_wait_info
+            {
+                task_ptr grant_callback;
+                task_ptr lease_callback;
+                std::string owner;
+            };
+
             struct lock_info
             {
                 std::string owner;
                 uint64_t    version;
-                task_code code;
-                lock_callback cb;
-            };
-
-            struct lock_info_ex : public lock_info
-            {
-                std::vector<lock_info> pending_list;
+                task_ptr    lease_callback;
+                std::list<lock_wait_info> pending_list;
             };
             
-            typedef std::unordered_map<std::string, lock_info_ex> locks;
+            typedef std::unordered_map<std::string, lock_info> locks;
 
             zlock _lock;
             locks _dlocks; // lock -> owner

@@ -112,7 +112,7 @@ DEFINE_TASK_CODE(LPC_META_SERVER_LEADER_LOCK_CALLBACK, TASK_PRIORITY_COMMON, THR
 
 void meta_server_failure_detector::init_lock_service()
 {
-    _lock_svc->lock(
+    /*_lock_svc->lock(
         _primary_lock_id,
         _local_owner_id,
         true,
@@ -137,11 +137,10 @@ void meta_server_failure_detector::init_lock_service()
                     _state->on_become_leader();
                 }
             }
-
-            // TODO: we also need notification when the lock owner is changed
-            // better to be implemented using watcher on meta state service
-        }
-    );
+        },
+            LPC_META_SERVER_LEADER_LOCK_CALLBACK,
+            nullptr
+    );*/
 }
 
 void meta_server_failure_detector::set_primary(rpc_address primary)

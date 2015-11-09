@@ -112,6 +112,11 @@ namespace dsn
         {
             return dsn_file_get_io_size(_task);
         }
+
+        void enqueue(int delay_milliseconds = 0)
+        {
+            dsn_task_call(_task, delay_milliseconds);
+        }
             
         void enqueue_aio(error_code err, size_t size)
         {
@@ -208,13 +213,13 @@ namespace dsn
     //    return task;
     //
     //    ... after logging ....
-    //    task->bind_and_enqueue(error, delay);
+    //    task->bind_and_enqueue([&](cb)=>{std::bind(cb, error)}, delay);
     //
     template<typename THandler>
     class safe_late_task : public safe_task_handle
     {
     public:
-        safe_late_task(THandler& h) 
+        safe_late_task(THandler& h)
             : _handler(h), _bound_handler(nullptr)
         {
         }
@@ -235,34 +240,12 @@ namespace dsn
             return r;
         }
 
-        template<typename T1>
-        void bind_and_enqueue(T1& t, int delay_milliseconds = 0)
+        void bind_and_enqueue(
+            std::function<std::function<void()> (THandler&)> binder,
+            int delay_milliseconds = 0
+            )
         {
-            _bound_handler = std::bind(_handler, t);
-            _handler = nullptr;
-            dsn_task_call(native_handle(), delay_milliseconds);
-        }
-
-        template<typename T1, typename T2>
-        void bind_and_enqueue(T1& t1, T1& t2, int delay_milliseconds = 0)
-        {
-            _bound_handler = std::bind(_handler, t1, t2);
-            _handler = nullptr;
-            dsn_task_call(native_handle(), delay_milliseconds);
-        }
-
-        template<typename T1, typename T2, typename T3>
-        void bind_and_enqueue(T1& t1, T1& t2, T3& t3, int delay_milliseconds = 0)
-        {
-            _bound_handler = std::bind(_handler, t1, t2, t3);
-            _handler = nullptr;
-            dsn_task_call(native_handle(), delay_milliseconds);
-        }
-
-        template<typename T1, typename T2, typename T3, typename T4>
-        void bind_and_enqueue(T1& t1, T1& t2, T3& t3, T4& t4, int delay_milliseconds = 0)
-        {
-            _bound_handler = std::bind(_handler, t1, t2, t3, t4);
+            _bound_handler = binder(_handler);
             _handler = nullptr;
             dsn_task_call(native_handle(), delay_milliseconds);
         }
@@ -279,7 +262,6 @@ namespace dsn
         std::function<void()> _bound_handler;
         THandler              _handler;
     };
-
 
     // ------- inlined implementation ----------
 }

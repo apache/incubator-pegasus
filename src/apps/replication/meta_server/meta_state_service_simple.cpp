@@ -69,6 +69,23 @@ namespace dsn
             return ERR_OK;
         }
 
+        static void __err_cb_bind_and_enqueue(
+            task_ptr lock_task,
+            error_code err,
+            int delay_milliseconds = 0
+            )
+        {
+            auto t = dynamic_cast<safe_late_task<meta_state_service::err_callback>*>(lock_task.get());
+
+            t->bind_and_enqueue(
+                [&](meta_state_service::err_callback& cb)
+                {
+                    return std::bind(cb, err);
+                },
+                delay_milliseconds
+                );
+        }
+
         error_code meta_state_service_simple::initialize()
         {
             // TODO: load on-disk files and recover the memory state
@@ -109,7 +126,7 @@ namespace dsn
                 //return t;
 
                 // after logger is done
-                t->bind_and_enqueue(ERR_NODE_ALREADY_EXIST, 0);
+                __err_cb_bind_and_enqueue(t, ERR_NODE_ALREADY_EXIST, 0);
             }
 
             std::string name, parent;
