@@ -208,6 +208,7 @@ namespace dsn {
         std::string profiler_output_handler(const std::vector<std::string>& args);
         std::string profiler_js_handler(const std::vector<std::string>& args);
         std::string profiler_data_handler(const std::vector<std::string>& args);
+		std::string query_data_handler(const std::vector<std::string>& args);
 
         void profiler_output_dependency_list_callee(std::stringstream &ss, const int task_id);
         void profiler_output_dependency_list_caller(std::stringstream &ss, const int task_id);
