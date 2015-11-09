@@ -105,38 +105,6 @@ namespace dsn
 
     namespace tasking 
     {
-        task_ptr create(
-            dsn_task_code_t evt,            
-            task_handler callback,
-            int hash /*= 0*/,
-            int timer_interval_milliseconds /*= 0*/,
-            clientlet* svc
-            )
-        {
-            dsn_task_t t;
-            task_ptr tsk = new safe_task<task_handler>(callback, timer_interval_milliseconds != 0);
-
-            tsk->add_ref(); // released in exec callback
-            if (timer_interval_milliseconds != 0)
-            {
-                t = dsn_task_create_timer(evt, safe_task<task_handler>::exec,
-                    tsk, hash, timer_interval_milliseconds, svc ? svc->tracker() : nullptr);
-            }
-            else
-            {
-                t = dsn_task_create(evt, safe_task<task_handler>::exec, 
-                    tsk, hash, svc ? svc->tracker() : nullptr);
-            }
-
-            tsk->set_task_info(t);
-            return tsk;
-        }
-
-        void enqueue(task_ptr& tsk, int delay_milliseconds)
-        {
-            dsn_task_call(tsk->native_handle(), delay_milliseconds);
-        }
-
         task_ptr enqueue(
             dsn_task_code_t evt,
             clientlet* svc,

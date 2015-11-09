@@ -56,6 +56,7 @@ namespace dsn
                         li.cb = it->second.cb;
                         li.code = it->second.code;
                         li.owner = it->second.owner;
+                        li.version = it->second.version;
 
                         it->second.cb = nullptr;
                         it->second.owner = "";
@@ -73,7 +74,7 @@ namespace dsn
             tasking::enqueue(
                 li.code,
                 nullptr,
-                [=](){li.cb(ERR_EXPIRED, li.owner); }
+                [=](){ li.cb(ERR_EXPIRED, li.owner, li.version); }
             );
         }
 
@@ -87,11 +88,12 @@ namespace dsn
             const std::string& myself_id,
             bool create_if_not_exist,
             task_code cb_code,
-            const err_string_callback& cb)
+            const lock_callback& cb)
         {
             lock_info_ex li;
             error_code err;
             std::string cowner;
+            uint64_t version;
             bool is_new = false;
 
             {
@@ -106,9 +108,12 @@ namespace dsn
                         li.owner = myself_id;
                         li.cb = cb;
                         li.code = cb_code;
+                        li.version = 1;
                         _dlocks.insert(locks::value_type(lock_id, li));
+
                         err = ERR_OK;
                         cowner = myself_id;
+                        version = 1;
                         is_new = true;
                     }
                 }
@@ -117,7 +122,11 @@ namespace dsn
                     if (it->second.owner != "")
                     {
                         if (it->second.owner == myself_id)
+                        {
                             err = ERR_RECURSIVE_LOCK;
+                            cowner = myself_id;
+                            version = it->second.version;
+                        }   
                         else
                         {
                             err = ERR_IO_PENDING;
@@ -135,8 +144,11 @@ namespace dsn
                         it->second.owner = myself_id;
                         it->second.cb = cb;
                         it->second.code = cb_code;
+                        it->second.version++;
+
                         err = ERR_OK;
                         cowner = myself_id;
+                        version = it->second.version;
                     }
                 }
             }
@@ -156,7 +168,7 @@ namespace dsn
             return tasking::enqueue(
                 cb_code,
                 nullptr,
-                [=]() { cb(err, cowner); }
+                [=]() { cb(err, cowner, version); }
                 );
         }
 
@@ -198,10 +210,19 @@ namespace dsn
             );
         }
 
+        task_ptr distributed_lock_service_simple::cancel_lock(
+            const std::string& lock_id,
+            const std::string& myself_id,
+            task_code cb_code,
+            const lock_callback& cb)
+        {
+            return nullptr;
+        }
+
         task_ptr distributed_lock_service_simple::query_lock(
             const std::string& lock_id,
             task_code cb_code,
-            const err_string_callback& cb)
+            const lock_callback& cb)
         {
             error_code err;
             std::string cowner;
@@ -223,7 +244,7 @@ namespace dsn
             return tasking::enqueue(
                 cb_code,
                 nullptr,
-                [=]() { cb(err, cowner); }
+                [=]() { cb(err, cowner, 0); }
             );
         }
     }

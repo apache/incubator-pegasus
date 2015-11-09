@@ -100,20 +100,16 @@ namespace dsn
                     );
 
                 // TODO: need aio logger is done first
-                auto t = tasking::create(
+                auto t = tasking::create_late_task(
                     cb_code,
-                    [=]()
-                    {
-                        cb_create(ERR_NODE_ALREADY_EXIST);
-                    },
-                    0,
+                    cb_create,
                     0,
                     tracker
                     );
-                return t;
+                //return t;
 
                 // after logger is done
-                tasking::enqueue(t, 0);                
+                t->bind_and_enqueue(ERR_NODE_ALREADY_EXIST, 0);
             }
 
             std::string name, parent;

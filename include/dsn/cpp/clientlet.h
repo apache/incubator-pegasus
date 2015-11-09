@@ -71,16 +71,6 @@ namespace dsn
 
     namespace tasking 
     {
-        task_ptr create(
-            dsn_task_code_t evt,
-            task_handler callback,
-            int hash = 0,
-            int timer_interval_milliseconds = 0,
-            clientlet* svc = nullptr
-            );
-
-        void enqueue(task_ptr& tsk, int delay_milliseconds = 0);
-
         task_ptr enqueue(
             dsn_task_code_t evt,
             clientlet* svc,
@@ -110,6 +100,25 @@ namespace dsn
                 delay_milliseconds,
                 timer_interval_milliseconds
                 );
+        }
+
+        template<typename THandler>
+        safe_late_task<THandler>* create_late_task(
+            dsn_task_code_t evt,
+            THandler callback,
+            int hash = 0,
+            clientlet* svc = nullptr
+            )
+        {
+            dsn_task_t t;
+            auto tsk = new safe_late_task<THandler>(callback);
+
+            tsk->add_ref(); // released in exec callback
+            t = dsn_task_create(evt, safe_late_task<THandler>::exec,
+                tsk, hash, svc ? svc->tracker() : nullptr);
+
+            tsk->set_task_info(t);
+            return tsk;
         }
     }
 

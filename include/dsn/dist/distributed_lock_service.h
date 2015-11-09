@@ -64,7 +64,7 @@ namespace dsn
 
         public:
             typedef std::function<void (error_code ec)> err_callback;
-            typedef std::function<void (error_code ec, const std::string& owner_id)> err_string_callback;
+            typedef std::function<void (error_code ec, const std::string& owner_id, uint64_t version)> lock_callback;
 
             /*
              * initialization routine
@@ -82,7 +82,8 @@ namespace dsn
              *   ERR_TIMEOUT, creating lock timeout if create_if_not_exist==true
              *   ERR_OBJECT_NOT_FOUND, lock doesn't exist and create_if_not_exist == false
              *
-             *   ERR_OK, the caller gets the lock, owner_id is ignored     
+             *   ERR_OK, the caller gets the lock. when the lock is hold by others, the callback
+             *   is hold until it gets the lock.
              *   ERR_RECURSIVE_LOCK, call "lock" again if it was called before in the process
              *     context with the same parameter pair.
              *   ERR_EXPIRED, the leasing period is expired. In this case, the lock is
@@ -92,13 +93,12 @@ namespace dsn
              *   (1) when user calls unlock for the same myself_id and the lock is released
              *       successfully, cb will never be called again
              *   (2) cb will never be called again after it returns ERR_EXPIRED
-             *   (3) if cb returns ERR_OK, then ERR_HOLD_BY_OTHERS should never be returned
              */
             virtual task_ptr lock(const std::string& lock_id,
                               const std::string& myself_id,
                               bool create_if_not_exist,
                               task_code cb_code,
-                              const err_string_callback& cb) = 0;
+                              const lock_callback& cb) = 0;
             /*
              * unlock
              * cb_code: the task code specifies where to execute the callback
@@ -118,6 +118,24 @@ namespace dsn
                                 bool destroy,
                                 task_code cb_code,
                                 const err_callback& cb) = 0;
+
+            /*
+             * cancel the lock operation that is on pending
+             * cb_code: the task code specifies where to execute the callback
+             * lock_id should be valid, and cb should not be empty
+             *
+             * possible ec:
+             *   ERR_INVALID_PARAMETERS
+             *   ERR_OK, the pending lock is cancelled successfully
+             *   ERR_OBJECT_NOT_FOUND, the caller is not found in pending list, check
+             *   returned owner to see whether it already succeedes
+             *
+             */
+            virtual task_ptr cancel_lock(const std::string& lock_id,
+                                const std::string& myself_id,
+                                task_code cb_code,
+                                const lock_callback& cb) = 0;
+
             /*
              * cb_code: the task code specifies where to execute the callback
              * cb shouldn't be empty
@@ -130,7 +148,7 @@ namespace dsn
              */
             virtual task_ptr query_lock(const std::string& lock_id,
                                     task_code cb_code,
-                                    const err_string_callback& cb) = 0;
+                                    const lock_callback& cb) = 0;
         };
     }
 }

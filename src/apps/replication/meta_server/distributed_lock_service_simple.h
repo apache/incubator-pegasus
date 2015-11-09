@@ -54,7 +54,7 @@ namespace dsn
                 const std::string& myself_id,
                 bool create_if_not_exist,
                 task_code cb_code,
-                const err_string_callback& cb) override;
+                const lock_callback& cb) override;
 
             virtual task_ptr unlock(
                 const std::string& lock_id,
@@ -63,10 +63,16 @@ namespace dsn
                 task_code cb_code,
                 const err_callback& cb) override;
 
+            virtual task_ptr cancel_lock(
+                const std::string& lock_id,
+                const std::string& myself_id,
+                task_code cb_code,
+                const lock_callback& cb) override;
+
             virtual task_ptr query_lock(
                 const std::string& lock_id,
                 task_code cb_code,
-                const err_string_callback& cb) override;
+                const lock_callback& cb) override;
 
         private:
             void random_lock_lease_expire(const std::string& lock_id);
@@ -75,8 +81,9 @@ namespace dsn
             struct lock_info
             {
                 std::string owner;
+                uint64_t    version;
                 task_code code;
-                err_string_callback cb;
+                lock_callback cb;
             };
 
             struct lock_info_ex : public lock_info

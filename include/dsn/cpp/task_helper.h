@@ -168,7 +168,7 @@ namespace dsn
                 t->release_ref(); // added upon callback exec registration
             }
         }
-
+        
         static void exec_rpc_response(dsn_error_t err, dsn_message_t req, dsn_message_t resp, void* task)
         {
             safe_task* t = (safe_task*)task;
@@ -194,6 +194,90 @@ namespace dsn
     private:
         bool                 _is_timer;
         THandler             _handler;
+    };
+
+    //
+    // two staged computation task
+    // this is used when a task handle is returned when a call is made,
+    // while the task, is however, enqueued later after other operations when
+    // certain parameters to the task is known (e.g., error code after logging)
+    // in thise case, we can use two staged computation task as this is.
+    //
+    //    auto task = tasking::create_late_task(...);
+    //    ...
+    //    return task;
+    //
+    //    ... after logging ....
+    //    task->bind_and_enqueue(error, delay);
+    //
+    template<typename THandler>
+    class safe_late_task : public safe_task_handle
+    {
+    public:
+        safe_late_task(THandler& h) 
+            : _handler(h), _bound_handler(nullptr)
+        {
+        }
+
+        operator task_ptr() const
+        {
+            return task_ptr(this);
+        }
+
+        virtual bool cancel(bool wait_until_finished, bool* finished = nullptr) override
+        {
+            bool r = safe_task_handle::cancel(wait_until_finished, finished);
+            if (r)
+            {
+                _bound_handler = nullptr;
+                release_ref(); // added upon callback exec registration
+            }
+            return r;
+        }
+
+        template<typename T1>
+        void bind_and_enqueue(T1& t, int delay_milliseconds = 0)
+        {
+            _bound_handler = std::bind(_handler, t);
+            _handler = nullptr;
+            dsn_task_call(native_handle(), delay_milliseconds);
+        }
+
+        template<typename T1, typename T2>
+        void bind_and_enqueue(T1& t1, T1& t2, int delay_milliseconds = 0)
+        {
+            _bound_handler = std::bind(_handler, t1, t2);
+            _handler = nullptr;
+            dsn_task_call(native_handle(), delay_milliseconds);
+        }
+
+        template<typename T1, typename T2, typename T3>
+        void bind_and_enqueue(T1& t1, T1& t2, T3& t3, int delay_milliseconds = 0)
+        {
+            _bound_handler = std::bind(_handler, t1, t2, t3);
+            _handler = nullptr;
+            dsn_task_call(native_handle(), delay_milliseconds);
+        }
+
+        template<typename T1, typename T2, typename T3, typename T4>
+        void bind_and_enqueue(T1& t1, T1& t2, T3& t3, T4& t4, int delay_milliseconds = 0)
+        {
+            _bound_handler = std::bind(_handler, t1, t2, t3, t4);
+            _handler = nullptr;
+            dsn_task_call(native_handle(), delay_milliseconds);
+        }
+
+        static void exec(void* task)
+        {
+            auto t = (safe_late_task<THandler>*)task;
+            t->_bound_handler();
+            t->_bound_handler = nullptr;
+            t->release_ref(); // added upon callback exec registration
+        }
+
+    private:
+        std::function<void()> _bound_handler;
+        THandler              _handler;
     };
 
 
