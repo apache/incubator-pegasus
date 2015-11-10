@@ -64,7 +64,13 @@ void meta_service::start()
     
     _balancer = new load_balancer(_state);            
     _failure_detector = new meta_server_failure_detector(_state, this);    
-    _failure_detector->init_lock_service();
+    
+    // become leader
+    while (!_failure_detector->acquire_leader_lock()) {}
+    dassert(_failure_detector->is_primary(), "must be primary at this point");
+
+    // sync meta state
+    while (_state->on_become_leader() != ERR_OK) {}
 
     // make sure the delay is larger than fd.grace to ensure 
     // all machines are in the correct state (assuming connected initially)

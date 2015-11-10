@@ -67,7 +67,7 @@ public:
         return _primary_address;
     }
     
-    void init_lock_service();
+    bool acquire_leader_lock();
     
     // client side
     virtual void on_master_disconnected(const std::vector<::dsn::rpc_address>& nodes)

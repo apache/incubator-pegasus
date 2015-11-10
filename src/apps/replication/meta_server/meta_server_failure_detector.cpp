@@ -115,8 +115,9 @@ void meta_server_failure_detector::on_worker_connected(::dsn::rpc_address node)
 
 DEFINE_TASK_CODE(LPC_META_SERVER_LEADER_LOCK_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_FD)
 
-void meta_server_failure_detector::init_lock_service()
+bool meta_server_failure_detector::acquire_leader_lock()
 {
+    error_code err;
     auto tasks = 
     _lock_svc->lock(
         _primary_lock_id,
@@ -125,42 +126,44 @@ void meta_server_failure_detector::init_lock_service()
 
         // lock granted
         LPC_META_SERVER_LEADER_LOCK_CALLBACK,
-        [this](error_code ec, const std::string& owner, uint64_t version)
+        [this, &err](error_code ec, const std::string& owner, uint64_t version)
         {
-            if (ec == ERR_TIMEOUT)
-            {
-                init_lock_service();
-            }
-            else
-            {
-                dassert(ec == ERR_OK, "unexpected return error %s", ec.to_string());
-                dassert(owner == _local_owner_id, "");
-                rpc_address addr;
-                if (addr.from_string_ipv4(owner.c_str()))
-                {
-                    dassert(primary_address() == addr, "");
-                    _state->on_become_leader();
-                    set_primary(addr);
-                }
-            }
+            err = ec;
         },
 
         // lease expire
         LPC_META_SERVER_LEADER_LOCK_CALLBACK,
         [this](error_code ec, const std::string& owner, uint64_t version)
         {
-            // reset primary
-            rpc_address addr;
-            set_primary(addr);
-            _state->on_become_non_leader();
+            // let's take the easy way right now
+            dsn_terminate();
 
-            // set another round of service
-            init_lock_service();
+            // reset primary
+            //rpc_address addr;
+            //set_primary(addr);
+            //_state->on_become_non_leader();
+
+            //// set another round of service
+            //acquire_leader_lock();            
         }
     );
 
     _lock_grant_task = tasks.first;
     _lock_expire_task = tasks.second;
+
+    _lock_grant_task->wait();
+    if (err == ERR_OK)
+    {
+        rpc_address addr;
+        if (addr.from_string_ipv4(_local_owner_id.c_str()))
+        {
+            dassert(primary_address() == addr, "");            
+            set_primary(addr);
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void meta_server_failure_detector::set_primary(rpc_address primary)
