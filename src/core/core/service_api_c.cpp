@@ -112,10 +112,6 @@ DSN_API const char* dsn_error_to_string(dsn_error_t err)
 // use ::dsn::threadpool_code2; for parsing purpose
 DSN_API dsn_threadpool_code_t dsn_threadpool_code_register(const char* name)
 {
-    dassert(!dsn_all.is_config_completed(), 
-        "thread pool code '%s' must be registered before the service app role is registered",
-        name);
-
     return static_cast<dsn_threadpool_code_t>(
         ::dsn::utils::customized_id_mgr<::dsn::threadpool_code2_>::instance().register_id(name)
         );
@@ -146,10 +142,6 @@ struct task_code_placeholder { };
 DSN_API dsn_task_code_t dsn_task_code_register(const char* name, dsn_task_type_t type,
     dsn_task_priority_t pri, dsn_threadpool_code_t pool)
 {
-    dassert(!dsn_all.is_config_completed(),
-        "task code '%s' must be registered before the service app role is registered",
-        name);
-
     auto r = static_cast<dsn_task_code_t>(::dsn::utils::customized_id_mgr<task_code_placeholder>::instance().register_id(name));
     ::dsn::task_spec::register_task_code(r, type, pri, pool);
     return r;
@@ -922,6 +914,22 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
         printf("Fail to load config file %s\n", config_file);
         return false;
     }
+    
+    // pause when necessary
+    if (dsn_all.config->get_value<bool>("core", "pause_on_start", false,
+        "whether to pause at startup time for easier debugging"))
+    {
+#if defined(_WIN32)
+        printf("\nPause for debugging (pid = %d)...\n", static_cast<int>(::GetCurrentProcessId()));
+#else
+        printf("\nPause for debugging (pid = %d)...\n", static_cast<int>(getpid()));
+#endif
+        getchar();
+    }
+
+    // load all shared libraries so all code and app factories are 
+    // automatically registered
+    dsn::service_spec::load_app_shared_libraries(dsn_all.config);
 
     for (int i = 0; i <= dsn_task_code_max(); i++)
     {
@@ -937,18 +945,6 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
     }
 
     dsn_all.config_completed = true;
-
-    // pause when necessary
-    if (dsn_all.config->get_value<bool>("core", "pause_on_start", false,
-        "whether to pause at startup time for easier debugging"))
-    {
-#if defined(_WIN32)
-        printf("\nPause for debugging (pid = %d)...\n", static_cast<int>(::GetCurrentProcessId()));
-#else
-        printf("\nPause for debugging (pid = %d)...\n", static_cast<int>(getpid()));
-#endif
-        getchar();
-    }
 
     // setup coredump
 	auto& coredump_dir = spec.coredump_dir;
