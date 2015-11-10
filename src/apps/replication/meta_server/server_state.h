@@ -84,12 +84,6 @@ public:
     //  * set node state from unlive to live, and leaves load balancer to update configuration
     void set_node_state(const node_states& nodes, /*out*/ machine_fail_updates* pris);
     
-    // load state from checkpoint file
-    void load(const char* chk_point);
-
-    // save state to checkpoint file
-    void save(const char* chk_point);
-
     // partition server & client => meta server
 
     // query all partition configurations of a replica server

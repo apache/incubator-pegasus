@@ -73,80 +73,6 @@ server_state::~server_state(void)
 {
 }
 
-
-void server_state::load(const char* chk_point)
-{
-    FILE* fp = ::fopen(chk_point, "rb");
-
-    int32_t len;
-    ::fread((void*)&len, sizeof(int32_t), 1, fp);
-
-    std::shared_ptr<char> buffer(new char[len]);
-    ::fread((void*)buffer.get(), len, 1, fp);
-
-    blob bb(buffer, 0, len);
-    binary_reader reader(bb);
-    unmarshall(reader, _apps);
-
-    ::fclose(fp);
-
-    dassert(_apps.size() == 1, "");
-    auto& app = _apps[0];
-    for (int i = 0; i < app.partition_count; i++)
-    {
-        auto& ps = app.partitions[i];
-
-        if (ps.primary.is_invalid() == false)
-        {
-            _nodes[ps.primary].primaries.insert(ps.gpid);
-            _nodes[ps.primary].partitions.insert(ps.gpid);
-        }
-        
-        for (auto& ep : ps.secondaries)
-        {
-            dassert(ep.is_invalid() == false, "");
-            _nodes[ep].partitions.insert(ps.gpid);
-        }
-    }
-
-    for (auto& node : _nodes)
-    {
-        node.second.address = node.first;
-        node.second.is_alive = true;
-        _node_live_count++;
-    }
-
-    for (auto& app : _apps)
-    {
-        for (auto& par : app.partitions)
-        {
-            check_consistency(par.gpid);
-        }
-    }
-}
-
-void server_state::save(const char* chk_point)
-{
-    binary_writer writer;
-    marshall(writer, _apps);
-
-    FILE* fp = ::fopen(chk_point, "wb+");
-
-    int32_t len = writer.total_size();
-    ::fwrite((const void*)&len, sizeof(len), 1, fp);
-
-    std::vector<blob> bbs;
-    writer.get_buffers(bbs);
-
-    for (auto& bb : bbs)
-    {
-        ::fwrite((const void*)bb.data(), bb.length(), 1, fp);
-    }
-
-    ::fclose(fp);
-}
-
-
 DEFINE_TASK_CODE(LPC_META_STATE_SVC_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_META_SERVER);
 
 void server_state::initialize()
@@ -163,6 +89,10 @@ void server_state::initialize()
 error_code server_state::on_become_leader()
 {
     zauto_write_lock l(_lock);
+    
+    _apps.clear();
+    _nodes.clear();
+
     auto err = sync_apps_from_remote_storage();
     if (err == ERR_OBJECT_NOT_FOUND)
         err = initialize_apps();
@@ -283,8 +213,6 @@ error_code server_state::sync_apps_from_remote_storage()
     error_code err = ERR_OK;
     clientlet tracker;
 
-    _apps.clear();
-
     // get all apps
     std::string root = "/apps";
     _storage->get_children(root, LPC_META_STATE_SVC_CALLBACK,
@@ -371,6 +299,42 @@ error_code server_state::sync_apps_from_remote_storage()
 
     // wait for all those tasks completed
     dsn_task_tracker_wait_all(tracker.tracker());
+
+    if (err == ERR_OK)
+    {
+        auto& app = _apps[0];
+        for (int i = 0; i < app.partition_count; i++)
+        {
+            auto& ps = app.partitions[i];
+
+            if (ps.primary.is_invalid() == false)
+            {
+                _nodes[ps.primary].primaries.insert(ps.gpid);
+                _nodes[ps.primary].partitions.insert(ps.gpid);
+            }
+
+            for (auto& ep : ps.secondaries)
+            {
+                dassert(ep.is_invalid() == false, "");
+                _nodes[ep].partitions.insert(ps.gpid);
+            }
+        }
+
+        for (auto& node : _nodes)
+        {
+            node.second.address = node.first;
+            node.second.is_alive = true;
+            _node_live_count++;
+        }
+
+        for (auto& app : _apps)
+        {
+            for (auto& par : app.partitions)
+            {
+                check_consistency(par.gpid);
+            }
+        }
+    }
 
     return err;
 }
