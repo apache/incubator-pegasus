@@ -38,13 +38,13 @@
 
 #include <queue>
 
-using namespace ::dsn::service;
+using namespace dsn::service;
 
 namespace dsn
 {
     namespace dist
     {
-        DEFINE_TASK_CODE_AIO(META_STATE_SERVICE_SIMPLE_INTERNAL_TASK, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT);
+        DEFINE_TASK_CODE_AIO(LPC_META_STATE_SERVICE_SIMPLE_INTERNAL, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT);
 
         class meta_state_service_simple
             : public meta_state_service, public clientlet
@@ -96,23 +96,31 @@ namespace dsn
             ~meta_state_service_simple();
 
         private:
-
             struct operation
             {
                 bool done;
                 std::function<void(bool)> cb;
-                operation(bool done, std::function<void(bool)>&&cb) : done(done), cb(std::move(cb)) {}
+                operation(bool done, std::function<void(bool)>&&cb) : done(done), cb(move(cb)) {}
+            };
+
+            struct log_header
+            {
+                int magic;
+                size_t size;
+                static constexpr int default_magic = 0xdeadbeef;
+                log_header() : magic(default_magic), size(0)
+                {}
             };
 
             struct state_node
             {
                 std::string name;
-                dsn::blob   data;
+                blob   data;
 
                 state_node* parent;
                 std::unordered_map<std::string, state_node*> children;
 
-                state_node(const std::string& nm, state_node* pt, const dsn::blob& dt = {})
+                state_node(const std::string& nm, state_node* pt, const blob& dt = {})
                     : name(nm), parent(pt), data(dt)
                 {}
             };
@@ -123,6 +131,46 @@ namespace dsn
                 delete_node,
                 set_data,
             };
+            
+            template<operation_type op, typename ... Args> struct log_struct;
+            template<operation_type op, typename Head, typename ...Tail>
+            struct log_struct<op, Head, Tail...> {
+                static blob get_log(const Head& head, Tail... tail)
+                {
+                    binary_writer writer;
+                    writer.write_pod(log_header());
+                    marshall(writer, static_cast<int>(op));
+                    write(writer, head, tail...);
+                    auto shared_blob = writer.get_buffer();
+                    reinterpret_cast<log_header*>(shared_blob.buffer().get())->size = shared_blob.length() - sizeof(log_header);
+                    return shared_blob;
+                }
+                static void write(binary_writer& writer, const Head& head, const Tail&... tail)
+                {
+                    marshall(writer, head);
+                    log_struct<op, Tail...>::write(writer, tail...);
+                }
+                static void parse(binary_reader& reader, Head&head, Tail&... tail)
+                {
+                    unmarshall(reader, head);
+                    log_struct<op, Tail...>::parse(reader, tail...);
+                }
+            };
+            template<operation_type op, typename Head>
+            struct log_struct<op, Head> {
+                static void write(binary_writer& writer, const Head& head)
+                {
+                    marshall(writer, head);
+                }
+                static void parse(binary_reader& reader, Head&head)
+                {
+                    unmarshall(reader, head);
+                }
+            };
+
+            using create_node_log = log_struct<operation_type::create_node, std::string, blob>;
+            using delete_node_log = log_struct<operation_type::delete_node, std::string, bool>;
+            using set_data_log = log_struct<operation_type::set_data, std::string, blob>;
 
             static std::string normalize_path(const std::string& s);
             static error_code extract_name_parent_from_path(
@@ -131,7 +179,7 @@ namespace dsn
                 /*out*/ std::string& parent
                 );
 
-            void log_continuation(operation* target_operation, bool succeed);
+            void write_log(blob&& log_blob, std::function<error_code(void)> internal_operation, task_ptr task);
 
             error_code create_node_internal(const std::string &node, const blob& blob);
             error_code delete_node_internal(const std::string &node, bool recursive);
