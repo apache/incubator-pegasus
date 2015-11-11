@@ -291,11 +291,11 @@ namespace dsn
             _offset += log_writer.total_size();
 
             auto returned_task_ptr = tasking::create_late_task(cb_code, cb_create, 0, tracker);
-            auto continuation_task = std::make_unique<operation>(false, [=](bool log_succeed)
+            auto continuation_task = std::unique_ptr<operation>(new operation(false, [=](bool log_succeed)
             {
                 dassert(log_succeed, "we cannot handle logging failure now");
                 __err_cb_bind_and_enqueue(returned_task_ptr, create_node_internal(node, value), 0);
-            });
+            }));
             auto continuation_task_ptr = continuation_task.get();
             _task_queue.emplace(std::move(continuation_task));
             _log_lock.unlock();
@@ -338,11 +338,11 @@ namespace dsn
             _offset += log_writer.total_size();
 
             auto returned_task_ptr = tasking::create_late_task(cb_code, cb_delete, 0, tracker);
-            auto continuation_task = std::make_unique<operation>(false, [=](bool log_succeed)
+            auto continuation_task = std::unique_ptr<operation>(new operation(false, [=](bool log_succeed)
             {
                 dassert(log_succeed, "we cannot handle logging failure now");
                 __err_cb_bind_and_enqueue(returned_task_ptr, delete_node_internal(node, recursively_delete), 0);
-            });
+            }));
             auto continuation_task_ptr = continuation_task.get();
             _task_queue.emplace(std::move(continuation_task));
 
@@ -442,11 +442,11 @@ namespace dsn
             _offset += log_writer.total_size();
 
             auto returned_task_ptr = tasking::create_late_task(cb_code, cb_set_data, 0, tracker);
-            auto continuation_task = std::make_unique<operation>(false, [=](bool log_succeed)
+            auto continuation_task = std::unique_ptr<operation>(new operation(false, [=](bool log_succeed)
             {
                 dassert(log_succeed, "we cannot handle logging failure now");
                 __err_cb_bind_and_enqueue(returned_task_ptr, set_data_internal(node, value), 0);
-            });
+            }));
             auto continuation_task_ptr = continuation_task.get();
             _task_queue.emplace(std::move(continuation_task));
 
