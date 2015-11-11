@@ -97,6 +97,10 @@ namespace dsn
 
             std::string name, parent;
             auto err = extract_name_parent_from_path(path, name, parent);
+            if (err != ERR_OK)
+            {
+                return err;
+            }
 
             auto parent_it = _quick_map.find(parent);
             if (parent_it == _quick_map.end())
@@ -148,6 +152,10 @@ namespace dsn
 
             std::string name, parent;
             auto err = extract_name_parent_from_path(path, name, parent);
+            if (err != ERR_OK)
+            {
+                return err;
+            }
 
             auto parent_it = _quick_map.find(parent);
             dassert(parent_it != _quick_map.end(), "unable to find parent node");
@@ -196,8 +204,8 @@ namespace dsn
                 {
                     for (;;)
                     {
-                        char magic_size_buffer[sizeof(int) + sizeof(size_t)];
-                        if (fread(magic_size_buffer, sizeof(size_t), 1, fd) != sizeof(sizeof(int) + sizeof(size_t)))
+                        char magic_size_buffer[sizeof(int) * 2];
+                        if (fread(magic_size_buffer, sizeof(int) * 2, 1, fd) != 1)
                         {
                             break;
                         }
@@ -207,14 +215,14 @@ namespace dsn
                         {
                             break;
                         }
-                        size_t size = *reinterpret_cast<size_t*>(magic_size_buffer + sizeof(int));
+                        int size = *reinterpret_cast<int*>(magic_size_buffer + sizeof(int));
                         std::shared_ptr<char> buffer(new char[size]);
                         //TODO error handling, check size or check std::bad_alloc
-                        if (fread(buffer.get(), size, 1, fd) != size)
+                        if (fread(buffer.get(), size, 1, fd) != 1)
                         {
                             break;
                         }
-                        _offset += size;
+                        _offset += sizeof(int) * 2 + size;
                         dsn::blob blob_wrapper(buffer, size);
                         binary_reader reader(blob_wrapper);
                         int8_t op_type;
@@ -227,7 +235,7 @@ namespace dsn
                             ::dsn::blob data;
                             unmarshall(reader, node);
                             unmarshall(reader, data);
-                            create_node_internal(node, data);
+                            create_node_internal(node, data).end_tracking();
                             break;
                         }
                         case operation_type::delete_node:
@@ -236,7 +244,7 @@ namespace dsn
                             bool recursively_delete;
                             unmarshall(reader, node);
                             unmarshall(reader, recursively_delete);
-                            delete_node_internal(node, recursively_delete);
+                            delete_node_internal(node, recursively_delete).end_tracking();
                             break;
                         }
                         case operation_type::set_data:
@@ -245,13 +253,13 @@ namespace dsn
                             ::dsn::blob data;
                             unmarshall(reader, node);
                             unmarshall(reader, data);
-                            set_data_internal(node, data);
+                            set_data_internal(node, data).end_tracking();
                             break;
                         }
                         default:
                             //The log is complete but its content is modified by cosmic ray. This is unacceptable
                             dassert(false, "meta state server log corrupted");
-                        }
+                        }   
                     }
                     fclose(fd);
                 }
@@ -275,9 +283,8 @@ namespace dsn
             binary_writer log_writer;
             int magic = 0xdeadbeef;
             log_writer.write(magic);
-            log_writer.write(static_cast<size_t>(log_writer.total_size()));
-            log_writer.write(log_writer.get_buffer());
-            
+            log_writer.write(temperal_writer.get_buffer());
+
             size_t log_size = log_writer.total_size();
             _log_lock.lock();
             uint64_t log_offset = _offset;
@@ -292,16 +299,17 @@ namespace dsn
             auto continuation_task_ptr = continuation_task.get();
             _task_queue.emplace(std::move(continuation_task));
             _log_lock.unlock();
+            blob shared_blob = log_writer.get_buffer();
              file::write(
                 _log,
-                log_writer.get_buffer().buffer_ptr(),
+                shared_blob.buffer_ptr(),
                 log_writer.total_size(),
                 log_offset,
                 META_STATE_SERVICE_SIMPLE_INTERNAL_TASK,
                 this,
-                [=](error_code err, size_t bytes)
+                [this, continuation_task_ptr, shared_blob, log_size](error_code err, size_t bytes)
                 {
-                    log_continuation(continuation_task_ptr, !err && bytes == log_size);
+                    log_continuation(continuation_task_ptr, err == ERR_OK && bytes == log_size);
                 }
                 );
              return returned_task_ptr;
@@ -322,8 +330,7 @@ namespace dsn
             binary_writer log_writer;
             int magic = 0xdeadbeef;
             log_writer.write(magic);
-            log_writer.write(static_cast<size_t>(log_writer.total_size()));
-            log_writer.write(log_writer.get_buffer());
+            log_writer.write(temperal_writer.get_buffer());
 
             size_t log_size = log_writer.total_size();
             _log_lock.lock();
@@ -341,16 +348,17 @@ namespace dsn
 
             _log_lock.unlock();
 
+            blob shared_blob = log_writer.get_buffer();
             file::write(
                 _log,
-                log_writer.get_buffer().buffer_ptr(),
+                shared_blob.buffer_ptr(),
                 log_writer.total_size(),
                 log_offset,
                 META_STATE_SERVICE_SIMPLE_INTERNAL_TASK,
                 this,
-                [=](error_code err, size_t bytes)
+                [this, continuation_task_ptr, shared_blob, log_size](error_code err, size_t bytes)
                 {
-                    log_continuation(continuation_task_ptr, !err && bytes == log_size);
+                    log_continuation(continuation_task_ptr, err == ERR_OK && bytes == log_size);
                 }
                 );
             return returned_task_ptr;
@@ -426,8 +434,7 @@ namespace dsn
             binary_writer log_writer;
             int magic = 0xdeadbeef;
             log_writer.write(magic);
-            log_writer.write(static_cast<size_t>(log_writer.total_size()));
-            log_writer.write(log_writer.get_buffer());
+            log_writer.write(temperal_writer.get_buffer());
 
             size_t log_size = log_writer.total_size();
             _log_lock.lock();
@@ -445,19 +452,25 @@ namespace dsn
 
             _log_lock.unlock();
 
+            blob shared_blob = log_writer.get_buffer();
             file::write(
                 _log,
-                log_writer.get_buffer().buffer_ptr(),
+                shared_blob.buffer_ptr(),
                 log_writer.total_size(),
                 log_offset,
                 META_STATE_SERVICE_SIMPLE_INTERNAL_TASK,
                 this,
-                [=](error_code err, size_t bytes)
+                [this, continuation_task_ptr, shared_blob, log_size](error_code err, size_t bytes)
                 {
-                    log_continuation(continuation_task_ptr, !err && bytes == log_size);
+                    log_continuation(continuation_task_ptr, err == ERR_OK && bytes == log_size);
                 }
                 );
             return returned_task_ptr;
+        }
+
+        meta_state_service_simple::~meta_state_service_simple()
+        {
+            dsn_file_close(_log);
         }
 
         task_ptr meta_state_service_simple::get_children(

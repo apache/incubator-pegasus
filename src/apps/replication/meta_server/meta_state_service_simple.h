@@ -93,6 +93,7 @@ namespace dsn
                 task_code cb_code,
                 const err_stringv_callback& cb_get_children,
                 clientlet* tracker = nullptr) override;
+            ~meta_state_service_simple();
 
         private:
 

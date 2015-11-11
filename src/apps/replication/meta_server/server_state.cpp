@@ -88,11 +88,8 @@ void server_state::initialize()
 
 error_code server_state::on_become_leader()
 {
-    zauto_write_lock l(_lock);
-    
     _apps.clear();
     _nodes.clear();
-
     auto err = sync_apps_from_remote_storage();
     if (err == ERR_OBJECT_NOT_FOUND)
         err = initialize_apps();
@@ -211,8 +208,7 @@ error_code server_state::initialize_apps()
 error_code server_state::sync_apps_from_remote_storage()
 {
     error_code err = ERR_OK;
-    clientlet tracker;
-
+    clientlet tracker(1);
     // get all apps
     std::string root = "/apps";
     _storage->get_children(root, LPC_META_STATE_SVC_CALLBACK,
@@ -236,12 +232,12 @@ error_code server_state::sync_apps_from_remote_storage()
                             unmarshall(reader, state);
 
                             int app_id = state.app_id;
-
+                            dassert(app_id != 0, "invalid app id");
                             {
                                 zauto_write_lock l(_lock);
                                 if (app_id > _apps.size())
                                 {
-                                    _apps.resize(app_id - 1);
+                                    _apps.resize(app_id);
                                 }
                                 _apps[app_id - 1] = state;
                                 _apps[app_id - 1].partitions.resize(state.partition_count);
@@ -263,6 +259,7 @@ error_code server_state::sync_apps_from_remote_storage()
                                             binary_reader reader(value);
                                             partition_configuration pc;
                                             unmarshall(reader, pc);
+                                            zauto_write_lock l(_lock);
                                             _apps[app_id - 1].partitions[i] = pc;
                                         }
                                         else
