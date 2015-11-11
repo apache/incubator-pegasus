@@ -81,11 +81,53 @@ namespace dsn
             t->bind_and_enqueue(
                 [&](meta_state_service::err_callback& cb)
                 {
-                    return std::bind(cb, err);
+                    return bind(cb, err);
                 },
                 delay_milliseconds
                 );
         }
+
+        void meta_state_service_simple::write_log(blob&& log_blob, std::function<error_code()> internal_operation, task_ptr task)
+        {
+            _log_lock.lock();
+            uint64_t log_offset = _offset;
+            _offset += log_blob.length();
+            auto continuation_task = std::unique_ptr<operation>(new operation(false, [=](bool log_succeed)
+            {
+                dassert(log_succeed, "we cannot handle logging failure now");
+                __err_cb_bind_and_enqueue(task, internal_operation(), 0);
+            }));
+            auto continuation_task_ptr = continuation_task.get();
+            _task_queue.emplace(move(continuation_task));
+            _log_lock.unlock();
+
+            file::write(
+                _log,
+                log_blob.buffer_ptr(),
+                log_blob.length(),
+                log_offset,
+                LPC_META_STATE_SERVICE_SIMPLE_INTERNAL,
+                this,
+                [=](error_code err, size_t bytes)
+                {
+                    dassert(err == ERR_OK && bytes == log_blob.length(), "we cannot handle logging failure now");
+                    _log_lock.lock();
+                    continuation_task_ptr->done = true;
+                    while (!_task_queue.empty())
+                    {
+                        if (!_task_queue.front()->done)
+                        {
+                            break;
+                        }
+                        _task_queue.front()->cb(true);
+                        _task_queue.pop();
+                    }
+                    _log_lock.unlock();
+                }
+                );
+        }
+
+
 
         error_code meta_state_service_simple::create_node_internal(const std::string& node, const blob& value)
         {
@@ -97,6 +139,10 @@ namespace dsn
 
             std::string name, parent;
             auto err = extract_name_parent_from_path(path, name, parent);
+            if (err != ERR_OK)
+            {
+                return err;
+            }
 
             auto parent_it = _quick_map.find(parent);
             if (parent_it == _quick_map.end())
@@ -148,6 +194,10 @@ namespace dsn
 
             std::string name, parent;
             auto err = extract_name_parent_from_path(path, name, parent);
+            if (err != ERR_OK)
+            {
+                return err;
+            }
 
             auto parent_it = _quick_map.find(parent);
             dassert(parent_it != _quick_map.end(), "unable to find parent node");
@@ -169,23 +219,6 @@ namespace dsn
             return ERR_OK;
         }
 
-        void meta_state_service_simple::log_continuation(operation* succeed_operation, bool log_succeed)
-        {
-            dassert(log_succeed, "we cannot handle logging failure now");
-            _log_lock.lock();
-            succeed_operation->done = true;
-            while (!_task_queue.empty())
-            {
-                if (!_task_queue.front()->done)
-                {
-                    break;
-                }
-                _task_queue.front()->cb(log_succeed);
-                _task_queue.pop();
-            }
-            _log_lock.unlock();
-        }
-
         error_code meta_state_service_simple::initialize()
         {
             _offset = 0;
@@ -196,62 +229,55 @@ namespace dsn
                 {
                     for (;;)
                     {
-                        char magic_size_buffer[sizeof(int) + sizeof(size_t)];
-                        if (fread(magic_size_buffer, sizeof(size_t), 1, fd) != sizeof(sizeof(int) + sizeof(size_t)))
+                        log_header header;
+                        if (fread(&header, sizeof(log_header), 1, fd) != 1)
                         {
                             break;
                         }
-                        
-                        int magic = *reinterpret_cast<int*>(magic_size_buffer);
-                        if (magic != 0xdeadbeef)
+                        if (header.magic != log_header::default_magic)
                         {
                             break;
                         }
-                        size_t size = *reinterpret_cast<size_t*>(magic_size_buffer + sizeof(int));
-                        std::shared_ptr<char> buffer(new char[size]);
-                        //TODO error handling, check size or check std::bad_alloc
-                        if (fread(buffer.get(), size, 1, fd) != size)
+                        std::shared_ptr<char> buffer(new char[header.size]);
+                        if (fread(buffer.get(), header.size, 1, fd) != 1)
                         {
                             break;
                         }
-                        _offset += size;
-                        dsn::blob blob_wrapper(buffer, size);
+                        _offset += sizeof(header) + header.size;
+                        blob blob_wrapper(buffer, header.size);
                         binary_reader reader(blob_wrapper);
-                        int8_t op_type;
+                        int op_type;
                         unmarshall(reader, op_type);
                         switch (static_cast<operation_type>(op_type))
                         {
                         case operation_type::create_node:
                         {
                             std::string node;
-                            ::dsn::blob data;
-                            unmarshall(reader, node);
-                            unmarshall(reader, data);
-                            create_node_internal(node, data);
+                            blob data;
+                            create_node_log::parse(reader, node, data);
+                            create_node_internal(node, data).end_tracking();
                             break;
                         }
                         case operation_type::delete_node:
                         {
                             std::string node;
                             bool recursively_delete;
-                            unmarshall(reader, node);
-                            unmarshall(reader, recursively_delete);
-                            delete_node_internal(node, recursively_delete);
+                            delete_node_log::parse(reader, node, recursively_delete);
+                            delete_node_internal(node, recursively_delete).end_tracking();
                             break;
                         }
                         case operation_type::set_data:
                         {
                             std::string node;
-                            ::dsn::blob data;
-                            unmarshall(reader, node);
-                            unmarshall(reader, data);
-                            set_data_internal(node, data);
+                            blob data;
+                            set_data_log::parse(reader, node, data);
+                            set_data_internal(node, data).end_tracking();
                             break;
                         }
                         default:
                             //The log is complete but its content is modified by cosmic ray. This is unacceptable
                             dassert(false, "meta state server log corrupted");
-                        }
+                        }   
                     }
                     fclose(fd);
                 }
@@ -267,44 +293,15 @@ namespace dsn
             const blob& value,
             clientlet* tracker )
         {
-            binary_writer temperal_writer;
-            marshall(temperal_writer, static_cast<int8_t>(operation_type::create_node));
-            marshall(temperal_writer, node);
-            marshall(temperal_writer, value);
-
-            binary_writer log_writer;
-            int magic = 0xdeadbeef;
-            log_writer.write(magic);
-            log_writer.write(static_cast<size_t>(log_writer.total_size()));
-            log_writer.write(log_writer.get_buffer());
-            
-            size_t log_size = log_writer.total_size();
-            _log_lock.lock();
-            uint64_t log_offset = _offset;
-            _offset += log_writer.total_size();
-
-            auto returned_task_ptr = tasking::create_late_task(cb_code, cb_create, 0, tracker);
-            auto continuation_task = std::make_unique<operation>(false, [=](bool log_succeed)
-            {
-                dassert(log_succeed, "we cannot handle logging failure now");
-                __err_cb_bind_and_enqueue(returned_task_ptr, create_node_internal(node, value), 0);
-            });
-            auto continuation_task_ptr = continuation_task.get();
-            _task_queue.emplace(std::move(continuation_task));
-            _log_lock.unlock();
-             file::write(
-                _log,
-                log_writer.get_buffer().buffer_ptr(),
-                log_writer.total_size(),
-                log_offset,
-                META_STATE_SERVICE_SIMPLE_INTERNAL_TASK,
-                this,
-                [=](error_code err, size_t bytes)
-                {
-                    log_continuation(continuation_task_ptr, !err && bytes == log_size);
-                }
+            auto task = tasking::create_late_task(cb_code, cb_create, 0, tracker);
+            write_log(
+                create_node_log::get_log(node, value),
+                [=]{
+                    return create_node_internal(node, value);
+                },
+                task
                 );
-             return returned_task_ptr;
+            return task;
         }
 
         task_ptr meta_state_service_simple::delete_node(
@@ -314,46 +311,15 @@ namespace dsn
             const err_callback& cb_delete,
             clientlet* tracker)
         {
-            binary_writer temperal_writer;
-            marshall(temperal_writer, static_cast<int8_t>(operation_type::delete_node));
-            marshall(temperal_writer, node);
-            marshall(temperal_writer, recursively_delete);
-
-            binary_writer log_writer;
-            int magic = 0xdeadbeef;
-            log_writer.write(magic);
-            log_writer.write(static_cast<size_t>(log_writer.total_size()));
-            log_writer.write(log_writer.get_buffer());
-
-            size_t log_size = log_writer.total_size();
-            _log_lock.lock();
-            uint64_t log_offset = _offset;
-            _offset += log_writer.total_size();
-
-            auto returned_task_ptr = tasking::create_late_task(cb_code, cb_delete, 0, tracker);
-            auto continuation_task = std::make_unique<operation>(false, [=](bool log_succeed)
-            {
-                dassert(log_succeed, "we cannot handle logging failure now");
-                __err_cb_bind_and_enqueue(returned_task_ptr, delete_node_internal(node, recursively_delete), 0);
-            });
-            auto continuation_task_ptr = continuation_task.get();
-            _task_queue.emplace(std::move(continuation_task));
-
-            _log_lock.unlock();
-
-            file::write(
-                _log,
-                log_writer.get_buffer().buffer_ptr(),
-                log_writer.total_size(),
-                log_offset,
-                META_STATE_SERVICE_SIMPLE_INTERNAL_TASK,
-                this,
-                [=](error_code err, size_t bytes)
-                {
-                    log_continuation(continuation_task_ptr, !err && bytes == log_size);
-                }
+            auto task = tasking::create_late_task(cb_code, cb_delete, 0, tracker);
+            write_log(
+                delete_node_log::get_log(node, recursively_delete),
+                [=] {
+                    return delete_node_internal(node, recursively_delete);
+                },
+                task
                 );
-            return returned_task_ptr;
+            return task;
         }
 
         task_ptr meta_state_service_simple::node_exist(
@@ -418,46 +384,15 @@ namespace dsn
             const err_callback& cb_set_data,
             clientlet* tracker)
         {
-            binary_writer temperal_writer;
-            marshall(temperal_writer, static_cast<int8_t>(operation_type::set_data));
-            marshall(temperal_writer, node);
-            marshall(temperal_writer, value);
-
-            binary_writer log_writer;
-            int magic = 0xdeadbeef;
-            log_writer.write(magic);
-            log_writer.write(static_cast<size_t>(log_writer.total_size()));
-            log_writer.write(log_writer.get_buffer());
-
-            size_t log_size = log_writer.total_size();
-            _log_lock.lock();
-            uint64_t log_offset = _offset;
-            _offset += log_writer.total_size();
-
-            auto returned_task_ptr = tasking::create_late_task(cb_code, cb_set_data, 0, tracker);
-            auto continuation_task = std::make_unique<operation>(false, [=](bool log_succeed)
-            {
-                dassert(log_succeed, "we cannot handle logging failure now");
-                __err_cb_bind_and_enqueue(returned_task_ptr, set_data_internal(node, value), 0);
-            });
-            auto continuation_task_ptr = continuation_task.get();
-            _task_queue.emplace(std::move(continuation_task));
-
-            _log_lock.unlock();
-
-            file::write(
-                _log,
-                log_writer.get_buffer().buffer_ptr(),
-                log_writer.total_size(),
-                log_offset,
-                META_STATE_SERVICE_SIMPLE_INTERNAL_TASK,
-                this,
-                [=](error_code err, size_t bytes)
-                {
-                    log_continuation(continuation_task_ptr, !err && bytes == log_size);
-                }
+            auto task = tasking::create_late_task(cb_code, cb_set_data, 0, tracker);
+            write_log(
+                set_data_log::get_log(node, value),
+                [=] {
+                    return set_data_internal(node, value);
+                },
+                task
                 );
-            return returned_task_ptr;
+            return task;
         }
 
         task_ptr meta_state_service_simple::get_children(
@@ -492,10 +427,15 @@ namespace dsn
                     tracker,
                     [=]() mutable
                     {
-                        cb_get_children(ERR_OK, std::move(result));
+                        cb_get_children(ERR_OK, move(result));
                     }
                     );
             }
+        }
+
+        meta_state_service_simple::~meta_state_service_simple()
+        {
+            dsn_file_close(_log);
         }
     }
 }
