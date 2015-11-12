@@ -107,7 +107,7 @@ namespace dsn
             {
                 int magic;
                 size_t size;
-                static constexpr int default_magic = 0xdeadbeef;
+                static const int default_magic = 0xdeadbeef;
                 log_header() : magic(default_magic), size(0)
                 {}
             };
