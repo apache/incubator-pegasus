@@ -33,9 +33,9 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#pragma once
+# pragma once
 
-#include "replication_common.h"
+# include "replication_common.h"
 
 using namespace dsn;
 using namespace dsn::service;
@@ -57,13 +57,10 @@ public:
     meta_service(server_state* state);
     ~meta_service(void);
 
-    void start(const char* data_dir, bool clean_state);
+    void start();
     bool stop();
 
 private:
-    void on_request(dsn_message_t request);
-    void replay_log(const char* log);
-
     // partition server & client => meta server
     // query partition configuration
     void on_query_configuration_by_node(dsn_message_t req);
@@ -71,11 +68,8 @@ private:
 
     // update configuration
     void on_update_configuration(dsn_message_t req);
+    void update_configuration_on_machine_failure(std::shared_ptr<configuration_update_request>& update);
 
-    void update_configuration(std::shared_ptr<configuration_update_request>& update);
-    void on_log_completed(error_code err, size_t size, blob buffer, std::shared_ptr<configuration_update_request> req, dsn_message_t resp);
-    void update_configuration(const configuration_update_request& request, /*out*/ configuration_update_response& response);
-      
     // load balance actions
     void on_load_balance_start();
     void on_load_balance_timer();
@@ -85,16 +79,11 @@ private:
     friend class meta_server_failure_detector;
     friend class ::dsn::replication::replication_checker;
 
-    meta_server_failure_detector *_failure_detector;
+    meta_server_failure_detector *_failure_detector;    
     server_state                 *_state;
     load_balancer                *_balancer;
     dsn::task_ptr                _balancer_timer;
     replication_options          _opts;
-    std::string                  _data_dir;
     bool                         _started;
-
-    zlock                        _log_lock;
-    dsn_handle_t                 _log;
-    uint64_t                     _offset;
 }; 
 

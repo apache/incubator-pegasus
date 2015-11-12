@@ -48,7 +48,7 @@
 //
 // then it is done.
 //
-static void module_init();
+void module_init();
 
 # if defined(__GNUC__) || defined(_WIN32)
 # else

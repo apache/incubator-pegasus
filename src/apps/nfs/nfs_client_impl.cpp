@@ -85,7 +85,9 @@ namespace dsn {
 
                 filec = new file_context(ureq, resp.file_list[i], resp.size_list[i]);
                 ureq->file_context_map.insert(std::pair<std::string, file_context*>(
-                    ureq->file_size_req.dst_dir + resp.file_list[i], filec));
+                    utils::filesystem::path_combine(ureq->file_size_req.dst_dir, resp.file_list[i]), 
+                    filec
+                    ));
 
                 //dinfo("this file size is %d, name is %s", size, resp.file_list[i].c_str());
 

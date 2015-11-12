@@ -36,7 +36,8 @@
 #pragma once
 
 # include <dsn/dist/failure_detector.h>
-#include "replication_common.h"
+# include <dsn/dist/distributed_lock_service.h>
+# include "replication_common.h"
 
 using namespace dsn;
 using namespace dsn::service;
@@ -66,8 +67,8 @@ public:
         return _primary_address;
     }
     
-    void set_primary(rpc_address primary);    
-
+    bool acquire_leader_lock();
+    
     // client side
     virtual void on_master_disconnected(const std::vector<::dsn::rpc_address>& nodes)
     {
@@ -86,6 +87,9 @@ public:
     virtual void on_ping(const fd::beacon_msg& beacon, ::dsn::rpc_replier<fd::beacon_ack>& reply);
 
 private:
+    void set_primary(rpc_address primary);
+
+private:
     friend class ::dsn::replication::replication_checker;
 
     volatile bool _is_primary;
@@ -95,5 +99,11 @@ private:
 
     server_state *_state;
     meta_service *_svc;
+
+    ::dsn::dist::distributed_lock_service *_lock_svc;
+    task_ptr    _lock_grant_task;
+    task_ptr    _lock_expire_task;
+    std::string _primary_lock_id;
+    std::string _local_owner_id;
 };
 

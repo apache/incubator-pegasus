@@ -33,16 +33,51 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/dist/replication.h>
-#include "server_state.h"
-#include "meta_service.h"
+# include <dsn/dist/replication.h>
+# include "server_state.h"
+# include "meta_service.h"
+# include "distributed_lock_service_simple.h"
+# include "meta_state_service_simple.h"
+# include <dsn/internal/factory_store.h>
 
 namespace dsn {
     namespace service {
 
+        bool register_component_provider(
+            const char* name,
+            ::dsn::dist::distributed_lock_service::factory f)
+        {
+            return dsn::utils::factory_store<::dsn::dist::distributed_lock_service>::register_factory(
+                name, 
+                f,
+                PROVIDER_TYPE_MAIN);
+        }
+
+        bool register_component_provider(
+            const char* name,
+            ::dsn::dist::meta_state_service::factory f)
+        {
+            return dsn::utils::factory_store<::dsn::dist::meta_state_service>::register_factory(
+                name,
+                f,
+                PROVIDER_TYPE_MAIN);
+        }
+
         meta_service_app::meta_service_app()
         {
             _service = nullptr;
+
+            register_component_provider(
+                "distributed_lock_service_simple",
+                ::dsn::dist::distributed_lock_service::create<::dsn::dist::distributed_lock_service_simple>
+                );
+
+            register_component_provider(
+                "meta_state_service_simple",
+                ::dsn::dist::meta_state_service::create<::dsn::dist::meta_state_service_simple>
+                );
+
+            // TODO: register more provides here used by meta servers
         }
 
         meta_service_app::~meta_service_app()
@@ -55,8 +90,8 @@ namespace dsn {
             _state = new server_state();
             _service = new meta_service(_state);
 
-            _state->init_app();
-            _service->start(argv[0], false);
+            _state->initialize();
+            _service->start();
             return ERR_OK;
         }
 

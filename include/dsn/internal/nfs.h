@@ -72,6 +72,8 @@ namespace dsn {
             return new T(node);
         }
 
+        typedef nfs_node* (*factory)(service_node*);
+
     public:
         nfs_node(service_node* node) : _node(node) {}
 

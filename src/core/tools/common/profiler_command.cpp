@@ -226,7 +226,7 @@ namespace dsn {
 
                 if ((task_id != TASK_CODE_INVALID) && (counter_type != PREF_COUNTER_INVALID) && (s_spec_profilers[task_id].ptr[counter_type] != NULL) && (s_spec_profilers[task_id].is_profile != false))
                 {
-                    ss << dsn_task_code_to_string(i) << ":" << counter_info_ptr[counter_type]->title << ":" << percentail_counter_string[percentile_type] << ":";
+                    ss << dsn_task_code_to_string(task_id) << ":" << counter_info_ptr[counter_type]->title << ":" << percentail_counter_string[percentile_type] << ":";
                     if (counter_info_ptr[counter_type]->type != COUNTER_TYPE_NUMBER_PERCENTILES)
                     {
                         ss << s_spec_profilers[task_id].ptr[counter_type]->get_value() << " ";
@@ -245,6 +245,56 @@ namespace dsn {
                             ss << dsn_task_code_to_string(i) << ":" << counter_info_ptr[j]->title << ":" << percentail_counter_string[percentile_type] << ":" << s_spec_profilers[task_id].ptr[j]->get_percentile(percentile_type) << " ";
                         }
                     }
+                }
+            }
+            return ss.str();
+        }
+
+        std::string query_data_handler(const std::vector<std::string>& args)
+        {
+            int task_id;
+            perf_counter_ptr_type counter_type;
+            counter_percentile_type percentile_type;
+            std::stringstream ss;
+
+            for (int i = 0; i <= dsn_task_code_max(); ++i)
+            {
+                task_id = i;
+
+                if ((i == TASK_CODE_INVALID) || (s_spec_profilers[task_id].is_profile == false))
+                    continue;
+
+                for (int j = 0; j < COUNTER_PERCENTILE_COUNT; ++j)
+                {
+                    percentile_type = static_cast<counter_percentile_type>(j);
+                    ss << "<tr>" << "<td>" << dsn_task_code_to_string(task_id) << "</td>";
+                    ss << "<td>" << percentail_counter_string[percentile_type] << "</td>";
+
+                    for (int k = 0; k < PREF_COUNTER_COUNT; k++)
+                    {
+                        counter_type = static_cast<perf_counter_ptr_type>(k);
+
+                        if (s_spec_profilers[task_id].ptr[counter_type] == NULL)
+                        {
+                            ss << "<td></td>";
+                        }
+                        else
+                        {
+                            if (counter_info_ptr[counter_type]->type == COUNTER_TYPE_NUMBER_PERCENTILES)
+                            {
+                                ss << "<td>" << s_spec_profilers[task_id].ptr[counter_type]->get_percentile(percentile_type) << "</td>";
+                            }
+                            else
+                            {
+                                auto res = s_spec_profilers[task_id].ptr[counter_type]->get_value();
+                                if (std::isnan(res))
+                                    ss << "<td>" << "NAN" << "</td>";
+                                else
+                                    ss << "<td>" << res << "</td>";
+                            }
+                        }
+                    }
+                    ss << "</tr>";
                 }
             }
             return ss.str();

@@ -47,33 +47,53 @@ namespace dsn
             : public distributed_lock_service, public clientlet
         {
         public:
-            virtual void create_lock(const std::string& lock_id,
-                const err_callback& cb) override;
+            virtual error_code initialize() override;
 
-            virtual void destroy_lock(const std::string& lock_id,
-                const err_callback& cb) override;
-
-            virtual void lock(const std::string& lock_id,
+            virtual std::pair<task_ptr, task_ptr> lock(
+                const std::string& lock_id,
                 const std::string& myself_id,
                 bool create_if_not_exist,
-                const err_string_callback& cb) override;
+                task_code lock_cb_code,
+                const lock_callback& lock_cb,
+                task_code lease_expire_code,
+                const lock_callback& lease_expire_callback
+                ) override;
 
-            virtual void unlock(const std::string& lock_id,
+            virtual task_ptr cancel_pending_lock(
+                const std::string& lock_id,
+                const std::string& myself_id,
+                task_code cb_code,
+                const lock_callback& cb) override;
+
+            virtual task_ptr unlock(
+                const std::string& lock_id,
                 const std::string& myself_id,
                 bool destroy,
+                task_code cb_code,
                 const err_callback& cb) override;
-
-            virtual void query_lock(const std::string& lock_id,
-                const err_string_callback& cb) override;
+            
+            virtual task_ptr query_lock(
+                const std::string& lock_id,
+                task_code cb_code,
+                const lock_callback& cb) override;
 
         private:
-            void random_lock_lease_expire();
+            void random_lock_lease_expire(const std::string& lock_id);
 
         private:
+            struct lock_wait_info
+            {
+                task_ptr grant_callback;
+                task_ptr lease_callback;
+                std::string owner;
+            };
+
             struct lock_info
             {
                 std::string owner;
-                err_string_callback cb;
+                uint64_t    version;
+                task_ptr    lease_callback;
+                std::list<lock_wait_info> pending_list;
             };
             
             typedef std::unordered_map<std::string, lock_info> locks;

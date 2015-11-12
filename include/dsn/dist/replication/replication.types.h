@@ -506,17 +506,7 @@ namespace dsn { namespace replication {
         int32_t pidx;
     };
 
-    inline void marshall(::dsn::binary_writer& writer, const global_partition_id& val)
-    {
-        marshall(writer, val.app_id);
-        marshall(writer, val.pidx);
-    };
-
-    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ global_partition_id& val)
-    {
-        unmarshall(reader, val.app_id);
-        unmarshall(reader, val.pidx);
-    };
+    DEFINE_POD_SERIALIZATION(global_partition_id)
 
     // ---------- mutation_header -------------
     struct mutation_header
@@ -528,23 +518,7 @@ namespace dsn { namespace replication {
         int64_t last_committed_decree;
     };
 
-    inline void marshall(::dsn::binary_writer& writer, const mutation_header& val)
-    {
-        marshall(writer, val.gpid);
-        marshall(writer, val.ballot);
-        marshall(writer, val.decree);
-        marshall(writer, val.log_offset);
-        marshall(writer, val.last_committed_decree);
-    };
-
-    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ mutation_header& val)
-    {
-        unmarshall(reader, val.gpid);
-        unmarshall(reader, val.ballot);
-        unmarshall(reader, val.decree);
-        unmarshall(reader, val.log_offset);
-        unmarshall(reader, val.last_committed_decree);
-    };
+    DEFINE_POD_SERIALIZATION(mutation_header)
 
     // ---------- mutation_data -------------
     struct mutation_data
@@ -611,21 +585,7 @@ namespace dsn { namespace replication {
         partition_status status;
     };
 
-    inline void marshall(::dsn::binary_writer& writer, const replica_configuration& val)
-    {
-        marshall(writer, val.gpid);
-        marshall(writer, val.ballot);
-        marshall(writer, val.primary);
-        marshall(writer, val.status);
-    };
-
-    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ replica_configuration& val)
-    {
-        unmarshall(reader, val.gpid);
-        unmarshall(reader, val.ballot);
-        unmarshall(reader, val.primary);
-        unmarshall(reader, val.status);
-    };
+    DEFINE_POD_SERIALIZATION(replica_configuration)
 
     // ---------- prepare_msg -------------
     struct prepare_msg

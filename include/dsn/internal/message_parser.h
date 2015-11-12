@@ -27,7 +27,7 @@
 /*
  * Description:
  *     message parser base prototype, to support different kinds
- *     of message headers (so as to interact with them)
+ *     of message headers (so as to interact among them)
  *
  * Revision history:
  *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
@@ -48,6 +48,8 @@ namespace dsn
         {
             return new T(buffer_block_size);
         }
+
+        typedef message_parser*  (*factory)(int);
 
     public:
         message_parser(int buffer_block_size);

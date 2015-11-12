@@ -48,6 +48,8 @@ public:
         return new T(inner_provider);
     }
 
+    typedef env_provider* (*factory)(env_provider*);
+
 public:
     env_provider(env_provider* inner_provider);
 

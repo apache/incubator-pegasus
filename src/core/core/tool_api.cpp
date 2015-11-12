@@ -164,92 +164,92 @@ namespace dsn {
 
         namespace internal_use_only
         {
-            bool register_toollet(const char* name, toollet_factory f, int type)
+            bool register_toollet(const char* name, toollet::factory f, int type)
             {
                 return dsn::utils::factory_store<toollet>::register_factory(name, f, type);
             }
 
-            bool register_tool(const char* name, tool_app_factory f, int type)
+            bool register_tool(const char* name, tool_app::factory f, int type)
             {
                 return dsn::utils::factory_store<tool_app>::register_factory(name, f, type);
             }
 
-            bool register_component_provider(const char* name, timer_factory f, int type)
+            bool register_component_provider(const char* name, timer_service::factory f, int type)
             {
                 return dsn::utils::factory_store<timer_service>::register_factory(name, f, type);
             }
 
-            bool register_component_provider(const char* name, task_queue_factory f, int type)
+            bool register_component_provider(const char* name, task_queue::factory f, int type)
             {
                 return dsn::utils::factory_store<task_queue>::register_factory(name, f, type);
             }
 
-            bool register_component_provider(const char* name, task_worker_factory f, int type)
+            bool register_component_provider(const char* name, task_worker::factory f, int type)
             {
                 return dsn::utils::factory_store<task_worker>::register_factory(name, f, type);
             }
 
-            bool register_component_provider(const char* name, admission_controller_factory f, int type)
+            bool register_component_provider(const char* name, admission_controller::factory f, int type)
             {
                 return dsn::utils::factory_store<admission_controller>::register_factory(name, f, type);
             }
 
-            bool register_component_provider(const char* name, lock_factory f, int type)
+            bool register_component_provider(const char* name, lock_provider::factory f, int type)
             {
                 return dsn::utils::factory_store<lock_provider>::register_factory(name, f, type);
             }
 
-            bool register_component_provider(const char* name, lock_nr_factory f, int type)
+            bool register_component_provider(const char* name, lock_nr_provider::factory f, int type)
             {
                 return dsn::utils::factory_store<lock_nr_provider>::register_factory(name, f, type);
             }
 
-            bool register_component_provider(const char* name, read_write_lock_factory f, int type)
+            bool register_component_provider(const char* name, rwlock_nr_provider::factory f, int type)
             {
                 return dsn::utils::factory_store<rwlock_nr_provider>::register_factory(name, f, type);
             }
 
-            bool register_component_provider(const char* name, semaphore_factory f, int type)
+            bool register_component_provider(const char* name, semaphore_provider::factory f, int type)
             {
                 return dsn::utils::factory_store<semaphore_provider>::register_factory(name, f, type);
             }
 
-            bool register_component_provider(const char* name, network_factory f, int type)
+            bool register_component_provider(const char* name, network::factory f, int type)
             {
                 return dsn::utils::factory_store<network>::register_factory(name, f, type);
             }
 
-            bool register_component_provider(const char* name, aio_factory f, int type)
+            bool register_component_provider(const char* name, aio_provider::factory f, int type)
             {
                 return dsn::utils::factory_store<aio_provider>::register_factory(name, f, type);
             }
 
-            bool register_component_provider(const char* name, env_factory f, int type)
+            bool register_component_provider(const char* name, env_provider::factory f, int type)
             {
                 return dsn::utils::factory_store<env_provider>::register_factory(name, f, type);
             }
 
-            bool register_component_provider(const char* name, perf_counter_factory f, int type)
+            bool register_component_provider(const char* name, perf_counter::factory f, int type)
             {
                 return dsn::utils::factory_store<perf_counter>::register_factory(name, f, type);
             }
 
-            bool register_component_provider(const char* name, nfs_factory f, int type)
+            bool register_component_provider(const char* name, nfs_node::factory f, int type)
             {
                 return dsn::utils::factory_store<nfs_node>::register_factory(name, f, type);
             }
 
-            bool register_component_provider(const char* name, logging_factory f, int type)
+            bool register_component_provider(const char* name, logging_provider::factory f, int type)
             {
                 return dsn::utils::factory_store<logging_provider>::register_factory(name, f, type);
             }
 
-            bool register_component_provider(const char* name, memory_factory f, int type)
+            bool register_component_provider(const char* name, memory_provider::factory f, int type)
             {
                 return dsn::utils::factory_store<memory_provider>::register_factory(name, f, type);
             }
 
-            bool register_component_provider(const char* name, message_parser_factory f, int type)
+            bool register_component_provider(const char* name, message_parser::factory f, int type)
             {
                 return dsn::utils::factory_store<message_parser>::register_factory(name, f, type);
             }

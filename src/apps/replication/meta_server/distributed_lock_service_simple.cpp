@@ -40,28 +40,130 @@ namespace dsn
 {
     namespace dist
     {
-        DEFINE_TASK_CODE(LPC_DIST_LOCK_SVC_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_META_SERVER);
+        DEFINE_TASK_CODE(LPC_DIST_LOCK_SVC_RANDOM_EXPIRE, TASK_PRIORITY_COMMON, THREAD_POOL_META_SERVER);
 
-        void distributed_lock_service_simple::create_lock(const std::string& lock_id,
-            const err_callback& cb)
+        static void __lock_cb_bind_and_enqueue(
+            task_ptr lock_task,
+            error_code err,
+            const std::string& owner,
+            uint64_t version,
+            int delay_milliseconds = 0
+            )
         {
-            dassert(!"not used", "");
+            auto t = dynamic_cast<safe_late_task<distributed_lock_service::lock_callback>*>(lock_task.get());
+
+            t->bind_and_enqueue(
+                [&](distributed_lock_service::lock_callback& cb)
+                {
+                    return std::bind(cb, err, owner, version);
+                },
+                delay_milliseconds
+                );
         }
 
-        void distributed_lock_service_simple::destroy_lock(const std::string& lock_id,
-            const err_callback& cb)
+        void distributed_lock_service_simple::random_lock_lease_expire(const std::string& lock_id)
         {
-            dassert(!"not used", "");
+            // TODO: let's test without failure first
+            return;
+
+            std::string owner;
+            uint64_t version;
+            lock_wait_info next;
+            task_ptr lease_callback;
+
+            {
+                zauto_lock l(_lock);
+                auto it = _dlocks.find(lock_id);
+                if (it != _dlocks.end())
+                {
+                    if (it->second.owner != "")
+                    {
+                        owner = it->second.owner;
+                        version = it->second.version;
+                        lease_callback = it->second.lease_callback;
+
+                        if (it->second.pending_list.size() > 0)
+                        {
+                            next = it->second.pending_list.front();
+                            
+                            it->second.owner = next.owner;
+                            it->second.version++;
+                            it->second.lease_callback = next.lease_callback;
+                            it->second.pending_list.pop_front();
+                        }
+                        else
+                        {
+                            next.owner = "";
+                            it->second.owner = "";
+                            it->second.version++;
+                            it->second.lease_callback = nullptr;
+                        }
+                    }
+                    else
+                        return;
+                }
+                else
+                {
+                    dsn_task_cancel_current_timer();
+                    return;
+                }
+            }
+            
+            __lock_cb_bind_and_enqueue(
+                lease_callback,
+                ERR_EXPIRED,
+                owner,
+                version,
+                0
+                );
+
+            if (next.owner != "")
+            {
+                version++;
+                error_code err = ERR_OK;
+                __lock_cb_bind_and_enqueue(
+                    next.grant_callback,
+                    err,
+                    next.owner,
+                    version,
+                    0
+                    );
+            }
         }
 
-        void distributed_lock_service_simple::lock(const std::string& lock_id,
+        error_code distributed_lock_service_simple::initialize()
+        {
+            return ERR_OK;
+        }
+
+        std::pair<task_ptr, task_ptr> distributed_lock_service_simple::lock(
+            const std::string& lock_id,
             const std::string& myself_id,
             bool create_if_not_exist,
-            const err_string_callback& cb)
+            task_code lock_cb_code,
+            const lock_callback& lock_cb,
+            task_code lease_expire_code,
+            const lock_callback& lease_expire_callback
+            )
         {
-            lock_info li;
+            task_ptr grant_cb = tasking::create_late_task(
+                lock_cb_code,
+                lock_cb,
+                0,
+                nullptr
+                );
+
+            task_ptr lease_cb = tasking::create_late_task(
+                lease_expire_code,
+                lease_expire_callback,
+                0,
+                nullptr
+                );
+
             error_code err;
             std::string cowner;
+            uint64_t version;
+            bool is_new = false;
 
             {
                 zauto_lock l(_lock);
@@ -72,11 +174,16 @@ namespace dsn
                         err = ERR_OBJECT_NOT_FOUND;
                     else
                     {
+                        lock_info li;
                         li.owner = myself_id;
-                        li.cb = cb;
+                        li.version = 1;
+                        li.lease_callback = lease_cb;
                         _dlocks.insert(locks::value_type(lock_id, li));
+
                         err = ERR_OK;
                         cowner = myself_id;
+                        version = 1;
+                        is_new = true;
                     }
                 }
                 else
@@ -84,34 +191,116 @@ namespace dsn
                     if (it->second.owner != "")
                     {
                         if (it->second.owner == myself_id)
+                        {
                             err = ERR_RECURSIVE_LOCK;
+                            cowner = myself_id;
+                            version = it->second.version;
+                        }   
                         else
-                            err = ERR_HOLD_BY_OTHERS;
-                        cowner = it->second.owner;
+                        {
+                            err = ERR_IO_PENDING;
+
+                            lock_wait_info wi;
+                            wi.grant_callback = grant_cb;
+                            wi.lease_callback = lease_cb;
+                            wi.owner = myself_id;
+                            it->second.pending_list.push_back(wi);
+                        }                        
                     }
                     else
                     {
+                        it->second.lease_callback = lease_cb;
                         it->second.owner = myself_id;
-                        it->second.cb = cb;
+                        it->second.version++;
+
                         err = ERR_OK;
                         cowner = myself_id;
+                        version = it->second.version;
                     }
                 }
             }
 
-            tasking::enqueue(
-                LPC_DIST_LOCK_SVC_CALLBACK,
+            if (is_new)
+            {
+                tasking::enqueue(
+                    LPC_DIST_LOCK_SVC_RANDOM_EXPIRE,
+                    this,
+                    [=](){ random_lock_lease_expire(lock_id); },
+                    0,
+                    1000,
+                    1000 * 60 * 5 // every 5 min
+                    );
+            }
+
+            if (err != ERR_IO_PENDING)
+            {
+                __lock_cb_bind_and_enqueue(
+                    grant_cb,
+                    err,
+                    cowner,
+                    version
+                    );
+            }
+
+            return std::pair<task_ptr, task_ptr>(grant_cb, lease_cb);
+        }
+
+        task_ptr distributed_lock_service_simple::cancel_pending_lock(
+            const std::string& lock_id,
+            const std::string& myself_id,
+            task_code cb_code,
+            const lock_callback& cb)
+        {
+            error_code err;
+            std::string cowner;
+            uint64_t version;
+
+            {
+                zauto_lock l(_lock);
+                auto it = _dlocks.find(lock_id);
+                if (it == _dlocks.end())
+                {
+                    err = ERR_OBJECT_NOT_FOUND;
+                    cowner = "";
+                    version = 0;
+                }
+                else
+                {
+                    cowner = it->second.owner;
+                    version = it->second.version;
+                    err = ERR_OBJECT_NOT_FOUND;
+                    for (auto it2 = it->second.pending_list.begin();
+                        it2 != it->second.pending_list.end();
+                        it2++)
+                    {
+                        auto& w = *it2;
+                        if (w.owner == myself_id)
+                        {
+                            err = ERR_OK;
+                            it->second.pending_list.erase(it2);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return tasking::enqueue(
+                cb_code,
                 nullptr,
-                [=]() { cb(err, cowner); }
+                [=]() { cb(err, cowner, version); }
             );
         }
 
-        void distributed_lock_service_simple::unlock(const std::string& lock_id,
+        task_ptr distributed_lock_service_simple::unlock(
+            const std::string& lock_id,
             const std::string& myself_id,
             bool destroy,
+            task_code cb_code,
             const err_callback& cb)
         {
             error_code err;
+            lock_wait_info next;
+            uint64_t next_version;
 
             {
                 zauto_lock l(_lock);
@@ -128,25 +317,56 @@ namespace dsn
                     }
                     else
                     {
-                        it->second.owner = "";
-                        it->second.cb = nullptr;
                         err = ERR_OK;
+
+                        if (it->second.pending_list.size() > 0)
+                        {
+                            next = it->second.pending_list.front();
+                            next_version = it->second.version++;
+                            it->second.owner = next.owner;
+                            it->second.lease_callback = next.lease_callback;
+                            it->second.pending_list.pop_front();
+                        }
+                        else
+                        {
+                            next.owner = "";
+                            it->second.owner = "";
+                            it->second.lease_callback = nullptr;
+                            it->second.version++;
+                        }
                     }
                 }
             }
 
-            tasking::enqueue(
-                LPC_DIST_LOCK_SVC_CALLBACK,
+            auto t = tasking::enqueue(
+                cb_code,
                 nullptr,
                 [=]() { cb(err); }
             );
+
+            if (next.owner != "")
+            {
+                error_code err = ERR_OK;
+                __lock_cb_bind_and_enqueue(
+                    next.grant_callback,
+                    err,
+                    next.owner,
+                    next_version,
+                    0
+                    );
+            }
+
+            return t;
         }
 
-        void distributed_lock_service_simple::query_lock(const std::string& lock_id,
-            const err_string_callback& cb)
+        task_ptr distributed_lock_service_simple::query_lock(
+            const std::string& lock_id,
+            task_code cb_code,
+            const lock_callback& cb)
         {
             error_code err;
             std::string cowner;
+            uint64_t version;
 
             {
                 zauto_lock l(_lock);
@@ -159,13 +379,14 @@ namespace dsn
                 {
                     err = ERR_OK;
                     cowner = it->second.owner;
+                    version = it->second.version;
                 }
             }
 
-            tasking::enqueue(
-                LPC_DIST_LOCK_SVC_CALLBACK,
+            return tasking::enqueue(
+                cb_code,
                 nullptr,
-                [=]() { cb(err, cowner); }
+                [=]() { cb(err, cowner, version); }
             );
         }
     }

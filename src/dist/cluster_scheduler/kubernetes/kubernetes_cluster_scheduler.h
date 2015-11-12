@@ -33,34 +33,44 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+# pragma once
 
-# include <dsn/internal/aio_provider.h>
-# include <gtest/gtest.h>
-# include <dsn/service_api_cpp.h>
-# include "test_utils.h"
+# include <dsn/dist/cluster_scheduler.h>
 
-DEFINE_TASK_CODE(LPC_TEST_HASH, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
+using namespace ::dsn::service;
 
-void on_lpc_test(void* p)
+namespace dsn
 {
-    std::string& result = *(std::string*)p;
-    result = ::dsn::task::get_current_worker()->name();
-}
+    namespace dist
+    {
+        class kubernetes_cluster_scheduler 
+            : public cluster_scheduler, public clientlet
+        {
+        public:
+            virtual error_code initialize() override;
 
-void on_lpc_test2(void* p)
-{
+            /*
+            * option 1: combined deploy and failure notification service
+            *  failure_notification is specific for this deployment unit
+            */
+            virtual void schedule(
+                std::shared_ptr<deployment_unit>& unit,
+                std::function<void(error_code, rpc_address)> deployment_callback,
+                std::function<void(error_code, std::string)> failure_notification
+                ) override {}
 
-}
+            /*
+            * option 2: seperated deploy and failure notification service
+            */
+            virtual void deploy(
+                std::shared_ptr<deployment_unit>& unit,
+                std::function<void(error_code, rpc_address)> deployment_callback
+                ) override {}
 
-TEST(core, lpc)
-{
-    std::string result;
-    auto t = dsn_task_create(LPC_TEST_HASH, on_lpc_test, (void*)&result, 1);
-    dsn_task_add_ref(t);
-    dsn_task_call(t, 0);
-    bool r = dsn_task_wait(t);
-    dsn_task_release_ref(t);
-
-    EXPECT_TRUE(r);
-    EXPECT_TRUE(result.substr(0, result.length() - 2) == "client.THREAD_POOL_TEST_SERVER");
+            // *  failure_notification is general for all deployment units
+            virtual void register_failure_callback(
+                std::function<void(error_code, std::string)> failure_notification
+                ) override {}
+        };
+    }
 }

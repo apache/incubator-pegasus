@@ -48,6 +48,8 @@ public:
         return new T();
     }
 
+    typedef logging_provider* (*factory)();
+
 public:
     logging_provider() {}
 

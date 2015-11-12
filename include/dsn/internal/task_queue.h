@@ -51,6 +51,8 @@ public:
         return new T(pool, index, inner_provider);
     }
 
+    typedef task_queue*      (*factory)(task_worker_pool*, int, task_queue*);
+
 public:
     task_queue(task_worker_pool* pool, int index, task_queue* inner_provider); 
     ~task_queue() {}

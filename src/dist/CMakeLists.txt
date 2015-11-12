@@ -1,1 +1,2 @@
 add_subdirectory(failure_detector)
+add_subdirectory(cluster_scheduler)

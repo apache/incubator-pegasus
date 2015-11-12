@@ -36,6 +36,7 @@
 #include "meta_server_failure_detector.h"
 #include "server_state.h"
 #include "meta_service.h"
+#include <dsn/internal/factory_store.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -47,10 +48,24 @@ meta_server_failure_detector::meta_server_failure_detector(server_state* state, 
     _state = state;
     _svc = svc;
     _is_primary = false;
+
+    // TODO: config
+    _lock_svc = dsn::utils::factory_store<::dsn::dist::distributed_lock_service>::create(
+        "distributed_lock_service_simple",
+        PROVIDER_TYPE_MAIN
+        );
+    _primary_lock_id = "dsn.meta.server.leader";
+    _local_owner_id = primary_address().to_string();
 }
 
 meta_server_failure_detector::~meta_server_failure_detector(void)
 {
+    auto t = _lock_grant_task;
+    if (t) t->cancel(true);
+    t = _lock_expire_task;
+    if (t) t->cancel(true);
+
+    delete _lock_svc;
 }
 
 void meta_server_failure_detector::on_worker_disconnected(const std::vector<::dsn::rpc_address>& nodes)
@@ -78,7 +93,7 @@ void meta_server_failure_detector::on_worker_disconnected(const std::vector<::ds
             pri.first.pidx,
             pri.second->node.to_string()
             );
-        _svc->update_configuration(pri.second);
+        _svc->update_configuration_on_machine_failure(pri.second);
     }
 }
 
@@ -96,6 +111,59 @@ void meta_server_failure_detector::on_worker_connected(::dsn::rpc_address node)
         "Client %s", node.to_string());
 
     _state->set_node_state(states, nullptr);
+}
+
+DEFINE_TASK_CODE(LPC_META_SERVER_LEADER_LOCK_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_FD)
+
+bool meta_server_failure_detector::acquire_leader_lock()
+{
+    error_code err;
+    auto tasks = 
+    _lock_svc->lock(
+        _primary_lock_id,
+        _local_owner_id,
+        true,
+
+        // lock granted
+        LPC_META_SERVER_LEADER_LOCK_CALLBACK,
+        [this, &err](error_code ec, const std::string& owner, uint64_t version)
+        {
+            err = ec;
+        },
+
+        // lease expire
+        LPC_META_SERVER_LEADER_LOCK_CALLBACK,
+        [this](error_code ec, const std::string& owner, uint64_t version)
+        {
+            // let's take the easy way right now
+            dsn_terminate();
+
+            // reset primary
+            //rpc_address addr;
+            //set_primary(addr);
+            //_state->on_become_non_leader();
+
+            //// set another round of service
+            //acquire_leader_lock();            
+        }
+    );
+
+    _lock_grant_task = tasks.first;
+    _lock_expire_task = tasks.second;
+
+    _lock_grant_task->wait();
+    if (err == ERR_OK)
+    {
+        rpc_address addr;
+        if (addr.from_string_ipv4(_local_owner_id.c_str()))
+        {
+            dassert(primary_address() == addr, "");            
+            set_primary(addr);
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void meta_server_failure_detector::set_primary(rpc_address primary)
