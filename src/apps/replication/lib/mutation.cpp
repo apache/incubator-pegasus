@@ -33,26 +33,28 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "mutation.h"
-
+# include "mutation.h"
+# include "mutation_log.h"
+# include "replica.h"
 
 namespace dsn { namespace replication {
 
 mutation::mutation()
 {
-    rpc_code = 0;
     _private0 = 0; 
     _not_logged = 1;
     _prepare_ts_ms = 0;
-    _client_request = nullptr;
     _prepare_request = nullptr;
+    next = nullptr;
+    _appro_data_bytes = sizeof(mutation_header);
 }
 
 mutation::~mutation()
 {
-    if (_client_request != nullptr)
+    for (auto& r : client_requests)
     {
-        dsn_msg_release_ref(_client_request);
+        if (r.req)
+            dsn_msg_release_ref(r.req);
     }
 
     if (_prepare_request != nullptr)
@@ -64,17 +66,18 @@ mutation::~mutation()
 void mutation::copy_from(mutation_ptr& old)
 {
     data.updates = old->data.updates;
-    rpc_code = old->rpc_code;
+    client_requests = old->client_requests;
+    _appro_data_bytes = old->_appro_data_bytes;
+    for (auto& r : client_requests)
+    {
+        if (r.req)
+            dsn_msg_add_ref(r.req);
+    }
+
     if (old->is_logged())
     {
         set_logged();
         data.header.log_offset = old->data.header.log_offset;
-    }
-        
-    _client_request = old->client_msg();
-    if (_client_request)
-    {
-        dsn_msg_add_ref(_client_request);
     }
 
     _prepare_request = old->prepare_msg();
@@ -84,14 +87,15 @@ void mutation::copy_from(mutation_ptr& old)
     }
 }
 
-void mutation::set_client_request(dsn_task_code_t code, dsn_message_t request)
+bool mutation::add_client_request(dsn_task_code_t code, dsn_message_t request)
 {
-    dassert(_client_request == nullptr, "batch is not supported now");
-    rpc_code = code;
+    client_info ci;
+    ci.code = code;
+    ci.req = request;
+    client_requests.push_back(ci);
 
     if (request != nullptr)
     {
-        _client_request = request;
         dsn_msg_add_ref(request); // released on dctor
 
         void* ptr;
@@ -102,32 +106,40 @@ void mutation::set_client_request(dsn_task_code_t code, dsn_message_t request)
 
         blob buffer((char*)ptr, 0, (int)size);
         data.updates.push_back(buffer);
-    }    
+
+        _appro_data_bytes += (int)size + sizeof(int);
+    }   
+    else
+    {
+        blob bb;
+        data.updates.push_back(bb);
+
+        _appro_data_bytes += sizeof(int);
+    }
+
+    dbg_dassert(client_requests.size() == data.updates.size(), 
+        "size must be equal");
+
+    return true;
 }
 
 /*static*/ mutation_ptr mutation::read_from(binary_reader& reader, dsn_message_t from)
 {
     mutation_ptr mu(new mutation());
     unmarshall(reader, mu->data);
-    unmarshall(reader, mu->rpc_code);
 
-    // it is possible this is an emtpy mutation due to new primaries inserts empty mutations for holes
-    dassert(mu->data.updates.size() == 1 || mu->rpc_code == RPC_REPLICATION_WRITE_EMPTY,
-        "batch is not supported now");
+    for (auto& d : mu->data.updates)
+    {
+        client_info ci;
+        unmarshall(reader, ci.code);
+        ci.req = nullptr;
+        mu->client_requests.push_back(ci);
+    }
 
     if (nullptr != from)
     {
         mu->_prepare_request = from;
         dsn_msg_add_ref(from); // released on dctor
-    }
-    else if (mu->data.updates.size() > 0)
-    {
-        dassert(mu->data.updates.at(0).has_holder(), 
-            "the buffer must has ownership");
-    }
-    else
-    {
-        dassert(mu->rpc_code == RPC_REPLICATION_WRITE_EMPTY, "must be RPC_REPLICATION_WRITE_EMPTY");
     }
     
     sprintf(mu->_name, "%lld.%lld",
@@ -140,7 +152,11 @@ void mutation::set_client_request(dsn_task_code_t code, dsn_message_t request)
 void mutation::write_to(binary_writer& writer)
 {
     marshall(writer, data);
-    marshall(writer, rpc_code);
+
+    for (auto& ci : client_requests)
+    {
+        marshall(writer, ci.code);
+    }
 }
 
 int mutation::clear_prepare_or_commit_tasks()
@@ -166,6 +182,98 @@ int mutation::clear_log_task()
         return 1;
     }
     return 0;
+}
+
+mutation_ptr mutation_queue::add_work(int code, dsn_message_t request, replica* r)
+{
+    // batch and add to work queue
+    if (!_pending_mutation)
+    {
+        _pending_mutation = r->new_mutation(invalid_decree);
+    }
+
+    _pending_mutation->add_client_request(code, request);
+
+    // short-cut
+    if (_current_op_count < _max_concurrent_op 
+        && _hdr.is_empty()
+        )
+    {
+        auto ret = _pending_mutation;
+        _pending_mutation = nullptr;
+        _current_op_count++;
+        return ret;
+    }
+
+    // check if full
+    if (_pending_mutation->is_full())
+    {
+        _pending_mutation->add_ref(); // released when unlink
+        _hdr.add(_pending_mutation);
+        _pending_mutation = nullptr;
+    }
+    
+    // get next work item
+    if (_current_op_count == _max_concurrent_op)
+        return nullptr;
+    else if (_hdr.is_empty())
+    {
+        dassert(_pending_mutation != nullptr, 
+            "pending mutation cannot be null");
+
+        auto ret = _pending_mutation;
+        _pending_mutation = nullptr;
+        _current_op_count++;
+        return ret;
+    }
+    else
+    {
+        _current_op_count++;
+        return unlink_next_workload(nullptr);
+    }
+}
+
+mutation_ptr mutation_queue::on_work_completed(mutation* running, void* ctx)
+{
+    _current_op_count--;
+
+    // no further workload
+    if (_hdr.is_empty())
+    {
+        if (_pending_mutation != nullptr)
+        {
+            auto ret = _pending_mutation;
+            _pending_mutation = nullptr;
+            _current_op_count++;
+            return ret;
+        }
+        else
+        {
+            return nullptr;
+        }
+    }
+
+    // run further workload
+    else
+    {
+        _current_op_count++;
+        return unlink_next_workload(ctx);
+    }
+}
+
+void mutation_queue::clear()
+{
+    if (_pending_mutation != nullptr)
+    {
+        delete _pending_mutation;
+        _pending_mutation = nullptr;
+    }
+
+    mutation* r;
+    while ((r = unlink_next_workload(nullptr)) != nullptr)
+    {
+        delete r;
+    }
 }
 
 }} // namespace end

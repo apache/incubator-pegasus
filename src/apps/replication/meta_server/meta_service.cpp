@@ -211,7 +211,7 @@ void meta_service::on_update_configuration(dsn_message_t req)
     dsn_msg_read_next(req, &ptr, &sz);
     dsn_msg_read_commit(req, 0);
 
-    blob request_buffer((const char*)ptr, 0, sz);
+    blob request_buffer((const char*)ptr, 0, (int)sz);
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
 
     ::unmarshall(req, *request);

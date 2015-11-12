@@ -760,7 +760,8 @@ void replica::replay_prepare_list()
         }
         else
         {
-            mu->rpc_code = RPC_REPLICATION_WRITE_EMPTY;
+            mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);
+
             ddebug(
                 "%s: emit empty mutation %lld when replay prepare list",
                 name(),

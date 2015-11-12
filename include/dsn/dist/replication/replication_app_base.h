@@ -169,6 +169,7 @@ protected:
         );
 
     void unregister_rpc_handler(dsn_task_code_t code);
+    void init_last_commit_decree(decree d) { _last_committed_decree = d; }
     
 private:
     template<typename T, typename TRequest, typename TResponse>
@@ -197,8 +198,11 @@ private:
     bool        _is_delta_state_learning_supported;
     replica_log_info _info;
 
-protected:
+private:
+    // it is now totally controlled by rdsn as we are now supporting batching
     std::atomic<decree> _last_committed_decree;
+
+protected:    
     std::atomic<decree> _last_durable_decree;
 };
 

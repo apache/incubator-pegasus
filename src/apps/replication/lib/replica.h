@@ -51,7 +51,6 @@
 namespace dsn { namespace replication {
 
 class replication_app_base;
-class mutation_log;
 class replica_stub;
 
 using namespace ::dsn::service;
@@ -199,6 +198,7 @@ private:
     
 private:
     friend class ::dsn::replication::replication_checker;
+    friend class ::dsn::replication::mutation_queue;
 
     // replica configuration, updated by update_local_configuration ONLY    
     replica_configuration   _config;
