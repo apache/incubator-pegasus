@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     lock abstraction
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -61,6 +61,7 @@ public:
     {
         return new T(inner_provider);
     }
+    typedef lock_provider*  (*factory)(lock_provider*);
 
 public:
     lock_provider(lock_provider* inner_provider) { _inner_provider = inner_provider; }
@@ -79,6 +80,8 @@ public:
         return new T(inner_provider);
     }
 
+    typedef lock_nr_provider* (*factory)(lock_nr_provider*);
+
 public:
     lock_nr_provider(lock_nr_provider* inner_provider) { _inner_provider = inner_provider; }
     virtual ~lock_nr_provider() { if (nullptr != _inner_provider) delete _inner_provider; }
@@ -95,6 +98,8 @@ public:
     {
         return new T(inner_provider);
     }
+
+    typedef rwlock_nr_provider* (*factory)(rwlock_nr_provider*);
 
 public:
     rwlock_nr_provider(rwlock_nr_provider* inner_provider) { _inner_provider = inner_provider; }
@@ -119,6 +124,8 @@ public:
     {
         return new T(initCount, inner_provider);
     }
+
+    typedef semaphore_provider* (*factory)(int, semaphore_provider*);
 
 public:  
     semaphore_provider(int initial_count, semaphore_provider* inner_provider) { _inner_provider = inner_provider; }

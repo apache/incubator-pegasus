@@ -128,7 +128,11 @@ DSN_API uint32_t dsn_ipv4_local(const char* network_interface)
         struct ifaddrs* i = ifa;
         while (i != nullptr)
         {
-            if (i->ifa_addr->sa_family == AF_INET && strcmp(i->ifa_name, network_interface) == 0)
+            if (i->ifa_name != nullptr &&
+                strcmp(i->ifa_name, network_interface) == 0 &&
+                i->ifa_addr != nullptr && 
+                i->ifa_addr->sa_family == AF_INET
+                )
             {
                 ret = (uint32_t)ntohl(((struct sockaddr_in *)i->ifa_addr)->sin_addr.s_addr);
                 break;

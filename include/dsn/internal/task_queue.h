@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     task queue abstraction
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -50,6 +50,8 @@ public:
     {
         return new T(pool, index, inner_provider);
     }
+
+    typedef task_queue*      (*factory)(task_worker_pool*, int, task_queue*);
 
 public:
     task_queue(task_worker_pool* pool, int index, task_queue* inner_provider); 

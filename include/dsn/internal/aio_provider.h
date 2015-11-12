@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     define the interface for disk operation provider 
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -54,6 +54,8 @@ public:
     {
         return new T(disk, inner_provider);
     }
+
+    typedef aio_provider* (*factory)(disk_engine*, aio_provider*);
 
 public:
     aio_provider(disk_engine* disk, aio_provider* inner_provider);

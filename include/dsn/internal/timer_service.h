@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     timer service abstraction
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -47,6 +47,8 @@ namespace dsn
         {
             return new T(node, inner_provider);
         }
+
+        typedef timer_service*  (*factory)(service_node*, timer_service*);
 
     public:
         timer_service(service_node* node, timer_service* inner_provider)

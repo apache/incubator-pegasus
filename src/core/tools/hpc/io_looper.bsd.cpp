@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     io looper implementation for BSD.
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     2015-09-01, HX Lin(linmajia@live.com), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 

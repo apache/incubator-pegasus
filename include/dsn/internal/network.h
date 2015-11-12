@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     base interface for a network provider
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -62,6 +62,8 @@ namespace dsn {
         {
             return new T(srv, inner_provider);
         }
+        
+        typedef network* (*factory)(rpc_engine*, network*);
 
     public:
         //

@@ -26,10 +26,11 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     define the interface of admissio controllers which is used to throttle the
+ *     traffic into the task thread pools
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -44,6 +45,7 @@ class admission_controller
 {
 public:
     template <typename T> static admission_controller* create(task_queue* q, const char* args);
+    typedef admission_controller* (*factory)(task_queue*, const char*);
 
 public:
     admission_controller(task_queue* q, std::vector<std::string>& sargs) : _queue(q) {}

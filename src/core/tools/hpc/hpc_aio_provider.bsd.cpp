@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     AIO using kqueue on BSD
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     2015-09-07, HX Lin(linmajia@live.com), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 

@@ -26,10 +26,46 @@
 
 /*
  * Description:
- *     this file define the C Service API in rDSN layer 1, e.g., ZION.
+ *     this file define the C Service API in rDSN layer 1, e.g., Zion.
+ *
+ * ------------------------------------------------------------------------------
+ * 
+ *  The service system call API for Zion
+ * -------------------------------------------
+ *  Summary:
+ *  (1) rich API for common distributed system development
+ *      - thread pools and tasking
+ *      - thread synchronization
+ *      - remote procedure calls
+ *      - asynchnous file operations
+ *      - envrionment inputs
+ *      - rDSN system and other utilities
+ *  (2) portable
+ *      - compilable on many platforms (currently linux, windows, FreeBSD, MacOS)
+ *      - system calls are in C so that later language wrappers are possibles.
+ *  (3) high performance
+ *      - all low level components can be plugged with the tool API (in C++)
+ *        besides the existing high performance providers;
+ *      - developers can also configure thread pools, thread numbers, thread/task
+ *        priorities, CPU core affinities, throttling policies etc. declaratively
+ *        to build a best threading model for upper apps.
+ *  (4) ease of intergration
+ *      - support many languages through language wrappers based this c interface
+ *      - easy support for existing protocols (thrift/protobuf etc.)
+ *      - integrate with existing platform infra with low level providers (plug-in),
+ *        such as loggers, performance counters, etc.
+ *  (5) rich debug, development tools and runtime policies support
+ *      - tool API with task granularity semantic for further tool and runtime policy development.
+ *      - rich existing tools, tracer, profiler, simulator, model checker, replayer, global checker
+ *  (7) PRINCIPLE: all non-determinims must be go through these system calls so that powerful
+ *      internal tools are possible - replay, model checking, replication, ...,
+ *      AND, it is still OK to call other DETERMINISTIC APIs for applications.
+ * 
+ * ------------------------------------------------------------------------------
  *
  * Revision history:
- *     July, 2015, @imzhenyu (Zhenyu.Guo@microsoft.com), first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version in cpp
+ *     July, 2015, @imzhenyu (Zhenyu Guo), refactor and refined in c
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -71,42 +107,6 @@ extern "C" {
 # define DSN_INVALID_HASH                  0xdeadbeef
 # define DSN_MAX_APP_TYPE_NAME_LENGTH      32
 # define DSN_MAX_APP_COUNT_IN_SAME_PROCESS 256
-
-//------------------------------------------------------------------------------
-//
-// The service system call API for rDSN
-//-------------------------------------------
-// Summary:
-// (1) rich API for common distributed system development
-//     - thread pools and tasking
-//     - thread synchronization
-//     - remote procedure calls
-//     - asynchnous file operations
-//     - envrionment inputs 
-//     - rDSN system and other utilities
-// (2) portable
-//     - compilable on many platforms (currently linux, windows, FreeBSD, MacOS)
-//     - system calls are in C so that later language wrappers are possibles.
-// (3) high performance
-//     - all low level components can be plugged with the tool API (in C++)
-//       besides the existing high performance providers; 
-//     - developers can also configure thread pools, thread numbers, thread/task 
-//       priorities, CPU core affinities, throttling policies etc. declaratively
-//       to build a best threading model for upper apps.
-// (4) ease of intergration
-//     - support many languages through language wrappers based this c interface
-//     - easy support for existing protocols (thrift/protobuf etc.)
-//     - integrate with existing platform infra with low level providers (plug-in),
-//       such as loggers, performance counters, etc.
-// (5) rich debug, development tools and runtime policies support
-//     - tool API with task granularity semantic for further tool and runtime policy development.
-//     - rich existing tools, tracer, profiler, simulator, model checker, replayer, global checker
-// (7) PRINCIPLE: all non-determinims must be go through these system calls so that powerful
-//     internal tools are possible - replay, model checking, replication, ...,
-//     AND, it is still OK to call other DETERMINISTIC APIs for applications.
-//
-//------------------------------------------------------------------------------
-
 
 //------------------------------------------------------------------------------
 //
@@ -252,6 +252,7 @@ typedef struct dsn_address_t
             unsigned long long type : 2;
             unsigned long long group : 62; // dsn_group_t
         } group;
+        uint64_t value;
     } u;
 } dsn_address_t;
 
@@ -441,29 +442,6 @@ extern DSN_API uint32_t              dsn_crc32_concatenate(
 extern DSN_API void        dsn_task_release_ref(dsn_task_t task);
 extern DSN_API void        dsn_task_add_ref(dsn_task_t task);
 
-// create a common asynchronous task
-// - code defines the thread pool which executes the callback
-//   i.e., [task.%code$] pool_code = THREAD_POOL_DEFAULT
-// - hash defines the thread with index hash % worker_count in the threadpool
-//   to execute the callback, when [threadpool.%pool_code%] partitioned = true
-//   
-extern DSN_API dsn_task_t  dsn_task_create(
-                            dsn_task_code_t code,               // task label
-                            dsn_task_handler_t cb,              // callback function
-                            void* param,                        // param to the callback
-                            int hash DEFAULT(DSN_INVALID_HASH) // hash to callback
-                            );
-extern DSN_API dsn_task_t  dsn_task_create_timer(
-                            dsn_task_code_t code, 
-                            dsn_task_handler_t cb, 
-                            void* param, 
-                            int hash,
-                            int interval_milliseconds          // timer period
-                            );
-// repeated declarations later in correpondent rpc and file sections
-//extern DSN_API dsn_task_t  dsn_rpc_create_response_task(...);
-//extern DSN_API dsn_task_t  dsn_file_create_aio_task(...);
-
 //
 // task trackers are used to track task context
 //
@@ -480,14 +458,38 @@ extern DSN_API void               dsn_task_tracker_destroy(dsn_task_tracker_t tr
 extern DSN_API void               dsn_task_tracker_cancel_all(dsn_task_tracker_t tracker);
 extern DSN_API void               dsn_task_tracker_wait_all(dsn_task_tracker_t tracker);
 
+// create a common asynchronous task
+// - code defines the thread pool which executes the callback
+//   i.e., [task.%code$] pool_code = THREAD_POOL_DEFAULT
+// - hash defines the thread with index hash % worker_count in the threadpool
+//   to execute the callback, when [threadpool.%pool_code%] partitioned = true
+//   
+extern DSN_API dsn_task_t  dsn_task_create(
+                            dsn_task_code_t code,               // task label
+                            dsn_task_handler_t cb,              // callback function
+                            void* param,                        // param to the callback
+                            int hash DEFAULT(DSN_INVALID_HASH), // hash to callback
+                            dsn_task_tracker_t tracker DEFAULT(nullptr)
+                            );
+extern DSN_API dsn_task_t  dsn_task_create_timer(
+                            dsn_task_code_t code, 
+                            dsn_task_handler_t cb, 
+                            void* param, 
+                            int hash,
+                            int interval_milliseconds,         // timer period
+                            dsn_task_tracker_t tracker DEFAULT(nullptr)
+                            );
+// repeated declarations later in correpondent rpc and file sections
+//extern DSN_API dsn_task_t  dsn_rpc_create_response_task(...);
+//extern DSN_API dsn_task_t  dsn_file_create_aio_task(...);
+
 //
 // common task 
 // - task: must be created by dsn_task_create or dsn_task_create_timer
 // - tracker: can be null. 
 //
 extern DSN_API void        dsn_task_call(
-                                dsn_task_t task, 
-                                dsn_task_tracker_t tracker DEFAULT(nullptr),
+                                dsn_task_t task,                                 
                                 int delay_milliseconds DEFAULT(0)
                                 );
 extern DSN_API bool        dsn_task_cancel(dsn_task_t task, bool wait_until_finished);
@@ -496,6 +498,7 @@ extern DSN_API bool        dsn_task_cancel2(
                                 bool wait_until_finished, 
                                 /*out*/ bool* finished
                                 );
+extern DSN_API void        dsn_task_cancel_current_timer();
 extern DSN_API bool        dsn_task_wait(dsn_task_t task); 
 extern DSN_API bool        dsn_task_wait_timeout(
                                 dsn_task_t task,
@@ -685,14 +688,14 @@ extern DSN_API dsn_task_t    dsn_rpc_create_response_task(
                                 dsn_message_t request, 
                                 dsn_rpc_response_handler_t cb, 
                                 void* param, 
-                                int reply_hash DEFAULT(DSN_INVALID_HASH)
+                                int reply_hash DEFAULT(DSN_INVALID_HASH),
+                                dsn_task_tracker_t tracker DEFAULT(nullptr)
                                 );
 
 // tracker can be empty
 extern DSN_API void          dsn_rpc_call(
                                 dsn_address_t server,
-                                dsn_task_t rpc_call, 
-                                dsn_task_tracker_t tracker DEFAULT(nullptr)
+                                dsn_task_t rpc_call
                                 );
 
 // WARNING: returned msg must be explicitly msg_release_ref
@@ -734,31 +737,29 @@ extern DSN_API dsn_task_t   dsn_file_create_aio_task(
                                 dsn_task_code_t code, 
                                 dsn_aio_handler_t cb, 
                                 void* param, 
-                                int hash
+                                int hash DEFAULT(0),
+                                dsn_task_tracker_t tracker DEFAULT(nullptr)
                                 );
 extern DSN_API void         dsn_file_read(
                                 dsn_handle_t file, 
                                 char* buffer, 
                                 int count, 
                                 uint64_t offset, 
-                                dsn_task_t cb, 
-                                dsn_task_tracker_t tracker DEFAULT(nullptr)
+                                dsn_task_t cb
                                 );
 extern DSN_API void         dsn_file_write(
                                 dsn_handle_t file, 
                                 const char* buffer, 
                                 int count, 
                                 uint64_t offset, 
-                                dsn_task_t cb, 
-                                dsn_task_tracker_t tracker DEFAULT(nullptr)
+                                dsn_task_t cb
                                 );
 extern DSN_API void         dsn_file_copy_remote_directory(
                                 dsn_address_t remote, 
                                 const char* source_dir, 
                                 const char* dest_dir,
                                 bool overwrite, 
-                                dsn_task_t cb, 
-                                dsn_task_tracker_t tracker DEFAULT(nullptr)
+                                dsn_task_t cb
                                 );
 extern DSN_API void         dsn_file_copy_remote_files(
                                 dsn_address_t remote,
@@ -766,8 +767,7 @@ extern DSN_API void         dsn_file_copy_remote_files(
                                 const char** source_files, 
                                 const char* dest_dir, 
                                 bool overwrite, 
-                                dsn_task_t cb, 
-                                dsn_task_tracker_t tracker DEFAULT(nullptr)
+                                dsn_task_t cb
                                 );
 extern DSN_API size_t       dsn_file_get_io_size(dsn_task_t cb_task);
 extern DSN_API void         dsn_file_task_enqueue(

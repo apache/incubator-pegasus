@@ -26,10 +26,11 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     define the fast run tool for Zion, which aims at
+ *     fast computation of the upper applications
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Aug., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 

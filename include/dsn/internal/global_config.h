@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     rdsn configurations
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -171,6 +171,7 @@ struct service_spec
     bool init();
     bool init_app_specs();
     int get_ports_delta(int app_id, dsn_threadpool_code_t pool, int queue_index) const;
+    static void load_app_shared_libraries(dsn::configuration_ptr config);
 };
 
 CONFIG_BEGIN(service_spec)

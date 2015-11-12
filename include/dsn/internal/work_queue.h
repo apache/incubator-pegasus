@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     the work queue abstraction
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Oct., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 

@@ -26,10 +26,11 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     tracker abstraction for tasks, to ensure the tasks are cancelled 
+ *     appropriately when the context is gone
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 

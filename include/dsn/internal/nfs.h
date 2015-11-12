@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     network file system component base interface
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -71,6 +71,8 @@ namespace dsn {
         {
             return new T(node);
         }
+
+        typedef nfs_node* (*factory)(service_node*);
 
     public:
         nfs_node(service_node* node) : _node(node) {}

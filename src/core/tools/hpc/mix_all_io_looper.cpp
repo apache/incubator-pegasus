@@ -32,10 +32,6 @@
  *     xxxx-xx-xx, author, first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
-/*
- * History:
- *      Aug., 2015, Zhenyu Guo (zhenyu.guo@microsoft.com)
- */
 
 # include "mix_all_io_looper.h"
 

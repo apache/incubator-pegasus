@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     state extension for cpp objects
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 

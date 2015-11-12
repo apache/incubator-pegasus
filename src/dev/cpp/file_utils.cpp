@@ -26,22 +26,22 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     File system utility functions.
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     2015-08-24, HX Lin(linmajia@live.com), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
 
 # include <dsn/cpp/utils.h>
+# include <sys/stat.h>
+# include <errno.h>
 
 # ifdef _WIN32
 
 # include <direct.h>
 # include <io.h>
-# include <sys/types.h>
-# include <sys/stat.h>
 # include <deque>
 
 # define getcwd_ _getcwd
@@ -67,9 +67,6 @@
 # endif
 
 # else
-
-# include <sys/stat.h>
-# include <errno.h>
 
 # define getcwd_ getcwd
 # define rmdir_ rmdir
@@ -536,7 +533,7 @@ namespace dsn {
                         succ = (::RemoveDirectoryA(fpath) == TRUE);
                         if (!succ)
                         {
-                            derror("remove directory %s failed, err = %d", fpath, ::GetLastError());
+                            dwarn("remove directory %s failed, err = %d", fpath, ::GetLastError());
                         }
                     }
                     else
@@ -545,7 +542,7 @@ namespace dsn {
                         succ = (std::remove(fpath) == 0);
                         if (!succ)
                         {
-                            derror("remove file %s failed, err = %s", fpath, strerror(errno));
+                            dwarn("remove file %s failed, err = %s", fpath, strerror(errno));
                         }
 #ifdef _WIN32
                     }
@@ -578,7 +575,7 @@ namespace dsn {
                     bool ret = (std::remove(npath.c_str()) == 0);
                     if (!ret)
                     {
-                        derror("remove file %s failed, err = %s", path.c_str(), strerror(errno));
+                        dwarn("remove file %s failed, err = %s", path.c_str(), strerror(errno));
                     }
                     return ret;
                 }

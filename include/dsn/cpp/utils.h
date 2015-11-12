@@ -195,14 +195,14 @@ namespace dsn {
     {
     public:
         // given bb on ctor
-        binary_reader(blob& blob);
+        binary_reader(const blob& blob);
 
         // or delayed init
         binary_reader() {}
 
         virtual ~binary_reader() {}
 
-        void init(blob& bb);
+        void init(const blob& bb);
 
         template<typename T> int read_pod(/*out*/ T& val);
         template<typename T> int read(/*out*/ T& val) { dassert(false, "read of this type is not implemented"); return 0; }

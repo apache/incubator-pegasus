@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     task worker (thread) abstraction
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -49,6 +49,8 @@ public:
     {
         return new T(pool, q, index, inner_provider);
     }
+
+    typedef task_worker*  (*factory)(task_worker_pool*, task_queue*, int, task_worker*);
 
 public:
     task_worker(task_worker_pool* pool, task_queue* q, int index, task_worker* inner_provider);

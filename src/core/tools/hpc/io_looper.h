@@ -26,15 +26,11 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     define the base cross-platform asynchonous io looper interface 
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Aug., 2015, @imzhenyu (Zhenyu Guo), the first version
  *     xxxx-xx-xx, author, fix bug about xxx
- */
-/*
- * History:
- *      Aug., 2015, Zhenyu Guo, the first version (zhenyu.guo@microsoft.com)
  */
 #pragma once
 

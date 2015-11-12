@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     base prototype for logging
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -47,6 +47,8 @@ public:
     {
         return new T();
     }
+
+    typedef logging_provider* (*factory)();
 
 public:
     logging_provider() {}

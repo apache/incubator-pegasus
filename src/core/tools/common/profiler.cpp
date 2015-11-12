@@ -205,7 +205,7 @@ namespace dsn {
 
         void register_command_profiler()
         {
-            std::stringstream textp, textpjs, textpd, textarg;
+            std::stringstream textp, textpjs, textpd, textquery, textarg;
             textp << "NAME:" << std::endl;
             textp << "  profiler - collect performance data" << std::endl;
             textp << "SYNOPSIS:" << std::endl;
@@ -231,6 +231,11 @@ namespace dsn {
             textpd << "  pd|PD|profiledata|ProfileData $task_name:$counter_name:$percentile ..." << std::endl;
             textpd << "  pd|PD|profiledata|ProfileData $task_name:AllPercentile:$percentile" << std::endl;
 
+			textquery << "NAME:" << std::endl;
+			textquery << "  query profiler data in batch" << std::endl;
+			textquery << "SYNOPSIS:" << std::endl;
+			textquery << "  query" << std::endl;
+
             textarg << "ARGUMENTS:" << std::endl;
             textarg << "  $percentile : e.g, 50 for latency at 50 percentile, 50(default)|90|95|99|999" << std::endl;
             textarg << "  $counter_name :" << std::endl;
@@ -244,7 +249,7 @@ namespace dsn {
                 textarg << std::endl;
             }
             textarg << "  $task : all task code, such as" << std::endl;
-            for (int i = 1; i < dsn_task_code_max() && i <= 10; i++)
+            for (int i = 1; i < dsn_task_code_max(); i++)
             {
                 textarg << "      " << dsn_task_code_to_string(i) << std::endl;
             }
@@ -252,11 +257,12 @@ namespace dsn {
             textp << textarg.str();
             textpjs << textarg.str();
             textpd << textarg.str();
-
+			textquery << textarg.str();
 
             register_command({ "p", "P", "profile", "Profile" }, "profile|Profile|p|P - performance profiling", textp.str().c_str(), profiler_output_handler);
             //register_command({ "pjs", "PJS", "profilejavascript", "ProfileJavaScript", nullptr }, "pjs|PJS|profilejavascript|ProfileJavaScript - profile and show by javascript", textpjs.str().c_str(), profiler_js_handler);
             register_command({ "pd", "PD", "profiledata", "ProfileData" }, "profiler data - get appointed data, using by pjs", textpd.str().c_str(), profiler_data_handler);
+			register_command({ "query"}, "query profiling data, output in html table format", textquery.str().c_str(), query_data_handler);
         }
 
         void profiler::install(service_spec& spec)

@@ -181,7 +181,8 @@ namespace dsn { namespace replication {
                 msg,
                 callback,
                 context,
-                reply_hash
+                reply_hash,
+                owner
                 );
 
             auto rc = create_write_context(partition_index, code, msg, task, reply_hash);
@@ -318,7 +319,8 @@ namespace dsn { namespace replication {
                 msg,
                 callback,
                 context,
-                reply_hash
+                reply_hash,
+                owner
                 );
 
             auto rc = create_read_context(partition_index, code, msg, task, read_semantic, snapshot_decree, reply_hash);

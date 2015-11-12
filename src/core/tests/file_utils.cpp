@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     Unit tests for file utility.
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     2015-08-25, HX Lin(linmajia@live.com), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 

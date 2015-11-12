@@ -287,6 +287,9 @@ bool task::cancel(bool wait_until_finished, /*out*/ bool* finished /*= nullptr*/
             spec().name(),
             id()
             );*/
+        
+        // make sure timers are cancelled
+        _wait_for_cancel = true;
 
         if (finished)
             *finished = false;

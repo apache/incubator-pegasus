@@ -54,7 +54,7 @@ error_code replica::initialize_on_new(const char* app_type, global_partition_id 
     sprintf(buffer, "%u.%u.%s", gpid.app_id, gpid.pidx, app_type);
 
     _config.gpid = gpid;
-    _dir = _stub->dir() + "/" + buffer;
+    _dir = utils::filesystem::path_combine(_stub->dir(), buffer);
 
     if (dsn::utils::filesystem::directory_exists(_dir) &&
         !dsn::utils::filesystem::remove_path(_dir))

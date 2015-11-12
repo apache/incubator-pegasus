@@ -75,9 +75,6 @@ ENUM_BEGIN(counter_percentile_type, COUNTER_PERCENTILE_INVALID)
     ENUM_REG(COUNTER_PERCENTILE_999)
 ENUM_END(counter_percentile_type)
 
-class perf_counter;
-typedef perf_counter* (*perf_counter_factory)(const char *section, const char *name, perf_counter_type type);
-
 class perf_counter
 {
 public:
@@ -85,6 +82,8 @@ public:
     {
         return new T(section, name, type);
     }
+
+    typedef perf_counter* (*factory)(const char *, const char *, perf_counter_type);
 
 public:
     perf_counter(const char *section, const char *name, perf_counter_type type) {}

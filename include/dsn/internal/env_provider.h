@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     interface of the environment in Zion
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -47,6 +47,8 @@ public:
     {
         return new T(inner_provider);
     }
+
+    typedef env_provider* (*factory)(env_provider*);
 
 public:
     env_provider(env_provider* inner_provider);
