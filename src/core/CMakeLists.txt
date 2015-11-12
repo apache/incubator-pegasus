@@ -1,8 +1,5 @@
 add_definitions(-DDSN_IN_CORE)
 set(DSN_IN_CORE "TRUE")
-if(UNIX)
-    add_compile_options(-fPIC)
-endif()
 add_subdirectory(core)
 add_subdirectory(dev.cpp.core.use)
 add_subdirectory(tools)
