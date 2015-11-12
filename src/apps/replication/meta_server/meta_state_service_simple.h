@@ -29,8 +29,8 @@
  *     a simple version of meta state service for development
  *
  * Revision history:
- *     2015-11-03, @imzhenyu (Zhenyu.Guo@microsoft.com), first version
- *     xxxx-xx-xx, author, fix bug about xxx
+ *     2015-11-03, @imzhenyu (Zhenyu.Guo@microsoft.com), setup the sketch
+ *     2015-11-11, Tianyi WANG, first version done
  */
 
 # include <dsn/dist/meta_state_service.h>
@@ -142,7 +142,7 @@ namespace dsn
                     marshall(writer, static_cast<int>(op));
                     write(writer, head, tail...);
                     auto shared_blob = writer.get_buffer();
-                    reinterpret_cast<log_header*>(shared_blob.buffer().get())->size = shared_blob.length() - sizeof(log_header);
+                    reinterpret_cast<log_header*>((char*)shared_blob.buffer_ptr())->size = shared_blob.length() - sizeof(log_header);
                     return shared_blob;
                 }
                 static void write(binary_writer& writer, const Head& head, const Tail&... tail)

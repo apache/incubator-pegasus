@@ -29,7 +29,8 @@
  *     a simple version of meta state service for development
  *
  * Revision history:
- *     2015-11-04, @imzhenyu (Zhenyu.Guo@microsoft.com), setup the sketch and a sample api impl
+ *     2015-11-04, @imzhenyu (Zhenyu.Guo@microsoft.com), setup the sketch
+ *     2015-11-11, Tianyi WANG, first version done
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
