@@ -733,6 +733,13 @@ extern DSN_API void          dsn_rpc_enqueue_response(
 // file operations
 //
 //------------------------------------------------------------------------------
+
+typedef struct
+{
+    void* buffer;
+    size_t size;
+}dsn_file_buffer_t;
+
 // return nullptr if open failed
 extern DSN_API dsn_handle_t dsn_file_open(
                                 const char* file_name, 
@@ -766,6 +773,13 @@ extern DSN_API void         dsn_file_write(
                                 const char* buffer, 
                                 int count, 
                                 uint64_t offset, 
+                                dsn_task_t cb
+                                );
+extern DSN_API void         dsn_file_write_vector(
+                                dsn_handle_t file,
+                                const dsn_file_buffer_t* buffers,
+                                int buffer_count,
+                                uint64_t offset,
                                 dsn_task_t cb
                                 );
 extern DSN_API void         dsn_file_copy_remote_directory(
