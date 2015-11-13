@@ -51,6 +51,7 @@
 # include "service_engine.h"
 # include "rpc_engine.h"
 # include "disk_engine.h"
+# include "task_engine.h"
 # include "coredump.h"
 # include "crc.h"
 # include <fstream>
@@ -107,6 +108,14 @@ DSN_API dsn_error_t dsn_error_register(const char* name)
 DSN_API const char* dsn_error_to_string(dsn_error_t err)
 {
     return error_code_mgr::instance().get_name(static_cast<int>(err));
+}
+
+DSN_API volatile int* dsn_task_queue_virtual_length_ptr(
+    dsn_task_code_t code,
+    int hash
+    )
+{
+    return dsn::task::get_current_node()->computation()->get_task_queue_virtual_length_ptr(code, hash);
 }
 
 // use ::dsn::threadpool_code2; for parsing purpose

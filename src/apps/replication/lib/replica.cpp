@@ -46,9 +46,9 @@
 namespace dsn { namespace replication {
 
 // for replica::load(..) only
-replica::replica(replica_stub* stub, const char* path)
+replica::replica(replica_stub* stub, global_partition_id gpid, const char* app_type, const char* path)
     : serverlet<replica>("replica"), 
-    _primary_states(stub->options().staleness_for_commit)
+    _primary_states(gpid, stub->options().staleness_for_commit)
 {
     dassert (stub, "");
     _stub = stub;
@@ -58,12 +58,13 @@ replica::replica(replica_stub* stub, const char* path)
     _options = &stub->options();
 
     init_state();
+    _config.gpid = gpid;
 }
 
 // for replica::newr(...) only
 replica::replica(replica_stub* stub, global_partition_id gpid, const char* app_type)
 : serverlet<replica>("replica"),
-  _primary_states(stub->options().staleness_for_commit)
+  _primary_states(gpid, stub->options().staleness_for_commit)
 {
     dassert (stub, "");
     _stub = stub;

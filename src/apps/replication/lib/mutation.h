@@ -118,11 +118,16 @@ private:
 class mutation_queue
 {
 public:
-    mutation_queue(int max_concurrent_op = 2)
+    mutation_queue(global_partition_id gpid, int max_concurrent_op = 2)
         : _max_concurrent_op(max_concurrent_op)
     {
         _current_op_count = 0;
         _pending_mutation = nullptr;
+        dassert(gpid.app_id != 0, "invalid gpid");
+        _pcount = dsn_task_queue_virtual_length_ptr(
+            RPC_PREPARE,
+            gpid_to_hash(gpid)
+            );
     }
 
     ~mutation_queue()
@@ -146,7 +151,11 @@ private:
     mutation_ptr unlink_next_workload(void* ctx)
     {
         mutation_ptr r = _hdr.pop_one();
-        r->release_ref(); // added in add_work
+        if (r.get() != nullptr)
+        {
+            r->release_ref(); // added in add_work        
+            *_pcount--;
+        }
         return r;
     }
 
@@ -158,7 +167,8 @@ private:
 private:
     int _current_op_count;
     int _max_concurrent_op;
-
+    
+    volatile int*   _pcount;
     mutation_ptr    _pending_mutation;
     slist<mutation> _hdr;
 };

@@ -80,12 +80,13 @@ namespace dsn
         static dsn_error_t app_start(void* app, int argc, char** argv)
         {
             service_app* sapp = (service_app*)app;
+            sapp->_address = dsn_primary_address();
+            sapp->_name = std::string(argv[0]);
+
             auto r = sapp->start(argc, argv);
             if (r == ::dsn::ERR_OK)
             {
-                sapp->_started = true;
-                sapp->_address = dsn_primary_address();
-                sapp->_name = std::string(argv[0]);
+                sapp->_started = true;                
                 sapp->register_for_debugging();
             }
             return r;

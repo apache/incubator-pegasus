@@ -150,6 +150,8 @@ namespace dsn
             lmsg->dl.remove();
         }
         
+        // added in send_message
+        _message_count -= (int)(_sending_msgs.size());
         return _sending_msgs.size() > 0;
     }
     
@@ -157,7 +159,9 @@ namespace dsn
     {
         dinfo("%s: rpc_id = %llx, code = %s", __FUNCTION__, msg->header->rpc_id, msg->header->rpc_name);
 
-        msg->add_ref(); // released in on_send_completed
+        _net.delay(_message_count++); // -- in unlink_message
+
+        msg->add_ref(); // released in on_send_completed        
         uint64_t sig;
         {
             utils::auto_lock<utils::ex_lock_nr> l(_lock);
@@ -251,6 +255,7 @@ namespace dsn
     {
         _matcher = nullptr;
         _is_sending_next = false;
+        _message_count = 0;
         _connect_state = is_client ? SS_DISCONNECTED : SS_CONNECTED;
         _reconnect_count_after_last_success = 0;
         _message_sent = 0;
@@ -316,6 +321,10 @@ namespace dsn
     {   
         _message_buffer_block_size = 1024 * 64;
         _max_buffer_block_count_per_send = 64; // TODO: windows, how about the other platforms?
+        _send_queue_threshold = (int)dsn_config_get_value_uint64(
+            "network", "send_queue_threshold",
+            4 * 1024, "send queue size above which throttling is applied"
+            );
     }
 
     void network::reset_parser(network_header_format name, int message_buffer_block_size)
@@ -362,7 +371,7 @@ namespace dsn
 
     connection_oriented_network::connection_oriented_network(rpc_engine* srv, network* inner_provider)
         : network(srv, inner_provider)
-    {
+    {        
     }
 
     void connection_oriented_network::send_message(message_ex* request)

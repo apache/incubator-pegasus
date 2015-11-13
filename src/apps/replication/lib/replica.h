@@ -133,9 +133,9 @@ private:
         
     // initialization
     error_code init_app_and_prepare_list(const char* app_type, bool create_new);
-    error_code initialize_on_load(const char* dir, bool rename_dir_on_failure);
+    error_code initialize_on_load(const char* dir, const char* app_type, bool rename_dir_on_failure);
     error_code initialize_on_new(const char* app_type, global_partition_id gpid);    
-    replica(replica_stub* stub, const char* dir); // for replica::load(..) only
+    replica(replica_stub* stub, global_partition_id gpid, const char* app_type, const char* dir); // for replica::load(..) only
     replica(replica_stub* stub, global_partition_id gpid, const char* app_type); // for replica::newr(...) only
         
     /////////////////////////////////////////////////////////////////

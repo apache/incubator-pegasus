@@ -159,65 +159,8 @@ void task_worker_pool::enqueue(task* t)
 
     if (_is_running)
     {
-        int idx = (_spec.partitioned ? t->hash() % _queues.size() : 0);
-        task_queue* q = _queues[idx];
-        //dinfo("%s pool::enqueue %s (%016llx)", _node->name(), task->spec().name(), task->id());
-        auto controller = _controllers[idx];
-        if (controller != nullptr)
-        {
-            int i = 0;
-            while (!controller->is_task_accepted(t))
-            {
-                // any customized rejection handler?
-                if (t->spec().rejection_handler != nullptr)
-                {
-                    t->spec().rejection_handler(t, controller);
-
-                    ddebug("task %s (%016llx) is rejected",                            
-                        t->spec().name.c_str(),
-                        t->id()
-                        );
-
-                    return;
-                }
-
-                if (++i % 1000 == 0)
-                {
-                    dwarn("task queue %s cannot accept new task now, size = %d", 
-                        q->get_name().c_str(), q->approx_count());
-                }
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            }
-        }
-        else if (t->spec().type == TASK_TYPE_RPC_REQUEST && _spec.max_input_queue_length != 0x0FFFFFFFUL)
-        {
-            int i = 0;
-            while (q->approx_count() >= _spec.max_input_queue_length)
-            {
-                // any customized rejection handler?
-                if (t->spec().rejection_handler != nullptr)
-                {
-                    t->spec().rejection_handler(t, controller);
-
-                    ddebug("task %s (%016llx) is rejected because the target queue is full",                            
-                        t->spec().name.c_str(),
-                        t->id()
-                        );
-
-                    return;
-                }
-
-                if (++i % 1000 == 0)
-                {
-                    dwarn("task queue %s cannot accept new task now, size = %d",
-                        q->get_name().c_str(), q->approx_count());
-                }
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            }
-        }
-
-        q->increase_count();
-        return q->enqueue(t);
+        int idx = (_spec.partitioned ? t->hash() % _queues.size() : 0);        
+        return _queues[idx]->enqueue_internal(t);
     }
     else
     {
@@ -309,6 +252,16 @@ void task_engine::start()
     }
 
     _is_running = true;
+}
+
+volatile int* task_engine::get_task_queue_virtual_length_ptr(
+    dsn_task_code_t code,
+    int hash
+    )
+{
+    auto pl = get_pool(task_spec::get(code)->pool_code);
+    auto idx = (pl->spec().partitioned ? hash % pl->spec().worker_count : 0);
+    return pl->queues()[idx]->get_virtual_length_ptr();
 }
 
 void task_engine::get_runtime_info(const std::string& indent, const std::vector<std::string>& args, /*out*/ std::stringstream& ss)

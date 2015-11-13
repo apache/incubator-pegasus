@@ -311,7 +311,14 @@ extern DSN_API void        dsn_cli_register(
 //
 //------------------------------------------------------------------------------
 extern DSN_API dsn_error_t           dsn_error_register(const char* name);
-extern DSN_API const char*           dsn_error_to_string(dsn_error_t err);    
+extern DSN_API const char*           dsn_error_to_string(dsn_error_t err);  
+// apps updates the value at dsn_task_queue_virtual_length_ptr(..) to control
+// the length of a vitual queue (bound to current code + hash) to 
+// enable customized throttling, see spec of thread pool for more information
+extern DSN_API volatile int*         dsn_task_queue_virtual_length_ptr(
+                                        dsn_task_code_t code,
+                                        int hash DEFAULT(0)
+                                        );
 extern DSN_API dsn_threadpool_code_t dsn_threadpool_code_register(const char* name);
 extern DSN_API const char*           dsn_threadpool_code_to_string(dsn_threadpool_code_t pool_code);
 extern DSN_API dsn_threadpool_code_t dsn_threadpool_code_from_string(

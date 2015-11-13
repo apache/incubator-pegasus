@@ -299,6 +299,9 @@ error_code server_state::sync_apps_from_remote_storage()
 
     if (err == ERR_OK)
     {
+        if (_apps.size() == 0)
+            return ERR_OBJECT_NOT_FOUND;
+
         auto& app = _apps[0];
         for (int i = 0; i < app.partition_count; i++)
         {
