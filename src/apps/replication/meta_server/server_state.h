@@ -102,7 +102,6 @@ public:
     void update_configuration(
         std::shared_ptr<configuration_update_request>& req,
         dsn_message_t request_msg, 
-        const blob& request_blob, 
         std::function<void()> callback
         );
 
@@ -126,6 +125,9 @@ private:
 
     // execute all pending requests according to ballot order
     void exec_pending_requests();
+
+    // compute drop out collection
+    void maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const rpc_address& node, bool is_add);
 
 private:
     friend class ::dsn::replication::replication_checker;

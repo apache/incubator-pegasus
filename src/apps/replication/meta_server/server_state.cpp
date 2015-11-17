@@ -476,12 +476,11 @@ DEFINE_TASK_CODE(LPC_META_SERVER_STATE_UPDATE_CALLBACK, TASK_PRIORITY_HIGH, THRE
 void server_state::update_configuration(
     std::shared_ptr<configuration_update_request>& req,
     dsn_message_t request_msg, 
-    const blob& request_blob, 
     std::function<void()> callback)
 {
     bool write;
     configuration_update_response response; 
-    std::string partition_path; 
+    std::string partition_path;
 
     {
         zauto_read_lock l(_lock);
@@ -499,6 +498,7 @@ void server_state::update_configuration(
             std::stringstream ss;
             ss << "/apps/" << app.app_name << "/" << old.gpid.pidx;
             partition_path = ss.str();
+            req->config.last_drops = old.last_drops;
         }
     }
 
@@ -519,12 +519,30 @@ void server_state::update_configuration(
         {
             dsn_msg_add_ref(request_msg);
         }
+
+        // maintain dropouts
+        switch (req->type)
+        {
+        case CT_ASSIGN_PRIMARY:
+        case CT_ADD_SECONDARY:
+        case CT_UPGRADE_TO_SECONDARY:
+            maintain_drops(req->config.last_drops, req->node, true);
+            break;
+        case CT_DOWNGRADE_TO_INACTIVE:
+        case CT_REMOVE:
+            maintain_drops(req->config.last_drops, req->node, false);
+            break;
+        }
         
+        binary_writer writer;
+        marshall(writer, req->config);
+
+        blob new_config_blob = writer.get_buffer();
         _storage->set_data(
             partition_path,
-            request_blob,
+            new_config_blob,
             LPC_META_SERVER_STATE_UPDATE_CALLBACK,
-            [this, req, request_msg, callback](error_code ec)
+            [this, new_config_blob, req, request_msg, callback](error_code ec)
             {                
                 storage_work_item wi;
                 wi.ballot = req->config.ballot;
@@ -589,7 +607,7 @@ void server_state::exec_pending_requests()
     } while (true);
 }
 
-static void maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const rpc_address& node, bool is_add)
+/*static*/ void server_state::maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const rpc_address& node, bool is_add)
 {
     auto it = std::find(drops.begin(), drops.end(), node);
     if (is_add)

@@ -206,14 +206,7 @@ void meta_service::on_update_configuration(dsn_message_t req)
         return;
     }
     
-    void* ptr;
-    size_t sz;
-    dsn_msg_read_next(req, &ptr, &sz);
-    dsn_msg_read_commit(req, 0);
-
-    blob request_buffer((const char*)ptr, 0, (int)sz);
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
-
     ::unmarshall(req, *request);
 
     if (_state->freezed())
@@ -228,7 +221,7 @@ void meta_service::on_update_configuration(dsn_message_t req)
     }
   
     global_partition_id gpid = request->config.gpid;
-    _state->update_configuration(request, req, request_buffer, [this, gpid](){
+    _state->update_configuration(request, req, [this, gpid](){
         if (_started)
         {
             tasking::enqueue(LPC_LBM_RUN, this, std::bind(&meta_service::on_config_changed, this, gpid));
@@ -238,12 +231,8 @@ void meta_service::on_update_configuration(dsn_message_t req)
 
 void meta_service::update_configuration_on_machine_failure(std::shared_ptr<configuration_update_request>& update)
 {
-    binary_writer writer;
-    marshall(writer, *update);
-
-    blob bb = writer.get_buffer();
     global_partition_id gpid = update->config.gpid;
-    _state->update_configuration(update, nullptr, bb, [this, gpid](){
+    _state->update_configuration(update, nullptr, [this, gpid](){
         if (_started)
         {
             tasking::enqueue(LPC_LBM_RUN, this, std::bind(&meta_service::on_config_changed, this, gpid));
