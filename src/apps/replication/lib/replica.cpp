@@ -46,8 +46,9 @@
 namespace dsn { namespace replication {
 
 // for replica::load(..) only
-replica::replica(replica_stub* stub, const char* path)
-: serverlet<replica>("replica")
+replica::replica(replica_stub* stub, global_partition_id gpid, const char* app_type, const char* path)
+    : serverlet<replica>("replica"), 
+    _primary_states(gpid, stub->options().staleness_for_commit)
 {
     dassert (stub, "");
     _stub = stub;
@@ -57,11 +58,13 @@ replica::replica(replica_stub* stub, const char* path)
     _options = &stub->options();
 
     init_state();
+    _config.gpid = gpid;
 }
 
 // for replica::newr(...) only
 replica::replica(replica_stub* stub, global_partition_id gpid, const char* app_type)
-: serverlet<replica>("replica")
+: serverlet<replica>("replica"),
+  _primary_states(gpid, stub->options().staleness_for_commit)
 {
     dassert (stub, "");
     _stub = stub;
@@ -288,6 +291,15 @@ void replica::execute_mutation(mutation_ptr& mu)
     if (err != ERR_OK)
     {
         handle_local_failure(err);
+    }
+
+    if (status() == PS_PRIMARY)
+    {
+        mutation_ptr next = _primary_states.write_queue.on_work_completed(mu.get(), nullptr);
+        if (next)
+        {
+            init_prepare(next);
+        }
     }
 }
 

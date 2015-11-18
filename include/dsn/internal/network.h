@@ -40,6 +40,7 @@
 # include <dsn/internal/message_parser.h>
 # include <dsn/cpp/address.h>
 # include <dsn/internal/priority_queue.h>
+# include <dsn/internal/exp_delay.h>
 
 namespace dsn {
 
@@ -111,6 +112,7 @@ namespace dsn {
 
         rpc_engine* engine() const { return _engine; }
         int max_buffer_block_count_per_send() const { return _max_buffer_block_count_per_send; }
+        void delay(int len) { _delayer.delay(len, _send_queue_threshold); }
 
     protected:
         static uint32_t get_local_ipv4();
@@ -120,6 +122,8 @@ namespace dsn {
         network_header_format         _parser_type;
         int                           _message_buffer_block_size;
         int                           _max_buffer_block_count_per_send;
+        shared_exp_delay              _delayer;
+        int                           _send_queue_threshold;
 
     private:
         friend class rpc_engine;
@@ -149,7 +153,7 @@ namespace dsn {
 
         // to be defined
         virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) = 0;
-
+        
     protected:
         typedef std::unordered_map<::dsn::rpc_address, rpc_session_ptr> client_sessions;
         client_sessions               _clients;
@@ -240,9 +244,10 @@ namespace dsn {
         };
 
         // TODO: expose the queue to be customizable
+        std::atomic<int>                   _message_count;
         ::dsn::utils::ex_lock_nr           _lock; // [
         bool                               _is_sending_next;
-        dlink                              _messages;
+        dlink                              _messages;        
         session_state                      _connect_state;
         uint64_t                           _message_sent;     
         // ]

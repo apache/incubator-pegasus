@@ -87,28 +87,9 @@ error_code replica::initialize_on_new(const char* app_type, global_partition_id 
     }
 }
 
-error_code replica::initialize_on_load(const char* dir, bool rename_dir_on_failure)
+error_code replica::initialize_on_load(const char* dir, const char* app_type, bool rename_dir_on_failure)
 {
-    std::string dr(dir);
-    char splitters[] = { '\\', '/', 0 };
-    std::string name = utils::get_last_component(dr, splitters);
-
-    if (name == "")
-    {
-        derror("invalid replica dir %s", dir);
-        return ERR_PATH_NOT_FOUND;
-    }
-
-    char app_type[128];
-    global_partition_id gpid;
-    if (3 != sscanf(name.c_str(), "%u.%u.%s", &gpid.app_id, &gpid.pidx, app_type))
-    {
-        derror( "invalid replica dir %s", dir);
-        return ERR_PATH_NOT_FOUND;
-    }
-    
-    _config.gpid = gpid;
-    _dir = dr;
+    _dir = dir;
 
     error_code err = init_app_and_prepare_list(app_type, false);
 
@@ -132,8 +113,26 @@ error_code replica::initialize_on_load(const char* dir, bool rename_dir_on_failu
 
 /*static*/ replica* replica::load(replica_stub* stub, const char* dir, bool rename_dir_on_failure)
 {
-    replica* rep = new replica(stub, dir);
-    error_code err = rep->initialize_on_load(dir, rename_dir_on_failure);
+    std::string dr(dir);
+    char splitters[] = { '\\', '/', 0 };
+    std::string name = utils::get_last_component(dr, splitters);
+
+    if (name == "")
+    {
+        derror("invalid replica dir %s", dir);
+        return nullptr;
+    }
+
+    char app_type[128];
+    global_partition_id gpid;
+    if (3 != sscanf(name.c_str(), "%u.%u.%s", &gpid.app_id, &gpid.pidx, app_type))
+    {
+        derror("invalid replica dir %s", dir);
+        return nullptr;
+    }
+
+    replica* rep = new replica(stub, gpid, app_type, dir);
+    error_code err = rep->initialize_on_load(dir, app_type, rename_dir_on_failure);
     if (err != ERR_OK)
     {
         rep->close();

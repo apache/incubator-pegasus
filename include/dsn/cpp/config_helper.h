@@ -128,7 +128,7 @@
         val.fld = default_value->fld;\
     }
 
-// cb: std::list<std::string>& => fld value
+// cb: std::list<int>& => fld value
 # define CONFIG_FLD_INT_LIST(fld, dsptr) \
    { \
     std::string vv = dsn_config_get_value_string(section, #fld, "", dsptr); \

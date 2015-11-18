@@ -162,24 +162,34 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
 error_code replication_app_base::write_internal(mutation_ptr& mu)
 {
     dassert (mu->data.header.decree == last_committed_decree() + 1, "");
+    dassert(mu->client_requests.size() == mu->data.updates.size(), 
+        "data inconsistency in mutation");
 
-    if (mu->rpc_code != RPC_REPLICATION_WRITE_EMPTY)
+    int count = static_cast<int>(mu->client_requests.size());
+    for (int i = 0; i < count; i++)
     {
-        binary_reader reader(mu->data.updates[0]);
-        dsn_message_t resp = (mu->client_msg() ? dsn_msg_create_response(mu->client_msg()) : nullptr);
-        dispatch_rpc_call(mu->rpc_code, reader, resp);
-    }
-    else
-    {
-        on_empty_write();
+        auto& r = mu->client_requests[i];
+
+        if (r.code != RPC_REPLICATION_WRITE_EMPTY)
+        {
+            binary_reader reader(mu->data.updates[i]);
+            dsn_message_t resp = (r.req ? dsn_msg_create_response(r.req) : nullptr);
+            dispatch_rpc_call(r.code, reader, resp);
+        }
+        else
+        {
+            on_empty_write();
+        }
+
+        if (_physical_error != 0)
+        {
+            derror("physical error %d occurs in replication local app %s", _physical_error, data_dir().c_str());
+            return ERR_LOCAL_APP_FAILURE;
+        }
     }
 
-    if (_physical_error != 0)
-    {
-        derror("physical error %d occurs in replication local app %s", _physical_error, data_dir().c_str());
-    }
-
-    return _physical_error == 0 ? ERR_OK : ERR_LOCAL_APP_FAILURE;
+    ++_last_committed_decree;
+    return ERR_OK;
 }
 
 error_code replication_app_base::update_log_info(replica* r, int64_t shared_log_offset, int64_t private_log_offset)
