@@ -36,6 +36,7 @@
 # pragma once
 
 # include <dsn/internal/task.h>
+# include <dsn/internal/exp_delay.h>
 
 namespace dsn {
 
@@ -70,12 +71,15 @@ public:
     int               worker_count() const { return _worker_count; }
     task_worker*      owner_worker() const { return _owner_worker; } // when not is_shared()
     int               index() const { return _index; }
+    volatile int*     get_virtual_length_ptr() { return &_virtual_queue_length; }
+
     admission_controller* controller() const { return _controller; }
     void set_controller(admission_controller* controller) { _controller = controller; }
 
 private:
     friend class task_worker_pool;
     void set_owner_worker(task_worker* worker) { _owner_worker = worker; }
+    void enqueue_internal(task* task);
 
 private:
     task_worker_pool*      _pool;
@@ -85,6 +89,9 @@ private:
     admission_controller*  _controller;
     int                    _worker_count;
     int                    _appro_count;
+    bool                   _enable_virtual_queue_throttling;
+    volatile int           _virtual_queue_length;
+    exp_delay              _delayer;
 };
 
 } // end namespace

@@ -245,7 +245,7 @@ namespace dsn
                             break;
                         }
                         _offset += sizeof(header) + header.size;
-                        blob blob_wrapper(buffer, header.size);
+                        blob blob_wrapper(buffer, (int)header.size);
                         binary_reader reader(blob_wrapper);
                         int op_type;
                         unmarshall(reader, op_type);

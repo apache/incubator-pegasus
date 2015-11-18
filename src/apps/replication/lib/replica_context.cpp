@@ -64,15 +64,9 @@ void primary_context::cleanup(bool clean_pending_mutations)
 
 void primary_context::do_cleanup_pending_mutations(bool clean_pending_mutations)
 {
-    if (pending_mutation_task != nullptr) 
-    {
-        pending_mutation_task->cancel(true);        
-        pending_mutation_task = nullptr;
-    }
-
     if (clean_pending_mutations)
     {
-        pending_mutation = nullptr;
+        write_queue.clear();
     }
 }
 

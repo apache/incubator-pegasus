@@ -56,9 +56,11 @@ void replica::on_client_write(int code, dsn_message_t request)
         return;
     }
 
-    mutation_ptr mu = new_mutation(_prepare_list->max_decree() + 1);
-    mu->set_client_request(code, request);
-    init_prepare(mu);
+    auto mu = _primary_states.write_queue.add_work(code, request, this);
+    if (mu)
+    {
+        init_prepare(mu);
+    }
 }
 
 void replica::init_prepare(mutation_ptr& mu)
@@ -144,7 +146,10 @@ void replica::init_prepare(mutation_ptr& mu)
     return;
 
 ErrOut:
-    response_client_message(mu->client_msg(), err);
+    for (auto& ci : mu->client_requests)
+    {
+        response_client_message(ci.req, err);
+    }
     return;
 }
 
