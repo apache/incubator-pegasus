@@ -24,6 +24,16 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+
 # include <dsn/internal/aio_provider.h>
 # include <gtest/gtest.h>
 # include <dsn/service_api_cpp.h>
@@ -47,7 +57,7 @@ TEST(core, lpc)
     std::string result;
     auto t = dsn_task_create(LPC_TEST_HASH, on_lpc_test, (void*)&result, 1);
     dsn_task_add_ref(t);
-    dsn_task_call(t, nullptr, 0);
+    dsn_task_call(t, 0);
     bool r = dsn_task_wait(t);
     dsn_task_release_ref(t);
 

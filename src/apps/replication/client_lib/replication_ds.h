@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 # include <dsn/internal/enum_helper.h>
@@ -41,6 +51,7 @@ namespace dsn {
 
         ENUM_BEGIN(learner_status, Learning_INVALID)
             ENUM_REG(LearningWithoutPrepare)
+            ENUM_REG(LearningWithPrepareTransient)
             ENUM_REG(LearningWithPrepare)
             ENUM_REG(LearningSucceeded)
             ENUM_REG(LearningFailed)

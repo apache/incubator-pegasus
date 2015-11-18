@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     network file system component base interface
+ *
+ * Revision history:
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/service_api_c.h>
@@ -61,6 +71,8 @@ namespace dsn {
         {
             return new T(node);
         }
+
+        typedef nfs_node* (*factory)(service_node*);
 
     public:
         nfs_node(service_node* node) : _node(node) {}

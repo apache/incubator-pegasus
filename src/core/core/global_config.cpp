@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include <dsn/internal/global_config.h>
 # include <thread>
 # include <dsn/internal/task_spec.h>
@@ -347,6 +357,36 @@ bool service_spec::init()
     return true;
 }
 
+void service_spec::load_app_shared_libraries(dsn::configuration_ptr config)
+{
+    std::vector<std::string> allSectionNames;
+    config->get_all_sections(allSectionNames);
+
+    int app_id = 0;
+    std::vector<std::string> modules;
+    for (auto it = allSectionNames.begin(); it != allSectionNames.end(); it++)
+    {
+        if (it->substr(0, strlen("apps.")) == std::string("apps."))
+        {
+            std::string module = config->get_string_value(it->c_str(), "dmodule", "",
+                "path of a dynamic library which implement this app role, and register itself upon loaded");
+            if (module.length() > 0)
+            {
+                modules.push_back(module);
+            }
+        }
+    }
+
+    for (auto m : modules)
+    {
+        if (!::dsn::utils::load_dynamic_library(m.c_str()))
+        {
+            dassert(false, "cannot load shared library %s specified in config file",
+                m.c_str());
+        }
+    }
+}
+
 bool service_spec::init_app_specs()
 {
     // init service apps
@@ -390,15 +430,6 @@ bool service_spec::init_app_specs()
             default:
                 dassert(false, "unsupport io mode");
                 break;
-            }
-
-            // load dynamic module where app role is defined
-            if (app.dmodule.length() > 0)
-            {
-                if (!::dsn::utils::load_dynamic_library(app.dmodule.c_str()))
-                {
-                    return false;
-                }   
             }
 
             auto& store = ::dsn::utils::singleton_store<std::string, ::dsn::service_app_role>::instance();

@@ -23,9 +23,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#pragma once
 
-#include "mutation.h"
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+# pragma once
+
+# include "mutation.h"
 
 namespace dsn { namespace replication {
 
@@ -41,6 +51,10 @@ typedef std::unordered_map<::dsn::rpc_address, remote_learner_state> learner_map
 class primary_context
 {
 public:
+    primary_context(global_partition_id gpid, int max_concurrent_2pc_count = 1)
+        : write_queue(gpid, max_concurrent_2pc_count)
+    {}
+
     void cleanup(bool clean_pending_mutations = true);
        
     void reset_membership(const partition_configuration& config, bool clear_learners);
@@ -58,8 +72,7 @@ public:
     learner_map             learners;
 
     // 2pc batching
-    mutation_ptr      pending_mutation;
-    dsn::task_ptr     pending_mutation_task;
+    mutation_queue          write_queue;
 
     // group check
     dsn::task_ptr     group_check_task;

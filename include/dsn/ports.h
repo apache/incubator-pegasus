@@ -23,16 +23,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 #if defined(_WIN32)
 
-# define _WINSOCK_DEPRECATED_NO_WARNINGS 1
-
-# include <Winsock2.h>
-# include <ws2tcpip.h>
 # include <Windows.h>
-# pragma comment(lib, "ws2_32.lib")
 
 __pragma(warning(disable:4127))
 

@@ -24,14 +24,24 @@
  * THE SOFTWARE.
  */
 
-# include <dsn/ports.h>
-# include <dsn/service_api_c.h>
-# include <dsn/cpp/address.h>
-# include <dsn/internal/task.h>
-# include "group_address.h"
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 
 # ifdef _WIN32
 
+# define _WINSOCK_DEPRECATED_NO_WARNINGS 1
+
+# include <Winsock2.h>
+# include <ws2tcpip.h>
+# include <Windows.h>
+# pragma comment(lib, "ws2_32.lib")
 
 # else
 # include <sys/socket.h>
@@ -45,6 +55,12 @@
 # endif
 
 # endif
+
+# include <dsn/ports.h>
+# include <dsn/service_api_c.h>
+# include <dsn/cpp/address.h>
+# include <dsn/internal/task.h>
+# include "group_address.h"
 
 namespace dsn
 {
@@ -112,7 +128,11 @@ DSN_API uint32_t dsn_ipv4_local(const char* network_interface)
         struct ifaddrs* i = ifa;
         while (i != nullptr)
         {
-            if (i->ifa_addr->sa_family == AF_INET && strcmp(i->ifa_name, network_interface) == 0)
+            if (i->ifa_name != nullptr &&
+                strcmp(i->ifa_name, network_interface) == 0 &&
+                i->ifa_addr != nullptr && 
+                i->ifa_addr->sa_family == AF_INET
+                )
             {
                 ret = (uint32_t)ntohl(((struct sockaddr_in *)i->ifa_addr)->sin_addr.s_addr);
                 break;
@@ -138,8 +158,8 @@ DSN_API uint32_t dsn_ipv4_local(const char* network_interface)
 
 DSN_API const char*   dsn_address_to_string(dsn_address_t addr)
 {
-    char* p = dsn::tls_dsn.scatch_buffer;
-    auto sz = sizeof(dsn::tls_dsn.scatch_buffer);
+    char* p = dsn::tls_dsn.scratch_next();
+    auto sz = sizeof(dsn::tls_dsn.scratch_buffer[0]);
     struct in_addr net_addr;
 # ifdef _WIN32
     char* ip_str;

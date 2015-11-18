@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <memory>
@@ -65,9 +75,6 @@ ENUM_BEGIN(counter_percentile_type, COUNTER_PERCENTILE_INVALID)
     ENUM_REG(COUNTER_PERCENTILE_999)
 ENUM_END(counter_percentile_type)
 
-class perf_counter;
-typedef perf_counter* (*perf_counter_factory)(const char *section, const char *name, perf_counter_type type);
-
 class perf_counter
 {
 public:
@@ -75,6 +82,8 @@ public:
     {
         return new T(section, name, type);
     }
+
+    typedef perf_counter* (*factory)(const char *, const char *, perf_counter_type);
 
 public:
     perf_counter(const char *section, const char *name, perf_counter_type type) {}

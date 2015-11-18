@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include <dsn/internal/perf_counters.h>
 # include <dsn/service_api_c.h>
 
@@ -107,7 +117,7 @@ bool perf_counters::remove_counter(const char* section, const char* name)
     return true;
 }
 
-void perf_counters::register_factory(perf_counter_factory factory)
+void perf_counters::register_factory(perf_counter::factory factory)
 {
     auto_write_lock l(_lock);
     _factory = factory;

@@ -24,6 +24,16 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+
 # pragma once
 
 # ifdef __linux__
@@ -48,7 +58,7 @@ namespace dsn {
             ~native_linux_aio_provider();
 
             virtual dsn_handle_t open(const char* file_name, int flag, int pmode);
-            virtual error_code close(dsn_handle_t hFile);
+            virtual error_code close(dsn_handle_t fh);
             virtual void    aio(aio_task* aio);
             virtual disk_aio* prepare_aio_context(aio_task* tsk);
 

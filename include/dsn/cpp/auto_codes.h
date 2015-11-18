@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/service_api_c.h>
@@ -347,6 +357,7 @@ namespace dsn
     DEFINE_ERR_CODE(ERR_HANDLE_EOF)
     DEFINE_ERR_CODE(ERR_WRONG_CHECKSUM)
     DEFINE_ERR_CODE(ERR_INVALID_DATA)
+    DEFINE_ERR_CODE(ERR_INVALID_HANDLE)
     DEFINE_ERR_CODE(ERR_INCOMPLETE_DATA)
     DEFINE_ERR_CODE(ERR_VERSION_OUTDATED)
     DEFINE_ERR_CODE(ERR_PATH_NOT_FOUND)

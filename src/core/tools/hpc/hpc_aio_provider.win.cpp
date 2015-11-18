@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # ifdef _WIN32
 
 # include "hpc_aio_provider.h"
@@ -200,9 +210,9 @@ dsn_handle_t hpc_aio_provider::open(const char* file_name, int oflag, int pmode)
     }
 }
 
-error_code hpc_aio_provider::close(dsn_handle_t hFile)
+error_code hpc_aio_provider::close(dsn_handle_t fh)
 {
-    if (::CloseHandle((HANDLE)(hFile)))
+    if (::CloseHandle((HANDLE)(fh)))
         return ERR_OK;
     else
     {

@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #include "replica.h"
 #include "mutation.h"
 #include "mutation_log.h"
@@ -82,6 +92,7 @@ void replica::handle_remote_failure(partition_status st, ::dsn::rpc_address node
         // potential secondary failure does not lead to ballot change
         // therefore, it is possible to have multiple exec here
         _primary_states.learners.erase(node);
+        _primary_states.statuses.erase(node);
         break;
     case PS_INACTIVE:
     case PS_ERROR:

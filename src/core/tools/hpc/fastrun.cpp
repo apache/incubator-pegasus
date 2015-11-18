@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include <dsn/tool/fastrun.h>
 # include "mix_all_io_looper.h"
 
@@ -69,7 +79,7 @@ namespace dsn
                 spec.perf_counter_factory_name = "dsn::tools::simple_perf_counter";
 
             if (spec.logging_factory_name == "")
-                spec.logging_factory_name = "dsn::tools::hpc_tail_logger";
+                spec.logging_factory_name = "dsn::tools::hpc_logger";
 
             if (spec.memory_factory_name == "")
                 spec.memory_factory_name = "dsn::default_memory_provider";

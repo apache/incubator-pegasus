@@ -23,6 +23,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     message parser base prototype, to support different kinds
+ *     of message headers (so as to interact among them)
+ *
+ * Revision history:
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 # include <dsn/ports.h>
@@ -37,6 +48,8 @@ namespace dsn
         {
             return new T(buffer_block_size);
         }
+
+        typedef message_parser*  (*factory)(int);
 
     public:
         message_parser(int buffer_block_size);
@@ -85,7 +98,7 @@ namespace dsn
     public:
         dsn_message_parser(int buffer_block_size);
 
-        virtual message_ex* get_message_on_receive(int read_length, /*out*/ int& read_next);
+        virtual message_ex* get_message_on_receive(int read_length, /*out*/ int& read_next) override;
 
         virtual int prepare_buffers_on_send(message_ex* msg, int offset, /*out*/ send_buf* buffers) override;
 

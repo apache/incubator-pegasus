@@ -23,6 +23,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     define the interface for implementing and plug-in the tools &
+ *     runtime components into Zion.
+ *     in Zion, both developement tools and runtime libraries 
+ *     (e.g., high performance components) are considered tools.
+ *
+ * Revision history:
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 // providers
@@ -63,6 +76,8 @@ public:
         return new T(name);
     }
 
+    typedef toollet* (*factory)(const char*);
+
 public:
     toollet(const char* name);
 
@@ -76,6 +91,8 @@ public:
     {
         return new T(name);
     }
+
+    typedef tool_app* (*factory)(const char*);
 
 public:
     tool_app(const char* name);
@@ -95,47 +112,27 @@ public:
     static const service_spec& get_service_spec();
 };
 
-typedef timer_service*   (*timer_factory)(service_node*, timer_service*);
-typedef task_queue*      (*task_queue_factory)(task_worker_pool*, int, task_queue*);
-typedef task_worker*     (*task_worker_factory)(task_worker_pool*, task_queue*, int, task_worker*);
-typedef admission_controller* (*admission_controller_factory)(task_queue*, const char*);
-typedef lock_provider*   (*lock_factory)(lock_provider*);
-typedef lock_nr_provider*   (*lock_nr_factory)(lock_nr_provider*);
-typedef rwlock_nr_provider* (*read_write_lock_factory)(rwlock_nr_provider*);
-typedef semaphore_provider* (*semaphore_factory)(int, semaphore_provider*);
-typedef network*         (*network_factory)(rpc_engine*, network*);
-typedef aio_provider*    (*aio_factory)(disk_engine*, aio_provider*);
-typedef env_provider*    (*env_factory)(env_provider*);
-typedef nfs_node*        (*nfs_factory)(service_node*);
-typedef message_parser*  (*message_parser_factory)(int);
-
-typedef perf_counter*    (*perf_counter_factory)(const char *, const char *, perf_counter_type);
-typedef logging_provider* (*logging_factory)();
-typedef memory_provider* (*memory_factory)();
-typedef toollet*         (*toollet_factory)(const char*);
-typedef tool_app*        (*tool_app_factory)(const char*);
-
 namespace internal_use_only
 {
-    bool register_component_provider(const char* name, timer_factory f, int type);
-    bool register_component_provider(const char* name, task_queue_factory f, int type);
-    bool register_component_provider(const char* name, task_worker_factory f, int type);
-    bool register_component_provider(const char* name, admission_controller_factory f, int type);
-    bool register_component_provider(const char* name, lock_factory f, int type);
-    bool register_component_provider(const char* name, lock_nr_factory f, int type);
-    bool register_component_provider(const char* name, read_write_lock_factory f, int type);
-    bool register_component_provider(const char* name, semaphore_factory f, int type);
-    bool register_component_provider(const char* name, network_factory f, int type);
-    bool register_component_provider(const char* name, aio_factory f, int type);
-    bool register_component_provider(const char* name, env_factory f, int type);
-    bool register_component_provider(const char* name, perf_counter_factory f, int type);
-    bool register_component_provider(const char* name, logging_factory f, int type);
-    bool register_component_provider(const char* name, memory_factory f, int type);
-    bool register_component_provider(const char* name, nfs_factory f, int type);
-    bool register_component_provider(const char* name, message_parser_factory f, int type);
+    bool register_component_provider(const char* name, timer_service::factory f, int type);
+    bool register_component_provider(const char* name, task_queue::factory f, int type);
+    bool register_component_provider(const char* name, task_worker::factory f, int type);
+    bool register_component_provider(const char* name, admission_controller::factory f, int type);
+    bool register_component_provider(const char* name, lock_provider::factory f, int type);
+    bool register_component_provider(const char* name, lock_nr_provider::factory f, int type);
+    bool register_component_provider(const char* name, rwlock_nr_provider::factory f, int type);
+    bool register_component_provider(const char* name, semaphore_provider::factory f, int type);
+    bool register_component_provider(const char* name, network::factory f, int type);
+    bool register_component_provider(const char* name, aio_provider::factory f, int type);
+    bool register_component_provider(const char* name, env_provider::factory f, int type);
+    bool register_component_provider(const char* name, perf_counter::factory f, int type);
+    bool register_component_provider(const char* name, logging_provider::factory f, int type);
+    bool register_component_provider(const char* name, memory_provider::factory f, int type);
+    bool register_component_provider(const char* name, nfs_node::factory f, int type);
+    bool register_component_provider(const char* name, message_parser::factory f, int type);
     
-    bool register_toollet(const char* name, toollet_factory f, int type);
-    bool register_tool(const char* name, tool_app_factory f, int type);
+    bool register_toollet(const char* name, toollet::factory f, int type);
+    bool register_tool(const char* name, tool_app::factory f, int type);
     toollet* get_toollet(const char* name, int type);
 }
 

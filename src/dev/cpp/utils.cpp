@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include <dsn/cpp/utils.h>
 # include <dsn/internal/singleton.h>
 # include <sys/types.h>
@@ -230,12 +240,12 @@ namespace dsn {
 namespace  dsn 
 {
 
-    binary_reader::binary_reader(blob& blob)
+    binary_reader::binary_reader(const blob& blob)
     {
         init(blob);
     }
 
-    void binary_reader::init(blob& bb)
+    void binary_reader::init(const blob& bb)
     {
         _blob = bb;
         _size = bb.length();

@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include "asio_rpc_session.h"
 
 # ifdef __TITLE__
@@ -103,9 +113,8 @@ namespace dsn {
             });
         }
         
-        void asio_rpc_session::write(message_ex* msgs)
+        void asio_rpc_session::write(uint64_t signature)
         {
-            dassert(msgs == _sending_msgs, "incorrect sending msg");
             std::vector<boost::asio::const_buffer> buffers2;
             int bcount = (int)_sending_buffers.size();
             
@@ -118,7 +127,7 @@ namespace dsn {
 
             add_ref();
             boost::asio::async_write(*_socket, buffers2,
-                [this, msgs](boost::system::error_code ec, std::size_t length)
+                [this, signature](boost::system::error_code ec, std::size_t length)
             {
                 if (!!ec)
                 {
@@ -126,7 +135,7 @@ namespace dsn {
                 }
                 else
                 {
-                    on_send_completed(msgs);
+                    on_send_completed(signature);
                 }
 
                 release_ref();
@@ -135,16 +144,17 @@ namespace dsn {
         
         asio_rpc_session::asio_rpc_session(
             asio_network_provider& net,
-            std::shared_ptr<boost::asio::ip::tcp::socket>& socket,
             ::dsn::rpc_address remote_addr,
-            rpc_client_matcher_ptr& matcher,
-            std::shared_ptr<message_parser>& parser
+            std::shared_ptr<boost::asio::ip::tcp::socket>& socket,
+            std::shared_ptr<message_parser>& parser,
+            bool is_client
             )
             :
-            rpc_session(net, remote_addr, matcher, parser),
-            _socket(socket)            
+            rpc_session(net, remote_addr, parser, is_client),
+            _socket(socket)
         {
             set_options();
+            if (!is_client) do_read();
         }
         
         void asio_rpc_session::on_failure()
@@ -186,7 +196,7 @@ namespace dsn {
 
                         set_options();
                         set_connected();
-                        on_send_completed(nullptr);
+                        on_send_completed();
                         do_read();
                     }
                     else
@@ -200,20 +210,6 @@ namespace dsn {
                     release_ref();
                 });
             }
-        }
-
-        asio_rpc_session::asio_rpc_session(
-            asio_network_provider& net,
-            ::dsn::rpc_address remote_addr,
-            std::shared_ptr<boost::asio::ip::tcp::socket>& socket,
-            std::shared_ptr<message_parser>& parser
-            )
-            :
-            rpc_session(net, remote_addr, parser),
-            _socket(socket)
-        {
-            set_options();
-            do_read();
-        }
+        }   
     }
 }

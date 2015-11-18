@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     interface for a perfect failure detector
+ *
+ * Revision history:
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/dist/failure_detector/fd.client.h>

@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #include "replica_context.h"
 
 namespace dsn { namespace replication {
@@ -54,15 +64,9 @@ void primary_context::cleanup(bool clean_pending_mutations)
 
 void primary_context::do_cleanup_pending_mutations(bool clean_pending_mutations)
 {
-    if (pending_mutation_task != nullptr) 
-    {
-        pending_mutation_task->cancel(true);        
-        pending_mutation_task = nullptr;
-    }
-
     if (clean_pending_mutations)
     {
-        pending_mutation = nullptr;
+        write_queue.clear();
     }
 }
 

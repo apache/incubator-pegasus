@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- *
- * -=- Robust Distributed System Nucleus (rDSN) -=-
+ * 
+ * -=- Robust Distributed System Nucleus (rDSN) -=- 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,14 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
 #pragma once
 #include <iomanip>
 #include "shared_io_service.h"
@@ -208,6 +216,7 @@ namespace dsn {
         std::string profiler_output_handler(const std::vector<std::string>& args);
         std::string profiler_js_handler(const std::vector<std::string>& args);
         std::string profiler_data_handler(const std::vector<std::string>& args);
+		std::string query_data_handler(const std::vector<std::string>& args);
 
         void profiler_output_dependency_list_callee(std::stringstream &ss, const int task_id);
         void profiler_output_dependency_list_caller(std::stringstream &ss, const int task_id);

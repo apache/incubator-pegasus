@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     helper class for automated performance test in zion
+ *
+ * Revision history:
+ *     Aug., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/service_api_cpp.h>

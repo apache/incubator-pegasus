@@ -24,6 +24,16 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     AIO using kqueue on BSD
+ *
+ * Revision history:
+ *     2015-09-07, HX Lin(linmajia@live.com), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+
 # if defined(__APPLE__) || defined(__FreeBSD__)
 
 # include "hpc_aio_provider.h"
@@ -86,9 +96,32 @@ hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provid
         uintptr_t lolp_or_events
         )
     {
-        auto e = (struct kevent*)lolp_or_events;
-        auto io = (struct aiocb*)(e->ident);
-        complete_aio(io);
+        struct kevent* e;
+        struct aiocb* io;
+        int bytes;
+        int err;
+
+        e = (struct kevent*)lolp_or_events;
+        if (e->filter != EVFILT_AIO)
+        {
+            derror("Non-aio filter invokes the aio callback! e->filter = %hd", e->filter);
+            return;
+        }
+
+        io = (struct aiocb*)(e->ident);
+        err = aio_error(io);
+        if (err == EINPROGRESS)
+        {
+            return;
+        }
+
+        bytes = aio_return(io);
+        if (bytes == -1)
+        {
+            err = errno;
+        }
+
+        complete_aio(io, bytes, err);
     };
 
     _looper = nullptr;
@@ -109,9 +142,9 @@ dsn_handle_t hpc_aio_provider::open(const char* file_name, int oflag, int pmode)
     return  (dsn_handle_t)(uintptr_t)::open(file_name, oflag, pmode);
 }
 
-error_code hpc_aio_provider::close(dsn_handle_t hFile)
+error_code hpc_aio_provider::close(dsn_handle_t fh)
 {
-    if (::close((int)(uintptr_t)(hFile)) == 0)
+    if (::close((int)(uintptr_t)(fh)) == 0)
     {
         return ERR_OK;
     }
@@ -144,12 +177,6 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
 
     aio->this_ = this;
 
-    // set up callback
-    aio->cb.aio_sigevent.sigev_notify = SIGEV_KEVENT;
-    aio->cb.aio_sigevent.sigev_notify_kqueue = (int)(uintptr_t)_looper->native_handle();
-    aio->cb.aio_sigevent.sigev_notify_kevent_flags = EV_CLEAR;
-    aio->cb.aio_sigevent.sigev_value.sival_ptr = &_callback;
-
     if (!async)
     {
         aio->evt = new utils::notify_event();
@@ -161,17 +188,22 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
     {
     case AIO_Read:
         io_prep_pread(&aio->cb, static_cast<int>((ssize_t)aio->file), aio->buffer, aio->buffer_size, aio->file_offset);
-        r = aio_read(&aio->cb);
         break;
     case AIO_Write:
         io_prep_pwrite(&aio->cb, static_cast<int>((ssize_t)aio->file), aio->buffer, aio->buffer_size, aio->file_offset);
-        r = aio_write(&aio->cb);
         break;
     default:
         dassert(false, "unknown aio type %u", static_cast<int>(aio->type));
         break;
     }
 
+    // set up callback
+    aio->cb.aio_sigevent.sigev_notify = SIGEV_KEVENT;
+    aio->cb.aio_sigevent.sigev_notify_kqueue = (int)(uintptr_t)_looper->native_handle();
+    aio->cb.aio_sigevent.sigev_notify_kevent_flags = EV_CLEAR;
+    aio->cb.aio_sigevent.sigev_value.sival_ptr = &_callback;
+
+    r = (aio->type == AIO_Read) ? aio_read(&aio->cb) : aio_write(&aio->cb);
     if (r != 0)
     {
         derror("file op failed, err = %d (%s). On FreeBSD, you may need to load"
@@ -208,36 +240,32 @@ error_code hpc_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/
     }
 }
 
-void hpc_aio_provider::complete_aio(struct aiocb* io)
+void hpc_aio_provider::complete_aio(struct aiocb* io, int bytes, int err)
 {
     posix_disk_aio_context* ctx = CONTAINING_RECORD(io, posix_disk_aio_context, cb);
+    error_code ec;
 
-    int err = aio_error(&ctx->cb);
-    if (err != EINPROGRESS)
+    if (err != 0)
     {
-        size_t bytes = aio_return(&ctx->cb); // from e.g., read or write
-        error_code ec;
-        if (err != 0)
-        {
-            derror("aio error, err = %s", strerror(err));
-            ec = ERR_FILE_OPERATION_FAILED;
-        }
-        else
-        {
-            ec = bytes > 0 ? ERR_OK : ERR_HANDLE_EOF;
-        }
-        
-        if (!ctx->evt)
-        {
-            aio_task* aio(ctx->tsk);
-            ctx->this_->complete_io(aio, ec, bytes);
-        }
-        else
-        {
-            ctx->err = ec;
-            ctx->bytes = bytes;
-            ctx->evt->notify();
-        }
+        derror("aio error, err = %s", strerror(err));
+        ec = ERR_FILE_OPERATION_FAILED;
+    }
+    else
+    {
+        dassert(bytes >= 0, "bytes = %d.", bytes);
+        ec = bytes > 0 ? ERR_OK : ERR_HANDLE_EOF;
+    }
+
+    if (!ctx->evt)
+    {
+        aio_task* aio(ctx->tsk);
+        ctx->this_->complete_io(aio, ec, bytes);
+    }
+    else
+    {
+        ctx->err = ec;
+        ctx->bytes = bytes;
+        ctx->evt->notify();
     }
 }
 

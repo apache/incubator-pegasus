@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     interface of the environment in Zion
+ *
+ * Revision history:
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/ports.h>
@@ -37,6 +47,8 @@ public:
     {
         return new T(inner_provider);
     }
+
+    typedef env_provider* (*factory)(env_provider*);
 
 public:
     env_provider(env_provider* inner_provider);

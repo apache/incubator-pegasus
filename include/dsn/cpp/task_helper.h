@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/service_api_c.h>
@@ -102,6 +112,11 @@ namespace dsn
         {
             return dsn_file_get_io_size(_task);
         }
+
+        void enqueue(int delay_milliseconds = 0)
+        {
+            dsn_task_call(_task, delay_milliseconds);
+        }
             
         void enqueue_aio(error_code err, size_t size)
         {
@@ -158,7 +173,7 @@ namespace dsn
                 t->release_ref(); // added upon callback exec registration
             }
         }
-
+        
         static void exec_rpc_response(dsn_error_t err, dsn_message_t req, dsn_message_t resp, void* task)
         {
             safe_task* t = (safe_task*)task;
@@ -186,6 +201,67 @@ namespace dsn
         THandler             _handler;
     };
 
+    //
+    // two staged computation task
+    // this is used when a task handle is returned when a call is made,
+    // while the task, is however, enqueued later after other operations when
+    // certain parameters to the task is known (e.g., error code after logging)
+    // in thise case, we can use two staged computation task as this is.
+    //
+    //    auto task = tasking::create_late_task(...);
+    //    ...
+    //    return task;
+    //
+    //    ... after logging ....
+    //    task->bind_and_enqueue([&](cb)=>{std::bind(cb, error)}, delay);
+    //
+    template<typename THandler>
+    class safe_late_task : public safe_task_handle
+    {
+    public:
+        safe_late_task(THandler& h)
+            : _handler(h), _bound_handler(nullptr)
+        {
+        }
+
+        operator task_ptr() const
+        {
+            return task_ptr(this);
+        }
+
+        virtual bool cancel(bool wait_until_finished, bool* finished = nullptr) override
+        {
+            bool r = safe_task_handle::cancel(wait_until_finished, finished);
+            if (r)
+            {
+                _bound_handler = nullptr;
+                release_ref(); // added upon callback exec registration
+            }
+            return r;
+        }
+
+        void bind_and_enqueue(
+            std::function<std::function<void()> (THandler&)> binder,
+            int delay_milliseconds = 0
+            )
+        {
+            _bound_handler = binder(_handler);
+            _handler = nullptr;
+            dsn_task_call(native_handle(), delay_milliseconds);
+        }
+
+        static void exec(void* task)
+        {
+            auto t = (safe_late_task<THandler>*)task;
+            t->_bound_handler();
+            t->_bound_handler = nullptr;
+            t->release_ref(); // added upon callback exec registration
+        }
+
+    private:
+        std::function<void()> _bound_handler;
+        THandler              _handler;
+    };
 
     // ------- inlined implementation ----------
 }

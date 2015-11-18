@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     specification for the labeled tasks (task kinds)
+ *
+ * Revision history:
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/service_api_c.h>
@@ -236,12 +246,15 @@ struct threadpool_spec
     worker_priority_t       worker_priority;
     bool                    worker_share_core;
     uint64_t                worker_affinity_mask;
-    unsigned int            max_input_queue_length; // 0xFFFFFFFFUL by default
+    int                     queue_length_throttling_threshold; // 0x0FFFFFFFUL by default
     bool                    partitioned;         // false by default
     std::string             queue_factory_name;
     std::string             worker_factory_name;
     std::list<std::string>  queue_aspects;
     std::list<std::string>  worker_aspects;
+    bool                    enable_virtual_queue_throttling;
+    std::list<int>          throttling_delay_vector_milliseconds;
+
     std::string             admission_controller_factory_name;
     std::string             admission_controller_arguments;
 
@@ -259,12 +272,17 @@ CONFIG_BEGIN(threadpool_spec)
     CONFIG_FLD_ENUM(worker_priority_t, worker_priority, THREAD_xPRIORITY_NORMAL, THREAD_xPRIORITY_INVALID, false, "thread priority")
     CONFIG_FLD(bool, bool, worker_share_core, true, "whether the threads share all assigned cores")
     CONFIG_FLD(uint64_t, uint64, worker_affinity_mask, 0, "what CPU cores are assigned to this pool, 0 for all")
-    CONFIG_FLD(unsigned int, uint64, max_input_queue_length, 0xFFFFFFFFUL, "maximum (each) task queue length for this pool")
+    CONFIG_FLD(int, uint64, queue_length_throttling_threshold, 0x0FFFFFFFUL, "base threshold for queue throttling")
     CONFIG_FLD(bool, bool, partitioned, false, "whethe the threads share a single queue(partitioned=false) or not; the latter is usually for workload hash partitioning for avoiding locking")
     CONFIG_FLD_STRING(queue_factory_name, "", "task queue provider name")
     CONFIG_FLD_STRING(worker_factory_name, "", "task worker provider name")
     CONFIG_FLD_STRING_LIST(queue_aspects, "task queue aspects names, usually for tooling purpose")
-    CONFIG_FLD_STRING_LIST(worker_aspects, "Tas aspects names, usually for tooling purpose")
+    CONFIG_FLD_STRING_LIST(worker_aspects, "task aspects names, usually for tooling purpose")
+    CONFIG_FLD(bool, bool, enable_virtual_queue_throttling, false, "whether to enable throttling with virtual queues")
+    CONFIG_FLD_INT_LIST(throttling_delay_vector_milliseconds, 
+        "how many milliseconds for delay, e.g., 0, 0, 1, 2, 5, 10 as delay milliseconds "
+        "for queue length is queue_length_throttling_threshold * ( 1.0, 1.2, 1.4, 1.6, 1.8, >=2.0 ),"
+        "see dsn_task_queue_virtual_length_ptr() for more information")
     CONFIG_FLD_STRING(admission_controller_factory_name, "", "customized admission controller for the task queues")
     CONFIG_FLD_STRING(admission_controller_arguments, "", "arguments for the cusotmized admission controller")
 CONFIG_END

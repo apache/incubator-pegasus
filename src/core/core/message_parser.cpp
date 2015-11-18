@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include <dsn/internal/message_parser.h>
 # include <dsn/service_api_c.h>
 
@@ -106,7 +116,7 @@ namespace dsn {
                 auto msg_bb = _read_buffer.range(0, msg_sz);
                 message_ex* msg = message_ex::create_receive_message(msg_bb);
 
-                dassert(msg->is_right_header() && msg->is_right_body(), "");
+                dassert(msg->is_right_header() && msg->is_right_body(false), "");
 
                 _read_buffer = _read_buffer.range(msg_sz);
                 _read_buffer_occupied -= msg_sz;

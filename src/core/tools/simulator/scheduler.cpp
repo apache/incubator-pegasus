@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include <dsn/tool/simulator.h>
 # include <dsn/service_api_c.h>
 # include <dsn/tool/node_scoper.h>
@@ -252,7 +262,7 @@ void scheduler::schedule()
         for (auto& s : _threads)
         {
             if ((s->in_continuation && s->is_continuation_ready)
-                || (!s->in_continuation && s->worker->queue()->count() > 0)
+                || (!s->in_continuation && s->worker->queue()->approx_count() > 0)
                 )
             {
                 ready_workers.push_back(s->index);

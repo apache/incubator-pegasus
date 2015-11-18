@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include "service_engine.h"
@@ -101,6 +111,11 @@ public:
     std::vector<task_worker_pool*>& pools() { return _pools; }
 
     bool is_started() const { return _is_running; }
+
+    volatile int* get_task_queue_virtual_length_ptr(
+        dsn_task_code_t code,
+        int hash
+        );
 
     service_node* node() const { return _node; }
     void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, /*out*/ std::stringstream& ss);

@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include "simple_task_queue.h"
 
 # ifdef __TITLE__
@@ -99,11 +109,6 @@ namespace dsn
             auto t = _samples.dequeue(c);
             dassert(t != nullptr, "dequeue does not return empty tasks");
             return t;
-        }
-
-        int      simple_task_queue::count() const
-        {
-            return _samples.count();
         }
     }
 }

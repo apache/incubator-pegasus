@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     the nativerun tool which is a simple but runnable deployment runtime for zion
+ *
+ * Revision history:
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 #include <dsn/tool_api.h>
@@ -38,7 +48,7 @@ namespace dsn {
             {
             }
 
-            void install(service_spec& s);
+            virtual void install(service_spec& s) override;
 
             virtual void run() override;
         };

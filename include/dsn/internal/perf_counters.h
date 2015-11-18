@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/internal/perf_counter.h>
@@ -60,7 +70,7 @@ public:
         return remove_counter("dsn", name);
     }
 
-    void register_factory(perf_counter_factory factory);
+    void register_factory(perf_counter::factory factory);
 
 private:
     typedef std::map<std::string, std::pair<perf_counter_ptr, perf_counter_type> > same_section_counters;
@@ -68,7 +78,7 @@ private:
 
     mutable utils::rw_lock_nr  _lock;
     all_counters               _counters;
-    perf_counter_factory       _factory;
+    perf_counter::factory       _factory;
 };
 
 }} // end namespace dsn::utils

@@ -24,6 +24,16 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     self-execution code for dynamic linked libraries
+ *
+ * Revision history:
+ *     Aug., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+
 
 //
 // developers define the following global function somewhere
@@ -38,7 +48,7 @@
 //
 // then it is done.
 //
-static void module_init();
+void module_init();
 
 # if defined(__GNUC__) || defined(_WIN32)
 # else

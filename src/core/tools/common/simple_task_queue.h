@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 # include <dsn/tool_api.h>
@@ -38,7 +48,6 @@ namespace dsn {
 
             virtual void     enqueue(task* task);
             virtual task*    dequeue();
-            virtual int      count() const;
 
         private:
             typedef utils::blocking_priority_queue<task*, TASK_PRIORITY_COUNT> tqueue;

@@ -24,6 +24,16 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+
 # ifndef _WIN32
 
 # include "native_aio_provider.posix.h"
@@ -54,10 +64,10 @@ namespace dsn {
             return (dsn_handle_t)(uintptr_t)::open(file_name, flag, pmode);
         }
 
-        error_code native_posix_aio_provider::close(dsn_handle_t hFile)
+        error_code native_posix_aio_provider::close(dsn_handle_t fh)
         {
             // TODO: handle failure
-            ::close((int)(uintptr_t)(hFile));
+            ::close((int)(uintptr_t)(fh));
             return ERR_OK;
         }
 
@@ -124,6 +134,9 @@ namespace dsn {
             int r;
 
             aio->this_ = this;
+            memset(&aio->cb, 0, sizeof(aio->cb));
+            aio->cb.aio_reqprio = 0;
+            aio->cb.aio_lio_opcode = (aio->type == AIO_Read ? LIO_READ : LIO_WRITE);
             aio->cb.aio_fildes = static_cast<int>((ssize_t)aio->file);
             aio->cb.aio_buf = aio->buffer;
             aio->cb.aio_nbytes = aio->buffer_size;

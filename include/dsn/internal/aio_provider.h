@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     define the interface for disk operation provider 
+ *
+ * Revision history:
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/internal/task.h>
@@ -45,12 +55,14 @@ public:
         return new T(disk, inner_provider);
     }
 
+    typedef aio_provider* (*factory)(disk_engine*, aio_provider*);
+
 public:
     aio_provider(disk_engine* disk, aio_provider* inner_provider);
     service_node* node() const;
 
     virtual dsn_handle_t open(const char* file_name, int flag, int pmode) = 0;
-    virtual error_code   close(dsn_handle_t hFile) = 0;
+    virtual error_code   close(dsn_handle_t fh) = 0;
     virtual void         aio(aio_task* aio) = 0;
     virtual disk_aio*    prepare_aio_context(aio_task*) = 0;
 

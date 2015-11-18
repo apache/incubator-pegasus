@@ -23,12 +23,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
-# include <dsn/tool_api.h>
-# include "io_looper.h"
-
 # ifdef _WIN32
+    # include <Winsock2.h>
     typedef SOCKET socket_t;
 # else
     # include <sys/types.h>
@@ -40,6 +48,11 @@
         # include <netinet/in.h>
     # endif
 # endif
+
+
+# include <dsn/tool_api.h>
+# include "io_looper.h"
+
 
 namespace dsn {
     namespace tools {
@@ -83,33 +96,27 @@ namespace dsn {
         {
         // client
         public:
+            virtual void connect() override;
+            
+        // server
+        public:
+
+        // shared
+        public:
             hpc_rpc_session(
                 socket_t sock,
                 std::shared_ptr<dsn::message_parser>& parser,
                 connection_oriented_network& net,
                 ::dsn::rpc_address remote_addr,
-                rpc_client_matcher_ptr& matcher
+                bool is_client
                 );
 
-            virtual void connect() override;
-            
-        // server
-        public:
-            hpc_rpc_session(
-                socket_t sock,
-                std::shared_ptr<dsn::message_parser>& parser,
-                connection_oriented_network& net,
-                ::dsn::rpc_address remote_addr
-                );
-            
-        // shared
-        public:
-            virtual void send(message_ex* msgs) override
+            virtual void send(uint64_t signature) override
             {
 # ifdef _WIN32
-                do_write(msgs);
+                do_write(signature);
 # else
-                do_safe_write(msgs);
+                do_safe_write(signature);
 # endif
             }
 
@@ -117,7 +124,7 @@ namespace dsn {
             void do_read(int sz = 256);
 
         private:            
-            void do_write(message_ex* msgs);
+            void do_write(uint64_t signature);
             void close();
             void on_failure();
             void on_read_completed(message_ex* msg)
@@ -130,7 +137,7 @@ namespace dsn {
             
         protected:
             socket_t                               _socket;
-            message_ex*                            _sending_msg;            
+            uint64_t                               _sending_signature;
             int                                    _sending_buffer_start_index;
 
 # ifdef _WIN32
@@ -149,7 +156,7 @@ namespace dsn {
 
             void on_connect_events_ready(uintptr_t lolp_or_events);
             void on_send_recv_events_ready(uintptr_t lolp_or_events);
-            void do_safe_write(message_ex* msgs);
+            void do_safe_write(uint64_t signature);
 # endif
         };
     }

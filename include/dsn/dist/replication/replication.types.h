@@ -1,3 +1,37 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Microsoft Corporation
+ * 
+ * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
 # pragma once
 
 //
@@ -441,10 +475,11 @@ namespace dsn { namespace replication {
     enum learner_status
     {
         LearningWithoutPrepare = 0,
-        LearningWithPrepare = 1,
-        LearningSucceeded = 2,
-        LearningFailed = 3,
-        Learning_INVALID = 4,
+        LearningWithPrepareTransient = 1,
+        LearningWithPrepare = 2, // stage 2, preare while checkpinting
+        LearningSucceeded = 3,
+        LearningFailed = 4,
+        Learning_INVALID = 5,
     };
 
     DEFINE_POD_SERIALIZATION(learner_status);
@@ -471,17 +506,7 @@ namespace dsn { namespace replication {
         int32_t pidx;
     };
 
-    inline void marshall(::dsn::binary_writer& writer, const global_partition_id& val)
-    {
-        marshall(writer, val.app_id);
-        marshall(writer, val.pidx);
-    };
-
-    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ global_partition_id& val)
-    {
-        unmarshall(reader, val.app_id);
-        unmarshall(reader, val.pidx);
-    };
+    DEFINE_POD_SERIALIZATION(global_partition_id)
 
     // ---------- mutation_header -------------
     struct mutation_header
@@ -493,23 +518,7 @@ namespace dsn { namespace replication {
         int64_t last_committed_decree;
     };
 
-    inline void marshall(::dsn::binary_writer& writer, const mutation_header& val)
-    {
-        marshall(writer, val.gpid);
-        marshall(writer, val.ballot);
-        marshall(writer, val.decree);
-        marshall(writer, val.log_offset);
-        marshall(writer, val.last_committed_decree);
-    };
-
-    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ mutation_header& val)
-    {
-        unmarshall(reader, val.gpid);
-        unmarshall(reader, val.ballot);
-        unmarshall(reader, val.decree);
-        unmarshall(reader, val.log_offset);
-        unmarshall(reader, val.last_committed_decree);
-    };
+    DEFINE_POD_SERIALIZATION(mutation_header)
 
     // ---------- mutation_data -------------
     struct mutation_data
@@ -576,21 +585,7 @@ namespace dsn { namespace replication {
         partition_status status;
     };
 
-    inline void marshall(::dsn::binary_writer& writer, const replica_configuration& val)
-    {
-        marshall(writer, val.gpid);
-        marshall(writer, val.ballot);
-        marshall(writer, val.primary);
-        marshall(writer, val.status);
-    };
-
-    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ replica_configuration& val)
-    {
-        unmarshall(reader, val.gpid);
-        unmarshall(reader, val.ballot);
-        unmarshall(reader, val.primary);
-        unmarshall(reader, val.status);
-    };
+    DEFINE_POD_SERIALIZATION(replica_configuration)
 
     // ---------- prepare_msg -------------
     struct prepare_msg

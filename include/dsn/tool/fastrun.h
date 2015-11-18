@@ -23,6 +23,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     define the fast run tool for Zion, which aims at
+ *     fast computation of the upper applications
+ *
+ * Revision history:
+ *     Aug., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 #include <dsn/tool_api.h>
@@ -40,7 +51,7 @@ namespace dsn
             {
             }
 
-            void install(service_spec& s);
+            virtual void install(service_spec& s) override;
 
             virtual void run() override;
         };

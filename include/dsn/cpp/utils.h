@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/ports.h>
@@ -185,14 +195,14 @@ namespace dsn {
     {
     public:
         // given bb on ctor
-        binary_reader(blob& blob);
+        binary_reader(const blob& blob);
 
         // or delayed init
         binary_reader() {}
 
         virtual ~binary_reader() {}
 
-        void init(blob& bb);
+        void init(const blob& bb);
 
         template<typename T> int read_pod(/*out*/ T& val);
         template<typename T> int read(/*out*/ T& val) { dassert(false, "read of this type is not implemented"); return 0; }
@@ -396,7 +406,7 @@ namespace dsn {
 
 			extern std::string path_combine(const std::string& path1, const std::string& path2);
 
-			extern bool get_normalized_path(const std::string& path, std::string& npath);
+			extern int get_normalized_path(const std::string& path, std::string& npath);
 
 			//int (const char* fpath, int typeflags, struct FTW *ftwbuf)
 			typedef std::function<int(const char*, int, struct FTW*)> ftw_handler;
@@ -421,7 +431,7 @@ namespace dsn {
 
 			extern bool remove_path(const std::string& path);
 			
-			extern bool rename_path(const std::string& path1, const std::string& path2);
+			extern bool rename_path(const std::string& path1, const std::string& path2, bool overwrite = false);
 
 			extern bool file_size(const std::string& path, int64_t& sz);
 

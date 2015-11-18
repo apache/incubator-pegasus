@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     application model atop of zion in c++
+ *
+ * Revision history:
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/service_api_c.h>
@@ -70,12 +80,13 @@ namespace dsn
         static dsn_error_t app_start(void* app, int argc, char** argv)
         {
             service_app* sapp = (service_app*)app;
+            sapp->_address = dsn_primary_address();
+            sapp->_name = std::string(argv[0]);
+
             auto r = sapp->start(argc, argv);
             if (r == ::dsn::ERR_OK)
             {
-                sapp->_started = true;
-                sapp->_address = dsn_primary_address();
-                sapp->_name = std::string(argv[0]);
+                sapp->_started = true;                
                 sapp->register_for_debugging();
             }
             return r;

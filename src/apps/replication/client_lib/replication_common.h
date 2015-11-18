@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/dist/replication.h>
@@ -78,17 +88,14 @@ public:
     int32_t fd_lease_seconds;
     int32_t fd_grace_seconds;
 
-    bool    log_enable_private_commit;
-    bool    log_enable_shared_prepare;
+    bool    log_enable_private_prepare;
 
     int32_t log_file_size_mb;
-    int32_t log_buffer_size_mb;
+    int32_t log_batch_buffer_MB;
     int32_t log_pending_max_ms;
-    bool    log_batch_write;
     int32_t log_file_size_mb_private;
     int32_t log_buffer_size_mb_private;
     int32_t log_pending_max_ms_private;
-    bool    log_batch_write_private;
 
     int32_t config_sync_interval_ms;
     bool    config_sync_disabled;

@@ -24,6 +24,16 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+
 # include <dsn/internal/aio_provider.h>
 # include <gtest/gtest.h>
 # include <dsn/service_api_cpp.h>
@@ -41,23 +51,39 @@ TEST(core, aio)
     // write
     auto fp = dsn_file_open("tmp", O_RDWR | O_CREAT | O_BINARY, 0666);
     
-    auto t1 = ::dsn::file::write(fp, buffer, len, 0, LPC_AIO_TEST, nullptr, nullptr, 0);
-    auto t2 = ::dsn::file::write(fp, buffer, len, len, LPC_AIO_TEST, nullptr, nullptr, 0);
-    
-    bool r = t1->wait();
-    EXPECT_TRUE(r);
+    std::list<task_ptr> tasks;
+    uint64_t offset = 0;
 
-    r = t2->wait();
-    EXPECT_TRUE(r);
+    // new write
+    for (int i = 0; i < 100; i++)
+    {
+        auto t = ::dsn::file::write(fp, buffer, len, offset, LPC_AIO_TEST, nullptr, nullptr, 0);
+        tasks.push_back(t);
+        offset += len;
+    }
 
-    t1 = ::dsn::file::write(fp, buffer, len, 0, LPC_AIO_TEST, nullptr, nullptr, 0);
-    t2 = ::dsn::file::write(fp, buffer, len, len, LPC_AIO_TEST, nullptr, nullptr, 0);
+    for (auto& t : tasks)
+    {
+        bool r = t->wait();
+        EXPECT_TRUE(r);
+    }
 
-    r = t1->wait();
-    EXPECT_TRUE(r);
+    // overwrite 
+    offset = 0;
+    tasks.clear();
+    for (int i = 0; i < 100; i++)
+    {
+        auto t = ::dsn::file::write(fp, buffer, len, offset, LPC_AIO_TEST, nullptr, nullptr, 0);
+        tasks.push_back(t);
+        offset += len;
+    }
 
-    r = t2->wait();
-    EXPECT_TRUE(r);
+    for (auto& t : tasks)
+    {
+        bool r = t->wait();
+        EXPECT_TRUE(r);
+        EXPECT_TRUE(t->io_size() == (size_t)len);
+    }
 
     auto err = dsn_file_close(fp);
     EXPECT_TRUE(err == ERR_OK);
@@ -66,27 +92,37 @@ TEST(core, aio)
     char* buffer2 = (char*)alloca((size_t)len);
     fp = dsn_file_open("tmp", O_RDONLY | O_BINARY, 0);
 
-    t1 = ::dsn::file::read(fp, buffer2, len, 0, LPC_AIO_TEST, nullptr, nullptr, 0);
-    t2 = ::dsn::file::read(fp, buffer2, len, len, LPC_AIO_TEST, nullptr, nullptr, 0);
+    // concurrent read
+    offset = 0;
+    tasks.clear();
+    for (int i = 0; i < 100; i++)
+    {
+        auto t = ::dsn::file::read(fp, buffer2, len, offset, LPC_AIO_TEST, nullptr, nullptr, 0);
+        tasks.push_back(t);
+        offset += len;
+    }
 
-    r = t1->wait();
-    EXPECT_TRUE(r);
+    for (auto& t : tasks)
+    {
+        bool r = t->wait();
+        EXPECT_TRUE(r);
+        EXPECT_TRUE(t->io_size() == (size_t)len);
+    }
 
-    r = t2->wait();
-    EXPECT_TRUE(r);
+    // sequential read
+    offset = 0;
+    tasks.clear();
+    for (int i = 0; i < 100; i++)
+    {
+        buffer2[0] = 'x';
+        auto t = ::dsn::file::read(fp, buffer2, len, offset, LPC_AIO_TEST, nullptr, nullptr, 0);
+        offset += len;
 
-    EXPECT_TRUE(memcmp(buffer, buffer2, len) == 0);
-
-    t1 = ::dsn::file::read(fp, buffer2, len, 0, LPC_AIO_TEST, nullptr, nullptr, 0);
-    t2 = ::dsn::file::read(fp, buffer2, len, len, LPC_AIO_TEST, nullptr, nullptr, 0);
-
-    r = t1->wait();
-    EXPECT_TRUE(r);
-
-    r = t2->wait();
-    EXPECT_TRUE(r);
-
-    EXPECT_TRUE(memcmp(buffer, buffer2, len) == 0);
+        bool r = t->wait();
+        EXPECT_TRUE(r);
+        EXPECT_TRUE(t->io_size() == (size_t)len);
+        EXPECT_TRUE(memcmp(buffer, buffer2, len) == 0);
+    }
 
     err = dsn_file_close(fp);
     EXPECT_TRUE(err == ERR_OK);

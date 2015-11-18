@@ -1,3 +1,37 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Microsoft Corporation
+ * 
+ * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
 # include "mutation_log.h"
 # include <gtest/gtest.h>
 
@@ -21,19 +55,8 @@ TEST(replication, log_learn)
         utils::filesystem::create_directory(logp);
 
         // writing logs
-        mutation_log_ptr mlog = new mutation_log(
-            1,
-            50,
-            1,
-            false,
-            true
-            );
-
-        mlog->initialize(logp.c_str());
-        mlog->start_write_service(
-            mdecrees,
-            10
-            );
+        mutation_log_ptr mlog = new mutation_log(logp, true, 1, 1);
+        mlog->open(gpid, nullptr);
 
         for (int i = 0; i < 1000; i++)
         {
@@ -58,23 +81,16 @@ TEST(replication, log_learn)
 
         decree durable_decree = lp;
 
-        mlog->garbage_collection_when_as_commit_logs(gpid, durable_decree);
+        mlog->garbage_collection(gpid, durable_decree, 0);
         mlog->close();
         
         // reading logs
-        mlog = new mutation_log(
-            1,
-            50,
-            1,
-            true,
-            true
-            );
-
-        mlog->initialize(logp.c_str());
+        mlog = new mutation_log(logp, true, 1, 1);
+        mlog->open(gpid, nullptr);
 
         // learning
         learn_state state;
-        mlog->get_learn_state_when_as_commit_logs(gpid, durable_decree + 1, state);
+        mlog->get_learn_state(gpid, durable_decree + 1, state);
         mlog->close();
         mlog = nullptr;
 
@@ -97,6 +113,7 @@ TEST(replication, log_learn)
                     (const void*)mu->data.updates[0].data(),
                     mu->data.updates[0].length()) == 0
                     );
+                return true;
             },
             offset
             );

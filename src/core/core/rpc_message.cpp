@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include <dsn/ports.h>
 # include <dsn/internal/rpc_message.h>
 # include <dsn/internal/network.h>
@@ -256,13 +266,42 @@ bool message_ex::is_right_header() const
     }
 }
 
-bool message_ex::is_right_body() const
+bool message_ex::is_right_body(bool is_write_msg) const
 {
     if (header->body_crc32 != CRC_INVALID)
     {
-        //return (uint32_t)header->body_crc32 == crc32::compute((char*)bb.data() + sizeof(message_header), _msg.hdr.body_length, 0);
-        dassert(false, "TODO");
-        return true;
+        int i_max = (int)buffers.size() - 1;
+        uint32_t crc32 = 0;
+        size_t len = 0;
+        for (int i = 0; i <= i_max; i++)
+        {
+            uint32_t lcrc;
+            const void* ptr;
+            size_t sz;
+
+            if (i == 0 && is_write_msg)
+            {
+                ptr = (const void*)(buffers[i].data() + sizeof(message_header));
+                sz = (size_t)buffers[i].length() - sizeof(message_header);
+            }
+            else
+            {
+                ptr = (const void*)buffers[i].data();
+                sz = (size_t)buffers[i].length();
+            }
+
+            lcrc = dsn_crc32_compute(ptr, sz, crc32);
+            crc32 = dsn_crc32_concatenate(
+                0,
+                0, crc32, len,
+                crc32, lcrc, sz
+                );
+
+            len += sz;
+        }
+
+        dassert(len == (size_t)header->body_length, "data length is wrong");
+        return header->body_crc32 == crc32;
     }
 
     // crc is not enabled
@@ -272,13 +311,13 @@ bool message_ex::is_right_body() const
     }
 }
 
-message_ex* message_ex::create_receive_message(blob& data)
+message_ex* message_ex::create_receive_message(const blob& data)
 {
     message_ex* msg = new message_ex();
     msg->header = (message_header*)data.data();
     msg->_is_read = true;
-    data = data.range((int)sizeof(message_header));
-    msg->buffers.push_back(data);
+    auto data2 = data.range((int)sizeof(message_header));
+    msg->buffers.push_back(data2);
 
     dbg_dassert(msg->header->body_length > 0, "message %s is empty!", msg->header->rpc_name);
     return msg;
@@ -291,6 +330,7 @@ message_ex* message_ex::copy()
     msg->to_address = to_address;
     msg->local_rpc_code = local_rpc_code;
     msg->buffers = buffers;
+    msg->_is_read = _is_read;
 
     // received message
     if (this->_is_read)
@@ -360,7 +400,7 @@ message_ex* message_ex::create_response()
     msg->local_rpc_code = task_spec::get(local_rpc_code)->rpc_paired_code;
     msg->from_address = to_address;
     msg->to_address = from_address;
-    msg->server_session = server_session;
+    msg->io_session = io_session;
 
     // join point 
     task_spec::get(local_rpc_code)->on_rpc_create_response.execute(this, msg);

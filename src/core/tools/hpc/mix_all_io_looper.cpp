@@ -22,9 +22,15 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
+ */
+
+/*
+ * Description:
+ *     What is this file about?
  *
- * History:
- *      Aug., 2015, Zhenyu Guo (zhenyu.guo@microsoft.com)
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
  */
 
 # include "mix_all_io_looper.h"
@@ -102,32 +108,25 @@ namespace dsn
             exec_timer_tasks(true);
 
             // execute local queue
-            while (true)
+            task *t = _local_tasks.pop_all(), *next;
+            while (t)
             {
-                dlink *t = _local_tasks.next();
-                if (t == &_local_tasks)
-                    break;
-
-                t->remove();
-                task* ts = CONTAINING_RECORD(t, task, _task_queue_dl);
-                ts->exec_internal();
+                next = t->next;
+                t->exec_internal();
+                t = next;
             }
 
             // execute shared queue
-            while (true)
             {
-                dlink *t;
-                {
-                    utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
-                    t = _remote_tasks.next();
-                    if (t == &_remote_tasks)
-                        break;
-                    t->remove();
-                }
-
-                _remote_count.fetch_sub(1, std::memory_order_release);
-                task* ts = CONTAINING_RECORD(t, task, _task_queue_dl);
-                ts->exec_internal();
+                utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
+                t = _remote_tasks.pop_all();
+            }
+            
+            while (t)
+            {
+                next = t->next;
+                t->exec_internal();
+                t = next;
             }
         }
 
@@ -140,12 +139,12 @@ namespace dsn
                 auto it = _local_timer_tasks.begin();
                 if (it->first <= nts)
                 {
-                    task* t = it->second;
+                    task* t = it->second.pop_all(), *next;
                     _local_timer_tasks.erase(it);
 
-                    while (true)
+                    while (t)
                     {
-                        auto n = t->_task_queue_dl.remove_and_get_next();
+                        next = t->next;
                         if (local_exec)
                             t->exec_internal();
                         else
@@ -153,10 +152,8 @@ namespace dsn
                             t->enqueue();
                             t->release_ref(); // added by first t->enqueue()
                         }
-                        if (!n)
-                            break;
 
-                        t = CONTAINING_RECORD(n, task, _task_queue_dl);
+                        t = next;
                     }
                 }
                 else
@@ -166,7 +163,7 @@ namespace dsn
             // execute shared timers
             while (_remote_timer_tasks_count.load(std::memory_order_relaxed) > 0)
             {
-                task* t = nullptr;
+                task* t = nullptr, *next;
                 {
                     utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_remote_timer_tasks_lock);
                     if (_remote_timer_tasks.size() == 0)
@@ -175,7 +172,7 @@ namespace dsn
                     auto it = _remote_timer_tasks.begin();
                     if (it->first <= nts)
                     {
-                        t = it->second;
+                        t = it->second.pop_all();
                         _remote_timer_tasks.erase(it);
                     }
                     else
@@ -185,7 +182,9 @@ namespace dsn
                 while (t)
                 {
                     _remote_timer_tasks_count--;
-                    auto n = t->_task_queue_dl.remove_and_get_next();
+                    
+                    next = t->next;
+
                     if (local_exec)
                         t->exec_internal();
                     else
@@ -193,12 +192,8 @@ namespace dsn
                         t->enqueue();
                         t->release_ref(); // added by first t->enqueue()
                     }
-                    if (!n)
-                        break;
-                    else
-                    {
-                        t = CONTAINING_RECORD(n, task, _task_queue_dl);
-                    }
+
+                    t = next;
                 }
             }
         }
@@ -214,11 +209,8 @@ namespace dsn
                 {
                     utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_remote_timer_tasks_lock);
                     auto pr = _remote_timer_tasks.insert(
-                        std::map<uint64_t, task*>::value_type(ts_ms, timer));
-                    if (!pr.second)
-                    {
-                        timer->_task_queue_dl.insert_before(&pr.first->second->_task_queue_dl);
-                    }
+                        std::map<uint64_t, slist<task>>::value_type(ts_ms, slist<task>()));
+                    pr.first->second.add(timer);
                 }
 
                 _remote_timer_tasks_count++;
@@ -228,11 +220,8 @@ namespace dsn
             else
             {
                 auto pr = _local_timer_tasks.insert(
-                    std::map<uint64_t, task*>::value_type(ts_ms, timer));
-                if (!pr.second)
-                {
-                    timer->_task_queue_dl.insert_before(&pr.first->second->_task_queue_dl);
-                }
+                    std::map<uint64_t, slist<task>>::value_type(ts_ms, slist<task>()));
+                pr.first->second.add(timer);
             }
         }
 
@@ -243,8 +232,7 @@ namespace dsn
             {
                 {
                     utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
-
-                    task->_task_queue_dl.insert_before(&_remote_tasks);
+                    _remote_tasks.add(task);
                 }
 
                 int old = _remote_count.fetch_add(1, std::memory_order_release);
@@ -257,7 +245,7 @@ namespace dsn
             // put into local queue
             else
             {
-                task->_task_queue_dl.insert_before(&_local_tasks);
+                _local_tasks.add(task);
             }
         }
 

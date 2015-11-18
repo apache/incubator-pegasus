@@ -1,28 +1,4 @@
-/*
- * The MIT License (MIT)
- *
- * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
+
 
 # include <dsn/service_api_c.h>
 # include <dsn/cpp/auto_codes.h>
@@ -43,11 +19,11 @@ TEST(core, dsn_threadpool_code)
 
     ASSERT_STREQ("THREAD_POOL_DEFAULT", dsn_threadpool_code_to_string(THREAD_POOL_DEFAULT));
     ASSERT_EQ(THREAD_POOL_DEFAULT, dsn_threadpool_code_from_string("THREAD_POOL_DEFAULT", THREAD_POOL_INVALID));
-    ASSERT_LT(THREAD_POOL_DEFAULT, dsn_threadpool_code_max());
+    ASSERT_LE(THREAD_POOL_DEFAULT, dsn_threadpool_code_max());
 
     ASSERT_STREQ("THREAD_POOL_FOR_TEST", dsn_threadpool_code_to_string(THREAD_POOL_FOR_TEST));
     ASSERT_EQ(THREAD_POOL_FOR_TEST, dsn_threadpool_code_from_string("THREAD_POOL_FOR_TEST", THREAD_POOL_INVALID));
-    ASSERT_LT(THREAD_POOL_FOR_TEST, dsn_threadpool_code_max());
+    ASSERT_LE(THREAD_POOL_FOR_TEST, dsn_threadpool_code_max());
 }
 
 DEFINE_TASK_CODE(TASK_CODE_COMPUTE_FOR_TEST, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT);
@@ -67,7 +43,7 @@ TEST(core, dsn_task_code)
 
     ASSERT_STREQ("TASK_CODE_COMPUTE_FOR_TEST", dsn_task_code_to_string(TASK_CODE_COMPUTE_FOR_TEST));
     ASSERT_EQ(TASK_CODE_COMPUTE_FOR_TEST, dsn_task_code_from_string("TASK_CODE_COMPUTE_FOR_TEST", TASK_CODE_INVALID));
-    ASSERT_LT(TASK_CODE_COMPUTE_FOR_TEST, dsn_task_code_max());
+    ASSERT_LE(TASK_CODE_COMPUTE_FOR_TEST, dsn_task_code_max());
     dsn_task_code_query(TASK_CODE_COMPUTE_FOR_TEST, &type, &pri, &pool);
     ASSERT_EQ(TASK_TYPE_COMPUTE, type);
     ASSERT_EQ(TASK_PRIORITY_HIGH, pri);
@@ -75,7 +51,7 @@ TEST(core, dsn_task_code)
 
     ASSERT_STREQ("TASK_CODE_AIO_FOR_TEST", dsn_task_code_to_string(TASK_CODE_AIO_FOR_TEST));
     ASSERT_EQ(TASK_CODE_AIO_FOR_TEST, dsn_task_code_from_string("TASK_CODE_AIO_FOR_TEST", TASK_CODE_INVALID));
-    ASSERT_LT(TASK_CODE_AIO_FOR_TEST, dsn_task_code_max());
+    ASSERT_LE(TASK_CODE_AIO_FOR_TEST, dsn_task_code_max());
     dsn_task_code_query(TASK_CODE_AIO_FOR_TEST, &type, &pri, &pool);
     ASSERT_EQ(TASK_TYPE_AIO, type);
     ASSERT_EQ(TASK_PRIORITY_COMMON, pri);
@@ -83,7 +59,7 @@ TEST(core, dsn_task_code)
 
     ASSERT_STREQ("TASK_CODE_RPC_FOR_TEST", dsn_task_code_to_string(TASK_CODE_RPC_FOR_TEST));
     ASSERT_EQ(TASK_CODE_RPC_FOR_TEST, dsn_task_code_from_string("TASK_CODE_RPC_FOR_TEST", TASK_CODE_INVALID));
-    ASSERT_LT(TASK_CODE_RPC_FOR_TEST, dsn_task_code_max());
+    ASSERT_LE(TASK_CODE_RPC_FOR_TEST, dsn_task_code_max());
     dsn_task_code_query(TASK_CODE_RPC_FOR_TEST, &type, &pri, &pool);
     ASSERT_EQ(TASK_TYPE_RPC_REQUEST, type);
     ASSERT_EQ(TASK_PRIORITY_LOW, pri);
@@ -91,7 +67,7 @@ TEST(core, dsn_task_code)
 
     ASSERT_STREQ("TASK_CODE_RPC_FOR_TEST_ACK", dsn_task_code_to_string(TASK_CODE_RPC_FOR_TEST_ACK));
     ASSERT_EQ(TASK_CODE_RPC_FOR_TEST_ACK, dsn_task_code_from_string("TASK_CODE_RPC_FOR_TEST_ACK", TASK_CODE_INVALID));
-    ASSERT_LT(TASK_CODE_RPC_FOR_TEST_ACK, dsn_task_code_max());
+    ASSERT_LE(TASK_CODE_RPC_FOR_TEST_ACK, dsn_task_code_max());
     dsn_task_code_query(TASK_CODE_RPC_FOR_TEST_ACK, &type, &pri, &pool);
     ASSERT_EQ(TASK_TYPE_RPC_RESPONSE, type);
     ASSERT_EQ(TASK_PRIORITY_LOW, pri);

@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #include "prepare_list.h"
 #include "mutation.h"
 
@@ -40,7 +50,7 @@ prepare_list::prepare_list(
         : mutation_cache(init_decree, max_count)
 {
     _committer = committer;
-    _last_committed_decree = 0;
+    _last_committed_decree = init_decree;
 }
 
 void prepare_list::sanity_check()

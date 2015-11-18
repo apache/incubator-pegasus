@@ -23,6 +23,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     the task abstraction in zion, as well as the derived various types of
+ *     tasks in our system
+ *
+ * Revision history:
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/ports.h>
@@ -75,7 +86,9 @@ struct __tls_dsn__
     uint64_t      node_pool_thread_ids; // 8,8,16 bits
     int           last_lower32_task_id; // 32bits
 
-    char          scatch_buffer[256]; // for temp to_string() etc.
+    char          scratch_buffer[4][256]; // for temp to_string() etc., 4 buffers in maximum
+    int           scratch_buffer_index;
+    char*         scratch_next() { return scratch_buffer[++scratch_buffer_index % 4]; }
 };
 
 extern __thread struct __tls_dsn__ tls_dsn;
@@ -93,7 +106,9 @@ public:
     virtual void exec() = 0;
 
     void                    exec_internal();    
-    bool                    cancel(bool wait_until_finished, /*out*/ bool* finished = nullptr); // return whether *this* cancel success
+    // return whether *this* cancel success, 
+    // for timers, even return value is false, the further timer execs are cancelled
+    bool                    cancel(bool wait_until_finished, /*out*/ bool* finished = nullptr);
     bool                    wait(int timeout_milliseconds = TIME_MS_MAX, bool on_cancel = false);
     virtual void            enqueue();
     void                    set_error_code(error_code err) { _error = err; }
@@ -154,7 +169,7 @@ private:
 
 public:
     // used by task queue only
-    dlink                  _task_queue_dl;
+    task*                  next;
 };
 
 class task_c : public task
@@ -239,7 +254,7 @@ public:
     message_ex*  get_request() { return _request; }
     virtual void enqueue() override;
 
-    virtual void  exec()
+    virtual void  exec() override
     {
         _handler->run(_request);
     }
@@ -304,6 +319,7 @@ public:
     // filled by frameworks
     aio_type     type;
     disk_engine *engine;
+    void*        file_object;
 
     disk_aio() : type(aio_type::AIO_Invalid) {}
     virtual ~disk_aio(){}
@@ -319,7 +335,7 @@ public:
     size_t          get_transferred_size() const { return _transferred_size; }
     disk_aio*       aio() { return _aio; }
 
-    void            exec() // aio completed
+    virtual void exec() override // aio completed
     {
         if (nullptr != _cb)
         {
@@ -331,7 +347,7 @@ public:
         }
     }
 
-private:
+protected:
     disk_aio*         _aio;
     size_t            _transferred_size;
     dsn_aio_handler_t _cb;

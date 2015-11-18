@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 #include <dsn/tool_api.h>
@@ -36,12 +46,11 @@ namespace dsn { namespace tools {
         sim_client_session(
             sim_network_provider& net, 
             ::dsn::rpc_address remote_addr, 
-            rpc_client_matcher_ptr& matcher, 
             std::shared_ptr<message_parser>& parser
             );
 
         virtual void connect();
-        virtual void send(message_ex* msgs);
+        virtual void send(uint64_t signature) override;
     };
 
     class sim_server_session : public rpc_session
@@ -54,7 +63,7 @@ namespace dsn { namespace tools {
             std::shared_ptr<message_parser>& parser
             );
 
-        virtual void send(message_ex* reply_msg);
+        virtual void send(uint64_t signature) override;
 
         virtual void connect() {}
 
@@ -74,9 +83,8 @@ namespace dsn { namespace tools {
 
         virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr)
         {
-            auto matcher = get_client_matcher();
             auto parser = new_message_parser();
-            return rpc_session_ptr(new sim_client_session(*this, server_addr, matcher, parser));
+            return rpc_session_ptr(new sim_client_session(*this, server_addr, parser));
         }
 
         uint32_t net_delay_milliseconds() const;

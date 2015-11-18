@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- *
- * -=- Robust Distributed System Nucleus (rDSN) -=-
+ * 
+ * -=- Robust Distributed System Nucleus (rDSN) -=- 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,14 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
 # ifdef __linux__
 
 # include "native_aio_provider.linux.h"
@@ -68,10 +76,10 @@ namespace dsn {
             return (dsn_handle_t)(uintptr_t)::open(file_name, flag, pmode);
         }
 
-        error_code native_linux_aio_provider::close(dsn_handle_t hFile)
+        error_code native_linux_aio_provider::close(dsn_handle_t fh)
         {
             // TODO: handle failure
-            ::close((int)(uintptr_t)(hFile));
+            ::close((int)(uintptr_t)(fh));
             return ERR_OK;
         }
 

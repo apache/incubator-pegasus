@@ -1,3 +1,37 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Microsoft Corporation
+ * 
+ * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
 # include "mutation_log.h"
 # include <gtest/gtest.h>
 
@@ -6,22 +40,22 @@ using namespace ::dsn::replication;
 
 TEST(replication, log_file)
 {
-    multi_partition_decrees mdecrees;
+    multi_partition_decrees_ex mdecrees;
     global_partition_id gpid = { 1, 0 };    
     std::string fpath = ".//log.1.100";
     int64_t offset = 100;
     std::string str = "hello, world!";
+    error_code err;
 
     // prepare
-    mdecrees[gpid] = 3;
+    mdecrees[gpid] = log_replica_info(3, 0);
     utils::filesystem::remove_path(fpath);
 
     // write log
     log_file_ptr lf = log_file::create_write(
         "./",
         1,
-        offset,
-        10
+        offset
         );
 
     // write header + data block
@@ -64,7 +98,8 @@ TEST(replication, log_file)
 
     // read the file for test
     offset = 100;
-    lf = log_file::open_read(fpath.c_str());
+    lf = log_file::open_read(fpath.c_str(), err);
+    EXPECT_TRUE(err == ERR_OK);
     EXPECT_TRUE(lf != nullptr);
     EXPECT_TRUE(lf->index() == 1);
     EXPECT_TRUE(lf->start_offset() == 100);
@@ -80,7 +115,6 @@ TEST(replication, log_file)
         lf->read_header(reader);
 
         EXPECT_TRUE(lf->is_right_header());
-        EXPECT_TRUE(lf->header().max_staleness_for_commit == 10);
         EXPECT_TRUE(lf->header().log_buffer_size_bytes == 1024);
 
         std::string ss;
@@ -123,18 +157,14 @@ TEST(replication, mutation_log)
 
     // writing logs
     mutation_log_ptr mlog = new mutation_log(
+        logp,
+        false,
         1,
-        50,
-        4,
-        true,
-        false
+        4
         );
 
-    mlog->initialize(logp.c_str());
-    mlog->start_write_service(
-        mdecrees,
-        10
-        );
+    auto err = mlog->open(nullptr);
+    EXPECT_TRUE(err == ERR_OK);
 
     for (int i = 0; i < 1000; i++)
     {
@@ -161,17 +191,14 @@ TEST(replication, mutation_log)
 
     // reading logs
     mlog = new mutation_log(
+        logp,
+        false,
         1,
-        50,
-        4,
-        true,
-        false
+        4
         );
 
-    mlog->initialize(logp.c_str());
-
     int mutation_index = -1;
-    mlog->replay(        
+    mlog->open(        
         [&mutations, &mutation_index](mutation_ptr mu)
         {
             mutation_ptr wmu = mutations[++mutation_index];
@@ -185,10 +212,12 @@ TEST(replication, mutation_log)
                 (const void*)mu->data.updates[0].data(),
                 mu->data.updates[0].length()) == 0
                 );
+            return true;
         }
         );
     EXPECT_TRUE(mutation_index + 1 == (int)mutations.size());
- 
+    mlog->close();
+
     // clear all
     utils::filesystem::remove_path(logp);
 }

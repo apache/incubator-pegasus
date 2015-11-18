@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 //
@@ -38,6 +48,23 @@
 namespace dsn { namespace replication {
 
 class mutation;
+
+class replica_log_info
+{
+public:
+    int32_t magic;
+    int32_t crc;
+    ballot  init_ballot;
+    decree  init_decree;
+    int64_t init_offset_in_shared_log;
+    int64_t init_offset_in_private_log;
+
+public:
+    replica_log_info() { memset((void*)this, 0, sizeof(*this)); }
+    error_code load(const char* file);
+    error_code store(const char* file);
+};
+
 class replication_app_base
 {
 public:
@@ -87,7 +114,7 @@ public:
     //
     // The replication framework may emit empty write request to this app to increase the decree.
     //
-    virtual void on_empty_write() { _last_committed_decree++; }
+    virtual void on_empty_write() { }
 
     //
     // Helper routines to accelerate learning.
@@ -142,6 +169,7 @@ protected:
         );
 
     void unregister_rpc_handler(dsn_task_code_t code);
+    void init_last_commit_decree(decree d) { _last_committed_decree = d; }
     
 private:
     template<typename T, typename TRequest, typename TResponse>
@@ -154,9 +182,13 @@ private:
 private:
     // routines for replica internal usage
     friend class replica;
+    friend class replica_stub;
+    error_code open_internal(replica* r, bool create_new);
     error_code write_internal(mutation_ptr& mu);
     void       dispatch_rpc_call(int code, binary_reader& reader, dsn_message_t response);
-    
+    const replica_log_info& log_info() const { return _info; }
+    error_code update_log_info(replica* r, int64_t shared_log_offset, int64_t private_log_offset);
+
 private:
     std::string _dir_data;
     std::string _dir_learn;
@@ -164,9 +196,13 @@ private:
     std::unordered_map<int, std::function<void(binary_reader&, dsn_message_t)> > _handlers;
     int         _physical_error; // physical error (e.g., io error) indicates the app needs to be dropped
     bool        _is_delta_state_learning_supported;
+    replica_log_info _info;
 
-protected:
+private:
+    // it is now totally controlled by rdsn as we are now supporting batching
     std::atomic<decree> _last_committed_decree;
+
+protected:    
     std::atomic<decree> _last_durable_decree;
 };
 

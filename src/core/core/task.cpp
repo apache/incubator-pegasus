@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include <dsn/service_api_c.h>
 # include <dsn/internal/task.h>
 # include <dsn/internal/env_provider.h>
@@ -107,6 +117,7 @@ task::task(dsn_task_code_t code, int hash, service_node* node)
     _delay_milliseconds = 0;
     _wait_for_cancel = false;
     _is_null = false;
+    next = nullptr;
     
     if (node != nullptr)
     {
@@ -276,6 +287,9 @@ bool task::cancel(bool wait_until_finished, /*out*/ bool* finished /*= nullptr*/
             spec().name(),
             id()
             );*/
+        
+        // make sure timers are cancelled
+        _wait_for_cancel = true;
 
         if (finished)
             *finished = false;

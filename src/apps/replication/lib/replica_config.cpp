@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #include "replica.h"
 #include "mutation.h"
 #include "mutation_log.h"
@@ -146,18 +156,21 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     dassert (!_primary_states.check_exist(proposal.node, PS_PRIMARY), "");
     dassert (!_primary_states.check_exist(proposal.node, PS_SECONDARY), "");
 
-    if (_primary_states.learners.find(proposal.node) != _primary_states.learners.end())
-    {
-        return;
-    }
-
     remote_learner_state state;
     state.prepare_start_decree = invalid_decree;
-    state.signature = random64(0, (uint64_t)(-1LL));
     state.timeout_task = nullptr; // TODO: add timer for learner task
 
-    _primary_states.learners[proposal.node] = state;
-    _primary_states.statuses[proposal.node] = PS_POTENTIAL_SECONDARY;
+    auto it = _primary_states.learners.find(proposal.node);
+    if (it != _primary_states.learners.end())
+    {
+        state.signature = it->second.signature;
+    }
+    else
+    {
+        state.signature = random64(0, (uint64_t)(-1LL));
+        _primary_states.learners[proposal.node] = state;
+        _primary_states.statuses[proposal.node] = PS_POTENTIAL_SECONDARY;
+    }
 
     group_check_request request;
     request.app_type = _primary_states.membership.app_type;
@@ -387,6 +400,8 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
             _primary_states.last_prepare_decree_on_new_primary = _prepare_list->max_decree();
             break;
         case CT_ASSIGN_PRIMARY:
+            _primary_states.last_prepare_decree_on_new_primary = 0;
+            break;
         case CT_DOWNGRADE_TO_SECONDARY:
         case CT_DOWNGRADE_TO_INACTIVE:
         case CT_UPGRADE_TO_SECONDARY:
@@ -518,12 +533,13 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
             && _secondary_states.checkpoint_task != nullptr)
         {
             dwarn(
-                "%s: status change from %s @ %lld to %s @ %lld is not allowed coz checkpointing is still running",
+                "%s: status change from %s @ %lld to %s @ %lld is not allowed coz checkpointing %p is still running",
                 name(),
                 enum_to_string(old_status),
                 old_ballot,
                 enum_to_string(config.status),
-                config.ballot
+                config.ballot,
+                _secondary_states.checkpoint_task->native_handle()
                 );
             return false;
         }
@@ -746,7 +762,8 @@ void replica::replay_prepare_list()
         }
         else
         {
-            mu->rpc_code = RPC_REPLICATION_WRITE_EMPTY;
+            mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);
+
             ddebug(
                 "%s: emit empty mutation %lld when replay prepare list",
                 name(),

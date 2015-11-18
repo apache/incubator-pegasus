@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 #include <dsn/tool_api.h>
@@ -41,7 +51,7 @@ public:
     // after milliseconds, the provider should call task->enqueue()        
     virtual void add_timer(task* task) override;
 
-    virtual void start(io_modifer& ctx) {}
+    virtual void start(io_modifer& ctx) override {}
 };
 
 class sim_task_queue : public task_queue
@@ -51,7 +61,6 @@ public:
 
     virtual void     enqueue(task* task);
     virtual task*    dequeue();
-    virtual int      count() const { return static_cast<int>(_tasks.size()); }
 
 private:
     std::map<uint32_t, task*> _tasks;

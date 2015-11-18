@@ -24,6 +24,16 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+
 # include "replication_common.h"
 # include "replica_stub.h"
 
@@ -51,8 +61,10 @@ replication_service_app::~replication_service_app(void)
 error_code replication_service_app::start(int argc, char** argv)
 {
     replication_options opts;
-    opts.initialize();
-    opts.working_dir = std::string("./") + argv[0];
+    std::string app_name(argv[0]); 
+    
+    opts.initialize();    
+    opts.working_dir = utils::filesystem::path_combine(opts.working_dir, app_name);
 
     _stub = new replica_stub();
     _stub->initialize(opts);

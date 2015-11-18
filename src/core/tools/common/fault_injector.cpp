@@ -24,6 +24,16 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+
 #include <dsn/toollet/fault_injector.h>
 #include <dsn/service_api_c.h>
 
@@ -91,17 +101,16 @@ namespace dsn {
 
         static void fault_on_task_begin(task* this_)
         {
-            
-        }
-
-        static void fault_on_task_end(task* this_)
-        {
             fj_opt& opt = s_fj_opts[this_->spec().code];
             if (opt.execution_extra_delay_us_max > 0)
             {
                 auto d = dsn_random32(0, opt.execution_extra_delay_us_max);
                 std::this_thread::sleep_for(std::chrono::microseconds(d));
             }
+        }
+
+        static void fault_on_task_end(task* this_)
+        {            
         }
 
         static void fault_on_task_cancelled(task* this_)

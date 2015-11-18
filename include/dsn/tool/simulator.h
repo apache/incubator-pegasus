@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     the simulation tool (include simulation, replay, model-checking, ...)
+ *
+ * Revision history:
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 # include <dsn/tool_api.h>
@@ -37,7 +47,7 @@ public:
     {
     }
 
-    void install(service_spec& s);
+    virtual void install(service_spec& s) override;
     
     virtual void run() override;
 

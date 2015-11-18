@@ -23,6 +23,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     define address helper routines around dsn_address_t structure
+ *
+ * Revision history:
+ *     July, 2015, @imzhenyu (Zhenyu Guo), first version
+ *     Aug., 2015, @imzhenyu (Zhenyu Guo), add group and uri address support
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/service_api_c.h>
@@ -31,6 +42,7 @@
 # include <unordered_set>
 # include <vector>
 # include <cstring> // for strcmp()
+# include <string>
 
 namespace dsn
 {
@@ -57,6 +69,7 @@ namespace dsn
         rpc_address& operator=(dsn_address_t addr);
 
         const char* to_string() const;
+        bool from_string_ipv4(const char* s);
         dsn_host_type_t type() const { return (dsn_host_type_t)_addr.u.v4.type; }
         dsn_address_t c_addr() const { return _addr; }
         dsn_address_t* c_addr_ptr() { return &_addr; }
@@ -199,13 +212,27 @@ namespace dsn
 
     inline void rpc_address::clear()
     {
-        _addr.u.v4.type = HOST_TYPE_INVALID;
-        _addr.u.uri.uri = 0;
+        _addr.u.value = 0;
     }
 
     inline const char* rpc_address::to_string() const
     {
         return dsn_address_to_string(_addr);
+    }
+
+    inline bool rpc_address::from_string_ipv4(const char* s)
+    {
+        std::string str = std::string(s);
+        auto pos = str.find_last_of(':');
+        if (pos == std::string::npos)
+            return false;
+        else
+        {
+            auto host = str.substr(0, pos);
+            auto port = atoi(str.substr(pos + 1).c_str());
+            assign_ipv4(host.c_str(), (uint16_t)port);
+            return true;
+        }
     }
 }
 
@@ -221,7 +248,7 @@ namespace std
             case HOST_TYPE_IPV4:
                 return std::hash<uint32_t>()(ep.ip()) ^ std::hash<uint16_t>()(ep.port());
             case HOST_TYPE_URI:
-                return std::hash<string>()(std::string(ep.to_string()));
+                return std::hash<std::string>()(std::string(ep.to_string()));
             case HOST_TYPE_GROUP:
                 return std::hash<void*>()(ep.group_address());
             default:

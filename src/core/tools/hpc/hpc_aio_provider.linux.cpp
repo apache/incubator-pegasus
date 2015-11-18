@@ -24,6 +24,16 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+
 # ifdef __linux__
 //# ifdef _WIN32
 
@@ -120,9 +130,9 @@ dsn_handle_t hpc_aio_provider::open(const char* file_name, int oflag, int pmode)
     return (dsn_handle_t)(uintptr_t)::open(file_name, oflag, pmode);
 }
 
-error_code hpc_aio_provider::close(dsn_handle_t hFile)
+error_code hpc_aio_provider::close(dsn_handle_t fh)
 {
-    if (::close((int)(uintptr_t)(hFile)) == 0)
+    if (::close((int)(uintptr_t)(fh)) == 0)
     {
         return ERR_OK;
     }

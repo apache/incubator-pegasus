@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include "task_engine.h"
 # include <dsn/internal/perf_counters.h>
 # include <dsn/internal/factory_store.h>
@@ -149,52 +159,8 @@ void task_worker_pool::enqueue(task* t)
 
     if (_is_running)
     {
-        int idx = (_spec.partitioned ? t->hash() % _queues.size() : 0);
-        task_queue* q = _queues[idx];
-        //dinfo("%s pool::enqueue %s (%016llx)", _node->name(), task->spec().name(), task->id());
-        auto controller = _controllers[idx];
-        if (controller != nullptr)
-        {
-            while (!controller->is_task_accepted(t))
-            {
-                // any customized rejection handler?
-                if (t->spec().rejection_handler != nullptr)
-                {
-                    t->spec().rejection_handler(t, controller);
-
-                    ddebug("task %s (%016llx) is rejected",                            
-                        t->spec().name.c_str(),
-                        t->id()
-                        );
-
-                    return;
-                }
-
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            }
-        }
-        else if (t->spec().type == TASK_TYPE_RPC_REQUEST && _spec.max_input_queue_length != 0xFFFFFFFFUL)
-        {
-            while ((uint32_t)q->count() >= _spec.max_input_queue_length)
-            {
-                // any customized rejection handler?
-                if (t->spec().rejection_handler != nullptr)
-                {
-                    t->spec().rejection_handler(t, controller);
-
-                    ddebug("task %s (%016llx) is rejected because the target queue is full",                            
-                        t->spec().name.c_str(),
-                        t->id()
-                        );
-
-                    return;
-                }
-
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            }
-        }
-
-        return q->enqueue(t);
+        int idx = (_spec.partitioned ? t->hash() % _queues.size() : 0);        
+        return _queues[idx]->enqueue_internal(t);
     }
     else
     {
@@ -239,7 +205,7 @@ void task_worker_pool::get_runtime_info(const std::string& indent, const std::ve
     {
         if (q)
         {
-            ss << indent2 << q->get_name() << " now has " << q->count() << " pending tasks" << std::endl;
+            ss << indent2 << q->get_name() << " now has " << q->approx_count() << " pending tasks" << std::endl;
         }
     }
 
@@ -286,6 +252,16 @@ void task_engine::start()
     }
 
     _is_running = true;
+}
+
+volatile int* task_engine::get_task_queue_virtual_length_ptr(
+    dsn_task_code_t code,
+    int hash
+    )
+{
+    auto pl = get_pool(task_spec::get(code)->pool_code);
+    auto idx = (pl->spec().partitioned ? hash % pl->spec().worker_count : 0);
+    return pl->queues()[idx]->get_virtual_length_ptr();
 }
 
 void task_engine::get_runtime_info(const std::string& indent, const std::vector<std::string>& args, /*out*/ std::stringstream& ss)

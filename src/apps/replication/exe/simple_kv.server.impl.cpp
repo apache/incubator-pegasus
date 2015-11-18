@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #include "simple_kv.server.impl.h"
 #include <fstream>
 #include <sstream>
@@ -42,7 +52,7 @@ namespace dsn {
                 : simple_kv_service(replica), _lock(true)
             {
                 _test_file_learning = false;
-                set_delta_state_learning_supported();
+                //set_delta_state_learning_supported();
             }
 
             // RPC_SIMPLE_KV_READ
@@ -67,9 +77,8 @@ namespace dsn {
             {
                 zauto_lock l(_lock);
                 _store[pr.key] = pr.value;
-                ++_last_committed_decree;
 
-                dinfo("write %s, decree = %lld\n", pr.key.c_str(), last_committed_decree());
+                dinfo("write %s, decree = %lld\n", pr.key.c_str(), last_committed_decree() + 1);
                 reply(0);
             }
 
@@ -82,9 +91,8 @@ namespace dsn {
                     it->second.append(pr.value);
                 else
                     _store[pr.key] = pr.value;
-                ++_last_committed_decree;
 
-                dinfo("append %s, decree = %lld\n", pr.key.c_str(), last_committed_decree());
+                dinfo("append %s, decree = %lld\n", pr.key.c_str(), last_committed_decree() + 1);
                 reply(0);
             }
             
@@ -190,7 +198,8 @@ namespace dsn {
                     _store[key] = value;
                 }
 
-                _last_durable_decree = _last_committed_decree = version;
+                _last_durable_decree = version;
+                init_last_commit_decree(version);
             }
 
             int simple_kv_service_impl::flush(bool force)
@@ -243,9 +252,10 @@ namespace dsn {
                 int magic = 0xdeadbeef;
                 writer.write(magic);
 
-                writer.write(_last_committed_decree.load());
+                auto c = last_committed_decree();
+                writer.write(c);
 
-                dassert(_last_committed_decree >= 0, "");
+                dassert(c >= 0, "");
 
                 uint64_t count = static_cast<uint64_t>(_store.size());
                 writer.write(count);
@@ -309,7 +319,7 @@ namespace dsn {
                     _store[key] = value;
                 }
 
-                _last_committed_decree = decree;
+                init_last_commit_decree(decree);
                 _last_durable_decree = 0;
 
                 flush(true);

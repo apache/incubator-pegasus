@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include <dsn/cpp/utils.h>
 # include <dsn/internal/singleton.h>
 # include <sys/types.h>
@@ -54,7 +64,7 @@ namespace dsn {
             std::string module_name(module);
 # if defined(_WIN32)
             module_name += ".dll";
-            if (::LoadLibraryA(module_name.c_str()) != NULL)
+            if (::LoadLibraryA(module_name.c_str()) == NULL)
             {
                 derror("load dynamic library '%s' failed, err = %d", module_name.c_str(), ::GetLastError());
                 return false;

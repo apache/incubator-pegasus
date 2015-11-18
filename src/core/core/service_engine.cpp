@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include "service_engine.h"
 # include "task_engine.h"
 # include "disk_engine.h"
@@ -378,7 +388,7 @@ void service_engine::init_before_toollets(const service_spec& spec)
         spec.memory_factory_name.c_str(), PROVIDER_TYPE_MAIN
         );
     perf_counters::instance().register_factory(
-        factory_store<perf_counter>::get_factory<perf_counter_factory>(
+        factory_store<perf_counter>::get_factory<perf_counter::factory>(
         spec.perf_counter_factory_name.c_str(), PROVIDER_TYPE_MAIN
         )
         );

@@ -39,7 +39,7 @@ namespace dsn {
 
         void counter_service_impl::on_add(const ::dsn::example::count_op& op, ::dsn::rpc_replier<int32_t>& reply)
         {
-            zauto_lock l(_lock);
+            service::zauto_lock l(_lock);
             ++_last_committed_decree;
             auto rt = _counters[op.name] += op.operand;
             reply(rt);
@@ -47,7 +47,7 @@ namespace dsn {
 
         void counter_service_impl::on_read(const std::string& name, ::dsn::rpc_replier<int32_t>& reply)
         {
-            zauto_lock l(_lock);
+            service::zauto_lock l(_lock);
 
             auto it = _counters.find(name);
             if (it == _counters.end())
@@ -62,7 +62,7 @@ namespace dsn {
                 
         int counter_service_impl::open(bool create_new)
         {
-            zauto_lock l(_lock);
+            service::zauto_lock l(_lock);
             if (create_new)
             {
                 auto& dir = data_dir();
@@ -78,7 +78,7 @@ namespace dsn {
 
         int counter_service_impl::close(bool clear_state)
         {
-            zauto_lock l(_lock);
+            service::zauto_lock l(_lock);
             if (clear_state)
             {
                 if (!dsn::utils::filesystem::remove_path(data_dir()))
@@ -92,7 +92,7 @@ namespace dsn {
         // checkpoint related
         void counter_service_impl::recover()
         {
-            zauto_lock l(_lock);
+            service::zauto_lock l(_lock);
 
             _counters.clear();
 
@@ -127,7 +127,7 @@ namespace dsn {
 
         void counter_service_impl::recover(const std::string& name, decree version)
         {
-            zauto_lock l(_lock);
+            service::zauto_lock l(_lock);
 
             std::ifstream is(name.c_str());
             if (!is.is_open())
@@ -159,7 +159,7 @@ namespace dsn {
 
         int counter_service_impl::flush(bool force)
         {
-            zauto_lock l(_lock);
+            service::zauto_lock l(_lock);
 
             if (last_committed_decree() == last_durable_decree())
             {
@@ -194,7 +194,7 @@ namespace dsn {
         {
             ::dsn::binary_writer writer;
 
-            zauto_lock l(_lock);
+            service::zauto_lock l(_lock);
 
             int magic = 0xdeadbeef;
             writer.write(magic);
@@ -226,7 +226,7 @@ namespace dsn {
 
             binary_reader reader(bb);
 
-            zauto_lock l(_lock);
+            service::zauto_lock l(_lock);
 
             _counters.clear();
 

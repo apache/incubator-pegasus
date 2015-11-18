@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #include "asio_net_provider.h"
 #include "asio_rpc_session.h"
 
@@ -86,10 +96,9 @@ namespace dsn {
 
         rpc_session_ptr asio_network_provider::create_client_session(::dsn::rpc_address server_addr)
         {
-            auto matcher = get_client_matcher();
             auto parser = new_message_parser();
             auto sock = std::shared_ptr<boost::asio::ip::tcp::socket>(new boost::asio::ip::tcp::socket(_io_service));
-            return rpc_session_ptr(new asio_rpc_session(*this, sock, server_addr, matcher, parser));
+            return rpc_session_ptr(new asio_rpc_session(*this, server_addr, sock, parser, true));
         }
 
         void asio_network_provider::do_accept()
@@ -108,7 +117,7 @@ namespace dsn {
 
                     auto parser = new_message_parser();
                     rpc_session_ptr s = new asio_rpc_session(*this, client_addr, 
-                        (std::shared_ptr<boost::asio::ip::tcp::socket>&)socket, parser);
+                        (std::shared_ptr<boost::asio::ip::tcp::socket>&)socket, parser, false);
                     this->on_server_session_accepted(s);
                 }
 

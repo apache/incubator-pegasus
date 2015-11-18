@@ -24,6 +24,16 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+
 # include "hpc_tail_logger.h"
 # include <dsn/internal/singleton_store.h>
 # include <dsn/cpp/utils.h>
@@ -70,6 +80,14 @@ namespace dsn
                 10*1024*1024, // 10 MB by default
                 "buffer size for per-thread logging"
                 );
+
+            static bool register_it = false;
+            if (register_it)
+            {
+                return;
+            }
+
+            register_it = true;
 
             // register command for tail logging
             ::dsn::register_command("tail-log", 

@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     single and double linked list
+ *
+ * Revision history:
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/service_api_c.h>
@@ -32,34 +42,64 @@
 # endif
 # define __TITLE__ "linklist"
 
-class slink
+//
+// assuming public T::T* next; exists and inited to nullptr in T::T(...)
+//
+template<typename T>
+class slist
 {
 public:
-    slink() : _next(nullptr){}
-
-    slink* next() const { return _next; }
-    
-    void insert_after(slink* o) 
+    slist()
     {
-        slink* n = _next; 
-        _next = o; 
-        o->_next = n; 
+        _first = _last = nullptr;
     }
 
-    slink* remove_next() 
+    void add(T* obj)
     {
-        if (_next) 
+        if (_last)
         {
-            auto n = _next; 
-            _next = _next->_next; 
-            return n; 
+            _last->next = obj;
+            _last = obj;
         }
-        else 
-            return nullptr; 
+        else
+        {
+            _first = _last = obj;
+        }
     }
 
-private:
-    slink *_next;
+    T* pop_all()
+    {
+        T* ret = _first;
+        _first = _last = nullptr;
+        return ret;
+    }
+
+    T* pop_one()
+    {
+        if (_first)
+        {
+            T* ret = _first;
+
+            if (_first == _last)
+                _first = _last = nullptr;
+            else
+                _first = static_cast<T*>(_first->next);
+
+            ret->next = nullptr;
+            return ret;
+        }
+        else
+            return nullptr;
+    }
+
+    bool is_empty() const
+    {
+        return _first == nullptr;
+    }
+
+public:
+    T* _first;
+    T* _last;
 };
 
 class dlink

@@ -24,6 +24,16 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+
 # include <dsn/internal/rpc_message.h>
 # include <../core/transient_memory.h>
 # include <gtest/gtest.h>
@@ -58,7 +68,7 @@ TEST(core, message_ex)
         ASSERT_EQ((int)RPC_CODE_FOR_TEST, m->local_rpc_code);
 
         ASSERT_TRUE(m->is_right_header());
-        ASSERT_TRUE(m->is_right_body());
+        ASSERT_TRUE(m->is_right_body(true));
         ASSERT_TRUE(message_ex::is_right_header((char*)m->header));
         ASSERT_EQ(0, message_ex::get_body_length((char*)m->header));
 
@@ -93,7 +103,7 @@ TEST(core, message_ex)
         ASSERT_EQ(request->to_address, response->from_address);
 
         ASSERT_TRUE(response->is_right_header());
-        ASSERT_TRUE(response->is_right_body());
+        ASSERT_TRUE(response->is_right_body(true));
         ASSERT_TRUE(message_ex::is_right_header((char*)response->header));
         ASSERT_EQ(0, message_ex::get_body_length((char*)response->header));
 
@@ -131,15 +141,15 @@ TEST(core, message_ex)
         ASSERT_EQ(nullptr, request->rw_ptr(data_size + data_size));
 
         ASSERT_TRUE(request->is_right_header());
-        ASSERT_TRUE(request->is_right_body());
+        ASSERT_TRUE(request->is_right_body(true));
 
         request->seal(false);
         ASSERT_TRUE(request->is_right_header());
-        ASSERT_TRUE(request->is_right_body());
+        ASSERT_TRUE(request->is_right_body(true));
 
         request->seal(true);
         ASSERT_TRUE(request->is_right_header());
-        //ASSERT_TRUE(request->is_right_body()); // not implemented
+        ASSERT_TRUE(request->is_right_body(true));
 
         request->add_ref();
         request->release_ref();
@@ -158,12 +168,14 @@ TEST(core, message_ex)
         request->write_commit(data_size);
 
         request->seal(true);
+        ASSERT_TRUE(request->is_right_body(true));
 
         ASSERT_EQ(1u, request->buffers.size());
         message_ex* receive = message_ex::create_receive_message(request->buffers[0]);
         ASSERT_EQ(1u, receive->buffers.size());
         ASSERT_TRUE(receive->is_right_header());
-        //ASSERT_TRUE(request->is_right_body()); // not implemented
+        ASSERT_TRUE(receive->is_right_body(false));
+        ASSERT_TRUE(request->is_right_body(true));
 
         ASSERT_STREQ(dsn_task_code_to_string(RPC_CODE_FOR_TEST), receive->header->rpc_name);
 

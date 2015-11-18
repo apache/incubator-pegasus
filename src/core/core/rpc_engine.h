@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/internal/task.h>
@@ -33,6 +43,60 @@
 namespace dsn {
 
 class service_node;
+class rpc_engine;
+
+//
+// client matcher for matching RPC request and RPC response, and handling timeout
+// (1) the whole network may share a single client matcher,
+// (2) or we usually prefere each <src, dst> pair use a client matcher to have better inquery performance
+// (3) or we have certain cases we want RPC responses from node which is not the initial target node
+//     the RPC request message is sent to. In this case, a shared rpc_engine level matcher is used.
+//
+// WE NOW USE option (3) so as to enable more features and the performance should not be degraded (due to 
+// less std::shared_ptr<rpc_client_matcher> operations in rpc_timeout_task
+//
+#define MATCHER_BUCKET_NR 13
+class rpc_client_matcher : public ref_counter
+{
+public:
+    rpc_client_matcher(rpc_engine* engine)
+        :_engine(engine)
+    {
+
+    }
+
+    ~rpc_client_matcher();
+
+    //
+    // when a two-way RPC call is made, register the requst id and the callback
+    // which also registers a timer for timeout tracking
+    //
+    void on_call(message_ex* request, rpc_response_task* call);
+
+    //
+    // when a RPC response is received, call this function to trigger calback
+    //  key - message.header.id
+    //  reply - rpc response message
+    //  delay_ms - sometimes we want to delay the delivery of the message for certain purposes
+    //
+    bool on_recv_reply(uint64_t key, message_ex* reply, int delay_ms);
+
+private:
+    friend class rpc_timeout_task;
+    void on_rpc_timeout(uint64_t key);
+
+private:
+    rpc_engine*               _engine;
+    struct match_entry
+    {
+        rpc_response_task*    resp_task;
+        task*                 timeout_task;
+    };
+    typedef std::unordered_map<uint64_t, match_entry> rpc_requests;
+    rpc_requests                  _requests[MATCHER_BUCKET_NR];
+    ::dsn::utils::ex_lock_nr_spin _requests_lock[MATCHER_BUCKET_NR];
+};
+
 class rpc_engine
 {
 public:
@@ -64,7 +128,7 @@ public:
     //
     service_node* node() const { return _node; }
     ::dsn::rpc_address primary_address() const { return _local_primary_address; }
-    rpc_client_matcher_ptr matcher() { return _rpc_matcher; }
+    rpc_client_matcher* matcher() { return &_rpc_matcher; }
 
     // call with ip address only
     void call_ip(rpc_address addr, message_ex* request, rpc_response_task* call, bool reset_request_id = false);
@@ -82,7 +146,7 @@ private:
     std::vector<std::vector<network*>>              _client_nets; // <format, <CHANNEL, network*>>
     std::unordered_map<int, std::vector<network*>>  _server_nets; // <port, <CHANNEL, network*>>
     ::dsn::rpc_address                              _local_primary_address;
-    rpc_client_matcher_ptr                          _rpc_matcher;
+    rpc_client_matcher                              _rpc_matcher;
 
     typedef std::unordered_map<std::string, rpc_handler_ptr> rpc_handlers;
     rpc_handlers                  _handlers;
