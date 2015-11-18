@@ -400,6 +400,8 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
             _primary_states.last_prepare_decree_on_new_primary = _prepare_list->max_decree();
             break;
         case CT_ASSIGN_PRIMARY:
+            _primary_states.last_prepare_decree_on_new_primary = 0;
+            break;
         case CT_DOWNGRADE_TO_SECONDARY:
         case CT_DOWNGRADE_TO_INACTIVE:
         case CT_UPGRADE_TO_SECONDARY:
