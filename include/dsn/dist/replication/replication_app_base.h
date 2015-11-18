@@ -114,7 +114,7 @@ public:
     //
     // The replication framework may emit empty write request to this app to increase the decree.
     //
-    virtual void on_empty_write() { _last_committed_decree++; }
+    virtual void on_empty_write() { }
 
     //
     // Helper routines to accelerate learning.
