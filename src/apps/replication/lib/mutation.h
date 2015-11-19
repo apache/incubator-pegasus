@@ -133,8 +133,8 @@ public:
     ~mutation_queue()
     {
         clear();
-        dassert(_current_op_count == 0 && _hdr.is_empty(),
-            "work queue cannot be deleted when there are still %d running ops or pending work items in queue",
+        dassert(_hdr.is_empty(),
+            "work queue is deleted when there are still %d running ops or pending work items in queue",
             _current_op_count
             );
     }
