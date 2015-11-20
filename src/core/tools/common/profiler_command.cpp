@@ -256,7 +256,7 @@ namespace dsn {
 
             if (args.size() < 1)
             {
-                ss << "unenough arguments" << std::endl;
+                ss << "incorrect arguments" << std::endl;
                 return ss.str();
             }
 
@@ -329,7 +329,7 @@ namespace dsn {
                 ss << "]";
                 return ss.str();
             }
-            //return a list of 2 elements for a speciafic task:
+            //return a list of 2 elements for a specific task:
             //1. a list of all perf_counters
             //2. 1000 samples for each perf_counter
             else if (args[0] == "counter_sample")
@@ -344,7 +344,7 @@ namespace dsn {
 
                 if ((task_id == TASK_CODE_INVALID) || (s_spec_profilers[task_id].is_profile == false))
                 {
-                    ss << "no such task code" << std::endl;
+                    ss << "no such task code or target task is not profiled" << std::endl;
                     return ss.str();
                 }
 
@@ -420,7 +420,7 @@ namespace dsn {
 
                 if ((task_id == TASK_CODE_INVALID) || (s_spec_profilers[task_id].is_profile == false))
                 {
-                    ss << "no such task code" << std::endl;
+                    ss << "no such task code or target task is not profiled" << std::endl;
                     return ss.str();
                 }
 
@@ -481,7 +481,7 @@ namespace dsn {
 
                 if ((task_id == TASK_CODE_INVALID) || (s_spec_profilers[task_id].is_profile == false))
                 {
-                    ss << "no such task code" << std::endl;
+                    ss << "no such task code or target task is not profiled" << std::endl;
                     return ss.str();
                 }
                 ss << "[[";
@@ -519,7 +519,7 @@ namespace dsn {
 
                 if ((task_id == TASK_CODE_INVALID) || (s_spec_profilers[task_id].is_profile == false))
                 {
-                    ss << "no such task code" << std::endl;
+                    ss << "no such task code or target task is not profiled" << std::endl;
                     return ss.str();
                 }
 
