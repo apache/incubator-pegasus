@@ -95,6 +95,7 @@ public:
     virtual void   set(uint64_t val) = 0;
     virtual double get_value() = 0;
     virtual double get_percentile(counter_percentile_type type) = 0;
+    virtual uint64_t* get_samples(/*out*/ int& sample_count) const { return nullptr; }
 };
 
 typedef std::shared_ptr<perf_counter> perf_counter_ptr;
