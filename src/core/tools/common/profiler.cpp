@@ -233,7 +233,20 @@ namespace dsn {
             textquery << "NAME:" << std::endl;
             textquery << "  query profiler data in batch" << std::endl;
             textquery << "SYNOPSIS:" << std::endl;
-            textquery << "  query" << std::endl;
+            textquery << "  show a matrix for all task codes contained with perf_counter percentile value" << std::endl;
+            textquery << "    query table" << std::endl;
+            textquery << "  show a list of names of all task codes" << std::endl;
+            textquery << "    query task_list" << std::endl;
+            textquery << "  show a list of all perf_counters and 1000 samples for each perf_counter" << std::endl;
+            textquery << "    query counter_sample $task" << std::endl;
+            textquery << "  show raw counter values for a specific task" << std::endl;
+            textquery << "    query counter_raw $task" << std::endl;
+            textquery << "  show 6 types of latency times for a specific task" << std::endl;
+            textquery << "    query counter_calc $task" << std::endl;
+            textquery << "  show caller and callee list for a specific task" << std::endl;
+            textquery << "    query call $task" << std::endl;
+            textquery << "  show a list of all sharer using the same pool with a specific task" << std::endl;
+            textquery << "    query pool_sharer $task" << std::endl;
 
             textarg << "ARGUMENTS:" << std::endl;
             textarg << "  $percentile : e.g, 50 for latency at 50 percentile, 50(default)|90|95|99|999" << std::endl;
@@ -248,7 +261,7 @@ namespace dsn {
                 textarg << std::endl;
             }
             textarg << "  $task : all task code, such as" << std::endl;
-            for (int i = 1; i < dsn_task_code_max(); i++)
+            for (int i = 1; i < dsn_task_code_max() && i <= 10; i++)
             {
                 textarg << "      " << dsn_task_code_to_string(i) << std::endl;
             }
@@ -261,7 +274,7 @@ namespace dsn {
             register_command({ "p", "P", "profile", "Profile" }, "profile|Profile|p|P - performance profiling", textp.str().c_str(), profiler_output_handler);
             //register_command({ "pjs", "PJS", "profilejavascript", "ProfileJavaScript", nullptr }, "pjs|PJS|profilejavascript|ProfileJavaScript - profile and show by javascript", textpjs.str().c_str(), profiler_js_handler);
             register_command({ "pd", "PD", "profiledata", "ProfileData" }, "profiler data - get appointed data, using by pjs", textpd.str().c_str(), profiler_data_handler);
-            register_command({ "query"}, "query profiling data, output in html table format", textquery.str().c_str(), query_data_handler);
+            register_command({ "query"}, "query profiling data, output in json format", textquery.str().c_str(), query_data_handler);
         }
 
         void profiler::install(service_spec& spec)

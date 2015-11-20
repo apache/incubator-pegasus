@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -278,7 +278,7 @@ namespace dsn {
                     for (int j = 0; j < COUNTER_PERCENTILE_COUNT; ++j)
                     {
                         percentile_type = static_cast<counter_percentile_type>(j);
-                        ss << "[\""<< dsn_task_code_to_string(task_id) << "\",";
+                        ss << "[\"" << dsn_task_code_to_string(task_id) << "\",";
                         ss << "\"" << percentail_counter_string[percentile_type] << "\"";
 
                         for (int k = 0; k < PREF_COUNTER_COUNT; k++)
@@ -323,7 +323,7 @@ namespace dsn {
 
                     if ((i == TASK_CODE_INVALID) || (s_spec_profilers[task_id].is_profile == false))
                         continue;
-                    ss << "\""<<dsn_task_code_to_string(task_id) << "\",";
+                    ss << "\"" << dsn_task_code_to_string(task_id) << "\",";
 
                 }
                 ss << "]";
@@ -388,7 +388,7 @@ namespace dsn {
 
                             ss << "[\"" << name << name_suffix << "\"";
                             counterList << "\"" << name << name_suffix << "\",";
-                            
+
                             int sample_count = 0;
                             uint64_t* samples = s_spec_profilers[task_id].ptr[counter_type]->get_samples(sample_count);
 
@@ -404,11 +404,46 @@ namespace dsn {
                     if (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE || task_spec::get(task_id)->type == TASK_TYPE_RPC_REQUEST)
                         task_id = task_spec::get(task_id)->rpc_paired_code;
                 } while (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE);
-                counterList << "],[" << ss.str()<<"]]";
+                counterList << "],[" << ss.str() << "]]";
                 return counterList.str();
             }
+            //return raw counter values for a specific task
+            else if (args[0] == "counter_raw")
+            {
+                if (args.size() < 2)
+                {
+                    ss << "unenough arguments" << std::endl;
+                    return ss.str();
+                }
+
+                int task_id = find_task_id(args[1]);
+
+                if ((task_id == TASK_CODE_INVALID) || (s_spec_profilers[task_id].is_profile == false))
+                {
+                    ss << "no such task code or target task is not profiled" << std::endl;
+                    return ss.str();
+                }
+
+                double timeList[8] = { 0 };
+                for (int k = 0; k < PREF_COUNTER_COUNT; k++)
+                {
+                    perf_counter_ptr_type counter_type = static_cast<perf_counter_ptr_type>(k);
+
+                    if (counter_info_ptr[counter_type]->type == COUNTER_TYPE_NUMBER_PERCENTILES)
+                    {
+                        if (s_spec_profilers[task_id].ptr[counter_type] == NULL)
+                            continue;
+
+                        timeList[k] = s_spec_profilers[task_id].ptr[counter_type]->get_percentile(COUNTER_PERCENTILE_50);
+                    }
+                }
+
+                for (auto i : timeList)
+                    ss << ((i < 0) ? 0 : i) << ",";
+                return ss.str();
+            }
             //return 6 types of latency times for a specific task
-            else if (args[0] == "counter_structure")
+            else if (args[0] == "counter_calc")
             {
                 if (args.size() < 2)
                 {
@@ -453,7 +488,7 @@ namespace dsn {
                             else if (strcmp(counter_info_ptr[counter_type]->title, "EXEC(ns)") == 0 && task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE)
                                 timeList[5] = timeGet;
                             else if (strcmp(counter_info_ptr[counter_type]->title, "AIO.LATENCY(ns)") == 0)
-                                timeList[6] = timeGet;  
+                                timeList[6] = timeGet;
                         }
                     }
                     if (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE || task_spec::get(task_id)->type == TASK_TYPE_RPC_REQUEST)
@@ -462,8 +497,8 @@ namespace dsn {
 
                 timeList[0] = (timeList[3] - timeList[0]) / 2;
                 timeList[3] = timeList[0];
-                for (auto i: timeList)
-                    ss << ((i<0)?0:i) << ",";
+                for (auto i : timeList)
+                    ss << ((i < 0) ? 0 : i) << ",";
                 return ss.str();
             }
             //return a list of 2 elements for a specific task
@@ -491,7 +526,7 @@ namespace dsn {
                     {
                         if ((j != TASK_CODE_INVALID) && (s_spec_profilers[j].is_profile) && (s_spec_profilers[task_id].call_counts[j] > 0))
                         {
-                            ss << "{\"name\":\""<<std::string(dsn_task_code_to_string(j)) << "\",\"num\":" << s_spec_profilers[task_id].call_counts[j] << "},";
+                            ss << "{\"name\":\"" << std::string(dsn_task_code_to_string(j)) << "\",\"num\":" << s_spec_profilers[task_id].call_counts[j] << "},";
                         }
                     }
                 }
@@ -527,8 +562,8 @@ namespace dsn {
 
                 ss << "[";
                 for (int j = 0; j <= dsn_task_code_max(); j++)
-                    if (j != TASK_CODE_INVALID && task_spec::get(j)->pool_code == pool)
-                        ss <<"\""<< std::string(dsn_task_code_to_string(j)) << "\",";
+                if (j != TASK_CODE_INVALID && j != task_id && task_spec::get(j)->pool_code == pool && std::string(dsn_task_code_to_string(j)).find("_ACK") == std::string::npos)
+                    ss << "\"" << std::string(dsn_task_code_to_string(j)) << "\",";
                 ss << "]";
                 return ss.str();
             }
