@@ -113,8 +113,6 @@ namespace dsn {
 
         void profiler_output_infomation_line(std::stringstream &ss, const int task_id, counter_percentile_type percentile_type, const bool full_data)
         {
-            task_spec* spec = task_spec::get(task_id);
-
             //Print the table infrom
             if (full_data == true)
             {
@@ -183,7 +181,6 @@ namespace dsn {
                 if ((task_id == TASK_CODE_INVALID) || (!s_spec_profilers[task_id].is_profile)) return;
 
                 //Print all percentile type
-                task_spec* spec = task_spec::get(task_id);
                 for (int j = 0; j < COUNTER_PERCENTILE_COUNT; j++)
                 {
                     profiler_output_infomation_line(ss, task_id, (counter_percentile_type)j, j == COUNTER_PERCENTILE_COUNT / 2);
@@ -199,7 +196,6 @@ namespace dsn {
                     continue;
 
                 //Print all percentile type
-                task_spec* spec = task_spec::get(i);
                 for (int j = 0; j < COUNTER_PERCENTILE_COUNT; j++)
                 {
                     profiler_output_infomation_line(ss, i, (counter_percentile_type)j, j == COUNTER_PERCENTILE_COUNT / 2);

@@ -52,6 +52,10 @@ namespace dsn { namespace replication {
 
 class replication_app_base;
 class replica_stub;
+class replication_checker;
+namespace test {
+    class test_checker;
+}
 
 using namespace ::dsn::service;
 
@@ -198,6 +202,7 @@ private:
     
 private:
     friend class ::dsn::replication::replication_checker;
+    friend class ::dsn::replication::test::test_checker;
     friend class ::dsn::replication::mutation_queue;
 
     // replica configuration, updated by update_local_configuration ONLY    

@@ -75,6 +75,11 @@ void meta_server_failure_detector::on_worker_disconnected(const std::vector<::ds
         return;
     }
 
+    if (!_svc->_started)
+    {
+        return;
+    }
+
     node_states states;
     for (auto& n : nodes)
     {

@@ -166,7 +166,9 @@ void task_worker::set_name(const char* name)
 void task_worker::set_priority(worker_priority_t pri)
 {
 # ifndef _WIN32
-    static int policy = SCHED_OTHER;
+    #ifndef __linux__
+        static int policy = SCHED_OTHER;
+    #endif
     static int prio_max =
     #ifdef __linux__
         -20;

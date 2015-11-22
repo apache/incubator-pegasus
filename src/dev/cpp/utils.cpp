@@ -74,10 +74,10 @@ namespace dsn {
 # endif 
         }
 
-        std::string get_last_component(const std::string& input, char splitters[])
+        std::string get_last_component(const std::string& input, const char splitters[])
         {
             int index = -1;
-            char* s = splitters;
+            const char* s = splitters;
 
             while (*s != 0)
             {
@@ -90,7 +90,7 @@ namespace dsn {
             if (index != -1)
                 return input.substr(index + 1);
             else
-                return "";
+                return input;
         }
 
         void split_args(const char* args, /*out*/ std::vector<std::string>& sargs, char splitter)

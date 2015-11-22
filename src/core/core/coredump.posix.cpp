@@ -48,7 +48,6 @@ namespace dsn {
     namespace utils {
 
         static std::string s_dump_dir;
-        static char s_app_name[256] = "unknown";
 
         void coredump::init(const char* dump_dir)
         {

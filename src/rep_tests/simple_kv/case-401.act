@@ -1,0 +1,19 @@
+config:{0,-,[]}
+state:{{r1,pri,1,0}}
+
+# this write will be notified with not enough member
+client:begin_write:id=1,key=t1,value=v1,timeout=0
+
+state:{{r1,pri,1,0},{r2,pot,1,0}}
+state:{{r1,ina,1,0},{r2,pot,1,0}}
+config:{2,r1,[r2]}
+state:{{r1,pri,2,0},{r2,pot,1,0}}
+state:{{r1,pri,2,0},{r2,sec,2,0}}
+state:{{r1,pri,2,0},{r2,sec,2,0},{r3,pot,2,0}}
+state:{{r1,ina,2,0},{r2,sec,2,0},{r3,pot,2,0}}
+config:{3,r1,[r2,r3]}
+
+# message will resend
+client:end_write:id=1,err=ERR_OK,resp=0
+state:{{r1,pri,3,1},{r2,sec,3,1},{r3,sec,3,1}}
+

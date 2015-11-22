@@ -34,7 +34,7 @@
  */
 
 
-# include <../core/transient_memory.h>
+# include "../core/transient_memory.h"
 # include <gtest/gtest.h>
 
 using namespace ::dsn;

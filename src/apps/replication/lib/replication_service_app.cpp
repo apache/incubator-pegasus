@@ -37,6 +37,11 @@
 # include "replication_common.h"
 # include "replica_stub.h"
 
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "replica.service_app"
+
 namespace dsn { namespace replication {
 
 replication_service_app::replication_service_app()

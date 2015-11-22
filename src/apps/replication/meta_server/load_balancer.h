@@ -44,12 +44,16 @@ using namespace dsn::replication;
 class load_balancer : public serverlet<load_balancer>
 {
 public:
+    static bool s_disable_lb;
+
+public:
     load_balancer(server_state* state);
     ~load_balancer();
 
     void run();
     void run(global_partition_id gpid);
 
+    void explictly_send_proposal(global_partition_id gpid, int role, config_type type);
 private:
     // meta server => partition server
     void send_proposal(::dsn::rpc_address node, const configuration_update_request& proposal);

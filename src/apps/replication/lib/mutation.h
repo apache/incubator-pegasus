@@ -133,13 +133,17 @@ public:
     ~mutation_queue()
     {
         clear();
+        // TODO(qinzuoyan): if primary writing is failed (prepare failure or writing log failure),
+        // the '_current_op_count' will not be decreased correctly
+        /*
         dassert(_current_op_count == 0 && _hdr.is_empty(),
             "work queue cannot be deleted when there are still %d running ops or pending work items in queue",
             _current_op_count
             );
+        */
     }
 
-    mutation_ptr add_work(int code, dsn_message_t request, replica* r);
+    mutation_ptr add_work(int code, dsn_message_t request, replica* r, bool disable_batch = false);
 
     void clear();
 

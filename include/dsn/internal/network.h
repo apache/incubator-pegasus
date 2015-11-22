@@ -189,6 +189,7 @@ namespace dsn {
     // for client session
     public:
         bool on_recv_reply(uint64_t key, message_ex* reply, int delay_ms);
+        // return true if the socket should be closed
         bool on_disconnected();
                
         virtual void connect() = 0;
@@ -216,7 +217,7 @@ namespace dsn {
         void on_send_completed(uint64_t signature = 0); // default value for nothing is sent
 
     private:
-        // return whether there are messages for sending        
+        // return whether there are messages for sending; should always be called in lock
         bool unlink_message_for_send();
         void clear(bool resend_msgs);
 
@@ -248,7 +249,7 @@ namespace dsn {
         ::dsn::utils::ex_lock_nr           _lock; // [
         bool                               _is_sending_next;
         dlink                              _messages;        
-        session_state                      _connect_state;
+        volatile session_state             _connect_state;
         uint64_t                           _message_sent;     
         // ]
     };

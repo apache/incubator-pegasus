@@ -48,6 +48,7 @@ replication_options::replication_options()
     prepare_timeout_ms_for_secondaries = 1000;
     prepare_timeout_ms_for_potential_secondaries = 3000;
 
+    batch_write_disabled = false;
     staleness_for_commit = 10;
     max_mutation_count_in_prepare_list = 110;
     
@@ -127,7 +128,14 @@ void replication_options::initialize()
         prepare_timeout_ms_for_potential_secondaries,
         "timeout (ms) for prepare message to potential secondaries in two phase commit"
         );
-    
+
+
+    batch_write_disabled =
+        dsn_config_get_value_bool("replication",
+        "batch_write_disabled",
+        batch_write_disabled,
+        "whether to disable auto-batch of replicated write requests"
+        );
     staleness_for_commit =
         (int)dsn_config_get_value_uint64("replication", 
         "staleness_for_commit", 

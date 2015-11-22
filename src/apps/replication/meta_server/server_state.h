@@ -46,6 +46,9 @@ using namespace dsn::replication;
 namespace dsn {
     namespace replication{
         class replication_checker;
+        namespace test {
+            class test_checker;
+        }
     }
 }
 
@@ -131,6 +134,7 @@ private:
 
 private:
     friend class ::dsn::replication::replication_checker;
+    friend class ::dsn::replication::test::test_checker;
 
     struct node_state
     {

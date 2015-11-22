@@ -67,9 +67,9 @@ namespace dsn
     const rpc_address rpc_group_address::_invalid;
 }
 
+#ifdef _WIN32
 static void net_init()
 {
-#ifdef _WIN32
     static std::once_flag flag;
     static bool flag_inited = false;
     if (!flag_inited)
@@ -81,8 +81,8 @@ static void net_init()
             flag_inited = true;
         });
     }
-#endif
 }
+#endif
 
 // name to ip etc.
 DSN_API uint32_t dsn_ipv4_from_host(const char* name)

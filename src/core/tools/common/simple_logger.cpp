@@ -39,8 +39,10 @@
 namespace dsn {
     namespace tools {
 
-        static void print_header(FILE* fp)
+        static void print_header(FILE* fp, dsn_log_level_t log_level)
         {
+            static char s_level_char[] = "IDWEF";
+
             uint64_t ts = 0;
             if (::dsn::tools::is_engine_ready())
                 ts = dsn_now_ns();
@@ -50,7 +52,8 @@ namespace dsn {
 
             int tid = ::dsn::utils::get_current_tid(); 
 
-            fprintf(fp, "%s (%llu %04x) ", str, static_cast<long long unsigned int>(ts), tid);
+            fprintf(fp, "%c%s (%llu %04x) ", s_level_char[log_level],
+                    str, static_cast<long long unsigned int>(ts), tid);
 
             task* t = task::get_current_task();
             if (t)
@@ -116,7 +119,7 @@ namespace dsn {
         {
             utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
 
-            print_header(stdout);
+            print_header(stdout, log_level);
             if (!_short_header)
             {
                 printf("%s:%d:%s(): ", title, line, function);
@@ -140,6 +143,14 @@ namespace dsn {
                 true, "whether to use short header (excluding file/function etc.)");
             _fast_flush = dsn_config_get_value_bool("tools.simple_logger", "fast_flush",
                 false, "whether to flush immediately");
+            _stderr_start_level = enum_from_string(
+                        dsn_config_get_value_string("tools.simple_logger", "stderr_start_level",
+                            enum_to_string(LOG_LEVEL_WARNING),
+                            "copy log messages at or above this level to stderr in addition to logfiles"),
+                        LOG_LEVEL_INVALID
+                        );
+            dassert(_stderr_start_level != LOG_LEVEL_INVALID,
+                    "invalid [tools.simple_logger] stderr_start_level specified");
 
             // check existing log files
 			std::vector<std::string> sub_list;
@@ -216,14 +227,14 @@ namespace dsn {
             )
         {
             va_list args2;
-            if (log_level >= LOG_LEVEL_WARNING)
+            if (log_level >= _stderr_start_level)
             {
                 va_copy(args2, args);
             }
 
             utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
          
-            print_header(_log);
+            print_header(_log, log_level);
             if (!_short_header)
             {
                 fprintf(_log, "%s:%d:%s(): ", title, line, function);
@@ -231,11 +242,13 @@ namespace dsn {
             vfprintf(_log, fmt, args);
             fprintf(_log, "\n");
             if (_fast_flush || log_level >= LOG_LEVEL_ERROR)
-                fflush(_log);
-
-            if (log_level >= LOG_LEVEL_WARNING)
             {
-                print_header(stdout);
+                fflush(_log);
+            }
+
+            if (log_level >= _stderr_start_level)
+            {
+                print_header(stdout, log_level);
                 if (!_short_header)
                 {
                     printf("%s:%d:%s(): ", title, line, function);
@@ -245,7 +258,9 @@ namespace dsn {
             }
 
             if (++_lines >= 200000)
+            {
                 create_log_file();
+            }
         }
     }
 }

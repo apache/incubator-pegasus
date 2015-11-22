@@ -68,11 +68,11 @@ namespace dsn {
         {
             if (caller != nullptr)
             {
-                auto& prof = s_spec_profilers[caller->spec().code];
                 auto code = caller->spec().code;
+                auto& prof = s_spec_profilers[code];
                 if (prof.collect_call_count)
                 {
-                    prof.call_counts[callee->spec().code]++;
+                    prof.call_counts[code]++;
                 }
             }
 
@@ -319,9 +319,9 @@ namespace dsn {
                 spec->on_task_begin.put_back(profiler_on_task_begin, "profiler");
                 spec->on_task_end.put_back(profiler_on_task_end, "profiler");
                 spec->on_task_cancelled.put_back(profiler_on_task_cancelled, "profiler");
-                //spec->on_task_wait_pre.put_back(profiler_on_task_wait_pre, "profiler");
-                //spec->on_task_wait_post.put_back(profiler_on_task_wait_post, "profiler");
-                //spec->on_task_cancel_post.put_back(profiler_on_task_cancel_post, "profiler");
+                spec->on_task_wait_pre.put_back(profiler_on_task_wait_pre, "profiler");
+                spec->on_task_wait_post.put_back(profiler_on_task_wait_post, "profiler");
+                spec->on_task_cancel_post.put_back(profiler_on_task_cancel_post, "profiler");
                 spec->on_aio_call.put_back(profiler_on_aio_call, "profiler");
                 spec->on_aio_enqueue.put_back(profiler_on_aio_enqueue, "profiler");
                 spec->on_rpc_call.put_back(profiler_on_rpc_call, "profiler");

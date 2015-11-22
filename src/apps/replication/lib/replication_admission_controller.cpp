@@ -35,6 +35,11 @@
 
 #include "replication_admission_controller.h"
 
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "replica.AC"
+
 namespace dsn { namespace replication {
 
 replication_admission_controller::replication_admission_controller(task_queue* q, std::vector<std::string>& sargs)
@@ -42,7 +47,7 @@ replication_admission_controller::replication_admission_controller(task_queue* q
 {
 }
 
-replication_admission_controller::~replication_admission_controller(void)
+replication_admission_controller::~replication_admission_controller()
 {
 }
 

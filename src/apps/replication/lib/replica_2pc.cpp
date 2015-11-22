@@ -41,7 +41,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ "TwoPhaseCommit"
+# define __TITLE__ "replica.2pc"
 
 namespace dsn { namespace replication {
 
@@ -56,7 +56,7 @@ void replica::on_client_write(int code, dsn_message_t request)
         return;
     }
 
-    auto mu = _primary_states.write_queue.add_work(code, request, this);
+    auto mu = _primary_states.write_queue.add_work(code, request, this, _options->batch_write_disabled);
     if (mu)
     {
         init_prepare(mu);

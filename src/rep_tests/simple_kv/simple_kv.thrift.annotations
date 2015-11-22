@@ -1,0 +1,14 @@
+; annotation format
+;[type.name[[.subname]...]]
+;key = vlaue
+
+[service.simple_kv]
+stateful = true ; simple_kv is a stateful service
+
+[function.simple_kv.write]
+write = true  ; simple_kv.write is a write function
+
+[function.simple_kv.append]
+write = true
+
+

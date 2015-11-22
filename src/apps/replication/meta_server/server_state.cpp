@@ -60,7 +60,6 @@ void unmarshall(binary_reader& reader, /*out*/ app_state& val)
     unmarshall(reader, val.partitions);
 }
 
-
 server_state::server_state(void)
     : ::dsn::serverlet<server_state>("meta.server.state")
 {
@@ -733,7 +732,7 @@ void server_state::update_configuration_internal(const configuration_update_requ
         }
         cf << "]}";
 
-        ddebug("%d.%d metaupdateok to ballot %lld, type = %s, node = %s, config = %s",
+        ddebug("%d.%d meta update ok to ballot %lld, type = %s, node = %s, config = %s",
             request.config.gpid.app_id,
             request.config.gpid.pidx,
             request.config.ballot,

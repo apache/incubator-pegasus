@@ -41,6 +41,9 @@
 namespace dsn { namespace replication {
 
 class replication_checker;
+namespace test {
+    class test_checker;
+}
 class replication_service_app : public ::dsn::service_app
 {
 public:
@@ -54,6 +57,7 @@ public:
 
 private:
     friend class ::dsn::replication::replication_checker;
+    friend class ::dsn::replication::test::test_checker;
     replica_stub_ptr _stub;
 };
 

@@ -504,6 +504,14 @@ namespace dsn { namespace replication {
     {
         int32_t app_id;
         int32_t pidx;
+        inline bool operator < (const global_partition_id& r) const
+        {
+            return app_id < r.app_id || (app_id == r.app_id && pidx < r.pidx);
+        }
+        inline bool operator == (const global_partition_id& r) const
+        {
+            return app_id == r.app_id && pidx == r.pidx;
+        }
     };
 
     DEFINE_POD_SERIALIZATION(global_partition_id)
@@ -843,7 +851,7 @@ namespace dsn { namespace replication {
     // ---------- meta_request_header -------------
     struct meta_request_header
     {
-        int32_t rpc_tag;
+        std::string rpc_tag;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const meta_request_header& val)

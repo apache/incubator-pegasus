@@ -58,6 +58,11 @@ namespace dsn {
             return ERR_OK;
         }
 
+        error_code empty_aio_provider::flush(dsn_handle_t fh)
+        {
+            return ERR_OK;
+        }
+
         void empty_aio_provider::aio(aio_task* aio)
         {
             complete_io(aio, ERR_OK, aio->aio()->buffer_size, 0);
