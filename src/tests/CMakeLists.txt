@@ -39,6 +39,7 @@ set(MY_PROJ_LIB_PATH "")
 # Extra files that will be installed
 set(MY_BINPLACES
     "${CMAKE_CURRENT_SOURCE_DIR}/run.sh"
+    "${CMAKE_CURRENT_SOURCE_DIR}/clear.sh"
     "${CMAKE_CURRENT_SOURCE_DIR}/config-test.ini"
     "${CMAKE_CURRENT_SOURCE_DIR}/log.1.0"
     "${CMAKE_CURRENT_SOURCE_DIR}/log.1.1"

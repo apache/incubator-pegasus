@@ -103,6 +103,9 @@ void load_balancer::run(global_partition_id gpid)
         return ::dsn::rpc_address();
     }
 
+    return stats[0].first;
+
+    /* TODO(qinzuoyan): just for test
     int candidate_count = 1;
     int val = stats[0].second;
 
@@ -114,6 +117,7 @@ void load_balancer::run(global_partition_id gpid)
     }
 
     return stats[dsn_random32(0, candidate_count - 1)].first;
+    */
 }
 
 void load_balancer::run_lb(partition_configuration& pc)

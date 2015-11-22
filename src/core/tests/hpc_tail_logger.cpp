@@ -7,7 +7,6 @@
 #include <gtest/gtest.h>
 #include <dsn/service_api_cpp.h>
 #include <dsn/internal/priority_queue.h>
-#include "../../apps/pegasus/meta/util.h"
 #include "../core/group_address.h"
 #include "../core/command_manager.h"
 #include "test_utils.h"
