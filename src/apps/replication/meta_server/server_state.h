@@ -73,7 +73,7 @@ public:
     ~server_state(void);
 
     // init _app[1] by "[replication.app]" config
-    void initialize();
+    void initialize(const char* dir);
 
     // when the server becomes the leader
     error_code on_become_leader();

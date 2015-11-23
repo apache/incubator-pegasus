@@ -1134,7 +1134,7 @@ void test_case::on_end_write(int id, ::dsn::error_code err, int32_t resp)
     if (g_done) return;
 
     char buf[1024];
-    snprintf(buf, 1024, "%s:end_write:id=%d,err=%s,resp=%d",
+    snprintf_p(buf, 1024, "%s:end_write:id=%d,err=%s,resp=%d",
              client_case_line::NAME(), id, err.to_string(), resp);
 
     ddebug("=== on_end_write:id=%d,err=%s,resp=%d", id, err.to_string(), resp);
@@ -1174,7 +1174,7 @@ void test_case::on_end_read(int id, ::dsn::error_code err, const std::string& re
     if (g_done) return;
 
     char buf[1024];
-    snprintf(buf, 1024, "%s:end_read:id=%d,err=%s,resp=%s",
+    snprintf_p(buf, 1024, "%s:end_read:id=%d,err=%s,resp=%s",
              client_case_line::NAME(), id, err.to_string(), resp.c_str());
 
     ddebug("=== on_end_read:id=%d,err=%s,resp=%s", id, err.to_string(), resp.c_str());

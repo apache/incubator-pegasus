@@ -155,6 +155,19 @@ error_code hpc_aio_provider::close(dsn_handle_t fh)
     }
 }
 
+error_code hpc_aio_provider::flush(dsn_handle_t fh)
+{
+    if (fh == DSN_INVALID_FILE_HANDLE || ::fsync((int)(uintptr_t)(fh)) == 0)
+    {
+        return ERR_OK;
+    }
+    else
+    {
+        derror("flush file failed, err = %s", strerror(errno));
+        return ERR_FILE_OPERATION_FAILED;
+    }
+}
+
 disk_aio* hpc_aio_provider::prepare_aio_context(aio_task* tsk)
 {
     auto r = new posix_disk_aio_context;

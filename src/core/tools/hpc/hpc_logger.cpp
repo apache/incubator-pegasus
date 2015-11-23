@@ -290,7 +290,7 @@ namespace dsn
                 ts = dsn_now_ns();
             char str[24];
             ::dsn::utils::time_ms_to_string(ts / 1000000, str);
-            auto wn = snprintf(ptr, capacity, "%s (%llu %04x) ", str, static_cast<long long unsigned int>(ts), tid);
+            auto wn = snprintf_p(ptr, capacity, "%s (%llu %04x) ", str, static_cast<long long unsigned int>(ts), tid);
             ptr += wn;
             capacity -= wn;
 
@@ -299,7 +299,7 @@ namespace dsn
             {
                 if (nullptr != task::get_current_worker())
                 {
-                    wn = snprintf(ptr, capacity, "%6s.%7s%u.%016llx: ",
+                    wn = snprintf_p(ptr, capacity, "%6s.%7s%u.%016llx: ",
                         task::get_current_node_name(),
                         task::get_current_worker()->pool_spec().name.c_str(),
                         task::get_current_worker()->index(),
@@ -308,7 +308,7 @@ namespace dsn
                 }
                 else
                 {
-                    wn = snprintf(ptr, capacity, "%6s.%7s.%05d.%016llx: ",
+                    wn = snprintf_p(ptr, capacity, "%6s.%7s.%05d.%016llx: ",
                         task::get_current_node_name(),
                         "io-thrd",
                         tid,
@@ -318,7 +318,7 @@ namespace dsn
             }
             else
             {
-                wn = snprintf(ptr, capacity, "%6s.%7s.%05d: ",
+                wn = snprintf_p(ptr, capacity, "%6s.%7s.%05d: ",
                     task::get_current_node_name(),
                     "io-thrd",
                     tid

@@ -63,7 +63,7 @@ static void clear_files(std::vector<int> &log_index)
     char file[256];
     memset(file, 0, sizeof(file));
     for (auto i: log_index) {
-        snprintf(file, 256, "log.%d.txt", i);
+        snprintf_p(file, 256, "log.%d.txt", i);
         dsn::utils::filesystem::remove_path( std::string(file) );
     }
 }

@@ -221,6 +221,19 @@ error_code hpc_aio_provider::close(dsn_handle_t fh)
     }        
 }
 
+error_code hpc_aio_provider::flush(dsn_handle_t fh)
+{
+    if (fh == DSN_INVALID_FILE_HANDLE || ::FlushFileBuffers((HANDLE)(fh)))
+    {
+        return ERR_OK;
+    }
+    else
+    {
+        derror("close file failed, err = 0x%x\n", ::GetLastError());
+        return ERR_FILE_OPERATION_FAILED;
+    }
+}
+
 disk_aio* hpc_aio_provider::prepare_aio_context(aio_task* tsk)
 {
     auto r = new windows_disk_aio_context;

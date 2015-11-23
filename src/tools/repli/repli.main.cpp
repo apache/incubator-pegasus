@@ -37,7 +37,9 @@
 # include <dsn/cpp/utils.h>
 # include <iostream>
 # include <thread>
+# if !defined (_WIN32)
 # include "unistd.h"
+# endif
 
 bool g_done = false;
 
