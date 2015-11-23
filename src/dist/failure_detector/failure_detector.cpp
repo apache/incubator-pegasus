@@ -196,7 +196,7 @@ void failure_detector::process_all_records()
         return;
     }
 
-    std::vector<::dsn::rpc_address> expire;
+    std::vector< ::dsn::rpc_address> expire;
     uint64_t now =now_ms();
 
     {

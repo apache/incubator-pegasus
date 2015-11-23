@@ -101,10 +101,10 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     }
     _dir = temp;
     std::string log_dir = _dir + "/log";
-	if (!dsn::utils::filesystem::create_directory(log_dir))
-	{
-		dassert(false, "Fail to create directory %s.", log_dir.c_str());
-	}
+    if (!dsn::utils::filesystem::create_directory(log_dir))
+    {
+        dassert(false, "Fail to create directory %s.", log_dir.c_str());
+    }
     _log = new mutation_log(
         log_dir,
         false,
@@ -114,35 +114,35 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 
     // init rps
     replicas rps;
-	std::vector<std::string> dir_list;
+    std::vector<std::string> dir_list;
 
-	if (!dsn::utils::filesystem::get_subdirectories(dir(), dir_list, false))
-	{
-		dassert(false, "Fail to get files in %s.", dir().c_str());
-	}
+    if (!dsn::utils::filesystem::get_subdirectories(dir(), dir_list, false))
+    {
+        dassert(false, "Fail to get files in %s.", dir().c_str());
+    }
 
-	for (auto& name : dir_list)
-	{
-		if (name.length() >= 4 &&
-			(name.substr(name.length() - strlen("log")) == "log" ||
-				name.substr(name.length() - strlen(".err")) == ".err")
-			)
-			continue;
+    for (auto& name : dir_list)
+    {
+        if (name.length() >= 4 &&
+            (name.substr(name.length() - strlen("log")) == "log" ||
+                name.substr(name.length() - strlen(".err")) == ".err")
+            )
+            continue;
 
-		auto r = replica::load(this, name.c_str(), true);
-		if (r != nullptr)
-		{
+        auto r = replica::load(this, name.c_str(), true);
+        if (r != nullptr)
+        {
             ddebug("%u.%u @ %s: load replica '%s' success, <durable, commit> = <%llu, %llu>, last_prepared_decree = %llu",
-				r->get_gpid().app_id, r->get_gpid().pidx,
+                r->get_gpid().app_id, r->get_gpid().pidx,
                 primary_address().to_string(),
                 name.c_str(),
-				r->last_durable_decree(),
+                r->last_durable_decree(),
                 r->last_committed_decree(),
                 r->last_prepared_decree()
-				);
-			rps[r->get_gpid()] = r;
-		}
-	}
+                );
+            rps[r->get_gpid()] = r;
+        }
+    }
     dir_list.clear();
 
     // init shared prepare log

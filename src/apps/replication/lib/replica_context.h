@@ -46,7 +46,7 @@ struct remote_learner_state
     decree   prepare_start_decree;
 };
 
-typedef std::unordered_map<::dsn::rpc_address, remote_learner_state> learner_map;
+typedef std::unordered_map< ::dsn::rpc_address, remote_learner_state> learner_map;
 
 class primary_context
 {

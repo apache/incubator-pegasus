@@ -73,16 +73,16 @@
 *                                                                   |
 *                                                                   |   when the _write_list is not empty,
 *                                                                   |   daemon thread is notified by _write_list_cond
-*	                                                                V          
+*                                                                    V          
 *
 *                                                             Daemon thread 
 *
 *                                                                   ||
 *                                                                   ===========>     log.x.txt
 *
-*	Some other facts:
-*	1. The log file size is restricted, when max size is achieved, a new log file will be established.
-*	2. When exiting, the logger flushes, in other words, print out the retained log info in buffers of each thread and buffers in the buffer list.
+*    Some other facts:
+*    1. The log file size is restricted, when max size is achieved, a new log file will be established.
+*    2. When exiting, the logger flushes, in other words, print out the retained log info in buffers of each thread and buffers in the buffer list.
 
 ************************************************************/
 
@@ -99,8 +99,8 @@
 #define MAX_FILE_SIZE 30 * 1024 * 1024
 namespace dsn
 {
-	namespace tools
-	{		
+    namespace tools
+    {        
         typedef struct __hpc_log_info__
         {
             uint32_t magic;
@@ -112,23 +112,23 @@ namespace dsn
         static __thread hpc_log_tls_info s_hpc_log_tls_info;
 
         //store log ptr for each thread
-		typedef ::dsn::utils::safe_singleton_store<int, hpc_log_tls_info*> hpc_log_manager;
+        typedef ::dsn::utils::safe_singleton_store<int, hpc_log_tls_info*> hpc_log_manager;
 
-		//daemon thread
-		void hpc_logger::log_thread()
-		{
-			std::list<buffer_info> saved_list;
+        //daemon thread
+        void hpc_logger::log_thread()
+        {
+            std::list<buffer_info> saved_list;
 
-			while (!_stop_thread)
-			{
-				_write_list_lock.lock();
-				_write_list_cond.wait(_write_list_lock, [=]{ return  _stop_thread || _write_list.size() > 0; });
-				saved_list = _write_list;
-				_write_list.clear();
-				_write_list_lock.unlock();
-				
+            while (!_stop_thread)
+            {
+                _write_list_lock.lock();
+                _write_list_cond.wait(_write_list_lock, [=]{ return  _stop_thread || _write_list.size() > 0; });
+                saved_list = _write_list;
+                _write_list.clear();
+                _write_list_lock.unlock();
+                
                 write_buffer_list(saved_list);
-			}
+            }
 
             _write_list_lock.lock();
             saved_list = _write_list;
@@ -136,17 +136,17 @@ namespace dsn
             _write_list_lock.unlock();
 
             write_buffer_list(saved_list);
-		}
+        }
 
-		hpc_logger::hpc_logger() 
+        hpc_logger::hpc_logger() 
             : _stop_thread(false)
-		{
-			_per_thread_buffer_bytes = config()->get_value<int>(
-				"tools.hpc_logger",
-				"per_thread_buffer_bytes",
-				64 * 1024, // 64 KB by default
-				"buffer size for per-thread logging"
-				);
+        {
+            _per_thread_buffer_bytes = config()->get_value<int>(
+                "tools.hpc_logger",
+                "per_thread_buffer_bytes",
+                64 * 1024, // 64 KB by default
+                "buffer size for per-thread logging"
+                );
 
             _start_index = 0;
             _index = 0;
@@ -184,8 +184,8 @@ namespace dsn
 
             _current_log = nullptr;
             create_log_file();
-			_log_thread = std::thread(&hpc_logger::log_thread, this);
-		}
+            _log_thread = std::thread(&hpc_logger::log_thread, this);
+        }
 
         void hpc_logger::create_log_file()
         {
@@ -206,175 +206,175 @@ namespace dsn
             }
         }
 
-		hpc_logger::~hpc_logger(void)
-		{
-			if (!_stop_thread)
-			{
-				_stop_thread = true;
-				_write_list_cond.notify_one();
-				_log_thread.join();
-			}
+        hpc_logger::~hpc_logger(void)
+        {
+            if (!_stop_thread)
+            {
+                _stop_thread = true;
+                _write_list_cond.notify_one();
+                _log_thread.join();
+            }
 
             _current_log->close();
             delete _current_log;
-		}
+        }
 
-		void hpc_logger::flush()
-		{
+        void hpc_logger::flush()
+        {
             //dangerous operation
-			//print retained log in the buffers of threads
+            //print retained log in the buffers of threads
             //this is only used at process exit
-			flush_all_buffers_at_exit();
+            flush_all_buffers_at_exit();
 
             _stop_thread = true;
             _write_list_cond.notify_one();
             _log_thread.join();
-		}
+        }
 
-		void hpc_logger::flush_all_buffers_at_exit()
-		{
-			std::vector<int> threads;
-			hpc_log_manager::instance().get_all_keys(threads);
+        void hpc_logger::flush_all_buffers_at_exit()
+        {
+            std::vector<int> threads;
+            hpc_log_manager::instance().get_all_keys(threads);
 
-			for (auto& tid : threads)
-			{
-				__hpc_log_info__* log;
-				if (!hpc_log_manager::instance().get(tid, log))
-					continue;
+            for (auto& tid : threads)
+            {
+                __hpc_log_info__* log;
+                if (!hpc_log_manager::instance().get(tid, log))
+                    continue;
 
-				buffer_push(log->buffer, static_cast<int>(log->next_write_ptr - log->buffer));
+                buffer_push(log->buffer, static_cast<int>(log->next_write_ptr - log->buffer));
 
-				hpc_log_manager::instance().remove(tid);
-			}
-		}
+                hpc_log_manager::instance().remove(tid);
+            }
+        }
 
-		void hpc_logger::dsn_logv(const char *file,
-			const char *function,
-			const int line,
-			dsn_log_level_t log_level,
-			const char* title,
-			const char *fmt,
-			va_list args
-			)
-		{
-			if (s_hpc_log_tls_info.magic != 0xdeadbeef)
-			{
-				s_hpc_log_tls_info.buffer = (char*)malloc(_per_thread_buffer_bytes);
-				s_hpc_log_tls_info.next_write_ptr = s_hpc_log_tls_info.buffer;
+        void hpc_logger::dsn_logv(const char *file,
+            const char *function,
+            const int line,
+            dsn_log_level_t log_level,
+            const char* title,
+            const char *fmt,
+            va_list args
+            )
+        {
+            if (s_hpc_log_tls_info.magic != 0xdeadbeef)
+            {
+                s_hpc_log_tls_info.buffer = (char*)malloc(_per_thread_buffer_bytes);
+                s_hpc_log_tls_info.next_write_ptr = s_hpc_log_tls_info.buffer;
 
-				hpc_log_manager::instance().put(::dsn::utils::get_current_tid(), &s_hpc_log_tls_info);
-				s_hpc_log_tls_info.magic = 0xdeadbeef;
-			}
+                hpc_log_manager::instance().put(::dsn::utils::get_current_tid(), &s_hpc_log_tls_info);
+                s_hpc_log_tls_info.magic = 0xdeadbeef;
+            }
 
-			// get enough write space >= 1K
-			if (s_hpc_log_tls_info.next_write_ptr + 1024 > s_hpc_log_tls_info.buffer + _per_thread_buffer_bytes)
-			{
-				_write_list_lock.lock();
-				buffer_push(s_hpc_log_tls_info.buffer, static_cast<int>(s_hpc_log_tls_info.next_write_ptr - s_hpc_log_tls_info.buffer));
-				_write_list_lock.unlock();
+            // get enough write space >= 1K
+            if (s_hpc_log_tls_info.next_write_ptr + 1024 > s_hpc_log_tls_info.buffer + _per_thread_buffer_bytes)
+            {
+                _write_list_lock.lock();
+                buffer_push(s_hpc_log_tls_info.buffer, static_cast<int>(s_hpc_log_tls_info.next_write_ptr - s_hpc_log_tls_info.buffer));
+                _write_list_lock.unlock();
 
                 _write_list_cond.notify_one();
 
-				s_hpc_log_tls_info.buffer = (char*)malloc(_per_thread_buffer_bytes);
-				s_hpc_log_tls_info.next_write_ptr = s_hpc_log_tls_info.buffer;
-			}
-
-			char* ptr = s_hpc_log_tls_info.next_write_ptr;
-			char* ptr0 = ptr; // remember it
-			size_t capacity = static_cast<size_t>(s_hpc_log_tls_info.buffer + _per_thread_buffer_bytes - ptr);
-
-			// print verbose log header    
-			uint64_t ts = 0;
-			int tid = ::dsn::utils::get_current_tid();
-			if (::dsn::tools::is_engine_ready())
-				ts = dsn_now_ns();
-			char str[24];
-			::dsn::utils::time_ms_to_string(ts / 1000000, str);
-            auto wn = snprintf(ptr, capacity, "%s (%llu %04x) ", str, static_cast<long long unsigned int>(ts), tid);
-			ptr += wn;
-			capacity -= wn;
-
-			task* t = task::get_current_task();
-			if (t)
-			{
-				if (nullptr != task::get_current_worker())
-				{
-                    wn = snprintf(ptr, capacity, "%6s.%7s%u.%016llx: ",
-						task::get_current_node_name(),
-						task::get_current_worker()->pool_spec().name.c_str(),
-						task::get_current_worker()->index(),
-						static_cast<long long unsigned int>(t->id())
-						);
-				}
-				else
-				{
-                    wn = snprintf(ptr, capacity, "%6s.%7s.%05d.%016llx: ",
-						task::get_current_node_name(),
-						"io-thrd",
-						tid,
-						static_cast<long long unsigned int>(t->id())
-						);
-				}
-			}
-			else
-			{
-                wn = snprintf(ptr, capacity, "%6s.%7s.%05d: ",
-					task::get_current_node_name(),
-					"io-thrd",
-					tid
-					);
+                s_hpc_log_tls_info.buffer = (char*)malloc(_per_thread_buffer_bytes);
+                s_hpc_log_tls_info.next_write_ptr = s_hpc_log_tls_info.buffer;
             }
 
-			ptr += wn;
-			capacity -= wn;
+            char* ptr = s_hpc_log_tls_info.next_write_ptr;
+            char* ptr0 = ptr; // remember it
+            size_t capacity = static_cast<size_t>(s_hpc_log_tls_info.buffer + _per_thread_buffer_bytes - ptr);
 
-			// print body
-			wn = std::vsnprintf(ptr, capacity - 1, fmt, args);
+            // print verbose log header    
+            uint64_t ts = 0;
+            int tid = ::dsn::utils::get_current_tid();
+            if (::dsn::tools::is_engine_ready())
+                ts = dsn_now_ns();
+            char str[24];
+            ::dsn::utils::time_ms_to_string(ts / 1000000, str);
+            auto wn = snprintf(ptr, capacity, "%s (%llu %04x) ", str, static_cast<long long unsigned int>(ts), tid);
+            ptr += wn;
+            capacity -= wn;
+
+            task* t = task::get_current_task();
+            if (t)
+            {
+                if (nullptr != task::get_current_worker())
+                {
+                    wn = snprintf(ptr, capacity, "%6s.%7s%u.%016llx: ",
+                        task::get_current_node_name(),
+                        task::get_current_worker()->pool_spec().name.c_str(),
+                        task::get_current_worker()->index(),
+                        static_cast<long long unsigned int>(t->id())
+                        );
+                }
+                else
+                {
+                    wn = snprintf(ptr, capacity, "%6s.%7s.%05d.%016llx: ",
+                        task::get_current_node_name(),
+                        "io-thrd",
+                        tid,
+                        static_cast<long long unsigned int>(t->id())
+                        );
+                }
+            }
+            else
+            {
+                wn = snprintf(ptr, capacity, "%6s.%7s.%05d: ",
+                    task::get_current_node_name(),
+                    "io-thrd",
+                    tid
+                    );
+            }
+
+            ptr += wn;
+            capacity -= wn;
+
+            // print body
+            wn = std::vsnprintf(ptr, capacity - 1, fmt, args);
             *(ptr + wn) = '\n';
-			ptr += (wn + 1);
-			capacity -= (wn + 1);
+            ptr += (wn + 1);
+            capacity -= (wn + 1);
 
-			// set next write ptr
-			s_hpc_log_tls_info.next_write_ptr = ptr;
+            // set next write ptr
+            s_hpc_log_tls_info.next_write_ptr = ptr;
 
-			// dump critical logs on screen
-			if (log_level >= LOG_LEVEL_WARNING)
-			{
+            // dump critical logs on screen
+            if (log_level >= LOG_LEVEL_WARNING)
+            {
                 std::cout.write(ptr0, ptr - ptr0);
-			}	
-		}
-		//log operation
+            }    
+        }
+        //log operation
 
-		void hpc_logger::buffer_push(char* buffer, int size)
-		{
+        void hpc_logger::buffer_push(char* buffer, int size)
+        {
             buffer_info new_buffer_info;
-			new_buffer_info.buffer = buffer;
-			new_buffer_info.buffer_size = size;
-			_write_list.push_back(new_buffer_info);
-		}
+            new_buffer_info.buffer = buffer;
+            new_buffer_info.buffer_size = size;
+            _write_list.push_back(new_buffer_info);
+        }
 
-		void hpc_logger::write_buffer_list(std::list<buffer_info>& llist)
-		{
-			while (!llist.empty())
-			{
-				buffer_info new_buffer_info = llist.front();
+        void hpc_logger::write_buffer_list(std::list<buffer_info>& llist)
+        {
+            while (!llist.empty())
+            {
+                buffer_info new_buffer_info = llist.front();
                 llist.pop_front();
 
-				if (_current_log_file_bytes + new_buffer_info.buffer_size >= MAX_FILE_SIZE)
-				{
-					_current_log->close();
-					delete _current_log;
+                if (_current_log_file_bytes + new_buffer_info.buffer_size >= MAX_FILE_SIZE)
+                {
+                    _current_log->close();
+                    delete _current_log;
                     _current_log = nullptr;
 
                     create_log_file();
-				}
+                }
 
-				_current_log->write(new_buffer_info.buffer, new_buffer_info.buffer_size);
+                _current_log->write(new_buffer_info.buffer, new_buffer_info.buffer_size);
 
-				_current_log_file_bytes += new_buffer_info.buffer_size;
+                _current_log_file_bytes += new_buffer_info.buffer_size;
 
-				free(new_buffer_info.buffer);
-			}
-		}
-	}
+                free(new_buffer_info.buffer);
+            }
+        }
+    }
 }

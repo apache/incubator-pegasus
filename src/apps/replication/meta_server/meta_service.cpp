@@ -104,6 +104,12 @@ void meta_service::start()
         "RPC_CM_UPDATE_PARTITION_CONFIGURATION",
         &meta_service::on_update_configuration
         );
+
+    register_rpc_handler(
+        RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND,
+        "RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND",
+        &meta_service::on_modify_replica_config_explictly
+        );
 }
 
 bool meta_service::stop()
@@ -123,6 +129,7 @@ bool meta_service::stop()
     unregister_rpc_handler(RPC_CM_QUERY_NODE_PARTITIONS);
     unregister_rpc_handler(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
     unregister_rpc_handler(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
+    unregister_rpc_handler(RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND);
 
     delete _balancer;
     _balancer = nullptr;
@@ -188,6 +195,44 @@ void meta_service::on_query_configuration_by_index(dsn_message_t msg)
     ::unmarshall(msg, request);
     _state->query_configuration_by_index(request, response);
     reply(msg, response);
+}
+
+void meta_service::on_modify_replica_config_explictly(dsn_message_t req)
+{
+    // TODO: implement modify config with reply
+    if (!_started)
+    {
+        configuration_query_by_index_response response;
+        response.err = ERR_SERVICE_NOT_ACTIVE;
+        reply(req, response);
+        return;
+    }
+
+    if (!_failure_detector->is_primary())
+    {
+        dsn_rpc_forward(req, _failure_detector->get_primary().c_addr());
+        return;
+    }
+
+    dsn::replication::global_partition_id gpid;
+    int role;
+    dsn::replication::config_type cfg_command;
+
+    ::unmarshall(req, gpid);
+    ::unmarshall(req, role);
+    ::unmarshall(req, cfg_command);
+
+    switch (cfg_command)
+    {
+    // ignore all other cfgs as the command is triggerd currently in meta
+    case CT_DOWNGRADE_TO_INACTIVE:
+    case CT_DOWNGRADE_TO_SECONDARY:
+    case CT_REMOVE:
+        _balancer->explictly_send_proposal(gpid, role, cfg_command);
+        break;
+    default:
+        break;
+    }
 }
 
 void meta_service::on_update_configuration(dsn_message_t req)

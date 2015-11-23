@@ -72,7 +72,7 @@ namespace dsn {
 namespace std
 {
     template<>
-    struct hash<::dsn::replication::global_partition_id> {
+    struct hash< ::dsn::replication::global_partition_id> {
         size_t operator()(const ::dsn::replication::global_partition_id &gpid) const {
             return std::hash<int>()(gpid.app_id) ^ std::hash<int>()(gpid.pidx);
         }
