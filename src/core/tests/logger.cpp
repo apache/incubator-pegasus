@@ -70,7 +70,8 @@ static void clear_files(std::vector<int> &log_index)
 
 static void prepare_test_dir() {
     const char* dir = "./test";
-    mkdir(dir, 0755);
+    std::string dr(dir);
+    dsn::utils::filesystem::create_directory(dr);
     chdir(dir);
 }
 

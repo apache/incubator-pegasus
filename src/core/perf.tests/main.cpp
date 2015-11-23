@@ -48,7 +48,7 @@
 # include <dsn/tool/providers.hpc.h>
 # include <dsn/tool/nfs_node_simple.h>
 
-void module_init()
+void dsn_module_init()
 {
     // register all providers
     dsn::tools::register_common_providers();
@@ -73,7 +73,7 @@ GTEST_API_ int main(int argc, char **argv)
     testing::InitGoogleTest(&argc, argv);
 
     // register all tools
-    module_init();
+    dsn_module_init();
 
     // register all possible services
     dsn::register_app<test_client>("test");
