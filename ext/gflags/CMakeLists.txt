@@ -3,7 +3,7 @@
 include(ExternalProject)
 
 ExternalProject_Add(gflags
-    GIT_REPOSITORY git@git.n.xiaomi.com:pegasus/gflags.git
+    GIT_REPOSITORY git@github.com:gflags/gflags.git
     GIT_TAG master
    #   CMAKE_ARGS -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=DebugLibs
    #            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=ReleaseLibs

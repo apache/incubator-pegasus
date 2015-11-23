@@ -220,7 +220,8 @@ namespace dsn
         return dsn_address_to_string(_addr);
     }
 
-    inline std::string rpc_address::to_std_string() const {
+    inline std::string rpc_address::to_std_string() const
+    {
         return std::string(to_string());
     }
 
