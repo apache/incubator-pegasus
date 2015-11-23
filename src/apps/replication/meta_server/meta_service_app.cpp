@@ -47,7 +47,7 @@ namespace dsn {
             const char* name,
             ::dsn::dist::distributed_lock_service::factory f)
         {
-            return dsn::utils::factory_store<::dsn::dist::distributed_lock_service>::register_factory(
+            return dsn::utils::factory_store< ::dsn::dist::distributed_lock_service>::register_factory(
                 name, 
                 f,
                 PROVIDER_TYPE_MAIN);
@@ -57,7 +57,7 @@ namespace dsn {
             const char* name,
             ::dsn::dist::meta_state_service::factory f)
         {
-            return dsn::utils::factory_store<::dsn::dist::meta_state_service>::register_factory(
+            return dsn::utils::factory_store< ::dsn::dist::meta_state_service>::register_factory(
                 name,
                 f,
                 PROVIDER_TYPE_MAIN);
@@ -69,12 +69,12 @@ namespace dsn {
 
             register_component_provider(
                 "distributed_lock_service_simple",
-                ::dsn::dist::distributed_lock_service::create<::dsn::dist::distributed_lock_service_simple>
+                ::dsn::dist::distributed_lock_service::create< ::dsn::dist::distributed_lock_service_simple>
                 );
 
             register_component_provider(
                 "meta_state_service_simple",
-                ::dsn::dist::meta_state_service::create<::dsn::dist::meta_state_service_simple>
+                ::dsn::dist::meta_state_service::create< ::dsn::dist::meta_state_service_simple>
                 );
 
             // TODO: register more provides here used by meta servers

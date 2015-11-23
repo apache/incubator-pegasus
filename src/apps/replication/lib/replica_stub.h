@@ -146,7 +146,7 @@ private:
     friend class ::dsn::replication::replication_checker;    
     friend class ::dsn::replication::test::test_checker;
     typedef std::unordered_map<global_partition_id, ::dsn::task_ptr> opening_replicas;
-    typedef std::unordered_map<global_partition_id, std::pair<::dsn::task_ptr, replica_ptr>> closing_replicas; // <close, replica>
+    typedef std::unordered_map<global_partition_id, std::pair< ::dsn::task_ptr, replica_ptr>> closing_replicas; // <close, replica>
 
     zlock                       _replicas_lock;
     replicas                    _replicas;

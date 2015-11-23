@@ -155,11 +155,11 @@ namespace dsn {
         virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) = 0;
         
     protected:
-        typedef std::unordered_map<::dsn::rpc_address, rpc_session_ptr> client_sessions;
+        typedef std::unordered_map< ::dsn::rpc_address, rpc_session_ptr> client_sessions;
         client_sessions               _clients;
         utils::rw_lock_nr             _clients_lock;
 
-        typedef std::unordered_map<::dsn::rpc_address, rpc_session_ptr> server_sessions;
+        typedef std::unordered_map< ::dsn::rpc_address, rpc_session_ptr> server_sessions;
         server_sessions               _servers;
         utils::rw_lock_nr             _servers_lock;
     };

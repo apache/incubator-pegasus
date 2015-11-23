@@ -50,7 +50,7 @@ meta_server_failure_detector::meta_server_failure_detector(server_state* state, 
     _is_primary = false;
 
     // TODO: config
-    _lock_svc = dsn::utils::factory_store<::dsn::dist::distributed_lock_service>::create(
+    _lock_svc = dsn::utils::factory_store< ::dsn::dist::distributed_lock_service>::create(
         "distributed_lock_service_simple",
         PROVIDER_TYPE_MAIN
         );
@@ -68,7 +68,7 @@ meta_server_failure_detector::~meta_server_failure_detector(void)
     delete _lock_svc;
 }
 
-void meta_server_failure_detector::on_worker_disconnected(const std::vector<::dsn::rpc_address>& nodes)
+void meta_server_failure_detector::on_worker_disconnected(const std::vector< ::dsn::rpc_address>& nodes)
 {
     if (!is_primary())
     {

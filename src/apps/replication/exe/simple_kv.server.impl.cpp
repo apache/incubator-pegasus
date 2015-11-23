@@ -101,9 +101,9 @@ namespace dsn {
                 zauto_lock l(_lock);
                 if (create_new)
                 {
-					auto& dir = data_dir();
-					dsn::utils::filesystem::remove_path(dir);
-					dsn::utils::filesystem::create_directory(dir);
+                    auto& dir = data_dir();
+                    dsn::utils::filesystem::remove_path(dir);
+                    dsn::utils::filesystem::create_directory(dir);
                 }
                 else
                 {
@@ -117,10 +117,10 @@ namespace dsn {
                 zauto_lock l(_lock);
                 if (clear_state)
                 {
-					if (!dsn::utils::filesystem::remove_path(data_dir()))
-					{
-						dassert(false, "Fail to delete directory %s.", data_dir().c_str());
-					}
+                    if (!dsn::utils::filesystem::remove_path(data_dir()))
+                    {
+                        dassert(false, "Fail to delete directory %s.", data_dir().c_str());
+                    }
                 }
                 return 0;
             }
@@ -135,15 +135,15 @@ namespace dsn {
                 decree maxVersion = 0;
                 std::string name;
 
-				std::vector<std::string> sub_list;
-				auto& path = data_dir();
-				if (!dsn::utils::filesystem::get_subfiles(path, sub_list, false))
-				{
-					dassert(false, "Fail to get subfiles in %s.", path.c_str());
-				}
-				for (auto& fpath : sub_list)
+                std::vector<std::string> sub_list;
+                auto& path = data_dir();
+                if (!dsn::utils::filesystem::get_subfiles(path, sub_list, false))
                 {
-					auto&& s = dsn::utils::filesystem::get_file_name(fpath);
+                    dassert(false, "Fail to get subfiles in %s.", path.c_str());
+                }
+                for (auto& fpath : sub_list)
+                {
+                    auto&& s = dsn::utils::filesystem::get_file_name(fpath);
                     if (s.substr(0, strlen("checkpoint.")) != std::string("checkpoint."))
                         continue;
 
@@ -154,7 +154,7 @@ namespace dsn {
                         name = data_dir() + "/" + s;
                     }
                 }
-				sub_list.clear();
+                sub_list.clear();
 
                 if (maxVersion > 0)
                 {

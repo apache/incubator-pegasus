@@ -40,7 +40,7 @@ namespace dsn {
         namespace application {
 
 
-            simple_kv_client_impl::simple_kv_client_impl(const std::vector<::dsn::rpc_address>& meta_servers)
+            simple_kv_client_impl::simple_kv_client_impl(const std::vector< ::dsn::rpc_address>& meta_servers)
                 : simple_kv_client(meta_servers, "simple_kv")
             {
             }

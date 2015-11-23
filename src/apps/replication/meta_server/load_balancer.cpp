@@ -125,7 +125,7 @@ void load_balancer::explictly_send_proposal(global_partition_id gpid, int role, 
 
 ::dsn::rpc_address load_balancer::find_minimal_load_machine(bool primaryOnly)
 {
-    std::vector<std::pair<::dsn::rpc_address, int>> stats;
+    std::vector<std::pair< ::dsn::rpc_address, int>> stats;
 
     for (auto it = _state->_nodes.begin(); it != _state->_nodes.end(); it++)
     {
@@ -137,7 +137,7 @@ void load_balancer::explictly_send_proposal(global_partition_id gpid, int role, 
     }
 
     
-    std::sort(stats.begin(), stats.end(), [](const std::pair<::dsn::rpc_address, int>& l, const std::pair<::dsn::rpc_address, int>& r)
+    std::sort(stats.begin(), stats.end(), [](const std::pair< ::dsn::rpc_address, int>& l, const std::pair< ::dsn::rpc_address, int>& r)
     {
         return l.second < r.second || (l.second == r.second && l.first < r.first);
     });

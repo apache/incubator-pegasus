@@ -56,7 +56,7 @@ public:
     {
         dassert (priority >= 0 && priority < priority_count, "wrong priority");
 
-        auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
+        auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_lock);
         {
             _items[priority].push(obj);
             return ++_count;
@@ -65,20 +65,20 @@ public:
 
     virtual T dequeue()
     {
-        auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
+        auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_lock);
         long ct = 0;
         return dequeue_impl(ct);
     }
 
     virtual T dequeue(/*out*/ long& ct)
     {
-        auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
+        auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_lock);
         return dequeue_impl(ct);
     }
     
     const std::string& get_name() const { return _name;}
 
-    long count() const { auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock); return _count; }
+    long count() const { auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_lock); return _count; }
 
 protected:
     T dequeue_impl(/*out*/ long& ct, bool pop = true)

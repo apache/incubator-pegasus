@@ -46,7 +46,7 @@ namespace dsn {
             {
             public:
                 simple_kv_perf_test_client(
-                    const std::vector<::dsn::rpc_address>& meta_servers,
+                    const std::vector< ::dsn::rpc_address>& meta_servers,
                     const char* app_name)
                     : simple_kv_client(meta_servers, app_name)
                 {

@@ -117,7 +117,7 @@ namespace dsn {
             va_list args
             )
         {
-            utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
+            utils::auto_lock< ::dsn::utils::ex_lock_nr> l(_lock);
 
             print_header(stdout, log_level);
             if (!_short_header)
@@ -153,15 +153,15 @@ namespace dsn {
                     "invalid [tools.simple_logger] stderr_start_level specified");
 
             // check existing log files
-			std::vector<std::string> sub_list;
-			std::string path = "./";
-			if (!dsn::utils::filesystem::get_subfiles(path, sub_list, false))
-			{
-				dassert(false, "Fail to get subfiles in %s.", path.c_str());
-			}			 
+            std::vector<std::string> sub_list;
+            std::string path = "./";
+            if (!dsn::utils::filesystem::get_subfiles(path, sub_list, false))
+            {
+                dassert(false, "Fail to get subfiles in %s.", path.c_str());
+            }             
             for (auto& fpath : sub_list)
             {
-				auto&& name = dsn::utils::filesystem::get_file_name(fpath);
+                auto&& name = dsn::utils::filesystem::get_file_name(fpath);
                 if (name.length() <= 8 ||
                     name.substr(0, 4) != "log.")
                     continue;
@@ -176,7 +176,7 @@ namespace dsn {
                 if (_start_index == 0 || index < _start_index)
                     _start_index = index;
             }
-			sub_list.clear();
+            sub_list.clear();
 
             if (_start_index == 0)
                 _start_index = _index;
@@ -200,10 +200,10 @@ namespace dsn {
             {
                 std::stringstream str2;
                 str2 << "log." << _start_index++ << ".txt";
-				if (!dsn::utils::filesystem::remove_path(str2.str()))
-				{
-					dassert(false, "Fail to remove file %s.", str2.str().c_str());
-				}
+                if (!dsn::utils::filesystem::remove_path(str2.str()))
+                {
+                    dassert(false, "Fail to remove file %s.", str2.str().c_str());
+                }
             }
         }
 
@@ -232,7 +232,7 @@ namespace dsn {
                 va_copy(args2, args);
             }
 
-            utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
+            utils::auto_lock< ::dsn::utils::ex_lock_nr> l(_lock);
          
             print_header(_log, log_level);
             if (!_short_header)

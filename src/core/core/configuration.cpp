@@ -63,7 +63,7 @@ bool configuration::load(const char* file_name, const char* arguments)
     FILE* fd = ::fopen(file_name, "rb");
     if (fd == nullptr) 
     {
-		std::string cdir;
+        std::string cdir;
         dsn::utils::filesystem::get_current_directory(cdir);
         printf("Cannot open file %s in %s, err=%s\n", file_name, cdir.c_str(), strerror(errno));
         return false;

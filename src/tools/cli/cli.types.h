@@ -55,14 +55,14 @@ namespace dsn {
     // ---------- command -------------
     inline void marshall(::dsn::binary_writer& writer, const command& val)
     {
-        boost::shared_ptr<::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
         ::dsn::marshall_rpc_args<command>(&proto, val, &command::write);
     };
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ command& val)
     {
-        boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
         ::dsn::unmarshall_rpc_args<command>(&proto, val, &command::read);
     };

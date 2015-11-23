@@ -76,7 +76,7 @@ DEFINE_TASK_CODE(LPC_META_STATE_SVC_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_
 
 void server_state::initialize()
 {
-    _storage = dsn::utils::factory_store<::dsn::dist::meta_state_service>::create(
+    _storage = dsn::utils::factory_store< ::dsn::dist::meta_state_service>::create(
         "meta_state_service_simple",  // TODO: read config
         PROVIDER_TYPE_MAIN
         );
