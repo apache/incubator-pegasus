@@ -41,6 +41,7 @@
 # endif
 # define __TITLE__ "load.balancer"
 
+bool load_balancer::s_lb_for_test = false;
 bool load_balancer::s_disable_lb = false;
 
 load_balancer::load_balancer(server_state* state)
@@ -103,9 +104,12 @@ void load_balancer::run(global_partition_id gpid)
         return ::dsn::rpc_address();
     }
 
-    return stats[0].first;
+    if (s_lb_for_test)
+    {
+        // alway use the first (minimal) one
+        return stats[0].first;
+    }
 
-    /* TODO(qinzuoyan): just for test
     int candidate_count = 1;
     int val = stats[0].second;
 
@@ -117,7 +121,6 @@ void load_balancer::run(global_partition_id gpid)
     }
 
     return stats[dsn_random32(0, candidate_count - 1)].first;
-    */
 }
 
 void load_balancer::run_lb(partition_configuration& pc)

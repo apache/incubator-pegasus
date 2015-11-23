@@ -24,6 +24,15 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     Unit-test for perf_counters.
+ *
+ * Revision history:
+ *     Nov., 2015, @qinzuoyan (Zuoyan Qin), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include <dsn/internal/perf_counters.h>
 # include <gtest/gtest.h>
 

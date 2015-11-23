@@ -24,6 +24,15 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     Repli util app.
+ *
+ * Revision history:
+ *     Nov., 2015, @qinzuoyan (Zuoyan Qin), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include "repli.app.h"
 # include <dsn/cpp/utils.h>
 # include "../../apps/replication/lib/mutation_log.h"

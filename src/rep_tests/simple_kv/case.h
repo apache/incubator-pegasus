@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     Replication testing framework.
+ *
+ * Revision history:
+ *     Nov., 2015, @qinzuoyan (Zuoyan Qin), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include "common.h"
@@ -71,9 +81,10 @@ public:
 private:
     bool _null_loop_set;
     int _null_loop;
+    bool _lb_for_test;
+    bool _lb_for_test_set;
     bool _disable_lb;
     bool _disable_lb_set;
-
     bool _close_replica_stub;
     bool _close_replica_stub_set;
 };

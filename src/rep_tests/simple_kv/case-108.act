@@ -1,6 +1,8 @@
 # inject on_rpc_call of notify learn completion
 # and set group_check_internal_ms=5000
 
+set:load_balance_for_test=1
+
 # wait until r1 becomes primary
 config:{1,r1,[]}
 state:{{r1,pri,1,0}}

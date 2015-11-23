@@ -26,7 +26,7 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     Unit-test for rpc related code.
  *
  * Revision history:
  *     xxxx-xx-xx, author, first version

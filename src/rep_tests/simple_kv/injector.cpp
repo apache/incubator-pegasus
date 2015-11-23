@@ -24,6 +24,15 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     Replication testing framework.
+ *
+ * Revision history:
+ *     Nov., 2015, @qinzuoyan (Zuoyan Qin), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #include "injector.h"
 #include "checker.h"
 #include "case.h"

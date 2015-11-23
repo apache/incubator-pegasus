@@ -24,6 +24,15 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     Unit-test for command_manager.
+ *
+ * Revision history:
+ *     Nov., 2015, @qinzuoyan (Zuoyan Qin), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include "../../tools/cli/cli.client.h"
 # include <dsn/internal/command.h>
 # include <gtest/gtest.h>

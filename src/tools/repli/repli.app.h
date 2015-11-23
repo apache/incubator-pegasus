@@ -24,6 +24,15 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     Repli util app.
+ *
+ * Revision history:
+ *     Nov., 2015, @qinzuoyan (Zuoyan Qin), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 # include <dsn/cpp/service_app.h>

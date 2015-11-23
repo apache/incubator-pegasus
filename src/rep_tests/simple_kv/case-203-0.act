@@ -1,5 +1,7 @@
 # Case Description: test recover
 
+set:load_balance_for_test=1
+
 config:{1,r1,[]}
 
 wait:on_rpc_call:rpc_name=RPC_CONFIG_PROPOSAL,from=m,to=r1

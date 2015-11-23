@@ -24,6 +24,15 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     Replication testing framework.
+ *
+ * Revision history:
+ *     Nov., 2015, @qinzuoyan (Zuoyan Qin), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include "case.h"
 # include "simple_kv.server.impl.h"
 
@@ -84,6 +93,12 @@ std::string set_case_line::to_string() const
         oss << "null_loop=" << _null_loop;
         count++;
     }
+    if (_lb_for_test_set)
+    {
+        if (count > 0) oss << ",";
+        oss << "load_balance_for_test=" << _lb_for_test;
+        count++;
+    }
     if (_disable_lb_set)
     {
         if (count > 0) oss << ",";
@@ -109,7 +124,9 @@ bool set_case_line::parse(const std::string& params)
         return false;
     }
     _null_loop_set = false;
+    _lb_for_test_set = false;
     _disable_lb_set = false;
+    _close_replica_stub_set = false;
     for (auto& kv : kv_map)
     {
         const std::string& k = kv.first;
@@ -119,6 +136,11 @@ bool set_case_line::parse(const std::string& params)
             _null_loop = boost::lexical_cast<int>(v);
             _null_loop_set = true;
         }
+        else if (k == "load_balance_for_test")
+        {
+            _lb_for_test = boost::lexical_cast<bool>(v);
+            _lb_for_test_set = true;
+        }
         else if (k == "disable_load_balance")
         {
             _disable_lb = boost::lexical_cast<bool>(v);
@@ -126,8 +148,8 @@ bool set_case_line::parse(const std::string& params)
         }
         else if (k == "close_replica_stub_on_exit")
         {
-            _close_replica_stub_set = true;
             _close_replica_stub = boost::lexical_cast<bool>(v);
+            _close_replica_stub_set = true;
         }
         else
         {
@@ -144,6 +166,10 @@ void set_case_line::apply_set() const
     if (_null_loop_set)
     {
         test_case::s_null_loop = _null_loop;
+    }
+    if (_lb_for_test_set)
+    {
+        load_balancer::s_lb_for_test = _lb_for_test;
     }
     if (_disable_lb_set)
     {
