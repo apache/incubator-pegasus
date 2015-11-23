@@ -110,6 +110,7 @@ error_code mutation_log::open(replay_callback callback)
     dassert(nullptr == _current_log_file, 
         "the current log file must be null at this point");
 
+
     // create dir if necessary
     if (!dsn::utils::filesystem::path_exists(_dir))
     {
@@ -122,6 +123,7 @@ error_code mutation_log::open(replay_callback callback)
 	
     // load the existing logs
     _log_files.clear();
+
 	std::vector<std::string> file_list;
 	if (!dsn::utils::filesystem::get_subfiles(_dir, file_list, false))
 	{
@@ -133,6 +135,8 @@ error_code mutation_log::open(replay_callback callback)
     {
         dassert(file_list.size() == 0, "log must be empty if callback is not present");
     }
+
+    std::sort(file_list.begin(), file_list.end());
 
 	for (auto& fpath : file_list)
 	{
@@ -149,6 +153,8 @@ error_code mutation_log::open(replay_callback callback)
                 return err;
             }   
 		}
+
+        ddebug("open log file %s succeed", fpath.c_str());
 
 		dassert(_log_files.find(log->index()) == _log_files.end(), "");
 		_log_files[log->index()] = log;
@@ -209,6 +215,9 @@ error_code mutation_log::open(
 
 void mutation_log::close(bool clear_all)
 {
+    // TODO(qinzuoyan): close() may be called in duplicate, which causes
+    // unnecessary execution
+
     dinfo("close mutation log %s, clear_all = %s",
         dir().c_str(),
         clear_all ? "true" : "false"
@@ -271,7 +280,7 @@ error_code mutation_log::create_new_log_file()
         return ERR_FILE_OPERATION_FAILED;
     }    
 
-    dinfo ("create new log file %s", logf->path().c_str());
+    ddebug ("create new log file %s succeed", logf->path().c_str());
     
     _last_file_number++;
     dassert (_log_files.find(_last_file_number) == _log_files.end(), "");
@@ -423,7 +432,9 @@ void mutation_log::internal_write_callback(
     offset += sizeof(log_block_header);
     offset += log->read_header(*reader);
     if (!log->is_right_header())
-        err = ERR_INVALID_DATA;
+    {
+        return ERR_INVALID_DATA;
+    }
 
     while (true)
     {
@@ -447,6 +458,10 @@ void mutation_log::internal_write_callback(
             offset += old_size - reader->get_remaining_size();
         }
         
+        /*
+         * if an error in an log mutation entry, then the replay log is
+         * stopped
+         */
         err = log->read_next_log_entry(offset - log->start_offset(), bb);
         if (err != ERR_OK)
         {
@@ -490,7 +505,6 @@ void mutation_log::internal_write_callback(
 
     return replay(logs, callback, offset);
 }
-
 
 /*static*/ error_code mutation_log::replay(
     std::map<int, log_file_ptr>& logs,
@@ -543,6 +557,11 @@ void mutation_log::internal_write_callback(
         else
         {
             // for other error codes, they are all checked by next loop or after loop
+            /*
+             * If the file is not corrupted, it may also return the value of ERR_INCOMPLETE_DATA
+             * or ERR_HANDLE_EOF.
+             * In this case, the correctness is relying on the check of start_offset.
+             */
             dassert(err == ERR_OK
                 || err == ERR_INCOMPLETE_DATA
                 || err == ERR_HANDLE_EOF
@@ -581,6 +600,7 @@ void mutation_log::internal_write_callback(
     else
     {
         // data failure
+        derror("replay mutation log failed: %s", err.to_string());
     }
 
     return err;
@@ -741,7 +761,7 @@ void mutation_log::update_max_decrees(global_partition_id gpid, decree d)
         tsk = new safe_task<aio_handler>(callback);
         tsk->add_ref(); // released in exec_aio
         dsn_task_t t = dsn_file_create_aio_task(callback_code,
-            safe_task<aio_handler>::exec_aio, tsk, hash);
+            safe_task<aio_handler>::exec_aio, tsk, hash, callback_host->tracker());
         tsk->set_task_info(t);
         _pending_write_callbacks->push_back(tsk);
     }
@@ -1130,54 +1150,88 @@ int mutation_log::garbage_collection(multi_partition_decrees_ex& durable_decrees
 
     // log.index.start_offset
     if (name.length() < strlen("log.")
-        || name.substr(0, strlen("log.")) != std::string("log.")
-        || (name.length() > strlen(".removed") 
-        && name.substr(name.length() - strlen(".removed")) == std::string(".removed"))
-        )
+        || name.substr(0, strlen("log.")) != std::string("log."))
     {
-        err = ERR_FILE_OPERATION_FAILED;
-        dwarn( "invalid log path %s", path);
+        err = ERR_INVALID_PARAMETERS;
+        dwarn("invalid log path %s", path);
         return nullptr;
     }
 
     auto pos = name.find_first_of('.');
+    dassert(pos != std::string::npos, "");
     auto pos2 = name.find_first_of('.', pos + 1);
     if (pos2 == std::string::npos)
     {
-        err = ERR_FILE_OPERATION_FAILED;
-        dwarn( "invalid log path %s", path);
+        err = ERR_INVALID_PARAMETERS;
+        dwarn("invalid log path %s", path);
         return nullptr;
     }
 
-    dsn_handle_t hfile = (dsn_handle_t)(uintptr_t)dsn_file_open(path, O_RDONLY | O_BINARY, 0);
+    /* so the log file format is log.index_str.start_offset_str */
+    std::string index_str = name.substr(pos + 1, pos2 - pos - 1);
+    std::string start_offset_str = name.substr(pos2 + 1);
+    if (index_str.empty() || start_offset_str.empty())
+    {
+        err = ERR_INVALID_PARAMETERS;
+        dwarn("invalid log path %s", path);
+        return nullptr;
+    }
 
-    if (hfile == 0)
+    char* p = nullptr;
+    int index = static_cast<int>(strtol(index_str.c_str(), &p, 10));
+    if (*p != 0)
+    {
+        err = ERR_INVALID_PARAMETERS;
+        dwarn("invalid log path %s", path);
+        return nullptr;
+    }
+    int64_t start_offset = static_cast<int64_t>(strtoll(start_offset_str.c_str(), &p, 10));
+    if (*p != 0)
+    {
+        err = ERR_INVALID_PARAMETERS;
+        dwarn("invalid log path %s", path);
+        return nullptr;
+    }
+
+    dsn_handle_t hfile = dsn_file_open(path, O_RDONLY | O_BINARY, 0);
+    if (!hfile)
     {
         err = ERR_FILE_OPERATION_FAILED;
-        dwarn("open log %s failed", path);
+        dwarn("open log file %s failed", path);
         return nullptr;
     }
 
-    
-    int index = atoi(name.substr(pos + 1, pos2 - pos - 1).c_str());
-    int64_t start_offset = static_cast<int64_t>(atoll(name.substr(pos2 + 1).c_str()));
-    
+    /*
+     * so log file is structured with sequences of log_blocks
+     * each block consists of the log_block_header + log_content
+     * and the first block is the log_file_header
+     */
     auto lf = new log_file(path, hfile, index, start_offset, true);
     blob hdr_blob;
     err = lf->read_next_log_entry(0, hdr_blob);
     if (err != ERR_OK)
     {
-        derror("read first log entry of file %s failed, err = %s",
-            lf->path().c_str(),
-            err.to_string()
-            );
+        err = ERR_FILE_OPERATION_FAILED;
+        std::string removed = std::string(path) + ".removed";
+        derror("read first log entry of file %s failed, err = %s. Rename the file to %s", path, err.to_string(), removed.c_str());
         delete lf;
+        dsn::utils::filesystem::rename_path(path, removed);
         return nullptr;
     }
 
     binary_reader reader(hdr_blob);
     lf->read_header(reader);
+    if (!lf->is_right_header())
+    {
+        err = ERR_FILE_OPERATION_FAILED;
+        std::string removed = std::string(path) + ".removed";
+        derror("invalid log file header of file %s. Rename the file to %s", path, removed.c_str());
+        delete lf;
+        dsn::utils::filesystem::rename_path(path, removed);
+        return nullptr;
+    }
 
+    err = ERR_OK;
     return lf;
 }
 
@@ -1188,11 +1242,16 @@ int mutation_log::garbage_collection(multi_partition_decrees_ex& durable_decrees
     )
 {
     char path[512]; 
-    sprintf (path, "%s/log.%u.%lld", dir, index,
-        static_cast<long long int>(start_offset));
+    sprintf (path, "%s/log.%d.%lld", dir, index, static_cast<long long int>(start_offset));
+
+    if (dsn::utils::filesystem::path_exists(std::string(path)))
+    {
+        dwarn("log file %s already exist", path);
+        return nullptr;
+    }
     
     dsn_handle_t hfile = dsn_file_open(path, O_RDWR | O_CREAT | O_BINARY, 0666);
-    if (hfile == 0)
+    if (!hfile)
     {
         dwarn("create log %s failed", path);
         return nullptr;
@@ -1219,18 +1278,18 @@ log_file::log_file(
 
     if (is_read)
     {
-		int64_t sz;
-		if (!dsn::utils::filesystem::file_size(_path, sz))
-		{
-			dassert(false, "fail to get file size of %s.", _path.c_str());
-		}
-		_end_offset += sz;
+        int64_t sz;
+        if (!dsn::utils::filesystem::file_size(_path, sz))
+        {
+            dassert(false, "fail to get file size of %s.", _path.c_str());
+        }
+        _end_offset += sz;
     }
 }
 
 void log_file::close()
 {
-    if (0 != _handle)
+    if (_handle)
     {
         error_code err = dsn_file_close(_handle);
         dassert(
@@ -1239,12 +1298,32 @@ void log_file::close()
             err.to_string()
             );
 
-        _handle = 0;
+        _handle = nullptr;
+    }
+}
+
+void log_file::flush()
+{
+    dassert (!_is_read, "log file must be of write mode");
+
+    if (_handle)
+    {
+        error_code err = dsn_file_flush(_handle);
+        dassert(
+            err == ERR_OK,
+            "dsn_file_flush failed, err = %s",
+            err.to_string()
+            );
     }
 }
 
 error_code log_file::read_next_log_entry(int64_t local_offset, /*out*/::dsn::blob& bb)
 {
+    /*
+     * so the structure of log entry: log_block_header + log_content
+     * and the length_of(log_content) == log_block_header.length
+     * and log_block_header.crc is stored for the check of lock_content
+     */
     dassert (_is_read, "log file must be of read mode");
     
     log_block_header hdr;    
@@ -1256,7 +1335,7 @@ error_code log_file::read_next_log_entry(int64_t local_offset, /*out*/::dsn::blo
     auto err = tsk->error();
     if (err != ERR_OK || read_count != sizeof(log_block_header))
     {
-        if (err == ERR_HANDLE_EOF)
+        if (err == ERR_OK || err == ERR_HANDLE_EOF)
         {
             err = read_count == 0 ? ERR_HANDLE_EOF : ERR_INCOMPLETE_DATA;
         }
@@ -1294,7 +1373,7 @@ error_code log_file::read_next_log_entry(int64_t local_offset, /*out*/::dsn::blo
 
         return err;
     }
-    
+
     auto crc = dsn_crc32_compute((const void*)bb.data(), (size_t)hdr.length, 0);
     if (crc != hdr.body_crc)
     {
@@ -1321,18 +1400,18 @@ std::shared_ptr<binary_writer> log_file::prepare_log_entry()
 ::dsn::task_ptr log_file::commit_log_entry(
                 blob& bb,
                 int64_t offset,
-                dsn_task_code_t evt,  // to indicate which thread pool to execute the callback
+                dsn_task_code_t evt,
                 clientlet* callback_host,
                 aio_handler callback,
                 int hash
                 )
 {
-    dassert (!_is_read, "");
-    dassert (offset == end_offset(), "");
+    dassert (!_is_read, "log file must be of write mode");
+    dassert (offset == end_offset(), "offset should match with file's end offset");
 
     auto* hdr = (log_block_header*)bb.data();
 
-    dassert(bb.buffer_ptr() == bb.data(), "header must be at the beginning ofr the buffer");
+    dassert(bb.buffer_ptr() == bb.data(), "header must be at the beginning of the buffer");
     dassert(hdr->magic == 0xdeadbeef, "");
     dassert(hdr->local_offset == (uint32_t)(offset - start_offset()), "");
 
@@ -1357,18 +1436,13 @@ std::shared_ptr<binary_writer> log_file::prepare_log_entry()
     return task;
 }
 
-void log_file::flush()
-{
-    // TODO: aio provide native_handle() method
-# ifdef _WIN32
-    ::FlushFileBuffers((HANDLE)dsn_file_native_handle(_handle));
-# else
-    fsync((int)(intptr_t)dsn_file_native_handle(_handle));
-# endif
-}
-
 int log_file::read_header(binary_reader& reader)
 {
+    /*
+     * and the log file header structure:
+     * log_file_header +
+     * count + [gpid + prev_log_max_decree]-->array_size_is_count
+     */
     reader.read_pod(_header);
 
     int count;
@@ -1404,20 +1478,20 @@ bool log_file::is_right_header() const
 
 int log_file::write_header(
     binary_writer& writer, 
-    multi_partition_decrees_ex& init_max_decrees, 
+    multi_partition_decrees_ex& init_max_decrees,
     int buffer_bytes
     )
 {
     _previous_log_max_decrees = init_max_decrees;
-    
+
     _header.magic = 0xdeadbeef;
     _header.version = 0x1;
     _header.start_global_offset = start_offset();
     _header.log_buffer_size_bytes = buffer_bytes;
-    // staleness set in ctor
+    // staleness already set in the constructor
 
     writer.write_pod(_header);
-    
+
     int count = static_cast<int>(_previous_log_max_decrees.size());
     writer.write(count);
     for (auto& kv : _previous_log_max_decrees)

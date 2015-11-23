@@ -35,6 +35,11 @@
 
 #include "replica_context.h"
 
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "replica.context"
+
 namespace dsn { namespace replication {
 
 void primary_context::cleanup(bool clean_pending_mutations)

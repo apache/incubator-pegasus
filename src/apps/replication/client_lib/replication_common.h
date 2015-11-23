@@ -70,6 +70,7 @@ public:
     int32_t prepare_timeout_ms_for_secondaries;
     int32_t prepare_timeout_ms_for_potential_secondaries;
         
+    bool    batch_write_disabled;
     int32_t staleness_for_commit;
     int32_t max_mutation_count_in_prepare_list;
     int32_t mutation_2pc_min_replica_count;

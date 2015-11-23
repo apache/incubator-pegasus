@@ -44,10 +44,15 @@ using namespace dsn::replication;
 class server_state;
 class load_balancer;
 class meta_server_failure_detector;
+class replication_checker;
+namespace test {
+    class test_checker;
+}
 
 namespace dsn {
     namespace replication{
         class replication_checker;
+        class test_checker;
     }
 }
 
@@ -78,6 +83,7 @@ private:
 private:
     friend class meta_server_failure_detector;
     friend class ::dsn::replication::replication_checker;
+    friend class ::dsn::replication::test::test_checker;
 
     meta_server_failure_detector *_failure_detector;    
     server_state                 *_state;

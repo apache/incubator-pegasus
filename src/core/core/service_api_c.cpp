@@ -110,6 +110,12 @@ DSN_API const char* dsn_error_to_string(dsn_error_t err)
     return error_code_mgr::instance().get_name(static_cast<int>(err));
 }
 
+DSN_API dsn_error_t dsn_error_from_string(const char* s, dsn_error_t default_err)
+{
+    auto r = error_code_mgr::instance().get_id(s);
+    return r == -1 ? default_err : r;
+}
+
 DSN_API volatile int* dsn_task_queue_virtual_length_ptr(
     dsn_task_code_t code,
     int hash
@@ -325,6 +331,11 @@ DSN_API void dsn_task_add_ref(dsn_task_t task)
 DSN_API void dsn_task_release_ref(dsn_task_t task)
 {
     ((::dsn::task*)(task))->release_ref();
+}
+
+DSN_API int dsn_task_get_ref(dsn_task_t task)
+{
+    return ((::dsn::task*)(task))->get_count();
 }
 
 DSN_API bool dsn_task_cancel(dsn_task_t task, bool wait_until_finished)
@@ -623,6 +634,7 @@ DSN_API void dsn_rpc_enqueue_response(dsn_task_t rpc_call, dsn_error_t err, dsn_
 // file operations
 //
 //------------------------------------------------------------------------------
+
 DSN_API dsn_handle_t dsn_file_open(const char* file_name, int flag, int pmode)
 {
     return ::dsn::task::get_current_disk()->open(file_name, flag, pmode);
@@ -631,6 +643,11 @@ DSN_API dsn_handle_t dsn_file_open(const char* file_name, int flag, int pmode)
 DSN_API dsn_error_t dsn_file_close(dsn_handle_t file)
 {
     return ::dsn::task::get_current_disk()->close(file);
+}
+
+DSN_API dsn_error_t dsn_file_flush(dsn_handle_t file)
+{
+    return ::dsn::task::get_current_disk()->flush(file);
 }
 
 // native handle: HANDLE for windows, int for non-windows
@@ -1116,5 +1133,5 @@ DSN_API int dsn_get_all_apps(dsn_app_info* info_buffer, int count)
         strncpy(info.name, kv.second->spec().name.c_str(), sizeof(info.name));
         strncpy(info.type, kv.second->spec().type.c_str(), sizeof(info.type));
     }
-    return i + 1;
+    return i;
 }

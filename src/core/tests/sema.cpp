@@ -26,13 +26,12 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     Unit-test for semaphore.
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Nov., 2015, @qinzuoyan (Zuoyan Qin), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
-
 
 # include <dsn/ext/hpc-locks/sema.h>
 # include <gtest/gtest.h>

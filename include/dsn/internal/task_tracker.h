@@ -84,7 +84,7 @@ namespace dsn
     //
     // task_tracker is the base class for RPC service and client
     // there can be multiple task_tracker in the system, mostly
-    // defined during set_trackerialization in main
+    // defined during set_tracker in main
     //
     class task_tracker
     {

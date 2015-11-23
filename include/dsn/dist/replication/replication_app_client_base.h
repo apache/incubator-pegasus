@@ -331,7 +331,7 @@ namespace dsn { namespace replication {
 
         // get read address policy
         virtual ::dsn::rpc_address get_read_address(read_semantic_t semantic, const partition_configuration& config);
-        
+        ::dsn::rpc_address get_meta_servers() const { return _meta_servers; }
     public:
         struct request_context : public ref_counter
         {

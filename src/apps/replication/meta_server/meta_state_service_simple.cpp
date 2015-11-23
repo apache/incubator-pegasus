@@ -35,6 +35,7 @@
  */
 
 # include "meta_state_service_simple.h"
+# include <dsn/internal/task.h>
 
 # include <stack>
 # include <utility>
@@ -223,7 +224,8 @@ namespace dsn
         error_code meta_state_service_simple::initialize()
         {
             _offset = 0;
-            std::string log_path = "meta_state_service.log";
+            std::string dir = dsn::task::get_current_node_name();
+            std::string log_path = dsn::utils::filesystem::path_combine(dir, "meta_state_service.log");
             if (utils::filesystem::file_exists(log_path))
             {
                 if (FILE* fd = fopen(log_path.c_str(), "rb"))
@@ -283,7 +285,17 @@ namespace dsn
                     fclose(fd);
                 }
             }
+            else if (!utils::filesystem::create_directory(dir))
+            {
+                derror("create directory failed: %s", dir.c_str());
+                return ERR_FILE_OPERATION_FAILED;
+            }
             _log = dsn_file_open(log_path.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
+            if (!_log)
+            {
+                derror("open file failed: %s", log_path.c_str());
+                return ERR_FILE_OPERATION_FAILED;
+            }
             return ERR_OK;
         }
 

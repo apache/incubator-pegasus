@@ -206,7 +206,7 @@ mutation_ptr mutation_queue::add_work(int code, dsn_message_t request, replica* 
     }
 
     // check if full
-    if (_pending_mutation->is_full())
+    if (_batch_write_disabled || _pending_mutation->is_full())
     {
         _pending_mutation->add_ref(); // released when unlink
         _hdr.add(_pending_mutation);

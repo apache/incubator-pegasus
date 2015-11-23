@@ -153,11 +153,11 @@ private:
     };
 
 private:    
-    typedef std::unordered_map<::dsn::rpc_address, master_record>    master_map;
-    typedef std::unordered_map<::dsn::rpc_address, worker_record>    worker_map;
+    typedef std::unordered_map< ::dsn::rpc_address, master_record>    master_map;
+    typedef std::unordered_map< ::dsn::rpc_address, worker_record>    worker_map;
 
     // allow list are set on machine name (port can vary)
-    typedef std::unordered_set<::dsn::rpc_address>   allow_list;
+    typedef std::unordered_set< ::dsn::rpc_address>   allow_list;
 
     mutable service::zlock _lock;
     master_map            _masters;
@@ -176,6 +176,12 @@ private:
 protected:
     // subClass can rewrite these method.
     virtual void send_beacon(::dsn::rpc_address node, uint64_t time);
+
+
+    // subClass can not rewrite these method.
+    virtual void end_ping2(::dsn::error_code err,
+                           std::shared_ptr< ::dsn::fd::beacon_msg>& beacon,
+                           std::shared_ptr< ::dsn::fd::beacon_ack>& resp) override;
 };
 
 }} // end namespace

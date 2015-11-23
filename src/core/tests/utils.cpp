@@ -42,6 +42,15 @@
 using namespace ::dsn;
 using namespace ::dsn::utils;
 
+TEST(core, get_last_component)
+{
+    ASSERT_EQ("a", get_last_component("a", "/"));
+    ASSERT_EQ("b", get_last_component("a/b", "/"));
+    ASSERT_EQ("b", get_last_component("a//b", "/"));
+    ASSERT_EQ("", get_last_component("a/", "/"));
+    ASSERT_EQ("c", get_last_component("a/b_c", "/_"));
+}
+
 TEST(core, crc)
 {
     char buffer[24];

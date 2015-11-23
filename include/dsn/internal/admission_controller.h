@@ -49,7 +49,7 @@ public:
 
 public:
     admission_controller(task_queue* q, std::vector<std::string>& sargs) : _queue(q) {}
-    ~admission_controller(void) {}
+    virtual ~admission_controller() {}
     
     virtual bool is_task_accepted(task* task) = 0;
         

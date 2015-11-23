@@ -665,10 +665,10 @@ namespace dsn
             )
         {
             dsn_message_t msg = dsn_msg_create_request(code, timeout_milliseconds, request_hash);
-            marshall(msg, *req);
+            ::marshall(msg, *req);
 
             auto t = internal_use_only::create_rpc_call<TRequest, TResponse>(
-                msg, req, owner, callback, reply_hash);
+                msg, req, callback, reply_hash, owner);
 
             dsn_rpc_call(server.c_addr(), t->native_handle());
             return t;

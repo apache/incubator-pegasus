@@ -21,10 +21,10 @@ set(MY_PROJ_LIBS gtest
                  dsn.tools.nfs
                  dsn.dev.cpp.core.use
                  dsn.tools.hpc
-				 dsn.tools.simulator
+                 dsn.tools.simulator
                  dsn.tools.common
                  dsn.corelib
-  )
+)
 
 set(MY_PROJ_LIB_PATH "")
 
@@ -38,7 +38,15 @@ set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config-bad-section.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/config-null-section.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/config-sample.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/config-test.ini"
+                 "${CMAKE_CURRENT_SOURCE_DIR}/config-test-2.ini"
+                 "${CMAKE_CURRENT_SOURCE_DIR}/config-test-posix-aio.ini"
+                 "${CMAKE_CURRENT_SOURCE_DIR}/config-test-sim.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/config-unmatch-section.ini"
+                 "${CMAKE_CURRENT_SOURCE_DIR}/command.txt"
+                 "${CMAKE_CURRENT_SOURCE_DIR}/nfs_test_file1"
+                 "${CMAKE_CURRENT_SOURCE_DIR}/nfs_test_file2"
+                 "${CMAKE_CURRENT_SOURCE_DIR}/run.sh"
+                 "${CMAKE_CURRENT_SOURCE_DIR}/clear.sh"
 )
 
 dsn_add_executable()

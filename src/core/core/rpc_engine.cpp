@@ -38,6 +38,9 @@
 # else
 # include <sys/socket.h>
 # include <netdb.h>
+# include <ifaddrs.h>
+# include <netinet/in.h>
+# include <arpa/inet.h>
 # endif
 
 # include "rpc_engine.h"
@@ -425,7 +428,7 @@ namespace dsn {
         else
         {
             dwarn(
-                "recv unknown message with type %s from %s, rpc_id = %llx",
+                "recv unknown message with type %s from %s, rpc_id = %016llx",
                 msg->header->rpc_name,
                 msg->from_address.to_string(),
                 msg->header->rpc_id
@@ -499,7 +502,7 @@ namespace dsn {
         auto& hdr = *request->header; 
         if (!sp->on_rpc_call.execute(task::get_current_task(), request, call, true))
         {
-            ddebug("rpc request %s is dropped (fault inject), rpc_id = %llx",
+            ddebug("rpc request %s is dropped (fault inject), rpc_id = %016llx",
                 request->header->rpc_name,
                 request->header->rpc_id
                 );

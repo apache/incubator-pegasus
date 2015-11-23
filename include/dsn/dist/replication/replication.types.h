@@ -843,7 +843,7 @@ namespace dsn { namespace replication {
     // ---------- meta_request_header -------------
     struct meta_request_header
     {
-        int32_t rpc_tag;
+        std::string rpc_tag;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const meta_request_header& val)

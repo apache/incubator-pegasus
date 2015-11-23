@@ -53,7 +53,7 @@
 
 //# include <dsn/thrift_helper.h>
 
-void module_init()
+void dsn_module_init()
 {
     // register all providers
     dsn::tools::register_common_providers();
