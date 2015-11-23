@@ -48,7 +48,7 @@
 namespace dsn { namespace tools {
 
     // multiple machines connect to the same switch, 10 should be >= than rpc_channel::max_value() + 1
-    static utils::safe_singleton_store<::dsn::rpc_address, sim_network_provider*> s_switch[10]; 
+    static utils::safe_singleton_store< ::dsn::rpc_address, sim_network_provider*> s_switch[10]; 
 
     sim_client_session::sim_client_session(
         sim_network_provider& net, 

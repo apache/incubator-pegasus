@@ -230,10 +230,10 @@ namespace dsn {
             textpd << "  pd|PD|profiledata|ProfileData $task_name:$counter_name:$percentile ..." << std::endl;
             textpd << "  pd|PD|profiledata|ProfileData $task_name:AllPercentile:$percentile" << std::endl;
 
-			textquery << "NAME:" << std::endl;
-			textquery << "  query profiler data in batch" << std::endl;
-			textquery << "SYNOPSIS:" << std::endl;
-			textquery << "  query" << std::endl;
+            textquery << "NAME:" << std::endl;
+            textquery << "  query profiler data in batch" << std::endl;
+            textquery << "SYNOPSIS:" << std::endl;
+            textquery << "  query" << std::endl;
 
             textarg << "ARGUMENTS:" << std::endl;
             textarg << "  $percentile : e.g, 50 for latency at 50 percentile, 50(default)|90|95|99|999" << std::endl;
@@ -256,12 +256,12 @@ namespace dsn {
             textp << textarg.str();
             textpjs << textarg.str();
             textpd << textarg.str();
-			textquery << textarg.str();
+            textquery << textarg.str();
 
             register_command({ "p", "P", "profile", "Profile" }, "profile|Profile|p|P - performance profiling", textp.str().c_str(), profiler_output_handler);
             //register_command({ "pjs", "PJS", "profilejavascript", "ProfileJavaScript", nullptr }, "pjs|PJS|profilejavascript|ProfileJavaScript - profile and show by javascript", textpjs.str().c_str(), profiler_js_handler);
             register_command({ "pd", "PD", "profiledata", "ProfileData" }, "profiler data - get appointed data, using by pjs", textpd.str().c_str(), profiler_data_handler);
-			register_command({ "query"}, "query profiling data, output in html table format", textquery.str().c_str(), query_data_handler);
+            register_command({ "query"}, "query profiling data, output in html table format", textquery.str().c_str(), query_data_handler);
         }
 
         void profiler::install(service_spec& spec)

@@ -173,7 +173,7 @@ namespace dsn {
     template<typename T>
     void marshall(binary_writer& writer, const T& val)
     {
-        boost::shared_ptr<::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
         marshall_base<T>(&proto, val);
     }
@@ -181,7 +181,7 @@ namespace dsn {
     template<typename T>
     void unmarshall(binary_reader& reader, /*out*/ T& val)
     {
-        boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
         unmarshall_base<T>(&proto, val);
     }
@@ -280,7 +280,7 @@ namespace dsn {
             // prepare head
             blob bb(_write_buffer_for_header, 0, 512);
             binary_writer writer(bb);
-            boost::shared_ptr<::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+            boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
             ::apache::thrift::protocol::TBinaryProtocol proto(transport);
 
             auto sp = task_spec::get(msg->header().local_rpc_code);
@@ -337,7 +337,7 @@ namespace dsn {
             {
                 blob bb = _read_buffer.range(0, _read_buffer_occupied);
                 binary_reader reader(bb);
-                boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+                boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
                 ::apache::thrift::protocol::TBinaryProtocol proto(transport);
 
                 int32_t rseqid = 0;

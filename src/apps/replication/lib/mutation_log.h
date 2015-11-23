@@ -199,7 +199,7 @@ private:
         /*out*/ int64_t& end_offset
         );
 
-    typedef std::shared_ptr<std::list<::dsn::task_ptr>> pending_callbacks_ptr;
+    typedef std::shared_ptr<std::list< ::dsn::task_ptr>> pending_callbacks_ptr;
     void init_states();    
     error_code create_new_log_file();    
     void create_new_pending_buffer();    

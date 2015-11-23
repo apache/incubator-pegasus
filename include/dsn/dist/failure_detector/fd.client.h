@@ -105,9 +105,9 @@ public:
         }
     }
     
-    // - asynchronous with on-heap std::shared_ptr<::dsn::fd::beacon_msg> and std::shared_ptr<::dsn::fd::beacon_ack> 
+    // - asynchronous with on-heap std::shared_ptr< ::dsn::fd::beacon_msg> and std::shared_ptr< ::dsn::fd::beacon_ack> 
     ::dsn::task_ptr begin_ping2(
-        std::shared_ptr<::dsn::fd::beacon_msg>& beacon,         
+        std::shared_ptr< ::dsn::fd::beacon_msg>& beacon,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0,
         int request_hash = 0,
@@ -127,8 +127,8 @@ public:
 
     virtual void end_ping2(
         ::dsn::error_code err, 
-        std::shared_ptr<::dsn::fd::beacon_msg>& beacon, 
-        std::shared_ptr<::dsn::fd::beacon_ack>& resp)
+        std::shared_ptr< ::dsn::fd::beacon_msg>& beacon, 
+        std::shared_ptr< ::dsn::fd::beacon_ack>& resp)
     {
         if (err != ::dsn::ERR_OK) std::cout << "reply RPC_FD_FAILURE_DETECTOR_PING err : " << err.to_string() << std::endl;
         else

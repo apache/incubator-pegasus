@@ -120,16 +120,16 @@ error_code mutation_log::open(replay_callback callback)
             return ERR_FILE_OPERATION_FAILED;
         }
     }
-	
+    
     // load the existing logs
     _log_files.clear();
 
-	std::vector<std::string> file_list;
-	if (!dsn::utils::filesystem::get_subfiles(_dir, file_list, false))
-	{
-		derror("open mutation_log: get files failed.");
-		return ERR_FILE_OPERATION_FAILED;
-	}
+    std::vector<std::string> file_list;
+    if (!dsn::utils::filesystem::get_subfiles(_dir, file_list, false))
+    {
+        derror("open mutation_log: get files failed.");
+        return ERR_FILE_OPERATION_FAILED;
+    }
 
     if (nullptr == callback)
     {
@@ -138,11 +138,11 @@ error_code mutation_log::open(replay_callback callback)
 
     std::sort(file_list.begin(), file_list.end());
 
-	for (auto& fpath : file_list)
-	{
-		log_file_ptr log = log_file::open_read(fpath.c_str(), err);
-		if (log == nullptr)
-		{
+    for (auto& fpath : file_list)
+    {
+        log_file_ptr log = log_file::open_read(fpath.c_str(), err);
+        if (log == nullptr)
+        {
             if (err == ERR_HANDLE_EOF)
             {
                 dwarn("Skip file %s during log init", fpath.c_str());
@@ -152,14 +152,14 @@ error_code mutation_log::open(replay_callback callback)
             {
                 return err;
             }   
-		}
+        }
 
         ddebug("open log file %s succeed", fpath.c_str());
 
-		dassert(_log_files.find(log->index()) == _log_files.end(), "");
-		_log_files[log->index()] = log;
-	}
-	file_list.clear();
+        dassert(_log_files.find(log->index()) == _log_files.end(), "");
+        _log_files[log->index()] = log;
+    }
+    file_list.clear();
         
     // replay with the found files    
     int64_t offset = 0;
@@ -323,7 +323,7 @@ void mutation_log::create_new_pending_buffer()
     dassert (_pending_write == nullptr, "");
     dassert (_pending_write_callbacks == nullptr, "");
 
-    _pending_write_callbacks.reset(new std::list<::dsn::task_ptr>);
+    _pending_write_callbacks.reset(new std::list< ::dsn::task_ptr>);
     _pending_write = _current_log_file->prepare_log_entry();
     _global_end_offset += _pending_write->total_size();
 }

@@ -52,7 +52,7 @@ namespace dsn {
     }
 }
 
-typedef std::list<std::pair<::dsn::rpc_address, bool>> node_states;
+typedef std::list<std::pair< ::dsn::rpc_address, bool>> node_states;
 
 struct app_state
 {
@@ -78,7 +78,7 @@ public:
     // when the server becomes the leader
     error_code on_become_leader();
 
-    // get node state std::list<std::pair<::dsn::rpc_address, bool>>
+    // get node state std::list<std::pair< ::dsn::rpc_address, bool>>
     void get_node_state(/*out*/ node_states& nodes);
 
     // update node state, maybe:
@@ -146,7 +146,7 @@ private:
 
     friend class load_balancer;
     mutable zrwlock_nr                                 _lock;
-    std::unordered_map<::dsn::rpc_address, node_state> _nodes;
+    std::unordered_map< ::dsn::rpc_address, node_state> _nodes;
     std::vector<app_state>                             _apps; // vec_index = app_id - 1
     
     int                               _node_live_count;

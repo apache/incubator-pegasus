@@ -71,7 +71,7 @@ static struct _all_info_
     ::dsn::tools::tool_app                                    *tool;
     ::dsn::configuration_ptr                                  config;
     ::dsn::service_engine                                     *engine;
-    std::vector<::dsn::task_spec*>                            task_specs;
+    std::vector< ::dsn::task_spec*>                            task_specs;
     ::dsn::memory_provider                                    *memory;
 
     bool is_config_completed() const {
@@ -128,24 +128,24 @@ DSN_API volatile int* dsn_task_queue_virtual_length_ptr(
 DSN_API dsn_threadpool_code_t dsn_threadpool_code_register(const char* name)
 {
     return static_cast<dsn_threadpool_code_t>(
-        ::dsn::utils::customized_id_mgr<::dsn::threadpool_code2_>::instance().register_id(name)
+        ::dsn::utils::customized_id_mgr< ::dsn::threadpool_code2_>::instance().register_id(name)
         );
 }
 
 DSN_API const char* dsn_threadpool_code_to_string(dsn_threadpool_code_t pool_code)
 {
-    return ::dsn::utils::customized_id_mgr<::dsn::threadpool_code2_>::instance().get_name(static_cast<int>(pool_code));
+    return ::dsn::utils::customized_id_mgr< ::dsn::threadpool_code2_>::instance().get_name(static_cast<int>(pool_code));
 }
 
 DSN_API dsn_threadpool_code_t dsn_threadpool_code_from_string(const char* s, dsn_threadpool_code_t default_code)
 {
-    auto r = ::dsn::utils::customized_id_mgr<::dsn::threadpool_code2_>::instance().get_id(s);
+    auto r = ::dsn::utils::customized_id_mgr< ::dsn::threadpool_code2_>::instance().get_id(s);
     return r == -1 ? default_code : r;
 }
 
 DSN_API int dsn_threadpool_code_max()
 {
-    return ::dsn::utils::customized_id_mgr<::dsn::threadpool_code2_>::instance().max_value();
+    return ::dsn::utils::customized_id_mgr< ::dsn::threadpool_code2_>::instance().max_value();
 }
 
 DSN_API int dsn_threadpool_get_current_tid()
@@ -381,29 +381,29 @@ DSN_API dsn_handle_t dsn_exlock_create(bool recursive)
 {
     if (recursive)
     {
-        ::dsn::lock_provider* last = ::dsn::utils::factory_store<::dsn::lock_provider>::create(
+        ::dsn::lock_provider* last = ::dsn::utils::factory_store< ::dsn::lock_provider>::create(
             ::dsn::service_engine::fast_instance().spec().lock_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
 
         // TODO: perf opt by saving the func ptrs somewhere
         for (auto& s : ::dsn::service_engine::fast_instance().spec().lock_aspects)
         {
-            last = ::dsn::utils::factory_store<::dsn::lock_provider>::create(s.c_str(), PROVIDER_TYPE_ASPECT, last);
+            last = ::dsn::utils::factory_store< ::dsn::lock_provider>::create(s.c_str(), PROVIDER_TYPE_ASPECT, last);
         }
 
-        return (dsn_handle_t)dynamic_cast<::dsn::ilock*>(last);
+        return (dsn_handle_t)dynamic_cast< ::dsn::ilock*>(last);
     }
     else
     {
-        ::dsn::lock_nr_provider* last = ::dsn::utils::factory_store<::dsn::lock_nr_provider>::create(
+        ::dsn::lock_nr_provider* last = ::dsn::utils::factory_store< ::dsn::lock_nr_provider>::create(
             ::dsn::service_engine::fast_instance().spec().lock_nr_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
 
         // TODO: perf opt by saving the func ptrs somewhere
         for (auto& s : ::dsn::service_engine::fast_instance().spec().lock_nr_aspects)
         {
-            last = ::dsn::utils::factory_store<::dsn::lock_nr_provider>::create(s.c_str(), PROVIDER_TYPE_ASPECT, last);
+            last = ::dsn::utils::factory_store< ::dsn::lock_nr_provider>::create(s.c_str(), PROVIDER_TYPE_ASPECT, last);
         }
 
-        return (dsn_handle_t)dynamic_cast<::dsn::ilock*>(last);
+        return (dsn_handle_t)dynamic_cast< ::dsn::ilock*>(last);
     }
 }
 
@@ -437,13 +437,13 @@ DSN_API void dsn_exlock_unlock(dsn_handle_t l)
 // non-recursive rwlock
 DSN_API dsn_handle_t dsn_rwlock_nr_create()
 {
-    ::dsn::rwlock_nr_provider* last = ::dsn::utils::factory_store<::dsn::rwlock_nr_provider>::create(
+    ::dsn::rwlock_nr_provider* last = ::dsn::utils::factory_store< ::dsn::rwlock_nr_provider>::create(
         ::dsn::service_engine::fast_instance().spec().rwlock_nr_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
 
     // TODO: perf opt by saving the func ptrs somewhere
     for (auto& s : ::dsn::service_engine::fast_instance().spec().rwlock_nr_aspects)
     {
-        last = ::dsn::utils::factory_store<::dsn::rwlock_nr_provider>::create(s.c_str(), PROVIDER_TYPE_ASPECT, last);
+        last = ::dsn::utils::factory_store< ::dsn::rwlock_nr_provider>::create(s.c_str(), PROVIDER_TYPE_ASPECT, last);
     }
     return (dsn_handle_t)(last);
 }
@@ -480,13 +480,13 @@ DSN_API void dsn_rwlock_nr_unlock_write(dsn_handle_t l)
 
 DSN_API dsn_handle_t dsn_semaphore_create(int initial_count)
 {
-    ::dsn::semaphore_provider* last = ::dsn::utils::factory_store<::dsn::semaphore_provider>::create(
+    ::dsn::semaphore_provider* last = ::dsn::utils::factory_store< ::dsn::semaphore_provider>::create(
         ::dsn::service_engine::fast_instance().spec().semaphore_factory_name.c_str(), PROVIDER_TYPE_MAIN, initial_count, nullptr);
 
     // TODO: perf opt by saving the func ptrs somewhere
     for (auto& s : ::dsn::service_engine::fast_instance().spec().semaphore_aspects)
     {
-        last = ::dsn::utils::factory_store<::dsn::semaphore_provider>::create(
+        last = ::dsn::utils::factory_store< ::dsn::semaphore_provider>::create(
             s.c_str(), PROVIDER_TYPE_ASPECT, initial_count, last);
     }
     return (dsn_handle_t)(last);
@@ -693,7 +693,7 @@ DSN_API void dsn_file_write(dsn_handle_t file, const char* buffer, int count, ui
 DSN_API void dsn_file_copy_remote_directory(dsn_address_t remote, const char* source_dir, 
     const char* dest_dir, bool overwrite, dsn_task_t cb)
 {
-    std::shared_ptr<::dsn::remote_copy_request> rci(new ::dsn::remote_copy_request());
+    std::shared_ptr< ::dsn::remote_copy_request> rci(new ::dsn::remote_copy_request());
     rci->source = remote;
     rci->source_dir = source_dir;
     rci->files.clear();
@@ -707,7 +707,7 @@ DSN_API void dsn_file_copy_remote_directory(dsn_address_t remote, const char* so
 
 DSN_API void dsn_file_copy_remote_files(dsn_address_t remote, const char* source_dir, const char** source_files, const char* dest_dir, bool overwrite, dsn_task_t cb)
 {
-    std::shared_ptr<::dsn::remote_copy_request> rci(new ::dsn::remote_copy_request());
+    std::shared_ptr< ::dsn::remote_copy_request> rci(new ::dsn::remote_copy_request());
     rci->source = remote;
     rci->source_dir = source_dir;
 
@@ -973,24 +973,24 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
     dsn_all.config_completed = true;
 
     // setup coredump
-	auto& coredump_dir = spec.coredump_dir;
-	dassert(!dsn::utils::filesystem::file_exists(coredump_dir), "%s should not be a file.", coredump_dir.c_str());
+    auto& coredump_dir = spec.coredump_dir;
+    dassert(!dsn::utils::filesystem::file_exists(coredump_dir), "%s should not be a file.", coredump_dir.c_str());
     if (!dsn::utils::filesystem::directory_exists(coredump_dir.c_str()))
     {
-		if (!dsn::utils::filesystem::create_directory(coredump_dir))
-		{
-			dassert(false, "Fail to create %s.", coredump_dir.c_str());
-		}
+        if (!dsn::utils::filesystem::create_directory(coredump_dir))
+        {
+            dassert(false, "Fail to create %s.", coredump_dir.c_str());
+        }
     }
-	std::string cdir;
-	if (!dsn::utils::filesystem::get_absolute_path(coredump_dir.c_str(), cdir))
-	{
-		dassert(false, "Fail to get absolute path from %s.", coredump_dir.c_str());
-	}
+    std::string cdir;
+    if (!dsn::utils::filesystem::get_absolute_path(coredump_dir.c_str(), cdir))
+    {
+        dassert(false, "Fail to get absolute path from %s.", coredump_dir.c_str());
+    }
     ::dsn::utils::coredump::init(cdir.c_str());
 
     // init tools
-    dsn_all.tool = ::dsn::utils::factory_store<::dsn::tools::tool_app>::create(spec.tool.c_str(), 0, spec.tool.c_str());
+    dsn_all.tool = ::dsn::utils::factory_store< ::dsn::tools::tool_app>::create(spec.tool.c_str(), 0, spec.tool.c_str());
     dsn_all.tool->install(spec);
 
     // init app specs
@@ -1001,7 +1001,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
     }
 
     // init tool memory
-    dsn_all.memory = ::dsn::utils::factory_store<::dsn::memory_provider>::create(
+    dsn_all.memory = ::dsn::utils::factory_store< ::dsn::memory_provider>::create(
         spec.tools_memory_factory_name.c_str(), PROVIDER_TYPE_MAIN);
 
     // prepare minimum necessary

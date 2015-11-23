@@ -47,11 +47,11 @@ class failure_detector_callback
 {
 public:
     // client side
-    virtual void on_master_disconnected( const std::vector<::dsn::rpc_address>& nodes ) = 0;
+    virtual void on_master_disconnected( const std::vector< ::dsn::rpc_address>& nodes ) = 0;
     virtual void on_master_connected( ::dsn::rpc_address node) = 0;
 
     // server side
-    virtual void on_worker_disconnected( const std::vector<::dsn::rpc_address>& nodes ) = 0;
+    virtual void on_worker_disconnected( const std::vector< ::dsn::rpc_address>& nodes ) = 0;
     virtual void on_worker_connected( ::dsn::rpc_address node ) = 0;
 };
 

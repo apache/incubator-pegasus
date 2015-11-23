@@ -106,7 +106,7 @@ namespace dsn {
                 std::atomic<dsn_handle_t> file;
                 int         current_write_index;
                 int         finished_segments;
-                std::vector<::dsn::ref_ptr<copy_request_ex> > copy_requests;
+                std::vector< ::dsn::ref_ptr<copy_request_ex> > copy_requests;
 
                 file_context(user_request* req, const std::string& file_nm, uint64_t sz)
                 {
@@ -177,10 +177,10 @@ namespace dsn {
             std::atomic<int> _concurrent_local_write_count; // 
 
             zlock                            _copy_requests_lock;
-            std::queue <::dsn::ref_ptr<copy_request_ex> >    _copy_requests;
+            std::queue < ::dsn::ref_ptr<copy_request_ex> >    _copy_requests;
 
             zlock                            _local_writes_lock;
-            std::queue <::dsn::ref_ptr<copy_request_ex> >    _local_writes;
+            std::queue < ::dsn::ref_ptr<copy_request_ex> >    _local_writes;
         };
     }
 }

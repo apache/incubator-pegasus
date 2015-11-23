@@ -44,7 +44,7 @@
 namespace dsn { namespace replication {
 
 replication_failure_detector::replication_failure_detector(
-    replica_stub* stub, std::vector<::dsn::rpc_address>& meta_servers)
+    replica_stub* stub, std::vector< ::dsn::rpc_address>& meta_servers)
 {
     _meta_servers.assign_group(dsn_group_build("meta.servers"));
     _stub = stub;
@@ -129,7 +129,7 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
 }
 
 // client side
-void replication_failure_detector::on_master_disconnected( const std::vector<::dsn::rpc_address>& nodes )
+void replication_failure_detector::on_master_disconnected( const std::vector< ::dsn::rpc_address>& nodes )
 {
     bool primaryDisconnected = false;
     rpc_address leader = dsn_group_get_leader(_meta_servers.group_handle());

@@ -244,7 +244,7 @@ namespace dsn
 namespace std
 {
     template<>
-    struct hash<::dsn::rpc_address> 
+    struct hash< ::dsn::rpc_address> 
     {
         size_t operator()(const ::dsn::rpc_address &ep) const 
         {

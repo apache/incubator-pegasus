@@ -294,7 +294,7 @@ void replication_options::sanity_check()
     dassert (max_mutation_count_in_prepare_list >= staleness_for_commit, "");
 }
    
-/*static*/ bool replica_helper::remove_node(::dsn::rpc_address node, /*inout*/ std::vector<::dsn::rpc_address>& nodeList)
+/*static*/ bool replica_helper::remove_node(::dsn::rpc_address node, /*inout*/ std::vector< ::dsn::rpc_address>& nodeList)
 {
     auto it = std::find(nodeList.begin(), nodeList.end(), node);
     if (it != nodeList.end())

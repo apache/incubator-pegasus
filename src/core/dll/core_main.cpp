@@ -58,7 +58,7 @@ void dsn_module_init()
     // register all providers
     dsn::tools::register_common_providers();
     dsn::tools::register_hpc_providers();
-    dsn::tools::register_component_provider<::dsn::service::nfs_node_simple>("dsn::service::nfs_node_simple");
+    dsn::tools::register_component_provider< ::dsn::service::nfs_node_simple>("dsn::service::nfs_node_simple");
 
     //dsn::tools::register_component_provider<dsn::thrift_binary_message_parser>("thrift");
 
