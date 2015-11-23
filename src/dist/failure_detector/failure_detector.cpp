@@ -475,22 +475,40 @@ bool failure_detector::is_worker_connected( ::dsn::rpc_address node) const
 
 void failure_detector::send_beacon(::dsn::rpc_address target, uint64_t time)
 {
-    beacon_msg beacon;
-    beacon.time = time;
-    beacon.from = primary_address();
-    beacon.to = target;
+    std::shared_ptr<beacon_msg> beacon(new beacon_msg());
+    beacon->time = time;
+    beacon->from = primary_address();
+    beacon->to = target;
 
     dinfo("send ping message, from[%s], to[%s]",
-          beacon.from.to_string(), beacon.to.to_string());
+          beacon->from.to_string(), beacon->to.to_string());
 
-    begin_ping(
+    begin_ping2(
         beacon,
-        nullptr,
         static_cast<int>(_check_interval_milliseconds),
         0,
         0,
         &target
         );
+}
+
+void failure_detector::end_ping2(
+    ::dsn::error_code err,
+    std::shared_ptr< ::dsn::fd::beacon_msg>& beacon,
+    std::shared_ptr< ::dsn::fd::beacon_ack>& resp)
+{
+    if (!resp)
+        resp.reset(new ::dsn::fd::beacon_ack());
+
+    if (err != ::dsn::ERR_OK)
+    {
+        // when rpc failed, the value of 'resp' is undefine, so we need to fill it with proper value,
+        // which may be used in end_ping()
+        resp->this_node = beacon->to;
+        resp->time = beacon->time;
+    }
+
+    end_ping(err, *resp, nullptr);
 }
 
 }} // end namespace

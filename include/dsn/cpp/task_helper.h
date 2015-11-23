@@ -56,7 +56,7 @@ namespace dsn
     typedef std::function<void(error_code, dsn_message_t, dsn_message_t)> rpc_reply_handler;
     typedef std::function<void(dsn_message_t)> rpc_request_handler;
     class safe_task_handle;
-    typedef ::dsn::ref_ptr<::dsn::safe_task_handle> task_ptr;
+    typedef ::dsn::ref_ptr<safe_task_handle> task_ptr;
     
     //
     // basic cpp task wrapper

@@ -282,6 +282,22 @@ void replica::on_remove(const replica_configuration& request)
     if (request.ballot < get_ballot())
         return;
 
+    // TODO(qinzuoyan): process this case more properly
+    // - meta-server requires primary r1 to remove this secondary r2
+    // - primary update config from {3,r1,[r2,r3]} to {4,r1,[r3]}
+    // - primary send one way RPC_REMOVE_REPLICA to r2, but this message is delay by network
+    // - meta-server requires primary r1 to add new secondary on r2 again (though this case would not occur generally)
+    // - primary send RPC_LEARN_ADD_LEARNER to r2 with config of {4,r1,[r3]}, then r2 start to learn
+    // - when r2 is on learning, the remove request is arrived, with the same ballot
+    // - here we ignore the lately arrived remove request, but is it proper?
+    if (request.ballot == get_ballot())
+    {
+        dwarn("this implies that a config proposal request (e.g. add secondary) "
+              "with the same ballot arrived before this remove request, "
+              "current status is %s", enum_to_string(status()));
+        return;
+    }
+
     dassert (request.status == PS_INACTIVE, "");
     update_local_configuration(request);
 }

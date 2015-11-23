@@ -52,8 +52,8 @@
 
 
 # ifdef __linux__
+
 # include <libaio.h>
-# endif
 
 DEFINE_TASK_CODE_AIO(LPC_AIO_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER);
 
@@ -186,3 +186,5 @@ TEST(tools_hpc, io_looper_timer)
     io_looper->stop();
     delete io_looper;
 }
+
+# endif // ifdef __linux__

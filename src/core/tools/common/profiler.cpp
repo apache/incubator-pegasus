@@ -68,11 +68,10 @@ namespace dsn {
         {
             if (caller != nullptr)
             {
-                auto code = caller->spec().code;
-                auto& prof = s_spec_profilers[code];
+                auto& prof = s_spec_profilers[caller->spec().code];
                 if (prof.collect_call_count)
                 {
-                    prof.call_counts[code]++;
+                    prof.call_counts[callee->spec().code]++;
                 }
             }
 

@@ -272,7 +272,11 @@ namespace dsn {
                     _timer->expires_from_now(boost::posix_time::seconds(_counter_computation_interval_seconds));
                     _timer->async_wait(std::bind(&perf_counter_number_percentile::on_timer, this, std::placeholders::_1));
                 }
-                else if (boost::system::errc::operation_canceled != ec)
+                else if (boost::system::errc::operation_canceled == ec)
+                {
+                    // ignore it if the timer is cancelled
+                }
+                else
                 {
                     dassert(false, "on_timer error!!!");
                 }

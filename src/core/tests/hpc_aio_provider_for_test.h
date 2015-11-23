@@ -33,6 +33,8 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+# pragma once
+
 # include <dsn/internal/aio_provider.h>
 # include <gtest/gtest.h>
 # include <dsn/service_api_cpp.h>
