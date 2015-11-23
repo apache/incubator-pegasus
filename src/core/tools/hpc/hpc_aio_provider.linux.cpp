@@ -86,7 +86,6 @@ hpc_aio_provider::hpc_aio_provider(disk_engine* disk, aio_provider* inner_provid
 
         struct io_event events[1];
         int ret;
-        linux_disk_aio_context * aio;
 
         while (finished_aio-- > 0) 
         {
@@ -132,13 +131,26 @@ dsn_handle_t hpc_aio_provider::open(const char* file_name, int oflag, int pmode)
 
 error_code hpc_aio_provider::close(dsn_handle_t fh)
 {
-    if (::close((int)(uintptr_t)(fh)) == 0)
+    if (fh == DSN_INVALID_FILE_HANDLE || ::close((int)(uintptr_t)(fh)) == 0)
     {
         return ERR_OK;
     }
     else
     {
-        derror("close file failed, err = %s\n", strerror(errno));
+        derror("close file failed, err = %s", strerror(errno));
+        return ERR_FILE_OPERATION_FAILED;
+    }
+}
+
+error_code hpc_aio_provider::flush(dsn_handle_t fh)
+{
+    if (fh == DSN_INVALID_FILE_HANDLE || ::fsync((int)(uintptr_t)(fh)) == 0)
+    {
+        return ERR_OK;
+    }
+    else
+    {
+        derror("flush file failed, err = %s", strerror(errno));
         return ERR_FILE_OPERATION_FAILED;
     }
 }

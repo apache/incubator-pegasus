@@ -26,7 +26,7 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     Unit-test for rpc related code.
  *
  * Revision history:
  *     xxxx-xx-xx, author, first version
@@ -41,9 +41,9 @@
 #include <gtest/gtest.h>
 #include <dsn/service_api_cpp.h>
 #include <dsn/internal/priority_queue.h>
-#include <boost/lexical_cast.hpp>
-
+#include "../core/group_address.h"
 #include "test_utils.h"
+#include <boost/lexical_cast.hpp>
 
 static ::dsn::rpc_address build_group() {
     ::dsn::rpc_address server_group;
@@ -103,9 +103,10 @@ TEST(core, group_address_talk_to_others)
 
     std::function<void (error_code, const std::string&, void*)> typed_callback =
             [addr](error_code err_code, const std::string& result, void*)->void {
-        EXPECT_TRUE(err_code == ERR_OK);
-        ::dsn::rpc_address addr_got = dsn_address_from_string(result);
-        EXPECT_TRUE(addr_got.port() == TEST_PORT_END);
+        EXPECT_EQ(ERR_OK, err_code);
+        ::dsn::rpc_address addr_got;
+        EXPECT_TRUE(addr_got.from_string_ipv4(result.c_str()));
+        EXPECT_EQ(TEST_PORT_END, addr_got.port());
     };
 
     std::vector<task_ptr> resp_tasks;
@@ -176,7 +177,7 @@ static void send_message(::dsn::rpc_address addr,
     }
 }
 
-TEST(core, group_address_no_response)
+TEST(core, group_address_no_response_2)
 {
     ::dsn::rpc_address addr = build_group();
     rpc_reply_handler action_on_succeed = [](error_code, dsn_message_t, dsn_message_t resp) {

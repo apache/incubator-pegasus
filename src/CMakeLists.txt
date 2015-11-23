@@ -7,4 +7,4 @@ add_subdirectory(tools)
 add_subdirectory(dist)
 add_subdirectory(apps)
 add_subdirectory(tests)
-
+add_subdirectory(rep_tests)

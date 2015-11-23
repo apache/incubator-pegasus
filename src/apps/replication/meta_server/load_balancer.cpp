@@ -41,6 +41,9 @@
 # endif
 # define __TITLE__ "load.balancer"
 
+bool load_balancer::s_lb_for_test = false;
+bool load_balancer::s_disable_lb = false;
+
 load_balancer::load_balancer(server_state* state)
 : _state(state), serverlet<load_balancer>("load_balancer")
 {
@@ -52,6 +55,8 @@ load_balancer::~load_balancer()
 
 void load_balancer::run()
 {
+    if (s_disable_lb) return;
+
     zauto_read_lock l(_state->_lock);
 
     for (size_t i = 0; i < _state->_apps.size(); i++)
@@ -68,6 +73,8 @@ void load_balancer::run()
 
 void load_balancer::run(global_partition_id gpid)
 {
+    if (s_disable_lb) return;
+
     zauto_read_lock l(_state->_lock);
     partition_configuration& pc = _state->_apps[gpid.app_id - 1].partitions[gpid.pidx];
     run_lb(pc);
@@ -89,12 +96,18 @@ void load_balancer::run(global_partition_id gpid)
     
     std::sort(stats.begin(), stats.end(), [](const std::pair<::dsn::rpc_address, int>& l, const std::pair<::dsn::rpc_address, int>& r)
     {
-        return l.second < r.second;
+        return l.second < r.second || (l.second == r.second && l.first < r.first);
     });
 
     if (stats.empty())
     {
         return ::dsn::rpc_address();
+    }
+
+    if (s_lb_for_test)
+    {
+        // alway use the first (minimal) one
+        return stats[0].first;
     }
 
     int candidate_count = 1;

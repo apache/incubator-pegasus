@@ -44,6 +44,12 @@ class service_node;
 class task_worker_pool;
 class task_queue;
 
+# if defined(_WIN32)
+# define DSN_INVALID_FILE_HANDLE ((dsn_handle_t)(uintptr_t)0)
+# else
+# define DSN_INVALID_FILE_HANDLE ((dsn_handle_t)(uintptr_t)-1)
+# endif
+
 //
 // !!! all threads must be started with task::set_tls_dsn_context(null, provider->node());
 //
@@ -59,10 +65,13 @@ public:
 
 public:
     aio_provider(disk_engine* disk, aio_provider* inner_provider);
+    virtual ~aio_provider() {}
     service_node* node() const;
 
+    // return DSN_INVALID_FILE_HANDLE if failed
     virtual dsn_handle_t open(const char* file_name, int flag, int pmode) = 0;
     virtual error_code   close(dsn_handle_t fh) = 0;
+    virtual error_code   flush(dsn_handle_t fh) = 0;
     virtual void         aio(aio_task* aio) = 0;
     virtual disk_aio*    prepare_aio_context(aio_task*) = 0;
 

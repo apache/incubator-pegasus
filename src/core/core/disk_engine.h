@@ -88,6 +88,7 @@ public:
     // asynchonous file read/write
     dsn_handle_t    open(const char* file_name, int flag, int pmode);
     error_code      close(dsn_handle_t fh);
+    error_code      flush(dsn_handle_t fh);
     void            read(aio_task* aio);
     void            write(aio_task* aio);  
 

@@ -113,7 +113,7 @@ namespace dsn {
                     user_req = req;
                     file_name = file_nm;
                     file_size = sz;
-                    file = static_cast<dsn_handle_t>(0);
+                    file = nullptr;
 
                     current_write_index = -1;
                     finished_segments = 0;

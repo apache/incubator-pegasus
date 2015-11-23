@@ -39,6 +39,8 @@
 # include <dsn/service_api_cpp.h>
 # include <dsn/internal/task.h>
 # include <dsn/internal/task_worker.h>
+# include <gtest/gtest.h>
+# include <iostream>
 
 using namespace ::dsn;
 
@@ -52,10 +54,11 @@ DEFINE_TASK_CODE_RPC(RPC_TEST_HASH, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVE
 DEFINE_TASK_CODE_RPC(RPC_TEST_STRING_COMMAND, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
 
 extern int g_test_count;
+extern int g_test_ret;
 
 inline void exec_tests()
 {    
-    auto ret = RUN_ALL_TESTS();
+    g_test_ret = RUN_ALL_TESTS();
     g_test_count++;
 }
 
@@ -87,12 +90,12 @@ public:
                 dsn_rpc_forward(message, next_addr.c_addr());
             }
             else {
-                reply(message, std::string(next_addr.to_string()));
+                reply(message, next_addr.to_std_string());
             }
         }
         else if (command == "expect_no_reply") {
             if (dsn::service_app::primary_address().port() == TEST_PORT_END)
-                reply(message, std::string(dsn::service_app::primary_address().to_string()));
+                reply(message, dsn::service_app::primary_address().to_std_string());
         }
         else if (command.substr(0, 5) == "echo ") {
             reply(message, command.substr(5));

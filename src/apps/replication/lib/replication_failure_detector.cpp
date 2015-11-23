@@ -36,8 +36,12 @@
 #include "replication_failure_detector.h"
 #include "replica_stub.h"
 
-namespace dsn { namespace replication {
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "replica.FD"
 
+namespace dsn { namespace replication {
 
 replication_failure_detector::replication_failure_detector(
     replica_stub* stub, std::vector<::dsn::rpc_address>& meta_servers)
@@ -60,46 +64,67 @@ replication_failure_detector::~replication_failure_detector(void)
 
 void replication_failure_detector::end_ping(::dsn::error_code err, const fd::beacon_ack& ack, void* context)
 {
-    failure_detector::end_ping(err, ack, context);
+    bool do_end_ping = false;
 
-    zauto_lock l(_meta_lock);
-    
-    if (dsn_group_is_leader(_meta_servers.group_handle(), ack.this_node.c_addr()))
+    dinfo("end ping result, error[%s], ack.this_node[%s], ack.primary_node[%s], ack.is_master[%s], ack.allowed[%s]",
+          err.to_string(), ack.this_node.to_string(), ack.primary_node.to_string(),
+          ack.is_master ? "true" : "false", ack.allowed ? "true" : "false");
+
     {
-        if (err != ERR_OK)
+        zauto_lock l(_meta_lock);
+
+        if (dsn_group_is_leader(_meta_servers.group_handle(), ack.this_node.c_addr()))
         {
-            rpc_address node = dsn_group_next(_meta_servers.group_handle(), ack.this_node.c_addr());
-            if (ack.this_node != node)
+            if (err != ERR_OK)
             {
-                switch_master(ack.this_node, node);
+                // ping failed, switch master
+                rpc_address node = dsn_group_next(_meta_servers.group_handle(), ack.this_node.c_addr());
+                if (ack.this_node != node)
+                {
+                    switch_master(ack.this_node, node);
+                }
+            }
+            else if (ack.is_master == false)
+            {
+                // switch master
+                if (!ack.primary_node.is_invalid()
+                        && !dsn_group_is_leader(_meta_servers.group_handle(), ack.primary_node.c_addr()))
+                {
+                    switch_master(ack.this_node, ack.primary_node);
+                }
+            }
+            else
+            {
+                do_end_ping = true;
             }
         }
-        else if (ack.is_master == false)
+        else // ack.this_node is not leader
         {
-            if (!ack.primary_node.is_invalid())
+            if (err != ERR_OK)
             {
-                switch_master(ack.this_node, ack.primary_node);
+                // do nothing
+            }
+            else if (ack.is_master == false)
+            {
+                // switch master
+                if (!ack.primary_node.is_invalid()
+                        && !dsn_group_is_leader(_meta_servers.group_handle(), ack.primary_node.c_addr()))
+                {
+                    switch_master(ack.this_node, ack.primary_node);
+                }
+            }
+            else
+            {
+                ddebug("update meta server leader to [%s]", ack.this_node.to_string());
+                dsn_group_set_leader(_meta_servers.group_handle(), ack.this_node.c_addr());
+                do_end_ping = true;
             }
         }
     }
 
-    else
+    if (do_end_ping)
     {
-        if (err != ERR_OK)
-        {
-            // nothing to do
-        }
-        else if (ack.is_master == false)
-        {
-            if (!ack.primary_node.is_invalid())
-            {
-                switch_master(ack.this_node, ack.primary_node);
-            }
-        }
-        else 
-        {
-            dsn_group_set_leader(_meta_servers.group_handle(), ack.this_node.c_addr());
-        }
+        failure_detector::end_ping(err, ack, context);
     }
 }
 
@@ -110,12 +135,12 @@ void replication_failure_detector::on_master_disconnected( const std::vector<::d
     rpc_address leader = dsn_group_get_leader(_meta_servers.group_handle());
 
     {
-    zauto_lock l(_meta_lock);
-    for (auto it = nodes.begin(); it != nodes.end(); it++)
-    {
-        if (leader == *it)
-            primaryDisconnected = true;
-    }
+        zauto_lock l(_meta_lock);
+        for (auto it = nodes.begin(); it != nodes.end(); it++)
+        {
+            if (leader == *it)
+                primaryDisconnected = true;
+        }
     }
 
     if (primaryDisconnected)
@@ -129,8 +154,8 @@ void replication_failure_detector::on_master_connected(::dsn::rpc_address node)
     bool is_primary = false;
 
     {
-    zauto_lock l(_meta_lock);
-    is_primary = dsn_group_is_leader(_meta_servers.group_handle(), node.c_addr());
+        zauto_lock l(_meta_lock);
+        is_primary = dsn_group_is_leader(_meta_servers.group_handle(), node.c_addr());
     }
 
     if (is_primary)

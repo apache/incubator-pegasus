@@ -55,6 +55,7 @@
 namespace dsn 
 {
 __thread struct __tls_dsn__ tls_dsn;
+__thread uint16_t tls_dsn_lower32_task_id_mask = 0;
 
 /*static*/ void task::set_tls_dsn_context(
     service_node* node,  // cannot be null
@@ -105,7 +106,7 @@ __thread struct __tls_dsn__ tls_dsn;
         worker_idx = ::dsn::utils::get_current_tid();
     }
     tls_dsn.node_pool_thread_ids |= ((uint64_t)(uint16_t)worker_idx) << 32; // next 16 bits for thread id
-    tls_dsn.last_lower32_task_id = 0;
+    tls_dsn.last_lower32_task_id = worker ? 0 : ((uint32_t)(++tls_dsn_lower32_task_id_mask)) << 16;
 }
 
 task::task(dsn_task_code_t code, int hash, service_node* node)
@@ -169,20 +170,24 @@ void task::exec_internal()
         {
             _spec->on_task_end.execute(this);
         }
-
-        // for timer
         else
         {
             if (!_wait_for_cancel)
             {
+                // for timer
                 notify_if_necessary = false;
                 _spec->on_task_end.execute(this);
                 enqueue();
             }   
             else
             {
-                _state.compare_exchange_strong(READY_STATE, TASK_STATE_CANCELLED);
-                _spec->on_task_end.execute(this);
+                // for cancelled
+                if (_state.compare_exchange_strong(READY_STATE, TASK_STATE_CANCELLED))
+                {
+                    _spec->on_task_cancelled.execute(this);
+                }
+                // TODO(qinzuoyan): should on_task_end() always be called?
+                //_spec->on_task_end.execute(this);
             }
         }
         
@@ -366,17 +371,17 @@ void task::enqueue()
 void task::enqueue(task_worker_pool* pool)
 {
     this->add_ref(); // released in exec_internal (even when cancelled)
-    
+
+    if (spec().type == TASK_TYPE_COMPUTE)
+    {
+        spec().on_task_enqueue.execute(task::get_current_task(), this);
+    }
+
     // for delayed tasks, refering to timer service
     if (_delay_milliseconds != 0)
     {
         pool->add_timer(this);
         return;
-    }
-    
-    if (spec().type == TASK_TYPE_COMPUTE)
-    {
-        spec().on_task_enqueue.execute(task::get_current_task(), this);
     }
 
     // fast execution

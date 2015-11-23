@@ -46,7 +46,7 @@ class replication_admission_controller :
 {
 public:
     replication_admission_controller(task_queue* q, std::vector<std::string>& sargs);
-    ~replication_admission_controller(void);
+    virtual ~replication_admission_controller();
 
 private:
     virtual bool is_task_accepted(task* task);

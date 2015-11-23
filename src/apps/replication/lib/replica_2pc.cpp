@@ -41,7 +41,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ "TwoPhaseCommit"
+# define __TITLE__ "replica.2pc"
 
 namespace dsn { namespace replication {
 

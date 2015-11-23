@@ -94,6 +94,7 @@ namespace dsn {
             int _lines;
             bool _short_header;
             bool _fast_flush;
+            dsn_log_level_t _stderr_start_level;
         };
 
     }

@@ -84,7 +84,7 @@ struct __tls_dsn__
     timer_service *tsvc;
 
     uint64_t      node_pool_thread_ids; // 8,8,16 bits
-    int           last_lower32_task_id; // 32bits
+    uint32_t      last_lower32_task_id; // 32bits
 
     char          scratch_buffer[4][256]; // for temp to_string() etc., 4 buffers in maximum
     int           scratch_buffer_index;

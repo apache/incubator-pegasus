@@ -66,9 +66,28 @@ namespace dsn {
 
         error_code native_posix_aio_provider::close(dsn_handle_t fh)
         {
-            // TODO: handle failure
-            ::close((int)(uintptr_t)(fh));
-            return ERR_OK;
+            if (fh == DSN_INVALID_FILE_HANDLE || ::close((int)(uintptr_t)(fh)) == 0)
+            {
+                return ERR_OK;
+            }
+            else
+            {
+                derror("close file failed, err = %s", strerror(errno));
+                return ERR_FILE_OPERATION_FAILED;
+            }
+        }
+
+        error_code native_posix_aio_provider::flush(dsn_handle_t fh)
+        {
+            if (fh == DSN_INVALID_FILE_HANDLE || ::fsync((int)(uintptr_t)(fh)) == 0)
+            {
+                return ERR_OK;
+            }
+            else
+            {
+                derror("flush file failed, err = %s", strerror(errno));
+                return ERR_FILE_OPERATION_FAILED;
+            }
         }
 
         struct posix_disk_aio_context : public disk_aio
@@ -94,11 +113,14 @@ namespace dsn {
         {
             aio_internal(aio_tsk, true);
         }
-        
+
         void aio_completed(sigval sigval)
         {
             auto ctx = (posix_disk_aio_context *)sigval.sival_ptr;
-            
+
+            if (dsn::tls_dsn.magic != 0xdeadbeef)
+                task::set_tls_dsn_context(ctx->tsk->node(), nullptr, nullptr);
+
             int err = aio_error(&ctx->cb);
             if (err != EINPROGRESS)
             {
@@ -195,10 +217,10 @@ namespace dsn {
                     aio->evt->wait();
                     delete aio->evt;
                     aio->evt = nullptr;
-					if (pbytes != nullptr)
-					{
-						*pbytes = aio->bytes;
-					}
+                    if (pbytes != nullptr)
+                    {
+                        *pbytes = aio->bytes;
+                    }
                     return aio->err;
                 }
             }

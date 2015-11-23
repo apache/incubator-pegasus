@@ -9,9 +9,10 @@ ExternalProject_Add(googletest
    #            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=ReleaseLibs
    #            -DCMAKE_CXX_FLAGS=${MSVC_COMPILER_DEFS}
     CMAKE_ARGS "${CMAKE_ARGS};-Dgtest_force_shared_crt=OFF;-DCMAKE_CXX_FLAGS=-fPIC ${CMAKE_CXX_FLAGS}"
-    BINARY_DIR "${PROJECT_BINARY_DIR}/lib"
-# Disable install step
-    INSTALL_COMMAND ""
+    BINARY_DIR "${PROJECT_BINARY_DIR}/gtest"
+
+    INSTALL_DIR "${PROJECT_BINARY_DIR}/lib"
+    INSTALL_COMMAND cp ${PROJECT_BINARY_DIR}/gtest/libgtest.a ${PROJECT_BINARY_DIR}/gtest/libgtest_main.a ${PROJECT_BINARY_DIR}/lib
 )
 
 # Specify include dir

@@ -61,7 +61,7 @@ meta_service::~meta_service(void)
 void meta_service::start()
 {
     dassert(!_started, "meta service is already started");
-    
+
     _balancer = new load_balancer(_state);            
     _failure_detector = new meta_server_failure_detector(_state, this);    
     
@@ -243,6 +243,9 @@ void meta_service::update_configuration_on_machine_failure(std::shared_ptr<confi
 // local timers
 void meta_service::on_load_balance_timer()
 {
+    if (!_started)
+        return;
+
     if (_state->freezed())
         return;
 

@@ -58,7 +58,7 @@ namespace dsn
         void* read_buffer_ptr(int read_next);
         int read_buffer_capacity() const;
 
-        // afer read, see if we can compose a message
+        // after read, see if we can compose a message
         virtual message_ex* get_message_on_receive(int read_length, /*out*/ int& read_next) = 0;
 
         // before send, prepare buffer

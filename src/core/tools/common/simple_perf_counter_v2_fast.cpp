@@ -324,6 +324,7 @@ namespace dsn {
 
             void on_timer(const boost::system::error_code& ec)
             {
+                //as the callback is not in tls context, so the log system calls like ddebug, dassert will cause a lock
                 if (!ec)
                 {
                     boost::shared_ptr<compute_context> ctx(new compute_context());
@@ -333,9 +334,9 @@ namespace dsn {
                     _timer->expires_from_now(boost::posix_time::seconds(_counter_computation_interval_seconds));
                     _timer->async_wait(std::bind(&perf_counter_number_percentile_v2_fast::on_timer, this, std::placeholders::_1));
                 }
-                else
+                else if (boost::system::errc::operation_canceled != ec)
                 {
-                    dassert(false, "on _timer error!!!");
+                    dassert(false, "on_timer error!!!");
                 }
             }
 

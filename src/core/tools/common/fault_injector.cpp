@@ -241,13 +241,13 @@ namespace dsn {
                 if (!lopt.fault_injection_enabled)
                     continue;
                 
-                //spec->on_task_enqueue.put_back(fault_on_task_enqueue, "fault_injector");
-                //spec->on_task_begin.put_back(fault_on_task_begin, "fault_injector");
+                spec->on_task_enqueue.put_back(fault_on_task_enqueue, "fault_injector");
+                spec->on_task_begin.put_back(fault_on_task_begin, "fault_injector");
                 spec->on_task_end.put_back(fault_on_task_end, "fault_injector");
-                //spec->on_task_cancelled.put_back(fault_on_task_cancelled, "fault_injector");
-                //spec->on_task_wait_pre.put_back(fault_on_task_wait_pre, "fault_injector");
-                //spec->on_task_wait_post.put_back(fault_on_task_wait_post, "fault_injector");
-                //spec->on_task_cancel_post.put_back(fault_on_task_cancel_post, "fault_injector");
+                spec->on_task_cancelled.put_back(fault_on_task_cancelled, "fault_injector");
+                spec->on_task_wait_pre.put_back(fault_on_task_wait_pre, "fault_injector");
+                spec->on_task_wait_post.put_back(fault_on_task_wait_post, "fault_injector");
+                spec->on_task_cancel_post.put_back(fault_on_task_cancel_post, "fault_injector");
                 spec->on_aio_call.put_native(fault_on_aio_call);
                 spec->on_aio_enqueue.put_back(fault_on_aio_enqueue, "fault_injector");
                 spec->on_rpc_call.put_native(fault_on_rpc_call);
