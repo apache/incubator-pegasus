@@ -433,7 +433,7 @@ void event_on_task::init(task* tsk)
     if (tsk != nullptr)
     {
         char buf[100];
-        sprintf(buf, "%016llx", tsk->id());
+        sprintf(buf, "%016lx", tsk->id());
         _task_id = buf;
         _node = tsk->node()->name();
         _task_code = dsn_task_code_to_string(tsk->code());
@@ -483,7 +483,7 @@ void event_on_rpc::init(message_ex* msg, task* tsk)
     if (msg != nullptr)
     {
         char buf[100];
-        sprintf(buf, "%016llx", msg->header->rpc_id);
+        sprintf(buf, "%016lx", msg->header->rpc_id);
         _rpc_id = buf;
         _rpc_name = msg->header->rpc_name;
         _from = address_to_node(msg->from_address);

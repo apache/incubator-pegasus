@@ -43,6 +43,16 @@ using namespace ::dsn::service;
 
 namespace dsn { namespace replication {
 
+inline bool operator < (const global_partition_id& l, const global_partition_id& r)
+{
+    return l.app_id < r.app_id || (l.app_id == r.app_id && l.pidx < r.pidx);
+}
+
+inline bool operator == (const global_partition_id& l, const global_partition_id& r)
+{
+    return l.app_id == r.app_id && l.pidx == r.pidx;
+}
+
 inline int gpid_to_hash(global_partition_id gpid)
 {
     return static_cast<int>(gpid.app_id ^ gpid.pidx);

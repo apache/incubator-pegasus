@@ -56,7 +56,7 @@ void replica::on_client_write(int code, dsn_message_t request)
         return;
     }
 
-    auto mu = _primary_states.write_queue.add_work(code, request, this, _options->batch_write_disabled);
+    auto mu = _primary_states.write_queue.add_work(code, request, this);
     if (mu)
     {
         init_prepare(mu);

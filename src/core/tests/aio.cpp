@@ -34,7 +34,6 @@
  */
 
 
-# include <future>
 # include <dsn/internal/aio_provider.h>
 # include <gtest/gtest.h>
 # include <dsn/service_api_cpp.h>

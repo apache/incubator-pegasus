@@ -36,6 +36,7 @@
 # pragma once
 
 # include <dsn/dist/replication.h>
+# include "../../apps/replication/client_lib/replication_common.h"
 
 namespace dsn { namespace replication { namespace test {
 

@@ -173,8 +173,6 @@ private:
     bool                 _use_allow_list;
     allow_list           _allow_list;
 
-    ::dsn::rpc_address   _primary_address;
-
 protected:
     // subClass can rewrite these method.
     virtual void send_beacon(::dsn::rpc_address node, uint64_t time);

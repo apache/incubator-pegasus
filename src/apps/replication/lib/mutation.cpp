@@ -184,7 +184,7 @@ int mutation::clear_log_task()
     return 0;
 }
 
-mutation_ptr mutation_queue::add_work(int code, dsn_message_t request, replica* r, bool disable_batch)
+mutation_ptr mutation_queue::add_work(int code, dsn_message_t request, replica* r)
 {
     // batch and add to work queue
     if (!_pending_mutation)
@@ -206,7 +206,7 @@ mutation_ptr mutation_queue::add_work(int code, dsn_message_t request, replica* 
     }
 
     // check if full
-    if (disable_batch || _pending_mutation->is_full())
+    if (_batch_write_disabled || _pending_mutation->is_full())
     {
         _pending_mutation->add_ref(); // released when unlink
         _hdr.add(_pending_mutation);

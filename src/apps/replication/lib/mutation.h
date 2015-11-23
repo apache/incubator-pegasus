@@ -118,8 +118,8 @@ private:
 class mutation_queue
 {
 public:
-    mutation_queue(global_partition_id gpid, int max_concurrent_op = 2)
-        : _max_concurrent_op(max_concurrent_op)
+    mutation_queue(global_partition_id gpid, int max_concurrent_op = 2, bool batch_write_disabled = false)
+        : _max_concurrent_op(max_concurrent_op), _batch_write_disabled(batch_write_disabled)
     {
         _current_op_count = 0;
         _pending_mutation = nullptr;
@@ -143,7 +143,7 @@ public:
         */
     }
 
-    mutation_ptr add_work(int code, dsn_message_t request, replica* r, bool disable_batch = false);
+    mutation_ptr add_work(int code, dsn_message_t request, replica* r);
 
     void clear();
 
@@ -171,6 +171,7 @@ private:
 private:
     int _current_op_count;
     int _max_concurrent_op;
+    bool _batch_write_disabled;
     
     volatile int*   _pcount;
     mutation_ptr    _pending_mutation;

@@ -170,20 +170,24 @@ void task::exec_internal()
         {
             _spec->on_task_end.execute(this);
         }
-
-        // for timer
         else
         {
             if (!_wait_for_cancel)
             {
+                // for timer
                 notify_if_necessary = false;
                 _spec->on_task_end.execute(this);
                 enqueue();
             }   
             else
             {
-                _state.compare_exchange_strong(READY_STATE, TASK_STATE_CANCELLED);
-                _spec->on_task_cancelled.execute(this);
+                // for cancelled
+                if (_state.compare_exchange_strong(READY_STATE, TASK_STATE_CANCELLED))
+                {
+                    _spec->on_task_cancelled.execute(this);
+                }
+                // TODO(qinzuoyan): should on_task_end() always be called?
+                //_spec->on_task_end.execute(this);
             }
         }
         

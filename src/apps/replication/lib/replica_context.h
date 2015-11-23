@@ -51,8 +51,8 @@ typedef std::unordered_map<::dsn::rpc_address, remote_learner_state> learner_map
 class primary_context
 {
 public:
-    primary_context(global_partition_id gpid, int max_concurrent_2pc_count = 1)
-        : write_queue(gpid, max_concurrent_2pc_count)
+    primary_context(global_partition_id gpid, int max_concurrent_2pc_count = 1, bool batch_write_disabled = false)
+        : write_queue(gpid, max_concurrent_2pc_count, batch_write_disabled)
     {}
 
     void cleanup(bool clean_pending_mutations = true);
