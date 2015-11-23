@@ -378,7 +378,8 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
         if (err != ERR_INVALID_VERSION)
         {
             rpc_address target(_stub->_failure_detector->get_servers());
-            dsn_msg_add_ref(request); // added for another round of rpc::call
+            // TODO(qinzuoyan): add ref cause memory leak, need to check it!
+            //dsn_msg_add_ref(request); // added for another round of rpc::call
             _primary_states.reconfiguration_task = rpc::call(
                 target,
                 request,

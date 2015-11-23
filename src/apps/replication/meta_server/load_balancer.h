@@ -55,7 +55,9 @@ public:
     void run();
     void run(global_partition_id gpid);
 
+    // this method is for testing
     void explictly_send_proposal(global_partition_id gpid, int role, config_type type);
+
 private:
     // meta server => partition server
     void send_proposal(::dsn::rpc_address node, const configuration_update_request& proposal);

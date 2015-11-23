@@ -72,6 +72,7 @@ private:
     void on_query_configuration_by_index(dsn_message_t req);
 
     // update configuration
+    void on_modify_replica_config_explictly(dsn_message_t req); // for testing
     void on_update_configuration(dsn_message_t req);
     void update_configuration_on_machine_failure(std::shared_ptr<configuration_update_request>& update);
 
