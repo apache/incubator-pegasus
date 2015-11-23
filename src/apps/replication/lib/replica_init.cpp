@@ -106,8 +106,7 @@ error_code replica::initialize_on_load(const char* dir, const char* app_type, bo
     {
         // GCed later
         char newPath[256];
-        // TODO(qinzuoyan): use timestamp instead of random number?
-        sprintf(newPath, "%s.%x.err", dir, random32(0, (uint32_t)-1));  
+        sprintf(newPath, "%s.%llu.err", dir, dsn_now_us());
         if (dsn::utils::filesystem::rename_path(dir, newPath, true))
         {
             derror("move bad replica from '%s' to '%s'", dir, newPath);

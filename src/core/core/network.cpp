@@ -84,10 +84,16 @@ namespace dsn
 
     void rpc_session::clear(bool resend_msgs)
     {
-        // TODO(qinzuoyan):
+        //
         // - in concurrent case, resending _sending_msgs and _messages
         //   may not maintain the original sending order
         // - can optimize by batch sending instead of sending one by one
+        //
+        // however, our threading model cannot ensure in-order processing
+        // of incoming messages neither, so this guarantee is not necesssary
+        // and the upper applications should not always rely on this (but can
+        // rely on this with a high probability).
+        //
 
         std::vector<message_ex*> swapped_sending_msgs;
         {
@@ -105,8 +111,11 @@ namespace dsn
                 _net.send_message(msg);
             }
 
-            // TODO(qinzuoyan): if not resend, the message's callback will not be invoked until timeout,
+            // if not resend, the message's callback will not be invoked until timeout,
             // it's too slow.
+            // since we don't maintain the callback ptrs here, so we have no idea whether
+            // the callback is already issued or not.
+            // therefore, let's keep this (usually) slow way on failure with non-resend.
 
             // added in rpc_engine::reply (for server) or rpc_session::send_message (for client)
             msg->release_ref();
@@ -298,8 +307,13 @@ namespace dsn
             // TODO(qinzuoyan): because '_reconnect_count_after_last_success' is a session scoped value,
             // depending on it may cause endless resending, so we always clear without resending.
             //
-            //clear(++_reconnect_count_after_last_success < 3);
-            clear(false);
+            // @imzhenyu: if we use clear(false), when there is a failure on established-connection, 
+            // the pending messages will be lost, this is considered harmful. the case for endless reconnecting
+            // is only possible when we can always *successfully* connect while fail on send, this should be
+            // very rare. so here we still use the old way but keep this mark here for future fix.
+            //
+            clear(++_reconnect_count_after_last_success < 3);
+            //clear(false);
         }
         
         else
