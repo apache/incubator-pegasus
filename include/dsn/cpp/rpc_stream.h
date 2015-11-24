@@ -75,7 +75,10 @@ namespace dsn
 
         ~rpc_read_stream()
         {
-            dsn_msg_read_commit(native_handle(), (size_t)(total_size() - get_remaining_size()));
+            if (native_handle())
+            {
+                dsn_msg_read_commit(native_handle(), (size_t)(total_size() - get_remaining_size()));
+            }
         }
     };
 

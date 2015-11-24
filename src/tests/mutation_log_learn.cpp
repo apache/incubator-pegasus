@@ -74,6 +74,11 @@ TEST(replication, log_learn)
             }
             mu->data.updates.push_back(writer.get_buffer());
 
+            mutation::client_info ci;
+            ci.code = 100;
+            ci.req = nullptr;
+            mu->client_requests.push_back(ci);
+
             mutations.push_back(mu);
 
             mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
@@ -86,7 +91,7 @@ TEST(replication, log_learn)
         
         // reading logs
         mlog = new mutation_log(logp, true, 1, 1);
-        mlog->open(gpid, nullptr);
+        mlog->open(gpid, [](mutation_ptr& mu)->bool{ return true; });
 
         // learning
         learn_state state;
@@ -98,7 +103,7 @@ TEST(replication, log_learn)
         std::set<decree> learned_decress;
         
         mutation_log::replay(state.files,
-            [&mutations, &learned_decress](mutation_ptr mu)
+            [&mutations, &learned_decress](mutation_ptr& mu)->bool
             {
                 learned_decress.insert(mu->data.header.decree);
 
@@ -113,6 +118,8 @@ TEST(replication, log_learn)
                     (const void*)mu->data.updates[0].data(),
                     mu->data.updates[0].length()) == 0
                     );
+                EXPECT_TRUE(wmu->client_requests.size() == mu->client_requests.size());
+                EXPECT_TRUE(wmu->client_requests[0].code == mu->client_requests[0].code);
                 return true;
             },
             offset
@@ -121,7 +128,7 @@ TEST(replication, log_learn)
         for (decree s = durable_decree + 1; s < 1000; s++)
         {
             auto it = learned_decress.find(s);
-            EXPECT_TRUE(it != learned_decress.end());
+            ASSERT_TRUE(it != learned_decress.end());
         }
 
         // clear all

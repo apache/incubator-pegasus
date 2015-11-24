@@ -56,14 +56,14 @@ namespace dsn {
         // ---------- copy_request -------------
         inline void marshall(::dsn::binary_writer& writer, const copy_request& val)
         {
-            boost::shared_ptr<::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+            boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
             ::apache::thrift::protocol::TBinaryProtocol proto(transport);
             ::dsn::marshall_rpc_args<copy_request>(&proto, val, &copy_request::write);
         };
 
         inline void unmarshall(::dsn::binary_reader& reader, /*out*/ copy_request& val)
         {
-            boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+            boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
             ::apache::thrift::protocol::TBinaryProtocol proto(transport);
             ::dsn::unmarshall_rpc_args<copy_request>(&proto, val, &copy_request::read);
         };
@@ -71,14 +71,14 @@ namespace dsn {
         // ---------- copy_response -------------
         inline void marshall(::dsn::binary_writer& writer, const copy_response& val)
         {
-            boost::shared_ptr<::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+            boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
             ::apache::thrift::protocol::TBinaryProtocol proto(transport);
             ::dsn::marshall_rpc_args<copy_response>(&proto, val, &copy_response::write);
         };
 
         inline void unmarshall(::dsn::binary_reader& reader, /*out*/ copy_response& val)
         {
-            boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+            boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
             ::apache::thrift::protocol::TBinaryProtocol proto(transport);
             ::dsn::unmarshall_rpc_args<copy_response>(&proto, val, &copy_response::read);
         };
@@ -86,14 +86,14 @@ namespace dsn {
         // ---------- get_file_size_request -------------
         inline void marshall(::dsn::binary_writer& writer, const get_file_size_request& val)
         {
-            boost::shared_ptr<::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+            boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
             ::apache::thrift::protocol::TBinaryProtocol proto(transport);
             ::dsn::marshall_rpc_args<get_file_size_request>(&proto, val, &get_file_size_request::write);
         };
 
         inline void unmarshall(::dsn::binary_reader& reader, /*out*/ get_file_size_request& val)
         {
-            boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+            boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
             ::apache::thrift::protocol::TBinaryProtocol proto(transport);
             ::dsn::unmarshall_rpc_args<get_file_size_request>(&proto, val, &get_file_size_request::read);
         };
@@ -101,14 +101,14 @@ namespace dsn {
         // ---------- get_file_size_response -------------
         inline void marshall(::dsn::binary_writer& writer, const get_file_size_response& val)
         {
-            boost::shared_ptr<::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+            boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
             ::apache::thrift::protocol::TBinaryProtocol proto(transport);
             ::dsn::marshall_rpc_args<get_file_size_response>(&proto, val, &get_file_size_response::write);
         };
 
         inline void unmarshall(::dsn::binary_reader& reader, /*out*/ get_file_size_response& val)
         {
-            boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+            boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
             ::apache::thrift::protocol::TBinaryProtocol proto(transport);
             ::dsn::unmarshall_rpc_args<get_file_size_response>(&proto, val, &get_file_size_response::read);
         };

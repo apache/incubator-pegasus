@@ -43,11 +43,11 @@
 
 namespace dsn {
     namespace tools {
-		typedef struct __buffer_info__
-		{
-			char*    buffer;
-			int      buffer_size;
-		} buffer_info;
+        typedef struct __buffer_info__
+        {
+            char*    buffer;
+            int      buffer_size;
+        } buffer_info;
 
         class hpc_logger : public logging_provider
         {
@@ -66,32 +66,32 @@ namespace dsn {
 
             virtual void flush();
 
-		private:
-			void log_thread();
-			
-			void flush_all_buffers_at_exit();
-			void buffer_push(char* buffer, int size);
-			//print logs in log list
-			void write_buffer_list(std::list<buffer_info>& llist);
+        private:
+            void log_thread();
+            
+            void flush_all_buffers_at_exit();
+            void buffer_push(char* buffer, int size);
+            //print logs in log list
+            void write_buffer_list(std::list<buffer_info>& llist);
             void create_log_file();
 
         private:            
-			bool        _stop_thread;
-			std::thread _log_thread;
+            bool        _stop_thread;
+            std::thread _log_thread;
 
-			// global buffer list
-			std::condition_variable_any   _write_list_cond;
-			::dsn::utils::ex_lock_nr_spin _write_list_lock;			
-			std::list<buffer_info>        _write_list;
+            // global buffer list
+            std::condition_variable_any   _write_list_cond;
+            ::dsn::utils::ex_lock_nr_spin _write_list_lock;            
+            std::list<buffer_info>        _write_list;
 
-			// log file and line count
-			int _start_index;
-			int _index;
-			int _per_thread_buffer_bytes;
-			int _current_log_file_bytes;
+            // log file and line count
+            int _start_index;
+            int _index;
+            int _per_thread_buffer_bytes;
+            int _current_log_file_bytes;
 
-			// current write file
-			std::ofstream *_current_log;
+            // current write file
+            std::ofstream *_current_log;
         };
     }
 }

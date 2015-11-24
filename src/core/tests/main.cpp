@@ -48,12 +48,14 @@
 # include <dsn/tool/providers.hpc.h>
 # include <dsn/tool/nfs_node_simple.h>
 
-void module_init()
+# include "hpc_aio_provider_for_test.h"
+
+void dsn_module_init()
 {
     // register all providers
     dsn::tools::register_common_providers();
     dsn::tools::register_hpc_providers();
-    dsn::tools::register_component_provider<::dsn::service::nfs_node_simple>("dsn::service::nfs_node_simple");
+    dsn::tools::register_component_provider< ::dsn::service::nfs_node_simple>("dsn::service::nfs_node_simple");
 
     //dsn::tools::register_component_provider<dsn::thrift_binary_message_parser>("thrift");
 
@@ -64,16 +66,25 @@ void module_init()
     dsn::tools::register_toollet<dsn::tools::tracer>("tracer");
     dsn::tools::register_toollet<dsn::tools::profiler>("profiler");
     dsn::tools::register_toollet<dsn::tools::fault_injector>("fault_injector");
+
+    // test helper
+    dsn::tools::register_component_provider<dsn::test::hpc_aio_provider_for_test>("dsn::test::hpc_aio_provider_for_test");
 }
 
+extern void task_engine_module_init();
+extern void command_manager_module_init();
+
 int g_test_count = 0;
+int g_test_ret = 0;
 
 GTEST_API_ int main(int argc, char **argv) 
 {
     testing::InitGoogleTest(&argc, argv);
 
     // register all tools
-    module_init();
+    dsn_module_init();
+    task_engine_module_init();
+    command_manager_module_init();
 
     // register all possible services
     dsn::register_app<test_client>("test");
@@ -87,14 +98,23 @@ GTEST_API_ int main(int argc, char **argv)
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
-    // set host app for the non-in-rDSN-thread api calls
-    dsn_mimic_app("client", 1);
+    if (g_test_ret != 0)
+    {
+        return g_test_ret;
+    }
 
+    /*
     // run out-rDSN tests in Main thread
+    dsn_mimic_app("client", 1);
     std::cout << "=========================================================== " << std::endl;
     std::cout << "================== run in Main thread ===================== " << std::endl;
     std::cout << "=========================================================== " << std::endl;
     exec_tests();
+    if (g_test_ret != 0)
+    {
+        return g_test_ret;
+    }
+    */
 
     // run out-rDSN tests in other threads
     std::cout << "=========================================================== " << std::endl;
@@ -105,9 +125,13 @@ GTEST_API_ int main(int argc, char **argv)
         exec_tests();
     });
     t.join();
+    if (g_test_ret != 0)
+    {
+        return g_test_ret;
+    }
     
     // exit without any destruction
-    dsn_terminate();
+    //dsn_terminate();
 
     return 0;    
 }

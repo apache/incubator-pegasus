@@ -48,7 +48,7 @@ namespace dsn { namespace replication {
 // for replica::load(..) only
 replica::replica(replica_stub* stub, global_partition_id gpid, const char* app_type, const char* path)
     : serverlet<replica>("replica"), 
-    _primary_states(gpid, stub->options().staleness_for_commit)
+    _primary_states(gpid, stub->options().staleness_for_commit, stub->options().batch_write_disabled)
 {
     dassert (stub, "");
     _stub = stub;
@@ -64,7 +64,7 @@ replica::replica(replica_stub* stub, global_partition_id gpid, const char* app_t
 // for replica::newr(...) only
 replica::replica(replica_stub* stub, global_partition_id gpid, const char* app_type)
 : serverlet<replica>("replica"),
-  _primary_states(gpid, stub->options().staleness_for_commit)
+  _primary_states(gpid, stub->options().staleness_for_commit, stub->options().batch_write_disabled)
 {
     dassert (stub, "");
     _stub = stub;
@@ -111,6 +111,8 @@ replica::~replica(void)
         delete _prepare_list;
         _prepare_list = nullptr;
     }
+
+    dinfo("%s: replica destroyed", name());
 }
 
 void replica::on_client_read(const read_request_header& meta, dsn_message_t request)
@@ -123,7 +125,7 @@ void replica::on_client_read(const read_request_header& meta, dsn_message_t requ
 
     if (meta.semantic == read_semantic_t::ReadLastUpdate)
     {
-        if (status() != PS_PRIMARY || 
+        if (status() != PS_PRIMARY ||
             last_committed_decree() < _primary_states.last_prepare_decree_on_new_primary)
         {
             response_client_message(request, ERR_INVALID_STATE);
@@ -211,6 +213,8 @@ void replica::check_state_completeness()
 void replica::execute_mutation(mutation_ptr& mu)
 {
     dassert (nullptr != _app, "");
+
+    dinfo("%s: execute mutation %s: request_count = %zu", name(), mu->name(), mu->client_requests.size());
 
     error_code err = ERR_OK;
     decree d = mu->data.header.decree;

@@ -91,14 +91,14 @@ namespace dsn
             _io_queue = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
         }
 
-		void io_looper::close_completion_queue()
-		{
-			if (_io_queue != 0)
-			{
-				::CloseHandle(_io_queue);
-				_io_queue = 0;
-			}
-		}
+        void io_looper::close_completion_queue()
+        {
+            if (_io_queue != 0)
+            {
+                ::CloseHandle(_io_queue);
+                _io_queue = 0;
+            }
+        }
 
         void io_looper::start(service_node* node, int worker_count)
         {

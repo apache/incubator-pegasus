@@ -35,19 +35,19 @@
 // apps
 # include "echo.app.example.h"
 
-void module_init()
+void dsn_module_init()
 {
     // register all possible service apps
-    dsn::register_app<::dsn::example::echo_server_app>("server");
-    dsn::register_app<::dsn::example::echo_client_app>("client");
-    dsn::register_app<::dsn::example::echo_perf_test_client_app>("client.perf.echo");
+    dsn::register_app< ::dsn::example::echo_server_app>("server");
+    dsn::register_app< ::dsn::example::echo_client_app>("client");
+    dsn::register_app< ::dsn::example::echo_perf_test_client_app>("client.perf.echo");
 }
 
 # ifndef DSN_RUN_USE_SVCHOST
 
 int main(int argc, char** argv)
 {
-    module_init();
+    dsn_module_init();
     
     // specify what services and tools will run in config file, then run
     dsn_run(argc, argv, true);

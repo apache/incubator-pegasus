@@ -41,7 +41,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ "GroupCheck"
+# define __TITLE__ "replica.check"
 
 namespace dsn { namespace replication {
 
@@ -82,7 +82,7 @@ void replica::broadcast_group_check()
 
     for (auto it = _primary_states.statuses.begin(); it != _primary_states.statuses.end(); it++)
     {
-        if (it->first == primary_address())
+        if (it->first == _stub->_primary_address)
             continue;
 
         ::dsn::rpc_address addr = it->first;
@@ -100,6 +100,13 @@ void replica::broadcast_group_check()
             request->learner_signature = it2->second.signature;
         }
 
+        ddebug(
+            "%s: init_group_check for %s with state %s",
+            name(),
+            addr.to_string(),
+            enum_to_string(it->second)
+        );
+
         dsn::task_ptr callback_task = rpc::call_typed(
             addr,
             RPC_GROUP_CHECK,
@@ -110,10 +117,6 @@ void replica::broadcast_group_check()
             );
 
         _primary_states.group_check_pending_replies[addr] = callback_task;
-
-        ddebug(
-            "%s: init_group_check for %s", name(), addr.to_string()
-        );
     }
 }
 
@@ -161,7 +164,7 @@ void replica::on_group_check(const group_check_request& request, /*out*/ group_c
     }
     
     response.gpid = get_gpid();
-    response.node = primary_address();
+    response.node = _stub->_primary_address;
     response.err = ERR_OK;
     if (status() == PS_ERROR)
     {

@@ -38,7 +38,7 @@
 //
 // developers define the following global function somewhere
 //
-//     void module_init()
+//     void dsn_module_init()
 //     {
 //          ...
 //     }
@@ -48,7 +48,7 @@
 //
 // then it is done.
 //
-void module_init();
+void dsn_module_init();
 
 # if defined(__GNUC__) || defined(_WIN32)
 # else
@@ -60,7 +60,7 @@ __attribute__((constructor))
 # endif
 static void __module_init__()
 {
-    module_init();
+    dsn_module_init();
 }
 
 

@@ -53,10 +53,11 @@ namespace dsn {
         {
         public:
             hpc_aio_provider(disk_engine* disk, aio_provider* inner_provider);
-            ~hpc_aio_provider();
+            virtual ~hpc_aio_provider();
 
             virtual dsn_handle_t open(const char* file_name, int flag, int pmode) override;
             virtual error_code   close(dsn_handle_t fh) override;
+            virtual error_code   flush(dsn_handle_t fh) override;
             virtual void         aio(aio_task* aio) override;
             virtual disk_aio*    prepare_aio_context(aio_task* tsk) override;
 

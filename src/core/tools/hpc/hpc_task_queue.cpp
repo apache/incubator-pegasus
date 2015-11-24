@@ -54,7 +54,7 @@ namespace dsn
         {
             dassert(task->next == nullptr, "task is not alone");
             {
-                utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
+                utils::auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_lock);
                 _tasks.add(task);
             }
             _cond.notify_one();

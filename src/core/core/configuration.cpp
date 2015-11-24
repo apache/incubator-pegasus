@@ -63,7 +63,7 @@ bool configuration::load(const char* file_name, const char* arguments)
     FILE* fd = ::fopen(file_name, "rb");
     if (fd == nullptr) 
     {
-		std::string cdir;
+        std::string cdir;
         dsn::utils::filesystem::get_current_directory(cdir);
         printf("Cannot open file %s in %s, err=%s\n", file_name, cdir.c_str(), strerror(errno));
         return false;
@@ -115,7 +115,6 @@ bool configuration::load(const char* file_name, const char* arguments)
     std::map<std::string, conf*>* pSection = nullptr;
     char *p, *pLine = (char*)"", *pNextLine, *pEnd, *pSectionName = nullptr, *pEqual;
     int lineno = 0;
-    unsigned int indexInSection = 0;
 
     // ATTENTION: arguments replace_string() may cause _file_data changed,
     // so set `p' and `pEnd' carefully.
@@ -232,7 +231,6 @@ ConfReg:
             auto it = _configs.insert(config_map::value_type(std::string(pSectionName), sm));
             assert (it.second);
             pSection = &it.first->second;
-            indexInSection = 0;
         }
 
         //

@@ -52,28 +52,28 @@ extern "C" {
 
 enum
 {
-	FTW_F,        /* Regular file.  */
+    FTW_F,        /* Regular file.  */
 #define FTW_F    FTW_F
-	FTW_D,        /* Directory.  */
+    FTW_D,        /* Directory.  */
 #define FTW_D    FTW_D
-	FTW_DNR,      /* Unreadable directory.  */
+    FTW_DNR,      /* Unreadable directory.  */
 #define FTW_DNR  FTW_DNR
-	FTW_NS,       /* Unstatable file.  */
+    FTW_NS,       /* Unstatable file.  */
 #define FTW_NS   FTW_NS
 
-	FTW_SL,       /* Symbolic link.  */
+    FTW_SL,       /* Symbolic link.  */
 # define FTW_SL  FTW_SL
-					/* These flags are only passed from the `nftw' function.  */
-	FTW_DP,       /* Directory, all subdirs have been visited. */
+                    /* These flags are only passed from the `nftw' function.  */
+    FTW_DP,       /* Directory, all subdirs have been visited. */
 # define FTW_DP  FTW_DP
-	FTW_SLN       /* Symbolic link naming non-existing file.  */
+    FTW_SLN       /* Symbolic link naming non-existing file.  */
 # define FTW_SLN FTW_SLN
 };
 
 struct FTW
 {
-	int base;
-	int level;
+    int base;
+    int level;
 };
 
 # else
@@ -350,7 +350,7 @@ namespace dsn {
         extern void split_args(const char* args, /*out*/ std::vector<std::string>& sargs, char splitter = ' ');
         extern void split_args(const char* args, /*out*/ std::list<std::string>& sargs, char splitter = ' ');
         extern std::string replace_string(std::string subject, const std::string& search, const std::string& replace);
-        extern std::string get_last_component(const std::string& input, char splitters[]);
+        extern std::string get_last_component(const std::string& input, const char splitters[]);
 
         extern char* trim_string(char* s);
 
@@ -396,53 +396,53 @@ namespace dsn {
 
         inline int get_invalid_tid() { return -1; }
 
-		namespace filesystem {
+        namespace filesystem {
 
-			extern bool get_absolute_path(const std::string& path1, std::string& path2);
+            extern bool get_absolute_path(const std::string& path1, std::string& path2);
 
-			extern std::string remove_file_name(const std::string& path);
+            extern std::string remove_file_name(const std::string& path);
 
-			extern std::string get_file_name(const std::string& path);
+            extern std::string get_file_name(const std::string& path);
 
-			extern std::string path_combine(const std::string& path1, const std::string& path2);
+            extern std::string path_combine(const std::string& path1, const std::string& path2);
 
-			extern int get_normalized_path(const std::string& path, std::string& npath);
+            extern int get_normalized_path(const std::string& path, std::string& npath);
 
-			//int (const char* fpath, int typeflags, struct FTW *ftwbuf)
-			typedef std::function<int(const char*, int, struct FTW*)> ftw_handler;
+            //int (const char* fpath, int typeflags, struct FTW *ftwbuf)
+            typedef std::function<int(const char*, int, struct FTW*)> ftw_handler;
 
-			extern bool file_tree_walk(
-				const std::string& dirpath,
-				ftw_handler handler,
-				bool recursive = true
-				);
+            extern bool file_tree_walk(
+                const std::string& dirpath,
+                ftw_handler handler,
+                bool recursive = true
+                );
 
-			extern bool path_exists(const std::string& path);
+            extern bool path_exists(const std::string& path);
 
-			extern bool directory_exists(const std::string& path);
+            extern bool directory_exists(const std::string& path);
 
-			extern bool file_exists(const std::string& path);
+            extern bool file_exists(const std::string& path);
 
-			extern bool get_subfiles(const std::string& path, std::vector<std::string>& sub_list, bool recursive);
+            extern bool get_subfiles(const std::string& path, std::vector<std::string>& sub_list, bool recursive);
 
-			extern bool get_subdirectories(const std::string& path, std::vector<std::string>& sub_list, bool recursive);
+            extern bool get_subdirectories(const std::string& path, std::vector<std::string>& sub_list, bool recursive);
 
-			extern bool get_subpaths(const std::string& path, std::vector<std::string>& sub_list, bool recursive);
+            extern bool get_subpaths(const std::string& path, std::vector<std::string>& sub_list, bool recursive);
 
-			extern bool remove_path(const std::string& path);
-			
-			extern bool rename_path(const std::string& path1, const std::string& path2, bool overwrite = false);
+            extern bool remove_path(const std::string& path);
+            
+            extern bool rename_path(const std::string& path1, const std::string& path2, bool overwrite = false);
 
-			extern bool file_size(const std::string& path, int64_t& sz);
+            extern bool file_size(const std::string& path, int64_t& sz);
 
-			extern bool create_directory(const std::string& path);
+            extern bool create_directory(const std::string& path);
 
-			extern bool create_file(const std::string& path);
+            extern bool create_file(const std::string& path);
 
-			extern bool get_current_directory(std::string& path);
+            extern bool get_current_directory(std::string& path);
 
-			extern bool last_write_time(std::string& path, time_t& tm);
-		}
+            extern bool last_write_time(std::string& path, time_t& tm);
+        }
     }
 } // end namespace dsn::utils
 

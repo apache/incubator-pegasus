@@ -58,18 +58,19 @@ inline int gpid_to_hash(global_partition_id gpid)
     return static_cast<int>(gpid.app_id ^ gpid.pidx);
 }
 
-typedef std::unordered_map<::dsn::rpc_address, partition_status> node_statuses;
-typedef std::unordered_map<::dsn::rpc_address, dsn::task_ptr> node_tasks;
+typedef std::unordered_map< ::dsn::rpc_address, partition_status> node_statuses;
+typedef std::unordered_map< ::dsn::rpc_address, dsn::task_ptr> node_tasks;
 
 class replication_options
 {
 public:
     std::string working_dir;
-    std::vector<::dsn::rpc_address> meta_servers;
+    std::vector< ::dsn::rpc_address> meta_servers;
 
     int32_t prepare_timeout_ms_for_secondaries;
     int32_t prepare_timeout_ms_for_potential_secondaries;
         
+    bool    batch_write_disabled;
     int32_t staleness_for_commit;
     int32_t max_mutation_count_in_prepare_list;
     int32_t mutation_2pc_min_replica_count;
@@ -113,7 +114,7 @@ private:
 class replica_helper
 {
 public:
-    static bool remove_node(::dsn::rpc_address node, /*inout*/ std::vector<::dsn::rpc_address>& nodeList);
+    static bool remove_node(::dsn::rpc_address node, /*inout*/ std::vector< ::dsn::rpc_address>& nodeList);
     static bool get_replica_config(const partition_configuration& partition_config, ::dsn::rpc_address node, /*out*/ replica_configuration& replica_config);
 };
 

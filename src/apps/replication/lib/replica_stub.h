@@ -47,6 +47,11 @@ namespace dsn { namespace replication {
 
 class mutation_log;
 class replication_failure_detector;
+class replication_checker;
+namespace test {
+    class test_checker;
+}
+
 typedef std::unordered_map<global_partition_id, replica_ptr> replicas;
 // from, new replica config, isClosing
 typedef std::function<void (::dsn::rpc_address, const replica_configuration&, bool)> replica_state_subscriber;
@@ -139,8 +144,9 @@ private:
 
 private:
     friend class ::dsn::replication::replication_checker;    
+    friend class ::dsn::replication::test::test_checker;
     typedef std::unordered_map<global_partition_id, ::dsn::task_ptr> opening_replicas;
-    typedef std::unordered_map<global_partition_id, std::pair<::dsn::task_ptr, replica_ptr>> closing_replicas; // <close, replica>
+    typedef std::unordered_map<global_partition_id, std::pair< ::dsn::task_ptr, replica_ptr>> closing_replicas; // <close, replica>
 
     zlock                       _replicas_lock;
     replicas                    _replicas;

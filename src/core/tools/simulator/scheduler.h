@@ -55,7 +55,7 @@ public:
     void add_system_event(uint64_t ts, std::function<void()> t);
     std::vector<event_entry>* pop_next_events(/*out*/ uint64_t& ts);
     void clear();
-    bool has_more_events() const {  utils::auto_lock<::dsn::utils::ex_lock> l(_lock); return _events.size() > 0; }
+    bool has_more_events() const {  utils::auto_lock< ::dsn::utils::ex_lock> l(_lock); return _events.size() > 0; }
 
 private:
     typedef std::map<uint64_t, std::vector<event_entry>*>  Events;
@@ -86,7 +86,7 @@ public:
     ~scheduler(void);
 
     void start();
-    uint64_t now_ns() const { utils::auto_lock<::dsn::utils::ex_lock> l(_lock); return _time_ns; }
+    uint64_t now_ns() const { utils::auto_lock< ::dsn::utils::ex_lock> l(_lock); return _time_ns; }
 
     void reset();
     void add_task(task* task, task_queue* q);

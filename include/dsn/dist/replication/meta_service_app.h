@@ -41,8 +41,11 @@ class server_state;
 class meta_service;
 
 namespace dsn {
-    namespace replication{
+    namespace replication {
         class replication_checker;
+        namespace test {
+            class test_checker;
+        }
     }
     namespace service {
 
@@ -58,6 +61,7 @@ namespace dsn {
 
         private:
             friend class ::dsn::replication::replication_checker;
+            friend class ::dsn::replication::test::test_checker;
             server_state*        _state;
             meta_service*        _service;
         };

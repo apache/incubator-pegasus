@@ -41,6 +41,9 @@
 # endif
 # define __TITLE__ "load.balancer"
 
+bool load_balancer::s_lb_for_test = false;
+bool load_balancer::s_disable_lb = false;
+
 load_balancer::load_balancer(server_state* state)
 : _state(state), serverlet<load_balancer>("load_balancer")
 {
@@ -52,6 +55,8 @@ load_balancer::~load_balancer()
 
 void load_balancer::run()
 {
+    if (s_disable_lb) return;
+
     zauto_read_lock l(_state->_lock);
 
     for (size_t i = 0; i < _state->_apps.size(); i++)
@@ -68,14 +73,59 @@ void load_balancer::run()
 
 void load_balancer::run(global_partition_id gpid)
 {
+    if (s_disable_lb) return;
+
     zauto_read_lock l(_state->_lock);
     partition_configuration& pc = _state->_apps[gpid.app_id - 1].partitions[gpid.pidx];
     run_lb(pc);
 }
 
+void load_balancer::explictly_send_proposal(global_partition_id gpid, int role, config_type type)
+{
+    if (gpid.app_id<=0 || gpid.pidx<0 || role<0) return;
+
+    configuration_update_request req;
+    {
+        zauto_read_lock l(_state->_lock);
+        if (gpid.app_id>_state->_apps.size())
+            return;
+        app_state& app = _state->_apps[gpid.app_id-1];
+        if (gpid.pidx>=app.partition_count)
+            return;
+        req.config = app.partitions[gpid.pidx];
+    }
+
+    dsn::rpc_address proposal_receiver;
+    if (!req.config.primary.is_invalid())
+        proposal_receiver = req.config.primary;
+    else if (!req.config.secondaries.empty())
+        proposal_receiver = req.config.secondaries[0];
+    else {
+        dwarn("no replica in partition config");
+        return;
+    }
+
+    if (!req.config.primary.is_invalid())
+    {
+        req.node = req.config.primary;
+        --role;
+    }
+
+    if (role >= (int)req.config.secondaries.size())
+    {
+        dwarn("role doesn't exist");
+        return;
+    }
+    else if (role != -1)
+        req.node = req.config.secondaries[role];
+
+    req.type = type;
+    send_proposal(proposal_receiver, req);
+}
+
 ::dsn::rpc_address load_balancer::find_minimal_load_machine(bool primaryOnly)
 {
-    std::vector<std::pair<::dsn::rpc_address, int>> stats;
+    std::vector<std::pair< ::dsn::rpc_address, int>> stats;
 
     for (auto it = _state->_nodes.begin(); it != _state->_nodes.end(); it++)
     {
@@ -87,14 +137,20 @@ void load_balancer::run(global_partition_id gpid)
     }
 
     
-    std::sort(stats.begin(), stats.end(), [](const std::pair<::dsn::rpc_address, int>& l, const std::pair<::dsn::rpc_address, int>& r)
+    std::sort(stats.begin(), stats.end(), [](const std::pair< ::dsn::rpc_address, int>& l, const std::pair< ::dsn::rpc_address, int>& r)
     {
-        return l.second < r.second;
+        return l.second < r.second || (l.second == r.second && l.first < r.first);
     });
 
     if (stats.empty())
     {
         return ::dsn::rpc_address();
+    }
+
+    if (s_lb_for_test)
+    {
+        // alway use the first (minimal) one
+        return stats[0].first;
     }
 
     int candidate_count = 1;

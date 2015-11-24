@@ -76,6 +76,7 @@ public:
     void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, /*out*/ std::stringstream& ss);
     std::vector<task_queue*>& queues() { return _queues; }
     std::vector<task_worker*>& workers() { return _workers; }
+    std::vector<admission_controller*>& controllers() { return _controllers; }
 
 private:
     threadpool_spec                    _spec;

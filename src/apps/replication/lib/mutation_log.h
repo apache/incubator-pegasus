@@ -62,6 +62,11 @@ struct log_replica_info
         decree = 0;
         log_start_offset = 0;
     }
+
+    bool operator == (const log_replica_info& o) const
+    {
+        return decree == o.decree && log_start_offset == o.log_start_offset;
+    }
 };
 
 typedef std::unordered_map<global_partition_id, decree>
@@ -194,7 +199,7 @@ private:
         /*out*/ int64_t& end_offset
         );
 
-    typedef std::shared_ptr<std::list<::dsn::task_ptr>> pending_callbacks_ptr;
+    typedef std::shared_ptr<std::list< ::dsn::task_ptr>> pending_callbacks_ptr;
     void init_states();    
     error_code create_new_log_file();    
     void create_new_pending_buffer();    
@@ -238,47 +243,91 @@ public:
     //
     // file operations
     //
+
+    // open the log file for read
+    // 'path' should be in format of log.{index}.{start_offset}, where:
+    //   - index: the index of the log file, start from 1
+    //   - start_offset: start offset in the global space
+    // returns:
+    //   - non-null if open succeed
+    //   - null if open failed
     static log_file_ptr open_read(const char* path, /*out*/ error_code& err);
+
+    // open the log file for write
+    // file path is '{dir}/log.{index}.{start_offset}'
+    // 'max_staleness_for_commit' will be write into the file header
     static log_file_ptr create_write(
         const char* dir, 
         int index, 
         int64_t start_offset
         );
+
+    // close the log file
     void close();
+
+    // flush the log file
+    void flush();
 
     //
     // read routines
     //
+
+    // sync read the next log entry from the file
+    // the entry data is start from the 'local_offset' of the file
+    // the result is passed out by 'bb'
     error_code read_next_log_entry(int64_t local_offset, /*out*/::dsn::blob& bb);
 
     //
     // write routines
     //
+
+    // prepare a log entry buffer, with block header reserved and inited
     std::shared_ptr<binary_writer> prepare_log_entry();
 
-    // return value: nullptr for error or immediate success (using ::GetLastError to get code), otherwise it is pending
+    // async write log entry into the file
+    // 'bb' is the date to be write
+    // 'offset' is start offset of the entry in the global space
+    // 'evt' is to indicate which thread pool to execute the callback
+    // 'callback_host' is used to get tracer
+    // 'callback' is to indicate the callback handler
+    // 'hash' helps to choose which thread in the thread pool to execute the callback
+    // returns:
+    //   - non-null if io task is in pending
+    //   - null if error
     ::dsn::task_ptr commit_log_entry(
                     blob& bb,
                     int64_t offset,
-                    dsn_task_code_t evt,  // to indicate which thread pool to execute the callback
+                    dsn_task_code_t evt,
                     clientlet* callback_host,
                     aio_handler callback,                    
                     int hash
                     );
-    
+
+    //
     // others
+    //
+
+    // end offset in the global space: end_offset = start_offset + file_size
     int64_t end_offset() const { return _end_offset; }
+    // start offset in the global space
     int64_t start_offset() const  { return _start_offset; }
-    int   index() const { return _index; }
+    // file index
+    int index() const { return _index; }
+    // file path
     const std::string& path() const { return _path; }
+    // previous decrees
     const multi_partition_decrees_ex& previous_log_max_decrees() { return _previous_log_max_decrees; }
+    // file header
     log_file_header& header() { return _header;}
 
+    // read file header from reader, return byte count consumed
     int read_header(binary_reader& reader);
+    // write file header to writer, return byte count written
     int write_header(binary_writer& writer, multi_partition_decrees_ex& init_max_decrees, int bufferSizeBytes);
-    bool is_right_header() const;
-    void flush();
+    // get serialized size of current file header
     int get_file_header_size() const;
+    // if the file header is valid
+    bool is_right_header() const;
     
 private:
     log_file(const char* path, dsn_handle_t handle, int index, int64_t start_offset, bool isRead);

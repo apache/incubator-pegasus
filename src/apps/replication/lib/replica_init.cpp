@@ -56,6 +56,8 @@ error_code replica::initialize_on_new(const char* app_type, global_partition_id 
     _config.gpid = gpid;
     _dir = utils::filesystem::path_combine(_stub->dir(), buffer);
 
+    sprintf(_name, "%u.%u@%s", _config.gpid.app_id, _config.gpid.pidx, _stub->_primary_address.to_string());
+
     if (dsn::utils::filesystem::directory_exists(_dir) &&
         !dsn::utils::filesystem::remove_path(_dir))
     {
@@ -63,11 +65,11 @@ error_code replica::initialize_on_new(const char* app_type, global_partition_id 
         return ERR_PATH_ALREADY_EXIST;
     }
 
-	if (!dsn::utils::filesystem::create_directory(_dir))
-	{
-		dassert(false, "Fail to create directory %s.", _dir.c_str());
-		return ERR_FILE_OPERATION_FAILED;
-	}
+    if (!dsn::utils::filesystem::create_directory(_dir))
+    {
+        dassert(false, "Fail to create directory %s.", _dir.c_str());
+        return ERR_FILE_OPERATION_FAILED;
+    }
 
     error_code err = init_app_and_prepare_list(app_type, true);
     dassert (err == ERR_OK, "");
@@ -77,10 +79,15 @@ error_code replica::initialize_on_new(const char* app_type, global_partition_id 
 /*static*/ replica* replica::newr(replica_stub* stub, const char* app_type, global_partition_id gpid)
 {
     replica* rep = new replica(stub, gpid, app_type);
-    if (rep->initialize_on_new(app_type, gpid) == ERR_OK)
+    error_code err = rep->initialize_on_new(app_type, gpid);
+    if (err == ERR_OK)
+    {
+        dinfo("%s: new replica succeed", rep->name());
         return rep;
+    }
     else
     {
+        dinfo("%s: new replica failed: %s", rep->name(), err.to_string());
         rep->close();
         delete rep;
         return nullptr;
@@ -91,21 +98,23 @@ error_code replica::initialize_on_load(const char* dir, const char* app_type, bo
 {
     _dir = dir;
 
+    sprintf(_name, "%u.%u@%s", _config.gpid.app_id, _config.gpid.pidx, _stub->_primary_address.to_string());
+
     error_code err = init_app_and_prepare_list(app_type, false);
 
     if (err != ERR_OK && rename_dir_on_failure)
     {
         // GCed later
         char newPath[256];
-        sprintf(newPath, "%s.%x.err", dir, random32(0, (uint32_t)-1));  
-		if (dsn::utils::filesystem::rename_path(dir, newPath, true))
-		{
-			derror("move bad replica from '%s' to '%s'", dir, newPath);
-		}
-		else
-		{
+        sprintf(newPath, "%s.%llu.err", dir, dsn_now_us());
+        if (dsn::utils::filesystem::rename_path(dir, newPath, true))
+        {
+            derror("move bad replica from '%s' to '%s'", dir, newPath);
+        }
+        else
+        {
             err = ERR_FILE_OPERATION_FAILED;
-		}
+        }
     }
     return err;
 }
@@ -133,15 +142,17 @@ error_code replica::initialize_on_load(const char* dir, const char* app_type, bo
 
     replica* rep = new replica(stub, gpid, app_type, dir);
     error_code err = rep->initialize_on_load(dir, app_type, rename_dir_on_failure);
-    if (err != ERR_OK)
+    if (err == ERR_OK)
     {
-        rep->close();
-        delete rep;
-        return nullptr;
+        dinfo("%s: load replica succeed", rep->name());
+        return rep;
     }
     else
     {
-        return rep;
+        dinfo("%s: load replica failed: %s", rep->name(), err.to_string());
+        rep->close();
+        delete rep;
+        return nullptr;
     }
 }
 
@@ -222,6 +233,7 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
                 _private_log->check_log_start_offset(get_gpid(), _app->log_info().init_offset_in_private_log);
                 set_inactive_state_transient(true);
             }
+            /* in the beginning the prepare_list is reset to the durable_decree */
             else
             {
                 derror(
@@ -237,6 +249,7 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
                 set_inactive_state_transient(false);
 
                 _private_log->close();
+                _private_log = nullptr;
             }
         }
 

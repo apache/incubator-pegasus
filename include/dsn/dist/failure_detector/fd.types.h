@@ -55,14 +55,14 @@ namespace dsn { namespace fd {
     // ---------- beacon_msg -------------
     inline void marshall(::dsn::binary_writer& writer, const beacon_msg& val)
     {
-        boost::shared_ptr<::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
         ::dsn::marshall_rpc_args<beacon_msg>(&proto, val, &beacon_msg::write);
     };
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ beacon_msg& val)
     {
-        boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
         ::dsn::unmarshall_rpc_args<beacon_msg>(&proto, val, &beacon_msg::read);
     };
@@ -70,14 +70,14 @@ namespace dsn { namespace fd {
     // ---------- beacon_ack -------------
     inline void marshall(::dsn::binary_writer& writer, const beacon_ack& val)
     {
-        boost::shared_ptr<::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
         ::dsn::marshall_rpc_args<beacon_ack>(&proto, val, &beacon_ack::write);
     };
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ beacon_ack& val)
     {
-        boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
         ::dsn::unmarshall_rpc_args<beacon_ack>(&proto, val, &beacon_ack::read);
     };

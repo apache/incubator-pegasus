@@ -60,7 +60,6 @@ void unmarshall(binary_reader& reader, /*out*/ app_state& val)
     unmarshall(reader, val.partitions);
 }
 
-
 server_state::server_state(void)
     : ::dsn::serverlet<server_state>("meta.server.state")
 {
@@ -75,14 +74,20 @@ server_state::~server_state(void)
 
 DEFINE_TASK_CODE(LPC_META_STATE_SVC_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_META_SERVER);
 
-void server_state::initialize()
+void server_state::initialize(const char* dir)
 {
-    _storage = dsn::utils::factory_store<::dsn::dist::meta_state_service>::create(
+    _storage = dsn::utils::factory_store< ::dsn::dist::meta_state_service>::create(
         "meta_state_service_simple",  // TODO: read config
         PROVIDER_TYPE_MAIN
         );
 
-    auto err = _storage->initialize();
+    std::string dr = std::string(dir);
+    if (!utils::filesystem::path_exists(dr))
+    {
+        utils::filesystem::create_directory(dr);
+    }
+
+    auto err = _storage->initialize(dir);
     dassert(err == ERR_OK, "meta state service initialization failed, err = %s", err.to_string());
 }
 
@@ -733,7 +738,7 @@ void server_state::update_configuration_internal(const configuration_update_requ
         }
         cf << "]}";
 
-        ddebug("%d.%d metaupdateok to ballot %lld, type = %s, node = %s, config = %s",
+        ddebug("%d.%d meta update ok to ballot %lld, type = %s, node = %s, config = %s",
             request.config.gpid.app_id,
             request.config.gpid.pidx,
             request.config.ballot,

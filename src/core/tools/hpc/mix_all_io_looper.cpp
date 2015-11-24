@@ -118,7 +118,7 @@ namespace dsn
 
             // execute shared queue
             {
-                utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
+                utils::auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_lock);
                 t = _remote_tasks.pop_all();
             }
             
@@ -165,7 +165,7 @@ namespace dsn
             {
                 task* t = nullptr, *next;
                 {
-                    utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_remote_timer_tasks_lock);
+                    utils::auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_remote_timer_tasks_lock);
                     if (_remote_timer_tasks.size() == 0)
                         break;
 
@@ -207,7 +207,7 @@ namespace dsn
             if (is_shared_timer_queue())
             {
                 {
-                    utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_remote_timer_tasks_lock);
+                    utils::auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_remote_timer_tasks_lock);
                     auto pr = _remote_timer_tasks.insert(
                         std::map<uint64_t, slist<task>>::value_type(ts_ms, slist<task>()));
                     pr.first->second.add(timer);
@@ -231,7 +231,7 @@ namespace dsn
             if (is_shared() || task::get_current_worker() != this->owner_worker())
             {
                 {
-                    utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
+                    utils::auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_lock);
                     _remote_tasks.add(task);
                 }
 

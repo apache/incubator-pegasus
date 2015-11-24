@@ -46,13 +46,13 @@ struct remote_learner_state
     decree   prepare_start_decree;
 };
 
-typedef std::unordered_map<::dsn::rpc_address, remote_learner_state> learner_map;
+typedef std::unordered_map< ::dsn::rpc_address, remote_learner_state> learner_map;
 
 class primary_context
 {
 public:
-    primary_context(global_partition_id gpid, int max_concurrent_2pc_count = 1)
-        : write_queue(gpid, max_concurrent_2pc_count)
+    primary_context(global_partition_id gpid, int max_concurrent_2pc_count = 1, bool batch_write_disabled = false)
+        : write_queue(gpid, max_concurrent_2pc_count, batch_write_disabled)
     {}
 
     void cleanup(bool clean_pending_mutations = true);
@@ -75,10 +75,13 @@ public:
     mutation_queue          write_queue;
 
     // group check
-    dsn::task_ptr     group_check_task;
-    node_tasks        group_check_pending_replies;
+    dsn::task_ptr     group_check_task; // the repeated group check task of LPC_GROUP_CHECK
+                                        // calls broadcast_group_check() to check all replicas separately
+                                        // created in replica::init_group_check()
+                                        // cancelled in cleanup() when status changed from PRIMARY to others
+    node_tasks        group_check_pending_replies; // group check response tasks of RPC_GROUP_CHECK for each replica
 
-    // reconfig
+    // reconfiguration task of RPC_CM_UPDATE_PARTITION_CONFIGURATION
     dsn::task_ptr     reconfiguration_task;
 
     // when read lastest update, all prepared decrees must be firstly committed

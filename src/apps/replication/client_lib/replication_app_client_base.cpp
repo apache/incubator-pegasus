@@ -41,7 +41,7 @@ namespace dsn { namespace replication {
 using namespace ::dsn::service;
 
 void replication_app_client_base::load_meta_servers(
-        /*out*/ std::vector<::dsn::rpc_address>& servers
+        /*out*/ std::vector< ::dsn::rpc_address>& servers
         )
 {
     // read meta_servers from machine list file
@@ -67,7 +67,7 @@ void replication_app_client_base::load_meta_servers(
 }
 
 replication_app_client_base::replication_app_client_base(
-    const std::vector<::dsn::rpc_address>& meta_servers, 
+    const std::vector< ::dsn::rpc_address>& meta_servers, 
     const char* app_name,
     int task_bucket_count/* = 13*/
     )

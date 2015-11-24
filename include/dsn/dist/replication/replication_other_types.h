@@ -42,6 +42,8 @@
 #ifndef replication_OTHER_TYPES_H
 #define replication_OTHER_TYPES_H
 
+# include <dsn/cpp/autoref_ptr.h>
+
 namespace dsn {
     namespace replication {
 

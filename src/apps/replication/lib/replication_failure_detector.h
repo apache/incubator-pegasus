@@ -44,17 +44,17 @@ class replica_stub;
 class replication_failure_detector  : public dsn::fd::failure_detector
 {
 public:
-    replication_failure_detector(replica_stub* stub, std::vector<::dsn::rpc_address>& meta_servers);
+    replication_failure_detector(replica_stub* stub, std::vector< ::dsn::rpc_address>& meta_servers);
     ~replication_failure_detector(void);
 
     virtual void end_ping(::dsn::error_code err, const fd::beacon_ack& ack, void* context);
 
      // client side
-    virtual void on_master_disconnected( const std::vector<::dsn::rpc_address>& nodes );
+    virtual void on_master_disconnected( const std::vector< ::dsn::rpc_address>& nodes );
     virtual void on_master_connected( ::dsn::rpc_address node);
 
     // server side
-    virtual void on_worker_disconnected( const std::vector<::dsn::rpc_address>& nodes ) { dassert (false, ""); }
+    virtual void on_worker_disconnected( const std::vector< ::dsn::rpc_address>& nodes ) { dassert (false, ""); }
     virtual void on_worker_connected( ::dsn::rpc_address node )  { dassert (false, ""); }
 
     ::dsn::rpc_address current_server_contact() const { zauto_lock l(_meta_lock); return dsn_group_get_leader(_meta_servers.group_handle()); }

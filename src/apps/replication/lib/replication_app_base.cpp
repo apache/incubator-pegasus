@@ -43,7 +43,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ "replica.2pc"
+# define __TITLE__ "replica.app_base"
 
 namespace dsn { namespace replication {
 
@@ -130,15 +130,15 @@ replication_app_base::replication_app_base(replica* replica)
     _replica = replica;
     _last_committed_decree = _last_durable_decree = 0;
 
-	if (!dsn::utils::filesystem::create_directory(_dir_data))
-	{
-		dassert(false, "Fail to create directory %s.", _dir_data.c_str());
-	}
+    if (!dsn::utils::filesystem::create_directory(_dir_data))
+    {
+        dassert(false, "Fail to create directory %s.", _dir_data.c_str());
+    }
 
-	if (!dsn::utils::filesystem::create_directory(_dir_learn))
-	{
-		dassert(false, "Fail to create directory %s.", _dir_learn.c_str());
-	}
+    if (!dsn::utils::filesystem::create_directory(_dir_learn))
+    {
+        dassert(false, "Fail to create directory %s.", _dir_learn.c_str());
+    }
 }
 
 const char* replication_app_base::replica_name() const
@@ -180,6 +180,8 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
 
         if (r.code != RPC_REPLICATION_WRITE_EMPTY)
         {
+            dinfo("%s: mutation %s dispatch rpc call: %s",
+                  _replica->name(), mu->name(), dsn_task_code_to_string(r.code));
             binary_reader reader(mu->data.updates[i]);
             dsn_message_t resp = (r.req ? dsn_msg_create_response(r.req) : nullptr);
             dispatch_rpc_call(r.code, reader, resp);
@@ -191,7 +193,8 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
 
         if (_physical_error != 0)
         {
-            derror("physical error %d occurs in replication local app %s", _physical_error, data_dir().c_str());
+            derror("%s: physical error %d occurs in replication local app %s",
+                   _replica->name(), _physical_error, data_dir().c_str());
             return ERR_LOCAL_APP_FAILURE;
         }
     }

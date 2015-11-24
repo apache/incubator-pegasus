@@ -158,7 +158,7 @@ namespace dsn
                     continue;
 
                 tail_log_hdr *hdr = log->last_hdr, *tmp = log->last_hdr;
-                do
+                while (tmp != nullptr && tmp != hdr)
                 {
                     if (!tmp->is_valid())
                         break;
@@ -169,7 +169,7 @@ namespace dsn
                     // try previous log
                     tmp = tmp->prev;
 
-                } while (tmp != nullptr && tmp != hdr);
+                };
             }
 
             olog.close();
@@ -180,8 +180,8 @@ namespace dsn
             std::unordered_set<int>& target_threads)
         {
             uint64_t nts = dsn_now_ns();
-            uint64_t start = nts - static_cast<uint64_t>(back_seconds)* 1000 * 1000;
-            uint64_t end = nts - static_cast<uint64_t>(back_start_seconds)* 1000 * 1000;
+            uint64_t start = nts - static_cast<uint64_t>(back_seconds)* 1000 * 1000 * 1000; // second to nanosecond
+            uint64_t end = nts - static_cast<uint64_t>(back_start_seconds)* 1000 * 1000 * 1000; // second to nanosecond
 
             std::vector<int> threads;
             tail_log_manager::instance().get_all_keys(threads);

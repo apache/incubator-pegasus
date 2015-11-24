@@ -311,7 +311,8 @@ extern DSN_API void        dsn_cli_register(
 //
 //------------------------------------------------------------------------------
 extern DSN_API dsn_error_t           dsn_error_register(const char* name);
-extern DSN_API const char*           dsn_error_to_string(dsn_error_t err);  
+extern DSN_API const char*           dsn_error_to_string(dsn_error_t err);
+extern DSN_API dsn_error_t           dsn_error_from_string(const char* s, dsn_error_t default_err);
 // apps updates the value at dsn_task_queue_virtual_length_ptr(..) to control
 // the length of a vitual queue (bound to current code + hash) to 
 // enable customized throttling, see spec of thread pool for more information
@@ -381,6 +382,7 @@ extern DSN_API int                   dsn_config_get_all_keys(
                                         );
 // logs with level smaller than this start_level will not be logged
 extern DSN_API dsn_log_level_t       dsn_log_start_level;
+extern DSN_API dsn_log_level_t       dsn_log_get_start_level();
 extern DSN_API void                  dsn_logv(
                                         const char *file, 
                                         const char *function, 
@@ -448,6 +450,7 @@ extern DSN_API uint32_t              dsn_crc32_concatenate(
 //
 extern DSN_API void        dsn_task_release_ref(dsn_task_t task);
 extern DSN_API void        dsn_task_add_ref(dsn_task_t task);
+extern DSN_API int         dsn_task_get_ref(dsn_task_t task);
 
 //
 // task trackers are used to track task context
@@ -730,6 +733,7 @@ extern DSN_API void          dsn_rpc_enqueue_response(
 // file operations
 //
 //------------------------------------------------------------------------------
+// return nullptr if open failed
 extern DSN_API dsn_handle_t dsn_file_open(
                                 const char* file_name, 
                                 int flag, 
@@ -738,12 +742,15 @@ extern DSN_API dsn_handle_t dsn_file_open(
 extern DSN_API dsn_error_t  dsn_file_close(
                                 dsn_handle_t file
                                 );
+extern DSN_API dsn_error_t  dsn_file_flush(
+                                dsn_handle_t file
+                                );
 // native handle: HANDLE for windows, int for non-windows
 extern DSN_API void*        dsn_file_native_handle(dsn_handle_t file);
 extern DSN_API dsn_task_t   dsn_file_create_aio_task(
                                 dsn_task_code_t code, 
                                 dsn_aio_handler_t cb, 
-                                void* param, 
+                                void* param,
                                 int hash DEFAULT(0),
                                 dsn_task_tracker_t tracker DEFAULT(nullptr)
                                 );

@@ -40,16 +40,16 @@
 // framework specific tools
 # include <dsn/dist/replication/replication.global_check.h>
 
-void module_init()
+void dsn_module_init()
 {
     // register replication application provider
-    dsn::replication::register_replica_provider<::dsn::replication::application::simple_kv_service_impl>("simple_kv");
+    dsn::replication::register_replica_provider< ::dsn::replication::application::simple_kv_service_impl>("simple_kv");
 
     // register all possible services
-    dsn::register_app<::dsn::service::meta_service_app>("meta");
-    dsn::register_app<::dsn::replication::replication_service_app>("replica");
-    dsn::register_app<::dsn::replication::application::simple_kv_client_app>("client");
-    dsn::register_app<::dsn::replication::application::simple_kv_perf_test_client_app>("client.perf.test");
+    dsn::register_app< ::dsn::service::meta_service_app>("meta");
+    dsn::register_app< ::dsn::replication::replication_service_app>("replica");
+    dsn::register_app< ::dsn::replication::application::simple_kv_client_app>("client");
+    dsn::register_app< ::dsn::replication::application::simple_kv_perf_test_client_app>("client.perf.test");
 
     dsn::replication::install_checkers();
 }
@@ -59,7 +59,7 @@ void module_init()
 
 int main(int argc, char** argv)
 {
-    module_init();
+    dsn_module_init();
 
     // specify what services and tools will run in config file, then run
     dsn_run(argc, argv, true);

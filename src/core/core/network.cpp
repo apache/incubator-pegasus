@@ -84,19 +84,42 @@ namespace dsn
 
     void rpc_session::clear(bool resend_msgs)
     {
-        // for sending msgs
-        for (auto& msg : _sending_msgs)
+        //
+        // - in concurrent case, resending _sending_msgs and _messages
+        //   may not maintain the original sending order
+        // - can optimize by batch sending instead of sending one by one
+        //
+        // however, our threading model cannot ensure in-order processing
+        // of incoming messages neither, so this guarantee is not necesssary
+        // and the upper applications should not always rely on this (but can
+        // rely on this with a high probability).
+        //
+
+        std::vector<message_ex*> swapped_sending_msgs;
+        {
+            // protect _sending_msgs and _sending_buffers in lock
+            utils::auto_lock<utils::ex_lock_nr> l(_lock);
+            _sending_msgs.swap(swapped_sending_msgs);
+            _sending_buffers.clear();
+        }
+
+        // resend pending messages if need
+        for (auto& msg : swapped_sending_msgs)
         {
             if (resend_msgs)
             {
                 _net.send_message(msg);
             }
 
+            // if not resend, the message's callback will not be invoked until timeout,
+            // it's too slow.
+            // since we don't maintain the callback ptrs here, so we have no idea whether
+            // the callback is already issued or not.
+            // therefore, let's keep this (usually) slow way on failure with non-resend.
+
             // added in rpc_engine::reply (for server) or rpc_session::send_message (for client)
             msg->release_ref();
         }
-        _sending_buffers.clear();
-        _sending_msgs.clear();
 
         while (true)
         {
@@ -157,7 +180,7 @@ namespace dsn
     
     void rpc_session::send_message(message_ex* msg)
     {
-        dinfo("%s: rpc_id = %llx, code = %s", __FUNCTION__, msg->header->rpc_id, msg->header->rpc_name);
+        dinfo("%s: rpc_id = %016llx, code = %s", __FUNCTION__, msg->header->rpc_id, msg->header->rpc_name);
 
         _net.delay(_message_count++); // -- in unlink_message
 
@@ -280,7 +303,17 @@ namespace dsn
             _net.on_client_session_disconnected(sp);
 
             // reconnect with new socket
+            //
+            // TODO(qinzuoyan): because '_reconnect_count_after_last_success' is a session scoped value,
+            // depending on it may cause endless resending, so we always clear without resending.
+            //
+            // @imzhenyu: if we use clear(false), when there is a failure on established-connection, 
+            // the pending messages will be lost, this is considered harmful. the case for endless reconnecting
+            // is only possible when we can always *successfully* connect while fail on send, this should be
+            // very rare. so here we still use the old way but keep this mark here for future fix.
+            //
             clear(++_reconnect_count_after_last_success < 3);
+            //clear(false);
         }
         
         else
@@ -293,7 +326,7 @@ namespace dsn
 
     bool rpc_session::on_recv_reply(uint64_t key, message_ex* reply, int delay_ms)
     {
-        dinfo("%s: rpc_id = %llx, code = %s", __FUNCTION__, reply->header->rpc_id, reply->header->rpc_name);
+        dinfo("%s: rpc_id = %016llx, code = %s", __FUNCTION__, reply->header->rpc_id, reply->header->rpc_name);
         if (reply != nullptr)
         {
             reply->from_address = remote_address();
@@ -305,7 +338,7 @@ namespace dsn
 
     void rpc_session::on_recv_request(message_ex* msg, int delay_ms)
     {
-        dinfo("%s: rpc_id = %llx, code = %s", __FUNCTION__, msg->header->rpc_id, msg->header->rpc_name);
+        dinfo("%s: rpc_id = %016llx, code = %s", __FUNCTION__, msg->header->rpc_id, msg->header->rpc_name);
         msg->from_address = remote_address();
         msg->from_address.c_addr_ptr()->u.v4.port = msg->header->client.port;
         msg->to_address = _net.address();

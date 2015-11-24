@@ -78,9 +78,28 @@ namespace dsn {
 
         error_code native_linux_aio_provider::close(dsn_handle_t fh)
         {
-            // TODO: handle failure
-            ::close((int)(uintptr_t)(fh));
-            return ERR_OK;
+            if (fh == DSN_INVALID_FILE_HANDLE || ::close((int)(uintptr_t)(fh)) == 0)
+            {
+                return ERR_OK;
+            }
+            else
+            {
+                derror("close file failed, err = %s", strerror(errno));
+                return ERR_FILE_OPERATION_FAILED;
+            }
+        }
+
+        error_code native_linux_aio_provider::flush(dsn_handle_t fh)
+        {
+            if (fh == DSN_INVALID_FILE_HANDLE || ::fsync((int)(uintptr_t)(fh)) == 0)
+            {
+                return ERR_OK;
+            }
+            else
+            {
+                derror("flush file failed, err = %s", strerror(errno));
+                return ERR_FILE_OPERATION_FAILED;
+            }
         }
 
         disk_aio* native_linux_aio_provider::prepare_aio_context(aio_task* tsk)
@@ -102,7 +121,6 @@ namespace dsn {
         {
             struct io_event events[1];
             int ret;
-            linux_disk_aio_context * aio;
 
             task::set_tls_dsn_context(node(), nullptr, nullptr);
 
@@ -217,10 +235,10 @@ namespace dsn {
                     aio->evt->wait();
                     delete aio->evt;
                     aio->evt = nullptr;
-					if (pbytes != nullptr)
-					{
-						*pbytes = aio->bytes;
-					}
+                    if (pbytes != nullptr)
+                    {
+                        *pbytes = aio->bytes;
+                    }
                     return aio->err;
                 }
             }
