@@ -3,7 +3,7 @@
 include(ExternalProject)
 
 ExternalProject_Add(gflags
-    GIT_REPOSITORY git@github.com:gflags/gflags.git
+    GIT_REPOSITORY https://github.com/gflags/gflags.git
     GIT_TAG master
    #   CMAKE_ARGS -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=DebugLibs
    #            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=ReleaseLibs
@@ -11,7 +11,7 @@ ExternalProject_Add(gflags
     BINARY_DIR "${PROJECT_BINARY_DIR}/gflags"
 
     INSTALL_DIR "${PROJECT_BINARY_DIR}/lib"
-    INSTALL_COMMAND cp ${PROJECT_BINARY_DIR}/gflags/lib/libgflags.a ${PROJECT_BINARY_DIR}/gflags/lib/libgflags_nothreads.a ${PROJECT_BINARY_DIR}/lib
+    INSTALL_COMMAND "${CMAKE_COMMAND}" -E copy ${PROJECT_BINARY_DIR}/gflags/lib/libgflags.a ${PROJECT_BINARY_DIR}/gflags/lib/libgflags_nothreads.a ${PROJECT_BINARY_DIR}/lib
 )
 
 # Specify include dir
