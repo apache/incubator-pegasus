@@ -52,6 +52,7 @@ namespace dsn {
             virtual void   set(uint64_t val) { _counter_impl->set(val); }
             virtual double get_value() { return _counter_impl->get_value(); }
             virtual double get_percentile(counter_percentile_type type) { return _counter_impl->get_percentile(type); }
+            virtual uint64_t* get_samples(/*out*/ int& sample_count) const { return _counter_impl->get_samples(sample_count); }
 
         private:
             perf_counter *_counter_impl;

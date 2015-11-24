@@ -144,6 +144,12 @@ namespace dsn {
                 return (double)_results[type];
             }
 
+            virtual uint64_t* get_samples(/*out*/ int& sample_count) const override 
+            { 
+                sample_count = static_cast<int>(sizeof(_samples) / sizeof(uint64_t));
+                return (uint64_t*)(_samples);
+            }
+
         private:
             struct compute_context
             {

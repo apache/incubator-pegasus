@@ -39,7 +39,6 @@
 #include <string>
 #include <queue>
 #include <iostream>
-#include <sys/eventfd.h>
 #include <dsn/internal/aio_provider.h>
 #include <gtest/gtest.h>
 #include <dsn/service_api_cpp.h>
@@ -53,6 +52,7 @@
 
 # ifdef __linux__
 
+# include <sys/eventfd.h>
 # include <libaio.h>
 
 DEFINE_TASK_CODE_AIO(LPC_AIO_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER);

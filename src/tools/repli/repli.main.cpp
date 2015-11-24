@@ -37,7 +37,9 @@
 # include <dsn/cpp/utils.h>
 # include <iostream>
 # include <thread>
+# if !defined (_WIN32)
 # include "unistd.h"
+# endif
 
 bool g_done = false;
 
@@ -52,7 +54,14 @@ int main(int argc, char** argv)
 
     std::string conf;
     char buf[4096];
-    int slen = readlink("/proc/self/exe", buf, sizeof(buf));
+    int slen;
+
+# if defined(_WIN32)
+    slen = ::GetModuleFileNameA(NULL, buf, sizeof(buf));
+# else
+    slen = readlink("/proc/self/exe", buf, sizeof(buf));
+# endif
+    
     if (slen != -1)
     {
         std::string dir = dsn::utils::filesystem::remove_file_name(buf);

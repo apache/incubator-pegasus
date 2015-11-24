@@ -186,8 +186,9 @@ void task::exec_internal()
                 {
                     _spec->on_task_cancelled.execute(this);
                 }
-                // TODO(qinzuoyan): should on_task_end() always be called?
-                //_spec->on_task_end.execute(this);
+
+                // always call on_task_end()
+                _spec->on_task_end.execute(this);
             }
         }
         

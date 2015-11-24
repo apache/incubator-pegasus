@@ -1005,6 +1005,7 @@ void replica_stub::notify_replica_state_update(const replica_configuration& conf
 void replica_stub::handle_log_failure(error_code err)
 {
     // TODO(qinzuoyan): disable dassert to make test run go ahead
+    // @imzhenyu: can we have a test-option in replication options instead to avoid hard-coding here
     //dassert(false, "TODO: better log failure handling ...");
 }
 

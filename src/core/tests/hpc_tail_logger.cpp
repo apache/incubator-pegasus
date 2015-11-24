@@ -65,9 +65,9 @@ TEST(tools_hpc, tail_logger_cb)
 
     std::ostringstream in;
     in << "tail-log 12345 4 1 " << dsn::utils::get_current_tid();
-    sleep(3);
+    std::this_thread::sleep_for(std::chrono::seconds(3));
     dwarn("key:12345");
-    sleep(2);
+    std::this_thread::sleep_for(std::chrono::seconds(2));
     dwarn("key:12345");
     output.clear();
     dsn::command_manager::instance().run_command(in.str().c_str(), output);

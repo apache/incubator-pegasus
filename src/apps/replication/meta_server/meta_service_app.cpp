@@ -90,7 +90,7 @@ namespace dsn {
             _state = new server_state();
             _service = new meta_service(_state);
 
-            _state->initialize();
+            _state->initialize(name().c_str());
             _service->start();
             return ERR_OK;
         }
