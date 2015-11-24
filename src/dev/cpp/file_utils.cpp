@@ -101,7 +101,7 @@ namespace dsn {
                 if (err != 0)
                 {
                     err = errno;
-                    dwarn("get_stat_internal %s failed, err = %s",
+                    ddebug("get_stat_internal %s failed, err = %s",
                         npath.c_str(),
                         strerror(err)
                         );

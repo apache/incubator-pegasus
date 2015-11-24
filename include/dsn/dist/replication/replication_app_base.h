@@ -74,7 +74,18 @@ public:
     {
         return new T(replica);
     }
-    
+
+public:
+    // requests may be batched by replication and fed to replication
+    // app with the same decree, in this case, apps may need to 
+    // be aware of the batch state for the current request
+    enum batch_state
+    {
+        BS_NOT_BATCH,  // request is not batched
+        BS_BATCH,      // request is batched but not the last in the same batch
+        BS_BATCH_LAST  // request is batched and the last in the same batch
+    };
+
 public:
     replication_app_base(::dsn::replication::replica* replica);
     virtual ~replication_app_base() {}
@@ -161,6 +172,9 @@ public:
     void set_delta_state_learning_supported() { _is_delta_state_learning_supported = true; }
 
 protected:
+    //
+    // rpc handler registration
+    //
     template<typename T, typename TRequest, typename TResponse> 
     void register_async_rpc_handler(
         dsn_task_code_t code,
@@ -169,7 +183,13 @@ protected:
         );
 
     void unregister_rpc_handler(dsn_task_code_t code);
+
+    // init the commit decree, usually used by apps when initializing the 
+    // state from checkpoints (e.g., update durable and commit decrees)
     void init_last_commit_decree(decree d) { _last_committed_decree = d; }
+
+    // see comments for batch_state, this function is not thread safe
+    batch_state get_current_batch_state() { return _batch_state; }
     
 private:
     template<typename T, typename TRequest, typename TResponse>
@@ -197,6 +217,7 @@ private:
     int         _physical_error; // physical error (e.g., io error) indicates the app needs to be dropped
     bool        _is_delta_state_learning_supported;
     replica_log_info _info;
+    batch_state _batch_state;
 
 private:
     // it is now totally controlled by rdsn as we are now supporting batching
