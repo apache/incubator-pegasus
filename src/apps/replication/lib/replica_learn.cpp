@@ -255,7 +255,7 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
             // start from (last_committed_decree + 1)
             it->second.prepare_start_decree = local_committed_decree + 1;
 
-            cleanup_preparing_mutations(true);
+            cleanup_preparing_mutations(false);
             
             // the replayed prepare msg needs to be AFTER the learning response msg
             delayed_replay_prepare_list = true;
@@ -791,6 +791,7 @@ error_code replica::apply_learned_state_from_private_log(learn_state& state)
                 return false;
 
             plist.prepare(mu, PS_SECONDARY);
+            mu->set_logged();
         }
     }
 

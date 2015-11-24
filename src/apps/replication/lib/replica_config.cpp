@@ -575,7 +575,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
     switch (old_status)
     {
     case PS_PRIMARY:
-        cleanup_preparing_mutations(true);
+        cleanup_preparing_mutations(false);
         switch (config.status)
         {
         case PS_PRIMARY:
@@ -596,7 +596,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         }        
         break;
     case PS_SECONDARY:
-        cleanup_preparing_mutations(true);
+        cleanup_preparing_mutations(false);
         switch (config.status)
         {
         case PS_PRIMARY:

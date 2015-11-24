@@ -737,7 +737,7 @@ extern DSN_API void          dsn_rpc_enqueue_response(
 typedef struct
 {
     void* buffer;
-    size_t size;
+    int size;
 }dsn_file_buffer_t;
 
 // return nullptr if open failed

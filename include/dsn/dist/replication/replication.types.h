@@ -530,13 +530,34 @@ namespace dsn { namespace replication {
     inline void marshall(::dsn::binary_writer& writer, const mutation_data& val)
     {
         marshall(writer, val.header);
-        marshall(writer, val.updates);
+        marshall(writer, val.updates.size());
+        for (const auto& bb : val.updates)
+        {
+            marshall(writer, bb.length());
+        }
+        for (const auto& bb : val.updates)
+        {
+            writer.write(bb.data(), bb.length());
+        }
     };
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ mutation_data& val)
     {
         unmarshall(reader, val.header);
-        unmarshall(reader, val.updates);
+        decltype(val.updates.size()) size;
+        unmarshall(reader, size);
+        val.updates.resize(size);
+        std::vector<decltype(val.updates.front().length())>  lengths(size, 0);
+        for (auto& length : lengths)
+        {
+            unmarshall(reader, length);
+        }
+        for (size_t i = 0; i < size; i ++)
+        {
+            std::shared_ptr<char> holder(new char[lengths[i]]);
+            reader.read(holder.get(), lengths[i]);
+            val.updates[i].assign(holder, 0, lengths[i]);
+        }
     };
 
     // ---------- partition_configuration -------------

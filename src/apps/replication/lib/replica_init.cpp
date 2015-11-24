@@ -187,7 +187,7 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
             _private_log = new mutation_log(
                 log_dir,
                 true,
-                _options->log_batch_buffer_MB,
+                _options->log_batch_buffer_KB_private,
                 _options->log_file_size_mb
                 );
         }
@@ -361,7 +361,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
         _private_log->append(mu,
             LPC_WRITE_REPLICATION_LOG,
             this,
-            [this](error_code err, size_t size)
+            [this, mu](error_code err, size_t size)
         {
             if (err != ERR_OK)
             {

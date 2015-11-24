@@ -105,7 +105,7 @@ namespace dsn
 
             file::write(
                 _log,
-                log_blob.buffer_ptr(),
+                log_blob.data(),
                 log_blob.length(),
                 log_offset,
                 LPC_META_STATE_SERVICE_SIMPLE_INTERNAL,

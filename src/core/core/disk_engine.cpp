@@ -338,6 +338,7 @@ void disk_engine::process_write(aio_task* aio, uint32_t sz)
             ptr += current_wk->aio()->buffer_size;
             current_wk = (aio_task*)current_wk->next;
         } while (current_wk);
+        
 
         dassert(ptr == (char*)bb.data() + bb.length(), "");
 
