@@ -442,6 +442,15 @@ namespace dsn {
             extern bool get_current_directory(std::string& path);
 
             extern bool last_write_time(std::string& path, time_t& tm);
+
+            extern error_code get_process_image_path(int pid, std::string& path);
+
+            inline error_code get_current_process_image_path(std::string& path)
+            {
+                auto err = dsn::utils::filesystem::get_process_image_path(-1, path);
+                dassert(err == ERR_OK, "get_current_process_image_path failed.");
+                return err;
+            }
         }
     }
 } // end namespace dsn::utils
