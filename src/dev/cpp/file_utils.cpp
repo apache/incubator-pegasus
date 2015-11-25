@@ -100,6 +100,7 @@ namespace dsn {
 # define _FS_ISSEP(x)   ((x) == _FS_SLASH || (x) == _FS_BSLASH)
 
             static __thread char tls_path_buffer[PATH_MAX];
+            # define TLS_PATH_BUFFER_SIZE PATH_MAX
 
             // npath need to be a normalized path
             static inline int get_stat_internal(const std::string& npath, struct stat_& st)
@@ -845,7 +846,7 @@ out_error:
                 bool succ;
 # if defined(_WIN32)
                 char* component;
-                succ = (0 != ::GetFullPathNameA(path1.c_str(), PATH_MAX, tls_path_buffer, &component));
+                succ = (0 != ::GetFullPathNameA(path1.c_str(), TLS_PATH_BUFFER_SIZE, tls_path_buffer, &component));
 # else
                 succ = (::realpath(path1.c_str(), tls_path_buffer) != nullptr);
 # endif
@@ -964,7 +965,7 @@ out_error:
             {
                 bool succ;
 
-                succ = (::getcwd_(tls_path_buffer, PATH_MAX) != nullptr);
+                succ = (::getcwd_(tls_path_buffer, TLS_PATH_BUFFER_SIZE) != nullptr);
                 if (succ)
                 {
                     path = tls_path_buffer;
@@ -1008,12 +1009,13 @@ out_error:
                     return ERR_INVALID_PARAMETERS;
                 }
 
+# if defined(__linux__) || defined(__APPLE__)
                 int err;
-                size_t bufsize = ARRAYSIZE(tls_path_buffer);
+# endif
 
 # if defined(_WIN32)
                 HANDLE hProcess;
-                DWORD dwSize = (DWORD)bufsize;
+                DWORD dwSize = TLS_PATH_BUFFER_SIZE;
 
                 if (pid == -1)
                 {
@@ -1043,13 +1045,12 @@ out_error:
 # elif defined(__linux__)
                 char tmp[48];
 
-                err = snprintf_p(tmp, ARRAYSIZE(tmp),
-                    "/proc/%s/exe",
+                err = snprintf_p(tmp, ARRAYSIZE(tmp), "/proc/%s/exe",
                     (pid == -1) ? "self" : std::to_string(pid).c_str()
                     );
                 dassert(err >= 0, "snprintf_p failed.");
 
-                err = (int)readlink(tmp, tls_path_buffer, bufsize);
+                err = (int)readlink(tmp, tls_path_buffer, TLS_PATH_BUFFER_SIZE);
                 if (err == -1)
                 {
                     return ERR_PATH_NOT_FOUND;
@@ -1078,7 +1079,7 @@ out_error:
                     pid = getpid();
                 }
 
-                err = proc_pidpath(pid, tls_path_buffer, bufsize);
+                err = proc_pidpath(pid, tls_path_buffer, TLS_PATH_BUFFER_SIZE);
                 if (err <= 0)
                 {
                     return ERR_PATH_NOT_FOUND;
