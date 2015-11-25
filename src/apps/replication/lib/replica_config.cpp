@@ -607,7 +607,9 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         case PS_SECONDARY:
             break;
         case PS_POTENTIAL_SECONDARY:
-            // InActive in config
+            // prevent further 2pc
+            // wait next group check or explicit learn for real learning
+            _potential_secondary_states.learning_status = LearningWithoutPrepare;
             break;
         case PS_INACTIVE:
             break;
