@@ -114,7 +114,8 @@ namespace dsn {
         void replica::checkpoint()
         {
             auto lerr = _app->flush(true);
-            auto err = lerr == 0 ? ERR_OK : ERR_LOCAL_APP_FAILURE;
+            auto err = lerr == 0 ? ERR_OK :
+                (lerr == ERR_WRONG_TIMING ? ERR_WRONG_TIMING : ERR_LOCAL_APP_FAILURE);
             
             tasking::enqueue(
                 LPC_CHECKPOINT_REPLICA_COMPLETED,
@@ -157,12 +158,12 @@ namespace dsn {
         {
             check_hashed_access();
 
-            // closing
-            if (PS_SECONDARY != status())
+            // closing or wrong timing
+            if (PS_SECONDARY != status() || ERR_WRONG_TIMING == err)
             {
                 _secondary_states.checkpoint_task = nullptr;
                 return;
-            }   
+            } 
 
             // handle failure
             if (err != ERR_OK)
