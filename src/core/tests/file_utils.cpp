@@ -63,7 +63,7 @@ static void file_utils_test_get_process_image_path()
     std::string path;
     std::string imagepath;
     dsn::error_code ret;
-    int pid;
+    //int pid;
 
     if (!dsn::utils::filesystem::get_current_directory(imagepath))
     {

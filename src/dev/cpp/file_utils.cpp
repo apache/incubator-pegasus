@@ -1030,7 +1030,8 @@ out_error:
 
                 if (::QueryFullProcessImageNameA(
                         hProcess,
-                        PROCESS_NAME_NATIVE,
+                        0,
+                        tls_path_buffer,
                         &dwSize
                         ) == FALSE
                     )
