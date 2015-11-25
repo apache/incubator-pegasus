@@ -89,9 +89,10 @@ namespace dsn { namespace tools {
             sim_network_provider* rnet = nullptr;
             if (!s_switch[task_spec::get(msg->local_rpc_code)->rpc_call_channel].get(remote_address(), rnet))
             {
-                dwarn("cannot find destination node %s in simulator",
+                derror("cannot find destination node %s in simulator",
                     remote_address().to_string()
                     );
+                //on_disconnected();  // disable this to avoid endless resending
             }
             else
             {

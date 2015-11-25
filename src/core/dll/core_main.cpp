@@ -53,8 +53,15 @@
 
 //# include <dsn/thrift_helper.h>
 
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "core.main"
+
 void dsn_module_init()
 {
+    ddebug("register builtin components");
+
     // register all providers
     dsn::tools::register_common_providers();
     dsn::tools::register_hpc_providers();

@@ -305,7 +305,8 @@ namespace dsn
             // reconnect with new socket
             //
             // TODO(qinzuoyan): because '_reconnect_count_after_last_success' is a session scoped value,
-            // depending on it may cause endless resending, so we always clear without resending.
+            // depending on it may cause endless resending, so we may always clear without resending:
+            //   clear(false);
             //
             // @imzhenyu: if we use clear(false), when there is a failure on established-connection, 
             // the pending messages will be lost, this is considered harmful. the case for endless reconnecting
@@ -313,7 +314,6 @@ namespace dsn
             // very rare. so here we still use the old way but keep this mark here for future fix.
             //
             clear(++_reconnect_count_after_last_success < 3);
-            //clear(false);
         }
         
         else

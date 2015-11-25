@@ -215,11 +215,6 @@ error_code mutation_log::open(
 
 void mutation_log::close(bool clear_all)
 {
-    dinfo("close mutation log %s, clear_all = %s",
-        dir().c_str(),
-        clear_all ? "true" : "false"
-        );
-
     {
         zauto_lock l(_lock);
         if (!_is_opened)
@@ -233,6 +228,11 @@ void mutation_log::close(bool clear_all)
             _pending_write = nullptr;
         }
     }
+
+    dinfo("close mutation log %s, clear_all = %s",
+        dir().c_str(),
+        clear_all ? "true" : "false"
+        );
 
     // make sure all issued aios are completed
     dsn_task_tracker_wait_all(tracker());
