@@ -10,10 +10,7 @@ if (WIN32)
 	   #            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=ReleaseLibs
 	   #            -DCMAKE_CXX_FLAGS=${MSVC_COMPILER_DEFS}
 		CMAKE_ARGS "${CMAKE_ARGS};-Dgtest_force_shared_crt=OFF; ${CMAKE_CXX_FLAGS}"
-		BINARY_DIR "${PROJECT_BINARY_DIR}/gtest"
-
-		INSTALL_DIR "${PROJECT_BINARY_DIR}/lib"
-		INSTALL_COMMAND "${CMAKE_COMMAND}" -E copy "${PROJECT_BINARY_DIR}/gtest/libgtest.a" "${PROJECT_BINARY_DIR}/lib" COMMAND "${CMAKE_COMMAND}" -E copy "${PROJECT_BINARY_DIR}/gtest/libgtest_main.a" "${PROJECT_BINARY_DIR}/lib"
+		BINARY_DIR "${PROJECT_BINARY_DIR}/lib"
 	)
 else()
 	ExternalProject_Add(googletest
