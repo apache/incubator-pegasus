@@ -43,6 +43,7 @@
 # include <vector>
 # include <cstring> // for strcmp()
 # include <string>
+# include <cstdlib>
 
 namespace dsn
 {
