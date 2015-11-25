@@ -44,7 +44,7 @@
 # endif
 # define __TITLE__ "simple_kv.main"
 
-void module_init()
+void dsn_module_init()
 {
     // register services
     dsn::register_app<dsn::replication::replication_service_app>("replica");
@@ -67,7 +67,7 @@ int main(int argc, char** argv)
 
     dsn::replication::test::g_case_input = argv[2];
 
-    module_init();
+    dsn_module_init();
 
     // specify what services and tools will run in config file, then run
     dsn_run(argc - 1, argv, false);

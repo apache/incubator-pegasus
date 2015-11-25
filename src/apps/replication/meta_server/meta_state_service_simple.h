@@ -52,7 +52,7 @@ namespace dsn
         public:
             explicit meta_state_service_simple() : _root("/", nullptr), _quick_map({std::make_pair("/", &_root)}), _log(nullptr), _offset(0){}
 
-            virtual error_code initialize() override;
+            virtual error_code initialize(const char* arguments) override;
 
             virtual task_ptr create_node(
                 const std::string& node,

@@ -50,7 +50,7 @@
 
 # include "hpc_aio_provider_for_test.h"
 
-void module_init()
+void dsn_module_init()
 {
     // register all providers
     dsn::tools::register_common_providers();
@@ -82,7 +82,7 @@ GTEST_API_ int main(int argc, char **argv)
     testing::InitGoogleTest(&argc, argv);
 
     // register all tools
-    module_init();
+    dsn_module_init();
     task_engine_module_init();
     command_manager_module_init();
 

@@ -215,9 +215,6 @@ error_code mutation_log::open(
 
 void mutation_log::close(bool clear_all)
 {
-    // TODO(qinzuoyan): close() may be called in duplicate, which causes
-    // unnecessary execution
-
     dinfo("close mutation log %s, clear_all = %s",
         dir().c_str(),
         clear_all ? "true" : "false"
@@ -225,6 +222,9 @@ void mutation_log::close(bool clear_all)
 
     {
         zauto_lock l(_lock);
+        if (!_is_opened)
+            return;
+
         _is_opened = false;
 
         if (_pending_write)

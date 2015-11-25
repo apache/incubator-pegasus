@@ -125,6 +125,7 @@ replication_app_base::replication_app_base(replica* replica)
     _dir_data = replica->dir() + "/data";
     _dir_learn = replica->dir() + "/learn";
     _is_delta_state_learning_supported = false;
+    _batch_state = BS_NOT_BATCH;
 
     _replica = replica;
     _last_committed_decree = _last_durable_decree = 0;
@@ -162,12 +163,19 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
 error_code replication_app_base::write_internal(mutation_ptr& mu)
 {
     dassert (mu->data.header.decree == last_committed_decree() + 1, "");
-    dassert(mu->client_requests.size() == mu->data.updates.size(), 
+    dassert(mu->client_requests.size() == mu->data.updates.size()
+        && mu->client_requests.size() > 0, 
         "data inconsistency in mutation");
 
     int count = static_cast<int>(mu->client_requests.size());
+    _batch_state = (count == 1 ? BS_NOT_BATCH : BS_BATCH);
     for (int i = 0; i < count; i++)
     {
+        if (_batch_state == BS_BATCH && i + 1 == count)
+        {
+            _batch_state = BS_BATCH_LAST;
+        }
+
         auto& r = mu->client_requests[i];
 
         if (r.code != RPC_REPLICATION_WRITE_EMPTY)
