@@ -212,9 +212,11 @@ void replica::check_state_completeness()
 
 void replica::execute_mutation(mutation_ptr& mu)
 {
-    dassert (nullptr != _app, "");
-
-    dinfo("%s: execute mutation %s: request_count = %zu", name(), mu->name(), mu->client_requests.size());
+    dinfo("%s: execute mutation %s: request_count = %u",
+        name(), 
+        mu->name(), 
+        static_cast<int>(mu->client_requests.size())
+        );
 
     error_code err = ERR_OK;
     decree d = mu->data.header.decree;
