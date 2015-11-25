@@ -1072,7 +1072,11 @@ out_error:
                     return ERR_PATH_NOT_FOUND;
                 }
 
-                path = proc->ki_comm;
+                // proc->ki_comm is the command name instead of the full name.
+                if (!dsn::utils::filesystem::get_absolute_path(proc->ki_comm, path))
+                {
+                    return ERR_PATH_NOT_FOUND;
+                }
                 free(proc);
 # elif defined(__APPLE__)
                 if (pid == -1)
