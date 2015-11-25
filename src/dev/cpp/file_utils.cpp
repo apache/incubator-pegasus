@@ -68,6 +68,15 @@
 
 # else
 
+# if defined(__FreeBSD__)
+# include <sys/types.h>
+# include <libutil.h>
+# endif
+
+# if defined(__APPLE__)
+# include <libproc.h>
+#endif
+
 # define getcwd_ getcwd
 # define rmdir_ rmdir
 # define mkdir_(path) mkdir(path, 0775)
@@ -990,6 +999,96 @@ out_error:
                 tm = st.st_mtime;
 
                 return true;
+            }
+
+            error_code get_process_image_path(int pid, std::string& path)
+            {
+                if (pid < -1)
+                {
+                    return ERR_INVALID_PARAMETERS;
+                }
+
+                int err;
+                size_t bufsize = ARRAYSIZE(tls_path_buffer);
+
+# if defined(_WIN32)
+                HANDLE hProcess;
+                DWORD dwSize = (DWORD)bufsize;
+
+                if (pid == -1)
+                {
+                    hProcess = ::GetCurrentProcess();
+                }
+                else
+                {
+                    hProcess = ::OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, (DWORD)pid);
+                    if (hProcess == nullptr)
+                    {
+                        return ERR_INVALID_HANDLE;
+                    }
+                }
+
+                if (::QueryFullProcessImageNameA(
+                        hProcess,
+                        PROCESS_NAME_NATIVE,
+                        &dwSize
+                        ) == FALSE
+                    )
+                {
+                    return ERR_PATH_NOT_FOUND;
+                }
+
+                path = tls_path_buffer;
+# elif defined(__linux__)
+                char tmp[48];
+
+                err = snprintf_p(tmp, ARRAYSIZE(tmp),
+                    "/proc/%s/exe",
+                    (pid == -1) ? "self" : std::to_string(pid).c_str()
+                    );
+                dassert(err >= 0, "snprintf_p failed.");
+
+                err = (int)readlink(tmp, tls_path_buffer, bufsize);
+                if (err == -1)
+                {
+                    return ERR_PATH_NOT_FOUND;
+                }
+
+                path = tls_path_buffer;
+# elif defined(__FreeBSD__)
+                struct kinfo_proc* proc;
+
+                if (pid == -1)
+                {
+                    pid = (int)getpid();
+                }
+
+                proc = kinfo_getproc(pid);
+                if (proc == nullptr)
+                {
+                    return ERR_PATH_NOT_FOUND;
+                }
+
+                path = proc->ki_comm;
+                free(proc);
+# elif defined(__APPLE__)
+                if (pid == -1)
+                {
+                    pid = getpid();
+                }
+
+                err = proc_pidpath(pid, tls_path_buffer, bufsize);
+                if (err <= 0)
+                {
+                    return ERR_PATH_NOT_FOUND;
+                }
+
+                path = tls_path_buffer;
+# else
+# error not implemented yet
+# endif
+
+                return ERR_OK;
             }
         }
     }

@@ -35,6 +35,7 @@
 
 
 # include <gtest/gtest.h>
+# include <dsn/service_api_cpp.h>
 # include <dsn/cpp/utils.h>
 # include <fstream>
 
@@ -55,6 +56,24 @@ static void file_utils_test_setup()
     EXPECT_TRUE(ret);
     ret = dsn::utils::filesystem::directory_exists(path);
     EXPECT_FALSE(ret);
+}
+
+static void file_utils_test_get_process_image_path()
+{
+    std::string path;
+    std::string imagepath;
+    dsn::error_code ret;
+    int pid;
+
+    if (!dsn::utils::filesystem::get_current_directory(imagepath))
+    {
+        EXPECT_TRUE(false);
+    }
+    imagepath = dsn::utils::filesystem::path_combine(imagepath, "dsn.core.tests");
+
+    ret = dsn::utils::filesystem::get_current_process_image_path(path);
+    EXPECT_TRUE(ret == dsn::ERR_OK);
+    EXPECT_TRUE(path == imagepath);
 }
 
 static void file_utils_test_get_normalized_path()
@@ -886,6 +905,7 @@ static void file_utils_test_cleanup()
 TEST(core, file_utils)
 {
     file_utils_test_setup();
+    file_utils_test_get_process_image_path();
     file_utils_test_get_normalized_path();
     file_utils_test_get_current_directory();
     file_utils_test_path_combine();
