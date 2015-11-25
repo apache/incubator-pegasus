@@ -26,11 +26,15 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     Performance counter ver.faster
+ *     Using devided container to improve efficiency
+ *     Using uint64 to store values in Number and Rate type counters
+ *     This version has higher efficiency but lower precision than ver.atomic
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
+ *     2015-08-17, zjc95, first version
+ *     2015-11-24, zjc95, revised the decription
+ *
  */
 
 # include "simple_perf_counter_v2_fast.h"

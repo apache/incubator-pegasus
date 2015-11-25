@@ -26,11 +26,12 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     Header of performance counter ver.simple
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
+ *     2015-08-17, zjc95, first version
+ *     2015-11-24, zjc95, revised the decription
+ *
  */
 
 #pragma once
