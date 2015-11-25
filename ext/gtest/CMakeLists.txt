@@ -13,7 +13,7 @@ if (WIN32)
 		BINARY_DIR "${PROJECT_BINARY_DIR}/gtest"
 
 		INSTALL_DIR "${PROJECT_BINARY_DIR}/lib"
-		INSTALL_COMMAND "${CMAKE_COMMAND}" -E copy ${PROJECT_BINARY_DIR}/gtest/libgtest.a ${PROJECT_BINARY_DIR}/gtest/libgtest_main.a ${PROJECT_BINARY_DIR}/lib
+		INSTALL_COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/gtest/libgtest.a ${PROJECT_BINARY_DIR}/lib COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/gtest/libgtest_main.a ${PROJECT_BINARY_DIR}/lib
 	)
 else()
 	ExternalProject_Add(googletest
@@ -26,7 +26,7 @@ else()
 		BINARY_DIR "${PROJECT_BINARY_DIR}/gtest"
 
 		INSTALL_DIR "${PROJECT_BINARY_DIR}/lib"
-		INSTALL_COMMAND "${CMAKE_COMMAND}" -E copy ${PROJECT_BINARY_DIR}/gtest/libgtest.a ${PROJECT_BINARY_DIR}/gtest/libgtest_main.a ${PROJECT_BINARY_DIR}/lib
+		INSTALL_COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/gtest/libgtest.a ${PROJECT_BINARY_DIR}/lib COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/gtest/libgtest_main.a ${PROJECT_BINARY_DIR}/lib
 	)
 endif()
 

@@ -11,7 +11,7 @@ ExternalProject_Add(gflags
     BINARY_DIR "${PROJECT_BINARY_DIR}/gflags"
 
     INSTALL_DIR "${PROJECT_BINARY_DIR}/lib"
-    INSTALL_COMMAND "${CMAKE_COMMAND}" -E copy ${PROJECT_BINARY_DIR}/gflags/lib/libgflags.a ${PROJECT_BINARY_DIR}/gflags/lib/libgflags_nothreads.a ${PROJECT_BINARY_DIR}/lib
+    INSTALL_COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/gflags/lib/libgflags.a ${PROJECT_BINARY_DIR}/lib COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/gflags/lib/libgflags_nothreads.a ${PROJECT_BINARY_DIR}/lib
 )
 
 # Specify include dir
