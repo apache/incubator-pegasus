@@ -70,6 +70,7 @@
 
 # if defined(__FreeBSD__)
 # include <sys/types.h>
+# include <sys/user.h>
 # include <libutil.h>
 # endif
 

@@ -484,6 +484,14 @@ function(dsn_setup_packages)
         set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} ${DSN_LIB_DL})
     endif()
 
+    if((CMAKE_SYSTEM_NAME STREQUAL "FreeBSD"))
+        find_library(DSN_LIB_UTIL NAMES util)
+        if(DSN_LIB_UTIL STREQUAL "DSN_LIB_UTIL-NOTFOUND")
+            message(FATAL_ERROR "Cannot find library util")
+        endif()
+        set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} ${DSN_LIB_UTIL})
+    endif()
+
     set(DSN_SYSTEM_LIBS
         ${DSN_SYSTEM_LIBS}
         ${CMAKE_THREAD_LIBS_INIT}
