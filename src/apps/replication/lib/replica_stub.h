@@ -53,11 +53,15 @@ namespace test {
 }
 
 typedef std::unordered_map<global_partition_id, replica_ptr> replicas;
-// from, new replica config, isClosing
-typedef std::function<void (::dsn::rpc_address, const replica_configuration&, bool)> replica_state_subscriber;
+typedef std::function<void (::dsn::rpc_address /*from*/,
+                            const replica_configuration& /*new_config*/,
+                            bool /*is_closing*/)> replica_state_subscriber;
 
 class replica_stub : public serverlet<replica_stub>, public ref_counter
 {
+public:
+    static bool s_not_exit_on_log_failure; // for test
+
 public:
     replica_stub(replica_state_subscriber subscriber = nullptr, bool is_long_subscriber = true);
     ~replica_stub(void);

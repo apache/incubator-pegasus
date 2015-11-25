@@ -48,7 +48,7 @@
 //
 // then it is done.
 //
-void dsn_module_init();
+extern void dsn_module_init();
 
 # if defined(__GNUC__) || defined(_WIN32)
 # else

@@ -49,6 +49,8 @@ namespace dsn { namespace replication {
 
 using namespace dsn::service;
 
+bool replica_stub::s_not_exit_on_log_failure = false;
+
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/, bool is_long_subscriber/* = true*/)
     : serverlet("replica_stub"), _replicas_lock(true)
 {
@@ -1004,9 +1006,10 @@ void replica_stub::notify_replica_state_update(const replica_configuration& conf
 
 void replica_stub::handle_log_failure(error_code err)
 {
-    // TODO(qinzuoyan): disable dassert to make test run go ahead
-    // @imzhenyu: can we have a test-option in replication options instead to avoid hard-coding here
-    //dassert(false, "TODO: better log failure handling ...");
+    if (!s_not_exit_on_log_failure)
+    {
+        dassert(false, "TODO: better log failure handling ...");
+    }
 }
 
 void replica_stub::open_service()

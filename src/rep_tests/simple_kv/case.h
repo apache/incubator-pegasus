@@ -87,6 +87,8 @@ private:
     bool _disable_lb_set;
     bool _close_replica_stub;
     bool _close_replica_stub_set;
+    bool _not_exist_on_log_failure;
+    bool _not_exist_on_log_failure_set;
 };
 
 // SKIP:100
