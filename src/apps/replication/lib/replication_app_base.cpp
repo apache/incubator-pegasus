@@ -24,14 +24,26 @@
  * THE SOFTWARE.
  */
 
-#include "replica.h"
-#include "mutation.h"
-#include <dsn/internal/factory_store.h>
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+
+# include "replica.h"
+# include "mutation.h"
+# include <dsn/internal/factory_store.h>
+# include "mutation_log.h"
+# include <fstream>
 
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ "replica.2pc"
+# define __TITLE__ "replica.app_base"
 
 namespace dsn { namespace replication {
 
@@ -40,43 +52,168 @@ void register_replica_provider(replica_app_factory f, const char* name)
     ::dsn::utils::factory_store<replication_app_base>::register_factory(name, f, PROVIDER_TYPE_MAIN);
 }
 
+error_code replica_log_info::load(const char* file)
+{
+    std::ifstream is(file, std::ios::binary);
+    if (!is.is_open())
+    {
+        derror("open file %s failed", file);
+        return ERR_FILE_OPERATION_FAILED;
+    }
+
+    magic = 0x0;
+    is.read((char*)this, sizeof(*this));
+    is.close();
+
+    if (magic != 0xdeadbeef)
+    {
+        derror("data in file %s is invalid (magic)", file);
+        return ERR_INVALID_DATA;
+    }
+
+    auto fcrc = crc;
+    crc = 0; // set for crc computation
+    auto lcrc = dsn_crc32_compute((const void*)this, sizeof(*this), 0);
+    crc = fcrc; // recover
+
+    if (lcrc != fcrc)
+    {
+        derror("data in file %s is invalid (crc)", file);
+        return ERR_INVALID_DATA;
+    }
+    
+    return ERR_OK;
+}
+
+error_code replica_log_info::store(const char* file)
+{
+    std::string ffile = std::string(file);
+    std::string tmp_file = ffile + ".tmp";
+
+    std::ofstream os(tmp_file.c_str(), (std::ofstream::out | std::ios::binary | std::ofstream::trunc));
+    if (!os.is_open())
+    {
+        derror("open file %s failed", tmp_file.c_str());
+        return ERR_FILE_OPERATION_FAILED;
+    }
+
+    // compute crc
+    crc = 0;
+    crc = dsn_crc32_compute((const void*)this, sizeof(*this), 0);
+
+    os.write((const char*)this, sizeof(*this));
+    os.close();
+
+    if (!utils::filesystem::rename_path(tmp_file, ffile, true))
+    {
+        return ERR_FILE_OPERATION_FAILED;
+    }
+
+    dinfo("update app init info in %s, ballot = %lld, decree = %lld, log_offset<S,P> = <%lld,%lld>",
+        ffile.c_str(),
+        init_ballot,
+        init_decree,
+        init_offset_in_shared_log,
+        init_offset_in_private_log
+        );
+    return ERR_OK;
+}
+
 replication_app_base::replication_app_base(replica* replica)
 {
     _physical_error = 0;
     _dir_data = replica->dir() + "/data";
     _dir_learn = replica->dir() + "/learn";
+    _is_delta_state_learning_supported = false;
+    _batch_state = BS_NOT_BATCH;
 
     _replica = replica;
     _last_committed_decree = _last_durable_decree = 0;
 
-    if (!::dsn::utils::is_file_or_dir_exist(_dir_data.c_str()))
-        mkdir_(_dir_data.c_str());
+    if (!dsn::utils::filesystem::create_directory(_dir_data))
+    {
+        dassert(false, "Fail to create directory %s.", _dir_data.c_str());
+    }
 
-    if (!::dsn::utils::is_file_or_dir_exist(_dir_learn.c_str()))
-        mkdir_(_dir_learn.c_str());
+    if (!dsn::utils::filesystem::create_directory(_dir_learn))
+    {
+        dassert(false, "Fail to create directory %s.", _dir_learn.c_str());
+    }
+}
+
+const char* replication_app_base::replica_name() const
+{
+    return _replica->name();
+}
+
+error_code replication_app_base::open_internal(replica* r, bool create_new)
+{
+    auto err = open(create_new);
+    if (err == 0)
+    {
+        if (!create_new)
+        {
+            std::string info_path = utils::filesystem::path_combine(r->dir(), ".info");
+            err = _info.load(info_path.c_str());
+        }
+    }
+    return err == 0 ? ERR_OK : ERR_LOCAL_APP_FAILURE;
 }
 
 error_code replication_app_base::write_internal(mutation_ptr& mu)
 {
     dassert (mu->data.header.decree == last_committed_decree() + 1, "");
+    dassert(mu->client_requests.size() == mu->data.updates.size()
+        && mu->client_requests.size() > 0, 
+        "data inconsistency in mutation");
 
-    if (mu->rpc_code != RPC_REPLICATION_WRITE_EMPTY)
+    int count = static_cast<int>(mu->client_requests.size());
+    _batch_state = (count == 1 ? BS_NOT_BATCH : BS_BATCH);
+    for (int i = 0; i < count; i++)
     {
-        binary_reader reader(mu->data.updates[0]);
-        dsn_message_t resp = (mu->client_msg() ? dsn_msg_create_response(mu->client_msg()) : nullptr);
-        dispatch_rpc_call(mu->rpc_code, reader, resp);
-    }
-    else
-    {
-        on_empty_write();
+        if (_batch_state == BS_BATCH && i + 1 == count)
+        {
+            _batch_state = BS_BATCH_LAST;
+        }
+
+        auto& r = mu->client_requests[i];
+
+        if (r.code != RPC_REPLICATION_WRITE_EMPTY)
+        {
+            dinfo("%s: mutation %s dispatch rpc call: %s",
+                  _replica->name(), mu->name(), dsn_task_code_to_string(r.code));
+            binary_reader reader(mu->data.updates[i]);
+            dsn_message_t resp = (r.req ? dsn_msg_create_response(r.req) : nullptr);
+            dispatch_rpc_call(r.code, reader, resp);
+        }
+        else
+        {
+            on_empty_write();
+        }
+
+        if (_physical_error != 0)
+        {
+            derror("%s: physical error %d occurs in replication local app %s",
+                   _replica->name(), _physical_error, data_dir().c_str());
+            return ERR_LOCAL_APP_FAILURE;
+        }
     }
 
-    if (_physical_error != 0)
-    {
-        derror("physical error %d occurs in replication local app %s", _physical_error, data_dir().c_str());
-    }
+    ++_last_committed_decree;
+    return ERR_OK;
+}
 
-    return _physical_error == 0 ? ERR_OK : ERR_LOCAL_APP_FAILURE;
+error_code replication_app_base::update_log_info(replica* r, int64_t shared_log_offset, int64_t private_log_offset)
+{
+    _info.crc = 0;
+    _info.magic = 0xdeadbeef;
+    _info.init_ballot = r->get_ballot();
+    _info.init_decree = r->last_committed_decree();
+    _info.init_offset_in_shared_log = shared_log_offset;
+    _info.init_offset_in_private_log = private_log_offset;
+
+    std::string info_path = utils::filesystem::path_combine(r->dir(), ".info");
+    return _info.store(info_path.c_str());
 }
 
 void replication_app_base::dispatch_rpc_call(int code, binary_reader& reader, dsn_message_t response)

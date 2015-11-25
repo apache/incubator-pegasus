@@ -24,6 +24,16 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+
 #pragma once
 
 # include <dsn/cpp/serverlet.h>
@@ -41,7 +51,7 @@ namespace dsn {
 
         private:
             cli_client     _client;
-            dsn_address_t  _target;
+            ::dsn::rpc_address  _target;
             int            _timeout_seconds;
         };
     }

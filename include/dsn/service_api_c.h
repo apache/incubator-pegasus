@@ -22,10 +22,53 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
- *
- * History
- *  - major revision from C++ in July, 2015 by @imzhenyu (Zhenyu.Guo@microsoft.com)
  */
+
+/*
+ * Description:
+ *     this file define the C Service API in rDSN layer 1, e.g., Zion.
+ *
+ * ------------------------------------------------------------------------------
+ * 
+ *  The service system call API for Zion
+ * -------------------------------------------
+ *  Summary:
+ *  (1) rich API for common distributed system development
+ *      - thread pools and tasking
+ *      - thread synchronization
+ *      - remote procedure calls
+ *      - asynchnous file operations
+ *      - envrionment inputs
+ *      - rDSN system and other utilities
+ *  (2) portable
+ *      - compilable on many platforms (currently linux, windows, FreeBSD, MacOS)
+ *      - system calls are in C so that later language wrappers are possibles.
+ *  (3) high performance
+ *      - all low level components can be plugged with the tool API (in C++)
+ *        besides the existing high performance providers;
+ *      - developers can also configure thread pools, thread numbers, thread/task
+ *        priorities, CPU core affinities, throttling policies etc. declaratively
+ *        to build a best threading model for upper apps.
+ *  (4) ease of intergration
+ *      - support many languages through language wrappers based this c interface
+ *      - easy support for existing protocols (thrift/protobuf etc.)
+ *      - integrate with existing platform infra with low level providers (plug-in),
+ *        such as loggers, performance counters, etc.
+ *  (5) rich debug, development tools and runtime policies support
+ *      - tool API with task granularity semantic for further tool and runtime policy development.
+ *      - rich existing tools, tracer, profiler, simulator, model checker, replayer, global checker
+ *  (7) PRINCIPLE: all non-determinims must be go through these system calls so that powerful
+ *      internal tools are possible - replay, model checking, replication, ...,
+ *      AND, it is still OK to call other DETERMINISTIC APIs for applications.
+ * 
+ * ------------------------------------------------------------------------------
+ *
+ * Revision history:
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version in cpp
+ *     July, 2015, @imzhenyu (Zhenyu Guo), refactor and refined in c
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <stdint.h>
@@ -33,7 +76,15 @@
 # include <stdarg.h>
 
 # ifdef __cplusplus
+# define DEFAULT(value) = value
+# else
+# define DEFAULT(value)
+# endif
+
+# ifdef __cplusplus
 extern "C" {
+# else
+# include <stdbool.h>
 # endif
 
 # if defined(DSN_IN_CORE)
@@ -51,39 +102,11 @@ extern "C" {
 # endif
 
 # define DSN_MAX_TASK_CODE_NAME_LENGTH     48
-# define DSN_MAX_ADDRESS_NAME_LENGTH       16
+# define DSN_MAX_ADDRESS_NAME_LENGTH       48
 # define DSN_MAX_BUFFER_COUNT_IN_MESSAGE   64
 # define DSN_INVALID_HASH                  0xdeadbeef
 # define DSN_MAX_APP_TYPE_NAME_LENGTH      32
 # define DSN_MAX_APP_COUNT_IN_SAME_PROCESS 256
-
-//------------------------------------------------------------------------------
-//
-// The service system call API for rDSN
-//-------------------------------------------
-// Summary:
-// (1) rich API for common distributed system development, including:
-//     - thread pools and tasking
-//     - thread synchronization
-//     - remote procedure calls
-//     - asynchnous file operations
-//     - envrionment inputs 
-//     - rDSN system and other utilities
-// (2) portable: system calls are in C so that later language wrappers are possibles.
-// (3) high performance - all low level components can be plugged with the tool API (in C++)
-//     besides the existing high performance providers; developers can also configure
-//     thread pools, thread numbers, thread/task priorities, CPU core affinities, 
-//     throttling policies etc. to build a best threading model for upper apps.
-// (4) ease of intergration - through langauge wrapper for service integration and low level
-//     plugged components for platform integration.
-// (5) rich debug, development tools and runtime policies support.
-// (6) tool API with task graunilarity semantic for further tool and runtime policy development.
-// (7) PRINCIPLE: all non-determinims must be go through these system calls so that powerful
-//     internal tools are possible - replay, model checking, replication, ...,
-//     AND, it is still OK to call other DETERMINISTIC APIs for applications.
-//
-//------------------------------------------------------------------------------
-
 
 //------------------------------------------------------------------------------
 //
@@ -101,10 +124,12 @@ typedef void*       dsn_handle_t;
 typedef void*       dsn_task_t;
 typedef void*       dsn_task_tracker_t;
 typedef void*       dsn_message_t; 
+typedef void*       dsn_group_t;
+typedef void*       dsn_uri_t;
 
 // all computation in rDSN are as tasks or events, 
-// i.e., event-driven programming
-// task callbacks
+// i.e., in event-driven programming
+// all kinds of task callbacks, see dsn_task_type_t below
 typedef void        (*dsn_task_handler_t)(void*); // void* context
 typedef void        (*dsn_rpc_request_handler_t)(
                                 dsn_message_t,  // incoming request
@@ -124,7 +149,9 @@ typedef void        (*dsn_aio_handler_t)(
 
 // rDSN allows many apps in the same process for easy deployment and test
 // app ceate, start, and destroy callbacks
-typedef void*       (*dsn_app_create)();        // return app_context
+typedef void*       (*dsn_app_create)(          // return app_context,
+                                const char*     // type name registered on dsn_register_app_role
+                                );              
 typedef dsn_error_t (*dsn_app_start)(
                                 void*,          // context return by app_create
                                 int,            // argc
@@ -144,6 +171,11 @@ typedef void*       (*dsn_checker_create)(      // return a checker
                                 );
 typedef void        (*dsn_checker_apply)(void*); // run the given checker
 
+// rDSN allows apps/tools to register commands into its command line interface,
+// which can be further probed via local/remote console, and also http services
+typedef const char* (*dsn_cli_handler)(int argc, const char** argv); // return cmd output
+typedef void        (*dsn_cli_free_handler)(const char* /*cmd output*/);
+
 struct dsn_app_info
 {
     void* app_context_ptr;                    // returned by dsn_app_create
@@ -151,6 +183,15 @@ struct dsn_app_info
     char  type[DSN_MAX_APP_TYPE_NAME_LENGTH]; // see dsn_register_app_role
     char  name[DSN_MAX_APP_TYPE_NAME_LENGTH]; // app name configed in config file
 };
+
+// the following ctrl code are used by dsn_file_ctrl
+typedef enum dsn_ctrl_code_t
+{
+    CTL_BATCH_INVALID,
+    CTL_BATCH_WRITE,            // (batch) set write batch size
+    CTL_MAX_CON_READ_OP_COUNT,  // (throttling) maximum concurrent read ops
+    CTL_MAX_CON_WRITE_OP_COUNT, // (throttling) maximum concurrent write ops
+} dsn_ctrl_code_t;
 
 typedef enum dsn_task_type_t
 {
@@ -185,11 +226,34 @@ typedef enum dsn_log_level_t
     LOG_LEVEL_INVALID
 } dsn_log_level_t;
 
+typedef enum dsn_host_type_t
+{
+    HOST_TYPE_INVALID = 0,
+    HOST_TYPE_IPV4 = 1,  // 4 bytes
+    HOST_TYPE_GROUP = 2, // reference to an address group
+    HOST_TYPE_URI = 3,   // universal resource identifier    
+    HOST_TYPE_COUNT = 4    
+} dsn_host_type_t;
+
 typedef struct dsn_address_t
 {
-    uint32_t ip;
-    uint16_t port;
-    char     name[DSN_MAX_ADDRESS_NAME_LENGTH];
+    union u_t {
+        struct {
+            unsigned long long type : 2;
+            unsigned long long padding : 14;
+            unsigned long long port : 16;
+            unsigned long long ip : 32;
+        } v4;
+        struct {
+            unsigned long long type : 2;
+            unsigned long long uri : 62;   // dsn_uri_t
+        } uri;
+        struct {
+            unsigned long long type : 2;
+            unsigned long long group : 62; // dsn_group_t
+        } group;
+        uint64_t value;
+    } u;
 } dsn_address_t;
 
 //------------------------------------------------------------------------------
@@ -197,21 +261,25 @@ typedef struct dsn_address_t
 // system
 //
 //------------------------------------------------------------------------------
-extern DSN_API bool dsn_register_app_role(
-                        const char* type_name, 
-                        dsn_app_create create, 
-                        dsn_app_start start, 
-                        dsn_app_destroy destroy
-                        );
-extern DSN_API void dsn_register_app_checker(
-                        const char* name, 
-                        dsn_checker_create create, 
-                        dsn_checker_apply apply
-                        );
-extern DSN_API bool dsn_run_config(
-                        const char* config, 
-                        bool sleep_after_init
-                        );
+extern DSN_API bool      dsn_register_app_role(
+                            const char* type_name, 
+                            dsn_app_create create, 
+                            dsn_app_start start, 
+                            dsn_app_destroy destroy
+                            );
+extern DSN_API void      dsn_register_app_checker(
+                            const char* name, 
+                            dsn_checker_create create, 
+                            dsn_checker_apply apply
+                            );
+extern DSN_API bool      dsn_mimic_app(
+                            const char* app_name, // specified in config file as [apps.xxx] name = %app_name%
+                            int index // start from 1, when there are multiple instances
+                            );
+extern DSN_API bool      dsn_run_config(
+                            const char* config, 
+                            bool sleep_after_init DEFAULT(false)
+                            );
 //
 // run the system with arguments
 //   config [-cargs k1=v1;k2=v2] [-app app_name] [-app_index index]
@@ -223,8 +291,19 @@ extern DSN_API bool dsn_run_config(
 //
 // Note the argc, argv folllows the C main convention that argv[0] is the executable name
 //
-extern DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init);
+extern DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init DEFAULT(false));
+extern DSN_API void dsn_terminate();
 extern DSN_API int  dsn_get_all_apps(dsn_app_info* info_buffer, int count); // return real app count
+
+extern DSN_API const char* dsn_cli_run(const char* command_line); // return command output
+extern DSN_API void        dsn_cli_free(const char* command_output);
+extern DSN_API void        dsn_cli_register(
+                            const char* command,
+                            const char* help_one_line,
+                            const char* help_long,
+                            dsn_cli_handler cmd_handler,
+                            dsn_cli_free_handler output_freer
+                            );
 
 //------------------------------------------------------------------------------
 //
@@ -232,7 +311,15 @@ extern DSN_API int  dsn_get_all_apps(dsn_app_info* info_buffer, int count); // r
 //
 //------------------------------------------------------------------------------
 extern DSN_API dsn_error_t           dsn_error_register(const char* name);
-extern DSN_API const char*           dsn_error_to_string(dsn_error_t err);    
+extern DSN_API const char*           dsn_error_to_string(dsn_error_t err);
+extern DSN_API dsn_error_t           dsn_error_from_string(const char* s, dsn_error_t default_err);
+// apps updates the value at dsn_task_queue_virtual_length_ptr(..) to control
+// the length of a vitual queue (bound to current code + hash) to 
+// enable customized throttling, see spec of thread pool for more information
+extern DSN_API volatile int*         dsn_task_queue_virtual_length_ptr(
+                                        dsn_task_code_t code,
+                                        int hash DEFAULT(0)
+                                        );
 extern DSN_API dsn_threadpool_code_t dsn_threadpool_code_register(const char* name);
 extern DSN_API const char*           dsn_threadpool_code_to_string(dsn_threadpool_code_t pool_code);
 extern DSN_API dsn_threadpool_code_t dsn_threadpool_code_from_string(
@@ -240,6 +327,7 @@ extern DSN_API dsn_threadpool_code_t dsn_threadpool_code_from_string(
                                         dsn_threadpool_code_t default_code // when s is not registered
                                         );
 extern DSN_API int                   dsn_threadpool_code_max();
+extern DSN_API int                   dsn_threadpool_get_current_tid();
 extern DSN_API dsn_task_code_t       dsn_task_code_register(
                                         const char* name,          // task code name
                                         dsn_task_type_t type,
@@ -294,6 +382,7 @@ extern DSN_API int                   dsn_config_get_all_keys(
                                         );
 // logs with level smaller than this start_level will not be logged
 extern DSN_API dsn_log_level_t       dsn_log_start_level;
+extern DSN_API dsn_log_level_t       dsn_log_get_start_level();
 extern DSN_API void                  dsn_logv(
                                         const char *file, 
                                         const char *function, 
@@ -320,18 +409,19 @@ extern DSN_API void                  dsn_log(
                                         const char* title
                                         );
 extern DSN_API void                  dsn_coredump();
-extern DSN_API uint32_t              dsn_crc32_compute(const void* ptr, size_t size);
+extern DSN_API uint32_t              dsn_crc32_compute(const void* ptr, size_t size, uint32_t init_crc);
 
 //
 // Given
-//      x_final = dsn_crc32_compute (x_ptr, x_size);
+//      x_final = dsn_crc32_compute (x_ptr, x_size, x_init);
 // and
-//      y_final = dsn_crc32_compute (y_ptr, y_size);
+//      y_final = dsn_crc32_compute (y_ptr, y_size, y_init);
 // compute CRC of concatenation of A and B
-//      x##y_crc = ComputeCrc (x##y, x_size + y_size);
+//      x##y_crc = dsn_crc32_compute (x##y, x_size + y_size, xy_init);
 // without touching A and B
 //
 extern DSN_API uint32_t              dsn_crc32_concatenate(
+                                        uint32_t xy_init, 
                                         uint32_t x_init,
                                         uint32_t x_final, 
                                         size_t   x_size, 
@@ -344,52 +434,23 @@ extern DSN_API uint32_t              dsn_crc32_concatenate(
 //
 // tasking - asynchronous tasks and timers tasks executed in target thread pools
 //
-// (configured in config files)
-// [task.RPC_PREPARE
-// // TODO: what can be configured for a task
-//
-// [threadpool.THREAD_POOL_REPLICATION]
-// // TODO: what can be configured for a thread pool
-//
-//------------------------------------------------------------------------------
-//
-
+// use the config-dump command in rDSN cli for detailed configurations for
+// each kind of task
 //
 // all returned dsn_task_t are NOT add_ref by rDSN,
 // so you DO NOT need to call task_release_ref to release the tasks.
-// the exception is made for easier programming, and you may consider the later
+// the decision is made for easier programming, and you may consider the later
 // dsn_rpc_xxx calls do the resource gc work for you.
 //
-// however, after you use the tasks with rDSN calls (e.g., dsn_task_call, 
-// dsn_rpc_call_xxx, dsn_file_read/write, etc.) and you want to hold them
-// further, you need to call task_add_ref and task_release_ref.
-// 
+// however, before you emit the tasks (e.g., via dsn_task_call, dsn_rpc_call),
+// AND you want to hold the task handle further after the emit API,
+// you need to call dsn_task_add_ref to ensure the handle is 
+// still valid, and also call dsn_task_release_ref later to 
+// release the handle.
 //
 extern DSN_API void        dsn_task_release_ref(dsn_task_t task);
 extern DSN_API void        dsn_task_add_ref(dsn_task_t task);
-
-// create a common asynchronous task
-// - code defines the thread pool which executes the callback
-//   i.e., [task.%code$] pool_code = THREAD_POOL_DEFAULT
-// - hash defines the thread with index hash % worker_count in the threadpool
-//   to execute the callback, when [threadpool.%pool_code%] partitioned = true
-//   
-extern DSN_API dsn_task_t  dsn_task_create(
-                            dsn_task_code_t code,  // task label
-                            dsn_task_handler_t cb, // callback function
-                            void* param,           // param to the callback
-                            int hash               // hash value to callback
-                            );
-extern DSN_API dsn_task_t  dsn_task_create_timer(
-                            dsn_task_code_t code, 
-                            dsn_task_handler_t cb, 
-                            void* param, 
-                            int hash, 
-                            int interval_milliseconds // timer period
-                            );
-// repeated declarations later in correpondent rpc and file sections
-//extern DSN_API dsn_task_t  dsn_rpc_create_response_task(...);
-//extern DSN_API dsn_task_t  dsn_file_create_aio_task(...);
+extern DSN_API int         dsn_task_get_ref(dsn_task_t task);
 
 //
 // task trackers are used to track task context
@@ -407,15 +468,39 @@ extern DSN_API void               dsn_task_tracker_destroy(dsn_task_tracker_t tr
 extern DSN_API void               dsn_task_tracker_cancel_all(dsn_task_tracker_t tracker);
 extern DSN_API void               dsn_task_tracker_wait_all(dsn_task_tracker_t tracker);
 
+// create a common asynchronous task
+// - code defines the thread pool which executes the callback
+//   i.e., [task.%code$] pool_code = THREAD_POOL_DEFAULT
+// - hash defines the thread with index hash % worker_count in the threadpool
+//   to execute the callback, when [threadpool.%pool_code%] partitioned = true
+//   
+extern DSN_API dsn_task_t  dsn_task_create(
+                            dsn_task_code_t code,               // task label
+                            dsn_task_handler_t cb,              // callback function
+                            void* param,                        // param to the callback
+                            int hash DEFAULT(DSN_INVALID_HASH), // hash to callback
+                            dsn_task_tracker_t tracker DEFAULT(nullptr)
+                            );
+extern DSN_API dsn_task_t  dsn_task_create_timer(
+                            dsn_task_code_t code, 
+                            dsn_task_handler_t cb, 
+                            void* param, 
+                            int hash,
+                            int interval_milliseconds,         // timer period
+                            dsn_task_tracker_t tracker DEFAULT(nullptr)
+                            );
+// repeated declarations later in correpondent rpc and file sections
+//extern DSN_API dsn_task_t  dsn_rpc_create_response_task(...);
+//extern DSN_API dsn_task_t  dsn_file_create_aio_task(...);
+
 //
 // common task 
 // - task: must be created by dsn_task_create or dsn_task_create_timer
 // - tracker: can be null. 
 //
 extern DSN_API void        dsn_task_call(
-                                dsn_task_t task, 
-                                dsn_task_tracker_t tracker, 
-                                int delay_milliseconds
+                                dsn_task_t task,                                 
+                                int delay_milliseconds DEFAULT(0)
                                 );
 extern DSN_API bool        dsn_task_cancel(dsn_task_t task, bool wait_until_finished);
 extern DSN_API bool        dsn_task_cancel2(
@@ -423,6 +508,7 @@ extern DSN_API bool        dsn_task_cancel2(
                                 bool wait_until_finished, 
                                 /*out*/ bool* finished
                                 );
+extern DSN_API void        dsn_task_cancel_current_timer();
 extern DSN_API bool        dsn_task_wait(dsn_task_t task); 
 extern DSN_API bool        dsn_task_wait_timeout(
                                 dsn_task_t task,
@@ -435,7 +521,7 @@ extern DSN_API dsn_error_t dsn_task_error(dsn_task_t task);
 // thread synchronization
 //
 //------------------------------------------------------------------------------
-extern DSN_API dsn_handle_t dsn_exlock_create();
+extern DSN_API dsn_handle_t dsn_exlock_create(bool recursive);
 extern DSN_API void         dsn_exlock_destroy(dsn_handle_t l);
 extern DSN_API void         dsn_exlock_lock(dsn_handle_t l);
 extern DSN_API bool         dsn_exlock_try_lock(dsn_handle_t l);
@@ -465,38 +551,71 @@ extern DSN_API bool         dsn_semaphore_wait_timeout(
 //------------------------------------------------------------------------------
 
 // rpc address utilities
-extern DSN_API dsn_address_t dsn_address_invalid;
-extern DSN_API void          dsn_address_build(
-                                /*out*/ dsn_address_t* ep, 
+extern DSN_API uint32_t      dsn_ipv4_from_host(const char* name);
+
+extern DSN_API uint32_t      dsn_ipv4_local(const char* network_interface);
+
+extern DSN_API dsn_address_t dsn_address_build(
                                 const char* host, 
                                 uint16_t port
                                 );
+extern DSN_API dsn_address_t dsn_address_build_ipv4(
+                                uint32_t ipv4,
+                                uint16_t port
+                                );
+extern DSN_API dsn_address_t dsn_address_build_group(
+                                dsn_group_t g
+                                );
+extern DSN_API dsn_address_t dsn_address_build_uri(
+                                dsn_uri_t uri
+                                );
+
+extern DSN_API const char*   dsn_address_to_string(dsn_address_t addr);
+
+extern DSN_API dsn_uri_t     dsn_uri_build(const char* url); // must be paired with destroy later
+extern DSN_API void          dsn_uri_destroy(dsn_uri_t uri);
+
+extern DSN_API dsn_group_t   dsn_group_build(const char* name); // must be paired with release later
+extern DSN_API bool          dsn_group_add(dsn_group_t g, dsn_address_t ep);
+extern DSN_API bool          dsn_group_remove(dsn_group_t g, dsn_address_t ep);
+extern DSN_API void          dsn_group_set_leader(dsn_group_t g, dsn_address_t ep);
+extern DSN_API dsn_address_t dsn_group_get_leader(dsn_group_t g);
+extern DSN_API bool          dsn_group_is_leader(dsn_group_t g, dsn_address_t ep);
+extern DSN_API dsn_address_t dsn_group_next(dsn_group_t g, dsn_address_t ep);
+extern DSN_API dsn_address_t dsn_group_forward_leader(dsn_group_t g);
+extern DSN_API void          dsn_group_destroy(dsn_group_t g);
+
 extern DSN_API dsn_address_t dsn_primary_address();
-extern DSN_API void          dsn_address_get_invalid(/*out*/ dsn_address_t* paddr);
-extern DSN_API void          dsn_primary_address2(/*out*/ dsn_address_t* paddr);
-    
+
 // rpc message and buffer management
 //
-// all returned dsn_message_t are add_ref by rDSN except those dsn_msg_create_xxx, 
-// so you need to call msg_release_ref to release the msgs.
-// the exception is made for easier programming, and you may consider the later
+// all returned dsn_message_t are NOT add_ref by rDSN, 
+// so you do not need to call msg_release_ref to release the msgs.
+// the decision is made for easier programming, and you may consider the later
 // dsn_rpc_xxx calls do the resource gc work for you.
+// however, if you want to hold the message further after call dsn_rpc_xxx,
+// you need to call dsn_msg_add_ref first before these operations, 
+// and call dsn_msg_release_ref later to ensure there is no memory leak.
+// This is very similar to what we have above with task handles.
 //
-// for those returned by dsn_msg_create_xxx, if you want to hold them after
-// calling dsn_rpc_xxx, you need to call msg_add_ref and msg_release_ref.
-// 
-// for all msgs accessable in callbacks, rDSN will handle reference by itself.
-// if you want to hold them in upper apps, you need to call msg_add_ref
-// and msg_release_ref explicitly.
+// however, this is not true for returned message from
+// dsn_rpc_call_wait and dsn_rpc_get_response. For these two cases,
+// developers are responsible for releasing the message handle
+// by calling dsn_msg_release_ref.
+//
+// similarily, for all msgs accessable in callbacks, if you want to hold them in 
+// upper apps further beyond the callbacks, 
+// you need to call msg_add_ref, and msg_release_ref explicitly.
 //
 // when timeout_milliseconds == 0,  [task.%rpc_code%] rpc_timeout_milliseconds is used.
 // 
 extern DSN_API dsn_message_t dsn_msg_create_request(
                                 dsn_task_code_t rpc_code, 
-                                int timeout_milliseconds, // if 0, see comments
-                                int hash
+                                int timeout_milliseconds DEFAULT(0),
+                                int hash DEFAULT(DSN_INVALID_HASH)
                                 );
 extern DSN_API dsn_message_t dsn_msg_create_response(dsn_message_t request);
+extern DSN_API dsn_message_t dsn_msg_copy(dsn_message_t msg);
 extern DSN_API void          dsn_msg_add_ref(dsn_message_t msg);
 extern DSN_API void          dsn_msg_release_ref(dsn_message_t msg);
 extern DSN_API void          dsn_msg_update_request(
@@ -510,7 +629,7 @@ extern DSN_API void          dsn_msg_query_request(
                                 /*out*/ int* phash
                                 );
 
-// apps write rpc message as this:
+// apps write rpc message as follows:
 //   void* ptr;
 //   size_t size;
 //   dsn_msg_write_next(msg, &ptr, &size, min_size);
@@ -530,7 +649,7 @@ extern DSN_API void          dsn_msg_write_next(
 // commit the write buffer after the message content is written
 extern DSN_API void          dsn_msg_write_commit(dsn_message_t msg, size_t size);
 
-// apps read rpc message as this:
+// apps read rpc message as follows:
 //   void* ptr;
 //   size_t size;
 //   dsn_msg_read_next(msg, &ptr, &size);
@@ -546,44 +665,63 @@ extern DSN_API void          dsn_msg_read_commit(dsn_message_t msg, size_t size)
 
 extern DSN_API size_t        dsn_msg_body_size(dsn_message_t msg);
 extern DSN_API void*         dsn_msg_rw_ptr(dsn_message_t msg, size_t offset_begin);
-extern DSN_API void          dsn_msg_from_address(
-                                dsn_message_t msg, 
-                                /*out*/ dsn_address_t* ep
-                                );
-extern DSN_API void          dsn_msg_to_address(
-                                dsn_message_t msg, 
-                                /*out*/ dsn_address_t* ep
-                                );
-    
-// rpc calls
+extern DSN_API dsn_address_t dsn_msg_from_address(dsn_message_t msg);
+extern DSN_API dsn_address_t dsn_msg_to_address(dsn_message_t msg);
+
+//
+// server-side rpc calls
+//
 extern DSN_API bool          dsn_rpc_register_handler(
                                 dsn_task_code_t code, 
                                 const char* name,
                                 dsn_rpc_request_handler_t cb, 
                                 void* param
                                 );
-// return void* param on dsn_rpc_register_handler  
-extern DSN_API void*         dsn_rpc_unregiser_handler(dsn_task_code_t code);
 
+// return void* param on dsn_rpc_register_handler  
+extern DSN_API void*         dsn_rpc_unregiser_handler(
+                                dsn_task_code_t code
+                                );
+
+// reply with a response which is created using dsn_msg_create_response
+extern DSN_API void          dsn_rpc_reply(dsn_message_t response);
+
+// forward the request to another server instead
+extern DSN_API void          dsn_rpc_forward(dsn_message_t request, dsn_address_t addr);
+
+
+//
+// client-side rpc calls
+//
+// create a callback task to be used in dsn_rpc_call (@rpc-call)
 extern DSN_API dsn_task_t    dsn_rpc_create_response_task(
                                 dsn_message_t request, 
                                 dsn_rpc_response_handler_t cb, 
                                 void* param, 
-                                int reply_hash
+                                int reply_hash DEFAULT(DSN_INVALID_HASH),
+                                dsn_task_tracker_t tracker DEFAULT(nullptr)
                                 );
+
+// tracker can be empty
 extern DSN_API void          dsn_rpc_call(
-                                dsn_address_t server, 
-                                dsn_task_t rpc_call, 
-                                dsn_task_tracker_t tracker
+                                dsn_address_t server,
+                                dsn_task_t rpc_call
                                 );
 
 // WARNING: returned msg must be explicitly msg_release_ref
-extern DSN_API dsn_message_t dsn_rpc_call_wait(dsn_address_t server, dsn_message_t request);
-extern DSN_API void          dsn_rpc_call_one_way(dsn_address_t server, dsn_message_t request);
-extern DSN_API void          dsn_rpc_reply(dsn_message_t response);
+extern DSN_API dsn_message_t dsn_rpc_call_wait(
+                                dsn_address_t server, 
+                                dsn_message_t request
+                                );
+extern DSN_API void          dsn_rpc_call_one_way(
+                                dsn_address_t server, 
+                                dsn_message_t request
+                                );
 
 // WARNING: returned msg must be explicitly msg_release_ref
 extern DSN_API dsn_message_t dsn_rpc_get_response(dsn_task_t rpc_call);
+
+// this is to mimic a response is received when no real rpc is called
 extern DSN_API void          dsn_rpc_enqueue_response(
                                 dsn_task_t rpc_call, 
                                 dsn_error_t err, 
@@ -595,46 +733,55 @@ extern DSN_API void          dsn_rpc_enqueue_response(
 // file operations
 //
 //------------------------------------------------------------------------------
-extern DSN_API dsn_handle_t dsn_file_open(const char* file_name, int flag, int pmode);
-extern DSN_API dsn_error_t  dsn_file_close(dsn_handle_t file);
+// return nullptr if open failed
+extern DSN_API dsn_handle_t dsn_file_open(
+                                const char* file_name, 
+                                int flag, 
+                                int pmode
+                                );
+extern DSN_API dsn_error_t  dsn_file_close(
+                                dsn_handle_t file
+                                );
+extern DSN_API dsn_error_t  dsn_file_flush(
+                                dsn_handle_t file
+                                );
+// native handle: HANDLE for windows, int for non-windows
+extern DSN_API void*        dsn_file_native_handle(dsn_handle_t file);
 extern DSN_API dsn_task_t   dsn_file_create_aio_task(
                                 dsn_task_code_t code, 
                                 dsn_aio_handler_t cb, 
-                                void* param, 
-                                int hash
+                                void* param,
+                                int hash DEFAULT(0),
+                                dsn_task_tracker_t tracker DEFAULT(nullptr)
                                 );
 extern DSN_API void         dsn_file_read(
                                 dsn_handle_t file, 
                                 char* buffer, 
                                 int count, 
                                 uint64_t offset, 
-                                dsn_task_t cb, 
-                                dsn_task_tracker_t tracker
+                                dsn_task_t cb
                                 );
 extern DSN_API void         dsn_file_write(
                                 dsn_handle_t file, 
                                 const char* buffer, 
                                 int count, 
                                 uint64_t offset, 
-                                dsn_task_t cb, 
-                                dsn_task_tracker_t tracker
+                                dsn_task_t cb
                                 );
 extern DSN_API void         dsn_file_copy_remote_directory(
                                 dsn_address_t remote, 
                                 const char* source_dir, 
                                 const char* dest_dir,
                                 bool overwrite, 
-                                dsn_task_t cb, 
-                                dsn_task_tracker_t tracker
+                                dsn_task_t cb
                                 );
 extern DSN_API void         dsn_file_copy_remote_files(
-                                dsn_address_t remote, 
+                                dsn_address_t remote,
                                 const char* source_dir, 
                                 const char** source_files, 
                                 const char* dest_dir, 
                                 bool overwrite, 
-                                dsn_task_t cb, 
-                                dsn_task_tracker_t tracker
+                                dsn_task_t cb
                                 );
 extern DSN_API size_t       dsn_file_get_io_size(dsn_task_t cb_task);
 extern DSN_API void         dsn_file_task_enqueue(
@@ -651,18 +798,63 @@ extern DSN_API void         dsn_file_task_enqueue(
 extern DSN_API uint64_t dsn_now_ns();
 extern DSN_API uint64_t dsn_random64(uint64_t min, uint64_t max); // [min, max]
 
-inline uint64_t dsn_now_us() { return dsn_now_ns() / 1000; }
-inline uint64_t dsn_now_ms() { return dsn_now_ns() / 1000000; }
+__inline uint64_t dsn_now_us() { return dsn_now_ns() / 1000; }
+__inline uint64_t dsn_now_ms() { return dsn_now_ns() / 1000000; }
 
-inline uint32_t dsn_random32(uint32_t min, uint32_t max) 
+__inline uint32_t dsn_random32(uint32_t min, uint32_t max)
 {
-    return static_cast<uint32_t>(dsn_random64(min, max)); 
+    return (uint32_t)(dsn_random64(min, max)); 
 }
 
-inline double   dsn_probability() 
+__inline double   dsn_probability()
 {
-    return static_cast<double>(dsn_random64(0, 1000000000)) / 1000000000.0; 
+    return (double)(dsn_random64(0, 1000000000)) / 1000000000.0; 
 }
+
+//------------------------------------------------------------------------------
+//
+// service model (partition + replication)
+//
+//------------------------------------------------------------------------------
+
+typedef struct __app_flag__
+{
+    uint32_t is_partitioned   : 1;
+    uint32_t is_stateful      : 1;
+    uint32_t is_replicated    : 1;
+    uint32_t use_virtual_node : 1;
+} dsn_app_flag;
+
+typedef struct __app_id__
+{
+    uint32_t app_id;
+    uint32_t partition_id;
+} dsn_app_id;
+
+typedef struct __app_role__
+{
+    const char*     type_name;    
+    dsn_app_flag    flag;
+    dsn_app_create  create;
+    dsn_app_start   start;
+    dsn_app_destroy destroy;
+
+    // dsn_app_checkpointer
+    // dsn_app_load_balancer
+    // dsn_app_xxx
+} dsn_app_role;
+
+extern DSN_API void          dsn_msg_set_context(
+                                dsn_message_t msg,
+                                uint64_t context,
+                                uint64_t context2
+                                );
+
+extern DSN_API void         dsn_msg_get_context(
+                                dsn_message_t msg,
+                                /*out*/ uint64_t* context,
+                                /*out*/ uint64_t* context2
+                                );
 
 //------------------------------------------------------------------------------
 //
@@ -678,7 +870,7 @@ inline double   dsn_probability()
 #define derror(...) dlog(LOG_LEVEL_ERROR, __TITLE__, __VA_ARGS__)
 #define dfatal(...) dlog(LOG_LEVEL_FATAL, __TITLE__, __VA_ARGS__)
 #define dassert(x, ...) do { if (!(x)) {                    \
-            dlog(LOG_LEVEL_FATAL, "assert", #x);           \
+            dlog(LOG_LEVEL_FATAL, "assert", "assertion expression: "#x); \
             dlog(LOG_LEVEL_FATAL, "assert", __VA_ARGS__);  \
             dsn_coredump();       \
                 } } while (false)
@@ -689,7 +881,12 @@ inline double   dsn_probability()
 #define dbg_dassert(x, ...) 
 #endif
 
-        
 # ifdef __cplusplus
+}
+
+inline void dsn_address_size_checker()
+{
+    static_assert (sizeof(dsn_address_t) == sizeof(uint64_t),
+        "sizeof(dsn_address_t) must equal to sizeof(uint64_t)");
 }
 # endif

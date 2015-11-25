@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #include "replica.h"
 #include "mutation.h"
 #include "mutation_log.h"
@@ -31,7 +41,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ "GroupCheck"
+# define __TITLE__ "replica.check"
 
 namespace dsn { namespace replication {
 
@@ -39,7 +49,7 @@ void replica::init_group_check()
 {
     check_hashed_access();
 
-    if (PS_PRIMARY != status() || _options.group_check_disabled)
+    if (PS_PRIMARY != status() || _options->group_check_disabled)
         return;
 
     dassert (nullptr == _primary_states.group_check_task, "");
@@ -49,7 +59,7 @@ void replica::init_group_check()
             &replica::broadcast_group_check,
             gpid_to_hash(get_gpid()),
             0,
-            _options.group_check_internal_ms
+            _options->group_check_internal_ms
             );
 }
 
@@ -72,10 +82,10 @@ void replica::broadcast_group_check()
 
     for (auto it = _primary_states.statuses.begin(); it != _primary_states.statuses.end(); it++)
     {
-        if (it->first == primary_address())
+        if (it->first == _stub->_primary_address)
             continue;
 
-        dsn_address_t addr = it->first;
+        ::dsn::rpc_address addr = it->first;
         std::shared_ptr<group_check_request> request(new group_check_request);
 
         request->app_type = _primary_states.membership.app_type;
@@ -90,6 +100,13 @@ void replica::broadcast_group_check()
             request->learner_signature = it2->second.signature;
         }
 
+        ddebug(
+            "%s: init_group_check for %s with state %s",
+            name(),
+            addr.to_string(),
+            enum_to_string(it->second)
+        );
+
         dsn::task_ptr callback_task = rpc::call_typed(
             addr,
             RPC_GROUP_CHECK,
@@ -100,20 +117,16 @@ void replica::broadcast_group_check()
             );
 
         _primary_states.group_check_pending_replies[addr] = callback_task;
-
-        ddebug(
-            "%s: init_group_check for %s:%hu", name(), addr.name, addr.port
-        );
     }
 }
 
-void replica::on_group_check(const group_check_request& request, __out_param group_check_response& response)
+void replica::on_group_check(const group_check_request& request, /*out*/ group_check_response& response)
 {
     check_hashed_access();
 
     ddebug(
-        "%s: on_group_check from %s:%hu",
-        name(), request.config.primary.name, request.config.primary.port
+        "%s: on_group_check from %s",
+        name(), request.config.primary.to_string()
         );
     
     if (request.config.ballot < get_ballot())
@@ -123,7 +136,8 @@ void replica::on_group_check(const group_check_request& request, __out_param gro
     }
     else if (request.config.ballot > get_ballot())
     {
-        update_local_configuration(request.config);
+        if (!update_local_configuration(request.config))
+            return;
     }
     else if (is_same_ballot_status_change_allowed(status(), request.config.status))
     {
@@ -137,7 +151,7 @@ void replica::on_group_check(const group_check_request& request, __out_param gro
     case PS_SECONDARY:
         if (request.last_committed_decree > last_committed_decree())
         {
-            _prepare_list->commit(request.last_committed_decree, true);
+            _prepare_list->commit(request.last_committed_decree, COMMIT_TO_DECREE_HARD);
         }
         break;
     case PS_POTENTIAL_SECONDARY:
@@ -150,7 +164,7 @@ void replica::on_group_check(const group_check_request& request, __out_param gro
     }
     
     response.gpid = get_gpid();
-    response.node = primary_address();
+    response.node = _stub->_primary_address;
     response.err = ERR_OK;
     if (status() == PS_ERROR)
     {
@@ -198,7 +212,7 @@ void replica::on_group_check_reply(error_code err, std::shared_ptr<group_check_r
 // for testing purpose only
 void replica::send_group_check_once_for_test(int delay_milliseconds)
 {
-    dassert (_options.group_check_disabled, "");
+    dassert (_options->group_check_disabled, "");
 
     _primary_states.group_check_task = tasking::enqueue(
             LPC_GROUP_CHECK,

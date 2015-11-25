@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 #include "simple_kv.server.h"
@@ -47,7 +57,7 @@ namespace dsn {
                 virtual int  flush(bool force);
 
                 // helper routines to accelerate learning
-                virtual int get_learn_state(decree start, const blob& learn_req, __out_param learn_state& state);
+                virtual int get_learn_state(decree start, const blob& learn_req, /*out*/ learn_state& state);
                 virtual int apply_learn_state(learn_state& state);
 
             private:
@@ -57,7 +67,7 @@ namespace dsn {
             private:
                 typedef std::map<std::string, std::string> simple_kv;
                 simple_kv _store;
-                zlock     _lock;
+                ::dsn::service::zlock _lock;
                 bool      _test_file_learning;
             };
 

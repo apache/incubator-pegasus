@@ -23,16 +23,27 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     cpp development library atop of zion's c service api
+ *
+ * Revision history:
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/service_api_c.h>
 # include <dsn/ports.h>
 # include <dsn/cpp/auto_codes.h>
+# include <dsn/cpp/config_helper.h>
 # include <dsn/cpp/serialization.h>
-# include <dsn/cpp/msg_binary_io.h>
+# include <dsn/cpp/rpc_stream.h>
 # include <dsn/cpp/zlocks.h>
+# include <dsn/cpp/clientlet.h>
 # include <dsn/cpp/serverlet.h>
-# include <dsn/cpp/service.api.oo.h>
 # include <dsn/cpp/service_app.h>
 # include <dsn/cpp/address.h>
 # include <dsn/cpp/perf_test_helper.h>

@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 # include "simple_kv.client.h"
 
@@ -32,11 +42,11 @@ namespace dsn {
 
             class simple_kv_perf_test_client
                 : public simple_kv_client, 
-                  public ::dsn::service::perf_client_helper<simple_kv_perf_test_client>
+                  public ::dsn::service::perf_client_helper
             {
             public:
                 simple_kv_perf_test_client(
-                    const std::vector<dsn_address_t>& meta_servers,
+                    const std::vector< ::dsn::rpc_address>& meta_servers,
                     const char* app_name)
                     : simple_kv_client(meta_servers, app_name)
                 {
@@ -73,20 +83,17 @@ namespace dsn {
 
                 virtual int get_partition_index(const std::string& key) 
                 {
-                    return (int)0; // dsn_random32(0, 7);
+                    return (int)dsn_random32(0, SKV_PARTITION_COUNT - 1);
                 }
 
                 virtual int get_partition_index(const ::dsn::replication::application::kv_pair& key)
                 {
-                    return (int)0; // dsn_random32(0, 7);
+                    return (int)dsn_random32(0, SKV_PARTITION_COUNT - 1);
                 }
                                 
                 void send_one_read(int payload_bytes)
                 {
                     void* ctx = prepare_send_one();
-                    if (!ctx)
-                        return;
-
                     auto rs = random64(0, 10000000);
                     std::stringstream ss;
                     ss << "key." << rs;
@@ -106,9 +113,6 @@ namespace dsn {
                 void send_one_write(int payload_bytes)
                 {
                     void* ctx = prepare_send_one();
-                    if (!ctx)
-                        return;
-
                     auto rs = random64(0, 10000000);
                     std::stringstream ss;
                     ss << "key." << rs;
@@ -131,9 +135,6 @@ namespace dsn {
                 void send_one_append(int payload_bytes)
                 {
                     void* ctx = prepare_send_one();
-                    if (!ctx)
-                        return;
-
                     auto rs = random64(0, 10000000);
                     std::stringstream ss;
                     ss << "key." << rs;

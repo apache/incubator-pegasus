@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 #include <dsn/tool_api.h>
@@ -42,6 +52,20 @@ public:
 private:
     utils::ex_lock _lock;
 };
+
+class std_lock_nr_provider : public lock_nr_provider
+{
+public:
+    std_lock_nr_provider(lock_nr_provider* inner_provider) : lock_nr_provider(inner_provider) {}
+
+    virtual void lock() { _lock.lock(); }
+    virtual bool try_lock() { return _lock.try_lock(); }
+    virtual void unlock() { _lock.unlock(); }
+
+private:
+    utils::ex_lock_nr _lock;
+};
+
 
 class std_rwlock_nr_provider : public rwlock_nr_provider
 {

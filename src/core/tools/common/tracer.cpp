@@ -24,6 +24,16 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+
 #include <dsn/toollet/tracer.h>
 
 # ifdef __TITLE__
@@ -57,13 +67,11 @@ namespace dsn {
             case dsn_task_type_t::TASK_TYPE_RPC_REQUEST:
             {
                 auto tsk = (rpc_request_task*)this_;
-                ddebug("%s EXEC BEGIN, task_id = %016llx, %s:%hu => %s:%hu, rpc_id = %016llx",
+                ddebug("%s EXEC BEGIN, task_id = %016llx, %s => %s, rpc_id = %016llx",
                     this_->spec().name.c_str(),
                     this_->id(),
-                    tsk->get_request()->from_address.name,
-                    tsk->get_request()->from_address.port,
-                    tsk->get_request()->to_address.name,
-                    tsk->get_request()->to_address.port,
+                    tsk->get_request()->from_address.to_string(),
+                    tsk->get_request()->to_address.to_string(),
                     tsk->get_request()->header->rpc_id
                     );
             }
@@ -71,13 +79,11 @@ namespace dsn {
             case dsn_task_type_t::TASK_TYPE_RPC_RESPONSE:
             {
                 auto tsk = (rpc_response_task*)this_;
-                ddebug("%s EXEC BEGIN, task_id = %016llx, %s:%hu => %s:%hu, rpc_id = %016llx",
+                ddebug("%s EXEC BEGIN, task_id = %016llx, %s => %s, rpc_id = %016llx",
                     this_->spec().name.c_str(),
                     this_->id(),
-                    tsk->get_request()->to_address.name,
-                    tsk->get_request()->to_address.port,
-                    tsk->get_request()->from_address.name,
-                    tsk->get_request()->from_address.port,
+                    tsk->get_request()->to_address.to_string(),
+                    tsk->get_request()->from_address.to_string(),
                     tsk->get_request()->header->rpc_id
                     );
             }
@@ -139,12 +145,10 @@ namespace dsn {
         {
             message_header& hdr = *req->header;
             ddebug(
-                "%s RPC.CALL: %s:%hu => %s:%hu, rpc_id = %016llx, callback_task = %016llx, timeout = %d ms",
+                "%s RPC.CALL: %s => %s, rpc_id = %016llx, callback_task = %016llx, timeout = %d ms",
                 hdr.rpc_name,
-                req->from_address.name,
-                req->from_address.port,
-                req->to_address.name,
-                req->to_address.port,
+                req->from_address.to_string(),
+                req->to_address.to_string(),
                 hdr.rpc_id,
                 callee ? callee->id() : 0,
                 hdr.client.timeout_ms
@@ -153,13 +157,12 @@ namespace dsn {
 
         static void tracer_on_rpc_request_enqueue(rpc_request_task* callee)
         {
-            ddebug("%s RPC.REQUEST.ENQUEUE, task_id = %016llx, %s:%hu => %s:%hu, rpc_id = %016llx",
+            ddebug("%s RPC.REQUEST.ENQUEUE (0x%p), task_id = %016llx, %s => %s, rpc_id = %016llx",
                 callee->spec().name.c_str(),
+                callee,
                 callee->id(),
-                callee->get_request()->from_address.name,
-                callee->get_request()->from_address.port,
-                callee->get_request()->to_address.name,
-                callee->get_request()->to_address.port,
+                callee->get_request()->from_address.to_string(),
+                callee->get_request()->to_address.to_string(),
                 callee->get_request()->header->rpc_id
                 );
         }
@@ -170,25 +173,21 @@ namespace dsn {
             message_header& hdr = *msg->header;
 
             ddebug(
-                "%s RPC.REPLY: %s:%hu => %s:%hu, rpc_id = %016llx",
+                "%s RPC.REPLY: %s => %s, rpc_id = %016llx",
                 hdr.rpc_name,
-                msg->from_address.name,
-                msg->from_address.port,
-                msg->to_address.name,
-                msg->to_address.port,
+                msg->from_address.to_string(),
+                msg->to_address.to_string(),
                 hdr.rpc_id
                 );
         }
 
         static void tracer_on_rpc_response_enqueue(rpc_response_task* resp)
         {
-            ddebug("%s RPC.RESPONSE.ENQUEUE, task_id = %016llx, %s:%hu => %s:%hu, rpc_id = %016llx",
+            ddebug("%s RPC.RESPONSE.ENQUEUE, task_id = %016llx, %s => %s, rpc_id = %016llx",
                 resp->spec().name.c_str(),
                 resp->id(),
-                resp->get_request()->to_address.name,
-                resp->get_request()->to_address.port,
-                resp->get_request()->from_address.name,
-                resp->get_request()->from_address.port,
+                resp->get_request()->to_address.to_string(),
+                resp->get_request()->from_address.to_string(),
                 resp->get_request()->header->rpc_id
                 );
         }
@@ -223,17 +222,21 @@ namespace dsn {
                     "whether to trace when a task ends"))
                     spec->on_task_end.put_back(tracer_on_task_end, "tracer");
 
-                //if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_cancelled", true))
-                //    spec->on_task_cancelled.put_back(tracer_on_task_cancelled, "tracer");
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_cancelled", true,
+                    "whether to trace when a task is cancelled"))
+                    spec->on_task_cancelled.put_back(tracer_on_task_cancelled, "tracer");
 
-                //if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_wait_pre", true))
-                    //spec->on_task_wait_pre.put_back(tracer_on_task_wait_pre, "tracer");
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_wait_pre", true,
+                    "whether to trace when a task is to be wait"))
+                    spec->on_task_wait_pre.put_back(tracer_on_task_wait_pre, "tracer");
 
-                //if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_wait_post", true))
-                    //spec->on_task_wait_post.put_back(tracer_on_task_wait_post, "tracer");
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_wait_post", true,
+                    "whether to trace when a task is wait post"))
+                    spec->on_task_wait_post.put_back(tracer_on_task_wait_post, "tracer");
 
-                //if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_cancel_post", true))
-                    //spec->on_task_cancel_post.put_back(tracer_on_task_cancel_post, "tracer");
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_cancel_post", true,
+                    "whether to trace when a task is cancel post"))
+                    spec->on_task_cancel_post.put_back(tracer_on_task_cancel_post, "tracer");
 
                 if (config()->get_value<bool>(section_name.c_str(), "tracer::on_aio_call", true, 
                     "whether to trace when an aio task is called"))

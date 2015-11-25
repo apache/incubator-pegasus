@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include "replication_common.h"
 # include "rpc_replicated.h"
 
@@ -37,18 +47,20 @@ namespace dsn
 
             struct params
             {
-                std::vector<dsn_address_t> servers;
+                ::dsn::rpc_address current_server;
+                ::dsn::rpc_address first_server;
+                std::vector< ::dsn::rpc_address> servers;
                 rpc_reply_handler callback;
 
                 // internal callback contexts
                 std::function<void(error_code, dsn_message_t, dsn_message_t)> internal_cb;
-                servicelet* svc;
+                clientlet* svc;
                 int         reply_hash;
             };
 
-            static dsn_address_t get_next_server(const dsn_address_t& currentServer, const std::vector<dsn_address_t>& servers)
+            static ::dsn::rpc_address get_next_server(::dsn::rpc_address currentServer, const std::vector< ::dsn::rpc_address>& servers)
             {
-                if (currentServer == dsn_address_invalid)
+                if (currentServer.is_invalid())
                 {
                     return servers[dsn_random32(0, static_cast<int>(servers.size()) * 13) % static_cast<int>(servers.size())];
                 }
@@ -75,13 +87,24 @@ namespace dsn
                     err.end_tracking();
                     ::unmarshall(response, header);
 
-                    if (header.err == ERR_TALK_TO_OTHERS)
+                    if (header.err == ERR_FORWARD_TO_OTHERS)
                     {
+                        dsn_msg_add_ref(request); // add for another round of rpc::call
                         rpc::call(header.primary_address, request, ps->svc, ps->internal_cb, ps->reply_hash);
                         return;
                     }
 
                     err = header.err;
+                }
+                else if(err != ERR_OK)
+                {
+                    ::dsn::rpc_address next_server = rpc_replicated_impl::get_next_server(ps->current_server, ps->servers);
+                    if(next_server != ps->first_server)
+                    {
+                        ps->current_server = next_server;
+                        rpc::call(next_server, request, ps->svc, ps->internal_cb, ps->reply_hash);
+                        return;
+                    }
                 }
 
                 if (nullptr != ps->callback)
@@ -95,18 +118,20 @@ namespace dsn
         } // end namespace rpc_replicated_impl 
 
         dsn::task_ptr call_replicated(
-            const dsn_address_t& first_server,
-            const std::vector<dsn_address_t>& servers,
+            ::dsn::rpc_address first_server,
+            const std::vector< ::dsn::rpc_address>& servers,
             dsn_message_t request,
 
             // reply
-            servicelet* svc,
+            clientlet* svc,
             rpc_reply_handler callback,
             int reply_hash
             )
         {
-            dsn_address_t first = first_server;
-            if (first == dsn_address_invalid)
+            dassert(false, "this api is not obsolete, pls use normal rpc::call with rpc_group_address instead");
+
+            ::dsn::rpc_address first = first_server;
+            if (first.is_invalid())
             {
                 first = rpc_replicated_impl::get_next_server(first_server, servers);
             }
@@ -114,6 +139,8 @@ namespace dsn
             rpc_replicated_impl::params *ps = new rpc_replicated_impl::params;
             ps->servers = servers;
             ps->callback = callback;
+            ps->first_server = first;
+            ps->current_server = first;
 
             ps->internal_cb = std::bind(
                 &rpc_replicated_impl::internal_rpc_reply_callback,

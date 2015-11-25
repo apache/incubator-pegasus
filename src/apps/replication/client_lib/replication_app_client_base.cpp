@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #include "replication_common.h"
 #include "rpc_replicated.h"
 
@@ -31,7 +41,7 @@ namespace dsn { namespace replication {
 using namespace ::dsn::service;
 
 void replication_app_client_base::load_meta_servers(
-        __out_param std::vector<dsn_address_t>& servers
+        /*out*/ std::vector< ::dsn::rpc_address>& servers
         )
 {
     // read meta_servers from machine list file
@@ -50,29 +60,33 @@ void replication_app_client_base::load_meta_servers(
         auto pos1 = s.find_first_of(':');
         if (pos1 != std::string::npos)
         {
-            dsn_address_t ep;
-            dsn_address_build(&ep, s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
+            ::dsn::rpc_address ep(s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
             servers.push_back(ep);
         }
     }
 }
 
 replication_app_client_base::replication_app_client_base(
-    const std::vector<dsn_address_t>& meta_servers, 
-    const char* app_name
+    const std::vector< ::dsn::rpc_address>& meta_servers, 
+    const char* app_name,
+    int task_bucket_count/* = 13*/
     )
+    : clientlet(task_bucket_count)
 {
-    _app_name = std::string(app_name);   
-    _meta_servers = meta_servers;
+    _meta_servers.assign_group(dsn_group_build("meta.servers"));
+    _app_name = std::string(app_name); 
+
+    for (auto& m : meta_servers)
+        dsn_group_add(_meta_servers.group_handle(), m.c_addr());
 
     _app_id = -1;
     _app_partition_count = -1;
-    _last_contact_point = dsn_address_invalid;
 }
 
 replication_app_client_base::~replication_app_client_base()
 {
     clear_all_pending_tasks();
+    dsn_group_destroy(_meta_servers.group_handle());
 }
 
 void replication_app_client_base::clear_all_pending_tasks()
@@ -115,7 +129,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->partition_index = partition_index;    
     rc->write_header.gpid.app_id = _app_id;
     rc->write_header.gpid.pidx = partition_index;
-    rc->write_header.code = code;
+    rc->write_header.code = dsn_task_code_to_string(code);
     rc->timeout_timer = nullptr;
     rc->timeout_ms = timeout_milliseconds;
     rc->timeout_ts_us = now_us() + timeout_milliseconds * 1000;
@@ -157,7 +171,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->partition_index = partition_index;
     rc->read_header.gpid.app_id = _app_id;
     rc->read_header.gpid.pidx = partition_index;
-    rc->read_header.code = code;
+    rc->read_header.code = dsn_task_code_to_string(code);
     rc->read_header.semantic = read_semantic;
     rc->read_header.version_decree = snapshot_decree;
     rc->timeout_timer = nullptr;
@@ -227,7 +241,7 @@ void replication_app_client_base::call(request_context_ptr request, bool no_dela
     else
         timeout_ms = static_cast<int>(request->timeout_ts_us - nts) / 1000;
 
-    dsn_address_t addr;
+    ::dsn::rpc_address addr;
     int app_id;
 
     error_code err = get_address(
@@ -241,7 +255,7 @@ void replication_app_client_base::call(request_context_ptr request, bool no_dela
     // target node in cache
     if (err == ERR_OK)
     {
-        dbg_dassert(addr != dsn_address_invalid, "");
+        dbg_dassert(addr.is_invalid() == false, "");
         dassert(app_id > 0, "");
 
         if (request->header_pos != 0)
@@ -334,20 +348,16 @@ void replication_app_client_base::call(request_context_ptr request, bool no_dela
         // init configuration query task if necessary
         if (it->second->query_config_task == nullptr)
         {
-            dsn_message_t msg = dsn_msg_create_request(RPC_CM_CALL, 0, 0);
-
-            meta_request_header hdr;
-            hdr.rpc_tag = RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX;
-            ::marshall(msg, hdr);
+            dsn_message_t msg = dsn_msg_create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, 0, 0);
 
             configuration_query_by_index_request req;
             req.app_name = _app_name;
             req.partition_indices.push_back(request->partition_index);
             ::marshall(msg, req);
             
-            it->second->query_config_task = rpc::call_replicated(
-                _last_contact_point,
-                _meta_servers,
+            rpc_address target(_meta_servers);
+            it->second->query_config_task = rpc::call(
+                target,
                 msg,
 
                 this,
@@ -398,7 +408,7 @@ Retry:
     call(rc.get(), false);
 }
 
-error_code replication_app_client_base::get_address(int pidx, bool is_write, __out_param dsn_address_t& addr, __out_param int& app_id, read_semantic_t semantic)
+error_code replication_app_client_base::get_address(int pidx, bool is_write, /*out*/ ::dsn::rpc_address& addr, /*out*/ int& app_id, read_semantic_t semantic)
 {
     error_code err;
     partition_configuration config;
@@ -429,7 +439,7 @@ error_code replication_app_client_base::get_address(int pidx, bool is_write, __o
             addr = get_read_address(semantic, config);
         }
 
-        if (dsn_address_invalid == addr)
+        if (addr.is_invalid())
         {
             err = ERR_IO_PENDING;
         }
@@ -446,8 +456,6 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
         if (resp.err == ERR_OK)
         {
             zauto_write_lock l(_config_lock);
-            dsn_msg_from_address(response, &_last_contact_point);
-
             if (resp.partitions.size() > 0)
             {
                 if (_app_id != -1 && _app_id != resp.partitions[0].gpid.app_id)
@@ -499,7 +507,7 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
     }
 }
 
-dsn_address_t replication_app_client_base::get_read_address(read_semantic_t semantic, const partition_configuration& config)
+::dsn::rpc_address replication_app_client_base::get_read_address(read_semantic_t semantic, const partition_configuration& config)
 {
     if (semantic == read_semantic_t::ReadLastUpdate)
         return config.primary;
@@ -509,7 +517,7 @@ dsn_address_t replication_app_client_base::get_read_address(read_semantic_t sema
     {
         bool has_primary = false;
         int N = static_cast<int>(config.secondaries.size());
-        if (config.primary != dsn_address_invalid)
+        if (config.primary.is_invalid() == false)
         {
             N++;
             has_primary = true;

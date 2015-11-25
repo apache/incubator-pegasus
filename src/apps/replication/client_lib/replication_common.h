@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/dist/replication.h>
@@ -33,27 +43,36 @@ using namespace ::dsn::service;
 
 namespace dsn { namespace replication {
 
+inline bool operator < (const global_partition_id& l, const global_partition_id& r)
+{
+    return l.app_id < r.app_id || (l.app_id == r.app_id && l.pidx < r.pidx);
+}
+
+inline bool operator == (const global_partition_id& l, const global_partition_id& r)
+{
+    return l.app_id == r.app_id && l.pidx == r.pidx;
+}
+
 inline int gpid_to_hash(global_partition_id gpid)
 {
     return static_cast<int>(gpid.app_id ^ gpid.pidx);
 }
 
-typedef std::unordered_map<dsn_address_t, partition_status> node_statuses;
-typedef std::unordered_map<dsn_address_t, dsn::task_ptr> node_tasks;
+typedef std::unordered_map< ::dsn::rpc_address, partition_status> node_statuses;
+typedef std::unordered_map< ::dsn::rpc_address, dsn::task_ptr> node_tasks;
 
 class replication_options
 {
 public:
     std::string working_dir;
-    std::vector<dsn_address_t> meta_servers;
+    std::vector< ::dsn::rpc_address> meta_servers;
 
     int32_t prepare_timeout_ms_for_secondaries;
     int32_t prepare_timeout_ms_for_potential_secondaries;
-    int32_t prepare_list_max_size_mb;
-    bool    prepare_ack_on_secondary_before_logging_allowed;
         
+    bool    batch_write_disabled;
     int32_t staleness_for_commit;
-    int32_t staleness_for_start_prepare_for_potential_secondary;
+    int32_t max_mutation_count_in_prepare_list;
     int32_t mutation_2pc_min_replica_count;
     
     bool    group_check_disabled;
@@ -70,11 +89,14 @@ public:
     int32_t fd_lease_seconds;
     int32_t fd_grace_seconds;
 
+    bool    log_enable_private_prepare;
+
     int32_t log_file_size_mb;
-    int32_t log_buffer_size_mb;
+    int32_t log_batch_buffer_MB;
     int32_t log_pending_max_ms;
-    bool    log_batch_write;
-    int32_t log_max_concurrent_writes;
+    int32_t log_file_size_mb_private;
+    int32_t log_buffer_size_mb_private;
+    int32_t log_pending_max_ms_private;
 
     int32_t config_sync_interval_ms;
     bool    config_sync_disabled;
@@ -92,8 +114,8 @@ private:
 class replica_helper
 {
 public:
-    static bool remove_node(const dsn_address_t& node, __inout_param std::vector<dsn_address_t>& nodeList);
-    static bool get_replica_config(const partition_configuration& partition_config, const dsn_address_t& node, __out_param replica_configuration& replica_config);
+    static bool remove_node(::dsn::rpc_address node, /*inout*/ std::vector< ::dsn::rpc_address>& nodeList);
+    static bool get_replica_config(const partition_configuration& partition_config, ::dsn::rpc_address node, /*out*/ replica_configuration& replica_config);
 };
 
 }} // namespace

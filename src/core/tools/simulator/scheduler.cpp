@@ -23,8 +23,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include <dsn/tool/simulator.h>
 # include <dsn/service_api_c.h>
+# include <dsn/tool/node_scoper.h>
 # include "scheduler.h"
 # include "env.sim.h"
 # include <set>
@@ -38,27 +49,48 @@ namespace dsn { namespace tools {
 
 void event_wheel::add_event(uint64_t ts, task* t)
 {
-    utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
+    utils::auto_lock< ::dsn::utils::ex_lock> l(_lock);
 
-    std::vector<task*>* evts;
+    std::vector<event_entry>* evts;
     auto itr = _events.find(ts);
     if (itr != _events.end())
         evts = itr->second;
     else
     {
-        evts = new std::vector<task*>();
+        evts = new std::vector<event_entry>();
         _events.insert(std::make_pair(ts, evts));
     }
     
-    evts->push_back(t);
-
+    event_entry entry;
+    entry.app_task = t;
+    evts->push_back(entry);
 }
 
-std::vector<task*>* event_wheel::pop_next_events(__out_param uint64_t& ts)
+void event_wheel::add_system_event(uint64_t ts, std::function<void()> t)
 {
-    utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
+    utils::auto_lock< ::dsn::utils::ex_lock> l(_lock);
 
-    std::vector<task*>* evts = NULL;
+    std::vector<event_entry>* evts;
+    auto itr = _events.find(ts);
+    if (itr != _events.end())
+        evts = itr->second;
+    else
+    {
+        evts = new std::vector<event_entry>();
+        _events.insert(std::make_pair(ts, evts));
+    }
+
+    event_entry entry;
+    entry.system_task = std::move(t);
+    entry.app_task = nullptr;
+    evts->push_back(entry);
+}
+
+std::vector<event_entry>* event_wheel::pop_next_events(/*out*/ uint64_t& ts)
+{
+    utils::auto_lock< ::dsn::utils::ex_lock> l(_lock);
+
+    std::vector<event_entry>* evts = NULL;
     auto itr = _events.begin();
     if (itr != _events.end()){
         evts = itr->second;
@@ -70,11 +102,13 @@ std::vector<task*>* event_wheel::pop_next_events(__out_param uint64_t& ts)
 
 void event_wheel::clear()
 {
-    utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
+    utils::auto_lock< ::dsn::utils::ex_lock> l(_lock);
     _events.clear();
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
+
+__thread bool scheduler::_is_scheduling = false;
 
 scheduler::scheduler(void)
 {
@@ -86,7 +120,7 @@ scheduler::scheduler(void)
     for (int i = 0; i <= dsn_task_code_max(); i++)
     {
         task_spec::get(i)->on_task_wait_pre.put_back(scheduler::on_task_wait, "simulation.on_task_wait");
-        task_spec::get(i)->on_task_end.put_back(scheduler::on_task_end, "simulation.on_task_end");
+        task_spec::get(i)->on_task_wait_notified.put_back(scheduler::on_task_wait_notified, "simulation.on_task_wait_notified");
     }
 
     task_ext::register_ext(task_state_ext::deletor);
@@ -120,11 +154,12 @@ scheduler::~scheduler(void)
 {
     if (waitor == nullptr)
         return;
-
+    
     if (waitee->state() < task_state::TASK_STATE_FINISHED)
     {
         auto ts = task_ext::get_inited(waitee);
-        ts->wait_threads.push_back(task_worker_ext::get(task::get_current_worker()));
+        auto wks = task_worker_ext::get(task::get_current_worker());
+        ts->wait_threads.push_back(wks);
 
         scheduler::instance().wait_schedule(true, false);
     }
@@ -134,7 +169,7 @@ scheduler::~scheduler(void)
     }
 }
 
-/*static*/ void scheduler::on_task_end(task* task)
+/*static*/ void scheduler::on_task_wait_notified(task* task)
 {
     auto ts = task_ext::get(task);
     if (ts != nullptr)
@@ -154,6 +189,11 @@ void scheduler::add_task(task* tsk, task_queue* q)
     auto delay = (uint64_t)tsk->delay_milliseconds() * 1000000;
     tsk->set_delay(0);
     _wheel.add_event(now_ns() + delay, tsk);
+}
+
+void scheduler::add_system_event(uint64_t ts_ns, std::function<void()> t)
+{
+    _wheel.add_system_event(ts_ns, t);
 }
 
 void scheduler::start()
@@ -211,6 +251,8 @@ void scheduler::wait_schedule(bool in_continue, bool is_continue_ready /*= false
 
 void scheduler::schedule()
 {
+    _is_scheduling = true;
+
     check(); // check before schedule
 
     while (true)
@@ -220,7 +262,7 @@ void scheduler::schedule()
         for (auto& s : _threads)
         {
             if ((s->in_continuation && s->is_continuation_ready)
-                || (!s->in_continuation && s->worker->queue()->count() > 0)
+                || (!s->in_continuation && s->worker->queue()->approx_count() > 0)
                 )
             {
                 ready_workers.push_back(s->index);
@@ -231,6 +273,8 @@ void scheduler::schedule()
         {
             int i = dsn_random32(0, (uint32_t)ready_workers.size() - 1);
             _threads[ready_workers[i]]->runnable.release();
+            
+            _is_scheduling = false;
             return;
         }
 
@@ -240,18 +284,31 @@ void scheduler::schedule()
         if (events)
         {
             {
-                utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
+                utils::auto_lock< ::dsn::utils::ex_lock> l(_lock);
                 _time_ns = ts;
             }
 
             // randomize the events, and see
             std::random_shuffle(events->begin(), events->end(), [](int n) { return dsn_random32(0, n - 1); });
 
-            for (auto it = events->begin(); it != events->end(); it++)
+            for (auto e : *events)
             {
-                task* t = *it;
-                t->enqueue();
-                t->release_ref(); // added by previous t->enqueue from app
+                if (e.app_task != nullptr)
+                {
+                    task* t = e.app_task;
+
+                    {
+                        node_scoper ns(t->node());
+                        t->enqueue();
+                    }
+
+                    t->release_ref(); // added by previous t->enqueue from app
+                }
+                else
+                {
+                    dassert(e.system_task != nullptr, "app and system tasks cannot be both empty");
+                    e.system_task();
+                }
             }
 
             delete events;
@@ -261,6 +318,8 @@ void scheduler::schedule()
         // wait a moment
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
+
+    _is_scheduling = false;
 }
 
 

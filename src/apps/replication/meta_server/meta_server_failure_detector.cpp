@@ -23,9 +23,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #include "meta_server_failure_detector.h"
 #include "server_state.h"
 #include "meta_service.h"
+#include <dsn/internal/factory_store.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -37,15 +48,34 @@ meta_server_failure_detector::meta_server_failure_detector(server_state* state, 
     _state = state;
     _svc = svc;
     _is_primary = false;
+
+    // TODO: config
+    _lock_svc = dsn::utils::factory_store< ::dsn::dist::distributed_lock_service>::create(
+        "distributed_lock_service_simple",
+        PROVIDER_TYPE_MAIN
+        );
+    _primary_lock_id = "dsn.meta.server.leader";
+    _local_owner_id = primary_address().to_string();
 }
 
 meta_server_failure_detector::~meta_server_failure_detector(void)
 {
+    auto t = _lock_grant_task;
+    if (t) t->cancel(true);
+    t = _lock_expire_task;
+    if (t) t->cancel(true);
+
+    delete _lock_svc;
 }
 
-void meta_server_failure_detector::on_worker_disconnected(const std::vector<dsn_address_t>& nodes)
+void meta_server_failure_detector::on_worker_disconnected(const std::vector< ::dsn::rpc_address>& nodes)
 {
     if (!is_primary())
+    {
+        return;
+    }
+
+    if (!_svc->_started)
     {
         return;
     }
@@ -55,7 +85,7 @@ void meta_server_failure_detector::on_worker_disconnected(const std::vector<dsn_
     {
         states.push_back(std::make_pair(n, false));
 
-        dwarn("client expired: %s:%hu", n.name, n.port);
+        dwarn("client expired: %s", n.to_string());
     }
     
     machine_fail_updates pris;
@@ -63,17 +93,16 @@ void meta_server_failure_detector::on_worker_disconnected(const std::vector<dsn_
     
     for (auto& pri : pris)
     {
-        dinfo("%d.%d primary node for %s:%hu is gone, update configuration on meta server", 
+        dinfo("%d.%d primary node for %s is gone, update configuration on meta server", 
             pri.first.app_id,
             pri.first.pidx,
-            pri.second->node.name,
-            pri.second->node.port
+            pri.second->node.to_string()
             );
-        _svc->update_configuration(pri.second);
+        _svc->update_configuration_on_machine_failure(pri.second);
     }
 }
 
-void meta_server_failure_detector::on_worker_connected(const dsn_address_t& node)
+void meta_server_failure_detector::on_worker_connected(::dsn::rpc_address node)
 {
     if (!is_primary())
     {
@@ -84,15 +113,74 @@ void meta_server_failure_detector::on_worker_connected(const dsn_address_t& node
     states.push_back(std::make_pair(node, true));
 
     dwarn("Client reconnected",
-        "Client %s:%hu", node.name, node.port);
+        "Client %s", node.to_string());
 
     _state->set_node_state(states, nullptr);
 }
 
-bool meta_server_failure_detector::set_primary(bool is_primary /*= false*/)
+DEFINE_TASK_CODE(LPC_META_SERVER_LEADER_LOCK_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_FD)
+
+bool meta_server_failure_detector::acquire_leader_lock()
 {
-    bool bRet = true;
-    if (is_primary && !_is_primary)
+    error_code err;
+    auto tasks = 
+    _lock_svc->lock(
+        _primary_lock_id,
+        _local_owner_id,
+        true,
+
+        // lock granted
+        LPC_META_SERVER_LEADER_LOCK_CALLBACK,
+        [this, &err](error_code ec, const std::string& owner, uint64_t version)
+        {
+            err = ec;
+        },
+
+        // lease expire
+        LPC_META_SERVER_LEADER_LOCK_CALLBACK,
+        [this](error_code ec, const std::string& owner, uint64_t version)
+        {
+            // let's take the easy way right now
+            dsn_terminate();
+
+            // reset primary
+            //rpc_address addr;
+            //set_primary(addr);
+            //_state->on_become_non_leader();
+
+            //// set another round of service
+            //acquire_leader_lock();            
+        }
+    );
+
+    _lock_grant_task = tasks.first;
+    _lock_expire_task = tasks.second;
+
+    _lock_grant_task->wait();
+    if (err == ERR_OK)
+    {
+        rpc_address addr;
+        if (addr.from_string_ipv4(_local_owner_id.c_str()))
+        {
+            dassert(primary_address() == addr, "");            
+            set_primary(addr);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void meta_server_failure_detector::set_primary(rpc_address primary)
+{
+    bool old = _is_primary;
+    {
+        utils::auto_lock<zlock> l(_primary_address_lock);
+        _primary_address = primary;
+        _is_primary = (primary == primary_address());
+    }
+
+    if (!old && _is_primary)
     {
         node_states ns;
         _state->get_node_state(ns);
@@ -101,23 +189,14 @@ bool meta_server_failure_detector::set_primary(bool is_primary /*= false*/)
         {
             register_worker(pr.first, pr.second);
         }
-
-        _is_primary = true;
     }
 
-    if (!is_primary && _is_primary)
+    if (old && !_is_primary)
     {
         clear_workers();
-        _is_primary = false;
     }
-
-    return bRet;
 }
 
-bool meta_server_failure_detector::is_primary() const
-{
-    return _is_primary;
-}
 
 void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::rpc_replier<fd::beacon_ack>& reply)
 {
@@ -125,19 +204,9 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::
     ack.this_node = beacon.to;
     if (!is_primary())
     {
-        dsn_address_t master;
-        if (_state->get_meta_server_primary(master))
-        {
-            ack.time = beacon.time;
-            ack.is_master = false;
-            ack.primary_node = master;
-        }
-        else
-        {
-            ack.time = beacon.time;
-            ack.is_master = false;
-            ack.primary_node =  dsn_address_invalid;
-        }
+        ack.time = beacon.time;
+        ack.is_master = false;
+        ack.primary_node = _primary_address;
     }
     else
     {

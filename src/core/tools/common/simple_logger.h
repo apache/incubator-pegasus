@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/tool_api.h>
@@ -36,8 +46,8 @@ namespace dsn {
         class screen_logger : public logging_provider
         {
         public:
-            screen_logger() { }
-            virtual ~screen_logger(void) { }
+            screen_logger();
+            virtual ~screen_logger(void);
 
             virtual void dsn_logv(const char *file,
                 const char *function,
@@ -52,6 +62,7 @@ namespace dsn {
 
         private:
             ::dsn::utils::ex_lock_nr _lock;
+            bool _short_header;
         };
 
 
@@ -81,6 +92,9 @@ namespace dsn {
             int _start_index;
             int _index;
             int _lines;
+            bool _short_header;
+            bool _fast_flush;
+            dsn_log_level_t _stderr_start_level;
         };
 
     }

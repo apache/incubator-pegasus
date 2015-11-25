@@ -23,10 +23,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 # include <dsn/dist/failure_detector.h>
-#include "replication_common.h"
+# include <dsn/dist/distributed_lock_service.h>
+# include "replication_common.h"
 
 using namespace dsn;
 using namespace dsn::service;
@@ -39,6 +50,9 @@ class meta_service;
 namespace dsn {
     namespace replication{
         class replication_checker;
+        namespace test {
+            class test_checker;
+        }
     }
 }
 
@@ -48,31 +62,52 @@ public:
     meta_server_failure_detector(server_state* state, meta_service* svc);
     ~meta_server_failure_detector(void);
 
-    virtual bool set_primary(bool is_primary = false);
-    bool is_primary() const;
+    bool is_primary() const { return _is_primary; }
 
+    rpc_address get_primary()
+    {
+        dsn::utils::auto_lock<zlock> l(_primary_address_lock);
+        return _primary_address;
+    }
+    
+    bool acquire_leader_lock();
+    
     // client side
-    virtual void on_master_disconnected(const std::vector<dsn_address_t>& nodes)
+    virtual void on_master_disconnected(const std::vector< ::dsn::rpc_address>& nodes)
     {
         dassert (false, "unsupported method");
     }
 
-    virtual void on_master_connected(const dsn_address_t& node)
+    virtual void on_master_connected(::dsn::rpc_address node)
     {
         dassert (false, "unsupported method");
     }
 
     // server side
-    virtual void on_worker_disconnected(const std::vector<dsn_address_t>& nodes);
-    virtual void on_worker_connected(const dsn_address_t& node);
+    virtual void on_worker_disconnected(const std::vector< ::dsn::rpc_address>& nodes);
+    virtual void on_worker_connected(::dsn::rpc_address node);
 
     virtual void on_ping(const fd::beacon_msg& beacon, ::dsn::rpc_replier<fd::beacon_ack>& reply);
 
 private:
-    friend class ::dsn::replication::replication_checker;
+    void set_primary(rpc_address primary);
 
-    bool         _is_primary;
+private:
+    friend class ::dsn::replication::replication_checker;
+    friend class ::dsn::replication::test::test_checker;
+
+    volatile bool _is_primary;
+
+    zlock         _primary_address_lock;
+    rpc_address   _primary_address;
+
     server_state *_state;
     meta_service *_svc;
+
+    ::dsn::dist::distributed_lock_service *_lock_svc;
+    task_ptr    _lock_grant_task;
+    task_ptr    _lock_expire_task;
+    std::string _primary_lock_id;
+    std::string _local_owner_id;
 };
 

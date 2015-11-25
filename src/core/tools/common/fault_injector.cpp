@@ -24,6 +24,16 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+
 #include <dsn/toollet/fault_injector.h>
 #include <dsn/service_api_c.h>
 
@@ -83,16 +93,13 @@ namespace dsn {
         
         static fj_opt* s_fj_opts = nullptr;
 
+        typedef uint64_extension_helper<task> task_ext_for_fj;
+
         static void fault_on_task_enqueue(task* caller, task* callee)
         {
         }
 
         static void fault_on_task_begin(task* this_)
-        {
-            
-        }
-
-        static void fault_on_task_end(task* this_)
         {
             fj_opt& opt = s_fj_opts[this_->spec().code];
             if (opt.execution_extra_delay_us_max > 0)
@@ -100,6 +107,10 @@ namespace dsn {
                 auto d = dsn_random32(0, opt.execution_extra_delay_us_max);
                 std::this_thread::sleep_for(std::chrono::microseconds(d));
             }
+        }
+
+        static void fault_on_task_end(task* this_)
+        {            
         }
 
         static void fault_on_task_cancelled(task* this_)
@@ -129,6 +140,7 @@ namespace dsn {
             case AIO_Read:
                 if (dsn_probability() < s_fj_opts[callee->spec().code].disk_read_fail_ratio)
                 {
+                    ddebug("fault inject %s", __FUNCTION__);
                     callee->set_error_code(ERR_FILE_OPERATION_FAILED);
                     return false;
                 }
@@ -136,6 +148,7 @@ namespace dsn {
             case AIO_Write:
                 if (dsn_probability() < s_fj_opts[callee->spec().code].disk_write_fail_ratio)
                 {
+                    ddebug("fault inject %s", __FUNCTION__);
                     callee->set_error_code(ERR_FILE_OPERATION_FAILED);
                     return false;
                 }
@@ -148,7 +161,11 @@ namespace dsn {
         static void fault_on_aio_enqueue(aio_task* this_)
         {
             fj_opt& opt = s_fj_opts[this_->spec().code];
-            this_->set_delay(dsn_random32(opt.disk_io_delay_ms_min, opt.disk_io_delay_ms_max));
+            if (this_->delay_milliseconds() == 0 && task_ext_for_fj::get(this_) == 0)
+            {
+                this_->set_delay(dsn_random32(opt.disk_io_delay_ms_min, opt.disk_io_delay_ms_max));
+                task_ext_for_fj::get(this_) = 1; // ensure only fd once
+            }
         }
 
         // return true means continue, otherwise early terminate with task::set_error_code
@@ -157,6 +174,7 @@ namespace dsn {
             fj_opt& opt = s_fj_opts[req->local_rpc_code];
             if (dsn_probability() < opt.rpc_request_drop_ratio)
             {
+                ddebug("fault inject %s", __FUNCTION__);
                 return false;
             }
             else
@@ -168,7 +186,11 @@ namespace dsn {
         static void fault_on_rpc_request_enqueue(rpc_request_task* callee)
         {
             fj_opt& opt = s_fj_opts[callee->spec().code];
-            callee->set_delay(dsn_random32(opt.rpc_message_delay_ms_min, opt.rpc_message_delay_ms_max));
+            if (callee->delay_milliseconds() == 0 && task_ext_for_fj::get(callee) == 0)
+            {
+                callee->set_delay(dsn_random32(opt.rpc_message_delay_ms_min, opt.rpc_message_delay_ms_max));
+                task_ext_for_fj::get(callee) = 1; // ensure only fd once
+            }
         }
 
         // return true means continue, otherwise early terminate with task::set_error_code
@@ -177,6 +199,7 @@ namespace dsn {
             fj_opt& opt = s_fj_opts[msg->local_rpc_code];
             if (dsn_probability() < opt.rpc_response_drop_ratio)
             {
+                ddebug("fault inject %s", __FUNCTION__);
                 return false;
             }
             else
@@ -188,11 +211,17 @@ namespace dsn {
         static void fault_on_rpc_response_enqueue(rpc_response_task* resp)
         {
             fj_opt& opt = s_fj_opts[resp->spec().code];
-            resp->set_delay(dsn_random32(opt.rpc_message_delay_ms_min, opt.rpc_message_delay_ms_max));
+            if (resp->delay_milliseconds() == 0 && task_ext_for_fj::get(resp) == 0)
+            {
+                resp->set_delay(dsn_random32(opt.rpc_message_delay_ms_min, opt.rpc_message_delay_ms_max));
+                task_ext_for_fj::get(resp) = 1; // ensure only fd once
+            }
         }
 
         void fault_injector::install(service_spec& spec)
         {
+            task_ext_for_fj::register_ext();
+
             s_fj_opts = new fj_opt[dsn_task_code_max() + 1];
             fj_opt default_opt;
             read_config("task..default", default_opt);
@@ -212,13 +241,13 @@ namespace dsn {
                 if (!lopt.fault_injection_enabled)
                     continue;
                 
-                //spec->on_task_enqueue.put_back(fault_on_task_enqueue, "fault_injector");
-                //spec->on_task_begin.put_back(fault_on_task_begin, "fault_injector");
+                spec->on_task_enqueue.put_back(fault_on_task_enqueue, "fault_injector");
+                spec->on_task_begin.put_back(fault_on_task_begin, "fault_injector");
                 spec->on_task_end.put_back(fault_on_task_end, "fault_injector");
-                //spec->on_task_cancelled.put_back(fault_on_task_cancelled, "fault_injector");
-                //spec->on_task_wait_pre.put_back(fault_on_task_wait_pre, "fault_injector");
-                //spec->on_task_wait_post.put_back(fault_on_task_wait_post, "fault_injector");
-                //spec->on_task_cancel_post.put_back(fault_on_task_cancel_post, "fault_injector");
+                spec->on_task_cancelled.put_back(fault_on_task_cancelled, "fault_injector");
+                spec->on_task_wait_pre.put_back(fault_on_task_wait_pre, "fault_injector");
+                spec->on_task_wait_post.put_back(fault_on_task_wait_post, "fault_injector");
+                spec->on_task_cancel_post.put_back(fault_on_task_cancel_post, "fault_injector");
                 spec->on_aio_call.put_native(fault_on_aio_call);
                 spec->on_aio_enqueue.put_back(fault_on_aio_enqueue, "fault_injector");
                 spec->on_rpc_call.put_native(fault_on_rpc_call);

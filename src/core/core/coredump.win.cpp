@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include <dsn/tool_api.h>
 # include "coredump.h"
 
@@ -67,7 +77,7 @@ namespace dsn {
         }
 
         typedef BOOL(WINAPI *MINIDUMPWRITEDUMP)(
-            HANDLE hProcess, DWORD dwPid, HANDLE hFile, MINIDUMP_TYPE DumpType,
+            HANDLE hProcess, DWORD dwPid, HANDLE fh, MINIDUMP_TYPE DumpType,
             CONST PMINIDUMP_EXCEPTION_INFORMATION ExceptionParam,
             CONST PMINIDUMP_USER_STREAM_INFORMATION UserStreamParam,
             CONST PMINIDUMP_CALLBACK_INFORMATION CallbackParam
@@ -103,10 +113,10 @@ namespace dsn {
                     sprintf(szDumpPath, "%s\\%s_%d_%d.dmp", s_dump_dir.c_str(), s_app_name, ::GetCurrentProcessId(), time(NULL));
 
                     // create the file
-                    HANDLE hFile = ::CreateFileA(szDumpPath, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS,
+                    HANDLE fh = ::CreateFileA(szDumpPath, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS,
                         FILE_ATTRIBUTE_NORMAL, NULL);
 
-                    if (hFile != INVALID_HANDLE_VALUE)
+                    if (fh != INVALID_HANDLE_VALUE)
                     {
                         _MINIDUMP_EXCEPTION_INFORMATION ExInfo;
 
@@ -115,7 +125,7 @@ namespace dsn {
                         ExInfo.ClientPointers = NULL;
 
                         // write the dump
-                        BOOL bOK = pDump(GetCurrentProcess(), GetCurrentProcessId(), hFile, MiniDumpNormal, &ExInfo, NULL, NULL);
+                        BOOL bOK = pDump(GetCurrentProcess(), GetCurrentProcessId(), fh, MiniDumpNormal, &ExInfo, NULL, NULL);
                         if (bOK)
                         {
                             sprintf(szScratch, "saved dump file to '%s'", szDumpPath);
@@ -127,7 +137,7 @@ namespace dsn {
                             sprintf(szScratch, "failed to save dump file to '%s' (error %d)", szDumpPath, GetLastError());
                             szResult = szScratch;
                         }
-                        ::CloseHandle(hFile);
+                        ::CloseHandle(fh);
                     }
                     else
                     {

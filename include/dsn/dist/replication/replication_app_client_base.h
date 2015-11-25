@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 //
@@ -39,17 +49,17 @@ namespace dsn { namespace replication {
     DEFINE_ERR_CODE(ERR_REPLICATION_FAILURE)
     
 #pragma pack(push, 4)
-    class replication_app_client_base : public virtual servicelet
+    class replication_app_client_base : public virtual clientlet
     {
     public:
-        static void load_meta_servers(__out_param std::vector<dsn_address_t>& servers);
+        static void load_meta_servers(/*out*/ std::vector< ::dsn::rpc_address>& servers);
 
     public:
         replication_app_client_base(        
-            const std::vector<dsn_address_t>& meta_servers, 
-            const char* app_name
+            const std::vector< ::dsn::rpc_address>& meta_servers, 
+            const char* replicated_app_name, 
+            int task_bucket_count = 13
             );
-
         ~replication_app_client_base();
 
         template<typename T, typename TRequest, typename TResponse>
@@ -91,7 +101,7 @@ namespace dsn { namespace replication {
             std::shared_ptr<TRequest>& req,
 
             // callback
-            servicelet* owner,
+            clientlet* owner,
             std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
 
             // other specific parameters   
@@ -155,7 +165,7 @@ namespace dsn { namespace replication {
             const TRequest& req,
 
             // callback
-            servicelet* owner,
+            clientlet* owner,
             std::function<void(error_code, const TResponse&, void*)> callback,
             void* context,
 
@@ -169,10 +179,10 @@ namespace dsn { namespace replication {
             
             auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
                 msg,
-                owner,
                 callback,
                 context,
-                reply_hash
+                reply_hash,
+                owner
                 );
 
             auto rc = create_write_context(partition_index, code, msg, task, reply_hash);
@@ -222,7 +232,7 @@ namespace dsn { namespace replication {
             std::shared_ptr<TRequest>& req,
 
             // callback
-            servicelet* owner,
+            clientlet* owner,
             std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
 
             // other specific parameters   
@@ -291,7 +301,7 @@ namespace dsn { namespace replication {
             const TRequest& req,
 
             // callback
-            servicelet* owner,
+            clientlet* owner,
             std::function<void(error_code, const TResponse&, void*)> callback,
             void* context,
 
@@ -307,10 +317,10 @@ namespace dsn { namespace replication {
             
             auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
                 msg,
-                owner,
                 callback,
                 context,
-                reply_hash
+                reply_hash,
+                owner
                 );
 
             auto rc = create_read_context(partition_index, code, msg, task, read_semantic, snapshot_decree, reply_hash);
@@ -320,8 +330,8 @@ namespace dsn { namespace replication {
         }
 
         // get read address policy
-        virtual dsn_address_t get_read_address(read_semantic_t semantic, const partition_configuration& config);
-        
+        virtual ::dsn::rpc_address get_read_address(read_semantic_t semantic, const partition_configuration& config);
+        ::dsn::rpc_address get_meta_servers() const { return _meta_servers; }
     public:
         struct request_context : public ref_counter
         {
@@ -335,7 +345,7 @@ namespace dsn { namespace replication {
             uint64_t              timeout_ts_us; // timeout at this timing point
             dsn_message_t         request;
 
-            zlock                 lock; // [
+            ::dsn::service::zlock lock; // [
             dsn::task_ptr         timeout_timer; // when partition config is unknown at the first place            
             bool                  completed;
             // ]
@@ -352,8 +362,8 @@ namespace dsn { namespace replication {
 
         typedef std::unordered_map<int, partition_context*> pending_requests;
         
-        mutable zlock     _requests_lock;
-        pending_requests  _pending_requests;        
+        mutable ::dsn::service::zlock  _requests_lock;
+        pending_requests               _pending_requests;
 
     private:
         request_context* create_write_context(
@@ -375,18 +385,17 @@ namespace dsn { namespace replication {
             );
 
     private:
-        std::string                             _app_name;
-        std::vector<dsn_address_t>                  _meta_servers;
+        std::string      _app_name;
+        dsn::rpc_address _meta_servers;
         
-        mutable zrwlock_nr                      _config_lock;
+        mutable ::dsn::service::zrwlock_nr      _config_lock;
         std::unordered_map<int, partition_configuration> _config_cache;
         int                                     _app_id;
         int                                     _app_partition_count;
-        dsn_address_t                               _last_contact_point;
 
     private:
         void call(request_context_ptr request, bool no_delay = true);
-        error_code get_address(int pidx, bool is_write, __out_param dsn_address_t& addr, __out_param int& app_id, read_semantic_t semantic = read_semantic_t::ReadLastUpdate);
+        error_code get_address(int pidx, bool is_write, /*out*/ ::dsn::rpc_address& addr, /*out*/ int& app_id, read_semantic_t semantic = read_semantic_t::ReadLastUpdate);
         void query_partition_configuration_reply(error_code err, dsn_message_t request, dsn_message_t response, int pidx);
         void replica_rw_reply(error_code err, dsn_message_t request, dsn_message_t response, request_context_ptr& rc);
         void end_request(request_context_ptr& request, error_code err, dsn_message_t resp);

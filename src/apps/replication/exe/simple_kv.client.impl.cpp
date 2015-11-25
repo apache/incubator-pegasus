@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #include "simple_kv.client.impl.h"
 
 namespace dsn {
@@ -30,7 +40,7 @@ namespace dsn {
         namespace application {
 
 
-            simple_kv_client_impl::simple_kv_client_impl(const std::vector<dsn_address_t>& meta_servers)
+            simple_kv_client_impl::simple_kv_client_impl(const std::vector< ::dsn::rpc_address>& meta_servers)
                 : simple_kv_client(meta_servers, "simple_kv")
             {
             }
@@ -43,14 +53,12 @@ namespace dsn {
 
             int simple_kv_client_impl::get_partition_index(const std::string& key)
             {
-                // TODO:
-                return 0;
+                return (int)dsn_random32(0, SKV_PARTITION_COUNT - 1);
             }
 
             int simple_kv_client_impl::get_partition_index(const kv_pair& pr)
             {
-                // TODO:
-                return 0;
+                return (int)dsn_random32(0, SKV_PARTITION_COUNT - 1);
             }
         }
     }

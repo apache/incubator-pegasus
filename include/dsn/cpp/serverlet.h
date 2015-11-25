@@ -23,9 +23,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
-# include <dsn/cpp/service.api.oo.h>
+# include <dsn/cpp/clientlet.h>
 # include <dsn/cpp/service_app.h>
 
 namespace dsn 
@@ -33,7 +43,7 @@ namespace dsn
     //
     // for TRequest/TResponse, we assume that the following routines are defined:
     //    marshall(binary_writer& writer, const T& val); 
-    //    unmarshall(binary_reader& reader, __out_param T& val);
+    //    unmarshall(binary_reader& reader, /*out*/ T& val);
     // either in the namespace of ::dsn or T
     // developers may write these helper functions by their own, or use tools
     // such as protocol-buffer, thrift, or bond to generate these functions automatically
@@ -63,12 +73,17 @@ namespace dsn
             }
         }
 
+        bool is_empty() const
+        {
+            return _response == nullptr;
+        }
+
     private:
         dsn_message_t _response;
     };
 
     template <typename T> // where T : serverlet<T>
-    class serverlet : public virtual servicelet
+    class serverlet : public virtual clientlet
     {
     public:
         serverlet(const char* nm, int task_bucket_count = 8);
@@ -108,7 +123,7 @@ namespace dsn
     // ------------- inline implementation ----------------
     template<typename T>
     inline serverlet<T>::serverlet(const char* nm, int task_bucket_count)
-        : _name(nm), servicelet(task_bucket_count)
+        : _name(nm), clientlet(task_bucket_count)
     {
     }
 

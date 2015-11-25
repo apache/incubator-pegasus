@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include "task_engine.h"
 # include <dsn/internal/perf_counters.h>
 # include <dsn/internal/factory_store.h>
@@ -36,14 +46,15 @@ using namespace dsn::utils;
 
 namespace dsn {
 
+
 task_worker_pool::task_worker_pool(const threadpool_spec& opts, task_engine* owner)
     : _spec(opts), _owner(owner), _node(owner->node())
 {
     _is_running = false;
-    _timer_service = _owner->timer_svc();
+    _per_node_timer_svc = nullptr;
 }
 
-void task_worker_pool::start()
+void task_worker_pool::create()
 {
     if (_is_running)
         return;
@@ -93,12 +104,50 @@ void task_worker_pool::start()
             worker = factory_store<task_worker>::create(it->c_str(), PROVIDER_TYPE_ASPECT, this, q, i, worker);
         }
         task_worker::on_create.execute(worker);
+        q->set_owner_worker(spec().partitioned ? worker : nullptr);
 
         _workers.push_back(worker);
-        worker->start();
+    }
+}
+
+void task_worker_pool::start()
+{
+    if (_is_running)
+        return;
+
+    for (auto& wk : _workers)
+        wk->start();
+
+    // setup cached ptrs for fast timer service access
+    if (service_engine::fast_instance().spec().timer_io_mode == IOE_PER_QUEUE)
+    {
+        for (size_t i = 0; i < _queues.size(); i++)
+        {
+            auto svc = node()->tsvc(_queues[i]);
+            dassert(svc, "per queue timer service must be present");
+            _per_queue_timer_svcs.push_back(svc);
+        }
+    }
+    else
+    {
+        _per_node_timer_svc = node()->tsvc(nullptr);
     }
 
     _is_running = true;
+}
+
+void task_worker_pool::add_timer(task* t)
+{
+    dassert(t->delay_milliseconds() > 0,
+        "task delayed should be dispatched to timer service first");
+
+    if (_per_node_timer_svc)
+        _per_node_timer_svc->add_timer(t);
+    else
+    {
+        int idx = (_spec.partitioned ? t->hash() % _queues.size() : 0);
+        _per_queue_timer_svcs[idx]->add_timer(t);
+    }
 }
 
 void task_worker_pool::enqueue(task* t)
@@ -110,52 +159,8 @@ void task_worker_pool::enqueue(task* t)
 
     if (_is_running)
     {
-        int idx = (_spec.partitioned ? t->hash() % _queues.size() : 0);
-        task_queue* q = _queues[idx];
-        //dinfo("%s pool::enqueue %s (%016llx)", _node->name(), task->spec().name, task->id());
-        auto controller = _controllers[idx];
-        if (controller != nullptr)
-        {
-            while (!controller->is_task_accepted(t))
-            {
-                // any customized rejection handler?
-                if (t->spec().rejection_handler != nullptr)
-                {
-                    t->spec().rejection_handler(t, controller);
-
-                    ddebug("task %s (%016llx) is rejected",                            
-                        t->spec().name.c_str(),
-                        t->id()
-                        );
-
-                    return;
-                }
-
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            }
-        }
-        else if (t->spec().type == TASK_TYPE_RPC_REQUEST && _spec.max_input_queue_length != 0xFFFFFFFFUL)
-        {
-            while ((uint32_t)q->count() >= _spec.max_input_queue_length)
-            {
-                // any customized rejection handler?
-                if (t->spec().rejection_handler != nullptr)
-                {
-                    t->spec().rejection_handler(t, controller);
-
-                    ddebug("task %s (%016llx) is rejected because the target queue is full",                            
-                        t->spec().name.c_str(),
-                        t->id()
-                        );
-
-                    return;
-                }
-
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            }
-        }
-
-        return q->enqueue(t);
+        int idx = (_spec.partitioned ? t->hash() % _queues.size() : 0);        
+        return _queues[idx]->enqueue_internal(t);
     }
     else
     {
@@ -191,7 +196,7 @@ bool task_worker_pool::shared_same_worker_with_current_task(task* tsk) const
     }
 }
 
-void task_worker_pool::get_runtime_info(const std::string& indent, const std::vector<std::string>& args, __out_param std::stringstream& ss)
+void task_worker_pool::get_runtime_info(const std::string& indent, const std::vector<std::string>& args, /*out*/ std::stringstream& ss)
 {
     std::string indent2 = indent + "\t";
     ss << indent << "contains " << _workers.size() << " threads with " << _queues.size() << " queues" << std::endl;
@@ -200,7 +205,7 @@ void task_worker_pool::get_runtime_info(const std::string& indent, const std::ve
     {
         if (q)
         {
-            ss << indent2 << q->get_name() << " now has " << q->count() << " pending tasks" << std::endl;
+            ss << indent2 << q->get_name() << " now has " << q->approx_count() << " pending tasks" << std::endl;
         }
     }
 
@@ -219,39 +224,47 @@ task_engine::task_engine(service_node* node)
     _node = node;
 }
 
-void task_engine::start(const std::list<dsn_threadpool_code_t>& pools)
+void task_engine::create(const std::list<dsn_threadpool_code_t>& pools)
 {
     if (_is_running)
         return;
-
-    // init timer service
-    _timer_service = factory_store<timer_service>::create(
-        service_engine::fast_instance().spec().timer_factory_name.c_str(),
-        PROVIDER_TYPE_MAIN, _node, nullptr);
-
-    for (auto& s : service_engine::fast_instance().spec().timer_aspects)
-    {
-        _timer_service = factory_store<timer_service>::create(
-            s.c_str(),
-            PROVIDER_TYPE_ASPECT,
-            _node, _timer_service
-            );
-    }
-
+    
     // init pools
     _pools.resize(dsn_threadpool_code_max() + 1, nullptr);
     for (auto& p : pools)
     {
         auto& s = service_engine::fast_instance().spec().threadpool_specs[p];
         auto workerPool = new task_worker_pool(s, this);
-        workerPool->start();
+        workerPool->create();
         _pools[p] = workerPool;
     }
-    
+}
+
+void task_engine::start()
+{
+    if (_is_running)
+        return;
+
+    for (auto& pl : _pools)
+    {
+        if (pl)
+            pl->start();
+    }
+
     _is_running = true;
 }
 
-void task_engine::get_runtime_info(const std::string& indent, const std::vector<std::string>& args, __out_param std::stringstream& ss)
+volatile int* task_engine::get_task_queue_virtual_length_ptr(
+    dsn_task_code_t code,
+    int hash
+    )
+{
+    auto pl = get_pool(task_spec::get(code)->pool_code);
+    auto idx = (pl->spec().partitioned ? hash % pl->spec().worker_count : 0);
+    return pl->queues()[idx]->get_virtual_length_ptr();
+}
+
+void task_engine::get_runtime_info(const std::string& indent, const std::vector<std::string>& args, /*out*/ std::stringstream& ss)
 {
     std::string indent2 = indent + "\t";
     for (auto& p : _pools)

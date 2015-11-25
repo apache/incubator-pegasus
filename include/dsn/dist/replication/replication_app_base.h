@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 //
@@ -37,9 +47,24 @@
 
 namespace dsn { namespace replication {
 
-using namespace ::dsn::service;
-
 class mutation;
+
+class replica_log_info
+{
+public:
+    int32_t magic;
+    int32_t crc;
+    ballot  init_ballot;
+    decree  init_decree;
+    int64_t init_offset_in_shared_log;
+    int64_t init_offset_in_private_log;
+
+public:
+    replica_log_info() { memset((void*)this, 0, sizeof(*this)); }
+    error_code load(const char* file);
+    error_code store(const char* file);
+};
+
 class replication_app_base
 {
 public:
@@ -49,13 +74,25 @@ public:
     {
         return new T(replica);
     }
-    
+
+public:
+    // requests may be batched by replication and fed to replication
+    // app with the same decree, in this case, apps may need to 
+    // be aware of the batch state for the current request
+    enum batch_state
+    {
+        BS_NOT_BATCH,  // request is not batched
+        BS_BATCH,      // request is batched but not the last in the same batch
+        BS_BATCH_LAST  // request is batched and the last in the same batch
+    };
+
 public:
     replication_app_base(::dsn::replication::replica* replica);
     virtual ~replication_app_base() {}
 
     //
-    // Interfaces to be implemented by app, most of them return error code.
+    // Interfaces to be implemented by app, 
+    // most of them return error code (0 for success).
     //
 
     //
@@ -88,12 +125,12 @@ public:
     //
     // The replication framework may emit empty write request to this app to increase the decree.
     //
-    virtual void on_empty_write() { _last_committed_decree++; }
+    virtual void on_empty_write() { }
 
     //
     // Helper routines to accelerate learning.
     // 
-    virtual void prepare_learning_request(__out_param ::dsn::blob& learn_req) {}
+    virtual void prepare_learning_request(/*out*/ ::dsn::blob& learn_req) {}
 
     // 
     // Learn [start, infinite) from remote replicas.
@@ -106,8 +143,11 @@ public:
     // Postconditions:
     // * after apply_learn_state() done, last_committed_decree() >= last_durable_decree()
     //
-    virtual int  get_learn_state(::dsn::replication::decree start,
-            const ::dsn::blob& learn_req, __out_param ::dsn::replication::learn_state& state) = 0;
+    virtual int  get_learn_state(
+        ::dsn::replication::decree start,
+        const ::dsn::blob& learn_req,
+        /*out*/ ::dsn::replication::learn_state& state
+        ) = 0;
     virtual int  apply_learn_state(::dsn::replication::learn_state& state) = 0;
 
     //
@@ -120,14 +160,21 @@ public:
     //
     // utility functions to be used by app
     //   
+    const char* replica_name() const;
     const std::string& data_dir() const { return _dir_data; }
     const std::string& learn_dir() const { return _dir_learn; }
+    bool is_delta_state_learning_supported() const { return _is_delta_state_learning_supported; }
+
     //
     // set physical error (e.g., disk error) so that the app is dropped by replication later
     //
     void set_physical_error(int err) { _physical_error = err; }
+    void set_delta_state_learning_supported() { _is_delta_state_learning_supported = true; }
 
 protected:
+    //
+    // rpc handler registration
+    //
     template<typename T, typename TRequest, typename TResponse> 
     void register_async_rpc_handler(
         dsn_task_code_t code,
@@ -136,6 +183,13 @@ protected:
         );
 
     void unregister_rpc_handler(dsn_task_code_t code);
+
+    // init the commit decree, usually used by apps when initializing the 
+    // state from checkpoints (e.g., update durable and commit decrees)
+    void init_last_commit_decree(decree d) { _last_committed_decree = d; }
+
+    // see comments for batch_state, this function is not thread safe
+    batch_state get_current_batch_state() { return _batch_state; }
     
 private:
     template<typename T, typename TRequest, typename TResponse>
@@ -148,18 +202,28 @@ private:
 private:
     // routines for replica internal usage
     friend class replica;
+    friend class replica_stub;
+    error_code open_internal(replica* r, bool create_new);
     error_code write_internal(mutation_ptr& mu);
     void       dispatch_rpc_call(int code, binary_reader& reader, dsn_message_t response);
-    
+    const replica_log_info& log_info() const { return _info; }
+    error_code update_log_info(replica* r, int64_t shared_log_offset, int64_t private_log_offset);
+
 private:
     std::string _dir_data;
     std::string _dir_learn;
     replica*    _replica;
     std::unordered_map<int, std::function<void(binary_reader&, dsn_message_t)> > _handlers;
     int         _physical_error; // physical error (e.g., io error) indicates the app needs to be dropped
+    bool        _is_delta_state_learning_supported;
+    replica_log_info _info;
+    batch_state _batch_state;
 
-protected:
+private:
+    // it is now totally controlled by rdsn as we are now supporting batching
     std::atomic<decree> _last_committed_decree;
+
+protected:    
     std::atomic<decree> _last_durable_decree;
 };
 

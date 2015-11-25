@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- *
- * -=- Robust Distributed System Nucleus (rDSN) -=-
+ * 
+ * -=- Robust Distributed System Nucleus (rDSN) -=- 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,14 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
 # ifdef __linux__
 
 # include "native_aio_provider.linux.h"
@@ -46,8 +54,6 @@ namespace dsn {
             memset(&_ctx, 0, sizeof(_ctx));
             auto ret = io_setup(128, &_ctx); // 128 concurrent events
             dassert(ret == 0, "io_setup error, ret = %d", ret);
-
-            new std::thread(std::bind(&native_linux_aio_provider::get_event, this));
         }
 
         native_linux_aio_provider::~native_linux_aio_provider()
@@ -56,16 +62,44 @@ namespace dsn {
             dassert(ret == 0, "io_destroy error, ret = %d", ret);
         }
 
-        dsn_handle_t native_linux_aio_provider::open(const char* file_name, int flag, int pmode)
+        void native_linux_aio_provider::start(io_modifer& ctx)
         {
-            return (dsn_handle_t)::open(file_name, flag, pmode);
+            new std::thread([this, ctx]()
+            {
+                task::set_tls_dsn_context(node(), nullptr, ctx.queue);
+                get_event();
+            });
         }
 
-        error_code native_linux_aio_provider::close(dsn_handle_t hFile)
+        dsn_handle_t native_linux_aio_provider::open(const char* file_name, int flag, int pmode)
         {
-            // TODO: handle failure
-            ::close((int)(uintptr_t)(hFile));
-            return ERR_OK;
+            return (dsn_handle_t)(uintptr_t)::open(file_name, flag, pmode);
+        }
+
+        error_code native_linux_aio_provider::close(dsn_handle_t fh)
+        {
+            if (fh == DSN_INVALID_FILE_HANDLE || ::close((int)(uintptr_t)(fh)) == 0)
+            {
+                return ERR_OK;
+            }
+            else
+            {
+                derror("close file failed, err = %s", strerror(errno));
+                return ERR_FILE_OPERATION_FAILED;
+            }
+        }
+
+        error_code native_linux_aio_provider::flush(dsn_handle_t fh)
+        {
+            if (fh == DSN_INVALID_FILE_HANDLE || ::fsync((int)(uintptr_t)(fh)) == 0)
+            {
+                return ERR_OK;
+            }
+            else
+            {
+                derror("flush file failed, err = %s", strerror(errno));
+                return ERR_FILE_OPERATION_FAILED;
+            }
         }
 
         disk_aio* native_linux_aio_provider::prepare_aio_context(aio_task* tsk)
@@ -79,14 +113,21 @@ namespace dsn {
 
         void native_linux_aio_provider::aio(aio_task* aio_tsk)
         {
-            aio_internal(aio_tsk, true);
+            auto err = aio_internal(aio_tsk, true);
+            err.end_tracking();
         }
 
         void native_linux_aio_provider::get_event()
         {
             struct io_event events[1];
             int ret;
-            linux_disk_aio_context * aio;
+
+            task::set_tls_dsn_context(node(), nullptr, nullptr);
+
+            const char* name = ::dsn::tools::get_service_node_name(node());
+            char buffer[128];
+            sprintf(buffer, "%s.aio", name);
+            task_worker::set_name(buffer);
 
             while (true)
             {
@@ -107,25 +148,31 @@ namespace dsn {
         void native_linux_aio_provider::complete_aio(struct iocb* io, int bytes, int err)
         {
             linux_disk_aio_context* aio = CONTAINING_RECORD(io, linux_disk_aio_context, cb);
+            error_code ec;
             if (err != 0)
             {
-                derror("aio error, err = %d", err);
+                derror("aio error, err = %s", strerror(err));
+                ec = ERR_FILE_OPERATION_FAILED;
+            }
+            else
+            {
+                ec = bytes > 0 ? ERR_OK : ERR_HANDLE_EOF;
             }
 
             if (!aio->evt)
             {
                 aio_task* aio_ptr(aio->tsk);
-                aio->this_->complete_io(aio_ptr, (err == 0) ? ERR_OK : ERR_FILE_OPERATION_FAILED, bytes);
+                aio->this_->complete_io(aio_ptr, ec, bytes);
             }
             else
             {
-                aio->err = (err == 0) ? ERR_OK : ERR_FILE_OPERATION_FAILED;
+                aio->err = ec;
                 aio->bytes = bytes;
                 aio->evt->notify();
             }
         }
 
-        error_code native_linux_aio_provider::aio_internal(aio_task* aio_tsk, bool async, __out_param uint32_t* pbytes /*= nullptr*/)
+        error_code native_linux_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/ uint32_t* pbytes /*= nullptr*/)
         {
             struct iocb *cbs[1];
             linux_disk_aio_context * aio;
@@ -188,7 +235,10 @@ namespace dsn {
                     aio->evt->wait();
                     delete aio->evt;
                     aio->evt = nullptr;
-                    *pbytes = aio->bytes;
+                    if (pbytes != nullptr)
+                    {
+                        *pbytes = aio->bytes;
+                    }
                     return aio->err;
                 }
             }

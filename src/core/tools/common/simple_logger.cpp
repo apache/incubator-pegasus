@@ -23,15 +23,26 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include "simple_logger.h"
 # include <sstream>
-# include <boost/filesystem.hpp>
 
 namespace dsn {
     namespace tools {
 
-        static void print_header(FILE* fp)
+        static void print_header(FILE* fp, dsn_log_level_t log_level)
         {
+            static char s_level_char[] = "IDWEF";
+
             uint64_t ts = 0;
             if (::dsn::tools::is_engine_ready())
                 ts = dsn_now_ns();
@@ -41,7 +52,8 @@ namespace dsn {
 
             int tid = ::dsn::utils::get_current_tid(); 
 
-            fprintf(fp, "%s (%llu %04x) ", str, static_cast<long long unsigned int>(ts), tid);
+            fprintf(fp, "%c%s (%llu %04x) ", s_level_char[log_level],
+                    str, static_cast<long long unsigned int>(ts), tid);
 
             task* t = task::get_current_task();
             if (t)
@@ -49,7 +61,7 @@ namespace dsn {
                 if (nullptr != task::get_current_worker())
                 {
                     fprintf(fp, "%6s.%7s%u.%016llx: ",
-                        t->node_name(),
+                        task::get_current_node_name(),
                         task::get_current_worker()->pool_spec().name.c_str(),
                         task::get_current_worker()->index(),
                         static_cast<long long unsigned int>(t->id())
@@ -58,7 +70,7 @@ namespace dsn {
                 else
                 {
                     fprintf(fp, "%6s.%7s.%05d.%016llx: ",
-                        t->node_name(),
+                        task::get_current_node_name(),
                         "io-thrd",
                         tid,
                         static_cast<long long unsigned int>(t->id())
@@ -67,12 +79,33 @@ namespace dsn {
             }
             else
             {
-                fprintf(fp, "%6s.%7s.%05d: ",
-                    "system",
-                    "io-thrd",
-                    tid
-                    );
+                if (nullptr != task::get_current_worker())
+                {
+                    fprintf(fp, "%6s.%7s%u: ",
+                        task::get_current_node_name(),
+                        task::get_current_worker()->pool_spec().name.c_str(),
+                        task::get_current_worker()->index()
+                        );
+                }
+                else
+                {
+                    fprintf(fp, "%6s.%7s.%05d: ",
+                        task::get_current_node_name(),
+                        "io-thrd",
+                        tid
+                        );
+                }
             }
+        }
+
+        screen_logger::screen_logger()
+        {
+            _short_header = dsn_config_get_value_bool("tools.screen_logger", "short_header",
+                true, "whether to use short header (excluding file/function etc.)");
+        }
+
+        screen_logger::~screen_logger(void)
+        {
         }
 
         void screen_logger::dsn_logv(const char *file,
@@ -84,10 +117,13 @@ namespace dsn {
             va_list args
             )
         {
-            utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
+            utils::auto_lock< ::dsn::utils::ex_lock_nr> l(_lock);
 
-            print_header(stdout);
-            // printf("%s:%d:%s(): ", title, line, function);
+            print_header(stdout, log_level);
+            if (!_short_header)
+            {
+                printf("%s:%d:%s(): ", title, line, function);
+            }
             vprintf(fmt, args);
             printf("\n");
         }
@@ -103,14 +139,29 @@ namespace dsn {
             _index = 0;
             _lines = 0;
             _log = nullptr;
+            _short_header = dsn_config_get_value_bool("tools.simple_logger", "short_header", 
+                true, "whether to use short header (excluding file/function etc.)");
+            _fast_flush = dsn_config_get_value_bool("tools.simple_logger", "fast_flush",
+                false, "whether to flush immediately");
+            _stderr_start_level = enum_from_string(
+                        dsn_config_get_value_string("tools.simple_logger", "stderr_start_level",
+                            enum_to_string(LOG_LEVEL_WARNING),
+                            "copy log messages at or above this level to stderr in addition to logfiles"),
+                        LOG_LEVEL_INVALID
+                        );
+            dassert(_stderr_start_level != LOG_LEVEL_INVALID,
+                    "invalid [tools.simple_logger] stderr_start_level specified");
 
             // check existing log files
-            boost::filesystem::directory_iterator endtr;
-            for (boost::filesystem::directory_iterator it(std::string("./"));
-                it != endtr;
-                ++it)
+            std::vector<std::string> sub_list;
+            std::string path = "./";
+            if (!dsn::utils::filesystem::get_subfiles(path, sub_list, false))
             {
-                auto name = it->path().filename().string();
+                dassert(false, "Fail to get subfiles in %s.", path.c_str());
+            }             
+            for (auto& fpath : sub_list)
+            {
+                auto&& name = dsn::utils::filesystem::get_file_name(fpath);
                 if (name.length() <= 8 ||
                     name.substr(0, 4) != "log.")
                     continue;
@@ -125,6 +176,7 @@ namespace dsn {
                 if (_start_index == 0 || index < _start_index)
                     _start_index = index;
             }
+            sub_list.clear();
 
             if (_start_index == 0)
                 _start_index = _index;
@@ -148,9 +200,10 @@ namespace dsn {
             {
                 std::stringstream str2;
                 str2 << "log." << _start_index++ << ".txt";
-                boost::filesystem::path dp = str2.str();
-                if (::dsn::utils::is_file_or_dir_exist(str2.str().c_str()))
-                    boost::filesystem::remove(dp);
+                if (!dsn::utils::filesystem::remove_path(str2.str()))
+                {
+                    dassert(false, "Fail to remove file %s.", str2.str().c_str());
+                }
             }
         }
 
@@ -174,30 +227,40 @@ namespace dsn {
             )
         {
             va_list args2;
-            if (log_level >= LOG_LEVEL_WARNING)
+            if (log_level >= _stderr_start_level)
             {
                 va_copy(args2, args);
             }
 
-            utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
+            utils::auto_lock< ::dsn::utils::ex_lock_nr> l(_lock);
          
-            print_header(_log);
-            fprintf(_log, "%s:%d:%s(): ", title, line, function);
+            print_header(_log, log_level);
+            if (!_short_header)
+            {
+                fprintf(_log, "%s:%d:%s(): ", title, line, function);
+            }
             vfprintf(_log, fmt, args);
             fprintf(_log, "\n");
-            if (log_level >= LOG_LEVEL_ERROR)
-                fflush(_log);
-
-            if (log_level >= LOG_LEVEL_WARNING)
+            if (_fast_flush || log_level >= LOG_LEVEL_ERROR)
             {
-                print_header(stdout);
-                printf("%s:%d:%s(): ", title, line, function);
+                fflush(_log);
+            }
+
+            if (log_level >= _stderr_start_level)
+            {
+                print_header(stdout, log_level);
+                if (!_short_header)
+                {
+                    printf("%s:%d:%s(): ", title, line, function);
+                }
                 vprintf(fmt, args2);
                 printf("\n");
             }
 
             if (++_lines >= 200000)
+            {
                 create_log_file();
+            }
         }
     }
 }

@@ -24,10 +24,23 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+
 # include "replication_common.h"
 # include "replica_stub.h"
 
-# include <boost/filesystem.hpp>
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "replica.service_app"
 
 namespace dsn { namespace replication {
 
@@ -36,12 +49,14 @@ replication_service_app::replication_service_app()
 {
     _stub = nullptr;
 
+#if 0
     ::boost::filesystem::path pr("./");
     if (!::boost::filesystem::exists(pr))
     {
         printf("we are avoiding a bug in boost file system here\n");
         // http://boost.2283326.n4.nabble.com/filesystem-v3-v1-49-Path-constructor-issue-in-VS-Debug-configuration-td4463703.html
     }
+#endif
 }
 
 replication_service_app::~replication_service_app(void)
@@ -51,8 +66,10 @@ replication_service_app::~replication_service_app(void)
 error_code replication_service_app::start(int argc, char** argv)
 {
     replication_options opts;
-    opts.initialize();
-    opts.working_dir = std::string("./") + argv[0];
+    std::string app_name(argv[0]); 
+    
+    opts.initialize();    
+    opts.working_dir = utils::filesystem::path_combine(opts.working_dir, app_name);
 
     _stub = new replica_stub();
     _stub->initialize(opts);

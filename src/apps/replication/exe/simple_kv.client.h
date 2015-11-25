@@ -23,10 +23,22 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 # include <dsn/dist/replication.h>
 # include "simple_kv.code.definition.h"
 # include <iostream>
+
+# define SKV_PARTITION_COUNT 1
 
 namespace dsn { namespace replication { namespace application { 
 class simple_kv_client 
@@ -34,7 +46,7 @@ class simple_kv_client
 {
 public:
     simple_kv_client(
-        const std::vector<dsn_address_t>& meta_servers,
+        const std::vector< ::dsn::rpc_address>& meta_servers,
         const char* app_name)
         : ::dsn::replication::replication_app_client_base(meta_servers, app_name) 
     {
@@ -44,14 +56,14 @@ public:
     
     // from requests to partition index
     // PLEASE DO RE-DEFINE THEM IN A SUB CLASS!!!
-    virtual int get_partition_index(const std::string& key) { return 0;};
-    virtual int get_partition_index(const ::dsn::replication::application::kv_pair& key) { return 0;};
+    virtual int get_partition_index(const std::string& key) { return (int)dsn_random32(0, SKV_PARTITION_COUNT-1); };
+    virtual int get_partition_index(const ::dsn::replication::application::kv_pair& key) { return (int)dsn_random32(0, SKV_PARTITION_COUNT - 1); };
 
     // ---------- call RPC_SIMPLE_KV_SIMPLE_KV_READ ------------
     // - synchronous 
     ::dsn::error_code read(
         const std::string& key, 
-        __out_param std::string& resp, 
+        /*out*/ std::string& resp, 
         int timeout_milliseconds = 0
         )
     {
@@ -141,11 +153,11 @@ public:
     // - synchronous 
     ::dsn::error_code write(
         const ::dsn::replication::application::kv_pair& pr, 
-        __out_param int32_t& resp, 
+        /*out*/ int32_t& resp, 
         int timeout_milliseconds = 0
         )
     {
-        auto resp_task = ::dsn::replication::replication_app_client_base::write<::dsn::replication::application::kv_pair, int32_t>(
+        auto resp_task = ::dsn::replication::replication_app_client_base::write< ::dsn::replication::application::kv_pair, int32_t>(
             get_partition_index(pr),
             RPC_SIMPLE_KV_SIMPLE_KV_WRITE,
             pr,
@@ -194,9 +206,9 @@ public:
         }
     }
     
-    // - asynchronous with on-heap std::shared_ptr<::dsn::replication::application::kv_pair> and std::shared_ptr<int32_t> 
+    // - asynchronous with on-heap std::shared_ptr< ::dsn::replication::application::kv_pair> and std::shared_ptr<int32_t> 
     ::dsn::task_ptr begin_write2(
-        std::shared_ptr<::dsn::replication::application::kv_pair>& pr,         
+        std::shared_ptr< ::dsn::replication::application::kv_pair>& pr,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0
         )
@@ -214,7 +226,7 @@ public:
 
     virtual void end_write2( 
         ::dsn::error_code err, 
-        std::shared_ptr<::dsn::replication::application::kv_pair>& pr, 
+        std::shared_ptr< ::dsn::replication::application::kv_pair>& pr, 
         std::shared_ptr<int32_t>& resp)
     {
         if (err != ::dsn::ERR_OK) std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_WRITE err : " << err.to_string() << std::endl;
@@ -229,11 +241,11 @@ public:
     // - synchronous 
     ::dsn::error_code append(
         const ::dsn::replication::application::kv_pair& pr, 
-        __out_param int32_t& resp, 
+        /*out*/ int32_t& resp, 
         int timeout_milliseconds = 0
         )
     {
-        auto resp_task = ::dsn::replication::replication_app_client_base::write<::dsn::replication::application::kv_pair, int32_t>(
+        auto resp_task = ::dsn::replication::replication_app_client_base::write< ::dsn::replication::application::kv_pair, int32_t>(
             get_partition_index(pr),
             RPC_SIMPLE_KV_SIMPLE_KV_APPEND,
             pr,
@@ -282,9 +294,9 @@ public:
         }
     }
     
-    // - asynchronous with on-heap std::shared_ptr<::dsn::replication::application::kv_pair> and std::shared_ptr<int32_t> 
+    // - asynchronous with on-heap std::shared_ptr< ::dsn::replication::application::kv_pair> and std::shared_ptr<int32_t> 
     ::dsn::task_ptr begin_append2(
-        std::shared_ptr<::dsn::replication::application::kv_pair>& pr,         
+        std::shared_ptr< ::dsn::replication::application::kv_pair>& pr,         
         int timeout_milliseconds = 0, 
         int reply_hash = 0
         )
@@ -302,7 +314,7 @@ public:
 
     virtual void end_append2(
         ::dsn::error_code err, 
-        std::shared_ptr<::dsn::replication::application::kv_pair>& pr, 
+        std::shared_ptr< ::dsn::replication::application::kv_pair>& pr, 
         std::shared_ptr<int32_t>& resp)
     {
         if (err != ::dsn::ERR_OK) std::cout << "reply RPC_SIMPLE_KV_SIMPLE_KV_APPEND err : " << err.to_string() << std::endl;

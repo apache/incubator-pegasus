@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #include <dsn/tool/nativerun.h>
 
 namespace dsn {
@@ -68,6 +78,9 @@ namespace dsn {
 
             if (spec.lock_factory_name == "")
                 spec.lock_factory_name = ("dsn::tools::std_lock_provider");
+
+            if (spec.lock_nr_factory_name == "")
+                spec.lock_nr_factory_name = ("dsn::tools::std_lock_nr_provider");
 
             if (spec.rwlock_nr_factory_name == "")
                 spec.rwlock_nr_factory_name = ("dsn::tools::std_rwlock_nr_provider");

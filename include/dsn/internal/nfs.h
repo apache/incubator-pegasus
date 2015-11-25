@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     network file system component base interface
+ *
+ * Revision history:
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/service_api_c.h>
@@ -34,7 +44,7 @@ namespace dsn {
 
     struct remote_copy_request
     {
-        dsn_address_t   source;
+        ::dsn::rpc_address   source;
         std::string source_dir;
         std::vector<std::string> files;
         std::string dest_dir;
@@ -48,10 +58,12 @@ namespace dsn {
 
     extern void marshall(::dsn::binary_writer& writer, const remote_copy_request& val);
 
-    extern void unmarshall(::dsn::binary_reader& reader, __out_param remote_copy_request& val);
-
-
+    extern void unmarshall(::dsn::binary_reader& reader, /*out*/ remote_copy_request& val);
+    
     class service_node;
+    class task_worker_pool;
+    class task_queue;
+
     class nfs_node
     {
     public:
@@ -60,14 +72,18 @@ namespace dsn {
             return new T(node);
         }
 
+        typedef nfs_node* (*factory)(service_node*);
+
     public:
         nfs_node(service_node* node) : _node(node) {}
 
-        virtual ::dsn::error_code start() = 0;
+        virtual ::dsn::error_code start(io_modifer& ctx) = 0;
 
         virtual error_code stop() = 0;
 
         virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task* callback) = 0;
+        
+        service_node* node() { return _node; }
 
     protected:
         service_node* _node;

@@ -24,6 +24,16 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+
 # include "cli_app.h"
 # include <iostream>
 
@@ -89,7 +99,7 @@ namespace dsn {
                         int port = atoi(args[2].c_str());
                         _timeout_seconds = atoi(args[3].c_str());
 
-                        dsn_address_build(&_target, machine.c_str(), port);
+                        _target.assign_ipv4(machine.c_str(), port);
 
                         std::cout << "remote target is set to " << machine << ":" << port << ", timeout = " << _timeout_seconds << " seconds" <<std::endl;
                         continue;
@@ -105,7 +115,7 @@ namespace dsn {
                         rcmd.arguments.push_back(args[i]);
                     }
 
-                    std::cout << "CALL " << _target.name << ":" << _target.port << " ..." << std::endl;
+                    std::cout << "CALL " << _target.to_string() << " ..." << std::endl;
                     std::string result;
                     auto err = _client.call(rcmd, result, _timeout_seconds * 1000, 0, &_target);
                     if (err == ERR_OK)

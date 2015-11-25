@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #include "load_balancer.h"
 #include <algorithm>
 
@@ -30,6 +40,9 @@
 # undef __TITLE__
 # endif
 # define __TITLE__ "load.balancer"
+
+bool load_balancer::s_lb_for_test = false;
+bool load_balancer::s_disable_lb = false;
 
 load_balancer::load_balancer(server_state* state)
 : _state(state), serverlet<load_balancer>("load_balancer")
@@ -42,6 +55,8 @@ load_balancer::~load_balancer()
 
 void load_balancer::run()
 {
+    if (s_disable_lb) return;
+
     zauto_read_lock l(_state->_lock);
 
     for (size_t i = 0; i < _state->_apps.size(); i++)
@@ -58,14 +73,59 @@ void load_balancer::run()
 
 void load_balancer::run(global_partition_id gpid)
 {
+    if (s_disable_lb) return;
+
     zauto_read_lock l(_state->_lock);
     partition_configuration& pc = _state->_apps[gpid.app_id - 1].partitions[gpid.pidx];
     run_lb(pc);
 }
 
-dsn_address_t load_balancer::find_minimal_load_machine(bool primaryOnly)
+void load_balancer::explictly_send_proposal(global_partition_id gpid, int role, config_type type)
 {
-    std::vector<std::pair<dsn_address_t, int>> stats;
+    if (gpid.app_id<=0 || gpid.pidx<0 || role<0) return;
+
+    configuration_update_request req;
+    {
+        zauto_read_lock l(_state->_lock);
+        if (gpid.app_id>_state->_apps.size())
+            return;
+        app_state& app = _state->_apps[gpid.app_id-1];
+        if (gpid.pidx>=app.partition_count)
+            return;
+        req.config = app.partitions[gpid.pidx];
+    }
+
+    dsn::rpc_address proposal_receiver;
+    if (!req.config.primary.is_invalid())
+        proposal_receiver = req.config.primary;
+    else if (!req.config.secondaries.empty())
+        proposal_receiver = req.config.secondaries[0];
+    else {
+        dwarn("no replica in partition config");
+        return;
+    }
+
+    if (!req.config.primary.is_invalid())
+    {
+        req.node = req.config.primary;
+        --role;
+    }
+
+    if (role >= (int)req.config.secondaries.size())
+    {
+        dwarn("role doesn't exist");
+        return;
+    }
+    else if (role != -1)
+        req.node = req.config.secondaries[role];
+
+    req.type = type;
+    send_proposal(proposal_receiver, req);
+}
+
+::dsn::rpc_address load_balancer::find_minimal_load_machine(bool primaryOnly)
+{
+    std::vector<std::pair< ::dsn::rpc_address, int>> stats;
 
     for (auto it = _state->_nodes.begin(); it != _state->_nodes.end(); it++)
     {
@@ -77,14 +137,20 @@ dsn_address_t load_balancer::find_minimal_load_machine(bool primaryOnly)
     }
 
     
-    std::sort(stats.begin(), stats.end(), [](const std::pair<dsn_address_t, int>& l, const std::pair<dsn_address_t, int>& r)
+    std::sort(stats.begin(), stats.end(), [](const std::pair< ::dsn::rpc_address, int>& l, const std::pair< ::dsn::rpc_address, int>& r)
     {
-        return l.second < r.second;
+        return l.second < r.second || (l.second == r.second && l.first < r.first);
     });
 
     if (stats.empty())
     {
-        return dsn_address_invalid;
+        return ::dsn::rpc_address();
+    }
+
+    if (s_lb_for_test)
+    {
+        // alway use the first (minimal) one
+        return stats[0].first;
     }
 
     int candidate_count = 1;
@@ -108,20 +174,35 @@ void load_balancer::run_lb(partition_configuration& pc)
     configuration_update_request proposal;
     proposal.config = pc;
 
-    if (pc.primary == dsn_address_invalid)
+    if (pc.primary.is_invalid())
     {
         if (pc.secondaries.size() > 0)
         {
             proposal.node = pc.secondaries[dsn_random32(0, static_cast<int>(pc.secondaries.size()) - 1)];
             proposal.type = CT_UPGRADE_TO_PRIMARY;
         }
-        else
+
+        else if (pc.last_drops.size() == 0)
         {
             proposal.node = find_minimal_load_machine(true);
             proposal.type = CT_ASSIGN_PRIMARY;
         }
 
-        if (proposal.node != dsn_address_invalid)
+        // DDD
+        else
+        {
+            proposal.node = *pc.last_drops.rbegin();
+            proposal.type = CT_ASSIGN_PRIMARY;
+
+            derror("%s.%d.%d enters DDD state, we are waiting for its last primary node %s to come back ...",
+                pc.app_type.c_str(),
+                pc.gpid.app_id,
+                pc.gpid.pidx,
+                proposal.node.to_string()
+                );
+        }
+
+        if (proposal.node.is_invalid() == false)
         {
             send_proposal(proposal.node, proposal);
         }
@@ -131,7 +212,7 @@ void load_balancer::run_lb(partition_configuration& pc)
     {
         proposal.type = CT_ADD_SECONDARY;
         proposal.node = find_minimal_load_machine(false);
-        if (proposal.node != dsn_address_invalid && 
+        if (proposal.node.is_invalid() == false && 
             proposal.node != pc.primary &&
             std::find(pc.secondaries.begin(), pc.secondaries.end(), proposal.node) == pc.secondaries.end())
         {
@@ -145,12 +226,11 @@ void load_balancer::run_lb(partition_configuration& pc)
 }
 
 // meta server => partition server
-void load_balancer::send_proposal(const dsn_address_t& node, const configuration_update_request& proposal)
+void load_balancer::send_proposal(::dsn::rpc_address node, const configuration_update_request& proposal)
 {
-    dinfo("send proposal %s of %s:%hu, current ballot = %lld", 
+    dinfo("send proposal %s of %s, current ballot = %lld", 
         enum_to_string(proposal.type),
-        proposal.node.name,
-        proposal.node.port,
+        proposal.node.to_string(),
         proposal.config.ballot
         );
 

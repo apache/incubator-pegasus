@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include "simple_task_queue.h"
 
 # ifdef __TITLE__
@@ -37,12 +47,24 @@ namespace dsn
         simple_timer_service::simple_timer_service(service_node* node, timer_service* inner_provider)
             : timer_service(node, inner_provider)
         {
-            _worker = std::shared_ptr<std::thread>(new std::thread([this, node]()
+            _worker = nullptr;
+        }
+
+        void simple_timer_service::start(io_modifer& ctx)
+        {
+            _worker = std::shared_ptr<std::thread>(new std::thread([this, ctx]()
             {
-                task_worker::set_name("timer");
+                task::set_tls_dsn_context(node(), nullptr, ctx.queue);
+
+                char buffer[128];
+                sprintf(buffer, "%s.%s.timer", 
+                    get_service_node_name(node()), 
+                    ctx.queue ? ctx.queue->get_name().c_str():""
+                    );
+
+                task_worker::set_name(buffer);
                 task_worker::set_priority(worker_priority_t::THREAD_xPRIORITY_ABOVE_NORMAL);
 
-                task::set_current_worker(nullptr, node);
                 boost::asio::io_service::work work(_ios);
                 _ios.run();
             }));
@@ -87,11 +109,6 @@ namespace dsn
             auto t = _samples.dequeue(c);
             dassert(t != nullptr, "dequeue does not return empty tasks");
             return t;
-        }
-
-        int      simple_task_queue::count() const
-        {
-            return _samples.count();
         }
     }
 }

@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #include "replica.h"
 #include "mutation.h"
 #include "mutation_log.h"
@@ -31,7 +41,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ "FailOver"
+# define __TITLE__ "replica.failover"
 
 namespace dsn { namespace replication {
 
@@ -52,19 +62,19 @@ void replica::handle_local_failure(error_code error)
     update_local_configuration_with_no_ballot_change(PS_ERROR);
 }
 
-void replica::handle_remote_failure(partition_status st, const dsn_address_t& node, error_code error)
+void replica::handle_remote_failure(partition_status st, ::dsn::rpc_address node, error_code error)
 {    
     derror(
-        "%s: handle remote failure error %s, status = %s, node = %s:%hu",
+        "%s: handle remote failure error %s, status = %s, node = %s",
         name(),
         error.to_string(),
         enum_to_string(st),
-        node.name, node.port
+        node.to_string()
         );
     error.end_tracking();
 
     dassert (status() == PS_PRIMARY, "");
-    dassert (node != primary_address(), "");
+    dassert (node != _stub->_primary_address, "");
 
     switch (st)
     {
@@ -81,14 +91,8 @@ void replica::handle_remote_failure(partition_status st, const dsn_address_t& no
     case PS_POTENTIAL_SECONDARY:
         // potential secondary failure does not lead to ballot change
         // therefore, it is possible to have multiple exec here
-        if (_primary_states.learners.erase(node) > 0)
-        {
-            if (_primary_states.check_exist(node, PS_INACTIVE))
-                _primary_states.statuses[node] = PS_INACTIVE;
-            else
-                _primary_states.statuses.erase(node);
-        }
-        
+        _primary_states.learners.erase(node);
+        _primary_states.statuses.erase(node);
         break;
     case PS_INACTIVE:
     case PS_ERROR:

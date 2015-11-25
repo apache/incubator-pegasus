@@ -23,18 +23,61 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include <dsn/dist/replication.h>
-#include "server_state.h"
-#include "meta_service.h"
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+# include <dsn/dist/replication.h>
+# include "server_state.h"
+# include "meta_service.h"
+# include "distributed_lock_service_simple.h"
+# include "meta_state_service_simple.h"
+# include <dsn/internal/factory_store.h>
 
 namespace dsn {
     namespace service {
 
-        server_state * meta_service_app::_reliable_state = nullptr;
+        bool register_component_provider(
+            const char* name,
+            ::dsn::dist::distributed_lock_service::factory f)
+        {
+            return dsn::utils::factory_store< ::dsn::dist::distributed_lock_service>::register_factory(
+                name, 
+                f,
+                PROVIDER_TYPE_MAIN);
+        }
+
+        bool register_component_provider(
+            const char* name,
+            ::dsn::dist::meta_state_service::factory f)
+        {
+            return dsn::utils::factory_store< ::dsn::dist::meta_state_service>::register_factory(
+                name,
+                f,
+                PROVIDER_TYPE_MAIN);
+        }
 
         meta_service_app::meta_service_app()
         {
             _service = nullptr;
+
+            register_component_provider(
+                "distributed_lock_service_simple",
+                ::dsn::dist::distributed_lock_service::create< ::dsn::dist::distributed_lock_service_simple>
+                );
+
+            register_component_provider(
+                "meta_state_service_simple",
+                ::dsn::dist::meta_state_service::create< ::dsn::dist::meta_state_service_simple>
+                );
+
+            // TODO: register more provides here used by meta servers
         }
 
         meta_service_app::~meta_service_app()
@@ -44,36 +87,26 @@ namespace dsn {
 
         ::dsn::error_code meta_service_app::start(int argc, char** argv)
         {
-            if (nullptr == _reliable_state)
-            {
-                _reliable_state = new server_state();
-            }
+            _state = new server_state();
+            _service = new meta_service(_state);
 
-            _service = new meta_service(_reliable_state);
-
-            _reliable_state->init_app();
-            _reliable_state->add_meta_node(_service->primary_address());
-            _service->start(argv[0], false);
+            _state->initialize(name().c_str());
+            _service->start();
             return ERR_OK;
         }
 
         void meta_service_app::stop(bool cleanup)
         {
-            if (_reliable_state != nullptr)
+            if (_state != nullptr)
             {
                 if (_service != nullptr)
                 {
                     _service->stop();
-                    _reliable_state->remove_meta_node(_service->primary_address());
                     delete _service;
                     _service = nullptr;
 
-                    dsn_address_t primary;
-                    if (!_reliable_state->get_meta_server_primary(primary))
-                    {
-                        delete _reliable_state;
-                        _reliable_state = nullptr;
-                    }
+                    delete _state;
+                    _state = nullptr;
                 }
             }
             else

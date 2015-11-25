@@ -23,19 +23,73 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include "command_manager.h"
 # include <iostream>
 # include <thread>
 # include <sstream>
 # include <dsn/cpp/utils.h>
 # include <dsn/cpp/serialization.h>
-# include <dsn/cpp/msg_binary_io.h>
+# include <dsn/cpp/rpc_stream.h>
 # include "service_engine.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
 # define __TITLE__ "command_manager"
+
+DSN_API const char* dsn_cli_run(const char* command_line) // return command output
+{
+    std::string cmd = command_line;
+    std::string output;
+    dsn::command_manager::instance().run_command(cmd, output);
+
+    char* c_output = (char*)malloc(output.length() + 1);
+    strcpy(c_output, output.c_str());
+    return c_output;
+}
+
+DSN_API void dsn_cli_free(const char* command_output)
+{
+    ::free((void*)command_output);
+}
+
+DSN_API void dsn_cli_register(
+    const char* command,
+    const char* help_one_line,
+    const char* help_long,
+    dsn_cli_handler cmd_handler,
+    dsn_cli_free_handler output_freer
+    )
+{
+    dsn::register_command(
+        command,
+        help_one_line,
+        help_long,
+        [=](const std::vector<std::string>& args)
+        {
+            std::vector<const char*> c_args;
+            for (auto& s : args)
+            {
+                c_args.push_back(s.c_str());
+            }
+
+            const char* output = cmd_handler((int)c_args.size(), (const char**)&c_args[0]);
+            std::string cpp_output = std::string(output);
+            output_freer(output);
+            return cpp_output;
+        }
+        );
+}
 
 namespace dsn {
 
@@ -91,7 +145,7 @@ namespace dsn {
         }
     }
 
-    bool command_manager::run_command(const std::string& cmdline, __out_param std::string& output)
+    bool command_manager::run_command(const std::string& cmdline, /*out*/ std::string& output)
     {
         std::string scmd = cmdline;
         std::vector<std::string> args;
@@ -110,7 +164,7 @@ namespace dsn {
         return run_command(args[0], args2, output);
     }
 
-    bool command_manager::run_command(const std::string& cmd, const std::vector<std::string>& args, __out_param std::string& output)
+    bool command_manager::run_command(const std::string& cmd, const std::vector<std::string>& args, /*out*/ std::string& output)
     {
         command* h = nullptr;
         {
@@ -135,16 +189,15 @@ namespace dsn {
     void command_manager::run_console()
     {
         std::cout << "dsn cli begin ... (type 'help' + Enter to learn more)" << std::endl;
+        std::cout << ">";
 
-        while (true)
+        std::string cmdline;
+        while (std::getline(std::cin, cmdline))
         {
-            std::string cmdline;
-            std::cout << ">";
-            std::getline(std::cin, cmdline);
-
             std::string result;
             run_command(cmdline, result);
             std::cout << result << std::endl;
+            std::cout << ">";
         }
     }
 
@@ -167,8 +220,7 @@ namespace dsn {
 
     void command_manager::on_remote_cli(dsn_message_t req)
     {
-        auto msg = (message_ex*)req;
-        msg_binary_reader reader(msg);
+        rpc_read_stream reader(req);
 
         std::string cmd;
         unmarshall(reader, cmd);
@@ -207,7 +259,7 @@ namespace dsn {
                     utils::auto_read_lock l(_lock);
                     auto it = _handlers.find(args[0]);
                     if (it == _handlers.end())
-                        ss << "cannot find command '" << args[0] << "'" << std::endl;
+                        ss << "cannot find command '" << args[0] << "'";
                     else
                     {
                         ss.width(6);

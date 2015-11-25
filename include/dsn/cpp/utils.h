@@ -23,15 +23,88 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/ports.h>
 # include <dsn/cpp/auto_codes.h>
+# include <functional>
 
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
 # define __TITLE__ "utils"
+
+# ifdef __cplusplus
+extern "C" {
+# endif
+
+# ifdef _WIN32
+
+enum
+{
+    FTW_F,        /* Regular file.  */
+#define FTW_F    FTW_F
+    FTW_D,        /* Directory.  */
+#define FTW_D    FTW_D
+    FTW_DNR,      /* Unreadable directory.  */
+#define FTW_DNR  FTW_DNR
+    FTW_NS,       /* Unstatable file.  */
+#define FTW_NS   FTW_NS
+
+    FTW_SL,       /* Symbolic link.  */
+# define FTW_SL  FTW_SL
+                    /* These flags are only passed from the `nftw' function.  */
+    FTW_DP,       /* Directory, all subdirs have been visited. */
+# define FTW_DP  FTW_DP
+    FTW_SLN       /* Symbolic link naming non-existing file.  */
+# define FTW_SLN FTW_SLN
+};
+
+struct FTW
+{
+    int base;
+    int level;
+};
+
+# else
+
+#ifndef _XOPEN_SOURCE
+# define _XOPEN_SOURCE 500
+#endif
+
+# include <ftw.h>
+
+# endif
+
+#ifndef FTW_CONTINUE
+# define FTW_CONTINUE 0
+#endif
+
+#ifndef FTW_STOP
+# define FTW_STOP 1
+#endif
+
+#ifndef FTW_SKIP_SUBTREE
+# define FTW_SKIP_SUBTREE 2
+#endif
+
+#ifndef FTW_SKIP_SIBLINGS
+# define FTW_SKIP_SIBLINGS 3
+#endif
+
+# ifdef __cplusplus
+}
+# endif
 
 namespace dsn {
 
@@ -78,6 +151,8 @@ namespace dsn {
 
         std::shared_ptr<char> buffer() { return _holder; }
 
+        bool has_holder() const { return _holder.get() != nullptr; }
+
         const char* buffer_ptr() { return _holder.get(); }
 
         blob range(int offset) const
@@ -120,26 +195,29 @@ namespace dsn {
     {
     public:
         // given bb on ctor
-        binary_reader(blob& blob);
+        binary_reader(const blob& blob);
 
         // or delayed init
         binary_reader() {}
-        void init(blob& bb);
 
-        template<typename T> int read_pod(__out_param T& val);
-        template<typename T> int read(__out_param T& val) { dassert(false, "read of this type is not implemented"); return 0; }
-        int read(__out_param int8_t& val) { return read_pod(val); }
-        int read(__out_param uint8_t& val) { return read_pod(val); }
-        int read(__out_param int16_t& val) { return read_pod(val); }
-        int read(__out_param uint16_t& val) { return read_pod(val); }
-        int read(__out_param int32_t& val) { return read_pod(val); }
-        int read(__out_param uint32_t& val) { return read_pod(val); }
-        int read(__out_param int64_t& val) { return read_pod(val); }
-        int read(__out_param uint64_t& val) { return read_pod(val); }
-        int read(__out_param bool& val) { return read_pod(val); }
+        virtual ~binary_reader() {}
 
-        int read(__out_param error_code& err) { int val; int ret = read_pod(val); err = val; return ret; }
-        int read(__out_param std::string& s);
+        void init(const blob& bb);
+
+        template<typename T> int read_pod(/*out*/ T& val);
+        template<typename T> int read(/*out*/ T& val) { dassert(false, "read of this type is not implemented"); return 0; }
+        int read(/*out*/ int8_t& val) { return read_pod(val); }
+        int read(/*out*/ uint8_t& val) { return read_pod(val); }
+        int read(/*out*/ int16_t& val) { return read_pod(val); }
+        int read(/*out*/ uint16_t& val) { return read_pod(val); }
+        int read(/*out*/ int32_t& val) { return read_pod(val); }
+        int read(/*out*/ uint32_t& val) { return read_pod(val); }
+        int read(/*out*/ int64_t& val) { return read_pod(val); }
+        int read(/*out*/ uint64_t& val) { return read_pod(val); }
+        int read(/*out*/ bool& val) { return read_pod(val); }
+
+        int read(/*out*/ error_code& err) { int val; int ret = read_pod(val); err = val; return ret; }
+        int read(/*out*/ std::string& s);
         int read(char* buffer, int sz);
         int read(blob& blob);
 
@@ -165,7 +243,8 @@ namespace dsn {
     public:
         binary_writer(int reserved_buffer_size = 0);
         binary_writer(blob& buffer);
-        ~binary_writer();
+
+        virtual ~binary_writer();
 
         template<typename T> void write_pod(const T& val);
         template<typename T> void write(const T& val) { dassert(false, "write of this type is not implemented"); }
@@ -188,9 +267,10 @@ namespace dsn {
         bool next(void** data, int* size);
         bool backup(int count);
 
-        void get_buffers(__out_param std::vector<blob>& buffers);
+        void get_buffers(/*out*/ std::vector<blob>& buffers);
         int  get_buffer_count() const { return static_cast<int>(_buffers.size()); }
         blob get_buffer();
+        blob get_current_buffer(); // without commit, write can be continued on the last buffer
         blob get_first_buffer() const;
 
         int total_size() const { return _total_size; }
@@ -215,7 +295,7 @@ namespace dsn {
 
     //--------------- inline implementation -------------------
     template<typename T>
-    inline int binary_reader::read_pod(__out_param T& val)
+    inline int binary_reader::read_pod(/*out*/ T& val)
     {
         if (sizeof(T) <= get_remaining_size())
         {
@@ -237,7 +317,7 @@ namespace dsn {
         write((char*)&val, static_cast<int>(sizeof(T)));
     }
 
-    inline void binary_writer::get_buffers(__out_param std::vector<blob>& buffers)
+    inline void binary_writer::get_buffers(/*out*/ std::vector<blob>& buffers)
     {
         commit();
         buffers = _buffers;
@@ -267,10 +347,10 @@ namespace dsn {
 namespace dsn {
     namespace utils {
 
-        extern void split_args(const char* args, __out_param std::vector<std::string>& sargs, char splitter = ' ');
-        extern void split_args(const char* args, __out_param std::list<std::string>& sargs, char splitter = ' ');
+        extern void split_args(const char* args, /*out*/ std::vector<std::string>& sargs, char splitter = ' ');
+        extern void split_args(const char* args, /*out*/ std::list<std::string>& sargs, char splitter = ' ');
         extern std::string replace_string(std::string subject, const std::string& search, const std::string& replace);
-        extern std::string get_last_component(const std::string& input, char splitters[]);
+        extern std::string get_last_component(const std::string& input, const char splitters[]);
 
         extern char* trim_string(char* s);
 
@@ -279,6 +359,17 @@ namespace dsn {
         extern uint64_t get_random64_pseudo();
 
         extern uint64_t get_current_physical_time_ns();
+
+        inline uint64_t get_current_rdtsc()
+        {
+# ifdef _WIN32
+            return __rdtsc();
+# else
+            unsigned hi, lo;
+            __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
+            return ((unsigned long long)lo) | (((unsigned long long)hi) << 32);
+# endif
+        }
 
         extern void time_ms_to_string(uint64_t ts_ms, char* str);
 
@@ -305,15 +396,62 @@ namespace dsn {
 
         inline int get_invalid_tid() { return -1; }
 
-        extern bool load_dynamic_library(const char* module);
+        namespace filesystem {
 
-        extern bool is_file_or_dir_exist(const char* path);
+            extern bool get_absolute_path(const std::string& path1, std::string& path2);
 
-        extern std::string get_absolute_path(const char* path);
+            extern std::string remove_file_name(const std::string& path);
 
-        extern std::string remove_file_name(const char* path);
+            extern std::string get_file_name(const std::string& path);
 
-        extern bool remove_dir(const char* path, bool recursive);
+            extern std::string path_combine(const std::string& path1, const std::string& path2);
+
+            extern int get_normalized_path(const std::string& path, std::string& npath);
+
+            //int (const char* fpath, int typeflags, struct FTW *ftwbuf)
+            typedef std::function<int(const char*, int, struct FTW*)> ftw_handler;
+
+            extern bool file_tree_walk(
+                const std::string& dirpath,
+                ftw_handler handler,
+                bool recursive = true
+                );
+
+            extern bool path_exists(const std::string& path);
+
+            extern bool directory_exists(const std::string& path);
+
+            extern bool file_exists(const std::string& path);
+
+            extern bool get_subfiles(const std::string& path, std::vector<std::string>& sub_list, bool recursive);
+
+            extern bool get_subdirectories(const std::string& path, std::vector<std::string>& sub_list, bool recursive);
+
+            extern bool get_subpaths(const std::string& path, std::vector<std::string>& sub_list, bool recursive);
+
+            extern bool remove_path(const std::string& path);
+            
+            extern bool rename_path(const std::string& path1, const std::string& path2, bool overwrite = false);
+
+            extern bool file_size(const std::string& path, int64_t& sz);
+
+            extern bool create_directory(const std::string& path);
+
+            extern bool create_file(const std::string& path);
+
+            extern bool get_current_directory(std::string& path);
+
+            extern bool last_write_time(std::string& path, time_t& tm);
+
+            extern error_code get_process_image_path(int pid, std::string& path);
+
+            inline error_code get_current_process_image_path(std::string& path)
+            {
+                auto err = dsn::utils::filesystem::get_process_image_path(-1, path);
+                dassert(err == ERR_OK, "get_current_process_image_path failed.");
+                return err;
+            }
+        }
     }
 } // end namespace dsn::utils
 

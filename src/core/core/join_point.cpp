@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include <dsn/internal/join_point.h>
 # include <dsn/service_api_c.h>
 
@@ -39,12 +49,12 @@ join_point_base::join_point_base(const char* name)
 bool join_point_base::put_front(void* fn, const char* name, bool is_native)
 {
     auto e = new_entry(fn, name, is_native);
-    auto e1 = _hdr.prev;
+    auto e1 = _hdr.next;
 
-    e1->next = e;
-    e->next = &_hdr;
-    _hdr.prev = e;
-    e->prev = e1;
+    _hdr.next = e;
+    e->next = e1;
+    e1->prev = e;
+    e->prev = &_hdr;
 
     return true;
 }
@@ -64,10 +74,10 @@ bool join_point_base::put_back(void* fn, const char* name, bool is_native)
 
 bool join_point_base::put_before(const char* base, void* fn, const char* name, bool is_native)
 {
-    auto e0 = get_by_name(name);
+    auto e0 = get_by_name(base);
     if (e0 == nullptr)
     {
-        dassert (false, "cannot find advice with name '%s' in '%s'", name, _name.c_str());
+        dassert (false, "cannot find advice with name '%s' in '%s'", base, _name.c_str());
         return false;
     }
 
@@ -84,10 +94,10 @@ bool join_point_base::put_before(const char* base, void* fn, const char* name, b
 
 bool join_point_base::put_after(const char* base, void* fn, const char* name, bool is_native)
 {
-    auto e0 = get_by_name(name);
+    auto e0 = get_by_name(base);
     if (e0 == nullptr)
     {
-        dassert (false, "cannot find advice with name '%s' in '%s'", name, _name.c_str());
+        dassert (false, "cannot find advice with name '%s' in '%s'", base, _name.c_str());
         return false;
     }
 
@@ -104,10 +114,10 @@ bool join_point_base::put_after(const char* base, void* fn, const char* name, bo
 
 bool join_point_base::put_replace(const char* base, void* fn, const char* name)
 {
-    auto e0 = get_by_name(name);
+    auto e0 = get_by_name(base);
     if (e0 == nullptr)
     {
-        dassert (false, "cannot find advice with name '%s' in '%s'", name, _name.c_str());
+        dassert (false, "cannot find advice with name '%s' in '%s'", base, _name.c_str());
         return false;
     }
     else

@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include <dsn/cpp/utils.h>
 # include <dsn/internal/singleton.h>
 # include <sys/types.h>
@@ -31,7 +41,6 @@
 
 # if defined(__linux__)
 # include <sys/syscall.h>
-# include <dlfcn.h> 
 # elif defined(__FreeBSD__)
 # include <sys/thr.h>
 # elif defined(__APPLE__)
@@ -65,86 +74,10 @@ namespace dsn {
 # endif 
         }
 
-        bool load_dynamic_library(const char* module)
-        {
-            std::string module_name(module);
-# if defined(_WIN32)
-            module_name += ".dll";
-            if (::LoadLibraryA(module_name.c_str()) != NULL)
-            {
-                derror("load dynamic library '%s' failed, err = %d", module_name.c_str(), ::GetLastError());
-                return false;
-            }
-            else
-                return true;
-# elif defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
-            module_name += ".dll";
-            if (nullptr == dlopen(module_name.c_str(), RTLD_LAZY))
-            {
-                derror("load dynamic library '%s' failed, err = %s", module_name.c_str(), dlerror());
-                return false;
-            }
-            else
-                return true;
-# else
-# error not implemented yet
-# endif 
-        }
-
-        bool is_file_or_dir_exist(const char* path)
-        {
-# if defined(_WIN32)
-            struct _stat32 buffer;
-            return _stat32(path, &buffer) == 0;
-# else
-            struct stat buffer;
-            return stat(path, &buffer) == 0;
-# endif
-        }
-
-        bool remove_dir(const char* path, bool recursive)
-        {
-            if (!recursive)
-                return rmdir_(path) == 0;
-            else
-            {
-                dassert(!"not implemented", "not implmented");
-                return 0;
-            }
-        }
-
-        std::string get_absolute_path(const char* path)
-        {
-# if defined(_WIN32)
-            char* component;
-            char absoluate_path[1024];
-            if (0 == ::GetFullPathNameA(path, 1024, absoluate_path, &component))
-                return "";
-            else
-                return std::string(absoluate_path);
-# else
-            char* rpath = realpath(path, nullptr);
-            if (rpath == nullptr)
-                return "";
-            else
-            {
-                std::string apath = rpath;
-                free(rpath);
-                return apath;
-            }
-# endif
-        }
-
-        std::string remove_file_name(const char* path)
-        {
-            std::string path0(path);
-            return path0.substr(0, path0.find_last_of("\\/"));
-        }
-
-        std::string get_last_component(const std::string& input, char splitters[])
+        std::string get_last_component(const std::string& input, const char splitters[])
         {
             int index = -1;
-            char* s = splitters;
+            const char* s = splitters;
 
             while (*s != 0)
             {
@@ -157,10 +90,10 @@ namespace dsn {
             if (index != -1)
                 return input.substr(index + 1);
             else
-                return "";
+                return input;
         }
 
-        void split_args(const char* args, __out_param std::vector<std::string>& sargs, char splitter)
+        void split_args(const char* args, /*out*/ std::vector<std::string>& sargs, char splitter)
         {
             sargs.clear();
 
@@ -195,7 +128,7 @@ namespace dsn {
             }
         }
         
-        void split_args(const char* args, __out_param std::list<std::string>& sargs, char splitter)
+        void split_args(const char* args, /*out*/ std::list<std::string>& sargs, char splitter)
         {
             sargs.clear();
 
@@ -307,12 +240,12 @@ namespace dsn {
 namespace  dsn 
 {
 
-    binary_reader::binary_reader(blob& blob)
+    binary_reader::binary_reader(const blob& blob)
     {
         init(blob);
     }
 
-    void binary_reader::init(blob& bb)
+    void binary_reader::init(const blob& bb)
     {
         _blob = bb;
         _size = bb.length();
@@ -320,7 +253,7 @@ namespace  dsn
         _remaining_size = _size;
     }
 
-    int binary_reader::read(__out_param std::string& s)
+    int binary_reader::read(/*out*/ std::string& s)
     {
         int len;
         if (0 == read(len))
@@ -348,6 +281,15 @@ namespace  dsn
         if (len <= get_remaining_size())
         {
             blob = _blob.range(static_cast<int>(_ptr - _blob.data()), len);
+
+            // optimization: zero-copy
+            if (!blob.buffer_ptr())
+            {
+                std::shared_ptr<char> buffer(new char[len]);
+                memcpy(buffer.get(), blob.data(), blob.length());
+                blob = ::dsn::blob(buffer, 0, blob.length());
+            }
+            
             _ptr += len;
             _remaining_size -= len;
             return len + sizeof(len);
@@ -459,7 +401,7 @@ namespace  dsn
 
     void binary_writer::create_new_buffer(size_t size, /*out*/blob& bb)
     {
-        std::shared_ptr<char> ptr((char*)malloc(size));
+        std::shared_ptr<char> ptr(new char[size]);
         bb.assign(ptr, 0, (int)size);
     }
 
@@ -483,13 +425,40 @@ namespace  dsn
         }
         else
         {
-            std::shared_ptr<char> bptr((char*)malloc(_total_size));
+            std::shared_ptr<char> bptr(new char[_total_size]);
             blob bb(bptr, _total_size);
             const char* ptr = bb.data();
 
             for (int i = 0; i < static_cast<int>(_buffers.size()); i++)
             {
                 memcpy((void*)ptr, (const void*)_buffers[i].data(), (size_t)_buffers[i].length());
+                ptr += _buffers[i].length();
+            }
+            return bb;
+        }
+    }
+
+    blob binary_writer::get_current_buffer()
+    {
+        if (_buffers.size() == 1)
+        {
+            return _current_offset > 0 ? _buffers[0].range(0, _current_offset) : _buffers[0];
+        }
+        else
+        {
+            std::shared_ptr<char> bptr(new char[_total_size]);
+            blob bb(bptr, _total_size);
+            const char* ptr = bb.data();
+
+            for (int i = 0; i < static_cast<int>(_buffers.size()); i++)
+            {
+                size_t len = (size_t)_buffers[i].length();
+                if (_current_offset > 0 && i + 1 == (int)_buffers.size())
+                {
+                    len = _current_offset;
+                }
+
+                memcpy((void*)ptr, (const void*)_buffers[i].data(), len);
                 ptr += _buffers[i].length();
             }
             return bb;

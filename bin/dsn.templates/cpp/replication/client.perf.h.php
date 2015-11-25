@@ -7,14 +7,16 @@ $file_prefix = $argv[3];
 
 # include "<?=$file_prefix?>.client.h"
 
-<?=$_PROG->get_cpp_namespace_begin()?>
-<?php foreach ($_PROG->services as $svc) { ?>
-class <?=$svc->name?>_perf_test_client
-    : public <?=$svc->name?>_client, public ::dsn::service::perf_client_helper<<?=$svc->name?>_perf_test_client>
+<?=$_PROG->get_cpp_namespace_begin()?> 
+
+<?php foreach ($_PROG->services as $svc) { ?> 
+class <?=$svc->name?>_perf_test_client 
+    : public <?=$svc->name?>_client, 
+      public ::dsn::service::perf_client_helper 
 {
 public:
     <?=$svc->name?>_perf_test_client(
-        const std::vector<dsn_address_t>& meta_servers,
+        const std::vector<::dsn::rpc_address>& meta_servers,
         const char* app_name)
         : <?=$svc->name?>_client(meta_servers, app_name)
     {
@@ -41,9 +43,6 @@ public:
     void send_one_<?=$f->name?>(int payload_bytes)
     {
         void* ctx = prepare_send_one();
-        if (!ctx)
-            return;
-
         <?=$f->get_first_param()->get_cpp_type()?> req;
         // TODO: randomize the value of req
         // auto rs = random64(0, 10000000);

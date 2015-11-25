@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     timer service abstraction
+ *
+ * Revision history:
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/internal/task.h>
@@ -38,11 +48,15 @@ namespace dsn
             return new T(node, inner_provider);
         }
 
+        typedef timer_service*  (*factory)(service_node*, timer_service*);
+
     public:
         timer_service(service_node* node, timer_service* inner_provider)
         {
             _node = node;
         }
+
+        virtual void start(io_modifer& ctx) = 0;
 
         // after milliseconds, the provider should call task->enqueue()        
         virtual void add_timer(task* task) = 0;

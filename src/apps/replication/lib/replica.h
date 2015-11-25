@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 //
@@ -41,8 +51,11 @@
 namespace dsn { namespace replication {
 
 class replication_app_base;
-class mutation_log;
 class replica_stub;
+class replication_checker;
+namespace test {
+    class test_checker;
+}
 
 using namespace ::dsn::service;
 
@@ -54,13 +67,16 @@ public:
     //
     //    routines for replica stub
     //
-    static replica* load(replica_stub* stub, const char* dir, replication_options& options, bool renameDirOnFailure);    
-    static replica* newr(replica_stub* stub, const char* app_type, global_partition_id gpid, replication_options& options);    
-    void replay_mutation(mutation_ptr& mu);
+    static replica* load(replica_stub* stub, const char* dir, bool rename_dir_on_failure);    
+    static replica* newr(replica_stub* stub, const char* app_type, global_partition_id gpid);    
+    // return true when the mutation is valid for the current replica
+    bool replay_mutation(mutation_ptr& mu, bool is_private = true);
     void reset_prepare_list_after_replay();
     // return false when update fails or replica is going to be closed
     bool update_local_configuration_with_no_ballot_change(partition_status status);
     void set_inactive_state_transient(bool t);
+    void check_state_completeness();
+    //error_code check_and_fix_private_log_completeness();
     void close();
 
     //
@@ -79,11 +95,11 @@ public:
     //    messages from peers (primary or secondary)
     //
     void on_prepare(dsn_message_t request);    
-    void on_learn(const learn_request& request, __out_param learn_response& response);
+    void on_learn(dsn_message_t msg, const learn_request& request);
     void on_learn_completion_notification(const group_check_response& report);
     void on_add_learner(const group_check_request& request);
     void on_remove(const replica_configuration& request);
-    void on_group_check(const group_check_request& request, __out_param group_check_response& response);
+    void on_group_check(const group_check_request& request, /*out*/ group_check_response& response);
 
     //
     //    messsages from liveness monitor
@@ -107,28 +123,29 @@ public:
     decree last_prepared_decree() const;
     decree last_durable_decree() const;    
     const std::string& dir() const { return _dir; }
-    bool group_configuration(__out_param partition_configuration& config) const;
+    bool group_configuration(/*out*/ partition_configuration& config) const;
     uint64_t last_config_change_time_milliseconds() const { return _last_config_change_time_ms; }
     const char* name() const { return _name; }
+    mutation_log_ptr private_log() const { return _private_log; }
         
 private:
     // common helpers
     void init_state();
     void response_client_message(dsn_message_t request, error_code error, decree decree = -1);    
     void execute_mutation(mutation_ptr& mu);
-    mutation_ptr new_mutation(decree decree);
-    
+    mutation_ptr new_mutation(decree decree);    
+        
     // initialization
     error_code init_app_and_prepare_list(const char* app_type, bool create_new);
-    error_code initialize_on_load(const char* dir, bool renameDirOnFailure);
-    error_code initialize_on_new(const char* app_type, global_partition_id gpid);
-    replica(replica_stub* stub, replication_options& options); // for replica::load(..) only
-    replica(replica_stub* stub, global_partition_id gpid, replication_options& options); // for replica::newr(...) only
+    error_code initialize_on_load(const char* dir, const char* app_type, bool rename_dir_on_failure);
+    error_code initialize_on_new(const char* app_type, global_partition_id gpid);    
+    replica(replica_stub* stub, global_partition_id gpid, const char* app_type, const char* dir); // for replica::load(..) only
+    replica(replica_stub* stub, global_partition_id gpid, const char* app_type); // for replica::newr(...) only
         
     /////////////////////////////////////////////////////////////////
     // 2pc
     void init_prepare(mutation_ptr& mu);
-    void send_prepare_message(const dsn_address_t& addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds);
+    void send_prepare_message(::dsn::rpc_address addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds);
     void on_append_log_completed(mutation_ptr& mu, error_code err, size_t size);
     void on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, error_code err, dsn_message_t request, dsn_message_t reply);
     void do_possible_commit_on_primary(mutation_ptr& mu);    
@@ -142,23 +159,24 @@ private:
     void on_copy_remote_state_completed(error_code err, size_t size, std::shared_ptr<learn_response> resp);
     void on_learn_remote_state_completed(error_code err);
     void handle_learning_error(error_code err);
-    void handle_learning_succeeded_on_primary(const dsn_address_t& node, uint64_t learnSignature);
+    void handle_learning_succeeded_on_primary(::dsn::rpc_address node, uint64_t learn_signature);
     void notify_learn_completion();
+    error_code apply_learned_state_from_private_log(learn_state& state);
         
     /////////////////////////////////////////////////////////////////
     // failure handling    
     void handle_local_failure(error_code error);
-    void handle_remote_failure(partition_status status, const dsn_address_t& node, error_code error);
+    void handle_remote_failure(partition_status status, ::dsn::rpc_address node, error_code error);
 
     /////////////////////////////////////////////////////////////////
     // reconfiguration
     void assign_primary(configuration_update_request& proposal);
     void add_potential_secondary(configuration_update_request& proposal);
-    void upgrade_to_secondary_on_primary(const dsn_address_t& node);
+    void upgrade_to_secondary_on_primary(::dsn::rpc_address node);
     void downgrade_to_secondary_on_primary(configuration_update_request& proposal);
     void downgrade_to_inactive_on_primary(configuration_update_request& proposal);
     void remove(configuration_update_request& proposal);
-    void update_configuration_on_meta_server(config_type type, const dsn_address_t& node, partition_configuration& newConfig);
+    void update_configuration_on_meta_server(config_type type, ::dsn::rpc_address node, partition_configuration& newConfig);
     void on_update_configuration_on_meta_server_reply(error_code err, dsn_message_t request, dsn_message_t response, std::shared_ptr<configuration_update_request> req);
     void replay_prepare_list();
     bool is_same_ballot_status_change_allowed(partition_status olds, partition_status news);
@@ -172,9 +190,20 @@ private:
     void init_group_check();
     void broadcast_group_check();
     void on_group_check_reply(error_code err, std::shared_ptr<group_check_request>& req, std::shared_ptr<group_check_response>& resp);
+
+    /////////////////////////////////////////////////////////////////
+    // check timer for gc, checkpointing etc.
+    void on_check_timer();
+    void gc();
+    void init_checkpoint();
+    void checkpoint();
+    void catch_up_with_private_logs(partition_status s);
+    void on_checkpoint_completed(error_code err);
     
 private:
     friend class ::dsn::replication::replication_checker;
+    friend class ::dsn::replication::test::test_checker;
+    friend class ::dsn::replication::mutation_queue;
 
     // replica configuration, updated by update_local_configuration ONLY    
     replica_configuration   _config;
@@ -183,8 +212,11 @@ private:
     // prepare list
     prepare_list*           _prepare_list;
 
-    // private log (if enabled)
-    mutation_log*           _log;
+    // private prepare log (may be empty, depending on config)
+    mutation_log_ptr        _private_log;
+
+    // local check timer for gc, checkpoint, etc.
+    dsn::task_ptr           _check_timer;
 
     // application
     replication_app_base*   _app;
@@ -193,10 +225,11 @@ private:
     replica_stub*           _stub;
     std::string             _dir;
     char                    _name[256]; // app.index @ host:port
-    replication_options     _options;
+    replication_options     *_options;
     
     // replica status specific states
     primary_context             _primary_states;
+    secondary_context           _secondary_states;
     potential_secondary_context _potential_secondary_states;
     bool                        _inactive_is_transient; // upgrade to P/S is allowed only iff true
 };

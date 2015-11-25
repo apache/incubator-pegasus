@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/service_api_c.h>
@@ -30,30 +40,61 @@
 # include <dsn/cpp/autoref_ptr.h>
 # include <memory>
 
+# define TRACK_ERROR_CODE 1 
+
 namespace dsn 
 {
-    class message_ptr : public ::std::shared_ptr<char>
+    typedef void(*safe_handle_release)(void*);
+
+    template<safe_handle_release releaser>
+    class safe_handle : public ::dsn::ref_counter
     {
     public:
-        message_ptr() : ::std::shared_ptr<char>(nullptr, release)
-        {}
-
-        message_ptr(dsn_message_t msg) : ::std::shared_ptr<char>((char*)msg, release)
-        {}
-
-        dsn_message_t get_msg()
+        safe_handle(void* handle, bool is_owner)
         {
-            return (dsn_message_t)get();
+            _handle = handle;
+            _is_owner = is_owner;
+        }
+
+        safe_handle()
+        {
+            _handle = nullptr;
+            _is_owner = false;
+        }
+
+        void assign(void* handle, bool is_owner)
+        {
+            clear();
+
+            _handle = handle;
+            _is_owner = is_owner;
+        }
+
+        void set_owner(bool owner = true)
+        {
+            _is_owner = owner;
+        }
+
+        ~safe_handle()
+        {
+            clear();
+        }
+
+        void* native_handle() const { return _handle; }
+
+    private:
+        void clear()
+        {
+            if (_is_owner && nullptr != _handle)
+            {
+                releaser(_handle);
+                _handle = nullptr;
+            }
         }
 
     private:
-        static void release(char* msg)
-        {
-            if (nullptr != msg)
-            {
-                dsn_msg_release_ref((dsn_message_t)msg);
-            }
-        }
+        void* _handle;
+        bool  _is_owner;
     };
 
     class task_code
@@ -179,7 +220,7 @@ namespace dsn
             _internal_code = dsn_error_register(name);
 
             dassert (name, "name for an error code cannot be empty");
-    # ifdef _DEBUG
+    # ifdef TRACK_ERROR_CODE
             _used = true;
     # endif
         }
@@ -188,7 +229,7 @@ namespace dsn
         {
             _internal_code = 0;
 
-    # ifdef _DEBUG
+    # ifdef TRACK_ERROR_CODE
             _used = true;
     # endif
         }
@@ -197,7 +238,7 @@ namespace dsn
         {
             _internal_code = err;
 
-# ifdef _DEBUG
+# ifdef TRACK_ERROR_CODE
             _used = false;
 # endif
         }
@@ -205,7 +246,7 @@ namespace dsn
         error_code(const error_code& err) 
         {
             _internal_code = err._internal_code;
-    # ifdef _DEBUG
+    # ifdef TRACK_ERROR_CODE
             _used = false;
             err._used = true;
     # endif
@@ -213,7 +254,7 @@ namespace dsn
 
         const char* to_string() const
         {
-    # ifdef _DEBUG
+    # ifdef TRACK_ERROR_CODE
             _used = true;
     # endif
             return dsn_error_to_string(_internal_code);
@@ -222,7 +263,7 @@ namespace dsn
         error_code& operator=(const error_code& source)
         {
             _internal_code = source._internal_code;
-    # ifdef _DEBUG
+    # ifdef TRACK_ERROR_CODE
             _used = false;
             source._used = true;
     # endif
@@ -231,7 +272,7 @@ namespace dsn
 
         bool operator == (const error_code& r)
         {
-    # ifdef _DEBUG
+    # ifdef TRACK_ERROR_CODE
             _used = true;
             r._used = true;
     # endif
@@ -244,7 +285,7 @@ namespace dsn
         }
        
     
-    # ifdef _DEBUG
+    # ifdef TRACK_ERROR_CODE
         ~error_code()
         {
             // in cases where error code is std::bind-ed as task callbacks,
@@ -252,14 +293,18 @@ namespace dsn
             // therefore we change derror to dwarn
             if (!_used)
             {
-                dlog(LOG_LEVEL_WARNING, "error-code", "error code is not handled");
+                if (_internal_code != 0)
+                {
+                    dlog(LOG_LEVEL_ERROR, "error-code",
+                        "error code is not handled, err = %s", to_string());
+                }
             }
         }
     # endif
     
         dsn_error_t get() const
         {
-    # ifdef _DEBUG
+    # ifdef TRACK_ERROR_CODE
             _used = true;
     # endif
             return _internal_code;
@@ -267,7 +312,7 @@ namespace dsn
 
         operator dsn_error_t() const
         {
-    # ifdef _DEBUG
+    # ifdef TRACK_ERROR_CODE
             _used = true;
     # endif
             return _internal_code;
@@ -275,13 +320,13 @@ namespace dsn
 
         void end_tracking() const
         {
-    # ifdef _DEBUG
+    # ifdef TRACK_ERROR_CODE
             _used = true;
     # endif
         }
 
     private:
-    # ifdef _DEBUG
+    # ifdef TRACK_ERROR_CODE
         mutable bool _used;
     # endif
         dsn_error_t _internal_code;
@@ -290,6 +335,7 @@ namespace dsn
     #define DEFINE_ERR_CODE(x) __selectany const dsn::error_code x(#x);
 
     DEFINE_ERR_CODE(ERR_OK)
+    DEFINE_ERR_CODE(ERR_UNKNOWN)
     DEFINE_ERR_CODE(ERR_SERVICE_NOT_FOUND)
     DEFINE_ERR_CODE(ERR_SERVICE_ALREADY_RUNNING)
     DEFINE_ERR_CODE(ERR_IO_PENDING)
@@ -297,7 +343,7 @@ namespace dsn
     DEFINE_ERR_CODE(ERR_SERVICE_NOT_ACTIVE)
     DEFINE_ERR_CODE(ERR_BUSY)
     DEFINE_ERR_CODE(ERR_NETWORK_INIT_FALED)
-    DEFINE_ERR_CODE(ERR_TALK_TO_OTHERS)
+    DEFINE_ERR_CODE(ERR_FORWARD_TO_OTHERS)
     DEFINE_ERR_CODE(ERR_OBJECT_NOT_FOUND)
     DEFINE_ERR_CODE(ERR_HANDLER_NOT_FOUND)
     DEFINE_ERR_CODE(ERR_LEARN_FILE_FALED)
@@ -312,12 +358,19 @@ namespace dsn
     DEFINE_ERR_CODE(ERR_HANDLE_EOF)
     DEFINE_ERR_CODE(ERR_WRONG_CHECKSUM)
     DEFINE_ERR_CODE(ERR_INVALID_DATA)
+    DEFINE_ERR_CODE(ERR_INVALID_HANDLE)
+    DEFINE_ERR_CODE(ERR_INCOMPLETE_DATA)
     DEFINE_ERR_CODE(ERR_VERSION_OUTDATED)
     DEFINE_ERR_CODE(ERR_PATH_NOT_FOUND)
     DEFINE_ERR_CODE(ERR_PATH_ALREADY_EXIST)
     DEFINE_ERR_CODE(ERR_ADDRESS_ALREADY_USED)
     DEFINE_ERR_CODE(ERR_STATE_FREEZED)
     DEFINE_ERR_CODE(ERR_LOCAL_APP_FAILURE)
+    DEFINE_ERR_CODE(ERR_BIND_IOCP_FAILED)
+    DEFINE_ERR_CODE(ERR_NETWORK_START_FAILED)
+    DEFINE_ERR_CODE(ERR_NOT_IMPLEMENTED)
+    DEFINE_ERR_CODE(ERR_CHECKPOINT_FAILED)
+    DEFINE_ERR_CODE(ERR_WRONG_TIMING)
 
 } // end namespace
 

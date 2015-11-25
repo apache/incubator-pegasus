@@ -29,7 +29,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
         }
 
 <?php foreach ($_PROG->services as $svc) { ?>
-        private <?=$svc->name?>Server _<?=$svc->name?>Server;
+        private <?=$svc->name?>Server _<?=$svc->name?>Server = new <?=$svc->name?>Server();
 <?php } ?>
     }
 
@@ -43,12 +43,12 @@ namespace <?=$_PROG->get_csharp_namespace()?>
                 throw new Exception("wrong usage: server-host server-port");                
             }
 
-            Native.dsn_address_build(out _server.addr, args[1], ushort.Parse(args[2]));
+            _server.addr = Native.dsn_address_build(args[1], ushort.Parse(args[2]));
 
 <?php foreach ($_PROG->services as $svc) { ?>
-            _<?=$svc->name?>Client= new <?=$svc->name?>Client(_server);
+            _<?=$svc->name?>Client = new <?=$svc->name?>Client(_server);
 <?php } ?>
-            _timer = Servicelet.CallAsync2(<?=$_PROG->name?>Helper.<?=$_PROG->get_test_task_code()?>, null, this.OnTestTimer, 0, 0, 1000);
+            _timer = Clientlet.CallAsync3(<?=$_PROG->name?>Helper.<?=$_PROG->get_test_task_code()?>, null, this.OnTestTimer, 0, 0, 1000);
             return ErrorCode.ERR_OK;
         }
 
@@ -99,7 +99,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
 <?php foreach ($_PROG->services as $svc) { ?>
     class <?=$svc->name?>_perf_testClientApp :
         public ::dsn::service_app<<?=$svc->name?>_perf_testClientApp>, 
-        public virtual ::dsn::service::servicelet
+        public virtual ::dsn::service::clientlet
     {
     public:
         <?=$svc->name?>_perf_testClientApp()
@@ -117,7 +117,7 @@ namespace <?=$_PROG->get_csharp_namespace()?>
             if (argc < 2)
                 return ErrorCode.ERR_INVALID_PARAMETERS;
 
-            dsn_address_build(&_server, argv[1], (uint16_t)atoi(argv[2]));
+            dsn_address_build(_server.c_addr_ptr(), argv[1], (uint16_t)atoi(argv[2]));
 
             _<?=$svc->name?>Client= new <?=$svc->name?>_perf_testClient(_server);
             _<?=$svc->name?>Client->start_test();

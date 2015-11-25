@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include <dsn/ports.h>
 # include <dsn/internal/rpc_message.h>
 # include <dsn/internal/network.h>
@@ -43,6 +53,11 @@ DSN_API dsn_message_t dsn_msg_create_request(dsn_task_code_t rpc_code, int timeo
     return msg;
 }
 
+DSN_API dsn_message_t dsn_msg_copy(dsn_message_t msg)
+{
+    return msg ? ((::dsn::message_ex*)msg)->copy() : nullptr;
+}
+
 DSN_API void dsn_msg_update_request(dsn_message_t msg, int timeout_milliseconds, int hash)
 {
     auto msg2 = (::dsn::message_ex*)msg;
@@ -54,7 +69,7 @@ DSN_API void dsn_msg_query_request(dsn_message_t msg, int* ptimeout_milliseconds
 {
     auto msg2 = (::dsn::message_ex*)msg;
     if (ptimeout_milliseconds) *ptimeout_milliseconds = msg2->header->client.timeout_ms;
-    if (phash) *phash = msg2->header->client.timeout_ms;
+    if (phash) *phash = msg2->header->client.hash;
 }
 
 DSN_API dsn_message_t dsn_msg_create_response(dsn_message_t request)
@@ -103,14 +118,36 @@ DSN_API void dsn_msg_release_ref(dsn_message_t msg)
     ((::dsn::message_ex*)msg)->release_ref();
 }
 
-DSN_API void dsn_msg_from_address(dsn_message_t msg, /*out*/ dsn_address_t* ep)
+DSN_API dsn_address_t dsn_msg_from_address(dsn_message_t msg)
 {
-    *ep = ((::dsn::message_ex*)msg)->from_address;
+    return ((::dsn::message_ex*)msg)->from_address.c_addr();
 }
 
-DSN_API void dsn_msg_to_address(dsn_message_t msg, /*out*/ dsn_address_t* ep)
+DSN_API dsn_address_t dsn_msg_to_address(dsn_message_t msg)
 {
-    *ep = ((::dsn::message_ex*)msg)->to_address;
+    return ((::dsn::message_ex*)msg)->to_address.c_addr();
+}
+
+DSN_API void dsn_msg_set_context(
+    dsn_message_t msg,
+    uint64_t context,
+    uint64_t context2
+    )
+{
+    auto c = ((::dsn::message_ex*)msg)->header;
+    c->context = context;
+    c->context2 = context2;
+}
+
+DSN_API void dsn_msg_get_context(
+    dsn_message_t msg,
+    /*out*/ uint64_t* context,
+    /*out*/ uint64_t* context2
+    )
+{
+    auto c = ((::dsn::message_ex*)msg)->header;
+    *context = c->context;
+    *context2 = c->context2;
 }
 
 namespace dsn {
@@ -164,8 +201,9 @@ void message_ex::seal(bool fill_crc)
                     sz = (size_t)buffers[i].length();
                 }
 
-                lcrc = dsn_crc32_compute(ptr, sz);
+                lcrc = dsn_crc32_compute(ptr, sz, crc32);
                 crc32 = dsn_crc32_concatenate(
+                    0,
                     0, crc32, len, 
                     crc32, lcrc, sz
                     );
@@ -178,7 +216,7 @@ void message_ex::seal(bool fill_crc)
         }
 
         header->hdr_crc32 = CRC_INVALID;
-        header->hdr_crc32 = dsn_crc32_compute(header, sizeof(message_header));
+        header->hdr_crc32 = dsn_crc32_compute(header, sizeof(message_header), 0);
     }
     else
     {
@@ -216,7 +254,7 @@ bool message_ex::is_right_header() const
     {
         //dassert  (*(int32_t*)data == hdr_crc32, "HeaderCrc must be put at the beginning of the buffer");
         *(int32_t*)hdr = CRC_INVALID;
-        bool r = ((uint32_t)crc32 == dsn_crc32_compute(hdr, sizeof(message_header)));
+        bool r = ((uint32_t)crc32 == dsn_crc32_compute(hdr, sizeof(message_header), 0));
         *(int32_t*)hdr = crc32;
         return r;
     }
@@ -228,13 +266,42 @@ bool message_ex::is_right_header() const
     }
 }
 
-bool message_ex::is_right_body() const
+bool message_ex::is_right_body(bool is_write_msg) const
 {
     if (header->body_crc32 != CRC_INVALID)
     {
-        //return (uint32_t)header->body_crc32 == crc32::compute((char*)bb.data() + sizeof(message_header), _msg.hdr.body_length, 0);
-        dassert(false, "TODO");
-        return true;
+        int i_max = (int)buffers.size() - 1;
+        uint32_t crc32 = 0;
+        size_t len = 0;
+        for (int i = 0; i <= i_max; i++)
+        {
+            uint32_t lcrc;
+            const void* ptr;
+            size_t sz;
+
+            if (i == 0 && is_write_msg)
+            {
+                ptr = (const void*)(buffers[i].data() + sizeof(message_header));
+                sz = (size_t)buffers[i].length() - sizeof(message_header);
+            }
+            else
+            {
+                ptr = (const void*)buffers[i].data();
+                sz = (size_t)buffers[i].length();
+            }
+
+            lcrc = dsn_crc32_compute(ptr, sz, crc32);
+            crc32 = dsn_crc32_concatenate(
+                0,
+                0, crc32, len,
+                crc32, lcrc, sz
+                );
+
+            len += sz;
+        }
+
+        dassert(len == (size_t)header->body_length, "data length is wrong");
+        return header->body_crc32 == crc32;
     }
 
     // crc is not enabled
@@ -244,15 +311,43 @@ bool message_ex::is_right_body() const
     }
 }
 
-message_ex* message_ex::create_receive_message(blob& data)
+message_ex* message_ex::create_receive_message(const blob& data)
 {
     message_ex* msg = new message_ex();
     msg->header = (message_header*)data.data();
     msg->_is_read = true;
-    data = data.range((int)sizeof(message_header));
-    msg->buffers.push_back(data);
+    auto data2 = data.range((int)sizeof(message_header));
+    msg->buffers.push_back(data2);
 
     dbg_dassert(msg->header->body_length > 0, "message %s is empty!", msg->header->rpc_name);
+    return msg;
+}
+
+message_ex* message_ex::copy()
+{
+    message_ex* msg = new message_ex();
+    msg->from_address = from_address;
+    msg->to_address = to_address;
+    msg->local_rpc_code = local_rpc_code;
+    msg->buffers = buffers;
+    msg->_is_read = _is_read;
+
+    // received message
+    if (this->_is_read)
+    {
+        // header is within buffer
+        msg->header = header;
+    }
+
+    // send message
+    else
+    {
+        // header is within buffer
+        msg->header = header;
+
+        msg->server_address = server_address;
+    }
+
     return msg;
 }
 
@@ -284,11 +379,6 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
     hdr.id = new_id();
 
     msg->local_rpc_code = (uint16_t)rpc_code;
-    msg->from_address.name[0] = '\0';
-    msg->from_address.port = 0;
-    msg->to_address.name[0] = '\0';
-    msg->to_address.port = 0;
-
     return msg;
 }
 
@@ -310,7 +400,7 @@ message_ex* message_ex::create_response()
     msg->local_rpc_code = task_spec::get(local_rpc_code)->rpc_paired_code;
     msg->from_address = to_address;
     msg->to_address = from_address;
-    msg->server_session = server_session;
+    msg->io_session = io_session;
 
     // join point 
     task_spec::get(local_rpc_code)->on_rpc_create_response.execute(this, msg);
@@ -442,7 +532,7 @@ void* message_ex::rw_ptr(size_t offset_begin)
     for (int i = 0; i < i_max; i++)
     {
         size_t c_length = (size_t)(this->buffers[i].length());
-        if (offset_begin <= c_length)
+        if (offset_begin < c_length)
         {
             return (void*)(this->buffers[i].data() + offset_begin);
         }

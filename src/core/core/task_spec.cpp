@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include <dsn/internal/task_spec.h>
 # include <dsn/internal/singleton.h>
 # include <dsn/internal/perf_counters.h>
@@ -65,6 +75,7 @@ task_spec::task_spec(int code, const char* name, dsn_task_type_t type, dsn_task_
     on_task_begin((std::string(name) + std::string(".begin")).c_str()), 
     on_task_end((std::string(name) + std::string(".end")).c_str()), 
     on_task_wait_pre((std::string(name) + std::string(".wait.pre")).c_str()), 
+    on_task_wait_notified((std::string(name) + std::string(".wait.notified")).c_str()),
     on_task_wait_post((std::string(name) + std::string(".wait.post")).c_str()), 
     on_task_cancel_post((std::string(name) + std::string(".cancel.post")).c_str()), 
     on_task_cancelled((std::string(name) + std::string(".cancelled")).c_str()),
@@ -180,7 +191,7 @@ threadpool_spec& threadpool_spec::operator=(const threadpool_spec& source)
     worker_priority = source.worker_priority;
     worker_share_core = source.worker_share_core;
     worker_affinity_mask = source.worker_affinity_mask;
-    max_input_queue_length = source.max_input_queue_length;
+    queue_length_throttling_threshold = source.queue_length_throttling_threshold;
     partitioned = source.partitioned;
 
     queue_factory_name = source.queue_factory_name;
@@ -194,13 +205,13 @@ threadpool_spec& threadpool_spec::operator=(const threadpool_spec& source)
     return *this;
 }
 
-bool threadpool_spec::init(__out_param std::vector<threadpool_spec>& specs)
+bool threadpool_spec::init(/*out*/ std::vector<threadpool_spec>& specs)
 {
     /*
     [threadpool..default]
     worker_count = 4
     worker_priority = THREAD_xPRIORITY_NORMAL
-    max_input_queue_length = 10000
+    queue_length_throttling_threshold = 10000
     partitioned = false
     queue_aspects = xxx
     worker_aspects = xxx
@@ -212,7 +223,7 @@ bool threadpool_spec::init(__out_param std::vector<threadpool_spec>& specs)
     run = true
     worker_count = 4
     worker_priority = THREAD_xPRIORITY_NORMAL
-    max_input_queue_length = 10000
+    queue_length_throttling_threshold = 10000
     partitioned = false
     queue_aspects = xxx
     worker_aspects = xxx

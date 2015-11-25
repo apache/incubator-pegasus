@@ -23,9 +23,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 # include <atomic>
+# include <dsn/service_api_c.h>
 
 namespace dsn
 {
@@ -35,10 +46,19 @@ namespace dsn
         ref_counter()
         {
             _counter = 0;
+            _magic = 0xdeadbeef;
         }
 
         virtual ~ref_counter()
         {
+            if (_magic != 0xdeadbeef)
+            {
+                dassert(false, "memory corrupted, could be double free or others");
+            }
+            else
+            {
+                _magic = 0xfacedead;
+            }
         }
 
         void add_ref()
@@ -58,7 +78,20 @@ namespace dsn
         }
 
     private:
-        std::atomic<long> _counter;
+        int _magic;
+        std::atomic<long> _counter;   
+
+    public:
+        ref_counter(const ref_counter&)
+        {
+            dassert(false, "this is not allowed");
+        }
+
+        ref_counter& operator=(const ref_counter&)
+        {
+            dassert(false, "this is not allowed");
+            return *this;
+        }
     };
 
     template<typename T>  // T : ref_counter

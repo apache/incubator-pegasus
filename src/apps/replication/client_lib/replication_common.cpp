@@ -23,8 +23,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #include "replication_common.h"
 #include <dsn/internal/configuration.h>
+
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "replication.common"
 
 namespace dsn { namespace replication {
 
@@ -32,31 +47,38 @@ replication_options::replication_options()
 {
     prepare_timeout_ms_for_secondaries = 1000;
     prepare_timeout_ms_for_potential_secondaries = 3000;
+
+    batch_write_disabled = false;
     staleness_for_commit = 10;
-    staleness_for_start_prepare_for_potential_secondary = 110;
-    mutation_2pc_min_replica_count = 1;
-    prepare_list_max_size_mb = 250;
-    prepare_ack_on_secondary_before_logging_allowed = false;
+    max_mutation_count_in_prepare_list = 110;
+    
+    mutation_2pc_min_replica_count = 1;    
 
     group_check_internal_ms = 100000;
     group_check_disabled = false;
+
     gc_interval_ms = 30 * 1000; // 30000 milliseconds
     gc_disabled = false;
     gc_memory_replica_interval_ms = 5 * 60 * 1000; // 5 minutes
     gc_disk_error_replica_interval_seconds = 48 * 3600 * 1000; // 48 hrs
-    log_batch_write = true;
-    log_max_concurrent_writes = 4;
+    
     fd_disabled = false;
     //_options.meta_servers = ...;
     fd_check_interval_seconds = 5;
     fd_beacon_interval_seconds = 3;
     fd_lease_seconds = 10;
     fd_grace_seconds = 15;
+
     working_dir = ".";
         
-    log_buffer_size_mb = 1;
+    log_batch_buffer_MB = 1;
     log_pending_max_ms = 100;
     log_file_size_mb = 32;
+    log_buffer_size_mb_private = 1;
+    log_pending_max_ms_private = 100;
+    log_file_size_mb_private = 32;
+
+    log_enable_private_prepare = true;
     
     config_sync_interval_ms = 30000;
     config_sync_disabled = false;
@@ -76,6 +98,7 @@ void replication_options::read_meta_servers()
     need_count = dsn_config_get_all_keys("replication.meta_servers", server_ss, &capacity);
     dassert(need_count <= capacity, "too many meta servers specified");
 
+    std::ostringstream oss;
     for (int i = 0; i < capacity; i++)
     {
         std::string s(server_ss[i]);
@@ -83,11 +106,12 @@ void replication_options::read_meta_servers()
         auto pos1 = s.find_first_of(':');
         if (pos1 != std::string::npos)
         {
-            dsn_address_t ep;
-            dsn_address_build(&ep, s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
+            ::dsn::rpc_address ep(s.substr(0, pos1).c_str(), atoi(s.substr(pos1 + 1).c_str()));
             meta_servers.push_back(ep);
+            oss << "[" << ep.to_string() << "] ";
         }
     }
+    ddebug("read meta servers from config: %s", oss.str().c_str());
 }
 
 void replication_options::initialize()
@@ -104,24 +128,25 @@ void replication_options::initialize()
         prepare_timeout_ms_for_potential_secondaries,
         "timeout (ms) for prepare message to potential secondaries in two phase commit"
         );
-    prepare_ack_on_secondary_before_logging_allowed =
-        dsn_config_get_value_bool("replication", 
-        "prepare_ack_on_secondary_before_logging_allowed", 
-        prepare_ack_on_secondary_before_logging_allowed,
-        "whether we need to ensure logging is completed before acking a prepare message"
-        );
 
+
+    batch_write_disabled =
+        dsn_config_get_value_bool("replication",
+        "batch_write_disabled",
+        batch_write_disabled,
+        "whether to disable auto-batch of replicated write requests"
+        );
     staleness_for_commit =
         (int)dsn_config_get_value_uint64("replication", 
         "staleness_for_commit", 
         staleness_for_commit,
         "how many concurrent two phase commit rounds are allowed"
         );
-    staleness_for_start_prepare_for_potential_secondary =
+    max_mutation_count_in_prepare_list =
         (int)dsn_config_get_value_uint64("replication", 
-        "staleness_for_start_prepare_for_potential_secondary", 
-        staleness_for_start_prepare_for_potential_secondary,
-        "within this decree gap we will start two phase commit for potential secondaries to catch up online traffic"
+        "max_mutation_count_in_prepare_list", 
+        max_mutation_count_in_prepare_list,
+        "maximum number of mutations in prepare list"
         );
     mutation_2pc_min_replica_count =
         (int)dsn_config_get_value_uint64("replication", 
@@ -129,12 +154,7 @@ void replication_options::initialize()
         mutation_2pc_min_replica_count,
         "minimum number of alive replicas under which write is allowed"
         );
-    prepare_list_max_size_mb =
-        (int)dsn_config_get_value_uint64("replication", 
-        "prepare_list_max_size_mb",
-        prepare_list_max_size_mb,
-        "maximum size (Mb) for prepare list"
-        );
+
     group_check_internal_ms =
         (int)dsn_config_get_value_uint64("replication",
         "group_check_internal_ms", 
@@ -210,10 +230,10 @@ void replication_options::initialize()
         log_file_size_mb,
         "maximum log segment file size (MB)"
         );
-    log_buffer_size_mb =
+    log_batch_buffer_MB =
         (int)dsn_config_get_value_uint64("replication", 
-        "log_buffer_size_mb", 
-        log_buffer_size_mb,
+        "log_batch_buffer_MB", 
+        log_batch_buffer_MB,
         "log buffer size (MB) for batching incoming logs"
         );
     log_pending_max_ms =
@@ -222,20 +242,35 @@ void replication_options::initialize()
         log_pending_max_ms,
         "maximum duration (ms) the log entries reside in the buffer for batching"
         );
-    log_batch_write = 
-        dsn_config_get_value_bool("replication", 
-        "log_batch_write", 
-        log_batch_write,
-        "whether to batch write the incoming logs"
+
+    log_file_size_mb_private =
+        (int)dsn_config_get_value_uint64("replication",
+        "log_file_size_mb_private",
+        log_file_size_mb_private,
+        "maximum log segment file size (MB) for private log"
         );
-    log_max_concurrent_writes =
-        (int)dsn_config_get_value_uint64("replication", 
-        "log_max_concurrent_writes", 
-        log_max_concurrent_writes,
-        "maximum concurrent log writes"
+    log_buffer_size_mb_private =
+        (int)dsn_config_get_value_uint64("replication",
+        "log_buffer_size_mb_private",
+        log_buffer_size_mb_private,
+        "log buffer size (MB) for batching incoming logs for private log"
+        );
+    log_pending_max_ms_private =
+        (int)dsn_config_get_value_uint64("replication",
+        "log_pending_max_ms_private",
+        log_pending_max_ms_private,
+        "maximum duration (ms) the log entries reside in the buffer for batching for private log"
         );
 
-     config_sync_disabled =
+    log_enable_private_prepare =
+        dsn_config_get_value_bool("replication",
+        "log_enable_private_prepare",
+        log_enable_private_prepare,
+        "whether to log committed mutations for each app, "
+        "which is used for easier learning"
+        );
+
+    config_sync_disabled =
         dsn_config_get_value_bool("replication", 
         "config_sync_disabled",
         config_sync_disabled,
@@ -256,10 +291,10 @@ void replication_options::initialize()
 
 void replication_options::sanity_check()
 {
-    dassert (staleness_for_start_prepare_for_potential_secondary >= staleness_for_commit, "");
+    dassert (max_mutation_count_in_prepare_list >= staleness_for_commit, "");
 }
    
-/*static*/ bool replica_helper::remove_node(const dsn_address_t& node, __inout_param std::vector<dsn_address_t>& nodeList)
+/*static*/ bool replica_helper::remove_node(::dsn::rpc_address node, /*inout*/ std::vector< ::dsn::rpc_address>& nodeList)
 {
     auto it = std::find(nodeList.begin(), nodeList.end(), node);
     if (it != nodeList.end())
@@ -273,7 +308,7 @@ void replication_options::sanity_check()
     }
 }
 
-/*static*/ bool replica_helper::get_replica_config(const partition_configuration& partition_config, const dsn_address_t& node, __out_param replica_configuration& replica_config)
+/*static*/ bool replica_helper::get_replica_config(const partition_configuration& partition_config, ::dsn::rpc_address node, /*out*/ replica_configuration& replica_config)
 {
     replica_config.gpid = partition_config.gpid;
     replica_config.primary = partition_config.primary;
@@ -287,11 +322,6 @@ void replication_options::sanity_check()
     else if (std::find(partition_config.secondaries.begin(), partition_config.secondaries.end(), node) != partition_config.secondaries.end())
     {
         replica_config.status = PS_SECONDARY;
-        return true;
-    }
-    else if (std::find(partition_config.drop_outs.begin(), partition_config.drop_outs.end(), node) != partition_config.drop_outs.end())
-    {
-        replica_config.status = PS_INACTIVE;
         return true;
     }
     else

@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include "service_engine.h"
@@ -40,7 +50,7 @@ class task_worker;
 
 //
 // a task_worker_pool is a set of TaskWorkers share the same configs;
-// they may even share the same task_queue when partitioned == true
+// they may even share the same task_queue when partitioned == false
 //
 class task_worker_pool
 {
@@ -48,19 +58,25 @@ public:
     task_worker_pool(const threadpool_spec& opts, task_engine* owner);
 
     // service management
-    void start();    
+    void create();    
+    void start();
 
     // task procecessing
     void enqueue(task* task);
     void on_dequeue(int count);
 
+    // cached timer service access
+    void add_timer(task* task);
+
     // inquery
     const threadpool_spec& spec() const { return _spec; }
     bool shared_same_worker_with_current_task(task* task) const;
-    timer_service* timer_svc() const { return _timer_service; }
     task_engine* engine() const { return _owner; }
     service_node* node() const { return _node; }
-    void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, __out_param std::stringstream& ss);
+    void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, /*out*/ std::stringstream& ss);
+    std::vector<task_queue*>& queues() { return _queues; }
+    std::vector<task_worker*>& workers() { return _workers; }
+    std::vector<admission_controller*>& controllers() { return _controllers; }
 
 private:
     threadpool_spec                    _spec;
@@ -68,9 +84,12 @@ private:
     service_node*                      _node;
 
     std::vector<task_worker*>          _workers;
-    std::vector<task_queue*>           _queues;
+    std::vector<task_queue*>           _queues;    
     std::vector<admission_controller*> _controllers;
-    timer_service                     *_timer_service;
+
+    // cached ptrs for fast access
+    timer_service*                     _per_node_timer_svc;
+    std::vector<timer_service*>        _per_queue_timer_svcs;
 
     bool                              _is_running;
 };
@@ -83,21 +102,26 @@ public:
     //
     // service management routines
     //
-    void start(const std::list<dsn_threadpool_code_t>& pools);
+    void create(const std::list<dsn_threadpool_code_t>& pools);
+    void start();
 
     //
     // task management routines
     //
     task_worker_pool* get_pool(int code) const { return _pools[code]; }
-    timer_service* timer_svc() const { return _timer_service;  }
+    std::vector<task_worker_pool*>& pools() { return _pools; }
 
     bool is_started() const { return _is_running; }
 
+    volatile int* get_task_queue_virtual_length_ptr(
+        dsn_task_code_t code,
+        int hash
+        );
+
     service_node* node() const { return _node; }
-    void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, __out_param std::stringstream& ss);
+    void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, /*out*/ std::stringstream& ss);
     
 private:
-    timer_service                 *_timer_service;
     std::vector<task_worker_pool*> _pools;
     volatile bool                  _is_running;
     service_node                   *_node;

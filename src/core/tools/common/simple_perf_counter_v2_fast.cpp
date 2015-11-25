@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include "simple_perf_counter_v2_fast.h"
 # include "shared_io_service.h"
 
@@ -288,7 +298,7 @@ namespace dsn {
 
             void   calc(boost::shared_ptr<compute_context>& ctx)
             {
-                uint64_t _num = _tail > MAX_QUEUE_LENGTH ? MAX_QUEUE_LENGTH : _tail;
+                int _num = _tail > MAX_QUEUE_LENGTH ? MAX_QUEUE_LENGTH : _tail;
 
                 if (_num == 0)
                     return;
@@ -314,6 +324,7 @@ namespace dsn {
 
             void on_timer(const boost::system::error_code& ec)
             {
+                //as the callback is not in tls context, so the log system calls like ddebug, dassert will cause a lock
                 if (!ec)
                 {
                     boost::shared_ptr<compute_context> ctx(new compute_context());
@@ -323,9 +334,9 @@ namespace dsn {
                     _timer->expires_from_now(boost::posix_time::seconds(_counter_computation_interval_seconds));
                     _timer->async_wait(std::bind(&perf_counter_number_percentile_v2_fast::on_timer, this, std::placeholders::_1));
                 }
-                else
+                else if (boost::system::errc::operation_canceled != ec)
                 {
-                    dassert(false, "on _timer error!!!");
+                    dassert(false, "on_timer error!!!");
                 }
             }
 

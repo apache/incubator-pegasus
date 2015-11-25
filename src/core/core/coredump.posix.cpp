@@ -24,6 +24,16 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+
 # ifndef _WIN32
 
 # include "coredump.h"
@@ -38,7 +48,6 @@ namespace dsn {
     namespace utils {
 
         static std::string s_dump_dir;
-        static char s_app_name[256] = "unknown";
 
         void coredump::init(const char* dump_dir)
         {

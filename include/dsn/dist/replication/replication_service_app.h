@@ -23,16 +23,27 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 #include <dsn/cpp/service_app.h>
 #include <dsn/dist/replication/replication_other_types.h>
 
-using namespace dsn::service;
-using namespace dsn;
-
 namespace dsn { namespace replication {
 
+class replication_checker;
+namespace test {
+    class test_checker;
+}
 class replication_service_app : public ::dsn::service_app
 {
 public:
@@ -46,6 +57,7 @@ public:
 
 private:
     friend class ::dsn::replication::replication_checker;
+    friend class ::dsn::replication::test::test_checker;
     replica_stub_ptr _stub;
 };
 

@@ -23,11 +23,22 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include <dsn/internal/global_config.h>
 # include <thread>
 # include <dsn/internal/task_spec.h>
 # include <dsn/internal/network.h>
 # include <dsn/internal/singleton_store.h>
+# include "library_utils.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -38,7 +49,7 @@ namespace dsn {
 
 static bool build_client_network_confs(
     const char* section, 
-    __out_param network_client_configs& nss,
+    /*out*/ network_client_configs& nss,
     network_client_configs* default_spec)
 {
     nss.clear();
@@ -118,7 +129,7 @@ static bool build_client_network_confs(
 
 static bool build_server_network_confs(
     const char* section,
-    __out_param network_server_configs& nss,
+    /*out*/ network_server_configs& nss,
     network_server_configs* default_spec,
     const std::vector<int>& ports,
     bool is_template)
@@ -174,8 +185,8 @@ static bool build_server_network_confs(
             /*            
             port = 0 for default setting in [apps..default]
             port.channel = header_format, network_provider_name,buffer_block_size
-            network.server.port.RPC_CHANNEL_TCP = NET_HDR_DSN, dsn::tools::asio_network_provider,65536
-            network.server.port.RPC_CHANNEL_UDP = NET_HDR_DSN, dsn::tools::asio_network_provider,65536
+            network.server.port().RPC_CHANNEL_TCP = NET_HDR_DSN, dsn::tools::asio_network_provider,65536
+            network.server.port().RPC_CHANNEL_UDP = NET_HDR_DSN, dsn::tools::asio_network_provider,65536
             */
 
             rpc_channel ch = rpc_channel::from_string(k3.c_str(), RPC_CHANNEL_TCP);
@@ -262,10 +273,12 @@ service_app_spec::service_app_spec(const service_app_spec& r)
     ports = r.ports;
     pools = r.pools;
     delay_seconds = r.delay_seconds;
+    ports_gap = r.ports_gap;
     run = r.run;
     dmodule = r.dmodule;
     network_client_confs = r.network_client_confs;
     network_server_confs = r.network_server_confs;
+    count = r.count;
 }
 
 bool service_app_spec::init(
@@ -285,6 +298,7 @@ bool service_app_spec::init(
         return false;
 
     std::sort(ports.begin(), ports.end());
+    ports_gap = ports.size() > 0 ? (*ports.rbegin() + 1 - *ports.begin()) : 0;
 
     if (!build_client_network_confs(
         section,
@@ -304,7 +318,6 @@ bool service_app_spec::init(
 
     return true;
 }
-
 
 network_server_config::network_server_config(const network_server_config& r)
 : channel(r.channel), hdr_format(r.hdr_format)
@@ -344,6 +357,36 @@ bool service_spec::init()
     return true;
 }
 
+void service_spec::load_app_shared_libraries(dsn::configuration_ptr config)
+{
+    std::vector<std::string> allSectionNames;
+    config->get_all_sections(allSectionNames);
+
+    int app_id = 0;
+    std::vector<std::string> modules;
+    for (auto it = allSectionNames.begin(); it != allSectionNames.end(); it++)
+    {
+        if (it->substr(0, strlen("apps.")) == std::string("apps."))
+        {
+            std::string module = config->get_string_value(it->c_str(), "dmodule", "",
+                "path of a dynamic library which implement this app role, and register itself upon loaded");
+            if (module.length() > 0)
+            {
+                modules.push_back(module);
+            }
+        }
+    }
+
+    for (auto m : modules)
+    {
+        if (!::dsn::utils::load_dynamic_library(m.c_str()))
+        {
+            dassert(false, "cannot load shared library %s specified in config file",
+                m.c_str());
+        }
+    }
+}
+
 bool service_spec::init_app_specs()
 {
     // init service apps
@@ -366,13 +409,27 @@ bool service_spec::init_app_specs()
             if (!app.init((*it).c_str(), it->substr(5).c_str(), &default_app))
                 return false;
 
-            // load dynamic module where app role is defined
-            if (app.dmodule.length() > 0)
+            // fix ports_gap when necessary
+            int ports_gap = app.ports_gap;
+            switch (rpc_io_mode)
             {
-                if (!::dsn::utils::load_dynamic_library(app.dmodule.c_str()))
+            case IOE_PER_NODE:
+                ports_gap *= 1;
+                break;
+            case IOE_PER_QUEUE:
                 {
-                    return false;
-                }   
+                    int number_of_ioes = 0;
+                    for (auto& pl : app.pools)
+                    {
+                        number_of_ioes += (this->threadpool_specs[pl].partitioned 
+                            ? this->threadpool_specs[pl].worker_count : 1);
+                    }
+                    ports_gap *= number_of_ioes;
+                }
+                break;
+            default:
+                dassert(false, "unsupport io mode");
+                break;
             }
 
             auto& store = ::dsn::utils::singleton_store<std::string, ::dsn::service_app_role>::instance();
@@ -386,8 +443,7 @@ bool service_spec::init_app_specs()
             app.role = role;
 
             auto ports = app.ports;   
-            auto nsc = app.network_server_confs;
-            auto gap = ports.size() > 0 ? (*ports.rbegin() + 1 - *ports.begin()) : 0;            
+            auto nsc = app.network_server_confs;            
             std::string name = app.name;
             for (int i = 1; i <= app.count; i++)
             {
@@ -399,18 +455,19 @@ bool service_spec::init_app_specs()
 
                 // add app
                 app_specs.push_back(app);
+                dassert((int)app_specs.size() == app.id, "incorrect app id");
 
                 // for next instance
                 app.ports.clear();
                 for (auto& p : ports)
                 {
-                    app.ports.push_back(p + i * gap);
+                    app.ports.push_back(p + i * ports_gap);
                 }
 
                 app.network_server_confs.clear();
                 for (auto sc : nsc)
                 {
-                    sc.second.port += i * gap;
+                    sc.second.port += i * ports_gap;
                     app.network_server_confs[sc.second] = sc.second;
                 }
             }
@@ -419,5 +476,32 @@ bool service_spec::init_app_specs()
 
     return true;
 }
+
+int service_spec::get_ports_delta(int app_id, dsn_threadpool_code_t pool, int queue_index) const
+{
+    dassert(rpc_io_mode == IOE_PER_QUEUE, "only used for IOE_PER_QUEUE mode");
+
+    auto& aps = app_specs[app_id - 1];
+    int number_of_ioes = 0;
+    for (auto& pl : aps.pools)
+    {
+        if (pl != pool)
+        {
+            number_of_ioes += (this->threadpool_specs[pl].partitioned
+                ? this->threadpool_specs[pl].worker_count : 1);
+        }
+        else
+        {
+            number_of_ioes += (this->threadpool_specs[pl].partitioned
+                ? (queue_index + 1) : 1);
+            break;
+        }
+    }
+
+    dassert(number_of_ioes >= 1, "given pool not started");
+
+    return aps.ports_gap * (number_of_ioes - 1);
+}
+
 
 } // end namespace dsn

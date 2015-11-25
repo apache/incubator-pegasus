@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 #include <dsn/tool_api.h>
@@ -40,6 +50,8 @@ public:
 
     // after milliseconds, the provider should call task->enqueue()        
     virtual void add_timer(task* task) override;
+
+    virtual void start(io_modifer& ctx) override {}
 };
 
 class sim_task_queue : public task_queue
@@ -49,7 +61,6 @@ public:
 
     virtual void     enqueue(task* task);
     virtual task*    dequeue();
-    virtual int      count() const { return static_cast<int>(_tasks.size()); }
 
 private:
     std::map<uint32_t, task*> _tasks;
@@ -73,32 +84,35 @@ private:
     std::list<sim_worker_state*> _wait_threads;
 };
 
-class sim_lock : public lock_provider
+class sim_lock_provider : public lock_provider
 {
 public:
-    sim_lock(lock_provider* inner_provider)
-        : lock_provider(inner_provider),
-        _sema(1, nullptr)
-    {}
-    
-    virtual ~sim_lock()
-    {}
+    sim_lock_provider(lock_provider* inner_provider);
+    virtual ~sim_lock_provider();
 
-    virtual void lock()
-    {
-        _sema.wait(TIME_MS_MAX);
-    }
-    virtual bool try_lock()
-    {
-        return _sema.wait(0);
-    }
-
-    virtual void unlock()
-    {
-        _sema.signal(1);
-    }
+    virtual void lock();
+    virtual bool try_lock();
+    virtual void unlock();
 
 private:
+    int                    _lock_depth; // 0 for not locked;
+    int                    _current_holder; // -1 for invalid
+    sim_semaphore_provider _sema;
+};
+
+class sim_lock_nr_provider : public lock_nr_provider
+{
+public:
+    sim_lock_nr_provider(lock_nr_provider* inner_provider);
+    virtual ~sim_lock_nr_provider();
+
+    virtual void lock();
+    virtual bool try_lock();
+    virtual void unlock();
+
+private:
+    int                    _lock_depth; // 0 for not locked;
+    int                    _current_holder; // -1 for invalid
     sim_semaphore_provider _sema;
 };
 

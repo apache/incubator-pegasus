@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #include "replica.h"
 #include "mutation.h"
 #include "mutation_log.h"
@@ -36,26 +46,35 @@
 namespace dsn { namespace replication {
 
 // for replica::load(..) only
-replica::replica(replica_stub* stub, replication_options& options)
-: serverlet<replica>("replica")
+replica::replica(replica_stub* stub, global_partition_id gpid, const char* app_type, const char* path)
+    : serverlet<replica>("replica"), 
+    _primary_states(gpid, stub->options().staleness_for_commit, stub->options().batch_write_disabled)
 {
     dassert (stub, "");
     _stub = stub;
     _app = nullptr;
-        
-    _options = options;
+    _check_timer = nullptr;
+    _dir = path;
+    _options = &stub->options();
 
     init_state();
+    _config.gpid = gpid;
 }
 
-// for create new replica only used in replica_stub::on_config_proposal
-replica::replica(replica_stub* stub, global_partition_id gpid, replication_options& options)
-: serverlet<replica>("replica")
+// for replica::newr(...) only
+replica::replica(replica_stub* stub, global_partition_id gpid, const char* app_type)
+: serverlet<replica>("replica"),
+  _primary_states(gpid, stub->options().staleness_for_commit, stub->options().batch_write_disabled)
 {
     dassert (stub, "");
     _stub = stub;
-    _app = nullptr;    
-    _options = options;
+    _app = nullptr;
+    _check_timer = nullptr;
+
+    char buffer[256];
+    sprintf(buffer, "%u.%u.%s", gpid.app_id, gpid.pidx, app_type);
+    _dir = _stub->dir() + "/" + buffer;
+    _options = &stub->options();
 
     init_state();
     _config.gpid = gpid;
@@ -64,16 +83,14 @@ replica::replica(replica_stub* stub, global_partition_id gpid, replication_optio
 void replica::init_state()
 {
     _inactive_is_transient = false;
-    _log = nullptr;
     _prepare_list = new prepare_list(
         0, 
-        _options.staleness_for_start_prepare_for_potential_secondary,
+        _options->max_mutation_count_in_prepare_list,
         std::bind(
             &replica::execute_mutation,
             this,
             std::placeholders::_1
-            ),
-        _options.prepare_ack_on_secondary_before_logging_allowed
+            )
     );
 
     _config.ballot = 0;
@@ -82,6 +99,7 @@ void replica::init_state()
     _config.status = PS_INACTIVE;
     _primary_states.membership.ballot = 0;
     _last_config_change_time_ms = now_ms();
+    _private_log = nullptr;
 }
 
 replica::~replica(void)
@@ -93,6 +111,8 @@ replica::~replica(void)
         delete _prepare_list;
         _prepare_list = nullptr;
     }
+
+    dinfo("%s: replica destroyed", name());
 }
 
 void replica::on_client_read(const read_request_header& meta, dsn_message_t request)
@@ -105,7 +125,7 @@ void replica::on_client_read(const read_request_header& meta, dsn_message_t requ
 
     if (meta.semantic == read_semantic_t::ReadLastUpdate)
     {
-        if (status() != PS_PRIMARY || 
+        if (status() != PS_PRIMARY ||
             last_committed_decree() < _primary_states.last_prepare_decree_on_new_primary)
         {
             response_client_message(request, ERR_INVALID_STATE);
@@ -115,8 +135,9 @@ void replica::on_client_read(const read_request_header& meta, dsn_message_t requ
 
     dassert (_app != nullptr, "");
 
-    msg_binary_reader reader(request);
-    _app->dispatch_rpc_call(meta.code, reader, dsn_msg_create_response(request));
+    rpc_read_stream reader(request);
+    _app->dispatch_rpc_call(dsn_task_code_from_string(meta.code.c_str(), TASK_CODE_INVALID),
+                            reader, dsn_msg_create_response(request));
 }
 
 void replica::response_client_message(dsn_message_t request, error_code error, decree d/* = invalid_decree*/)
@@ -130,40 +151,141 @@ void replica::response_client_message(dsn_message_t request, error_code error, d
     reply(request, error);
 }
 
+//error_code replica::check_and_fix_private_log_completeness()
+//{
+//    error_code err = ERR_OK;
+//
+//    auto mind = _private_log->max_gced_decree(get_gpid());
+//    if (_prepare_list->max_decree())
+//
+//    if (!(mind <= last_durable_decree()))
+//    {
+//        err = ERR_INCOMPLETE_DATA;
+//        derror("%s: private log is incomplete (gced/durable): %lld vs %lld",
+//            name(),
+//            mind,
+//            last_durable_decree()
+//            );
+//    }
+//    else
+//    {
+//        mind = _private_log->max_decree(get_gpid());
+//        if (!(mind >= _app->last_committed_decree()))
+//        {
+//            err = ERR_INCOMPLETE_DATA;
+//            derror("%s: private log is incomplete (max/commit): %lld vs %lld",
+//                name(),
+//                mind,
+//                _app->last_committed_decree()
+//                );
+//        }
+//    }
+//    
+//    if (ERR_INCOMPLETE_DATA == err)
+//    {
+//        _private_log->close(true);
+//        _private_log->open(nullptr);
+//        _private_log->set_private(get_gpid(), _app->last_durable_decree());
+//    }
+//    
+//    return err;
+//}
+
+void replica::check_state_completeness()
+{
+    /* prepare commit durable */
+    dassert(max_prepared_decree() >= last_committed_decree(), "");
+    dassert(last_committed_decree() >= last_durable_decree(), "");
+
+    auto mind = _stub->_log->max_gced_decree(get_gpid(), _app->log_info().init_offset_in_shared_log);
+    dassert(mind <= last_durable_decree(), "");
+    _stub->_log->check_log_start_offset(get_gpid(), _app->log_info().init_offset_in_shared_log);
+
+    if (_private_log != nullptr)
+    {   
+        auto mind = _private_log->max_gced_decree(get_gpid(), _app->log_info().init_offset_in_private_log);
+        dassert(mind <= last_durable_decree(), "");
+
+        _private_log->check_log_start_offset(get_gpid(), _app->log_info().init_offset_in_private_log);
+    }
+}
+
 void replica::execute_mutation(mutation_ptr& mu)
 {
-    dassert (nullptr != _app, "");
+    dinfo("%s: execute mutation %s: request_count = %u",
+        name(), 
+        mu->name(), 
+        static_cast<int>(mu->client_requests.size())
+        );
 
     error_code err = ERR_OK;
+    decree d = mu->data.header.decree;
+
     switch (status())
     {
     case PS_INACTIVE:
-        if (_app->last_committed_decree() + 1 == mu->data.header.decree)
+        if (_app->last_committed_decree() + 1 == d)
+        {
             err = _app->write_internal(mu);
-        break;
-    case PS_PRIMARY:
-    case PS_SECONDARY:
-        {
-        dassert (_app->last_committed_decree() + 1 == mu->data.header.decree, "");
-        err = _app->write_internal(mu);
-        }
-        break;
-    case PS_POTENTIAL_SECONDARY:
-        if (LearningSucceeded == _potential_secondary_states.learning_status)
-        {
-            if (mu->data.header.decree == _app->last_committed_decree() + 1)
-            {
-                err = _app->write_internal(mu); 
-            }
-            else
-            {
-                dassert (mu->data.header.decree <= _app->last_committed_decree(), "");
-            }
         }
         else
         {
-            // drop mutations as learning will catch up
-            ddebug("%s: mutation %s skipped coz learing buffer overflow", name(), mu->name());
+            ddebug(
+                "%s: mutation %s commit to %s skipped, app.last_committed_decree = %lld",
+                name(), mu->name(),
+                enum_to_string(status()),
+                _app->last_committed_decree()
+                );
+        }
+        break;
+    case PS_PRIMARY:
+        {
+            check_state_completeness();
+            dassert(_app->last_committed_decree() + 1 == d, "");
+            err = _app->write_internal(mu);
+        }
+        break;
+
+    case PS_SECONDARY:
+        if (_secondary_states.checkpoint_task == nullptr)
+        {
+            check_state_completeness();
+            dassert (_app->last_committed_decree() + 1 == d, "");
+            err = _app->write_internal(mu);
+        }
+        else
+        {
+            ddebug(
+                "%s: mutation %s commit to %s skipped, app.last_committed_decree = %lld",
+                name(), mu->name(),
+                enum_to_string(status()),
+                _app->last_committed_decree()
+                );
+
+            // make sure private log saves the state
+            // catch-up will be done later after checkpoint task is fininished
+            dassert(_private_log != nullptr, "");            
+        }
+        break;
+    case PS_POTENTIAL_SECONDARY:
+        if (_potential_secondary_states.learning_status == LearningSucceeded ||
+            _potential_secondary_states.learning_status == LearningWithPrepareTransient)
+        {
+            dassert(_app->last_committed_decree() + 1 == d, "");
+            err = _app->write_internal(mu);
+        }
+        else
+        {
+            // prepare also happens with LearningWithPrepare, in this case
+            // make sure private log saves the state,
+            // catch-up will be done later after the checkpoint task is finished
+
+            ddebug(
+                "%s: mutation %s commit to %s skipped, app.last_committed_decree = %lld",
+                name(), mu->name(),
+                enum_to_string(status()),
+                _app->last_committed_decree()
+                );
         }
         break;
     case PS_ERROR:
@@ -175,6 +297,15 @@ void replica::execute_mutation(mutation_ptr& mu)
     if (err != ERR_OK)
     {
         handle_local_failure(err);
+    }
+
+    if (status() == PS_PRIMARY)
+    {
+        mutation_ptr next = _primary_states.write_queue.on_work_completed(mu.get(), nullptr);
+        if (next)
+        {
+            init_prepare(next);
+        }
     }
 }
 
@@ -188,7 +319,7 @@ mutation_ptr replica::new_mutation(decree decree)
     return mu;
 }
 
-bool replica::group_configuration(__out_param partition_configuration& config) const
+bool replica::group_configuration(/*out*/ partition_configuration& config) const
 {
     if (PS_PRIMARY != status())
         return false;
@@ -208,7 +339,7 @@ decree replica::last_prepared_decree() const
         auto mu = _prepare_list->get_mutation_by_decree(start + 1);
         if (mu == nullptr 
             || mu->data.header.ballot < lastBallot 
-            || (!mu->is_logged() && !_options.prepare_ack_on_secondary_before_logging_allowed)
+            || !mu->is_logged()
             )
             break;
 
@@ -220,6 +351,12 @@ decree replica::last_prepared_decree() const
 
 void replica::close()
 {
+    if (nullptr != _check_timer)
+    {
+        _check_timer->cancel(true);
+        _check_timer = nullptr;
+    }
+
     if (status() != PS_INACTIVE && status() != PS_ERROR)
     {
         update_local_configuration_with_no_ballot_change(PS_INACTIVE);
@@ -227,7 +364,14 @@ void replica::close()
 
     cleanup_preparing_mutations(true);
     _primary_states.cleanup();
+    _secondary_states.cleanup();
     _potential_secondary_states.cleanup(true);
+
+    if (_private_log != nullptr)
+    {
+        _private_log->close();
+        _private_log = nullptr;
+    }
 
     if (_app != nullptr)
     {

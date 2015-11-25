@@ -23,10 +23,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     specification for the labeled tasks (task kinds)
+ *
+ * Revision history:
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/service_api_c.h>
 # include <dsn/cpp/utils.h>
+# include <dsn/cpp/config_helper.h>
 # include <dsn/internal/enum_helper.h>
 # include <dsn/internal/perf_counter.h>
 # include <dsn/internal/customizable_id.h>
@@ -96,6 +107,34 @@ ENUM_BEGIN(task_state, TASK_STATE_INVALID)
     ENUM_REG(TASK_STATE_CANCELLED)
 ENUM_END(task_state)
 
+typedef enum ioe_mode
+{
+    IOE_PER_NODE,  // each node has shared io engine (rpc/disk/nfs/timer)
+    IOE_PER_QUEUE, // each queue has shared io engine (rpc/disk/nfs/timer)
+    IOE_COUNT,
+    IOE_INVALID
+} ioe_mode;
+
+ENUM_BEGIN(ioe_mode, IOE_INVALID)
+    ENUM_REG(IOE_PER_NODE)
+    ENUM_REG(IOE_PER_QUEUE)
+ENUM_END(ioe_mode)
+
+typedef enum grpc_mode_t
+{
+    GRPC_TO_LEADER,  // the rpc is sent to the leader (if exist)
+    GRPC_TO_ALL,     // the rpc is sent to all
+    GRPC_TO_ANY,     // the rpc is sent to one of the group member
+    GRPC_TARGET_COUNT,
+    GRPC_TARGET_INVALID
+} grpc_mode_t;
+
+ENUM_BEGIN(grpc_mode_t, GRPC_TARGET_INVALID)
+    ENUM_REG(GRPC_TO_LEADER)
+    ENUM_REG(GRPC_TO_ALL)
+    ENUM_REG(GRPC_TO_ANY)
+ENUM_END(grpc_mode_t)
+
 // define network header format for RPC
 DEFINE_CUSTOMIZED_ID_TYPE(network_header_format);
 DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_DSN);
@@ -109,12 +148,22 @@ DEFINE_CUSTOMIZED_ID(rpc_channel, RPC_CHANNEL_UDP)
 DEFINE_CUSTOMIZED_ID_TYPE(threadpool_code2)
 
 class task;
+class task_queue;
 class aio_task;
 class rpc_request_task;
 class rpc_response_task;
 class message_ex;
 class admission_controller;
 typedef void (*task_rejection_handler)(task*, admission_controller*);
+struct rpc_handler_info;
+typedef std::shared_ptr<rpc_handler_info> rpc_handler_ptr;
+
+typedef struct __io_mode_modifier__
+{
+    ioe_mode    mode;     // see ioe_mode for details
+    task_queue* queue;    // when mode == IOE_PER_QUEUE
+    int port_shift_value; // port += port_shift_value
+} io_modifer;
 
 class task_spec : public extensible_object<task_spec, 4>
 {
@@ -132,6 +181,7 @@ public:
 
     // configurable [
     dsn_task_priority_t    priority;
+    grpc_mode_t            grpc_mode; // used when a rpc request is sent to a group address
     dsn_threadpool_code_t  pool_code;
     bool                   allow_inline; // allow task executed in other thread pools or tasks
     bool                   fast_execution_in_network_thread;
@@ -148,7 +198,8 @@ public:
     join_point<void, task*>                      on_task_end;
     join_point<void, task*>                      on_task_cancelled;
 
-    join_point<bool, task*, task*, uint32_t>     on_task_wait_pre;
+    join_point<void, task*, task*, uint32_t>     on_task_wait_pre; // waitor, waitee, timeout
+    join_point<void, task*>                      on_task_wait_notified;
     join_point<void, task*, task*, bool>         on_task_wait_post; // wait succeeded or timedout
     join_point<void, task*, task*, bool>         on_task_cancel_post; // cancel succeeded or not
     
@@ -178,6 +229,7 @@ public:
 
 CONFIG_BEGIN(task_spec)
     CONFIG_FLD_ENUM(dsn_task_priority_t, priority, TASK_PRIORITY_COMMON, TASK_PRIORITY_INVALID, true, "task priority")
+    CONFIG_FLD_ENUM(grpc_mode_t, grpc_mode, GRPC_TO_LEADER, GRPC_TARGET_INVALID, false, "group rpc mode: GRPC_TO_LEADER, GRPC_TO_ALL, GRPC_TO_ANY")
     CONFIG_FLD_ID(threadpool_code2, pool_code, THREAD_POOL_DEFAULT, true, "thread pool to execute the task")
     CONFIG_FLD(bool, bool, allow_inline, false, "whether the task can be executed inlined with the caller task")
     CONFIG_FLD(bool, bool, fast_execution_in_network_thread, false, "whether the rpc task can be executed in network threads directly")
@@ -194,12 +246,15 @@ struct threadpool_spec
     worker_priority_t       worker_priority;
     bool                    worker_share_core;
     uint64_t                worker_affinity_mask;
-    unsigned int            max_input_queue_length; // 0xFFFFFFFFUL by default
+    int                     queue_length_throttling_threshold; // 0x0FFFFFFFUL by default
     bool                    partitioned;         // false by default
     std::string             queue_factory_name;
     std::string             worker_factory_name;
     std::list<std::string>  queue_aspects;
     std::list<std::string>  worker_aspects;
+    bool                    enable_virtual_queue_throttling;
+    std::list<int>          throttling_delay_vector_milliseconds;
+
     std::string             admission_controller_factory_name;
     std::string             admission_controller_arguments;
 
@@ -207,7 +262,7 @@ struct threadpool_spec
     threadpool_spec(const threadpool_spec& source);
     threadpool_spec& operator=(const threadpool_spec& source);
 
-    static bool init(__out_param std::vector<threadpool_spec>& specs);
+    static bool init(/*out*/ std::vector<threadpool_spec>& specs);
 };
 
 CONFIG_BEGIN(threadpool_spec)
@@ -217,12 +272,17 @@ CONFIG_BEGIN(threadpool_spec)
     CONFIG_FLD_ENUM(worker_priority_t, worker_priority, THREAD_xPRIORITY_NORMAL, THREAD_xPRIORITY_INVALID, false, "thread priority")
     CONFIG_FLD(bool, bool, worker_share_core, true, "whether the threads share all assigned cores")
     CONFIG_FLD(uint64_t, uint64, worker_affinity_mask, 0, "what CPU cores are assigned to this pool, 0 for all")
-    CONFIG_FLD(unsigned int, uint64, max_input_queue_length, 0xFFFFFFFFUL, "maximum (each) task queue length for this pool")
+    CONFIG_FLD(int, uint64, queue_length_throttling_threshold, 0x0FFFFFFFUL, "base threshold for queue throttling")
     CONFIG_FLD(bool, bool, partitioned, false, "whethe the threads share a single queue(partitioned=false) or not; the latter is usually for workload hash partitioning for avoiding locking")
     CONFIG_FLD_STRING(queue_factory_name, "", "task queue provider name")
     CONFIG_FLD_STRING(worker_factory_name, "", "task worker provider name")
     CONFIG_FLD_STRING_LIST(queue_aspects, "task queue aspects names, usually for tooling purpose")
-    CONFIG_FLD_STRING_LIST(worker_aspects, "Tas aspects names, usually for tooling purpose")
+    CONFIG_FLD_STRING_LIST(worker_aspects, "task aspects names, usually for tooling purpose")
+    CONFIG_FLD(bool, bool, enable_virtual_queue_throttling, false, "whether to enable throttling with virtual queues")
+    CONFIG_FLD_INT_LIST(throttling_delay_vector_milliseconds, 
+        "how many milliseconds for delay, e.g., 0, 0, 1, 2, 5, 10 as delay milliseconds "
+        "for queue length is queue_length_throttling_threshold * ( 1.0, 1.2, 1.4, 1.6, 1.8, >=2.0 ),"
+        "see dsn_task_queue_virtual_length_ptr() for more information")
     CONFIG_FLD_STRING(admission_controller_factory_name, "", "customized admission controller for the task queues")
     CONFIG_FLD_STRING(admission_controller_arguments, "", "arguments for the cusotmized admission controller")
 CONFIG_END

@@ -23,17 +23,33 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # ifdef _WIN32
 # include <WinSock2.h>
 # else
 # include <sys/socket.h>
 # include <netdb.h>
+# include <ifaddrs.h>
+# include <netinet/in.h>
+# include <arpa/inet.h>
 # endif
 
 # include "rpc_engine.h"
 # include "service_engine.h"
+# include "group_address.h"
 # include <dsn/internal/perf_counters.h>
 # include <dsn/internal/factory_store.h>
+# include <dsn/internal/task_queue.h>
+# include <dsn/cpp/serialization.h>
 # include <set>
 
 # ifdef __TITLE__
@@ -48,8 +64,8 @@ namespace dsn {
     class rpc_timeout_task : public task
     {
     public:
-        rpc_timeout_task(rpc_client_matcher* matcher, uint64_t id) 
-            : task(LPC_RPC_TIMEOUT)
+        rpc_timeout_task(rpc_client_matcher* matcher, uint64_t id, service_node* node) 
+            : task(LPC_RPC_TIMEOUT, 0, node)
         {
             _matcher = matcher;
             _id = id;
@@ -61,31 +77,38 @@ namespace dsn {
         }
 
     private:
-        rpc_client_matcher_ptr _matcher;
-        uint64_t               _id;
+        // use the following if the matcher is per rpc session
+        // rpc_client_matcher_ptr _matcher;
+
+        rpc_client_matcher* _matcher;
+        uint64_t            _id;
     };
 
     rpc_client_matcher::~rpc_client_matcher()
     {
-        dassert(_requests.size() == 0, "all rpc enries must be removed before the matcher ends");
+        for (int i = 0; i < MATCHER_BUCKET_NR; i++)
+        {
+            dassert(_requests[i].size() == 0, "all rpc enries must be removed before the matcher ends");
+        }
     }
 
     bool rpc_client_matcher::on_recv_reply(uint64_t key, message_ex* reply, int delay_ms)
     {
         dassert(reply != nullptr, "cannot receive an empty reply message");
-
+        
         rpc_response_task* call;
         task* timeout_task;
+        int bucket_index = key % MATCHER_BUCKET_NR;
 
         {
-            utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock);
-            auto it = _requests.find(key);
-            if (it != _requests.end())
+            utils::auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
+            auto it = _requests[bucket_index].find(key);
+            if (it != _requests[bucket_index].end())
             {
                 call = it->second.resp_task;
                 timeout_task = it->second.timeout_task;
                 timeout_task->add_ref(); // released below in the same function
-                _requests.erase(it);
+                _requests[bucket_index].erase(it);
             }
             else
             {
@@ -99,12 +122,22 @@ namespace dsn {
         dbg_dassert(call != nullptr, "rpc response task cannot be empty");
         if (timeout_task != task::get_current_task())
         {
-            timeout_task->cancel(true);
+            timeout_task->cancel(false); // no need to wait
         }
-        timeout_task->release_ref();
-            
-        call->set_delay(delay_ms);
-        call->enqueue(reply->error(), reply);
+        timeout_task->release_ref(); // added above in the same function
+        
+        if (reply->error() == ERR_FORWARD_TO_OTHERS)
+        {
+            rpc_address addr;
+            ::unmarshall((dsn_message_t)reply, addr);
+            _engine->call_ip(addr, call->get_request(), call, true);
+            delete reply;
+        }
+        else
+        {
+            call->set_delay(delay_ms);
+            call->enqueue(reply->error(), reply);
+        }
 
         call->release_ref(); // added in on_call
         return true;
@@ -113,14 +146,15 @@ namespace dsn {
     void rpc_client_matcher::on_rpc_timeout(uint64_t key)
     {
         rpc_response_task* call;
+        int bucket_index = key % MATCHER_BUCKET_NR;
 
         {
-            utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock);
-            auto it = _requests.find(key);
-            if (it != _requests.end())
+            utils::auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
+            auto it = _requests[bucket_index].find(key);
+            if (it != _requests[bucket_index].end())
             {
                 call = it->second.resp_task;
-                _requests.erase(it);
+                _requests[bucket_index].erase(it);
             }
             else
             {
@@ -138,13 +172,14 @@ namespace dsn {
     {
         task* timeout_task;
         message_header& hdr = *request->header;
+        int bucket_index = hdr.id % MATCHER_BUCKET_NR;
 
         dbg_dassert(call != nullptr, "rpc response task cannot be empty");
-        timeout_task = (new rpc_timeout_task(this, hdr.id));
+        timeout_task = (new rpc_timeout_task(this, hdr.id, call->node()));
 
         {
-            utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock);
-            auto pr = _requests.insert(rpc_requests::value_type(hdr.id, match_entry()));
+            utils::auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
+            auto pr = _requests[bucket_index].insert(rpc_requests::value_type(hdr.id, match_entry()));
             dassert (pr.second, "the message is already on the fly!!!");
             pr.first->second.resp_task = call;
             pr.first->second.timeout_task = timeout_task;
@@ -160,13 +195,12 @@ namespace dsn {
     /*static*/ bool rpc_engine::_message_crc_required;
 
     rpc_engine::rpc_engine(configuration_ptr config, service_node* node)
-        : _config(config), _node(node)
+        : _config(config), _node(node), _rpc_matcher(this)
     {
         dassert (_node != nullptr, "");
         dassert (_config != nullptr, "");
 
         _is_running = false;
-        _local_primary_address = dsn_address_invalid;
         _message_crc_required = config->get_value<bool>(
             "network", "message_crc_required", false,
             "whether crc is enabled for network messages");
@@ -175,7 +209,11 @@ namespace dsn {
     //
     // management routines
     //
-    network* rpc_engine::create_network(const network_server_config& netcs, bool client_only)
+    network* rpc_engine::create_network(
+        const network_server_config& netcs, 
+        bool client_only,
+        io_modifer& ctx
+        )
     {
         const service_spec& spec = service_engine::fast_instance().spec();
         auto net = utils::factory_store<network>::create(
@@ -190,7 +228,7 @@ namespace dsn {
         }
 
         // start the net
-        error_code ret = net->start(netcs.channel, netcs.port, client_only);
+        error_code ret = net->start(netcs.channel, netcs.port + ctx.port_shift_value, client_only, ctx); 
         if (ret == ERR_OK)
         {
             return net;
@@ -202,7 +240,10 @@ namespace dsn {
         }   
     }
 
-    error_code rpc_engine::start(const service_app_spec& aspec)
+    error_code rpc_engine::start(
+        const service_app_spec& aspec, 
+        io_modifer& ctx
+        )
     {
         if (_is_running)
         {
@@ -214,8 +255,6 @@ namespace dsn {
 
         // start client networks
         _client_nets.resize(network_header_format::max_value() + 1);
-
-        const service_spec& spec = service_engine::fast_instance().spec();
 
         // for each format
         for (int i = 0; i <= network_header_format::max_value(); i++)
@@ -248,9 +287,29 @@ namespace dsn {
                 cs.message_buffer_block_size = blk_size;
                 cs.hdr_format = network_header_format(network_header_format::to_string(i));
 
-                auto net = create_network(cs, true);
+                auto net = create_network(cs, true, ctx);
                 if (!net) return ERR_NETWORK_INIT_FALED;
                 pnet[j] = net;
+
+                if (ctx.queue)
+                {
+                    ddebug("[%s.%s] network client started at port %u, channel = %s, fmt = %s ...",
+                        node()->name(),
+                        ctx.queue->get_name().c_str(),
+                        (uint32_t)(cs.port + ctx.port_shift_value),
+                        cs.channel.to_string(),
+                        cs.hdr_format.to_string()
+                        );
+                }
+                else
+                {
+                    ddebug("[%s] network client started at port %u, channel = %s, fmt = %s ...",
+                        node()->name(),
+                        (uint32_t)(cs.port + ctx.port_shift_value),
+                        cs.channel.to_string(),
+                        cs.hdr_format.to_string()
+                        );
+                }
             }
         }
         
@@ -274,7 +333,7 @@ namespace dsn {
                 pnets = &it->second;
             }
 
-            auto net = create_network(sp.second, false);
+            auto net = create_network(sp.second, false, ctx);
             if (net == nullptr)
             {
                 return ERR_NETWORK_INIT_FALED;
@@ -282,15 +341,32 @@ namespace dsn {
 
             (*pnets)[sp.second.channel] = net;
 
-            dinfo("network started at port %u, channel = %s, fmt = %s ...",
-                (uint32_t)port,
-                sp.second.channel.to_string(),
-                sp.second.hdr_format.to_string()
-                );
+            if (ctx.queue)
+            {
+                dwarn("[%s.%s] network server started at port %u, channel = %s, fmt = %s ...",
+                    node()->name(),
+                    ctx.queue->get_name().c_str(),
+                    (uint32_t)(port + ctx.port_shift_value),
+                    sp.second.channel.to_string(),
+                    sp.second.hdr_format.to_string()
+                    );
+            }
+            else
+            {
+                dwarn("[%s] network server started at port %u, channel = %s, fmt = %s ...",
+                    node()->name(),
+                    (uint32_t)(port + ctx.port_shift_value),
+                    sp.second.channel.to_string(),
+                    sp.second.hdr_format.to_string()
+                    );
+            }
         }
 
         _local_primary_address = _client_nets[0][0]->address();
-        _local_primary_address.port = aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id;
+        _local_primary_address.c_addr_ptr()->u.v4.port = aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id + ctx.port_shift_value;
+
+        ddebug("=== service_node=[%s], primary_address=[%s] ===",
+            _node->name(), _local_primary_address.to_string());
 
         _is_running = true;
         return ERR_OK;
@@ -347,47 +423,95 @@ namespace dsn {
         if (tsk != nullptr)
         {
             tsk->set_delay(delay_ms);
-            tsk->enqueue(_node);
+            tsk->enqueue();
         }
         else
         {
-            // TODO: warning about this msg
             dwarn(
-                "recv unknown message with type %s from %s:%hu",
+                "recv unknown message with type %s from %s, rpc_id = %016llx",
                 msg->header->rpc_name,
-                msg->from_address.name,
-                msg->from_address.port
+                msg->from_address.to_string(),
+                msg->header->rpc_id
                 );
+
+            delete msg;
         }
     }
 
     void rpc_engine::call(message_ex* request, rpc_response_task* call)
     {
         auto sp = task_spec::get(request->local_rpc_code);
-        auto nts_us = dsn_now_us();
-        auto& named_nets = _client_nets[sp->rpc_call_header_format];
-        network* net = named_nets[sp->rpc_call_channel];
         auto& hdr = *request->header;
 
-        dassert(nullptr != net, "network not present for rpc channel '%s' with format '%s' used by rpc %s",
-            sp->rpc_call_channel.to_string(),
-            sp->rpc_call_header_format.to_string(),
-            hdr.rpc_name
-            );
-
-        hdr.client.port = primary_address().port;
-        hdr.rpc_id = utils::get_random64();
-        request->from_address = primary_address();
-
+        hdr.client.port = primary_address().port();
+        hdr.rpc_id = utils::get_random64();        
         request->seal(_message_crc_required);
+        
+        switch (request->server_address.type())
+        {
+        case HOST_TYPE_IPV4:
+            call_ip(request->server_address, request, call);
+            break;
+        case HOST_TYPE_URI:
+            dassert(false, "uri as host support is to be implemented");
+            break;
+        case HOST_TYPE_GROUP:
+            switch (sp->grpc_mode)
+            {
+            case GRPC_TO_LEADER:
+                // TODO: auto-changed leader
+                call_ip(request->server_address.group_address()->possible_leader(), request, call);
+                break;
+            case GRPC_TO_ANY:
+                // TODO: performance optimization
+                call_ip(request->server_address.group_address()->random_member(), request, call);
+                break;
+            case GRPC_TO_ALL:
+                dassert(false, "to be implemented");
+                break;
+            default:
+                dassert(false, "invalid group rpc mode %d", (int)(sp->grpc_mode));
+            }
+            break;
+        default:
+            dassert(false, "invalid target address type %d", (int)request->server_address.type());
+            break;
+        }
+        return;
+    }
 
+    void rpc_engine::call_ip(rpc_address addr, message_ex* request, rpc_response_task* call, bool reset_request_id)
+    {
+        dbg_dassert(addr.type() == HOST_TYPE_IPV4, "only IPV4 is now supported");
+        dbg_dassert(addr.port() >= 1024, "only server address can be called");
+
+        while (!request->dl.is_alone())
+        {
+            dwarn("msg request %s is in sending queue, try to pick out ...");
+            auto s = request->io_session;
+            if (s.get() != nullptr)
+            {
+                s->cancel(request);
+            }
+        }
+        
+        request->from_address = primary_address();
+        request->to_address = addr;
+
+        auto sp = task_spec::get(request->local_rpc_code);
+        auto& hdr = *request->header; 
         if (!sp->on_rpc_call.execute(task::get_current_task(), request, call, true))
         {
+            ddebug("rpc request %s is dropped (fault inject), rpc_id = %016llx",
+                request->header->rpc_name,
+                request->header->rpc_id
+                );
+
             if (call != nullptr)
             {
                 call->set_delay(hdr.client.timeout_ms);
                 call->enqueue(ERR_TIMEOUT, nullptr);
-            }   
+            }
             else
             {
                 // as ref_count for request may be zero
@@ -397,33 +521,54 @@ namespace dsn {
             return;
         }
 
-        net->call(request, call);
+        auto& named_nets = _client_nets[sp->rpc_call_header_format];
+        network* net = named_nets[sp->rpc_call_channel];
+        
+        dassert(nullptr != net, "network not present for rpc channel '%s' with format '%s' used by rpc %s",
+            sp->rpc_call_channel.to_string(),
+            sp->rpc_call_header_format.to_string(),
+            hdr.rpc_name
+            );
+
+        if (reset_request_id)
+        {
+            hdr.id = message_ex::new_id();
+            request->seal(_message_crc_required);
+        }
+            
+        if (call != nullptr)
+        {
+            _rpc_matcher.on_call(request, call);
+        }
+
+        net->send_message(request);
     }
 
-    void rpc_engine::reply(message_ex* response)
+    void rpc_engine::reply(message_ex* response, error_code err)
     {
-        response->add_ref();  // released in on_send_completed
-
-        auto s = response->server_session.get();
+        auto s = response->io_session.get();
         if (s == nullptr)
         {
-            // do not delete above add and release here for cancellation
+            // do not delete following add and release here for cancellation
             // as response may initially have ref_count == 0
-            response->release_ref(); // added above
+            response->add_ref();
+            response->release_ref(); 
             return;
         }   
 
+        response->header->server.error = err;
         response->seal(_message_crc_required);
 
         auto sp = task_spec::get(response->local_rpc_code);
         if (!sp->on_rpc_reply.execute(task::get_current_task(), response, true))
         {
-            // do not delete above add and release here for cancellation
+            // do not delete following add and release here for cancellation
             // as response may initially have ref_count == 0
-            response->release_ref(); // added above
+            response->add_ref();
+            response->release_ref();
             return;
         }
                 
-        s->send(response);
+        s->send_message(response);
     }
 }

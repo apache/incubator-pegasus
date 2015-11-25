@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 #include "server_state.h"
@@ -34,20 +44,28 @@ using namespace dsn::replication;
 class load_balancer : public serverlet<load_balancer>
 {
 public:
+    // switchs for replication test
+    static bool s_disable_lb;
+    static bool s_lb_for_test;
+
+public:
     load_balancer(server_state* state);
     ~load_balancer();
 
     void run();
     void run(global_partition_id gpid);
 
+    // this method is for testing
+    void explictly_send_proposal(global_partition_id gpid, int role, config_type type);
+
 private:
     // meta server => partition server
-    void send_proposal(const dsn_address_t& node, const configuration_update_request& proposal);
+    void send_proposal(::dsn::rpc_address node, const configuration_update_request& proposal);
     void query_decree(std::shared_ptr<query_replica_decree_request> query);
     void on_query_decree_ack(error_code err, std::shared_ptr<query_replica_decree_request>& query, std::shared_ptr<query_replica_decree_response>& resp);
     
     void run_lb(partition_configuration& pc);
-    dsn_address_t find_minimal_load_machine(bool primaryOnly);
+    ::dsn::rpc_address find_minimal_load_machine(bool primaryOnly);
 
 private:
     server_state *_state;

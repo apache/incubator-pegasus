@@ -24,6 +24,16 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+
 # ifndef _WIN32
 
 # include "native_aio_provider.posix.h"
@@ -51,14 +61,33 @@ namespace dsn {
 
         dsn_handle_t native_posix_aio_provider::open(const char* file_name, int flag, int pmode)
         {
-            return (dsn_handle_t)::open(file_name, flag, pmode);
+            return (dsn_handle_t)(uintptr_t)::open(file_name, flag, pmode);
         }
 
-        error_code native_posix_aio_provider::close(dsn_handle_t hFile)
+        error_code native_posix_aio_provider::close(dsn_handle_t fh)
         {
-            // TODO: handle failure
-            ::close((int)(uintptr_t)(hFile));
-            return ERR_OK;
+            if (fh == DSN_INVALID_FILE_HANDLE || ::close((int)(uintptr_t)(fh)) == 0)
+            {
+                return ERR_OK;
+            }
+            else
+            {
+                derror("close file failed, err = %s", strerror(errno));
+                return ERR_FILE_OPERATION_FAILED;
+            }
+        }
+
+        error_code native_posix_aio_provider::flush(dsn_handle_t fh)
+        {
+            if (fh == DSN_INVALID_FILE_HANDLE || ::fsync((int)(uintptr_t)(fh)) == 0)
+            {
+                return ERR_OK;
+            }
+            else
+            {
+                derror("flush file failed, err = %s", strerror(errno));
+                return ERR_FILE_OPERATION_FAILED;
+            }
         }
 
         struct posix_disk_aio_context : public disk_aio
@@ -84,40 +113,52 @@ namespace dsn {
         {
             aio_internal(aio_tsk, true);
         }
-        
+
         void aio_completed(sigval sigval)
         {
             auto ctx = (posix_disk_aio_context *)sigval.sival_ptr;
-            
+
+            if (dsn::tls_dsn.magic != 0xdeadbeef)
+                task::set_tls_dsn_context(ctx->tsk->node(), nullptr, nullptr);
+
             int err = aio_error(&ctx->cb);
             if (err != EINPROGRESS)
             {
+                size_t bytes = aio_return(&ctx->cb); // from e.g., read or write
+                error_code ec;
                 if (err != 0)
                 {
-                    derror("file operation failed, errno = %d", errno);
-                }
-
-                size_t bytes = aio_return(&ctx->cb); // from e.g., read or write
-                if (!ctx->evt)
-                {
-                    aio_task* aio(ctx->tsk);
-                    ctx->this_->complete_io(aio, err == 0 ? ERR_OK : ERR_FILE_OPERATION_FAILED, bytes);
+                    derror("aio error, err = %s", strerror(err));
+                    ec = ERR_FILE_OPERATION_FAILED;
                 }
                 else
                 {
-                    ctx->err = err == 0 ? ERR_OK : ERR_FILE_OPERATION_FAILED;
+                    ec = bytes > 0 ? ERR_OK : ERR_HANDLE_EOF;
+                }
+
+                if (!ctx->evt)
+                {
+                    aio_task* aio(ctx->tsk);
+                    ctx->this_->complete_io(aio, ec, bytes);
+                }
+                else
+                {
+                    ctx->err = ec;
                     ctx->bytes = bytes;
                     ctx->evt->notify();
                 }
             }
         }
 
-        error_code native_posix_aio_provider::aio_internal(aio_task* aio_tsk, bool async, __out_param uint32_t* pbytes /*= nullptr*/)
+        error_code native_posix_aio_provider::aio_internal(aio_task* aio_tsk, bool async, /*out*/ uint32_t* pbytes /*= nullptr*/)
         {
             auto aio = (posix_disk_aio_context *)aio_tsk->aio();
             int r;
 
             aio->this_ = this;
+            memset(&aio->cb, 0, sizeof(aio->cb));
+            aio->cb.aio_reqprio = 0;
+            aio->cb.aio_lio_opcode = (aio->type == AIO_Read ? LIO_READ : LIO_WRITE);
             aio->cb.aio_fildes = static_cast<int>((ssize_t)aio->file);
             aio->cb.aio_buf = aio->buffer;
             aio->cb.aio_nbytes = aio->buffer_size;
@@ -151,7 +192,8 @@ namespace dsn {
 
             if (r != 0)
             {
-                derror("file op failed, err = %d. On FreeBSD, you may need to load aio kernel module by running 'sudo kldload aio'.", errno);
+                derror("file op failed, err = %d (%s). On FreeBSD, you may need to load"
+                       " aio kernel module by running 'sudo kldload aio'.", errno, strerror(errno));
 
                 if (async)
                 {
@@ -175,7 +217,10 @@ namespace dsn {
                     aio->evt->wait();
                     delete aio->evt;
                     aio->evt = nullptr;
-                    *pbytes = aio->bytes;
+                    if (pbytes != nullptr)
+                    {
+                        *pbytes = aio->bytes;
+                    }
                     return aio->err;
                 }
             }

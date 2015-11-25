@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 #include <queue>
@@ -40,72 +50,42 @@ public:
     {
         _name = name;
         _count = 0;
-        _peeked_item = nullptr;
     }
 
     virtual long enqueue(T obj, uint32_t priority)
     {
         dassert (priority >= 0 && priority < priority_count, "wrong priority");
 
-        auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
+        auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_lock);
         {
             _items[priority].push(obj);
             return ++_count;
         }
     }
 
-    virtual T peek()
-    {
-        auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
-
-        // already peeked
-        if (nullptr != _peeked_item)
-            return nullptr;
-
-        else
-        {
-            long ct = 0;
-            _peeked_item = dequeue_impl(ct);
-            return _peeked_item;
-        }
-    }
-
-    virtual T dequeue_peeked()
-    {
-        auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
-        auto c = _peeked_item;
-        _peeked_item = nullptr;
-        return c;
-    }
-
-    bool is_peeked()
-    {
-        auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
-        return _peeked_item != nullptr;
-    }
-
     virtual T dequeue()
     {
-        auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
+        auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_lock);
         long ct = 0;
         return dequeue_impl(ct);
     }
 
-    virtual T dequeue(__out_param long& ct)
+    virtual T dequeue(/*out*/ long& ct)
     {
-        auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
+        auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_lock);
         return dequeue_impl(ct);
     }
     
     const std::string& get_name() const { return _name;}
 
-    long count() const { auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock); return _count; }
+    long count() const { auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_lock); return _count; }
 
 protected:
-    T dequeue_impl(__out_param long& ct, bool pop = true)
+    T dequeue_impl(/*out*/ long& ct, bool pop = true)
     {
         if (_count == 0)
         {
+            ct = 0;
             return nullptr;
         }
 
@@ -128,7 +108,6 @@ protected:
 
 protected:
     std::string   _name;
-    T             _peeked_item;
     TQueue        _items[priority_count];
     long          _count;
     mutable utils::ex_lock_nr_spin _lock;
@@ -150,9 +129,13 @@ public:
         return r;
     }
 
-    virtual T dequeue(__out_param long& ct, int millieseconds = TIME_MS_MAX)
+    virtual T dequeue(/*out*/ long& ct, int millieseconds = TIME_MS_MAX)
     {
-        _sema.wait();
+        if (!_sema.wait(millieseconds))
+        {
+            ct = 0;
+            return nullptr;
+        }
         return priority_queue<T, priority_count, TQueue>::dequeue(ct);
     }
     

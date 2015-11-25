@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 # ifdef _WIN32
@@ -39,12 +49,15 @@ namespace dsn {
             ~native_win_aio_provider();
 
             virtual dsn_handle_t open(const char* file_name, int flag, int pmode);
-            virtual error_code close(dsn_handle_t hFile);
+            virtual error_code close(dsn_handle_t fh);
+            virtual error_code flush(dsn_handle_t fh);
             virtual void    aio(aio_task* aio);            
             virtual disk_aio* prepare_aio_context(aio_task* tsk);
+            
+            virtual void start(io_modifer& ctx) override;
 
         protected:
-            error_code aio_internal(aio_task* aio, bool async, __out_param uint32_t* pbytes = nullptr);
+            error_code aio_internal(aio_task* aio, bool async, /*out*/ uint32_t* pbytes = nullptr);
 
         private:
             void worker();

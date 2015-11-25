@@ -25,21 +25,21 @@
  */
 
 # include "counter.server.impl.h"
-# include <boost/filesystem.hpp>
 # include <fstream>
+# include <dsn/cpp/utils.h>
 
 namespace dsn {
     namespace example {
 
 
         counter_service_impl::counter_service_impl(replica* replica)
-            : counter_service(replica)
+            : counter_service(replica), _lock(true)
         {
         }
 
         void counter_service_impl::on_add(const ::dsn::example::count_op& op, ::dsn::rpc_replier<int32_t>& reply)
         {
-            zauto_lock l(_lock);
+            service::zauto_lock l(_lock);
             ++_last_committed_decree;
             auto rt = _counters[op.name] += op.operand;
             reply(rt);
@@ -47,7 +47,7 @@ namespace dsn {
 
         void counter_service_impl::on_read(const std::string& name, ::dsn::rpc_replier<int32_t>& reply)
         {
-            zauto_lock l(_lock);
+            service::zauto_lock l(_lock);
 
             auto it = _counters.find(name);
             if (it == _counters.end())
@@ -62,11 +62,12 @@ namespace dsn {
                 
         int counter_service_impl::open(bool create_new)
         {
-            zauto_lock l(_lock);
+            service::zauto_lock l(_lock);
             if (create_new)
             {
-                boost::filesystem::remove_all(data_dir());
-                boost::filesystem::create_directory(data_dir());
+                auto& dir = data_dir();
+                dsn::utils::filesystem::remove_path(dir);
+                dsn::utils::filesystem::create_directory(dir);
             }
             else
             {
@@ -77,10 +78,13 @@ namespace dsn {
 
         int counter_service_impl::close(bool clear_state)
         {
-            zauto_lock l(_lock);
+            service::zauto_lock l(_lock);
             if (clear_state)
             {
-                boost::filesystem::remove_all(data_dir());
+                if (!dsn::utils::filesystem::remove_path(data_dir()))
+                {
+                    dassert(false, "Fail to delete directory %s.", data_dir().c_str());
+                }
             }
             return 0;
         }
@@ -88,18 +92,22 @@ namespace dsn {
         // checkpoint related
         void counter_service_impl::recover()
         {
-            zauto_lock l(_lock);
+            service::zauto_lock l(_lock);
 
             _counters.clear();
 
             decree max_ver = 0;
             std::string name;
-            boost::filesystem::directory_iterator end_it;
-            for (boost::filesystem::directory_iterator it(data_dir());
-                it != end_it;
-                ++it)
+
+            std::vector<std::string> sub_list;
+            auto& path = data_dir();
+            if (!dsn::utils::filesystem::get_subfiles(path, sub_list, false))
             {
-                auto s = it->path().filename().string();
+                dassert(false, "Fail to get subfiles in %s.", path.c_str());
+            }
+            for (auto& fpath : sub_list)
+            {
+                auto&& s = dsn::utils::filesystem::get_file_name(fpath);
                 if (s.substr(0, strlen("checkpoint.")) != std::string("checkpoint."))
                     continue;
 
@@ -119,7 +127,7 @@ namespace dsn {
 
         void counter_service_impl::recover(const std::string& name, decree version)
         {
-            zauto_lock l(_lock);
+            service::zauto_lock l(_lock);
 
             std::ifstream is(name.c_str());
             if (!is.is_open())
@@ -151,7 +159,7 @@ namespace dsn {
 
         int counter_service_impl::flush(bool force)
         {
-            zauto_lock l(_lock);
+            service::zauto_lock l(_lock);
 
             if (last_committed_decree() == last_durable_decree())
             {
@@ -182,11 +190,11 @@ namespace dsn {
         }
 
         // helper routines to accelerate learning
-        int counter_service_impl::get_learn_state(decree start, const blob& learn_request, __out_param learn_state& state)
+        int counter_service_impl::get_learn_state(decree start, const blob& learn_request, /*out*/ learn_state& state)
         {
             ::dsn::binary_writer writer;
 
-            zauto_lock l(_lock);
+            service::zauto_lock l(_lock);
 
             int magic = 0xdeadbeef;
             writer.write(magic);
@@ -218,7 +226,7 @@ namespace dsn {
 
             binary_reader reader(bb);
 
-            zauto_lock l(_lock);
+            service::zauto_lock l(_lock);
 
             _counters.clear();
 

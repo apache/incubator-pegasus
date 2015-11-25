@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <atomic>
@@ -30,16 +40,13 @@
 # include <dsn/internal/extensible_object.h>
 # include <dsn/internal/task_spec.h>
 # include <dsn/cpp/auto_codes.h>
+# include <dsn/cpp/address.h>
+# include <dsn/internal/link.h>
 
 namespace dsn 
 {
-    class rpc_client_session;
-    class rpc_server_session;
-    class rpc_client_matcher;
-
-    typedef ::dsn::ref_ptr<rpc_client_session> rpc_client_session_ptr;
-    typedef ::dsn::ref_ptr<rpc_server_session> rpc_server_session_ptr;
-    typedef ::dsn::ref_ptr<rpc_client_matcher> rpc_client_matcher_ptr;
+    class rpc_session;
+    typedef ::dsn::ref_ptr<rpc_session> rpc_session_ptr;
 
     typedef struct dsn_buffer_t // binary compatible with WSABUF on windows
     {
@@ -56,15 +63,16 @@ namespace dsn
         uint64_t      id;
         uint64_t      rpc_id;
         char          rpc_name[DSN_MAX_TASK_CODE_NAME_LENGTH];
+        uint64_t      context;
+        uint64_t      context2;
 
-        // info from client => server
         union
         {
             struct
             {
-                int32_t  timeout_ms;
-                int32_t  hash;
-                uint16_t port;
+                int32_t    timeout_ms;
+                int32_t    hash;
+                uint16_t   port;
             } client;
 
             struct
@@ -84,10 +92,14 @@ namespace dsn
                                         // header not included for *recieved* 
 
         // by rpc and network
-        rpc_server_session_ptr server_session;
-        dsn_address_t          from_address;
-        dsn_address_t          to_address;
+        rpc_session_ptr        io_session;     // send/recv session
+        ::dsn::rpc_address     from_address;   // always ipv4/v6 address
+        ::dsn::rpc_address     to_address;     // always ipv4/v6 address
+        ::dsn::rpc_address     server_address; // used by requests, and may be of uri/group address
         uint16_t               local_rpc_code;
+
+        // by message queuing
+        dlink                  dl;
 
     public:        
         //message_ex(blob bb, bool parse_hdr = true); // read 
@@ -97,7 +109,7 @@ namespace dsn
         // utility routines
         //
         bool is_right_header() const;
-        bool is_right_body() const;
+        bool is_right_body(bool is_write_msg) const;
         error_code error() const { return header->server.error; }        
         static uint64_t new_id() { return ++_id; }
         static bool is_right_header(char* hdr);
@@ -109,10 +121,10 @@ namespace dsn
         //
         // routines for create messages
         //
-        static message_ex* create_receive_message(blob& data);
+        static message_ex* create_receive_message(const blob& data);
         static message_ex* create_request(dsn_task_code_t rpc_code, int timeout_milliseconds = 0, int hash = 0);
         message_ex* create_response();
-
+        message_ex* copy();
 
         //
         // routines for buffer management

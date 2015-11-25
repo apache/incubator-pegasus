@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- *
- * -=- Robust Distributed System Nucleus (rDSN) -=-
+ * 
+ * -=- Robust Distributed System Nucleus (rDSN) -=- 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,14 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
 #include <dsn/toollet/profiler.h>
 #include <dsn/service_api_c.h>
 #include "shared_io_service.h"
@@ -61,7 +69,6 @@ namespace dsn {
             if (caller != nullptr)
             {
                 auto& prof = s_spec_profilers[caller->spec().code];
-                auto code = caller->spec().code;
                 if (prof.collect_call_count)
                 {
                     prof.call_counts[callee->spec().code]++;
@@ -111,10 +118,13 @@ namespace dsn {
         // return true means continue, otherwise early terminate with task::set_error_code
         static void profiler_on_aio_call(task* caller, aio_task* callee)
         {
-            auto& prof = s_spec_profilers[caller->spec().code];
-            if (prof.collect_call_count)
+            if (nullptr != caller)
             {
-                prof.call_counts[callee->spec().code]++;
+                auto& prof = s_spec_profilers[caller->spec().code];
+                if (prof.collect_call_count)
+                {
+                    prof.call_counts[callee->spec().code]++;
+                }
             }
 
             // time disk io starts
@@ -133,10 +143,13 @@ namespace dsn {
         // return true means continue, otherwise early terminate with task::set_error_code
         static void profiler_on_rpc_call(task* caller, message_ex* req, rpc_response_task* callee)
         {
-            auto& prof = s_spec_profilers[caller->spec().code];
-            if (prof.collect_call_count)
+            if (nullptr != caller)
             {
-                prof.call_counts[req->local_rpc_code]++;
+                auto& prof = s_spec_profilers[caller->spec().code];
+                if (prof.collect_call_count)
+                {
+                    prof.call_counts[req->local_rpc_code]++;
+                }
             }
 
             // time rpc starts
@@ -191,7 +204,7 @@ namespace dsn {
 
         void register_command_profiler()
         {
-            std::stringstream textp, textpjs, textpd, textarg;
+            std::stringstream textp, textpjs, textpd, textquery, textarg;
             textp << "NAME:" << std::endl;
             textp << "  profiler - collect performance data" << std::endl;
             textp << "SYNOPSIS:" << std::endl;
@@ -217,6 +230,11 @@ namespace dsn {
             textpd << "  pd|PD|profiledata|ProfileData $task_name:$counter_name:$percentile ..." << std::endl;
             textpd << "  pd|PD|profiledata|ProfileData $task_name:AllPercentile:$percentile" << std::endl;
 
+            textquery << "NAME:" << std::endl;
+            textquery << "  query profiler data in batch" << std::endl;
+            textquery << "SYNOPSIS:" << std::endl;
+            textquery << "  query" << std::endl;
+
             textarg << "ARGUMENTS:" << std::endl;
             textarg << "  $percentile : e.g, 50 for latency at 50 percentile, 50(default)|90|95|99|999" << std::endl;
             textarg << "  $counter_name :" << std::endl;
@@ -230,7 +248,7 @@ namespace dsn {
                 textarg << std::endl;
             }
             textarg << "  $task : all task code, such as" << std::endl;
-            for (int i = 1; i < dsn_task_code_max() && i <= 10; i++)
+            for (int i = 1; i < dsn_task_code_max(); i++)
             {
                 textarg << "      " << dsn_task_code_to_string(i) << std::endl;
             }
@@ -238,11 +256,12 @@ namespace dsn {
             textp << textarg.str();
             textpjs << textarg.str();
             textpd << textarg.str();
-
+            textquery << textarg.str();
 
             register_command({ "p", "P", "profile", "Profile" }, "profile|Profile|p|P - performance profiling", textp.str().c_str(), profiler_output_handler);
             //register_command({ "pjs", "PJS", "profilejavascript", "ProfileJavaScript", nullptr }, "pjs|PJS|profilejavascript|ProfileJavaScript - profile and show by javascript", textpjs.str().c_str(), profiler_js_handler);
             register_command({ "pd", "PD", "profiledata", "ProfileData" }, "profiler data - get appointed data, using by pjs", textpd.str().c_str(), profiler_data_handler);
+            register_command({ "query"}, "query profiling data, output in html table format", textquery.str().c_str(), query_data_handler);
         }
 
         void profiler::install(service_spec& spec)
@@ -299,9 +318,9 @@ namespace dsn {
                 spec->on_task_begin.put_back(profiler_on_task_begin, "profiler");
                 spec->on_task_end.put_back(profiler_on_task_end, "profiler");
                 spec->on_task_cancelled.put_back(profiler_on_task_cancelled, "profiler");
-                //spec->on_task_wait_pre.put_back(profiler_on_task_wait_pre, "profiler");
-                //spec->on_task_wait_post.put_back(profiler_on_task_wait_post, "profiler");
-                //spec->on_task_cancel_post.put_back(profiler_on_task_cancel_post, "profiler");
+                spec->on_task_wait_pre.put_back(profiler_on_task_wait_pre, "profiler");
+                spec->on_task_wait_post.put_back(profiler_on_task_wait_post, "profiler");
+                spec->on_task_cancel_post.put_back(profiler_on_task_cancel_post, "profiler");
                 spec->on_aio_call.put_back(profiler_on_aio_call, "profiler");
                 spec->on_aio_enqueue.put_back(profiler_on_aio_enqueue, "profiler");
                 spec->on_rpc_call.put_back(profiler_on_rpc_call, "profiler");

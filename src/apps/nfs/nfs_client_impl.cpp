@@ -1,3 +1,37 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Microsoft Corporation
+ * 
+ * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
 # include "nfs_client_impl.h"
 # include <dsn/internal/nfs.h>
 # include <queue>
@@ -30,7 +64,7 @@ namespace dsn {
             if (err != ::dsn::ERR_OK)
             {
                 derror("remote copy request failed");
-                ureq->nfs_task->enqueue(err, 0, ureq->nfs_task->node());
+                ureq->nfs_task->enqueue(err, 0);
                 delete ureq;
                 return;
             }
@@ -39,7 +73,7 @@ namespace dsn {
             if (err != ::dsn::ERR_OK)
             {
                 derror("remote copy request failed");
-                ureq->nfs_task->enqueue(err, 0, ureq->nfs_task->node());
+                ureq->nfs_task->enqueue(err, 0);
                 delete ureq;
                 return;
             }
@@ -51,7 +85,9 @@ namespace dsn {
 
                 filec = new file_context(ureq, resp.file_list[i], resp.size_list[i]);
                 ureq->file_context_map.insert(std::pair<std::string, file_context*>(
-                    ureq->file_size_req.dst_dir + resp.file_list[i], filec));
+                    utils::filesystem::path_combine(ureq->file_size_req.dst_dir, resp.file_list[i]), 
+                    filec
+                    ));
 
                 //dinfo("this file size is %d, name is %s", size, resp.file_list[i].c_str());
 
@@ -250,11 +286,11 @@ namespace dsn {
             }   
 
             // real write
-            std::string file_path = reqc->copy_req.dst_dir + reqc->file_ctx->file_name;
-            std::string path = ::dsn::utils::remove_file_name(file_path.c_str());
-            if (!::dsn::utils::is_file_or_dir_exist(path.c_str()))
+            std::string file_path = dsn::utils::filesystem::path_combine(reqc->copy_req.dst_dir, reqc->file_ctx->file_name);
+            std::string path = dsn::utils::filesystem::remove_file_name(file_path.c_str());
+            if (!dsn::utils::filesystem::create_directory(path))
             {
-                mkdir_(path.c_str());
+                dassert(false, "Fail to create directory %s.", path.c_str());
             }
 
             dsn_handle_t hfile = reqc->file_ctx->file.load();
@@ -322,7 +358,7 @@ namespace dsn {
                 {
                     auto err = dsn_file_close(reqc->file_ctx->file);
                     dassert(err == ERR_OK, "dsn_file_close failed, err = %s", dsn_error_to_string(err));
-                    reqc->file_ctx->file = static_cast<dsn_handle_t>(0);
+                    reqc->file_ctx->file = nullptr;
                     reqc->file_ctx->copy_requests.clear();
 
                     if (++reqc->file_ctx->user_req->finished_files == (int)reqc->file_ctx->user_req->file_context_map.size())
@@ -390,7 +426,7 @@ namespace dsn {
                     auto err2 = dsn_file_close(f.second->file);
                     dassert(err2 == ERR_OK, "dsn_file_close failed, err = %s", dsn_error_to_string(err2)); 
 
-                    f.second->file = static_cast<dsn_handle_t>(0);
+                    f.second->file = nullptr;
 
                     if (f.second->finished_segments != (int)f.second->copy_requests.size())
                     {
@@ -403,7 +439,7 @@ namespace dsn {
             }
 
             req->file_context_map.clear();
-            req->nfs_task->enqueue(err, 0, req->nfs_task->node());
+            req->nfs_task->enqueue(err, 0);
 
             delete req;
 

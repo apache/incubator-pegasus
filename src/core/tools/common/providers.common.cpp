@@ -24,7 +24,17 @@
  * THE SOFTWARE.
  */
 
-# include "net_provider.h"
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+
+# include "asio_net_provider.h"
 # include <dsn/tool/providers.common.h>
 # include "lockp.std.h"
 # include "native_aio_provider.win.h"
@@ -37,8 +47,6 @@
 # include "network.sim.h"
 # include "simple_logger.h"
 # include "empty_aio_provider.h"
-# include "hpc_task_queue.h"
-# include "hpc_tail_logger.h"
 
 namespace dsn {
     namespace tools {
@@ -49,8 +57,8 @@ namespace dsn {
             register_component_provider<task_worker>("dsn::task_worker");
             register_component_provider<screen_logger>("dsn::tools::screen_logger");
             register_component_provider<simple_logger>("dsn::tools::simple_logger");
-            register_component_provider<hpc_tail_logger>("dsn::tools::hpc_tail_logger");
             register_component_provider<std_lock_provider>("dsn::tools::std_lock_provider");
+            register_component_provider<std_lock_nr_provider>("dsn::tools::std_lock_nr_provider");
             register_component_provider<std_rwlock_nr_provider>("dsn::tools::std_rwlock_nr_provider");
             register_component_provider<std_semaphore_provider>("dsn::tools::std_semaphore_provider");
             register_component_provider<simple_perf_counter>("dsn::tools::simple_perf_counter");
@@ -60,9 +68,8 @@ namespace dsn {
             register_component_provider<sim_network_provider>("dsn::tools::sim_network_provider");
             register_component_provider<simple_task_queue>("dsn::tools::simple_task_queue");
             register_component_provider<simple_timer_service>("dsn::tools::simple_timer_service");
-            register_component_provider<hpc_task_queue>("dsn::tools::hpc_task_queue");
             
-            register_message_header_parser<dsn_message_parser>(NET_HDR_DSN);
+            register_message_header_parser<dsn_message_parser>("NET_HDR_DSN");
 #if defined(_WIN32)
             register_component_provider<native_win_aio_provider>("dsn::tools::native_aio_provider");
 #elif defined(__linux__)

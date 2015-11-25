@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <dsn/service_api_cpp.h>
@@ -99,7 +109,7 @@ namespace dsn {
             xfer += proto->writeFieldEnd(); \
             return xfer;\
         }\
-        inline int read_base(::apache::thrift::protocol::TProtocol* proto, __out_param TName& val, ::apache::thrift::protocol::TType ftype)\
+        inline int read_base(::apache::thrift::protocol::TProtocol* proto, /*out*/ TName& val, ::apache::thrift::protocol::TType ftype)\
         {\
             if (ftype == ::apache::thrift::protocol::TType::T_##TTag) return proto->read##TMethod(val); \
             else return proto->skip(ftype);\
@@ -125,7 +135,7 @@ namespace dsn {
     }
         
     template<typename TName>
-    inline uint32_t unmarshall_base(::apache::thrift::protocol::TProtocol* iproto, __out_param TName& val)
+    inline uint32_t unmarshall_base(::apache::thrift::protocol::TProtocol* iproto, /*out*/ TName& val)
     {
         uint32_t xfer = 0;
         std::string fname;
@@ -163,15 +173,15 @@ namespace dsn {
     template<typename T>
     void marshall(binary_writer& writer, const T& val)
     {
-        boost::shared_ptr<::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
         marshall_base<T>(&proto, val);
     }
 
     template<typename T>
-    void unmarshall(binary_reader& reader, __out_param T& val)
+    void unmarshall(binary_reader& reader, /*out*/ T& val)
     {
-        boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
         unmarshall_base<T>(&proto, val);
     }
@@ -202,7 +212,7 @@ namespace dsn {
     template<typename T>
     uint32_t unmarshall_rpc_args(
         ::apache::thrift::protocol::TProtocol* iprot,
-        __out_param T& val,
+        /*out*/ T& val,
         uint32_t(T::*reader)(::apache::thrift::protocol::TProtocol*)
         )
     {
@@ -265,12 +275,12 @@ namespace dsn {
         {
         }
 
-        virtual void prepare_buffers_for_send(dsn_message_t msg, __out_param std::vector<blob>& buffers)
+        virtual void prepare_buffers_for_send(dsn_message_t msg, /*out*/ std::vector<blob>& buffers)
         {
             // prepare head
             blob bb(_write_buffer_for_header, 0, 512);
             binary_writer writer(bb);
-            boost::shared_ptr<::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+            boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
             ::apache::thrift::protocol::TBinaryProtocol proto(transport);
 
             auto sp = task_spec::get(msg->header().local_rpc_code);
@@ -313,7 +323,7 @@ namespace dsn {
             }
         }
 
-        virtual dsn_message_t get_message_on_receive(int read_length, __out_param int& read_next)
+        virtual dsn_message_t get_message_on_receive(int read_length, /*out*/ int& read_next)
         {
             mark_read(read_length);
 
@@ -327,7 +337,7 @@ namespace dsn {
             {
                 blob bb = _read_buffer.range(0, _read_buffer_occupied);
                 binary_reader reader(bb);
-                boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+                boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
                 ::apache::thrift::protocol::TBinaryProtocol proto(transport);
 
                 int32_t rseqid = 0;

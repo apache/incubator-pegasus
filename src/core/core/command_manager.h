@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 # include <dsn/internal/command.h>
@@ -39,14 +49,14 @@ namespace dsn {
         command_manager();
 
         void register_command(const std::vector<const char*>& commands, const char* help_one_line, const char* help_long, command_handler handler);
-        bool run_command(const std::string& cmdline, __out_param std::string& output);
+        bool run_command(const std::string& cmdline, /*out*/ std::string& output);
         void run_console();
         void start_local_cli();
         void start_remote_cli();
         void on_remote_cli(dsn_message_t req);
 
     private:
-        bool run_command(const std::string& cmd, const std::vector<std::string>& args, __out_param std::string& output);
+        bool run_command(const std::string& cmd, const std::vector<std::string>& args, /*out*/ std::string& output);
 
     private:
         struct command

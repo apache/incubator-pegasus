@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 //
@@ -37,12 +47,21 @@ namespace dsn { namespace replication {
 
 class mutation_log;
 class replication_failure_detector;
+class replication_checker;
+namespace test {
+    class test_checker;
+}
 
-// from, new replica config, isClosing
-typedef std::function<void (const dsn_address_t&, const replica_configuration&, bool)> replica_state_subscriber;
+typedef std::unordered_map<global_partition_id, replica_ptr> replicas;
+typedef std::function<void (::dsn::rpc_address /*from*/,
+                            const replica_configuration& /*new_config*/,
+                            bool /*is_closing*/)> replica_state_subscriber;
 
 class replica_stub : public serverlet<replica_stub>, public ref_counter
 {
+public:
+    static bool s_not_exit_on_log_failure; // for test
+
 public:
     replica_stub(replica_state_subscriber subscriber = nullptr, bool is_long_subscriber = true);
     ~replica_stub(void);
@@ -66,7 +85,7 @@ public:
     //    messages from meta server
     //
     void on_config_proposal(const configuration_update_request& proposal);
-    void on_query_decree(const query_replica_decree_request& req, __out_param query_replica_decree_response& resp);
+    void on_query_decree(const query_replica_decree_request& req, /*out*/ query_replica_decree_response& resp);
         
     //
     //    messages from peers (primary or secondary)
@@ -75,11 +94,11 @@ public:
     //        - learn
     //
     void on_prepare(dsn_message_t request);    
-    void on_learn(const learn_request& request, __out_param learn_response& response);
+    void on_learn(dsn_message_t msg);
     void on_learn_completion_notification(const group_check_response& report);
     void on_add_learner(const group_check_request& request);
     void on_remove(const replica_configuration& request);
-    void on_group_check(const group_check_request& request, __out_param group_check_response& response);
+    void on_group_check(const group_check_request& request, /*out*/ group_check_response& response);
 
     //
     //    local messages
@@ -103,10 +122,7 @@ public:
     replica_ptr get_replica(int32_t app_id, int32_t partition_index);
     replication_options& options() { return _options; }
     bool is_connected() const { return NS_Connected == _state; }
-
-    // p_tableID = MAX_UInt32 for replica of all tables.
-    void get_primary_replica_list(uint32_t p_tableID, std::vector<global_partition_id>& p_repilcaList);
-
+    
 private:    
     enum replica_node_state
     {
@@ -128,20 +144,22 @@ private:
     void add_replica(replica_ptr r);
     bool remove_replica(replica_ptr r);
     void notify_replica_state_update(const replica_configuration& config, bool isClosing);
+    void handle_log_failure(error_code err);
 
 private:
-    friend class ::dsn::replication::replication_checker;
-    typedef std::unordered_map<global_partition_id, replica_ptr> replicas;
+    friend class ::dsn::replication::replication_checker;    
+    friend class ::dsn::replication::test::test_checker;
     typedef std::unordered_map<global_partition_id, ::dsn::task_ptr> opening_replicas;
-    typedef std::unordered_map<global_partition_id, std::pair<::dsn::task_ptr, replica_ptr>> closing_replicas; // <close, replica>
+    typedef std::unordered_map<global_partition_id, std::pair< ::dsn::task_ptr, replica_ptr>> closing_replicas; // <close, replica>
 
-    zlock                       _repicas_lock;
+    zlock                       _replicas_lock;
     replicas                    _replicas;
     opening_replicas            _opening_replicas;
     closing_replicas            _closing_replicas;
     
-    mutation_log                *_log;
+    mutation_log_ptr            _log;
     std::string                 _dir;
+    ::dsn::rpc_address          _primary_address;
 
     replication_failure_detector *_failure_detector;
     volatile replica_node_state   _state;
@@ -159,7 +177,6 @@ private:
 private:    
     friend class replica;
     void response_client_error(dsn_message_t request, int error);
-    void replay_mutation(mutation_ptr& mu, replicas* rps);
 };
 //------------ inline impl ----------------------
 

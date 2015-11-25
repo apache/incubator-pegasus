@@ -23,24 +23,36 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #include "simple_kv.server.impl.h"
 #include <fstream>
 #include <sstream>
-#include <boost/filesystem.hpp>
 
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
 # define __TITLE__ "simple.kv"
 
+using namespace ::dsn::service;
+
 namespace dsn {
     namespace replication {
         namespace application {
             
             simple_kv_service_impl::simple_kv_service_impl(replica* replica)
-                : simple_kv_service(replica)
+                : simple_kv_service(replica), _lock(true)
             {
                 _test_file_learning = false;
+                //set_delta_state_learning_supported();
             }
 
             // RPC_SIMPLE_KV_READ
@@ -65,9 +77,8 @@ namespace dsn {
             {
                 zauto_lock l(_lock);
                 _store[pr.key] = pr.value;
-                ++_last_committed_decree;
 
-                dinfo("write %s, decree = %lld\n", pr.key.c_str(), last_committed_decree());
+                dinfo("write %s, decree = %lld\n", pr.key.c_str(), last_committed_decree() + 1);
                 reply(0);
             }
 
@@ -80,9 +91,8 @@ namespace dsn {
                     it->second.append(pr.value);
                 else
                     _store[pr.key] = pr.value;
-                ++_last_committed_decree;
 
-                dinfo("append %s, decree = %lld\n", pr.key.c_str(), last_committed_decree());
+                dinfo("append %s, decree = %lld\n", pr.key.c_str(), last_committed_decree() + 1);
                 reply(0);
             }
             
@@ -91,8 +101,9 @@ namespace dsn {
                 zauto_lock l(_lock);
                 if (create_new)
                 {
-                    boost::filesystem::remove_all(data_dir());
-                    mkdir_(data_dir().c_str());
+                    auto& dir = data_dir();
+                    dsn::utils::filesystem::remove_path(dir);
+                    dsn::utils::filesystem::create_directory(dir);
                 }
                 else
                 {
@@ -106,7 +117,10 @@ namespace dsn {
                 zauto_lock l(_lock);
                 if (clear_state)
                 {
-                    boost::filesystem::remove_all(data_dir());
+                    if (!dsn::utils::filesystem::remove_path(data_dir()))
+                    {
+                        dassert(false, "Fail to delete directory %s.", data_dir().c_str());
+                    }
                 }
                 return 0;
             }
@@ -120,12 +134,16 @@ namespace dsn {
 
                 decree maxVersion = 0;
                 std::string name;
-                boost::filesystem::directory_iterator endtr;
-                for (boost::filesystem::directory_iterator it(data_dir());
-                    it != endtr;
-                    ++it)
+
+                std::vector<std::string> sub_list;
+                auto& path = data_dir();
+                if (!dsn::utils::filesystem::get_subfiles(path, sub_list, false))
                 {
-                    auto s = it->path().filename().string();
+                    dassert(false, "Fail to get subfiles in %s.", path.c_str());
+                }
+                for (auto& fpath : sub_list)
+                {
+                    auto&& s = dsn::utils::filesystem::get_file_name(fpath);
                     if (s.substr(0, strlen("checkpoint.")) != std::string("checkpoint."))
                         continue;
 
@@ -136,6 +154,7 @@ namespace dsn {
                         name = data_dir() + "/" + s;
                     }
                 }
+                sub_list.clear();
 
                 if (maxVersion > 0)
                 {
@@ -179,7 +198,8 @@ namespace dsn {
                     _store[key] = value;
                 }
 
-                _last_durable_decree = _last_committed_decree = version;
+                _last_durable_decree = version;
+                init_last_commit_decree(version);
             }
 
             int simple_kv_service_impl::flush(bool force)
@@ -223,7 +243,7 @@ namespace dsn {
             }
 
             // helper routines to accelerate learning
-            int simple_kv_service_impl::get_learn_state(decree start, const blob& learn_req, __out_param learn_state& state)
+            int simple_kv_service_impl::get_learn_state(decree start, const blob& learn_req, /*out*/ learn_state& state)
             {
                 ::dsn::binary_writer writer;
 
@@ -232,9 +252,10 @@ namespace dsn {
                 int magic = 0xdeadbeef;
                 writer.write(magic);
 
-                writer.write(_last_committed_decree.load());
+                auto c = last_committed_decree();
+                writer.write(c);
 
-                dassert(_last_committed_decree >= 0, "");
+                dassert(c >= 0, "");
 
                 uint64_t count = static_cast<uint64_t>(_store.size());
                 writer.write(count);
@@ -298,7 +319,7 @@ namespace dsn {
                     _store[key] = value;
                 }
 
-                _last_committed_decree = decree;
+                init_last_commit_decree(decree);
                 _last_durable_decree = 0;
 
                 flush(true);
@@ -308,7 +329,7 @@ namespace dsn {
                 {
                     dassert(state.files.size() == 1, "");
                     std::string fn = learn_dir() + "/" + state.files[0];
-                    ret = ::dsn::utils::is_file_or_dir_exist(fn.c_str());
+                    ret = dsn::utils::filesystem::path_exists(fn.c_str());
                     if (ret)
                     {
                         std::string s;

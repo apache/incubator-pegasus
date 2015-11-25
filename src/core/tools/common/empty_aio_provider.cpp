@@ -24,6 +24,16 @@
  * THE SOFTWARE.
  */
 
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+
 # include "empty_aio_provider.h"
 
 namespace dsn {
@@ -43,7 +53,12 @@ namespace dsn {
             return (dsn_handle_t)(size_t)(1);
         }
 
-        error_code empty_aio_provider::close(dsn_handle_t hFile)
+        error_code empty_aio_provider::close(dsn_handle_t fh)
+        {
+            return ERR_OK;
+        }
+
+        error_code empty_aio_provider::flush(dsn_handle_t fh)
         {
             return ERR_OK;
         }

@@ -23,7 +23,22 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #include "replica_context.h"
+
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "replica.context"
 
 namespace dsn { namespace replication {
 
@@ -54,15 +69,9 @@ void primary_context::cleanup(bool clean_pending_mutations)
 
 void primary_context::do_cleanup_pending_mutations(bool clean_pending_mutations)
 {
-    if (pending_mutation_task != nullptr) 
-    {
-        pending_mutation_task->cancel(true);        
-        pending_mutation_task = nullptr;
-    }
-
     if (clean_pending_mutations)
     {
-        pending_mutation = nullptr;
+        write_queue.clear();
     }
 }
 
@@ -76,7 +85,7 @@ void primary_context::reset_membership(const partition_configuration& config, bo
 
     membership = config;
 
-    if (membership.primary != dsn_address_invalid)
+    if (membership.primary.is_invalid() == false)
     {
         statuses[membership.primary] = PS_PRIMARY;
     }
@@ -91,17 +100,9 @@ void primary_context::reset_membership(const partition_configuration& config, bo
     {
         statuses[it->first] = PS_POTENTIAL_SECONDARY;
     }
-
-    for (auto it = config.drop_outs.begin(); it != config.drop_outs.end(); it++)
-    {
-        if (statuses.find(*it) == statuses.end())
-        {
-            statuses[*it] = PS_INACTIVE;
-        }
-    }
 }
 
-bool primary_context::get_replica_config(const dsn_address_t& node, __out_param replica_configuration& config)
+bool primary_context::get_replica_config(::dsn::rpc_address node, /*out*/ replica_configuration& config)
 {
     config.gpid = membership.gpid;
     config.primary = membership.primary;  
@@ -121,7 +122,7 @@ bool primary_context::get_replica_config(const dsn_address_t& node, __out_param 
 }
 
 
-void primary_context::get_replica_config(partition_status st, __out_param replica_configuration& config)
+void primary_context::get_replica_config(partition_status st, /*out*/ replica_configuration& config)
 {
     config.gpid = membership.gpid;
     config.primary = membership.primary;  
@@ -129,7 +130,7 @@ void primary_context::get_replica_config(partition_status st, __out_param replic
     config.status = st;
 }
 
-bool primary_context::check_exist(const dsn_address_t& node, partition_status st)
+bool primary_context::check_exist(::dsn::rpc_address node, partition_status st)
 {
     switch (st)
     {
@@ -139,11 +140,18 @@ bool primary_context::check_exist(const dsn_address_t& node, partition_status st
         return std::find(membership.secondaries.begin(), membership.secondaries.end(), node) != membership.secondaries.end();
     case PS_POTENTIAL_SECONDARY:
         return learners.find(node) != learners.end();
-    case PS_INACTIVE:
-        return std::find(membership.drop_outs.begin(), membership.drop_outs.end(), node) != membership.drop_outs.end();
     default:
         dassert (false, "");
         return false;
+    }
+}
+
+void secondary_context::cleanup()
+{
+    if (nullptr != checkpoint_task)
+    {
+        checkpoint_task->cancel(true);
+        checkpoint_task = nullptr;
     }
 }
 
@@ -175,6 +183,7 @@ bool potential_secondary_context::cleanup(bool force)
 
     learning_signature = 0;
     learning_round_is_running = false;
+    learning_start_prepare_decree = invalid_decree;
     return true;
 }
 

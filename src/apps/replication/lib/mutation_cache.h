@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 
@@ -47,6 +57,7 @@ public:
     decree  min_decree() const { return _start_decree; } 
     decree  max_decree() const { return _end_decree; }
     int     count() const { return _interval; }
+    int     capacity() const { return _max_count; }
 
 private:
     std::vector<mutation_ptr> _array;

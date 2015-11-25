@@ -23,13 +23,59 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include "service_engine.h"
 # include <dsn/internal/synchronize.h>
 # include <dsn/internal/aio_provider.h>
+# include <dsn/internal/work_queue.h>
 
 namespace dsn {
+
+class disk_write_queue : public work_queue<aio_task>
+{
+public:
+    disk_write_queue()
+        : work_queue(2)
+    {
+        _max_batch_bytes = 1024 * 1024; // 1 MB
+    }
+
+private:
+    virtual aio_task* unlink_next_workload(void* plength) override;
+
+private:
+    uint32_t _max_batch_bytes;
+};
+
+class disk_file
+{
+public:
+    disk_file(dsn_handle_t handle);
+    void ctrl(dsn_ctrl_code_t code, int param);
+    aio_task* read(aio_task* tsk);
+    aio_task* write(aio_task* tsk, void* ctx);
+
+    aio_task* on_read_completed(aio_task* wk, error_code err, size_t size);
+    aio_task* on_write_completed(aio_task* wk, void* ctx, error_code err, size_t size);
+    
+    dsn_handle_t native_handle() const { return _handle; }
+
+private:
+    dsn_handle_t     _handle;
+    disk_write_queue _write_queue;
+    work_queue<aio_task> _read_queue;
+};
 
 class disk_engine
 {
@@ -37,29 +83,29 @@ public:
     disk_engine(service_node* node);
     ~disk_engine();
 
-    void start(aio_provider* provider);
+    void start(aio_provider* provider, io_modifer& ctx);
 
     // asynchonous file read/write
-    dsn_handle_t    open(const char* fileName, int flag, int pmode);
-    error_code      close(dsn_handle_t hFile);
+    dsn_handle_t    open(const char* file_name, int flag, int pmode);
+    error_code      close(dsn_handle_t fh);
+    error_code      flush(dsn_handle_t fh);
     void            read(aio_task* aio);
     void            write(aio_task* aio);  
 
+    void            ctrl(dsn_handle_t fh, dsn_ctrl_code_t code, int param);
     disk_aio*       prepare_aio_context(aio_task* tsk) { return _provider->prepare_aio_context(tsk); }
     service_node*   node() const { return _node; }
     
 private:
     friend class aio_provider;
-    void start_io(aio_task* aio);
+    friend class batch_write_io_task;
+    void process_write(aio_task* wk, uint32_t sz);
     void complete_io(aio_task* aio, error_code err, uint32_t bytes, int delay_milliseconds = 0);
 
 private:
-    bool           _is_running;
+    volatile bool   _is_running;
     aio_provider    *_provider;
     service_node    *_node;
-
-    ::dsn::utils::ex_lock_nr _lock;
-    int                      _request_count;
 };
 
 } // end namespace

@@ -23,9 +23,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#pragma once
 
-#include "mutation.h"
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
+# pragma once
+
+# include "mutation.h"
 
 namespace dsn { namespace replication {
 
@@ -36,18 +46,22 @@ struct remote_learner_state
     decree   prepare_start_decree;
 };
 
-typedef std::unordered_map<dsn_address_t, remote_learner_state> learner_map;
+typedef std::unordered_map< ::dsn::rpc_address, remote_learner_state> learner_map;
 
 class primary_context
 {
 public:
+    primary_context(global_partition_id gpid, int max_concurrent_2pc_count = 1, bool batch_write_disabled = false)
+        : write_queue(gpid, max_concurrent_2pc_count, batch_write_disabled)
+    {}
+
     void cleanup(bool clean_pending_mutations = true);
        
     void reset_membership(const partition_configuration& config, bool clear_learners);
-    bool get_replica_config(const dsn_address_t& node, __out_param replica_configuration& config);
-    void get_replica_config(partition_status status, __out_param replica_configuration& config);
-    bool check_exist(const dsn_address_t& node, partition_status status);
-    partition_status get_node_status(const dsn_address_t& addr) const;
+    bool get_replica_config(::dsn::rpc_address node, /*out*/ replica_configuration& config);
+    void get_replica_config(partition_status status, /*out*/ replica_configuration& config);
+    bool check_exist(::dsn::rpc_address node, partition_status status);
+    partition_status get_node_status(::dsn::rpc_address addr) const;
 
     void do_cleanup_pending_mutations(bool clean_pending_mutations = true);
     
@@ -58,14 +72,16 @@ public:
     learner_map             learners;
 
     // 2pc batching
-    mutation_ptr      pending_mutation;
-    dsn::task_ptr     pending_mutation_task;
+    mutation_queue          write_queue;
 
     // group check
-    dsn::task_ptr     group_check_task;
-    node_tasks        group_check_pending_replies;
+    dsn::task_ptr     group_check_task; // the repeated group check task of LPC_GROUP_CHECK
+                                        // calls broadcast_group_check() to check all replicas separately
+                                        // created in replica::init_group_check()
+                                        // cancelled in cleanup() when status changed from PRIMARY to others
+    node_tasks        group_check_pending_replies; // group check response tasks of RPC_GROUP_CHECK for each replica
 
-    // reconfig
+    // reconfiguration task of RPC_CM_UPDATE_PARTITION_CONFIGURATION
     dsn::task_ptr     reconfiguration_task;
 
     // when read lastest update, all prepared decrees must be firstly committed
@@ -73,6 +89,14 @@ public:
     decree       last_prepare_decree_on_new_primary; 
 };
 
+class secondary_context
+{
+public:
+    void cleanup();
+
+public:
+    ::dsn::task_ptr checkpoint_task;
+};
 
 class potential_secondary_context 
 {
@@ -80,14 +104,16 @@ public:
     potential_secondary_context() :
         learning_signature(0),
         learning_round_is_running(false),
-        learning_status(learner_status::Learning_INVALID)
+        learning_status(learner_status::Learning_INVALID),
+        learning_start_prepare_decree(invalid_decree)
     {}
     bool cleanup(bool force);
 
 public:
     uint64_t        learning_signature;
     learner_status  learning_status;
-    volatile bool learning_round_is_running;
+    volatile bool   learning_round_is_running;
+    decree          learning_start_prepare_decree;
 
     ::dsn::task_ptr       learning_task;
     ::dsn::task_ptr       learn_remote_files_task;
@@ -98,7 +124,7 @@ public:
 
 //---------------inline impl----------------------------------------------------------------
 
-inline partition_status primary_context::get_node_status(const dsn_address_t& addr) const
+inline partition_status primary_context::get_node_status(::dsn::rpc_address addr) const
 { 
     auto it = statuses.find(addr);
     return it != statuses.end()  ? it->second : PS_INACTIVE;

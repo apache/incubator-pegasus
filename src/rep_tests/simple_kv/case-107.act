@@ -1,0 +1,34 @@
+# inject on_rpc_call of notify learn completion
+
+set:load_balance_for_test=1,not_exist_on_log_failure=1
+
+# wait until r1 becomes primary
+config:{1,r1,[]}
+state:{{r1,pri,1,0}}
+
+# wait add learner r2 
+wait:on_rpc_call:rpc_name=RPC_LEARN_ADD_LEARNER,from=r1,to=r2
+
+# wait start learn
+wait:on_rpc_call:rpc_name=RPC_LEARN,from=r2,to=r1
+
+# wait learn ack
+wait:on_rpc_reply:rpc_name=RPC_LEARN_ACK,from=r1,to=r2
+
+# inject notify learn completion (which is one way rpc)
+inject:on_rpc_call:rpc_name=RPC_LEARN_COMPLETION_NOTIFY,from=r2,to=r1
+
+###
+# after some time, meta_server will do load balance again,
+# which will trigger r1 to add learner r2 again,
+# and r2 will found itself in state of LearningSucceeded,
+# and then trigger notify learn completion again
+###
+wait:on_rpc_call:rpc_name=RPC_CONFIG_PROPOSAL,from=m,to=r1
+wait:on_rpc_call:rpc_name=RPC_LEARN_ADD_LEARNER,from=r1,to=r2
+wait:on_rpc_call:rpc_name=RPC_LEARN_COMPLETION_NOTIFY,from=r2,to=r1
+
+# wait until server ready
+config:{2,r1,[r2]}
+state:{{r1,pri,2,0},{r2,sec,2,0}}
+

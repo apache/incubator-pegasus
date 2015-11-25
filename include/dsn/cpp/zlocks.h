@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     lock implementation atop of c service api
+ *
+ * Revision history:
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 # include <dsn/service_api_c.h>
@@ -31,12 +41,10 @@
 
 namespace dsn { namespace service {
 
-
-
 class zlock
 {
 public:
-    zlock() { _h = dsn_exlock_create(); }
+    zlock(bool recursive = false) { _h = dsn_exlock_create(recursive); }
     ~zlock() { dsn_exlock_destroy(_h); }
 
     void lock() { dsn_exlock_lock(_h); }

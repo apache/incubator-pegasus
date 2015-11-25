@@ -23,6 +23,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     configuration file interface
+ *
+ * Revision history:
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     Jul., 2015, @imzhenyu (Zhenyu Guo), add parameter support
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 
 # include <memory>
@@ -45,20 +56,16 @@ typedef void (*config_file_change_notifier)(configuration_ptr);
 class configuration
 {
 public:
-    template <typename T> static configuration* create(const char* file_name)
-    {
-        return new T(file_name);
-    }
+    configuration();
 
-public:
+    ~configuration();
+
     // arguments: k1=v1;k2=v2;k3=v3; ...
     // e.g.,
     //    port = %port%
     //    timeout = %timeout%
     // arguments: port=23466;timeout=1000
-    configuration(const char* file_name, const char* arguments = nullptr);
-
-    ~configuration(void);
+    bool load(const char* file_name, const char* arguments = nullptr);
 
     void get_all_sections(std::vector<std::string>& sections);
 
@@ -194,8 +201,8 @@ template<> inline long configuration::get_value<long>(const char* section, const
     {
         if (strlen(value) > 2 && (value[0] == '0' && (value[1] == 'x' || value[1] == 'X')))
         {
-            int v;
-            sscanf(value, "0x%x", &v);
+            long v;
+            sscanf(value, "0x%lx", &v);
             return v;
         }
         else
@@ -261,107 +268,5 @@ template<> inline bool configuration::get_value<bool>(const char* section, const
     }
 }
 
-
-# define CONFIG_BEGIN(t_struct) \
-    inline bool read_config(\
-    const char* section, \
-    __out_param t_struct& val, \
-    t_struct* default_value = nullptr\
-    ) \
-{
-
-# define CONFIG_END \
-    return true; \
-}
-
-// type fld = xyz
-# define CONFIG_FLD(real_type, config_type, fld, default_fld_value, dsptr) \
-    val.fld = (real_type)dsn_config_get_value_##config_type(section, #fld, default_value ? default_value->fld : default_fld_value, dsptr);
-
-# define CONFIG_FLD_STRING(fld, default_fld_value, dsptr) \
-    val.fld = dsn_config_get_value_string(section, #fld, (val.fld.length() > 0 && val.fld != std::string(default_fld_value)) ? \
-         val.fld.c_str() : (default_value ? default_value->fld.c_str() : default_fld_value), dsptr);
-
-// customized_id<type> fld = xyz
-# define CONFIG_FLD_ID(type, fld, default_fld_value, defined_before_read_config, dsptr) \
-{\
-    std::string v = dsn_config_get_value_string(section, #fld, "", dsptr); \
-    if (v == "") {    \
-        if (!defined_before_read_config){\
-                if (default_value) val.fld = default_value->fld; \
-                    else val.fld = default_fld_value; \
-        }\
-    }\
-    else {\
-    if (!type::is_exist(v.c_str())) {\
-        printf("invalid enum configuration '[%s] %s'", section, #fld); \
-        return false; \
-            }\
-            else \
-        val.fld = type(v.c_str()); \
-    }\
-}
-
-// enum type fld = xyz
-# define CONFIG_FLD_ENUM(type, fld, default_fld_value, invalid_enum, defined_before_read_config, dsptr) \
-{\
-    std::string v = dsn_config_get_value_string(section, #fld, "", dsptr); \
-    if (v == "") {    \
-        if (!defined_before_read_config){ \
-            if (default_value) val.fld = default_value->fld; \
-            else val.fld = default_fld_value; \
-        }\
-    }\
-    else {\
-    auto v2 = enum_from_string(v.c_str(), invalid_enum);\
-    if (v2 == invalid_enum) {\
-        printf("invalid enum configuration '[%s] %s'", section, #fld); \
-        return false; \
-            }\
-            else \
-        val.fld = v2; \
-    }\
-}
-
-// list<customized_id<type>> fld = x,y,z
-# define CONFIG_FLD_ID_LIST(type, fld, dsptr) \
-{ \
-    val.fld.clear();\
-    std::string vv = dsn_config_get_value_string(section, #fld, "", dsptr); \
-    std::list<std::string> lv; \
-    ::dsn::utils::split_args(vv.c_str(), lv, ','); \
-    for (auto& v : lv) {\
-        if (!type::is_exist(v.c_str())) {\
-            printf("invalid enum configuration '[%s] %s'", section, #fld); \
-            return false; \
-                } \
-                else \
-            val.fld.push_back(type(v.c_str())); \
-        } \
-    if (val.fld.size() == 0 && default_value) \
-        val.fld = default_value->fld; \
-}
-
-// list<type> fld = x,y,z
-# define CONFIG_FLD_STRING_LIST(fld, dsptr) \
-    {\
-    std::string vv = dsn_config_get_value_string(section, #fld, "", dsptr); \
-    ::dsn::utils::split_args(vv.c_str(), val.fld, ','); \
-    if (val.fld.size() == 0 && default_value) \
-        val.fld = default_value->fld;\
-    }
-
-// cb: std::list<std::string>& => fld value
-# define CONFIG_FLD_INT_LIST(fld, dsptr) \
-   { \
-    std::string vv = dsn_config_get_value_string(section, #fld, "", dsptr); \
-    std::list<std::string> lv; \
-    ::dsn::utils::split_args(vv.c_str(), lv, ','); \
-    if (lv.size() == 0 && default_value) \
-        val.fld = default_value->fld; \
-    else {\
-        for (auto& s : lv) { val.fld.push_back(atoi(s.c_str())); } \
-    }\
-   }
 
 } // end namespace

@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 # include <dsn/cpp/service_app.h>
@@ -31,8 +41,11 @@ class server_state;
 class meta_service;
 
 namespace dsn {
-    namespace replication{
+    namespace replication {
         class replication_checker;
+        namespace test {
+            class test_checker;
+        }
     }
     namespace service {
 
@@ -48,7 +61,8 @@ namespace dsn {
 
         private:
             friend class ::dsn::replication::replication_checker;
-            static server_state *_reliable_state;
+            friend class ::dsn::replication::test::test_checker;
+            server_state*        _state;
             meta_service*        _service;
         };
 

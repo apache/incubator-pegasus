@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 #pragma once
 
 #include "simple_kv.client.h"
@@ -34,7 +44,7 @@ namespace dsn {
             class simple_kv_client_impl : public simple_kv_client
             {
             public:
-                simple_kv_client_impl(const std::vector<dsn_address_t>& meta_servers);
+                simple_kv_client_impl(const std::vector< ::dsn::rpc_address>& meta_servers);
                 ~simple_kv_client_impl(void);
 
             protected:

@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # pragma once
 # include "simple_kv.client.h"
 # include "simple_kv.client.perf.h"
@@ -30,7 +40,7 @@
 
 namespace dsn { namespace replication { namespace application { 
 // client app example
-class simple_kv_client_app : public ::dsn::service_app, public virtual ::dsn::servicelet
+class simple_kv_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
 {
 public:
     simple_kv_client_app()
@@ -48,7 +58,7 @@ public:
         if (argc < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        std::vector<dsn_address_t> meta_servers;
+        std::vector< ::dsn::rpc_address> meta_servers;
         ::dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
         
         _simple_kv_client = new simple_kv_client(meta_servers, argv[1]);
@@ -93,7 +103,10 @@ public:
 
             if (err == ERR_OK && err2 == ERR_OK)
             {
-                dassert(v == req.value, "data is inconsistent!");
+                if (1 == SKV_PARTITION_COUNT)
+                {
+                    dassert(v == req.value, "data is inconsistent!");
+                }
             }
         }
     }
@@ -104,7 +117,7 @@ private:
 };
 
 
-class simple_kv_perf_test_client_app : public ::dsn::service_app, public virtual ::dsn::servicelet
+class simple_kv_perf_test_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
 {
 public:
     simple_kv_perf_test_client_app()
@@ -122,7 +135,7 @@ public:
         if (argc < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        std::vector<dsn_address_t> meta_servers;
+        std::vector< ::dsn::rpc_address> meta_servers;
         ::dsn::replication::replication_app_client_base::load_meta_servers(meta_servers);
 
         _simple_kv_client = new simple_kv_perf_test_client(meta_servers, argv[1]);

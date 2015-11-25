@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include <dsn/internal/task_worker.h>
 # include "task_engine.h"
 # include <sstream>
@@ -156,7 +166,9 @@ void task_worker::set_name(const char* name)
 void task_worker::set_priority(worker_priority_t pri)
 {
 # ifndef _WIN32
-    static int policy = SCHED_OTHER;
+    #ifndef __linux__
+        static int policy = SCHED_OTHER;
+    #endif
     static int prio_max =
     #ifdef __linux__
         -20;
@@ -214,7 +226,7 @@ void task_worker::set_priority(worker_priority_t pri)
 
     if (!succ)
     {
-        dwarn("You may need priviledge to set thread priority. errno = %d.\n", errno);
+        dwarn("You may need priviledge to set thread priority. errno = %d", errno);
     }
 }
 
@@ -226,7 +238,7 @@ void task_worker::set_affinity(uint64_t affinity)
     dassert(affinity <= (((uint64_t)1 << nr_cpu) - 1),
         "There are %d cpus in total, while setting thread affinity to a nonexistent one.", nr_cpu);
 
-    int err;
+    int err = 0;
 # ifdef _WIN32
     if (::SetThreadAffinityMask(::GetCurrentThread(), static_cast<DWORD_PTR>(affinity)) == 0)
     {
@@ -274,7 +286,7 @@ void task_worker::run_internal()
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
-    task::set_current_worker(this, pool()->node());
+    task::set_tls_dsn_context(pool()->node(), this, queue());
     
     _native_tid = ::dsn::utils::get_current_tid();
     set_name(name().c_str());
@@ -317,10 +329,18 @@ void task_worker::loop()
     //try {
         while (_is_running)
         {
-            task* task = q->dequeue();
-            if (task != nullptr)
+            task* task = q->dequeue(), *next;
+            while (task != nullptr)
             {
+                if (q->decrease_count() < 0)
+                {
+                    // fix count approximation
+                    q->reset_count();
+                }
+                next = task->next;
+                task->next = nullptr;
                 task->exec_internal();
+                task = next;
             }
         }
     /*}

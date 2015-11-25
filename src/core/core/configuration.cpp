@@ -23,6 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Description:
+ *     What is this file about?
+ *
+ * Revision history:
+ *     xxxx-xx-xx, author, first version
+ *     xxxx-xx-xx, author, fix bug about xxx
+ */
+
 # include <dsn/internal/configuration.h>
 # include <cassert>
 # include <dsn/cpp/utils.h>
@@ -32,47 +42,51 @@
 namespace dsn {
 
 
+configuration::configuration()
+{
+    _warning = false;
+}
+
+configuration::~configuration()
+{
+}
+
 // arguments: k1=v1;k2=v2;k3=v3; ...
 // e.g.,
 //    port = %port%
 //    timeout = %timeout%
 // arguments: port=23466;timeout=1000
-configuration::configuration(const char* file_name, const char* arguments)
+bool configuration::load(const char* file_name, const char* arguments)
 {
-    _warning = false;
     _file_name = std::string(file_name);
 
     FILE* fd = ::fopen(file_name, "rb");
     if (fd == nullptr) 
     {
-        char cdir[FILENAME_MAX];
-        getcwd_(cdir, sizeof(cdir));
-        printf("Cannot open file %s in %s, err=%s", file_name, cdir, strerror(errno));
-        return;
+        std::string cdir;
+        dsn::utils::filesystem::get_current_directory(cdir);
+        printf("Cannot open file %s in %s, err=%s\n", file_name, cdir.c_str(), strerror(errno));
+        return false;
     }
     ::fseek(fd, 0, SEEK_END);
     int len = ftell(fd);
     if (len == -1 || len == 0) 
     {
-        printf("Cannot get length of %s, err=%s", file_name, strerror(errno));
+        printf("Cannot get length of %s, err=%s\n", file_name, strerror(errno));
         ::fclose(fd);
-        return;
+        return false;
     }
 
-    int file_length = len;
     _file_data.resize(len + 1);
-    char* fdata = (char*)_file_data.c_str();
-
     ::fseek(fd, 0, SEEK_SET);
-    auto sz = ::fread(fdata, len, 1, fd);
+    auto sz = ::fread((char*)_file_data.c_str(), len, 1, fd);
     ::fclose(fd);
     if (sz != 1)
     {
-        printf("Cannot read correct data of %s, err=%s", file_name, strerror(errno));
-        return;
+        printf("Cannot read correct data of %s, err=%s\n", file_name, strerror(errno));
+        return false;
     }
-    ((char*)fdata)[file_length] = '\n';
-
+    _file_data[len] = '\n';
 
     // replace data with arguments
     if (arguments != nullptr)
@@ -86,7 +100,7 @@ configuration::configuration(const char* file_name, const char* arguments)
             if (vs.size() != 2)
             {
                 printf("invalid configuration argument: '%s' in '%s'\n", kv.c_str(), arguments);
-                return;
+                return false;
             }
 
             std::string key = std::string("%") + *vs.begin() + std::string("%");
@@ -94,16 +108,18 @@ configuration::configuration(const char* file_name, const char* arguments)
             _file_data = utils::replace_string(_file_data, key, value);
         }
     }
+
     //
     // parse mapped file and build conf map
     //
     std::map<std::string, conf*>* pSection = nullptr;
     char *p, *pLine = (char*)"", *pNextLine, *pEnd, *pSectionName = nullptr, *pEqual;
     int lineno = 0;
-    unsigned int indexInSection = 0;
 
-    p = (char*)fdata;
-    pEnd = p + file_length;
+    // ATTENTION: arguments replace_string() may cause _file_data changed,
+    // so set `p' and `pEnd' carefully.
+    p = (char*)_file_data.c_str();
+    pEnd = p + _file_data.size();
 
     while (p < pEnd) {
         //
@@ -156,7 +172,7 @@ configuration::configuration(const char* file_name, const char* arguments)
         {
 ConfReg:
             if (pSection == nullptr) {
-                printf("configuration section not defined");
+                printf("configuration section not defined\n");
                 goto err;
             }
             if (pEqual)    *pEqual = '\0';
@@ -215,7 +231,6 @@ ConfReg:
             auto it = _configs.insert(config_map::value_type(std::string(pSectionName), sm));
             assert (it.second);
             pSection = &it.first->second;
-            indexInSection = 0;
         }
 
         //
@@ -224,19 +239,16 @@ ConfReg:
 Next:
         p = pNextLine;
     }
-    return;
+    return true;
     
 err:
     printf("Unexpected configure in %s(line %d): %s\n", file_name, lineno, pLine);
-    exit(-2);
-}
-
-configuration::~configuration(void)
-{
+    return false;
 }
 
 void configuration::get_all_sections(std::vector<std::string>& sections)
 {
+    sections.clear();
     for (auto it = _configs.begin(); it != _configs.end(); it++)
     {
         sections.push_back(it->first);
@@ -245,6 +257,7 @@ void configuration::get_all_sections(std::vector<std::string>& sections)
 
 void configuration::get_all_keys(const char* section, std::vector<const char*>& keys)
 {
+    keys.clear();
     auto it = _configs.find(section);
     if (it != _configs.end())
     {
@@ -267,21 +280,21 @@ bool configuration::get_string_value_internal(const char* section, const char* k
         auto it2 = it->second.find(key);
         if (it2 != it->second.end())
         {
-            if (it2->second->present)
+            if (!it2->second->present)
             {
-                if (it2->second->dsptr.length() == 0)
+                dassert(it2->second->value == default_value,
+                        "different default value for [%s] %s: %s <--> %s",
+                        section, key, it2->second->value.c_str(), default_value);
+            }
+
+            if (it2->second->dsptr.length() == 0)
                 it2->second->dsptr = dsptr;
 
-                *ov = it2->second->value.c_str();
+            *ov = it2->second->value.c_str();
+            bool ret = it2->second->present ? true : false;
 
-                _lock.unlock();
-                return true;
-            }
-            else
-            {
-                _lock.unlock();
-                return false;
-            }
+            _lock.unlock();
+            return ret;
         }
     }
     
