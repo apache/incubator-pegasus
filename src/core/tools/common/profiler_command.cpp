@@ -275,6 +275,7 @@ namespace dsn {
                     if ((i == TASK_CODE_INVALID) || (s_spec_profilers[task_id].is_profile == false))
                         continue;
 
+                    double query_record[PREF_COUNTER_COUNT] = { 0 };
                     for (int j = 0; j < COUNTER_PERCENTILE_COUNT; ++j)
                     {
                         percentile_type = static_cast<counter_percentile_type>(j);
@@ -297,7 +298,15 @@ namespace dsn {
                                 }
                                 else
                                 {
-                                    auto res = s_spec_profilers[task_id].ptr[counter_type]->get_value();
+                                    double res;
+                                    if (j == 0)
+                                    {
+                                        res = s_spec_profilers[task_id].ptr[counter_type]->get_value();
+                                        query_record[k] = res;
+                                    }
+                                    else
+                                        res = query_record[k];
+
                                     if (std::isnan(res))
                                         ss << "," << "\"NAN\"";
                                     else
@@ -366,20 +375,14 @@ namespace dsn {
                             char name[20] = { 0 };
                             strcpy(name, counter_info_ptr[counter_type]->title);
 
-                            //Javascript doesn't allow special characters as var names
-                            for (int m = 0; m < strlen(name); ++m)
-                            {
-                                name[m] = (name[m] == '.' || name[m] == '(' || name[m] == ')') ? '_' : name[m];
-                            }
-
                             char name_suffix[10] = { 0 };
                             switch (task_spec::get(task_id)->type)
                             {
                             case TASK_TYPE_RPC_REQUEST:
-                                strcat(name_suffix, "_server");
+                                strcat(name_suffix, "@server");
                                 break;
                             case TASK_TYPE_RPC_RESPONSE:
-                                strcat(name_suffix, "_server");
+                                strcat(name_suffix, "@client");
                                 break;
                             default:
                                 strcat(name_suffix, "");

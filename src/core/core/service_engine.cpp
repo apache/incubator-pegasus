@@ -362,6 +362,14 @@ void service_node::get_runtime_info(
     _computation->get_runtime_info(indent2, args, ss);
 }
 
+void service_node::get_queue_info(
+    /*out*/ std::stringstream& ss
+    )
+{
+    ss << "{\"app_name\":\"" << name() << "\",\n\"thread_pool\":[\n";
+    _computation->get_queue_info(ss);
+    ss << "]}";
+}
 //////////////////////////////////////////////////////////////////////////////////////////
 
 service_engine::service_engine(void)
@@ -373,6 +381,10 @@ service_engine::service_engine(void)
     ::dsn::register_command("engine", "engine - get engine internal information",
         "engine [app-id]",
         &service_engine::get_runtime_info
+        );
+    ::dsn::register_command("system.queue", "system.queue - get queue internal information",
+        "system.queue",
+        &service_engine::get_queue_info
         );
 }
 
@@ -518,6 +530,19 @@ std::string service_engine::get_runtime_info(const std::vector<std::string>& arg
             ss << "cannot find node with given app id";
         }
     }
+    return ss.str();
+}
+
+std::string service_engine::get_queue_info(const std::vector<std::string>& args)
+{
+    std::stringstream ss;
+    ss << "[";
+    for (auto &it : service_engine::fast_instance()._nodes_by_app_id)
+    {
+        if (it.first != service_engine::fast_instance()._nodes_by_app_id.begin()->first) ss << ",";
+        it.second->get_queue_info(ss);
+    }
+    ss << "]";
     return ss.str();
 }
 
