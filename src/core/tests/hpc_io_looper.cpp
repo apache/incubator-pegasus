@@ -49,13 +49,14 @@
 #include "test_utils.h"
 #include "../tools/hpc/io_looper.h"
 
+DEFINE_THREAD_POOL_CODE(THREAD_POOL_TEST_SERVER_2);
+DEFINE_TASK_CODE_AIO(LPC_AIO_TEST_2, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER_2);
+DEFINE_TASK_CODE_AIO(LPC_AIO_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER);
 
 # ifdef __linux__
 
 # include <sys/eventfd.h>
 # include <libaio.h>
-
-DEFINE_TASK_CODE_AIO(LPC_AIO_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER);
 
 namespace dsn{
 namespace test{
@@ -157,9 +158,6 @@ void timer_callback(void* param)
     EXPECT_EQ(1, *a);
     *a = 2;
 }
-
-DEFINE_THREAD_POOL_CODE(THREAD_POOL_TEST_SERVER_2);
-DEFINE_TASK_CODE_AIO(LPC_AIO_TEST_2, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER_2);
 
 TEST(tools_hpc, io_looper_timer)
 {
