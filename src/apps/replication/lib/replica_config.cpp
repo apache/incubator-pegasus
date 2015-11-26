@@ -175,9 +175,8 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     group_check_request request;
     request.app_type = _primary_states.membership.app_type;
     request.node = proposal.node;
-    _primary_states.get_replica_config(proposal.node, request.config);
+    _primary_states.get_replica_config(PS_POTENTIAL_SECONDARY, request.config, state.signature);
     request.last_committed_decree = last_committed_decree();
-    request.learner_signature = state.signature;
 
     ddebug(
         "%s: call one way %s to start learning",

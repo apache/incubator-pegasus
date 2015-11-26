@@ -313,6 +313,7 @@ void replication_options::sanity_check()
     replica_config.gpid = partition_config.gpid;
     replica_config.primary = partition_config.primary;
     replica_config.ballot = partition_config.ballot;
+    replica_config.learner_signature = invalid_signature;
 
     if (node == partition_config.primary)
     {

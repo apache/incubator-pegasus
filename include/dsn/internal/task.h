@@ -363,8 +363,10 @@ __inline /*static*/ task* task::get_current_task()
 
 __inline /*static*/ uint64_t task::get_current_task_id()
 {
-    dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
-    return tls_dsn.current_task ? tls_dsn.current_task->id() : 0;
+    if (tls_dsn.magic == 0xdeadbeef)
+        return tls_dsn.current_task ? tls_dsn.current_task->id() : 0;
+    else
+        return 0;
 }
 
 

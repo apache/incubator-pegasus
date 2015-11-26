@@ -90,15 +90,8 @@ void replica::broadcast_group_check()
 
         request->app_type = _primary_states.membership.app_type;
         request->node = addr;
-        _primary_states.get_replica_config(addr, request->config);
+        _primary_states.get_replica_config(it->second, request->config);
         request->last_committed_decree = last_committed_decree();
-        request->learner_signature = 0;
-        if (it->second == PS_POTENTIAL_SECONDARY)
-        {
-            auto it2 = _primary_states.learners.find(it->first);
-            dassert (it2 != _primary_states.learners.end(), "");
-            request->learner_signature = it2->second.signature;
-        }
 
         ddebug(
             "%s: init_group_check for %s with state %s",
@@ -155,7 +148,7 @@ void replica::on_group_check(const group_check_request& request, /*out*/ group_c
         }
         break;
     case PS_POTENTIAL_SECONDARY:
-        init_learn(request.learner_signature);
+        init_learn(request.config.learner_signature);
         break;
     case PS_ERROR:
         break;

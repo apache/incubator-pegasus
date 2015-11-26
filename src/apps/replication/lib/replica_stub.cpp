@@ -180,7 +180,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         {
             it->second->close();
             std::string new_dir = it->second->dir() + ".err";
-            if (!utils::filesystem::rename_path(it->second->dir(), new_dir, true))
+            if (!utils::filesystem::rename_path(it->second->dir(), new_dir))
             {
                 dassert(false, "we cannot recover from the above error, exit ...");
             }
@@ -231,7 +231,6 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         if (err == ERR_OK)
         {            
             dassert(smax == pmax, "incomplete private log state");
-            it->second->check_state_completeness();
             it->second->set_inactive_state_transient(true);
         }
         else
@@ -454,7 +453,7 @@ void replica_stub::on_group_check(const group_check_request& request, /*out*/ gr
 
             begin_open_replica(request.app_type, request.config.gpid, req);
             response.err = ERR_OK;
-            response.learner_signature = 0;
+            response.learner_signature = invalid_signature;
         }
         else
         {

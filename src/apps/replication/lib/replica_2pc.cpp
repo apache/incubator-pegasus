@@ -252,6 +252,13 @@ void replica::on_prepare(dsn_message_t request)
 
     else if (PS_POTENTIAL_SECONDARY == status())
     {
+        // new learning process
+        if (rconfig.learner_signature != _potential_secondary_states.learning_signature)
+        {
+            init_learn(rconfig.learner_signature);
+            return;
+        }
+
         if (_potential_secondary_states.learning_status == LearningWithoutPrepare
             || _potential_secondary_states.learning_status == LearningFailed)
         {

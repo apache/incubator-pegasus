@@ -107,7 +107,7 @@ error_code replica::initialize_on_load(const char* dir, const char* app_type, bo
         // GCed later
         char newPath[256];
         sprintf(newPath, "%s.%llu.err", dir, static_cast<long long unsigned int>(dsn_now_us()));
-        if (dsn::utils::filesystem::rename_path(dir, newPath, true))
+        if (dsn::utils::filesystem::rename_path(dir, newPath))
         {
             derror("move bad replica from '%s' to '%s'", dir, newPath);
         }

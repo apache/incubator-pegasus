@@ -431,7 +431,8 @@ namespace dsn {
 
             extern bool remove_path(const std::string& path);
             
-            extern bool rename_path(const std::string& path1, const std::string& path2, bool overwrite = false);
+            // this will always remove target path if exist
+            extern bool rename_path(const std::string& path1, const std::string& path2);
 
             extern bool file_size(const std::string& path, int64_t& sz);
 

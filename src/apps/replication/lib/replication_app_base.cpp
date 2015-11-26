@@ -104,7 +104,7 @@ error_code replica_log_info::store(const char* file)
     os.write((const char*)this, sizeof(*this));
     os.close();
 
-    if (!utils::filesystem::rename_path(tmp_file, ffile, true))
+    if (!utils::filesystem::rename_path(tmp_file, ffile))
     {
         return ERR_FILE_OPERATION_FAILED;
     }
