@@ -35,7 +35,6 @@
 
 # include "server_state.h"
 # include <dsn/internal/factory_store.h>
-# include "../client_lib/replication_common.h"
 # include <sstream>
 
 # ifdef __TITLE__
@@ -813,7 +812,8 @@ bool server_state::partition_configuration_equal(const partition_configuration& 
 {
     // last_drops is not considered into equality check
     return pc1.ballot == pc2.ballot &&
-           pc1.gpid == pc2.gpid &&
+           pc1.gpid.app_id == pc2.gpid.app_id &&
+           pc1.gpid.pidx == pc2.gpid.pidx &&
            pc1.app_type == pc2.app_type &&
            pc1.max_replica_count == pc2.max_replica_count &&
            pc1.primary == pc2.primary &&

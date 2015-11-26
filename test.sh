@@ -89,16 +89,10 @@ fi
 
 # make
 cd $ROOT/builder
-make -j4
+make install -j8
 if [ $? -ne 0 ]
 then
-    echo "make failed"
-    exit -1
-fi
-make install
-if [ $? -ne 0 ]
-then
-    echo "make install failed"
+    echo "build failed"
     exit -1
 fi
 

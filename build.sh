@@ -29,7 +29,6 @@ then
 fi
 
 cd builder
-make -j4
-make install
+make install -j8
 cd ..
 
