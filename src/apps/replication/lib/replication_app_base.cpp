@@ -109,7 +109,7 @@ error_code replica_log_info::store(const char* file)
         return ERR_FILE_OPERATION_FAILED;
     }
 
-    dinfo("update app init info in %s, ballot = %lld, decree = %lld, log_offset<S,P> = <%lld,%lld>",
+    dinfo("update app init info in %s, ballot = %" PRId64 ", decree = %" PRId64 ", log_offset<S,P> = <%" PRId64 ",%" PRId64 ">",
         ffile.c_str(),
         init_ballot,
         init_decree,

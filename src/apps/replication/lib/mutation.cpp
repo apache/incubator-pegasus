@@ -142,9 +142,9 @@ bool mutation::add_client_request(dsn_task_code_t code, dsn_message_t request)
         dsn_msg_add_ref(from); // released on dctor
     }
     
-    sprintf(mu->_name, "%lld.%lld",
-        static_cast<long long int>(mu->data.header.ballot),
-        static_cast<long long int>(mu->data.header.decree));
+    sprintf(mu->_name, "%" PRId64 ".%" PRId64,
+        mu->data.header.ballot,
+        mu->data.header.decree);
 
     return mu;
 }

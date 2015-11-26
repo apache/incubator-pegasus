@@ -71,7 +71,7 @@ namespace dsn {
                 }
             }
 
-            dinfo("nfs: copy file %s [%lld, %lld)",
+            dinfo("nfs: copy file %s [%" PRId64 ", %" PRId64 ")",
                 file_path.c_str(),
                 request.offset,
                 request.offset + request.size

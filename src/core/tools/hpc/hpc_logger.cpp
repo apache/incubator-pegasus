@@ -294,7 +294,7 @@ namespace dsn
                 ts = dsn_now_ns();
             char str[24];
             ::dsn::utils::time_ms_to_string(ts / 1000000, str);
-            auto wn = snprintf_p(ptr, capacity, "%s (%llu %04x) ", str, static_cast<long long unsigned int>(ts), tid);
+            auto wn = snprintf_p(ptr, capacity, "%s (%" PRIu64 " %04x) ", str, ts, tid);
             ptr += wn;
             capacity -= wn;
 

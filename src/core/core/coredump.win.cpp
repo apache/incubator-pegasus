@@ -110,7 +110,7 @@ namespace dsn {
                 MINIDUMPWRITEDUMP pDump = (MINIDUMPWRITEDUMP)::GetProcAddress(hDll, "MiniDumpWriteDump");
                 if (pDump)
                 {
-                    sprintf(szDumpPath, "%s\\%s_%d_%d.dmp", s_dump_dir.c_str(), s_app_name, ::GetCurrentProcessId(), time(NULL));
+                    sprintf(szDumpPath, "%s\\%s_%d_%" PRId64 ".dmp", s_dump_dir.c_str(), s_app_name, ::GetCurrentProcessId(), (int64_t)time(NULL));
 
                     // create the file
                     HANDLE fh = ::CreateFileA(szDumpPath, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS,
