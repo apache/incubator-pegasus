@@ -221,7 +221,7 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
 
             if (err == ERR_OK)
             {
-                derror(
+                ddebug(
                     "%s: private log initialized, durable = %lld, committed = %lld, maxpd = %llu, ballot = %llu, valid_offset = %lld",
                     name(),
                     _app->last_durable_decree(),

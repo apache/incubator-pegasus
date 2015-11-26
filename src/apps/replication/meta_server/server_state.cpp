@@ -34,7 +34,8 @@
  */
 
 # include "server_state.h"
-#include <dsn/internal/factory_store.h>
+# include <dsn/internal/factory_store.h>
+# include "../client_lib/replication_common.h"
 # include <sstream>
 
 # ifdef __TITLE__
@@ -423,6 +424,11 @@ void server_state::unfree_if_possible_on_start()
     dinfo("live replica server # is %d, freeze = %s", _node_live_count, _freeze ? "true" : "false");
 }
 
+void server_state::set_config_change_subscriber_for_test(config_change_subscriber subscriber)
+{
+    _config_change_subscriber = subscriber;
+}
+
 // partition server & client => meta server
 void server_state::query_configuration_by_node(const configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response)
 {
@@ -491,8 +497,19 @@ void server_state::update_configuration(
         zauto_read_lock l(_lock);
         app_state& app = _apps[req->config.gpid.app_id - 1];
         partition_configuration& old = app.partitions[req->config.gpid.pidx];
-        if (old.ballot + 1 != req->config.ballot)
+        if (partition_configuration_equal(old, req->config))
         {
+            // duplicate request
+            dwarn("received duplicate update configuration request from %s, gpid = %d.%d, ballot = %lld",
+                  req->node.to_string(), old.gpid.app_id, old.gpid.pidx, old.ballot);
+            write = false;
+            response.err = ERR_OK;
+            response.config = old;
+        }
+        else if (old.ballot + 1 != req->config.ballot)
+        {
+            dwarn("received invalid update configuration request from %s, gpid = %d.%d, ballot = %lld, cur_ballot = %lld",
+                  req->node.to_string(), old.gpid.app_id, old.gpid.pidx, req->config.ballot, old.ballot);
             write = false;   
             response.err = ERR_INVALID_VERSION;
             response.config = old;
@@ -608,7 +625,6 @@ void server_state::exec_pending_requests()
         {
             wi.callback();
         }
-
     } while (true);
 }
 
@@ -748,10 +764,14 @@ void server_state::update_configuration_internal(const configuration_update_requ
             );
     }
     
-
 #ifdef _DEBUG
     check_consistency(request.config.gpid);
 #endif
+
+    if (_config_change_subscriber)
+    {
+        _config_change_subscriber(_apps);
+    }
 }
 
 void server_state::check_consistency(global_partition_id gpid)
@@ -788,3 +808,16 @@ void server_state::check_consistency(global_partition_id gpid)
     }    
     dassert(_node_live_count == lc, "");
 }
+
+bool server_state::partition_configuration_equal(const partition_configuration& pc1, const partition_configuration& pc2)
+{
+    // last_drops is not considered into equality check
+    return pc1.ballot == pc2.ballot &&
+           pc1.gpid == pc2.gpid &&
+           pc1.app_type == pc2.app_type &&
+           pc1.max_replica_count == pc2.max_replica_count &&
+           pc1.primary == pc2.primary &&
+           pc1.secondaries == pc2.secondaries &&
+           pc1.last_committed_decree == pc2.last_committed_decree;
+}
+

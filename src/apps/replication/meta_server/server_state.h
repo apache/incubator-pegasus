@@ -65,6 +65,8 @@ struct app_state
 
 typedef std::unordered_map<global_partition_id, std::shared_ptr<configuration_update_request> > machine_fail_updates;
 
+typedef std::function<void (const std::vector<app_state>& /*new_config*/)> config_change_subscriber;
+
 class server_state : 
     public ::dsn::serverlet<server_state>
 {
@@ -112,6 +114,9 @@ public:
 
     // if is freezed
     bool freezed() const { return _freeze.load(); }
+
+    // for test
+    void set_config_change_subscriber_for_test(config_change_subscriber subscriber);
     
 private:    
     // initialize apps in local cache and in remote storage
@@ -131,6 +136,9 @@ private:
 
     // compute drop out collection
     void maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const rpc_address& node, bool is_add);
+
+    // check equality of two partition configurations, not take last_drops into account
+    bool partition_configuration_equal(const partition_configuration& pc1, const partition_configuration& pc2);
 
 private:
     friend class ::dsn::replication::replication_checker;
@@ -164,5 +172,8 @@ private:
 
     mutable zlock                         _pending_requests_lock;
     std::map<uint64_t, storage_work_item> _pending_requests;
+
+    // for test
+    config_change_subscriber          _config_change_subscriber;
 };
 

@@ -328,11 +328,11 @@ class client_case_line : public case_line
 public:
     enum client_type
     {
-        begin_write, // id=xxx,key=xxx,value=xxx,timeout=xxx
-        begin_read,  // id=xxx,key=xxx,timeout=xxx
-        end_write,   // id=xxx,err=xxx,resp=xxx
-        end_read,    // id=xxx,err=xxx,resp=xxx
-        replica_config // replica=appid.pidx.replica_role[0:prim,1:sec1,2:sec2],command=downgrade_to_secondary/downgrade_to_inactive/remove
+        begin_write,      // id=xxx,key=xxx,value=xxx,timeout=xxx
+        begin_read,       // id=xxx,key=xxx,timeout=xxx
+        end_write,        // id=xxx,err=xxx,resp=xxx
+        end_read,         // id=xxx,err=xxx,resp=xxx
+        replica_config,   // receiver=xxx,type=xxx,node=xxx
     };
 
 public:
@@ -346,7 +346,7 @@ public:
     bool parse_type_name(const std::string& name);
     void get_write_params(int& id, std::string& key, std::string& value, int& timeout_ms) const;
     void get_read_params(int& id, std::string& key, int& timeout_ms) const;
-    void get_replica_config_params(dsn::replication::global_partition_id& gpid, int &role, dsn::replication::config_type &type) const;
+    void get_replica_config_params(rpc_address& receiver, dsn::replication::config_type& type, rpc_address& node) const;
     bool check_write_result(int id, ::dsn::error_code err, int32_t resp);
     bool check_read_result(int id, ::dsn::error_code err, const std::string& resp);
 
@@ -362,12 +362,9 @@ private:
     int _write_resp;
     std::string _read_resp;
 
-    //fields for replica_modify
-    static const char* _replica_config_commands[];
-
-    dsn::replication::global_partition_id _gpid;
-    int _role;
-    dsn::replication::config_type _config_command;
+    rpc_address _config_receiver;
+    dsn::replication::config_type _config_type;
+    rpc_address _config_node;
 };
 
 class test_case : public dsn::utils::singleton<test_case>
@@ -394,7 +391,7 @@ public:
     void wait_check_client();
     void notify_check_client();
     bool check_client_write(int& id, std::string& key, std::string& value, int& timeout_ms);
-    bool check_replica_config(dsn::replication::global_partition_id& gpid, int &role, dsn::replication::config_type &cfg_type);
+    bool check_replica_config(rpc_address& receiver, dsn::replication::config_type& type, rpc_address& node);
     bool check_client_read(int& id, std::string& key, int& timeout_ms);
     void on_end_write(int id, ::dsn::error_code err, int32_t resp);
     void on_end_read(int id, ::dsn::error_code err, const std::string& resp);

@@ -65,7 +65,7 @@ public:
 
     void begin_read(int id, const std::string& key, int timeout_ms);
     void begin_write(int id,const std::string& key,const std::string& value, int timeout_ms);
-    void send_config_to_meta(const dsn::replication::global_partition_id& gpid, int role, dsn::replication::config_type cfg_type);
+    void send_config_to_meta(const rpc_address& receiver, dsn::replication::config_type type, const rpc_address& node);
 private:
     simple_kv_client *_simple_kv_client;
 };

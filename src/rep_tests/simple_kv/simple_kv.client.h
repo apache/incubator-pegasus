@@ -26,6 +26,7 @@
 # pragma once
 # include <dsn/dist/replication.h>
 # include "simple_kv.code.definition.h"
+# include "common.h"
 # include <iostream>
 
 # define SKV_PARTITION_COUNT 1
@@ -317,16 +318,15 @@ public:
         }
     }
     
-    void send_config_to_meta(const dsn::replication::global_partition_id& gpid,
-                             int role,
-                             dsn::replication::config_type cfg)
+    void send_config_to_meta(const rpc_address& receiver, dsn::replication::config_type type, const rpc_address& node)
     {
         dsn::rpc_address meta_servers = replication_app_client_base::get_meta_servers();
         dsn_message_t request = dsn_msg_create_request(RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND, 30000);
 
-        ::marshall(request, gpid);
-        ::marshall(request, role);
-        ::marshall(request, cfg);
+        ::marshall(request, g_default_gpid);
+        ::marshall(request, receiver);
+        ::marshall(request, type);
+        ::marshall(request, node);
 
         dsn_rpc_call_one_way(meta_servers.c_addr(), request);
     }

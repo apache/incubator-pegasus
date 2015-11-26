@@ -113,6 +113,7 @@ public:
     void init_gc_for_test();
     void set_meta_server_disconnected_for_test() { on_meta_server_disconnected(); }
     void set_meta_server_connected_for_test(const configuration_query_by_node_response& config);
+    void set_replica_state_subscriber_for_test(replica_state_subscriber subscriber, bool is_long_subscriber);
 
     //
     // common routines for inquiry
