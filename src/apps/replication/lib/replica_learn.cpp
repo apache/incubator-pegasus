@@ -146,8 +146,8 @@ void replica::init_learn(uint64_t signature)
     _app->prepare_learning_request(request->app_specific_learn_request);
 
     ddebug(
-        "%s: init_learn with primaryAddr = [%s], lastAppC/DDecree = <%lld,%lld>, "
-        "lastCDecree = %lld, learnState = %s",
+        "%s: init_learn with primaryAddr = [%s], lastAppC/DDecree = <%" PRId64 ",%" PRId64 ">, "
+        "lastCDecree = %" PRId64 ", learnState = %s",
         name(), _config.primary.to_string(),
         _app->last_committed_decree(),
         _app->last_durable_decree(),
@@ -202,7 +202,7 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
     {
         derror (
             "%s: on_learn %s, learner state is newer than learnee, "
-            "with its appCommittedDecree = %lld vs local_committed_decree = %lld, learn from scratch",
+            "with its appCommittedDecree = %" PRId64 " vs local_committed_decree = %" PRId64 ", learn from scratch",
             name(), request.learner.to_string(),
             request.last_committed_decree_in_app, local_committed_decree
             );
@@ -221,8 +221,8 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
     bool delayed_replay_prepare_list = false;
 
     ddebug(
-        "%s: on_learn %s, with local_committed_decree = %lld, "
-        "localAppC/DDecree = <%lld, %lld>, learn_start_decree = %lld",
+        "%s: on_learn %s, with local_committed_decree = %" PRId64 ", "
+        "localAppC/DDecree = <%" PRId64 ", %" PRId64 ">, learn_start_decree = %" PRId64,
         name(), 
         request.learner.to_string(),
         local_committed_decree, 
@@ -253,7 +253,7 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
             delayed_replay_prepare_list = true;
             
             ddebug(
-                "%s: on_learn %s, set prepareStartDecree = %lld",
+                "%s: on_learn %s, set prepareStartDecree = %" PRId64,
                 name(), request.learner.to_string(),
                 local_committed_decree + 1
             );
@@ -352,8 +352,8 @@ void replica::on_learn_reply(
     }
 
     ddebug(
-        "%s: on_learn_reply with err = %s, remoteCommit = %lld, "
-        "prepareStart = %lld, currentState = %s",
+        "%s: on_learn_reply with err = %s, remoteCommit = %" PRId64 ", "
+        "prepareStart = %" PRId64 ", currentState = %s",
         name(), 
         resp->err.to_string(), 
         resp->commit_decree, 
@@ -380,7 +380,7 @@ void replica::on_learn_reply(
     // local state is newer than learnee
     if (resp->commit_decree < _app->last_committed_decree())
     {
-        dwarn("%s: learner state is newer than learnee (primary): %lld vs %lld",
+        dwarn("%s: learner state is newer than learnee (primary): %" PRId64 " vs %" PRId64,
             name(),
             _app->last_committed_decree(),
             resp->commit_decree            
@@ -428,7 +428,7 @@ void replica::on_learn_reply(
         _potential_secondary_states.learning_start_prepare_decree = resp->prepare_start_decree;
         _prepare_list->reset(_app->last_committed_decree());
         ddebug(
-            "%s: resetPrepareList = %lld, currentState = %s",
+            "%s: resetPrepareList = %" PRId64 ", currentState = %s",
             name(), _app->last_committed_decree(),
             enum_to_string(_potential_secondary_states.learning_status)
             );
@@ -584,8 +584,8 @@ void replica::on_copy_remote_state_completed(
 
     ddebug(
         "%s: learning %d files to %s, err = 0x%x, err2 = %s, "
-        "appCommit(%lld => %lld), appDurable(%lld => %lld), "
-        "remoteCommit(%lld), prepareStart(%lld), currentState(%s)",
+        "appCommit(%" PRId64 " => %" PRId64 "), appDurable(%" PRId64 " => %" PRId64 "), "
+        "remoteCommit(%" PRId64 "), prepareStart(%" PRId64 "), currentState(%s)",
         name(), resp->state.files.size(), _dir.c_str(), err, err2.to_string(),
         old_committed, _app->last_committed_decree(),
         old_durable, _app->last_durable_decree(),
@@ -601,7 +601,7 @@ void replica::on_copy_remote_state_completed(
     {        
         err = _app->flush(true);
         ddebug(
-            "%s: flush done, err = %d, lastC/DDecree = <%lld, %lld>",
+            "%s: flush done, err = %d, lastC/DDecree = <%" PRId64 ", %" PRId64 ">",
             name(), err, _app->last_committed_decree(), _app->last_durable_decree()
             );
         if (err == 0)
@@ -651,7 +651,7 @@ void replica::handle_learning_error(error_code err)
     check_hashed_access();
 
     dwarn(
-        "%s: learning failed with err = %s, LastCommitted = %lld",
+        "%s: learning failed with err = %s, LastCommitted = %" PRId64,
         name(),
         err.to_string(),
         _app->last_committed_decree()
@@ -687,8 +687,8 @@ void replica::notify_learn_completion()
     report.node = _stub->_primary_address;
 
     ddebug(
-        "%s: notify_learn_completion with lastAppC/DDecree = <%lld, %lld>, "
-        "lastCDecree = %lld, learnState = %s",
+        "%s: notify_learn_completion with lastAppC/DDecree = <%" PRId64 ", %" PRId64 ">, "
+        "lastCDecree = %" PRId64 ", learnState = %s",
         name(),
         _app->last_committed_decree(),
         _app->last_durable_decree(),

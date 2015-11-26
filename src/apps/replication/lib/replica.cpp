@@ -161,7 +161,7 @@ void replica::response_client_message(dsn_message_t request, error_code error, d
 //    if (!(mind <= last_durable_decree()))
 //    {
 //        err = ERR_INCOMPLETE_DATA;
-//        derror("%s: private log is incomplete (gced/durable): %lld vs %lld",
+//        derror("%s: private log is incomplete (gced/durable): %" PRId64 " vs %" PRId64,
 //            name(),
 //            mind,
 //            last_durable_decree()
@@ -173,7 +173,7 @@ void replica::response_client_message(dsn_message_t request, error_code error, d
 //        if (!(mind >= _app->last_committed_decree()))
 //        {
 //            err = ERR_INCOMPLETE_DATA;
-//            derror("%s: private log is incomplete (max/commit): %lld vs %lld",
+//            derror("%s: private log is incomplete (max/commit): %" PRId64 " vs %" PRId64,
 //                name(),
 //                mind,
 //                _app->last_committed_decree()
@@ -231,7 +231,7 @@ void replica::execute_mutation(mutation_ptr& mu)
         else
         {
             ddebug(
-                "%s: mutation %s commit to %s skipped, app.last_committed_decree = %lld",
+                "%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
                 name(), mu->name(),
                 enum_to_string(status()),
                 _app->last_committed_decree()
@@ -256,7 +256,7 @@ void replica::execute_mutation(mutation_ptr& mu)
         else
         {
             ddebug(
-                "%s: mutation %s commit to %s skipped, app.last_committed_decree = %lld",
+                "%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
                 name(), mu->name(),
                 enum_to_string(status()),
                 _app->last_committed_decree()
@@ -281,7 +281,7 @@ void replica::execute_mutation(mutation_ptr& mu)
             // catch-up will be done later after the checkpoint task is finished
 
             ddebug(
-                "%s: mutation %s commit to %s skipped, app.last_committed_decree = %lld",
+                "%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
                 name(), mu->name(),
                 enum_to_string(status()),
                 _app->last_committed_decree()

@@ -415,7 +415,7 @@ void mutation_log::internal_write_callback(
     )
 {
     offset = log->start_offset();
-    dinfo("replay mutation log %s: offset = [%lld, %lld)",
+    dinfo("replay mutation log %s: offset = [%" PRId64 ", %" PRId64 ")",
         log->path().c_str(),
         log->start_offset(),
         log->end_offset()
@@ -447,7 +447,7 @@ void mutation_log::internal_write_callback(
 
             if (mu->data.header.log_offset != offset)
             {
-                derror("offset mismatch in log entry and mutation %lld vs %lld",
+                derror("offset mismatch in log entry and mutation %" PRId64 " vs %" PRId64,
                     offset, mu->data.header.log_offset);
                 err = ERR_INVALID_DATA;
                 break;
@@ -542,7 +542,7 @@ void mutation_log::internal_write_callback(
 
         if (log->start_offset() != offset)
         {
-            derror("offset mismatch in log file offset and global offset %lld vs %lld",
+            derror("offset mismatch in log file offset and global offset %" PRId64 " vs %" PRId64,
                 log->start_offset(), offset);
             return ERR_INVALID_DATA;
         }
@@ -575,7 +575,7 @@ void mutation_log::internal_write_callback(
     if (err == ERR_OK)
     {
         dassert(g_end_offset == offset,
-            "make sure the global end offset is correct: %lld vs %lld",
+            "make sure the global end offset is correct: %" PRId64 " vs %" PRId64,
             g_end_offset,
             offset
             );
@@ -628,7 +628,7 @@ void mutation_log::check_log_start_offset(global_partition_id gpid, int64_t vali
     if (_is_private)
     {
         dassert(valid_start_offset == _private_valid_start_offset,
-            "valid start offset mismatch: %lld vs %lld",
+            "valid start offset mismatch: %" PRId64 " vs %" PRId64,
             valid_start_offset,
             _private_valid_start_offset
             );
@@ -639,7 +639,7 @@ void mutation_log::check_log_start_offset(global_partition_id gpid, int64_t vali
         if (it != _shared_max_decrees.end())
         {
             dassert(valid_start_offset == it->second.log_start_offset,
-                "valid start offset mismatch: %lld vs %lld",
+                "valid start offset mismatch: %" PRId64 " vs %" PRId64,
                 valid_start_offset,
                 it->second.log_start_offset
                 );
@@ -824,7 +824,7 @@ int64_t mutation_log::on_partition_reset(global_partition_id gpid, decree max_d)
         auto it = _shared_max_decrees.insert(multi_partition_decrees_ex::value_type(gpid, info));
         if (!it.second)
         {
-            dwarn("replica %d.%d has shifted its max decree from %lld to %lld, valid_start_offset from %lld to %lld",
+            dwarn("replica %d.%d has shifted its max decree from %" PRId64 " to %" PRId64 ", valid_start_offset from %" PRId64 " to %" PRId64,
                 gpid.app_id, gpid.pidx,
                 it.first->second.decree, info.decree,
                 it.first->second.log_start_offset, info.log_start_offset
@@ -942,7 +942,7 @@ int mutation_log::garbage_collection(
         // log is invalid, ok to delete
         if (valid_start_offset >= itr->second->end_offset())
         {
-            dinfo("gc @ %d.%d: max_offset for %s is %lld vs %lld as app.valid_start_offset.private,"
+            dinfo("gc @ %d.%d: max_offset for %s is %" PRId64 " vs %" PRId64 " as app.valid_start_offset.private,"
                 " safe to delete this and all older logs",
                 _private_gpid.app_id,
                 _private_gpid.pidx,
@@ -956,7 +956,7 @@ int mutation_log::garbage_collection(
         // all decrees are durable, ok to delete
         else if (durable_d >= max_decree)
         {
-            dinfo("gc @ %d.%d: max_decree for %s is %lld vs %lld as app.durable decree,"
+            dinfo("gc @ %d.%d: max_decree for %s is %" PRId64 " vs %" PRId64 " as app.durable decree,"
                 " safe to delete this and all older logs",
                 _private_gpid.app_id,
                 _private_gpid.pidx,
@@ -1039,7 +1039,7 @@ int mutation_log::garbage_collection(multi_partition_decrees_ex& durable_decrees
                 dassert(valid_start_offset >= log->end_offset(), 
                     "valid start offset must be greater than the end of this log file");
 
-                dinfo("gc @ %d.%d: max_decree for %s is missing vs %lld as app.durable decree,"
+                dinfo("gc @ %d.%d: max_decree for %s is missing vs %" PRId64 " as app.durable decree,"
                     " safe to delete this and all older logs for this replica",
                     gpid.app_id,
                     gpid.pidx,
@@ -1057,7 +1057,7 @@ int mutation_log::garbage_collection(multi_partition_decrees_ex& durable_decrees
                     delete_ok_for_this_replica = true;
 
                     dinfo("gc @ %d.%d: log is invalid for %s, as"
-                        " valid start offset vs log end offset = %lld vs %lld, "
+                        " valid start offset vs log end offset = %" PRId64 " vs %" PRId64 ", "
                         " it is therefore safe to delete this and all older logs for this replica",
                         gpid.app_id,
                         gpid.pidx,
@@ -1070,7 +1070,7 @@ int mutation_log::garbage_collection(multi_partition_decrees_ex& durable_decrees
                 {
                     delete_ok_for_this_replica = true;
 
-                    dinfo("gc @ %d.%d: max_decree for %s is %lld vs %lld as app.durable decree,"
+                    dinfo("gc @ %d.%d: max_decree for %s is %" PRId64 " vs %" PRId64 " as app.durable decree,"
                         " it is therefore safe to delete this and all older logs for this replica",
                         gpid.app_id,
                         gpid.pidx,
@@ -1242,7 +1242,7 @@ int mutation_log::garbage_collection(multi_partition_decrees_ex& durable_decrees
     )
 {
     char path[512]; 
-    sprintf (path, "%s/log.%d.%lld", dir, index, static_cast<long long int>(start_offset));
+    sprintf (path, "%s/log.%d.%" PRId64, dir, index, start_offset);
 
     if (dsn::utils::filesystem::path_exists(std::string(path)))
     {
@@ -1341,7 +1341,7 @@ error_code log_file::read_next_log_entry(int64_t local_offset, /*out*/::dsn::blo
         }
         else
         {
-            derror("read data block header failed, size = %d vs %d, err = %s, local_offset = %lld",
+            derror("read data block header failed, size = %d vs %d, err = %s, local_offset = %" PRId64,
                 read_count, (int)sizeof(log_block_header), err.to_string(), local_offset);
         }
 
@@ -1365,7 +1365,7 @@ error_code log_file::read_next_log_entry(int64_t local_offset, /*out*/::dsn::blo
     err = tsk->error();
     if (err != ERR_OK || hdr.length != read_count)
     {
-        derror("read data block body failed, size = %d vs %d, err = %s, local_offset = %lld",
+        derror("read data block body failed, size = %d vs %d, err = %s, local_offset = %" PRId64,
             read_count, (int)hdr.length, err.to_string(), local_offset);
 
         if (err == ERR_OK || err == ERR_HANDLE_EOF)

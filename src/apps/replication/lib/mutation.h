@@ -179,7 +179,7 @@ inline void mutation::set_id(ballot b, decree c)
 {
     data.header.ballot = b;
     data.header.decree = c;
-    sprintf (_name, "%lld.%lld", static_cast<long long int>(b), static_cast<long long int>(c));
+    sprintf (_name, "%" PRId64 ".%" PRId64, b, c);
 }
 
 }} // namespace
