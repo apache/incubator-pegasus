@@ -67,7 +67,7 @@ namespace dsn {
                 }
                 else
                 {
-                    dinfo("read %s, decree = %lld\n", it->second.c_str(), last_committed_decree());
+                    dinfo("read %s, decree = %" PRId64 "\n", it->second.c_str(), last_committed_decree());
                     reply(it->second);
                 }
             }
@@ -78,7 +78,7 @@ namespace dsn {
                 zauto_lock l(_lock);
                 _store[pr.key] = pr.value;
 
-                dinfo("write %s, decree = %lld\n", pr.key.c_str(), last_committed_decree() + 1);
+                dinfo("write %s, decree = %" PRId64 "\n", pr.key.c_str(), last_committed_decree() + 1);
                 reply(0);
             }
 
@@ -92,7 +92,7 @@ namespace dsn {
                 else
                     _store[pr.key] = pr.value;
 
-                dinfo("append %s, decree = %lld\n", pr.key.c_str(), last_committed_decree() + 1);
+                dinfo("append %s, decree = %" PRId64 "\n", pr.key.c_str(), last_committed_decree() + 1);
                 reply(0);
             }
             
@@ -213,8 +213,8 @@ namespace dsn {
 
                 // TODO: should use async write instead
                 char name[256];
-                sprintf(name, "%s/checkpoint.%lld", data_dir().c_str(), 
-                        static_cast<long long int>(last_committed_decree()));
+                sprintf(name, "%s/checkpoint.%" PRId64, data_dir().c_str(),
+                        last_committed_decree());
                 std::ofstream os(name, std::ios::binary);
 
                 uint64_t count = (uint64_t)_store.size();
