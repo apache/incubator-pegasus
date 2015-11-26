@@ -824,7 +824,7 @@ int64_t mutation_log::on_partition_reset(global_partition_id gpid, decree max_d)
         auto it = _shared_max_decrees.insert(multi_partition_decrees_ex::value_type(gpid, info));
         if (!it.second)
         {
-            dwarn("replica %d.%d has shifted its max decree from %llu to %llu, valid_start_offset from %llu to %llu",
+            dwarn("replica %d.%d has shifted its max decree from %lld to %lld, valid_start_offset from %lld to %lld",
                 gpid.app_id, gpid.pidx,
                 it.first->second.decree, info.decree,
                 it.first->second.log_start_offset, info.log_start_offset
