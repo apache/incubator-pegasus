@@ -692,7 +692,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
     }
 
     dwarn(
-        "%s: status change %s @ %lld => %s @ %lld, pre(%lld, %lld), app(%lld, %lld), duration=%llu ms",
+        "%s: status change %s @ %lld => %s @ %lld, pre(%lld, %lld), app(%lld, %lld), duration=%" PRIu64 " ms",
         name(),
         enum_to_string(old_status),
         old_ballot,
