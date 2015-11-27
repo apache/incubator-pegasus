@@ -71,7 +71,7 @@ public:
     void set_left_secondary_ack_count(unsigned int count) { _left_secondary_ack_count = count; }
     void set_left_potential_secondary_ack_count(unsigned int count) { _left_potential_secondary_ack_count = count; }
     int  clear_prepare_or_commit_tasks();
-    int  clear_log_task();
+    void wait_log_task() const;
     void set_prepare_ts() { _prepare_ts_ms = dsn_now_ms(); }
 
     // >= 1 MB
@@ -79,6 +79,7 @@ public:
     
     // reader & writer
     static mutation_ptr read_from(binary_reader& readeer, dsn_message_t from);
+    void write_to_scatter(std::function<void(blob)> inserter) const;
     void write_to(binary_writer& writer);
 
     // data
@@ -145,10 +146,10 @@ public:
 
     // called when the curren operation is completed,
     // which triggers further round of operations as returned
-    mutation_ptr on_work_completed(mutation* running, void* ctx);
+    mutation_ptr on_work_completed(int current_running_count);
 
 private:
-    mutation_ptr unlink_next_workload(void* ctx)
+    mutation_ptr unlink_next_workload()
     {
         mutation_ptr r = _hdr.pop_one();
         if (r.get() != nullptr)

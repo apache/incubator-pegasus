@@ -690,6 +690,24 @@ DSN_API void dsn_file_write(dsn_handle_t file, const char* buffer, int count, ui
     ::dsn::task::get_current_disk()->write(callback);
 }
 
+DSN_API void dsn_file_write_vector(dsn_handle_t file, const dsn_file_buffer_t* buffers, int buffer_count, uint64_t offset, dsn_task_t cb)
+{
+    ::dsn::aio_task* callback((::dsn::aio_task*)cb);
+    callback->aio()->buffer = nullptr;
+    callback->aio()->buffer_size = 0;
+    callback->aio()->engine = nullptr;
+    callback->aio()->file = file;
+    callback->aio()->file_offset = offset;
+    callback->aio()->type = ::dsn::AIO_Write;
+    for (int i = 0; i < buffer_count; i ++)
+    {
+        callback->_unmerged_write_buffers.push_back(buffers[i]);
+        callback->aio()->buffer_size += buffers[i].size;
+    }
+
+    ::dsn::task::get_current_disk()->write(callback);
+}
+
 DSN_API void dsn_file_copy_remote_directory(dsn_address_t remote, const char* source_dir, 
     const char* dest_dir, bool overwrite, dsn_task_t cb)
 {

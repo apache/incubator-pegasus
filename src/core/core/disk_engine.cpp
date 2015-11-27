@@ -321,6 +321,7 @@ void disk_engine::process_write(aio_task* aio, uint32_t sz)
     // no batching
     if (aio->aio()->buffer_size == sz)
     {
+        aio->collapse();
         return _provider->aio(aio);
     }
 
@@ -333,16 +334,11 @@ void disk_engine::process_write(aio_task* aio, uint32_t sz)
         auto current_wk = aio;
         do
         {
-            auto dio = current_wk->aio();
-            memcpy(
-                (void*)ptr,
-                (const void*)(dio->buffer),
-                (size_t)(dio->buffer_size)
-                );
-
-            ptr += dio->buffer_size;
+            current_wk->copy_to(ptr);
+            ptr += current_wk->aio()->buffer_size;
             current_wk = (aio_task*)current_wk->next;
         } while (current_wk);
+        
 
         dassert(ptr == (char*)bb.data() + bb.length(), "");
 

@@ -150,7 +150,7 @@ private:
     void on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, error_code err, dsn_message_t request, dsn_message_t reply);
     void do_possible_commit_on_primary(mutation_ptr& mu);    
     void ack_prepare_message(error_code err, mutation_ptr& mu);
-    void cleanup_preparing_mutations(bool is_primary);
+    void cleanup_preparing_mutations(bool wait);
     
     /////////////////////////////////////////////////////////////////
     // learning    
@@ -159,7 +159,7 @@ private:
     void on_copy_remote_state_completed(error_code err, size_t size, std::shared_ptr<learn_response> resp);
     void on_learn_remote_state_completed(error_code err);
     void handle_learning_error(error_code err);
-    void handle_learning_succeeded_on_primary(::dsn::rpc_address node, uint64_t learn_signature);
+    void handle_learning_succeeded_on_primary(::dsn::rpc_address node, uint64_t learn_signature, decree lcd);
     void notify_learn_completion();
     error_code apply_learned_state_from_private_log(learn_state& state);
         

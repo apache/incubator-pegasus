@@ -107,7 +107,7 @@ error_code replica::initialize_on_load(const char* dir, const char* app_type, bo
         // GCed later
         char newPath[256];
         sprintf(newPath, "%s.%" PRIu64 ".err", dir, dsn_now_us());
-        if (dsn::utils::filesystem::rename_path(dir, newPath, true))
+        if (dsn::utils::filesystem::rename_path(dir, newPath))
         {
             derror("move bad replica from '%s' to '%s'", dir, newPath);
         }
@@ -187,7 +187,7 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
             _private_log = new mutation_log(
                 log_dir,
                 true,
-                _options->log_batch_buffer_MB,
+                _options->log_batch_buffer_KB_private,
                 _options->log_file_size_mb
                 );
         }
@@ -361,7 +361,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
         _private_log->append(mu,
             LPC_WRITE_REPLICATION_LOG,
             this,
-            [this](error_code err, size_t size)
+            [this, mu](error_code err, size_t size)
         {
             if (err != ERR_OK)
             {

@@ -74,34 +74,35 @@ TEST(replication, log_file)
     // write data
     for (int i = 0; i < 100; i++)
     {
-        auto writer = lf->prepare_log_entry();
+        auto writer = lf->prepare_log_block();
 
         if (i == 0)
         {
+            binary_writer temp_writer;
             lf->write_header(
-                *writer,
+                temp_writer,
                 mdecrees,
                 1024
                 );
+            writer->add(temp_writer.get_buffer());
             ASSERT_EQ(mdecrees, lf->previous_log_max_decrees());
             log_file_header& h = lf->header();
-            ASSERT_EQ(1024, h.log_buffer_size_bytes);
             ASSERT_EQ(100, h.start_global_offset);
         }
 
-        writer->write(str);
+        binary_writer temp_writer;
+        temp_writer.write(str);
+        writer->add(temp_writer.get_buffer());
 
-        auto bb = writer->get_buffer();
-        ASSERT_EQ(writer->total_size(), bb.length());
-        auto task = lf->commit_log_entry(
-            bb, offset, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0
+        auto task = lf->commit_log_block(
+            *writer, offset, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0
             );
         task->wait();
         ASSERT_EQ(ERR_OK, task->error());
-        ASSERT_EQ(bb.length(), task->io_size());
+        ASSERT_EQ(writer->size(), task->io_size());
 
         lf->flush();
-        offset += bb.length();
+        offset += writer->size();
     }
 
     lf->close();
@@ -199,16 +200,15 @@ TEST(replication, log_file)
     for (int i = 0; i < 100; i++)
     {
         blob bb;
-        auto err = lf->read_next_log_entry(offset - lf->start_offset(), bb);
+        auto err = lf->read_next_log_block(offset - lf->start_offset(), bb);
         ASSERT_TRUE(err == ERR_OK);
-        
+
         binary_reader reader(bb);
 
         if (i == 0)
         {
             lf->read_header(reader);
             ASSERT_TRUE(lf->is_right_header());
-            ASSERT_EQ(1024, lf->header().log_buffer_size_bytes);
             ASSERT_EQ(100, lf->header().start_global_offset);
         }
 
@@ -222,7 +222,7 @@ TEST(replication, log_file)
     ASSERT_TRUE(offset == lf->end_offset());
 
     blob bb;
-    err = lf->read_next_log_entry(offset - lf->start_offset(), bb);
+    err = lf->read_next_log_block(offset - lf->start_offset(), bb);
     ASSERT_TRUE(err == ERR_HANDLE_EOF);
 
     lf = nullptr;
@@ -236,7 +236,7 @@ TEST(replication, mutation_log)
     std::string str = "hello, world!";
     std::string logp = "./test-log";
     std::vector<mutation_ptr> mutations;
-    
+
     // prepare
     utils::filesystem::remove_path(logp);
     utils::filesystem::create_directory(logp);
@@ -263,7 +263,7 @@ TEST(replication, mutation_log)
 
         binary_writer writer;
         for (int j = 0; j < 100; j++)
-        {   
+        {
             writer.write(str);
         }
         mu->data.updates.push_back(writer.get_buffer());
@@ -278,7 +278,7 @@ TEST(replication, mutation_log)
         mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
     }
 
-    mlog->close(); 
+    mlog->close();
 
     // reading logs
     mlog = new mutation_log(
@@ -291,23 +291,23 @@ TEST(replication, mutation_log)
     int mutation_index = -1;
     mlog->open(gpid,
         [&mutations, &mutation_index](mutation_ptr& mu)->bool
-        {
-            mutation_ptr wmu = mutations[++mutation_index];
-            EXPECT_TRUE(memcmp((const void*)&wmu->data.header,
-                (const void*)&mu->data.header,
-                sizeof(mu->data.header)) == 0
-                );
-            EXPECT_TRUE(wmu->data.updates.size() == mu->data.updates.size());
-            EXPECT_TRUE(wmu->data.updates[0].length() == mu->data.updates[0].length());
-            EXPECT_TRUE(memcmp((const void*)wmu->data.updates[0].data(),
-                (const void*)mu->data.updates[0].data(),
-                mu->data.updates[0].length()) == 0
-                );
-            EXPECT_TRUE(wmu->client_requests.size() == mu->client_requests.size());
-            EXPECT_TRUE(wmu->client_requests[0].code == mu->client_requests[0].code);
-            return true;
-        }
-        );
+    {
+        mutation_ptr wmu = mutations[++mutation_index];
+        EXPECT_TRUE(memcmp((const void*)&wmu->data.header,
+            (const void*)&mu->data.header,
+            sizeof(mu->data.header)) == 0
+            );
+        EXPECT_TRUE(wmu->data.updates.size() == mu->data.updates.size());
+        EXPECT_TRUE(wmu->data.updates[0].length() == mu->data.updates[0].length());
+        EXPECT_TRUE(memcmp((const void*)wmu->data.updates[0].data(),
+            (const void*)mu->data.updates[0].data(),
+            mu->data.updates[0].length()) == 0
+            );
+        EXPECT_TRUE(wmu->client_requests.size() == mu->client_requests.size());
+        EXPECT_TRUE(wmu->client_requests[0].code == mu->client_requests[0].code);
+        return true;
+    }
+    );
     EXPECT_TRUE(mutation_index + 1 == (int)mutations.size());
     mlog->close();
 
