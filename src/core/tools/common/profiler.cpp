@@ -182,7 +182,6 @@ namespace dsn {
             {
                 task_ext_for_profiler::get(callee) = dsn_now_ns();
             }
-
         }
 
         static void profiler_on_rpc_request_enqueue(rpc_request_task* callee)
@@ -216,6 +215,7 @@ namespace dsn {
         {
             uint64_t& cts = task_ext_for_profiler::get(resp);
             uint64_t now = dsn_now_ns();
+
             if (resp->get_response() != nullptr)
             {
                 s_spec_profilers[resp->spec().code].ptr[RPC_CLIENT_NON_TIMEOUT_LATENCY_NS]->set(now - cts);

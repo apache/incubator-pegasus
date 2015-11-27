@@ -504,6 +504,75 @@ namespace dsn {
                     ss << ((i < 0) ? 0 : i) << ",";
                 return ss.str();
             }
+            //return a list of current counter value for a specific task
+            else if (args[0] == "counter_realtime")
+            {
+                if (args.size() < 2)
+                {
+                    ss << "unenough arguments" << std::endl;
+                    return ss.str();
+                }
+
+                int task_id = find_task_id(args[1]);
+
+                if ((task_id == TASK_CODE_INVALID) || (s_spec_profilers[task_id].is_profile == false))
+                {
+                    ss << "no such task code or target task is not profiled" << std::endl;
+                    return ss.str();
+                }
+
+                ss << "[";
+                if (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE)
+                    task_id = task_spec::get(task_id)->rpc_paired_code;
+
+                bool fstFlag = 0;
+                do{
+                    for (int k = 0; k < PREF_COUNTER_COUNT; k++)
+                    {
+                        perf_counter_ptr_type counter_type = static_cast<perf_counter_ptr_type>(k);
+
+                        if (counter_info_ptr[counter_type]->type == COUNTER_TYPE_NUMBER_PERCENTILES)
+                        {
+                            if (s_spec_profilers[task_id].ptr[counter_type] == NULL)
+                                continue;
+
+                            char name[20] = { 0 };
+                            strcpy(name, counter_info_ptr[counter_type]->title);
+
+                            char name_suffix[10] = { 0 };
+                            switch (task_spec::get(task_id)->type)
+                            {
+                            case TASK_TYPE_RPC_REQUEST:
+                                strcat(name_suffix, "@server");
+                                break;
+                            case TASK_TYPE_RPC_RESPONSE:
+                                strcat(name_suffix, "@client");
+                                break;
+                            default:
+                                strcat(name_suffix, "");
+                                break;
+                            }
+
+                            if (!fstFlag)
+                                fstFlag = 1;
+                            else
+                                ss << ",";
+
+                            ss << "{\"name\":\"" << name << name_suffix << "\"";
+
+                            uint64_t sample = s_spec_profilers[task_id].ptr[counter_type]->get_current_sample();
+                            ss << ", \"value\":" << sample;
+
+                            ss << "}\n";
+                        }
+                    }
+                    if (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE || task_spec::get(task_id)->type == TASK_TYPE_RPC_REQUEST)
+                        task_id = task_spec::get(task_id)->rpc_paired_code;
+                } while (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE);
+
+                ss << "]";
+                return ss.str();
+            }
             //return a list of 2 elements for a specific task
             //1. a list of caller names and call times 
             //2. a list of callee names and call times
