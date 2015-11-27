@@ -767,7 +767,7 @@ void server_state::update_configuration_internal(const configuration_update_requ
         }
         cf << "]}";
 
-        ddebug("%d.%d meta update ok to ballot %lld, type = %s, node = %s, config = %s",
+        ddebug("%d.%d meta update ok to ballot %" PRId64 ", type = %s, node = %s, config = %s",
             request.config.gpid.app_id,
             request.config.gpid.pidx,
             request.config.ballot,

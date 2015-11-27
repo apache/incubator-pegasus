@@ -52,8 +52,8 @@ namespace dsn {
 
             int tid = ::dsn::utils::get_current_tid(); 
 
-            fprintf(fp, "%c%s (%llu %04x) ", s_level_char[log_level],
-                    str, static_cast<long long unsigned int>(ts), tid);
+            fprintf(fp, "%c%s (%" PRIu64 " %04x) ", s_level_char[log_level],
+                    str, ts, tid);
 
             task* t = task::get_current_task();
             if (t)

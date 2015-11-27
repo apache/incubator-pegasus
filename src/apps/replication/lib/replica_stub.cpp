@@ -134,7 +134,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         auto r = replica::load(this, name.c_str(), true);
         if (r != nullptr)
         {
-            ddebug("%u.%u @ %s: load replica '%s' success, <durable, commit> = <%llu, %llu>, last_prepared_decree = %llu",
+            ddebug("%u.%u @ %s: load replica '%s' success, <durable, commit> = <%" PRId64 ", %" PRId64 ">, last_prepared_decree = %" PRId64,
                 r->get_gpid().app_id, r->get_gpid().pidx,
                 primary_address().to_string(),
                 name.c_str(),
@@ -213,8 +213,8 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         }
 
         dwarn(
-            "%u.%u @ %s: load replica with err %s, durable = %lld, committed = %llu, "
-            "maxpd = %llu, ballot = %llu, max(share) = %lld, max(private) = %lld, log_offset = <%lld, %lld>",
+            "%u.%u @ %s: load replica with err %s, durable = %" PRId64 ", committed = %" PRId64 ", "
+            "maxpd = %" PRId64 ", ballot = %" PRId64 ", max(share) = %" PRId64 ", max(private) = %" PRId64 ", log_offset = <%" PRId64 ", %" PRId64 ">",
             it->first.app_id, it->first.pidx,
             primary_address().to_string(),
             err.to_string(),
