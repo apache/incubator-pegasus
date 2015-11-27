@@ -19,17 +19,35 @@ then
     CMAKE_OPTIONS="$CMAKE_OPTIONS -DBoost_NO_BOOST_CMAKE=ON -DBOOST_ROOT=$BOOST_DIR -DBoost_NO_SYSTEM_PATHS=ON"
 fi
 
-if [ $# -eq 1 -a "$1" == "true" ]
+if [ -d "builder" -a $# -eq 1 -a "$1" == "true" ]
 then
     echo "Clear builder..."
     rm -rf builder
+fi
+
+if [ ! -d "builder" ]
+then
+    echo "Running cmake..."
     mkdir -p builder
     cd builder
     cmake .. -DCMAKE_INSTALL_PREFIX=`pwd`/output $CMAKE_OPTIONS
+    if [ $? -ne 0 ]
+    then
+        echo "ERROR: cmake failed"
+        exit -1
+    fi
     cd ..
 fi
 
 cd builder
+echo "Building..."
 make install -j8
+if [ $? -ne 0 ]
+then
+    echo "ERROR: build failed"
+    exit -1
+else
+    echo "Build succeed"
+fi
 cd ..
 

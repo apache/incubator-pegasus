@@ -74,24 +74,40 @@ dsn.rep_tests.simple_kv
 '
 
 # if clear
+cd $ROOT
 if [ $# -eq 1 -a "$1" == "true" ]
 then
     echo "Backup gcov..."
-    if [ -d gcov ]
+    if [ -d "gcov" ]
     then
         rm -rf gcov.last
         mv gcov gcov.last
     fi
     echo "Clear builder..."
-    cd $ROOT
-    rm -rf builder
+    if [ -d "builder" ]
+    then
+        rm -rf builder
+    fi
+fi
+
+# if cmake
+cd $ROOT
+if [ ! -d "builder" ]
+then
+    echo "Running cmake..."
     mkdir -p builder
     cd builder
     cmake .. -DCMAKE_INSTALL_PREFIX=`pwd`/output $CMAKE_OPTIONS
+    if [ $? -ne 0 ]
+    then
+        echo "cmake failed"
+        exit -1
+    fi
 fi
 
 # make
 cd $ROOT/builder
+echo "Building..."
 make install -j8
 if [ $? -ne 0 ]
 then
