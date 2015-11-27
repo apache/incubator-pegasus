@@ -36,6 +36,7 @@
 # include "server_state.h"
 # include <dsn/internal/factory_store.h>
 # include <sstream>
+# include <cinttypes>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -510,7 +511,7 @@ void server_state::update_configuration(
         if (partition_configuration_equal(old, req->config))
         {
             // duplicate request
-            dwarn("received duplicate update configuration request from %s, gpid = %d.%d, ballot = %lld",
+            dwarn("received duplicate update configuration request from %s, gpid = %d.%d, ballot = %" PRId64,
                   req->node.to_string(), old.gpid.app_id, old.gpid.pidx, old.ballot);
             write = false;
             response.err = ERR_OK;
@@ -518,7 +519,7 @@ void server_state::update_configuration(
         }
         else if (old.ballot + 1 != req->config.ballot)
         {
-            dwarn("received invalid update configuration request from %s, gpid = %d.%d, ballot = %lld, cur_ballot = %lld",
+            dwarn("received invalid update configuration request from %s, gpid = %d.%d, ballot = %" PRId64 ", cur_ballot = %" PRId64,
                   req->node.to_string(), old.gpid.app_id, old.gpid.pidx, req->config.ballot, old.ballot);
             write = false;   
             response.err = ERR_INVALID_VERSION;
