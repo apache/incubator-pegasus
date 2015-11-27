@@ -164,16 +164,16 @@ private:
     ::dsn::dist::meta_state_service *_storage;
     struct storage_work_item
     {
-        uint64_t ballot;
+        int64_t ballot;
         std::shared_ptr<configuration_update_request> req;
         dsn_message_t msg;
         std::function<void()> callback;
     };
 
-    mutable zlock                         _pending_requests_lock;
+    mutable zlock                     _pending_requests_lock;
     // because ballots of different gpid may conflict, we separate items by gpid
-    // app_id -> pidx -> <ballot, item>
-    std::vector< std::vector< std::map<uint64_t, storage_work_item> > > _pending_requests;
+    // gpid => <ballot, item>
+    std::map<global_partition_id, std::map<int64_t, storage_work_item> > _pending_requests;
 
     // for test
     config_change_subscriber          _config_change_subscriber;

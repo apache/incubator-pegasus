@@ -207,8 +207,6 @@ error_code server_state::initialize_apps()
     if (err == ERR_OK)
     {
         _apps.push_back(app);
-        _pending_requests.resize(1);
-        _pending_requests[0].resize(app.partition_count);
     }
 
     return err;
@@ -250,14 +248,6 @@ error_code server_state::sync_apps_from_remote_storage()
                                 }
                                 _apps[app_id - 1] = state;
                                 _apps[app_id - 1].partitions.resize(state.partition_count);
-                            }
-                            {
-                                zauto_lock l(_pending_requests_lock);
-                                if (app_id > _pending_requests.size())
-                                {
-                                    _pending_requests.resize(app_id);
-                                }
-                                _pending_requests[app_id - 1].resize(state.partition_count);
                             }
 
                             // get partition info
@@ -531,8 +521,6 @@ void server_state::update_configuration(
             std::stringstream ss;
             ss << "/apps/" << app.app_name << "/" << old.gpid.pidx;
             partition_path = ss.str();
-            // TODO(qinzuoyan): last_drops is maintained only in meta_server and nerver used in replica_server,
-            // consider take it out of partition_configuration to avoid unnecessary data transmission.
             req->config.last_drops = old.last_drops;
         }
     }
@@ -588,7 +576,7 @@ void server_state::update_configuration(
 
                 {
                     zauto_lock l(_pending_requests_lock);
-                    _pending_requests[gpid.app_id - 1][gpid.pidx][wi.ballot] = wi;
+                    _pending_requests[gpid][wi.ballot] = wi;
                 }
 
                 exec_pending_requests(gpid);
@@ -604,7 +592,7 @@ void server_state::exec_pending_requests(global_partition_id gpid)
         storage_work_item wi;
         {
             zauto_lock l(_pending_requests_lock);
-            auto& part = _pending_requests[gpid.app_id - 1][gpid.pidx];
+            auto& part = _pending_requests[gpid];
             if (part.size() == 0)
                 return;
 
