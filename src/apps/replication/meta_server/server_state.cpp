@@ -95,6 +95,7 @@ error_code server_state::on_become_leader()
 {
     _apps.clear();
     _nodes.clear();
+    _pending_requests.clear();
     auto err = sync_apps_from_remote_storage();
     if (err == ERR_OBJECT_NOT_FOUND)
         err = initialize_apps();
@@ -205,6 +206,8 @@ error_code server_state::initialize_apps()
     if (err == ERR_OK)
     {
         _apps.push_back(app);
+        _pending_requests.resize(1);
+        _pending_requests[0].resize(app.partition_count);
     }
 
     return err;
@@ -246,6 +249,14 @@ error_code server_state::sync_apps_from_remote_storage()
                                 }
                                 _apps[app_id - 1] = state;
                                 _apps[app_id - 1].partitions.resize(state.partition_count);
+                            }
+                            {
+                                zauto_lock l(_pending_requests_lock);
+                                if (app_id > _pending_requests.size())
+                                {
+                                    _pending_requests.resize(app_id);
+                                }
+                                _pending_requests[app_id - 1].resize(state.partition_count);
                             }
 
                             // get partition info
@@ -519,6 +530,8 @@ void server_state::update_configuration(
             std::stringstream ss;
             ss << "/apps/" << app.app_name << "/" << old.gpid.pidx;
             partition_path = ss.str();
+            // TODO(qinzuoyan): last_drops is maintained only in meta_server and nerver used in replica_server,
+            // consider take it out of partition_configuration to avoid unnecessary data transmission.
             req->config.last_drops = old.last_drops;
         }
     }
@@ -564,7 +577,8 @@ void server_state::update_configuration(
             new_config_blob,
             LPC_META_SERVER_STATE_UPDATE_CALLBACK,
             [this, new_config_blob, req, request_msg, callback](error_code ec)
-            {                
+            {
+                global_partition_id gpid = req->config.gpid;
                 storage_work_item wi;
                 wi.ballot = req->config.ballot;
                 wi.req = req;
@@ -573,39 +587,39 @@ void server_state::update_configuration(
 
                 {
                     zauto_lock l(_pending_requests_lock);
-                    _pending_requests[wi.ballot] = wi;
+                    _pending_requests[gpid.app_id - 1][gpid.pidx][wi.ballot] = wi;
                 }
 
-                exec_pending_requests();
+                exec_pending_requests(gpid);
             }
         );
     }
 }
 
-void server_state::exec_pending_requests()
+void server_state::exec_pending_requests(global_partition_id gpid)
 {
     do
     {
         storage_work_item wi;
         {
             zauto_lock l(_pending_requests_lock);
-            if (_pending_requests.size() == 0)
+            auto& part = _pending_requests[gpid.app_id - 1][gpid.pidx];
+            if (part.size() == 0)
                 return;
 
-            storage_work_item& fwi = _pending_requests.begin()->second;
-
+            storage_work_item& fwi = part.begin()->second;
             {
-                zauto_read_lock l(_lock);
-                app_state& app = _apps[fwi.req->config.gpid.app_id - 1];
-                partition_configuration& old = app.partitions[fwi.req->config.gpid.pidx];
-                if (old.ballot + 1 != fwi.req->config.ballot)
+                zauto_read_lock l2(_lock);
+                app_state& app = _apps[gpid.app_id - 1];
+                partition_configuration& old = app.partitions[gpid.pidx];
+                if (old.ballot + 1 != fwi.ballot)
                 {
                     return;
                 }
             }
 
             wi = fwi;
-            _pending_requests.erase(_pending_requests.begin());
+            part.erase(part.begin());
         }
         
         configuration_update_response resp;

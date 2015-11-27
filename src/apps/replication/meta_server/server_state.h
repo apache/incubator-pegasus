@@ -132,7 +132,7 @@ private:
     void update_configuration_internal(const configuration_update_request& request, /*out*/ configuration_update_response& response);
 
     // execute all pending requests according to ballot order
-    void exec_pending_requests();
+    void exec_pending_requests(global_partition_id gpid);
 
     // compute drop out collection
     void maintain_drops(/*inout*/ std::vector<rpc_address>& drops, const rpc_address& node, bool is_add);
@@ -171,7 +171,9 @@ private:
     };
 
     mutable zlock                         _pending_requests_lock;
-    std::map<uint64_t, storage_work_item> _pending_requests;
+    // because ballots of different gpid may conflict, we separate items by gpid
+    // app_id -> pidx -> <ballot, item>
+    std::vector< std::vector< std::map<uint64_t, storage_work_item> > > _pending_requests;
 
     // for test
     config_change_subscriber          _config_change_subscriber;
