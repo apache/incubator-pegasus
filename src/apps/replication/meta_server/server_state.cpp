@@ -34,8 +34,9 @@
  */
 
 # include "server_state.h"
-#include <dsn/internal/factory_store.h>
+# include <dsn/internal/factory_store.h>
 # include <sstream>
+# include <cinttypes>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -95,6 +96,7 @@ error_code server_state::on_become_leader()
 {
     _apps.clear();
     _nodes.clear();
+    _pending_requests.clear();
     auto err = sync_apps_from_remote_storage();
     if (err == ERR_OBJECT_NOT_FOUND)
         err = initialize_apps();
@@ -423,6 +425,11 @@ void server_state::unfree_if_possible_on_start()
     dinfo("live replica server # is %d, freeze = %s", _node_live_count, _freeze ? "true" : "false");
 }
 
+void server_state::set_config_change_subscriber_for_test(config_change_subscriber subscriber)
+{
+    _config_change_subscriber = subscriber;
+}
+
 // partition server & client => meta server
 void server_state::query_configuration_by_node(const configuration_query_by_node_request& request, /*out*/ configuration_query_by_node_response& response)
 {
@@ -491,8 +498,19 @@ void server_state::update_configuration(
         zauto_read_lock l(_lock);
         app_state& app = _apps[req->config.gpid.app_id - 1];
         partition_configuration& old = app.partitions[req->config.gpid.pidx];
-        if (old.ballot + 1 != req->config.ballot)
+        if (partition_configuration_equal(old, req->config))
         {
+            // duplicate request
+            dwarn("received duplicate update configuration request from %s, gpid = %d.%d, ballot = %" PRId64,
+                  req->node.to_string(), old.gpid.app_id, old.gpid.pidx, old.ballot);
+            write = false;
+            response.err = ERR_OK;
+            response.config = old;
+        }
+        else if (old.ballot + 1 != req->config.ballot)
+        {
+            dwarn("received invalid update configuration request from %s, gpid = %d.%d, ballot = %" PRId64 ", cur_ballot = %" PRId64,
+                  req->node.to_string(), old.gpid.app_id, old.gpid.pidx, req->config.ballot, old.ballot);
             write = false;   
             response.err = ERR_INVALID_VERSION;
             response.config = old;
@@ -548,7 +566,8 @@ void server_state::update_configuration(
             new_config_blob,
             LPC_META_SERVER_STATE_UPDATE_CALLBACK,
             [this, new_config_blob, req, request_msg, callback](error_code ec)
-            {                
+            {
+                global_partition_id gpid = req->config.gpid;
                 storage_work_item wi;
                 wi.ballot = req->config.ballot;
                 wi.req = req;
@@ -557,39 +576,39 @@ void server_state::update_configuration(
 
                 {
                     zauto_lock l(_pending_requests_lock);
-                    _pending_requests[wi.ballot] = wi;
+                    _pending_requests[gpid][wi.ballot] = wi;
                 }
 
-                exec_pending_requests();
+                exec_pending_requests(gpid);
             }
         );
     }
 }
 
-void server_state::exec_pending_requests()
+void server_state::exec_pending_requests(global_partition_id gpid)
 {
     do
     {
         storage_work_item wi;
         {
             zauto_lock l(_pending_requests_lock);
-            if (_pending_requests.size() == 0)
+            auto& part = _pending_requests[gpid];
+            if (part.size() == 0)
                 return;
 
-            storage_work_item& fwi = _pending_requests.begin()->second;
-
+            storage_work_item& fwi = part.begin()->second;
             {
-                zauto_read_lock l(_lock);
-                app_state& app = _apps[fwi.req->config.gpid.app_id - 1];
-                partition_configuration& old = app.partitions[fwi.req->config.gpid.pidx];
-                if (old.ballot + 1 != fwi.req->config.ballot)
+                zauto_read_lock l2(_lock);
+                app_state& app = _apps[gpid.app_id - 1];
+                partition_configuration& old = app.partitions[gpid.pidx];
+                if (old.ballot + 1 != fwi.ballot)
                 {
                     return;
                 }
             }
 
             wi = fwi;
-            _pending_requests.erase(_pending_requests.begin());
+            part.erase(part.begin());
         }
         
         configuration_update_response resp;
@@ -608,7 +627,6 @@ void server_state::exec_pending_requests()
         {
             wi.callback();
         }
-
     } while (true);
 }
 
@@ -748,10 +766,14 @@ void server_state::update_configuration_internal(const configuration_update_requ
             );
     }
     
-
 #ifdef _DEBUG
     check_consistency(request.config.gpid);
 #endif
+
+    if (_config_change_subscriber)
+    {
+        _config_change_subscriber(_apps);
+    }
 }
 
 void server_state::check_consistency(global_partition_id gpid)
@@ -788,3 +810,17 @@ void server_state::check_consistency(global_partition_id gpid)
     }    
     dassert(_node_live_count == lc, "");
 }
+
+bool server_state::partition_configuration_equal(const partition_configuration& pc1, const partition_configuration& pc2)
+{
+    // last_drops is not considered into equality check
+    return pc1.ballot == pc2.ballot &&
+           pc1.gpid.app_id == pc2.gpid.app_id &&
+           pc1.gpid.pidx == pc2.gpid.pidx &&
+           pc1.app_type == pc2.app_type &&
+           pc1.max_replica_count == pc2.max_replica_count &&
+           pc1.primary == pc2.primary &&
+           pc1.secondaries == pc2.secondaries &&
+           pc1.last_committed_decree == pc2.last_committed_decree;
+}
+

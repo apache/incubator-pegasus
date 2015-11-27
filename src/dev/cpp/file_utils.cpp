@@ -550,7 +550,7 @@ namespace dsn {
                     else
                     {
 #endif
-                        succ = (std::remove(fpath) == 0);
+                        succ = (::remove(fpath) == 0);
                         if (!succ)
                         {
                             dwarn("remove file %s failed, err = %s", fpath, strerror(errno));
@@ -583,7 +583,7 @@ namespace dsn {
 
                 if (dsn::utils::filesystem::path_exists_internal(npath, FTW_F))
                 {
-                    bool ret = (std::remove(npath.c_str()) == 0);
+                    bool ret = (::remove(npath.c_str()) == 0);
                     if (!ret)
                     {
                         dwarn("remove file %s failed, err = %s", path.c_str(), strerror(errno));

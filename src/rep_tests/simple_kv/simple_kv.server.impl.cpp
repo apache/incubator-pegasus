@@ -62,7 +62,7 @@ void simple_kv_service_impl::on_read(const std::string& key, ::dsn::rpc_replier<
         value = it->second;
     }
 
-    ddebug("=== on_exec_read:decree=%lld,key=%s,value=%s", last_committed_decree(), key.c_str(), value.c_str());
+    ddebug("=== on_exec_read:decree=%" PRId64 ",key=%s,value=%s", last_committed_decree(), key.c_str(), value.c_str());
     reply(value);
 }
 
@@ -72,7 +72,7 @@ void simple_kv_service_impl::on_write(const kv_pair& pr, ::dsn::rpc_replier<int3
     dsn::service::zauto_lock l(_lock);
     _store[pr.key] = pr.value;
 
-    ddebug("=== on_exec_write:decree=%lld,key=%s,value=%s\n", last_committed_decree(), pr.key.c_str(), pr.value.c_str());
+    ddebug("=== on_exec_write:decree=%" PRId64 ",key=%s,value=%s\n", last_committed_decree(), pr.key.c_str(), pr.value.c_str());
     reply(0);
 }
 
@@ -86,7 +86,7 @@ void simple_kv_service_impl::on_append(const kv_pair& pr, ::dsn::rpc_replier<int
     else
         _store[pr.key] = pr.value;
 
-    ddebug("=== on_exec_append:decree=%lld,key=%s,value=%s\n", last_committed_decree(), pr.key.c_str(), pr.value.c_str());
+    ddebug("=== on_exec_append:decree=%" PRId64 ",key=%s,value=%s\n", last_committed_decree(), pr.key.c_str(), pr.value.c_str());
     reply(0);
 }
 
@@ -207,8 +207,7 @@ int simple_kv_service_impl::flush(bool force)
 
     // TODO: should use async write instead
     char name[256];
-    sprintf(name, "%s/checkpoint.%lld", data_dir().c_str(), 
-            static_cast<long long int>(last_committed_decree()));
+    sprintf(name, "%s/checkpoint.%" PRId64, data_dir().c_str(), last_committed_decree());
     std::ofstream os(name, std::ios::binary);
 
     uint64_t count = (uint64_t)_store.size();

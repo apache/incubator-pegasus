@@ -80,11 +80,19 @@ bool test_checker::init(const char* name, dsn_app_info* info, int count)
     {
         if (0 == strcmp(app.type, "meta"))
         {
-            _meta_servers.push_back((meta_service_app*)app.app_context_ptr);
+            meta_service_app* meta_app = (meta_service_app*)app.app_context_ptr;
+            meta_app->_state->set_config_change_subscriber_for_test(
+                        std::bind(&test_checker::on_config_change, this, std::placeholders::_1));
+            _meta_servers.push_back(meta_app);
         }
         else if (0 == strcmp(app.type, "replica"))
         {
-            _replica_servers.push_back((replication_service_app*)app.app_context_ptr);
+            replication_service_app* replica_app = (replication_service_app*)app.app_context_ptr;
+            replica_app->_stub->set_replica_state_subscriber_for_test(
+                        std::bind(&test_checker::on_replica_state_change, this,
+                                  std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
+                        false);
+            _replica_servers.push_back(replica_app);
         }
     }
 
@@ -93,7 +101,10 @@ bool test_checker::init(const char* name, dsn_app_info* info, int count)
     {
         int id = node.second->id();
         std::string name = node.second->name();
-        int port = node.second->rpc(nullptr)->primary_address().port();
+        rpc_address paddr = node.second->rpc(nullptr)->primary_address();
+        int port = paddr.port();
+        _node_to_address[name] = paddr;
+        ddebug("=== node_to_address[%s]=%s", name.c_str(), paddr.to_string());
         _address_to_node[port] = name;
         ddebug("=== address_to_node[%u]=%s", port, name.c_str());
         if (id != port)
@@ -103,14 +114,15 @@ bool test_checker::init(const char* name, dsn_app_info* info, int count)
         }
     }
 
+    s_inited = true;
+
     if (!test_case::instance().init(g_case_input))
     {
         std::cerr << "init test_case failed" << std::endl;
+        s_inited = false;
         return false;
     }
 
-    //ddebug("=== test_checker created");
-    s_inited = true;
     return true;
 }
 
@@ -122,16 +134,22 @@ void test_checker::exit()
     {
         app->_service->_started = false;
     }
-    if ( !test_case::s_close_replica_stub_on_exit ) return;
 
-    dsn::tools::tool_app* app = dsn::tools::get_current_tool();
-    app->stop_all_apps(true);
+    if (test_case::s_close_replica_stub_on_exit)
+    {
+        dsn::tools::tool_app* app = dsn::tools::get_current_tool();
+        app->stop_all_apps(true);
+    }
 }
 
 void test_checker::check()
 {
     test_case::instance().on_check();
     if (g_done) return;
+
+    // 'config_change' and 'replica_state_change' are detected in two ways:
+    //   - each time this check() is called, checking will be applied
+    //   - register subscribers on meta_server and replica_server to be notified
 
     parti_config cur_config;
     if (get_current_config(cur_config) && cur_config != _last_config)
@@ -147,6 +165,29 @@ void test_checker::check()
     {
         test_case::instance().on_state_change(_last_states, cur_states);
         _last_states = cur_states;
+    }
+}
+
+void test_checker::on_replica_state_change(::dsn::rpc_address from, const replica_configuration& new_config, bool is_closing)
+{
+    state_snapshot cur_states;
+    get_current_states(cur_states);
+    if (cur_states != _last_states)
+    {
+        test_case::instance().on_state_change(_last_states, cur_states);
+        _last_states = cur_states;
+    }
+}
+
+void test_checker::on_config_change(const std::vector<app_state>& new_config)
+{
+    partition_configuration c = new_config[g_default_gpid.app_id - 1].partitions[g_default_gpid.pidx];
+    parti_config cur_config;
+    cur_config.convert_from(c);
+    if (cur_config != _last_config)
+    {
+        test_case::instance().on_config_change(_last_config, cur_config);
+        _last_config = cur_config;
     }
 }
 
@@ -171,7 +212,6 @@ void test_checker::get_current_states(state_snapshot& states)
         }
     }
 }
-
 
 bool test_checker::get_current_config(parti_config& config)
 {
@@ -233,6 +273,14 @@ std::string test_checker::address_to_node_name(rpc_address addr)
     if (find != _address_to_node.end())
         return find->second;
     return "node@" + boost::lexical_cast<std::string>(addr.port());
+}
+
+rpc_address test_checker::node_name_to_address(const std::string& name)
+{
+    auto find = _node_to_address.find(name);
+    if (find != _node_to_address.end())
+        return find->second;
+    return rpc_address();
 }
 
 void install_checkers()

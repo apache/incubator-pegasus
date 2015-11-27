@@ -301,7 +301,7 @@ namespace dsn
             const blob& value,
             clientlet* tracker )
         {
-            auto task = tasking::create_late_task(cb_code, cb_create, 0, tracker);
+            task_ptr task = tasking::create_late_task(cb_code, cb_create, 0, tracker);
             write_log(
                 create_node_log::get_log(node, value),
                 [=]{
@@ -319,7 +319,7 @@ namespace dsn
             const err_callback& cb_delete,
             clientlet* tracker)
         {
-            auto task = tasking::create_late_task(cb_code, cb_delete, 0, tracker);
+            task_ptr task = tasking::create_late_task(cb_code, cb_delete, 0, tracker);
             write_log(
                 delete_node_log::get_log(node, recursively_delete),
                 [=] {
@@ -392,7 +392,7 @@ namespace dsn
             const err_callback& cb_set_data,
             clientlet* tracker)
         {
-            auto task = tasking::create_late_task(cb_code, cb_set_data, 0, tracker);
+            task_ptr task = tasking::create_late_task(cb_code, cb_set_data, 0, tracker);
             write_log(
                 set_data_log::get_log(node, value),
                 [=] {
