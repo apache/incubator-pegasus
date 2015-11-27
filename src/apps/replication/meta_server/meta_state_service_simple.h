@@ -142,7 +142,7 @@ namespace dsn
                     marshall(writer, static_cast<int>(op));
                     write(writer, head, tail...);
                     auto shared_blob = writer.get_buffer();
-                    reinterpret_cast<log_header*>((char*)shared_blob.buffer_ptr())->size = shared_blob.length() - sizeof(log_header);
+                    reinterpret_cast<log_header*>((char*)shared_blob.data())->size = shared_blob.length() - sizeof(log_header);
                     return shared_blob;
                 }
                 static void write(binary_writer& writer, const Head& head, const Tail&... tail)

@@ -328,52 +328,50 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
     }
 
     // skip old mutations
-    if (mu->data.header.ballot < get_ballot() || status() == PS_INACTIVE)
+    if (mu->data.header.ballot >= get_ballot() && status() != PS_INACTIVE)
     {
-        return;
-    }
+        switch (status())
+        {
+        case PS_PRIMARY:
+            if (err == ERR_OK)
+            {
+                do_possible_commit_on_primary(mu);
+            }
+            else
+            {
+                handle_local_failure(err);
+            }
+            break;
+        case PS_SECONDARY:
+        case PS_POTENTIAL_SECONDARY:
+            if (err != ERR_OK)
+            {
+                handle_local_failure(err);
+            }
 
-    switch (status())
-    {
-    case PS_PRIMARY:
-        if (err == ERR_OK)
-        {
-            do_possible_commit_on_primary(mu);
+            ack_prepare_message(err, mu);
+            break;
+        case PS_ERROR:
+            break;
+        default:
+            dassert(false, "");
+            break;
         }
-        else
-        {
-            handle_local_failure(err);
-        }
-        break;
-    case PS_SECONDARY:
-    case PS_POTENTIAL_SECONDARY:
+
+        // mutation log failure, propagted to all replicas
         if (err != ERR_OK)
         {
-            handle_local_failure(err);
+            _stub->handle_log_failure(err);
         }
-
-        ack_prepare_message(err, mu);
-        break;
-    case PS_ERROR:
-        break;
-    default:
-        dassert (false, "");
-        break;
     }
-
-    // mutation log failure, propagted to all replicas
-    if (err != ERR_OK)
-    {
-        _stub->handle_log_failure(err);
-    }
-
+   
     // write local private log if necessary
-    else if (_private_log && status() != PS_ERROR)
+    if (err == ERR_OK && _private_log && status() != PS_ERROR)
     {
         _private_log->append(mu,
             LPC_WRITE_REPLICATION_LOG,
             this,
-            [this](error_code err, size_t size)
+            [this, mu](error_code err, size_t size)
         {
             if (err != ERR_OK)
             {
@@ -502,7 +500,7 @@ void replica::ack_prepare_message(error_code err, mutation_ptr& mu)
     ddebug( "%s: mutation %s ack_prepare_message", name(), mu->name());
 }
 
-void replica::cleanup_preparing_mutations(bool is_primary)
+void replica::cleanup_preparing_mutations(bool wait)
 {
     decree start = last_committed_decree() + 1;
     decree end = _prepare_list->max_decree();
@@ -512,16 +510,13 @@ void replica::cleanup_preparing_mutations(bool is_primary)
         mutation_ptr mu = _prepare_list->get_mutation_by_decree(decree);
         if (mu != nullptr)
         {
-            int c = mu->clear_prepare_or_commit_tasks();
-            if (!is_primary)
-            {
-                dassert (0 == c, "");
-            }
-            else
-            {
-            }
+            mu->clear_prepare_or_commit_tasks();
 
-            mu->clear_log_task();
+            //
+            // make sure the buffers from mutations are valid for underlying aio
+            //
+            if (wait)
+                mu->wait_log_task();
         }
     }
 }

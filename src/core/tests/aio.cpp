@@ -88,6 +88,25 @@ TEST(core, aio)
         EXPECT_TRUE(t->io_size() == (size_t)len);
     }
 
+    // vector write
+    tasks.clear();
+    std::unique_ptr<dsn_file_buffer_t[]> buffers(new dsn_file_buffer_t[100]);
+    for (int i = 0; i < 10; i ++)
+    {
+        buffers[i].buffer = reinterpret_cast<void*>(const_cast<char*>(buffer));
+        buffers[i].size = len;
+    }
+    for (int i = 0; i < 10; i ++)
+    {
+        tasks.push_back(::dsn::file::write_vector(fp, buffers.get(), 10, offset, LPC_AIO_TEST, nullptr, nullptr, 0));
+        offset += 10 * len;
+    }
+    for (auto& t : tasks)
+    {
+        bool r = t->wait();
+        EXPECT_TRUE(r);
+        EXPECT_TRUE(t->io_size() == 10 * len);
+    }
     auto err = dsn_file_close(fp);
     EXPECT_TRUE(err == ERR_OK);
 
@@ -115,7 +134,7 @@ TEST(core, aio)
     // sequential read
     offset = 0;
     tasks.clear();
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < 200; i++)
     {
         buffer2[0] = 'x';
         auto t = ::dsn::file::read(fp, buffer2, len, offset, LPC_AIO_TEST, nullptr, nullptr, 0);

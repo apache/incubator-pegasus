@@ -153,7 +153,7 @@ namespace dsn {
 
         bool has_holder() const { return _holder.get() != nullptr; }
 
-        const char* buffer_ptr() { return _holder.get(); }
+        const char* buffer_ptr() const { return _holder.get(); }
 
         blob range(int offset) const
         {

@@ -86,11 +86,34 @@ struct log_file_header
 {
     int32_t  magic;
     int32_t  version;
-    int32_t  header_size;
-    int32_t  log_buffer_size_bytes;
     int64_t  start_global_offset;
 };
 
+class log_block
+{
+    std::vector<blob> _data;
+    size_t _size;
+public:
+    log_block(blob &&init_blob) : _data({init_blob}), _size(init_blob.length()) {}
+    const std::vector<blob>& data() const
+    {
+        return _data;
+    }
+    blob& front()
+    {
+        dassert(!_data.empty(), "trying to get first blob out of an empty log block");
+        return _data.front();
+    }
+    void add(const blob& bb)
+    {
+        _size += bb.length();
+        _data.push_back(bb);
+    }
+    size_t size() const
+    {
+        return _size;
+    };
+};
 class mutation_log : public virtual clientlet, public ref_counter
 {
 public:
@@ -164,7 +187,7 @@ public:
         global_partition_id gpid,
         ::dsn::replication::decree start,
         /*out*/ ::dsn::replication::learn_state& state
-        );
+        ) const;
 
     //
     //    other inquiry routines
@@ -203,7 +226,7 @@ private:
     void init_states();    
     error_code create_new_log_file();    
     void create_new_pending_buffer();    
-    static void internal_write_callback(error_code err, size_t size, pending_callbacks_ptr callbacks, blob data);
+    static void internal_write_callback(error_code err, size_t size, pending_callbacks_ptr callbacks, std::shared_ptr<log_block> logs, uint32_t init_crc32);
     error_code write_pending_mutations(bool create_new_log_when_necessary = true);
     
 private:
@@ -223,8 +246,10 @@ private:
     int64_t                     _global_start_offset;
     int64_t                     _global_end_offset;
     
-    // bufferring    
-    std::shared_ptr<binary_writer> _pending_write;
+    
+    // bufferring
+    std::shared_ptr<log_block> _pending_write;
+    size_t _pending_write_size;
     pending_callbacks_ptr          _pending_write_callbacks;
 
     // replica states
@@ -266,7 +291,7 @@ public:
     void close();
 
     // flush the log file
-    void flush();
+    void flush() const;
 
     //
     // read routines
@@ -275,14 +300,14 @@ public:
     // sync read the next log entry from the file
     // the entry data is start from the 'local_offset' of the file
     // the result is passed out by 'bb'
-    error_code read_next_log_entry(int64_t local_offset, /*out*/::dsn::blob& bb);
+    error_code read_next_log_block(int64_t local_offset, /*out*/::dsn::blob& bb);
 
     //
     // write routines
     //
 
     // prepare a log entry buffer, with block header reserved and inited
-    std::shared_ptr<binary_writer> prepare_log_entry();
+    std::shared_ptr<log_block> prepare_log_block() const;
 
     // async write log entry into the file
     // 'bb' is the date to be write
@@ -294,8 +319,8 @@ public:
     // returns:
     //   - non-null if io task is in pending
     //   - null if error
-    ::dsn::task_ptr commit_log_entry(
-                    blob& bb,
+    ::dsn::task_ptr commit_log_block(
+                    log_block& logs,
                     int64_t offset,
                     dsn_task_code_t evt,
                     clientlet* callback_host,
@@ -307,6 +332,7 @@ public:
     // others
     //
 
+    uint32_t& crc32() { return _crc32;  }
     // end offset in the global space: end_offset = start_offset + file_size
     int64_t end_offset() const { return _end_offset; }
     // start offset in the global space
@@ -333,6 +359,7 @@ private:
     log_file(const char* path, dsn_handle_t handle, int index, int64_t start_offset, bool isRead);
 
 private:        
+    uint32_t      _crc32;
     int64_t       _start_offset;
     int64_t       _end_offset;
     dsn_handle_t  _handle;

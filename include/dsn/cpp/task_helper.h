@@ -148,7 +148,7 @@ namespace dsn
         {
         }
 
-        safe_task(THandler& h) : _handler(h)
+        safe_task(THandler& h) : _handler(h), _is_timer(false)
         {
         }
 

@@ -150,7 +150,7 @@ private:
     void on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, error_code err, dsn_message_t request, dsn_message_t reply);
     void do_possible_commit_on_primary(mutation_ptr& mu);    
     void ack_prepare_message(error_code err, mutation_ptr& mu);
-    void cleanup_preparing_mutations(bool is_primary);
+    void cleanup_preparing_mutations(bool wait);
     
     /////////////////////////////////////////////////////////////////
     // learning    

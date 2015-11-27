@@ -71,7 +71,8 @@ replication_options::replication_options()
 
     working_dir = ".";
         
-    log_batch_buffer_MB = 1;
+    log_batch_buffer_KB_shared = 0;
+    log_batch_buffer_KB_private = 4;
     log_pending_max_ms = 100;
     log_file_size_mb = 32;
     log_buffer_size_mb_private = 1;
@@ -230,12 +231,18 @@ void replication_options::initialize()
         log_file_size_mb,
         "maximum log segment file size (MB)"
         );
-    log_batch_buffer_MB =
+    log_batch_buffer_KB_shared =
         (int)dsn_config_get_value_uint64("replication", 
-        "log_batch_buffer_MB", 
-        log_batch_buffer_MB,
-        "log buffer size (MB) for batching incoming logs"
+        "log_batch_buffer_KB_shared", 
+        log_batch_buffer_KB_shared,
+        "shared log buffer size (KB) for batching incoming logs"
         );
+    log_batch_buffer_KB_private =
+        (int)dsn_config_get_value_uint64("replication",
+            "log_batch_buffer_KB_private",
+            log_batch_buffer_KB_private,
+            "private log buffer size (KB) for batching incoming logs"
+            );
     log_pending_max_ms =
         (int)dsn_config_get_value_uint64("replication", 
         "log_pending_max_ms", 
