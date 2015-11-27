@@ -639,6 +639,12 @@ void replica_stub::set_meta_server_connected_for_test(const configuration_query_
     }
 }
 
+void replica_stub::set_replica_state_subscriber_for_test(replica_state_subscriber subscriber, bool is_long_subscriber)
+{
+    _replica_state_subscriber = subscriber;
+    _is_long_subscriber = is_long_subscriber;
+}
+
 // this_ is used to hold a ref to replica_stub so we don't need to cancel the task on replica_stub::close
 void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_, const partition_configuration& config)
 {

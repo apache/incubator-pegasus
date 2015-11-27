@@ -80,47 +80,34 @@ void load_balancer::run(global_partition_id gpid)
     run_lb(pc);
 }
 
-void load_balancer::explictly_send_proposal(global_partition_id gpid, int role, config_type type)
+void load_balancer::explictly_send_proposal(global_partition_id gpid, rpc_address receiver, config_type type, rpc_address node)
 {
-    if (gpid.app_id<=0 || gpid.pidx<0 || role<0) return;
+    if (gpid.app_id <= 0 || gpid.pidx < 0 || type == CT_NONE)
+    {
+        derror("invalid params");
+        return;
+    }
 
     configuration_update_request req;
     {
         zauto_read_lock l(_state->_lock);
-        if (gpid.app_id>_state->_apps.size())
+        if (gpid.app_id > _state->_apps.size())
+        {
+            derror("invalid params");
             return;
+        }
         app_state& app = _state->_apps[gpid.app_id-1];
         if (gpid.pidx>=app.partition_count)
+        {
+            derror("invalid params");
             return;
+        }
         req.config = app.partitions[gpid.pidx];
     }
 
-    dsn::rpc_address proposal_receiver;
-    if (!req.config.primary.is_invalid())
-        proposal_receiver = req.config.primary;
-    else if (!req.config.secondaries.empty())
-        proposal_receiver = req.config.secondaries[0];
-    else {
-        dwarn("no replica in partition config");
-        return;
-    }
-
-    if (!req.config.primary.is_invalid())
-    {
-        req.node = req.config.primary;
-        --role;
-    }
-
-    if (role >= (int)req.config.secondaries.size())
-    {
-        dwarn("role doesn't exist");
-        return;
-    }
-    else if (role != -1)
-        req.node = req.config.secondaries[role];
-
     req.type = type;
-    send_proposal(proposal_receiver, req);
+    req.node = node;
+    send_proposal(receiver, req);
 }
 
 ::dsn::rpc_address load_balancer::find_minimal_load_machine(bool primaryOnly)

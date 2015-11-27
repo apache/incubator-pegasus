@@ -424,10 +424,10 @@ void event_on_task::internal_to_string(std::ostream& oss) const
 bool event_on_task::internal_parse(const std::map<std::string, std::string>& kv_map)
 {
     std::map<std::string, std::string>::const_iterator it;
-    // not parse task_id
+    if ((it = kv_map.find("task_id")) != kv_map.end()) _task_id = it->second;
     if ((it = kv_map.find("node")) != kv_map.end()) _node = it->second;
     if ((it = kv_map.find("task_code")) != kv_map.end()) _task_code = boost::algorithm::to_upper_copy(it->second);
-    // not parse delay
+    if ((it = kv_map.find("delay")) != kv_map.end()) _delay = it->second;
     return true;
 }
 
@@ -436,12 +436,14 @@ bool event_on_task::check_satisfied(const event* ev) const
     if (type() != ev->type())
         return false;
     const event_on_task* e = (const event_on_task*)ev;
-    // not check task_id
+    if (!_task_id.empty() && _task_id != e->_task_id)
+        return false;
     if (!_node.empty() && _node != e->_node)
         return false;
     if (!_task_code.empty() && _task_code != e->_task_code)
         return false;
-    // not check delay
+    if (!_delay.empty() && _delay != e->_delay)
+        return false;
     return true;
 }
 
@@ -472,7 +474,7 @@ bool event_on_rpc::internal_parse(const std::map<std::string, std::string>& kv_m
     if (!event_on_task::internal_parse(kv_map))
         return false;
     std::map<std::string, std::string>::const_iterator it;
-    // not parse rpc_id
+    if ((it = kv_map.find("rpc_id")) != kv_map.end()) _rpc_id = it->second;
     if ((it = kv_map.find("rpc_name")) != kv_map.end()) _rpc_name = boost::algorithm::to_upper_copy(it->second);
     if ((it = kv_map.find("from")) != kv_map.end()) _from = it->second;
     if ((it = kv_map.find("to")) != kv_map.end()) _to = it->second;
@@ -484,7 +486,8 @@ bool event_on_rpc::check_satisfied(const event* ev) const
     if (!event_on_task::check_satisfied(ev))
         return false;
     const event_on_rpc* e = (const event_on_rpc*)ev;
-    // not check id
+    if (!_rpc_id.empty() && _rpc_id != e->_rpc_id)
+        return false;
     if (!_rpc_name.empty() && _rpc_name != e->_rpc_name)
         return false;
     if (!_from.empty() && _from != e->_from)
@@ -690,8 +693,9 @@ std::string client_case_line::to_string() const
     }
     case replica_config:
     {
-        oss << "replica=" << _gpid.app_id << "." << _gpid.pidx << "." << _role << ","
-            << "command=" << config_command_to_string(_config_command);
+        oss << "receiver=" << address_to_node(_config_receiver)
+            << ",type=" << config_command_to_string(_config_type)
+            << ",node=" << address_to_node(_config_node);
         break;
     }
     default:
@@ -720,7 +724,6 @@ bool client_case_line::parse(const std::string& params)
     {
         return false;
     }
-    _err = ERR_OK;
     bool parse_ok = true;
     switch (_type)
     {
@@ -744,6 +747,8 @@ bool client_case_line::parse(const std::string& params)
         _id = boost::lexical_cast<int>(kv_map["id"]);
         _err = dsn_error_from_string(boost::algorithm::to_upper_copy(kv_map["err"]).c_str(), ERR_UNKNOWN);
         _write_resp = boost::lexical_cast<int>(kv_map["resp"]);
+        if (_err == ERR_UNKNOWN)
+            parse_ok = false;
         break;
     }
     case end_read:
@@ -751,22 +756,23 @@ bool client_case_line::parse(const std::string& params)
         _id = boost::lexical_cast<int>(kv_map["id"]);
         _err = dsn_error_from_string(boost::algorithm::to_upper_copy(kv_map["err"]).c_str(), ERR_UNKNOWN);
         _read_resp = kv_map["resp"];
+        if (_err == ERR_UNKNOWN)
+            parse_ok = false;
         break;
     }
     case replica_config:
     {
-        std::string& replica_value = kv_map["replica"];
-        int parse_count = sscanf(replica_value.c_str(), "%d.%d.%d", &_gpid.app_id, &_gpid.pidx, &_role);
-        _config_command = parse_config_command( kv_map["command"] );
-
-        if (parse_count<3 || _config_command==CT_NONE)
+        _config_receiver = node_to_address(kv_map["receiver"]);
+        _config_type = parse_config_command(kv_map["type"]);
+        _config_node = node_to_address(kv_map["node"]);
+        if (_config_receiver.is_invalid() || _config_type == CT_NONE || _config_node.is_invalid())
             parse_ok = false;
         break;
     }
     default:
         dassert(false, "");
     }
-    if (_err == ERR_UNKNOWN || !parse_ok)
+    if (!parse_ok)
     {
         std::cerr << "bad line: line_no=" << line_no()
                   << ": unknown error: " << kv_map["err"] << std::endl;
@@ -812,7 +818,7 @@ bool client_case_line::parse_type_name(const std::string& name)
     return true;
 }
 
-const char* client_case_line::_replica_config_commands[] = {
+static const char* s_replica_config_commands[] = {
     "none", "assign_primary", "upgrade_to_primary", "add_secondary",
     "downgrade_to_secondary", "downgrade_to_inactive", "remove",
     "upgrade_to_secondary", nullptr
@@ -820,16 +826,20 @@ const char* client_case_line::_replica_config_commands[] = {
 
 dsn::replication::config_type client_case_line::parse_config_command(const std::string& command_name) const
 {
-    for (int i=0; _replica_config_commands[i]; ++i)
-        if ( strcmp(command_name.c_str(), _replica_config_commands[i])==0 )
+    for (int i = 0; s_replica_config_commands[i] != nullptr; ++i)
+    {
+        if (boost::iequals(command_name.c_str(), s_replica_config_commands[i]))
+        {
             return (dsn::replication::config_type)i;
+        }
+    }
     return CT_NONE;
 }
 
 std::string client_case_line::config_command_to_string(dsn::replication::config_type cfg_command) const
 {
-    dassert(cfg_command<=CT_UPGRADE_TO_SECONDARY, "");
-    return std::string(_replica_config_commands[cfg_command]);
+    dassert(cfg_command <= CT_UPGRADE_TO_SECONDARY, "");
+    return s_replica_config_commands[cfg_command];
 }
 
 void client_case_line::get_write_params(int& id, std::string& key, std::string& value, int& timeout_ms) const
@@ -849,12 +859,12 @@ void client_case_line::get_read_params(int& id, std::string& key, int& timeout_m
     timeout_ms = _timeout;
 }
 
-void client_case_line::get_replica_config_params(dsn::replication::global_partition_id& gpid, int &role, dsn::replication::config_type &type) const
+void client_case_line::get_replica_config_params(rpc_address& receiver, dsn::replication::config_type& type, rpc_address& node) const
 {
     dassert(_type == replica_config, "");
-    gpid = _gpid;
-    role = _role;
-    type = _config_command;
+    receiver = _config_receiver;
+    type = _config_type;
+    node = _config_node;
 }
 
 bool client_case_line::check_write_result(int id, ::dsn::error_code err, int32_t resp)
@@ -1119,19 +1129,18 @@ bool test_case::check_client_write(int& id, std::string& key, std::string& value
 {
     if ( !check_client_instruction(client_case_line::begin_write) )
         return false;
-
     client_case_line* cl = static_cast<client_case_line*>(_case_lines[_next]);
     cl->get_write_params(id, key, value, timeout_ms);
     forward();
     return true;
 }
 
-bool test_case::check_replica_config(dsn::replication::global_partition_id& gpid, int &role, dsn::replication::config_type &cfg_type)
+bool test_case::check_replica_config(rpc_address& receiver, dsn::replication::config_type& type, rpc_address& node)
 {
     if ( !check_client_instruction(client_case_line::replica_config) )
         return false;
     client_case_line* cl = static_cast<client_case_line*>(_case_lines[_next]);
-    cl->get_replica_config_params(gpid, role, cfg_type);
+    cl->get_replica_config_params(receiver, type, node);
     forward();
     return true;
 }

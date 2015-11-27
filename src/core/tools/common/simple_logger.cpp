@@ -187,22 +187,22 @@ namespace dsn {
         void simple_logger::create_log_file()
         {
             if (_log != nullptr)
-                fclose(_log);
+                ::fclose(_log);
 
             _lines = 0;
 
             std::stringstream str;
             str << "log." << ++_index << ".txt";
-            _log = fopen(str.str().c_str(), "w+");  
+            _log = ::fopen(str.str().c_str(), "w+");
 
             // TODO: move gc out of criticial path
             if (_index - _start_index > 20)
             {
                 std::stringstream str2;
                 str2 << "log." << (_start_index + 1) << ".txt";
-                if (!dsn::utils::filesystem::remove_path(str2.str()))
+                if (!::remove(str2.str().c_str()))
                 {
-                    dwarn("Fail to remove file %s.", str2.str().c_str());
+                    printf ("Fail to remove file %s.", str2.str().c_str());
                 }
                 else
                 {
@@ -213,7 +213,7 @@ namespace dsn {
 
         simple_logger::~simple_logger(void) 
         { 
-            fclose(_log);
+            ::fclose(_log);
         }
 
         void simple_logger::flush()
@@ -247,7 +247,7 @@ namespace dsn {
             fprintf(_log, "\n");
             if (_fast_flush || log_level >= LOG_LEVEL_ERROR)
             {
-                fflush(_log);
+                ::fflush(_log);
             }
 
             if (log_level >= _stderr_start_level)
