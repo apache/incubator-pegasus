@@ -10,14 +10,14 @@ $file_prefix = $argv[3];
 void module_init()
 {
     // register replication application provider
-    dsn::replication::register_replica_provider<<?=$_PROG->get_cpp_namespace().$_PROG->name?>_service_impl>("<?=$_PROG->name?>");
+    dsn::replication::register_replica_provider< <?=$_PROG->get_cpp_namespace().$_PROG->name?>_service_impl>("<?=$_PROG->name?>");
 
     // register all possible services
-    dsn::register_app<::dsn::service::meta_service_app>("meta");
-    dsn::register_app<::dsn::replication::replication_service_app>("replica");
-    dsn::register_app<<?=$_PROG->get_cpp_namespace().$_PROG->name?>_client_app>("client");
+    dsn::register_app< ::dsn::service::meta_service_app>("meta");
+    dsn::register_app< ::dsn::replication::replication_service_app>("replica");
+    dsn::register_app< <?=$_PROG->get_cpp_namespace().$_PROG->name?>_client_app>("client");
 <?php foreach ($_PROG->services as $svc) { ?>
-    dsn::register_app<<?=$_PROG->get_cpp_namespace().$svc->name?>_perf_test_client_app>("client.perf.<?=$svc->name?>");
+    dsn::register_app< <?=$_PROG->get_cpp_namespace().$svc->name?>_perf_test_client_app>("client.perf.<?=$svc->name?>");
 <?php } ?>
 }
 
