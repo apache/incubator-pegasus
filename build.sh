@@ -1,5 +1,8 @@
 #!/bin/bash
 
+CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=Debug"
+CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"
+
 # You can specify customized boost by defining BOOST_DIR.
 # Install boost like this:
 #   wget http://downloads.sourceforge.net/project/boost/boost/1.54.0/boost_1_54_0.zip?r=&ts=1442891144&use_mirror=jaist
@@ -13,9 +16,7 @@
 if [ -n "$BOOST_DIR" ]
 then
     echo "Use customized boost: $BOOST_DIR"
-    BOOST_OPTIONS="-DBoost_NO_BOOST_CMAKE=ON -DBOOST_ROOT=$BOOST_DIR -DBoost_NO_SYSTEM_PATHS=ON"
-else
-    BOOST_OPTIONS=""
+    CMAKE_OPTIONS="$CMAKE_OPTIONS -DBoost_NO_BOOST_CMAKE=ON -DBOOST_ROOT=$BOOST_DIR -DBoost_NO_SYSTEM_PATHS=ON"
 fi
 
 if [ $# -eq 1 -a "$1" == "true" ]
@@ -24,7 +25,7 @@ then
     rm -rf builder
     mkdir -p builder
     cd builder
-    cmake .. -DCMAKE_INSTALL_PREFIX=`pwd`/output -DCMAKE_BUILD_TYPE=Debug $BOOST_OPTIONS
+    cmake .. -DCMAKE_INSTALL_PREFIX=`pwd`/output $CMAKE_OPTIONS
     cd ..
 fi
 
