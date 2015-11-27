@@ -215,7 +215,7 @@ mutation_ptr mutation_queue::add_work(int code, dsn_message_t request, replica* 
     }
     
     // get next work item
-    if (_current_op_count == _max_concurrent_op)
+    if (_current_op_count >= _max_concurrent_op)
         return nullptr;
     else if (_hdr.is_empty())
     {
