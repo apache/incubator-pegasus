@@ -147,6 +147,12 @@ public:
     // which triggers further round of operations as returned
     mutation_ptr on_work_completed(mutation* running, void* ctx);
 
+    // a quick way to ensure all flying ops are completed
+    void make_all_running_writes_completed()
+    {
+        _current_op_count = 0;
+    }
+
 private:
     mutation_ptr unlink_next_workload(void* ctx)
     {
