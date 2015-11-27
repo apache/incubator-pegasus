@@ -576,7 +576,6 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
     {
     case PS_PRIMARY:
         cleanup_preparing_mutations(true);
-        _primary_states.write_queue.make_all_running_writes_completed();
         switch (config.status)
         {
         case PS_PRIMARY:

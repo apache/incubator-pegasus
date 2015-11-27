@@ -673,14 +673,22 @@ void replica::handle_learning_error(error_code err)
 
 void replica::handle_learning_succeeded_on_primary(
     ::dsn::rpc_address node, 
-    uint64_t learn_signature
+    uint64_t learn_signature,
+    decree lcd
     )
 {
     auto it = _primary_states.learners.find(node);
-    if (it != _primary_states.learners.end() 
+    if (it != _primary_states.learners.end()
         && it->second.signature == learn_signature
         )
+    {
+        dassert(lcd == last_committed_decree(),
+            "learner's state is incomplete: %" PRId64 " vs %" PRId64"",
+            lcd,
+            last_committed_decree()
+            );
         upgrade_to_secondary_on_primary(node);
+    }   
 }
 
 void replica::notify_learn_completion()
@@ -717,7 +725,7 @@ void replica::on_learn_completion_notification(const group_check_response& repor
 
     if (report.learner_status_ == LearningSucceeded)
     {
-        handle_learning_succeeded_on_primary(report.node, report.learner_signature);
+        handle_learning_succeeded_on_primary(report.node, report.learner_signature, report.last_committed_decree_in_prepare_list);
     }
 }
 

@@ -145,16 +145,10 @@ public:
 
     // called when the curren operation is completed,
     // which triggers further round of operations as returned
-    mutation_ptr on_work_completed(mutation* running, void* ctx);
-
-    // a quick way to ensure all flying ops are completed
-    void make_all_running_writes_completed()
-    {
-        _current_op_count = 0;
-    }
+    mutation_ptr on_work_completed(int current_running_count);
 
 private:
-    mutation_ptr unlink_next_workload(void* ctx)
+    mutation_ptr unlink_next_workload()
     {
         mutation_ptr r = _hdr.pop_one();
         if (r.get() != nullptr)

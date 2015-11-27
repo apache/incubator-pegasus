@@ -192,7 +192,7 @@ void replica::on_group_check_reply(error_code err, std::shared_ptr<group_check_r
         {
             if (resp->learner_status_ == LearningSucceeded && req->config.status == PS_POTENTIAL_SECONDARY)
             {
-                handle_learning_succeeded_on_primary(req->node, resp->learner_signature);
+                handle_learning_succeeded_on_primary(req->node, resp->learner_signature, req->last_committed_decree);
             }
         }
         else

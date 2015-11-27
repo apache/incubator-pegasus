@@ -230,13 +230,13 @@ mutation_ptr mutation_queue::add_work(int code, dsn_message_t request, replica* 
     else
     {
         _current_op_count++;
-        return unlink_next_workload(nullptr);
+        return unlink_next_workload();
     }
 }
 
-mutation_ptr mutation_queue::on_work_completed(mutation* running, void* ctx)
+mutation_ptr mutation_queue::on_work_completed(int current_running_count)
 {
-    _current_op_count--;
+    _current_op_count = current_running_count;
 
     // no further workload
     if (_hdr.is_empty())
@@ -258,7 +258,7 @@ mutation_ptr mutation_queue::on_work_completed(mutation* running, void* ctx)
     else
     {
         _current_op_count++;
-        return unlink_next_workload(ctx);
+        return unlink_next_workload();
     }
 }
 
@@ -270,7 +270,7 @@ void mutation_queue::clear()
     }
 
     mutation_ptr r;
-    while ((r = unlink_next_workload(nullptr)) != nullptr)
+    while ((r = unlink_next_workload()) != nullptr)
     {
     }
 }
