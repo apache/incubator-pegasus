@@ -4,7 +4,7 @@ require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
 $idl_type = $argv[4];
 ?>
-
+# pragma once
 # include <dsn/tool/global_checker.h>
 
 <?=$_PROG->get_cpp_namespace_begin()?> 

@@ -4,7 +4,6 @@ require_once($argv[2]); // program.php
 $file_prefix = $argv[3];
 ?>
 # pragma once
-
 # include "<?=$file_prefix?>.client.h"
 
 <?=$_PROG->get_cpp_namespace_begin()?> 
@@ -16,7 +15,7 @@ class <?=$svc->name?>_perf_test_client
 {
 public:
     <?=$svc->name?>_perf_test_client(
-        const std::vector<::dsn::rpc_address>& meta_servers,
+        const std::vector< ::dsn::rpc_address>& meta_servers,
         const char* app_name)
         : <?=$svc->name?>_client(meta_servers, app_name)
     {
