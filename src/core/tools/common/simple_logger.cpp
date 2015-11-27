@@ -55,7 +55,7 @@ namespace dsn {
             fprintf(fp, "%c%s (%" PRIu64 " %04x) ", s_level_char[log_level],
                     str, ts, tid);
 
-            task* t = task::get_current_task();
+            auto t = task::get_current_task_id();
             if (t)
             {
                 if (nullptr != task::get_current_worker())
@@ -64,7 +64,7 @@ namespace dsn {
                         task::get_current_node_name(),
                         task::get_current_worker()->pool_spec().name.c_str(),
                         task::get_current_worker()->index(),
-                        static_cast<long long unsigned int>(t->id())
+                        static_cast<long long unsigned int>(t)
                         );
                 }
                 else
@@ -73,7 +73,7 @@ namespace dsn {
                         task::get_current_node_name(),
                         "io-thrd",
                         tid,
-                        static_cast<long long unsigned int>(t->id())
+                        static_cast<long long unsigned int>(t)
                         );
                 }
             }
@@ -199,11 +199,15 @@ namespace dsn {
             if (_index - _start_index > 20)
             {
                 std::stringstream str2;
-                str2 << "log." << _start_index++ << ".txt";
-                // ATTENTION: here we should not invoke dsn::utils::filesystem::remove_path()
-                // because it may print log recursively and cause deadlock.
-                // And we just ignore the return code of remove() to tolerate failure.
-                ::remove(str2.str().c_str());
+                str2 << "log." << (_start_index + 1) << ".txt";
+                if (!::remove(str2.str().c_str()))
+                {
+                    printf ("Fail to remove file %s.", str2.str().c_str());
+                }
+                else
+                {
+                    _start_index++;
+                }
             }
         }
 

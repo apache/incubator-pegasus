@@ -53,13 +53,20 @@ void replica::init_learn(uint64_t signature)
         return;
         
     // at most one learning task running
-    if (_potential_secondary_states.learning_round_is_running || !signature)
+    if (_potential_secondary_states.learning_round_is_running || signature == invalid_signature)
         return;
 
     // learn timeout or primary change, the (new) primary starts another round of learning process
     if (signature != _potential_secondary_states.learning_signature)
     {
-        _potential_secondary_states.cleanup(true);
+        if (!_potential_secondary_states.cleanup(false))
+        {
+            dwarn("%s: previous learning is still in-process, skip new learning request",
+                name()
+                );
+            return;
+        }   
+
         _potential_secondary_states.learning_signature = signature;
         _potential_secondary_states.learning_status = LearningWithoutPrepare;
         _prepare_list->reset(_app->last_committed_decree());
@@ -177,7 +184,7 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
         return;
     }
         
-    _primary_states.get_replica_config(request.learner, response.config);
+    _primary_states.get_replica_config(PS_POTENTIAL_SECONDARY, response.config);
 
     auto it = _primary_states.learners.find(request.learner);
     if (it == _primary_states.learners.end())
@@ -188,6 +195,7 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
     }
     else if (it->second.signature != request.signature)
     {
+        response.config.learner_signature = it->second.signature;
         response.err = ERR_OBJECT_NOT_FOUND;
         reply(msg, response);
         return;
@@ -247,7 +255,7 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
             // start from (last_committed_decree + 1)
             it->second.prepare_start_decree = local_committed_decree + 1;
 
-            cleanup_preparing_mutations(true);
+            cleanup_preparing_mutations(false);
             
             // the replayed prepare msg needs to be AFTER the learning response msg
             delayed_replay_prepare_list = true;
@@ -665,14 +673,22 @@ void replica::handle_learning_error(error_code err)
 
 void replica::handle_learning_succeeded_on_primary(
     ::dsn::rpc_address node, 
-    uint64_t learn_signature
+    uint64_t learn_signature,
+    decree lcd
     )
 {
     auto it = _primary_states.learners.find(node);
-    if (it != _primary_states.learners.end() 
+    if (it != _primary_states.learners.end()
         && it->second.signature == learn_signature
         )
+    {
+        dassert(lcd == last_committed_decree(),
+            "learner's state is incomplete: %" PRId64 " vs %" PRId64"",
+            lcd,
+            last_committed_decree()
+            );
         upgrade_to_secondary_on_primary(node);
+    }   
 }
 
 void replica::notify_learn_completion()
@@ -709,7 +725,7 @@ void replica::on_learn_completion_notification(const group_check_response& repor
 
     if (report.learner_status_ == LearningSucceeded)
     {
-        handle_learning_succeeded_on_primary(report.node, report.learner_signature);
+        handle_learning_succeeded_on_primary(report.node, report.learner_signature, report.last_committed_decree_in_prepare_list);
     }
 }
 
@@ -725,7 +741,7 @@ void replica::on_add_learner(const group_check_request& request)
             return;
 
         dassert(PS_POTENTIAL_SECONDARY == status(), "");
-        init_learn(request.learner_signature);
+        init_learn(request.config.learner_signature);
     }
 }
 
@@ -775,6 +791,7 @@ error_code replica::apply_learned_state_from_private_log(learn_state& state)
                 return false;
 
             plist.prepare(mu, PS_SECONDARY);
+            mu->set_logged();
         }
     }
 

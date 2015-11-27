@@ -198,10 +198,14 @@ namespace dsn
             if (_index - _start_index > 20)
             {
                 std::stringstream str2;
-                str2 << "log." << _start_index++ << ".txt";
+                str2 << "log." << (_start_index + 1) << ".txt";
                 if (!dsn::utils::filesystem::remove_path(str2.str()))
                 {
-                    dassert(false, "Fail to remove file %s.", str2.str().c_str());
+                    dwarn("Fail to remove file %s.", str2.str().c_str());
+                }
+                else
+                {
+                    _start_index++;
                 }
             }
         }
@@ -294,7 +298,7 @@ namespace dsn
             ptr += wn;
             capacity -= wn;
 
-            task* t = task::get_current_task();
+            auto t = task::get_current_task_id();
             if (t)
             {
                 if (nullptr != task::get_current_worker())
@@ -303,7 +307,7 @@ namespace dsn
                         task::get_current_node_name(),
                         task::get_current_worker()->pool_spec().name.c_str(),
                         task::get_current_worker()->index(),
-                        static_cast<long long unsigned int>(t->id())
+                        static_cast<long long unsigned int>(t)
                         );
                 }
                 else
@@ -312,7 +316,7 @@ namespace dsn
                         task::get_current_node_name(),
                         "io-thrd",
                         tid,
-                        static_cast<long long unsigned int>(t->id())
+                        static_cast<long long unsigned int>(t)
                         );
                 }
             }

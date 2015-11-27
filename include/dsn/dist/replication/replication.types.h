@@ -530,13 +530,34 @@ namespace dsn { namespace replication {
     inline void marshall(::dsn::binary_writer& writer, const mutation_data& val)
     {
         marshall(writer, val.header);
-        marshall(writer, val.updates);
+        marshall(writer, val.updates.size());
+        for (const auto& bb : val.updates)
+        {
+            marshall(writer, bb.length());
+        }
+        for (const auto& bb : val.updates)
+        {
+            writer.write(bb.data(), bb.length());
+        }
     };
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ mutation_data& val)
     {
         unmarshall(reader, val.header);
-        unmarshall(reader, val.updates);
+        decltype(val.updates.size()) size;
+        unmarshall(reader, size);
+        val.updates.resize(size);
+        std::vector<decltype(val.updates.front().length())>  lengths(size, 0);
+        for (auto& length : lengths)
+        {
+            unmarshall(reader, length);
+        }
+        for (size_t i = 0; i < size; i ++)
+        {
+            std::shared_ptr<char> holder(new char[lengths[i]]);
+            reader.read(holder.get(), lengths[i]);
+            val.updates[i].assign(holder, 0, lengths[i]);
+        }
     };
 
     // ---------- partition_configuration -------------
@@ -583,6 +604,7 @@ namespace dsn { namespace replication {
         int64_t ballot;
         ::dsn::rpc_address primary;
         partition_status status;
+        uint64_t         learner_signature;
     };
 
     DEFINE_POD_SERIALIZATION(replica_configuration)
@@ -785,7 +807,6 @@ namespace dsn { namespace replication {
         ::dsn::rpc_address node;
         replica_configuration config;
         int64_t last_committed_decree;
-        int64_t learner_signature;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const group_check_request& val)
@@ -794,7 +815,6 @@ namespace dsn { namespace replication {
         marshall(writer, val.node);
         marshall(writer, val.config);
         marshall(writer, val.last_committed_decree);
-        marshall(writer, val.learner_signature);
     };
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ group_check_request& val)
@@ -803,7 +823,6 @@ namespace dsn { namespace replication {
         unmarshall(reader, val.node);
         unmarshall(reader, val.config);
         unmarshall(reader, val.last_committed_decree);
-        unmarshall(reader, val.learner_signature);
     };
 
     // ---------- group_check_response -------------

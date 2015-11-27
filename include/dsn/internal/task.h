@@ -335,6 +335,31 @@ public:
     size_t          get_transferred_size() const { return _transferred_size; }
     disk_aio*       aio() { return _aio; }
 
+    void copy_to(char* dest)
+    {
+        if (!_unmerged_write_buffers.empty())
+        {
+            for (auto &buffer : _unmerged_write_buffers)
+            {
+                memcpy(dest, buffer.buffer, buffer.size);
+                dest += buffer.size;
+            }
+        }
+        else
+        {
+            memcpy(dest, _aio->buffer, _aio->buffer_size);
+        }
+    }
+
+    void collapse() {
+        if (!_unmerged_write_buffers.empty()) {
+            auto buffer = std::shared_ptr<char>(new char[_aio->buffer_size]);
+            _merged_write_buffer_holder.assign(buffer, 0, _aio->buffer_size);
+            _aio->buffer = buffer.get();
+            copy_to(buffer.get());
+        }
+    }
+
     virtual void exec() override // aio completed
     {
         if (nullptr != _cb)
@@ -347,6 +372,8 @@ public:
         }
     }
 
+    std::vector<dsn_file_buffer_t> _unmerged_write_buffers;
+    blob                      _merged_write_buffer_holder;
 protected:
     disk_aio*         _aio;
     size_t            _transferred_size;
@@ -363,8 +390,10 @@ __inline /*static*/ task* task::get_current_task()
 
 __inline /*static*/ uint64_t task::get_current_task_id()
 {
-    dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
-    return tls_dsn.current_task ? tls_dsn.current_task->id() : 0;
+    if (tls_dsn.magic == 0xdeadbeef)
+        return tls_dsn.current_task ? tls_dsn.current_task->id() : 0;
+    else
+        return 0;
 }
 
 

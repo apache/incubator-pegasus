@@ -301,7 +301,10 @@ void replica::execute_mutation(mutation_ptr& mu)
 
     if (status() == PS_PRIMARY)
     {
-        mutation_ptr next = _primary_states.write_queue.on_work_completed(mu.get(), nullptr);
+        mutation_ptr next = _primary_states.write_queue.on_work_completed(
+            static_cast<int>(_prepare_list->max_decree() - d)
+            );
+
         if (next)
         {
             init_prepare(next);

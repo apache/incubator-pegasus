@@ -153,7 +153,7 @@ namespace dsn {
 
         bool has_holder() const { return _holder.get() != nullptr; }
 
-        const char* buffer_ptr() { return _holder.get(); }
+        const char* buffer_ptr() const { return _holder.get(); }
 
         blob range(int offset) const
         {
@@ -431,7 +431,8 @@ namespace dsn {
 
             extern bool remove_path(const std::string& path);
             
-            extern bool rename_path(const std::string& path1, const std::string& path2, bool overwrite = false);
+            // this will always remove target path if exist
+            extern bool rename_path(const std::string& path1, const std::string& path2);
 
             extern bool file_size(const std::string& path, int64_t& sz);
 

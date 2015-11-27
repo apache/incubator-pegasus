@@ -221,6 +221,32 @@ namespace dsn
             return tsk;
         }
 
+        task_ptr write_vector(
+            dsn_handle_t fh,
+            const dsn_file_buffer_t* buffers,
+            int buffer_count,
+            uint64_t offset,
+            dsn_task_code_t callback_code,
+            clientlet* svc,
+            aio_handler callback,
+            int hash /*= 0*/)
+        {
+            task_ptr tsk = new safe_task<aio_handler>(callback);
+
+            if (callback != nullptr)
+                tsk->add_ref(); // released in exec_aio
+
+            dsn_task_t t = dsn_file_create_aio_task(callback_code,
+                callback != nullptr ? safe_task<aio_handler>::exec_aio : nullptr,
+                tsk, hash, svc ? svc->tracker() : nullptr
+                );
+
+            tsk->set_task_info(t);
+
+            dsn_file_write_vector(fh, buffers, buffer_count, offset, t);
+            return tsk;
+        }
+
         task_ptr copy_remote_files(
             ::dsn::rpc_address remote,
             const std::string& source_dir,

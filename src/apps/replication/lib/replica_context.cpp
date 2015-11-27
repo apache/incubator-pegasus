@@ -102,32 +102,35 @@ void primary_context::reset_membership(const partition_configuration& config, bo
     }
 }
 
-bool primary_context::get_replica_config(::dsn::rpc_address node, /*out*/ replica_configuration& config)
-{
-    config.gpid = membership.gpid;
-    config.primary = membership.primary;  
-    config.ballot = membership.ballot;
+//
+//bool primary_context::get_replica_config(::dsn::rpc_address node, /*out*/ replica_configuration& config)
+//{
+//    config.gpid = membership.gpid;
+//    config.primary = membership.primary;  
+//    config.ballot = membership.ballot;
+//    config.learner_signature = invalid_signature;
+//
+//    auto it = statuses.find(node);
+//    if (it != statuses.end())
+//    {
+//        config.status = it->second;
+//        return true;
+//    }
+//    else
+//    {
+//        config.status = PS_INACTIVE;
+//        return false;
+//    }
+//}
 
-    auto it = statuses.find(node);
-    if (it != statuses.end())
-    {
-        config.status = it->second;
-        return true;
-    }
-    else
-    {
-        config.status = PS_INACTIVE;
-        return false;
-    }
-}
 
-
-void primary_context::get_replica_config(partition_status st, /*out*/ replica_configuration& config)
+void primary_context::get_replica_config(partition_status st, /*out*/ replica_configuration& config, uint64_t learner_signature /*= invalid_signature*/)
 {
     config.gpid = membership.gpid;
     config.primary = membership.primary;  
     config.ballot = membership.ballot;
     config.status = st;
+    config.learner_signature = learner_signature;
 }
 
 bool primary_context::check_exist(::dsn::rpc_address node, partition_status st)
