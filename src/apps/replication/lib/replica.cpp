@@ -301,7 +301,7 @@ void replica::execute_mutation(mutation_ptr& mu)
 
     if (status() == PS_PRIMARY)
     {
-        mutation_ptr next = _primary_states.write_queue.on_work_completed(
+        mutation_ptr next = _primary_states.write_queue.check_possible_work(
             static_cast<int>(_prepare_list->max_decree() - d)
             );
 

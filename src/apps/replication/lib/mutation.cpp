@@ -259,7 +259,7 @@ mutation_ptr mutation_queue::add_work(int code, dsn_message_t request, replica* 
     }
 }
 
-mutation_ptr mutation_queue::on_work_completed(int current_running_count)
+mutation_ptr mutation_queue::check_possible_work(int current_running_count)
 {
     _current_op_count = current_running_count;
 

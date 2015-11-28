@@ -144,9 +144,9 @@ public:
 
     void clear();
 
-    // called when the curren operation is completed,
+    // called when the curren operation is completed or replica configuration is change,
     // which triggers further round of operations as returned
-    mutation_ptr on_work_completed(int current_running_count);
+    mutation_ptr check_possible_work(int current_running_count);
 
 private:
     mutation_ptr unlink_next_workload()
