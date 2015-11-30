@@ -353,7 +353,7 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
     auto aio = _current_log_file->commit_log_block(
         *_pending_write,
         offset,
-        LPC_AIO_IMMEDIATE_CALLBACK,
+        LPC_WRITE_REPLICATION_LOG,
         this,
         std::bind(
             &mutation_log::internal_write_callback,
@@ -734,6 +734,8 @@ void mutation_log::update_max_decrees(global_partition_id gpid, decree d)
 {
     auto d = mu->data.header.decree;
     error_code err = ERR_OK;
+
+    dinfo("write replication log for mutation %s", mu->name());
 
     zauto_lock l(_lock);
     dassert(_is_opened, "");

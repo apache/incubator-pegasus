@@ -148,6 +148,7 @@ void replica::response_client_message(dsn_message_t request, error_code error, d
         return;
     }   
 
+    ddebug("%s: reply client write, err = %s", name(), error.to_string());
     reply(request, error);
 }
 

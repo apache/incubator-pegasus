@@ -50,11 +50,22 @@ void replica::init_learn(uint64_t signature)
     check_hashed_access();
 
     if (status() != PS_POTENTIAL_SECONDARY)
+    {
+        ddebug("%s: not potential secondary (%s), skip %s",
+            name(), enum_to_string(status()), __FUNCTION__
+            );
         return;
+    }   
         
     // at most one learning task running
     if (_potential_secondary_states.learning_round_is_running || signature == invalid_signature)
+    {
+        ddebug("%s: previous learning is still running or signature is invalid %" PRIx64,
+            name(),
+            signature
+            );
         return;
+    }   
 
     // learn timeout or primary change, the (new) primary starts another round of learning process
     if (signature != _potential_secondary_states.learning_signature)
@@ -732,7 +743,10 @@ void replica::on_learn_completion_notification(const group_check_response& repor
 void replica::on_add_learner(const group_check_request& request)
 {
     if (request.config.ballot < get_ballot())
+    {
+        ddebug("%s: %s ballot is old, skipped", name(), __FUNCTION__);
         return;
+    }   
 
     if (request.config.ballot > get_ballot()
         || is_same_ballot_status_change_allowed(status(), request.config.status))
