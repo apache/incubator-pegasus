@@ -111,6 +111,86 @@ namespace dsn {
             }
         }
 
+        // @ secondary
+        void replica::on_copy_checkpoint(const replica_configuration& request, /*out*/ learn_response& response)
+        {
+            check_hashed_access();
+
+            if (request.ballot > get_ballot())
+            {
+                if (!update_local_configuration(request))
+                {
+                    response.err = ERR_INVALID_STATE;
+                    return;
+                }
+            }
+
+            if (status() != PS_SECONDARY)
+            {
+                response.err = ERR_INVALID_STATE;
+                return;
+            }
+
+            blob placeholder;
+            int err = _app->get_learn_state(0, placeholder, response.state);
+            if (err != 0)
+            {
+                response.err = ERR_LEARN_FILE_FALED;
+            }
+            else
+            {
+                response.err = ERR_OK;
+                response.last_committed_decree = last_committed_decree();
+                response.base_local_dir = _app->data_dir();
+                response.address = _stub->_primary_address;
+            }
+        }
+
+        void replica::on_copy_checkpoint_ack(error_code err, std::shared_ptr<replica_configuration>& req, std::shared_ptr<learn_response>& resp)
+        {
+            check_hashed_access();
+
+            if (PS_PRIMARY != status())
+                return;
+
+            if (err != ERR_OK || resp == nullptr)
+            {
+                dwarn("%s: copy checkpoint from secondary failed, err = %s", name(), err.to_string());
+                return;
+            }
+
+            if (resp->err != ERR_OK)
+            {
+                dwarn("%s: copy checkpoint from secondary failed, err = %s", name(), resp->err.to_string());
+                return;
+            }
+                
+            std::string ldir = utils::filesystem::path_combine(
+                _app->learn_dir(),
+                "checkpoint.copy"
+                );
+
+            _secondary_states.checkpoint_task = file::copy_remote_files(
+                resp->address,
+                resp->base_local_dir,
+                resp->state.files,
+                ldir,
+                false,
+                LPC_COPY_REMOTE_DELTA_FILES,
+                this,
+                [this, resp](error_code err, size_t sz)
+                {
+                    this->on_copy_checkpoint_file_completed(err, sz, resp);
+                },
+                gpid_to_hash(get_gpid())
+                );
+        }
+
+        void replica::on_copy_checkpoint_file_completed(error_code err, size_t sz, std::shared_ptr<learn_response> resp)
+        {
+            // apply checkpoint
+        }
+
         void replica::checkpoint()
         {
             auto lerr = _app->flush(true);

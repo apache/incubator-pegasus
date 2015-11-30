@@ -250,8 +250,9 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
         learn_start_decree
         );
     
+    response.address = _stub->_primary_address;
     response.prepare_start_decree = invalid_decree;
-    response.commit_decree = local_committed_decree;
+    response.last_committed_decree = local_committed_decree;
     response.err = ERR_OK; 
 
     // set prepare_start_decree when to-be-learn state is covered by prepare list
@@ -375,7 +376,7 @@ void replica::on_learn_reply(
         "prepareStart = %" PRId64 ", currentState = %s",
         name(), 
         resp->err.to_string(), 
-        resp->commit_decree, 
+        resp->last_committed_decree, 
         resp->prepare_start_decree,
         enum_to_string(_potential_secondary_states.learning_status)
         );
@@ -397,12 +398,12 @@ void replica::on_learn_reply(
     }
 
     // local state is newer than learnee
-    if (resp->commit_decree < _app->last_committed_decree())
+    if (resp->last_committed_decree < _app->last_committed_decree())
     {
         dwarn("%s: learner state is newer than learnee (primary): %" PRId64 " vs %" PRId64,
             name(),
             _app->last_committed_decree(),
-            resp->commit_decree            
+            resp->last_committed_decree            
             );
 
         auto lerr = _app->close(true);
@@ -564,9 +565,9 @@ void replica::on_copy_remote_state_completed(
             if (err == 0)
             {
                 dassert(_app->last_committed_decree() >= _app->last_durable_decree(), "");
-                // because if the original _app->last_committed_decree > resp->commit_decree,
+                // because if the original _app->last_committed_decree > resp->last_committed_decree,
                 // the learn_start_decree will be set to 0, which makes learner to learn from scratch
-                dassert(_app->last_committed_decree() <= resp->commit_decree, "");
+                dassert(_app->last_committed_decree() <= resp->last_committed_decree, "");
             }
         }
 
@@ -608,7 +609,7 @@ void replica::on_copy_remote_state_completed(
         name(), resp->state.files.size(), _dir.c_str(), err, err2.to_string(),
         old_committed, _app->last_committed_decree(),
         old_durable, _app->last_durable_decree(),
-        resp->commit_decree, resp->prepare_start_decree,
+        resp->last_committed_decree, resp->prepare_start_decree,
         enum_to_string(_potential_secondary_states.learning_status)
         );
     
