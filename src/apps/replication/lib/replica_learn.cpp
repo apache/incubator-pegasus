@@ -787,12 +787,16 @@ error_code replica::apply_learned_state_from_private_log(learn_state& state)
         while (!reader.is_eof())
         {
             auto mu = mutation::read_from(reader, nullptr);
-            auto old = plist.get_mutation_by_decree(mu->data.header.decree);
-            if (old != nullptr && old->data.header.ballot >= mu->data.header.ballot)
-                return false;
+            auto d = mu->data.header.decree;
+            if (d <= plist.last_committed_decree())
+                continue;
 
-            plist.prepare(mu, PS_SECONDARY);
+            auto old = plist.get_mutation_by_decree(d);
+            if (old != nullptr && old->data.header.ballot >= mu->data.header.ballot)
+                continue;
+            
             mu->set_logged();
+            plist.prepare(mu, PS_SECONDARY);            
         }
     }
 
