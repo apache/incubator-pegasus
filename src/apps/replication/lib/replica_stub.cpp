@@ -480,6 +480,19 @@ void replica_stub::on_learn(dsn_message_t msg)
     }
 }
 
+void replica_stub::on_copy_checkpoint(const replica_configuration& request, /*out*/ learn_response& response)
+{
+    replica_ptr rep = get_replica(request.gpid);
+    if (rep != nullptr)
+    {
+        rep->on_copy_checkpoint(request, response);
+    }
+    else
+    {
+        response.err = ERR_OBJECT_NOT_FOUND;
+    }
+}
+
 void replica_stub::on_learn_completion_notification(const group_check_response& report)
 {
     replica_ptr rep = get_replica(report.gpid);
@@ -1031,6 +1044,7 @@ void replica_stub::open_service()
     register_rpc_handler(RPC_REMOVE_REPLICA, "remove", &replica_stub::on_remove);
     register_rpc_handler(RPC_GROUP_CHECK, "GroupCheck", &replica_stub::on_group_check);
     register_rpc_handler(RPC_QUERY_PN_DECREE, "query_decree", &replica_stub::on_query_decree);
+    register_rpc_handler(RPC_REPLICA_COPY_LAST_CHECKPOINT, "copy_checkpoint", &replica_stub::on_copy_checkpoint);
 }
 
 void replica_stub::close()

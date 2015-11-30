@@ -270,6 +270,8 @@ namespace dsn {
                 auto buf = bb.buffer();
 
                 state.meta.push_back(blob(buf, static_cast<int>(bb.data() - bb.buffer().get()), bb.length()));
+                state.from_excluded = 0;
+                state.to_included = last_committed_decree();
                 
                 // Test Sample
                 if (_test_file_learning)
@@ -318,6 +320,9 @@ namespace dsn {
                     reader.read(value);
                     _store[key] = value;
                 }
+
+                dassert(decree == state.to_included, "decree mismatch");
+                dassert(0 == state.from_excluded, "invalid from decree for the learned state");
 
                 init_last_commit_decree(decree);
                 _last_durable_decree = 0;

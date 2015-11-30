@@ -100,6 +100,7 @@ public:
     void on_add_learner(const group_check_request& request);
     void on_remove(const replica_configuration& request);
     void on_group_check(const group_check_request& request, /*out*/ group_check_response& response);
+    void on_copy_checkpoint(const replica_configuration& request, /*out*/ learn_response& response);
 
     //
     //    messsages from liveness monitor
@@ -199,7 +200,9 @@ private:
     void checkpoint();
     void catch_up_with_private_logs(partition_status s);
     void on_checkpoint_completed(error_code err);
-    
+    void on_copy_checkpoint_ack(error_code err, std::shared_ptr<replica_configuration>& req, std::shared_ptr<learn_response>& resp);
+    void on_copy_checkpoint_file_completed(error_code err, size_t sz, std::shared_ptr<learn_response> resp);
+
 private:
     friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
