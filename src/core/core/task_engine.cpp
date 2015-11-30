@@ -220,13 +220,13 @@ void task_worker_pool::get_runtime_info(const std::string& indent, const std::ve
 void task_worker_pool::get_queue_info(/*out*/ std::stringstream& ss)
 {
     ss << "[";
-    bool fstFlag = 0;
+    bool first_flag = 0;
     for (auto& q : _queues)
     {
         if (q)
         {
-            if (!fstFlag)
-                fstFlag = 1;
+            if (!first_flag)
+                first_flag = 1;
             else
                 ss << ",";
             ss <<"\t\t{\"name\":\""<< q->get_name() << "\",\n\t\t\"num\":" << q->approx_count() << "}\n";
@@ -296,13 +296,13 @@ void task_engine::get_runtime_info(const std::string& indent, const std::vector<
 
 void task_engine::get_queue_info(/*out*/ std::stringstream& ss)
 {
-    bool fstFlag = 0;
+    bool first_flag = 0;
     for (auto& p : _pools)
     {
         if (p)
         {
-            if (!fstFlag) 
-                fstFlag = 1;
+            if (!first_flag) 
+                first_flag = 1;
             else
                 ss << ",";
             ss << "\t{\"pool_name\":\""<<dsn_threadpool_code_to_string(p->spec().pool_code) <<"\",\n\t\"pool_queue\":\n";

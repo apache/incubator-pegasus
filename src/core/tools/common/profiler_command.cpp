@@ -525,7 +525,7 @@ namespace dsn {
                 if (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE)
                     task_id = task_spec::get(task_id)->rpc_paired_code;
 
-                bool fstFlag = 0;
+                bool first_flag = 0;
                 do{
                     for (int k = 0; k < PREF_COUNTER_COUNT; k++)
                     {
@@ -553,8 +553,8 @@ namespace dsn {
                                 break;
                             }
 
-                            if (!fstFlag)
-                                fstFlag = 1;
+                            if (!first_flag)
+                                first_flag = 1;
                             else
                                 ss << ",";
 
@@ -634,7 +634,7 @@ namespace dsn {
 
                 ss << "[";
                 for (int j = 0; j <= dsn_task_code_max(); j++)
-                if (j != TASK_CODE_INVALID && j != task_id && task_spec::get(j)->pool_code == pool && std::string(dsn_task_code_to_string(j)).find("_ACK") == std::string::npos)
+                if (j != TASK_CODE_INVALID && j != task_id && task_spec::get(j)->pool_code == pool && task_spec::get(j)->type == TASK_TYPE_RPC_RESPONSE)
                     ss << "\"" << std::string(dsn_task_code_to_string(j)) << "\",";
                 ss << "]";
                 return ss.str();
