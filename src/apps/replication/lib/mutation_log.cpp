@@ -1232,7 +1232,8 @@ int mutation_log::garbage_collection(multi_partition_decrees_ex& durable_decrees
         delete lf;
         dsn::utils::filesystem::rename_path(path, removed);
         return nullptr;
-    } else if (err != ERR_OK)
+    }
+    else if (err != ERR_OK)
     {
         dassert(false, "unexpected error type");
     }
@@ -1241,7 +1242,7 @@ int mutation_log::garbage_collection(multi_partition_decrees_ex& durable_decrees
     lf->read_header(reader);
     if (!lf->is_right_header())
     {
-        err = ERR_FILE_OPERATION_FAILED;
+        err = ERR_INVALID_DATA;
         std::string removed = std::string(path) + ".removed";
         derror("invalid log file header of file %s. Rename the file to %s", path, removed.c_str());
         delete lf;
