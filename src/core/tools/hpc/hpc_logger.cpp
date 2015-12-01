@@ -198,10 +198,10 @@ namespace dsn
             if (_index - _start_index > 20)
             {
                 std::stringstream str2;
-                str2 << "log." << (_start_index + 1) << ".txt";
-                if (!dsn::utils::filesystem::remove_path(str2.str()))
+                str2 << "log." << _start_index << ".txt";
+                if (::remove(str2.str().c_str()) != 0)
                 {
-                    dwarn("Fail to remove file %s.", str2.str().c_str());
+                    printf("Failed to remove garbage log file %s\n", str2.str().c_str());
                 }
                 else
                 {

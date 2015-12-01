@@ -77,9 +77,9 @@ typedef std::unordered_map<global_partition_id, log_replica_info>
 struct log_block_header
 {
     int32_t magic;
-    int32_t length;
-    int32_t body_crc;
-    uint32_t local_offset;
+    int32_t length; // block data length (not including log_block_header)
+    int32_t body_crc; // block data crc (not including log_block_header)
+    uint32_t local_offset; // start offset in the log file
 };
 
 struct log_file_header

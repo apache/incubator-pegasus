@@ -34,9 +34,47 @@
  */
 # include "mutation_log.h"
 # include <gtest/gtest.h>
+# include <cstdio>
 
 using namespace ::dsn;
 using namespace ::dsn::replication;
+
+static void copy_file(const char* from_file, const char* to_file, int to_size = -1)
+{
+    int64_t from_size;
+    ASSERT_TRUE(dsn::utils::filesystem::file_size(from_file, from_size));
+    ASSERT_LE(to_size, from_size);
+    FILE* from = fopen(from_file, "rb");
+    ASSERT_TRUE(from != nullptr);
+    FILE* to = fopen(to_file, "wb");
+    ASSERT_TRUE(to != nullptr);
+    if (to_size == -1)
+        to_size = from_size;
+    if (to_size > 0)
+    {
+        char buf[to_size];
+        int n = fread(buf, 1, to_size, from);
+        ASSERT_EQ(to_size, n);
+        n = fwrite(buf, 1, to_size, to);
+        ASSERT_EQ(to_size, n);
+    }
+    int r = fclose(from);
+    ASSERT_EQ(0, r);
+    r = fclose(to);
+    ASSERT_EQ(0, r);
+}
+
+static void overwrite_file(const char* file, int offset, const void* buf, int size)
+{
+    FILE* f = fopen(file, "r+b");
+    ASSERT_TRUE(f != nullptr);
+    int r = fseek(f, offset, SEEK_SET);
+    ASSERT_EQ(0, r);
+    size_t n = fwrite(buf, 1, size, f);
+    ASSERT_EQ(size, n);
+    r = fclose(f);
+    ASSERT_EQ(0, r);
+}
 
 TEST(replication, log_file)
 {
@@ -48,18 +86,10 @@ TEST(replication, log_file)
     int64_t offset = 100;
     std::string str = "hello, world!";
     error_code err;
-
-    // write log
     log_file_ptr lf = nullptr;
 
-    lf = log_file::create_write(
-        ".",
-        1,
-        0
-        );
-    ASSERT_TRUE(lf == nullptr); // already exist
-
-    utils::filesystem::remove_path(fpath);
+    // write log
+    ASSERT_TRUE(!dsn::utils::filesystem::file_exists(fpath));
     lf = log_file::create_write(
         ".",
         index,
@@ -70,8 +100,6 @@ TEST(replication, log_file)
     ASSERT_EQ(index, lf->index());
     ASSERT_EQ(offset, lf->start_offset());
     ASSERT_EQ(offset, lf->end_offset());
-
-    // write data
     for (int i = 0; i < 100; i++)
     {
         auto writer = lf->prepare_log_block();
@@ -104,9 +132,18 @@ TEST(replication, log_file)
         lf->flush();
         offset += writer->size();
     }
-
     lf->close();
     lf = nullptr;
+    ASSERT_TRUE(dsn::utils::filesystem::file_exists(fpath));
+
+    // file already exist
+    offset = 100;
+    lf = log_file::create_write(
+        ".",
+        index,
+        offset
+        );
+    ASSERT_TRUE(lf == nullptr);
 
     // invalid file name
     lf = log_file::open_read("", err);
@@ -145,42 +182,57 @@ TEST(replication, log_file)
     ASSERT_TRUE(lf == nullptr);
     ASSERT_EQ(ERR_FILE_OPERATION_FAILED, err);
 
-    // bad file data: crc checking failed
+    // bad file data: empty file
+    ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.0"));
+    copy_file(fpath.c_str(), "log.1.0", 0);
+    ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.0"));
     lf = log_file::open_read("log.1.0", err);
     ASSERT_TRUE(lf == nullptr);
-    ASSERT_EQ(ERR_FILE_OPERATION_FAILED, err);
+    ASSERT_EQ(ERR_HANDLE_EOF, err);
     ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.0"));
     ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.0.removed"));
-    ASSERT_TRUE(dsn::utils::filesystem::rename_path("log.1.0.removed", "log.1.0"));
 
-    // bad file data: bad log_file_header (magic = 0xfeadbeef)
+    // bad file data: incomplete log_block_header
+    ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.1"));
+    copy_file(fpath.c_str(), "log.1.1", sizeof(log_block_header) - 1);
+    ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.1"));
     lf = log_file::open_read("log.1.1", err);
     ASSERT_TRUE(lf == nullptr);
-    ASSERT_EQ(ERR_FILE_OPERATION_FAILED, err);
+    ASSERT_EQ(ERR_INCOMPLETE_DATA, err);
     ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.1"));
     ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.1.removed"));
-    ASSERT_TRUE(dsn::utils::filesystem::rename_path("log.1.1.removed", "log.1.1"));
 
-    // bad file data: less than log_block_header
+    // bad file data: bad log_block_header (magic = 0xfeadbeef)
+    ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.2"));
+    copy_file(fpath.c_str(), "log.1.2");
+    int32_t bad_magic = 0xfeadbeef;
+    overwrite_file("log.1.2", FIELD_OFFSET(log_block_header, magic), &bad_magic, sizeof(bad_magic));
+    ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.2"));
     lf = log_file::open_read("log.1.2", err);
     ASSERT_TRUE(lf == nullptr);
-    ASSERT_EQ(ERR_FILE_OPERATION_FAILED, err);
+    ASSERT_EQ(ERR_INVALID_DATA, err);
     ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.2"));
     ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.2.removed"));
-    ASSERT_TRUE(dsn::utils::filesystem::rename_path("log.1.2.removed", "log.1.2"));
 
-    // bad file data: bad log_block_header
+    // bad file data: bad log_block_header (crc check failed)
+    ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.3"));
+    copy_file(fpath.c_str(), "log.1.3");
+    int32_t bad_crc = 0;
+    overwrite_file("log.1.3", FIELD_OFFSET(log_block_header, body_crc), &bad_crc, sizeof(bad_crc));
+    ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.3"));
     lf = log_file::open_read("log.1.3", err);
     ASSERT_TRUE(lf == nullptr);
-    ASSERT_EQ(ERR_FILE_OPERATION_FAILED, err);
+    ASSERT_EQ(ERR_INVALID_DATA, err);
     ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.3"));
     ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.3.removed"));
-    ASSERT_TRUE(dsn::utils::filesystem::rename_path("log.1.3.removed", "log.1.3"));
 
-    // bad file data: truncated block body
+    // bad file data: incomplete block body
+    ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.4"));
+    copy_file(fpath.c_str(), "log.1.4", sizeof(log_block_header) + 1);
+    ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.4"));
     lf = log_file::open_read("log.1.4", err);
     ASSERT_TRUE(lf == nullptr);
-    ASSERT_EQ(ERR_FILE_OPERATION_FAILED, err);
+    ASSERT_EQ(ERR_INCOMPLETE_DATA, err);
     ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.4"));
     ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.4.removed"));
     ASSERT_TRUE(dsn::utils::filesystem::rename_path("log.1.4.removed", "log.1.4"));
@@ -201,7 +253,7 @@ TEST(replication, log_file)
     {
         blob bb;
         auto err = lf->read_next_log_block(offset - lf->start_offset(), bb);
-        ASSERT_TRUE(err == ERR_OK);
+        ASSERT_EQ(ERR_OK, err);
 
         binary_reader reader(bb);
 
