@@ -52,10 +52,10 @@ static void copy_file(const char* from_file, const char* to_file, int to_size = 
         to_size = from_size;
     if (to_size > 0)
     {
-        char buf[to_size];
-        int n = fread(buf, 1, to_size, from);
+        std::unique_ptr<char> buf(new char[to_size]);
+        int n = fread(buf.get(), 1, to_size, from);
         ASSERT_EQ(to_size, n);
-        n = fwrite(buf, 1, to_size, to);
+        n = fwrite(buf.get(), 1, to_size, to);
         ASSERT_EQ(to_size, n);
     }
     int r = fclose(from);
@@ -249,6 +249,7 @@ TEST(replication, log_file)
     ASSERT_EQ(lf->start_offset() + sz, lf->end_offset());
 
     // read data
+    lf->crc32() = 0;
     for (int i = 0; i < 100; i++)
     {
         blob bb;
