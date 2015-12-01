@@ -263,6 +263,8 @@ int simple_kv_service_impl::get_learn_state(decree start, const blob& learn_req,
 
     state.meta.push_back(blob(buf, static_cast<int>(bb.data() - bb.buffer().get()), bb.length()));
 
+    ddebug("buffer_size=%d", bb.length());
+
     // Test Sample
     if (_test_file_learning)
     {
@@ -283,6 +285,8 @@ int simple_kv_service_impl::get_learn_state(decree start, const blob& learn_req,
 int simple_kv_service_impl::apply_learn_state(learn_state& state)
 {
     blob bb((const char*)state.meta[0].data(), 0, state.meta[0].length());
+
+    ddebug("buffer_size=%d", state.meta[0].length());
 
     binary_reader reader(bb);
 
