@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     replica interface, the base object which rdsn replicates
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -194,7 +194,7 @@ private:
 
     /////////////////////////////////////////////////////////////////
     // check timer for gc, checkpointing etc.
-    void on_check_timer();
+    void on_checkpoint_timer();
     void gc();
     void init_checkpoint();
     void checkpoint();

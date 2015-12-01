@@ -202,7 +202,7 @@ namespace dsn {
                 init_last_commit_decree(version);
             }
 
-            int simple_kv_service_impl::flush(bool force)
+            int simple_kv_service_impl::checkpoint()
             {
                 zauto_lock l(_lock);
 
@@ -238,121 +238,64 @@ namespace dsn {
                     os.write((const char*)&v[0], sz);
                 }
 
+                // TODO: gc checkpoints
+
                 _last_durable_decree = last_committed_decree();
                 return 0;
             }
 
             // helper routines to accelerate learning
-            int simple_kv_service_impl::get_learn_state(decree start, const blob& learn_req, /*out*/ learn_state& state)
+            int simple_kv_service_impl::get_checkpoint(decree start, const blob& learn_req, /*out*/ learn_state& state)
             {
-                ::dsn::binary_writer writer;
-
-                zauto_lock l(_lock);
-
-                int magic = 0xdeadbeef;
-                writer.write(magic);
-
-                auto c = last_committed_decree();
-                writer.write(c);
-
-                dassert(c >= 0, "");
-
-                uint64_t count = static_cast<uint64_t>(_store.size());
-                writer.write(count);
-
-                for (auto it = _store.begin(); it != _store.end(); it++)
+                if (_last_durable_decree.load() > 0)
                 {
-                    writer.write(it->first);
-                    writer.write(it->second);
+                    state.from_decree_excluded = 0;
+                    state.to_decree_included = _last_durable_decree;
+
+                    char name[256];
+                    sprintf(name, "%s/checkpoint.%" PRId64,
+                        data_dir().c_str(),
+                        _last_durable_decree.load()
+                        );
+
+                    state.files.push_back(name);
+                    return ERR_OK;
                 }
-
-                auto bb = writer.get_buffer();
-                auto buf = bb.buffer();
-
-                state.meta.push_back(blob(buf, static_cast<int>(bb.data() - bb.buffer().get()), bb.length()));
-                state.from_excluded = 0;
-                state.to_included = last_committed_decree();
-                
-                // Test Sample
-                if (_test_file_learning)
+                else
                 {
-                    std::stringstream ss;                
-                    ss << dsn_random32(0, 10000);
-
-                    auto learn_test_file = data_dir() + "/test_learning_" + ss.str() + ".txt";
-                    state.files.push_back(learn_test_file);
-                    
-                    std::ofstream fout(learn_test_file.c_str());
-                    fout << "DEADBEEF" << std::endl;        
-                    fout.close();        
+                    state.from_decree_excluded = 0;
+                    state.to_decree_included = 0;
+                    return ERR_OBJECT_NOT_FOUND;
                 }
-
-                return 0;
             }
 
-            int simple_kv_service_impl::apply_learn_state(learn_state& state)
+            int simple_kv_service_impl::apply_checkpoint(learn_state& state, chkpt_apply_mode mode)
             {
-                blob bb((const char*)state.meta[0].data(), 0, state.meta[0].length());
-
-                binary_reader reader(bb);
-
-                zauto_lock l(_lock);
-
-                _store.clear();
-
-                int magic;
-                reader.read(magic);
-
-                dassert(magic == 0xdeadbeef, "");
-
-                decree decree;
-                reader.read(decree);
-
-                dassert(decree >= 0, "");
-
-                uint64_t count;
-                reader.read(count);
-
-                for (uint64_t i = 0; i < count; i++)
+                if (mode == CHKPT_LEARN)
                 {
-                    std::string key, value;
-                    reader.read(key);
-                    reader.read(value);
-                    _store[key] = value;
+                    recover(state.files[0], state.to_decree_included);
+                    return ERR_OK;
                 }
-
-                dassert(decree == state.to_included, "decree mismatch");
-                dassert(0 == state.from_excluded, "invalid from decree for the learned state");
-
-                init_last_commit_decree(decree);
-                _last_durable_decree = 0;
-
-                flush(true);
-
-                bool ret = true;
-                if (_test_file_learning)
+                else
                 {
-                    dassert(state.files.size() == 1, "");
-                    std::string fn = learn_dir() + "/" + state.files[0];
-                    ret = dsn::utils::filesystem::path_exists(fn.c_str());
-                    if (ret)
-                    {
-                        std::string s;
-                        std::ifstream fin(fn.c_str());                        
-                        
-                        getline(fin, s);
-                        fin.close();
+                    dassert(CHKPT_COPY == mode, "invalid mode %d", (int)mode);
+                    dassert(state.to_decree_included > _last_durable_decree, "checkpoint's decree is smaller than current");
 
-                        ret = (s == "DEADBEEF");
-                    }
+                    char name[256];
+                    sprintf(name, "%s/checkpoint.%" PRId64,
+                        data_dir().c_str(),
+                        state.to_decree_included
+                        );
+                    std::string lname(name);
+
+                    if (!utils::filesystem::rename_path(state.files[0], lname))
+                        return ERR_CHECKPOINT_FAILED;
                     else
                     {
-                        dassert(false, "learning file is missing");
-                    }
+                        _last_durable_decree = state.to_decree_included;
+                        return ERR_OK;
+                    }                        
                 }
-
-                if (ret) return 0;
-                else return ERR_LEARN_FILE_FALED.get();
             }
 
         }

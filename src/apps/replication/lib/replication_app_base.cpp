@@ -188,7 +188,7 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
         }
         else
         {
-            on_empty_write();
+            // empty mutation write
         }
 
         if (_physical_error != 0)

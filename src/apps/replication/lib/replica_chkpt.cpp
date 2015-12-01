@@ -41,12 +41,12 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ "replica.timer"
+# define __TITLE__ "replica.chkpoint"
 
 namespace dsn { 
     namespace replication {
 
-        void replica::on_check_timer()
+        void replica::on_checkpoint_timer()
         {
             init_checkpoint();
             gc();
@@ -74,10 +74,6 @@ namespace dsn {
             if (_app->is_delta_state_learning_supported())
                 return;
 
-            // already running
-            if (_secondary_states.checkpoint_task != nullptr)
-                return;
-
             // private log must be enabled to make sure commits
             // are not lost during checkpinting
             dassert(nullptr != _private_log, "log_enable_private_prepare must be true for checkpointing");
@@ -86,15 +82,31 @@ namespace dsn {
             if (last_committed_decree() - last_durable_decree() < 10000)
                 return;
 
-            // primary is downgraded to secondary for checkpointing as no write can be seen
-            // during checkpointing (i.e., state is freezed)
+            // primary cannot checkpoint (TODO: test if async checkpoint is supported)
+            // therefore we have to copy checkpoints from secondaries
             if (PS_PRIMARY == status())
             {
-                configuration_update_request proposal;
-                proposal.config = _primary_states.membership;
-                proposal.type = CT_DOWNGRADE_TO_SECONDARY;
-                proposal.node = proposal.config.primary;
-                downgrade_to_secondary_on_primary(proposal);
+                // only one running instance
+                if (nullptr == _primary_states.checkpoint_task)
+                {
+                    if (_primary_states.membership.secondaries.size() == 0)
+                        return;
+
+                    std::shared_ptr<replica_configuration> rc(new replica_configuration);
+                    _primary_states.get_replica_config(PS_SECONDARY, *rc);
+
+                    rpc_address sd = _primary_states.membership.secondaries
+                        [dsn_random32(0, (int)_primary_states.membership.secondaries.size() - 1)];
+
+                    _primary_states.checkpoint_task = rpc::call_typed(
+                        sd,
+                        RPC_REPLICA_COPY_LAST_CHECKPOINT,
+                        rc,
+                        this,
+                        &replica::on_copy_checkpoint_ack,
+                        gpid_to_hash(get_gpid())
+                        );
+                }
             }
 
             // secondary can start checkpint in the long running thread pool
@@ -102,12 +114,16 @@ namespace dsn {
             {
                 dassert(PS_SECONDARY == status(), "");
 
-                _secondary_states.checkpoint_task = tasking::enqueue(
-                    LPC_CHECKPOINT_REPLICA,
-                    this,
-                    &replica::checkpoint,
-                    gpid_to_hash(get_gpid())
-                    );
+                // only one running instance
+                if (_secondary_states.checkpoint_task != nullptr)
+                {
+                    _secondary_states.checkpoint_task = tasking::enqueue(
+                        LPC_CHECKPOINT_REPLICA,
+                        this,
+                        &replica::checkpoint,
+                        gpid_to_hash(get_gpid())
+                        );
+                }                
             }
         }
 
@@ -131,8 +147,14 @@ namespace dsn {
                 return;
             }
 
+            if (_app->last_durable_decree() == 0)
+            {
+                response.err = ERR_OBJECT_NOT_FOUND;
+                return;
+            }
+
             blob placeholder;
-            int err = _app->get_learn_state(0, placeholder, response.state);
+            int err = _app->get_checkpoint(0, placeholder, response.state);
             if (err != 0)
             {
                 response.err = ERR_LEARN_FILE_FALED;
@@ -151,17 +173,31 @@ namespace dsn {
             check_hashed_access();
 
             if (PS_PRIMARY != status())
+            {
+                _primary_states.checkpoint_task = nullptr;
                 return;
+            }
 
             if (err != ERR_OK || resp == nullptr)
             {
                 dwarn("%s: copy checkpoint from secondary failed, err = %s", name(), err.to_string());
+                _primary_states.checkpoint_task = nullptr;
                 return;
             }
 
             if (resp->err != ERR_OK)
             {
-                dwarn("%s: copy checkpoint from secondary failed, err = %s", name(), resp->err.to_string());
+                dinfo("%s: copy checkpoint from secondary failed, err = %s", name(), resp->err.to_string());
+                _primary_states.checkpoint_task = nullptr;
+                return;
+            }
+
+            if (resp->state.to_decree_included <= _app->last_durable_decree())
+            {
+                dinfo("%s: copy checkpoint from secondary skipped, as its decree is not bigger than current durable_decree: %" PRIu64 " vs %" PRIu64 "",
+                    name(), resp->state.to_decree_included, _app->last_durable_decree()
+                    );
+                _primary_states.checkpoint_task = nullptr;
                 return;
             }
                 
@@ -170,13 +206,16 @@ namespace dsn {
                 "checkpoint.copy"
                 );
 
-            _secondary_states.checkpoint_task = file::copy_remote_files(
+            if (utils::filesystem::path_exists(ldir))
+                utils::filesystem::remove_path(ldir);
+
+            _primary_states.checkpoint_task = file::copy_remote_files(
                 resp->address,
                 resp->base_local_dir,
                 resp->state.files,
                 ldir,
                 false,
-                LPC_COPY_REMOTE_DELTA_FILES,
+                LPC_REPLICATION_COPY_REMOTE_FILES,
                 this,
                 [this, resp](error_code err, size_t sz)
                 {
@@ -188,12 +227,17 @@ namespace dsn {
 
         void replica::on_copy_checkpoint_file_completed(error_code err, size_t sz, std::shared_ptr<learn_response> resp)
         {
-            // apply checkpoint
+            if (PS_PRIMARY == status() && resp->state.to_decree_included > _app->last_durable_decree())
+            {
+                _app->apply_checkpoint(resp->state, CHKPT_COPY);
+            }
+
+            _primary_states.checkpoint_task = nullptr;
         }
 
         void replica::checkpoint()
         {
-            auto lerr = _app->flush(true);
+            auto lerr = _app->checkpoint();
             auto err = lerr == 0 ? ERR_OK :
                 (lerr == ERR_WRONG_TIMING ? ERR_WRONG_TIMING : ERR_LOCAL_APP_FAILURE);
             
@@ -208,7 +252,7 @@ namespace dsn {
         void replica::catch_up_with_private_logs(partition_status s)
         {
             learn_state state;
-            _private_log->get_learn_state(
+            _private_log->get_checkpoint(
                 get_gpid(),
                 _app->last_committed_decree() + 1,
                 state

@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     context for replica with different roles
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -64,6 +64,13 @@ void primary_context::cleanup(bool clean_pending_mutations)
     {
         reconfiguration_task->cancel(true);
         reconfiguration_task = nullptr;
+    }
+
+    // clean up checkpoint
+    if (nullptr != checkpoint_task)
+    {
+        checkpoint_task->cancel(true);
+        checkpoint_task = nullptr;
     }
 }
 

@@ -722,24 +722,24 @@ namespace dsn { namespace replication {
     // ---------- learn_state -------------
     struct learn_state
     {
-        uint64_t from_excluded;
-        uint64_t to_included;
+        int64_t from_decree_excluded;
+        int64_t to_decree_included;
         std::vector< ::dsn::blob>  meta;
         std::vector< std::string>  files;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const learn_state& val)
     {
-        marshall(writer, val.from_excluded);
-        marshall(writer, val.to_included);
+        marshall(writer, val.from_decree_excluded);
+        marshall(writer, val.to_decree_included);
         marshall(writer, val.meta);
         marshall(writer, val.files);
     };
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ learn_state& val)
     {
-        unmarshall(reader, val.from_excluded);
-        unmarshall(reader, val.to_included);
+        unmarshall(reader, val.from_decree_excluded);
+        unmarshall(reader, val.to_decree_included);
         unmarshall(reader, val.meta);
         unmarshall(reader, val.files);
     };

@@ -54,11 +54,11 @@ namespace dsn {
 
                 virtual int  open(bool create_new);
                 virtual int  close(bool clear_state);
-                virtual int  flush(bool force);
+                virtual int  checkpoint();
 
                 // helper routines to accelerate learning
-                virtual int get_learn_state(decree start, const blob& learn_req, /*out*/ learn_state& state);
-                virtual int apply_learn_state(learn_state& state);
+                virtual int get_checkpoint(decree start, const blob& learn_req, /*out*/ learn_state& state);
+                virtual int apply_checkpoint(learn_state& state, chkpt_apply_mode mode);
 
             private:
                 void recover();

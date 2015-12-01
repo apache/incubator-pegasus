@@ -183,7 +183,7 @@ public:
     //
     //  when this is a private log, log files are learned by remote replicas
     //
-    void get_learn_state(
+    void get_checkpoint(
         global_partition_id gpid,
         ::dsn::replication::decree start,
         /*out*/ ::dsn::replication::learn_state& state

@@ -848,7 +848,7 @@ int64_t mutation_log::on_partition_reset(global_partition_id gpid, decree max_d)
     return _global_end_offset;
 }
 
-void mutation_log::get_learn_state(
+void mutation_log::get_checkpoint(
     global_partition_id gpid,
     ::dsn::replication::decree start,
     /*out*/ ::dsn::replication::learn_state& state

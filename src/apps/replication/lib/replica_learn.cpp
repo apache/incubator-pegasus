@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     replication learning process
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -161,7 +161,7 @@ void replica::init_learn(uint64_t signature)
     request->last_committed_decree_in_prepare_list = _prepare_list->last_committed_decree();
     request->learner = _stub->_primary_address;
     request->signature = _potential_secondary_states.learning_signature;
-    _app->prepare_learning_request(request->app_specific_learn_request);
+    _app->prepare_learn_request(request->app_specific_learn_request);
 
     ddebug(
         "%s: init_learn with primaryAddr = [%s], lastAppC/DDecree = <%" PRId64 ",%" PRId64 ">, "
@@ -307,7 +307,7 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
     else if (_app->is_delta_state_learning_supported() 
         || learn_start_decree <= _app->last_durable_decree())
     {
-        int lerr = _app->get_learn_state(
+        int lerr = _app->get_checkpoint(
             learn_start_decree, 
             request.app_specific_learn_request, 
             response.state
@@ -335,7 +335,7 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
             name()
             );
 
-        _private_log->get_learn_state(get_gpid(), learn_start_decree, response.state);
+        _private_log->get_checkpoint(get_gpid(), learn_start_decree, response.state);
         response.base_local_dir = _private_log->dir();
     }
 
@@ -502,7 +502,7 @@ void replica::on_learn_reply(
                 resp->state.files,
                 _app->learn_dir(),
                 true,
-                LPC_COPY_REMOTE_DELTA_FILES,
+                LPC_REPLICATION_COPY_REMOTE_FILES,
                 this,
                 std::bind(&replica::on_copy_remote_state_completed, this,
                 std::placeholders::_1,
@@ -561,7 +561,7 @@ void replica::on_copy_remote_state_completed(
         if (_app->is_delta_state_learning_supported())
         {
             // the only place where there is non-in-partition-thread update
-            err = _app->apply_learn_state(resp->state);
+            err = _app->apply_checkpoint(resp->state, CHKPT_LEARN);
             if (err == 0)
             {
                 dassert(_app->last_committed_decree() >= _app->last_durable_decree(), "");
@@ -585,7 +585,7 @@ void replica::on_copy_remote_state_completed(
             // apply checkpoint
             if (!is_log)
             {
-                err = _app->apply_learn_state(lstate);
+                err = _app->apply_checkpoint(lstate, CHKPT_LEARN);
             }
 
             // apply logs
@@ -619,7 +619,7 @@ void replica::on_copy_remote_state_completed(
         && _app->last_committed_decree() + 1 >= _potential_secondary_states.learning_start_prepare_decree
         && _app->last_committed_decree() > _app->last_durable_decree())
     {        
-        err = _app->flush(true);
+        err = _app->checkpoint();
         ddebug(
             "%s: flush done, err = %d, lastC/DDecree = <%" PRId64 ", %" PRId64 ">",
             name(), err, _app->last_committed_decree(), _app->last_durable_decree()
