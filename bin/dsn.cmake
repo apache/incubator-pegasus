@@ -555,7 +555,7 @@ function(dsn_add_pseudo_projects)
 endfunction(dsn_add_pseudo_projects)
 
 function(dsn_common_setup)
-    if (NOT WIN32)
+    if(NOT WIN32)
         execute_process(COMMAND sh -c "rm -rf ${CMAKE_SOURCE_DIR}/.matchfile")
     endif()
 
