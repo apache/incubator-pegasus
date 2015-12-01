@@ -49,6 +49,12 @@ namespace dsn {
             ENUM_REG(PS_POTENTIAL_SECONDARY)
         ENUM_END(partition_status)
 
+        ENUM_BEGIN(learn_type, LT_NONE)
+            ENUM_REG(LT_CACHE)
+            ENUM_REG(LT_APP)
+            ENUM_REG(LT_LOG)
+        ENUM_END(learn_type)
+
         ENUM_BEGIN(learner_status, Learning_INVALID)
             ENUM_REG(LearningWithoutPrepare)
             ENUM_REG(LearningWithPrepareTransient)

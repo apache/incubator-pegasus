@@ -1227,17 +1227,13 @@ int mutation_log::garbage_collection(multi_partition_decrees_ex& durable_decrees
     auto lf = new log_file(path, hfile, index, start_offset, true);
     blob hdr_blob;
     err = lf->read_next_log_block(0, hdr_blob);
-    if (err == ERR_INVALID_DATA || err == ERR_INCOMPLETE_DATA || err == ERR_HANDLE_EOF)
+    if (err == ERR_INVALID_DATA || err == ERR_INCOMPLETE_DATA || err == ERR_HANDLE_EOF || err == ERR_FILE_OPERATION_FAILED)
     {
         std::string removed = std::string(path) + ".removed";
         derror("read first log entry of file %s failed, err = %s. Rename the file to %s", path, err.to_string(), removed.c_str());
         delete lf;
         dsn::utils::filesystem::rename_path(path, removed);
         return nullptr;
-    }
-    else if (err != ERR_OK)
-    {
-        dassert(false, "unexpected error type");
     }
 
     binary_reader reader(hdr_blob);
