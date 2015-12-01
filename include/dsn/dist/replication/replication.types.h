@@ -471,6 +471,17 @@ namespace dsn { namespace replication {
 
     DEFINE_POD_SERIALIZATION(read_semantic_t);
 
+    // ---------- learn_type -------------
+    enum learn_type
+    {
+        LT_NONE = 0,
+        LT_CACHE = 1,
+        LT_APP = 2,
+        LT_LOG = 3,
+    };
+
+    DEFINE_POD_SERIALIZATION(learn_type);
+
     // ---------- learner_status -------------
     enum learner_status
     {
@@ -776,6 +787,7 @@ namespace dsn { namespace replication {
         replica_configuration config;
         int64_t commit_decree;
         int64_t prepare_start_decree;
+        learn_type type;
         learn_state state;
         std::string base_local_dir;
     };
@@ -786,6 +798,7 @@ namespace dsn { namespace replication {
         marshall(writer, val.config);
         marshall(writer, val.commit_decree);
         marshall(writer, val.prepare_start_decree);
+        marshall(writer, val.type);
         marshall(writer, val.state);
         marshall(writer, val.base_local_dir);
     };
@@ -796,6 +809,7 @@ namespace dsn { namespace replication {
         unmarshall(reader, val.config);
         unmarshall(reader, val.commit_decree);
         unmarshall(reader, val.prepare_start_decree);
+        unmarshall(reader, val.type);
         unmarshall(reader, val.state);
         unmarshall(reader, val.base_local_dir);
     };

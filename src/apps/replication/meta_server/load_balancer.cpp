@@ -123,16 +123,15 @@ void load_balancer::explictly_send_proposal(global_partition_id gpid, rpc_addres
         }
     }
 
+    if (stats.empty())
+    {
+        return ::dsn::rpc_address();
+    }
     
     std::sort(stats.begin(), stats.end(), [](const std::pair< ::dsn::rpc_address, int>& l, const std::pair< ::dsn::rpc_address, int>& r)
     {
         return l.second < r.second || (l.second == r.second && l.first < r.first);
     });
-
-    if (stats.empty())
-    {
-        return ::dsn::rpc_address();
-    }
 
     if (s_lb_for_test)
     {
@@ -165,7 +164,16 @@ void load_balancer::run_lb(partition_configuration& pc)
     {
         if (pc.secondaries.size() > 0)
         {
-            proposal.node = pc.secondaries[dsn_random32(0, static_cast<int>(pc.secondaries.size()) - 1)];
+            if (s_lb_for_test)
+            {
+                std::vector< ::dsn::rpc_address> tmp(pc.secondaries);
+                std::sort(tmp.begin(), tmp.end());
+                proposal.node = tmp[0];
+            }
+            else
+            {
+                proposal.node = pc.secondaries[dsn_random32(0, static_cast<int>(pc.secondaries.size()) - 1)];
+            }
             proposal.type = CT_UPGRADE_TO_PRIMARY;
         }
 

@@ -21,13 +21,9 @@ inject:on_rpc_call:rpc_name=RPC_LEARN_COMPLETION_NOTIFY,from=r2,to=r1
 
 ###
 # after some time, r1 will do group check to r2,
-# which will trigger notify learn completion again,
-# so group check will help learning
+# which will find learning succeed
 ###
 wait:on_rpc_request_enqueue:rpc_name=RPC_GROUP_CHECK,from=r1,to=r2
-wait:on_rpc_call:rpc_name=RPC_LEARN_COMPLETION_NOTIFY,from=r2,to=r1
-
-# wait until server ready
 config:{2,r1,[r2]}
 state:{{r1,pri,2,0},{r2,sec,2,0}}
 

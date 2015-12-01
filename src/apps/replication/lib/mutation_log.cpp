@@ -1235,7 +1235,10 @@ int mutation_log::garbage_collection(multi_partition_decrees_ex& durable_decrees
     }
     else if (err != ERR_OK)
     {
-        dassert(false, "unexpected error type");
+        // TODO(qinzuoyan): process this properly, not coredump
+        //dassert(false, "unexpected error type");
+        delete lf;
+        return nullptr;
     }
 
     binary_reader reader(hdr_blob);
