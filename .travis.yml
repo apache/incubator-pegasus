@@ -1,0 +1,6 @@
+language: cpp
+compiler:
+  - gcc
+  - clang
+
+script: ./builder.sh && ./test.sh
