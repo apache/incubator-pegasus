@@ -10,10 +10,10 @@ $idl_type = $argv[4];
 void module_init()
 {
     // register all possible service apps
-    dsn::register_app<<?=$_PROG->get_cpp_namespace().$_PROG->name?>_server_app>("server");
-    dsn::register_app<<?=$_PROG->get_cpp_namespace().$_PROG->name?>_client_app>("client");
+    dsn::register_app< <?=$_PROG->get_cpp_namespace().$_PROG->name?>_server_app>("server");
+    dsn::register_app< <?=$_PROG->get_cpp_namespace().$_PROG->name?>_client_app>("client");
 <?php foreach ($_PROG->services as $svc) { ?>
-    dsn::register_app<<?=$_PROG->get_cpp_namespace().$svc->name?>_perf_test_client_app>("client.perf.<?=$svc->name?>");
+    dsn::register_app< <?=$_PROG->get_cpp_namespace().$svc->name?>_perf_test_client_app>("client.perf.<?=$svc->name?>");
 <?php } ?>
 }
 
