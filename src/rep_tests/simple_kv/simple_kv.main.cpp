@@ -56,6 +56,8 @@ static void module_init()
     dsn::replication::test::install_checkers();
 }
 
+extern void dsn_module_init();
+
 int main(int argc, char** argv)
 {
     if (argc != 3)
@@ -64,10 +66,14 @@ int main(int argc, char** argv)
         std::cerr << " e.g.: " << argv[0] << " case-000.ini case-000.act" << std::endl;
         return -1;
     }
-
+    
     dsn::replication::test::g_case_input = argv[2];
 
     module_init();
+
+# if defined(WIN32)
+    dsn_module_init();
+# endif
 
     // specify what services and tools will run in config file, then run
     dsn_run(argc - 1, argv, false);

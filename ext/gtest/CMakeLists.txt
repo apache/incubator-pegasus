@@ -11,6 +11,8 @@ if (WIN32)
 	   #            -DCMAKE_CXX_FLAGS=${MSVC_COMPILER_DEFS}
 		CMAKE_ARGS "${CMAKE_ARGS};-Dgtest_force_shared_crt=OFF; ${CMAKE_CXX_FLAGS}"
 		BINARY_DIR "${PROJECT_BINARY_DIR}/lib"
+		# disable install
+		INSTALL_COMMAND ""
 	)
 else()
 	ExternalProject_Add(googletest
