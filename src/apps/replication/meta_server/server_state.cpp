@@ -212,7 +212,7 @@ error_code server_state::sync_apps_from_remote_storage()
     // get all apps
     std::string root = "/apps";
     _storage->get_children(root, LPC_META_STATE_SVC_CALLBACK,
-        [&](error_code ec, std::vector<std::string>&& apps)
+        [&](error_code ec, const std::vector<std::string>& apps)
         {
             if (ec == ERR_OK)
             {
@@ -223,7 +223,7 @@ error_code server_state::sync_apps_from_remote_storage()
                     _storage->get_data(
                         app_path,
                         LPC_META_STATE_SVC_CALLBACK,
-                        [this, app_path, &err, &tracker](error_code ec, blob&& value)
+                        [this, app_path, &err, &tracker](error_code ec, const blob& value)
                     {
                         if (ec == ERR_OK)
                         {
@@ -252,7 +252,7 @@ error_code server_state::sync_apps_from_remote_storage()
                                 _storage->get_data(
                                     par_path,
                                     LPC_META_STATE_SVC_CALLBACK,
-                                    [this, app_id, i, &err](error_code ec, blob&& value)
+                                    [this, app_id, i, &err](error_code ec, const blob& value)
                                     {
                                         if (ec == ERR_OK)
                                         {

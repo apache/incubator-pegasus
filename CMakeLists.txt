@@ -8,4 +8,5 @@ dsn_common_setup()
 dsn_add_pseudo_projects()
 
 add_subdirectory(ext/gtest)
+add_subdirectory(ext/zookeeper)
 add_subdirectory(src)

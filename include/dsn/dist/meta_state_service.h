@@ -62,8 +62,8 @@ namespace dsn
             typedef meta_state_service* (*factory)();
 
         public:
-            typedef std::function<void (error_code ec, blob&& val)> err_value_callback;
-            typedef std::function<void (error_code ec, std::vector<std::string>&& ret_strv)> err_stringv_callback;
+            typedef std::function<void (error_code ec, const blob& val)> err_value_callback;
+            typedef std::function<void (error_code ec, const std::vector<std::string>& ret_strv)> err_stringv_callback;
             typedef std::function<void (error_code ec)> err_callback;
 
         public:
