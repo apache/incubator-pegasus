@@ -43,7 +43,7 @@ namespace dsn {
         class simple_perf_counter : public perf_counter
         {
         public:
-            simple_perf_counter(const char *section, const char *name, perf_counter_type type);
+            simple_perf_counter(const char *section, const char *name, perf_counter_type type, const char *dsptr);
             ~simple_perf_counter(void);
 
             virtual void   increment() { _counter_impl->increment(); }
