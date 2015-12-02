@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.8)
+cmake_minimum_required(VERSION 2.8.7)
 include(bin/dsn.cmake)
 #cmake_policy(SET CMP0048 NEW)
 #project(dsn VERSION 1.0 LANGUAGES C CXX)
