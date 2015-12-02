@@ -78,15 +78,19 @@ ENUM_END(counter_percentile_type)
 class perf_counter
 {
 public:
-    template <typename T> static perf_counter* create(const char *section, const char *name, perf_counter_type type)
+    template <typename T> static perf_counter* create(const char *section, const char *name, perf_counter_type type, const char *dsptr)
     {
-        return new T(section, name, type);
+        return new T(section, name, type, dsptr);
     }
 
-    typedef perf_counter* (*factory)(const char *, const char *, perf_counter_type);
+    typedef perf_counter* (*factory)(const char *, const char *, perf_counter_type, const char *);
 
 public:
-    perf_counter(const char *section, const char *name, perf_counter_type type) {}
+    perf_counter(const char *section, const char *name, perf_counter_type type, const char *dsptr) 
+        : _name(name), _section(section), _dsptr(dsptr)
+    {
+    }
+
     virtual ~perf_counter(void) {}
 
     virtual void   increment() = 0;
@@ -97,6 +101,15 @@ public:
     virtual double get_percentile(counter_percentile_type type) = 0;
     virtual uint64_t* get_samples(/*out*/ int& sample_count) const { return nullptr; }
     virtual uint64_t get_current_sample() const { return 0; }
+
+    const char* name() const { return _name.c_str(); }
+    const char* section() const { return _section.c_str(); }
+    const char* dsptr() const { return _dsptr.c_str(); }
+
+private:
+    std::string _name;
+    std::string _section;
+    std::string _dsptr;
 };
 
 typedef std::shared_ptr<perf_counter> perf_counter_ptr;

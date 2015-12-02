@@ -44,8 +44,8 @@ namespace dsn {
         class perf_counter_number : public perf_counter
         {
         public:
-            perf_counter_number(const char *section, const char *name, perf_counter_type type)
-                : perf_counter(section, name, type), _val(0){}
+            perf_counter_number(const char *section, const char *name, perf_counter_type type, const char *dsptr)
+                : perf_counter(section, name, type, dsptr), _val(0){}
             ~perf_counter_number(void) {}
 
             virtual void   increment() { _val++; }
@@ -64,8 +64,8 @@ namespace dsn {
         class perf_counter_rate : public perf_counter
         {
         public:
-            perf_counter_rate(const char *section, const char *name, perf_counter_type type)
-                : perf_counter(section, name, type), _val(0)
+            perf_counter_rate(const char *section, const char *name, perf_counter_type type, const char *dsptr)
+                : perf_counter(section, name, type, dsptr), _val(0)
             {
                 qts = 0;
             }
@@ -102,8 +102,8 @@ namespace dsn {
         class perf_counter_number_percentile : public perf_counter
         {
         public:
-            perf_counter_number_percentile(const char *section, const char *name, perf_counter_type type)
-                : perf_counter(section, name, type), _tail(0)
+            perf_counter_number_percentile(const char *section, const char *name, perf_counter_type type, const char *dsptr)
+                : perf_counter(section, name, type, dsptr), _tail(0)
             {
                 _counter_computation_interval_seconds = config()->get_value<int>(
                     "components.simple_perf_counter", 
@@ -305,15 +305,15 @@ namespace dsn {
 
         // ---------------------- perf counter dispatcher ---------------------
 
-        simple_perf_counter::simple_perf_counter(const char *section, const char *name, perf_counter_type type)
-            : perf_counter(section, name, type)
+        simple_perf_counter::simple_perf_counter(const char *section, const char *name, perf_counter_type type, const char *dsptr)
+            : perf_counter(section, name, type, dsptr)
         {
             if (type == perf_counter_type::COUNTER_TYPE_NUMBER)
-                _counter_impl = new perf_counter_number(section, name, type);
+                _counter_impl = new perf_counter_number(section, name, type, dsptr);
             else if (type == perf_counter_type::COUNTER_TYPE_RATE)
-                _counter_impl = new perf_counter_rate(section, name, type);
+                _counter_impl = new perf_counter_rate(section, name, type, dsptr);
             else
-                _counter_impl = new perf_counter_number_percentile(section, name, type);
+                _counter_impl = new perf_counter_number_percentile(section, name, type, dsptr);
         }
 
         simple_perf_counter::~simple_perf_counter(void) 
