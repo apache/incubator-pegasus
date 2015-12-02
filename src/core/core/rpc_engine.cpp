@@ -288,7 +288,7 @@ namespace dsn {
                 cs.hdr_format = network_header_format(network_header_format::to_string(i));
 
                 auto net = create_network(cs, true, ctx);
-                if (!net) return ERR_NETWORK_INIT_FALED;
+                if (!net) return ERR_NETWORK_INIT_FAILED;
                 pnet[j] = net;
 
                 if (ctx.queue)
@@ -336,7 +336,7 @@ namespace dsn {
             auto net = create_network(sp.second, false, ctx);
             if (net == nullptr)
             {
-                return ERR_NETWORK_INIT_FALED;
+                return ERR_NETWORK_INIT_FAILED;
             }
 
             (*pnets)[sp.second.channel] = net;

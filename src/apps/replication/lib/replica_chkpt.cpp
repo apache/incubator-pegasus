@@ -157,7 +157,7 @@ namespace dsn {
             int err = _app->get_checkpoint(0, placeholder, response.state);
             if (err != 0)
             {
-                response.err = ERR_LEARN_FILE_FALED;
+                response.err = ERR_LEARN_FILE_FAILED;
             }
             else
             {

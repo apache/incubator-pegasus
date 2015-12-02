@@ -113,6 +113,9 @@ public:
     // most of them return error code (0 for success).
     //
 
+    // TODO(qinzuoyan): the return value of following interfaces just uses dsn::error_code?
+    // or mixed using error code in different space(dsn::error_code vs rocksdb::Status) is confused.
+
     //
     // Open the app.
     // If `create_new' is true, means "create_if_missing = true && error_if_exists = true".
@@ -135,7 +138,7 @@ public:
     // which stops replication writes to the app concurrently.
     //
     // Postconditions:
-    // * if `wait' is true, then last_committed_decree() == last_durable_decree()
+    // * last_committed_decree() == last_durable_decree()
     //
     virtual int  checkpoint() = 0;
 
