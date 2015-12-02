@@ -1,6 +1,20 @@
-language: cpp
-compiler:
-  - gcc
-  - clang
+sudo: true
 
-script: ./builder.sh && ./test.sh
+language: cpp
+
+os: linux
+
+compiler: gcc
+
+env: COMPILER=gcc-4.8.4
+
+before_install:
+    - sudo apt-get install build-essential
+    - sudo apt-get install php5-cli
+    - sudo apt-get install libboost-all-dev
+    - sudo apt-get install libaio-dev
+    - sudo apt-get install lcov
+
+script:
+    - cd rDSN && ./build.sh
+    #	&& ./test.sh
