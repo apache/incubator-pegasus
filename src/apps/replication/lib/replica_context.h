@@ -87,6 +87,9 @@ public:
     // when read lastest update, all prepared decrees must be firstly committed
     // (possibly true on old primary) before opening read service
     decree       last_prepare_decree_on_new_primary; 
+
+    // copy checkpoint from secondaries ptr
+    dsn::task_ptr   checkpoint_task;
 };
 
 class secondary_context

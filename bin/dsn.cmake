@@ -85,6 +85,9 @@ function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PRO
         
         if(DO_INSTALL)
             install(TARGETS ${PROJ_NAME} DESTINATION "${INSTALL_DIR}")
+            #if (WIN32)
+            #    install(FILES "${PROJ_NAME}.pdb" DESTINATION "${INSTALL_DIR}")
+            #endif()
         endif()
     endif()
     

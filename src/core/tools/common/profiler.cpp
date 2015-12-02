@@ -32,6 +32,31 @@
  *     xxxx-xx-xx, author, first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
+
+/*
+HELP GRAPH
+
+                                     CALL ===================== net(call) =====================> ENQUEUE =========== queue(server) ===========> START
+                                      ^                                                            ^                                             ||
+                                      |                                                            |                                             ||
+                                      |                                                            |                                             ||
+                                      |                                                            |                                             ||
+                                      |                                                            |                                             ||
+                                Client Latency                                               Server Latency                                  exec(server)
+                                      |                                                            |                                             ||
+                                      |                                                            |                                             ||
+                                      |                                                            |                                             ||
+                                      |                                                            |                                             ||
+                                      V                                                            V                                             ||
+START<======== queue(server) ======ENQUEUE <===================== net(reply) ==================== REPLY <==========================================
+  ||
+  ||
+ exec(client)
+  ||
+  ||
+  \/
+ END
+*/
 #include <dsn/toollet/profiler.h>
 #include <dsn/service_api_c.h>
 #include "shared_io_service.h"
@@ -157,7 +182,6 @@ namespace dsn {
             {
                 task_ext_for_profiler::get(callee) = dsn_now_ns();
             }
-
         }
 
         static void profiler_on_rpc_request_enqueue(rpc_request_task* callee)
@@ -191,6 +215,7 @@ namespace dsn {
         {
             uint64_t& cts = task_ext_for_profiler::get(resp);
             uint64_t now = dsn_now_ns();
+
             if (resp->get_response() != nullptr)
             {
                 s_spec_profilers[resp->spec().code].ptr[RPC_CLIENT_NON_TIMEOUT_LATENCY_NS]->set(now - cts);
@@ -217,12 +242,14 @@ namespace dsn {
             textp << "  show the top N task kinds sort by counter_name:" << std::endl;
             textp << "      p|P|profile|Profile top $N $counter_name [$percentile]" << std::endl;
 
+            /*
             textpjs << "NAME:" << std::endl;
             textpjs << "  profile javascript - collect performance data and show as chart by javascript" << std::endl;
             textpjs << "SYNOPSIS:" << std::endl;
             textpjs << "  pjs|PJS|profilejavascript|ProfileJavaScript $chart_type task|t $task_name [$percentile] [$counter_name $counter_name ...]" << std::endl;
             textpjs << "  pjs|PJS|profilejavascript|ProfileJavaScript $chart_type counter|c $counter_name [$percentile] $task_name $task_name ..." << std::endl;
             textpjs << "  pjs|PJS|profilejavascript|ProfileJavaScript top $N $counter_name [$percentile]" << std::endl;
+            */
 
             textpd << "NAME:" << std::endl;
             textpd << "  profiler data - get appointed data, using by pjs" << std::endl;
@@ -233,7 +260,20 @@ namespace dsn {
             textquery << "NAME:" << std::endl;
             textquery << "  query profiler data in batch" << std::endl;
             textquery << "SYNOPSIS:" << std::endl;
-            textquery << "  query" << std::endl;
+            textquery << "  show a matrix for all task codes contained with perf_counter percentile value" << std::endl;
+			textquery << "    profiler.query|pq table" << std::endl;
+            textquery << "  show a list of names of all task codes" << std::endl;
+            textquery << "    profiler.query|pq task_list" << std::endl;
+            textquery << "  show a list of all perf_counters and 1000 samples for each perf_counter" << std::endl;
+            textquery << "    profiler.query|pq counter_sample $task" << std::endl;
+            textquery << "  show raw counter values for a specific task" << std::endl;
+            textquery << "    profiler.query|pq counter_raw $task" << std::endl;
+            textquery << "  show 6 types of latency times for a specific task" << std::endl;
+            textquery << "    profiler.query|pq counter_calc $task" << std::endl;
+            textquery << "  show caller and callee list for a specific task" << std::endl;
+            textquery << "    profiler.query|pq call $task" << std::endl;
+            textquery << "  show a list of all sharer using the same pool with a specific task" << std::endl;
+            textquery << "    profiler.query|pq pool_sharer $task" << std::endl;
 
             textarg << "ARGUMENTS:" << std::endl;
             textarg << "  $percentile : e.g, 50 for latency at 50 percentile, 50(default)|90|95|99|999" << std::endl;
@@ -248,7 +288,7 @@ namespace dsn {
                 textarg << std::endl;
             }
             textarg << "  $task : all task code, such as" << std::endl;
-            for (int i = 1; i < dsn_task_code_max(); i++)
+            for (int i = 1; i < dsn_task_code_max() && i <= 10; i++)
             {
                 textarg << "      " << dsn_task_code_to_string(i) << std::endl;
             }
@@ -261,7 +301,7 @@ namespace dsn {
             register_command({ "p", "P", "profile", "Profile" }, "profile|Profile|p|P - performance profiling", textp.str().c_str(), profiler_output_handler);
             //register_command({ "pjs", "PJS", "profilejavascript", "ProfileJavaScript", nullptr }, "pjs|PJS|profilejavascript|ProfileJavaScript - profile and show by javascript", textpjs.str().c_str(), profiler_js_handler);
             register_command({ "pd", "PD", "profiledata", "ProfileData" }, "profiler data - get appointed data, using by pjs", textpd.str().c_str(), profiler_data_handler);
-            register_command({ "query"}, "query profiling data, output in html table format", textquery.str().c_str(), query_data_handler);
+			register_command({ "profiler.query","pq"}, "profiler.query|pq - query profiling data, output in json format", textquery.str().c_str(), query_data_handler);
         }
 
         void profiler::install(service_spec& spec)

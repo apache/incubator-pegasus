@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     initialization for replica object
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -258,10 +258,11 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
             _check_timer = tasking::enqueue(
                 LPC_PER_REPLICA_CHECK_TIMER,
                 this,
-                &replica::on_check_timer,
+                &replica::on_checkpoint_timer,
                 gpid_to_hash(get_gpid()),
                 0,
-                5 * 60 * 1000 // check every five mins
+                5 * 60
+                //5 * 60 * 1000 // check every five mins
                 );
         }
     }
@@ -286,7 +287,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     if (is_private && offset < _app->log_info().init_offset_in_private_log)
     {
         ddebug(
-            "%s: replay mutation skipped1 as offset is invalid, ballot = %" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
+            "%s: replay mutation skipped1 as offset is invalid in private log, ballot = %" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
             name(),
             mu->data.header.ballot,
             d,
@@ -299,7 +300,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     if (!is_private && offset < _app->log_info().init_offset_in_shared_log)
     {
         ddebug(
-            "%s: replay mutation skipped2 as offset is invalid, ballot = %" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
+            "%s: replay mutation skipped2 as offset is invalid in shared log, ballot = %" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
             name(),
             mu->data.header.ballot,
             d,
@@ -312,10 +313,11 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     if (d <= last_committed_decree())
     {
         ddebug(
-            "%s: replay mutation skipped3 as decree is outdated, ballot = %" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
+            "%s: replay mutation skipped3 as decree is outdated, ballot = %" PRId64 ", decree = %" PRId64 "(vs app %" PRId64 "), last_committed_decree = %" PRId64 ", offset = %" PRId64,
             name(),
             mu->data.header.ballot,
             d,
+            last_committed_decree(),
             mu->data.header.last_committed_decree,
             offset
             );
@@ -326,9 +328,10 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     if (old != nullptr && old->data.header.ballot >= mu->data.header.ballot)
     {
         ddebug(
-            "%s: replay mutation skipped4 as ballot is outdated, ballot = %" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
+            "%s: replay mutation skipped4 as ballot is outdated, ballot = %" PRId64 " (vs local-ballot=%" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
             name(),
             mu->data.header.ballot,
+            old->data.header.ballot,
             d,
             mu->data.header.last_committed_decree,
             offset

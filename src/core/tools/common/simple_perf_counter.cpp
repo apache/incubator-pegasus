@@ -114,6 +114,8 @@ namespace dsn {
                 _timer.reset(new boost::asio::deadline_timer(shared_io_service::instance().ios));
                 _timer->expires_from_now(boost::posix_time::seconds(rand() % _counter_computation_interval_seconds + 1));
                 _timer->async_wait(std::bind(&perf_counter_number_percentile::on_timer, this, std::placeholders::_1));
+
+                memset(_samples, 0, sizeof(_samples));
             }
             
             ~perf_counter_number_percentile(void) 
@@ -148,6 +150,12 @@ namespace dsn {
             { 
                 sample_count = static_cast<int>(sizeof(_samples) / sizeof(uint64_t));
                 return (uint64_t*)(_samples);
+            }
+
+            virtual uint64_t get_current_sample() const override
+            {
+                int idx = (_tail + MAX_QUEUE_LENGTH - 1) % MAX_QUEUE_LENGTH;
+                return _samples[idx];
             }
 
         private:

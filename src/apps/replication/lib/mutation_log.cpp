@@ -353,7 +353,7 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
     auto aio = _current_log_file->commit_log_block(
         *_pending_write,
         offset,
-        LPC_AIO_IMMEDIATE_CALLBACK,
+        LPC_WRITE_REPLICATION_LOG,
         this,
         std::bind(
             &mutation_log::internal_write_callback,
@@ -735,6 +735,8 @@ void mutation_log::update_max_decrees(global_partition_id gpid, decree d)
     auto d = mu->data.header.decree;
     error_code err = ERR_OK;
 
+    dinfo("write replication log for mutation %s", mu->name());
+
     zauto_lock l(_lock);
     dassert(_is_opened, "");
 
@@ -846,7 +848,7 @@ int64_t mutation_log::on_partition_reset(global_partition_id gpid, decree max_d)
     return _global_end_offset;
 }
 
-void mutation_log::get_learn_state(
+void mutation_log::get_checkpoint(
     global_partition_id gpid,
     ::dsn::replication::decree start,
     /*out*/ ::dsn::replication::learn_state& state
@@ -1225,19 +1227,12 @@ int mutation_log::garbage_collection(multi_partition_decrees_ex& durable_decrees
     auto lf = new log_file(path, hfile, index, start_offset, true);
     blob hdr_blob;
     err = lf->read_next_log_block(0, hdr_blob);
-    if (err == ERR_INVALID_DATA || err == ERR_INCOMPLETE_DATA || err == ERR_HANDLE_EOF)
+    if (err == ERR_INVALID_DATA || err == ERR_INCOMPLETE_DATA || err == ERR_HANDLE_EOF || err == ERR_FILE_OPERATION_FAILED)
     {
         std::string removed = std::string(path) + ".removed";
         derror("read first log entry of file %s failed, err = %s. Rename the file to %s", path, err.to_string(), removed.c_str());
         delete lf;
         dsn::utils::filesystem::rename_path(path, removed);
-        return nullptr;
-    }
-    else if (err != ERR_OK)
-    {
-        // TODO(qinzuoyan): process this properly, not coredump
-        //dassert(false, "unexpected error type");
-        delete lf;
         return nullptr;
     }
 
