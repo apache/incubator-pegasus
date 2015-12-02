@@ -218,12 +218,12 @@ void mutation_log::close(bool clear_all)
 {
     {
         zauto_lock l(_lock);
-        // event it is not opened, we still need to
-        // go through the following logics, e.g., 
-        // clear all logs as open failed.
 
-       /* if (!_is_opened)
-            return;*/
+        if (!_is_opened)
+        {
+            dassert(!clear_all, "should not be here if do clear");
+            return;
+        }
 
         _is_opened = false;
 

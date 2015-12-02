@@ -324,7 +324,7 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
 
         if (lerr != 0)
         {
-            response.err = ERR_GET_LEARN_STATE_FALED;
+            response.err = ERR_GET_LEARN_STATE_FAILED;
             derror(
                 "%s: on_learn[%016llx]: learner = %s, get app learn state failed, error = %d",
                 name(), request.signature, request.learner.to_string(), lerr
