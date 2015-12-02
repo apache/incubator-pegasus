@@ -2,7 +2,16 @@
 
 set:load_balance_for_test=1,not_exist_on_log_failure=1
 
-config:{1,r1,[]}
+# check config is not enough but check state instead
+# to ensure primary is setup on replica but only only on meta
+# server.
+# the reason is that the next only RPC_CONFIG_PROPOSAL (due to
+# set:disable_load_balance=1 later) can be skipped if the
+# replica is not in primary status yet, which leads to failure
+# of r2 becomes potential secondary.
+#
+# config:{1,r1,[]}
+state:{{r1,pri,1,0}}
 
 wait:on_rpc_call:rpc_name=RPC_CONFIG_PROPOSAL,from=m,to=r1
 set:disable_load_balance=1
