@@ -78,8 +78,7 @@ namespace dsn {
             // are not lost during checkpinting
             dassert(nullptr != _private_log, "log_enable_private_prepare must be true for checkpointing");
 
-            // TODO: when NOT to checkpoint, but use private log replay to build the state
-            if (last_committed_decree() - last_durable_decree() < 10000)
+            if (last_committed_decree() - last_durable_decree() < _options->checkpoint_min_decree_gap)
                 return;
 
             // primary cannot checkpoint (TODO: test if async checkpoint is supported)

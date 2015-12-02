@@ -54,8 +54,12 @@ replication_options::replication_options()
     
     mutation_2pc_min_replica_count = 1;    
 
-    group_check_internal_ms = 100000;
+    group_check_interval_ms = 100000;
     group_check_disabled = false;
+
+    checkpoint_interval_mins = 60; // 60 mins
+    checkpoint_min_decree_gap = 10000;
+    checkpoint_max_interval_hours = 24; // at least one checkpoint per day
 
     gc_interval_ms = 30 * 1000; // 30000 milliseconds
     gc_disabled = false;
@@ -156,10 +160,10 @@ void replication_options::initialize()
         "minimum number of alive replicas under which write is allowed"
         );
 
-    group_check_internal_ms =
+    group_check_interval_ms =
         (int)dsn_config_get_value_uint64("replication",
-        "group_check_internal_ms", 
-        group_check_internal_ms,
+        "group_check_interval_ms", 
+        group_check_interval_ms,
         "every what period (ms) we check the replica healthness"
         );
     group_check_disabled =
@@ -168,6 +172,28 @@ void replication_options::initialize()
         group_check_disabled,
         "whether group check is disabled"
         );
+
+    checkpoint_interval_mins =
+        (int)dsn_config_get_value_uint64("replication",
+        "checkpoint_interval_mins",
+        checkpoint_interval_mins,
+        "every what period (minutes) we do checkpoints for replicated apps"
+        ); 
+
+    checkpoint_min_decree_gap = 
+        (int64_t)dsn_config_get_value_uint64("replication",
+        "checkpoint_min_decree_gap",
+        checkpoint_min_decree_gap,
+        "minimum decree gap that triggers checkpoint"
+        );
+
+    checkpoint_max_interval_hours = 
+        (int)dsn_config_get_value_uint64("replication",
+        "checkpoint_max_interval_hours",
+        checkpoint_max_interval_hours,
+        "maximum time interval (hours) where a new checkpoint must be created"
+        );
+
     gc_interval_ms =
         (int)dsn_config_get_value_uint64("replication", 
         "gc_interval_ms", 

@@ -59,7 +59,7 @@ void replica::init_group_check()
             &replica::broadcast_group_check,
             gpid_to_hash(get_gpid()),
             0,
-            _options->group_check_internal_ms
+            _options->group_check_interval_ms
             );
 }
 

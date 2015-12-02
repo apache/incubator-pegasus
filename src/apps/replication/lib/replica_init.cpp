@@ -261,8 +261,7 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
                 &replica::on_checkpoint_timer,
                 gpid_to_hash(get_gpid()),
                 0,
-                5 * 60
-                //5 * 60 * 1000 // check every five mins
+                _options->checkpoint_interval_mins * 60 * 1000
                 );
         }
     }
