@@ -117,7 +117,7 @@ void replica::init_prepare(mutation_ptr& mu)
     {
         if (it->second.prepare_start_decree != invalid_decree && mu->data.header.decree >= it->second.prepare_start_decree)
         {
-            send_prepare_message(it->first, PS_POTENTIAL_SECONDARY, mu, _options->prepare_timeout_ms_for_potential_secondaries);
+            send_prepare_message(it->first, PS_POTENTIAL_SECONDARY, mu, _options->prepare_timeout_ms_for_potential_secondaries, it->second.signature);
             count++;
         }
     }    
@@ -153,11 +153,16 @@ ErrOut:
     return;
 }
 
-void replica::send_prepare_message(::dsn::rpc_address addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds)
+void replica::send_prepare_message(
+    ::dsn::rpc_address addr, 
+    partition_status status, 
+    mutation_ptr& mu, 
+    int timeout_milliseconds,
+    int64_t learn_signature)
 {
     dsn_message_t msg = dsn_msg_create_request(RPC_PREPARE, timeout_milliseconds, gpid_to_hash(get_gpid()));
     replica_configuration rconfig;
-    _primary_states.get_replica_config(status, rconfig);
+    _primary_states.get_replica_config(status, rconfig, learn_signature);
 
     {
         rpc_write_stream writer(msg);
@@ -259,8 +264,8 @@ void replica::on_prepare(dsn_message_t request)
             return;
         }
 
-        if (_potential_secondary_states.learning_status == LearningWithoutPrepare
-            || _potential_secondary_states.learning_status == LearningFailed)
+        if (!(_potential_secondary_states.learning_status == LearningWithPrepare
+            || _potential_secondary_states.learning_status == LearningSucceeded))
         {
             ddebug( 
                 "%s: mutation %s on_prepare to %s skipped, learnings state = %s",

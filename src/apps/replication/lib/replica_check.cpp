@@ -93,6 +93,13 @@ void replica::broadcast_group_check()
         _primary_states.get_replica_config(it->second, request->config);
         request->last_committed_decree = last_committed_decree();
 
+        if (request->config.status == PS_POTENTIAL_SECONDARY)
+        {
+            auto it = _primary_states.learners.find(addr);
+            dassert(it != _primary_states.learners.end(), "learner %s is missing", addr.to_string());
+            request->config.learner_signature = it->second.signature;
+        }
+
         ddebug(
             "%s: init_group_check for %s with state %s",
             name(),
@@ -192,7 +199,7 @@ void replica::on_group_check_reply(error_code err, std::shared_ptr<group_check_r
         {
             if (resp->learner_status_ == LearningSucceeded && req->config.status == PS_POTENTIAL_SECONDARY)
             {
-                handle_learning_succeeded_on_primary(req->node, resp->learner_signature, req->last_committed_decree);
+                handle_learning_succeeded_on_primary(req->node, resp->learner_signature);
             }
         }
         else
