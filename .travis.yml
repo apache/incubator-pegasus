@@ -16,5 +16,5 @@ before_install:
     - sudo apt-get install lcov
 
 script:
-    - cd rDSN && ./build.sh
+    - ./build.sh
     #	&& ./test.sh
