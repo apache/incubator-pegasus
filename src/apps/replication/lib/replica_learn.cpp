@@ -576,6 +576,8 @@ void replica::on_copy_remote_state_completed(
         dassert(resp->type == LT_APP || resp->type == LT_LOG, "");
 
         learn_state lstate;
+        lstate.from_decree_excluded = resp->state.from_decree_excluded;
+        lstate.to_decree_included = resp->state.to_decree_included;
         lstate.meta = resp->state.meta;
         
         for (auto& f : resp->state.files)
@@ -587,7 +589,7 @@ void replica::on_copy_remote_state_completed(
         // apply app learning
         if (resp->type == LT_APP)
         {
-            err = _app->apply_checkpoint(resp->state, CHKPT_LEARN);
+            err = _app->apply_checkpoint(lstate, CHKPT_LEARN);
             if (err == 0)
             {
                 dassert(_app->last_committed_decree() >= _app->last_durable_decree(), "");

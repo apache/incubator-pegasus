@@ -42,7 +42,7 @@ namespace dsn {
         class simple_perf_counter_v2_atomic : public perf_counter
         {
         public:
-            simple_perf_counter_v2_atomic(const char *section, const char *name, perf_counter_type type);
+            simple_perf_counter_v2_atomic(const char *section, const char *name, perf_counter_type type, const char *dsptr);
             ~simple_perf_counter_v2_atomic(void);
 
             virtual void   increment() { _counter_impl->increment(); }

@@ -52,7 +52,6 @@ namespace dsn {
                 : simple_kv_service(replica), _lock(true)
             {
                 _test_file_learning = false;
-                //set_delta_state_learning_supported();
             }
 
             // RPC_SIMPLE_KV_READ
@@ -159,6 +158,7 @@ namespace dsn {
                 if (maxVersion > 0)
                 {
                     recover(name, maxVersion);
+                    _last_durable_decree = maxVersion;
                 }
             }
 
@@ -198,7 +198,6 @@ namespace dsn {
                     _store[key] = value;
                 }
 
-                _last_durable_decree = version;
                 init_last_commit_decree(version);
             }
 
