@@ -335,9 +335,9 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
             response.type = LT_APP;
             response.base_local_dir = _app->data_dir();
             ddebug(
-                "%s: on_learn[%016llx]: learner = %s, get app learn state succeed, base_local_dir = %s, learn_file_count = %zu",
+                "%s: on_learn[%016llx]: learner = %s, get app learn state succeed, base_local_dir = %s, learn_file_count = %u",
                 name(), request.signature, request.learner.to_string(),
-                response.base_local_dir.c_str(), response.state.files.size()
+                response.base_local_dir.c_str(), static_cast<uint32_t>(response.state.files.size())
                 );
         }
     }
@@ -356,9 +356,9 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
         response.type = LT_LOG;
         response.base_local_dir = _private_log->dir();
         ddebug(
-            "%s: on_learn[%016llx]: learner = %s, learn private logs succeed, base_local_dir = %s, learn_file_count = %zu",
+            "%s: on_learn[%016llx]: learner = %s, learn private logs succeed, base_local_dir = %s, learn_file_count = %u",
             name(), request.signature, request.learner.to_string(),
-            response.base_local_dir.c_str(), response.state.files.size()
+            response.base_local_dir.c_str(), static_cast<uint32_t>(response.state.files.size())
             );
     }
 
@@ -396,13 +396,13 @@ void replica::on_learn_reply(
 
     ddebug(
         "%s: on_learn_reply[%016llx]: learnee = %s, response_err = %s, remote_committed_decree = %" PRId64 ", "
-        "prepare_start_decree = %" PRId64 ", learn_type = %s, learn_file_count = %zu, current_learning_status = %s",
+        "prepare_start_decree = %" PRId64 ", learn_type = %s, learn_file_count = %u, current_learning_status = %s",
         name(), req->signature, resp->config.primary.to_string(),
         resp->err.to_string(), 
         resp->last_committed_decree, 
         resp->prepare_start_decree,
         enum_to_string(resp->type),
-        resp->state.files.size(),
+        static_cast<uint32_t>(resp->state.files.size()),
         enum_to_string(_potential_secondary_states.learning_status)
         );
 
