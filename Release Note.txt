@@ -5,7 +5,7 @@ Release notes @ 4/15/2015, Version 0.9
 
 - Languages and platforms
 	. C++
-	. Ubuntu14.04/OS X Yosemite/Windows 8.1
+	. Ubuntu14.04/Windows 8.1
 
 - What's New
 
