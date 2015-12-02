@@ -42,7 +42,7 @@ namespace dsn {
                 : simple_kv_service(replica), _lock(true)
             {
                 _test_file_learning = dsn_config_get_value_bool("test", "test_file_learning", true, "");
-                if (dsn_config_get_value_bool("test", "delta_state_learning_supported", true, ""))
+                if (dsn_config_get_value_bool("test", "delta_state_learning_supported", false, ""))
                 {
                     set_delta_state_learning_supported();
                 }
@@ -155,6 +155,7 @@ namespace dsn {
                 if (maxVersion > 0)
                 {
                     recover(name, maxVersion);
+                    _last_durable_decree = maxVersion;
                 }
             }
 
@@ -195,7 +196,6 @@ namespace dsn {
                 }
 
                 init_last_commit_decree(version);
-                _last_durable_decree = version;
             }
 
             int simple_kv_service_impl::checkpoint()
@@ -240,6 +240,11 @@ namespace dsn {
             // helper routines to accelerate learning
             int simple_kv_service_impl::get_checkpoint(decree start, const blob& learn_req, /*out*/ learn_state& state)
             {
+                if (_last_durable_decree.load() == 0 && is_delta_state_learning_supported())
+                {
+                    checkpoint();
+                }
+
                 if (_last_durable_decree.load() > 0)
                 {
                     state.from_decree_excluded = 0;
