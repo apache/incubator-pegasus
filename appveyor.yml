@@ -25,7 +25,7 @@ install:
             Start-FileDownload "${env:DSN_BOOST_PKG} -FileName boost.7z -Timeout 1200000
         }
 
-        echo "Extracting boost libs ..."
+        echo "Extracting boost libs to ${env:APPVEYOR_BUILD_FOLDER} ..."
 
         7z x boost.7z -y -o"${env:APPVEYOR_BUILD_FOLDER}" > $null
         
