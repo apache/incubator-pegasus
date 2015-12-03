@@ -3,6 +3,7 @@ version: 1.0.{build}
 environment:
     global:
         DSN_VS: "Visual Studio 12 2013 Win64"
+        DSN_BOOST: boost_1_57_0
         DSN_BOOST_INC: "${env:APPVEYOR_BUILD_FOLDER}/boost_1_57_0"
         DSN_BOOST_LIB: "${env:APPVEYOR_BUILD_FOLDER}/boost_1_57_0/lib64-msvc-12.0"
         DSN_BOOST_PKG: "https://github.com/imzhenyu/packages/blob/master/windows/boost_1_57_0.7z"
@@ -26,11 +27,10 @@ install:
 
         echo "Extracting boost libs ..."
 
-        7z x boost.7z -y -o"${env:APPVEYOR_BUILD_FOLDER}" > $null
+        7z x boost.7z -y -o"${env:APPVEYOR_BUILD_FOLDER}" "${env:DSN_BOOST}" > $null
 
 cache:
     - boost.7z
-    - boost.exe
 
 before_build:
     - ps: >-
