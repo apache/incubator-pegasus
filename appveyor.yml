@@ -27,7 +27,7 @@ install:
 
         echo "Extracting boost libs ..."
 
-        7z x boost.7z -y -o"${env:APPVEYOR_BUILD_FOLDER}" "${env:DSN_BOOST}/boost" > $null
+        7z x boost.7z -y -o"${env:APPVEYOR_BUILD_FOLDER}" > $null
         
 cache:
     - boost.7z
