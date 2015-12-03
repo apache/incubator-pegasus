@@ -152,8 +152,10 @@ int64_t lock_struct::parse_seq_path(const std::string& path)
     const std::string& match = distributed_lock_service_zookeeper::LOCK_NODE;
     int j = ((int)match.size())-1;
     for (; i>=0 && j>=0 && path[i]==match[j]; --i, --j);
-    if (power==1 || j>=0)
+    if (power==1 || j>=0) {
+        dwarn("invalid path: %s", path.c_str());
         return -1;
+    }
     return ans;
 }
 
@@ -512,7 +514,7 @@ void lock_struct::after_create_locknode(lock_struct_ptr _this, int ec, std::shar
         return;
     }
     
-    char splitter[] = {'/'};
+    char splitter[] = {'/', 0};
     _this->_myself._node_seq_name = utils::get_last_component(*path, splitter);
     _this->_myself._sequence_id = parse_seq_path(_this->_myself._node_seq_name);
     dassert(_this->_myself._sequence_id!=-1, "invalid seq path created");

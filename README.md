@@ -1,4 +1,5 @@
-[![Build Status](https://travis-ci.org/imzhenyu/rDSN.svg?branch=master)](https://travis-ci.org/imzhenyu/rDSN)
+[![Build Status](https://travis-ci.org/imzhenyu/rDSN.svg?branch=master)](https://travis-ci.org/imzhenyu/rDSN) [![Build status](https://ci.appveyor.com/api/projects/status/1re27vmu7n7c4j1l?svg=true)](https://ci.appveyor.com/project/imzhenyu/rdsn)
+
 ### Top Links
  * [[Case](https://github.com/imzhenyu/rocksdb)] RocksDB made replicated using rDSN!
  * [[Tutorial](https://github.com/Microsoft/rDSN/wiki/Tutorial:-Build-A-Single-Node-Counter-Service)] Build a counter service with built-in tools (e.g., codegen, auto-test, fault injection, bug replay, tracing)
