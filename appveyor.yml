@@ -1,0 +1,50 @@
+environment:
+	matrix:
+		- DSN_VS: "Visual Studio 12 2013 Win64"
+		  DSN_BOOST_INC: "${env:APPVEYOR_BUILD_FOLDER}/boost_1_57_0"
+		  DSN_BOOST_LIB: "${env:APPVEYOR_BUILD_FOLDER}/boost_1_57_0/lib64-msvc-12.0"
+		  DSN_BOOST_PKG: "https://github.com/imzhenyu/packages/blob/master/windows/boost_1_57_0.7z"
+		  DSN_CMAKE_BUILD_TYPE: "RelWithDebInfo"
+		- DSN_VS: "Visual Studio 12 2013 Win64"
+		  DSN_BOOST_INC: "${env:APPVEYOR_BUILD_FOLDER}/boost_1_57_0"
+		  DSN_BOOST_LIB: "${env:APPVEYOR_BUILD_FOLDER}/boost_1_57_0/lib64-msvc-12.0"
+		  DSN_BOOST_PKG: "https://github.com/imzhenyu/packages/blob/master/windows/boost_1_57_0.7z"
+		  DSN_CMAKE_BUILD_TYPE: "Debug"
+
+install:
+	- ps: >-
+		git submodule update --init
+
+		$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine")
+
+    	if (!(Test-Path boost.7z)) {
+
+			echo "Downloading boost binaries from ${env:DSN_BOOST_PKG} ..."
+
+			Start-FileDownload "${env:DSN_BOOST_PKG} -FileName boost.7z -Timeout 1200000
+		}
+
+		echo "Extracting boost libs ..."
+
+		7z x boost.7z -y -o"${env:APPVEYOR_BUILD_FOLDER}" > $null
+
+cache:
+	- boost.7z
+	- boost.exe
+
+before_build:
+	- ps: >-
+		mkdir build
+
+		cd .\build
+
+		cmake .. -DBOOST_INCLUDEDIR="${env:DSN_BOOST_INC}" -DBOOST_LIBRARYDIR="${env:DSN_BOOST_LIB}" -G $env:DSN_VS
+
+build_script:
+	- ps: >-
+		cmake --build . --target check -- /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+
+		if (-not $?) { throw "build failed" }
+
+test_script:
+
