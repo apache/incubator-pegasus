@@ -13,10 +13,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN useradd -d /home/rdsn -s /bin/bash rdsn
 RUN mkdir /home/rdsn 
-COPY bash_profile /home/rdsn/.bash_profile
-COPY bashrc /home/rdsn/.bashrc
+COPY script/bash_profile /home/rdsn/.bash_profile
+COPY script/bashrc /home/rdsn/.bashrc
 RUN chown -R rdsn:rdsn /home/rdsn
-COPY rdsn_build.sh /usr/local/bin/
+COPY script/rdsn_build.sh /usr/local/bin/
 RUN chmod a+x /usr/local/bin/rdsn_build.sh
 
 USER rdsn

@@ -3,7 +3,7 @@ require_once($argv[1]);
 require_once($argv[2]);
 $file_prefix = $argv[3];
 ?>
-FROM goksyli/rdsn-dev
+FROM rdsn-dev
 
 COPY <?=$_PROG->name?> /home/rdsn/
 
