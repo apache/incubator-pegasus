@@ -40,8 +40,6 @@ before_build:
 
 build_script:
     - cmd: >-
-        cd .\build
-        
         msbuild dsn.sln
 
 test_script:
