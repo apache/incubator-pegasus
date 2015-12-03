@@ -243,6 +243,16 @@ namespace dsn
             int hash = 0
             );
 
+        task_ptr write_vector(
+            dsn_handle_t fh,
+            const dsn_file_buffer_t* buffers,
+            int buffer_count,
+            uint64_t offset,
+            dsn_task_code_t callback_code,
+            clientlet* svc,
+            aio_handler callback,
+            int hash = 0
+            );
 
         template<typename T> // where T : public virtual clientlet
         inline task_ptr read(
@@ -665,10 +675,10 @@ namespace dsn
             )
         {
             dsn_message_t msg = dsn_msg_create_request(code, timeout_milliseconds, request_hash);
-            marshall(msg, *req);
+            ::marshall(msg, *req);
 
             auto t = internal_use_only::create_rpc_call<TRequest, TResponse>(
-                msg, req, owner, callback, reply_hash);
+                msg, req, callback, reply_hash, owner);
 
             dsn_rpc_call(server.c_addr(), t->native_handle());
             return t;

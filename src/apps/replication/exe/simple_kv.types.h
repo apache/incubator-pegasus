@@ -56,14 +56,14 @@ namespace dsn { namespace replication { namespace application {
     // ---------- kv_pair -------------
     inline void marshall(::dsn::binary_writer& writer, const kv_pair& val)
     {
-        boost::shared_ptr<::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
+        boost::shared_ptr< ::dsn::binary_writer_transport> transport(new ::dsn::binary_writer_transport(writer));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
         ::dsn::marshall_rpc_args<kv_pair>(&proto, val, &kv_pair::write);
     };
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ kv_pair& val)
     {
-        boost::shared_ptr<::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
+        boost::shared_ptr< ::dsn::binary_reader_transport> transport(new ::dsn::binary_reader_transport(reader));
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
         ::dsn::unmarshall_rpc_args<kv_pair>(&proto, val, &kv_pair::read);
     };

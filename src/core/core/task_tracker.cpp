@@ -90,7 +90,7 @@ namespace dsn
                 trackable_task *tcm;
 
                 {
-                    utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_outstanding_tasks_lock[i]);
+                    utils::auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_outstanding_tasks_lock[i]);
                     auto n = _outstanding_tasks[i].next();
                     if (n != &_outstanding_tasks[i])
                     {
@@ -141,7 +141,7 @@ namespace dsn
                 trackable_task *tcm;
 
                 {
-                    utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_outstanding_tasks_lock[i]);
+                    utils::auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_outstanding_tasks_lock[i]);
                     auto n = _outstanding_tasks[i].next();
                     if (n != &_outstanding_tasks[i])
                     {

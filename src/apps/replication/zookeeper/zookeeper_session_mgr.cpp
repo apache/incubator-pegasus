@@ -15,8 +15,6 @@ zookeeper_session_mgr::zookeeper_session_mgr()
     FILE* fp = fopen(_zoo_logfile.c_str(), "a");
     if (fp != nullptr)
         zoo_set_log_stream(fp);
-    else
-        throw std::runtime_error("can't open zoologfile: " + _zoo_logfile);
 }
 
 zookeeper_session* zookeeper_session_mgr::get_session(void* service_node)

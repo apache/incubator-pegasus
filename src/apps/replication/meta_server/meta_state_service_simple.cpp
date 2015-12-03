@@ -35,6 +35,7 @@
  */
 
 # include "meta_state_service_simple.h"
+# include <dsn/internal/task.h>
 
 # include <stack>
 # include <utility>
@@ -104,7 +105,7 @@ namespace dsn
 
             file::write(
                 _log,
-                log_blob.buffer_ptr(),
+                log_blob.data(),
                 log_blob.length(),
                 log_offset,
                 LPC_META_STATE_SERVICE_SIMPLE_INTERNAL,
@@ -220,10 +221,10 @@ namespace dsn
             return ERR_OK;
         }
 
-        error_code meta_state_service_simple::initialize()
+        error_code meta_state_service_simple::initialize(const char* dir)
         {
             _offset = 0;
-            std::string log_path = "meta_state_service.log";
+            std::string log_path = dsn::utils::filesystem::path_combine(dir, "meta_state_service.log");
             if (utils::filesystem::file_exists(log_path))
             {
                 if (FILE* fd = fopen(log_path.c_str(), "rb"))
@@ -283,7 +284,13 @@ namespace dsn
                     fclose(fd);
                 }
             }
+
             _log = dsn_file_open(log_path.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
+            if (!_log)
+            {
+                derror("open file failed: %s", log_path.c_str());
+                return ERR_FILE_OPERATION_FAILED;
+            }
             return ERR_OK;
         }
 
@@ -294,7 +301,7 @@ namespace dsn
             const blob& value,
             clientlet* tracker )
         {
-            auto task = tasking::create_late_task(cb_code, cb_create, 0, tracker);
+            task_ptr task = tasking::create_late_task(cb_code, cb_create, 0, tracker);
             write_log(
                 create_node_log::get_log(node, value),
                 [=]{
@@ -312,7 +319,7 @@ namespace dsn
             const err_callback& cb_delete,
             clientlet* tracker)
         {
-            auto task = tasking::create_late_task(cb_code, cb_delete, 0, tracker);
+            task_ptr task = tasking::create_late_task(cb_code, cb_delete, 0, tracker);
             write_log(
                 delete_node_log::get_log(node, recursively_delete),
                 [=] {
@@ -385,7 +392,7 @@ namespace dsn
             const err_callback& cb_set_data,
             clientlet* tracker)
         {
-            auto task = tasking::create_late_task(cb_code, cb_set_data, 0, tracker);
+            task_ptr task = tasking::create_late_task(cb_code, cb_set_data, 0, tracker);
             write_log(
                 set_data_log::get_log(node, value),
                 [=] {

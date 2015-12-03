@@ -43,7 +43,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ "replica.2pc"
+# define __TITLE__ "replica.app_base"
 
 namespace dsn { namespace replication {
 
@@ -104,12 +104,12 @@ error_code replica_log_info::store(const char* file)
     os.write((const char*)this, sizeof(*this));
     os.close();
 
-    if (!utils::filesystem::rename_path(tmp_file, ffile, true))
+    if (!utils::filesystem::rename_path(tmp_file, ffile))
     {
         return ERR_FILE_OPERATION_FAILED;
     }
 
-    dinfo("update app init info in %s, ballot = %lld, decree = %lld, log_offset<S,P> = <%lld,%lld>",
+    dinfo("update app init info in %s, ballot = %" PRId64 ", decree = %" PRId64 ", log_offset<S,P> = <%" PRId64 ",%" PRId64 ">",
         ffile.c_str(),
         init_ballot,
         init_decree,
@@ -125,19 +125,20 @@ replication_app_base::replication_app_base(replica* replica)
     _dir_data = replica->dir() + "/data";
     _dir_learn = replica->dir() + "/learn";
     _is_delta_state_learning_supported = false;
+    _batch_state = BS_NOT_BATCH;
 
     _replica = replica;
     _last_committed_decree = _last_durable_decree = 0;
 
-	if (!dsn::utils::filesystem::create_directory(_dir_data))
-	{
-		dassert(false, "Fail to create directory %s.", _dir_data.c_str());
-	}
+    if (!dsn::utils::filesystem::create_directory(_dir_data))
+    {
+        dassert(false, "Fail to create directory %s.", _dir_data.c_str());
+    }
 
-	if (!dsn::utils::filesystem::create_directory(_dir_learn))
-	{
-		dassert(false, "Fail to create directory %s.", _dir_learn.c_str());
-	}
+    if (!dsn::utils::filesystem::create_directory(_dir_learn))
+    {
+        dassert(false, "Fail to create directory %s.", _dir_learn.c_str());
+    }
 }
 
 const char* replication_app_base::replica_name() const
@@ -162,28 +163,38 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
 error_code replication_app_base::write_internal(mutation_ptr& mu)
 {
     dassert (mu->data.header.decree == last_committed_decree() + 1, "");
-    dassert(mu->client_requests.size() == mu->data.updates.size(), 
+    dassert(mu->client_requests.size() == mu->data.updates.size()
+        && mu->client_requests.size() > 0, 
         "data inconsistency in mutation");
 
     int count = static_cast<int>(mu->client_requests.size());
+    _batch_state = (count == 1 ? BS_NOT_BATCH : BS_BATCH);
     for (int i = 0; i < count; i++)
     {
+        if (_batch_state == BS_BATCH && i + 1 == count)
+        {
+            _batch_state = BS_BATCH_LAST;
+        }
+
         auto& r = mu->client_requests[i];
 
         if (r.code != RPC_REPLICATION_WRITE_EMPTY)
         {
+            dinfo("%s: mutation %s dispatch rpc call: %s",
+                  _replica->name(), mu->name(), dsn_task_code_to_string(r.code));
             binary_reader reader(mu->data.updates[i]);
             dsn_message_t resp = (r.req ? dsn_msg_create_response(r.req) : nullptr);
             dispatch_rpc_call(r.code, reader, resp);
         }
         else
         {
-            on_empty_write();
+            // empty mutation write
         }
 
         if (_physical_error != 0)
         {
-            derror("physical error %d occurs in replication local app %s", _physical_error, data_dir().c_str());
+            derror("%s: physical error %d occurs in replication local app %s",
+                   _replica->name(), _physical_error, data_dir().c_str());
             return ERR_LOCAL_APP_FAILURE;
         }
     }

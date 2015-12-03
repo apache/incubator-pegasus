@@ -73,6 +73,11 @@ namespace dsn
             }
         }
 
+        bool is_empty() const
+        {
+            return _response == nullptr;
+        }
+
     private:
         dsn_message_t _response;
     };

@@ -52,7 +52,7 @@ namespace dsn
         public:
             explicit meta_state_service_simple() : _root("/", nullptr), _quick_map({std::make_pair("/", &_root)}), _log(nullptr), _offset(0){}
 
-            virtual error_code initialize() override;
+            virtual error_code initialize(const char* arguments) override;
 
             virtual task_ptr create_node(
                 const std::string& node,
@@ -142,7 +142,7 @@ namespace dsn
                     marshall(writer, static_cast<int>(op));
                     write(writer, head, tail...);
                     auto shared_blob = writer.get_buffer();
-                    reinterpret_cast<log_header*>((char*)shared_blob.buffer_ptr())->size = shared_blob.length() - sizeof(log_header);
+                    reinterpret_cast<log_header*>((char*)shared_blob.data())->size = shared_blob.length() - sizeof(log_header);
                     return shared_blob;
                 }
                 static void write(binary_writer& writer, const Head& head, const Tail&... tail)

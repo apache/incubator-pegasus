@@ -288,9 +288,9 @@ namespace dsn {
             // real write
             std::string file_path = dsn::utils::filesystem::path_combine(reqc->copy_req.dst_dir, reqc->file_ctx->file_name);
             std::string path = dsn::utils::filesystem::remove_file_name(file_path.c_str());
-			if (!dsn::utils::filesystem::create_directory(path))
+            if (!dsn::utils::filesystem::create_directory(path))
             {
-				dassert(false, "Fail to create directory %s.", path.c_str());
+                dassert(false, "Fail to create directory %s.", path.c_str());
             }
 
             dsn_handle_t hfile = reqc->file_ctx->file.load();
@@ -358,7 +358,7 @@ namespace dsn {
                 {
                     auto err = dsn_file_close(reqc->file_ctx->file);
                     dassert(err == ERR_OK, "dsn_file_close failed, err = %s", dsn_error_to_string(err));
-                    reqc->file_ctx->file = static_cast<dsn_handle_t>(0);
+                    reqc->file_ctx->file = nullptr;
                     reqc->file_ctx->copy_requests.clear();
 
                     if (++reqc->file_ctx->user_req->finished_files == (int)reqc->file_ctx->user_req->file_context_map.size())
@@ -426,7 +426,7 @@ namespace dsn {
                     auto err2 = dsn_file_close(f.second->file);
                     dassert(err2 == ERR_OK, "dsn_file_close failed, err = %s", dsn_error_to_string(err2)); 
 
-                    f.second->file = static_cast<dsn_handle_t>(0);
+                    f.second->file = nullptr;
 
                     if (f.second->finished_segments != (int)f.second->copy_requests.size())
                     {

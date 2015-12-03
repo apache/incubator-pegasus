@@ -43,6 +43,7 @@
 # include <vector>
 # include <cstring> // for strcmp()
 # include <string>
+# include <cstdlib>
 
 namespace dsn
 {
@@ -69,6 +70,7 @@ namespace dsn
         rpc_address& operator=(dsn_address_t addr);
 
         const char* to_string() const;
+        std::string to_std_string() const;
         bool from_string_ipv4(const char* s);
         dsn_host_type_t type() const { return (dsn_host_type_t)_addr.u.v4.type; }
         dsn_address_t c_addr() const { return _addr; }
@@ -167,7 +169,7 @@ namespace dsn
         _addr = addr;
         return *this;
     }
-        
+
     inline bool rpc_address::operator == (::dsn::rpc_address r) const
     {
         if (_addr.u.v4.type != r.type())
@@ -196,7 +198,6 @@ namespace dsn
         if (_addr.u.v4.type != r.type())
             return _addr.u.v4.type < r.type();
 
-        int c = 0;
         switch (_addr.u.v4.type)
         {
         case HOST_TYPE_IPV4:
@@ -220,6 +221,11 @@ namespace dsn
         return dsn_address_to_string(_addr);
     }
 
+    inline std::string rpc_address::to_std_string() const
+    {
+        return std::string(to_string());
+    }
+
     inline bool rpc_address::from_string_ipv4(const char* s)
     {
         std::string str = std::string(s);
@@ -239,7 +245,7 @@ namespace dsn
 namespace std
 {
     template<>
-    struct hash<::dsn::rpc_address> 
+    struct hash< ::dsn::rpc_address> 
     {
         size_t operator()(const ::dsn::rpc_address &ep) const 
         {

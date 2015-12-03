@@ -68,6 +68,16 @@
 
 # else
 
+# if defined(__FreeBSD__)
+# include <sys/types.h>
+# include <sys/user.h>
+# include <libutil.h>
+# endif
+
+# if defined(__APPLE__)
+# include <libproc.h>
+#endif
+
 # define getcwd_ getcwd
 # define rmdir_ rmdir
 # define mkdir_(path) mkdir(path, 0775)
@@ -91,6 +101,7 @@ namespace dsn {
 # define _FS_ISSEP(x)   ((x) == _FS_SLASH || (x) == _FS_BSLASH)
 
             static __thread char tls_path_buffer[PATH_MAX];
+            # define TLS_PATH_BUFFER_SIZE PATH_MAX
 
             // npath need to be a normalized path
             static inline int get_stat_internal(const std::string& npath, struct stat_& st)
@@ -101,7 +112,7 @@ namespace dsn {
                 if (err != 0)
                 {
                     err = errno;
-                    dwarn("get_stat_internal %s failed, err = %s",
+                    dinfo("get_stat_internal %s failed, err = %s",
                         npath.c_str(),
                         strerror(err)
                         );
@@ -539,7 +550,7 @@ namespace dsn {
                     else
                     {
 #endif
-                        succ = (std::remove(fpath) == 0);
+                        succ = (::remove(fpath) == 0);
                         if (!succ)
                         {
                             dwarn("remove file %s failed, err = %s", fpath, strerror(errno));
@@ -572,7 +583,7 @@ namespace dsn {
 
                 if (dsn::utils::filesystem::path_exists_internal(npath, FTW_F))
                 {
-                    bool ret = (std::remove(npath.c_str()) == 0);
+                    bool ret = (::remove(npath.c_str()) == 0);
                     if (!ret)
                     {
                         dwarn("remove file %s failed, err = %s", path.c_str(), strerror(errno));
@@ -589,13 +600,16 @@ namespace dsn {
                 }
             }
 
-            bool rename_path(const std::string& path1, const std::string& path2, bool overwrite)
+            bool rename_path(const std::string& path1, const std::string& path2)
             {
                 bool ret;
-                
-                // We don't check this existence of path2 when overwrite is false
-                // since ::rename() will do this.
-                if (overwrite && dsn::utils::filesystem::path_exists(path2))
+
+                //
+                // on linux, we don't need to check this existence of path2 since ::rename() will do this.
+                // however, rename will not do this on windows as on linux, so we do this here for windows
+                //
+# if defined(_WIN32)
+                if (dsn::utils::filesystem::path_exists(path2))
                 {
                     ret = dsn::utils::filesystem::remove_path(path2);
                     if (!ret)
@@ -608,6 +622,7 @@ namespace dsn {
                         return ret;
                     }
                 }
+# endif
 
                 ret = (::rename(path1.c_str(), path2.c_str()) == 0);
                 if (!ret)
@@ -836,7 +851,7 @@ out_error:
                 bool succ;
 # if defined(_WIN32)
                 char* component;
-                succ = (0 != ::GetFullPathNameA(path1.c_str(), PATH_MAX, tls_path_buffer, &component));
+                succ = (0 != ::GetFullPathNameA(path1.c_str(), TLS_PATH_BUFFER_SIZE, tls_path_buffer, &component));
 # else
                 succ = (::realpath(path1.c_str(), tls_path_buffer) != nullptr);
 # endif
@@ -955,7 +970,7 @@ out_error:
             {
                 bool succ;
 
-                succ = (::getcwd_(tls_path_buffer, PATH_MAX) != nullptr);
+                succ = (::getcwd_(tls_path_buffer, TLS_PATH_BUFFER_SIZE) != nullptr);
                 if (succ)
                 {
                     path = tls_path_buffer;
@@ -990,6 +1005,101 @@ out_error:
                 tm = st.st_mtime;
 
                 return true;
+            }
+
+            error_code get_process_image_path(int pid, std::string& path)
+            {
+                if (pid < -1)
+                {
+                    return ERR_INVALID_PARAMETERS;
+                }
+
+# if defined(__linux__) || defined(__APPLE__)
+                int err;
+# endif
+
+# if defined(_WIN32)
+                HANDLE hProcess;
+                DWORD dwSize = TLS_PATH_BUFFER_SIZE;
+
+                if (pid == -1)
+                {
+                    hProcess = ::GetCurrentProcess();
+                }
+                else
+                {
+                    hProcess = ::OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, (DWORD)pid);
+                    if (hProcess == nullptr)
+                    {
+                        return ERR_INVALID_HANDLE;
+                    }
+                }
+
+                if (::QueryFullProcessImageNameA(
+                        hProcess,
+                        0,
+                        tls_path_buffer,
+                        &dwSize
+                        ) == FALSE
+                    )
+                {
+                    return ERR_PATH_NOT_FOUND;
+                }
+
+                path = tls_path_buffer;
+# elif defined(__linux__)
+                char tmp[48];
+
+                err = snprintf_p(tmp, ARRAYSIZE(tmp), "/proc/%s/exe",
+                    (pid == -1) ? "self" : std::to_string(pid).c_str()
+                    );
+                dassert(err >= 0, "snprintf_p failed.");
+
+                err = (int)readlink(tmp, tls_path_buffer, TLS_PATH_BUFFER_SIZE);
+                if (err == -1)
+                {
+                    return ERR_PATH_NOT_FOUND;
+                }
+
+                path = tls_path_buffer;
+# elif defined(__FreeBSD__)
+                struct kinfo_proc* proc;
+
+                if (pid == -1)
+                {
+                    pid = (int)getpid();
+                }
+
+                proc = kinfo_getproc(pid);
+                if (proc == nullptr)
+                {
+                    return ERR_PATH_NOT_FOUND;
+                }
+
+                // proc->ki_comm is the command name instead of the full name.
+                if (!dsn::utils::filesystem::get_absolute_path(proc->ki_comm, path))
+                {
+                    return ERR_PATH_NOT_FOUND;
+                }
+                free(proc);
+# elif defined(__APPLE__)
+                if (pid == -1)
+                {
+                    pid = getpid();
+                }
+
+                err = proc_pidpath(pid, tls_path_buffer, TLS_PATH_BUFFER_SIZE);
+                if (err <= 0)
+                {
+                    return ERR_PATH_NOT_FOUND;
+                }
+
+                path = tls_path_buffer;
+# else
+# error not implemented yet
+# endif
+
+                return ERR_OK;
             }
         }
     }

@@ -48,7 +48,7 @@
 namespace dsn { namespace tools {
 
     // multiple machines connect to the same switch, 10 should be >= than rpc_channel::max_value() + 1
-    static utils::safe_singleton_store<::dsn::rpc_address, sim_network_provider*> s_switch[10]; 
+    static utils::safe_singleton_store< ::dsn::rpc_address, sim_network_provider*> s_switch[10]; 
 
     sim_client_session::sim_client_session(
         sim_network_provider& net, 
@@ -89,9 +89,10 @@ namespace dsn { namespace tools {
             sim_network_provider* rnet = nullptr;
             if (!s_switch[task_spec::get(msg->local_rpc_code)->rpc_call_channel].get(remote_address(), rnet))
             {
-                dwarn("cannot find destination node %s in simulator",
+                derror("cannot find destination node %s in simulator",
                     remote_address().to_string()
                     );
+                //on_disconnected();  // disable this to avoid endless resending
             }
             else
             {

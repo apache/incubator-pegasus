@@ -32,6 +32,31 @@
  *     xxxx-xx-xx, author, first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
+
+/*
+HELP GRAPH
+
+                                     CALL ===================== net(call) =====================> ENQUEUE =========== queue(server) ===========> START
+                                      ^                                                            ^                                             ||
+                                      |                                                            |                                             ||
+                                      |                                                            |                                             ||
+                                      |                                                            |                                             ||
+                                      |                                                            |                                             ||
+                                Client Latency                                               Server Latency                                  exec(server)
+                                      |                                                            |                                             ||
+                                      |                                                            |                                             ||
+                                      |                                                            |                                             ||
+                                      |                                                            |                                             ||
+                                      V                                                            V                                             ||
+START<======== queue(server) ======ENQUEUE <===================== net(reply) ==================== REPLY <==========================================
+  ||
+  ||
+ exec(client)
+  ||
+  ||
+  \/
+ END
+*/
 #include <dsn/toollet/profiler.h>
 #include <dsn/service_api_c.h>
 #include "shared_io_service.h"
@@ -69,7 +94,6 @@ namespace dsn {
             if (caller != nullptr)
             {
                 auto& prof = s_spec_profilers[caller->spec().code];
-                auto code = caller->spec().code;
                 if (prof.collect_call_count)
                 {
                     prof.call_counts[callee->spec().code]++;
@@ -158,7 +182,6 @@ namespace dsn {
             {
                 task_ext_for_profiler::get(callee) = dsn_now_ns();
             }
-
         }
 
         static void profiler_on_rpc_request_enqueue(rpc_request_task* callee)
@@ -192,6 +215,7 @@ namespace dsn {
         {
             uint64_t& cts = task_ext_for_profiler::get(resp);
             uint64_t now = dsn_now_ns();
+
             if (resp->get_response() != nullptr)
             {
                 s_spec_profilers[resp->spec().code].ptr[RPC_CLIENT_NON_TIMEOUT_LATENCY_NS]->set(now - cts);
@@ -218,12 +242,14 @@ namespace dsn {
             textp << "  show the top N task kinds sort by counter_name:" << std::endl;
             textp << "      p|P|profile|Profile top $N $counter_name [$percentile]" << std::endl;
 
+            /*
             textpjs << "NAME:" << std::endl;
             textpjs << "  profile javascript - collect performance data and show as chart by javascript" << std::endl;
             textpjs << "SYNOPSIS:" << std::endl;
             textpjs << "  pjs|PJS|profilejavascript|ProfileJavaScript $chart_type task|t $task_name [$percentile] [$counter_name $counter_name ...]" << std::endl;
             textpjs << "  pjs|PJS|profilejavascript|ProfileJavaScript $chart_type counter|c $counter_name [$percentile] $task_name $task_name ..." << std::endl;
             textpjs << "  pjs|PJS|profilejavascript|ProfileJavaScript top $N $counter_name [$percentile]" << std::endl;
+            */
 
             textpd << "NAME:" << std::endl;
             textpd << "  profiler data - get appointed data, using by pjs" << std::endl;
@@ -231,10 +257,23 @@ namespace dsn {
             textpd << "  pd|PD|profiledata|ProfileData $task_name:$counter_name:$percentile ..." << std::endl;
             textpd << "  pd|PD|profiledata|ProfileData $task_name:AllPercentile:$percentile" << std::endl;
 
-			textquery << "NAME:" << std::endl;
-			textquery << "  query profiler data in batch" << std::endl;
-			textquery << "SYNOPSIS:" << std::endl;
-			textquery << "  query" << std::endl;
+            textquery << "NAME:" << std::endl;
+            textquery << "  query profiler data in batch" << std::endl;
+            textquery << "SYNOPSIS:" << std::endl;
+            textquery << "  show a matrix for all task codes contained with perf_counter percentile value" << std::endl;
+			textquery << "    profiler.query|pq table" << std::endl;
+            textquery << "  show a list of names of all task codes" << std::endl;
+            textquery << "    profiler.query|pq task_list" << std::endl;
+            textquery << "  show a list of all perf_counters and 1000 samples for each perf_counter" << std::endl;
+            textquery << "    profiler.query|pq counter_sample $task" << std::endl;
+            textquery << "  show raw counter values for a specific task" << std::endl;
+            textquery << "    profiler.query|pq counter_raw $task" << std::endl;
+            textquery << "  show 6 types of latency times for a specific task" << std::endl;
+            textquery << "    profiler.query|pq counter_calc $task" << std::endl;
+            textquery << "  show caller and callee list for a specific task" << std::endl;
+            textquery << "    profiler.query|pq call $task" << std::endl;
+            textquery << "  show a list of all sharer using the same pool with a specific task" << std::endl;
+            textquery << "    profiler.query|pq pool_sharer $task" << std::endl;
 
             textarg << "ARGUMENTS:" << std::endl;
             textarg << "  $percentile : e.g, 50 for latency at 50 percentile, 50(default)|90|95|99|999" << std::endl;
@@ -249,7 +288,7 @@ namespace dsn {
                 textarg << std::endl;
             }
             textarg << "  $task : all task code, such as" << std::endl;
-            for (int i = 1; i < dsn_task_code_max(); i++)
+            for (int i = 1; i < dsn_task_code_max() && i <= 10; i++)
             {
                 textarg << "      " << dsn_task_code_to_string(i) << std::endl;
             }
@@ -257,12 +296,12 @@ namespace dsn {
             textp << textarg.str();
             textpjs << textarg.str();
             textpd << textarg.str();
-			textquery << textarg.str();
+            textquery << textarg.str();
 
             register_command({ "p", "P", "profile", "Profile" }, "profile|Profile|p|P - performance profiling", textp.str().c_str(), profiler_output_handler);
             //register_command({ "pjs", "PJS", "profilejavascript", "ProfileJavaScript", nullptr }, "pjs|PJS|profilejavascript|ProfileJavaScript - profile and show by javascript", textpjs.str().c_str(), profiler_js_handler);
             register_command({ "pd", "PD", "profiledata", "ProfileData" }, "profiler data - get appointed data, using by pjs", textpd.str().c_str(), profiler_data_handler);
-			register_command({ "query"}, "query profiling data, output in html table format", textquery.str().c_str(), query_data_handler);
+			register_command({ "profiler.query","pq"}, "profiler.query|pq - query profiling data, output in json format", textquery.str().c_str(), query_data_handler);
         }
 
         void profiler::install(service_spec& spec)
@@ -291,23 +330,23 @@ namespace dsn {
                     );
                 s_spec_profilers[i].call_counts = new std::atomic<int64_t>[dsn_task_code_max() + 1];
 
-                s_spec_profilers[i].ptr[TASK_QUEUEING_TIME_NS] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".queue(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
-                s_spec_profilers[i].ptr[TASK_EXEC_TIME_NS] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".exec(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
-                s_spec_profilers[i].ptr[TASK_THROUGHPUT] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".qps")).c_str(), COUNTER_TYPE_RATE, true);
-                s_spec_profilers[i].ptr[TASK_CANCELLED] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".cancelled#")).c_str(), COUNTER_TYPE_NUMBER, true);
+                s_spec_profilers[i].ptr[TASK_QUEUEING_TIME_NS] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".queue(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES,"latency due to waiting in the queue", true);
+                s_spec_profilers[i].ptr[TASK_EXEC_TIME_NS] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".exec(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, "latency due to executing tasks", true);
+                s_spec_profilers[i].ptr[TASK_THROUGHPUT] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".qps")).c_str(), COUNTER_TYPE_RATE, "task numbers per second", true);
+                s_spec_profilers[i].ptr[TASK_CANCELLED] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".cancelled#")).c_str(), COUNTER_TYPE_NUMBER, "cancelled times of a specific task type", true);
 
                 if (spec->type == dsn_task_type_t::TASK_TYPE_RPC_REQUEST)
                 {
-                    s_spec_profilers[i].ptr[RPC_SERVER_LATENCY_NS] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".latency.server")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
+                    s_spec_profilers[i].ptr[RPC_SERVER_LATENCY_NS] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".latency.server")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, "latency from enqueue point to reply point on the server side for RPC tasks", true);
                 }
                 else if (spec->type == dsn_task_type_t::TASK_TYPE_RPC_RESPONSE)
                 {
-                    s_spec_profilers[i].ptr[RPC_CLIENT_NON_TIMEOUT_LATENCY_NS] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".latency.client(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
-                    s_spec_profilers[i].ptr[RPC_CLIENT_TIMEOUT_THROUGHPUT] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".timeout.qps")).c_str(), COUNTER_TYPE_RATE, true);
+                    s_spec_profilers[i].ptr[RPC_CLIENT_NON_TIMEOUT_LATENCY_NS] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".latency.client(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, "latency from call point to enqueue point on the client side for RPC tasks", true);
+                    s_spec_profilers[i].ptr[RPC_CLIENT_TIMEOUT_THROUGHPUT] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".timeout.qps")).c_str(), COUNTER_TYPE_RATE, "time-out task numbers per second for RPC tasks", true);
                 }
                 else if (spec->type == dsn_task_type_t::TASK_TYPE_AIO)
                 {
-                    s_spec_profilers[i].ptr[AIO_LATENCY_NS] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".latency(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, true);
+                    s_spec_profilers[i].ptr[AIO_LATENCY_NS] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".latency(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, "latency from call point to enqueue point for AIO tasks", true);
                 }
 
                 s_spec_profilers[i].is_profile = config()->get_value<bool>(name.c_str(), "is_profile", profile, "whether to profile this kind of task");
@@ -319,9 +358,9 @@ namespace dsn {
                 spec->on_task_begin.put_back(profiler_on_task_begin, "profiler");
                 spec->on_task_end.put_back(profiler_on_task_end, "profiler");
                 spec->on_task_cancelled.put_back(profiler_on_task_cancelled, "profiler");
-                //spec->on_task_wait_pre.put_back(profiler_on_task_wait_pre, "profiler");
-                //spec->on_task_wait_post.put_back(profiler_on_task_wait_post, "profiler");
-                //spec->on_task_cancel_post.put_back(profiler_on_task_cancel_post, "profiler");
+                spec->on_task_wait_pre.put_back(profiler_on_task_wait_pre, "profiler");
+                spec->on_task_wait_post.put_back(profiler_on_task_wait_post, "profiler");
+                spec->on_task_cancel_post.put_back(profiler_on_task_cancel_post, "profiler");
                 spec->on_aio_call.put_back(profiler_on_aio_call, "profiler");
                 spec->on_aio_enqueue.put_back(profiler_on_aio_enqueue, "profiler");
                 spec->on_rpc_call.put_back(profiler_on_rpc_call, "profiler");

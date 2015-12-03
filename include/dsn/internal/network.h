@@ -155,11 +155,11 @@ namespace dsn {
         virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) = 0;
         
     protected:
-        typedef std::unordered_map<::dsn::rpc_address, rpc_session_ptr> client_sessions;
+        typedef std::unordered_map< ::dsn::rpc_address, rpc_session_ptr> client_sessions;
         client_sessions               _clients;
         utils::rw_lock_nr             _clients_lock;
 
-        typedef std::unordered_map<::dsn::rpc_address, rpc_session_ptr> server_sessions;
+        typedef std::unordered_map< ::dsn::rpc_address, rpc_session_ptr> server_sessions;
         server_sessions               _servers;
         utils::rw_lock_nr             _servers_lock;
     };
@@ -189,6 +189,7 @@ namespace dsn {
     // for client session
     public:
         bool on_recv_reply(uint64_t key, message_ex* reply, int delay_ms);
+        // return true if the socket should be closed
         bool on_disconnected();
                
         virtual void connect() = 0;
@@ -216,7 +217,7 @@ namespace dsn {
         void on_send_completed(uint64_t signature = 0); // default value for nothing is sent
 
     private:
-        // return whether there are messages for sending        
+        // return whether there are messages for sending; should always be called in lock
         bool unlink_message_for_send();
         void clear(bool resend_msgs);
 
@@ -248,7 +249,7 @@ namespace dsn {
         ::dsn::utils::ex_lock_nr           _lock; // [
         bool                               _is_sending_next;
         dlink                              _messages;        
-        session_state                      _connect_state;
+        volatile session_state             _connect_state;
         uint64_t                           _message_sent;     
         // ]
     };

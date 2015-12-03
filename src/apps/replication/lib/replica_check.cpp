@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     replica membership state periodical checking
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -41,7 +41,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ "GroupCheck"
+# define __TITLE__ "replica.check"
 
 namespace dsn { namespace replication {
 
@@ -59,7 +59,7 @@ void replica::init_group_check()
             &replica::broadcast_group_check,
             gpid_to_hash(get_gpid()),
             0,
-            _options->group_check_internal_ms
+            _options->group_check_interval_ms
             );
 }
 
@@ -82,7 +82,7 @@ void replica::broadcast_group_check()
 
     for (auto it = _primary_states.statuses.begin(); it != _primary_states.statuses.end(); it++)
     {
-        if (it->first == primary_address())
+        if (it->first == _stub->_primary_address)
             continue;
 
         ::dsn::rpc_address addr = it->first;
@@ -90,15 +90,22 @@ void replica::broadcast_group_check()
 
         request->app_type = _primary_states.membership.app_type;
         request->node = addr;
-        _primary_states.get_replica_config(addr, request->config);
+        _primary_states.get_replica_config(it->second, request->config);
         request->last_committed_decree = last_committed_decree();
-        request->learner_signature = 0;
-        if (it->second == PS_POTENTIAL_SECONDARY)
+
+        if (request->config.status == PS_POTENTIAL_SECONDARY)
         {
-            auto it2 = _primary_states.learners.find(it->first);
-            dassert (it2 != _primary_states.learners.end(), "");
-            request->learner_signature = it2->second.signature;
+            auto it = _primary_states.learners.find(addr);
+            dassert(it != _primary_states.learners.end(), "learner %s is missing", addr.to_string());
+            request->config.learner_signature = it->second.signature;
         }
+
+        ddebug(
+            "%s: init_group_check for %s with state %s",
+            name(),
+            addr.to_string(),
+            enum_to_string(it->second)
+        );
 
         dsn::task_ptr callback_task = rpc::call_typed(
             addr,
@@ -110,10 +117,6 @@ void replica::broadcast_group_check()
             );
 
         _primary_states.group_check_pending_replies[addr] = callback_task;
-
-        ddebug(
-            "%s: init_group_check for %s", name(), addr.to_string()
-        );
     }
 }
 
@@ -152,7 +155,7 @@ void replica::on_group_check(const group_check_request& request, /*out*/ group_c
         }
         break;
     case PS_POTENTIAL_SECONDARY:
-        init_learn(request.learner_signature);
+        init_learn(request.config.learner_signature);
         break;
     case PS_ERROR:
         break;
@@ -161,7 +164,7 @@ void replica::on_group_check(const group_check_request& request, /*out*/ group_c
     }
     
     response.gpid = get_gpid();
-    response.node = primary_address();
+    response.node = _stub->_primary_address;
     response.err = ERR_OK;
     if (status() == PS_ERROR)
     {

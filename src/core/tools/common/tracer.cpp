@@ -226,14 +226,17 @@ namespace dsn {
                     "whether to trace when a task is cancelled"))
                     spec->on_task_cancelled.put_back(tracer_on_task_cancelled, "tracer");
 
-                //if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_wait_pre", true))
-                    //spec->on_task_wait_pre.put_back(tracer_on_task_wait_pre, "tracer");
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_wait_pre", true,
+                    "whether to trace when a task is to be wait"))
+                    spec->on_task_wait_pre.put_back(tracer_on_task_wait_pre, "tracer");
 
-                //if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_wait_post", true))
-                    //spec->on_task_wait_post.put_back(tracer_on_task_wait_post, "tracer");
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_wait_post", true,
+                    "whether to trace when a task is wait post"))
+                    spec->on_task_wait_post.put_back(tracer_on_task_wait_post, "tracer");
 
-                //if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_cancel_post", true))
-                    //spec->on_task_cancel_post.put_back(tracer_on_task_cancel_post, "tracer");
+                if (config()->get_value<bool>(section_name.c_str(), "tracer::on_task_cancel_post", true,
+                    "whether to trace when a task is cancel post"))
+                    spec->on_task_cancel_post.put_back(tracer_on_task_cancel_post, "tracer");
 
                 if (config()->get_value<bool>(section_name.c_str(), "tracer::on_aio_call", true, 
                     "whether to trace when an aio task is called"))

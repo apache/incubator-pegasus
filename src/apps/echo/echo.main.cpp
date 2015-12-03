@@ -35,15 +35,13 @@
 // apps
 # include "echo.app.example.h"
 
-void module_init()
+static void module_init()
 {
     // register all possible service apps
-    dsn::register_app<::dsn::example::echo_server_app>("server");
-    dsn::register_app<::dsn::example::echo_client_app>("client");
-    dsn::register_app<::dsn::example::echo_perf_test_client_app>("client.perf.echo");
+    dsn::register_app< ::dsn::example::echo_server_app>("server");
+    dsn::register_app< ::dsn::example::echo_client_app>("client");
+    dsn::register_app< ::dsn::example::echo_perf_test_client_app>("client.perf.echo");
 }
-
-# ifndef DSN_RUN_USE_SVCHOST
 
 int main(int argc, char** argv)
 {
@@ -62,9 +60,3 @@ int main(int argc, char** argv)
 
     return 0;
 }
-
-# else
-
-# include <dsn/internal/module_int.cpp.h>
-
-# endif

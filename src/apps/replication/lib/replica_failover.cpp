@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     failure handling in replica
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -41,7 +41,7 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ "FailOver"
+# define __TITLE__ "replica.failover"
 
 namespace dsn { namespace replication {
 
@@ -74,7 +74,7 @@ void replica::handle_remote_failure(partition_status st, ::dsn::rpc_address node
     error.end_tracking();
 
     dassert (status() == PS_PRIMARY, "");
-    dassert (node != primary_address(), "");
+    dassert (node != _stub->_primary_address, "");
 
     switch (st)
     {

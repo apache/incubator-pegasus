@@ -202,13 +202,28 @@ dsn_handle_t native_win_aio_provider::open(const char* file_name, int oflag, int
 
 error_code native_win_aio_provider::close(dsn_handle_t fh)
 {
-    if (::CloseHandle((HANDLE)(fh)))
+    if (fh == DSN_INVALID_FILE_HANDLE || ::CloseHandle((HANDLE)(fh)))
+    {
         return ERR_OK;
+    }
     else
     {
         derror("close file failed, err = 0x%x\n", ::GetLastError());
         return ERR_FILE_OPERATION_FAILED;
     }        
+}
+
+error_code native_win_aio_provider::flush(dsn_handle_t fh)
+{
+    if (fh == DSN_INVALID_FILE_HANDLE || ::FlushFileBuffers((HANDLE)(fh)))
+    {
+        return ERR_OK;
+    }
+    else
+    {
+        derror("close file failed, err = 0x%x\n", ::GetLastError());
+        return ERR_FILE_OPERATION_FAILED;
+    }
 }
 
 struct windows_disk_aio_context : public disk_aio

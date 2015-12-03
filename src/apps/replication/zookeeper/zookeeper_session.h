@@ -76,10 +76,16 @@ public:
     static zoo_opcontext* create_context()
     {
         zoo_opcontext* result = new zoo_opcontext();
-        result->_input._flags = 0; result->_input._is_set_watch = false;
+        result->_input._flags = 0;
+        result->_input._is_set_watch = false;
+        result->_input._owner = nullptr;
+        result->_input._watcher_callback = nullptr;
 
         memset(&(result->_output), 0, sizeof(zoo_output));
+
         result->_optype = ZOO_OPINVALID;
+        result->_callback_function = nullptr;
+        result->_priv_session_ref = nullptr;
         return result;
     }
     static void free_context(zoo_opcontext* ctx) { delete ctx; }

@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     replica container - replica stub
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -48,6 +48,8 @@
 namespace dsn { namespace replication {
 
 using namespace dsn::service;
+
+bool replica_stub::s_not_exit_on_log_failure = false;
 
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/, bool is_long_subscriber/* = true*/)
     : serverlet("replica_stub"), _replicas_lock(true)
@@ -79,69 +81,71 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     // init dirs
     set_options(opts);
     _dir = _options.working_dir;
+    _primary_address = primary_address();
     
     if (clear)
     {
-		if (!dsn::utils::filesystem::remove_path(_dir))
-		{
-			dassert("Fail to remove %s.", _dir.c_str());
-		}
+        if (!dsn::utils::filesystem::remove_path(_dir))
+        {
+            dassert("Fail to remove %s.", _dir.c_str());
+        }
     }
 
-	if (!dsn::utils::filesystem::create_directory(_dir))
-	{
-		dassert(false, "Fail to create directory %s.", _dir.c_str());
-	}
+    if (!dsn::utils::filesystem::create_directory(_dir))
+    {
+        dassert(false, "Fail to create directory %s.", _dir.c_str());
+    }
 
-	std::string temp;
-	if (!dsn::utils::filesystem::get_absolute_path(_dir, temp))
-	{
-		dassert(false, "Fail to get absolute path from %s.", _dir.c_str());
-	}
-	_dir = temp;
+    std::string temp;
+    if (!dsn::utils::filesystem::get_absolute_path(_dir, temp))
+    {
+        dassert(false, "Fail to get absolute path from %s.", _dir.c_str());
+    }
+    _dir = temp;
     std::string log_dir = _dir + "/log";
-	if (!dsn::utils::filesystem::create_directory(log_dir))
-	{
-		dassert(false, "Fail to create directory %s.", log_dir.c_str());
-	}
+    if (!dsn::utils::filesystem::create_directory(log_dir))
+    {
+        dassert(false, "Fail to create directory %s.", log_dir.c_str());
+    }
     _log = new mutation_log(
         log_dir,
         false,
-        opts.log_batch_buffer_MB,
+        opts.log_batch_buffer_KB_shared,
         opts.log_file_size_mb
         );
 
     // init rps
     replicas rps;
-	std::vector<std::string> dir_list;
+    std::vector<std::string> dir_list;
 
-	if (!dsn::utils::filesystem::get_subdirectories(dir(), dir_list, false))
-	{
-		dassert(false, "Fail to get files in %s.", dir().c_str());
-	}
+    if (!dsn::utils::filesystem::get_subdirectories(dir(), dir_list, false))
+    {
+        dassert(false, "Fail to get files in %s.", dir().c_str());
+    }
 
-	for (auto& name : dir_list)
-	{
-		if (name.length() >= 4 &&
-			(name.substr(name.length() - strlen("log")) == "log" ||
-				name.substr(name.length() - strlen(".err")) == ".err")
-			)
-			continue;
+    for (auto& name : dir_list)
+    {
+        if (name.length() >= 4 &&
+            (name.substr(name.length() - strlen("log")) == "log" ||
+                name.substr(name.length() - strlen(".err")) == ".err")
+            )
+            continue;
 
-		auto r = replica::load(this, name.c_str(), true);
-		if (r != nullptr)
-		{
-			ddebug("%u.%u @ %s: load replica '%s' success, <durable, commit> = <%llu, %llu>",
-				r->get_gpid().app_id, r->get_gpid().pidx,
+        auto r = replica::load(this, name.c_str(), true);
+        if (r != nullptr)
+        {
+            ddebug("%u.%u @ %s: load replica '%s' success, <durable, commit> = <%" PRId64 ", %" PRId64 ">, last_prepared_decree = %" PRId64,
+                r->get_gpid().app_id, r->get_gpid().pidx,
                 primary_address().to_string(),
                 name.c_str(),
-				r->last_durable_decree(),
-                r->last_committed_decree()				
-				);
-			rps[r->get_gpid()] = r;
-		}
-	}
-	dir_list.clear();
+                r->last_durable_decree(),
+                r->last_committed_decree(),
+                r->last_prepared_decree()
+                );
+            rps[r->get_gpid()] = r;
+        }
+    }
+    dir_list.clear();
 
     // init shared prepare log
     err = _log->open(
@@ -176,7 +180,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         {
             it->second->close();
             std::string new_dir = it->second->dir() + ".err";
-            if (!utils::filesystem::rename_path(it->second->dir(), new_dir, true))
+            if (!utils::filesystem::rename_path(it->second->dir(), new_dir))
             {
                 dassert(false, "we cannot recover from the above error, exit ...");
             }
@@ -209,8 +213,8 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         }
 
         dwarn(
-            "%u.%u @ %s: load replica with err %s, durable = %lld, committed = %llu, "
-            "maxpd = %llu, ballot = %llu, max(share) = %lld, max(private) = %lld, log_offset = <%lld, %lld>",
+            "%u.%u @ %s: load replica with err %s, durable = %" PRId64 ", committed = %" PRId64 ", "
+            "maxpd = %" PRId64 ", ballot = %" PRId64 ", max(share) = %" PRId64 ", max(private) = %" PRId64 ", log_offset = <%" PRId64 ", %" PRId64 ">",
             it->first.app_id, it->first.pidx,
             primary_address().to_string(),
             err.to_string(),
@@ -227,7 +231,6 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         if (err == ERR_OK)
         {            
             dassert(smax == pmax, "incomplete private log state");
-            it->second->check_state_completeness();
             it->second->set_inactive_state_transient(true);
         }
         else
@@ -361,7 +364,11 @@ void replica_stub::on_client_read(dsn_message_t request)
 
 void replica_stub::on_config_proposal(const configuration_update_request& proposal)
 {
-    if (!is_connected()) return;
+    if (!is_connected())
+    {
+        dwarn("on_config_proposal: not connected, ignore");
+        return;
+    }
 
     replica_ptr rep = get_replica(proposal.config.gpid, proposal.type == CT_ASSIGN_PRIMARY, proposal.config.app_type.c_str());
     if (rep == nullptr)
@@ -426,7 +433,11 @@ void replica_stub::on_prepare(dsn_message_t request)
 
 void replica_stub::on_group_check(const group_check_request& request, /*out*/ group_check_response& response)
 {
-    if (!is_connected()) return;
+    if (!is_connected())
+    {
+        dwarn("on_group_check: not connected, ignore");
+        return;
+    }
 
     replica_ptr rep = get_replica(request.config.gpid, request.config.status == PS_POTENTIAL_SECONDARY, request.app_type.c_str());
     if (rep != nullptr)
@@ -442,7 +453,7 @@ void replica_stub::on_group_check(const group_check_request& request, /*out*/ gr
 
             begin_open_replica(request.app_type, request.config.gpid, req);
             response.err = ERR_OK;
-            response.learner_signature = 0;
+            response.learner_signature = invalid_signature;
         }
         else
         {
@@ -466,6 +477,19 @@ void replica_stub::on_learn(dsn_message_t msg)
         learn_response response;
         response.err = ERR_OBJECT_NOT_FOUND;
         reply(msg, response);
+    }
+}
+
+void replica_stub::on_copy_checkpoint(const replica_configuration& request, /*out*/ learn_response& response)
+{
+    replica_ptr rep = get_replica(request.gpid);
+    if (rep != nullptr)
+    {
+        rep->on_copy_checkpoint(request, response);
+    }
+    else
+    {
+        response.err = ERR_OBJECT_NOT_FOUND;
     }
 }
 
@@ -521,7 +545,7 @@ void replica_stub::query_configuration_by_node()
     dsn_message_t msg = dsn_msg_create_request(RPC_CM_QUERY_NODE_PARTITIONS, 0, 0);
 
     configuration_query_by_node_request req;
-    req.node = primary_address();
+    req.node = _primary_address;
     ::marshall(msg, req);
 
     rpc_address target(_failure_detector->get_servers());
@@ -628,6 +652,12 @@ void replica_stub::set_meta_server_connected_for_test(const configuration_query_
     }
 }
 
+void replica_stub::set_replica_state_subscriber_for_test(replica_state_subscriber subscriber, bool is_long_subscriber)
+{
+    _replica_state_subscriber = subscriber;
+    _is_long_subscriber = is_long_subscriber;
+}
+
 // this_ is used to hold a ref to replica_stub so we don't need to cancel the task on replica_stub::close
 void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_, const partition_configuration& config)
 {
@@ -644,7 +674,7 @@ void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_, const par
             primary_address().to_string()
             );
 
-        if (config.primary == primary_address())
+        if (config.primary == _primary_address)
         {
             remove_replica_on_meta_server(config);
         }
@@ -672,14 +702,14 @@ void replica_stub::remove_replica_on_meta_server(const partition_configuration& 
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
     request->config = config;
     request->config.ballot++;        
-    request->node = primary_address();
+    request->node = _primary_address;
     request->type = CT_DOWNGRADE_TO_INACTIVE;
 
-    if (primary_address() == config.primary)
+    if (_primary_address == config.primary)
     {
         request->config.primary.set_invalid();        
     }
-    else if (replica_helper::remove_node(primary_address(), request->config.secondaries))
+    else if (replica_helper::remove_node(_primary_address, request->config.secondaries))
     {
     }
     else
@@ -779,35 +809,35 @@ void replica_stub::on_gc()
     }
     
     // gc on-disk rps
-	std::vector<std::string> sub_list;
-	if (!dsn::utils::filesystem::get_subdirectories(_dir, sub_list, false))
-	{
-		dassert(false, "Fail to get subdirectories in %s.", _dir.c_str());
-	}
-	std::string ext = ".err";
-	for (auto& fpath : sub_list)
-	{
-		auto&& name = dsn::utils::filesystem::get_file_name(fpath);
-		if ((name.length() > ext.length())
-			&& (name.compare((name.length() - ext.length()), std::string::npos, ext) == 0)
-			)
-		{
-			time_t mt;
-			if (!dsn::utils::filesystem::last_write_time(fpath, mt))
-			{
-				dassert(false, "Fail to get last write time of %s.", fpath.c_str());
-			}
+    std::vector<std::string> sub_list;
+    if (!dsn::utils::filesystem::get_subdirectories(_dir, sub_list, false))
+    {
+        dassert(false, "Fail to get subdirectories in %s.", _dir.c_str());
+    }
+    std::string ext = ".err";
+    for (auto& fpath : sub_list)
+    {
+        auto&& name = dsn::utils::filesystem::get_file_name(fpath);
+        if ((name.length() > ext.length())
+            && (name.compare((name.length() - ext.length()), std::string::npos, ext) == 0)
+            )
+        {
+            time_t mt;
+            if (!dsn::utils::filesystem::last_write_time(fpath, mt))
+            {
+                dassert(false, "Fail to get last write time of %s.", fpath.c_str());
+            }
 
-			if (mt > ::time(0) + _options.gc_disk_error_replica_interval_seconds)
-			{
-				if (!dsn::utils::filesystem::remove_path(fpath))
-				{
-					dassert(false, "Fail to delete directory %s.", fpath.c_str());
-				}
-			}
-		}
-	}
-	sub_list.clear();
+            if (mt > ::time(0) + _options.gc_disk_error_replica_interval_seconds)
+            {
+                if (!dsn::utils::filesystem::remove_path(fpath))
+                {
+                    dassert(false, "Fail to delete directory %s.", fpath.c_str());
+                }
+            }
+        }
+    }
+    sub_list.clear();
 
 #if 0
     boost::filesystem::directory_iterator endtr;
@@ -917,7 +947,7 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
 
     if (nullptr != req)
     {
-        rpc::call_one_way_typed(primary_address(), RPC_LEARN_ADD_LEARNER, *req, gpid_to_hash(req->config.gpid));
+        rpc::call_one_way_typed(_primary_address, RPC_LEARN_ADD_LEARNER, *req, gpid_to_hash(req->config.gpid));
     }
 }
 
@@ -972,7 +1002,9 @@ bool replica_stub::remove_replica(replica_ptr r)
         return true;
     }
     else
+    {
         return false;
+    }
 }
 
 void replica_stub::notify_replica_state_update(const replica_configuration& config, bool isClosing)
@@ -981,18 +1013,21 @@ void replica_stub::notify_replica_state_update(const replica_configuration& conf
     {
         if (_is_long_subscriber)
         {
-            tasking::enqueue(LPC_REPLICA_STATE_CHANGE_NOTIFICATION, this, std::bind(_replica_state_subscriber, primary_address(), config, isClosing));
+            tasking::enqueue(LPC_REPLICA_STATE_CHANGE_NOTIFICATION, this, std::bind(_replica_state_subscriber, _primary_address, config, isClosing));
         }
         else
         {
-            _replica_state_subscriber(primary_address(), config, isClosing);
+            _replica_state_subscriber(_primary_address, config, isClosing);
         }
     }
 }
 
 void replica_stub::handle_log_failure(error_code err)
 {
-    dassert(false, "TODO: better log failure handling ...");
+    if (!s_not_exit_on_log_failure)
+    {
+        dassert(false, "TODO: better log failure handling ...");
+    }
 }
 
 void replica_stub::open_service()
@@ -1009,6 +1044,7 @@ void replica_stub::open_service()
     register_rpc_handler(RPC_REMOVE_REPLICA, "remove", &replica_stub::on_remove);
     register_rpc_handler(RPC_GROUP_CHECK, "GroupCheck", &replica_stub::on_group_check);
     register_rpc_handler(RPC_QUERY_PN_DECREE, "query_decree", &replica_stub::on_query_decree);
+    register_rpc_handler(RPC_REPLICA_COPY_LAST_CHECKPOINT, "copy_checkpoint", &replica_stub::on_copy_checkpoint);
 }
 
 void replica_stub::close()

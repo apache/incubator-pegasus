@@ -38,6 +38,9 @@
 # else
 # include <sys/socket.h>
 # include <netdb.h>
+# include <ifaddrs.h>
+# include <netinet/in.h>
+# include <arpa/inet.h>
 # endif
 
 # include "rpc_engine.h"
@@ -98,7 +101,7 @@ namespace dsn {
         int bucket_index = key % MATCHER_BUCKET_NR;
 
         {
-            utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
+            utils::auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
             auto it = _requests[bucket_index].find(key);
             if (it != _requests[bucket_index].end())
             {
@@ -146,7 +149,7 @@ namespace dsn {
         int bucket_index = key % MATCHER_BUCKET_NR;
 
         {
-            utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
+            utils::auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
             auto it = _requests[bucket_index].find(key);
             if (it != _requests[bucket_index].end())
             {
@@ -175,7 +178,7 @@ namespace dsn {
         timeout_task = (new rpc_timeout_task(this, hdr.id, call->node()));
 
         {
-            utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
+            utils::auto_lock< ::dsn::utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
             auto pr = _requests[bucket_index].insert(rpc_requests::value_type(hdr.id, match_entry()));
             dassert (pr.second, "the message is already on the fly!!!");
             pr.first->second.resp_task = call;
@@ -285,7 +288,7 @@ namespace dsn {
                 cs.hdr_format = network_header_format(network_header_format::to_string(i));
 
                 auto net = create_network(cs, true, ctx);
-                if (!net) return ERR_NETWORK_INIT_FALED;
+                if (!net) return ERR_NETWORK_INIT_FAILED;
                 pnet[j] = net;
 
                 if (ctx.queue)
@@ -333,7 +336,7 @@ namespace dsn {
             auto net = create_network(sp.second, false, ctx);
             if (net == nullptr)
             {
-                return ERR_NETWORK_INIT_FALED;
+                return ERR_NETWORK_INIT_FAILED;
             }
 
             (*pnets)[sp.second.channel] = net;
@@ -425,7 +428,7 @@ namespace dsn {
         else
         {
             dwarn(
-                "recv unknown message with type %s from %s, rpc_id = %llx",
+                "recv unknown message with type %s from %s, rpc_id = %016llx",
                 msg->header->rpc_name,
                 msg->from_address.to_string(),
                 msg->header->rpc_id
@@ -499,7 +502,7 @@ namespace dsn {
         auto& hdr = *request->header; 
         if (!sp->on_rpc_call.execute(task::get_current_task(), request, call, true))
         {
-            ddebug("rpc request %s is dropped (fault inject), rpc_id = %llx",
+            ddebug("rpc request %s is dropped (fault inject), rpc_id = %016llx",
                 request->header->rpc_name,
                 request->header->rpc_id
                 );

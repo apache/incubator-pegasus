@@ -195,7 +195,7 @@ void disk_engine::ctrl(dsn_handle_t fh, dsn_ctrl_code_t code, int param)
 dsn_handle_t disk_engine::open(const char* file_name, int flag, int pmode)
 {            
     dsn_handle_t nh = _provider->open(file_name, flag, pmode);
-    if (nh != nullptr)
+    if (nh != DSN_INVALID_FILE_HANDLE)
     {
         return new disk_file(nh);
     }
@@ -218,6 +218,19 @@ error_code disk_engine::close(dsn_handle_t fh)
     {
         return ERR_INVALID_HANDLE;
     }   
+}
+
+error_code disk_engine::flush(dsn_handle_t fh)
+{
+    if (nullptr != fh)
+    {
+        auto df = (disk_file*)fh;
+        return _provider->flush(df->native_handle());
+    }
+    else
+    {
+        return ERR_INVALID_HANDLE;
+    }
 }
 
 void disk_engine::read(aio_task* aio)
@@ -308,6 +321,7 @@ void disk_engine::process_write(aio_task* aio, uint32_t sz)
     // no batching
     if (aio->aio()->buffer_size == sz)
     {
+        aio->collapse();
         return _provider->aio(aio);
     }
 
@@ -320,16 +334,11 @@ void disk_engine::process_write(aio_task* aio, uint32_t sz)
         auto current_wk = aio;
         do
         {
-            auto dio = current_wk->aio();
-            memcpy(
-                (void*)ptr,
-                (const void*)(dio->buffer),
-                (size_t)(dio->buffer_size)
-                );
-
-            ptr += dio->buffer_size;
+            current_wk->copy_to(ptr);
+            ptr += current_wk->aio()->buffer_size;
             current_wk = (aio_task*)current_wk->next;
         } while (current_wk);
+        
 
         dassert(ptr == (char*)bb.data() + bb.length(), "");
 
@@ -358,7 +367,7 @@ void disk_engine::complete_io(aio_task* aio, error_code err, uint32_t bytes, int
     if (err != ERR_OK)
     {
         dinfo(
-            "disk operation failure with code %s, err = %s, aio task id = %llx",
+            "disk operation failure with code %s, err = %s, aio task id = %016llx",
             aio->spec().name.c_str(),
             err.to_string(),
             aio->id()

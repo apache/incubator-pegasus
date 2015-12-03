@@ -47,12 +47,24 @@ namespace dsn { namespace replication {
 
 class mutation_log;
 class replication_failure_detector;
+class replication_checker;
+namespace test {
+    class test_checker;
+}
+
 typedef std::unordered_map<global_partition_id, replica_ptr> replicas;
-// from, new replica config, isClosing
-typedef std::function<void (::dsn::rpc_address, const replica_configuration&, bool)> replica_state_subscriber;
+typedef std::function<void (::dsn::rpc_address /*from*/,
+                            const replica_configuration& /*new_config*/,
+                            bool /*is_closing*/)> replica_state_subscriber;
+
+
+DEFINE_TASK_CODE_RPC(RPC_REPLICA_COPY_LAST_CHECKPOINT, TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION)
 
 class replica_stub : public serverlet<replica_stub>, public ref_counter
 {
+public:
+    static bool s_not_exit_on_log_failure; // for test
+
 public:
     replica_stub(replica_state_subscriber subscriber = nullptr, bool is_long_subscriber = true);
     ~replica_stub(void);
@@ -90,6 +102,7 @@ public:
     void on_add_learner(const group_check_request& request);
     void on_remove(const replica_configuration& request);
     void on_group_check(const group_check_request& request, /*out*/ group_check_response& response);
+    void on_copy_checkpoint(const replica_configuration& request, /*out*/ learn_response& response);
 
     //
     //    local messages
@@ -104,6 +117,7 @@ public:
     void init_gc_for_test();
     void set_meta_server_disconnected_for_test() { on_meta_server_disconnected(); }
     void set_meta_server_connected_for_test(const configuration_query_by_node_response& config);
+    void set_replica_state_subscriber_for_test(replica_state_subscriber subscriber, bool is_long_subscriber);
 
     //
     // common routines for inquiry
@@ -139,8 +153,9 @@ private:
 
 private:
     friend class ::dsn::replication::replication_checker;    
+    friend class ::dsn::replication::test::test_checker;
     typedef std::unordered_map<global_partition_id, ::dsn::task_ptr> opening_replicas;
-    typedef std::unordered_map<global_partition_id, std::pair<::dsn::task_ptr, replica_ptr>> closing_replicas; // <close, replica>
+    typedef std::unordered_map<global_partition_id, std::pair< ::dsn::task_ptr, replica_ptr>> closing_replicas; // <close, replica>
 
     zlock                       _replicas_lock;
     replicas                    _replicas;

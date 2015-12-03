@@ -45,7 +45,7 @@ namespace dsn
         dsn::task_ptr call_typed_replicated(
             // servers
             ::dsn::rpc_address first_server,
-            const std::vector<::dsn::rpc_address>& servers,
+            const std::vector< ::dsn::rpc_address>& servers,
             // request
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
@@ -60,7 +60,7 @@ namespace dsn
 
         dsn::task_ptr call_replicated(
             ::dsn::rpc_address first_server,
-            const std::vector<::dsn::rpc_address>& servers,
+            const std::vector< ::dsn::rpc_address>& servers,
             dsn_message_t request,
 
             // reply
@@ -97,7 +97,7 @@ namespace dsn
         inline dsn::task_ptr call_typed_replicated(
             // servers
             ::dsn::rpc_address first_server,
-            const std::vector<::dsn::rpc_address>& servers,
+            const std::vector< ::dsn::rpc_address>& servers,
             // request
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,

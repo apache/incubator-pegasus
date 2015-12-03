@@ -74,8 +74,10 @@ public:
     task_engine* engine() const { return _owner; }
     service_node* node() const { return _node; }
     void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, /*out*/ std::stringstream& ss);
+    void get_queue_info(/*out*/ std::stringstream& ss);
     std::vector<task_queue*>& queues() { return _queues; }
     std::vector<task_worker*>& workers() { return _workers; }
+    std::vector<admission_controller*>& controllers() { return _controllers; }
 
 private:
     threadpool_spec                    _spec;
@@ -119,7 +121,7 @@ public:
 
     service_node* node() const { return _node; }
     void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, /*out*/ std::stringstream& ss);
-    
+    void get_queue_info(/*out*/ std::stringstream& ss);
 private:
     std::vector<task_worker_pool*> _pools;
     volatile bool                  _is_running;

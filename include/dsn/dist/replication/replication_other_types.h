@@ -42,6 +42,8 @@
 #ifndef replication_OTHER_TYPES_H
 #define replication_OTHER_TYPES_H
 
+# include <dsn/cpp/autoref_ptr.h>
+
 namespace dsn {
     namespace replication {
 
@@ -52,6 +54,7 @@ namespace dsn {
         #define invalid_ballot ((::dsn::replication::ballot)-1LL)
         #define invalid_decree ((::dsn::replication::decree)-1LL)
         #define invalid_offset (-1LL)
+        #define invalid_signature 0
 
         class replica;
         typedef dsn::ref_ptr<replica> replica_ptr;

@@ -71,7 +71,7 @@ public:
     void set_left_secondary_ack_count(unsigned int count) { _left_secondary_ack_count = count; }
     void set_left_potential_secondary_ack_count(unsigned int count) { _left_potential_secondary_ack_count = count; }
     int  clear_prepare_or_commit_tasks();
-    int  clear_log_task();
+    void wait_log_task() const;
     void set_prepare_ts() { _prepare_ts_ms = dsn_now_ms(); }
 
     // >= 1 MB
@@ -79,6 +79,7 @@ public:
     
     // reader & writer
     static mutation_ptr read_from(binary_reader& readeer, dsn_message_t from);
+    void write_to_scatter(std::function<void(blob)> inserter) const;
     void write_to(binary_writer& writer);
 
     // data
@@ -118,8 +119,8 @@ private:
 class mutation_queue
 {
 public:
-    mutation_queue(global_partition_id gpid, int max_concurrent_op = 2)
-        : _max_concurrent_op(max_concurrent_op)
+    mutation_queue(global_partition_id gpid, int max_concurrent_op = 2, bool batch_write_disabled = false)
+        : _max_concurrent_op(max_concurrent_op), _batch_write_disabled(batch_write_disabled)
     {
         _current_op_count = 0;
         _pending_mutation = nullptr;
@@ -133,8 +134,8 @@ public:
     ~mutation_queue()
     {
         clear();
-        dassert(_current_op_count == 0 && _hdr.is_empty(),
-            "work queue cannot be deleted when there are still %d running ops or pending work items in queue",
+        dassert(_hdr.is_empty(),
+            "work queue is deleted when there are still %d running ops or pending work items in queue",
             _current_op_count
             );
     }
@@ -143,12 +144,12 @@ public:
 
     void clear();
 
-    // called when the curren operation is completed,
+    // called when the curren operation is completed or replica configuration is change,
     // which triggers further round of operations as returned
-    mutation_ptr on_work_completed(mutation* running, void* ctx);
+    mutation_ptr check_possible_work(int current_running_count);
 
 private:
-    mutation_ptr unlink_next_workload(void* ctx)
+    mutation_ptr unlink_next_workload()
     {
         mutation_ptr r = _hdr.pop_one();
         if (r.get() != nullptr)
@@ -167,6 +168,7 @@ private:
 private:
     int _current_op_count;
     int _max_concurrent_op;
+    bool _batch_write_disabled;
     
     volatile int*   _pcount;
     mutation_ptr    _pending_mutation;
@@ -178,7 +180,7 @@ inline void mutation::set_id(ballot b, decree c)
 {
     data.header.ballot = b;
     data.header.decree = c;
-    sprintf (_name, "%lld.%lld", static_cast<long long int>(b), static_cast<long long int>(c));
+    sprintf (_name, "%" PRId64 ".%" PRId64, b, c);
 }
 
 }} // namespace

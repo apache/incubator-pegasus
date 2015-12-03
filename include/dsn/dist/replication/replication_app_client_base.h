@@ -52,11 +52,11 @@ namespace dsn { namespace replication {
     class replication_app_client_base : public virtual clientlet
     {
     public:
-        static void load_meta_servers(/*out*/ std::vector<::dsn::rpc_address>& servers);
+        static void load_meta_servers(/*out*/ std::vector< ::dsn::rpc_address>& servers);
 
     public:
         replication_app_client_base(        
-            const std::vector<::dsn::rpc_address>& meta_servers, 
+            const std::vector< ::dsn::rpc_address>& meta_servers, 
             const char* replicated_app_name, 
             int task_bucket_count = 13
             );
@@ -331,7 +331,7 @@ namespace dsn { namespace replication {
 
         // get read address policy
         virtual ::dsn::rpc_address get_read_address(read_semantic_t semantic, const partition_configuration& config);
-        
+        ::dsn::rpc_address get_meta_servers() const { return _meta_servers; }
     public:
         struct request_context : public ref_counter
         {

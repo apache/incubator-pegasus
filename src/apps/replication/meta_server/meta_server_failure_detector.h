@@ -50,6 +50,9 @@ class meta_service;
 namespace dsn {
     namespace replication{
         class replication_checker;
+        namespace test {
+            class test_checker;
+        }
     }
 }
 
@@ -70,7 +73,7 @@ public:
     bool acquire_leader_lock();
     
     // client side
-    virtual void on_master_disconnected(const std::vector<::dsn::rpc_address>& nodes)
+    virtual void on_master_disconnected(const std::vector< ::dsn::rpc_address>& nodes)
     {
         dassert (false, "unsupported method");
     }
@@ -81,7 +84,7 @@ public:
     }
 
     // server side
-    virtual void on_worker_disconnected(const std::vector<::dsn::rpc_address>& nodes);
+    virtual void on_worker_disconnected(const std::vector< ::dsn::rpc_address>& nodes);
     virtual void on_worker_connected(::dsn::rpc_address node);
 
     virtual void on_ping(const fd::beacon_msg& beacon, ::dsn::rpc_replier<fd::beacon_ack>& reply);
@@ -91,6 +94,7 @@ private:
 
 private:
     friend class ::dsn::replication::replication_checker;
+    friend class ::dsn::replication::test::test_checker;
 
     volatile bool _is_primary;
 

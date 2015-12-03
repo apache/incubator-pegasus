@@ -43,7 +43,7 @@ namespace dsn
 {
     namespace tools
     {
-        io_looper::io_looper()
+        io_looper::io_looper() : _remote_timer_tasks_count(0)
         {
             _io_queue = 0;
             _local_notification_fd = eventfd(0, EFD_NONBLOCK);
@@ -127,11 +127,12 @@ namespace dsn
                 if (cb)
                 {
                     utils::auto_lock<utils::ex_lock_nr_spin> l(_io_sessions_lock);
-                    auto r = _io_sessions.erase(cb);
-                    dassert(r > 0, "the callback must be present");
+                    _io_sessions.erase(cb);
+                    // without ctx, we are not sure whether cb exists in _io_sessions
+                    // no assert here.
                 }
                 return ERR_OK;
-            }                
+            }
         }
 
         void io_looper::notify_local_execution()
@@ -156,7 +157,6 @@ namespace dsn
                 uintptr_t lolp_or_events
                 )
             {
-                uint32_t events = (uint32_t)lolp_or_events;
                 int64_t notify_count = 0;
 
                 if (read(_local_notification_fd, &notify_count, sizeof(notify_count)) != sizeof(notify_count))

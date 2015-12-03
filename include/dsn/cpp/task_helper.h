@@ -56,7 +56,7 @@ namespace dsn
     typedef std::function<void(error_code, dsn_message_t, dsn_message_t)> rpc_reply_handler;
     typedef std::function<void(dsn_message_t)> rpc_request_handler;
     class safe_task_handle;
-    typedef ::dsn::ref_ptr<::dsn::safe_task_handle> task_ptr;
+    typedef ::dsn::ref_ptr<safe_task_handle> task_ptr;
     
     //
     // basic cpp task wrapper
@@ -148,7 +148,7 @@ namespace dsn
         {
         }
 
-        safe_task(THandler& h) : _handler(h)
+        safe_task(THandler& h) : _handler(h), _is_timer(false)
         {
         }
 
@@ -208,7 +208,7 @@ namespace dsn
     // certain parameters to the task is known (e.g., error code after logging)
     // in thise case, we can use two staged computation task as this is.
     //
-    //    auto task = tasking::create_late_task(...);
+    //    task_ptr task = tasking::create_late_task(...);
     //    ...
     //    return task;
     //

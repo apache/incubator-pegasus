@@ -26,7 +26,7 @@ meta_state_service_zookeeper::~meta_state_service_zookeeper()
     }
 }
 
-error_code meta_state_service_zookeeper::initialize()
+error_code meta_state_service_zookeeper::initialize(const char *)
 {
     _session = zookeeper_session_mgr::instance().get_session( task::get_current_node() );
     _zoo_state = _session->attach(this, std::bind(&meta_state_service_zookeeper::on_zoo_session_evt,
@@ -38,13 +38,14 @@ error_code meta_state_service_zookeeper::initialize()
         if (_zoo_state != ZOO_CONNECTED_STATE)
             return ERR_TIMEOUT;
     }
+    add_ref();
     return ERR_OK;
 }
 
 #define VISIT_INIT(tsk, op_type, node) \
     zookeeper_session::zoo_opcontext* op = zookeeper_session::create_context();\
     zookeeper_session::zoo_input* input = &op->_input;\
-    op->_callback_function = std::bind(&meta_state_service_zookeeper::visit_zookeeper_internal, ref_this(this), tsk, std::placeholders::_1);\
+    op->_callback_function = std::bind(&meta_state_service_zookeeper::visit_zookeeper_internal, ref_this(this), task_ptr(tsk), std::placeholders::_1);\
     op->_optype = op_type;\
     input->_path = node;
 
@@ -56,7 +57,7 @@ task_ptr meta_state_service_zookeeper::create_node(
     clientlet *tracker)
 {    
     auto tsk = tasking::create_late_task(cb_code, cb_create, 0, tracker);
-
+    dinfo("call create, node(%s)", node.c_str());
     VISIT_INIT(tsk, zookeeper_session::ZOO_OPERATION::ZOO_CREATE, node);
     input->_value = value;
     input->_flags = 0;
@@ -72,6 +73,7 @@ task_ptr meta_state_service_zookeeper::delete_empty_node(
     clientlet* tracker)
 {
     auto tsk = tasking::create_late_task(cb_code, cb_delete, 0, tracker);
+    dinfo("call delete, node(%s)", node.c_str());
     VISIT_INIT(tsk, zookeeper_session::ZOO_OPERATION::ZOO_DELETE, node);
     _session->visit(op);
     return tsk;
@@ -135,6 +137,7 @@ task_ptr meta_state_service_zookeeper::get_data(
     clientlet *tracker)
 {
     auto tsk = tasking::create_late_task(cb_code, cb_get_data, 0, tracker);
+    dinfo("call get, node(%s)", node.c_str());
     VISIT_INIT(tsk, zookeeper_session::ZOO_OPERATION::ZOO_GET, node);
     input->_is_set_watch = 0;
     _session->visit(op);
@@ -149,6 +152,7 @@ task_ptr meta_state_service_zookeeper::set_data(
     clientlet *tracker)
 {
     auto tsk = tasking::create_late_task(cb_code, cb_set_data, 0, tracker);
+    dinfo("call set, node(%s)", node.c_str());
     VISIT_INIT(tsk, zookeeper_session::ZOO_OPERATION::ZOO_SET, node);
 
     input->_value = value;
@@ -163,6 +167,7 @@ task_ptr meta_state_service_zookeeper::node_exist(
     clientlet *tracker)
 {
     auto tsk = tasking::create_late_task(cb_code, cb_exist, 0, tracker);
+    dinfo("call node_exist, node(%s)", node.c_str());
     VISIT_INIT(tsk, zookeeper_session::ZOO_OPERATION::ZOO_EXISTS, node);
     input->_is_set_watch = 0;
     _session->visit(op);
@@ -176,6 +181,7 @@ task_ptr meta_state_service_zookeeper::get_children(
     clientlet *tracker)
 {
     auto tsk = tasking::create_late_task(cb_code, cb_get_children, 0, tracker);
+    dinfo("call get children, node(%s)", node.c_str());
     VISIT_INIT(tsk, zookeeper_session::ZOO_OPERATION::ZOO_GETCHILDREN, node);
     input->_is_set_watch = 0;
     _session->visit(op);
@@ -206,10 +212,12 @@ void meta_state_service_zookeeper::on_zoo_session_evt(ref_this _this, int zoo_st
 /*this function runs in zookeper do-completion thread*/
 void meta_state_service_zookeeper::visit_zookeeper_internal(
     ref_this,
-    task_ptr callback, 
+    task_ptr callback,
     void* result)
 {
     zookeeper_session::zoo_opcontext* op = reinterpret_cast<zookeeper_session::zoo_opcontext*>(result);
+    dinfo("visit zookeeper internal: ans(%d), call type(%d)", op->_output.error, op->_optype);
+
     switch (op->_optype)
     {
     case zookeeper_session::ZOO_OPERATION::ZOO_CREATE:

@@ -142,11 +142,38 @@ bool mutation::add_client_request(dsn_task_code_t code, dsn_message_t request)
         dsn_msg_add_ref(from); // released on dctor
     }
     
-    sprintf(mu->_name, "%lld.%lld",
-        static_cast<long long int>(mu->data.header.ballot),
-        static_cast<long long int>(mu->data.header.decree));
+    sprintf(mu->_name, "%" PRId64 ".%" PRId64,
+        mu->data.header.ballot,
+        mu->data.header.decree);
 
     return mu;
+}
+
+void mutation::write_to_scatter(std::function<void(blob)> inserter) const
+{
+    {
+        binary_writer temp_writer;
+        marshall(temp_writer, data.header);
+        marshall(temp_writer, data.updates.size());
+        for (const auto& bb : data.updates)
+        {
+            marshall(temp_writer, bb.length());
+        }
+        inserter(temp_writer.get_buffer());
+    }
+    
+    for (const auto& bb : data.updates)
+    {
+        inserter(bb);
+    }
+    {
+        binary_writer temp_writer;
+        for (auto& ci : client_requests)
+        {
+            marshall(temp_writer, ci.code);
+        }
+        inserter(temp_writer.get_buffer());
+    }
 }
 
 void mutation::write_to(binary_writer& writer)
@@ -162,7 +189,7 @@ void mutation::write_to(binary_writer& writer)
 int mutation::clear_prepare_or_commit_tasks()
 {
     int c = 0;
-    for (auto it = _prepare_or_commit_tasks.begin(); it != _prepare_or_commit_tasks.end(); it++)
+    for (auto it = _prepare_or_commit_tasks.begin(); it != _prepare_or_commit_tasks.end(); ++it)
     {
         if (it->second->cancel(true))
         {
@@ -174,14 +201,12 @@ int mutation::clear_prepare_or_commit_tasks()
     return c;
 }
 
-int mutation::clear_log_task()
+void mutation::wait_log_task() const
 {
-    if (_log_task != nullptr && _log_task->cancel(true))
+    if (_log_task != nullptr)
     {
-        _log_task = nullptr;
-        return 1;
+        _log_task->wait();
     }
-    return 0;
 }
 
 mutation_ptr mutation_queue::add_work(int code, dsn_message_t request, replica* r)
@@ -206,7 +231,7 @@ mutation_ptr mutation_queue::add_work(int code, dsn_message_t request, replica* 
     }
 
     // check if full
-    if (_pending_mutation->is_full())
+    if (_batch_write_disabled || _pending_mutation->is_full())
     {
         _pending_mutation->add_ref(); // released when unlink
         _hdr.add(_pending_mutation);
@@ -215,7 +240,7 @@ mutation_ptr mutation_queue::add_work(int code, dsn_message_t request, replica* 
     }
     
     // get next work item
-    if (_current_op_count == _max_concurrent_op)
+    if (_current_op_count >= _max_concurrent_op)
         return nullptr;
     else if (_hdr.is_empty())
     {
@@ -230,13 +255,13 @@ mutation_ptr mutation_queue::add_work(int code, dsn_message_t request, replica* 
     else
     {
         _current_op_count++;
-        return unlink_next_workload(nullptr);
+        return unlink_next_workload();
     }
 }
 
-mutation_ptr mutation_queue::on_work_completed(mutation* running, void* ctx)
+mutation_ptr mutation_queue::check_possible_work(int current_running_count)
 {
-    _current_op_count--;
+    _current_op_count = current_running_count;
 
     // no further workload
     if (_hdr.is_empty())
@@ -258,7 +283,7 @@ mutation_ptr mutation_queue::on_work_completed(mutation* running, void* ctx)
     else
     {
         _current_op_count++;
-        return unlink_next_workload(ctx);
+        return unlink_next_workload();
     }
 }
 
@@ -270,7 +295,7 @@ void mutation_queue::clear()
     }
 
     mutation_ptr r;
-    while ((r = unlink_next_workload(nullptr)) != nullptr)
+    while ((r = unlink_next_workload()) != nullptr)
     {
     }
 }

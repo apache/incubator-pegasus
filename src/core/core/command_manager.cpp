@@ -189,16 +189,15 @@ namespace dsn {
     void command_manager::run_console()
     {
         std::cout << "dsn cli begin ... (type 'help' + Enter to learn more)" << std::endl;
+        std::cout << ">";
 
-        while (true)
+        std::string cmdline;
+        while (std::getline(std::cin, cmdline))
         {
-            std::string cmdline;
-            std::cout << ">";
-            std::getline(std::cin, cmdline);
-
             std::string result;
             run_command(cmdline, result);
             std::cout << result << std::endl;
+            std::cout << ">";
         }
     }
 
@@ -260,7 +259,7 @@ namespace dsn {
                     utils::auto_read_lock l(_lock);
                     auto it = _handlers.find(args[0]);
                     if (it == _handlers.end())
-                        ss << "cannot find command '" << args[0] << "'" << std::endl;
+                        ss << "cannot find command '" << args[0] << "'";
                     else
                     {
                         ss.width(6);

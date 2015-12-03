@@ -44,11 +44,19 @@ using namespace dsn::replication;
 class load_balancer : public serverlet<load_balancer>
 {
 public:
+    // switchs for replication test
+    static bool s_disable_lb;
+    static bool s_lb_for_test;
+
+public:
     load_balancer(server_state* state);
     ~load_balancer();
 
     void run();
     void run(global_partition_id gpid);
+
+    // this method is for testing
+    void explictly_send_proposal(global_partition_id gpid, rpc_address receiver, config_type type, rpc_address node);
 
 private:
     // meta server => partition server

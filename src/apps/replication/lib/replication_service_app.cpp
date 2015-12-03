@@ -37,12 +37,17 @@
 # include "replication_common.h"
 # include "replica_stub.h"
 
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "replica.service_app"
+
 namespace dsn { namespace replication {
 
 replication_service_app::replication_service_app()
     : service_app()
 {
-    _stub = nullptr;
+    _stub = new replica_stub();
 
 #if 0
     ::boost::filesystem::path pr("./");
@@ -66,7 +71,6 @@ error_code replication_service_app::start(int argc, char** argv)
     opts.initialize();    
     opts.working_dir = utils::filesystem::path_combine(opts.working_dir, app_name);
 
-    _stub = new replica_stub();
     _stub->initialize(opts);
     _stub->open_service();
     return ERR_OK;

@@ -43,6 +43,7 @@
 # endif
 
 int g_test_count = 0;
+int g_test_ret = 0;
 
 class test_client : public ::dsn::service_app
 {
@@ -50,7 +51,7 @@ public:
     ::dsn::error_code start(int argc, char** argv)
     {
         testing::InitGoogleTest(&argc, argv);
-        auto ret = RUN_ALL_TESTS();
+        g_test_ret = RUN_ALL_TESTS();
         g_test_count = 1;
 /*
         // exit without any destruction
@@ -83,5 +84,5 @@ GTEST_API_ int main(int argc, char **argv)
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
-    return 0;    
+    return g_test_ret;
 }

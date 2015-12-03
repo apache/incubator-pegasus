@@ -49,7 +49,7 @@ namespace dsn {
             const char* name,
             ::dsn::dist::distributed_lock_service::factory f)
         {
-            return dsn::utils::factory_store<::dsn::dist::distributed_lock_service>::register_factory(
+            return dsn::utils::factory_store< ::dsn::dist::distributed_lock_service>::register_factory(
                 name, 
                 f,
                 PROVIDER_TYPE_MAIN);
@@ -59,7 +59,7 @@ namespace dsn {
             const char* name,
             ::dsn::dist::meta_state_service::factory f)
         {
-            return dsn::utils::factory_store<::dsn::dist::meta_state_service>::register_factory(
+            return dsn::utils::factory_store< ::dsn::dist::meta_state_service>::register_factory(
                 name,
                 f,
                 PROVIDER_TYPE_MAIN);
@@ -67,32 +67,38 @@ namespace dsn {
 
         meta_service_app::meta_service_app()
         {
-            _service = nullptr;
+            _state = new server_state();
+            _service = new meta_service(_state);
 
             register_component_provider(
                 "distributed_lock_service_simple",
-                ::dsn::dist::distributed_lock_service::create<::dsn::dist::distributed_lock_service_zookeeper>
+                ::dsn::dist::distributed_lock_service::create<dsn::dist::distributed_lock_service_simple>
                 );
 
             register_component_provider(
                 "meta_state_service_simple",
-                ::dsn::dist::meta_state_service::create<::dsn::dist::meta_state_service_zookeeper>
+                ::dsn::dist::meta_state_service::create<dsn::dist::meta_state_service_simple>
                 );
 
+            register_component_provider(
+                "distributed_lock_service_zookeeper",
+                dsn::dist::distributed_lock_service::create<dsn::dist::distributed_lock_service_zookeeper>
+                );
+
+            register_component_provider(
+                "meta_state_service_zookeeper",
+                dsn::dist::meta_state_service::create<dsn::dist::meta_state_service_zookeeper>
+                );
             // TODO: register more provides here used by meta servers
         }
 
         meta_service_app::~meta_service_app()
         {
-
         }
 
         ::dsn::error_code meta_service_app::start(int argc, char** argv)
         {
-            _state = new server_state();
-            _service = new meta_service(_state);
-
-            _state->initialize();
+            _state->initialize(name().c_str());
             _service->start();
             return ERR_OK;
         }

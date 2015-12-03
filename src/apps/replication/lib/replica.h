@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     replica interface, the base object which rdsn replicates
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -52,6 +52,10 @@ namespace dsn { namespace replication {
 
 class replication_app_base;
 class replica_stub;
+class replication_checker;
+namespace test {
+    class test_checker;
+}
 
 using namespace ::dsn::service;
 
@@ -96,6 +100,7 @@ public:
     void on_add_learner(const group_check_request& request);
     void on_remove(const replica_configuration& request);
     void on_group_check(const group_check_request& request, /*out*/ group_check_response& response);
+    void on_copy_checkpoint(const replica_configuration& request, /*out*/ learn_response& response);
 
     //
     //    messsages from liveness monitor
@@ -141,12 +146,12 @@ private:
     /////////////////////////////////////////////////////////////////
     // 2pc
     void init_prepare(mutation_ptr& mu);
-    void send_prepare_message(::dsn::rpc_address addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds);
+    void send_prepare_message(::dsn::rpc_address addr, partition_status status, mutation_ptr& mu, int timeout_milliseconds, int64_t learn_signature = invalid_signature);
     void on_append_log_completed(mutation_ptr& mu, error_code err, size_t size);
     void on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, error_code err, dsn_message_t request, dsn_message_t reply);
     void do_possible_commit_on_primary(mutation_ptr& mu);    
     void ack_prepare_message(error_code err, mutation_ptr& mu);
-    void cleanup_preparing_mutations(bool is_primary);
+    void cleanup_preparing_mutations(bool wait);
     
     /////////////////////////////////////////////////////////////////
     // learning    
@@ -189,15 +194,18 @@ private:
 
     /////////////////////////////////////////////////////////////////
     // check timer for gc, checkpointing etc.
-    void on_check_timer();
+    void on_checkpoint_timer();
     void gc();
     void init_checkpoint();
     void checkpoint();
     void catch_up_with_private_logs(partition_status s);
     void on_checkpoint_completed(error_code err);
-    
+    void on_copy_checkpoint_ack(error_code err, std::shared_ptr<replica_configuration>& req, std::shared_ptr<learn_response>& resp);
+    void on_copy_checkpoint_file_completed(error_code err, size_t sz, std::shared_ptr<learn_response> resp);
+
 private:
     friend class ::dsn::replication::replication_checker;
+    friend class ::dsn::replication::test::test_checker;
     friend class ::dsn::replication::mutation_queue;
 
     // replica configuration, updated by update_local_configuration ONLY    

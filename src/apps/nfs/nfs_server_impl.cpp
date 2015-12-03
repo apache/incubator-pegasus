@@ -39,7 +39,7 @@
 namespace dsn {
     namespace service {
 
-        void nfs_service_impl::on_copy(const ::dsn::service::copy_request& request, ::dsn::rpc_replier<::dsn::service::copy_response>& reply)
+        void nfs_service_impl::on_copy(const ::dsn::service::copy_request& request, ::dsn::rpc_replier< ::dsn::service::copy_response>& reply)
         {
             //dinfo(">>> on call RPC_COPY end, exec RPC_NFS_COPY");
 
@@ -71,7 +71,7 @@ namespace dsn {
                 }
             }
 
-            dinfo("nfs: copy file %s [%lld, %lld)",
+            dinfo("nfs: copy file %s [%" PRId64 ", %" PRId64 ")",
                 file_path.c_str(),
                 request.offset,
                 request.offset + request.size
@@ -136,7 +136,7 @@ namespace dsn {
         }
 
         // RPC_NFS_NEW_NFS_GET_FILE_SIZE 
-        void nfs_service_impl::on_get_file_size(const ::dsn::service::get_file_size_request& request, ::dsn::rpc_replier<::dsn::service::get_file_size_response>& reply)
+        void nfs_service_impl::on_get_file_size(const ::dsn::service::get_file_size_request& request, ::dsn::rpc_replier< ::dsn::service::get_file_size_response>& reply)
         {
             //dinfo(">>> on call RPC_NFS_GET_FILE_SIZE end, exec RPC_NFS_GET_FILE_SIZE");
 
@@ -152,27 +152,27 @@ namespace dsn {
                 }
                 else
                 {
-					if (!dsn::utils::filesystem::get_subfiles(folder, file_list, true))
-					{
-						err = ERR_FILE_OPERATION_FAILED;
-					}
-					else
-					{
-						for (auto& fpath : file_list)
-						{
-							// TODO: using uint64 instead as file ma
-							// Done
-							int64_t sz;
-							if (!dsn::utils::filesystem::file_size(fpath, sz))
-							{
-								dassert(false, "Fail to get file size of %s.", fpath.c_str());
-							}
+                    if (!dsn::utils::filesystem::get_subfiles(folder, file_list, true))
+                    {
+                        err = ERR_FILE_OPERATION_FAILED;
+                    }
+                    else
+                    {
+                        for (auto& fpath : file_list)
+                        {
+                            // TODO: using uint64 instead as file ma
+                            // Done
+                            int64_t sz;
+                            if (!dsn::utils::filesystem::file_size(fpath, sz))
+                            {
+                                dassert(false, "Fail to get file size of %s.", fpath.c_str());
+                            }
 
-							resp.size_list.push_back((uint64_t)sz);
-							resp.file_list.push_back(fpath.substr(request.source_dir.length(), fpath.length() - 1));
-						}
-						file_list.clear();
-					}
+                            resp.size_list.push_back((uint64_t)sz);
+                            resp.file_list.push_back(fpath.substr(request.source_dir.length(), fpath.length() - 1));
+                        }
+                        file_list.clear();
+                    }
                 }
             }
             else // return file size in the request file folder

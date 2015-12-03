@@ -47,7 +47,9 @@ namespace dsn
 
             struct params
             {
-                std::vector<::dsn::rpc_address> servers;
+                ::dsn::rpc_address current_server;
+                ::dsn::rpc_address first_server;
+                std::vector< ::dsn::rpc_address> servers;
                 rpc_reply_handler callback;
 
                 // internal callback contexts
@@ -56,7 +58,7 @@ namespace dsn
                 int         reply_hash;
             };
 
-            static ::dsn::rpc_address get_next_server(::dsn::rpc_address currentServer, const std::vector<::dsn::rpc_address>& servers)
+            static ::dsn::rpc_address get_next_server(::dsn::rpc_address currentServer, const std::vector< ::dsn::rpc_address>& servers)
             {
                 if (currentServer.is_invalid())
                 {
@@ -94,6 +96,16 @@ namespace dsn
 
                     err = header.err;
                 }
+                else if(err != ERR_OK)
+                {
+                    ::dsn::rpc_address next_server = rpc_replicated_impl::get_next_server(ps->current_server, ps->servers);
+                    if(next_server != ps->first_server)
+                    {
+                        ps->current_server = next_server;
+                        rpc::call(next_server, request, ps->svc, ps->internal_cb, ps->reply_hash);
+                        return;
+                    }
+                }
 
                 if (nullptr != ps->callback)
                 {
@@ -107,7 +119,7 @@ namespace dsn
 
         dsn::task_ptr call_replicated(
             ::dsn::rpc_address first_server,
-            const std::vector<::dsn::rpc_address>& servers,
+            const std::vector< ::dsn::rpc_address>& servers,
             dsn_message_t request,
 
             // reply
@@ -127,6 +139,8 @@ namespace dsn
             rpc_replicated_impl::params *ps = new rpc_replicated_impl::params;
             ps->servers = servers;
             ps->callback = callback;
+            ps->first_server = first;
+            ps->current_server = first;
 
             ps->internal_cb = std::bind(
                 &rpc_replicated_impl::internal_rpc_reply_callback,

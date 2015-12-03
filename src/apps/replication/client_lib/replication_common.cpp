@@ -48,13 +48,18 @@ replication_options::replication_options()
     prepare_timeout_ms_for_secondaries = 1000;
     prepare_timeout_ms_for_potential_secondaries = 3000;
 
+    batch_write_disabled = false;
     staleness_for_commit = 10;
     max_mutation_count_in_prepare_list = 110;
     
     mutation_2pc_min_replica_count = 1;    
 
-    group_check_internal_ms = 100000;
+    group_check_interval_ms = 100000;
     group_check_disabled = false;
+
+    checkpoint_interval_mins = 60; // 60 mins
+    checkpoint_min_decree_gap = 10000;
+    checkpoint_max_interval_hours = 24; // at least one checkpoint per day
 
     gc_interval_ms = 30 * 1000; // 30000 milliseconds
     gc_disabled = false;
@@ -70,7 +75,8 @@ replication_options::replication_options()
 
     working_dir = ".";
         
-    log_batch_buffer_MB = 1;
+    log_batch_buffer_KB_shared = 0;
+    log_batch_buffer_KB_private = 4;
     log_pending_max_ms = 100;
     log_file_size_mb = 32;
     log_buffer_size_mb_private = 1;
@@ -127,7 +133,14 @@ void replication_options::initialize()
         prepare_timeout_ms_for_potential_secondaries,
         "timeout (ms) for prepare message to potential secondaries in two phase commit"
         );
-    
+
+
+    batch_write_disabled =
+        dsn_config_get_value_bool("replication",
+        "batch_write_disabled",
+        batch_write_disabled,
+        "whether to disable auto-batch of replicated write requests"
+        );
     staleness_for_commit =
         (int)dsn_config_get_value_uint64("replication", 
         "staleness_for_commit", 
@@ -147,10 +160,10 @@ void replication_options::initialize()
         "minimum number of alive replicas under which write is allowed"
         );
 
-    group_check_internal_ms =
+    group_check_interval_ms =
         (int)dsn_config_get_value_uint64("replication",
-        "group_check_internal_ms", 
-        group_check_internal_ms,
+        "group_check_interval_ms", 
+        group_check_interval_ms,
         "every what period (ms) we check the replica healthness"
         );
     group_check_disabled =
@@ -159,6 +172,28 @@ void replication_options::initialize()
         group_check_disabled,
         "whether group check is disabled"
         );
+
+    checkpoint_interval_mins =
+        (int)dsn_config_get_value_uint64("replication",
+        "checkpoint_interval_mins",
+        checkpoint_interval_mins,
+        "every what period (minutes) we do checkpoints for replicated apps"
+        ); 
+
+    checkpoint_min_decree_gap = 
+        (int64_t)dsn_config_get_value_uint64("replication",
+        "checkpoint_min_decree_gap",
+        checkpoint_min_decree_gap,
+        "minimum decree gap that triggers checkpoint"
+        );
+
+    checkpoint_max_interval_hours = 
+        (int)dsn_config_get_value_uint64("replication",
+        "checkpoint_max_interval_hours",
+        checkpoint_max_interval_hours,
+        "maximum time interval (hours) where a new checkpoint must be created"
+        );
+
     gc_interval_ms =
         (int)dsn_config_get_value_uint64("replication", 
         "gc_interval_ms", 
@@ -222,12 +257,18 @@ void replication_options::initialize()
         log_file_size_mb,
         "maximum log segment file size (MB)"
         );
-    log_batch_buffer_MB =
+    log_batch_buffer_KB_shared =
         (int)dsn_config_get_value_uint64("replication", 
-        "log_batch_buffer_MB", 
-        log_batch_buffer_MB,
-        "log buffer size (MB) for batching incoming logs"
+        "log_batch_buffer_KB_shared", 
+        log_batch_buffer_KB_shared,
+        "shared log buffer size (KB) for batching incoming logs"
         );
+    log_batch_buffer_KB_private =
+        (int)dsn_config_get_value_uint64("replication",
+            "log_batch_buffer_KB_private",
+            log_batch_buffer_KB_private,
+            "private log buffer size (KB) for batching incoming logs"
+            );
     log_pending_max_ms =
         (int)dsn_config_get_value_uint64("replication", 
         "log_pending_max_ms", 
@@ -286,7 +327,7 @@ void replication_options::sanity_check()
     dassert (max_mutation_count_in_prepare_list >= staleness_for_commit, "");
 }
    
-/*static*/ bool replica_helper::remove_node(::dsn::rpc_address node, /*inout*/ std::vector<::dsn::rpc_address>& nodeList)
+/*static*/ bool replica_helper::remove_node(::dsn::rpc_address node, /*inout*/ std::vector< ::dsn::rpc_address>& nodeList)
 {
     auto it = std::find(nodeList.begin(), nodeList.end(), node);
     if (it != nodeList.end())
@@ -305,6 +346,7 @@ void replication_options::sanity_check()
     replica_config.gpid = partition_config.gpid;
     replica_config.primary = partition_config.primary;
     replica_config.ballot = partition_config.ballot;
+    replica_config.learner_signature = invalid_signature;
 
     if (node == partition_config.primary)
     {
