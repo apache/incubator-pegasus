@@ -19,7 +19,7 @@ install:
 
             echo "Downloading boost binaries from ${env:DSN_BOOST_PKG} ..."
 
-            Start-FileDownload "${env:DSN_BOOST_PKG}" -FileName boost.7z -Timeout 1200000
+            appveyor DownloadFile "${env:DSN_BOOST_PKG}" -FileName boost.7z -Timeout 1200000
         }
 
     - cmd: >-
