@@ -20,5 +20,10 @@ dsn_common_setup()
 dsn_add_pseudo_projects()
 
 add_subdirectory(ext/gtest)
-add_subdirectory(ext/gflags)
+
+#
+# !!! gflags is currently not used, and when it is enabled, it causes failure on windows compilation
+# add_subdirectory(ext/gflags)
+#
+
 add_subdirectory(src)
