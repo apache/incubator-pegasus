@@ -48,6 +48,7 @@ namespace dsn {
 
         void replica::on_checkpoint_timer()
         {
+            check_hashed_access();
             init_checkpoint();
             gc();
         }
@@ -64,8 +65,6 @@ namespace dsn {
 
         void replica::init_checkpoint()
         {
-            check_hashed_access();
-            
             // only applicable to primary and secondary replicas
             if (status() != PS_PRIMARY && status() != PS_SECONDARY)
                 return;
@@ -114,7 +113,7 @@ namespace dsn {
                 dassert(PS_SECONDARY == status(), "");
 
                 // only one running instance
-                if (_secondary_states.checkpoint_task != nullptr)
+                if (nullptr == _secondary_states.checkpoint_task)
                 {
                     _secondary_states.checkpoint_task = tasking::enqueue(
                         LPC_CHECKPOINT_REPLICA,
