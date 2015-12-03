@@ -143,13 +143,13 @@ public:
     virtual int  checkpoint() = 0;
 
     //
-    // asynchonously checkpoint, which will not stall the normal writes ops.
+    // asynchonously checkpoint, which will not stall the normal write ops.
     // replication layer will check last_durable_decree() later.
     // 
     // Must be thread safe.
     //
     // It is not always necessary for the apps to implement this method,
-    // but if it is implemented, the replication logic will be much easier.
+    // but if it is implemented, the checkpoint logic in replication will be much simpler.
     //
     virtual int  checkpoint_async() { return ERR_NOT_IMPLEMENTED; }
     
@@ -187,8 +187,8 @@ public:
     // Or,
     //
     // [CHKPT_COPY]
-    // when an app only implement synchonous checkpoint, the replica
-    // as a primary needs to copy checkpoint from secondaries instead of
+    // when an app only implement synchonous checkpoint, the primary replica
+    // needs to copy checkpoint from secondaries instead of
     // doing checkpointing by itself, in order to not stall the normal
     // write operations.
     // 
