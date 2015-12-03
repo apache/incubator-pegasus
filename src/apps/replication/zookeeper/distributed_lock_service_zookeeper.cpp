@@ -17,6 +17,30 @@ namespace dsn { namespace dist {
 std::string distributed_lock_service_zookeeper::LOCK_ROOT = "/lock";
 std::string distributed_lock_service_zookeeper::LOCK_NODE = "LOCKNODE";
 
+distributed_lock_service_zookeeper::distributed_lock_service_zookeeper(): clientlet(), ref_counter()
+{
+    _first_call = true;
+}
+
+distributed_lock_service_zookeeper::~distributed_lock_service_zookeeper()
+{
+    if (_session)
+    {
+        std::vector<lock_struct_ptr> handle_vec;
+        {
+            utils::auto_write_lock l(_service_lock);
+            for (auto& kv: _zookeeper_locks)
+                handle_vec.push_back(kv.second);
+            _zookeeper_locks.clear();
+        }
+        for (lock_struct_ptr& ptr: handle_vec)
+            _session->detach(ptr.get());
+        _session->detach(this);
+
+        _session = nullptr;
+    }
+}
+
 void distributed_lock_service_zookeeper::erase(const lock_key& key)
 {
     utils::auto_write_lock l(_service_lock);
@@ -26,14 +50,13 @@ void distributed_lock_service_zookeeper::erase(const lock_key& key)
 error_code distributed_lock_service_zookeeper::initialize()
 {
     _session = zookeeper_session_mgr::instance().get_session( task::get_current_node() );
-    _zoo_state = ZOO_CONNECTING_STATE;
-    int zstate = _session->attach(this, std::bind(&distributed_lock_service_zookeeper::on_zoo_session_evt,
+    _zoo_state = _session->attach(this, std::bind(&distributed_lock_service_zookeeper::on_zoo_session_evt,
                                                   lock_srv_ptr(this),
                                                   std::placeholders::_1) );
-    if (zstate == ZOO_CONNECTING_STATE)
+    if (_zoo_state != ZOO_CONNECTED_STATE)
     {
         _waiting_attach.wait_for( zookeeper_session_mgr::fast_instance().timeout() );
-        if (_zoo_state == ZOO_CONNECTING_STATE)
+        if (_zoo_state != ZOO_CONNECTED_STATE)
             return ERR_TIMEOUT;
     }
     return ERR_OK;
@@ -51,7 +74,8 @@ std::pair<task_ptr, task_ptr> distributed_lock_service_zookeeper::lock(
     lock_struct_ptr handle;
     {
         utils::auto_write_lock l(_service_lock);
-        auto iter = _zookeeper_locks.find( std::make_pair(lock_id, myself_id) );
+        auto id_pair = std::make_pair(lock_id, myself_id);
+        auto iter = _zookeeper_locks.find( id_pair );
         if ( iter==_zookeeper_locks.end() ){
             if (!create_if_not_exist) {
                 task_ptr tsk = tasking::enqueue(lock_cb_code, nullptr, 
@@ -61,6 +85,7 @@ std::pair<task_ptr, task_ptr> distributed_lock_service_zookeeper::lock(
             else {
                 handle = new lock_struct(lock_srv_ptr(this));
                 handle->initialize(lock_id, myself_id);
+                _zookeeper_locks[ id_pair ] = handle;
             }
         }
         else
@@ -157,12 +182,11 @@ void distributed_lock_service_zookeeper::dispatch_zookeeper_session_expire()
 void distributed_lock_service_zookeeper::on_zoo_session_evt(lock_srv_ptr _this, int zoo_state)
 {
     //TODO: better policy of zookeeper session response
-    static bool first_call = true;
     _this->_zoo_state = zoo_state;
 
-    if (first_call && ZOO_CONNECTED_STATE==zoo_state)
+    if (_this->_first_call && ZOO_CONNECTED_STATE==zoo_state)
     {
-        first_call = false;
+        _this->_first_call = false;
         _this->_waiting_attach.notify();
     }
     else if (ZOO_CONNECTED_STATE!=zoo_state)

@@ -10,6 +10,8 @@ class zookeeper_session;
 class distributed_lock_service_zookeeper: public distributed_lock_service, public clientlet, public ref_counter
 {
 public:
+    explicit distributed_lock_service_zookeeper();
+    virtual ~distributed_lock_service_zookeeper();
     virtual error_code initialize() override;
     virtual std::pair<task_ptr, task_ptr> lock(
         const std::string& lock_id,
@@ -36,7 +38,7 @@ public:
         task_code cb_code,
         const lock_callback& cb) override;
 
-private:    
+private:
     static std::string LOCK_ROOT;
     static std::string LOCK_NODE;
 
@@ -56,6 +58,7 @@ private:
 
     zookeeper_session* _session;
     int _zoo_state;
+    bool _first_call;
     utils::notify_event _waiting_attach;
 
     void erase(const lock_key& key);
@@ -64,7 +67,7 @@ private:
 
     static void on_zoo_session_evt(lock_srv_ptr _this, int zoo_state);
 
-    friend class lock_struct;    
+    friend class lock_struct;
 };
 
 }}

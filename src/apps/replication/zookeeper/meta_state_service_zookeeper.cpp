@@ -12,6 +12,11 @@
 
 namespace dsn{ namespace dist {
 
+meta_state_service_zookeeper::meta_state_service_zookeeper(): clientlet(), ref_counter()
+{
+    _first_call = true;
+}
+
 meta_state_service_zookeeper::~meta_state_service_zookeeper()
 {
     if (_session)
@@ -181,16 +186,15 @@ task_ptr meta_state_service_zookeeper::get_children(
 /* this function runs in zookeeper do-completion thread */
 void meta_state_service_zookeeper::on_zoo_session_evt(ref_this _this, int zoo_state)
 {
-    static bool first_call = true;
     _this->_zoo_state = zoo_state;
 
     if (ZOO_CONNECTING_STATE == zoo_state) {
         //TODO: support the switch of zookeeper session
         dassert(false, "");
     }
-    else if (first_call && ZOO_CONNECTED_STATE==zoo_state)
+    else if (_this->_first_call && ZOO_CONNECTED_STATE==zoo_state)
     {
-        first_call = false;
+        _this->_first_call = false;
         _this->_notifier.notify();
     }
     else
@@ -199,6 +203,7 @@ void meta_state_service_zookeeper::on_zoo_session_evt(ref_this _this, int zoo_st
     }
 }
 /*static*/
+/*this function runs in zookeper do-completion thread*/
 void meta_state_service_zookeeper::visit_zookeeper_internal(
     ref_this,
     task_ptr callback, 

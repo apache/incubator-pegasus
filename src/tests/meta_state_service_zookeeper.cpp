@@ -88,6 +88,7 @@ static void recursively_create(
     int current_layer,
     error_code ec)
 {
+    ddebug("%s: root:%s, layer:%d, ec:%s", __PRETTY_FUNCTION__, root.c_str(), current_layer, ec.to_string());
     ASSERT_TRUE(ec==ERR_OK);
     if (current_layer<=0) return;
     for (int i=0; i!=10; ++i) {
@@ -106,14 +107,15 @@ TEST(meta_state_service_zookeeper, create_delete)
 {
     ref_ptr<meta_state_service_zookeeper> service(new meta_state_service_zookeeper());
     service->initialize();
-    clientlet* tracker = new clientlet();
+    clientlet tracker;
     
     service->delete_node("/r", true, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, [](error_code ec){ ddebug("result: %s", ec.to_string()); } )->wait();
     service->create_node(
         "/r", 
         META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, 
-        std::bind(recursively_create, service, tracker, "/r", 1, std::placeholders::_1), 
+        std::bind(recursively_create, service, &tracker, "/r", 1, std::placeholders::_1), 
         blob(),
-        tracker);
-    dsn_task_tracker_wait_all(tracker);
+        &tracker);
+    dsn_task_tracker_wait_all(tracker.tracker());
+    ddebug("create delete test finish");
 }

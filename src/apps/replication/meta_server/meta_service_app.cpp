@@ -38,6 +38,8 @@
 # include "meta_service.h"
 # include "distributed_lock_service_simple.h"
 # include "meta_state_service_simple.h"
+# include "../zookeeper/meta_state_service_zookeeper.h"
+# include "../zookeeper/distributed_lock_service_zookeeper.h"
 # include <dsn/internal/factory_store.h>
 
 namespace dsn {
@@ -69,12 +71,12 @@ namespace dsn {
 
             register_component_provider(
                 "distributed_lock_service_simple",
-                ::dsn::dist::distributed_lock_service::create<::dsn::dist::distributed_lock_service_simple>
+                ::dsn::dist::distributed_lock_service::create<::dsn::dist::distributed_lock_service_zookeeper>
                 );
 
             register_component_provider(
                 "meta_state_service_simple",
-                ::dsn::dist::meta_state_service::create<::dsn::dist::meta_state_service_simple>
+                ::dsn::dist::meta_state_service::create<::dsn::dist::meta_state_service_zookeeper>
                 );
 
             // TODO: register more provides here used by meta servers

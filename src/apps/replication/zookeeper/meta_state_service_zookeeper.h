@@ -12,7 +12,7 @@ class meta_state_service_zookeeper:
         public ref_counter
 {
 public:
-    explicit meta_state_service_zookeeper(){}
+    explicit meta_state_service_zookeeper();
     virtual ~meta_state_service_zookeeper();
 
     virtual error_code initialize() override;
@@ -67,6 +67,7 @@ public:
 private:
     typedef ref_ptr<meta_state_service_zookeeper> ref_this;
 
+    bool _first_call;
     int _zoo_state;
     zookeeper_session* _session;
     utils::notify_event _notifier;
