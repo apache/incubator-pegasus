@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     checkpoint the replicated app
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Nov., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -72,6 +72,16 @@ namespace dsn {
             // no need to checkpoint
             if (_app->is_delta_state_learning_supported())
                 return;
+
+            auto err = _app->checkpoint_async();
+            if (err != ERR_NOT_IMPLEMENTED)
+            {
+                if (err != 0)
+                {
+                    derror("%s: checkpoint_async failed, err = %d", err);
+                }
+                return;
+            }
 
             // private log must be enabled to make sure commits
             // are not lost during checkpinting
@@ -308,7 +318,13 @@ namespace dsn {
                     {
                         auto mu = _prepare_list->get_mutation_by_decree(d);
                         dassert(nullptr != mu, "");
-                        _app->write_internal(mu);
+                        err = _app->write_internal(mu);
+                        if (ERR_OK != err)
+                        {
+                            _secondary_states.checkpoint_task = nullptr;
+                            handle_local_failure(err);
+                            return;
+                        }
                     }
 
                     // everything is ok now, done checkpointing
