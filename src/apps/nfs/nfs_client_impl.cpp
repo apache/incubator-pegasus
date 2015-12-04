@@ -356,11 +356,6 @@ namespace dsn {
                 zauto_lock l(reqc->file_ctx->user_req->user_req_lock);
                 if (++reqc->file_ctx->finished_segments == (int)reqc->file_ctx->copy_requests.size())
                 {
-                    auto err = dsn_file_close(reqc->file_ctx->file);
-                    dassert(err == ERR_OK, "dsn_file_close failed, err = %s", dsn_error_to_string(err));
-                    reqc->file_ctx->file = nullptr;
-                    reqc->file_ctx->copy_requests.clear();
-
                     if (++reqc->file_ctx->user_req->finished_files == (int)reqc->file_ctx->user_req->file_context_map.size())
                     {
                         completed = true;
@@ -433,6 +428,8 @@ namespace dsn {
                         ::remove((f.second->user_req->file_size_req.dst_dir 
                             + f.second->file_name).c_str());
                     }
+
+                    f.second->copy_requests.clear();
                 }
 
                 delete f.second;

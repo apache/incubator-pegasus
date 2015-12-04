@@ -1,6 +1,20 @@
-language: cpp
-compiler:
-  - gcc
-  - clang
+sudo: required
+dist: trusty
 
-script: ./builder.sh && ./test.sh
+language: cpp
+
+os: linux
+
+compiler: 
+    - gcc
+
+before_install:
+    # - sudo apt-get install php5-cli
+    - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y 
+    - sudo apt-get update -qq 
+    - sudo apt-get install -qq libboost-all-dev libaio-dev lcov
+
+script:
+    - ./build.sh
+    #	&& ./test.sh
+

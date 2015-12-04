@@ -1,0 +1,43 @@
+version: 1.0.{build}
+
+environment:
+    DSN_VS: "Visual Studio 12 2013 Win64"
+    DSN_BOOST: boost_1_57_0
+    DSN_BOOST_LIB: lib64-msvc-12.0
+    DSN_BOOST_PKG: https://github.com/imzhenyu/packages/blob/master/windows/boost_1_57_0.7z?raw=true
+
+install:
+    - ps: >-
+        git submodule update --init
+
+        if (!(Test-Path boost.7z)) {
+
+            echo "Downloading boost binaries from ${env:DSN_BOOST_PKG} ..."
+
+            appveyor DownloadFile "${env:DSN_BOOST_PKG}" -FileName boost.7z -Timeout 1200000
+        }
+
+    - cmd: >-
+        echo "Extracting boost libs to %APPVEYOR_BUILD_FOLDER% ..."
+
+        7z x boost.7z -y -o"%APPVEYOR_BUILD_FOLDER%" > null
+        
+cache:
+    - boost.7z
+
+before_build:
+    - cmd: >-
+        mkdir build
+
+        cd .\build
+
+        cmake .. -DCMAKE_BUILD_TYPE="%DSN_CMAKE_BUILD_TYPE%" -DBOOST_INCLUDEDIR="%APPVEYOR_BUILD_FOLDER%\%DSN_BOOST%" -DBOOST_LIBRARYDIR="%APPVEYOR_BUILD_FOLDER%\%DSN_BOOST%\%DSN_BOOST_LIB%" -G "%DSN_VS%"
+
+build_script:
+    - cmd: >-
+        msbuild dsn.sln /t:Rebuild /p:Configuration=RelWithDebInfo
+        
+        msbuild dsn.sln /t:Rebuild /p:Configuration=Debug
+        
+test_script:
+

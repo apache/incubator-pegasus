@@ -108,7 +108,12 @@ void replica::init_learn(uint64_t signature)
                         {
                             auto mu = _prepare_list->get_mutation_by_decree(d);
                             dassert(nullptr != mu, "");
-                            _app->write_internal(mu);
+                            auto err = _app->write_internal(mu);
+                            if (ERR_OK != err)
+                            {
+                                handle_learning_error(err);
+                                return;
+                            }
                         }
                     }
 
@@ -767,19 +772,22 @@ void replica::on_add_learner(const group_check_request& request)
 error_code replica::apply_learned_state_from_private_log(learn_state& state)
 {
     int64_t offset;
+    error_code err;
 
     // temp prepare list for learning purpose
     prepare_list plist(
         _app->last_committed_decree(),
         _options->max_mutation_count_in_prepare_list,
-        [this](mutation_ptr& mu)
+        [this, &err](mutation_ptr& mu)
         {
             if (mu->data.header.decree == _app->last_committed_decree() + 1)
-                _app->write_internal(mu);
+            {
+                _app->write_internal(mu).end_tracking();
+            }   
         }
         );
 
-    auto err = mutation_log::replay(
+    err = mutation_log::replay(
         state.files,
         [this, &plist](mutation_ptr& mu)
         {
