@@ -38,31 +38,31 @@
 //
 // developers define the following global function somewhere
 //
-//     void dsn_module_init()
-//     {
+//     MODULE_INIT_BEGIN
 //          ...
-//     }
+//     MODULE_INIT_END
 //    
 // and include this cpp file only once in a module
 //     # include <dsn/internal/module_init.cpp.h>
 //
 // then it is done.
 //
-extern void dsn_module_init();
+
 
 # if defined(__GNUC__) || defined(_WIN32)
 # else
 # error "dsn init on shared lib loading is not supported on this platform yet"
 # endif
 
-# if defined(__GNUC__)
-__attribute__((constructor))
-# endif
-static void __module_init__()
-{
-    dsn_module_init();
-}
+extern void dsn_module_init();
 
+# if defined(__GNUC__)
+# define MODULE_INIT_BEGIN __attribute__((constructor)) void dsn_module_init() {
+# else
+# define MODULE_INIT_BEGIN void dsn_module_init() {
+# endif
+
+# define MODULE_INIT_END }
 
 # ifdef _WIN32
 # include <Windows.h>
@@ -79,7 +79,7 @@ bool APIENTRY DllMain(HMODULE hModule,
     switch (ul_reason_for_call)
     {
     case DLL_PROCESS_ATTACH:
-        __module_init__();
+        dsn_module_init();
         break;
     case DLL_THREAD_ATTACH:
     case DLL_THREAD_DETACH:
