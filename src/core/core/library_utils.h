@@ -45,9 +45,12 @@
 
 namespace dsn {
     namespace utils {
+        
+        extern dsn_handle_t load_dynamic_library(const char* module);
 
+        extern dsn_handle_t load_symbol(dsn_handle_t hmodule, const char* symbol);
 
-        extern bool load_dynamic_library(const char* module);
+        extern void unload_dynamic_library(dsn_handle_t hmodule);
 
     }
 } // end namespace dsn::utils
