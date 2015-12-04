@@ -57,9 +57,6 @@ typedef std::function<void (::dsn::rpc_address /*from*/,
                             const replica_configuration& /*new_config*/,
                             bool /*is_closing*/)> replica_state_subscriber;
 
-
-DEFINE_TASK_CODE_RPC(RPC_REPLICA_COPY_LAST_CHECKPOINT, TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION)
-
 class replica_stub : public serverlet<replica_stub>, public ref_counter
 {
 public:

@@ -177,7 +177,6 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
         }
 
         auto& r = mu->client_requests[i];
-
         if (r.code != RPC_REPLICATION_WRITE_EMPTY)
         {
             dinfo("%s: mutation %s dispatch rpc call: %s",
