@@ -36,8 +36,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include <dsn/internal/task.h>
-
 #include "meta_state_service_zookeeper.h"
 #include "zookeeper_session_mgr.h"
 #include "zookeeper_session.h"
@@ -61,7 +59,7 @@ meta_state_service_zookeeper::~meta_state_service_zookeeper()
 
 error_code meta_state_service_zookeeper::initialize(const char *)
 {
-    _session = zookeeper_session_mgr::instance().get_session( task::get_current_node() );
+    _session = new zookeeper_session(nullptr); // zookeeper_session_mgr::instance().get_session(task::get_current_node());
     _zoo_state = _session->attach(this, std::bind(&meta_state_service_zookeeper::on_zoo_session_evt,
                                                   ref_this(this),
                                                   std::placeholders::_1) );

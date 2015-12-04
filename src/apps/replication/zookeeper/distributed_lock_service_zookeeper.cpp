@@ -82,7 +82,7 @@ void distributed_lock_service_zookeeper::erase(const lock_key& key)
 
 error_code distributed_lock_service_zookeeper::initialize()
 {
-    _session = zookeeper_session_mgr::instance().get_session( task::get_current_node() );
+    _session = new zookeeper_session(nullptr); // zookeeper_session_mgr::instance().get_session(task::get_current_node());
     _zoo_state = _session->attach(this, std::bind(&distributed_lock_service_zookeeper::on_zoo_session_evt,
                                                   lock_srv_ptr(this),
                                                   std::placeholders::_1) );

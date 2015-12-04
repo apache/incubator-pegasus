@@ -49,7 +49,7 @@ namespace dsn { namespace dist{
 zookeeper_session::zookeeper_session(void *srv_node):
     _handle(nullptr)
 {
-    _srv_node = (service_node*)srv_node;
+//    _srv_node = (service_node*)srv_node;
 }
 
 int zookeeper_session::attach(
@@ -204,7 +204,7 @@ void zookeeper_session::init_non_dsn_thread()
 {
     static __thread int dsn_context_init = 0;
     if ( dsn_context_init == 0) {
-        task::set_tls_dsn_context(_srv_node, nullptr, nullptr);
+        dsn_mimic_app("meta", 1);
         dsn_context_init = 1;
     }
 }

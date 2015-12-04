@@ -36,7 +36,6 @@
 #include <dsn/cpp/clientlet.h>
 #include <dsn/internal/singleton.h>
 #include <dsn/internal/synchronize.h>
-#include <dsn/internal/task.h>
 
 #include <thread>
 #include <zookeeper.h>
@@ -143,7 +142,7 @@ private:
         state_callback watcher_callback;
     };
     std::list<watcher_object> _watchers;
-    service_node* _srv_node;
+//    service_node* _srv_node;
     zhandle_t* _handle;
 
     void dispatch_event(int type, int zstate, const char* path);
