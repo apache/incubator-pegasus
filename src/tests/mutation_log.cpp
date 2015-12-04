@@ -34,9 +34,47 @@
  */
 # include "mutation_log.h"
 # include <gtest/gtest.h>
+# include <cstdio>
 
 using namespace ::dsn;
 using namespace ::dsn::replication;
+
+static void copy_file(const char* from_file, const char* to_file, int to_size = -1)
+{
+    int64_t from_size;
+    ASSERT_TRUE(dsn::utils::filesystem::file_size(from_file, from_size));
+    ASSERT_LE(to_size, from_size);
+    FILE* from = fopen(from_file, "rb");
+    ASSERT_TRUE(from != nullptr);
+    FILE* to = fopen(to_file, "wb");
+    ASSERT_TRUE(to != nullptr);
+    if (to_size == -1)
+        to_size = from_size;
+    if (to_size > 0)
+    {
+        std::unique_ptr<char> buf(new char[to_size]);
+        int n = fread(buf.get(), 1, to_size, from);
+        ASSERT_EQ(to_size, n);
+        n = fwrite(buf.get(), 1, to_size, to);
+        ASSERT_EQ(to_size, n);
+    }
+    int r = fclose(from);
+    ASSERT_EQ(0, r);
+    r = fclose(to);
+    ASSERT_EQ(0, r);
+}
+
+static void overwrite_file(const char* file, int offset, const void* buf, int size)
+{
+    FILE* f = fopen(file, "r+b");
+    ASSERT_TRUE(f != nullptr);
+    int r = fseek(f, offset, SEEK_SET);
+    ASSERT_EQ(0, r);
+    size_t n = fwrite(buf, 1, size, f);
+    ASSERT_EQ(size, n);
+    r = fclose(f);
+    ASSERT_EQ(0, r);
+}
 
 TEST(replication, log_file)
 {
@@ -48,18 +86,10 @@ TEST(replication, log_file)
     int64_t offset = 100;
     std::string str = "hello, world!";
     error_code err;
-
-    // write log
     log_file_ptr lf = nullptr;
 
-    lf = log_file::create_write(
-        ".",
-        1,
-        0
-        );
-    ASSERT_TRUE(lf == nullptr); // already exist
-
-    utils::filesystem::remove_path(fpath);
+    // write log
+    ASSERT_TRUE(!dsn::utils::filesystem::file_exists(fpath));
     lf = log_file::create_write(
         ".",
         index,
@@ -70,42 +100,50 @@ TEST(replication, log_file)
     ASSERT_EQ(index, lf->index());
     ASSERT_EQ(offset, lf->start_offset());
     ASSERT_EQ(offset, lf->end_offset());
-
-    // write data
     for (int i = 0; i < 100; i++)
     {
-        auto writer = lf->prepare_log_entry();
+        auto writer = lf->prepare_log_block();
 
         if (i == 0)
         {
+            binary_writer temp_writer;
             lf->write_header(
-                *writer,
+                temp_writer,
                 mdecrees,
                 1024
                 );
+            writer->add(temp_writer.get_buffer());
             ASSERT_EQ(mdecrees, lf->previous_log_max_decrees());
             log_file_header& h = lf->header();
-            ASSERT_EQ(1024, h.log_buffer_size_bytes);
             ASSERT_EQ(100, h.start_global_offset);
         }
 
-        writer->write(str);
+        binary_writer temp_writer;
+        temp_writer.write(str);
+        writer->add(temp_writer.get_buffer());
 
-        auto bb = writer->get_buffer();
-        ASSERT_EQ(writer->total_size(), bb.length());
-        auto task = lf->commit_log_entry(
-            bb, offset, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0
+        auto task = lf->commit_log_block(
+            *writer, offset, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0
             );
         task->wait();
         ASSERT_EQ(ERR_OK, task->error());
-        ASSERT_EQ(bb.length(), task->io_size());
+        ASSERT_EQ(writer->size(), task->io_size());
 
         lf->flush();
-        offset += bb.length();
+        offset += writer->size();
     }
-
     lf->close();
     lf = nullptr;
+    ASSERT_TRUE(dsn::utils::filesystem::file_exists(fpath));
+
+    // file already exist
+    offset = 100;
+    lf = log_file::create_write(
+        ".",
+        index,
+        offset
+        );
+    ASSERT_TRUE(lf == nullptr);
 
     // invalid file name
     lf = log_file::open_read("", err);
@@ -144,42 +182,57 @@ TEST(replication, log_file)
     ASSERT_TRUE(lf == nullptr);
     ASSERT_EQ(ERR_FILE_OPERATION_FAILED, err);
 
-    // bad file data: crc checking failed
+    // bad file data: empty file
+    ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.0"));
+    copy_file(fpath.c_str(), "log.1.0", 0);
+    ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.0"));
     lf = log_file::open_read("log.1.0", err);
     ASSERT_TRUE(lf == nullptr);
-    ASSERT_EQ(ERR_FILE_OPERATION_FAILED, err);
+    ASSERT_EQ(ERR_HANDLE_EOF, err);
     ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.0"));
     ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.0.removed"));
-    ASSERT_TRUE(dsn::utils::filesystem::rename_path("log.1.0.removed", "log.1.0"));
 
-    // bad file data: bad log_file_header (magic = 0xfeadbeef)
+    // bad file data: incomplete log_block_header
+    ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.1"));
+    copy_file(fpath.c_str(), "log.1.1", sizeof(log_block_header) - 1);
+    ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.1"));
     lf = log_file::open_read("log.1.1", err);
     ASSERT_TRUE(lf == nullptr);
-    ASSERT_EQ(ERR_FILE_OPERATION_FAILED, err);
+    ASSERT_EQ(ERR_INCOMPLETE_DATA, err);
     ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.1"));
     ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.1.removed"));
-    ASSERT_TRUE(dsn::utils::filesystem::rename_path("log.1.1.removed", "log.1.1"));
 
-    // bad file data: less than log_block_header
+    // bad file data: bad log_block_header (magic = 0xfeadbeef)
+    ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.2"));
+    copy_file(fpath.c_str(), "log.1.2");
+    int32_t bad_magic = 0xfeadbeef;
+    overwrite_file("log.1.2", FIELD_OFFSET(log_block_header, magic), &bad_magic, sizeof(bad_magic));
+    ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.2"));
     lf = log_file::open_read("log.1.2", err);
     ASSERT_TRUE(lf == nullptr);
-    ASSERT_EQ(ERR_FILE_OPERATION_FAILED, err);
+    ASSERT_EQ(ERR_INVALID_DATA, err);
     ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.2"));
     ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.2.removed"));
-    ASSERT_TRUE(dsn::utils::filesystem::rename_path("log.1.2.removed", "log.1.2"));
 
-    // bad file data: bad log_block_header
+    // bad file data: bad log_block_header (crc check failed)
+    ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.3"));
+    copy_file(fpath.c_str(), "log.1.3");
+    int32_t bad_crc = 0;
+    overwrite_file("log.1.3", FIELD_OFFSET(log_block_header, body_crc), &bad_crc, sizeof(bad_crc));
+    ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.3"));
     lf = log_file::open_read("log.1.3", err);
     ASSERT_TRUE(lf == nullptr);
-    ASSERT_EQ(ERR_FILE_OPERATION_FAILED, err);
+    ASSERT_EQ(ERR_INVALID_DATA, err);
     ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.3"));
     ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.3.removed"));
-    ASSERT_TRUE(dsn::utils::filesystem::rename_path("log.1.3.removed", "log.1.3"));
 
-    // bad file data: truncated block body
+    // bad file data: incomplete block body
+    ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.4"));
+    copy_file(fpath.c_str(), "log.1.4", sizeof(log_block_header) + 1);
+    ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.4"));
     lf = log_file::open_read("log.1.4", err);
     ASSERT_TRUE(lf == nullptr);
-    ASSERT_EQ(ERR_FILE_OPERATION_FAILED, err);
+    ASSERT_EQ(ERR_INCOMPLETE_DATA, err);
     ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.4"));
     ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.4.removed"));
     ASSERT_TRUE(dsn::utils::filesystem::rename_path("log.1.4.removed", "log.1.4"));
@@ -196,19 +249,19 @@ TEST(replication, log_file)
     ASSERT_EQ(lf->start_offset() + sz, lf->end_offset());
 
     // read data
+    lf->crc32() = 0;
     for (int i = 0; i < 100; i++)
     {
         blob bb;
-        auto err = lf->read_next_log_entry(offset - lf->start_offset(), bb);
-        ASSERT_TRUE(err == ERR_OK);
-        
+        auto err = lf->read_next_log_block(offset - lf->start_offset(), bb);
+        ASSERT_EQ(ERR_OK, err);
+
         binary_reader reader(bb);
 
         if (i == 0)
         {
             lf->read_header(reader);
             ASSERT_TRUE(lf->is_right_header());
-            ASSERT_EQ(1024, lf->header().log_buffer_size_bytes);
             ASSERT_EQ(100, lf->header().start_global_offset);
         }
 
@@ -222,7 +275,7 @@ TEST(replication, log_file)
     ASSERT_TRUE(offset == lf->end_offset());
 
     blob bb;
-    err = lf->read_next_log_entry(offset - lf->start_offset(), bb);
+    err = lf->read_next_log_block(offset - lf->start_offset(), bb);
     ASSERT_TRUE(err == ERR_HANDLE_EOF);
 
     lf = nullptr;
@@ -236,7 +289,7 @@ TEST(replication, mutation_log)
     std::string str = "hello, world!";
     std::string logp = "./test-log";
     std::vector<mutation_ptr> mutations;
-    
+
     // prepare
     utils::filesystem::remove_path(logp);
     utils::filesystem::create_directory(logp);
@@ -263,7 +316,7 @@ TEST(replication, mutation_log)
 
         binary_writer writer;
         for (int j = 0; j < 100; j++)
-        {   
+        {
             writer.write(str);
         }
         mu->data.updates.push_back(writer.get_buffer());
@@ -278,7 +331,7 @@ TEST(replication, mutation_log)
         mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
     }
 
-    mlog->close(); 
+    mlog->close();
 
     // reading logs
     mlog = new mutation_log(
@@ -291,23 +344,23 @@ TEST(replication, mutation_log)
     int mutation_index = -1;
     mlog->open(gpid,
         [&mutations, &mutation_index](mutation_ptr& mu)->bool
-        {
-            mutation_ptr wmu = mutations[++mutation_index];
-            EXPECT_TRUE(memcmp((const void*)&wmu->data.header,
-                (const void*)&mu->data.header,
-                sizeof(mu->data.header)) == 0
-                );
-            EXPECT_TRUE(wmu->data.updates.size() == mu->data.updates.size());
-            EXPECT_TRUE(wmu->data.updates[0].length() == mu->data.updates[0].length());
-            EXPECT_TRUE(memcmp((const void*)wmu->data.updates[0].data(),
-                (const void*)mu->data.updates[0].data(),
-                mu->data.updates[0].length()) == 0
-                );
-            EXPECT_TRUE(wmu->client_requests.size() == mu->client_requests.size());
-            EXPECT_TRUE(wmu->client_requests[0].code == mu->client_requests[0].code);
-            return true;
-        }
-        );
+    {
+        mutation_ptr wmu = mutations[++mutation_index];
+        EXPECT_TRUE(memcmp((const void*)&wmu->data.header,
+            (const void*)&mu->data.header,
+            sizeof(mu->data.header)) == 0
+            );
+        EXPECT_TRUE(wmu->data.updates.size() == mu->data.updates.size());
+        EXPECT_TRUE(wmu->data.updates[0].length() == mu->data.updates[0].length());
+        EXPECT_TRUE(memcmp((const void*)wmu->data.updates[0].data(),
+            (const void*)mu->data.updates[0].data(),
+            mu->data.updates[0].length()) == 0
+            );
+        EXPECT_TRUE(wmu->client_requests.size() == mu->client_requests.size());
+        EXPECT_TRUE(wmu->client_requests[0].code == mu->client_requests[0].code);
+        return true;
+    }
+    );
     EXPECT_TRUE(mutation_index + 1 == (int)mutations.size());
     mlog->close();
 

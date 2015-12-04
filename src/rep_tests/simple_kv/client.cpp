@@ -89,9 +89,9 @@ void simple_kv_client_app::run()
     std::string value;
     int timeout_ms;
 
-    dsn::replication::global_partition_id gpid;
-    int role;
-    dsn::replication::config_type cfg_type;
+    rpc_address receiver;
+    dsn::replication::config_type type;
+    rpc_address node;
 
     while (!g_done)
     {
@@ -100,9 +100,9 @@ void simple_kv_client_app::run()
             begin_write(id, key, value, timeout_ms);
             continue;
         }
-        if (test_case::fast_instance().check_replica_config(gpid, role, cfg_type) )
+        if (test_case::fast_instance().check_replica_config(receiver, type, node) )
         {
-            send_config_to_meta(gpid, role, cfg_type);
+            send_config_to_meta(receiver, type, node);
             continue;
         }
         if (test_case::fast_instance().check_client_read(id, key, timeout_ms))
@@ -139,9 +139,9 @@ void simple_kv_client_wrapper::end_write(::dsn::error_code err, const int32_t& r
     delete ctx;
 }
 
-void simple_kv_client_app::send_config_to_meta(const dsn::replication::global_partition_id& gpid, int role, dsn::replication::config_type cfg_type)
+void simple_kv_client_app::send_config_to_meta(const rpc_address& receiver, dsn::replication::config_type type, const rpc_address& node)
 {
-    _simple_kv_client->send_config_to_meta(gpid, role, cfg_type);
+    _simple_kv_client->send_config_to_meta(receiver, type, node);
 }
 
 struct read_context

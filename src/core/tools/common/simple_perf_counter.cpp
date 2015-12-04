@@ -51,8 +51,8 @@ namespace dsn {
         class perf_counter_number : public perf_counter
         {
         public:
-            perf_counter_number(const char *section, const char *name, perf_counter_type type)
-                : perf_counter(section, name, type), _val(0){}
+            perf_counter_number(const char *section, const char *name, perf_counter_type type, const char *dsptr)
+                : perf_counter(section, name, type, dsptr), _val(0){}
             ~perf_counter_number(void) {}
 
             virtual void   increment() { _val++; }
@@ -71,8 +71,8 @@ namespace dsn {
         class perf_counter_rate : public perf_counter
         {
         public:
-            perf_counter_rate(const char *section, const char *name, perf_counter_type type)
-                : perf_counter(section, name, type), _val(0)
+            perf_counter_rate(const char *section, const char *name, perf_counter_type type, const char *dsptr)
+                : perf_counter(section, name, type, dsptr), _val(0)
             {
                 qts = 0;
             }
@@ -109,8 +109,8 @@ namespace dsn {
         class perf_counter_number_percentile : public perf_counter
         {
         public:
-            perf_counter_number_percentile(const char *section, const char *name, perf_counter_type type)
-                : perf_counter(section, name, type), _tail(0)
+            perf_counter_number_percentile(const char *section, const char *name, perf_counter_type type, const char *dsptr)
+                : perf_counter(section, name, type, dsptr), _tail(0)
             {
                 _counter_computation_interval_seconds = config()->get_value<int>(
                     "components.simple_perf_counter", 
@@ -121,6 +121,8 @@ namespace dsn {
                 _timer.reset(new boost::asio::deadline_timer(shared_io_service::instance().ios));
                 _timer->expires_from_now(boost::posix_time::seconds(rand() % _counter_computation_interval_seconds + 1));
                 _timer->async_wait(std::bind(&perf_counter_number_percentile::on_timer, this, std::placeholders::_1));
+
+                memset(_samples, 0, sizeof(_samples));
             }
             
             ~perf_counter_number_percentile(void) 
@@ -155,6 +157,12 @@ namespace dsn {
             { 
                 sample_count = static_cast<int>(sizeof(_samples) / sizeof(uint64_t));
                 return (uint64_t*)(_samples);
+            }
+
+            virtual uint64_t get_current_sample() const override
+            {
+                int idx = (_tail + MAX_QUEUE_LENGTH - 1) % MAX_QUEUE_LENGTH;
+                return _samples[idx];
             }
 
         private:
@@ -304,15 +312,15 @@ namespace dsn {
 
         // ---------------------- perf counter dispatcher ---------------------
 
-        simple_perf_counter::simple_perf_counter(const char *section, const char *name, perf_counter_type type)
-            : perf_counter(section, name, type)
+        simple_perf_counter::simple_perf_counter(const char *section, const char *name, perf_counter_type type, const char *dsptr)
+            : perf_counter(section, name, type, dsptr)
         {
             if (type == perf_counter_type::COUNTER_TYPE_NUMBER)
-                _counter_impl = new perf_counter_number(section, name, type);
+                _counter_impl = new perf_counter_number(section, name, type, dsptr);
             else if (type == perf_counter_type::COUNTER_TYPE_RATE)
-                _counter_impl = new perf_counter_rate(section, name, type);
+                _counter_impl = new perf_counter_rate(section, name, type, dsptr);
             else
-                _counter_impl = new perf_counter_number_percentile(section, name, type);
+                _counter_impl = new perf_counter_number_percentile(section, name, type, dsptr);
         }
 
         simple_perf_counter::~simple_perf_counter(void) 

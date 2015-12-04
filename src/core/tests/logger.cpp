@@ -119,7 +119,7 @@ TEST(tools_common, simple_logger)
     get_log_file_index(index);
     ASSERT_TRUE(!index.empty());
     sort(index.begin(), index.end());
-    ASSERT_TRUE(index.size() == simple_logger_gc_gap+1);
+    ASSERT_EQ(simple_logger_gc_gap+1, index.size());
     for (unsigned int i=0; i<=simple_logger_gc_gap; ++i)
         ASSERT_TRUE(index[i]==i+10);
     clear_files(index);

@@ -57,6 +57,9 @@ typedef std::function<void (::dsn::rpc_address /*from*/,
                             const replica_configuration& /*new_config*/,
                             bool /*is_closing*/)> replica_state_subscriber;
 
+
+DEFINE_TASK_CODE_RPC(RPC_REPLICA_COPY_LAST_CHECKPOINT, TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION)
+
 class replica_stub : public serverlet<replica_stub>, public ref_counter
 {
 public:
@@ -99,6 +102,7 @@ public:
     void on_add_learner(const group_check_request& request);
     void on_remove(const replica_configuration& request);
     void on_group_check(const group_check_request& request, /*out*/ group_check_response& response);
+    void on_copy_checkpoint(const replica_configuration& request, /*out*/ learn_response& response);
 
     //
     //    local messages
@@ -113,6 +117,7 @@ public:
     void init_gc_for_test();
     void set_meta_server_disconnected_for_test() { on_meta_server_disconnected(); }
     void set_meta_server_connected_for_test(const configuration_query_by_node_response& config);
+    void set_replica_state_subscriber_for_test(replica_state_subscriber subscriber, bool is_long_subscriber);
 
     //
     // common routines for inquiry

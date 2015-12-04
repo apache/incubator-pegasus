@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     initialization for replica object
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -106,8 +106,8 @@ error_code replica::initialize_on_load(const char* dir, const char* app_type, bo
     {
         // GCed later
         char newPath[256];
-        sprintf(newPath, "%s.%llu.err", dir, static_cast<long long unsigned int>(dsn_now_us()));
-        if (dsn::utils::filesystem::rename_path(dir, newPath, true))
+        sprintf(newPath, "%s.%" PRIu64 ".err", dir, dsn_now_us());
+        if (dsn::utils::filesystem::rename_path(dir, newPath))
         {
             derror("move bad replica from '%s' to '%s'", dir, newPath);
         }
@@ -187,7 +187,7 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
             _private_log = new mutation_log(
                 log_dir,
                 true,
-                _options->log_batch_buffer_MB,
+                _options->log_batch_buffer_KB_private,
                 _options->log_file_size_mb
                 );
         }
@@ -221,8 +221,8 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
 
             if (err == ERR_OK)
             {
-                derror(
-                    "%s: private log initialized, durable = %lld, committed = %lld, maxpd = %llu, ballot = %llu, valid_offset = %lld",
+                ddebug(
+                    "%s: private log initialized, durable = %" PRId64 ", committed = %" PRId64 ", maxpd = %" PRId64 ", ballot = %" PRId64 ", valid_offset = %" PRId64,
                     name(),
                     _app->last_durable_decree(),
                     _app->last_committed_decree(),
@@ -237,7 +237,7 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
             else
             {
                 derror(
-                    "%s: private log initialized with error, durable = %lld, committed = %lld, maxpd = %llu, ballot = %llu, valid_offset = %lld",
+                    "%s: private log initialized with error, durable = %" PRId64 ", committed = %" PRId64 ", maxpd = %" PRId64 ", ballot = %" PRId64 ", valid_offset = %" PRId64,
                     name(),
                     _app->last_durable_decree(),
                     _app->last_committed_decree(),
@@ -258,10 +258,10 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
             _check_timer = tasking::enqueue(
                 LPC_PER_REPLICA_CHECK_TIMER,
                 this,
-                &replica::on_check_timer,
+                &replica::on_checkpoint_timer,
                 gpid_to_hash(get_gpid()),
                 0,
-                5 * 60 * 1000 // check every five mins
+                _options->checkpoint_interval_mins * 60 * 1000
                 );
         }
     }
@@ -286,7 +286,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     if (is_private && offset < _app->log_info().init_offset_in_private_log)
     {
         ddebug(
-            "%s: replay mutation skipped1 as offset is invalid, ballot = %llu, decree = %llu, last_committed_decree = %llu, offset = %lld",
+            "%s: replay mutation skipped1 as offset is invalid in private log, ballot = %" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
             name(),
             mu->data.header.ballot,
             d,
@@ -299,7 +299,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     if (!is_private && offset < _app->log_info().init_offset_in_shared_log)
     {
         ddebug(
-            "%s: replay mutation skipped2 as offset is invalid, ballot = %llu, decree = %llu, last_committed_decree = %llu, offset = %lld",
+            "%s: replay mutation skipped2 as offset is invalid in shared log, ballot = %" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
             name(),
             mu->data.header.ballot,
             d,
@@ -312,10 +312,11 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     if (d <= last_committed_decree())
     {
         ddebug(
-            "%s: replay mutation skipped3 as decree is outdated, ballot = %llu, decree = %llu, last_committed_decree = %llu, offset = %lld",
+            "%s: replay mutation skipped3 as decree is outdated, ballot = %" PRId64 ", decree = %" PRId64 "(vs app %" PRId64 "), last_committed_decree = %" PRId64 ", offset = %" PRId64,
             name(),
             mu->data.header.ballot,
             d,
+            last_committed_decree(),
             mu->data.header.last_committed_decree,
             offset
             );
@@ -326,9 +327,10 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     if (old != nullptr && old->data.header.ballot >= mu->data.header.ballot)
     {
         ddebug(
-            "%s: replay mutation skipped4 as ballot is outdated, ballot = %llu, decree = %llu, last_committed_decree = %llu, offset = %lld",
+            "%s: replay mutation skipped4 as ballot is outdated, ballot = %" PRId64 " (vs local-ballot=%" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
             name(),
             mu->data.header.ballot,
+            old->data.header.ballot,
             d,
             mu->data.header.last_committed_decree,
             offset
@@ -344,7 +346,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     }
 
     ddebug(
-        "%s: replay mutation ballot = %llu, decree = %llu, last_committed_decree = %llu",
+        "%s: replay mutation ballot = %" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64,
         name(),
         mu->data.header.ballot,
         d,
@@ -361,7 +363,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
         _private_log->append(mu,
             LPC_WRITE_REPLICATION_LOG,
             this,
-            [this](error_code err, size_t size)
+            [this, mu](error_code err, size_t size)
         {
             if (err != ERR_OK)
             {

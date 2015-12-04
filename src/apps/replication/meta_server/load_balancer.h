@@ -56,7 +56,7 @@ public:
     void run(global_partition_id gpid);
 
     // this method is for testing
-    void explictly_send_proposal(global_partition_id gpid, int role, config_type type);
+    void explictly_send_proposal(global_partition_id gpid, rpc_address receiver, config_type type, rpc_address node);
 
 private:
     // meta server => partition server

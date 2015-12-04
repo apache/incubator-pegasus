@@ -92,6 +92,8 @@ public:
     task_engine* computation() const { return _computation; }
     const std::list<io_engine>& ios() const { return _ios; }
     void get_runtime_info(const std::string& indent, const std::vector<std::string>& args, /*out*/ std::stringstream& ss);
+    void get_queue_info(/*out*/ std::stringstream& ss);
+
     error_code start_io_engine_in_node_start_task(const io_engine& io);
 
     ::dsn::error_code start();
@@ -132,7 +134,8 @@ public:
     logging_provider* logging() const { return _logging; }
     memory_provider* memory() const { return _memory; }
     static std::string get_runtime_info(const std::vector<std::string>& args);
-        
+    static std::string get_queue_info(const std::vector<std::string>& args);
+
     void init_before_toollets(const service_spec& spec);
     void init_after_toollets();
     void configuration_changed();

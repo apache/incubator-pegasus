@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     replica configuration management
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -61,7 +61,7 @@ void replica::on_config_proposal(configuration_update_request& proposal)
     if (proposal.config.ballot < get_ballot())
     {
         dwarn(
-            "%s: on_config_proposal is out-dated, %lld vs %lld",
+            "%s: on_config_proposal is out-dated, %" PRId64 " vs %" PRId64,
             name(),
             proposal.config.ballot,
             get_ballot()
@@ -175,9 +175,8 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
     group_check_request request;
     request.app_type = _primary_states.membership.app_type;
     request.node = proposal.node;
-    _primary_states.get_replica_config(proposal.node, request.config);
+    _primary_states.get_replica_config(PS_POTENTIAL_SECONDARY, request.config, state.signature);
     request.last_committed_decree = last_committed_decree();
-    request.learner_signature = state.signature;
 
     ddebug(
         "%s: call one way %s to start learning",
@@ -370,7 +369,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
     if (err != ERR_OK)
     {
         ddebug(
-            "%s: update configuration reply with err %s, request ballot %lld",
+            "%s: update configuration reply with err %s, request ballot %" PRId64,
             name(),
             err.to_string(),
             req->config.ballot
@@ -395,7 +394,7 @@ void replica::on_update_configuration_on_meta_server_reply(error_code err, dsn_m
     }
 
     ddebug(
-        "%s: update configuration reply with err %s, ballot %lld, local %lld",
+        "%s: update configuration reply with err %s, ballot %" PRId64 ", local %" PRId64,
         name(),
         resp.err.to_string(),
         resp.config.ballot,
@@ -508,7 +507,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
     case PS_ERROR:
         {
             ddebug(
-                "%s: status change from %s @ %lld to %s @ %lld is not allowed",
+                "%s: status change from %s @ %" PRId64 " to %s @ %" PRId64 " is not allowed",
                 name(),
                 enum_to_string(old_status),
                 old_ballot,
@@ -523,7 +522,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
             && !_inactive_is_transient)
         {
             ddebug(
-                "%s: status change from %s @ %lld to %s @ %lld is not allowed when inactive state is not transient",
+                "%s: status change from %s @ %" PRId64 " to %s @ %" PRId64 " is not allowed when inactive state is not transient",
                 name(),
                 enum_to_string(old_status),
                 old_ballot,
@@ -539,7 +538,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
             if (!_potential_secondary_states.cleanup(false))
             {
                 dwarn(
-                    "%s: status change from %s @ %lld to %s @ %lld is not allowed coz learning remote state is still running",
+                    "%s: status change from %s @ %" PRId64 " to %s @ %" PRId64 " is not allowed coz learning remote state is still running",
                     name(),
                     enum_to_string(old_status),
                     old_ballot,
@@ -555,7 +554,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
             && _secondary_states.checkpoint_task != nullptr)
         {
             dwarn(
-                "%s: status change from %s @ %lld to %s @ %lld is not allowed coz checkpointing %p is still running",
+                "%s: status change from %s @ %" PRId64 " to %s @ %" PRId64 " is not allowed coz checkpointing %p is still running",
                 name(),
                 enum_to_string(old_status),
                 old_ballot,
@@ -576,11 +575,14 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
     switch (old_status)
     {
     case PS_PRIMARY:
-        cleanup_preparing_mutations(true);
+        cleanup_preparing_mutations(false);
         switch (config.status)
         {
         case PS_PRIMARY:
             replay_prepare_list();
+            _primary_states.write_queue.check_possible_work(
+                static_cast<int>(_prepare_list->max_decree() - last_committed_decree())
+                );
             break;
         case PS_INACTIVE:
             _primary_states.cleanup(old_ballot != config.ballot);
@@ -597,12 +599,15 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         }        
         break;
     case PS_SECONDARY:
-        cleanup_preparing_mutations(true);
+        cleanup_preparing_mutations(false);
         switch (config.status)
         {
         case PS_PRIMARY:
             init_group_check();            
             replay_prepare_list();
+            _primary_states.write_queue.check_possible_work(
+                static_cast<int>(_prepare_list->max_decree() - last_committed_decree())
+                );
             break;
         case PS_SECONDARY:
             break;
@@ -650,6 +655,9 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
             _inactive_is_transient = false;
             init_group_check();
             replay_prepare_list();
+            _primary_states.write_queue.check_possible_work(
+                static_cast<int>(_prepare_list->max_decree() - last_committed_decree())
+                );
             break;
         case PS_SECONDARY:            
             _inactive_is_transient = false;
@@ -692,7 +700,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
     }
 
     dwarn(
-        "%s: status change %s @ %lld => %s @ %lld, pre(%llu, %llu), app(%llu, %llu), duration=%llu ms",
+        "%s: status change %s @ %" PRId64 " => %s @ %" PRId64 ", pre(%" PRId64 ", %" PRId64 "), app(%" PRId64 ", %" PRId64 "), duration=%" PRIu64 " ms",
         name(),
         enum_to_string(old_status),
         old_ballot,
@@ -768,7 +776,7 @@ void replica::replay_prepare_list()
     decree end = _prepare_list->max_decree();
 
     ddebug(
-            "%s: replay prepare list from %lld to %lld, ballot = %lld",
+            "%s: replay prepare list from %" PRId64 " to %" PRId64 ", ballot = %" PRId64,
             name(),
             start,
             end,
@@ -789,7 +797,7 @@ void replica::replay_prepare_list()
             mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);
 
             ddebug(
-                "%s: emit empty mutation %lld when replay prepare list",
+                "%s: emit empty mutation %" PRId64 " when replay prepare list",
                 name(),
                 decree
                 );

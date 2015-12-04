@@ -65,7 +65,8 @@ namespace dsn {
 
         meta_service_app::meta_service_app()
         {
-            _service = nullptr;
+            _state = new server_state();
+            _service = new meta_service(_state);
 
             register_component_provider(
                 "distributed_lock_service_simple",
@@ -82,14 +83,10 @@ namespace dsn {
 
         meta_service_app::~meta_service_app()
         {
-
         }
 
         ::dsn::error_code meta_service_app::start(int argc, char** argv)
         {
-            _state = new server_state();
-            _service = new meta_service(_state);
-
             _state->initialize(name().c_str());
             _service->start();
             return ERR_OK;

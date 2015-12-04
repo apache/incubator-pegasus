@@ -243,6 +243,16 @@ namespace dsn
             int hash = 0
             );
 
+        task_ptr write_vector(
+            dsn_handle_t fh,
+            const dsn_file_buffer_t* buffers,
+            int buffer_count,
+            uint64_t offset,
+            dsn_task_code_t callback_code,
+            clientlet* svc,
+            aio_handler callback,
+            int hash = 0
+            );
 
         template<typename T> // where T : public virtual clientlet
         inline task_ptr read(

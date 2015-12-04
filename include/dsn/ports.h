@@ -77,6 +77,9 @@ __pragma(warning(disable:4127))
 # include <fcntl.h> // for file open flags
 # include <cstdio>
 # include <climits>
+# include <cerrno>
+# include <cstdint>
+# include <inttypes.h>
 
 // common utilities
 # include <atomic>

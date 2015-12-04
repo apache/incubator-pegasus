@@ -13,8 +13,10 @@ function run_single()
         cat log.1.txt | grep -v FAILURE_DETECT | grep -v BEACON | grep -v beacon | grep -v THREAD_POOL_FD >${prefix}.log
         rm log.1.txt
     fi
-    if [ ${ret} -ne 0 ]; then
-        echo "run ${prefix} failed"
+
+    # successful case calls dsn_terminates which returns SIGKILL
+    if [ ${ret} -ne 137 ]; then
+        echo "run ${prefix} failed, return value = ${ret}"
         exit -1
     fi
 }

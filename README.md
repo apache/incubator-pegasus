@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/imzhenyu/rDSN.svg?branch=master)](https://travis-ci.org/imzhenyu/rDSN) [![Build status](https://ci.appveyor.com/api/projects/status/1re27vmu7n7c4j1l?svg=true)](https://ci.appveyor.com/project/imzhenyu/rdsn)
 
 ### Top Links
  * [[Case](https://github.com/imzhenyu/rocksdb)] RocksDB made replicated using rDSN!

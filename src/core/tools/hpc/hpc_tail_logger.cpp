@@ -276,20 +276,20 @@ namespace dsn
                 ts = dsn_now_ns();
             char str[24];
             ::dsn::utils::time_ms_to_string(ts / 1000000, str);            
-            auto wn = sprintf(ptr, "%s (%llu %04x) ", str, static_cast<long long unsigned int>(ts), tid);
+            auto wn = sprintf(ptr, "%s (%" PRIu64 " %04x) ", str, ts, tid);
             ptr += wn;
             capacity -= wn;
 
-            task* t = task::get_current_task();
+            auto t = task::get_current_task_id();
             if (t)
             {
-                if (nullptr != task::get_current_worker())
+                if (nullptr != task::get_current_worker2())
                 {
                     wn = sprintf(ptr, "%6s.%7s%u.%016llx: ",
                         task::get_current_node_name(),
-                        task::get_current_worker()->pool_spec().name.c_str(),
-                        task::get_current_worker()->index(),
-                        static_cast<long long unsigned int>(t->id())
+                        task::get_current_worker2()->pool_spec().name.c_str(),
+                        task::get_current_worker2()->index(),
+                        static_cast<long long unsigned int>(t)
                         );
                 }
                 else
@@ -298,7 +298,7 @@ namespace dsn
                         task::get_current_node_name(),
                         "io-thrd",
                         tid,
-                        static_cast<long long unsigned int>(t->id())
+                        static_cast<long long unsigned int>(t)
                         );
                 }
             }

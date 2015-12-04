@@ -39,6 +39,7 @@
 
 # include <dsn/internal/singleton.h>
 # include <dsn/tool/global_checker.h>
+# include "../../apps/replication/meta_server/server_state.h"
 
 namespace dsn { namespace replication { namespace test {
 
@@ -65,6 +66,10 @@ public:
     bool check_replica_state(int primary_count, int secondary_count, int inactive_count);
 
     std::string address_to_node_name(rpc_address addr);
+    rpc_address node_name_to_address(const std::string& name);
+
+    void on_replica_state_change(::dsn::rpc_address from, const replica_configuration& new_config, bool is_closing);
+    void on_config_change(const std::vector<app_state>& new_config);
 
     void get_current_states(state_snapshot& states);
     bool get_current_config(parti_config& config);
@@ -76,7 +81,8 @@ private:
     parti_config                          _last_config;
     state_snapshot                        _last_states;
 
-    std::map<int, std::string>            _address_to_node; // port is enough
+    std::map<std::string, dsn::rpc_address> _node_to_address; // address is primary_address()
+    std::map<int, std::string>              _address_to_node; // port is enough for key
 };
 
 class wrap_checker : public dsn::tools::checker

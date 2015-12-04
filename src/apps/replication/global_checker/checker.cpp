@@ -209,7 +209,7 @@ namespace dsn {
                                 r.second->_config.ballot == it->second->_config.ballot)
                             {
                                 dassert(it->second->last_committed_decree() <= r.second->last_prepared_decree(),
-                                    "all committed must be firstly prepared on all secondaries: %lld vs %lld",
+                                    "all committed must be firstly prepared on all secondaries: %" PRId64 " vs %" PRId64,
                                     it->second->last_committed_decree(),
                                     r.second->last_prepared_decree()
                                     );
@@ -217,7 +217,7 @@ namespace dsn {
                             else
                             {
                                 dassert(r.second->_config.ballot <= it->second->_config.ballot, 
-                                    "repicas must have smaller or equal ballots than primary: %lld vs %lld",
+                                    "repicas must have smaller or equal ballots than primary: %" PRId64 " vs %" PRId64,
                                     r.second->_config.ballot,
                                     it->second->_config.ballot
                                     );
@@ -225,7 +225,7 @@ namespace dsn {
                                 // it is possible that this is violated when new primary replaying mutations which marks
                                 // prepared mutations not logged (and to log again), and compre with old primary
                                /* dassert(r.second->last_committed_decree() <= it->second->last_prepared_decree(), 
-                                    "replicas must have smaller or equal state than primary: %lld vs %lld",
+                                    "replicas must have smaller or equal state than primary: %" PRId64 " vs %" PRId64,
                                     r.second->last_committed_decree(),
                                     it->second->last_prepared_decree()
                                     );*/

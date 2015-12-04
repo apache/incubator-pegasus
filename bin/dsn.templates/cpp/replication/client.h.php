@@ -16,7 +16,7 @@ class <?=$svc->name?>_client
 {
 public:
     <?=$svc->name?>_client(
-        const std::vector<::dsn::rpc_address>& meta_servers,
+        const std::vector< ::dsn::rpc_address>& meta_servers,
         const char* replicated_app_name)
         : ::dsn::replication::replication_app_client_base(meta_servers, replicated_app_name) 
     {
@@ -34,7 +34,7 @@ foreach ($svc->functions as $f)
     
 foreach ($keys as $k => $v)
 {
-    echo "    virtual int get_partition_index(const ".$k."& key) { return 0;};".PHP_EOL;
+    echo "    virtual int get_partition_index(const ".$k."& key) { return 0; }".PHP_EOL;
 }
 ?>
 <?php foreach ($svc->functions as $f) { ?>

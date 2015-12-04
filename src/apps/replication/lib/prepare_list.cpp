@@ -173,7 +173,7 @@ bool prepare_list::commit(decree d, commit_type ct)
                 mutation_ptr mu = get_mutation_by_decree(d0);
                 dassert(mu != nullptr &&
                     (mu->is_logged()),
-                    "mutation %lld is missing in prepare list",
+                    "mutation %" PRId64 " is missing in prepare list",
                     d0
                     );
 

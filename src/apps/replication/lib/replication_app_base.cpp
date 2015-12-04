@@ -104,12 +104,12 @@ error_code replica_log_info::store(const char* file)
     os.write((const char*)this, sizeof(*this));
     os.close();
 
-    if (!utils::filesystem::rename_path(tmp_file, ffile, true))
+    if (!utils::filesystem::rename_path(tmp_file, ffile))
     {
         return ERR_FILE_OPERATION_FAILED;
     }
 
-    dinfo("update app init info in %s, ballot = %lld, decree = %lld, log_offset<S,P> = <%lld,%lld>",
+    dinfo("update app init info in %s, ballot = %" PRId64 ", decree = %" PRId64 ", log_offset<S,P> = <%" PRId64 ",%" PRId64 ">",
         ffile.c_str(),
         init_ballot,
         init_decree,
@@ -188,7 +188,7 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
         }
         else
         {
-            on_empty_write();
+            // empty mutation write
         }
 
         if (_physical_error != 0)

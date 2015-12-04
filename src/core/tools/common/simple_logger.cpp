@@ -52,19 +52,19 @@ namespace dsn {
 
             int tid = ::dsn::utils::get_current_tid(); 
 
-            fprintf(fp, "%c%s (%llu %04x) ", s_level_char[log_level],
-                    str, static_cast<long long unsigned int>(ts), tid);
+            fprintf(fp, "%c%s (%" PRIu64 " %04x) ", s_level_char[log_level],
+                    str, ts, tid);
 
-            task* t = task::get_current_task();
+            auto t = task::get_current_task_id();
             if (t)
             {
-                if (nullptr != task::get_current_worker())
+                if (nullptr != task::get_current_worker2())
                 {
                     fprintf(fp, "%6s.%7s%u.%016llx: ",
                         task::get_current_node_name(),
-                        task::get_current_worker()->pool_spec().name.c_str(),
-                        task::get_current_worker()->index(),
-                        static_cast<long long unsigned int>(t->id())
+                        task::get_current_worker2()->pool_spec().name.c_str(),
+                        task::get_current_worker2()->index(),
+                        static_cast<long long unsigned int>(t)
                         );
                 }
                 else
@@ -73,18 +73,18 @@ namespace dsn {
                         task::get_current_node_name(),
                         "io-thrd",
                         tid,
-                        static_cast<long long unsigned int>(t->id())
+                        static_cast<long long unsigned int>(t)
                         );
                 }
             }
             else
             {
-                if (nullptr != task::get_current_worker())
+                if (nullptr != task::get_current_worker2())
                 {
                     fprintf(fp, "%6s.%7s%u: ",
                         task::get_current_node_name(),
-                        task::get_current_worker()->pool_spec().name.c_str(),
-                        task::get_current_worker()->index()
+                        task::get_current_worker2()->pool_spec().name.c_str(),
+                        task::get_current_worker2()->index()
                         );
                 }
                 else
@@ -187,29 +187,29 @@ namespace dsn {
         void simple_logger::create_log_file()
         {
             if (_log != nullptr)
-                fclose(_log);
+                ::fclose(_log);
 
             _lines = 0;
 
             std::stringstream str;
             str << "log." << ++_index << ".txt";
-            _log = fopen(str.str().c_str(), "w+");  
+            _log = ::fopen(str.str().c_str(), "w+");
 
             // TODO: move gc out of criticial path
             if (_index - _start_index > 20)
             {
                 std::stringstream str2;
                 str2 << "log." << _start_index++ << ".txt";
-                if (!dsn::utils::filesystem::remove_path(str2.str()))
+                if (::remove(str2.str().c_str()) != 0)
                 {
-                    dassert(false, "Fail to remove file %s.", str2.str().c_str());
+                    printf("Failed to remove garbage log file %s\n", str2.str().c_str());
                 }
             }
         }
 
         simple_logger::~simple_logger(void) 
         { 
-            fclose(_log);
+            ::fclose(_log);
         }
 
         void simple_logger::flush()
@@ -243,7 +243,7 @@ namespace dsn {
             fprintf(_log, "\n");
             if (_fast_flush || log_level >= LOG_LEVEL_ERROR)
             {
-                fflush(_log);
+                ::fflush(_log);
             }
 
             if (log_level >= _stderr_start_level)

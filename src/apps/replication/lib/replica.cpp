@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     helper functions in replica object
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -148,6 +148,7 @@ void replica::response_client_message(dsn_message_t request, error_code error, d
         return;
     }   
 
+    ddebug("%s: reply client write, err = %s", name(), error.to_string());
     reply(request, error);
 }
 
@@ -161,7 +162,7 @@ void replica::response_client_message(dsn_message_t request, error_code error, d
 //    if (!(mind <= last_durable_decree()))
 //    {
 //        err = ERR_INCOMPLETE_DATA;
-//        derror("%s: private log is incomplete (gced/durable): %lld vs %lld",
+//        derror("%s: private log is incomplete (gced/durable): %" PRId64 " vs %" PRId64,
 //            name(),
 //            mind,
 //            last_durable_decree()
@@ -173,7 +174,7 @@ void replica::response_client_message(dsn_message_t request, error_code error, d
 //        if (!(mind >= _app->last_committed_decree()))
 //        {
 //            err = ERR_INCOMPLETE_DATA;
-//            derror("%s: private log is incomplete (max/commit): %lld vs %lld",
+//            derror("%s: private log is incomplete (max/commit): %" PRId64 " vs %" PRId64,
 //                name(),
 //                mind,
 //                _app->last_committed_decree()
@@ -231,7 +232,7 @@ void replica::execute_mutation(mutation_ptr& mu)
         else
         {
             ddebug(
-                "%s: mutation %s commit to %s skipped, app.last_committed_decree = %lld",
+                "%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
                 name(), mu->name(),
                 enum_to_string(status()),
                 _app->last_committed_decree()
@@ -256,7 +257,7 @@ void replica::execute_mutation(mutation_ptr& mu)
         else
         {
             ddebug(
-                "%s: mutation %s commit to %s skipped, app.last_committed_decree = %lld",
+                "%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
                 name(), mu->name(),
                 enum_to_string(status()),
                 _app->last_committed_decree()
@@ -281,7 +282,7 @@ void replica::execute_mutation(mutation_ptr& mu)
             // catch-up will be done later after the checkpoint task is finished
 
             ddebug(
-                "%s: mutation %s commit to %s skipped, app.last_committed_decree = %lld",
+                "%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
                 name(), mu->name(),
                 enum_to_string(status()),
                 _app->last_committed_decree()
@@ -301,7 +302,10 @@ void replica::execute_mutation(mutation_ptr& mu)
 
     if (status() == PS_PRIMARY)
     {
-        mutation_ptr next = _primary_states.write_queue.on_work_completed(mu.get(), nullptr);
+        mutation_ptr next = _primary_states.write_queue.check_possible_work(
+            static_cast<int>(_prepare_list->max_decree() - d)
+            );
+
         if (next)
         {
             init_prepare(next);

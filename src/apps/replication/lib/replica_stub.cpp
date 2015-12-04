@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     replica container - replica stub
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -110,7 +110,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     _log = new mutation_log(
         log_dir,
         false,
-        opts.log_batch_buffer_MB,
+        opts.log_batch_buffer_KB_shared,
         opts.log_file_size_mb
         );
 
@@ -134,7 +134,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         auto r = replica::load(this, name.c_str(), true);
         if (r != nullptr)
         {
-            ddebug("%u.%u @ %s: load replica '%s' success, <durable, commit> = <%llu, %llu>, last_prepared_decree = %llu",
+            ddebug("%u.%u @ %s: load replica '%s' success, <durable, commit> = <%" PRId64 ", %" PRId64 ">, last_prepared_decree = %" PRId64,
                 r->get_gpid().app_id, r->get_gpid().pidx,
                 primary_address().to_string(),
                 name.c_str(),
@@ -180,7 +180,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         {
             it->second->close();
             std::string new_dir = it->second->dir() + ".err";
-            if (!utils::filesystem::rename_path(it->second->dir(), new_dir, true))
+            if (!utils::filesystem::rename_path(it->second->dir(), new_dir))
             {
                 dassert(false, "we cannot recover from the above error, exit ...");
             }
@@ -213,8 +213,8 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         }
 
         dwarn(
-            "%u.%u @ %s: load replica with err %s, durable = %lld, committed = %llu, "
-            "maxpd = %llu, ballot = %llu, max(share) = %lld, max(private) = %lld, log_offset = <%lld, %lld>",
+            "%u.%u @ %s: load replica with err %s, durable = %" PRId64 ", committed = %" PRId64 ", "
+            "maxpd = %" PRId64 ", ballot = %" PRId64 ", max(share) = %" PRId64 ", max(private) = %" PRId64 ", log_offset = <%" PRId64 ", %" PRId64 ">",
             it->first.app_id, it->first.pidx,
             primary_address().to_string(),
             err.to_string(),
@@ -231,7 +231,6 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         if (err == ERR_OK)
         {            
             dassert(smax == pmax, "incomplete private log state");
-            it->second->check_state_completeness();
             it->second->set_inactive_state_transient(true);
         }
         else
@@ -454,7 +453,7 @@ void replica_stub::on_group_check(const group_check_request& request, /*out*/ gr
 
             begin_open_replica(request.app_type, request.config.gpid, req);
             response.err = ERR_OK;
-            response.learner_signature = 0;
+            response.learner_signature = invalid_signature;
         }
         else
         {
@@ -478,6 +477,19 @@ void replica_stub::on_learn(dsn_message_t msg)
         learn_response response;
         response.err = ERR_OBJECT_NOT_FOUND;
         reply(msg, response);
+    }
+}
+
+void replica_stub::on_copy_checkpoint(const replica_configuration& request, /*out*/ learn_response& response)
+{
+    replica_ptr rep = get_replica(request.gpid);
+    if (rep != nullptr)
+    {
+        rep->on_copy_checkpoint(request, response);
+    }
+    else
+    {
+        response.err = ERR_OBJECT_NOT_FOUND;
     }
 }
 
@@ -638,6 +650,12 @@ void replica_stub::set_meta_server_connected_for_test(const configuration_query_
             gpid_to_hash(it->gpid)
             );
     }
+}
+
+void replica_stub::set_replica_state_subscriber_for_test(replica_state_subscriber subscriber, bool is_long_subscriber)
+{
+    _replica_state_subscriber = subscriber;
+    _is_long_subscriber = is_long_subscriber;
 }
 
 // this_ is used to hold a ref to replica_stub so we don't need to cancel the task on replica_stub::close
@@ -1026,6 +1044,7 @@ void replica_stub::open_service()
     register_rpc_handler(RPC_REMOVE_REPLICA, "remove", &replica_stub::on_remove);
     register_rpc_handler(RPC_GROUP_CHECK, "GroupCheck", &replica_stub::on_group_check);
     register_rpc_handler(RPC_QUERY_PN_DECREE, "query_decree", &replica_stub::on_query_decree);
+    register_rpc_handler(RPC_REPLICA_COPY_LAST_CHECKPOINT, "copy_checkpoint", &replica_stub::on_copy_checkpoint);
 }
 
 void replica_stub::close()

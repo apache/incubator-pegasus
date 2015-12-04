@@ -214,25 +214,17 @@ void meta_service::on_modify_replica_config_explictly(dsn_message_t req)
         return;
     }
 
-    dsn::replication::global_partition_id gpid;
-    int role;
-    dsn::replication::config_type cfg_command;
+    global_partition_id gpid;
+    rpc_address receiver;
+    config_type type;
+    rpc_address node;
 
     ::unmarshall(req, gpid);
-    ::unmarshall(req, role);
-    ::unmarshall(req, cfg_command);
+    ::unmarshall(req, receiver);
+    ::unmarshall(req, type);
+    ::unmarshall(req, node);
 
-    switch (cfg_command)
-    {
-    // ignore all other cfgs as the command is triggerd currently in meta
-    case CT_DOWNGRADE_TO_INACTIVE:
-    case CT_DOWNGRADE_TO_SECONDARY:
-    case CT_REMOVE:
-        _balancer->explictly_send_proposal(gpid, role, cfg_command);
-        break;
-    default:
-        break;
-    }
+    _balancer->explictly_send_proposal(gpid, receiver, type, node);
 }
 
 void meta_service::on_update_configuration(dsn_message_t req)

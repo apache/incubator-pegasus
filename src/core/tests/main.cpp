@@ -37,40 +37,9 @@
 # include "gtest/gtest.h"
 # include "test_utils.h"
 
-# include <dsn/tool/simulator.h>
-# include <dsn/tool/nativerun.h>
-# include <dsn/tool/fastrun.h>
-# include <dsn/toollet/tracer.h>
-# include <dsn/toollet/profiler.h>
-# include <dsn/toollet/fault_injector.h>
-
-# include <dsn/tool/providers.common.h>
-# include <dsn/tool/providers.hpc.h>
-# include <dsn/tool/nfs_node_simple.h>
-
 # include "hpc_aio_provider_for_test.h"
 
-static void module_init()
-{
-    // register all providers
-    dsn::tools::register_common_providers();
-    dsn::tools::register_hpc_providers();
-    dsn::tools::register_component_provider< ::dsn::service::nfs_node_simple>("dsn::service::nfs_node_simple");
-
-    //dsn::tools::register_component_provider<dsn::thrift_binary_message_parser>("thrift");
-
-    // register all possible tools and toollets
-    dsn::tools::register_tool<dsn::tools::nativerun>("nativerun");
-    dsn::tools::register_tool<dsn::tools::fastrun>("fastrun");
-    dsn::tools::register_tool<dsn::tools::simulator>("simulator");
-    dsn::tools::register_toollet<dsn::tools::tracer>("tracer");
-    dsn::tools::register_toollet<dsn::tools::profiler>("profiler");
-    dsn::tools::register_toollet<dsn::tools::fault_injector>("fault_injector");
-
-    // test helper
-    dsn::tools::register_component_provider<dsn::test::hpc_aio_provider_for_test>("dsn::test::hpc_aio_provider_for_test");
-}
-
+extern void dsn_core_init();
 extern void task_engine_module_init();
 extern void command_manager_module_init();
 
@@ -81,8 +50,10 @@ GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
 
+    dsn::tools::register_component_provider<dsn::test::hpc_aio_provider_for_test>("dsn::test::hpc_aio_provider_for_test");
+
     // register all tools
-    module_init();
+    dsn_core_init();
     task_engine_module_init();
     command_manager_module_init();
 

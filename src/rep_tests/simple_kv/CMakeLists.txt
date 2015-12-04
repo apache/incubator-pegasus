@@ -1,8 +1,10 @@
 set(MY_PROJ_NAME dsn.rep_tests.simple_kv)
+add_definitions(-DDSN_IN_CORE)
+set(DSN_IN_CORE "TRUE")
 
 # Source files under CURRENT project directory will be automatically included.
 # You can manually set MY_PROJ_SRC to include source files under other directories.
-set(MY_PROJ_SRC "")
+set(MY_PROJ_SRC "../../core/dll/core_main.cpp")
 
 # Search mode for source files under CURRENT project directory?
 # "GLOB_RECURSE" for recursive search
@@ -13,7 +15,18 @@ set(MY_PROJ_INC_PATH ../../apps/replication/client_lib)
 
 set(MY_BOOST_PACKAGES system)
 
-set(MY_PROJ_LIBS dsn.replication dsn.replication.meta_server dsn.replication.clientlib dsn.failure_detector)
+set(MY_PROJ_LIBS gtest
+                 dsn.tools.nfs
+                 dsn.dev.cpp.core.use
+                 dsn.tools.hpc
+                 dsn.tools.simulator
+                 dsn.tools.common
+                 dsn.corelib
+                 dsn.replication
+                 dsn.replication.meta_server
+                 dsn.replication.clientlib
+                 dsn.failure_detector
+)
 
 set(MY_PROJ_LIB_PATH "")
 
@@ -25,5 +38,9 @@ set(MY_BINPLACES
     "${CMAKE_CURRENT_SOURCE_DIR}/addcase.sh"
     "${CASE_FILES}"
 )
+
+if(WIN32)
+    SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} /ignore:4099")
+endif()
 
 dsn_add_executable()

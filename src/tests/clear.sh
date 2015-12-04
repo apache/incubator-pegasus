@@ -1,4 +1,4 @@
 #!/bin/bash
 
-rm -rf client coredump
+rm -rf client coredump log.* *.log
 

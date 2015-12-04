@@ -52,8 +52,8 @@ namespace dsn {
         class perf_counter_number_v2_fast : public perf_counter
         {
         public:
-            perf_counter_number_v2_fast(const char *section, const char *name, perf_counter_type type)
-                : perf_counter(section, name, type)
+            perf_counter_number_v2_fast(const char *section, const char *name, perf_counter_type type, const char *dsptr)
+                : perf_counter(section, name, type, dsptr)
             {
                 for (int i = 0; i < DIVIDE_CONTAINER; i++)
                 {
@@ -98,8 +98,8 @@ namespace dsn {
         class perf_counter_rate_v2_fast : public perf_counter
         {
         public:
-            perf_counter_rate_v2_fast(const char *section, const char *name, perf_counter_type type)
-                : perf_counter(section, name, type), _rate(0)
+            perf_counter_rate_v2_fast(const char *section, const char *name, perf_counter_type type, const char *dsptr)
+                : perf_counter(section, name, type, dsptr), _rate(0)
             {
                 _last_time = ::dsn::utils::get_current_physical_time_ns();
                 for (int i = 0; i < DIVIDE_CONTAINER; i++)
@@ -166,8 +166,8 @@ namespace dsn {
         class perf_counter_number_percentile_v2_fast : public perf_counter
         {
         public:
-            perf_counter_number_percentile_v2_fast(const char *section, const char *name, perf_counter_type type)
-                : perf_counter(section, name, type)
+            perf_counter_number_percentile_v2_fast(const char *section, const char *name, perf_counter_type type, const char *dsptr)
+                : perf_counter(section, name, type, dsptr)
             {
                 _results[COUNTER_PERCENTILE_50] = 0;
                 _results[COUNTER_PERCENTILE_90] = 0;
@@ -353,15 +353,15 @@ namespace dsn {
 
         // ---------------------- perf counter dispatcher ---------------------
 
-        simple_perf_counter_v2_fast::simple_perf_counter_v2_fast(const char *section, const char *name, perf_counter_type type)
-            : perf_counter(section, name, type)
+        simple_perf_counter_v2_fast::simple_perf_counter_v2_fast(const char *section, const char *name, perf_counter_type type, const char *dsptr)
+            : perf_counter(section, name, type, dsptr)
         {
             if (type == perf_counter_type::COUNTER_TYPE_NUMBER)
-                _counter_impl = new perf_counter_number_v2_fast(section, name, type);
+                _counter_impl = new perf_counter_number_v2_fast(section, name, type, dsptr);
             else if (type == perf_counter_type::COUNTER_TYPE_RATE)
-                _counter_impl = new perf_counter_rate_v2_fast(section, name, type);
+                _counter_impl = new perf_counter_rate_v2_fast(section, name, type, dsptr);
             else
-                _counter_impl = new perf_counter_number_percentile_v2_fast(section, name, type);
+                _counter_impl = new perf_counter_number_percentile_v2_fast(section, name, type, dsptr);
         }
 
         simple_perf_counter_v2_fast::~simple_perf_counter_v2_fast(void)

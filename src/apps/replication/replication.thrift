@@ -96,6 +96,14 @@ struct prepare_ack
     6:i64                 last_committed_decree_in_prepare_list;
 }
 
+enum learn_type
+{
+    LT_NONE,
+    LT_CACHE,
+    LT_APP,
+    LT_LOG,
+}
+
 struct learn_state
 {
     1:list<dsn.blob> meta;
@@ -128,8 +136,9 @@ struct learn_response
     2:replica_configuration config;
     3:i64                   commit_decree;
     4:i64                   prepare_start_decree;
-    5:learn_state           state;
-    6:string                base_local_dir;
+    5:learn_type            type;
+    6:learn_state           state;
+    7:string                base_local_dir;
 }
 
 struct group_check_request

@@ -550,7 +550,7 @@ namespace dsn {
                     else
                     {
 #endif
-                        succ = (std::remove(fpath) == 0);
+                        succ = (::remove(fpath) == 0);
                         if (!succ)
                         {
                             dwarn("remove file %s failed, err = %s", fpath, strerror(errno));
@@ -583,7 +583,7 @@ namespace dsn {
 
                 if (dsn::utils::filesystem::path_exists_internal(npath, FTW_F))
                 {
-                    bool ret = (std::remove(npath.c_str()) == 0);
+                    bool ret = (::remove(npath.c_str()) == 0);
                     if (!ret)
                     {
                         dwarn("remove file %s failed, err = %s", path.c_str(), strerror(errno));
@@ -600,13 +600,16 @@ namespace dsn {
                 }
             }
 
-            bool rename_path(const std::string& path1, const std::string& path2, bool overwrite)
+            bool rename_path(const std::string& path1, const std::string& path2)
             {
                 bool ret;
-                
-                // We don't check this existence of path2 when overwrite is false
-                // since ::rename() will do this.
-                if (overwrite && dsn::utils::filesystem::path_exists(path2))
+
+                //
+                // on linux, we don't need to check this existence of path2 since ::rename() will do this.
+                // however, rename will not do this on windows as on linux, so we do this here for windows
+                //
+# if defined(_WIN32)
+                if (dsn::utils::filesystem::path_exists(path2))
                 {
                     ret = dsn::utils::filesystem::remove_path(path2);
                     if (!ret)
@@ -619,6 +622,7 @@ namespace dsn {
                         return ret;
                     }
                 }
+# endif
 
                 ret = (::rename(path1.c_str(), path2.c_str()) == 0);
                 if (!ret)

@@ -1,0 +1,11 @@
+# Case Description:
+# - normal recover
+
+set:load_balance_for_test=1,not_exist_on_log_failure=1
+
+# on meta server the config is the same with the exit state last time
+config:{3,r1,[r2,r3]}
+
+# and the states will be normal again
+state:{{r1,pri,3,2},{r2,sec,3,2},{r3,sec,3,2}}
+

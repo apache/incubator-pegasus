@@ -44,7 +44,7 @@
 # endif
 # define __TITLE__ "simple_kv.main"
 
-static void module_init()
+void dsn_app_registration()
 {
     // register services
     dsn::register_app<dsn::replication::replication_service_app>("replica");
@@ -56,6 +56,8 @@ static void module_init()
     dsn::replication::test::install_checkers();
 }
 
+extern void dsn_core_init();
+
 int main(int argc, char** argv)
 {
     if (argc != 3)
@@ -64,10 +66,12 @@ int main(int argc, char** argv)
         std::cerr << " e.g.: " << argv[0] << " case-000.ini case-000.act" << std::endl;
         return -1;
     }
-
+    
     dsn::replication::test::g_case_input = argv[2];
 
-    module_init();
+    dsn_app_registration();
+
+    dsn_core_init();
 
     // specify what services and tools will run in config file, then run
     dsn_run(argc - 1, argv, false);
@@ -86,6 +90,8 @@ int main(int argc, char** argv)
         return -1;
     }
 
+    // success: avoid rdsn exit coredump (no elegant exits so far
+    dsn_terminate(); // return SIGKILL 137
     return 0;
 }
 
