@@ -26,37 +26,29 @@
 
 /*
  * Description:
- *     a singleton to manager all zookeeper sessions, so that each zookeeper session
- *     can be shared by all threads in one service-node. The Header file.
+ *     distributed lock service implemented with zookeeper, some types definition
  *
  * Revision history:
  *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
  */
-
-#include <dsn/internal/singleton_store.h>
-#include <string>
-
 #pragma once
 
+#include <dsn/cpp/autoref_ptr.h>
+#include <dsn/cpp/clientlet.h>
+#include <dsn/dist/distributed_lock_service.h>
+#include <dsn/cpp/auto_codes.h>
+
 namespace dsn { namespace dist{
+    
+DEFINE_THREAD_POOL_CODE(THREAD_POOL_DLOCK)
+DEFINE_TASK_CODE(TASK_CODE_DLOCK, TASK_PRIORITY_HIGH, THREAD_POOL_DLOCK)
 
-class zookeeper_session;
-class zookeeper_session_mgr: public utils::singleton<zookeeper_session_mgr>
-{
-public:
-    zookeeper_session_mgr();
-    zookeeper_session* get_session(void* service_node);
-    const char* zoo_hosts() const { return _zoo_hosts.c_str(); }
-    int timeout() const { return _timeout_ms; }
-    const char* zoo_logfile() const { return _zoo_logfile.c_str(); }
+class distributed_lock_service_zookeeper;
+class lock_struct;
+typedef ref_ptr<distributed_lock_service_zookeeper> lock_srv_ptr;
+typedef ref_ptr<lock_struct> lock_struct_ptr;
 
-private:
-    utils::ex_lock_nr _store_lock;
-
-private:
-    std::string _zoo_hosts;
-    int _timeout_ms;
-    std::string _zoo_logfile;
-};
+typedef safe_late_task<distributed_lock_service::lock_callback>* lock_task_t;
+typedef safe_late_task<distributed_lock_service::err_callback>* unlock_task_t;
 
 }}
