@@ -94,8 +94,8 @@ TEST(distributed_lock_service_zookeeper, simple_lock_unlock)
     q.clear();
     
     srand( time(0) );
-    q.reserve(1000000);
-    for (int i=0; i!=1000000; ++i) {
+    q.reserve(100000);
+    for (int i=0; i!=100000; ++i) {
         int64_t rand1 = rand()%10000;
         int64_t rand2 = rand()%10000; 
         q.push_back( rand1*rand2 );
