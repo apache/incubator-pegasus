@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     dsn (layer 1) initialization
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     July, 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -49,8 +49,6 @@
 # include <dsn/tool/nfs_node_simple.h>
 # include <dsn/internal/singleton.h>
 
-# include <dsn/internal/module_int.cpp.h>
-
 //# include <dsn/thrift_helper.h>
 
 # ifdef __TITLE__
@@ -58,7 +56,7 @@
 # endif
 # define __TITLE__ "core.main"
 
-void dsn_module_init()
+void dsn_core_init()
 {
     ddebug("register builtin components");
 

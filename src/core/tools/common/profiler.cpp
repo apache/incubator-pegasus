@@ -26,11 +26,18 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     Entry of profiler
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
+ *     2015-06-01, zjc95, first version
+ *     2015-06-01, zjc95, deleted pdh part
+ *     2015-06-02, zjc95, revised License
+ *     2015-06-02, zjc95, revised format of tab and brace
+ *     2015-08-11, zjc95, revised format of variable name
+ *     2015-08-12, zjc95, fixed bug about TITLE
+ *     2015-08-17, zjc95, added command decription
+ *     2015-11-24, zjc95, revised the decription
+ *
  */
 
 /*

@@ -26,38 +26,22 @@
 
 /*
  * Description:
- *     Header of performance counter ver.faster
+ *     auto initialization when the module is loaded
  *
  * Revision history:
- *     2015-08-17, zjc95, first version
- *     2015-11-24, zjc95, revised the decription
- *
+ *     Dec., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#pragma once
+# include <dsn/internal/module_init.cpp.h>
 
-# include <dsn/tool_api.h>
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "core.init"
 
-namespace dsn {
-    namespace tools {
+extern void dsn_core_init();
 
-        class simple_perf_counter_v2_fast : public perf_counter
-        {
-        public:
-            simple_perf_counter_v2_fast(const char *section, const char *name, perf_counter_type type, const char *dsptr);
-            ~simple_perf_counter_v2_fast(void);
-
-            virtual void   increment() { _counter_impl->increment(); }
-            virtual void   decrement() { _counter_impl->decrement(); }
-            virtual void   add(uint64_t val) { _counter_impl->add(val); }
-            virtual void   set(uint64_t val) { _counter_impl->set(val); }
-            virtual double get_value() { return _counter_impl->get_value(); }
-            virtual double get_percentile(counter_percentile_type type) { return _counter_impl->get_percentile(type); }
-
-        private:
-            perf_counter *_counter_impl;
-        };
-
-    }
-}
-
+MODULE_INIT_BEGIN
+    dsn_core_init();
+MODULE_INIT_END
