@@ -53,14 +53,14 @@ static inline const char* string_zooevt(int zoo_event)
 
 static inline void __lock_task_bind_and_enqueue(lock_task_t lock_task, error_code ec, const std::string& id, int version)
 {
-    lock_task->bind_and_enqueue([=](distributed_lock_service::lock_callback& cb){
+    lock_task->bind_and_enqueue([&](distributed_lock_service::lock_callback& cb){
         return std::bind(cb, ec, id, version);
     });
 }
 
 static inline void __unlock_task_bind_and_enqueue(unlock_task_t unlock_task, error_code ec)
 {
-    unlock_task->bind_and_enqueue([=](distributed_lock_service::err_callback& cb){
+    unlock_task->bind_and_enqueue([&](distributed_lock_service::err_callback& cb){
         return std::bind(cb, ec);
     });
 }

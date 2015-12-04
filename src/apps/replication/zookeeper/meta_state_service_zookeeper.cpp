@@ -80,7 +80,7 @@ task_ptr meta_state_service_zookeeper::delete_empty_node(
 }
 
 static auto __bind_and_enqueue = [](safe_late_task<meta_state_service::err_callback>* tsk, error_code ec){
-    tsk->bind_and_enqueue([ec](meta_state_service::err_callback& cb){
+    tsk->bind_and_enqueue([&ec](meta_state_service::err_callback& cb){
         return std::bind(cb, ec);
     });
 };
@@ -236,15 +236,13 @@ void meta_state_service_zookeeper::visit_zookeeper_internal(
         auto tsk = reinterpret_cast< safe_late_task<meta_state_service::err_value_callback>* >(callback.get());
         tsk->bind_and_enqueue(
             [op](meta_state_service::err_value_callback& cb){
+                blob data;
                 if (ZOK == op->_output.error) {
                     std::shared_ptr<char> buf(new char[op->_output.get_op.value_length]);
                     memcpy(buf.get(), op->_output.get_op.value, op->_output.get_op.value_length);
-                    blob data(buf, op->_output.get_op.value_length);
-                    return std::bind(cb, ERR_OK, data);
+                    data.assign(buf, 0, op->_output.get_op.value_length);
                 }
-                else {
-                    return std::bind(cb, from_zerror(op->_output.error), blob());
-                }
+                return std::bind(cb, from_zerror(op->_output.error), data);
             }
         );
     }
@@ -253,15 +251,14 @@ void meta_state_service_zookeeper::visit_zookeeper_internal(
     {
         auto tsk = reinterpret_cast< safe_late_task<meta_state_service::err_stringv_callback>* >(callback.get());
         tsk->bind_and_enqueue([op](meta_state_service::err_stringv_callback& cb){
+            std::vector<std::string> result;
             if (ZOK == op->_output.error) {
                 const String_vector* vec = op->_output.getchildren_op.strings;
-                std::vector<std::string> result(vec->count);
+                result.resize(vec->count);
                 for (int i=0; i!=vec->count; ++i)
                     result[i].assign(vec->data[i]);
-                return std::bind(cb, ERR_OK, result);
             }
-            else
-                return std::bind(cb, from_zerror(op->_output.error), std::vector<std::string>());
+            return std::bind(cb, from_zerror(op->_output.error), result);
         });
     }
         break;
