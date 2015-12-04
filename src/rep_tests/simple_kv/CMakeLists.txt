@@ -26,6 +26,8 @@ set(MY_PROJ_LIBS gtest
                  dsn.replication.meta_server
                  dsn.replication.clientlib
                  dsn.failure_detector
+                 dsn.replication.zookeeper_provider
+                 zookeeper_mt
 )
 
 set(MY_PROJ_LIB_PATH "")

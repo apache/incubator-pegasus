@@ -20,7 +20,7 @@ TEST(meta_state_service_simple, basics)
         service->create_node("/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)->wait();
         service->node_exist("/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)->wait();
         service->create_node("/1/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)->wait();
-        service->get_children("/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, [](error_code ec, std::vector<std::string>&& children)
+        service->get_children("/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, [](error_code ec, const std::vector<std::string>& children)
         {
             dassert(ec == ERR_OK && children.size() == 1 && *children.begin() == "1", "unexpected child");
         });
@@ -48,7 +48,7 @@ TEST(meta_state_service_simple, basics)
         dsn::binary_writer writer;
         writer.write(0xdeadbeef);
         service->create_node("/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok, writer.get_buffer())->wait();
-        service->get_data("/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, [](error_code ec, const dsn::blob&& value)
+        service->get_data("/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, [](error_code ec, const dsn::blob& value)
         {
             expect_ok(ec);
             dsn::binary_reader reader(value);
@@ -59,7 +59,7 @@ TEST(meta_state_service_simple, basics)
         writer = dsn::binary_writer();
         writer.write(0xbeefdead);
         service->set_data("/1", writer.get_buffer(), META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)->wait();
-        service->get_data("/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, [](error_code ec, dsn::blob&& value)
+        service->get_data("/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, [](error_code ec, const dsn::blob& value)
         {
             expect_ok(ec);
             dsn::binary_reader reader(value);

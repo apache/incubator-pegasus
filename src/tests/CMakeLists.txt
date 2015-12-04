@@ -16,6 +16,7 @@ set(MY_PROJ_INC_PATH
 	../apps/replication/client_lib 
 	../apps/replication/lib 
 	../apps/replication/meta_server
+	../apps/replication/zookeeper
 	)
 
 if (UNIX)
@@ -28,7 +29,9 @@ set(MY_PROJ_LIBS
 	dsn.replication.meta_server
 	dsn.replication
 	dsn.replication.clientlib
-	dsn.failure_detector	
+	dsn.failure_detector
+	dsn.replication.zookeeper_provider
+	zookeeper_mt
 	${MY_PROJ_LIBS}
 	)
 
