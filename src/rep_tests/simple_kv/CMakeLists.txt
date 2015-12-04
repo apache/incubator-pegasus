@@ -42,7 +42,7 @@ set(MY_BINPLACES
 )
 
 if(WIN32)
-    SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} /ignore:4099")
+    SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} /ignore:4049 /ignore:4217")
 endif()
 
 dsn_add_executable()

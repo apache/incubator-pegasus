@@ -26,12 +26,16 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     Header of profiler
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
+ *     2015-06-01, zjc95, first version
+ *     2015-06-01, zjc95, deleted pdh part
+ *     2015-08-11, zjc95, adjusted according to 'profiler_command' and 'profiler_output'
+ *     2015-11-24, zjc95, revised the decription
+ *
  */
+
 #pragma once
 #include <iomanip>
 #include "shared_io_service.h"

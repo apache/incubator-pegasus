@@ -26,11 +26,18 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     Performance counter ver.simple
+ *     3 types counter : Number Rate NumberPercentile
+ *     Using Select to find Kth number in type NumberPercentile counter
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
+ *     2015-06-01, zjc95, first version
+ *     2015-08-11, zjc95, added optimizing about devided container
+ *     2015-08-12, zjc95, fixed bug about 'compute_context'
+ *     2015-08-17, zjc95, fixed bug about allocation of 'calc_queue'
+ *     2015-08-17, zjc95, moved devided container to 'simple_perf_counter_v2_atomic' and 'simple_perf_counter_v2_fast'
+ *     2015-11-24, zjc95, revised the decription
+ *
  */
 
 # include "simple_perf_counter.h"
