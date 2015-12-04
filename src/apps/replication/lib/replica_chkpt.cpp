@@ -260,7 +260,7 @@ namespace dsn {
         void replica::catch_up_with_private_logs(partition_status s)
         {
             learn_state state;
-            _private_log->get_checkpoint(
+            _private_log->get_learn_state(
                 get_gpid(),
                 _app->last_committed_decree() + 1,
                 state
