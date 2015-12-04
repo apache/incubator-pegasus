@@ -125,7 +125,7 @@ namespace dsn {
                 zlock                   user_req_lock;
 
                 get_file_size_request  file_size_req;
-                aio_task*           nfs_task;
+                aio_task*              nfs_task;
                 std::atomic<int>       finished_files;
                 bool                   is_finished;
 
