@@ -190,7 +190,7 @@ public:
     // write operations.
     //
     // Postconditions:
-    // * after apply_checkpoint() done, last_committed_decree() >= last_durable_decree()
+    // * after apply_checkpoint() done, last_committed_decree() == last_durable_decree()
     // 
     virtual int  apply_checkpoint(::dsn::replication::learn_state& state, chkpt_apply_mode mode) = 0;
 
