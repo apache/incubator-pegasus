@@ -99,6 +99,11 @@ struct service_app_spec
     int                  count; // index = 1,2,...,count
     int                  ports_gap; // when count > 1 or service_spec.io_mode != IOE_PER_NODE
     std::string          dmodule; // when the service is a dynamcially loaded module
+
+    // when the service cannot be automatied register its app types into rdsn through %dmoudule% 
+    // dllmain or atribute(contructor)
+    //
+    std::string          dmodule_bridge_arguments; 
     service_app_role     role;
 
     network_client_configs network_client_confs;
