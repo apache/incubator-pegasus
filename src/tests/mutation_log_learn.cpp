@@ -95,7 +95,7 @@ TEST(replication, log_learn)
 
         // learning
         learn_state state;
-        mlog->get_checkpoint(gpid, durable_decree + 1, state);
+        mlog->get_learn_state(gpid, durable_decree + 1, state);
         mlog->close();
         mlog = nullptr;
 
