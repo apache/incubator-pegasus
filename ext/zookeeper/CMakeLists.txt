@@ -1,12 +1,14 @@
 include(ExternalProject)
 
-ExternalProject_Add(zookeeper
-    GIT_REPOSITORY https://github.com/shengofsun/zookeeper_client_c.git
-    GIT_TAG master
-    BINARY_DIR "${PROJECT_BINARY_DIR}/zookeeper"
-    INSTALL_DIR "${PROJECT_BINARY_DIR}/lib"
-    INSTALL_COMMAND cp ${PROJECT_BINARY_DIR}/zookeeper/libzookeeper_mt.a ${PROJECT_BINARY_DIR}/lib
-)
+if (NOT WIN32)
+    ExternalProject_Add(zookeeper
+        GIT_REPOSITORY https://github.com/shengofsun/zookeeper_client_c.git
+        GIT_TAG master
+        BINARY_DIR "${PROJECT_BINARY_DIR}/zookeeper"
+        INSTALL_DIR "${PROJECT_BINARY_DIR}/lib"
+        INSTALL_COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/zookeeper/libzookeeper_mt.a ${PROJECT_BINARY_DIR}/lib
+    )
+endif()
 
 # Specify include dir
 ExternalProject_Get_Property(zookeeper source_dir)
