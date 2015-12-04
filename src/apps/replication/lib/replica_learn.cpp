@@ -357,7 +357,7 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
             name()
             );
 
-        _private_log->get_checkpoint(get_gpid(), learn_start_decree, response.state);
+        _private_log->get_learn_state(get_gpid(), learn_start_decree, response.state);
         response.type = LT_LOG;
         response.base_local_dir = _private_log->dir();
         ddebug(

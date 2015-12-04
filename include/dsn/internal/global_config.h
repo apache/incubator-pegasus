@@ -100,8 +100,12 @@ struct service_app_spec
     int                  ports_gap; // when count > 1 or service_spec.io_mode != IOE_PER_NODE
     std::string          dmodule; // when the service is a dynamcially loaded module
 
-    // when the service cannot be automatied register its app types into rdsn through %dmoudule% 
-    // dllmain or atribute(contructor)
+    //
+    // when the service cannot automatically register its app types into rdsn 
+    // through %dmoudule%'s dllmain or attribute(constructor), we require the %dmodule%
+    // implement an exported function called "dsn_error_t dsn_app_bridge(int argc, const char** argv);",
+    // which loads the real target (e.g., a python/Java/php module), that registers their
+    // app types and factories.
     //
     std::string          dmodule_bridge_arguments; 
     service_app_role     role;
@@ -123,6 +127,13 @@ CONFIG_BEGIN(service_app_spec)
     CONFIG_FLD_STRING(type, "", "app type name, as given when registering by dsn_register_app_role")
     CONFIG_FLD_STRING(arguments, "", "arguments for the app instances")
     CONFIG_FLD_STRING(dmodule, "", "path of a dynamic library which implement this app role, and register itself upon loaded")
+    CONFIG_FLD_STRING(dmodule_bridge_arguments, "",
+        "\n; when the service cannot automatically register its app types into rdsn \n"
+        "; through %dmoudule%'s dllmain or attribute(constructor), we require the %dmodule% \n"
+        "; implement an exporte function called \"dsn_error_t dsn_bridge(const char* args);\", \n"
+        "; which loads the real target (e.g., a python/Java/php module), that registers their \n"
+        "; app types and factories."
+        );
     CONFIG_FLD_INT_LIST(ports, "RPC server listening ports needed for this app")
     CONFIG_FLD_ID_LIST(threadpool_code2, pools, "thread pools need to be started")
     CONFIG_FLD(int, uint64, delay_seconds, 0, "delay seconds for when the apps should be started")

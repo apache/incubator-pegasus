@@ -40,5 +40,5 @@ using namespace ::dsn;
 
 TEST(core, load_dynamic_library)
 {
-    ASSERT_FALSE(dsn::utils::load_dynamic_library("not_exist_module"));
+    ASSERT_FALSE(dsn::utils::load_dynamic_library("not_exist_module") != nullptr);
 }

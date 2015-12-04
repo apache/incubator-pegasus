@@ -59,30 +59,49 @@ namespace dsn {
     namespace utils {
 
 
-        bool load_dynamic_library(const char* module)
+        dsn_handle_t load_dynamic_library(const char* module)
         {
             std::string module_name(module);
 # if defined(_WIN32)
             module_name += ".dll";
-            if (::LoadLibraryA(module_name.c_str()) == NULL)
+            auto hmod = ::LoadLibraryA(module_name.c_str());
+            if (hmod == NULL)
             {
                 derror("load dynamic library '%s' failed, err = %d", module_name.c_str(), ::GetLastError());
-                return false;
-            }
-            else
-                return true;
+            }            
 # elif defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
             module_name = "lib" + module_name + ".so";
-            if (nullptr == dlopen(module_name.c_str(), RTLD_LAZY))
+            auto hmod = dlopen(module_name.c_str(), RTLD_LAZY);
+            if (nullptr == hmod)
             {
                 derror("load dynamic library '%s' failed, err = %s", module_name.c_str(), dlerror());
-                return false;
             }
-            else
-                return true;
 # else
 # error not implemented yet
 # endif 
+            return (dsn_handle_t)(hmod);
+        }
+
+        dsn_handle_t load_symbol(dsn_handle_t hmodule, const char* symbol)
+        {
+# if defined(_WIN32)
+            return (dsn_handle_t)::GetProcAddress((HMODULE)hmodule, (LPCSTR)symbol);
+# elif defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
+            return (dsn_handle_t)dlsym((void*)hmodule, symbol);
+# else
+# error not implemented yet
+# endif 
+        }
+
+        void unload_dynamic_library(dsn_handle_t hmodule)
+        {
+# if defined(_WIN32)
+            ::CloseHandle((HMODULE)hmodule);
+# elif defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
+            dlclose((void*)hmodule);
+# else
+# error not implemented yet
+# endif
         }
     }
 }
