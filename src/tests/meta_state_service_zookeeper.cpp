@@ -88,7 +88,7 @@ static void recursively_create(
     int current_layer,
     error_code ec)
 {
-    ddebug("%s: root:%s, layer:%d, ec:%s", __PRETTY_FUNCTION__, root.c_str(), current_layer, ec.to_string());
+    ddebug("%s: root:%s, layer:%d, ec:%s", __FUNCTION__, root.c_str(), current_layer, ec.to_string());
     ASSERT_TRUE(ec==ERR_OK);
     if (current_layer<=0) return;
     for (int i=0; i!=10; ++i) {

@@ -45,7 +45,6 @@
 int g_test_count = 0;
 int g_test_ret = 0;
 
-extern void dsn_core_init();
 extern void lock_test_init();
 
 class test_client : public ::dsn::service_app
@@ -77,7 +76,6 @@ GTEST_API_ int main(int argc, char **argv)
 {
     // register all possible services
     dsn::register_app<test_client>("test");
-    dsn_core_init();
     lock_test_init();
     
     // specify what services and tools will run in config file, then run

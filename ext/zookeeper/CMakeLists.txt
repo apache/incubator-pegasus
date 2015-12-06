@@ -1,32 +1,15 @@
-include(ExternalProject)
+set(project_name zookeeper)
+set(target_url  https://github.com/shengofsun/zookeeper_client_c.git)
+set(my_cmake_args "")
 
-#if(NOT WIN32)
-#    ExternalProject_Add(zookeeper
-#        GIT_REPOSITORY https://github.com/shengofsun/zookeeper_client_c.git
-#        GIT_TAG master
-#        BINARY_DIR "${PROJECT_BINARY_DIR}/zookeeper"
-#        INSTALL_DIR "${PROJECT_BINARY_DIR}/lib"
-#        INSTALL_COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/zookeeper/libzookeeper_mt.a ${PROJECT_BINARY_DIR}/lib
-#    )
-#endif()
+if(WIN32)
+	set(target_binaries zookeeper_mt.dll zookeeper_mt.lib)
+else()
+	set(target_binaries libzookeeper_mt.a)
+endif()
 
-ExternalProject_Add(zookeeper
-		GIT_REPOSITORY https://github.com/imzhenyu/zookeeper_client_c.git
-		GIT_TAG master
-	   #   CMAKE_ARGS -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=DebugLibs
-	   #            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=ReleaseLibs
-	   #            -DCMAKE_CXX_FLAGS=${MSVC_COMPILER_DEFS}
-		BINARY_DIR "${PROJECT_BINARY_DIR}/lib"
-		# disable install
-		INSTALL_COMMAND ""
-	)
+include(${PROJECT_SOURCE_DIR}/bin/dsn.ext.cmake)
 
-# Specify include dir
-ExternalProject_Get_Property(zookeeper source_dir)
-set(ZOOKEEPER_INCLUDE_DIR ${source_dir}/include PARENT_SCOPE)
+set(ZOOKEEPER_INCLUDE_DIR ${my_source_dir}/include PARENT_SCOPE)
+set(ZOOKEEPER_LIB_DIR ${my_binary_dir} PARENT_SCOPE)
 
-# Specify MainTest's link libraries
-ExternalProject_Get_Property(zookeeper binary_dir)
-set(ZOOKEEPER_LIB_DIR ${binary_dir} PARENT_SCOPE)
-
-#install(FILES "${PROJECT_BINARY_DIR}/zookeeper/libzookeeper_mt.a" DESTINATION lib)

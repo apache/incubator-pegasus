@@ -20,3 +20,4 @@ set(MY_PROJ_LIB_PATH "")
 set(MY_BINPLACES "")
 
 dsn_add_static_library()
+add_dependencies(${MY_PROJ_NAME} zookeeper)

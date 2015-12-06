@@ -10,7 +10,7 @@ set(MY_PROJ_SRC "../dll/core_main.cpp")
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH
-	${GTEST_INCLUDE_DIRS} 
+	${GTEST_INCLUDE_DIR} 
 	../core ../tools/common ../tools/simulator ../tools/hpc ../tools/nfs 
 	../../dev/cpp
 	)
@@ -26,7 +26,7 @@ set(MY_PROJ_LIBS gtest
                  dsn.corelib
 )
 
-set(MY_PROJ_LIB_PATH "")
+set(MY_PROJ_LIB_PATH "${GTEST_LIB_DIR}")
 
 # Extra files that will be installed
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config-bad-section.ini"
