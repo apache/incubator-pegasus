@@ -204,7 +204,7 @@ void zookeeper_session::init_non_dsn_thread()
 {
     static __thread int dsn_context_init = 0;
     if ( dsn_context_init == 0) {
-        dsn_mimic_app("meta", 1);
+        dsn_mimic_app_by_id(_srv_node.app_id);
         dsn_context_init = 1;
     }
 }

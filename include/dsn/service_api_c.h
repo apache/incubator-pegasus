@@ -273,8 +273,11 @@ extern DSN_API void      dsn_register_app_checker(
                             dsn_checker_apply apply
                             );
 extern DSN_API bool      dsn_mimic_app(
-                            const char* app_name, // specified in config file as [apps.xxx] name = %app_name%
+                            const char* role_name, // specified in config file as [apps.${role_name}]
                             int index // start from 1, when there are multiple instances
+                            );
+extern DSN_API bool      dsn_mimic_app_by_id(
+                            int app_id // global app id
                             );
 extern DSN_API bool      dsn_run_config(
                             const char* config, 

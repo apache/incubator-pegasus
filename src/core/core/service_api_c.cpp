@@ -787,15 +787,15 @@ DSN_API uint64_t dsn_random64(uint64_t min, uint64_t max) // [min, max]
 // system
 //
 //------------------------------------------------------------------------------
-DSN_API bool dsn_register_app_role(const char* name, dsn_app_create create, dsn_app_start start, dsn_app_destroy destroy)
+DSN_API bool dsn_register_app_role(const char* type_name, dsn_app_create create, dsn_app_start start, dsn_app_destroy destroy)
 {
     auto& store = ::dsn::utils::singleton_store<std::string, ::dsn::service_app_role>::instance();
     ::dsn::service_app_role role;
-    role.name = std::string(name);
+    role.type_name = std::string(type_name);
     role.create = create;
     role.start = start;
     role.destroy = destroy;
-    return store.put(role.name, role);
+    return store.put(role.type_name, role);
 }
 
 static bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_name, int app_index);
@@ -815,7 +815,7 @@ DSN_API void dsn_terminate()
 # endif
 }
 
-DSN_API bool dsn_mimic_app(const char* app_name, int index)
+DSN_API bool dsn_mimic_app(const char* role_name, int index)
 {
     auto worker = ::dsn::task::get_current_worker2();
     dassert(worker == nullptr, "cannot call dsn_mimic_app in rDSN threads");
@@ -824,10 +824,8 @@ DSN_API bool dsn_mimic_app(const char* app_name, int index)
     if (cnode != nullptr)
     {
         const std::string& name = cnode->spec().name;
-        if (name == std::string(app_name) ||
-            (name.substr(0, strlen(app_name)) == std::string(app_name)
+        if (cnode->spec().role_name == std::string(role_name)
             && cnode->spec().index == index)
-            )
         {
             return true;
         }
@@ -841,17 +839,47 @@ DSN_API bool dsn_mimic_app(const char* app_name, int index)
     auto nodes = ::dsn::service_engine::instance().get_all_nodes();
     for (auto& n : nodes)
     {
-        if (n.second->spec().name == std::string(app_name) ||
-            (n.second->spec().name.substr(0, strlen(app_name)) == std::string(app_name)
-            && n.second->spec().index == index)
-            )
+        if (cnode->spec().role_name == std::string(role_name)
+            && cnode->spec().index == index)
         {
             ::dsn::task::set_tls_dsn_context(n.second, nullptr, nullptr);
             return true;
         }
     }
 
-    derror("cannot find host app %s with index %d", app_name, index);
+    derror("cannot find host app %s with index %d", role_name, index);
+    return false;
+}
+
+DSN_API bool dsn_mimic_app_by_id(int app_id)
+{
+    auto worker = ::dsn::task::get_current_worker2();
+    dassert(worker == nullptr, "cannot call dsn_mimic_app in rDSN threads");
+
+    auto cnode = ::dsn::task::get_current_node2();
+    if (cnode != nullptr)
+    {
+        const std::string& name = cnode->spec().name;
+        if (cnode->spec().id == app_id)
+        {
+            return true;
+        }
+        else
+        {
+            derror("current thread is already attached to another rDSN app %s", name.c_str());
+            return false;
+        }
+    }
+
+    auto nodes = ::dsn::service_engine::instance().get_all_nodes();
+    auto find = nodes.find(app_id);
+    if (find != nodes.end())
+    {
+        ::dsn::task::set_tls_dsn_context(find->second, nullptr, nullptr);
+        return true;
+    }
+
+    derror("cannot find host app with app_id %d", app_id);
     return false;
 }
 
@@ -943,6 +971,7 @@ DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init)
         }
     }
 
+    // app_name is actually the role_name in [apps.${role_name}]
     if (!run(config, config_args.size() > 0 ? config_args.c_str() : nullptr, sleep_after_init, app_name, app_index))
     {
         printf("run the system failed\n");

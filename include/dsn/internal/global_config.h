@@ -77,19 +77,20 @@ typedef std::map<network_server_config, network_server_config> network_server_co
 
 typedef struct service_app_role
 {
-    std::string     name; // type name
+    std::string     type_name;
     dsn_app_create  create;
     dsn_app_start   start;
     dsn_app_destroy destroy;
-
 } service_app_role;
 
 struct service_app_spec
 {
-    int                  id;    // global for all roles
-    int                  index; // local index for the current role (1,2,3,...)
-    std::string          config_section; //[apps.$role]
-    std::string          name;  // $role.$count
+    int                  id;    // global for all roles, also name as app_id
+    int                  index; // local index for the current role (1,2,3,...), also name as role_index
+    std::string          config_section; // [apps.${role_name}]
+    std::string          role_name;  // role name of [apps.${role_name}]
+    std::string          name;  // full app name: ${role_name}${index}, usually used for printing log
+                                // e.g., "meta1" when role_name = meta and index = 1
     std::string          type;  // registered type_name
     std::string          arguments;
     std::vector<int>     ports;
@@ -116,7 +117,7 @@ struct service_app_spec
     service_app_spec() {}
     service_app_spec(const service_app_spec& r);
     bool init(const char* section, 
-        const char* role, 
+        const char* role_name_,
         service_app_spec* default_value,
         network_client_configs* default_client_nets = nullptr,
         network_server_configs* default_server_nets = nullptr
