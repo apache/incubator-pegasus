@@ -125,7 +125,7 @@ public:
 
 public:
     typedef std::function<void (int)> state_callback;
-    zookeeper_session(void* srv_node);
+    zookeeper_session(dsn_app_info* srv_node);
     ~zookeeper_session();
     int attach(void* callback_owner, const state_callback& cb);
     void detach(void* callback_owner);
@@ -142,7 +142,7 @@ private:
         state_callback watcher_callback;
     };
     std::list<watcher_object> _watchers;
-//    service_node* _srv_node;
+    dsn_app_info _srv_node;
     zhandle_t* _handle;
 
     void dispatch_event(int type, int zstate, const char* path);

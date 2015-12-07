@@ -51,15 +51,16 @@ zookeeper_session_mgr::zookeeper_session_mgr()
         zoo_set_log_stream(fp);
 }
 
-zookeeper_session* zookeeper_session_mgr::get_session(void* service_node)
+zookeeper_session* zookeeper_session_mgr::get_session(dsn_app_info* node)
 {
-    auto& store = utils::singleton_store<void*, zookeeper_session*>::instance();
+    auto& store = utils::singleton_store<std::string, zookeeper_session*>::instance();
+    std::string node_name(node->name);
     zookeeper_session* ans = nullptr;
     utils::auto_lock<utils::ex_lock_nr> l(_store_lock);
-    if ( !store.get(service_node, ans) )
+    if (!store.get(node_name, ans))
     {
-        ans = new zookeeper_session(service_node);
-        store.put(service_node, ans);
+        ans = new zookeeper_session(node);
+        store.put(node_name, ans);
     }
     return ans;
 }

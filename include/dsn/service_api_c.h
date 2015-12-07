@@ -294,6 +294,29 @@ extern DSN_API bool      dsn_run_config(
 extern DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init DEFAULT(false));
 extern DSN_API void dsn_terminate();
 extern DSN_API int  dsn_get_all_apps(dsn_app_info* info_buffer, int count); // return real app count
+extern DSN_API bool dsn_get_current_app_info(/*out*/ dsn_app_info* app_info);
+
+//
+// app roles must be registered (dsn_app_register_role)
+// before dsn_run is invoked.
+// in certain cases, a synchonization is needed to ensure this order.
+// for example, we want to register an app role in python while the main program is in 
+// C++ to call dsn_run.
+// in this case, we need to do as follows (in C++)
+//    [ C++ program    
+//    start new thread[]{
+//       [ python program
+//           dsn_app_register_role(...)
+//           dsn_app_loader_signal()
+//       ]
+//    };
+//
+//    dsn_app_loader_wait();
+//    dsn_run(...)
+//    ]
+//
+extern DSN_API void dsn_app_loader_signal();
+extern DSN_API void dsn_app_loader_wait();
 
 extern DSN_API const char* dsn_cli_run(const char* command_line); // return command output
 extern DSN_API void        dsn_cli_free(const char* command_output);

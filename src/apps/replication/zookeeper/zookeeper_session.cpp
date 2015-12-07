@@ -46,10 +46,10 @@
 
 namespace dsn { namespace dist{
 
-zookeeper_session::zookeeper_session(void *srv_node):
+zookeeper_session::zookeeper_session(dsn_app_info* node):
     _handle(nullptr)
 {
-//    _srv_node = (service_node*)srv_node;
+    _srv_node = *node;
 }
 
 int zookeeper_session::attach(

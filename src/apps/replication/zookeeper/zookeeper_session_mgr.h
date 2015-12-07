@@ -45,7 +45,7 @@ class zookeeper_session_mgr: public utils::singleton<zookeeper_session_mgr>
 {
 public:
     zookeeper_session_mgr();
-    zookeeper_session* get_session(void* service_node);
+    zookeeper_session* get_session(dsn_app_info* node);
     const char* zoo_hosts() const { return _zoo_hosts.c_str(); }
     int timeout() const { return _timeout_ms; }
     const char* zoo_logfile() const { return _zoo_logfile.c_str(); }
