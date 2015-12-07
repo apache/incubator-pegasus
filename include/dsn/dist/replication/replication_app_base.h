@@ -171,9 +171,6 @@ public:
     // so when apply the learned file state, make sure using learn_dir() instead of data_dir() to get the
     // full path of the files.
     //
-    // Postconditions:
-    // * after apply_checkpoint() done, last_committed_decree() >= last_durable_decree()
-    //
     virtual int  get_checkpoint(
         ::dsn::replication::decree start,
         const ::dsn::blob& learn_req,
@@ -191,6 +188,9 @@ public:
     // needs to copy checkpoint from secondaries instead of
     // doing checkpointing by itself, in order to not stall the normal
     // write operations.
+    //
+    // Postconditions:
+    // * after apply_checkpoint() done, last_committed_decree() == last_durable_decree()
     // 
     virtual int  apply_checkpoint(::dsn::replication::learn_state& state, chkpt_apply_mode mode) = 0;
 
