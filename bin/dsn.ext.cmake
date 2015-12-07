@@ -50,7 +50,8 @@ ExternalProject_Add(${project_name}
     CMAKE_ARGS "${CMAKE_ARGS};-DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX};${my_cmake_args};"
     BINARY_DIR "${target_bin_dir}"
     INSTALL_DIR "${target_bin_dir}"
-    INSTALL_COMMAND "${install_cmd}"
+    #INSTALL_COMMAND "${install_cmd}"
+    INSTALL_COMMAND "" #TODO: fix installation later to be cross-platform
 )
 
 # Specify source dir
