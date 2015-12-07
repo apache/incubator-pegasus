@@ -295,6 +295,8 @@ TEST(core, dsn_file)
     ASSERT_EQ(fin_size, fout_size);
 }
 
+//TODO: On windows an opened file cannot be deleted, so this test cannot pass
+#ifndef WIN32
 TEST(core, dsn_nfs)
 {
     // if in dsn_mimic_app() and nfs_io_mode == IOE_PER_QUEUE
@@ -418,6 +420,7 @@ TEST(core, dsn_nfs)
         ASSERT_EQ(sz1, sz2);
     }
 }
+#endif
 
 TEST(core, dsn_env)
 {

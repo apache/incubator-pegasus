@@ -121,7 +121,7 @@ public:
     //
     void call(message_ex* request, rpc_response_task* call);    
     void on_recv_request(message_ex* msg, int delay_ms);
-    static void reply(message_ex* response, error_code err = ERR_OK);
+    void reply(message_ex* response, error_code err = ERR_OK);
 
     //
     // information inquery

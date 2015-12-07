@@ -376,6 +376,11 @@ namespace dsn
         return _engine->on_recv_request(msg, delay_ms);
     }
 
+    void network::on_recv_reply(message_ex* msg, int delay_ms)
+    {
+        _engine->matcher()->on_recv_reply(msg->header->id, msg, delay_ms);
+    }
+
     std::shared_ptr<message_parser> network::new_message_parser()
     {
         message_parser * parser = utils::factory_store<message_parser>::create(_parser_type.to_string(), PROVIDER_TYPE_MAIN, _message_buffer_block_size);

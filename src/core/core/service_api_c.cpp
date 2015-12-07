@@ -595,7 +595,7 @@ DSN_API void dsn_rpc_call_one_way(dsn_address_t server, dsn_message_t request)
 DSN_API void dsn_rpc_reply(dsn_message_t response)
 {
     auto msg = ((::dsn::message_ex*)response);
-    ::dsn::rpc_engine::reply(msg);
+    ::dsn::task::get_current_rpc()->reply(msg);
 }
 
 DSN_API void dsn_rpc_forward(dsn_message_t request, dsn_address_t addr)
@@ -603,7 +603,7 @@ DSN_API void dsn_rpc_forward(dsn_message_t request, dsn_address_t addr)
     // TODO: enable real forwarding
     auto resp = dsn_msg_create_response(request);
     ::marshall(resp, addr);
-    ::dsn::rpc_engine::reply((::dsn::message_ex*)resp, ::dsn::ERR_FORWARD_TO_OTHERS);
+    ::dsn::task::get_current_rpc()->reply((::dsn::message_ex*)resp, ::dsn::ERR_FORWARD_TO_OTHERS);
 }
 
 DSN_API dsn_message_t dsn_rpc_get_response(dsn_task_t rpc_call)

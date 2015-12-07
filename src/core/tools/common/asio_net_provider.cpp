@@ -124,5 +124,124 @@ namespace dsn {
                 do_accept();
             });
         }
+
+        void asio_udp_provider::send_message(message_ex* request)
+        {
+            auto parser = new_message_parser();
+            int tlen;
+            auto count = parser->get_send_buffers_count_and_total_length(request, &tlen);
+            dassert(tlen < max_udp_packet_size, "the message is too large to send via a udp channel");
+            std::unique_ptr<message_parser::send_buf[]> bufs(new message_parser::send_buf[count]);
+            parser->prepare_buffers_on_send(request, 0, bufs.get());
+            std::unique_ptr<char[]> packet_buffer(new char[tlen]);
+            size_t offset = 0;
+            for (int i = 0; i < count; i ++)
+            {
+                memcpy(&packet_buffer[offset], bufs[i].buf, bufs[i].sz);
+                offset += bufs[i].sz;
+            };
+            ::boost::asio::ip::udp::endpoint ep(::boost::asio::ip::address_v4(request->to_address.ip()), request->to_address.port());
+            _socket->async_send_to(::boost::asio::buffer(packet_buffer.get(), tlen), ep,
+                [](const boost::system::error_code& error, std::size_t bytes_transferred)
+                {
+                    //do nothing, rpc matcher would handle timeouts
+                });
+        }
+
+        void asio_udp_provider::do_receive()
+        {
+            std::shared_ptr<::boost::asio::ip::udp::endpoint> send_endpoint(new ::boost::asio::ip::udp::endpoint);
+            auto parser = new_message_parser();
+            auto buffer_ptr = parser->read_buffer_ptr(max_udp_packet_size);
+            dassert(parser->read_buffer_capacity() >= max_udp_packet_size, "failed to load enough buffer in parser");
+            _socket->async_receive_from(
+                ::boost::asio::buffer(buffer_ptr, max_udp_packet_size),
+                *send_endpoint,
+                [this, parser, send_endpoint](const boost::system::error_code& error, std::size_t bytes_transferred)
+                {
+                    if (!error) {
+                        int read_next;
+                        auto message = parser->get_message_on_receive(bytes_transferred, read_next);
+                        if (message == nullptr)
+                        {
+                            derror("invalid udp packet");
+                        }
+                    
+                        message->from_address.assign_ipv4(send_endpoint->address().to_v4().to_ulong(), send_endpoint->port());
+                        message->to_address = address();
+
+                        if (!_is_client)
+                        {
+                            on_recv_request(message, 0);
+                        }
+                        else
+                        {
+                            on_recv_reply(message, 0);
+                        }
+                    }
+
+                    do_receive();
+                }
+            );
+        }
+
+        error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_only, io_modifer& ctx)
+        {
+            _is_client = client_only;
+            int io_service_worker_count = config()->get_value<int>("network", "io_service_worker_count", 1,
+                                                                   "thread number for io service (timer and boost network)");
+            for (int i = 0; i < io_service_worker_count; i++)
+            {
+                _workers.push_back(std::shared_ptr<std::thread>(new std::thread([this, ctx, i]()
+                    {
+                        task::set_tls_dsn_context(node(), nullptr, ctx.queue);
+
+                        const char* name = ::dsn::tools::get_service_node_name(node());
+                        char buffer[128];
+                        sprintf(buffer, "%s.asio.udp.%d", name, i);
+                        task_worker::set_name(buffer);
+
+                        boost::asio::io_service::work work(_io_service);
+                        _io_service.run();
+                    })));
+            }
+
+            dassert(channel == RPC_CHANNEL_UDP, "invalid given channel %s", channel.to_string());
+
+            if (client_only)
+            {
+                do
+                {
+                    //FIXME: we actually do not need to set a random port for clinet if the rpc_engine is refactored
+                    _address.assign_ipv4(get_local_ipv4(), std::numeric_limits<uint16_t>::max() - utils::get_random64() % 5000);
+                    ::boost::asio::ip::udp::endpoint ep(boost::asio::ip::address_v4::any(), _address.port());
+                    try
+                    {
+                        _socket.reset(new ::boost::asio::ip::udp::socket(_io_service, ep));
+                        do_receive();
+                        break;
+                    }
+                    catch (boost::system::system_error& err)
+                    {
+                        derror("boost asio listen on port %u failed, err: %s\n", port, err.what());
+                    }
+                } while (true);
+            } else {
+                _address.assign_ipv4(get_local_ipv4(), port);
+                ::boost::asio::ip::udp::endpoint ep(boost::asio::ip::address_v4::any(), _address.port());
+                try
+                {
+                    _socket.reset(new ::boost::asio::ip::udp::socket(_io_service, ep));
+                    do_receive();
+                }
+                catch (boost::system::system_error& err)
+                {
+                    derror("boost asio listen on port %u failed, err: %s\n", port, err.what());
+                    return ERR_ADDRESS_ALREADY_USED;
+                }
+            }
+
+            return ERR_OK;
+        }
     }
 }
