@@ -45,6 +45,12 @@
 
 #include "zookeeper_error.h"
 
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+
+#define __TITLE__ "dlock.service.zk"
+
 namespace dsn { namespace dist {
 
 std::string distributed_lock_service_zookeeper::LOCK_ROOT = "/lock";
@@ -89,8 +95,30 @@ error_code distributed_lock_service_zookeeper::initialize()
     if (_zoo_state != ZOO_CONNECTED_STATE)
     {
         _waiting_attach.wait_for( zookeeper_session_mgr::fast_instance().timeout() );
-        if (_zoo_state != ZOO_CONNECTED_STATE)
+        if (_zoo_state != ZOO_CONNECTED_STATE) {
+            dwarn("attach to zookeeper session timeout, distributed lock service initialized failed");
             return ERR_TIMEOUT;
+        }
+    }
+
+    utils::notify_event e;
+    int zerr;
+    auto result_wrapper = [&e, &zerr](zookeeper_session::zoo_opcontext* op) mutable {
+        zerr = op->_output.error;
+        e.notify();
+    };
+
+    zookeeper_session::zoo_opcontext* op = zookeeper_session::create_context();
+    op->_optype = zookeeper_session::ZOO_CREATE;
+    op->_input._path = LOCK_ROOT;
+    op->_callback_function = result_wrapper;
+
+    _session->visit(op);
+    e.wait();
+
+    if (zerr!=ZOK && zerr!=ZNODEEXISTS) {
+        dwarn("create lock root(%s) failed, reason(%s)", LOCK_ROOT.c_str(), zerror(zerr));
+        return from_zerror(zerr);
     }
     return ERR_OK;
 }
