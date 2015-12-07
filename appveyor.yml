@@ -35,8 +35,6 @@ before_build:
 
 build_script:
     - cmd: >-
-        msbuild dsn.sln /t:Rebuild /p:Configuration=RelWithDebInfo
-        
         msbuild dsn.sln /t:Rebuild /p:Configuration=Debug
         
 test_script:

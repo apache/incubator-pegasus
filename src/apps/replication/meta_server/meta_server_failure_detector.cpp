@@ -49,11 +49,18 @@ meta_server_failure_detector::meta_server_failure_detector(server_state* state, 
     _svc = svc;
     _is_primary = false;
 
-    // TODO: config
-    _lock_svc = dsn::utils::factory_store< ::dsn::dist::distributed_lock_service>::create(
+    const char* distributed_lock_service_name = dsn_config_get_value_string(
+        "meta_server",
+        "distributed_lock_service_name",
         "distributed_lock_service_simple",
+        "the distributed_lock_service provider name"
+        );
+
+    _lock_svc = dsn::utils::factory_store< ::dsn::dist::distributed_lock_service>::create(
+        distributed_lock_service_name,
         PROVIDER_TYPE_MAIN
         );
+    _lock_svc->initialize();
     _primary_lock_id = "dsn.meta.server.leader";
     _local_owner_id = primary_address().to_string();
 }
