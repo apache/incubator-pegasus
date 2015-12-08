@@ -856,10 +856,12 @@ DSN_API bool dsn_get_current_app_info(/*out*/ dsn_app_info* app_info)
     auto cnode = ::dsn::task::get_current_node2();
     if (cnode != nullptr)
     {
-        app_info->app_id = cnode->id();
         app_info->app_context_ptr = cnode->get_app_context_ptr();
-        strncpy(app_info->name, cnode->spec().name.c_str(), sizeof(app_info->name));
+        app_info->app_id = cnode->id();
+        app_info->index = cnode->spec().index;
+        strncpy(app_info->role, cnode->spec().role_name.c_str(), sizeof(app_info->role));
         strncpy(app_info->type, cnode->spec().type.c_str(), sizeof(app_info->type));
+        strncpy(app_info->name, cnode->spec().name.c_str(), sizeof(app_info->name));
         return true;
     }
     else
@@ -1169,7 +1171,7 @@ DSN_API int dsn_get_all_apps(dsn_app_info* info_buffer, int count)
 
         dsn::service_node* node = kv.second;
         dsn_app_info& info = info_buffer[i++];
-        info.app_context_ptr = kv.second->get_app_context_ptr();
+        info.app_context_ptr = node->get_app_context_ptr();
         info.app_id = node->id();
         info.index = node->spec().index;
         strncpy(info.role, node->spec().role_name.c_str(), sizeof(info.role));
