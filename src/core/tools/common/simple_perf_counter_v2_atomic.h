@@ -26,12 +26,14 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     Header of performance counter ver.atomic
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
+ *     2015-08-17, zjc95, first version
+ *     2015-11-24, zjc95, revised the decription
+ *
  */
+
 #pragma once
 
 # include <dsn/tool_api.h>
@@ -42,7 +44,7 @@ namespace dsn {
         class simple_perf_counter_v2_atomic : public perf_counter
         {
         public:
-            simple_perf_counter_v2_atomic(const char *section, const char *name, perf_counter_type type);
+            simple_perf_counter_v2_atomic(const char *section, const char *name, perf_counter_type type, const char *dsptr);
             ~simple_perf_counter_v2_atomic(void);
 
             virtual void   increment() { _counter_impl->increment(); }

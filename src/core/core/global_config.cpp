@@ -357,13 +357,18 @@ bool service_spec::init()
     return true;
 }
 
+extern "C"
+{
+    typedef dsn_error_t (*dsn_app_bridge_t)(int, const char**);
+}
+
 void service_spec::load_app_shared_libraries(dsn::configuration_ptr config)
 {
     std::vector<std::string> allSectionNames;
     config->get_all_sections(allSectionNames);
 
     int app_id = 0;
-    std::vector<std::string> modules;
+    std::vector< std::pair<std::string, std::string> > modules;
     for (auto it = allSectionNames.begin(); it != allSectionNames.end(); it++)
     {
         if (it->substr(0, strlen("apps.")) == std::string("apps."))
@@ -372,17 +377,54 @@ void service_spec::load_app_shared_libraries(dsn::configuration_ptr config)
                 "path of a dynamic library which implement this app role, and register itself upon loaded");
             if (module.length() > 0)
             {
-                modules.push_back(module);
+                std::string bridge_args = config->get_string_value(it->c_str(), "dmodule_bridge_arguments", "",
+                    "\n; when the service cannot automatically register its app types into rdsn \n"
+                    "; through %dmoudule%'s dllmain or attribute(constructor), we require the %dmodule% \n"
+                    "; implement an exporte function called \"dsn_error_t dsn_bridge(const char* args);\", \n"
+                    "; which loads the real target (e.g., a python/Java/php module), that registers their \n"
+                    "; app types and factories."
+                    );
+
+                modules.push_back(std::make_pair(module, bridge_args));
             }
         }
     }
 
     for (auto m : modules)
     {
-        if (!::dsn::utils::load_dynamic_library(m.c_str()))
+        auto hmod = ::dsn::utils::load_dynamic_library(m.first.c_str());
+        if (nullptr == hmod)
         {
             dassert(false, "cannot load shared library %s specified in config file",
-                m.c_str());
+                m.first.c_str());
+            break;
+        }
+
+        // have dmodule_bridge_arguments?
+        if (m.second.length() > 0)
+        {
+            dsn_app_bridge_t bridge_ptr = (dsn_app_bridge_t)::dsn::utils::load_symbol(hmod, "dsn_app_bridge");
+            dassert(bridge_ptr != nullptr,
+                "when dmodule_bridge_arguments is present (%s), function dsn_app_bridge must be implemented in module %s",
+                m.second.c_str(),
+                m.first.c_str()
+                );
+
+            ddebug("call %s.dsn_app_bridge(...%s...)",
+                m.first.c_str(),
+                m.second.c_str()
+                );
+
+            std::vector<std::string> args;
+            std::vector<const char*> args_ptr;
+            utils::split_args(m.second.c_str(), args);
+
+            for (auto& arg: args)
+            {
+                args_ptr.push_back(arg.c_str());
+            }
+
+            bridge_ptr((int)args_ptr.size(), &args_ptr[0]);
         }
     }
 }

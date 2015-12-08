@@ -356,7 +356,7 @@ bool task::cancel(bool wait_until_finished, /*out*/ bool* finished /*= nullptr*/
 
 const char* task::get_current_node_name()
 {
-    auto n = task::get_current_node();
+    auto n = task::get_current_node2();
     return n ? n->name() : "unknown";
 }
 

@@ -1,3 +1,2 @@
-if (UNIX)
-    add_subdirectory(simple_kv)
-endif()
+add_subdirectory(simple_kv)
+

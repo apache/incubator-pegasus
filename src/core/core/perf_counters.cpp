@@ -46,13 +46,12 @@ perf_counters::~perf_counters(void)
 {
 }
 
-perf_counter_ptr perf_counters::get_counter(const char *section, const char *name, perf_counter_type flags, bool create_if_not_exist /*= false*/)
+perf_counter_ptr perf_counters::get_counter(const char *section, const char *name, perf_counter_type flags, const char *dsptr, bool create_if_not_exist /*= false*/)
 {
     char section_name[512] = "";
     //::GetModuleBaseNameA(::GetCurrentProcess(), ::GetModuleHandleA(nullptr), section_name, 256);
     //strcat(section_name, ".");
     strcat(section_name, section);
-    
     if (create_if_not_exist)
     {
         auto_write_lock l(_lock);
@@ -67,7 +66,7 @@ perf_counter_ptr perf_counters::get_counter(const char *section, const char *nam
         auto it2 = it->second.find(name);
         if (it2 == it->second.end())
         {
-            perf_counter_ptr counter(_factory(section_name, name, flags));
+            perf_counter_ptr counter(_factory(section_name, name, flags,dsptr));
             it->second.insert(same_section_counters::value_type(name, std::make_pair(counter, flags)));
             return counter;
         }

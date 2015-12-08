@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.8)
+cmake_minimum_required(VERSION 2.8.7)
 include(bin/dsn.cmake)
 #cmake_policy(SET CMP0048 NEW)
 #project(dsn VERSION 1.0 LANGUAGES C CXX)
@@ -20,5 +20,11 @@ dsn_common_setup()
 dsn_add_pseudo_projects()
 
 add_subdirectory(ext/gtest)
-add_subdirectory(ext/gflags)
+add_subdirectory(ext/zookeeper)
+
+#
+# !!! gflags is currently not used, and when it is enabled, it causes failure on windows compilation
+# add_subdirectory(ext/gflags)
+#
+
 add_subdirectory(src)

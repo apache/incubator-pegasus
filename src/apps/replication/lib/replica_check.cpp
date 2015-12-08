@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     replica membership state periodical checking
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -59,7 +59,7 @@ void replica::init_group_check()
             &replica::broadcast_group_check,
             gpid_to_hash(get_gpid()),
             0,
-            _options->group_check_internal_ms
+            _options->group_check_interval_ms
             );
 }
 
@@ -92,6 +92,13 @@ void replica::broadcast_group_check()
         request->node = addr;
         _primary_states.get_replica_config(it->second, request->config);
         request->last_committed_decree = last_committed_decree();
+
+        if (request->config.status == PS_POTENTIAL_SECONDARY)
+        {
+            auto it = _primary_states.learners.find(addr);
+            dassert(it != _primary_states.learners.end(), "learner %s is missing", addr.to_string());
+            request->config.learner_signature = it->second.signature;
+        }
 
         ddebug(
             "%s: init_group_check for %s with state %s",
@@ -192,7 +199,7 @@ void replica::on_group_check_reply(error_code err, std::shared_ptr<group_check_r
         {
             if (resp->learner_status_ == LearningSucceeded && req->config.status == PS_POTENTIAL_SECONDARY)
             {
-                handle_learning_succeeded_on_primary(req->node, resp->learner_signature, req->last_committed_decree);
+                handle_learning_succeeded_on_primary(req->node, resp->learner_signature);
             }
         }
         else

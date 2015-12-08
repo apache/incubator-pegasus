@@ -283,12 +283,12 @@ namespace dsn
             auto t = task::get_current_task_id();
             if (t)
             {
-                if (nullptr != task::get_current_worker())
+                if (nullptr != task::get_current_worker2())
                 {
                     wn = sprintf(ptr, "%6s.%7s%u.%016llx: ",
                         task::get_current_node_name(),
-                        task::get_current_worker()->pool_spec().name.c_str(),
-                        task::get_current_worker()->index(),
+                        task::get_current_worker2()->pool_spec().name.c_str(),
+                        task::get_current_worker2()->index(),
                         static_cast<long long unsigned int>(t)
                         );
                 }

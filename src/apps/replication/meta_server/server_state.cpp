@@ -77,8 +77,15 @@ DEFINE_TASK_CODE(LPC_META_STATE_SVC_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_
 
 void server_state::initialize(const char* dir)
 {
+    const char* meta_state_service_name = dsn_config_get_value_string(
+        "meta_server",
+        "meta_state_service_name",
+        "meta_state_service_simple",
+        "the meta_state_service provider name"
+        );
+
     _storage = dsn::utils::factory_store< ::dsn::dist::meta_state_service>::create(
-        "meta_state_service_simple",  // TODO: read config
+        meta_state_service_name,
         PROVIDER_TYPE_MAIN
         );
 
@@ -219,7 +226,7 @@ error_code server_state::sync_apps_from_remote_storage()
     // get all apps
     std::string root = "/apps";
     _storage->get_children(root, LPC_META_STATE_SVC_CALLBACK,
-        [&](error_code ec, std::vector<std::string>&& apps)
+        [&](error_code ec, const std::vector<std::string>& apps)
         {
             if (ec == ERR_OK)
             {
@@ -230,7 +237,7 @@ error_code server_state::sync_apps_from_remote_storage()
                     _storage->get_data(
                         app_path,
                         LPC_META_STATE_SVC_CALLBACK,
-                        [this, app_path, &err, &tracker](error_code ec, blob&& value)
+                        [this, app_path, &err, &tracker](error_code ec, const blob& value)
                     {
                         if (ec == ERR_OK)
                         {
@@ -259,7 +266,7 @@ error_code server_state::sync_apps_from_remote_storage()
                                 _storage->get_data(
                                     par_path,
                                     LPC_META_STATE_SVC_CALLBACK,
-                                    [this, app_id, i, &err](error_code ec, blob&& value)
+                                    [this, app_id, i, &err](error_code ec, const blob& value)
                                     {
                                         if (ec == ERR_OK)
                                         {
@@ -823,4 +830,3 @@ bool server_state::partition_configuration_equal(const partition_configuration& 
            pc1.secondaries == pc2.secondaries &&
            pc1.last_committed_decree == pc2.last_committed_decree;
 }
-

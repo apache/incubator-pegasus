@@ -58,12 +58,12 @@ namespace dsn {
             auto t = task::get_current_task_id();
             if (t)
             {
-                if (nullptr != task::get_current_worker())
+                if (nullptr != task::get_current_worker2())
                 {
                     fprintf(fp, "%6s.%7s%u.%016llx: ",
                         task::get_current_node_name(),
-                        task::get_current_worker()->pool_spec().name.c_str(),
-                        task::get_current_worker()->index(),
+                        task::get_current_worker2()->pool_spec().name.c_str(),
+                        task::get_current_worker2()->index(),
                         static_cast<long long unsigned int>(t)
                         );
                 }
@@ -79,12 +79,12 @@ namespace dsn {
             }
             else
             {
-                if (nullptr != task::get_current_worker())
+                if (nullptr != task::get_current_worker2())
                 {
                     fprintf(fp, "%6s.%7s%u: ",
                         task::get_current_node_name(),
-                        task::get_current_worker()->pool_spec().name.c_str(),
-                        task::get_current_worker()->index()
+                        task::get_current_worker2()->pool_spec().name.c_str(),
+                        task::get_current_worker2()->index()
                         );
                 }
                 else
@@ -199,14 +199,10 @@ namespace dsn {
             if (_index - _start_index > 20)
             {
                 std::stringstream str2;
-                str2 << "log." << _start_index << ".txt";
+                str2 << "log." << _start_index++ << ".txt";
                 if (::remove(str2.str().c_str()) != 0)
                 {
                     printf("Failed to remove garbage log file %s\n", str2.str().c_str());
-                }
-                else
-                {
-                    _start_index++;
                 }
             }
         }

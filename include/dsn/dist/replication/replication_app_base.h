@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     interface for apps to be replicated using rDSN
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -48,6 +48,24 @@
 namespace dsn { namespace replication {
 
 class mutation;
+
+//
+// [CHKPT_LEARN]
+// after learn the state from learner, apply the learned state to the local app
+//
+// Or,
+//
+// [CHKPT_COPY]
+// when an app only implement synchonous checkpoint, the replica
+// as a primary needs to copy checkpoint from secondaries instead of
+// doing checkpointing by itself, in order to not stall the normal
+// write operations.
+// 
+enum chkpt_apply_mode
+{
+    CHKPT_COPY,
+    CHKPT_LEARN
+};
 
 class replica_log_info
 {
@@ -95,6 +113,9 @@ public:
     // most of them return error code (0 for success).
     //
 
+    // TODO(qinzuoyan): the return value of following interfaces just uses dsn::error_code?
+    // or mixed using error code in different space(dsn::error_code vs rocksdb::Status) is confused.
+
     //
     // Open the app.
     // If `create_new' is true, means "create_if_missing = true && error_if_exists = true".
@@ -113,42 +134,65 @@ public:
     virtual int  close(bool clear_state) = 0;
 
     //
-    // Update last_durable_decree internally.
-    // If `wait' is true, means wait flush dobne.
-    // Must be thread safe.
+    // synchonously checkpoint, and update last_durable_decree internally.
+    // which stops replication writes to the app concurrently.
     //
     // Postconditions:
-    // * if `wait' is true, then last_committed_decree() == last_durable_decree()
+    // * last_committed_decree() == last_durable_decree()
     //
-    virtual int  flush(bool wait) = 0;
-    
-    //
-    // The replication framework may emit empty write request to this app to increase the decree.
-    //
-    virtual void on_empty_write() { }
+    virtual int  checkpoint() = 0;
 
     //
-    // Helper routines to accelerate learning.
+    // asynchonously checkpoint, which will not stall the normal write ops.
+    // replication layer will check last_durable_decree() later.
     // 
-    virtual void prepare_learning_request(/*out*/ ::dsn::blob& learn_req) {}
-
-    // 
-    // Learn [start, infinite) from remote replicas.
     // Must be thread safe.
     //
+    // It is not always necessary for the apps to implement this method,
+    // but if it is implemented, the checkpoint logic in replication will be much simpler.
+    //
+    virtual int  checkpoint_async() { return ERR_NOT_IMPLEMENTED; }
+    
+    //
+    // prepare an app-specific learning request (on learner, to be sent to learneee
+    // and used by method get_checkpoint), so that the learning process is more efficient
+    //
+    virtual void prepare_learn_request(/*out*/ ::dsn::blob& learn_req) { }
+
+    // 
+    // Learn [start, infinite) from remote replicas (learner)
+    //
+    // Must be thread safe.
+    //
+    // The learned checkpoint can be a complete checkpoint (0, infinite), or a delta checkpoint
+    // [start, infinite), depending on the capability of the underlying implementation.
+    // 
     // Note the files in learn_state are copied from dir /replica@remote/data to dir /replica@local/learn,
     // so when apply the learned file state, make sure using learn_dir() instead of data_dir() to get the
     // full path of the files.
     //
-    // Postconditions:
-    // * after apply_learn_state() done, last_committed_decree() >= last_durable_decree()
-    //
-    virtual int  get_learn_state(
+    virtual int  get_checkpoint(
         ::dsn::replication::decree start,
         const ::dsn::blob& learn_req,
         /*out*/ ::dsn::replication::learn_state& state
         ) = 0;
-    virtual int  apply_learn_state(::dsn::replication::learn_state& state) = 0;
+
+    //
+    // [CHKPT_LEARN]
+    // after learn the state from learner, apply the learned state to the local app
+    //
+    // Or,
+    //
+    // [CHKPT_COPY]
+    // when an app only implement synchonous checkpoint, the primary replica
+    // needs to copy checkpoint from secondaries instead of
+    // doing checkpointing by itself, in order to not stall the normal
+    // write operations.
+    //
+    // Postconditions:
+    // * after apply_checkpoint() done, last_committed_decree() == last_durable_decree()
+    // 
+    virtual int  apply_checkpoint(::dsn::replication::learn_state& state, chkpt_apply_mode mode) = 0;
 
     //
     // Query methods.

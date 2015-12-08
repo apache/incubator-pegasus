@@ -76,7 +76,11 @@ public:
     int32_t mutation_2pc_min_replica_count;
     
     bool    group_check_disabled;
-    int32_t group_check_internal_ms;
+    int32_t group_check_interval_ms;
+
+    int32_t checkpoint_interval_mins;
+    int64_t checkpoint_min_decree_gap;
+    int32_t checkpoint_max_interval_hours;
 
     int32_t gc_interval_ms;
     bool    gc_disabled;

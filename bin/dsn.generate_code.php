@@ -183,6 +183,7 @@ function generate_files_from_dir($dr)
         if ($template == "config.ini.php"
          || $template == "CMakeLists.txt.php"
          || $template == "App.config.php"
+         || $template == "Dockerfile.php"
            )
             $output_file = $g_out_dir."/".substr($template, 0, strlen($template)-4);
         else

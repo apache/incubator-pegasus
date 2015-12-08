@@ -52,6 +52,7 @@ public:
                     const char *section, 
                     const char *name, 
                     perf_counter_type flags, 
+                    const char *dsptr,
                     bool create_if_not_exist = false
                     );
 
@@ -59,10 +60,11 @@ public:
 
     perf_counter_ptr get_counter(
                     const char *name, 
-                    perf_counter_type flags, 
+                    perf_counter_type flags,
+                    const char *dsptr,
                     bool create_if_not_exist = false)
     {
-        return get_counter("dsn", name, flags, create_if_not_exist);
+        return get_counter("dsn", name, flags,dsptr, create_if_not_exist);
     }
 
     bool remove_counter(const char* name)
@@ -72,9 +74,15 @@ public:
 
     void register_factory(perf_counter::factory factory);
 
-private:
     typedef std::map<std::string, std::pair<perf_counter_ptr, perf_counter_type> > same_section_counters;
     typedef std::map<std::string, same_section_counters> all_counters;
+
+    all_counters get_all_counters()
+    {
+        return _counters;
+    }
+private:
+
 
     mutable utils::rw_lock_nr  _lock;
     all_counters               _counters;

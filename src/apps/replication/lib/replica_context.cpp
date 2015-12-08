@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     context for replica with different roles
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -64,6 +64,13 @@ void primary_context::cleanup(bool clean_pending_mutations)
     {
         reconfiguration_task->cancel(true);
         reconfiguration_task = nullptr;
+    }
+
+    // clean up checkpoint
+    if (nullptr != checkpoint_task)
+    {
+        checkpoint_task->cancel(true);
+        checkpoint_task = nullptr;
     }
 }
 
@@ -101,28 +108,6 @@ void primary_context::reset_membership(const partition_configuration& config, bo
         statuses[it->first] = PS_POTENTIAL_SECONDARY;
     }
 }
-
-//
-//bool primary_context::get_replica_config(::dsn::rpc_address node, /*out*/ replica_configuration& config)
-//{
-//    config.gpid = membership.gpid;
-//    config.primary = membership.primary;  
-//    config.ballot = membership.ballot;
-//    config.learner_signature = invalid_signature;
-//
-//    auto it = statuses.find(node);
-//    if (it != statuses.end())
-//    {
-//        config.status = it->second;
-//        return true;
-//    }
-//    else
-//    {
-//        config.status = PS_INACTIVE;
-//        return false;
-//    }
-//}
-
 
 void primary_context::get_replica_config(partition_status st, /*out*/ replica_configuration& config, uint64_t learner_signature /*= invalid_signature*/)
 {

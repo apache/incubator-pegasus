@@ -58,7 +58,6 @@ public:
     void cleanup(bool clean_pending_mutations = true);
        
     void reset_membership(const partition_configuration& config, bool clear_learners);
-    //bool get_replica_config(::dsn::rpc_address node, /*out*/ replica_configuration& config);
     void get_replica_config(partition_status status, /*out*/ replica_configuration& config, uint64_t learner_signature = invalid_signature);
     bool check_exist(::dsn::rpc_address node, partition_status status);
     partition_status get_node_status(::dsn::rpc_address addr) const;
@@ -87,6 +86,9 @@ public:
     // when read lastest update, all prepared decrees must be firstly committed
     // (possibly true on old primary) before opening read service
     decree       last_prepare_decree_on_new_primary; 
+
+    // copy checkpoint from secondaries ptr
+    dsn::task_ptr   checkpoint_task;
 };
 
 class secondary_context

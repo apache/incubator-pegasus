@@ -855,6 +855,32 @@ DSN_API bool dsn_mimic_app(const char* app_name, int index)
     return false;
 }
 
+DSN_API bool dsn_get_current_app_info(/*out*/ dsn_app_info* app_info)
+{
+    auto cnode = ::dsn::task::get_current_node2();
+    if (cnode != nullptr)
+    {
+        app_info->app_id = cnode->id();
+        app_info->app_context_ptr = cnode->get_app_context_ptr();
+        strncpy(app_info->name, cnode->spec().name.c_str(), sizeof(app_info->name));
+        strncpy(app_info->type, cnode->spec().type.c_str(), sizeof(app_info->type));
+        return true;
+    }
+    else
+        return false;
+}
+
+::dsn::utils::notify_event s_loader_event;
+DSN_API void dsn_app_loader_signal()
+{
+    s_loader_event.notify();
+}
+
+DSN_API void dsn_app_loader_wait()
+{
+    s_loader_event.wait();
+}
+
 //
 // run the system with arguments
 //   config [-cargs k1=v1;k2=v2] [-app app_name] [-app_index index]

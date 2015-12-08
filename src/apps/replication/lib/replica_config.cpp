@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     replica configuration management
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -581,7 +581,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         case PS_PRIMARY:
             replay_prepare_list();
             _primary_states.write_queue.check_possible_work(
-                _prepare_list->max_decree() - last_committed_decree()
+                static_cast<int>(_prepare_list->max_decree() - last_committed_decree())
                 );
             break;
         case PS_INACTIVE:
@@ -606,7 +606,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
             init_group_check();            
             replay_prepare_list();
             _primary_states.write_queue.check_possible_work(
-                _prepare_list->max_decree() - last_committed_decree()
+                static_cast<int>(_prepare_list->max_decree() - last_committed_decree())
                 );
             break;
         case PS_SECONDARY:
@@ -656,7 +656,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
             init_group_check();
             replay_prepare_list();
             _primary_states.write_queue.check_possible_work(
-                _prepare_list->max_decree() - last_committed_decree()
+                static_cast<int>(_prepare_list->max_decree() - last_committed_decree())
                 );
             break;
         case PS_SECONDARY:            

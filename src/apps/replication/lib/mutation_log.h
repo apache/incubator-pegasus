@@ -226,7 +226,7 @@ private:
     void init_states();    
     error_code create_new_log_file();    
     void create_new_pending_buffer();    
-    static void internal_write_callback(error_code err, size_t size, pending_callbacks_ptr callbacks, std::shared_ptr<log_block> logs, uint32_t init_crc32);
+    static void internal_write_callback(error_code err, size_t size, pending_callbacks_ptr callbacks, std::shared_ptr<log_block> logs, log_file_ptr file, bool is_private);
     error_code write_pending_mutations(bool create_new_log_when_necessary = true);
     
 private:
@@ -248,6 +248,7 @@ private:
     
     
     // bufferring
+    std::weak_ptr<log_block> _issued_write;
     std::shared_ptr<log_block> _pending_write;
     size_t _pending_write_size;
     pending_callbacks_ptr          _pending_write_callbacks;

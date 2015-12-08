@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     checkpoint the replicated app
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Nov., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -41,13 +41,14 @@
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
-# define __TITLE__ "replica.timer"
+# define __TITLE__ "replica.chkpoint"
 
 namespace dsn { 
     namespace replication {
 
-        void replica::on_check_timer()
+        void replica::on_checkpoint_timer()
         {
+            check_hashed_access();
             init_checkpoint();
             gc();
         }
@@ -64,8 +65,6 @@ namespace dsn {
 
         void replica::init_checkpoint()
         {
-            check_hashed_access();
-            
             // only applicable to primary and secondary replicas
             if (status() != PS_PRIMARY && status() != PS_SECONDARY)
                 return;
@@ -74,27 +73,48 @@ namespace dsn {
             if (_app->is_delta_state_learning_supported())
                 return;
 
-            // already running
-            if (_secondary_states.checkpoint_task != nullptr)
+            auto err = _app->checkpoint_async();
+            if (err != ERR_NOT_IMPLEMENTED)
+            {
+                if (err != 0)
+                {
+                    derror("%s: checkpoint_async failed, err = %d", err);
+                }
                 return;
+            }
 
             // private log must be enabled to make sure commits
             // are not lost during checkpinting
             dassert(nullptr != _private_log, "log_enable_private_prepare must be true for checkpointing");
 
-            // TODO: when NOT to checkpoint, but use private log replay to build the state
-            if (last_committed_decree() - last_durable_decree() < 10000)
+            if (last_committed_decree() - last_durable_decree() < _options->checkpoint_min_decree_gap)
                 return;
 
-            // primary is downgraded to secondary for checkpointing as no write can be seen
-            // during checkpointing (i.e., state is freezed)
+            // primary cannot checkpoint (TODO: test if async checkpoint is supported)
+            // therefore we have to copy checkpoints from secondaries
             if (PS_PRIMARY == status())
             {
-                configuration_update_request proposal;
-                proposal.config = _primary_states.membership;
-                proposal.type = CT_DOWNGRADE_TO_SECONDARY;
-                proposal.node = proposal.config.primary;
-                downgrade_to_secondary_on_primary(proposal);
+                // only one running instance
+                if (nullptr == _primary_states.checkpoint_task)
+                {
+                    if (_primary_states.membership.secondaries.size() == 0)
+                        return;
+
+                    std::shared_ptr<replica_configuration> rc(new replica_configuration);
+                    _primary_states.get_replica_config(PS_SECONDARY, *rc);
+
+                    rpc_address sd = _primary_states.membership.secondaries
+                        [dsn_random32(0, (int)_primary_states.membership.secondaries.size() - 1)];
+
+                    _primary_states.checkpoint_task = rpc::call_typed(
+                        sd,
+                        RPC_REPLICA_COPY_LAST_CHECKPOINT,
+                        rc,
+                        this,
+                        &replica::on_copy_checkpoint_ack,
+                        gpid_to_hash(get_gpid())
+                        );
+                }
             }
 
             // secondary can start checkpint in the long running thread pool
@@ -102,12 +122,16 @@ namespace dsn {
             {
                 dassert(PS_SECONDARY == status(), "");
 
-                _secondary_states.checkpoint_task = tasking::enqueue(
-                    LPC_CHECKPOINT_REPLICA,
-                    this,
-                    &replica::checkpoint,
-                    gpid_to_hash(get_gpid())
-                    );
+                // only one running instance
+                if (nullptr == _secondary_states.checkpoint_task)
+                {
+                    _secondary_states.checkpoint_task = tasking::enqueue(
+                        LPC_CHECKPOINT_REPLICA,
+                        this,
+                        &replica::checkpoint,
+                        gpid_to_hash(get_gpid())
+                        );
+                }                
             }
         }
 
@@ -131,11 +155,17 @@ namespace dsn {
                 return;
             }
 
+            if (_app->last_durable_decree() == 0)
+            {
+                response.err = ERR_OBJECT_NOT_FOUND;
+                return;
+            }
+
             blob placeholder;
-            int err = _app->get_learn_state(0, placeholder, response.state);
+            int err = _app->get_checkpoint(0, placeholder, response.state);
             if (err != 0)
             {
-                response.err = ERR_LEARN_FILE_FALED;
+                response.err = ERR_LEARN_FILE_FAILED;
             }
             else
             {
@@ -151,17 +181,31 @@ namespace dsn {
             check_hashed_access();
 
             if (PS_PRIMARY != status())
+            {
+                _primary_states.checkpoint_task = nullptr;
                 return;
+            }
 
             if (err != ERR_OK || resp == nullptr)
             {
                 dwarn("%s: copy checkpoint from secondary failed, err = %s", name(), err.to_string());
+                _primary_states.checkpoint_task = nullptr;
                 return;
             }
 
             if (resp->err != ERR_OK)
             {
-                dwarn("%s: copy checkpoint from secondary failed, err = %s", name(), resp->err.to_string());
+                dinfo("%s: copy checkpoint from secondary failed, err = %s", name(), resp->err.to_string());
+                _primary_states.checkpoint_task = nullptr;
+                return;
+            }
+
+            if (resp->state.to_decree_included <= _app->last_durable_decree())
+            {
+                dinfo("%s: copy checkpoint from secondary skipped, as its decree is not bigger than current durable_decree: %" PRIu64 " vs %" PRIu64 "",
+                    name(), resp->state.to_decree_included, _app->last_durable_decree()
+                    );
+                _primary_states.checkpoint_task = nullptr;
                 return;
             }
                 
@@ -170,13 +214,16 @@ namespace dsn {
                 "checkpoint.copy"
                 );
 
-            _secondary_states.checkpoint_task = file::copy_remote_files(
+            if (utils::filesystem::path_exists(ldir))
+                utils::filesystem::remove_path(ldir);
+
+            _primary_states.checkpoint_task = file::copy_remote_files(
                 resp->address,
                 resp->base_local_dir,
                 resp->state.files,
                 ldir,
                 false,
-                LPC_COPY_REMOTE_DELTA_FILES,
+                LPC_REPLICATION_COPY_REMOTE_FILES,
                 this,
                 [this, resp](error_code err, size_t sz)
                 {
@@ -188,12 +235,17 @@ namespace dsn {
 
         void replica::on_copy_checkpoint_file_completed(error_code err, size_t sz, std::shared_ptr<learn_response> resp)
         {
-            // apply checkpoint
+            if (PS_PRIMARY == status() && resp->state.to_decree_included > _app->last_durable_decree())
+            {
+                _app->apply_checkpoint(resp->state, CHKPT_COPY);
+            }
+
+            _primary_states.checkpoint_task = nullptr;
         }
 
         void replica::checkpoint()
         {
-            auto lerr = _app->flush(true);
+            auto lerr = _app->checkpoint();
             auto err = lerr == 0 ? ERR_OK :
                 (lerr == ERR_WRONG_TIMING ? ERR_WRONG_TIMING : ERR_LOCAL_APP_FAILURE);
             
@@ -266,7 +318,13 @@ namespace dsn {
                     {
                         auto mu = _prepare_list->get_mutation_by_decree(d);
                         dassert(nullptr != mu, "");
-                        _app->write_internal(mu);
+                        err = _app->write_internal(mu);
+                        if (ERR_OK != err)
+                        {
+                            _secondary_states.checkpoint_task = nullptr;
+                            handle_local_failure(err);
+                            return;
+                        }
                     }
 
                     // everything is ok now, done checkpointing

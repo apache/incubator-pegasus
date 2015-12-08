@@ -218,12 +218,12 @@ void mutation_log::close(bool clear_all)
 {
     {
         zauto_lock l(_lock);
-        // event it is not opened, we still need to
-        // go through the following logics, e.g., 
-        // clear all logs as open failed.
 
-       /* if (!_is_opened)
-            return;*/
+        if (!_is_opened)
+        {
+            dassert(!clear_all, "should not be here if do clear");
+            return;
+        }
 
         _is_opened = false;
 
@@ -353,25 +353,27 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
     auto aio = _current_log_file->commit_log_block(
         *_pending_write,
         offset,
-        LPC_WRITE_REPLICATION_LOG,
+        LPC_WRITE_REPLICATION_LOG_FLUSH,
         this,
         std::bind(
             &mutation_log::internal_write_callback,
             std::placeholders::_1,
             std::placeholders::_2,
-            _pending_write_callbacks, _pending_write, _current_log_file->crc32()),
+            _pending_write_callbacks, _pending_write, _current_log_file, _is_private),
         -1
         );
 
     if (aio == nullptr)
     {
         internal_write_callback(ERR_FILE_OPERATION_FAILED,
-            0, _pending_write_callbacks, _pending_write, _current_log_file->crc32());
+            0, _pending_write_callbacks, _pending_write, _current_log_file, _is_private);
     }
     else
     {
         dassert (_global_end_offset == _current_log_file->end_offset(), "");
     }
+
+    _issued_write = _pending_write;
 
     _pending_write = nullptr;
     _pending_write_callbacks = nullptr;
@@ -396,21 +398,12 @@ void mutation_log::internal_write_callback(
     size_t size,
     mutation_log::pending_callbacks_ptr callbacks,
     std::shared_ptr<log_block> block,
-    uint32_t init_crc32
+    log_file_ptr file,
+    bool is_private
     )
 {
     auto hdr = (log_block_header*)block->front().data();
     dassert(hdr->magic == 0xdeadbeef, "header magic is changed: 0x%x", hdr->magic);
-
-
-    for (auto log_iter = std::next(block->data().begin()); log_iter != block->data().end(); ++log_iter)
-    {
-        init_crc32 = dsn_crc32_compute(
-            static_cast<const void*>(log_iter->data()),
-            static_cast<size_t>(log_iter->length()), init_crc32
-            );
-    }
-    dassert(init_crc32 == hdr->body_crc, "");
 
     if (err == ERR_OK)
     {
@@ -419,6 +412,10 @@ void mutation_log::internal_write_callback(
             (int)size,
             block->size()
             );
+        //FIXME : the file could have been closed
+        if(is_private) {
+            file->flush();
+        }
     }
 
     for (auto& cb : *callbacks)
@@ -784,21 +781,22 @@ void mutation_log::update_max_decrees(global_partition_id gpid, decree d)
     //
     //err = write_pending_mutations();
     // not batching
-    
-    if (_batch_buffer_bytes == 0)
-    {
-        err = write_pending_mutations();
-    }
-    // batching
-    else
-    {
-        if (static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes)
+    if (_issued_write.expired()) {
+        if (_batch_buffer_bytes == 0)
         {
             err = write_pending_mutations();
         }
+        // batching
         else
         {
-            // waiting for batch write later
+            if (static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes)
+            {
+                err = write_pending_mutations();
+            }
+            else
+            {
+                // waiting for batch write later
+            }
         }
     }
     
@@ -868,28 +866,40 @@ void mutation_log::get_learn_state(
         files = _log_files;
         cfile = _current_log_file;
 
-        // also learn pending buffers
+        // also learn pending buffer
+        std::vector<std::shared_ptr<log_block>> pending_buffers;
+        if (auto locked_issued_ptr = _issued_write.lock())
+        {
+            pending_buffers.emplace_back(std::move(locked_issued_ptr));
+        }
         if (_pending_write)
         {
-            binary_writer temp_writer;
-            for (auto& bb : _pending_write->data())
-            {
-                temp_writer.write(bb.data(), bb.length());
-            }
-            auto bb = temp_writer.get_buffer();
-            auto hdr = (log_block_header*)bb.data();
+            //we have a lock here, so no race
+            pending_buffers.push_back(_pending_write);
+        }
 
+        binary_writer temp_writer;
+        for (auto& block : pending_buffers) {
+            dassert(!block->data().empty(), "log block can never be empty");
+            auto hdr = (log_block_header*)block->front().data();
+
+            //skip the block header
+            auto bb_iterator = std::next(block->data().begin());
+            
             if (hdr->local_offset == 0)
             {
-                bb = bb.range(cfile->get_file_header_size() + sizeof(log_block_header));
+                //we have a lock, so we are safe here
+                dassert(bb_iterator != block->data().end(), "there is no file header in a local_offset=0 log block");
+                //skip the file header
+                ++bb_iterator;
+                
             }
-            else
+            for (; bb_iterator != block->data().end(); ++bb_iterator)
             {
-                bb = bb.range(sizeof(log_block_header));
+                temp_writer.write(bb_iterator->data(), bb_iterator->length());
             }
-
-            state.meta.push_back(bb);
         }
+        state.meta.push_back(temp_writer.get_buffer());
     }
 
     // flush last file so learning can learn the on-disk state
@@ -1227,17 +1237,13 @@ int mutation_log::garbage_collection(multi_partition_decrees_ex& durable_decrees
     auto lf = new log_file(path, hfile, index, start_offset, true);
     blob hdr_blob;
     err = lf->read_next_log_block(0, hdr_blob);
-    if (err == ERR_INVALID_DATA || err == ERR_INCOMPLETE_DATA || err == ERR_HANDLE_EOF)
+    if (err == ERR_INVALID_DATA || err == ERR_INCOMPLETE_DATA || err == ERR_HANDLE_EOF || err == ERR_FILE_OPERATION_FAILED)
     {
         std::string removed = std::string(path) + ".removed";
         derror("read first log entry of file %s failed, err = %s. Rename the file to %s", path, err.to_string(), removed.c_str());
         delete lf;
         dsn::utils::filesystem::rename_path(path, removed);
         return nullptr;
-    }
-    else if (err != ERR_OK)
-    {
-        dassert(false, "unexpected error type");
     }
 
     binary_reader reader(hdr_blob);

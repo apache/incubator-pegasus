@@ -26,9 +26,14 @@ set(MY_PROJ_LIBS gtest
                  dsn.replication.meta_server
                  dsn.replication.clientlib
                  dsn.failure_detector
+                 dsn.replication.zookeeper_provider
+                 zookeeper_mt
 )
 
-set(MY_PROJ_LIB_PATH "")
+set(MY_PROJ_LIB_PATH 
+		${GTEST_LIB_DIR}
+		${ZOOKEEPER_LIB_DIR}
+		)
 
 # Extra files that will be installed
 FILE(GLOB_RECURSE CASE_FILES "case-*")
@@ -38,5 +43,9 @@ set(MY_BINPLACES
     "${CMAKE_CURRENT_SOURCE_DIR}/addcase.sh"
     "${CASE_FILES}"
 )
+
+if(WIN32)
+    SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} /ignore:4049 /ignore:4217")
+endif()
 
 dsn_add_executable()

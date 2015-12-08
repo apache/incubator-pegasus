@@ -10,6 +10,8 @@ if (WIN32)
 	   #            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=ReleaseLibs
 	   #            -DCMAKE_CXX_FLAGS=${MSVC_COMPILER_DEFS}
 		BINARY_DIR "${PROJECT_BINARY_DIR}/lib"
+		# disable install
+		INSTALL_COMMAND ""
 		)
 else()
 	ExternalProject_Add(gflags
