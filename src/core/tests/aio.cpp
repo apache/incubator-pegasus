@@ -210,6 +210,8 @@ TEST(core, operation_failed)
     t = ::dsn::file::read(fp2, buffer, 512, 100, LPC_AIO_TEST, nullptr, io_callback, 0);
     t->wait();
     ddebug("error code: %s", err->to_string());
+    dsn_file_close(fp);
+    dsn_file_close(fp2);
 
-    utils::filesystem::remove_path("tmp_test_file");
+    EXPECT_TRUE(utils::filesystem::remove_path("tmp_test_file"));
 }

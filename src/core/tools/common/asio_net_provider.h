@@ -46,9 +46,10 @@ namespace dsn {
         public:
             asio_network_provider(rpc_engine* srv, network* inner_provider);
 
-            virtual error_code start(rpc_channel channel, int port, bool client_only, io_modifer& ctx);
-            virtual ::dsn::rpc_address address() { return _address;  }
-            virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr);
+            virtual error_code start(rpc_channel channel, int port, bool client_only, io_modifer& ctx) override;
+            virtual ::dsn::rpc_address address() override
+            { return _address;  }
+            virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) override;
 
         private:
             void do_accept();
@@ -60,6 +61,35 @@ namespace dsn {
             boost::asio::io_service                         _io_service;
             std::vector<std::shared_ptr<std::thread>>       _workers;
             ::dsn::rpc_address                                   _address;
+        };
+
+        class asio_udp_provider : public network
+        {
+        public:
+            asio_udp_provider(rpc_engine* srv, network* inner_provider)
+                : network(srv, inner_provider)
+            {
+            }
+
+            void send_message(message_ex* request) override;
+
+            virtual error_code start(rpc_channel channel, int port, bool client_only, io_modifer& ctx) override;
+
+            virtual ::dsn::rpc_address address() override
+            {
+                return _address;
+            }
+
+        private:
+            void do_receive();
+
+            bool                                            _is_client;
+            boost::asio::io_service                         _io_service;
+            std::shared_ptr<boost::asio::ip::udp::socket>   _socket;
+            std::vector<std::shared_ptr<std::thread>>       _workers;
+            ::dsn::rpc_address                              _address;
+
+            static const size_t max_udp_packet_size = 450;
         };
 
     }

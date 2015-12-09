@@ -19,6 +19,6 @@ message count_result
 service counter
 {
     rpc add (count_op) returns (count_result);
-	rpc read (count_name) returns (count_result);
+    rpc read (count_name) returns (count_result);
 }
 
