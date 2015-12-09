@@ -520,8 +520,10 @@ void replica::cleanup_preparing_mutations(bool wait)
             //
             // make sure the buffers from mutations are valid for underlying aio
             //
-            if (wait)
+            if (wait) {
+                _stub->_log->flush();
                 mu->wait_log_task();
+            }
         }
     }
 }

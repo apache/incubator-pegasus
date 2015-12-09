@@ -595,7 +595,7 @@ DSN_API void dsn_rpc_call_one_way(dsn_address_t server, dsn_message_t request)
 DSN_API void dsn_rpc_reply(dsn_message_t response)
 {
     auto msg = ((::dsn::message_ex*)response);
-    ::dsn::rpc_engine::reply(msg);
+    ::dsn::task::get_current_rpc()->reply(msg);
 }
 
 DSN_API void dsn_rpc_forward(dsn_message_t request, dsn_address_t addr)
@@ -603,7 +603,7 @@ DSN_API void dsn_rpc_forward(dsn_message_t request, dsn_address_t addr)
     // TODO: enable real forwarding
     auto resp = dsn_msg_create_response(request);
     ::marshall(resp, addr);
-    ::dsn::rpc_engine::reply((::dsn::message_ex*)resp, ::dsn::ERR_FORWARD_TO_OTHERS);
+    ::dsn::task::get_current_rpc()->reply((::dsn::message_ex*)resp, ::dsn::ERR_FORWARD_TO_OTHERS);
 }
 
 DSN_API dsn_message_t dsn_rpc_get_response(dsn_task_t rpc_call)
@@ -787,15 +787,15 @@ DSN_API uint64_t dsn_random64(uint64_t min, uint64_t max) // [min, max]
 // system
 //
 //------------------------------------------------------------------------------
-DSN_API bool dsn_register_app_role(const char* name, dsn_app_create create, dsn_app_start start, dsn_app_destroy destroy)
+DSN_API bool dsn_register_app_role(const char* type_name, dsn_app_create create, dsn_app_start start, dsn_app_destroy destroy)
 {
     auto& store = ::dsn::utils::singleton_store<std::string, ::dsn::service_app_role>::instance();
     ::dsn::service_app_role role;
-    role.name = std::string(name);
+    role.type_name = std::string(type_name);
     role.create = create;
     role.start = start;
     role.destroy = destroy;
-    return store.put(role.name, role);
+    return store.put(role.type_name, role);
 }
 
 static bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_name, int app_index);
@@ -824,10 +824,8 @@ DSN_API bool dsn_mimic_app(const char* app_name, int index)
     if (cnode != nullptr)
     {
         const std::string& name = cnode->spec().name;
-        if (name == std::string(app_name) ||
-            (name.substr(0, strlen(app_name)) == std::string(app_name)
+        if (cnode->spec().role_name == std::string(app_name)
             && cnode->spec().index == index)
-            )
         {
             return true;
         }
@@ -841,10 +839,8 @@ DSN_API bool dsn_mimic_app(const char* app_name, int index)
     auto nodes = ::dsn::service_engine::instance().get_all_nodes();
     for (auto& n : nodes)
     {
-        if (n.second->spec().name == std::string(app_name) ||
-            (n.second->spec().name.substr(0, strlen(app_name)) == std::string(app_name)
+        if (n.second->spec().role_name == std::string(app_name)
             && n.second->spec().index == index)
-            )
         {
             ::dsn::task::set_tls_dsn_context(n.second, nullptr, nullptr);
             return true;
@@ -860,10 +856,12 @@ DSN_API bool dsn_get_current_app_info(/*out*/ dsn_app_info* app_info)
     auto cnode = ::dsn::task::get_current_node2();
     if (cnode != nullptr)
     {
-        app_info->app_id = cnode->id();
         app_info->app_context_ptr = cnode->get_app_context_ptr();
-        strncpy(app_info->name, cnode->spec().name.c_str(), sizeof(app_info->name));
+        app_info->app_id = cnode->id();
+        app_info->index = cnode->spec().index;
+        strncpy(app_info->role, cnode->spec().role_name.c_str(), sizeof(app_info->role));
         strncpy(app_info->type, cnode->spec().type.c_str(), sizeof(app_info->type));
+        strncpy(app_info->name, cnode->spec().name.c_str(), sizeof(app_info->name));
         return true;
     }
     else
@@ -1171,11 +1169,14 @@ DSN_API int dsn_get_all_apps(dsn_app_info* info_buffer, int count)
         if (i >= count)
             return (int)as.size();
 
+        dsn::service_node* node = kv.second;
         dsn_app_info& info = info_buffer[i++];
-        info.app_context_ptr = kv.second->get_app_context_ptr();
-        info.app_id = kv.second->id();
-        strncpy(info.name, kv.second->spec().name.c_str(), sizeof(info.name));
-        strncpy(info.type, kv.second->spec().type.c_str(), sizeof(info.type));
+        info.app_context_ptr = node->get_app_context_ptr();
+        info.app_id = node->id();
+        info.index = node->spec().index;
+        strncpy(info.role, node->spec().role_name.c_str(), sizeof(info.role));
+        strncpy(info.type, node->spec().type.c_str(), sizeof(info.type));
+        strncpy(info.name, node->spec().name.c_str(), sizeof(info.name));
     }
     return i;
 }

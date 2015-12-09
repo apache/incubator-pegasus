@@ -266,6 +266,7 @@ service_app_spec::service_app_spec(const service_app_spec& r)
     index = r.index;
     id = r.id;
     config_section = r.config_section;
+    role_name = r.role_name;
     name = r.name;
     role = r.role;
     type = r.type;
@@ -283,7 +284,7 @@ service_app_spec::service_app_spec(const service_app_spec& r)
 
 bool service_app_spec::init(
     const char* section, 
-    const char* r, 
+    const char* role_name_,
     service_app_spec* default_value,
     network_client_configs* default_client_nets,
     network_server_configs* default_server_nets
@@ -291,7 +292,8 @@ bool service_app_spec::init(
 {
     id = 0;
     index = 0;
-    name = r;
+    role_name = std::string(role_name_);
+    name = role_name;
     config_section = std::string(section);
 
     if (!read_config(section, *this, default_value))
@@ -485,13 +487,12 @@ bool service_spec::init_app_specs()
             app.role = role;
 
             auto ports = app.ports;   
-            auto nsc = app.network_server_confs;            
-            std::string name = app.name;
+            auto nsc = app.network_server_confs;
             for (int i = 1; i <= app.count; i++)
             {
                 char buf[16];
                 sprintf(buf, "%u", i);
-                app.name = (app.count > 1 ? (name + buf) : name);
+                app.name = (app.count > 1 ? (app.role_name + buf) : app.role_name);
                 app.id = ++app_id;
                 app.index = i;
 

@@ -58,7 +58,7 @@ service_node::service_node(service_app_spec& app_spec)
 {
     _computation = nullptr;
     _app_spec = app_spec;
-    _app_context_ptr = _app_spec.role.create(_app_spec.role.name.c_str());
+    _app_context_ptr = _app_spec.role.create(_app_spec.role.type_name.c_str());
 }
 
 bool service_node::rpc_register_handler(rpc_handler_ptr& handler)

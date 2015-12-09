@@ -35,7 +35,7 @@ function g()
     else
         proj_line=`cat $matchfile | grep -F "$proj_dir "`
         src_dir=`echo $proj_line | awk '{print $2}'`
-	    if [ "$proj_dir" = "$src_dir" ]; then
+        if [ "$proj_dir" = "$src_dir" ]; then
             goto_dest_dir $proj_line
         else
             goto_source_dir $proj_line

@@ -21,7 +21,7 @@ public:
         : ::dsn::replication::replication_app_client_base(meta_servers, replicated_app_name) 
     {
     }
-	
+
     virtual ~<?=$svc->name?>_client() {}
     
     // from requests to partition index

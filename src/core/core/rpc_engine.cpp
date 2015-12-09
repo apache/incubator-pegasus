@@ -546,16 +546,6 @@ namespace dsn {
 
     void rpc_engine::reply(message_ex* response, error_code err)
     {
-        auto s = response->io_session.get();
-        if (s == nullptr)
-        {
-            // do not delete following add and release here for cancellation
-            // as response may initially have ref_count == 0
-            response->add_ref();
-            response->release_ref(); 
-            return;
-        }   
-
         response->header->server.error = err;
         response->seal(_message_crc_required);
 
@@ -568,7 +558,15 @@ namespace dsn {
             response->release_ref();
             return;
         }
-                
-        s->send_message(response);
+        auto s = response->io_session.get();
+        if (s != nullptr) {
+            s->send_message(response);
+        }
+        else
+        {
+            auto sp = task_spec::get(response->local_rpc_code);
+            auto &net = _server_nets[response->from_address.port()][sp->rpc_call_channel];
+            net->send_message(response);
+        }
     }
 }

@@ -104,6 +104,7 @@ public:
     // first persistent to log file, then apply to memory state
     //void update_configuration(const configuration_update_request& request, /*out*/ configuration_update_response& response);
 
+    // TODO: callback should pass in error_code
     void update_configuration(
         std::shared_ptr<configuration_update_request>& req,
         dsn_message_t request_msg, 

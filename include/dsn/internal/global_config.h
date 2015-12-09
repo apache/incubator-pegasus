@@ -77,20 +77,29 @@ typedef std::map<network_server_config, network_server_config> network_server_co
 
 typedef struct service_app_role
 {
-    std::string     name; // type name
+    std::string     type_name;
     dsn_app_create  create;
     dsn_app_start   start;
     dsn_app_destroy destroy;
-
 } service_app_role;
 
+// Terms used in rDSN:
+//  - app_id
+//  - app_name/role_name
+//  - role_index
+//  - app_full_name
+//  - app_type
 struct service_app_spec
 {
-    int                  id;    // global for all roles
-    int                  index; // local index for the current role (1,2,3,...)
-    std::string          config_section; //[apps.$role]
-    std::string          name;  // $role.$count
-    std::string          type;  // registered type_name
+    int                  id;    // global id for all roles, assigned by rDSN automatically, also named as "app_id"
+    int                  index; // local index for the current role (1,2,3,...), also named as "role_index"
+    std::string          config_section; // [apps.${role_name}]
+    std::string          role_name;  // role name of [apps.${role_name}], also named as "app_name"
+    std::string          name;  // combined by role_name and role_index, also named as "app_full_name"
+                                // e.g., if role_name = meta and role_index = 1, then app_full_name = meta1
+                                // specially, if role count is 1, then app_full_name equals to role_name
+                                // it is usually used for printing log
+    std::string          type;  // registered type name, alse named as "app_type"
     std::string          arguments;
     std::vector<int>     ports;
     std::list<dsn_threadpool_code_t> pools;
@@ -116,7 +125,7 @@ struct service_app_spec
     service_app_spec() {}
     service_app_spec(const service_app_spec& r);
     bool init(const char* section, 
-        const char* role, 
+        const char* role_name_,
         service_app_spec* default_value,
         network_client_configs* default_client_nets = nullptr,
         network_server_configs* default_server_nets = nullptr

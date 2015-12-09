@@ -268,7 +268,7 @@ namespace dsn {
             textquery << "  query profiler data in batch" << std::endl;
             textquery << "SYNOPSIS:" << std::endl;
             textquery << "  show a matrix for all task codes contained with perf_counter percentile value" << std::endl;
-			textquery << "    profiler.query|pq table" << std::endl;
+            textquery << "    profiler.query|pq table" << std::endl;
             textquery << "  show a list of names of all task codes" << std::endl;
             textquery << "    profiler.query|pq task_list" << std::endl;
             textquery << "  show a list of all perf_counters and 1000 samples for each perf_counter" << std::endl;
@@ -308,7 +308,7 @@ namespace dsn {
             register_command({ "p", "P", "profile", "Profile" }, "profile|Profile|p|P - performance profiling", textp.str().c_str(), profiler_output_handler);
             //register_command({ "pjs", "PJS", "profilejavascript", "ProfileJavaScript", nullptr }, "pjs|PJS|profilejavascript|ProfileJavaScript - profile and show by javascript", textpjs.str().c_str(), profiler_js_handler);
             register_command({ "pd", "PD", "profiledata", "ProfileData" }, "profiler data - get appointed data, using by pjs", textpd.str().c_str(), profiler_data_handler);
-			register_command({ "profiler.query","pq"}, "profiler.query|pq - query profiling data, output in json format", textquery.str().c_str(), query_data_handler);
+            register_command({ "profiler.query","pq"}, "profiler.query|pq - query profiling data, output in json format", textquery.str().c_str(), query_data_handler);
         }
 
         void profiler::install(service_spec& spec)

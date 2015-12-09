@@ -574,6 +574,8 @@ void server_state::update_configuration(
             LPC_META_SERVER_STATE_UPDATE_CALLBACK,
             [this, new_config_blob, req, request_msg, callback](error_code ec)
             {
+                // TODO: should check error_code first
+
                 global_partition_id gpid = req->config.gpid;
                 storage_work_item wi;
                 wi.ballot = req->config.ballot;
