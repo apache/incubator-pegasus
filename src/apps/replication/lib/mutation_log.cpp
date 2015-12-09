@@ -653,6 +653,14 @@ void mutation_log::check_log_start_offset(global_partition_id gpid, int64_t vali
     }
 }
 
+void mutation_log::flush()
+{
+    zauto_lock _(_lock);
+    if (_pending_write != nullptr) {
+        write_pending_mutations();
+    }
+}
+
 decree mutation_log::max_gced_decree(global_partition_id gpid, int64_t valid_start_offset) const
 {
     check_log_start_offset(gpid, valid_start_offset);
