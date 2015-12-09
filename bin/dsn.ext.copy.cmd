@@ -40,6 +40,6 @@ ECHO latest build is in dir %PROJ_LIB_DIR%\%max_config%
 IF "%max_config%" EQU "" GOTO exit
 
 @ECHO ON
-XCOPY /F /Y /S %src%\%max_config% %dst%
+XCOPY /F /Y /S %PROJ_LIB_DIR%\%max_config% %DST_LIB_DIR%
     
 :exit

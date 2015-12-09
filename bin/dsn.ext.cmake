@@ -12,21 +12,20 @@ include(ExternalProject)
 
 string(TOUPPER ${project_name} PROJECT_NAME_U)
 
-set(target_bin_dir ${PROJECT_BINARY_DIR}/${project_name}-lib)
+set(target_bin_dir ${PROJECT_BINARY_DIR}/${project_name})
 set(install_cmd "")
 
 if(WIN32)
-    set (install_cmd "CALL ${PROJECT_SOURCE_DIR}/bin/dsn.ext.copy.cmd ${target_bin_dir} ${CMAKE_INSTALL_PREFIX}/lib")
-    set (install_cmd "cmd /c ${install_cmd}")
+    set (install_cmd CALL ${PROJECT_SOURCE_DIR}/bin/dsn.ext.copy.cmd ${target_bin_dir} ${PROJECT_BINARY_DIR}/lib)
+    set (install_cmd cmd /c ${install_cmd})
 else()
     foreach(file_i ${target_binaries})
         if(install_cmd STREQUAL "")
-            set(install_cmd "${target_bin_dir}/${file_i} ")
+            set(install_cmd ${CMAKE_COMMAND} -E copy "${target_bin_dir}/${file_i}" "${PROJECT_BINARY_DIR}/lib")
         else()
-            set(install_cmd "${install_cmd} ${target_bin_dir}/${file_i} ")
+            set(install_cmd ${install_cmd} COMMAND ${CMAKE_COMMAND} -E copy "${target_bin_dir}/${file_i}" "${PROJECT_BINARY_DIR}/lib")
         endif()
     endforeach()
-    set (install_cmd "cp ${install_cmd} ${CMAKE_INSTALL_PREFIX}/lib" )
 endif()
 
 message (INFO " install_cmd = ${install_cmd}")
@@ -36,8 +35,8 @@ ExternalProject_Add(${project_name}
     GIT_TAG master
     CMAKE_ARGS "${CMAKE_ARGS};-DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX};${my_cmake_args};"
     BINARY_DIR "${target_bin_dir}"
-    INSTALL_DIR "${target_bin_dir}"
-    INSTALL_COMMAND "${install_cmd}"
+    INSTALL_DIR "${PROJECT_BINARY_DIR}/lib"
+    INSTALL_COMMAND ${install_cmd}
 )
 
 # Specify source dir
