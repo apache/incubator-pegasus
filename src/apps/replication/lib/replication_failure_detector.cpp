@@ -85,6 +85,7 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
                 rpc_address node = dsn_group_next(_meta_servers.group_handle(), ack.this_node.c_addr());
                 if (ack.this_node != node)
                 {
+                    dsn_group_set_leader(_meta_servers.group_handle(), node.c_addr());
                     switch_master(ack.this_node, node);
                 }
             }
@@ -94,6 +95,7 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
                 if (!ack.primary_node.is_invalid()
                         && !dsn_group_is_leader(_meta_servers.group_handle(), ack.primary_node.c_addr()))
                 {
+                    dsn_group_set_leader(_meta_servers.group_handle(), ack.primary_node.c_addr());
                     switch_master(ack.this_node, ack.primary_node);
                 }
             }
@@ -113,6 +115,7 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
                 if (!ack.primary_node.is_invalid()
                         && !dsn_group_is_leader(_meta_servers.group_handle(), ack.primary_node.c_addr()))
                 {
+                    dsn_group_set_leader(_meta_servers.group_handle(), ack.primary_node.c_addr());
                     switch_master(ack.this_node, ack.primary_node);
                 }
             }
