@@ -649,41 +649,6 @@ namespace dsn {
                 ss << "]";
                 return ss.str();
             }
-            //return a list of all counters
-            else if (args[0] == "list_counter")
-            {
-                utils::perf_counters& c = utils::perf_counters::instance();
-                auto counters = c.get_all_counters();
-                ss << "[";
-                bool first_flag = 0;
-                for (auto section : counters)
-                {
-                    for (auto counter : section.second)
-                    {
-                        if (!first_flag)
-                            first_flag = 1;
-                        else
-                            ss << ",";
-                        ss << "\"" << counter.first << "\"";
-                    }
-                }
-                ss << "]";
-                return ss.str();
-            }
-            //query a counter
-            else if (args[0] == "query_counter")
-            {
-                if (args.size() < 2)
-                {
-                    ss << "unenough arguments" << std::endl;
-                    return ss.str();
-                }
-
-                utils::perf_counters& c = utils::perf_counters::instance();
-                auto counter = c.get_counter(args[1].c_str(), COUNTER_TYPE_NUMBER, "", false);
-                ss << counter->get_current_sample();
-                return ss.str();
-            }
             //query time
             else if (args[0] == "time")
             {
