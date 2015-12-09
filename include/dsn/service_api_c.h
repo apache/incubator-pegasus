@@ -179,11 +179,12 @@ typedef void        (*dsn_cli_free_handler)(const char* /*cmd output*/);
 struct dsn_app_info
 {
     void* app_context_ptr;                    // returned by dsn_app_create
-    int   app_id;                             // app id, assigned by rDSN automatically
-    int   index;                              // app role index, see doc in struct service_app_spec
-    char  role[DSN_MAX_APP_TYPE_NAME_LENGTH]; // app role name, see doc in struct service_app_spec
-    char  type[DSN_MAX_APP_TYPE_NAME_LENGTH]; // app type name, see doc in struct service_app_spec
-    char  name[DSN_MAX_APP_TYPE_NAME_LENGTH]; // app full name, see doc in struct service_app_spec
+    // See comments in struct service_app_spec about meanings of the following fields.
+    int   app_id;                             // app id
+    int   index;                              // app role index
+    char  role[DSN_MAX_APP_TYPE_NAME_LENGTH]; // app role name
+    char  type[DSN_MAX_APP_TYPE_NAME_LENGTH]; // app type name
+    char  name[DSN_MAX_APP_TYPE_NAME_LENGTH]; // app full name
 };
 
 // the following ctrl code are used by dsn_file_ctrl
