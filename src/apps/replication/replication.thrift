@@ -114,7 +114,7 @@ enum learner_status
 {
     LearningWithoutPrepare,
     LearningWithPrepare,
-	LearningWithPrepareS2, // prepare + checkpointing
+    LearningWithPrepareS2, // prepare + checkpointing
     LearningSucceeded,
     LearningFailed,
     Learning_INVALID

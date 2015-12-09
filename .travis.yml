@@ -15,6 +15,7 @@ before_install:
     - sudo apt-get install -qq libboost-all-dev libaio-dev lcov
 
 script:
+    - ./check_format.sh
     - ./build.sh
     #	&& ./test.sh
 
