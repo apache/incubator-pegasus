@@ -179,9 +179,12 @@ typedef void        (*dsn_cli_free_handler)(const char* /*cmd output*/);
 struct dsn_app_info
 {
     void* app_context_ptr;                    // returned by dsn_app_create
-    int   app_id;                             // assigned by rDSN automatically
-    char  type[DSN_MAX_APP_TYPE_NAME_LENGTH]; // see dsn_register_app_role
-    char  name[DSN_MAX_APP_TYPE_NAME_LENGTH]; // app name configed in config file
+    // See comments in struct service_app_spec about meanings of the following fields.
+    int   app_id;                             // app id
+    int   index;                              // app role index
+    char  role[DSN_MAX_APP_TYPE_NAME_LENGTH]; // app role name
+    char  type[DSN_MAX_APP_TYPE_NAME_LENGTH]; // app type name
+    char  name[DSN_MAX_APP_TYPE_NAME_LENGTH]; // app full name
 };
 
 // the following ctrl code are used by dsn_file_ctrl
@@ -273,7 +276,7 @@ extern DSN_API void      dsn_register_app_checker(
                             dsn_checker_apply apply
                             );
 extern DSN_API bool      dsn_mimic_app(
-                            const char* app_name, // specified in config file as [apps.xxx] name = %app_name%
+                            const char* app_name, // specified in config file as [apps.${app_name}]
                             int index // start from 1, when there are multiple instances
                             );
 extern DSN_API bool      dsn_run_config(

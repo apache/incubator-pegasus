@@ -126,7 +126,6 @@ TEST(core, dsn_task_code)
 
 TEST(core, dsn_config)
 {
-    ASSERT_STREQ("client", dsn_config_get_value_string("apps.client", "name", "unknown", "client name"));
     ASSERT_TRUE(dsn_config_get_value_bool("apps.client", "run", false, "client run"));
     ASSERT_EQ(1u, dsn_config_get_value_uint64("apps.client", "count", 100, "client count"));
     ASSERT_EQ(1.0, dsn_config_get_value_double("apps.client", "count", 100.0, "client count"));
