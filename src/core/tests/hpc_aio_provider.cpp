@@ -130,7 +130,7 @@ TEST(tools_hpc, aio_invalid_type)
     // invalid io
     char buffer[10];
     int count = 10;
-    sprintf(buffer, "abcdefghij");
+    sprintf(buffer, "abcdefghi");
     dsn_handle_t file = dsn_file_open("test_hpc_aio2.tmp", O_RDWR | O_CREAT, 0666);
     dsn_task_tracker_t tracker = dsn_task_tracker_create(13);
 

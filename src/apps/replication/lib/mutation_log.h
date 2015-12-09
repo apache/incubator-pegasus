@@ -206,6 +206,8 @@ public:
 
     void check_log_start_offset(global_partition_id gpid, int64_t valid_start_offset) const;
 
+    void flush();
+
 private:
     //
     //  internal helpers
