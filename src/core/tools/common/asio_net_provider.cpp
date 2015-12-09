@@ -142,9 +142,12 @@ namespace dsn {
             };
             ::boost::asio::ip::udp::endpoint ep(::boost::asio::ip::address_v4(request->to_address.ip()), request->to_address.port());
             _socket->async_send_to(::boost::asio::buffer(packet_buffer.get(), tlen), ep,
-                [](const boost::system::error_code& error, std::size_t bytes_transferred)
+                [=](const boost::system::error_code& error, std::size_t bytes_transferred)
                 {
-                    //do nothing, rpc matcher would handle timeouts
+                    if (error) {
+                        dwarn("send udp packet to ep %s:%d failed, message = %s", ep.address().to_string().c_str(), ep.port(), error.message().c_str());
+                        //we do not handle failure here, rpc matcher would handle timeouts
+                    }
                 });
         }
 
