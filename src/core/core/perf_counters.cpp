@@ -41,13 +41,13 @@ namespace dsn { namespace utils {
     
 perf_counters::perf_counters(void)
 {
-    ::dsn::register_command("list_counter", "list_counter - get engine internal information",
-        "list_counter",
+    ::dsn::register_command("counter.list", "counter.list - get the list of all counters",
+        "counter.list",
         &perf_counters::list_counter
         );
 
-    ::dsn::register_command("query_counter", "query_counter - get engine internal information",
-        "query_counter [counter]",
+    ::dsn::register_command("counter.query", "counter.query - get current value of a specific counter",
+        "counter.query [counter]",
         &perf_counters::query_counter
         );
 }
