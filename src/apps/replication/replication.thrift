@@ -52,7 +52,7 @@ struct replica_configuration
     2:i64                 ballot;
     3:dsn.address         primary;
     4:partition_status    status = partition_status.PS_INACTIVE;
-	5:i64                 learner_signature;
+    5:i64                 learner_signature;
 }
 
 struct prepare_msg
@@ -107,7 +107,7 @@ enum learn_type
 
 struct learn_state
 {
-	1:i64 from_decree_excluded;
+    1:i64 from_decree_excluded;
     2:i64 to_decree_included;
     3:list<dsn.blob> meta;
     4:list<string>   files;
@@ -116,7 +116,7 @@ struct learn_state
 enum learner_status
 {
     LearningWithoutPrepare,
-	LearningWithPrepareTransient,
+    LearningWithPrepareTransient,
     LearningWithPrepare,
     LearningSucceeded,
     LearningFailed,

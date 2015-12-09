@@ -10,11 +10,11 @@ set(MY_PROJ_SRC "../dll/core_main.cpp")
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH
-	${GTEST_INCLUDE_DIR} 
-	../core ../tools/common ../tools/simulator ../tools/hpc ../tools/nfs 
-	../../dev/cpp
-	)
-	
+    ${GTEST_INCLUDE_DIR} 
+    ../core ../tools/common ../tools/simulator ../tools/hpc ../tools/nfs 
+    ../../dev/cpp
+    )
+    
 set(MY_BOOST_PACKAGES system)
 
 set(MY_PROJ_LIBS gtest
