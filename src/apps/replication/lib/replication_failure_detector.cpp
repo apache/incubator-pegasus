@@ -64,11 +64,15 @@ replication_failure_detector::~replication_failure_detector(void)
 
 void replication_failure_detector::end_ping(::dsn::error_code err, const fd::beacon_ack& ack, void* context)
 {
-    bool do_end_ping = false;
-
     dinfo("end ping result, error[%s], ack.this_node[%s], ack.primary_node[%s], ack.is_master[%s], ack.allowed[%s]",
           err.to_string(), ack.this_node.to_string(), ack.primary_node.to_string(),
           ack.is_master ? "true" : "false", ack.allowed ? "true" : "false");
+
+    if (!failure_detector::end_ping_internal(err, ack))
+    {
+        // not applicable
+        return;
+    }
 
     {
         zauto_lock l(_meta_lock);
@@ -95,7 +99,6 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
             }
             else
             {
-                do_end_ping = true;
             }
         }
         else // ack.this_node is not leader
@@ -117,14 +120,8 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
             {
                 ddebug("update meta server leader to [%s]", ack.this_node.to_string());
                 dsn_group_set_leader(_meta_servers.group_handle(), ack.this_node.c_addr());
-                do_end_ping = true;
             }
         }
-    }
-
-    if (do_end_ping)
-    {
-        failure_detector::end_ping(err, ack, context);
     }
 }
 
