@@ -35,11 +35,21 @@
 
 # include <dsn/internal/perf_counters.h>
 # include <dsn/service_api_c.h>
+# include <dsn/internal/command.h>
 
 namespace dsn { namespace utils {
     
 perf_counters::perf_counters(void)
 {
+    ::dsn::register_command("counter.list", "counter.list - get the list of all counters",
+        "counter.list",
+        &perf_counters::list_counter
+        );
+
+    ::dsn::register_command("counter.query", "counter.query - get current value of a specific counter",
+        "counter.query [counter]",
+        &perf_counters::query_counter
+        );
 }
 
 perf_counters::~perf_counters(void)
@@ -120,6 +130,46 @@ void perf_counters::register_factory(perf_counter::factory factory)
 {
     auto_write_lock l(_lock);
     _factory = factory;
+}
+
+
+std::string perf_counters::list_counter(const std::vector<std::string>& args)
+{
+    std::stringstream ss;
+
+    utils::perf_counters& c = utils::perf_counters::instance();
+    auto counters = c.get_all_counters();
+    ss << "[";
+    bool first_flag = 0;
+    for (auto section : counters)
+    {
+        for (auto counter : section.second)
+        {
+            if (!first_flag)
+                first_flag = 1;
+            else
+                ss << ",";
+            ss << "\"" << counter.first << "\"";
+        }
+    }
+    ss << "]";
+    return ss.str();
+}
+
+std::string perf_counters::query_counter(const std::vector<std::string>& args)
+{
+    std::stringstream ss;
+
+    if (args.size() < 1)
+    {
+        ss << "unenough arguments" << std::endl;
+        return ss.str();
+    }
+
+    utils::perf_counters& c = utils::perf_counters::instance();
+    auto counter = c.get_counter(args[0].c_str(), COUNTER_TYPE_NUMBER, "", false);
+    ss << counter->get_current_sample();
+    return ss.str();
 }
 
 } } // end namespace

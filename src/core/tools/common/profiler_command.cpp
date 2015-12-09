@@ -528,7 +528,10 @@ namespace dsn {
                     return ss.str();
                 }
 
-                ss << "[";
+                char str[24];
+                ::dsn::utils::time_ms_to_string(dsn_now_ns() / 1000000, str);
+                ss << "{\"time\":\"" << str <<"\",";
+                ss << "\"data\":[";
                 if (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE)
                     task_id = task_spec::get(task_id)->rpc_paired_code;
 
@@ -577,7 +580,7 @@ namespace dsn {
                         task_id = task_spec::get(task_id)->rpc_paired_code;
                 } while (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE);
 
-                ss << "]";
+                ss << "]}";
                 return ss.str();
             }
             //return a list of 2 elements for a specific task
@@ -646,25 +649,12 @@ namespace dsn {
                 ss << "]";
                 return ss.str();
             }
-            //return a list of all counters
-            else if (args[0] == "list_counter")
+            //query time
+            else if (args[0] == "time")
             {
-                utils::perf_counters& c = utils::perf_counters::instance();
-                auto counters = c.get_all_counters();
-                ss << "[";
-                bool first_flag = 0;
-                for (auto section : counters)
-                {
-                    for (auto counter : section.second)
-                    {
-                        if (!first_flag)
-                            first_flag = 1;
-                        else
-                            ss << ",";
-                        ss << "\"" << counter.first << "\"";
-                    }
-                }
-                ss << "]";
+                char str[24];
+                ::dsn::utils::time_ms_to_string(dsn_now_ns() / 1000000, str);
+                ss << str;
                 return ss.str();
             }
             else
