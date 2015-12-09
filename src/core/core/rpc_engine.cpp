@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     rpc engine implementation
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -135,8 +135,36 @@ namespace dsn {
         }
         else
         {
+            auto err = reply->error();
+
+            // server address side effect
+            auto req = call->get_request();
+            task_spec* sp;
+            if (reply->from_address != req->to_address)
+            {
+                switch (req->server_address.type())
+                {
+                case HOST_TYPE_GROUP:
+                    sp = task_spec::get(call->get_request()->local_rpc_code);
+                    switch (sp->grpc_mode)
+                    {
+                    case GRPC_TO_LEADER:
+                        if (err == ERR_OK)
+                        {
+                            req->server_address.group_address()->set_leader(reply->from_address);
+                        }
+                        break;
+                        // TODO:
+                    }
+                    break;
+                case HOST_TYPE_URI:
+                    // TODO:
+                    break;
+                }
+            }
+
             call->set_delay(delay_ms);
-            call->enqueue(reply->error(), reply);
+            call->enqueue(err, reply);
         }
 
         call->release_ref(); // added in on_call
