@@ -64,31 +64,8 @@ void meta_service::start()
 
     _balancer = new load_balancer(_state);            
     _failure_detector = new meta_server_failure_detector(_state, this);    
-    
-    // become leader
-    while (!_failure_detector->acquire_leader_lock()) {}
-    dassert(_failure_detector->is_primary(), "must be primary at this point");
-    ddebug("got the primary lock, start to initliaze server state");
 
-    // sync meta state
-    while (_state->on_become_leader() != ERR_OK) {}
-    ddebug("start the server state finish");
-
-    // make sure the delay is larger than fd.grace to ensure 
-    // all machines are in the correct state (assuming connected initially)
-    tasking::enqueue(LPC_LBM_START, this, &meta_service::on_load_balance_start, 0, 
-        _opts.fd_grace_seconds * 1000);
-
-    auto err = _failure_detector->start(
-        _opts.fd_check_interval_seconds,
-        _opts.fd_beacon_interval_seconds,
-        _opts.fd_lease_seconds,
-        _opts.fd_grace_seconds,
-        false
-        );
-
-    dassert(err == ERR_OK, "FD start failed, err = %s", err.to_string());
-
+    // register rpc handlers
     register_rpc_handler(
         RPC_CM_QUERY_NODE_PARTITIONS,
         "RPC_CM_QUERY_NODE_PARTITIONS",
@@ -112,6 +89,29 @@ void meta_service::start()
         "RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND",
         &meta_service::on_modify_replica_config_explictly
         );
+    
+    // become leader
+    _failure_detector->acquire_leader_lock();
+    dassert(_failure_detector->is_primary(), "must be primary at this point");
+    ddebug("got the primary lock, start to initliaze server state");
+
+    // sync meta state
+    while (_state->on_become_leader() != ERR_OK) {}
+
+    // make sure the delay is larger than fd.grace to ensure 
+    // all machines are in the correct state (assuming connected initially)
+    tasking::enqueue(LPC_LBM_START, this, &meta_service::on_load_balance_start, 0, 
+        _opts.fd_grace_seconds * 1000);
+
+    auto err = _failure_detector->start(
+        _opts.fd_check_interval_seconds,
+        _opts.fd_beacon_interval_seconds,
+        _opts.fd_lease_seconds,
+        _opts.fd_grace_seconds,
+        false
+        );
+
+    dassert(err == ERR_OK, "FD start failed, err = %s", err.to_string());
 }
 
 bool meta_service::stop()
@@ -152,20 +152,32 @@ void meta_service::on_load_balance_start()
     _started = true;
 }
 
+bool meta_service::check_primary(dsn_message_t req)
+{
+    if (!_failure_detector->is_primary())
+    {
+        auto primary = _failure_detector->get_primary();
+        if (!primary.is_invalid())
+        {
+            dsn_rpc_forward(req, _failure_detector->get_primary().c_addr());
+            return false;
+        }
+    }
+
+    return true;
+}
+
 // partition server & client => meta server
 void meta_service::on_query_configuration_by_node(dsn_message_t msg)
 {
+    if (!check_primary(msg))
+        return;
+
     if (!_started)
     {
         configuration_query_by_node_response response;
         response.err = ERR_SERVICE_NOT_ACTIVE;
         reply(msg, response);
-        return;
-    }
-
-    if (!_failure_detector->is_primary())
-    {
-        dsn_rpc_forward(msg, _failure_detector->get_primary().c_addr());
         return;
     }
 
@@ -178,17 +190,14 @@ void meta_service::on_query_configuration_by_node(dsn_message_t msg)
 
 void meta_service::on_query_configuration_by_index(dsn_message_t msg)
 {
+    if (!check_primary(msg))
+        return;
+
     if (!_started)
     {
         configuration_query_by_index_response response;
         response.err = ERR_SERVICE_NOT_ACTIVE;
         reply(msg, response);
-        return;
-    }
-
-    if (!_failure_detector->is_primary())
-    {
-        dsn_rpc_forward(msg, _failure_detector->get_primary().c_addr());
         return;
     }
         
@@ -201,18 +210,15 @@ void meta_service::on_query_configuration_by_index(dsn_message_t msg)
 
 void meta_service::on_modify_replica_config_explictly(dsn_message_t req)
 {
+    if (!check_primary(req))
+        return;
+
     // TODO: implement modify config with reply
     if (!_started)
     {
         configuration_query_by_index_response response;
         response.err = ERR_SERVICE_NOT_ACTIVE;
         reply(req, response);
-        return;
-    }
-
-    if (!_failure_detector->is_primary())
-    {
-        dsn_rpc_forward(req, _failure_detector->get_primary().c_addr());
         return;
     }
 
@@ -231,17 +237,14 @@ void meta_service::on_modify_replica_config_explictly(dsn_message_t req)
 
 void meta_service::on_update_configuration(dsn_message_t req)
 {
+    if (!check_primary(req))
+        return;
+
     if (!_started)
     {
         configuration_update_response response;
         response.err = ERR_SERVICE_NOT_ACTIVE;
         reply(req, response);
-        return;
-    }
-
-    if (!_failure_detector->is_primary())
-    {
-        dsn_rpc_forward(req, _failure_detector->get_primary().c_addr());
         return;
     }
     
