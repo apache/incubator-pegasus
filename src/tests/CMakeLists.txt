@@ -11,13 +11,13 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 message(STATUS "GTEST_INCLUDE_DIR = ${GTEST_INCLUDE_DIR}")
 set(MY_PROJ_INC_PATH
-	${GTEST_INCLUDE_DIR} 
-	../dist/failure_detector 
-	../apps/replication/client_lib 
-	../apps/replication/lib 
-	../apps/replication/meta_server
-	../apps/replication/zookeeper
-	)
+    ${GTEST_INCLUDE_DIR} 
+    ../dist/failure_detector 
+    ../apps/replication/client_lib 
+    ../apps/replication/lib 
+    ../apps/replication/meta_server
+    ../apps/replication/zookeeper
+    )
 
 if (UNIX)
     set(MY_PROJ_LIBS gtest pthread)
@@ -26,21 +26,21 @@ else()
 endif()
 
 set(MY_PROJ_LIBS 
-	dsn.replication.meta_server
-	dsn.replication
-	dsn.replication.clientlib
-	dsn.failure_detector
-	dsn.replication.zookeeper_provider
-	zookeeper_mt
-	${MY_PROJ_LIBS}
-	)
+    dsn.replication.meta_server
+    dsn.replication
+    dsn.replication.clientlib
+    dsn.failure_detector
+    dsn.replication.zookeeper_provider
+    zookeeper_mt
+    ${MY_PROJ_LIBS}
+    )
 
 set(MY_BOOST_PACKAGES system)
 
 set(MY_PROJ_LIB_PATH 
-		${GTEST_LIB_DIR}
-		${ZOOKEEPER_LIB_DIR}
-		)
+        ${GTEST_LIB_DIR}
+        ${ZOOKEEPER_LIB_DIR}
+        )
 
 # Extra files that will be installed
 set(MY_BINPLACES

@@ -108,6 +108,9 @@ public:
 protected:
     void on_ping_internal(const beacon_msg& beacon, /*out*/ beacon_ack& ack);
 
+    // return false when the ack is not applicable
+    bool end_ping_internal(::dsn::error_code err, const beacon_ack& ack);
+
     bool is_time_greater_than(uint64_t ts, uint64_t base); 
 
     void report(::dsn::rpc_address node, bool is_master, bool is_connected);

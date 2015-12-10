@@ -19,9 +19,9 @@ set(MY_PROJ_LIB_PATH "")
 
 set(INI_FILES "")
 file(GLOB
-	INI_FILES
-	"${CMAKE_CURRENT_SOURCE_DIR}/*.ini"
-	)
+    INI_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.ini"
+    )
 
 # Extra files that will be installed
 set(MY_BINPLACES ${INI_FILES})

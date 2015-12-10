@@ -31,9 +31,9 @@ set(MY_PROJ_LIBS gtest
 )
 
 set(MY_PROJ_LIB_PATH 
-		${GTEST_LIB_DIR}
-		${ZOOKEEPER_LIB_DIR}
-		)
+        ${GTEST_LIB_DIR}
+        ${ZOOKEEPER_LIB_DIR}
+        )
 
 # Extra files that will be installed
 FILE(GLOB_RECURSE CASE_FILES "case-*")

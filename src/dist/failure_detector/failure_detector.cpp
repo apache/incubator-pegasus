@@ -324,14 +324,13 @@ void failure_detector::on_ping(const beacon_msg& beacon, ::dsn::rpc_replier<beac
     reply(ack);
 }
 
-void failure_detector::end_ping(::dsn::error_code err, const beacon_ack& ack, void* context)
+void failure_detector::end_ping(::dsn::error_code err, const beacon_ack& ack, void*)
 {
-    if (err != ERR_OK)
-    {
-        dwarn("ping master failed, err=%s", err.to_string());
-        return;
-    }
+    end_ping_internal(err, ack);
+}
 
+bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack& ack)
+{
     uint64_t beacon_send_time = ack.time;
     auto node = ack.this_node;
     uint64_t now = now_ms();
@@ -340,36 +339,41 @@ void failure_detector::end_ping(::dsn::error_code err, const beacon_ack& ack, vo
 
     master_map::iterator itr = _masters.find(node);
 
-    if ( itr == _masters.end() )
+    if (itr == _masters.end())
     {
         dwarn("received beacon ack without corresponding master, ignore it, "
-              "remote_master[%s], local_worker[%s]",
-              node.to_string(), primary_address().to_string());
-
-        return;
+            "remote_master[%s], local_worker[%s]",
+            node.to_string(), primary_address().to_string());
+        return false;
     }
 
     master_record& record = itr->second;
     if (!ack.allowed)
     {
         dwarn("worker rejected, stop sending beacon message, "
-              "remote_master[%s], local_worker[%s]",
-              node.to_string(), primary_address().to_string());
+            "remote_master[%s], local_worker[%s]",
+            node.to_string(), primary_address().to_string());
         record.rejected = true;
-        return;
+        return false;
     }
 
-    if (is_time_greater_than(beacon_send_time, record.last_send_time_for_beacon_with_ack))
+    if (!is_time_greater_than(beacon_send_time, record.last_send_time_for_beacon_with_ack))
     {
-        // update last_send_time_for_beacon_with_ack
-        record.last_send_time_for_beacon_with_ack = beacon_send_time;
-        record.rejected = false;
+        // out-dated beacon acks, do nothing
+        return false;
     }
-    else
+
+    // now the ack is applicable
+
+    if (err != ERR_OK)
     {
-        // do nothing
-        return;
+        dwarn("ping master failed, err=%s", err.to_string());
+        return true;
     }
+
+    // update last_send_time_for_beacon_with_ack
+    record.last_send_time_for_beacon_with_ack = beacon_send_time;
+    record.rejected = false;
 
     if (record.is_alive == false
         && now - record.last_send_time_for_beacon_with_ack <= _lease_milliseconds)
@@ -379,6 +383,7 @@ void failure_detector::end_ping(::dsn::error_code err, const beacon_ack& ack, vo
         itr->second.is_alive = true;
         on_master_connected(node);
     }
+    return true;
 }
 
 bool failure_detector::unregister_master(::dsn::rpc_address node)
@@ -497,18 +502,17 @@ void failure_detector::end_ping2(
     std::shared_ptr< ::dsn::fd::beacon_msg>& beacon,
     std::shared_ptr< ::dsn::fd::beacon_ack>& resp)
 {
-    if (!resp)
-        resp.reset(new ::dsn::fd::beacon_ack());
-
     if (err != ::dsn::ERR_OK)
     {
-        // when rpc failed, the value of 'resp' is undefine, so we need to fill it with proper value,
-        // which may be used in end_ping()
-        resp->this_node = beacon->to;
-        resp->time = beacon->time;
+        beacon_ack ack;
+        ack.this_node = beacon->to;
+        ack.time = beacon->time;
+        end_ping(err, ack, nullptr);
     }
-
-    end_ping(err, *resp, nullptr);
+    else
+    {
+        end_ping(err, *resp, nullptr);
+    }
 }
 
 }} // end namespace
