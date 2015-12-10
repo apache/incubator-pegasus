@@ -198,10 +198,23 @@ ConfReg:
             {
                 conf* cf = new conf;
                 cf->section = (const char*)pSectionName;
-                cf->key = pKey;
-                cf->value = pValue ? pValue : "";
+                cf->key = pKey;                
                 cf->line = lineno; 
                 cf->present = true;
+
+                if (pValue)
+                {
+                    // if argument is not provided
+                    if (strlen(pValue) > 2 && *pValue == '%' && pValue[strlen(pValue) - 1] == '%')
+                        cf->value = "";
+                    else
+                        cf->value = pValue;
+                }
+                else
+                {
+                    cf->value = "";
+                }
+
                 pSection->insert(std::make_pair(std::string(pKey), cf));
             }            
         }
