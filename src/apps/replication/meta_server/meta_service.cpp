@@ -68,9 +68,11 @@ void meta_service::start()
     // become leader
     while (!_failure_detector->acquire_leader_lock()) {}
     dassert(_failure_detector->is_primary(), "must be primary at this point");
+    ddebug("got the primary lock, start to initliaze server state");
 
     // sync meta state
     while (_state->on_become_leader() != ERR_OK) {}
+    ddebug("start the server state finish");
 
     // make sure the delay is larger than fd.grace to ensure 
     // all machines are in the correct state (assuming connected initially)

@@ -283,7 +283,6 @@ namespace dsn
         {
             return !(*this == r);
         }
-       
     
     # ifdef TRACK_ERROR_CODE
         ~error_code()

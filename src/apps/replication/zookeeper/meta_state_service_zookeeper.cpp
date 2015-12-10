@@ -72,6 +72,9 @@ error_code meta_state_service_zookeeper::initialize(const char *)
         if (_zoo_state != ZOO_CONNECTED_STATE)
             return ERR_TIMEOUT;
     }
+
+    // TODO: add_ref() here because we need add_ref/release_ref in callbacks, so this object should be
+    // stored in ref_ptr to avoid memory leak.
     add_ref();
     return ERR_OK;
 }
@@ -89,7 +92,7 @@ task_ptr meta_state_service_zookeeper::create_node(
     const err_callback &cb_create,
     const blob &value,
     clientlet *tracker)
-{    
+{
     auto tsk = tasking::create_late_task(cb_code, cb_create, 0, tracker);
     dinfo("call create, node(%s)", node.c_str());
     VISIT_INIT(tsk, zookeeper_session::ZOO_OPERATION::ZOO_CREATE, node);

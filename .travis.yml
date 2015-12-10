@@ -12,10 +12,18 @@ before_install:
     # - sudo apt-get install php5-cli
     - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y 
     - sudo apt-get update -qq 
-    - sudo apt-get install -qq libboost-all-dev libaio-dev lcov
+    - sudo apt-get install -qq libboost-all-dev libaio-dev lcov gdb
+
+install:
+    - ./check_format.sh && ./build.sh
+
+before_script:
+    - ./start_zk_for_test.sh
+    - ulimit -c unlimited -S
 
 script:
-    - ./check_format.sh
-    - ./build.sh
-    #	&& ./test.sh
+    - ./test.sh
+
+after_script:
+    - ./stop_zk_for_test.sh
 

@@ -33,7 +33,6 @@ ROOT=`pwd`
 TEST_MODULE='
 dsn.core.tests
 dsn.tests
-dsn.rep_tests.simple_kv
 '
 
 # if clear

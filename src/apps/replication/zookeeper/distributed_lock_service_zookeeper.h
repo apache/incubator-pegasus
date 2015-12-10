@@ -73,8 +73,7 @@ public:
         const lock_callback& cb) override;
 
 private:
-    static std::string LOCK_ROOT;
-    static std::string LOCK_NODE;
+    static std::string LOCK_NODE_PREFIX;
 
     typedef std::pair<std::string, std::string> lock_key;
     struct pair_hash 
@@ -85,7 +84,10 @@ private:
             return std::hash<T>()(key.first)+std::hash<U>()(key.second);
         }
     };
-    
+
+    std::string _lock_root; // ${cluster_root}/lock
+    // real lock node path: ${cluster_root}/lock/${lock_id}/${LOCK_NODE_PREFIX}${i}
+
     typedef std::unordered_map<lock_key, lock_struct_ptr, pair_hash> lock_map;
     utils::rw_lock_nr _service_lock;
     lock_map _zookeeper_locks;

@@ -17,7 +17,7 @@ state:{{r1,pri,1,0}}
 # on_rpc_request_enqueue may happen before the above state instruction, so
 #
 # wait:on_rpc_request_enqueue:rpc_name=RPC_CONFIG_PROPOSAL,from=m,to=r1
-wait:on_task_begin:rpc_name=RPC_CONFIG_PROPOSAL,from=m,to=r1
+wait:on_task_begin:node=r1,task_code=RPC_CONFIG_PROPOSAL
 
 set:disable_load_balance=1
 

@@ -496,7 +496,7 @@ namespace dsn
             scount = (int)_servers.size();
         }
 
-        dwarn("server session %s accepted (%d in total)", s->remote_address().to_string(), scount);
+        ddebug("server session %s accepted (%d in total)", s->remote_address().to_string(), scount);
     }
 
     void connection_oriented_network::on_server_session_disconnected(rpc_session_ptr& s)
@@ -516,7 +516,7 @@ namespace dsn
 
         if (r)
         {
-            dwarn("server session %s disconnected (%d in total)",
+            ddebug("server session %s disconnected (%d in total)",
                 s->remote_address().to_string(),
                 scount
                 );
@@ -547,7 +547,7 @@ namespace dsn
 
         if (r)
         {
-            dwarn("client session %s disconnected (%d in total)", s->remote_address().to_string(), scount);
+            ddebug("client session %s disconnected (%d in total)", s->remote_address().to_string(), scount);
         }
     }
 }

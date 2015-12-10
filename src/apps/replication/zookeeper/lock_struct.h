@@ -106,7 +106,7 @@ private:
     unlock_task_t _unlock_callback;
     
     std::string _lock_id;
-    std::string _lock_dir;
+    std::string _lock_dir; // ${lock_root}/${lock_id}
     zoolock_pair _myself, _owner;
     lock_state _state;
     int _hash;

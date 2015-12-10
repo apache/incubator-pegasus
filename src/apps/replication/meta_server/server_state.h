@@ -141,6 +141,8 @@ private:
     // check equality of two partition configurations, not take last_drops into account
     bool partition_configuration_equal(const partition_configuration& pc1, const partition_configuration& pc2);
 
+    // join path
+    static std::string join_path(const std::string& input1, const std::string& input2);
 private:
     friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
@@ -154,10 +156,11 @@ private:
     };
 
     friend class load_balancer;
-    mutable zrwlock_nr                                 _lock;
+    std::string                                         _cluster_root;
+    mutable zrwlock_nr                                  _lock;
     std::unordered_map< ::dsn::rpc_address, node_state> _nodes;
-    std::vector<app_state>                             _apps; // vec_index = app_id - 1
-    
+    std::vector<app_state>                              _apps; // vec_index = app_id - 1
+
     int                               _node_live_count;
     int                               _node_live_percentage_threshold_for_update;
     std::atomic<bool>                 _freeze;
