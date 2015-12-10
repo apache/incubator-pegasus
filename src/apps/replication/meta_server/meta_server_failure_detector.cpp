@@ -126,26 +126,76 @@ void meta_server_failure_detector::on_worker_connected(::dsn::rpc_address node)
 }
 
 DEFINE_TASK_CODE(LPC_META_SERVER_LEADER_LOCK_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_FD)
+DEFINE_TASK_CODE_RPC(RPC_CM_QUERY_LEADER_LOCK, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_CM_QUERY_LEADER_LOCK_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
-bool meta_server_failure_detector::acquire_leader_lock()
+void meta_server_failure_detector::acquire_leader_lock()
 {
-    error_code err;
-    auto tasks = 
-    _lock_svc->lock(
-        _primary_lock_id,
-        _local_owner_id,
-        true,
+    //
+    // lets' first set up a timer to query the leader
+    // so as to tell other nodes who is the leader in case they query
+    //
+    int leader_lock_query_interval_seconds = (int)dsn_config_get_value_uint64(
+        "meta_server",
+        "leader_lock_query_interval_seconds",
+        5, // 5 seconds
+        "period (seconds) for meta server to query the leader before itself becomes the leader"
+        );
 
-        // lock granted
-        LPC_META_SERVER_LEADER_LOCK_CALLBACK,
-        [this, &err](error_code ec, const std::string& owner, uint64_t version)
+    task_ptr query_leader_task;
+    task_ptr query_leader_timer = tasking::enqueue(
+        LPC_CM_QUERY_LEADER_LOCK_TIMER,
+        this,
+        [this, &query_leader_task]()
+        {
+            if (query_leader_task != nullptr)
+                return;
+
+            query_leader_task = _lock_svc->query_lock(
+                _primary_lock_id,
+                RPC_CM_QUERY_LEADER_LOCK,
+                [this, &query_leader_task](error_code ec, const std::string& owner_id, uint64_t version)
+                {
+                    if (ec == ERR_OK)
+                    {
+                        rpc_address addr;
+                        if (addr.from_string_ipv4(owner_id.c_str()))
+                        {
+                            dassert(primary_address() == addr, "");
+                            set_primary(addr);
+                        }
+                    }
+                    query_leader_task = nullptr;
+                }
+            );
+        },
+        0,
+        0,
+        leader_lock_query_interval_seconds * 1000
+        );
+        
+    //
+    // try to get the leader lock until it is done
+    //
+    while (true)
+    {
+        error_code err;
+        auto tasks =
+            _lock_svc->lock(
+            _primary_lock_id,
+            _local_owner_id,
+            true,
+
+            // lock granted
+            LPC_META_SERVER_LEADER_LOCK_CALLBACK,
+            [this, &err](error_code ec, const std::string& owner, uint64_t version)
         {
             err = ec;
         },
 
-        // lease expire
-        LPC_META_SERVER_LEADER_LOCK_CALLBACK,
-        [this](error_code ec, const std::string& owner, uint64_t version)
+            // lease expire
+            LPC_META_SERVER_LEADER_LOCK_CALLBACK,
+            [this](error_code ec, const std::string& owner, uint64_t version)
         {
             // let's take the easy way right now
             dsn_terminate();
@@ -158,24 +208,33 @@ bool meta_server_failure_detector::acquire_leader_lock()
             //// set another round of service
             //acquire_leader_lock();            
         }
-    );
+        );
 
-    _lock_grant_task = tasks.first;
-    _lock_expire_task = tasks.second;
+        _lock_grant_task = tasks.first;
+        _lock_expire_task = tasks.second;
 
-    _lock_grant_task->wait();
-    if (err == ERR_OK)
-    {
-        rpc_address addr;
-        if (addr.from_string_ipv4(_local_owner_id.c_str()))
+        _lock_grant_task->wait();
+        if (err == ERR_OK)
         {
-            dassert(primary_address() == addr, "");            
-            set_primary(addr);
-            return true;
+            rpc_address addr;
+            if (addr.from_string_ipv4(_local_owner_id.c_str()))
+            {
+                query_leader_timer->cancel(true);
+                query_leader_timer = nullptr;
+
+                task_ptr t = query_leader_task;
+                if (t != nullptr)
+                {
+                    t->cancel(true);
+                    query_leader_task = nullptr;
+                }
+
+                dassert(primary_address() == addr, "");
+                set_primary(addr);
+                break;
+            }
         }
     }
-
-    return false;
 }
 
 void meta_server_failure_detector::set_primary(rpc_address primary)

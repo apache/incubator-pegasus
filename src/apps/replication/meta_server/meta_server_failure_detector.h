@@ -70,7 +70,7 @@ public:
         return _primary_address;
     }
     
-    bool acquire_leader_lock();
+    void acquire_leader_lock();
     
     // client side
     virtual void on_master_disconnected(const std::vector< ::dsn::rpc_address>& nodes)
@@ -91,6 +91,7 @@ public:
 
 private:
     void set_primary(rpc_address primary);
+    void query_leader_callback();
 
 private:
     friend class ::dsn::replication::replication_checker;
