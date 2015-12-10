@@ -390,11 +390,27 @@ namespace dsn
 
     uint32_t network::get_local_ipv4()
     {
+        static const char* explicit_host = dsn_config_get_value_string(
+            "network", "explicit_host_address",
+            "", "explicit host name or ip (v4) assigned to this node (e.g., service ip for pods in kubernets)"
+            );
+
         static const char* inteface = dsn_config_get_value_string(
             "network", "primary_interface",
             "eth0", "network interface name used to init primary ip address");
 
-        uint32_t ip = dsn_ipv4_local(inteface);
+        uint32_t ip = 0;
+
+        if (strlen(explicit_host) > 0)
+        {
+            ip = dsn_ipv4_from_host(explicit_host);
+        }
+
+        if (0 == ip)
+        {
+            ip = dsn_ipv4_local(inteface);
+        }
+        
         if (0 == ip)
         {
             char name[128];
@@ -404,6 +420,7 @@ namespace dsn
             }
             ip = dsn_ipv4_from_host(name);
         }
+
         return ip;
     }
 
