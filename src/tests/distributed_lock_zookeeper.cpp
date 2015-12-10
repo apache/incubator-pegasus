@@ -33,6 +33,7 @@ public:
         _dlock_service = new distributed_lock_service_zookeeper();
         _dlock_service->initialize();
         
+
         while (!ss_finish) {
             std::pair<task_ptr, task_ptr> task_pair = _dlock_service->lock(
                 "test_lock", name(), true, 

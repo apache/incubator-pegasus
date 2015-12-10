@@ -45,10 +45,15 @@
 
 #include "zookeeper_error.h"
 
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+
+#define __TITLE__ "dlock.service.zk"
+
 namespace dsn { namespace dist {
 
-std::string distributed_lock_service_zookeeper::LOCK_ROOT = "/lock";
-std::string distributed_lock_service_zookeeper::LOCK_NODE = "LOCKNODE";
+std::string distributed_lock_service_zookeeper::LOCK_NODE_PREFIX = "LOCKNODE";
 
 distributed_lock_service_zookeeper::distributed_lock_service_zookeeper(): clientlet(), ref_counter()
 {
@@ -92,9 +97,49 @@ error_code distributed_lock_service_zookeeper::initialize()
     if (_zoo_state != ZOO_CONNECTED_STATE)
     {
         _waiting_attach.wait_for( zookeeper_session_mgr::fast_instance().timeout() );
-        if (_zoo_state != ZOO_CONNECTED_STATE)
+        if (_zoo_state != ZOO_CONNECTED_STATE) {
+            dwarn("attach to zookeeper session timeout, distributed lock service initialized failed");
             return ERR_TIMEOUT;
+        }
     }
+
+    _lock_root = dsn_config_get_value_string("meta_server", "cluster_root", "/", "cluster root of meta service");
+    std::vector<std::string> slices;
+    utils::split_args(_lock_root.c_str(), slices, '/');
+    slices.push_back("lock");
+    std::string current = "";
+    for (auto& str: slices)
+    {
+        if (str.empty())
+            continue;
+        utils::notify_event e;
+        int zerr;
+        current = current + "/" + str;
+        zookeeper_session::zoo_opcontext* op = zookeeper_session::create_context();
+        op->_optype = zookeeper_session::ZOO_CREATE;
+        op->_input._path = current;
+        op->_callback_function = [&e, &zerr](zookeeper_session::zoo_opcontext* op) mutable
+        {
+            zerr = op->_output.error;
+            e.notify();
+        };
+
+        _session->visit(op);
+        e.wait();
+        if (zerr != ZOK && zerr != ZNODEEXISTS)
+        {
+            derror("initialize distributed_lock_service_zookeeper failed, path = %s, err = %s",
+                   current.c_str(), zerror(zerr));
+            return from_zerror(zerr);
+        }
+    }
+    _lock_root = current;
+    dassert(!_lock_root.empty(), "");
+    ddebug("init distributed_lock_service_zookeeper succeed, lock_root = %s", _lock_root.c_str());
+
+    // TODO: add_ref() here because we need add_ref/release_ref in callbacks, so this object should be
+    // stored in ref_ptr to avoid memory leak.
+    add_ref();
     return ERR_OK;
 }
 
