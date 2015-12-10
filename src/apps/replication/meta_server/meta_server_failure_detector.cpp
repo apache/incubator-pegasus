@@ -272,7 +272,11 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::
     {
         ack.time = beacon.time;
         ack.is_master = false;
-        ack.primary_node = _primary_address;
+
+        {
+            utils::auto_lock<zlock> l(_primary_address_lock);
+            ack.primary_node = _primary_address;
+        }
     }
     else
     {
