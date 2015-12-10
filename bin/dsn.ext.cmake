@@ -28,7 +28,7 @@ else()
     endforeach()
 endif()
 
-message (INFO " install_cmd = ${install_cmd}")
+#message (INFO " install_cmd = ${install_cmd}")
 
 ExternalProject_Add(${project_name}
     GIT_REPOSITORY ${target_url}
