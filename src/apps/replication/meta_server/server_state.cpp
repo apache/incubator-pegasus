@@ -37,6 +37,7 @@
 # include <dsn/internal/factory_store.h>
 # include <sstream>
 # include <cinttypes>
+# include <boost/lexical_cast.hpp>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -97,6 +98,16 @@ void server_state::initialize(const char* dir)
 
     auto err = _storage->initialize(dir);
     dassert(err == ERR_OK, "meta state service initialization failed, err = %s", err.to_string());
+
+    _cluster_root = dsn_config_get_value_string("meta_server", "cluster_root", "", "path prefix for meta service");
+    std::vector<std::string> slices;
+    utils::split_args(_cluster_root.c_str(), slices, '/');
+    std::string current = "";
+    for (unsigned int i=0; i!=slices.size(); ++i) {
+        current = current + "/" + slices[i];
+        _storage->create_node(current, LPC_META_STATE_SVC_CALLBACK,
+                              [](error_code ec){ dassert(ec==ERR_OK || ec==ERR_NODE_ALREADY_EXIST, "unexpected error(%s)", ec.to_string()); } )->wait();
+    }
 }
 
 error_code server_state::on_become_leader()
@@ -110,8 +121,16 @@ error_code server_state::on_become_leader()
     return err;
 }
 
+std::string server_state::join_path(const std::string &input1, const std::string &input2)
+{
+    if (input1.empty()) return "/"+input2;
+    if (input1.back()=='/') return input1+input2;
+    return input1 + "/" + input2;
+}
+
 error_code server_state::initialize_apps()
 {
+    ddebug("start to do initialize");
     app_state app;
     app.app_id = 1;
     app.app_name = dsn_config_get_value_string("replication.app",
@@ -126,9 +145,9 @@ error_code server_state::initialize_apps()
     error_code err = ERR_OK;
     clientlet tracker;
 
-    // create root /apps node
-    std::string path = "/apps";
-    auto t = _storage->create_node(path, LPC_META_STATE_SVC_CALLBACK, 
+    // create  cluster_root/apps node
+    std::string apps_path = join_path(_cluster_root, "apps");
+    auto t = _storage->create_node(apps_path, LPC_META_STATE_SVC_CALLBACK,
         [&err](error_code ec)
         {err = ec; }
     );
@@ -141,18 +160,15 @@ error_code server_state::initialize_apps()
         return err;
     }
 
-    // create /apps/app_name node
-    std::stringstream ss;
-    ss << "/apps/" << app.app_name;
-    path = ss.str();
-
+    // create cluster_root/apps/app_name node
+    std::string app_path = join_path(apps_path, app.app_name);
     binary_writer writer;
     marshall(writer, app);
     
     blob value = writer.get_buffer();
 
-    _storage->create_node(path, LPC_META_STATE_SVC_CALLBACK,
-        [&err, this, &app, &tracker](error_code ec)
+    _storage->create_node(app_path, LPC_META_STATE_SVC_CALLBACK,
+        [&err, this, &app, &tracker, &app_path](error_code ec)
         {
             if (ec == ERR_OK)
             {
@@ -161,9 +177,7 @@ error_code server_state::initialize_apps()
 
                 for (int i = 0; i < app.partition_count; i++)
                 {
-                    std::stringstream ss;
-                    ss << "/apps/" << app.app_name << "/" << i;
-                    std::string path = ss.str();
+                    std::string partition_path = join_path(app_path, boost::lexical_cast<std::string>(i));
 
                     partition_configuration ps;
                     ps.app_type = app.app_type;
@@ -181,7 +195,7 @@ error_code server_state::initialize_apps()
 
                     blob value = writer.get_buffer();
 
-                    _storage->create_node(path, LPC_META_STATE_SVC_CALLBACK,
+                    _storage->create_node(partition_path, LPC_META_STATE_SVC_CALLBACK,
                         [&err, this, &app](error_code ec)
                         {
                             if (ec == ERR_OK)
@@ -221,11 +235,13 @@ error_code server_state::initialize_apps()
 
 error_code server_state::sync_apps_from_remote_storage()
 {
+    ddebug("start to do sync");
     error_code err = ERR_OK;
     clientlet tracker(1);
     // get all apps
-    std::string root = "/apps";
-    _storage->get_children(root, LPC_META_STATE_SVC_CALLBACK,
+
+    std::string app_root = join_path(_cluster_root, "apps");
+    _storage->get_children(app_root, LPC_META_STATE_SVC_CALLBACK,
         [&](error_code ec, const std::vector<std::string>& apps)
         {
             if (ec == ERR_OK)
@@ -233,7 +249,7 @@ error_code server_state::sync_apps_from_remote_storage()
                 // get app info
                 for (auto& s : apps)
                 {
-                    auto app_path = root + "/" + s;
+                    auto app_path = app_root + "/" + s;
                     _storage->get_data(
                         app_path,
                         LPC_META_STATE_SVC_CALLBACK,
@@ -526,7 +542,7 @@ void server_state::update_configuration(
         {
             write = true;
             std::stringstream ss;
-            ss << "/apps/" << app.app_name << "/" << old.gpid.pidx;
+            ss << join_path(_cluster_root, "apps") <<  "/" << app.app_name << "/" << old.gpid.pidx;
             partition_path = ss.str();
             req->config.last_drops = old.last_drops;
         }

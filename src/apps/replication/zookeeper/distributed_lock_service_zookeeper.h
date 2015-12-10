@@ -73,7 +73,7 @@ public:
         const lock_callback& cb) override;
 
 private:
-    static std::string LOCK_ROOT;
+    std::string LOCK_ROOT;
     static std::string LOCK_NODE;
 
     typedef std::pair<std::string, std::string> lock_key;

@@ -47,7 +47,6 @@
 
 namespace dsn { namespace dist {
 
-std::string distributed_lock_service_zookeeper::LOCK_ROOT = "/lock";
 std::string distributed_lock_service_zookeeper::LOCK_NODE = "LOCKNODE";
 
 distributed_lock_service_zookeeper::distributed_lock_service_zookeeper(): clientlet(), ref_counter()
@@ -95,6 +94,39 @@ error_code distributed_lock_service_zookeeper::initialize()
         if (_zoo_state != ZOO_CONNECTED_STATE)
             return ERR_TIMEOUT;
     }
+
+    LOCK_ROOT = dsn_config_get_value_string("meta_server", "cluster_root", "", "the cluster_root");
+    std::vector<std::string> slices;
+    utils::split_args(LOCK_ROOT.c_str(), slices, '/');
+    slices.push_back("lock");
+
+    std::string current = "";
+    for (auto& str: slices)
+    {
+        utils::notify_event e;
+        int zerr;
+        current = current + "/" +str;
+        zookeeper_session::zoo_opcontext* op = zookeeper_session::create_context();
+        op->_optype = zookeeper_session::ZOO_CREATE;
+        op->_input._path = current;
+        op->_callback_function = [&e, &zerr](zookeeper_session::zoo_opcontext* op) mutable
+        {
+            zerr = op->_output.error;
+            e.notify();
+        };
+
+        _session->visit(op);
+        e.wait();
+        if (zerr!=ZOK && zerr!=ZNODEEXISTS)
+        {
+            derror("initialize distributed lock service zookeeper failed, create path(%s) failed reason(%s)",
+                   current.c_str(), zerror(zerr));
+            return from_zerror(zerr);
+        }
+    }
+    //TODO: modify the meta_service, for add reference
+    add_ref();
+    LOCK_ROOT = std::move(current);
     return ERR_OK;
 }
 

@@ -484,6 +484,8 @@ void lock_struct::after_get_lockdir_nodes(lock_struct_ptr _this, int ec, std::sh
             _this->_state = lock_state::locked;
             _this->_owner._node_value = _this->_myself._node_value;
             watch_myself = true;
+
+            ddebug("got the lock(%s)", _this->_lock_id.c_str());
             __lock_task_bind_and_enqueue(_this->_lock_callback, 
                                         ERR_OK, 
                                         _this->_myself._node_value, 
@@ -626,7 +628,7 @@ void lock_struct::try_lock(lock_struct_ptr _this, lock_task_t lock_callback, loc
     _this->_state = lock_state::pending;
     
     if (_this->_lock_dir.empty()) {
-        _this->_lock_dir = distributed_lock_service_zookeeper::LOCK_ROOT + "/" + _this->_lock_id;
+        _this->_lock_dir = _this->_dist_lock_service->LOCK_ROOT + "/" + _this->_lock_id;
         auto result_wrapper = [_this](zookeeper_session::zoo_opcontext* op) {
             __execute(std::bind(&lock_struct::after_create_lockdir, _this, op->_output.error), _this);
         };
