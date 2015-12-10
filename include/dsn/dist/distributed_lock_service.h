@@ -69,7 +69,7 @@ namespace dsn
             /*
              * initialization routine
              */
-            virtual error_code initialize(const char* work_dir) = 0;
+            virtual error_code initialize(const char* work_dir, const char* lock_root) = 0;
             
             /*
              * lock

@@ -60,7 +60,8 @@ meta_server_failure_detector::meta_server_failure_detector(server_state* state, 
         distributed_lock_service_name,
         PROVIDER_TYPE_MAIN
         );
-    auto err = _lock_svc->initialize(svc->work_dir());
+    std::string lock_root = svc->cluster_root() + std::string("/lock");
+    auto err = _lock_svc->initialize(svc->work_dir(), lock_root.c_str());
     dassert(err == ERR_OK, "init lock service failed: %s", err.to_string());
     _primary_lock_id = "dsn.meta.server.leader";
     _local_owner_id = primary_address().to_string();

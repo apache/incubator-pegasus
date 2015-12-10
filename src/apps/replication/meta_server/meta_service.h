@@ -66,6 +66,7 @@ public:
     void stop();
 
     const char* work_dir() const { return _work_dir.c_str(); }
+    const char* cluster_root() const { return _cluster_root.c_str(); }
 
 private:
     // partition server & client => meta server
@@ -89,6 +90,7 @@ private:
     friend class ::dsn::replication::test::test_checker;
 
     std::string                  _work_dir;
+    std::string                  _cluster_root;
     server_state                 *_state;
     meta_server_failure_detector *_failure_detector;
     load_balancer                *_balancer;

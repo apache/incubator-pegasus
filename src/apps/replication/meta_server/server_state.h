@@ -75,7 +75,7 @@ public:
     ~server_state();
 
     // initialize server state
-    error_code initialize(const char* work_dir);
+    error_code initialize(const char* work_dir, const char* cluster_root);
 
     // when the server becomes the leader
     error_code on_become_leader();

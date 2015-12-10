@@ -82,7 +82,7 @@ server_state::~server_state()
 
 DEFINE_TASK_CODE(LPC_META_STATE_SVC_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_META_SERVER);
 
-error_code server_state::initialize(const char* work_dir)
+error_code server_state::initialize(const char* work_dir, const char* cluster_root)
 {
     _work_dir = work_dir;
 
@@ -114,10 +114,9 @@ error_code server_state::initialize(const char* work_dir)
         return err;
     }
 
-    _cluster_root = dsn_config_get_value_string("meta_server", "cluster_root", "/", "cluster root of meta service");
     std::vector<std::string> slices;
-    utils::split_args(_cluster_root.c_str(), slices, '/');
-    std::string current = "/";
+    utils::split_args(cluster_root, slices, '/');
+    std::string current = "";
     for (unsigned int i = 0; i != slices.size(); ++i)
     {
         if (slices[i].empty())
@@ -138,10 +137,9 @@ error_code server_state::initialize(const char* work_dir)
             return err;
         }
     }
-    _cluster_root = current;
-    dassert(!_cluster_root.empty(), "");
-
+    _cluster_root = current.empty() ? "/" : current;
     ddebug("init server_state succeed, cluster_root = %s, work_dir = %s", _cluster_root.c_str(), _work_dir.c_str());
+
     return ERR_OK;
 }
 

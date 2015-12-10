@@ -85,10 +85,14 @@ void distributed_lock_service_zookeeper::erase(const lock_key& key)
     _zookeeper_locks.erase(key);
 }
 
-error_code distributed_lock_service_zookeeper::initialize(const char* /*work_dir*/)
+error_code distributed_lock_service_zookeeper::initialize(const char* /*work_dir*/, const char* lock_root)
 {
     dsn_app_info node;
-    dsn_get_current_app_info(&node);
+    if (!dsn_get_current_app_info(&node))
+    {
+        derror("get current app info failed, can not init zookeeper lock");
+        return ERR_CORRUPTION;
+    }
 
     _session = zookeeper_session_mgr::instance().get_session(&node);
     _zoo_state = _session->attach(this, std::bind(&distributed_lock_service_zookeeper::on_zoo_session_evt,
@@ -103,10 +107,8 @@ error_code distributed_lock_service_zookeeper::initialize(const char* /*work_dir
         }
     }
 
-    _lock_root = dsn_config_get_value_string("meta_server", "cluster_root", "/", "cluster root of meta service");
     std::vector<std::string> slices;
-    utils::split_args(_lock_root.c_str(), slices, '/');
-    slices.push_back("lock");
+    utils::split_args(lock_root, slices, '/');
     std::string current = "";
     for (auto& str: slices)
     {
@@ -128,13 +130,11 @@ error_code distributed_lock_service_zookeeper::initialize(const char* /*work_dir
         e.wait();
         if (zerr != ZOK && zerr != ZNODEEXISTS)
         {
-            derror("initialize distributed_lock_service_zookeeper failed, path = %s, err = %s",
-                   current.c_str(), zerror(zerr));
+            derror("create zk node failed, path = %s, err = %s", current.c_str(), zerror(zerr));
             return from_zerror(zerr);
         }
     }
-    _lock_root = current;
-    dassert(!_lock_root.empty(), "");
+    _lock_root = current.empty() ? "/" : current;
     ddebug("init distributed_lock_service_zookeeper succeed, lock_root = %s", _lock_root.c_str());
 
     // TODO: add_ref() here because we need add_ref/release_ref in callbacks, so this object should be

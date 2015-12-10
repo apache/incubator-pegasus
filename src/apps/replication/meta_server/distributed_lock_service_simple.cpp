@@ -131,7 +131,7 @@ namespace dsn
             }
         }
 
-        error_code distributed_lock_service_simple::initialize(const char* /*work_dir*/)
+        error_code distributed_lock_service_simple::initialize(const char* /*work_dir*/, const char* /*lock_root*/)
         {
             return ERR_OK;
         }

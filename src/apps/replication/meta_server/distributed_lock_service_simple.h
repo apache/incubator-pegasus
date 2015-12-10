@@ -47,7 +47,7 @@ namespace dsn
             : public distributed_lock_service, public clientlet
         {
         public:
-            virtual error_code initialize(const char* work_dir) override;
+            virtual error_code initialize(const char* work_dir, const char* lock_root) override;
 
             virtual std::pair<task_ptr, task_ptr> lock(
                 const std::string& lock_id,
