@@ -4,7 +4,6 @@ help engine
 help unexist-cmd
 engine
 task-code
-config-dump
 config-dump config-dump.ini
 test-cmd this is test argument
 unexist-cmd arg1 arg2

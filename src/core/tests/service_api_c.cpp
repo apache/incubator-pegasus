@@ -231,7 +231,7 @@ TEST(core, dsn_file)
 
     dsn_handle_t fin = dsn_file_open("command.txt", O_RDONLY, 0);
     ASSERT_NE(nullptr, fin);
-    dsn_handle_t fout = dsn_file_open("command.copy.txt", O_RDWR | O_CREAT, 0666);
+    dsn_handle_t fout = dsn_file_open("command.copy.txt", O_RDWR | O_CREAT | O_TRUNC, 0666);
     ASSERT_NE(nullptr, fout);
     char buffer[1024];
     uint64_t offset = 0;
