@@ -1024,6 +1024,7 @@ void replica_stub::notify_replica_state_update(const replica_configuration& conf
 
 void replica_stub::handle_log_failure(error_code err)
 {
+    derror("handle log failure: %s", err.to_string());
     if (!s_not_exit_on_log_failure)
     {
         dassert(false, "TODO: better log failure handling ...");
