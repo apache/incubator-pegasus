@@ -71,11 +71,11 @@ class server_state :
     public ::dsn::serverlet<server_state>
 {
 public:
-    server_state(void);
-    ~server_state(void);
+    server_state();
+    ~server_state();
 
-    // init _app[1] by "[replication.app]" config
-    void initialize(const char* dir);
+    // initialize server state
+    error_code initialize(const char* work_dir);
 
     // when the server becomes the leader
     error_code on_become_leader();
@@ -156,6 +156,7 @@ private:
     };
 
     friend class load_balancer;
+    std::string                                         _work_dir;
     std::string                                         _cluster_root;
     mutable zrwlock_nr                                  _lock;
     std::unordered_map< ::dsn::rpc_address, node_state> _nodes;

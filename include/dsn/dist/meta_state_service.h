@@ -70,7 +70,7 @@ namespace dsn
             /*
              * initialization work
              */
-            virtual error_code initialize(const char* arguments) = 0;
+            virtual error_code initialize(const char* work_dir) = 0;
 
             /*
              * create a dir node

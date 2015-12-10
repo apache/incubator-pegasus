@@ -57,7 +57,7 @@ meta_state_service_zookeeper::~meta_state_service_zookeeper()
     }
 }
 
-error_code meta_state_service_zookeeper::initialize(const char *)
+error_code meta_state_service_zookeeper::initialize(const char* /*work_dir*/)
 {
     dsn_app_info node;
     dsn_get_current_app_info(&node);

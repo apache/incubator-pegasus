@@ -44,9 +44,10 @@ class distributed_lock_service_zookeeper: public distributed_lock_service, publi
 {
 public:
     explicit distributed_lock_service_zookeeper();
-
     virtual ~distributed_lock_service_zookeeper();
-    virtual error_code initialize() override;
+
+    virtual error_code initialize(const char* work_dir) override;
+
     virtual std::pair<task_ptr, task_ptr> lock(
         const std::string& lock_id,
         const std::string& myself_id,

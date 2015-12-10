@@ -221,10 +221,10 @@ namespace dsn
             return ERR_OK;
         }
 
-        error_code meta_state_service_simple::initialize(const char* dir)
+        error_code meta_state_service_simple::initialize(const char* work_dir)
         {
             _offset = 0;
-            std::string log_path = dsn::utils::filesystem::path_combine(dir, "meta_state_service.log");
+            std::string log_path = dsn::utils::filesystem::path_combine(work_dir, "meta_state_service.log");
             if (utils::filesystem::file_exists(log_path))
             {
                 if (FILE* fd = fopen(log_path.c_str(), "rb"))

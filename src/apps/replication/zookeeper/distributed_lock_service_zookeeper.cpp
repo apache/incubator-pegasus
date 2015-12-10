@@ -85,7 +85,7 @@ void distributed_lock_service_zookeeper::erase(const lock_key& key)
     _zookeeper_locks.erase(key);
 }
 
-error_code distributed_lock_service_zookeeper::initialize()
+error_code distributed_lock_service_zookeeper::initialize(const char* /*work_dir*/)
 {
     dsn_app_info node;
     dsn_get_current_app_info(&node);

@@ -62,22 +62,30 @@ void unmarshall(binary_reader& reader, /*out*/ app_state& val)
     unmarshall(reader, val.partitions);
 }
 
-server_state::server_state(void)
+server_state::server_state()
     : ::dsn::serverlet<server_state>("meta.server.state")
 {
     _node_live_count = 0;
-    _freeze = true;
     _node_live_percentage_threshold_for_update = 65;
+    _freeze = true;
+    _storage = nullptr;
 }
 
-server_state::~server_state(void)
+server_state::~server_state()
 {
+    if (_storage != nullptr)
+    {
+        delete _storage;
+        _storage = nullptr;
+    }
 }
 
 DEFINE_TASK_CODE(LPC_META_STATE_SVC_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_META_SERVER);
 
-void server_state::initialize(const char* dir)
+error_code server_state::initialize(const char* work_dir)
 {
+    _work_dir = work_dir;
+
     const char* meta_state_service_name = dsn_config_get_value_string(
         "meta_server",
         "meta_state_service_name",
@@ -90,14 +98,21 @@ void server_state::initialize(const char* dir)
         PROVIDER_TYPE_MAIN
         );
 
-    std::string dr = std::string(dir);
-    if (!utils::filesystem::path_exists(dr))
+    if (!utils::filesystem::path_exists(_work_dir))
     {
-        utils::filesystem::create_directory(dr);
+        if (!utils::filesystem::create_directory(_work_dir))
+        {
+            derror("create work_dir failed, work_dir = %s", _work_dir.c_str());
+            return ERR_FILE_OPERATION_FAILED;
+        }
     }
 
-    auto err = _storage->initialize(dir);
-    dassert(err == ERR_OK, "init meta_state_service failed, err = %s", err.to_string());
+    error_code err = _storage->initialize(_work_dir.c_str());
+    if (err != ERR_OK)
+    {
+        derror("init meta_state_service failed, work_dir = %s, err = %s", _work_dir.c_str(), err.to_string());
+        return err;
+    }
 
     _cluster_root = dsn_config_get_value_string("meta_server", "cluster_root", "/", "cluster root of meta service");
     std::vector<std::string> slices;
@@ -107,19 +122,27 @@ void server_state::initialize(const char* dir)
     {
         if (slices[i].empty())
             continue;
+
         current = join_path(current, slices[i]);
         task_ptr tsk = _storage->create_node(current, LPC_META_STATE_SVC_CALLBACK,
-            [](error_code ec)
+            [&err](error_code ec)
             {
-                dassert(ec == ERR_OK || ec == ERR_NODE_ALREADY_EXIST,
-                        "init cluster root failed, err = %s", ec.to_string());
+                err = ec;
             }
         );
         tsk->wait();
+
+        if (err != ERR_OK && err != ERR_NODE_ALREADY_EXIST)
+        {
+            derror("create node failed, node_path = %s, err = %s", current.c_str(), err.to_string());
+            return err;
+        }
     }
     _cluster_root = current;
     dassert(!_cluster_root.empty(), "");
-    ddebug("init server_state succeed, cluster_root = %s", _cluster_root.c_str());
+
+    ddebug("init server_state succeed, cluster_root = %s, work_dir = %s", _cluster_root.c_str(), _work_dir.c_str());
+    return ERR_OK;
 }
 
 error_code server_state::on_become_leader()

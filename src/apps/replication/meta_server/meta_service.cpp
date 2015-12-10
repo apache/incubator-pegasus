@@ -44,50 +44,62 @@
 # endif
 # define __TITLE__ "meta.service"
 
-meta_service::meta_service(server_state* state)
-: _state(state), serverlet("meta_service")
+meta_service::meta_service(const char* work_dir)
+: serverlet("meta_service"), _work_dir(work_dir), _state(nullptr),
+  _failure_detector(nullptr), _balancer(nullptr), _started(false)
 {
-    _balancer = nullptr;
-    _failure_detector = nullptr;
-    _started = false;
-
     _opts.initialize();
 }
 
-meta_service::~meta_service(void)
+meta_service::~meta_service()
 {
+    stop();
 }
 
-void meta_service::start()
+error_code meta_service::start()
 {
     dassert(!_started, "meta service is already started");
 
-    _balancer = new load_balancer(_state);            
-    _failure_detector = new meta_server_failure_detector(_state, this);    
-    
+    _state = new server_state();
+    error_code err = _state->initialize(_work_dir.c_str());
+    if (err != ERR_OK)
+    {
+        derror("init server_state failed, err = %s", err.to_string());
+        return err;
+    }
+    ddebug("init server state succeed");
+
+    _failure_detector = new meta_server_failure_detector(_state, this);
     // become leader
     while (!_failure_detector->acquire_leader_lock()) {}
     dassert(_failure_detector->is_primary(), "must be primary at this point");
-    ddebug("got the primary lock, start to initliaze server state");
+    ddebug("hahaha, I got the primary lock! now start to recover server state");
 
-    // sync meta state
-    while (_state->on_become_leader() != ERR_OK) {}
-    ddebug("start the server state finish");
+    // recover server state
+    while ((err = _state->on_become_leader()) != ERR_OK)
+    {
+        derror("recover server state failed, err = %s, retry ...");
+    }
+    ddebug("recover server state succeed");
 
+    _balancer = new load_balancer(_state);
     // make sure the delay is larger than fd.grace to ensure 
     // all machines are in the correct state (assuming connected initially)
     tasking::enqueue(LPC_LBM_START, this, &meta_service::on_load_balance_start, 0, 
         _opts.fd_grace_seconds * 1000);
 
-    auto err = _failure_detector->start(
+    err = _failure_detector->start(
         _opts.fd_check_interval_seconds,
         _opts.fd_beacon_interval_seconds,
         _opts.fd_lease_seconds,
         _opts.fd_grace_seconds,
         false
         );
-
-    dassert(err == ERR_OK, "FD start failed, err = %s", err.to_string());
+    if (err != ERR_OK)
+    {
+        derror("start failure_detector failed, err = %s", err.to_string());
+        return err;
+    }
 
     register_rpc_handler(
         RPC_CM_QUERY_NODE_PARTITIONS,
@@ -112,30 +124,45 @@ void meta_service::start()
         "RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND",
         &meta_service::on_modify_replica_config_explictly
         );
+
+    ddebug("start meta_service succeed");
+    return ERR_OK;
 }
 
-bool meta_service::stop()
+void meta_service::stop()
 {
-    if (!_started || _balancer_timer == nullptr) return false;
+    if (_state == nullptr) return;
 
     _started = false;
-    _failure_detector->stop();
-    delete _failure_detector;
-    _failure_detector = nullptr;
 
-    if (_balancer_timer == nullptr)
-    {
-        _balancer_timer->cancel(true);
-    }
-    
     unregister_rpc_handler(RPC_CM_QUERY_NODE_PARTITIONS);
     unregister_rpc_handler(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
     unregister_rpc_handler(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
     unregister_rpc_handler(RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND);
 
-    delete _balancer;
-    _balancer = nullptr;
-    return true;
+    if (_balancer_timer != nullptr)
+    {
+        _balancer_timer->cancel(true);
+    }
+
+    if (_balancer != nullptr)
+    {
+        delete _balancer;
+        _balancer = nullptr;
+    }
+
+    if (_failure_detector != nullptr)
+    {
+        _failure_detector->stop();
+        delete _failure_detector;
+        _failure_detector = nullptr;
+    }
+
+    if (_state != nullptr)
+    {
+        delete _state;
+        _state = nullptr;
+    }
 }
 
 void meta_service::on_load_balance_start()

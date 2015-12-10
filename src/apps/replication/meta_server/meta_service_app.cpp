@@ -44,8 +44,7 @@
 
 namespace dsn {
     namespace service {
-
-        bool register_component_provider(
+        static bool register_component_provider(
             const char* name,
             ::dsn::dist::distributed_lock_service::factory f)
         {
@@ -55,7 +54,7 @@ namespace dsn {
                 PROVIDER_TYPE_MAIN);
         }
 
-        bool register_component_provider(
+        static bool register_component_provider(
             const char* name,
             ::dsn::dist::meta_state_service::factory f)
         {
@@ -67,9 +66,6 @@ namespace dsn {
 
         meta_service_app::meta_service_app()
         {
-            _state = new server_state();
-            _service = new meta_service(_state);
-
             register_component_provider(
                 "distributed_lock_service_simple",
                 ::dsn::dist::distributed_lock_service::create<dsn::dist::distributed_lock_service_simple>
@@ -89,37 +85,35 @@ namespace dsn {
                 "meta_state_service_zookeeper",
                 dsn::dist::meta_state_service::create<dsn::dist::meta_state_service_zookeeper>
                 );
-            // TODO: register more provides here used by meta servers
+
+            /////////////////////////////////////////////////////
+            //// register more provides here used by meta servers
+            /////////////////////////////////////////////////////
         }
 
         meta_service_app::~meta_service_app()
         {
         }
 
-        ::dsn::error_code meta_service_app::start(int argc, char** argv)
+        ::dsn::error_code meta_service_app::start(int /*argc*/, char** /*argv*/)
         {
-            _state->initialize(name().c_str());
-            _service->start();
-            return ERR_OK;
+            std::string work_dir;
+            if (!dsn::utils::filesystem::get_absolute_path("./" + name(), work_dir))
+            {
+                derror("get absolute path failed");
+                return ERR_FILE_OPERATION_FAILED;
+            }
+            _service = new meta_service(work_dir.c_str());
+            return _service->start();
         }
 
-        void meta_service_app::stop(bool cleanup)
+        void meta_service_app::stop(bool /*cleanup*/)
         {
-            if (_state != nullptr)
+            if (_service != nullptr)
             {
-                if (_service != nullptr)
-                {
-                    _service->stop();
-                    delete _service;
-                    _service = nullptr;
-
-                    delete _state;
-                    _state = nullptr;
-                }
-            }
-            else
-            {
-                dassert(_service == nullptr, "service must be null");
+                _service->stop();
+                delete _service;
+                _service = nullptr;
             }
         }
     }

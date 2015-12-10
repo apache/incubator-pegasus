@@ -60,7 +60,7 @@ class meta_server_failure_detector : public failure_detector
 {
 public:
     meta_server_failure_detector(server_state* state, meta_service* svc);
-    ~meta_server_failure_detector(void);
+    virtual ~meta_server_failure_detector();
 
     bool is_primary() const { return _is_primary; }
 
