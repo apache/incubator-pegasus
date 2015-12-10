@@ -250,7 +250,7 @@ TEST(core, dsn_file)
         ASSERT_NE(nullptr, tin);
         ASSERT_EQ(1, dsn_task_get_ref(tin));
         dsn_file_read(fin, buffer, 1024, offset, tin);
-        ASSERT_TRUE(dsn_task_wait_timeout(tin, 5000));
+        ASSERT_TRUE(dsn_task_wait(tin));
         ASSERT_EQ(rin.err, dsn_task_error(tin));
         if (rin.err != ERR_OK)
         {
