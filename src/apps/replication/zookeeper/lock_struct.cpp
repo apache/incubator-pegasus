@@ -484,8 +484,7 @@ void lock_struct::after_get_lockdir_nodes(lock_struct_ptr _this, int ec, std::sh
             _this->_state = lock_state::locked;
             _this->_owner._node_value = _this->_myself._node_value;
             watch_myself = true;
-
-            ddebug("got the lock(%s)", _this->_lock_id.c_str());
+            ddebug("got the lock(%s), myself(%s:%s)", _this->_lock_id.c_str(), _this->_myself._node_seq_name.c_str(), _this->_myself._node_value.c_str());
             __lock_task_bind_and_enqueue(_this->_lock_callback, 
                                         ERR_OK, 
                                         _this->_myself._node_value, 
