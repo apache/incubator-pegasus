@@ -39,6 +39,7 @@
 # include <dsn/internal/singleton.h>
 # include <dsn/internal/synchronize.h>
 # include <map>
+# include <sstream>
 
 namespace dsn { namespace utils {
 
@@ -73,6 +74,8 @@ public:
     }
 
     void register_factory(perf_counter::factory factory);
+    static std::string list_counter(const std::vector<std::string>& args);
+    static std::string query_counter(const std::vector<std::string>& args);
 
     typedef std::map<std::string, std::pair<perf_counter_ptr, perf_counter_type> > same_section_counters;
     typedef std::map<std::string, same_section_counters> all_counters;
