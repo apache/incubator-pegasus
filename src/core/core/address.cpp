@@ -101,9 +101,13 @@ DSN_API uint32_t dsn_ipv4_from_host(const char* name)
             h_errno
 # endif
             ;
-        dassert(hp != nullptr, "gethostbyname failed, name = %s, err = %d.", name, err);
 
-        if (hp != nullptr)
+        if (hp == nullptr)
+        {
+            derror("gethostbyname failed, name = %s, err = %d.", name, err);
+            return 0;
+        }
+        else
         {
             memcpy(
                 (void*)&(addr.sin_addr.s_addr),
