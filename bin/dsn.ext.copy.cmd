@@ -19,7 +19,16 @@ GOTO copy_latest
     SET ltime=
     IF EXIST "%PROJ_LIB_DIR%\%lconfig%" (
         ECHO CHECK dir %PROJ_LIB_DIR%\%lconfig% ... 
-        FOR /f "tokens=1,2,3" %%i IN ('dir /o:d /TW "%PROJ_LIB_DIR%\%lconfig%" ^| find "/"' ) DO SET ltime=%%i %%j %%k
+        FOR /f "tokens=1,2,3" %%i IN ('dir /o:d /TW "%PROJ_LIB_DIR%\%lconfig%" ^| find "/"' ) DO (
+            SET valid_k=0
+            if "%%k" EQU "AM" SET valid_k=1
+            if "%%k" EQU "PM" SET valid_k=1
+            if "valid_k" EQU "1" (
+                SET ltime=%%i %%j %%k
+            ) else (
+                SET ltime=%%i %%j
+            )
+        )
     )
     IF "%max_time%" EQU "" (
         SET max_time=%ltime%
