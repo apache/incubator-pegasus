@@ -50,7 +50,7 @@ namespace test {
 }
 
 namespace dsn {
-    namespace replication{
+    namespace replication {
         class replication_checker;
         class test_checker;
     }
@@ -59,11 +59,14 @@ namespace dsn {
 class meta_service : public serverlet<meta_service>
 {
 public:
-    meta_service(server_state* state);
-    ~meta_service(void);
+    meta_service(const char* work_dir);
+    ~meta_service();
 
-    void start();
-    bool stop();
+    error_code start();
+    void stop();
+
+    const char* work_dir() const { return _work_dir.c_str(); }
+    const char* cluster_root() const { return _cluster_root.c_str(); }
 
 private:
     // partition server & client => meta server
@@ -89,8 +92,10 @@ private:
     friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
 
-    meta_server_failure_detector *_failure_detector;    
+    std::string                  _work_dir;
+    std::string                  _cluster_root;
     server_state                 *_state;
+    meta_server_failure_detector *_failure_detector;
     load_balancer                *_balancer;
     dsn::task_ptr                _balancer_timer;
     replication_options          _opts;

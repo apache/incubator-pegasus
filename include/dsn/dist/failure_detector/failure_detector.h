@@ -46,6 +46,8 @@ DEFINE_TASK_CODE(LPC_BEACON_CHECK, TASK_PRIORITY_HIGH, THREAD_POOL_FD)
 class failure_detector_callback
 {
 public:
+    virtual ~failure_detector_callback() {}
+
     // client side
     virtual void on_master_disconnected( const std::vector< ::dsn::rpc_address>& nodes ) = 0;
     virtual void on_master_connected( ::dsn::rpc_address node) = 0;
@@ -62,6 +64,7 @@ class failure_detector :
 {
 public:
     failure_detector();
+    virtual ~failure_detector() {}
 
     virtual void on_ping(const beacon_msg& beacon, ::dsn::rpc_replier<beacon_ack>& reply);
 

@@ -44,9 +44,10 @@ class distributed_lock_service_zookeeper: public distributed_lock_service, publi
 {
 public:
     explicit distributed_lock_service_zookeeper();
-
     virtual ~distributed_lock_service_zookeeper();
-    virtual error_code initialize() override;
+
+    virtual error_code initialize(const char* work_dir, const char* lock_root) override;
+
     virtual std::pair<task_ptr, task_ptr> lock(
         const std::string& lock_id,
         const std::string& myself_id,
@@ -85,8 +86,7 @@ private:
         }
     };
 
-    std::string _lock_root; // ${cluster_root}/lock
-    // real lock node path: ${cluster_root}/lock/${lock_id}/${LOCK_NODE_PREFIX}${i}
+    std::string _lock_root; // lock path: ${lock_root}/${lock_id}/${LOCK_NODE_PREFIX}${i}
 
     typedef std::unordered_map<lock_key, lock_struct_ptr, pair_hash> lock_map;
     utils::rw_lock_nr _service_lock;

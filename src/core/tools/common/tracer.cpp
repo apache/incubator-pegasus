@@ -66,7 +66,7 @@ namespace dsn {
                 break;
             case dsn_task_type_t::TASK_TYPE_RPC_REQUEST:
             {
-                auto tsk = (rpc_request_task*)this_;
+                rpc_request_task* tsk = (rpc_request_task*)this_;
                 ddebug("%s EXEC BEGIN, task_id = %016llx, %s => %s, rpc_id = %016llx",
                     this_->spec().name.c_str(),
                     this_->id(),
@@ -78,7 +78,7 @@ namespace dsn {
                 break;
             case dsn_task_type_t::TASK_TYPE_RPC_RESPONSE:
             {
-                auto tsk = (rpc_response_task*)this_;
+                rpc_response_task* tsk = (rpc_response_task*)this_;
                 ddebug("%s EXEC BEGIN, task_id = %016llx, %s => %s, rpc_id = %016llx",
                     this_->spec().name.c_str(),
                     this_->id(),

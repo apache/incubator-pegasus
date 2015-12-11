@@ -122,7 +122,7 @@ TEST(replication, log_file)
         temp_writer.write(str);
         writer->add(temp_writer.get_buffer());
 
-        auto task = lf->commit_log_block(
+        task_ptr task = lf->commit_log_block(
             *writer, offset, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0
             );
         task->wait();

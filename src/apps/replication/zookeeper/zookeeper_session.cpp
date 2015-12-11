@@ -66,7 +66,7 @@ int zookeeper_session::attach(
             nullptr,
             this,
             0);
-        dassert(_handle!=nullptr, "zookeeper session init failed");
+        dassert(_handle != nullptr, "zookeeper session init failed");
     }
 
     _watchers.push_back(watcher_object());
@@ -97,7 +97,7 @@ void zookeeper_session::dispatch_event(int type, int zstate, const char* path)
         });
     }
     {
-        if (ZOO_SESSION_EVENT!=type) {
+        if (ZOO_SESSION_EVENT != type) {
             utils::auto_write_lock l(_watcher_lock);
             _watchers.remove_if([path](const watcher_object& obj) {
                 return obj.watcher_path == path;
@@ -111,7 +111,7 @@ void zookeeper_session::visit(zoo_opcontext *ctx)
     ctx->_priv_session_ref = this;
     int &ec = ctx->_output.error;
 
-    if ( zoo_state(_handle)!=ZOO_CONNECTED_STATE ) {
+    if ( zoo_state(_handle) != ZOO_CONNECTED_STATE ) {
         ec = ZCONNECTIONLOSS;
         ctx->_callback_function(ctx);
         free_context(ctx);
