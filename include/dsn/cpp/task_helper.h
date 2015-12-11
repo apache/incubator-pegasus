@@ -213,7 +213,7 @@ namespace dsn
     // certain parameters to the task is known (e.g., error code after logging)
     // in thise case, we can use two staged computation task as this is.
     //
-    //    auto task = tasking::create_late_task(...);
+    //    task_ptr task = tasking::create_late_task(...);
     //    ...
     //    return task;
     //

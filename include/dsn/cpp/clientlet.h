@@ -103,7 +103,7 @@ namespace dsn
         }
 
         template<typename THandler>
-        inline ::dsn::ref_ptr< safe_late_task<THandler> > create_late_task(
+        inline safe_late_task<THandler>* create_late_task(
             dsn_task_code_t evt,
             THandler callback,
             int hash = 0,
@@ -111,7 +111,7 @@ namespace dsn
             )
         {
             dsn_task_t t;
-            ::dsn::ref_ptr< safe_late_task<THandler> > tsk = new safe_late_task<THandler>(callback);
+            auto tsk = new safe_late_task<THandler>(callback);
 
             tsk->add_ref(); // released in exec callback
             t = dsn_task_create_ex(evt, 
