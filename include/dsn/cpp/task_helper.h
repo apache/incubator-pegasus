@@ -213,7 +213,7 @@ namespace dsn
     // certain parameters to the task is known (e.g., error code after logging)
     // in thise case, we can use two staged computation task as this is.
     //
-    //    task_ptr task = tasking::create_late_task(...);
+    //    auto task = tasking::create_late_task(...);
     //    ...
     //    return task;
     //
@@ -240,7 +240,6 @@ namespace dsn
             if (r)
             {
                 _bound_handler = nullptr;
-                release_ref(); // added upon callback exec registration
             }
             return r;
         }
@@ -253,6 +252,12 @@ namespace dsn
             _bound_handler = binder(_handler);
             _handler = nullptr;
             dsn_task_call(native_handle(), delay_milliseconds);
+        }
+
+        static void on_cancel(void* task)
+        {
+            auto t = (safe_late_task<THandler>*)task;
+            t->release_ref(); // added upon callback exec registration
         }
 
         static void exec(void* task)

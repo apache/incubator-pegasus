@@ -203,9 +203,8 @@ task_ptr distributed_lock_service_zookeeper::unlock(
         handle = iter->second;
     }
     auto unlock_tsk = tasking::create_late_task<distributed_lock_service::err_callback>(cb_code, cb);
-    task_ptr ref_holder(unlock_tsk);
     tasking::enqueue(TASK_CODE_DLOCK, nullptr, std::bind(&lock_struct::unlock, handle, unlock_tsk), handle->hash());
-    return ref_holder;
+    return unlock_tsk;
 }
 
 task_ptr distributed_lock_service_zookeeper::cancel_pending_lock(
@@ -223,9 +222,8 @@ task_ptr distributed_lock_service_zookeeper::cancel_pending_lock(
         handle = iter->second;        
     }
     auto cancel_tsk = tasking::create_late_task<distributed_lock_service::lock_callback>(cb_code, cb);
-    task_ptr ref_holder(cancel_tsk);
     tasking::enqueue(TASK_CODE_DLOCK, nullptr, std::bind(&lock_struct::cancel_pending_lock, handle, cancel_tsk), handle->hash());
-    return ref_holder;
+    return cancel_tsk;
 }
 
 task_ptr distributed_lock_service_zookeeper::query_lock(
@@ -249,9 +247,8 @@ task_ptr distributed_lock_service_zookeeper::query_lock(
         return tasking::enqueue(cb_code, nullptr, std::bind(cb, ERR_OBJECT_NOT_FOUND, "", -1)); 
     else {
         auto query_tsk = tasking::create_late_task<distributed_lock_service::lock_callback>(cb_code, cb);
-        task_ptr ref_holder(query_tsk);
         tasking::enqueue(TASK_CODE_DLOCK, nullptr, std::bind(&lock_struct::query, handle, query_tsk), handle->hash() );
-        return ref_holder;
+        return query_tsk;
     }
 }
 
