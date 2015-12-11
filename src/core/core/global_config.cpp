@@ -277,9 +277,11 @@ service_app_spec::service_app_spec(const service_app_spec& r)
     ports_gap = r.ports_gap;
     run = r.run;
     dmodule = r.dmodule;
+    dmodule_bridge_arguments = r.dmodule_bridge_arguments;
     network_client_confs = r.network_client_confs;
     network_server_confs = r.network_server_confs;
     count = r.count;
+    data_dir = r.data_dir;
 }
 
 bool service_app_spec::init(
@@ -495,6 +497,7 @@ bool service_spec::init_app_specs()
                 app.name = (app.count > 1 ? (app.role_name + buf) : app.role_name);
                 app.id = ++app_id;
                 app.index = i;
+                app.data_dir = utils::filesystem::path_combine(data_dir, app.name);
 
                 // add app
                 app_specs.push_back(app);

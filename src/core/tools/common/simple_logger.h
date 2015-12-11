@@ -46,7 +46,7 @@ namespace dsn {
         class screen_logger : public logging_provider
         {
         public:
-            screen_logger();
+            screen_logger(const char* log_dir);
             virtual ~screen_logger(void);
 
             virtual void dsn_logv(const char *file,
@@ -69,7 +69,7 @@ namespace dsn {
         class simple_logger : public logging_provider
         {
         public:
-            simple_logger();
+            simple_logger(const char* log_dir);
             virtual ~simple_logger(void);
 
             virtual void dsn_logv(const char *file,
@@ -87,6 +87,7 @@ namespace dsn {
             void create_log_file();
 
         private:
+            std::string _log_dir;
             ::dsn::utils::ex_lock_nr _lock;
             FILE* _log;
             int _start_index;

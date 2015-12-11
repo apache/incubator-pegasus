@@ -66,10 +66,7 @@ replication_service_app::~replication_service_app(void)
 error_code replication_service_app::start(int argc, char** argv)
 {
     replication_options opts;
-    std::string app_name(argv[0]); 
-    
     opts.initialize();    
-    opts.working_dir = utils::filesystem::path_combine(opts.working_dir, app_name);
 
     _stub->initialize(opts);
     _stub->open_service();

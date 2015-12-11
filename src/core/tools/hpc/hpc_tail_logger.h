@@ -44,7 +44,7 @@ namespace dsn {
         class hpc_tail_logger : public logging_provider
         {
         public:
-            hpc_tail_logger();
+            hpc_tail_logger(const char* log_dir);
             virtual ~hpc_tail_logger(void);
 
             virtual void dsn_logv(const char *file,
@@ -60,9 +60,11 @@ namespace dsn {
 
         private:
             std::string search(const char* keyword, int back_seconds, int back_start_seconds, std::unordered_set<int>& target_threads);
-            
+            void hpc_tail_logs_dumpper();
+
         private:
             int _per_thread_buffer_bytes;
+            std::string _log_dir;
         };
     }
 }

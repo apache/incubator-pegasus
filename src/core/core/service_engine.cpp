@@ -250,6 +250,10 @@ error_code service_node::start()
 {
     error_code err = ERR_OK;
 
+    // init data dir
+    if (!dsn::utils::filesystem::path_exists(spec().data_dir))
+        dsn::utils::filesystem::create_directory(spec().data_dir);
+
     // init task engine    
     _computation = new task_engine(this);
     _computation->create(_app_spec.pools);    
@@ -394,7 +398,7 @@ void service_engine::init_before_toollets(const service_spec& spec)
 
     // init common providers (first half)
     _logging = factory_store<logging_provider>::create(
-        spec.logging_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr
+        spec.logging_factory_name.c_str(), PROVIDER_TYPE_MAIN, spec.dir_log.c_str()
         );
     _memory = factory_store<memory_provider>::create(
         spec.memory_factory_name.c_str(), PROVIDER_TYPE_MAIN
