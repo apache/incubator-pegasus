@@ -71,7 +71,7 @@ namespace dsn {
             }            
 # elif defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
             module_name = "lib" + module_name + ".so";
-            auto hmod = dlopen(module_name.c_str(), RTLD_LAZY);
+            auto hmod = dlopen(module_name.c_str(), RTLD_LAZY|RTLD_GLOBAL);
             if (nullptr == hmod)
             {
                 derror("load dynamic library '%s' failed, err = %s", module_name.c_str(), dlerror());
