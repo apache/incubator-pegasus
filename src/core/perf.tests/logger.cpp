@@ -72,7 +72,7 @@ template<typename TLOGGER>
 void logger_test(int thread_count, int record_count)
 {
     std::list<std::thread*> threads;
-    TLOGGER logger;
+    TLOGGER logger("./");
 
     uint64_t nts = dsn_now_ns();
     uint64_t nts_start = nts;

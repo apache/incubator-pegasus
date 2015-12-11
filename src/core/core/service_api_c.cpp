@@ -851,6 +851,11 @@ DSN_API bool dsn_mimic_app(const char* app_name, int index)
     return false;
 }
 
+DSN_API const char* dsn_get_current_app_data_dir()
+{
+    return ::dsn::task::get_current_node()->spec().data_dir.c_str();
+}
+
 DSN_API bool dsn_get_current_app_info(/*out*/ dsn_app_info* app_info)
 {
     auto cnode = ::dsn::task::get_current_node2();
@@ -862,6 +867,7 @@ DSN_API bool dsn_get_current_app_info(/*out*/ dsn_app_info* app_info)
         strncpy(app_info->role, cnode->spec().role_name.c_str(), sizeof(app_info->role));
         strncpy(app_info->type, cnode->spec().type.c_str(), sizeof(app_info->type));
         strncpy(app_info->name, cnode->spec().name.c_str(), sizeof(app_info->name));
+        strncpy(app_info->data_dir, cnode->spec().data_dir.c_str(), sizeof(app_info->data_dir));
         return true;
     }
     else
@@ -1014,23 +1020,32 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
 
     dsn_all.config_completed = true;
 
-    // setup coredump
-    auto& coredump_dir = spec.coredump_dir;
-    dassert(!dsn::utils::filesystem::file_exists(coredump_dir), "%s should not be a file.", coredump_dir.c_str());
-    if (!dsn::utils::filesystem::directory_exists(coredump_dir.c_str()))
+    // setup data dir
+    auto& data_dir = spec.data_dir;
+    dassert(!dsn::utils::filesystem::file_exists(data_dir), "%s should not be a file.", data_dir.c_str());
+    if (!dsn::utils::filesystem::directory_exists(data_dir.c_str()))
     {
-        if (!dsn::utils::filesystem::create_directory(coredump_dir))
+        if (!dsn::utils::filesystem::create_directory(data_dir))
         {
-            dassert(false, "Fail to create %s.", coredump_dir.c_str());
+            dassert(false, "Fail to create %s.", data_dir.c_str());
         }
     }
     std::string cdir;
-    if (!dsn::utils::filesystem::get_absolute_path(coredump_dir.c_str(), cdir))
+    if (!dsn::utils::filesystem::get_absolute_path(data_dir.c_str(), cdir))
     {
-        dassert(false, "Fail to get absolute path from %s.", coredump_dir.c_str());
+        dassert(false, "Fail to get absolute path from %s.", data_dir.c_str());
     }
-    ::dsn::utils::coredump::init(cdir.c_str());
+    spec.data_dir = cdir;
 
+    // setup coredump dir
+    spec.dir_coredump = ::dsn::utils::filesystem::path_combine(cdir, "coredumps");
+    dsn::utils::filesystem::create_directory(spec.dir_coredump);
+    ::dsn::utils::coredump::init(spec.dir_coredump.c_str());
+
+    // setup log dir
+    spec.dir_log = ::dsn::utils::filesystem::path_combine(cdir, "logs");
+    dsn::utils::filesystem::create_directory(spec.dir_log);
+    
     // init tools
     dsn_all.tool = ::dsn::utils::factory_store< ::dsn::tools::tool_app>::create(spec.tool.c_str(), 0, spec.tool.c_str());
     dsn_all.tool->install(spec);
@@ -1049,7 +1064,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
     // prepare minimum necessary
     ::dsn::service_engine::fast_instance().init_before_toollets(spec);
 
-    // init logging
+    // init logging    
     dsn_log_init();
 
     // init toollets

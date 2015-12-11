@@ -64,7 +64,6 @@ typedef std::unordered_map< ::dsn::rpc_address, dsn::task_ptr> node_tasks;
 class replication_options
 {
 public:
-    std::string working_dir;
     std::vector< ::dsn::rpc_address> meta_servers;
 
     int32_t prepare_timeout_ms_for_secondaries;

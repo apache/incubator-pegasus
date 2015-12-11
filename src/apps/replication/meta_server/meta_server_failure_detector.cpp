@@ -126,7 +126,7 @@ void meta_server_failure_detector::on_worker_connected(::dsn::rpc_address node)
 }
 
 DEFINE_TASK_CODE(LPC_META_SERVER_LEADER_LOCK_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_FD)
-DEFINE_TASK_CODE_RPC(RPC_CM_QUERY_LEADER_LOCK, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_CM_QUERY_LEADER_LOCK, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 DEFINE_TASK_CODE(LPC_CM_QUERY_LEADER_LOCK_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
 void meta_server_failure_detector::acquire_leader_lock()
@@ -153,7 +153,7 @@ void meta_server_failure_detector::acquire_leader_lock()
 
             query_leader_task = _lock_svc->query_lock(
                 _primary_lock_id,
-                RPC_CM_QUERY_LEADER_LOCK,
+                LPC_CM_QUERY_LEADER_LOCK,
                 [this, &query_leader_task](error_code ec, const std::string& owner_id, uint64_t version)
                 {
                     if (ec == ERR_OK)

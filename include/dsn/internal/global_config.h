@@ -93,6 +93,7 @@ struct service_app_spec
 {
     int                  id;    // global id for all roles, assigned by rDSN automatically, also named as "app_id"
     int                  index; // local index for the current role (1,2,3,...), also named as "role_index"
+    std::string          data_dir; // data dir for the app. it is auto-set as ${service_spec.data_dir}/${service_app_spec.name}.
     std::string          config_section; // [apps.${role_name}]
     std::string          role_name;  // role name of [apps.${role_name}], also named as "app_name"
     std::string          name;  // combined by role_name and role_index, also named as "app_full_name"
@@ -156,7 +157,7 @@ struct service_spec
 
     std::string                  tool;   // the main tool (only 1 is allowed for a time)
     std::list<std::string>       toollets; // toollets enabled compatible to the main tool
-    std::string                  coredump_dir; // to store core dump files
+    std::string                  data_dir; // to store all data/log/coredump etc.
     bool                         start_nfs;
     
     std::string                  timer_factory_name;
@@ -192,6 +193,10 @@ struct service_spec
     std::vector<threadpool_spec>  threadpool_specs;
     std::vector<service_app_spec> app_specs;
 
+    // auto-set
+    std::string                   dir_coredump;
+    std::string                   dir_log;
+
     service_spec() {}
     bool init();
     bool init_app_specs();
@@ -202,7 +207,7 @@ struct service_spec
 CONFIG_BEGIN(service_spec)
     CONFIG_FLD_STRING(tool, "", "use what tool to run this process, e.g., native or simulator")
     CONFIG_FLD_STRING_LIST(toollets, "use what toollets, e.g., tracer, profiler, fault_injector")
-    CONFIG_FLD_STRING(coredump_dir, "./coredump", "where to put the core dump files")
+    CONFIG_FLD_STRING(data_dir, "./data", "where to put the all the data/log/coredump, etc..")
     CONFIG_FLD(bool, bool, start_nfs, false, "whether to start nfs")
     CONFIG_FLD_STRING(timer_factory_name, "", "timer service provider")
     CONFIG_FLD_STRING(aio_factory_name, "", "asynchonous file system provider")

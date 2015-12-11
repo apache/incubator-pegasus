@@ -52,7 +52,7 @@ namespace dsn {
         class hpc_logger : public logging_provider
         {
         public:
-            hpc_logger();
+            hpc_logger(const char* log_dir);
             virtual ~hpc_logger(void);
 
             virtual void dsn_logv(const char *file,
@@ -78,6 +78,7 @@ namespace dsn {
         private:            
             bool        _stop_thread;
             std::thread _log_thread;
+            std::string _log_dir;
 
             // global buffer list
             std::condition_variable_any   _write_list_cond;
@@ -90,7 +91,7 @@ namespace dsn {
             int _per_thread_buffer_bytes;
             int _current_log_file_bytes;
 
-            // current write file
+            // current write file            
             std::ofstream *_current_log;
         };
     }

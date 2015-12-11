@@ -98,7 +98,7 @@ namespace dsn {
 
         ::dsn::error_code meta_service_app::start(int argc, char** argv)
         {
-            _state->initialize(name().c_str());
+            _state->initialize(dsn_get_current_app_data_dir());
             _service->start();
             return ERR_OK;
         }
