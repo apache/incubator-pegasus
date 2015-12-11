@@ -72,9 +72,7 @@ replication_options::replication_options()
     fd_beacon_interval_seconds = 3;
     fd_lease_seconds = 10;
     fd_grace_seconds = 15;
-
-    working_dir = ".";
-        
+            
     log_batch_buffer_KB_shared = 0;
     log_batch_buffer_KB_private = 4;
     log_pending_max_ms = 100;
@@ -244,11 +242,6 @@ void replication_options::initialize()
         "fd_grace_seconds", 
         fd_grace_seconds,
         "grace (seconds) assigned to remote FD slaves (grace > lease)"
-        );
-    working_dir = dsn_config_get_value_string("replication", 
-        "working_dir", 
-        working_dir.c_str(),
-        "root working directory for replication"
         );
     
     log_file_size_mb =

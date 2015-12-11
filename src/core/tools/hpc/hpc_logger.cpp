@@ -138,9 +138,10 @@ namespace dsn
             write_buffer_list(saved_list);
         }
 
-        hpc_logger::hpc_logger() 
-            : _stop_thread(false)
+        hpc_logger::hpc_logger(const char* log_dir) 
+            : logging_provider(log_dir), _stop_thread(false)
         {
+            _log_dir = std::string(log_dir);
             _per_thread_buffer_bytes = config()->get_value<int>(
                 "tools.hpc_logger",
                 "per_thread_buffer_bytes",
@@ -154,10 +155,9 @@ namespace dsn
 
             // check existing log files and decide start_index
             std::vector<std::string> sub_list;
-            std::string path = "./";
-            if (!dsn::utils::filesystem::get_subfiles(path, sub_list, false))
+            if (!dsn::utils::filesystem::get_subfiles(_log_dir, sub_list, false))
             {
-                dassert(false, "Fail to get subfiles in %s.", path.c_str());
+                dassert(false, "Fail to get subfiles in %s.", _log_dir.c_str());
             }
 
             for (auto& fpath : sub_list)
@@ -190,7 +190,7 @@ namespace dsn
         void hpc_logger::create_log_file()
         {
             std::stringstream log;
-            log << "log." << ++_index << ".txt";
+            log << _log_dir << "/log." << ++_index << ".txt";
             _current_log = new std::ofstream(log.str().c_str(), std::ofstream::out | std::ofstream::app | std::ofstream::binary);
             _current_log_file_bytes = 0;
 

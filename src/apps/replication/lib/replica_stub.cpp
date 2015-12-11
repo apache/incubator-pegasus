@@ -80,7 +80,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 
     // init dirs
     set_options(opts);
-    _dir = _options.working_dir;
+    _dir = std::string(dsn_get_current_app_data_dir());
     _primary_address = primary_address();
     
     if (clear)

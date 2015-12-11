@@ -84,6 +84,9 @@ private:
     void on_load_balance_timer();
     void on_config_changed(global_partition_id gpid);
 
+    // common routines
+    bool check_primary(dsn_message_t req);
+
 private:
     friend class meta_server_failure_detector;
     friend class ::dsn::replication::replication_checker;

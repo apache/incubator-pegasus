@@ -107,6 +107,7 @@ extern "C" {
 # define DSN_INVALID_HASH                  0xdeadbeef
 # define DSN_MAX_APP_TYPE_NAME_LENGTH      32
 # define DSN_MAX_APP_COUNT_IN_SAME_PROCESS 256
+# define DSN_MAX_PATH                      1024
 
 //------------------------------------------------------------------------------
 //
@@ -185,6 +186,7 @@ struct dsn_app_info
     char  role[DSN_MAX_APP_TYPE_NAME_LENGTH]; // app role name
     char  type[DSN_MAX_APP_TYPE_NAME_LENGTH]; // app type name
     char  name[DSN_MAX_APP_TYPE_NAME_LENGTH]; // app full name
+    char  data_dir[DSN_MAX_PATH];             // app data directory
 };
 
 // the following ctrl code are used by dsn_file_ctrl
@@ -298,6 +300,7 @@ extern DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init DEFAULT
 extern DSN_API void dsn_terminate();
 extern DSN_API int  dsn_get_all_apps(dsn_app_info* info_buffer, int count); // return real app count
 extern DSN_API bool dsn_get_current_app_info(/*out*/ dsn_app_info* app_info);
+extern DSN_API const char* dsn_get_current_app_data_dir();
 
 //
 // app roles must be registered (dsn_app_register_role)

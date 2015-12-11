@@ -97,13 +97,7 @@ namespace dsn {
 
         ::dsn::error_code meta_service_app::start(int /*argc*/, char** /*argv*/)
         {
-            std::string work_dir;
-            if (!dsn::utils::filesystem::get_absolute_path("./" + name(), work_dir))
-            {
-                derror("get absolute path failed");
-                return ERR_FILE_OPERATION_FAILED;
-            }
-            _service = new meta_service(work_dir.c_str());
+            _service = new meta_service(dsn_get_current_app_data_dir());
             return _service->start();
         }
 

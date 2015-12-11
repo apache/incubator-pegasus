@@ -98,7 +98,8 @@ namespace dsn {
             }
         }
 
-        screen_logger::screen_logger()
+        screen_logger::screen_logger(const char* log_dir)
+            : logging_provider(log_dir)
         {
             _short_header = dsn_config_get_value_bool("tools.screen_logger", "short_header",
                 true, "whether to use short header (excluding file/function etc.)");
@@ -133,8 +134,10 @@ namespace dsn {
             ::fflush(stdout);
         }
 
-        simple_logger::simple_logger() 
+        simple_logger::simple_logger(const char* log_dir)
+            : logging_provider(log_dir)
         {
+            _log_dir = std::string(log_dir);
             _start_index = 0;
             _index = 0;
             _lines = 0;
@@ -154,10 +157,9 @@ namespace dsn {
 
             // check existing log files
             std::vector<std::string> sub_list;
-            std::string path = "./";
-            if (!dsn::utils::filesystem::get_subfiles(path, sub_list, false))
+            if (!dsn::utils::filesystem::get_subfiles(_log_dir, sub_list, false))
             {
-                dassert(false, "Fail to get subfiles in %s.", path.c_str());
+                dassert(false, "Fail to get subfiles in %s.", _log_dir.c_str());
             }             
             for (auto& fpath : sub_list)
             {
@@ -192,7 +194,7 @@ namespace dsn {
             _lines = 0;
 
             std::stringstream str;
-            str << "log." << ++_index << ".txt";
+            str << _log_dir << "/log." << ++_index << ".txt";
             _log = ::fopen(str.str().c_str(), "w+");
 
             // TODO: move gc out of criticial path
