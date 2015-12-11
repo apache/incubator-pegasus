@@ -148,6 +148,20 @@ typedef void        (*dsn_aio_handler_t)(
                                 void*           // context when rd/wt is called
                                 );
 
+//
+// tasks can be cancelled. For languages such as C++, when there are explicit
+// resource release operations (e.g., ::free, release_ref()) in the task handlers,
+// cancellation will cause resource leak due to not-executed task handleers.
+// in order to support such scenario, rdsn provide dsn_task_cancelled_handler_t which
+// is executed when a task is cancelled. Note this callback does not have thread affinity
+// similar to task handlers above (which are configured to be executed in certain thread
+// pools or even a fixed thread). Therefore, it is developers' resposibility to ensure
+// this cancallation callback only does thread-insensitive operations (e.g., release_ref()).
+//
+// the void* context is shared with the context to the task handlers above
+//
+typedef void        (*dsn_task_cancelled_handler_t)(void*);
+
 // rDSN allows many apps in the same process for easy deployment and test
 // app ceate, start, and destroy callbacks
 typedef void*       (*dsn_app_create)(          // return app_context,
@@ -506,14 +520,14 @@ extern DSN_API void               dsn_task_tracker_wait_all(dsn_task_tracker_t t
 extern DSN_API dsn_task_t  dsn_task_create(
                             dsn_task_code_t code,               // task label
                             dsn_task_handler_t cb,              // callback function
-                            void* param,                        // param to the callback
+                            void* context,                      // context to the callback
                             int hash DEFAULT(DSN_INVALID_HASH), // hash to callback
                             dsn_task_tracker_t tracker DEFAULT(nullptr)
                             );
 extern DSN_API dsn_task_t  dsn_task_create_timer(
                             dsn_task_code_t code, 
                             dsn_task_handler_t cb, 
-                            void* param, 
+                            void* context, 
                             int hash,
                             int interval_milliseconds,         // timer period
                             dsn_task_tracker_t tracker DEFAULT(nullptr)
@@ -521,6 +535,31 @@ extern DSN_API dsn_task_t  dsn_task_create_timer(
 // repeated declarations later in correpondent rpc and file sections
 //extern DSN_API dsn_task_t  dsn_rpc_create_response_task(...);
 //extern DSN_API dsn_task_t  dsn_file_create_aio_task(...);
+
+//
+// task create api with on_cancel callback, see comments for 
+// dsn_task_cancelled_handler_t for details.
+//
+extern DSN_API dsn_task_t  dsn_task_create_ex(
+    dsn_task_code_t code,               // task label
+    dsn_task_handler_t cb,              // callback function
+    dsn_task_cancelled_handler_t on_cancel, 
+    void* context,                      // context to the two callbacks above
+    int hash DEFAULT(DSN_INVALID_HASH), // hash to callback
+    dsn_task_tracker_t tracker DEFAULT(nullptr)
+    );
+extern DSN_API dsn_task_t  dsn_task_create_timer_ex(
+    dsn_task_code_t code,
+    dsn_task_handler_t cb,
+    dsn_task_cancelled_handler_t on_cancel,
+    void* context,
+    int hash,
+    int interval_milliseconds,         // timer period
+    dsn_task_tracker_t tracker DEFAULT(nullptr)
+    );
+// repeated declarations later in correpondent rpc and file sections
+//extern DSN_API dsn_task_t  dsn_rpc_create_response_task_ex(...);
+//extern DSN_API dsn_task_t  dsn_file_create_aio_task_ex(...);
 
 //
 // common task 
@@ -704,10 +743,10 @@ extern DSN_API bool          dsn_rpc_register_handler(
                                 dsn_task_code_t code, 
                                 const char* name,
                                 dsn_rpc_request_handler_t cb, 
-                                void* param
+                                void* context
                                 );
 
-// return void* param on dsn_rpc_register_handler  
+// return void* context on dsn_rpc_register_handler  
 extern DSN_API void*         dsn_rpc_unregiser_handler(
                                 dsn_task_code_t code
                                 );
@@ -726,7 +765,15 @@ extern DSN_API void          dsn_rpc_forward(dsn_message_t request, dsn_address_
 extern DSN_API dsn_task_t    dsn_rpc_create_response_task(
                                 dsn_message_t request, 
                                 dsn_rpc_response_handler_t cb, 
-                                void* param, 
+                                void* context, 
+                                int reply_hash DEFAULT(DSN_INVALID_HASH),
+                                dsn_task_tracker_t tracker DEFAULT(nullptr)
+                                );
+extern DSN_API dsn_task_t    dsn_rpc_create_response_task_ex(
+                                dsn_message_t request, 
+                                dsn_rpc_response_handler_t cb, 
+                                dsn_task_cancelled_handler_t on_cancel,
+                                void* context, 
                                 int reply_hash DEFAULT(DSN_INVALID_HASH),
                                 dsn_task_tracker_t tracker DEFAULT(nullptr)
                                 );
@@ -786,7 +833,15 @@ extern DSN_API void*        dsn_file_native_handle(dsn_handle_t file);
 extern DSN_API dsn_task_t   dsn_file_create_aio_task(
                                 dsn_task_code_t code, 
                                 dsn_aio_handler_t cb, 
-                                void* param,
+                                void* context,
+                                int hash DEFAULT(0),
+                                dsn_task_tracker_t tracker DEFAULT(nullptr)
+                                );
+extern DSN_API dsn_task_t   dsn_file_create_aio_task_ex(
+                                dsn_task_code_t code, 
+                                dsn_aio_handler_t cb, 
+                                dsn_task_cancelled_handler_t on_cancel,
+                                void* context,
                                 int hash DEFAULT(0),
                                 dsn_task_tracker_t tracker DEFAULT(nullptr)
                                 );

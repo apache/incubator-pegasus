@@ -26,10 +26,11 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     task is the execution of a piece of sequence code, which completes
+ *     a meaningful application level task.
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -109,15 +110,18 @@ __thread uint16_t tls_dsn_lower32_task_id_mask = 0;
     tls_dsn.last_lower32_task_id = worker ? 0 : ((uint32_t)(++tls_dsn_lower32_task_id_mask)) << 16;
 }
 
-task::task(dsn_task_code_t code, int hash, service_node* node)
+task::task(dsn_task_code_t code, void* context, dsn_task_cancelled_handler_t on_cancel, int hash, service_node* node)
     : _state(TASK_STATE_READY)
 {
     _spec = task_spec::get(code);
+    _context = context;
+    _on_cancel = on_cancel;
     _wait_event.store(nullptr);
     _hash = hash;
     _delay_milliseconds = 0;
     _wait_for_cancel = false;
     _is_null = false;
+    _on_cancel = nullptr;    
     next = nullptr;
     
     if (node != nullptr)
@@ -344,6 +348,15 @@ bool task::cancel(bool wait_until_finished, /*out*/ bool* finished /*= nullptr*/
 
     if (succ)
     {
+        //
+        // TODO: pros and cons of executing on_cancel here
+        // or in exec_internal
+        //
+        if (_on_cancel)
+        {
+            _on_cancel(_context);
+        }
+
         spec().on_task_cancelled.execute(this);
         signal_waiters();
     }
@@ -415,11 +428,18 @@ void task::enqueue(task_worker_pool* pool)
     }
 }
 
-timer_task::timer_task(dsn_task_code_t code, dsn_task_handler_t cb, void* param, uint32_t interval_milliseconds, int hash, service_node* node)
-    : task(code, hash, node), 
+timer_task::timer_task(
+    dsn_task_code_t code, 
+    dsn_task_handler_t cb, 
+    void* context,
+    dsn_task_cancelled_handler_t on_cancel,
+    uint32_t interval_milliseconds, 
+    int hash, 
+    service_node* node
+    )
+    : task(code, context, on_cancel, hash, node),
     _interval_milliseconds(interval_milliseconds),
-    _cb(cb),
-    _param(param)
+    _cb(cb)
 {
     dassert (TASK_TYPE_COMPUTE == spec().type, "this must be a computation type task, please use DEFINE_TASK_CODE to define the task code");
 
@@ -431,7 +451,7 @@ void timer_task::exec()
 {
     task_state RUNNING_STATE = TASK_STATE_RUNNING;
     
-    _cb(_param);
+    _cb(_context);
 
     if (_interval_milliseconds > 0)
     {
@@ -443,7 +463,7 @@ void timer_task::exec()
 }
 
 rpc_request_task::rpc_request_task(message_ex* request, rpc_handler_ptr& h, service_node* node)
-    : task(dsn_task_code_t(request->local_rpc_code), request->header->client.hash, node), 
+    : task(dsn_task_code_t(request->local_rpc_code), nullptr, nullptr, request->header->client.hash, node), 
     _request(request),
     _handler(h)
 {
@@ -464,12 +484,18 @@ void rpc_request_task::enqueue()
     task::enqueue(node()->computation()->get_pool(spec().pool_code));
 }
 
-rpc_response_task::rpc_response_task(message_ex* request, dsn_rpc_response_handler_t cb, void* param, int hash, service_node* node)
-    : task(task_spec::get(request->local_rpc_code)->rpc_paired_code, 
+rpc_response_task::rpc_response_task(
+    message_ex* request, 
+    dsn_rpc_response_handler_t cb,
+    void* context, 
+    dsn_task_cancelled_handler_t on_cancel,
+    int hash, 
+    service_node* node
+    )
+    : task(task_spec::get(request->local_rpc_code)->rpc_paired_code, context, on_cancel,
            hash == 0 ? request->header->client.hash : hash, node)
 {
     _cb = cb;
-    _param = param;
     _is_null = (_cb == nullptr);
 
     set_error_code(ERR_IO_PENDING);
@@ -533,11 +559,17 @@ void rpc_response_task::enqueue()
     }
 }
 
-aio_task::aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash, service_node* node)
-    : task(code, hash, node)
+aio_task::aio_task(
+    dsn_task_code_t code, 
+    dsn_aio_handler_t cb, 
+    void* context, 
+    dsn_task_cancelled_handler_t on_cancel,
+    int hash,
+    service_node* node
+    )
+    : task(code, context, on_cancel, hash, node)
 {
     _cb = cb;
-    _param = param;
     _is_null = (_cb == nullptr);
 
     dassert (TASK_TYPE_AIO == spec().type, "task must be of AIO type, please use DEFINE_TASK_CODE_AIO to define the task code");

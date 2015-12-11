@@ -279,17 +279,34 @@ DSN_API uint32_t dsn_crc32_concatenate(uint32_t xy_init, uint32_t x_init, uint32
 // // TODO: what can be configured for a thread pool
 //
 //------------------------------------------------------------------------------
-DSN_API dsn_task_t dsn_task_create(dsn_task_code_t code, dsn_task_handler_t cb, void* param, int hash, dsn_task_tracker_t tracker)
+DSN_API dsn_task_t dsn_task_create(dsn_task_code_t code, dsn_task_handler_t cb, void* context, int hash, dsn_task_tracker_t tracker)
 {
-    auto t = new ::dsn::task_c(code, cb, param, hash);
+    auto t = new ::dsn::task_c(code, cb, context, nullptr, hash);
     t->set_tracker((dsn::task_tracker*)tracker);
     return t;
 }
 
 DSN_API dsn_task_t dsn_task_create_timer(dsn_task_code_t code, dsn_task_handler_t cb, 
-    void* param, int hash, int interval_milliseconds, dsn_task_tracker_t tracker)
+    void* context, int hash, int interval_milliseconds, dsn_task_tracker_t tracker)
 {
-    auto t = new ::dsn::timer_task(code, cb, param, interval_milliseconds, hash);
+    auto t = new ::dsn::timer_task(code, cb, context, nullptr, interval_milliseconds, hash);
+    t->set_tracker((dsn::task_tracker*)tracker);
+    return t;
+}
+
+DSN_API dsn_task_t dsn_task_create_ex(dsn_task_code_t code, dsn_task_handler_t cb, 
+    dsn_task_cancelled_handler_t on_cancel, void* context, int hash, dsn_task_tracker_t tracker)
+{
+    auto t = new ::dsn::task_c(code, cb, context, on_cancel, hash);
+    t->set_tracker((dsn::task_tracker*)tracker);
+    return t;
+}
+
+DSN_API dsn_task_t dsn_task_create_timer_ex(dsn_task_code_t code, dsn_task_handler_t cb,
+    dsn_task_cancelled_handler_t on_cancel, 
+    void* context, int hash, int interval_milliseconds, dsn_task_tracker_t tracker)
+{
+    auto t = new ::dsn::timer_task(code, cb, context, on_cancel, interval_milliseconds, hash);
     t->set_tracker((dsn::task_tracker*)tracker);
     return t;
 }
@@ -541,10 +558,21 @@ DSN_API void* dsn_rpc_unregiser_handler(dsn_task_code_t code)
     return (h != nullptr) ? h->parameter : nullptr;
 }
 
-DSN_API dsn_task_t dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, void* param, int reply_hash, dsn_task_tracker_t tracker)
+DSN_API dsn_task_t dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, 
+    void* context, int reply_hash, dsn_task_tracker_t tracker)
 {
     auto msg = ((::dsn::message_ex*)request);
-    auto t = new ::dsn::rpc_response_task(msg, cb, param, reply_hash);
+    auto t = new ::dsn::rpc_response_task(msg, cb, context, nullptr, reply_hash);
+    t->set_tracker((dsn::task_tracker*)tracker);
+    return t;
+}
+
+DSN_API dsn_task_t dsn_rpc_create_response_task_ex(dsn_message_t request, dsn_rpc_response_handler_t cb, 
+    dsn_task_cancelled_handler_t on_cancel,
+    void* context, int reply_hash, dsn_task_tracker_t tracker)
+{
+    auto msg = ((::dsn::message_ex*)request);
+    auto t = new ::dsn::rpc_response_task(msg, cb, context, on_cancel, reply_hash);
     t->set_tracker((dsn::task_tracker*)tracker);
     return t;
 }
@@ -657,9 +685,18 @@ DSN_API void* dsn_file_native_handle(dsn_handle_t file)
     return dfile->native_handle();
 }
 
-DSN_API dsn_task_t dsn_file_create_aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash, dsn_task_tracker_t tracker)
+DSN_API dsn_task_t dsn_file_create_aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* context, int hash, dsn_task_tracker_t tracker)
 {
-    auto t = new ::dsn::aio_task(code, cb, param, hash);
+    auto t = new ::dsn::aio_task(code, cb, context, nullptr, hash);
+    t->set_tracker((dsn::task_tracker*)tracker);
+    return t;
+}
+
+DSN_API dsn_task_t dsn_file_create_aio_task_ex(dsn_task_code_t code, dsn_aio_handler_t cb, 
+    dsn_task_cancelled_handler_t on_cancel,
+    void* context, int hash, dsn_task_tracker_t tracker)
+{
+    auto t = new ::dsn::aio_task(code, cb, context, on_cancel, hash);
     t->set_tracker((dsn::task_tracker*)tracker);
     return t;
 }
