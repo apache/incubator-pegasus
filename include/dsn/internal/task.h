@@ -110,7 +110,6 @@ public:
     virtual ~task();
         
     virtual void exec() = 0;
-    virtual void on_cancelled() {} // when the task is cancelled
 
     void                    exec_internal();    
     // return whether *this* cancel success, 
