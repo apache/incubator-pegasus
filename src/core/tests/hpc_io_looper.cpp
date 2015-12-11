@@ -169,7 +169,7 @@ TEST(tools_hpc, io_looper_timer)
 
     int* a = new int;
     *a = 1;
-    dsn::task_c* t = new dsn::task_c(LPC_AIO_TEST, timer_callback, a);
+    dsn::task_c* t = new dsn::task_c(LPC_AIO_TEST, timer_callback, a, nullptr);
     t->add_ref();
 
     t->set_delay(1000);
