@@ -30,6 +30,8 @@ set(INI_FILES "")
 file(GLOB
     INI_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/*.ini"
+    "${CMAKE_CURRENT_SOURCE_DIR}/run.sh"
+    "${CMAKE_CURRENT_SOURCE_DIR}/clear.sh"
     )
 
 # Extra files that will be installed

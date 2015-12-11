@@ -44,21 +44,22 @@
 # endif
 # define __TITLE__ "meta.service"
 
-meta_service::meta_service(const char* work_dir)
-: serverlet("meta_service"), _work_dir(work_dir), _state(nullptr),
-  _failure_detector(nullptr), _balancer(nullptr), _started(false)
+meta_service::meta_service()
+    : serverlet("meta_service"), _failure_detector(nullptr), _balancer(nullptr), _started(false)
 {
     _opts.initialize();
+    // create in constructor because it may be used in checker before started
+    _state = new server_state();
 }
 
 meta_service::~meta_service()
 {
-    stop();
 }
 
-error_code meta_service::start()
+error_code meta_service::start(const char* work_dir)
 {
     dassert(!_started, "meta service is already started");
+    _work_dir = work_dir;
 
     // get and normalize cluster_root
     std::string cluster_root = dsn_config_get_value_string(
@@ -77,7 +78,6 @@ error_code meta_service::start()
     }
     _cluster_root = current.empty() ? "/" : current;
 
-    _state = new server_state();
     error_code err = _state->initialize(_work_dir.c_str(), _cluster_root.c_str());
     if (err != ERR_OK)
     {
@@ -99,12 +99,6 @@ error_code meta_service::start()
     }
     ddebug("recover server state succeed");
 
-    _balancer = new load_balancer(_state);
-    // make sure the delay is larger than fd.grace to ensure 
-    // all machines are in the correct state (assuming connected initially)
-    tasking::enqueue(LPC_LBM_START, this, &meta_service::on_load_balance_start, 0, 
-        _opts.fd_grace_seconds * 1000);
-
     err = _failure_detector->start(
         _opts.fd_check_interval_seconds,
         _opts.fd_beacon_interval_seconds,
@@ -117,6 +111,12 @@ error_code meta_service::start()
         derror("start failure_detector failed, err = %s", err.to_string());
         return err;
     }
+
+    _balancer = new load_balancer(_state);
+    // make sure the delay is larger than fd.grace to ensure
+    // all machines are in the correct state (assuming connected initially)
+    tasking::enqueue(LPC_LBM_START, this, &meta_service::on_load_balance_start, 0,
+        _opts.fd_grace_seconds * 1000);
 
     // register rpc handlers
     register_rpc_handler(
@@ -149,8 +149,6 @@ error_code meta_service::start()
 
 void meta_service::stop()
 {
-    if (_state == nullptr) return;
-
     _started = false;
 
     unregister_rpc_handler(RPC_CM_QUERY_NODE_PARTITIONS);

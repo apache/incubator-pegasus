@@ -37,10 +37,12 @@ ROOT=`pwd`
 ##  - dsn.core.tests
 ##  - dsn.tests
 ##  - dsn.rep_tests.simple_kv
+##  - dsn.replication.simple_kv
 ##############################################
 TEST_MODULE='
 dsn.core.tests
 dsn.tests
+dsn.replication.simple_kv
 '
 
 # if clear

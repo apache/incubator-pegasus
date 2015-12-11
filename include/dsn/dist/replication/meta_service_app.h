@@ -62,7 +62,6 @@ namespace dsn {
         private:
             friend class ::dsn::replication::replication_checker;
             friend class ::dsn::replication::test::test_checker;
-            server_state*        _state;
             meta_service*        _service;
         };
 

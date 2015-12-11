@@ -59,10 +59,10 @@ namespace dsn {
 class meta_service : public serverlet<meta_service>
 {
 public:
-    meta_service(const char* work_dir);
-    ~meta_service();
+    meta_service();
+    virtual ~meta_service();
 
-    error_code start();
+    error_code start(const char* work_dir);
     void stop();
 
     const char* work_dir() const { return _work_dir.c_str(); }
