@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     helpers for easier task programing atop of C api
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Sep., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -158,9 +158,14 @@ namespace dsn
             if (r)
             {
                 _handler = nullptr;
-                release_ref(); // added upon callback exec registration
             }
             return r;
+        }
+
+        static void on_cancel(void* task)
+        {
+            safe_task* t = (safe_task*)task;
+            t->release_ref(); // added upon callback exec registration
         }
 
         static void exec(void* task)

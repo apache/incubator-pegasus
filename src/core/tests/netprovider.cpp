@@ -95,7 +95,7 @@ void rpc_client_session_send(rpc_session_ptr client_session)
     ::marshall(msg, std::string(buffer));
 
     wait_flag = 0;
-    rpc_response_task* t = new rpc_response_task(msg, response_handler, buffer);
+    rpc_response_task* t = new rpc_response_task(msg, response_handler, buffer, nullptr);
 
     client_session->net().engine()->matcher()->on_call(msg, t);
     client_session->send_message(msg);
@@ -176,7 +176,7 @@ TEST(tools_common, asio_udp_provider)
     ::marshall(msg, std::string(buffer));
 
     wait_flag = 0;
-    rpc_response_task* t = new rpc_response_task(msg, response_handler, buffer);
+    rpc_response_task* t = new rpc_response_task(msg, response_handler, buffer, nullptr);
 
     client->engine()->matcher()->on_call(msg, t);
     client->send_message(msg);

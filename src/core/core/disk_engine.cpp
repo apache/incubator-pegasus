@@ -265,14 +265,14 @@ class batch_write_io_task : public aio_task
 {
 public:
     batch_write_io_task(aio_task* tasks, blob& buffer)
-        : aio_task(LPC_AIO_BATCH_WRITE, nullptr, tasks)
+        : aio_task(LPC_AIO_BATCH_WRITE, nullptr, tasks, nullptr)
     {
         _buffer = buffer;
     }
     
     virtual void exec() override
     {
-        aio_task* tasks = (aio_task*)_param;
+        aio_task* tasks = (aio_task*)_context;
         auto df = (disk_file*)tasks->aio()->file_object;
         uint32_t sz;
 

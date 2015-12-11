@@ -1,5 +1,13 @@
 #!/bin/bash
 
+if [ -n "$DSN_ROOT"]
+then
+    export DSN_ROOT=`pwd`/install
+    echo export DSN_ROOT=$DSN_ROOT >> ~/.bashrc
+    echo export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:\$DSN_ROOT/lib >> ~/.bashrc
+    echo "================ THIS IS THE FIRST TIME REGISTER \$DSN_ROOT, please run source ~/.bashrc =========="
+fi
+
 CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=Debug"
 CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"
 #CMAKE_OPTIONS="$CMAKE_OPTIONS -DDSN_DEBUG_CMAKE=TRUE"
@@ -13,7 +21,7 @@ CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"
 #   cd boost_1_54_0
 #   ./bootstrap.sh --with-libraries=system,filesystem --with-toolset=gcc
 #   ./b2 toolset=gcc cxxflags="-std=c++11 -fPIC" -j8 -d0
-#   ./b2 install --prefix=`pwd`/output -d0
+#   ./b2 install --prefix=$DSN_ROOT -d0
 # And set BOOST_DIR as:
 #   export BOOST_DIR=/path/to/boost_1_54_0/output
 if [ -n "$BOOST_DIR" ]
@@ -33,7 +41,7 @@ then
     echo "Running cmake..."
     mkdir -p builder
     cd builder
-    cmake .. -DCMAKE_INSTALL_PREFIX=`pwd`/output $CMAKE_OPTIONS
+    cmake .. -DCMAKE_INSTALL_PREFIX=$DSN_ROOT $CMAKE_OPTIONS
     if [ $? -ne 0 ]
     then
         echo "ERROR: cmake failed"

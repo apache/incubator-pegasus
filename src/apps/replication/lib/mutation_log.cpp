@@ -778,8 +778,11 @@ void mutation_log::update_max_decrees(global_partition_id gpid, decree d)
     {
         tsk = new safe_task<aio_handler>(callback);
         tsk->add_ref(); // released in exec_aio
-        dsn_task_t t = dsn_file_create_aio_task(callback_code,
-            safe_task<aio_handler>::exec_aio, tsk, hash, callback_host->tracker());
+        dsn_task_t t = dsn_file_create_aio_task_ex(callback_code,
+            safe_task<aio_handler>::exec_aio,
+            safe_task<aio_handler>::on_cancel,
+            tsk, hash, callback_host->tracker()
+            );
         tsk->set_task_info(t);
         _pending_write_callbacks->push_back(tsk);
     }

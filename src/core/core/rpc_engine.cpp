@@ -65,7 +65,7 @@ namespace dsn {
     {
     public:
         rpc_timeout_task(rpc_client_matcher* matcher, uint64_t id, service_node* node) 
-            : task(LPC_RPC_TIMEOUT, 0, node)
+            : task(LPC_RPC_TIMEOUT, nullptr, nullptr, 0, node)
         {
             _matcher = matcher;
             _id = id;

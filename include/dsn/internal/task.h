@@ -100,7 +100,13 @@ class task :
     public extensible_object<task, 4>
 {
 public:
-    task(dsn_task_code_t code, int hash = 0, service_node* node = nullptr);
+    task(
+        dsn_task_code_t code, 
+        void* context, 
+        dsn_task_cancelled_handler_t on_cancel, 
+        int hash = 0, 
+        service_node* node = nullptr
+        );
     virtual ~task();
         
     virtual void exec() = 0;
@@ -154,6 +160,7 @@ protected:
     mutable std::atomic<task_state> _state;
     bool                   _is_null;
     error_code             _error;
+    void                   *_context; // the context for the task/on_cancel callbacks
 
 private:
     task(const task&);
@@ -166,6 +173,7 @@ private:
     task_spec              *_spec;
     service_node           *_node;
     trackable_task         _context_tracker; // when tracker is gone, the task is cancelled automatically
+    dsn_task_cancelled_handler_t _on_cancel;
 
 public:
     // used by task queue only
@@ -175,21 +183,26 @@ public:
 class task_c : public task
 {
 public:
-    task_c(dsn_task_code_t code, dsn_task_handler_t cb, void* param, int hash = 0, service_node* node = nullptr)
-        : task(code, hash, node)
+    task_c(
+        dsn_task_code_t code,
+        dsn_task_handler_t cb, 
+        void* context, 
+        dsn_task_cancelled_handler_t on_cancel,
+        int hash = 0, 
+        service_node* node = nullptr
+        )
+        : task(code, context, on_cancel, hash, node)
     {
         _cb = cb;
-        _param = param;
     }
 
     virtual void exec() override
     {
-        _cb(_param);
+        _cb(_context);
     }
 
 private:
     dsn_task_handler_t _cb;
-    void               *_param;
 };
 
 
@@ -198,13 +211,20 @@ private:
 class timer_task : public task
 {
 public:
-    timer_task(dsn_task_code_t code, dsn_task_handler_t cb, void* param, uint32_t interval_milliseconds, int hash = 0, service_node* node = nullptr);
+    timer_task(
+        dsn_task_code_t code, 
+        dsn_task_handler_t cb, 
+        void* context, 
+        dsn_task_cancelled_handler_t on_cancel, 
+        uint32_t interval_milliseconds,
+        int hash = 0, 
+        service_node* node = nullptr
+        );
     virtual void exec();
     
 private:
     uint32_t           _interval_milliseconds;
     dsn_task_handler_t _cb;
-    void*              _param;
 };
 
 //----------------- rpc task -------------------------------------------------------
@@ -267,7 +287,14 @@ protected:
 class rpc_response_task : public task
 {
 public:
-    rpc_response_task(message_ex* request, dsn_rpc_response_handler_t cb, void* param, int hash = 0, service_node* node = nullptr);
+    rpc_response_task(
+        message_ex* request, 
+        dsn_rpc_response_handler_t cb,
+        void* context, 
+        dsn_task_cancelled_handler_t on_cancel, 
+        int hash = 0, 
+        service_node* node = nullptr
+        );
     ~rpc_response_task();
 
     void             enqueue(error_code err, message_ex* reply);
@@ -279,7 +306,7 @@ public:
     {
         if (_cb)
         {
-            _cb(_error.get(), _request, _response, _param);
+            _cb(_error.get(), _request, _response, _context);
         }
         else
         {
@@ -292,7 +319,6 @@ private:
     message_ex*                _response;
     task_worker_pool *         _caller_pool;
     dsn_rpc_response_handler_t _cb;
-    void*                      _param;
 
     friend class rpc_engine;    
 };
@@ -328,7 +354,14 @@ public:
 class aio_task : public task
 {
 public:
-    aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, void* param, int hash = 0, service_node* node = nullptr);
+    aio_task(
+        dsn_task_code_t code,
+        dsn_aio_handler_t cb, 
+        void* context, 
+        dsn_task_cancelled_handler_t on_cancel, 
+        int hash = 0,
+        service_node* node = nullptr
+        );
     ~aio_task();
 
     void            enqueue(error_code err, size_t transferred_size);
@@ -364,7 +397,7 @@ public:
     {
         if (nullptr != _cb)
         {
-            _cb(_error.get(), _transferred_size, _param);
+            _cb(_error.get(), _transferred_size, _context);
         }
         else
         {
@@ -373,12 +406,11 @@ public:
     }
 
     std::vector<dsn_file_buffer_t> _unmerged_write_buffers;
-    blob                      _merged_write_buffer_holder;
+    blob                           _merged_write_buffer_holder;
 protected:
     disk_aio*         _aio;
     size_t            _transferred_size;
     dsn_aio_handler_t _cb;
-    void*             _param;
 };
 
 // ------------------------ inline implementations --------------------

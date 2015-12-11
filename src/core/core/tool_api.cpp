@@ -46,7 +46,7 @@ namespace dsn {
     {
     public:
         service_control_task(service_node* node, bool start, bool cleanup = false)
-            : _node(node), task(LPC_CONTROL_SERVICE_APP, 0, node), _start(start), _cleanup(cleanup)
+            : _node(node), task(LPC_CONTROL_SERVICE_APP, nullptr, nullptr, 0, node), _start(start), _cleanup(cleanup)
         {
         }
 
