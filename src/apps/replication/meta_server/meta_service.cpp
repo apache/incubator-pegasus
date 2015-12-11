@@ -86,6 +86,10 @@ error_code meta_service::start(const char* work_dir)
     }
     ddebug("init server state succeed");
 
+    // should register rpc handlers before acquiring leader lock, so that this meta service
+    // can tell others who is the current leader
+    register_rpc_handlers();
+
     _failure_detector = new meta_server_failure_detector(_state, this);
     // become leader
     _failure_detector->acquire_leader_lock();
@@ -118,7 +122,12 @@ error_code meta_service::start(const char* work_dir)
     tasking::enqueue(LPC_LBM_START, this, &meta_service::on_load_balance_start, 0,
         _opts.fd_grace_seconds * 1000);
 
-    // register rpc handlers
+    ddebug("start meta_service succeed, cluster_root = %s, work_dir = %s", _cluster_root.c_str(), _work_dir.c_str());
+    return ERR_OK;
+}
+
+void meta_service::register_rpc_handlers()
+{
     register_rpc_handler(
         RPC_CM_QUERY_NODE_PARTITIONS,
         "RPC_CM_QUERY_NODE_PARTITIONS",
@@ -142,9 +151,6 @@ error_code meta_service::start(const char* work_dir)
         "RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND",
         &meta_service::on_modify_replica_config_explictly
         );
-
-    ddebug("start meta_service succeed, cluster_root = %s, work_dir = %s", _cluster_root.c_str(), _work_dir.c_str());
-    return ERR_OK;
 }
 
 void meta_service::stop()

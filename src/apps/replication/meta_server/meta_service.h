@@ -69,6 +69,8 @@ public:
     const char* cluster_root() const { return _cluster_root.c_str(); }
 
 private:
+    void register_rpc_handlers();
+
     // partition server & client => meta server
     // query partition configuration
     void on_query_configuration_by_node(dsn_message_t req);
