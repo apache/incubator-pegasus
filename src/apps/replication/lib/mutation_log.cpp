@@ -1363,7 +1363,7 @@ error_code log_file::read_next_log_block(int64_t local_offset, /*out*/::dsn::blo
     dassert (_is_read, "log file must be of read mode");
 
     log_block_header hdr;
-    auto tsk = file::read(_handle, reinterpret_cast<char*>(&hdr), static_cast<int>(sizeof(log_block_header)),
+    task_ptr tsk = file::read(_handle, reinterpret_cast<char*>(&hdr), static_cast<int>(sizeof(log_block_header)),
         local_offset, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr);
     tsk->wait();
 
@@ -1472,7 +1472,7 @@ std::shared_ptr<log_block> log_file::prepare_log_block() const
             };
     });
 
-    auto task = file::write_vector(
+    task_ptr task = file::write_vector(
         _handle,
         buffer_vector.get(),
         block.data().size(),

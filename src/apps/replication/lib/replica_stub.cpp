@@ -906,7 +906,7 @@ void replica_stub::on_gc()
         }
         else 
         {
-            auto task = tasking::enqueue(LPC_OPEN_REPLICA, this, std::bind(&replica_stub::open_replica, this, app_type, gpid, req));
+            task_ptr task = tasking::enqueue(LPC_OPEN_REPLICA, this, std::bind(&replica_stub::open_replica, this, app_type, gpid, req));
             _opening_replicas[gpid] = task;
             _replicas_lock.unlock();
             return task;
@@ -961,7 +961,7 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
 
     if (remove_replica(r))
     {
-        auto task = tasking::enqueue(LPC_CLOSE_REPLICA, this, 
+        task_ptr task = tasking::enqueue(LPC_CLOSE_REPLICA, this,
             std::bind(&replica_stub::close_replica, this, r), 
             0, 
             r->status() == PS_ERROR ? 0 : _options.gc_memory_replica_interval_ms
@@ -1073,7 +1073,7 @@ void replica_stub::close()
         zauto_lock l(_replicas_lock);    
         while (_closing_replicas.empty() == false)
         {
-            auto task = _closing_replicas.begin()->second.first;
+            task_ptr task = _closing_replicas.begin()->second.first;
             _replicas_lock.unlock();
 
             task->wait();
@@ -1084,7 +1084,7 @@ void replica_stub::close()
 
         while (_opening_replicas.empty() == false)
         {
-            auto task = _opening_replicas.begin()->second;
+            task_ptr task = _opening_replicas.begin()->second;
             _replicas_lock.unlock();
 
             task->cancel(true);

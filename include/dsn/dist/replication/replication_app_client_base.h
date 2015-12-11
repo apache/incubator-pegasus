@@ -80,7 +80,7 @@ namespace dsn { namespace replication {
             
             dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds, 0);
             
-            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
+            task_ptr task = ::dsn::rpc::internal_use_only::create_rpc_call(
                 msg,
                 req,
                 owner,
@@ -112,7 +112,7 @@ namespace dsn { namespace replication {
             
             dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds, 0);
             
-            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
+            task_ptr task = ::dsn::rpc::internal_use_only::create_rpc_call(
                 msg,
                 req,
                 owner,
@@ -145,7 +145,7 @@ namespace dsn { namespace replication {
             
             dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds, 0);
             
-            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
+            task_ptr task = ::dsn::rpc::internal_use_only::create_rpc_call(
                 msg,
                 owner,
                 callback,
@@ -177,7 +177,7 @@ namespace dsn { namespace replication {
             
             dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_WRITE, timeout_milliseconds, 0);
             
-            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
+            task_ptr task = ::dsn::rpc::internal_use_only::create_rpc_call(
                 msg,
                 callback,
                 context,
@@ -211,7 +211,7 @@ namespace dsn { namespace replication {
             
             dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds, 0);
             
-            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
+            task_ptr task = ::dsn::rpc::internal_use_only::create_rpc_call(
                 msg,
                 req,
                 owner,
@@ -245,7 +245,7 @@ namespace dsn { namespace replication {
             
             dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds, 0);
             
-            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
+            task_ptr task = ::dsn::rpc::internal_use_only::create_rpc_call(
                 msg,
                 req,
                 owner,
@@ -280,7 +280,7 @@ namespace dsn { namespace replication {
             
             dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds, 0);
             
-            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
+            task_ptr task = ::dsn::rpc::internal_use_only::create_rpc_call(
                 msg,
                 owner,
                 callback,
@@ -315,7 +315,7 @@ namespace dsn { namespace replication {
             
             dsn_message_t msg = dsn_msg_create_request(RPC_REPLICATION_CLIENT_READ, timeout_milliseconds, 0);
             
-            auto task = ::dsn::rpc::internal_use_only::create_rpc_call(
+            task_ptr task = ::dsn::rpc::internal_use_only::create_rpc_call(
                 msg,
                 callback,
                 context,
