@@ -6,9 +6,9 @@ if [ $? -ne 0 ]; then
     echo "run dsn.tests failed"
     echo "---- ls ----"
     ls -l
-    if [ -f log.1.txt ]; then
+    if find . -name log.1.txt; then
         echo "---- tail -n 200 log.1.txt ----"
-        tail -n 200 log.1.txt
+        tail -n 200 `find . -name log.1.txt`
     fi
     if [ -f core ]; then
         echo "---- gdb ./dsn.tests core ----"
