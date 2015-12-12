@@ -45,26 +45,44 @@
 
 meta_server_failure_detector::meta_server_failure_detector(server_state* state, meta_service* svc)
 {
+    _is_primary = false;
     _state = state;
     _svc = svc;
-    _is_primary = false;
 
-    const char* distributed_lock_service_name = dsn_config_get_value_string(
+    const char* distributed_lock_service_type = dsn_config_get_value_string(
         "meta_server",
-        "distributed_lock_service_name",
+        "distributed_lock_service_type",
         "distributed_lock_service_simple",
-        "the distributed_lock_service provider name"
+        "distributed_lock_service provider type"
+        );
+    const char* distributed_lock_service_parameters = dsn_config_get_value_string(
+        "meta_server",
+        "distributed_lock_service_parameters",
+        "",
+        "distributed_lock_service provider parameters"
         );
 
+    // prepare parameters
+    std::vector<std::string> args;
+    dsn::utils::split_args(distributed_lock_service_parameters, args);
+    int argc = static_cast<int>(args.size());
+    const char* args_ptr[argc];
+    for (int i = argc - 1; i >= 0; i--)
+    {
+        args_ptr[i] = ((char*)args[i].c_str());
+    }
+
+    // create lock service
     _lock_svc = dsn::utils::factory_store< ::dsn::dist::distributed_lock_service>::create(
-        distributed_lock_service_name,
+        distributed_lock_service_type,
         PROVIDER_TYPE_MAIN
         );
-    std::string lock_root = svc->cluster_root() + std::string("/lock");
-    auto err = _lock_svc->initialize(svc->work_dir(), lock_root.c_str());
-    dassert(err == ERR_OK, "init lock service failed: %s", err.to_string());
+    error_code err = _lock_svc->initialize(argc, args_ptr);
+    dassert(err == ERR_OK, "init distributed_lock_service failed, err = %s", err.to_string());
     _primary_lock_id = "dsn.meta.server.leader";
     _local_owner_id = primary_address().to_string();
+
+    ddebug("init meta_server_failure_detector succeed");
 }
 
 meta_server_failure_detector::~meta_server_failure_detector()

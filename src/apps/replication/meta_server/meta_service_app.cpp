@@ -100,7 +100,7 @@ namespace dsn {
 
         ::dsn::error_code meta_service_app::start(int /*argc*/, char** /*argv*/)
         {
-            return _service->start(dsn_get_current_app_data_dir());
+            return _service->start();
         }
 
         void meta_service_app::stop(bool /*cleanup*/)

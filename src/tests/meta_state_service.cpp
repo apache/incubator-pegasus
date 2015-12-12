@@ -9,7 +9,7 @@ TEST(meta_state_service_simple, basics)
 {
     //environment
     auto service = new ::dsn::dist::meta_state_service_simple();
-    service->initialize("./");
+    service->initialize(0, nullptr);
     //bondary check
 #define expect_ok  [](error_code ec){EXPECT_TRUE(ec == ERR_OK);}
 #define expect_err [](error_code ec){EXPECT_FALSE(ec == ERR_OK);}
@@ -38,7 +38,7 @@ TEST(meta_state_service_simple, basics)
     {
         delete service;
         service = new ::dsn::dist::meta_state_service_simple();
-        service->initialize("./");
+        service->initialize(0, nullptr);
         service->node_exist("/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)->wait();
         service->node_exist("/1/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_err)->wait();
         service->delete_node("/1", false, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)->wait();

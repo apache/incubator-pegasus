@@ -102,8 +102,8 @@ private:
     zlock         _primary_address_lock;
     rpc_address   _primary_address;
 
-    server_state *_state;
-    meta_service *_svc;
+    server_state  *_state;
+    meta_service  *_svc;
 
     ::dsn::dist::distributed_lock_service *_lock_svc;
     task_ptr    _lock_grant_task;

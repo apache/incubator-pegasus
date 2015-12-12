@@ -85,12 +85,19 @@ void distributed_lock_service_zookeeper::erase(const lock_key& key)
     _zookeeper_locks.erase(key);
 }
 
-error_code distributed_lock_service_zookeeper::initialize(const char* /*work_dir*/, const char* lock_root)
+error_code distributed_lock_service_zookeeper::initialize(int argc, const char** argv)
 {
+    if (argc == 0)
+    {
+        derror("need parameters: <lock_root>");
+        return ERR_INVALID_PARAMETERS;
+    }
+    const char* lock_root = argv[0];
+
     dsn_app_info node;
     if (!dsn_get_current_app_info(&node))
     {
-        derror("get current app info failed, can not init zookeeper lock");
+        derror("get current app info failed, can not init distributed_lock_service_zookeeper");
         return ERR_CORRUPTION;
     }
 
@@ -101,7 +108,8 @@ error_code distributed_lock_service_zookeeper::initialize(const char* /*work_dir
     if (_zoo_state != ZOO_CONNECTED_STATE)
     {
         _waiting_attach.wait_for( zookeeper_session_mgr::fast_instance().timeout() );
-        if (_zoo_state != ZOO_CONNECTED_STATE) {
+        if (_zoo_state != ZOO_CONNECTED_STATE)
+        {
             dwarn("attach to zookeeper session timeout, distributed lock service initialized failed");
             return ERR_TIMEOUT;
         }
@@ -112,8 +120,6 @@ error_code distributed_lock_service_zookeeper::initialize(const char* /*work_dir
     std::string current = "";
     for (auto& str: slices)
     {
-        if (str.empty())
-            continue;
         utils::notify_event e;
         int zerr;
         current = current + "/" + str;
@@ -135,8 +141,8 @@ error_code distributed_lock_service_zookeeper::initialize(const char* /*work_dir
         }
     }
     _lock_root = current.empty() ? "/" : current;
-    ddebug("init distributed_lock_service_zookeeper succeed, lock_root = %s", _lock_root.c_str());
 
+    ddebug("init distributed_lock_service_zookeeper succeed, lock_root = %s", _lock_root.c_str());
     // TODO: add_ref() here because we need add_ref/release_ref in callbacks, so this object should be
     // stored in ref_ptr to avoid memory leak.
     add_ref();

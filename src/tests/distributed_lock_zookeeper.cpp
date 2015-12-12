@@ -31,7 +31,8 @@ public:
         while (!ss_start) std::this_thread::sleep_for(std::chrono::seconds(1));
         
         _dlock_service = new distributed_lock_service_zookeeper();
-        _dlock_service->initialize("./", "/dsn/tests/simple_adder_server");
+        const char* args[] = { "/dsn/tests/simple_adder_server" };
+        dassert(_dlock_service->initialize(1, args) == ERR_OK, "");
         
         while (!ss_finish) {
             std::pair<task_ptr, task_ptr> task_pair = _dlock_service->lock(
@@ -115,7 +116,8 @@ TEST(distributed_lock_service_zookeeper, simple_lock_unlock)
 TEST(distributed_lock_service_zookeeper, abnormal_api_call)
 {
     ref_ptr<distributed_lock_service_zookeeper> dlock_svc(new distributed_lock_service_zookeeper());
-    ASSERT_TRUE( ERR_OK == dlock_svc->initialize("./", "/dsn/tests/abnormal_api_call") );
+    const char* args[] = { "/dsn/tests/simple_adder_server" };
+    ASSERT_EQ(ERR_OK, dlock_svc->initialize(1, args));
     
     std::string lock_id = "test_lock2";
     std::string my_id = "test_myid";

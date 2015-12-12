@@ -57,10 +57,14 @@ meta_state_service_zookeeper::~meta_state_service_zookeeper()
     }
 }
 
-error_code meta_state_service_zookeeper::initialize(const char* /*work_dir*/)
+error_code meta_state_service_zookeeper::initialize(int /*argc*/, const char** /*argv*/)
 {
     dsn_app_info node;
-    dsn_get_current_app_info(&node);
+    if (!dsn_get_current_app_info(&node))
+    {
+        derror("get current app info failed, can not init meta_state_service_zookeeper");
+        return ERR_CORRUPTION;
+    }
 
     _session = zookeeper_session_mgr::instance().get_session(&node);
     _zoo_state = _session->attach(this, std::bind(&meta_state_service_zookeeper::on_zoo_session_evt,
@@ -73,6 +77,7 @@ error_code meta_state_service_zookeeper::initialize(const char* /*work_dir*/)
             return ERR_TIMEOUT;
     }
 
+    ddebug("init meta_state_service_zookeeper succeed");
     // TODO: add_ref() here because we need add_ref/release_ref in callbacks, so this object should be
     // stored in ref_ptr to avoid memory leak.
     add_ref();
