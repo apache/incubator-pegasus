@@ -72,7 +72,7 @@ class server_state :
 {
 public:
     server_state();
-    ~server_state();
+    virtual ~server_state();
 
     // initialize server state
     error_code initialize(const char* work_dir, const char* cluster_root);

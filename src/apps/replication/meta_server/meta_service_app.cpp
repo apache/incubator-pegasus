@@ -66,6 +66,9 @@ namespace dsn {
 
         meta_service_app::meta_service_app()
         {
+            // create in constructor because it may be used in checker before started
+            _service = new meta_service();
+
             register_component_provider(
                 "distributed_lock_service_simple",
                 ::dsn::dist::distributed_lock_service::create<dsn::dist::distributed_lock_service_simple>
@@ -97,8 +100,7 @@ namespace dsn {
 
         ::dsn::error_code meta_service_app::start(int /*argc*/, char** /*argv*/)
         {
-            _service = new meta_service(dsn_get_current_app_data_dir());
-            return _service->start();
+            return _service->start(dsn_get_current_app_data_dir());
         }
 
         void meta_service_app::stop(bool /*cleanup*/)

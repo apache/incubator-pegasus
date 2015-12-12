@@ -9,8 +9,8 @@ for test_case in `ls config-test*.ini`; do
         echo "---- ls ----"
         ls -l
         if find . -name log.1.txt; then
-            echo "---- tail -n 200 log.1.txt ----"
-            tail -n 200 `find . -name log.1.txt`
+            echo "---- tail -n 100 log.1.txt ----"
+            tail -n 100 `find . -name log.1.txt`
         fi
         if [ -f core ]; then
             echo "---- gdb ./dsn.core.tests core ----"

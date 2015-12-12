@@ -59,16 +59,18 @@ namespace dsn {
 class meta_service : public serverlet<meta_service>
 {
 public:
-    meta_service(const char* work_dir);
-    ~meta_service();
+    meta_service();
+    virtual ~meta_service();
 
-    error_code start();
+    error_code start(const char* work_dir);
     void stop();
 
     const char* work_dir() const { return _work_dir.c_str(); }
     const char* cluster_root() const { return _cluster_root.c_str(); }
 
 private:
+    void register_rpc_handlers();
+
     // partition server & client => meta server
     // query partition configuration
     void on_query_configuration_by_node(dsn_message_t req);

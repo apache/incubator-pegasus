@@ -44,21 +44,22 @@
 # endif
 # define __TITLE__ "meta.service"
 
-meta_service::meta_service(const char* work_dir)
-: serverlet("meta_service"), _work_dir(work_dir), _state(nullptr),
-  _failure_detector(nullptr), _balancer(nullptr), _started(false)
+meta_service::meta_service()
+    : serverlet("meta_service"), _failure_detector(nullptr), _balancer(nullptr), _started(false)
 {
     _opts.initialize();
+    // create in constructor because it may be used in checker before started
+    _state = new server_state();
 }
 
 meta_service::~meta_service()
 {
-    stop();
 }
 
-error_code meta_service::start()
+error_code meta_service::start(const char* work_dir)
 {
     dassert(!_started, "meta service is already started");
+    _work_dir = work_dir;
 
     // get and normalize cluster_root
     std::string cluster_root = dsn_config_get_value_string(
@@ -77,7 +78,6 @@ error_code meta_service::start()
     }
     _cluster_root = current.empty() ? "/" : current;
 
-    _state = new server_state();
     error_code err = _state->initialize(_work_dir.c_str(), _cluster_root.c_str());
     if (err != ERR_OK)
     {
@@ -85,6 +85,10 @@ error_code meta_service::start()
         return err;
     }
     ddebug("init server state succeed");
+
+    // should register rpc handlers before acquiring leader lock, so that this meta service
+    // can tell others who is the current leader
+    register_rpc_handlers();
 
     _failure_detector = new meta_server_failure_detector(_state, this);
     // become leader
@@ -99,12 +103,6 @@ error_code meta_service::start()
     }
     ddebug("recover server state succeed");
 
-    _balancer = new load_balancer(_state);
-    // make sure the delay is larger than fd.grace to ensure 
-    // all machines are in the correct state (assuming connected initially)
-    tasking::enqueue(LPC_LBM_START, this, &meta_service::on_load_balance_start, 0, 
-        _opts.fd_grace_seconds * 1000);
-
     err = _failure_detector->start(
         _opts.fd_check_interval_seconds,
         _opts.fd_beacon_interval_seconds,
@@ -118,7 +116,18 @@ error_code meta_service::start()
         return err;
     }
 
-    // register rpc handlers
+    _balancer = new load_balancer(_state);
+    // make sure the delay is larger than fd.grace to ensure
+    // all machines are in the correct state (assuming connected initially)
+    tasking::enqueue(LPC_LBM_START, this, &meta_service::on_load_balance_start, 0,
+        _opts.fd_grace_seconds * 1000);
+
+    ddebug("start meta_service succeed, cluster_root = %s, work_dir = %s", _cluster_root.c_str(), _work_dir.c_str());
+    return ERR_OK;
+}
+
+void meta_service::register_rpc_handlers()
+{
     register_rpc_handler(
         RPC_CM_QUERY_NODE_PARTITIONS,
         "RPC_CM_QUERY_NODE_PARTITIONS",
@@ -142,15 +151,10 @@ error_code meta_service::start()
         "RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND",
         &meta_service::on_modify_replica_config_explictly
         );
-
-    ddebug("start meta_service succeed, cluster_root = %s, work_dir = %s", _cluster_root.c_str(), _work_dir.c_str());
-    return ERR_OK;
 }
 
 void meta_service::stop()
 {
-    if (_state == nullptr) return;
-
     _started = false;
 
     unregister_rpc_handler(RPC_CM_QUERY_NODE_PARTITIONS);
