@@ -107,10 +107,11 @@ error_code server_state::initialize()
     std::vector<std::string> args;
     dsn::utils::split_args(meta_state_service_parameters, args);
     int argc = static_cast<int>(args.size());
-    const char* args_ptr[argc];
+    std::vector<const char*> args_ptr;
+    args_ptr.resize(argc);
     for (int i = argc - 1; i >= 0; i--)
     {
-        args_ptr[i] = ((char*)args[i].c_str());
+        args_ptr[i] = args[i].c_str();
     }
 
     // create storage
@@ -118,7 +119,7 @@ error_code server_state::initialize()
         meta_state_service_type,
         PROVIDER_TYPE_MAIN
         );
-    error_code err = _storage->initialize(argc, args_ptr);
+    error_code err = _storage->initialize(argc, &args_ptr[0]);
     if (err != ERR_OK)
     {
         derror("init meta_state_service failed, err = %s", err.to_string());
@@ -131,9 +132,6 @@ error_code server_state::initialize()
     std::string current = "";
     for (unsigned int i = 0; i != slices.size(); ++i)
     {
-        if (slices[i].empty())
-            continue;
-
         current = join_path(current, slices[i]);
         task_ptr tsk = _storage->create_node(current, LPC_META_STATE_SVC_CALLBACK,
             [&err](error_code ec)
@@ -142,7 +140,6 @@ error_code server_state::initialize()
             }
         );
         tsk->wait();
-
         if (err != ERR_OK && err != ERR_NODE_ALREADY_EXIST)
         {
             derror("create node failed, node_path = %s, err = %s", current.c_str(), err.to_string());

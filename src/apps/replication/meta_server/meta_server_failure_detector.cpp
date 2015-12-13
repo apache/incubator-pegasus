@@ -66,10 +66,11 @@ meta_server_failure_detector::meta_server_failure_detector(server_state* state, 
     std::vector<std::string> args;
     dsn::utils::split_args(distributed_lock_service_parameters, args);
     int argc = static_cast<int>(args.size());
-    const char* args_ptr[argc];
+    std::vector<const char*> args_ptr;
+    args_ptr.resize(argc);
     for (int i = argc - 1; i >= 0; i--)
     {
-        args_ptr[i] = ((char*)args[i].c_str());
+        args_ptr[i] = args[i].c_str();
     }
 
     // create lock service
@@ -77,7 +78,7 @@ meta_server_failure_detector::meta_server_failure_detector(server_state* state, 
         distributed_lock_service_type,
         PROVIDER_TYPE_MAIN
         );
-    error_code err = _lock_svc->initialize(argc, args_ptr);
+    error_code err = _lock_svc->initialize(argc, &args_ptr[0]);
     dassert(err == ERR_OK, "init distributed_lock_service failed, err = %s", err.to_string());
     _primary_lock_id = "dsn.meta.server.leader";
     _local_owner_id = primary_address().to_string();
