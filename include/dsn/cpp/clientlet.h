@@ -103,7 +103,7 @@ namespace dsn
         }
 
         template<typename THandler>
-        safe_late_task<THandler>* create_late_task(
+        inline safe_late_task<THandler>* create_late_task(
             dsn_task_code_t evt,
             THandler callback,
             int hash = 0,
@@ -114,7 +114,9 @@ namespace dsn
             auto tsk = new safe_late_task<THandler>(callback);
 
             tsk->add_ref(); // released in exec callback
-            t = dsn_task_create(evt, safe_late_task<THandler>::exec,
+            t = dsn_task_create_ex(evt, 
+                safe_late_task<THandler>::exec,
+                safe_late_task<THandler>::on_cancel,
                 tsk, hash, svc ? svc->tracker() : nullptr);
 
             tsk->set_task_info(t);
@@ -390,7 +392,7 @@ namespace dsn
                 int reply_hash
                 )
             {
-                auto task = new safe_task_handle();
+                task_ptr task = new safe_task_handle();
                 auto t = dsn_rpc_create_response_task(
                     msg,
                     nullptr,
@@ -426,7 +428,7 @@ namespace dsn
                         std::placeholders::_3
                         );
 
-                    auto task = new safe_task<rpc_reply_handler>(cb);
+                    task_ptr task = new safe_task<rpc_reply_handler>(cb);
 
                     task->add_ref(); // released in exec_rpc_response
                     auto t = dsn_rpc_create_response_task_ex(
@@ -470,7 +472,7 @@ namespace dsn
                         std::placeholders::_3
                         );
 
-                    auto task = new safe_task<rpc_reply_handler>(cb);
+                    task_ptr task = new safe_task<rpc_reply_handler>(cb);
 
                     task->add_ref(); // released in exec_rpc_response
                     auto t = dsn_rpc_create_response_task_ex(
@@ -514,7 +516,7 @@ namespace dsn
                         std::placeholders::_3
                         );
 
-                    auto task = new safe_task<rpc_reply_handler>(cb);
+                    task_ptr task = new safe_task<rpc_reply_handler>(cb);
 
                     task->add_ref(); // released in exec_rpc_response
                     auto t = dsn_rpc_create_response_task_ex(
@@ -557,7 +559,7 @@ namespace dsn
                         std::placeholders::_3
                         );
 
-                    auto task = new safe_task<rpc_reply_handler>(cb);
+                    task_ptr task = new safe_task<rpc_reply_handler>(cb);
 
                     task->add_ref(); // released in exec_rpc_response
                     auto t = dsn_rpc_create_response_task_ex(
