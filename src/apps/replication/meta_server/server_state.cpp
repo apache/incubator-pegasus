@@ -82,46 +82,56 @@ server_state::~server_state()
 
 DEFINE_TASK_CODE(LPC_META_STATE_SVC_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_META_SERVER);
 
-error_code server_state::initialize(const char* work_dir, const char* cluster_root)
+error_code server_state::initialize()
 {
-    _work_dir = work_dir;
-
-    const char* meta_state_service_name = dsn_config_get_value_string(
+    const char* cluster_root = dsn_config_get_value_string(
         "meta_server",
-        "meta_state_service_name",
+        "cluster_root",
+        "/",
+        "cluster root of meta server"
+        );
+    const char* meta_state_service_type = dsn_config_get_value_string(
+        "meta_server",
+        "meta_state_service_type",
         "meta_state_service_simple",
-        "the meta_state_service provider name"
+        "meta_state_service provider type"
+        );
+    const char* meta_state_service_parameters = dsn_config_get_value_string(
+        "meta_server",
+        "meta_state_service_parameters",
+        "",
+        "meta_state_service provider parameters"
         );
 
-    _storage = dsn::utils::factory_store< ::dsn::dist::meta_state_service>::create(
-        meta_state_service_name,
-        PROVIDER_TYPE_MAIN
-        );
-
-    if (!utils::filesystem::path_exists(_work_dir))
+    // prepare parameters
+    std::vector<std::string> args;
+    dsn::utils::split_args(meta_state_service_parameters, args);
+    int argc = static_cast<int>(args.size());
+    std::vector<const char*> args_ptr;
+    args_ptr.resize(argc);
+    for (int i = argc - 1; i >= 0; i--)
     {
-        if (!utils::filesystem::create_directory(_work_dir))
-        {
-            derror("create work_dir failed, work_dir = %s", _work_dir.c_str());
-            return ERR_FILE_OPERATION_FAILED;
-        }
+        args_ptr[i] = args[i].c_str();
     }
 
-    error_code err = _storage->initialize(_work_dir.c_str());
+    // create storage
+    _storage = dsn::utils::factory_store< ::dsn::dist::meta_state_service>::create(
+        meta_state_service_type,
+        PROVIDER_TYPE_MAIN
+        );
+    error_code err = _storage->initialize(argc, &args_ptr[0]);
     if (err != ERR_OK)
     {
-        derror("init meta_state_service failed, work_dir = %s, err = %s", _work_dir.c_str(), err.to_string());
+        derror("init meta_state_service failed, err = %s", err.to_string());
         return err;
     }
 
+    // prepare cluster root
     std::vector<std::string> slices;
     utils::split_args(cluster_root, slices, '/');
     std::string current = "";
     for (unsigned int i = 0; i != slices.size(); ++i)
     {
-        if (slices[i].empty())
-            continue;
-
         current = join_path(current, slices[i]);
         task_ptr tsk = _storage->create_node(current, LPC_META_STATE_SVC_CALLBACK,
             [&err](error_code ec)
@@ -130,7 +140,6 @@ error_code server_state::initialize(const char* work_dir, const char* cluster_ro
             }
         );
         tsk->wait();
-
         if (err != ERR_OK && err != ERR_NODE_ALREADY_EXIST)
         {
             derror("create node failed, node_path = %s, err = %s", current.c_str(), err.to_string());
@@ -138,8 +147,8 @@ error_code server_state::initialize(const char* work_dir, const char* cluster_ro
         }
     }
     _cluster_root = current.empty() ? "/" : current;
-    ddebug("init server_state succeed, cluster_root = %s, work_dir = %s", _cluster_root.c_str(), _work_dir.c_str());
 
+    ddebug("init server_state succeed, cluster_root = %s", _cluster_root.c_str());
     return ERR_OK;
 }
 

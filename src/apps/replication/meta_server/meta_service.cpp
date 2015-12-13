@@ -56,29 +56,12 @@ meta_service::~meta_service()
 {
 }
 
-error_code meta_service::start(const char* work_dir)
+error_code meta_service::start()
 {
     dassert(!_started, "meta service is already started");
-    _work_dir = work_dir;
 
-    // get and normalize cluster_root
-    std::string cluster_root = dsn_config_get_value_string(
-        "meta_server",
-        "cluster_root",
-        "/",
-        "cluster root of meta service"
-        );
-    std::vector<std::string> slices;
-    utils::split_args(cluster_root.c_str(), slices, '/');
-    std::string current = "";
-    for (unsigned int i = 0; i != slices.size(); ++i)
-    {
-        if (!slices[i].empty())
-            current = current + "/" + slices[i];
-    }
-    _cluster_root = current.empty() ? "/" : current;
-
-    error_code err = _state->initialize(_work_dir.c_str(), _cluster_root.c_str());
+    // init server state
+    error_code err = _state->initialize();
     if (err != ERR_OK)
     {
         derror("init server_state failed, err = %s", err.to_string());
@@ -122,7 +105,7 @@ error_code meta_service::start(const char* work_dir)
     tasking::enqueue(LPC_LBM_START, this, &meta_service::on_load_balance_start, 0,
         _opts.fd_grace_seconds * 1000);
 
-    ddebug("start meta_service succeed, cluster_root = %s, work_dir = %s", _cluster_root.c_str(), _work_dir.c_str());
+    ddebug("start meta_service succeed");
     return ERR_OK;
 }
 

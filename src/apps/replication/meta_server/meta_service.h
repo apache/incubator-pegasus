@@ -62,11 +62,8 @@ public:
     meta_service();
     virtual ~meta_service();
 
-    error_code start(const char* work_dir);
+    error_code start();
     void stop();
-
-    const char* work_dir() const { return _work_dir.c_str(); }
-    const char* cluster_root() const { return _cluster_root.c_str(); }
 
 private:
     void register_rpc_handlers();
@@ -94,8 +91,6 @@ private:
     friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
 
-    std::string                  _work_dir;
-    std::string                  _cluster_root;
     server_state                 *_state;
     meta_server_failure_detector *_failure_detector;
     load_balancer                *_balancer;

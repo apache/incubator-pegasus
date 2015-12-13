@@ -52,7 +52,8 @@ namespace dsn
         public:
             explicit meta_state_service_simple() : _root("/", nullptr), _quick_map({std::make_pair("/", &_root)}), _log(nullptr), _offset(0){}
 
-            virtual error_code initialize(const char* work_dir) override;
+            // work_path = (argc > 0 ? argv[0] : current_app_data_dir)
+            virtual error_code initialize(int argc, const char** argv) override;
 
             virtual task_ptr create_node(
                 const std::string& node,

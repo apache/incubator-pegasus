@@ -51,7 +51,8 @@ public:
     explicit meta_state_service_zookeeper();
     virtual ~meta_state_service_zookeeper();
 
-    virtual error_code initialize(const char* work_dir) override;
+    // no parameter need
+    virtual error_code initialize(int argc, const char** argv) override;
 
     virtual task_ptr create_node(
         const std::string& node,

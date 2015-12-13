@@ -13,7 +13,7 @@ TEST(meta_state_service_zookeeper, basics)
 #define expect_err [](error_code ec){EXPECT_FALSE(ec == ERR_OK);}
     {
         ref_ptr<meta_state_service_zookeeper> service(new meta_state_service_zookeeper());
-        error_code ec = service->initialize("");
+        error_code ec = service->initialize(0, nullptr);
         ASSERT_TRUE(ec == ERR_OK);
         service->node_exist("/", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)->wait();
         service->node_exist("", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_err)->wait();
@@ -41,7 +41,7 @@ TEST(meta_state_service_zookeeper, basics)
     //check replay
     {
         ref_ptr<meta_state_service_zookeeper> service(new meta_state_service_zookeeper());
-        service->initialize("");
+        service->initialize(0, nullptr);
 
         service->node_exist("/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)->wait();
         service->node_exist("/1/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_err)->wait();
@@ -50,7 +50,7 @@ TEST(meta_state_service_zookeeper, basics)
     //set & get data
     {
         ref_ptr<meta_state_service_zookeeper> service(new meta_state_service_zookeeper());
-        service->initialize("");
+        service->initialize(0, nullptr);
 
         dsn::binary_writer writer;
         writer.write(0xdeadbeef);
@@ -106,7 +106,7 @@ static void recursively_create(
 TEST(meta_state_service_zookeeper, create_delete)
 {
     ref_ptr<meta_state_service_zookeeper> service(new meta_state_service_zookeeper());
-    service->initialize("");
+    service->initialize(0, nullptr);
     clientlet tracker;
     
     service->delete_node("/r", true, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, [](error_code ec){ ddebug("result: %s", ec.to_string()); } )->wait();

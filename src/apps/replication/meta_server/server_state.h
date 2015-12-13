@@ -75,7 +75,7 @@ public:
     virtual ~server_state();
 
     // initialize server state
-    error_code initialize(const char* work_dir, const char* cluster_root);
+    error_code initialize();
 
     // when the server becomes the leader
     error_code on_become_leader();
@@ -156,7 +156,6 @@ private:
     };
 
     friend class load_balancer;
-    std::string                                         _work_dir;
     std::string                                         _cluster_root;
     mutable zrwlock_nr                                  _lock;
     std::unordered_map< ::dsn::rpc_address, node_state> _nodes;
