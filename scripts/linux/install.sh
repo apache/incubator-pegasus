@@ -22,8 +22,23 @@ then
     echo "ERROR: mkdir $INSTALL_DIR failed"
     exit -1
 fi
+INSTALL_DIR=`cd $INSTALL_DIR; pwd`
+echo "INSTALL_DIR=$INSTALL_DIR"
 
 echo "Copying files..."
-cp -r -v builder/output/* $INSTALL_DIR
+cp -r -v `pwd`/builder/output/* $INSTALL_DIR
 echo "Install succeed"
+if [ -z "$DSN_ROOT" ]
+then
+    export DSN_ROOT=$INSTALL_DIR
+    if ! grep -q '^export DSN_ROOT=' ~/.bashrc
+    then
+        echo "export DSN_ROOT=$INSTALL_DIR" >>~/.bashrc
+    fi
+    if ! grep -q '^export LD_LIBRARY_PATH=.*DSN_ROOT' ~/.bashrc
+    then
+        echo 'export LD_LIBRARY_PATH=$DSN_ROOT/lib:$LD_LIBRARY_PATH' >>~/.bashrc
+    fi
+    echo "====== THIS IS THE FIRST TIME REGISTER \$DSN_ROOT, please run 'source ~/.bashrc' ======"
+fi
 
