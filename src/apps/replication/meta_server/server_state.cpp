@@ -125,7 +125,7 @@ error_code server_state::initialize()
         meta_state_service_type,
         PROVIDER_TYPE_MAIN
         );
-    error_code err = _storage->initialize(argc, &args_ptr[0]);
+    error_code err = _storage->initialize(argc, argc > 0 ? &args_ptr[0] : nullptr);
     if (err != ERR_OK)
     {
         derror("init meta_state_service failed, err = %s", err.to_string());

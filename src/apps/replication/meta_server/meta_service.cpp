@@ -222,7 +222,7 @@ void meta_service::on_query_configuration_by_node(dsn_message_t msg)
 
 void meta_service::on_query_configuration_by_index(dsn_message_t msg)
 {
-    if (!check_primary(msg))
+    if (_failure_detector == nullptr || !check_primary(msg))
         return;
 
     if (!_started)
