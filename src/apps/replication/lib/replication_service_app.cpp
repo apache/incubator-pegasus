@@ -70,6 +70,7 @@ error_code replication_service_app::start(int argc, char** argv)
 
     _stub->initialize(opts);
     _stub->open_service();
+
     return ERR_OK;
 }
 

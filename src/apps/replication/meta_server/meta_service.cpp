@@ -69,11 +69,11 @@ error_code meta_service::start()
     }
     ddebug("init server state succeed");
 
+    _failure_detector = new meta_server_failure_detector(_state, this);
     // should register rpc handlers before acquiring leader lock, so that this meta service
     // can tell others who is the current leader
     register_rpc_handlers();
-
-    _failure_detector = new meta_server_failure_detector(_state, this);
+    
     // become leader
     _failure_detector->acquire_leader_lock();
     dassert(_failure_detector->is_primary(), "must be primary at this point");
