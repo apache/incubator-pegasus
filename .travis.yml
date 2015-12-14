@@ -15,15 +15,15 @@ before_install:
     - sudo apt-get install -qq libboost-all-dev libaio-dev lcov gdb
 
 install:
-    - ./check_format.sh && ./build.sh
+    - ./run.sh format
 
 before_script:
-    - ./start_zk_for_test.sh
+    - ./run.sh start_zk
     - ulimit -c unlimited -S
 
 script:
-    - ./test.sh
+    - ./run.sh test
 
 after_script:
-    - ./stop_zk_for_test.sh
+    - ./run.sh stop_zk
 
