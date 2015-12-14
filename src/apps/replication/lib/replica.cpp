@@ -37,6 +37,7 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "replica_stub.h"
+#include <dsn/cpp/json_helper.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -78,6 +79,11 @@ replica::replica(replica_stub* stub, global_partition_id gpid, const char* app_t
 
     init_state();
     _config.gpid = gpid;
+}
+
+void replica::json_state(std::stringstream& out) const
+{
+    JSON_DICT_ENTRIES(out, *this, name(), _config, _app->last_committed_decree(), _app->last_durable_decree());
 }
 
 void replica::init_state()
@@ -380,8 +386,6 @@ void replica::close()
     if (_app != nullptr)
     {
         _app->close(false);
-        delete _app;
-        _app = nullptr;
     }
 }
 

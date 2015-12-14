@@ -43,6 +43,10 @@
 #define replication_OTHER_TYPES_H
 
 # include <dsn/cpp/autoref_ptr.h>
+# include <dsn/dist/replication/replication.types.h>
+# include <sstream>
+# include <dsn/cpp/json_helper.h>
+# include <dsn/internal/enum_helper.h>
 
 namespace dsn {
     namespace replication {
@@ -67,7 +71,64 @@ namespace dsn {
 
         class mutation_log;
         typedef dsn::ref_ptr<mutation_log> mutation_log_ptr;
+
+
+        ENUM_BEGIN(partition_status, PS_INVALID)
+            ENUM_REG(PS_INACTIVE)
+            ENUM_REG(PS_ERROR)
+            ENUM_REG(PS_PRIMARY)
+            ENUM_REG(PS_SECONDARY)
+            ENUM_REG(PS_POTENTIAL_SECONDARY)
+        ENUM_END(partition_status)
+
+        ENUM_BEGIN(learn_type, LT_NONE)
+            ENUM_REG(LT_CACHE)
+            ENUM_REG(LT_APP)
+            ENUM_REG(LT_LOG)
+        ENUM_END(learn_type)
+
+        ENUM_BEGIN(learner_status, Learning_INVALID)
+            ENUM_REG(LearningWithoutPrepare)
+            ENUM_REG(LearningWithPrepareTransient)
+            ENUM_REG(LearningWithPrepare)
+            ENUM_REG(LearningSucceeded)
+            ENUM_REG(LearningFailed)
+        ENUM_END(learner_status)
+
+        ENUM_BEGIN(config_type, CT_NONE)
+            ENUM_REG(CT_ASSIGN_PRIMARY)
+            ENUM_REG(CT_UPGRADE_TO_PRIMARY)
+            ENUM_REG(CT_ADD_SECONDARY)
+            ENUM_REG(CT_DOWNGRADE_TO_SECONDARY)
+            ENUM_REG(CT_DOWNGRADE_TO_INACTIVE)
+            ENUM_REG(CT_REMOVE)
+            ENUM_REG(CT_UPGRADE_TO_SECONDARY)
+        ENUM_END(config_type)
+
+        inline void json_encode(std::stringstream& out, const partition_configuration& config)
+        {
+            JSON_DICT_ENTRIES(out, config, app_type, gpid, ballot, max_replica_count, primary, secondaries, last_drops, last_committed_decree);
+        }
+        inline void json_encode(std::stringstream& out, const partition_status& status)
+        {
+            json_encode(out, enum_to_string(status));
+        }
+        inline void json_encode(std::stringstream& out, const replica_configuration& config)
+        {
+            JSON_DICT_ENTRIES(out, config, gpid, ballot, primary, status, learner_signature);
+        }
+        
+        inline void json_encode(std::stringstream& out, const global_partition_id& gpid)
+        {
+            JSON_DICT_ENTRIES(out, gpid, app_id, pidx);
+        }
     }
+
+    inline void json_encode(std::stringstream& out, const dsn::rpc_address& address)
+    {
+        out << "\"" << address.to_string() << "\"";
+    }
+
 } // namespace
 
 #endif

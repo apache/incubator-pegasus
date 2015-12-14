@@ -124,7 +124,12 @@ public:
     replica_ptr get_replica(int32_t app_id, int32_t partition_index);
     replication_options& options() { return _options; }
     bool is_connected() const { return NS_Connected == _state; }
-    
+
+    void json_state(std::stringstream& out) const;
+    static void static_replica_stub_json_state(void* context, int argc, const char** argv, dsn_cli_reply* reply);
+
+    static void static_replica_stub_json_state_freer(dsn_cli_reply reply);
+
 private:    
     enum replica_node_state
     {
@@ -154,7 +159,7 @@ private:
     typedef std::unordered_map<global_partition_id, ::dsn::task_ptr> opening_replicas;
     typedef std::unordered_map<global_partition_id, std::pair< ::dsn::task_ptr, replica_ptr>> closing_replicas; // <close, replica>
 
-    zlock                       _replicas_lock;
+    mutable zlock               _replicas_lock;
     replicas                    _replicas;
     opening_replicas            _opening_replicas;
     closing_replicas            _closing_replicas;
@@ -175,6 +180,9 @@ private:
     ::dsn::task_ptr _config_query_task;
     ::dsn::task_ptr _config_sync_timer_task;
     ::dsn::task_ptr _gc_timer_task;
+
+    //cli handle, for deregister cli command
+    dsn_handle_t    _cli_replica_stub_json_state_handle;
 
 private:    
     friend class replica;
