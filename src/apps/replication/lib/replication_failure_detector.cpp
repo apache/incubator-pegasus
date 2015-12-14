@@ -122,8 +122,9 @@ void replication_failure_detector::end_ping(::dsn::error_code err, const fd::bea
             else
             {
                 ddebug("update meta server leader to [%s]", ack.this_node.to_string());
-                switch_master( dsn_group_get_leader(_meta_servers.group_handle()), ack.this_node.c_addr() );
+                rpc_address old_leader = dsn_group_get_leader(_meta_servers.group_handle());
                 dsn_group_set_leader(_meta_servers.group_handle(), ack.this_node.c_addr());
+                switch_master(old_leader, ack.this_node.c_addr() );
             }
         }
     }
