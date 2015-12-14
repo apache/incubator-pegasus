@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ -n "$DSN_ROOT"]
+if [ -n "$DSN_ROOT" ]
 then
     export DSN_ROOT=`pwd`/install
     echo export DSN_ROOT=$DSN_ROOT >> ~/.bashrc
