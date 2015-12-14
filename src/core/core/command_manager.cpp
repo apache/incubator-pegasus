@@ -42,6 +42,8 @@
 # include <dsn/cpp/rpc_stream.h>
 # include "service_engine.h"
 # include <dsn/internal/task.h>
+# include <dsn/internal/rpc_message.h>
+# include "rpc_engine.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -104,13 +106,16 @@ DSN_API dsn_handle_t dsn_cli_app_register(
 { 
     auto cnode = ::dsn::task::get_current_node2();
     dassert(cnode != nullptr, "tls_dsn not inited properly");
-    return dsn_cli_register(
+    auto handle = dsn_cli_register(
         (std::string(cnode->name()) + "." + command).c_str(),
         (std::string(cnode->name()) + "." + command + " " + help_one_line).c_str(),
         help_long,
         context,
         cmd_handler,
-        output_freer);
+        output_freer
+        );
+    dsn::command_manager::instance().set_cli_target_address(handle, dsn::task::get_current_rpc()->primary_address());
+    return handle;
 }
 
 DSN_API void dsn_cli_deregister(dsn_handle_t handle)
@@ -161,6 +166,7 @@ namespace dsn {
         }
 
         command* c = new command;
+        c->address.set_invalid();
         c->commands = commands;
         c->help_long = help_long;
         c->help_short = help_one_line;
@@ -196,6 +202,13 @@ namespace dsn {
 
     bool command_manager::run_command(const std::string& cmdline, /*out*/ std::string& output)
     {
+        auto cnode = ::dsn::task::get_current_node2();
+        if (cnode == nullptr)
+        {
+            auto& all_nodes = ::dsn::service_engine::fast_instance().get_all_nodes();
+            dassert(!all_nodes.empty(), "no node to mimic!");
+            dsn_mimic_app(all_nodes.begin()->second->spec().role_name.c_str(), 1);
+        }
         std::string scmd = cmdline;
         std::vector<std::string> args;
         
@@ -212,6 +225,8 @@ namespace dsn {
 
         return run_command(args[0], args2, output);
     }
+
+    DEFINE_TASK_CODE_RPC(RPC_DSN_CLI_CALL, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT);
 
     bool command_manager::run_command(const std::string& cmd, const std::vector<std::string>& args, /*out*/ std::string& output)
     {
@@ -230,8 +245,31 @@ namespace dsn {
         }
         else
         {
-            output = h->handler(args);
-            return true;
+            if (h->address.is_invalid() || h->address == dsn::task::get_current_rpc()->primary_address())
+            {
+                output = h->handler(args);
+                return true;
+            }
+            else
+            {
+                ::dsn::rpc_read_stream response;
+                
+                dsn_message_t msg = dsn_msg_create_request(RPC_DSN_CLI_CALL, 0, 0);
+                ::marshall(msg, cmd);
+                ::marshall(msg, args);
+                auto resp = dsn_rpc_call_wait(h->address.c_addr(), msg);
+                if (resp != nullptr)
+                {
+                    response.set_read_msg(resp);
+                    unmarshall(response, output);
+                    return true;
+                }
+                else
+                {
+                    dassert(false, "local rpc cli timeout");
+                    return false;
+                }
+            }
         }
     }
 
@@ -254,8 +292,6 @@ namespace dsn {
     {
         new std::thread(std::bind(&command_manager::run_console, this));
     }
-
-    DEFINE_TASK_CODE_RPC(RPC_DSN_CLI_CALL, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT);
 
     void remote_cli_handler(dsn_message_t req, void*)
     {
@@ -283,6 +319,11 @@ namespace dsn {
         auto resp = dsn_msg_create_response(req);
         ::marshall(resp, result);
         dsn_rpc_reply(resp);
+    }
+
+    void command_manager::set_cli_target_address(dsn_handle_t handle, dsn::rpc_address address)
+    {
+        reinterpret_cast<command*>(handle)->address = address;
     }
 
     command_manager::command_manager()
