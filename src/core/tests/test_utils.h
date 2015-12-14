@@ -87,15 +87,19 @@ public:
             dsn::rpc_address next_addr = dsn::service_app::primary_address();
             if (next_addr.port() != TEST_PORT_END) {
                 next_addr.assign_ipv4(next_addr.ip(), next_addr.port()+1);
+                ddebug("test_client_server, talk_to_others: %s", next_addr.to_std_string().c_str());
                 dsn_rpc_forward(message, next_addr.c_addr());
             }
             else {
+                ddebug("test_client_server, talk_to_me: %s", next_addr.to_std_string().c_str());
                 reply(message, next_addr.to_std_string());
             }
         }
         else if (command == "expect_no_reply") {
-            if (dsn::service_app::primary_address().port() == TEST_PORT_END)
+            if (dsn::service_app::primary_address().port() == TEST_PORT_END) {
+                ddebug("test_client_server, talk_with_reply: %s", dsn::service_app::primary_address().to_std_string().c_str());
                 reply(message, dsn::service_app::primary_address().to_std_string());
+            }
         }
         else if (command.substr(0, 5) == "echo ") {
             reply(message, command.substr(5));

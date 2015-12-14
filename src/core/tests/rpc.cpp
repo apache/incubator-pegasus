@@ -105,6 +105,7 @@ TEST(core, group_address_talk_to_others)
             [addr](error_code err_code, const std::string& result, void*)->void {
         EXPECT_EQ(ERR_OK, err_code);
         ::dsn::rpc_address addr_got;
+        ddebug("talk to others callback, result: %s", result.c_str());
         EXPECT_TRUE(addr_got.from_string_ipv4(result.c_str()));
         EXPECT_EQ(TEST_PORT_END, addr_got.port());
     };
