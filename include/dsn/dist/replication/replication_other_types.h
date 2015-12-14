@@ -105,10 +105,6 @@ namespace dsn {
             ENUM_REG(CT_UPGRADE_TO_SECONDARY)
         ENUM_END(config_type)
 
-        inline void json_encode(std::stringstream& out, const dsn::rpc_address& address)
-        {
-            out << "\"" << address.to_string() << "\"";
-        }
         inline void json_encode(std::stringstream& out, const partition_configuration& config)
         {
             JSON_DICT_ENTRIES(out, config, app_type, gpid, ballot, max_replica_count, primary, secondaries, last_drops, last_committed_decree);
@@ -127,6 +123,12 @@ namespace dsn {
             JSON_DICT_ENTRIES(out, gpid, app_id, pidx);
         }
     }
+
+    inline void json_encode(std::stringstream& out, const dsn::rpc_address& address)
+    {
+        out << "\"" << address.to_string() << "\"";
+    }
+
 } // namespace
 
 #endif

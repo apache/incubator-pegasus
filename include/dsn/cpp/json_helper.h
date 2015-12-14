@@ -58,57 +58,13 @@
 
 //parameters: fields to be serialized
 #define DEFINE_JSON_SERIALIZATION(...) void json_state(std::stringstream& out) const {JSON_DICT_ENTRIES(out, *this, __VA_ARGS__);}
+
+//#define  DEFINE_DEFAULT_JSON_SERIALIZATION(T) inline void json_encode(std::stringstream& out, const T& t) {out << t;}
     
 namespace dsn{ namespace replication{
-    
-template<typename T>
-struct json_forwarder {
-private:
-    //check if C has C.json_state(sstream&) function
-    template<typename C>
-    static auto check_json_state(C*)
-        -> typename std::is_same<decltype(std::declval<C>().json_state(std::declval<std::stringstream&>())), void>::type; 
 
-    template<typename>
-    static std::false_type check_json_state(...);
+template<typename> class json_forwarder;
 
-    //check if C has C->json_state(sstream&) function
-    template<typename C>
-    static auto p_check_json_state(C*)
-        -> typename std::is_same<decltype(std::declval<C>()->json_state(std::declval<std::stringstream&>())),void>::type;
-
-    template<typename>
-    static std::false_type p_check_json_state(...);
-
-    typedef decltype(check_json_state<T>(0)) has_json_state;
-    typedef decltype(p_check_json_state<T>(0)) p_has_json_state;
-
-    //internal serialization
-    static void call_inner(std::stringstream&out, const T& t, std::true_type, std::false_type)
-    {
-        t.json_state(out);
-    }
-    //internal serialization
-    static void call_inner(std::stringstream&out, const T& t, std::false_type, std::true_type)
-    {
-        t->json_state(out);
-    }
-    //internal serialization
-    static void call_inner(std::stringstream&out, const T& t, std::true_type, std::true_type)
-    {
-        t->json_state(out);
-    }
-    //external serialization
-    static void call_inner(std::stringstream&out, const T& t, std::false_type, std::false_type)
-    {
-        json_encode(out, t);
-    }
-public:
-    static void call(std::stringstream&out, const T& t)
-    {
-        call_inner(out, t, has_json_state{}, p_has_json_state{});
-    }
-};
 
 template<typename T> inline void json_encode(std::stringstream& out, const T& t)
 {
@@ -168,6 +124,55 @@ inline void json_encode(std::stringstream& out, const char* t)
 {
     out << "\"" << t << "\"";
 }
+
+template<typename T>
+struct json_forwarder {
+private:
+    //check if C has C.json_state(sstream&) function
+    template<typename C>
+    static auto check_json_state(C*)
+        -> typename std::is_same<decltype(std::declval<C>().json_state(std::declval<std::stringstream&>())), void>::type; 
+
+    template<typename>
+    static std::false_type check_json_state(...);
+
+    //check if C has C->json_state(sstream&) function
+    template<typename C>
+    static auto p_check_json_state(C*)
+        -> typename std::is_same<decltype(std::declval<C>()->json_state(std::declval<std::stringstream&>())),void>::type;
+
+    template<typename>
+    static std::false_type p_check_json_state(...);
+
+    typedef decltype(check_json_state<T>(0)) has_json_state;
+    typedef decltype(p_check_json_state<T>(0)) p_has_json_state;
+
+    //internal serialization
+    static void call_inner(std::stringstream&out, const T& t, std::true_type, std::false_type)
+    {
+        t.json_state(out);
+    }
+    //internal serialization
+    static void call_inner(std::stringstream&out, const T& t, std::false_type, std::true_type)
+    {
+        t->json_state(out);
+    }
+    //internal serialization
+    static void call_inner(std::stringstream&out, const T& t, std::true_type, std::true_type)
+    {
+        t->json_state(out);
+    }
+    //external serialization
+    static void call_inner(std::stringstream&out, const T& t, std::false_type, std::false_type)
+    {
+        json_encode(out, t);
+    }
+public:
+    static void call(std::stringstream&out, const T& t)
+    {
+        call_inner(out, t, has_json_state{}, p_has_json_state{});
+    }
+};
 
 }
 }

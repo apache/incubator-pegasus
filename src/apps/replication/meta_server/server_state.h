@@ -35,9 +35,9 @@
 
 #pragma once
 
+# include <dsn/dist/replication/replication_other_types.h>
 # include "replication_common.h"
 # include <dsn/dist/meta_state_service.h>
-# include <dsn/cpp/json_helper.h>
 # include <set>
 
 using namespace dsn;
