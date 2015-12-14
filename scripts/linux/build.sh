@@ -4,12 +4,13 @@
 # Options:
 #    DEBUG          YES|NO
 #    WARNING_ALL    YES|NO
-#    VERBOSE        YES|NO
+#    RUN_VERBOSE    YES|NO
 #    CLEAR          YES|NO
 #    BOOST_DIR      <dir>|""
 
 BUILD_DIR="./builder"
 CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"
+MAKE_OPTIONS="$MAKE_OPTIONS -j8"
 
 if [ "$DEBUG" == "YES" ]
 then
@@ -27,12 +28,13 @@ else
     echo "WARNING_ALL=NO"
 fi
 
-if [ "$VERBOSE" == "YES" ]
+if [ "$RUN_VERBOSE" == "YES" ]
 then
-    echo "VERBOSE=YES"
+    echo "RUN_VERBOSE=YES"
     CMAKE_OPTIONS="$CMAKE_OPTIONS -DDSN_DEBUG_CMAKE=TRUE"
+    MAKE_OPTIONS="$MAKE_OPTIONS VERBOSE=1"
 else
-    echo "VERBOSE=NO"
+    echo "RUN_VERBOSE=NO"
 fi
 
 if [ "$CLEAR" == "YES" ]
@@ -81,7 +83,7 @@ fi
 
 cd $BUILD_DIR
 echo "Building..."
-make install -j8
+make install $MAKE_OPTIONS
 if [ $? -ne 0 ]
 then
     echo "ERROR: build failed"

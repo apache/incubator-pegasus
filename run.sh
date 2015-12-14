@@ -40,7 +40,7 @@ function run_build()
     CLEAR=NO
     BOOST_DIR=""
     WARNING_ALL=NO
-    VERBOSE=NO
+    RUN_VERBOSE=NO
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -62,7 +62,7 @@ function run_build()
                 WARNING_ALL=YES
                 ;;
             -v|--verbose)
-                VERBOSE=YES
+                RUN_VERBOSE=YES
                 ;;
             *)
                 echo "ERROR: unknown option $key"
@@ -73,7 +73,7 @@ function run_build()
         esac
         shift
     done
-    DEBUG="$DEBUG" CLEAR="$CLEAR" BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" VERBOSE="$VERBOSE" $scripts_dir/build.sh
+    DEBUG="$DEBUG" CLEAR="$CLEAR" BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" RUN_VERBOSE="$RUN_VERBOSE" $scripts_dir/build.sh
 }
 
 #####################
@@ -137,7 +137,7 @@ function run_test()
     WARNING_ALL=NO
     ENABLE_GCOV=NO
     TEST_MODULE=""
-    VERBOSE=NO
+    RUN_VERBOSE=NO
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -163,7 +163,7 @@ function run_test()
                 shift
                 ;;
             -v|--verbose)
-                VERBOSE=YES
+                RUN_VERBOSE=YES
                 ;;
             *)
                 echo "ERROR: unknown option $key"
@@ -174,7 +174,7 @@ function run_test()
         esac
         shift
     done
-    CLEAR="$CLEAR" BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" TEST_MODULE="$TEST_MODULE" VERBOSE="$VERBOSE" $scripts_dir/test.sh
+    CLEAR="$CLEAR" BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" TEST_MODULE="$TEST_MODULE" RUN_VERBOSE="$RUN_VERBOSE" $scripts_dir/test.sh
 }
 
 #####################

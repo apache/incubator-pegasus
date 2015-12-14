@@ -4,7 +4,7 @@
 # Options:
 #    WARNING_ALL    YES|NO
 #    ENABLE_GCOV    YES|NO
-#    VERBOSE        YES|NO
+#    RUN_VERBOSE    YES|NO
 #    CLEAR          YES|NO
 #    BOOST_DIR      <dir>|""
 #    TEST_MODULE    "<module1> <module2> ..."
@@ -16,6 +16,7 @@ GCOV_TMP="$ROOT/.gcov_tmp"
 GCOV_PATTERN=`find $ROOT/include $ROOT/src -name '*.h' -o -name '*.cpp'`
 TIME=`date --rfc-3339=seconds`
 CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Debug"
+MAKE_OPTIONS="$MAKE_OPTIONS -j8"
 
 if [ "$WARNING_ALL" == "YES" ]
 then
@@ -33,12 +34,13 @@ else
     echo "ENABLE_GCOV=NO"
 fi
 
-if [ "$VERBOSE" == "YES" ]
+if [ "$RUN_VERBOSE" == "YES" ]
 then
-    echo "VERBOSE=YES"
+    echo "RUN_VERBOSE=YES"
     CMAKE_OPTIONS="$CMAKE_OPTIONS -DDSN_DEBUG_CMAKE=TRUE"
+    MAKE_OPTIONS="$MAKE_OPTIONS VERBOSE=1"
 else
-    echo "VERBOSE=NO"
+    echo "RUN_VERBOSE=NO"
 fi
 
 if [ "$CLEAR" == "YES" ]
@@ -103,7 +105,7 @@ fi
 
 cd $BUILD_DIR
 echo "Building..."
-make install -j8
+make install $MAKE_OPTIONS
 if [ $? -ne 0 ]
 then
     echo "ERROR: build failed"
