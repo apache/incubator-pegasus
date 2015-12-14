@@ -118,7 +118,7 @@ public:
     ballot get_ballot() const {return _config.ballot; }    
     partition_status status() const { return _config.status; }
     global_partition_id get_gpid() const { return _config.gpid; }    
-    replication_app_base* get_app() { return _app; }
+    replication_app_base* get_app() { return _app.get(); }
     decree max_prepared_decree() const { return _prepare_list->max_decree(); }
     decree last_committed_decree() const { return _prepare_list->last_committed_decree(); }
     decree last_prepared_decree() const;
@@ -128,6 +128,8 @@ public:
     uint64_t last_config_change_time_milliseconds() const { return _last_config_change_time_ms; }
     const char* name() const { return _name; }
     mutation_log_ptr private_log() const { return _private_log; }
+
+    void json_state(std::stringstream& out) const;
         
 private:
     // common helpers
@@ -222,7 +224,7 @@ private:
     dsn::task_ptr           _check_timer;
 
     // application
-    replication_app_base*   _app;
+    std::unique_ptr<replication_app_base>  _app;
 
     // constants
     replica_stub*           _stub;
@@ -236,4 +238,5 @@ private:
     potential_secondary_context _potential_secondary_states;
     bool                        _inactive_is_transient; // upgrade to P/S is allowed only iff true
 };
+
 }} // namespace

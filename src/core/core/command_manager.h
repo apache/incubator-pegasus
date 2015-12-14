@@ -48,7 +48,8 @@ namespace dsn {
     public:
         command_manager();
 
-        void register_command(const std::vector<const char*>& commands, const char* help_one_line, const char* help_long, command_handler handler);
+        dsn_handle_t register_command(const std::vector<const char*>& commands, const char* help_one_line, const char* help_long, command_handler handler);
+        void deregister_command(dsn_handle_t handle);
         bool run_command(const std::string& cmdline, /*out*/ std::string& output);
         void run_console();
         void start_local_cli();

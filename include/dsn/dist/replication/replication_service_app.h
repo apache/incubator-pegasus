@@ -59,6 +59,9 @@ private:
     friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
     replica_stub_ptr _stub;
+
+    static const char* replica_service_app_info(int argc, char** argv);
+    static void replica_service_app_info_free(const char* response);
 };
 
 }}
