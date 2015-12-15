@@ -48,8 +48,8 @@ namespace dsn {
                 ~simple_kv_client_impl(void);
 
             protected:
-                virtual int get_partition_index(const std::string& key);
-                virtual int get_partition_index(const kv_pair& pr);
+                virtual int get_partition_index(int partition_count, const std::string& key);
+                virtual int get_partition_index_2(int partition_count, const ::dsn::replication::application::kv_pair& key);
             };
 
         }

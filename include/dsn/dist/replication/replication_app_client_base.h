@@ -43,16 +43,28 @@
 # include <dsn/dist/replication/replication.types.h>
 # include <dsn/dist/replication/replication_other_types.h>
 # include <dsn/dist/replication/replication.codes.h>
+# include <dsn/cpp/clientlet.h>
+# include <functional>
+
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "replication.app.client.base.h"
 
 namespace dsn { namespace replication {
 
+    //error code
     DEFINE_ERR_CODE(ERR_REPLICATION_FAILURE)
+    DEFINE_ERR_CODE(ERR_APP_EXIST)
+    DEFINE_ERR_CODE(ERR_APP_NOT_EXIST)
+    DEFINE_ERR_CODE(ERR_BUSY_CREATING)
+    DEFINE_ERR_CODE(ERR_BUSY_DROPPING)
     
 #pragma pack(push, 4)
     class replication_app_client_base : public virtual clientlet
     {
     public:
-        static void load_meta_servers(/*out*/ std::vector< ::dsn::rpc_address>& servers);
+        static void load_meta_servers(/*out*/ std::vector< ::dsn::rpc_address>& servers, const char* section = "replication.meta_servers");
 
     public:
         replication_app_client_base(        
@@ -64,7 +76,7 @@ namespace dsn { namespace replication {
 
         template<typename T, typename TRequest, typename TResponse>
         ::dsn::task_ptr write(
-            int partition_index,
+            std::function<int(int)> get_partition_index,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
 
@@ -88,7 +100,7 @@ namespace dsn { namespace replication {
                 reply_hash
                 );
 
-            auto rc = create_write_context(partition_index, code, msg, task, reply_hash);
+            auto rc = create_write_context(-1, get_partition_index, code, msg, task, reply_hash);
             ::marshall(msg, *req);
             call(rc);
             return std::move(task);
@@ -96,7 +108,7 @@ namespace dsn { namespace replication {
         
         template<typename TRequest, typename TResponse>
         ::dsn::task_ptr write(
-            int partition_index,
+            std::function<int(int)> get_partition_index,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
 
@@ -120,7 +132,7 @@ namespace dsn { namespace replication {
                 reply_hash
                 );
 
-            auto rc = create_write_context(partition_index, code, msg, task, reply_hash);
+            auto rc = create_write_context(-1, get_partition_index, code, msg, task, reply_hash);
             ::marshall(msg, *req);
             call(rc);
             return std::move(task);
@@ -128,7 +140,7 @@ namespace dsn { namespace replication {
 
         template<typename T, typename TRequest, typename TResponse>
         ::dsn::task_ptr write(
-            int partition_index,
+            std::function<int(int)> get_partition_index,
             dsn_task_code_t code,
             const TRequest& req,
 
@@ -152,7 +164,7 @@ namespace dsn { namespace replication {
                 context,
                 reply_hash
                 );
-            auto rc = create_write_context(partition_index, code, msg, task, reply_hash);
+            auto rc = create_write_context(-1, get_partition_index, code, msg, task, reply_hash);
             ::marshall(msg, req);
             call(rc);
             return std::move(task);
@@ -160,7 +172,7 @@ namespace dsn { namespace replication {
 
         template<typename TRequest, typename TResponse>
         ::dsn::task_ptr write(
-            int partition_index,
+            std::function<int(int)> get_partition_index,
             dsn_task_code_t code,
             const TRequest& req,
 
@@ -185,7 +197,7 @@ namespace dsn { namespace replication {
                 owner
                 );
 
-            auto rc = create_write_context(partition_index, code, msg, task, reply_hash);
+            auto rc = create_write_context(-1, get_partition_index, code, msg, task, reply_hash);
             ::marshall(msg, req);
             call(rc);
             return std::move(task);
@@ -193,7 +205,7 @@ namespace dsn { namespace replication {
 
         template<typename T, typename TRequest, typename TResponse>
         ::dsn::task_ptr read(
-            int partition_index,
+            std::function<int(int)> get_partition_index,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
 
@@ -219,7 +231,7 @@ namespace dsn { namespace replication {
                 reply_hash
                 );
 
-            auto rc = create_read_context(partition_index, code, msg, task, read_semantic, snapshot_decree, reply_hash);
+            auto rc = create_read_context(-1, get_partition_index, code, msg, task, read_semantic, snapshot_decree, reply_hash);
             ::marshall(msg, *req);
             call(rc);
             return std::move(task);
@@ -227,7 +239,7 @@ namespace dsn { namespace replication {
 
         template<typename TRequest, typename TResponse>
         ::dsn::task_ptr read(
-            int partition_index,
+            std::function<int(int)> get_partition_index,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
 
@@ -253,15 +265,15 @@ namespace dsn { namespace replication {
                 reply_hash
                 );
 
-            auto rc = create_read_context(partition_index, code, msg, task, read_semantic, snapshot_decree, reply_hash);
-            ::marshall(msg *req);
+            auto rc = create_read_context(-1, get_partition_index, code, msg, task, read_semantic, snapshot_decree, reply_hash);
+            ::marshall(msg, *req);
             call(rc);
             return std::move(task);
         }
 
         template<typename T, typename TRequest, typename TResponse>
         ::dsn::task_ptr read(
-            int partition_index,
+            std::function<int(int)> get_partition_index,
             dsn_task_code_t code,
             const TRequest& req,
 
@@ -288,15 +300,16 @@ namespace dsn { namespace replication {
                 reply_hash
                 );
 
-            auto rc = create_read_context(partition_index, code, msg, task, read_semantic, snapshot_decree, reply_hash);
+            auto rc = create_read_context(-1, get_partition_index, code, msg, task, read_semantic, snapshot_decree, reply_hash);
             ::marshall(msg, req);
             call(rc);
             return std::move(task);
         }
 
+
         template<typename TRequest, typename TResponse>
         ::dsn::task_ptr read(
-            int partition_index,
+            std::function<int(int)> get_partition_index,
             dsn_task_code_t code,
             const TRequest& req,
 
@@ -323,19 +336,56 @@ namespace dsn { namespace replication {
                 owner
                 );
 
-            auto rc = create_read_context(partition_index, code, msg, task, read_semantic, snapshot_decree, reply_hash);
+            auto rc = create_read_context(-1, get_partition_index, code, msg, task, read_semantic, snapshot_decree, reply_hash);
             ::marshall(msg, req);
             call(rc);
             return std::move(task);
         }
 
-        // get read address policy
-        virtual ::dsn::rpc_address get_read_address(read_semantic_t semantic, const partition_configuration& config);
+        template<typename TRequest, typename TResponse>
+        ::dsn::task_ptr request_meta(
+            dsn_task_code_t code,
+            std::shared_ptr<TRequest>& req,
+
+            // callback
+            clientlet* owner,
+            std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
+
+            // other specific parameters
+            int timeout_milliseconds= 0,
+            int reply_hash = 0
+            )
+        {
+            dsn_message_t msg = dsn_msg_create_request(code, timeout_milliseconds, 0);
+            ::marshall(msg, *req);
+
+            task_ptr task = ::dsn::rpc::internal_use_only::create_rpc_call(
+                msg,
+                req,
+                callback,
+                reply_hash,
+                owner
+                );
+
+            meta_context* context = new meta_context;
+            context->callback_task = task;
+            context->completed = false;
+            context->request = msg;
+            context->timeout_timer = nullptr;
+            context->timeout_ts_us = now_us() + timeout_milliseconds * 1000;
+
+            call_meta(context);
+            return std::move(task);
+        }
+
         ::dsn::rpc_address get_meta_servers() const { return _meta_servers; }
+
     public:
+
         struct request_context : public ref_counter
         {
             int                   partition_index;
+            std::function<int(int)> get_partition_index;
             ::dsn::task_ptr callback_task;
             read_request_header   read_header;
             write_request_header  write_header;
@@ -346,12 +396,24 @@ namespace dsn { namespace replication {
             dsn_message_t         request;
 
             ::dsn::service::zlock lock; // [
-            dsn::task_ptr         timeout_timer; // when partition config is unknown at the first place            
+            dsn::task_ptr         timeout_timer; // when partition config is unknown at the first place
             bool                  completed;
             // ]
         };
-
         typedef ::dsn::ref_ptr<request_context> request_context_ptr;
+
+        struct meta_context : public ref_counter
+        {
+            dsn_message_t           request;
+            dsn::task_ptr           callback_task;
+            uint64_t                timeout_ts_us; // timeout at this timing point
+
+            dsn::service::zlock     lock; // [
+            task_ptr                timeout_timer; // when partition config is unknown at the first place
+            bool                    completed;
+            // ]
+        };
+        typedef ::dsn::ref_ptr<meta_context> meta_context_ptr;
 
     private:
         struct partition_context
@@ -360,14 +422,17 @@ namespace dsn { namespace replication {
             std::list<request_context_ptr> requests;
         };
 
-        typedef std::unordered_map<int, partition_context*> pending_requests;
-        
-        mutable ::dsn::service::zlock  _requests_lock;
-        pending_requests               _pending_requests;
+        typedef std::unordered_map<int, partition_context*> pending_replica_requests;
+
+        mutable dsn::service::zlock     _requests_lock;
+        pending_replica_requests  _pending_replica_requests;
+
+        partition_context _pending_meta_requests;  // query partition count info from meta server
 
     private:
         request_context* create_write_context(
             int partition_index,
+            std::function<int(int)> get_partition_index,
             dsn_task_code_t code,
             dsn_message_t request,
             ::dsn::task_ptr& callback,
@@ -376,32 +441,50 @@ namespace dsn { namespace replication {
 
         request_context* create_read_context(
             int partition_index,
+            std::function<int(int)> get_partition_index,
             dsn_task_code_t code,
             dsn_message_t request,
             ::dsn::task_ptr& callback,
-            read_semantic_t read_semantic = ReadOutdated,
-            decree snapshot_decree = invalid_decree, // only used when ReadSnapshot        
+            dsn::replication::read_semantic_t read_semantic = ReadOutdated,
+            decree snapshot_decree = invalid_decree, // only used when ReadSnapshot
             int reply_hash = 0
             );
 
     private:
-        std::string      _app_name;
-        dsn::rpc_address _meta_servers;
-        
-        mutable ::dsn::service::zrwlock_nr      _config_lock;
+        std::string                             _app_name;
+        dsn::rpc_address                        _meta_servers;
+
+        mutable dsn::service::zrwlock_nr      _config_lock;
         std::unordered_map<int, partition_configuration> _config_cache;
         int                                     _app_id;
         int                                     _app_partition_count;
 
     private:
+        //call
         void call(request_context_ptr request, bool no_delay = true);
-        error_code get_address(int pidx, bool is_write, /*out*/ ::dsn::rpc_address& addr, /*out*/ int& app_id, read_semantic_t semantic = read_semantic_t::ReadLastUpdate);
-        void query_partition_configuration_reply(error_code err, dsn_message_t request, dsn_message_t response, int pidx);
+        void get_address_and_call(request_context_ptr request, bool no_delay);
+        void call_with_address(dsn::rpc_address address, request_context_ptr request, bool no_delay);
+        void call_meta(meta_context_ptr request);
+
+        //send rpc
+        dsn::task_ptr query_partition_config(request_context_ptr request);
+
+        //memory cache interface
+        // int timeout_ms(request_context_ptr request);
+        dsn::rpc_address get_address(bool is_write, read_semantic_t semantic, const partition_configuration& config);
+        error_code get_address(int pidx, bool is_write, /*out*/ dsn::rpc_address& addr, dsn::replication::read_semantic_t semantic);
+
+        //callback
+        void query_partition_configuration_reply(error_code err, dsn_message_t request, dsn_message_t response, int pdix);
+        void meta_rw_reply(error_code err, dsn_message_t request, dsn_message_t response, meta_context_ptr& rc);
         void replica_rw_reply(error_code err, dsn_message_t request, dsn_message_t response, request_context_ptr& rc);
+
+
         void end_request(request_context_ptr& request, error_code err, dsn_message_t resp);
-        void on_user_request_timeout(request_context_ptr& rc);
+        void end_meta_request(meta_context_ptr& request, error_code err, dsn_message_t resp);
+        void on_replica_request_timeout(request_context_ptr& rc);
+        void on_meta_request_timeout(meta_context_ptr& rc);
         void clear_all_pending_tasks();
     };
 #pragma pack(pop)
-
 }} // namespace

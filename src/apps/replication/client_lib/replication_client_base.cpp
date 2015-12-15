@@ -2,8 +2,8 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
- * 
- * -=- Robust Distributed System Nucleus (rDSN) -=- 
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,40 +26,48 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     interface for clients operations using rDSN
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Dec., 2015, @xiaotz (Xiaotong Zhang), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "simple_kv.client.impl.h"
+# include <dsn/service_api_cpp.h>
+# include <dsn/dist/replication.h>
 
-namespace dsn {
-    namespace replication {
-        namespace application {
+using namespace dsn::service;
 
+namespace dsn { namespace replication {
 
-            simple_kv_client_impl::simple_kv_client_impl(const std::vector< ::dsn::rpc_address>& meta_servers)
-                : simple_kv_client(meta_servers, "simple_kv")
-            {
-            }
-
-
-            simple_kv_client_impl::~simple_kv_client_impl(void)
-            {
-
-            }
-
-            int simple_kv_client_impl::get_partition_index(int partition_count, const std::string& key)
-            {
-                return (dsn_crc32_compute(key.c_str(), key.size(), 0) % partition_count);
-            }
-            int simple_kv_client_impl::get_partition_index_2(int partition_count, const ::dsn::replication::application::kv_pair& key)
-            {
-                return (dsn_crc32_compute(key.key.c_str(), key.key.size(), 0) % partition_count);
-            }
-        }
-    }
+replication_client_base::replication_client_base(
+        const std::vector<dsn::rpc_address>& meta_servers
+        )
+{
+    _meta_servers = meta_servers;
 }
 
+replication_client_base::~replication_client_base()
+{
+    zauto_write_lock l(_config_lock);
+    for (auto& app_client : _app_clients)
+    {
+        replication_app_client_base* client_base = app_client.second;
+        delete client_base;
+    }
+    _app_clients.clear();
+}
+
+replication_app_client_base* replication_client_base::get_app_client_base(const char* app_name)
+{
+    zauto_write_lock l(_config_lock);
+    auto it = _app_clients.find(app_name);
+    if(it == _app_clients.end())
+    {
+        replication_app_client_base* client_base = new replication_app_client_base(_meta_servers, app_name);
+        it = _app_clients.insert(std::unordered_map<std::string, replication_app_client_base*>::value_type(app_name, client_base)).first;
+    }
+    return it->second;
+}
+
+}} // namespace
