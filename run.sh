@@ -26,21 +26,28 @@ function usage_build()
 {
     echo "Options for subcommand 'build':"
     echo "   -h|--help         print the help info"
-    echo "   -d|--debug        build in debug mode, default is release"
+    echo "   -t|--type         build type: debug|release, default is debug"
     echo "   -c|--clear        clear the environment before building"
     echo "   -b|--boost_dir <dir>"
     echo "                     specify customized boost directory,"
     echo "                     if not set, then use the system boost"
     echo "   -w|--warning_all  open all warnings when build, default no"
-    echo "   -v|--verbose      print verbose info, default no"
+    echo "   -g|--enable_gcov  generate gcov code coverage report, default no"
+    echo "   -v|--verbose      build in verbose mode, default no"
+    if [ "$ONLY_BUILD" == "NO" ]; then
+        echo "   -m|--test_module  specify the module to test, e.g., dsn.core.tests,"
+        echo "                     if not set, then run all tests"
+    fi
 }
 function run_build()
 {
-    DEBUG=NO
+    BUILD_TYPE="debug"
     CLEAR=NO
     BOOST_DIR=""
     WARNING_ALL=NO
+    ENABLE_GCOV=NO
     RUN_VERBOSE=NO
+    TEST_MODULE=""
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -48,8 +55,9 @@ function run_build()
                 usage_build
                 exit 0
                 ;;
-            -d|--debug)
-                DEBUG=YES
+            -t|--type)
+                BUILD_TYPE="$2"
+                shift
                 ;;
             -c|--clear)
                 CLEAR=YES
@@ -61,11 +69,24 @@ function run_build()
             -w|--warning_all)
                 WARNING_ALL=YES
                 ;;
+            -g|--enable_gcov)
+                ENABLE_GCOV=YES
+                ;;
             -v|--verbose)
                 RUN_VERBOSE=YES
                 ;;
+            -m|--test_module)
+                if [ "$ONLY_BUILD" == "YES" ]; then
+                    echo "ERROR: unknown option \"$key\""
+                    echo
+                    usage_build
+                    exit -1
+                fi
+                TEST_MODULE="$2"
+                shift
+                ;;
             *)
-                echo "ERROR: unknown option $key"
+                echo "ERROR: unknown option \"$key\""
                 echo
                 usage_build
                 exit -1
@@ -73,7 +94,15 @@ function run_build()
         esac
         shift
     done
-    DEBUG="$DEBUG" CLEAR="$CLEAR" BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" RUN_VERBOSE="$RUN_VERBOSE" $scripts_dir/build.sh
+    if [ "$BUILD_TYPE" != "debug" -a "$BUILD_TYPE" != "release" ]; then
+        echo "ERROR: invalid build type \"$BUILD_TYPE\""
+        echo
+        usage_build
+        exit -1
+    fi
+    BUILD_TYPE="$BUILD_TYPE" ONLY_BUILD="$ONLY_BUILD" CLEAR="$CLEAR" \
+        BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" \
+        RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" $scripts_dir/build.sh
 }
 
 #####################
@@ -102,7 +131,7 @@ function run_install()
                 shift
                 ;;
             *)
-                echo "ERROR: unknown option $key"
+                echo "ERROR: unknown option \"$key\""
                 echo
                 usage_install
                 exit -1
@@ -111,70 +140,6 @@ function run_install()
         shift
     done
     INSTALL_DIR="$INSTALL_DIR" $scripts_dir/install.sh
-}
-
-#####################
-## test
-#####################
-function usage_test()
-{
-    echo "Options for subcommand 'test':"
-    echo "   -h|--help         print the help info"
-    echo "   -c|--clear        clear the environment before building and testing"
-    echo "   -b|--boost_dir <dir>"
-    echo "                     specify the customized boost directory,"
-    echo "                     if not set, then use the system boost"
-    echo "   -w|--warning_all  open all warnings when build, default no"
-    echo "   -g|--enable_gcov  generate gcov code coverage report, default no"
-    echo "   -m|--test_module  specify the module to test, e.g., dsn.core.tests,"
-    echo "                     if not set, then run all tests"
-    echo "   -v|--verbose      print verbose info, default no"
-}
-function run_test()
-{
-    CLEAR=NO
-    BOOST_DIR=""
-    WARNING_ALL=NO
-    ENABLE_GCOV=NO
-    TEST_MODULE=""
-    RUN_VERBOSE=NO
-    while [[ $# > 0 ]]; do
-        key="$1"
-        case $key in
-            -h|--help)
-                usage_test
-                exit 0
-                ;;
-            -c|--clear)
-                CLEAR=YES
-                ;;
-            -b|--boost_dir)
-                BOOST_DIR="$2"
-                shift
-                ;;
-            -w|--warning_all)
-                WARNING_ALL=YES
-                ;;
-            -g|--enable_gcov)
-                ENABLE_GCOV=YES
-                ;;
-            -m|--test_module)
-                TEST_MODULE="$2"
-                shift
-                ;;
-            -v|--verbose)
-                RUN_VERBOSE=YES
-                ;;
-            *)
-                echo "ERROR: unknown option $key"
-                echo
-                usage_test
-                exit -1
-                ;;
-        esac
-        shift
-    done
-    CLEAR="$CLEAR" BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" TEST_MODULE="$TEST_MODULE" RUN_VERBOSE="$RUN_VERBOSE" $scripts_dir/test.sh
 }
 
 #####################
@@ -209,7 +174,7 @@ function run_start_zk()
                 shift
                 ;;
             *)
-                echo "ERROR: unknown option $key"
+                echo "ERROR: unknown option \"$key\""
                 echo
                 usage_start_zk
                 exit -1
@@ -246,7 +211,7 @@ function run_stop_zk()
                 shift
                 ;;
             *)
-                echo "ERROR: unknown option $key"
+                echo "ERROR: unknown option \"$key\""
                 echo
                 usage_stop_zk
                 exit -1
@@ -275,7 +240,7 @@ function run_format()
                 exit 0
                 ;;
             *)
-                echo "ERROR: unknown option $key"
+                echo "ERROR: unknown option \"$key\""
                 echo
                 usage_format
                 exit -1
@@ -298,13 +263,15 @@ case $cmd in
         usage ;;
     build)
         shift
+        ONLY_BUILD=YES
         run_build $* ;;
     install)
         shift
         run_install $* ;;
     test)
         shift
-        run_test $* ;;
+        ONLY_BUILD=NO
+        run_build $* ;;
     start_zk)
         shift
         run_start_zk $* ;;
