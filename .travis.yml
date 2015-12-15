@@ -13,6 +13,7 @@ before_install:
     - sudo wget https://raw.githubusercontent.com/shengofsun/packages/master/source.list
     - sudo cp source.list /etc/apt/sources.list
     # - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y 
+    # - sudo apt-key add 16126D3A3E5C1192
     - sudo apt-get update -qq
     - sudo apt-get install -qq libboost-all-dev libaio-dev lcov gdb
 
