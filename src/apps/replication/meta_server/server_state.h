@@ -35,9 +35,10 @@
 
 #pragma once
 
-#include "replication_common.h"
+# include <dsn/dist/replication/replication_other_types.h>
+# include "replication_common.h"
 # include <dsn/dist/meta_state_service.h>
-#include <set>
+# include <set>
 
 using namespace dsn;
 using namespace dsn::service;
@@ -61,13 +62,14 @@ struct app_state
     int32_t                              app_id;
     int32_t                              partition_count;
     std::vector<partition_configuration> partitions;
+    DEFINE_JSON_SERIALIZATION(app_type, app_name, app_id, partition_count, partitions);
 };
 
 typedef std::unordered_map<global_partition_id, std::shared_ptr<configuration_update_request> > machine_fail_updates;
 
 typedef std::function<void (const std::vector<app_state>& /*new_config*/)> config_change_subscriber;
 
-class server_state : 
+class server_state :
     public ::dsn::serverlet<server_state>
 {
 public:
@@ -88,7 +90,7 @@ public:
     //  * set node state from live to unlive, and returns configuration_update_request to apply
     //  * set node state from unlive to live, and leaves load balancer to update configuration
     void set_node_state(const node_states& nodes, /*out*/ machine_fail_updates* pris);
-    
+
     // partition server & client => meta server
 
     // query all partition configurations of a replica server
@@ -107,7 +109,7 @@ public:
     // TODO: callback should pass in error_code
     void update_configuration(
         std::shared_ptr<configuration_update_request>& req,
-        dsn_message_t request_msg, 
+        dsn_message_t request_msg,
         std::function<void()> callback
         );
 
@@ -118,8 +120,8 @@ public:
 
     // for test
     void set_config_change_subscriber_for_test(config_change_subscriber subscriber);
-    
-private:    
+
+private:
     // initialize apps in local cache and in remote storage
     error_code initialize_apps();
 
@@ -153,6 +155,7 @@ private:
         ::dsn::rpc_address            address;
         std::set<global_partition_id> primaries;
         std::set<global_partition_id> partitions;
+        DEFINE_JSON_SERIALIZATION(is_alive, address, primaries, partitions);
     };
 
     friend class load_balancer;
@@ -181,5 +184,12 @@ private:
 
     // for test
     config_change_subscriber          _config_change_subscriber;
+
+    dsn_handle_t                      _cli_json_state_handle;
+
+public:
+    void json_state(std::stringstream& out) const;
+    static void static_cli_json_state(void* context, int argc, const char** argv, dsn_cli_reply* reply);
+    static void static_cli_json_state_cleanup(dsn_cli_reply reply);
 };
 

@@ -1454,7 +1454,7 @@ std::shared_ptr<log_block> log_file::prepare_log_block() const
     dassert(hdr->local_offset == static_cast<uint32_t>(offset - start_offset()), "");
     dassert(block.size() != 0, "log_block cannot be empty");
 
-    hdr->length = block.size() - sizeof(log_block_header);
+    hdr->length = static_cast<int32_t>(block.size() - sizeof(log_block_header));
     hdr->body_crc = _crc32;
     for (auto log_iter = std::next(block.data().begin()) ; log_iter != block.data().end(); ++ log_iter)
     {
@@ -1478,7 +1478,7 @@ std::shared_ptr<log_block> log_file::prepare_log_block() const
     task_ptr task = file::write_vector(
         _handle,
         buffer_vector.get(),
-        block.data().size(),
+        static_cast<int>(block.data().size()),
         static_cast<int>(offset - start_offset()),
         evt,
         callback_host,

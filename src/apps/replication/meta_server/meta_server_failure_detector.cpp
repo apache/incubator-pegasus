@@ -78,7 +78,7 @@ meta_server_failure_detector::meta_server_failure_detector(server_state* state, 
         distributed_lock_service_type,
         PROVIDER_TYPE_MAIN
         );
-    error_code err = _lock_svc->initialize(argc, &args_ptr[0]);
+    error_code err = _lock_svc->initialize(argc, argc > 0 ? &args_ptr[0] : nullptr);
     dassert(err == ERR_OK, "init distributed_lock_service failed, err = %s", err.to_string());
     _primary_lock_id = "dsn.meta.server.leader";
     _local_owner_id = primary_address().to_string();

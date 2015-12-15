@@ -1,3 +1,6 @@
+# This script defines some useful function to help switch between directories of the project.
+# To use it, just import this script using 'source misc.sh'.
+
 function find_matchfile()
 {
     dir=`pwd`
@@ -144,3 +147,4 @@ function lst()
     echo
     echo "Try 'src <module>' or 'dst <module>' command to go to src/binary dirtory"
 }
+

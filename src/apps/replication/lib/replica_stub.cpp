@@ -33,12 +33,14 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+
 #include "replica.h"
 #include "replica_stub.h"
 #include "mutation_log.h"
 #include "mutation.h"
 #include "replication_failure_detector.h"
 #include "rpc_replicated.h"
+#include <dsn/cpp/json_helper.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -52,7 +54,7 @@ using namespace dsn::service;
 bool replica_stub::s_not_exit_on_log_failure = false;
 
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/, bool is_long_subscriber/* = true*/)
-    : serverlet("replica_stub"), _replicas_lock(true)
+    : serverlet("replica_stub"), _replicas_lock(true), _cli_replica_stub_json_state_handle(nullptr)
 {
     _replica_state_subscriber = subscriber;
     _is_long_subscriber = is_long_subscriber;
@@ -528,6 +530,38 @@ void replica_stub::on_remove(const replica_configuration& request)
     {
         rep->on_remove(request);
     }
+}
+
+void replica_stub::json_state(std::stringstream& out) const
+{
+    std::vector<replica_ptr> replicas_copy;
+    {
+        zauto_lock _(_replicas_lock);
+        for (auto& rep : _replicas)
+        {
+            replicas_copy.push_back(rep.second);
+        }
+    }
+    json_encode(out, replicas_copy);
+}
+
+void replica_stub::static_replica_stub_json_state(void* context, int argc, const char** argv, dsn_cli_reply* reply)
+{
+    auto stub = reinterpret_cast<replica_stub*>(context);
+    std::stringstream ss;
+    stub->json_state(ss);
+    auto danglingstr = new std::string(std::move(ss.str()));
+    reply->message = danglingstr->c_str();
+    reply->size = danglingstr->size();
+    reply->context = danglingstr;
+}
+
+void replica_stub::static_replica_stub_json_state_freer(dsn_cli_reply reply)
+{
+    dassert(reply.context != nullptr, "corrupted cli reply");
+    auto danglingstr = reinterpret_cast<std::string*>(reply.context);
+    dassert(danglingstr->c_str() == reply.message, "corrupted cli reply");
+    delete danglingstr;
 }
 
 void replica_stub::query_configuration_by_node()
@@ -1046,10 +1080,18 @@ void replica_stub::open_service()
     register_rpc_handler(RPC_GROUP_CHECK, "GroupCheck", &replica_stub::on_group_check);
     register_rpc_handler(RPC_QUERY_PN_DECREE, "query_decree", &replica_stub::on_query_decree);
     register_rpc_handler(RPC_REPLICA_COPY_LAST_CHECKPOINT, "copy_checkpoint", &replica_stub::on_copy_checkpoint);
+
+    _cli_replica_stub_json_state_handle = dsn_cli_app_register("info", "get the info of replica_stub on this node", "",
+        this, &static_replica_stub_json_state, &static_replica_stub_json_state_freer);
+    dassert(_cli_replica_stub_json_state_handle != nullptr, "register cli command failed");
 }
 
 void replica_stub::close()
 {
+    dassert(_cli_replica_stub_json_state_handle != nullptr, "unable to find registered cli command, close before initialize?");
+    dsn_cli_deregister(_cli_replica_stub_json_state_handle);
+    _cli_replica_stub_json_state_handle = nullptr;
+
     if (_config_sync_timer_task != nullptr)
     {
         _config_sync_timer_task->cancel(true);
@@ -1112,6 +1154,7 @@ void replica_stub::close()
         _log->close();
         _log = nullptr;
     }
+
 }
 
 }} // namespace

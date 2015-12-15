@@ -1,4 +1,6 @@
 #!/bin/bash
+# This script is to check format of the project, including:
+#   - not use 'TAB' in codes, instead using spaces.
 
 find . -name '*.h' \
     -o -name '*.cpp' \
@@ -9,14 +11,16 @@ find . -name '*.h' \
     -o -name '*.sh' \
     -o -name '*.php' \
     -o -name '*.act' \
-    | grep -v '^./builder/' \
-    | grep -v './check_format.sh' \
+    | grep -v '^\./\.' \
+    | grep -v '^\./builder' \
+    | grep -v '^\./scripts/.*/format.sh' \
     | xargs grep -n '	'
 
 if [ $? -eq 0 ]; then
-    echo "check format failed"
+    echo "ERROR: check format failed"
     exit -1
 else
-    echo "check format passed"
+    echo "Check format succeed"
     exit 0
 fi
+
