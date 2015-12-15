@@ -214,8 +214,13 @@ void failure_detector::process_all_records()
                 }
             }
 
+            /*
+             * "Check interval" and "send beacon" are interleaved, so we must
+             * test if "record will expire before next time we check all the records"
+             * in order to guarantee the perfect fd
+             */
             if (record.is_alive
-                && now - record.last_send_time_for_beacon_with_ack >= _lease_milliseconds)
+                && now + _check_interval_milliseconds - record.last_send_time_for_beacon_with_ack > _lease_milliseconds)
             {
                 expire.push_back(record.node);
                 record.is_alive = false;
