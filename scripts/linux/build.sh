@@ -1,23 +1,61 @@
 #!/bin/bash
 # !!! This script should be run in dsn project root directory (../../).
 #
-# Options:
-#    DEBUG          YES|NO
-#    WARNING_ALL    YES|NO
-#    RUN_VERBOSE    YES|NO
+# Shell Options:
 #    CLEAR          YES|NO
+#    BUILD_TYPE     debug|release
+#    ONLY_BUILD     YES|NO
+#    RUN_VERBOSE    YES|NO
+#    WARNING_ALL    YES|NO
+#    ENABLE_GCOV    YES|NO
 #    BOOST_DIR      <dir>|""
+#    TEST_MODULE    "<module1> <module2> ..."
+#
+# CMake options:
+#    -DCMAKE_C_COMPILER=gcc
+#    -DCMAKE_CXX_COMPILER=g++
+#    [-DCMAKE_BUILD_TYPE=Debug]
+#    [-DWARNING_ALL=TRUE]
+#    [-DENABLE_GCOV=TRUE]
+#    [-DBoost_NO_BOOST_CMAKE=ON -DBOOST_ROOT=$BOOST_DIR -DBoost_NO_SYSTEM_PATHS=ON]
 
-BUILD_DIR="./builder"
+ROOT=`pwd`
+BUILD_DIR="$ROOT/builder"
+GCOV_DIR="$ROOT/gcov_report"
+GCOV_TMP="$ROOT/.gcov_tmp"
+GCOV_PATTERN=`find $ROOT/include $ROOT/src -name '*.h' -o -name '*.cpp'`
+TIME=`date --rfc-3339=seconds`
 CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"
 MAKE_OPTIONS="$MAKE_OPTIONS -j8"
 
-if [ "$DEBUG" == "YES" ]
+if [ "$CLEAR" == "YES" ]
 then
-    echo "DEBUG=YES"
+    echo "CLEAR=YES"
+else
+    echo "CLEAR=NO"
+fi
+
+if [ "$BUILD_TYPE" == "debug" ]
+then
+    echo "BUILD_TYPE=debug"
     CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=Debug"
 else
-    echo "DEBUG=NO"
+    echo "BUILD_TYPE=release"
+fi
+
+if [ "$ONLY_BUILD" == "YES" ]
+then
+    echo "ONLY_BUILD=YES"
+else
+    echo "ONLY_BUILD=NO"
+fi
+
+if [ "$RUN_VERBOSE" == "YES" ]
+then
+    echo "RUN_VERBOSE=YES"
+    MAKE_OPTIONS="$MAKE_OPTIONS VERBOSE=1"
+else
+    echo "RUN_VERBOSE=NO"
 fi
 
 if [ "$WARNING_ALL" == "YES" ]
@@ -28,20 +66,12 @@ else
     echo "WARNING_ALL=NO"
 fi
 
-if [ "$RUN_VERBOSE" == "YES" ]
+if [ "$ENABLE_GCOV" == "YES" ]
 then
-    echo "RUN_VERBOSE=YES"
-    CMAKE_OPTIONS="$CMAKE_OPTIONS -DDSN_DEBUG_CMAKE=TRUE"
-    MAKE_OPTIONS="$MAKE_OPTIONS VERBOSE=1"
+    echo "ENABLE_GCOV=YES"
+    CMAKE_OPTIONS="$CMAKE_OPTIONS -DENABLE_GCOV=TRUE"
 else
-    echo "RUN_VERBOSE=NO"
-fi
-
-if [ "$CLEAR" == "YES" ]
-then
-    echo "CLEAR=YES"
-else
-    echo "CLEAR=NO"
+    echo "ENABLE_GCOV=NO"
 fi
 
 # You can specify customized boost by defining BOOST_DIR.
@@ -58,6 +88,23 @@ if [ -n "$BOOST_DIR" ]
 then
     echo "Use customized boost: $BOOST_DIR"
     CMAKE_OPTIONS="$CMAKE_OPTIONS -DBoost_NO_BOOST_CMAKE=ON -DBOOST_ROOT=$BOOST_DIR -DBoost_NO_SYSTEM_PATHS=ON"
+else
+    echo "Use system boost"
+fi
+
+echo "CMAKE_OPTIONS=$CMAKE_OPTIONS"
+echo "MAKE_OPTIONS=$MAKE_OPTIONS"
+
+echo "#############################################################################"
+
+if [ -f $BUILD_DIR/CMAKE_OPTIONS ]
+then
+    LAST_OPTIONS=`cat $BUILD_DIR/CMAKE_OPTIONS`
+    if [ "$CMAKE_OPTIONS" != "$LAST_OPTIONS" ]
+    then
+        echo "WARNING: CMAKE_OPTIONS has changed from last build, clear environment first"
+        CLEAR=YES
+    fi
 fi
 
 if [ "$CLEAR" == "YES" -a -d "$BUILD_DIR" ]
@@ -69,10 +116,10 @@ fi
 if [ ! -d "$BUILD_DIR" ]
 then
     echo "Running cmake..."
-    echo "CMAKE_OPTIONS=$CMAKE_OPTIONS"
     mkdir -p $BUILD_DIR
     cd $BUILD_DIR
-    cmake .. -DCMAKE_INSTALL_PREFIX=`pwd`/output $CMAKE_OPTIONS
+    echo "$CMAKE_OPTIONS" >CMAKE_OPTIONS
+    cmake .. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS
     if [ $? -ne 0 ]
     then
         echo "ERROR: cmake failed"
@@ -92,4 +139,87 @@ else
     echo "Build succeed"
 fi
 cd ..
+
+if [ "$ONLY_BUILD" == "YES" ]
+then
+    exit 0
+fi
+
+echo "#############################################################################"
+
+##############################################
+## Supported test module:
+##  - dsn.core.tests
+##  - dsn.tests
+##  - dsn.rep_tests.simple_kv
+##  - dsn.replication.simple_kv
+##############################################
+if [ -z "$TEST_MODULE" ]
+then
+    TEST_MODULE="dsn.core.tests dsn.tests dsn.replication.simple_kv"
+fi
+
+echo "TEST_MODULE=$TEST_MODULE"
+
+if [ "$ENABLE_GCOV" == "YES" ]
+then
+    echo "Initializing gcov..."
+    cd $ROOT
+    rm -rf $GCOV_TMP &>/dev/null
+    mkdir -p $GCOV_TMP
+    lcov -q -d $BUILD_DIR -z
+    lcov -q -d $BUILD_DIR -b $ROOT --no-external --initial -c -q -o $GCOV_TMP/initial.info
+    if [ $? -ne 0 ]
+    then
+        echo "ERROR: lcov init failed, maybe need to run again with --clear option"
+        exit -1
+    fi
+    lcov -q -e $GCOV_TMP/initial.info $GCOV_PATTERN -q -o $GCOV_TMP/initial.extract.info
+    if [ $? -ne 0 ]
+    then
+        echo "ERROR: lcov init extract failed"
+        exit -1
+    fi
+fi
+
+for MODULE in $TEST_MODULE; do
+    echo "====================== run $MODULE =========================="
+    cd $BUILD_DIR/bin/$MODULE
+    ./run.sh
+    if [ $? -ne 0 ]
+    then
+        echo "ERROR: run $MODULE failed"
+        exit -1
+    fi
+done
+
+if [ "$ENABLE_GCOV" == "YES" ]
+then
+    echo "Generating gcov report..."
+    cd $ROOT
+    lcov -q -d $BUILD_DIR -b $ROOT --no-external -c -q -o $GCOV_TMP/gcov.info
+    if [ $? -ne 0 ]
+    then
+        echo "ERROR: lcov generate failed"
+        exit -1
+    fi
+    lcov -q -e $GCOV_TMP/gcov.info $GCOV_PATTERN -q -o $GCOV_TMP/gcov.extract.info
+    if [ $? -ne 0 ]
+    then
+        echo "ERROR: lcov extract failed"
+        exit -1
+    fi
+    genhtml $GCOV_TMP/*.extract.info --show-details --legend --title "GCOV report at $TIME" -o $GCOV_TMP/report
+    if [ $? -ne 0 ]
+    then
+        echo "ERROR: gcov genhtml failed"
+        exit -1
+    fi
+    rm -rf $GCOV_DIR &>/dev/null
+    mv $GCOV_TMP/report $GCOV_DIR
+    rm -rf $GCOV_TMP
+    echo "View gcov report: firefox $GCOV_DIR/index.html"
+fi
+
+echo "Test succeed"
 
