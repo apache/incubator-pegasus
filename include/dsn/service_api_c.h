@@ -188,10 +188,22 @@ typedef void        (*dsn_checker_apply)(void*); // run the given checker
 
 // rDSN allows apps/tools to register commands into its command line interface,
 // which can be further probed via local/remote console, and also http services
-typedef const char* (*dsn_cli_handler)(int argc, const char** argv); // return cmd output
-typedef void        (*dsn_cli_free_handler)(const char* /*cmd output*/);
+typedef struct dsn_cli_reply
+{
+    const char* message;  // zero-ended reply message
+    uint64_t size;  // message_size
+    void* context;  // context for free_handler
+} dsn_cli_reply;
 
-struct dsn_app_info
+typedef void  (*dsn_cli_handler)(
+    void* context,                  // context registered by dsn_cli_register
+    int argc,                       // argument count
+    const char** argv,              // arguments
+    /*out*/dsn_cli_reply* reply     // reply message
+    );
+typedef void (*dsn_cli_free_handler)(dsn_cli_reply reply);
+
+typedef struct dsn_app_info
 {
     void* app_context_ptr;                    // returned by dsn_app_create
     // See comments in struct service_app_spec about meanings of the following fields.
@@ -201,7 +213,7 @@ struct dsn_app_info
     char  type[DSN_MAX_APP_TYPE_NAME_LENGTH]; // app type name
     char  name[DSN_MAX_APP_TYPE_NAME_LENGTH]; // app full name
     char  data_dir[DSN_MAX_PATH];             // app data directory
-};
+} dsn_app_info;
 
 // the following ctrl code are used by dsn_file_ctrl
 typedef enum dsn_ctrl_code_t
@@ -340,13 +352,30 @@ extern DSN_API void dsn_app_loader_wait();
 
 extern DSN_API const char* dsn_cli_run(const char* command_line); // return command output
 extern DSN_API void        dsn_cli_free(const char* command_output);
-extern DSN_API void        dsn_cli_register(
+
+//return value: Handle (the handle of this registered command)
+extern DSN_API dsn_handle_t dsn_cli_register(
                             const char* command,
                             const char* help_one_line,
                             const char* help_long,
+                            void* context,
                             dsn_cli_handler cmd_handler,
                             dsn_cli_free_handler output_freer
                             );
+//return value: Handle (the handle of this registered command) | NULL (We did no find a service_node, probably you call this function from a non-rdsn thread)
+extern DSN_API dsn_handle_t dsn_cli_app_register(
+                            const char* command,        //registered command, you should call this command by app_full_name.command
+                            const char* help_one_line,
+                            const char* help_long,
+                            void* context,              //context to be forwareded to cmd_handler
+                            dsn_cli_handler cmd_handler,
+                            dsn_cli_free_handler output_freer
+                            );
+
+//remove a cli handler, parameter: return value of dsn_cli_register or dsn_cli_app_register
+extern DSN_API void dsn_cli_deregister(dsn_handle_t cli_handle);
+
+
 
 //------------------------------------------------------------------------------
 //

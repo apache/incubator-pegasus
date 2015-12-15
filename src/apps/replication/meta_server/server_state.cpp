@@ -1,4 +1,5 @@
 /*
+
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
@@ -63,7 +64,7 @@ void unmarshall(binary_reader& reader, /*out*/ app_state& val)
 }
 
 server_state::server_state()
-    : ::dsn::serverlet<server_state>("meta.server.state")
+    : ::dsn::serverlet<server_state>("meta.server.state"), _cli_json_state_handle(nullptr)
 {
     _node_live_count = 0;
     _node_live_percentage_threshold_for_update = 65;
@@ -77,6 +78,11 @@ server_state::~server_state()
     {
         delete _storage;
         _storage = nullptr;
+    }
+    if (_cli_json_state_handle != nullptr)
+    {
+        dsn_cli_deregister(_cli_json_state_handle);
+        _cli_json_state_handle = nullptr;
     }
 }
 
@@ -119,7 +125,7 @@ error_code server_state::initialize()
         meta_state_service_type,
         PROVIDER_TYPE_MAIN
         );
-    error_code err = _storage->initialize(argc, &args_ptr[0]);
+    error_code err = _storage->initialize(argc, argc > 0 ? &args_ptr[0] : nullptr);
     if (err != ERR_OK)
     {
         derror("init meta_state_service failed, err = %s", err.to_string());
@@ -147,6 +153,10 @@ error_code server_state::initialize()
         }
     }
     _cluster_root = current.empty() ? "/" : current;
+
+    dassert(_cli_json_state_handle == nullptr, "server state is initialized twice");
+    _cli_json_state_handle = dsn_cli_app_register("info", "get info of nodes and apps on meta_server", "", this, &static_cli_json_state, &static_cli_json_state_cleanup);
+    dassert(_cli_json_state_handle != nullptr, "register cil handler failed, maybe it has been registered");
 
     ddebug("init server_state succeed, cluster_root = %s", _cluster_root.c_str());
     return ERR_OK;
@@ -273,7 +283,7 @@ error_code server_state::initialize_apps()
     {
         _apps.push_back(app);
     }
-
+    
     return err;
 }
 
@@ -889,4 +899,29 @@ bool server_state::partition_configuration_equal(const partition_configuration& 
            pc1.primary == pc2.primary &&
            pc1.secondaries == pc2.secondaries &&
            pc1.last_committed_decree == pc2.last_committed_decree;
+}
+
+void server_state::json_state(std::stringstream& out) const
+{
+    zauto_read_lock _(_lock);
+    JSON_DICT_ENTRIES(out, *this, _nodes, _apps);
+}
+
+void server_state::static_cli_json_state(void* context, int argc, const char** argv, dsn_cli_reply* reply)
+{
+    auto _server_state = reinterpret_cast<server_state*>(context);
+    std::stringstream out;
+    _server_state->json_state(out);
+    auto danglingstring = new std::string(std::move(out.str()));
+    reply->message = danglingstring->c_str();
+    reply->size = danglingstring->size();
+    reply->context = danglingstring;
+}
+
+void server_state::static_cli_json_state_cleanup(dsn_cli_reply reply)
+{
+    dassert(reply.context != nullptr, "corrupted cli reply context");
+    auto danglingstring = reinterpret_cast<std::string*>(reply.context);
+    dassert(reply.message == danglingstring->c_str(), "corrupted cli reply message");
+    delete danglingstring;
 }

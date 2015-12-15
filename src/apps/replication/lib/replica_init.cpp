@@ -162,7 +162,7 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
 
     sprintf(_name, "%u.%u @ %s", _config.gpid.app_id, _config.gpid.pidx, primary_address().to_string());
 
-    _app = ::dsn::utils::factory_store<replication_app_base>::create(app_type, PROVIDER_TYPE_MAIN, this);
+    _app.reset(::dsn::utils::factory_store<replication_app_base>::create(app_type, PROVIDER_TYPE_MAIN, this));
     if (nullptr == _app)
     {
         return ERR_OBJECT_NOT_FOUND;
@@ -271,7 +271,6 @@ error_code replica::init_app_and_prepare_list(const char* app_type, bool create_
     {
         derror( "%s: open replica failed, error = %s", name(), err.to_string());
         _app->close(false);
-        delete _app;
         _app = nullptr;
     }
     

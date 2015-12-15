@@ -39,7 +39,7 @@
 using namespace ::dsn;
 using namespace ::dsn::replication;
 
-static void copy_file(const char* from_file, const char* to_file, int to_size = -1)
+static void copy_file(const char* from_file, const char* to_file, int64_t to_size = -1)
 {
     int64_t from_size;
     ASSERT_TRUE(dsn::utils::filesystem::file_size(from_file, from_size));
@@ -53,7 +53,7 @@ static void copy_file(const char* from_file, const char* to_file, int to_size = 
     if (to_size > 0)
     {
         std::unique_ptr<char> buf(new char[to_size]);
-        int n = fread(buf.get(), 1, to_size, from);
+        auto n = fread(buf.get(), 1, to_size, from);
         ASSERT_EQ(to_size, n);
         n = fwrite(buf.get(), 1, to_size, to);
         ASSERT_EQ(to_size, n);
