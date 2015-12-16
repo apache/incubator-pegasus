@@ -46,6 +46,7 @@
 # include <dsn/internal/task.h>
 # include <dsn/internal/singleton_store.h>
 # include <dsn/internal/configuration.h>
+# include <dsn/cpp/utils.h>
 
 # include "command_manager.h"
 # include "service_engine.h"
@@ -835,12 +836,12 @@ DSN_API bool dsn_register_app_role(const char* type_name, dsn_app_create create,
     return store.put(role.type_name, role);
 }
 
-static bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_name, int app_index);
+static bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_list);
 
 DSN_API bool dsn_run_config(const char* config, bool sleep_after_init)
 {
     std::string name;
-    return run(config, nullptr, sleep_after_init, name, -1);
+    return run(config, nullptr, sleep_after_init, name);
 }
 
 DSN_API void dsn_terminate()
@@ -948,8 +949,7 @@ DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init)
 
     char* config = argv[1];
     std::string config_args = "";
-    std::string app_name = "";
-    int app_index = -1;
+    std::string app_list = "";
 
     for (int i = 2; i < argc;)
     {
@@ -961,19 +961,11 @@ DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init)
             }
         }
 
-        else if (0 == strcmp(argv[i], "-app"))
+        else if (0 == strcmp(argv[i], "-app_list"))
         {
             if (++i < argc)
             {
-                app_name = std::string(argv[i++]);
-            }
-        }
-
-        else if (0 == strcmp(argv[i], "-app_index"))
-        {
-            if (++i < argc)
-            {
-                app_index = atoi(argv[i++]);
+                app_list = std::string(argv[i++]);
             }
         }
         else
@@ -984,7 +976,7 @@ DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init)
         }
     }
 
-    if (!run(config, config_args.size() > 0 ? config_args.c_str() : nullptr, sleep_after_init, app_name, app_index))
+    if (!run(config, config_args.size() > 0 ? config_args.c_str() : nullptr, sleep_after_init, app_list))
     {
         printf("run the system failed\n");
         dsn_terminate();
@@ -1008,7 +1000,7 @@ namespace dsn {
 }
 
 extern void dsn_log_init();
-bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_name, int app_index)
+bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_list)
 {
     ::dsn::task::set_tls_dsn_context(nullptr, nullptr, nullptr);
 
@@ -1122,6 +1114,10 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
 
     dsn_all.engine_ready = true;
 
+    // split app_name and app_index
+    std::list<std::string> applistkvs;
+    ::dsn::utils::split_args(app_list.c_str(), applistkvs, ',');
+    
     // init apps
     for (auto& sp : spec.app_specs)
     {
@@ -1129,21 +1125,27 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
             continue;
 
         bool create_it = false;
-        if (app_name == "") // create all apps
+
+        if (app_list == "") // create all apps
         {
             create_it = true;
         }
-        else if (std::string("apps.") + app_name == sp.config_section)
+        else
         {
-            if (app_index == -1)
-                create_it = true;
-            else
+            for (auto &kv : applistkvs)
             {
-                create_it = (app_index == sp.index);
+                std::list<std::string> argskvs;
+                ::dsn::utils::split_args(kv.c_str(), argskvs, '@');
+                if (std::string("apps.") + argskvs.front() == sp.config_section)
+                {
+                    if (argskvs.size() < 2)
+                        create_it = true;
+                    else
+                        create_it = (std::stoi(argskvs.back()) == sp.index);
+                    break;
+                }
             }
         }
-        else
-            create_it = false;
 
         if (create_it)
         {
