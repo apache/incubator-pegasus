@@ -49,19 +49,19 @@ public:
     perf_counters(void);
     ~perf_counters(void);
 
-    perf_counter_ptr get_counter(
+    perf_counter* get_counter(
                     const char *section, 
                     const char *name, 
-                    perf_counter_type flags, 
+                    dsn_perf_counter_type_t flags, 
                     const char *dsptr,
                     bool create_if_not_exist = false
                     );
 
     bool remove_counter(const char* section, const char* name);
 
-    perf_counter_ptr get_counter(
+    perf_counter* get_counter(
                     const char *name, 
-                    perf_counter_type flags,
+                    dsn_perf_counter_type_t flags,
                     const char *dsptr,
                     bool create_if_not_exist = false)
     {
@@ -77,16 +77,11 @@ public:
     static std::string list_counter(const std::vector<std::string>& args);
     static std::string query_counter(const std::vector<std::string>& args);
 
-    typedef std::map<std::string, std::pair<perf_counter_ptr, perf_counter_type> > same_section_counters;
+    typedef std::map<std::string, std::pair<std::unique_ptr<perf_counter>, dsn_perf_counter_type_t> > same_section_counters;
     typedef std::map<std::string, same_section_counters> all_counters;
 
-    all_counters get_all_counters()
-    {
-        return _counters;
-    }
 private:
-
-
+    std::string list_counter_internal(const std::vector<std::string>& args);
     mutable utils::rw_lock_nr  _lock;
     all_counters               _counters;
     perf_counter::factory       _factory;

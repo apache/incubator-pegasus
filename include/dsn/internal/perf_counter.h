@@ -37,56 +37,35 @@
 
 # include <memory>
 # include <dsn/internal/enum_helper.h>
+# include <dsn/service_api_c.h>
 
 namespace dsn {
-
-enum perf_counter_type
-{
-    COUNTER_TYPE_NUMBER,
-    COUNTER_TYPE_RATE,
-    COUNTER_TYPE_NUMBER_PERCENTILES,
-    COUNTER_TYPE_INVALID,
-    COUNTER_TYPE_COUNT
-};
-
-ENUM_BEGIN(perf_counter_type, COUNTER_TYPE_INVALID)
+ENUM_BEGIN(dsn_perf_counter_type_t, COUNTER_TYPE_INVALID)
     ENUM_REG(COUNTER_TYPE_NUMBER)
     ENUM_REG(COUNTER_TYPE_RATE)
     ENUM_REG(COUNTER_TYPE_NUMBER_PERCENTILES)
-ENUM_END(perf_counter_type)
+ENUM_END(dsn_perf_counter_type_t)
 
-enum counter_percentile_type
-{
-    COUNTER_PERCENTILE_50,
-    COUNTER_PERCENTILE_90,
-    COUNTER_PERCENTILE_95,
-    COUNTER_PERCENTILE_99,
-    COUNTER_PERCENTILE_999,    
-
-    COUNTER_PERCENTILE_COUNT,
-    COUNTER_PERCENTILE_INVALID
-};
-
-ENUM_BEGIN(counter_percentile_type, COUNTER_PERCENTILE_INVALID)
+ENUM_BEGIN(dsn_perf_counter_percentile_type_t, COUNTER_PERCENTILE_INVALID)
     ENUM_REG(COUNTER_PERCENTILE_50)
     ENUM_REG(COUNTER_PERCENTILE_90)
     ENUM_REG(COUNTER_PERCENTILE_95)
     ENUM_REG(COUNTER_PERCENTILE_99)
     ENUM_REG(COUNTER_PERCENTILE_999)
-ENUM_END(counter_percentile_type)
+ENUM_END(dsn_perf_counter_percentile_type_t)
 
 class perf_counter
 {
 public:
-    template <typename T> static perf_counter* create(const char *section, const char *name, perf_counter_type type, const char *dsptr)
+    template <typename T> static perf_counter* create(const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr)
     {
         return new T(section, name, type, dsptr);
     }
 
-    typedef perf_counter* (*factory)(const char *, const char *, perf_counter_type, const char *);
+    typedef perf_counter* (*factory)(const char *, const char *, dsn_perf_counter_type_t, const char *);
 
 public:
-    perf_counter(const char *section, const char *name, perf_counter_type type, const char *dsptr) 
+    perf_counter(const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr) 
         : _name(name), _section(section), _dsptr(dsptr)
     {
     }
@@ -98,7 +77,7 @@ public:
     virtual void   add(uint64_t val) = 0;
     virtual void   set(uint64_t val) = 0;
     virtual double get_value() = 0;
-    virtual double get_percentile(counter_percentile_type type) = 0;
+    virtual double get_percentile(dsn_perf_counter_percentile_type_t type) = 0;
     virtual uint64_t* get_samples(/*out*/ int& sample_count) const { return nullptr; }
     virtual uint64_t get_current_sample() const { return 0; }
 
@@ -111,7 +90,5 @@ private:
     std::string _section;
     std::string _dsptr;
 };
-
-typedef std::shared_ptr<perf_counter> perf_counter_ptr;
 
 } // end namespace

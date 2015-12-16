@@ -44,7 +44,7 @@ namespace dsn {
         class simple_perf_counter_v2_atomic : public perf_counter
         {
         public:
-            simple_perf_counter_v2_atomic(const char *section, const char *name, perf_counter_type type, const char *dsptr);
+            simple_perf_counter_v2_atomic(const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr);
             ~simple_perf_counter_v2_atomic(void);
 
             virtual void   increment() { _counter_impl->increment(); }
@@ -52,7 +52,7 @@ namespace dsn {
             virtual void   add(uint64_t val) { _counter_impl->add(val); }
             virtual void   set(uint64_t val) { _counter_impl->set(val); }
             virtual double get_value() { return _counter_impl->get_value(); }
-            virtual double get_percentile(counter_percentile_type type) { return _counter_impl->get_percentile(type); }
+            virtual double get_percentile(dsn_perf_counter_percentile_type_t type) { return _counter_impl->get_percentile(type); }
 
         private:
             perf_counter *_counter_impl;

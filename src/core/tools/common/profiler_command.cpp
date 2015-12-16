@@ -53,7 +53,7 @@ namespace dsn {
             return code;
         }
 
-        static counter_percentile_type find_percentail_type(const std::string &name)
+        static dsn_perf_counter_percentile_type_t find_percentail_type(const std::string &name)
         {
             int num = atoi(name.c_str());
             if (num == 0)
@@ -184,7 +184,7 @@ namespace dsn {
                     return ss.str();
                 }
 
-                counter_percentile_type percentile_type = COUNTER_PERCENTILE_50;
+                dsn_perf_counter_percentile_type_t percentile_type = COUNTER_PERCENTILE_50;
                 if ((args.size() > 3) && (find_percentail_type(args[3]) != COUNTER_PERCENTILE_INVALID))
                 {
                     percentile_type = find_percentail_type(args[3]);
@@ -201,7 +201,7 @@ namespace dsn {
             size_t k = args.size();
             int task_id;
             perf_counter_ptr_type counter_type;
-            counter_percentile_type percentile_type;
+            dsn_perf_counter_percentile_type_t percentile_type;
             std::stringstream ss;
             std::vector<std::string> val;
 
@@ -272,7 +272,7 @@ namespace dsn {
             {
                 int task_id;
                 perf_counter_ptr_type counter_type;
-                counter_percentile_type percentile_type;
+                dsn_perf_counter_percentile_type_t percentile_type;
 
                 ss << "[";
                 for (int i = 0; i <= dsn_task_code_max(); ++i)
@@ -285,7 +285,7 @@ namespace dsn {
                     double query_record[PREF_COUNTER_COUNT] = { 0 };
                     for (int j = 0; j < COUNTER_PERCENTILE_COUNT; ++j)
                     {
-                        percentile_type = static_cast<counter_percentile_type>(j);
+                        percentile_type = static_cast<dsn_perf_counter_percentile_type_t>(j);
                         ss << "[\"" << dsn_task_code_to_string(task_id) << "\",";
                         ss << "\"" << percentail_counter_string[percentile_type] << "\"";
 

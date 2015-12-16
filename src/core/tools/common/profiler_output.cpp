@@ -68,7 +68,7 @@ namespace dsn {
             return x.val > y.val;
         }
 
-        void profiler_output_top(std::stringstream &ss, const perf_counter_ptr_type counter_type, const counter_percentile_type percentile_type, const int num)
+        void profiler_output_top(std::stringstream &ss, const perf_counter_ptr_type counter_type, const dsn_perf_counter_percentile_type_t percentile_type, const int num)
         {
             sort_node *_tmp = new sort_node[dsn_task_code_max() + 3];
             int tmp_num = (num >= dsn_task_code_max() + 1) ? dsn_task_code_max() + 1 : num;
@@ -118,7 +118,7 @@ namespace dsn {
             delete[] _tmp;
         }
 
-        void profiler_output_infomation_line(std::stringstream &ss, const int task_id, counter_percentile_type percentile_type, const bool full_data)
+        void profiler_output_infomation_line(std::stringstream &ss, const int task_id, dsn_perf_counter_percentile_type_t percentile_type, const bool full_data)
         {
             //Print the table infrom
             if (full_data == true)
@@ -190,7 +190,7 @@ namespace dsn {
                 //Print all percentile type
                 for (int j = 0; j < COUNTER_PERCENTILE_COUNT; j++)
                 {
-                    profiler_output_infomation_line(ss, task_id, (counter_percentile_type)j, j == COUNTER_PERCENTILE_COUNT / 2);
+                    profiler_output_infomation_line(ss, task_id, (dsn_perf_counter_percentile_type_t)j, j == COUNTER_PERCENTILE_COUNT / 2);
                 }
                 ss << profiler_output_data->separate_line_info << std::endl;
                 return;
@@ -205,7 +205,7 @@ namespace dsn {
                 //Print all percentile type
                 for (int j = 0; j < COUNTER_PERCENTILE_COUNT; j++)
                 {
-                    profiler_output_infomation_line(ss, i, (counter_percentile_type)j, j == COUNTER_PERCENTILE_COUNT / 2);
+                    profiler_output_infomation_line(ss, i, (dsn_perf_counter_percentile_type_t)j, j == COUNTER_PERCENTILE_COUNT / 2);
                 }
 
                 ss << profiler_output_data->separate_line_info << std::endl;
@@ -364,7 +364,7 @@ namespace dsn {
             }
         }
 
-        void profiler_data_top(std::stringstream &ss, const perf_counter_ptr_type counter_type, const counter_percentile_type percentile_type, const int num)
+        void profiler_data_top(std::stringstream &ss, const perf_counter_ptr_type counter_type, const dsn_perf_counter_percentile_type_t percentile_type, const int num)
         {
             sort_node *_tmp = new sort_node[dsn_task_code_max() + 3];
             int tmp_num = num >= dsn_task_code_max() + 1 ? dsn_task_code_max() + 1 : num;
