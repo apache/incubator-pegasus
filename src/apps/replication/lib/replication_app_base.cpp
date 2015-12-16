@@ -149,8 +149,9 @@ const char* replication_app_base::replica_name() const
 error_code replication_app_base::open_internal(replica* r, bool create_new)
 {
     auto err = open(create_new);
-    if (err == 0)
+    if (err == ERR_OK)
     {
+        dassert(last_committed_decree() == last_durable_decree(), "");
         if (!create_new)
         {
             std::string info_path = utils::filesystem::path_combine(r->dir(), ".info");

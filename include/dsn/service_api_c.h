@@ -997,8 +997,8 @@ extern DSN_API void         dsn_msg_get_context(
 #define derror(...) dlog(LOG_LEVEL_ERROR, __TITLE__, __VA_ARGS__)
 #define dfatal(...) dlog(LOG_LEVEL_FATAL, __TITLE__, __VA_ARGS__)
 #define dassert(x, ...) do { if (!(x)) {                    \
-            dlog(LOG_LEVEL_FATAL, "assert", "assertion expression: "#x); \
-            dlog(LOG_LEVEL_FATAL, "assert", __VA_ARGS__);  \
+            dlog(LOG_LEVEL_FATAL, __FILE__, "assertion expression: "#x); \
+            dlog(LOG_LEVEL_FATAL, __FILE__, __VA_ARGS__);  \
             dsn_coredump();       \
                 } } while (false)
 

@@ -22,14 +22,15 @@ config:{4,-,[r2,r3]}
 # r2 become primary
 state:{{r2,ina,4,0},{r3,sec,3,0}}
 config:{5,r2,[r3]}
-state:{{r2,pri,5,0},{r3,sec,3,0}}
-state:{{r2,pri,5,0},{r3,sec,5,0}}
+set:disable_load_balance=1
 
 # commit write
 state:{{r2,pri,5,1},{r3,sec,5,0}}
 
 # client receive timeout (but data is already committed)
 client:end_write:id=1,err=ERR_TIMEOUT,resp=0
+
+set:disable_load_balance=0
 
 # r1 recover
 state:{{r1,sec,6,1},{r2,pri,6,1},{r3,sec,6,1}}

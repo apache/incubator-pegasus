@@ -86,13 +86,13 @@ struct log_file_header
 {
     int32_t  magic;
     int32_t  version;
-    int64_t  start_global_offset;
+    int64_t  start_global_offset; // equal to the file postfix
 };
 
 class log_block
 {
-    std::vector<blob> _data;
-    size_t _size;
+    std::vector<blob> _data; // the first blob is log_block_header
+    size_t _size; // total data size of all blobs
 public:
     log_block(blob &&init_blob) : _data({init_blob}), _size(init_blob.length()) {}
     const std::vector<blob>& data() const
@@ -112,13 +112,15 @@ public:
     size_t size() const
     {
         return _size;
-    };
+    }
 };
+
+// log file name: log.{index}.{global_start_offset}
 class mutation_log : public virtual clientlet, public ref_counter
 {
 public:
     // return true when the mutation's offset is not less than
-    // the remembered log_start_offset therefore valid for the replica
+    // the remembered (shared or private) log_start_offset therefore valid for the replica
     typedef std::function<bool (mutation_ptr&)> replay_callback;
 
 public:
@@ -242,8 +244,8 @@ private:
 
     // logs
     mutable zlock               _lock;
-    int                         _last_file_number;
-    std::map<int, log_file_ptr> _log_files;
+    int                         _last_file_index;
+    std::map<int, log_file_ptr> _log_files; // index -> log_file_ptr
     log_file_ptr                _current_log_file;
     int64_t                     _global_start_offset;
     int64_t                     _global_end_offset;
@@ -263,6 +265,11 @@ private:
     int64_t                        _private_valid_start_offset;
 };
 
+//
+// the log file is structured with sequences of log_blocks,
+// each block consists of the log_block_header + log_content,
+// and the first block contains the log_file_header at the beginning
+//
 class log_file : public ref_counter
 {
 public:    
@@ -302,7 +309,12 @@ public:
 
     // sync read the next log entry from the file
     // the entry data is start from the 'local_offset' of the file
-    // the result is passed out by 'bb'
+    // the result is passed out by 'bb', not including the log_block_header
+    // return error codes:
+    //  - ERR_OK
+    //  - ERR_HANDLE_EOF
+    //  - ERR_INCOMPLETE_DATA
+    //  - ERR_INVALID_DATA
     error_code read_next_log_block(int64_t local_offset, /*out*/::dsn::blob& bb);
 
     //
@@ -350,9 +362,9 @@ public:
     log_file_header& header() { return _header;}
 
     // read file header from reader, return byte count consumed
-    int read_header(binary_reader& reader);
+    int read_file_header(binary_reader& reader);
     // write file header to writer, return byte count written
-    int write_header(binary_writer& writer, multi_partition_decrees_ex& init_max_decrees, int bufferSizeBytes);
+    int write_file_header(binary_writer& writer, multi_partition_decrees_ex& init_max_decrees, int bufferSizeBytes);
     // get serialized size of current file header
     int get_file_header_size() const;
     // if the file header is valid
@@ -363,12 +375,12 @@ private:
 
 private:        
     uint32_t      _crc32;
-    int64_t       _start_offset;
-    int64_t       _end_offset;
-    dsn_handle_t  _handle;
-    bool          _is_read;
-    std::string   _path;
-    int           _index;
+    int64_t       _start_offset; // start offset in the global space
+    int64_t       _end_offset; // end offset in the global space: end_offset = start_offset + file_size
+    dsn_handle_t  _handle; // file handle
+    bool          _is_read; // if opened for read or write
+    std::string   _path; // file path
+    int           _index; // file index
 
     // for gc
     multi_partition_decrees_ex _previous_log_max_decrees;    
