@@ -478,11 +478,9 @@ bool service_spec::init_app_specs()
         if (std::find(all_section_names.begin(), all_section_names.end(), mimic_section_name)
             == all_section_names.end())
         {
-            printf("[apps.mimic] must be defined in config when [core] enable_default_app_mimic is true, example:\n"
-                "[apps.mimic]\ntype = " mimic_app_role_name "\n"                
-                "pools = THREAD_POOL_DEFAULT\n"
-                );
-            return false;
+            config->set("apps.mimic", "type", mimic_app_role_name, "must be " mimic_app_role_name);
+            config->set("apps.mimic", "pools", "THREAD_POOL_DEFAULT", "");
+            all_section_names.push_back("apps.mimic");
         }
         else
         {
