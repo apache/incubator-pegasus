@@ -110,6 +110,24 @@ __thread uint16_t tls_dsn_lower32_task_id_mask = 0;
     tls_dsn.last_lower32_task_id = worker ? 0 : ((uint32_t)(++tls_dsn_lower32_task_id_mask)) << 16;
 }
 
+/*static*/ void task::on_tls_dsn_not_set()
+{
+    if (service_engine::instance().spec().enable_default_app_mimic)
+    {
+        dsn_mimic_app("mimic", 1);
+    }
+    else
+    {
+        dassert(false, "rDSN context is not initialized properly, to be fixed as follows:\n"
+            "(1). the current thread does NOT belongs to any rDSN service node, please invoke dsn_mimic_app first,\n"
+            "     or, you can enable [core] enable_default_app_mimic = true in your config file so mimic_app can be omitted\n"
+            "(2). the current thread belongs to a rDSN service node, and you are writing providers for rDSN, please use\n"
+            "     task::set_tls_dsn_context(...) at the beginning of your new thread in your providers;\n"
+            "(3). this should not happen, please help fire an issue so we we can investigate"            
+            );
+    }
+}
+
 task::task(dsn_task_code_t code, void* context, dsn_task_cancelled_handler_t on_cancel, int hash, service_node* node)
     : _state(TASK_STATE_READY)
 {

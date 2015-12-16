@@ -26,10 +26,10 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     configuration of rDSN
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -368,12 +368,12 @@ extern "C"
 
 void service_spec::load_app_shared_libraries(dsn::configuration_ptr config)
 {
-    std::vector<std::string> allSectionNames;
-    config->get_all_sections(allSectionNames);
+    std::vector<std::string> all_section_names;
+    config->get_all_sections(all_section_names);
 
     int app_id = 0;
     std::vector< std::pair<std::string, std::string> > modules;
-    for (auto it = allSectionNames.begin(); it != allSectionNames.end(); it++)
+    for (auto it = all_section_names.begin(); it != all_section_names.end(); it++)
     {
         if (it->substr(0, strlen("apps.")) == std::string("apps."))
         {
@@ -433,8 +433,33 @@ void service_spec::load_app_shared_libraries(dsn::configuration_ptr config)
     }
 }
 
+#define mimic_app_role_name "dsn.app.mimic"
+
+static void* mimic_app_create(const char*)
+{
+    return nullptr;
+}
+
+static dsn_error_t mimic_app_start(void* ctx, int argc, char** argv)
+{
+    return ::dsn::ERR_OK;
+}
+
+static void mimic_app_destroy(void* ctx, bool clean_up)
+{
+    return;
+}
+
 bool service_spec::init_app_specs()
 {
+    // register mimic app
+    dsn_register_app_role(
+        mimic_app_role_name,
+        mimic_app_create,
+        mimic_app_start,
+        mimic_app_destroy
+        );
+
     // init service apps
     service_app_spec default_app;
     if (!default_app.init("apps..default", ".default", nullptr,
@@ -443,11 +468,36 @@ bool service_spec::init_app_specs()
         ))
         return false;
 
-    std::vector<std::string> allSectionNames;
-    config->get_all_sections(allSectionNames);
+    std::vector<std::string> all_section_names;
+    config->get_all_sections(all_section_names);
     
+    // check mimic app
+    if (enable_default_app_mimic)
+    {
+        std::string mimic_section_name("apps.mimic");
+        if (std::find(all_section_names.begin(), all_section_names.end(), mimic_section_name)
+            == all_section_names.end())
+        {
+            printf("[apps.mimic] must be defined in config when [core] enable_default_app_mimic is true, example:\n"
+                "[apps.mimic]\ntype = " mimic_app_role_name "\n"                
+                "pools = THREAD_POOL_DEFAULT\n"
+                );
+            return false;
+        }
+        else
+        {
+            auto type = config->get_string_value("apps.mimic", "type", "", "app type, must be " mimic_app_role_name);
+            if (strcmp(type, mimic_app_role_name) != 0)
+            {
+                printf("invalid config value '%s' for [apps.mimic] type", type);
+                return false;
+            }
+        }
+    }
+
+    // init all apps
     int app_id = 0;
-    for (auto it = allSectionNames.begin(); it != allSectionNames.end(); it++)
+    for (auto it = all_section_names.begin(); it != all_section_names.end(); it++)
     {
         if (it->substr(0, strlen("apps.")) == std::string("apps.") && *it != std::string("apps..default"))
         {
