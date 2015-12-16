@@ -15,6 +15,11 @@ function usage()
     echo "   start_zk    start the local single zookeeper server"
     echo "   stop_zk     stop the local single zookeeper server"
     echo "   format      check the code format"
+    echo "   publish     publish the program"
+    echo "   deploy      deploy the program to remote machine"
+    echo "   start       start program at remote machine"
+    echo "   stop        stop program at remote machine"
+    echo "   clean       clean deployed program at remote machine"
     echo
     echo "Command 'run.sh <command> -h' will print help for subcommands."
 }
@@ -281,6 +286,11 @@ case $cmd in
     format)
         shift
         run_format $* ;;
+    publish)
+        shift
+        $scripts_dir/publish.sh $* ;;
+    deploy|start|stop|clean)
+        $scripts_dir/deploy.sh $* ;;
     *)
         echo "ERROR: unknown command $cmd"
         echo

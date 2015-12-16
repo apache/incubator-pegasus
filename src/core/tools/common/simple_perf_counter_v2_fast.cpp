@@ -52,7 +52,7 @@ namespace dsn {
         class perf_counter_number_v2_fast : public perf_counter
         {
         public:
-            perf_counter_number_v2_fast(const char *section, const char *name, perf_counter_type type, const char *dsptr)
+            perf_counter_number_v2_fast(const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr)
                 : perf_counter(section, name, type, dsptr)
             {
                 for (int i = 0; i < DIVIDE_CONTAINER; i++)
@@ -87,7 +87,7 @@ namespace dsn {
                 }
                 return val;
             }
-            virtual double get_percentile(counter_percentile_type type) { dassert(false, "invalid execution flow"); return 0.0; }
+            virtual double get_percentile(dsn_perf_counter_percentile_type_t type) { dassert(false, "invalid execution flow"); return 0.0; }
 
         private:
             uint64_t              _val[DIVIDE_CONTAINER];
@@ -98,7 +98,7 @@ namespace dsn {
         class perf_counter_rate_v2_fast : public perf_counter
         {
         public:
-            perf_counter_rate_v2_fast(const char *section, const char *name, perf_counter_type type, const char *dsptr)
+            perf_counter_rate_v2_fast(const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr)
                 : perf_counter(section, name, type, dsptr), _rate(0)
             {
                 _last_time = ::dsn::utils::get_current_physical_time_ns();
@@ -147,7 +147,7 @@ namespace dsn {
                 _rate = val / interval;
                 return _rate;
             }
-            virtual double get_percentile(counter_percentile_type type) { dassert(false, "invalid execution flow"); return 0.0; }
+            virtual double get_percentile(dsn_perf_counter_percentile_type_t type) { dassert(false, "invalid execution flow"); return 0.0; }
 
         private:
             std::atomic<double> _rate;
@@ -166,7 +166,7 @@ namespace dsn {
         class perf_counter_number_percentile_v2_fast : public perf_counter
         {
         public:
-            perf_counter_number_percentile_v2_fast(const char *section, const char *name, perf_counter_type type, const char *dsptr)
+            perf_counter_number_percentile_v2_fast(const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr)
                 : perf_counter(section, name, type, dsptr)
             {
                 _results[COUNTER_PERCENTILE_50] = 0;
@@ -202,7 +202,7 @@ namespace dsn {
 
             virtual double get_value() { dassert(false, "invalid execution flow");  return 0.0; }
 
-            virtual double get_percentile(counter_percentile_type type)
+            virtual double get_percentile(dsn_perf_counter_percentile_type_t type)
             {
                 if ((type < 0) || (type >= COUNTER_PERCENTILE_COUNT))
                 {
@@ -353,12 +353,12 @@ namespace dsn {
 
         // ---------------------- perf counter dispatcher ---------------------
 
-        simple_perf_counter_v2_fast::simple_perf_counter_v2_fast(const char *section, const char *name, perf_counter_type type, const char *dsptr)
+        simple_perf_counter_v2_fast::simple_perf_counter_v2_fast(const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr)
             : perf_counter(section, name, type, dsptr)
         {
-            if (type == perf_counter_type::COUNTER_TYPE_NUMBER)
+            if (type == dsn_perf_counter_type_t::COUNTER_TYPE_NUMBER)
                 _counter_impl = new perf_counter_number_v2_fast(section, name, type, dsptr);
-            else if (type == perf_counter_type::COUNTER_TYPE_RATE)
+            else if (type == dsn_perf_counter_type_t::COUNTER_TYPE_RATE)
                 _counter_impl = new perf_counter_rate_v2_fast(section, name, type, dsptr);
             else
                 _counter_impl = new perf_counter_number_percentile_v2_fast(section, name, type, dsptr);
