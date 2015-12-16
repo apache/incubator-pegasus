@@ -58,8 +58,6 @@
 
 //parameters: fields to be serialized
 #define DEFINE_JSON_SERIALIZATION(...) void json_state(std::stringstream& out) const {JSON_DICT_ENTRIES(out, *this, __VA_ARGS__);}
-
-//#define  DEFINE_DEFAULT_JSON_SERIALIZATION(T) inline void json_encode(std::stringstream& out, const T& t) {out << t;}
     
 namespace dsn{ namespace replication{
 
@@ -126,7 +124,7 @@ inline void json_encode(std::stringstream& out, const char* t)
 }
 
 template<typename T>
-struct json_forwarder {
+class json_forwarder {
 private:
     //check if C has C.json_state(sstream&) function
     template<typename C>

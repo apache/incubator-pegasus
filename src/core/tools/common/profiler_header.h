@@ -67,7 +67,7 @@ namespace dsn {
         class counter_info
         {
         public:
-            counter_info(const std::vector<const char*>& command_keys, perf_counter_ptr_type _index, perf_counter_type _type, const char * _title, const char* _unit)
+            counter_info(const std::vector<const char*>& command_keys, perf_counter_ptr_type _index, dsn_perf_counter_type_t _type, const char * _title, const char* _unit)
                 : type(_type), title(_title), unit_name(_unit)
             {
                 for (auto key : command_keys)
@@ -84,7 +84,7 @@ namespace dsn {
 
             static std::map<std::string, perf_counter_ptr_type> pointer_type;
             std::vector<const char*> keys;
-            perf_counter_type type;
+            dsn_perf_counter_type_t type;
             const char* title;
             const char* unit_name;
 
@@ -211,7 +211,7 @@ namespace dsn {
 
         struct task_spec_profiler
         {
-            perf_counter_ptr ptr[PREF_COUNTER_COUNT];
+            perf_counter* ptr[PREF_COUNTER_COUNT];
             bool collect_call_count;
             bool is_profile;
             std::atomic<int64_t>* call_counts;
@@ -226,8 +226,8 @@ namespace dsn {
         void profiler_output_dependency_list_caller(std::stringstream &ss, const int task_id);
         void profiler_output_dependency_matrix(std::stringstream &ss);
         void profiler_output_information_table(std::stringstream &ss, const int task_id);
-        void profiler_output_infomation_line(std::stringstream &ss, const int task_id, counter_percentile_type percentile_type, const bool full_data);
-        void profiler_output_top(std::stringstream &ss, const perf_counter_ptr_type counter_type, const counter_percentile_type percentile_type, const int num);
-        void profiler_data_top(std::stringstream &ss, const perf_counter_ptr_type counter_type, const counter_percentile_type percentile_type, const int num);
+        void profiler_output_infomation_line(std::stringstream &ss, const int task_id, dsn_perf_counter_percentile_type_t percentile_type, const bool full_data);
+        void profiler_output_top(std::stringstream &ss, const perf_counter_ptr_type counter_type, const dsn_perf_counter_percentile_type_t percentile_type, const int num);
+        void profiler_data_top(std::stringstream &ss, const perf_counter_ptr_type counter_type, const dsn_perf_counter_percentile_type_t percentile_type, const int num);
     }
 }
