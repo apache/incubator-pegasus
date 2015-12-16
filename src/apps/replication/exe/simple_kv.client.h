@@ -56,13 +56,13 @@ public:
     
     // from requests to partition index
     // PLEASE DO RE-DEFINE THEM IN A SUB CLASS!!!
-    virtual int get_partition_index(int partition_count, const std::string& key)
+    virtual uint32_t get_key_hash(const std::string& key)
     {
-        return (dsn_crc32_compute(key.c_str(), key.size(), 0) % partition_count);
+        return dsn_crc32_compute(key.c_str(), key.size(), 0);
     }
-    virtual int get_partition_index_2(int partition_count, const ::dsn::replication::application::kv_pair& key)
+    virtual uint32_t get_key_hash(const ::dsn::replication::application::kv_pair& key)
     {
-        return (dsn_crc32_compute(key.key.c_str(), key.key.size(), 0) % partition_count);
+        return dsn_crc32_compute(key.key.c_str(), key.key.size(), 0);
     }
 
     // ---------- call RPC_SIMPLE_KV_SIMPLE_KV_READ ------------
@@ -74,11 +74,7 @@ public:
         )
     {
         auto resp_task = ::dsn::replication::replication_app_client_base::read<std::string, std::string>(
-            std::bind(
-                &simple_kv_client::get_partition_index,
-                this,
-                std::placeholders::_1,
-                key),
+            get_key_hash(key),
             RPC_SIMPLE_KV_SIMPLE_KV_READ,
             key,
             nullptr,
@@ -105,11 +101,7 @@ public:
         )
     {
         return ::dsn::replication::replication_app_client_base::read<simple_kv_client, std::string, std::string>(
-            std::bind(
-                &simple_kv_client::get_partition_index,
-                this,
-                std::placeholders::_1,
-                key),
+            get_key_hash(key),
             RPC_SIMPLE_KV_SIMPLE_KV_READ, 
             key,
             this,
@@ -140,11 +132,7 @@ public:
         )
     {
         return ::dsn::replication::replication_app_client_base::read<simple_kv_client, std::string, std::string>(
-            std::bind(
-                &simple_kv_client::get_partition_index,
-                this,
-                std::placeholders::_1,
-                *key),
+            get_key_hash(*key),
             RPC_SIMPLE_KV_SIMPLE_KV_READ,
             key,
             this,
@@ -176,11 +164,7 @@ public:
         )
     {
         auto resp_task = ::dsn::replication::replication_app_client_base::write< ::dsn::replication::application::kv_pair, int32_t>(
-            std::bind(
-                &simple_kv_client::get_partition_index_2,
-                this,
-                std::placeholders::_1,
-                pr),
+            get_key_hash(pr),
             RPC_SIMPLE_KV_SIMPLE_KV_WRITE,
             pr,
             nullptr,
@@ -205,11 +189,7 @@ public:
         )
     {
         return ::dsn::replication::replication_app_client_base::write<simple_kv_client, ::dsn::replication::application::kv_pair, int32_t>(
-            std::bind(
-                &simple_kv_client::get_partition_index_2,
-                this,
-                std::placeholders::_1,
-                pr),
+            get_key_hash(pr),
             RPC_SIMPLE_KV_SIMPLE_KV_WRITE, 
             pr,
             this,
@@ -240,11 +220,7 @@ public:
         )
     {
         return ::dsn::replication::replication_app_client_base::write<simple_kv_client, ::dsn::replication::application::kv_pair, int32_t>(
-            std::bind(
-                &simple_kv_client::get_partition_index_2,
-                this,
-                std::placeholders::_1,
-                *pr),
+            get_key_hash(*pr),
             RPC_SIMPLE_KV_SIMPLE_KV_WRITE,
             pr,
             this,
@@ -276,11 +252,7 @@ public:
         )
     {
         auto resp_task = ::dsn::replication::replication_app_client_base::write< ::dsn::replication::application::kv_pair, int32_t>(
-            std::bind(
-                &simple_kv_client::get_partition_index_2,
-                this,
-                std::placeholders::_1,
-                pr),
+            get_key_hash(pr),
             RPC_SIMPLE_KV_SIMPLE_KV_APPEND,
             pr,
             nullptr,
@@ -305,11 +277,7 @@ public:
         )
     {
         return ::dsn::replication::replication_app_client_base::write<simple_kv_client, ::dsn::replication::application::kv_pair, int32_t>(
-            std::bind(
-                &simple_kv_client::get_partition_index_2,
-                this,
-                std::placeholders::_1,
-                pr),
+            get_key_hash(pr),
             RPC_SIMPLE_KV_SIMPLE_KV_APPEND, 
             pr,
             this,
@@ -340,11 +308,7 @@ public:
         )
     {
         return ::dsn::replication::replication_app_client_base::write<simple_kv_client, ::dsn::replication::application::kv_pair, int32_t>(
-            std::bind(
-                &simple_kv_client::get_partition_index_2,
-                this,
-                std::placeholders::_1,
-                *pr),
+            get_key_hash(*pr),
             RPC_SIMPLE_KV_SIMPLE_KV_APPEND,
             pr,
             this,

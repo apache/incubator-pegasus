@@ -125,7 +125,7 @@ DEFINE_TASK_CODE(LPC_REPLICATION_DELAY_QUERY_CONFIG, TASK_PRIORITY_COMMON, THREA
 
 replication_app_client_base::request_context* replication_app_client_base::create_write_context(
     int partition_index,
-    std::function<int(int)> get_partition_index,
+    uint32_t key_hash,
     dsn_task_code_t code,
     dsn_message_t request,
     ::dsn::task_ptr& callback,
@@ -140,7 +140,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->callback_task = callback;
     rc->is_read = false;
     rc->partition_index = partition_index;
-    rc->get_partition_index = get_partition_index;
+    rc->key_hash = key_hash;
     rc->write_header.gpid.app_id = _app_id;
     rc->write_header.gpid.pidx = partition_index;
     rc->write_header.code = dsn_task_code_to_string(code);
@@ -166,7 +166,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
 
 replication_app_client_base::request_context* replication_app_client_base::create_read_context(
     int partition_index,
-    std::function<int(int)> get_partition_index,
+    uint32_t key_hash,
     dsn_task_code_t code,
     dsn_message_t request,
     ::dsn::task_ptr& callback,
@@ -183,7 +183,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->callback_task = callback;
     rc->is_read = true;
     rc->partition_index = partition_index;
-    rc->get_partition_index = get_partition_index;
+    rc->key_hash = key_hash;
     rc->read_header.gpid.app_id = _app_id;
     rc->read_header.gpid.pidx = partition_index;
     rc->read_header.code = dsn_task_code_to_string(code);
@@ -293,7 +293,7 @@ void replication_app_client_base::call(request_context_ptr request, bool no_dela
             return;
         }
     }
-    request->partition_index = request->get_partition_index(_app_partition_count);
+    request->partition_index = get_partition_index(_app_partition_count, request->key_hash);
     get_address_and_call(request, no_delay);
 }
 
@@ -767,6 +767,11 @@ error_code replication_app_client_base::get_address(int pidx, bool is_write, /*o
         ddebug("not find address in cache for gpid:[%s,%d]", _app_name.c_str(), pidx);
     }
     return err;
+}
+
+int replication_app_client_base::get_partition_index(int partition_count, uint32_t key_hash)
+{
+    return key_hash % (uint64_t)partition_count;
 }
 
 }} // end namespace

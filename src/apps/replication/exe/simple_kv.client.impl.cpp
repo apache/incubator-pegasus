@@ -50,15 +50,6 @@ namespace dsn {
             {
 
             }
-
-            int simple_kv_client_impl::get_partition_index(int partition_count, const std::string& key)
-            {
-                return (dsn_crc32_compute(key.c_str(), key.size(), 0) % partition_count);
-            }
-            int simple_kv_client_impl::get_partition_index_2(int partition_count, const ::dsn::replication::application::kv_pair& key)
-            {
-                return (dsn_crc32_compute(key.key.c_str(), key.key.size(), 0) % partition_count);
-            }
         }
     }
 }
