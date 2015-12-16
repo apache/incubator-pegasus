@@ -54,10 +54,10 @@ int main(int argc, char** argv)
 {
     //
     // run the system with arguments
-    //   config [-cargs k1=v1;k2=v2] [-app app_name] [-app_index index]
-    // e.g., config.ini -app replica -app_index 1 to start the first replica as a new process
-    //       config.ini -app replica to start ALL replicas (count specified in config) as a new process
-    //       config.ini -app replica -cargs replica-port=34556 to start ALL replicas with given port variable specified in config.ini
+    //   config [-cargs k1=v1;k2=v2] [-app_list app_name1@index1,app_name2@index]
+    // e.g., config.ini -app_list replica@1 to start the first replica as a new process
+    //       config.ini -app_list replica to start ALL replicas (count specified in config) as a new process
+    //       config.ini -app_list replica -cargs replica-port=34556 to start ALL replicas with given port variable specified in config.ini
     //       config.ini to start ALL apps as a new process
     //
     dsn_run(argc, argv, true);
