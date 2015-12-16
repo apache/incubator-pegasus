@@ -443,19 +443,29 @@ TEST(core, dsn_system)
     tools::tool_app* tool = tools::get_current_tool();
     ASSERT_EQ(tool->name(), dsn_config_get_value_string("core", "tool", "", ""));
 
+    int app_count = 5;
+    int type_count = 1;
+    if (tool->get_service_spec().enable_default_app_mimic)
+    {
+        app_count++;
+        type_count++;
+    }   
+
     {
         dsn_app_info apps[20];
         int count = dsn_get_all_apps(apps, 20);
-        ASSERT_EQ(5, count);
+        ASSERT_EQ(app_count, count);
         std::map<std::string, int> type_to_count;
         for (int i = 0; i < count; ++i)
         {
             type_to_count[apps[i].type] += 1;
         }
+
+        ASSERT_EQ(type_count, static_cast<int>(type_to_count.size()));
         ASSERT_EQ(5, type_to_count["test"]);
 
         count = dsn_get_all_apps(apps, 3);
-        ASSERT_EQ(5, count);
+        ASSERT_EQ(app_count, count);
     }
 }
 

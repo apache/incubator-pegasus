@@ -1025,7 +1025,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
         printf("Fail to load config file %s\n", config_file);
         return false;
     }
-    
+
     // pause when necessary
     if (dsn_all.config->get_value<bool>("core", "pause_on_start", false,
         "whether to pause at startup time for easier debugging"))
@@ -1038,8 +1038,8 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
         getchar();
     }
 
-    // load all shared libraries so all code and app factories are 
-    // automatically registered
+    // regiser external app roles by loading all shared libraries
+    // so all code and app factories are automatically registered
     dsn::service_spec::load_app_shared_libraries(dsn_all.config);
 
     for (int i = 0; i <= dsn_task_code_max(); i++)
@@ -1047,6 +1047,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
         dsn_all.task_specs.push_back(::dsn::task_spec::get(i));
     }
 
+    // initialize global specification from config file
     ::dsn::service_spec spec;
     spec.config = dsn_all.config;
     if (!spec.init())
