@@ -421,7 +421,7 @@ void configuration::set(const char* section, const char* key, const char* value,
         cf->key = key;
         cf->value = value;
         cf->line = 0;
-        cf->present = false;
+        cf->present = true;
         cf->section = section;
         psection->insert(std::make_pair(cf->key, cf));
     }
