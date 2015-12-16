@@ -64,10 +64,3 @@ fi
 
 mkdir -p $t_dir
 ${scripts_dir}/publish.${d_unit}.sh $b_dir $t_dir
-
-
-
-
-
-
-
