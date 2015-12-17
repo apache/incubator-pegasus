@@ -925,7 +925,7 @@ DSN_API void dsn_app_loader_wait()
 
 //
 // run the system with arguments
-//   config [-cargs k1=v1;k2=v2] [-app_list app_name1@index1,app_name2@index]
+//   config [-cargs k1=v1;k2=v2] [-app_list app_name1@index1;app_name2@index]
 // e.g., config.ini -app_list replica@1 to start the first replica as a new process
 //       config.ini -app_list replica to start ALL replicas (count specified in config) as a new process
 //       config.ini -app_list replica -cargs replica-port=34556 to start ALL replicas with given port variable specified in config.ini
@@ -937,7 +937,7 @@ DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init)
     {
         printf("invalid options for dsn_run\n"
             "// run the system with arguments\n"
-            "//   config [-cargs k1=v1;k2=v2] [-app_list app_name1@index1,app_name2@index]\n"
+            "//   config [-cargs k1=v1;k2=v2] [-app_list app_name1@index1;app_name2@index]\n"
             "// e.g., config.ini -app_list replica@1 to start the first replica as a new process\n"
             "//       config.ini -app_list replica to start ALL replicas (count specified in config) as a new process\n"
             "//       config.ini -app_list replica -cargs replica-port=34556 to start with %%replica-port%% var in config.ini\n"
@@ -1116,7 +1116,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
 
     // split app_name and app_index
     std::list<std::string> applistkvs;
-    ::dsn::utils::split_args(app_list.c_str(), applistkvs, ',');
+    ::dsn::utils::split_args(app_list.c_str(), applistkvs, ';');
     
     // init apps
     for (auto& sp : spec.app_specs)
