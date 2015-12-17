@@ -97,7 +97,6 @@ void mutation_log::set_valid_log_offset_before_open(global_partition_id gpid, in
     {
         _private_gpid = gpid;
         _private_valid_start_offset = valid_start_offset;
-        _private_max_decree = valid_start_offset;
     }
     else
     {
