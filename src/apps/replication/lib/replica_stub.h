@@ -200,8 +200,7 @@ private:
 
     perf_counter_    _counter_replicas_2pc_latency;
 
-private:    
-    friend class replica;
+private:
     void response_client_error(dsn_message_t request, int error);
 };
 //------------ inline impl ----------------------
