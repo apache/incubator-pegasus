@@ -272,7 +272,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     
     // attach rps
     _replicas = std::move(rps);
-    _counter_replicas_count.set((uint64_t)_replicas.size());
+    _counter_replicas_count.add((uint64_t)_replicas.size());
 
     // start timer for configuration sync
     if (!_options.config_sync_disabled)

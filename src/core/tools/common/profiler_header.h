@@ -215,6 +215,14 @@ namespace dsn {
             bool collect_call_count;
             bool is_profile;
             std::atomic<int64_t>* call_counts;
+
+            task_spec_profiler()
+            {
+                collect_call_count = false;
+                is_profile = false;
+                call_counts = nullptr;
+                memset((void*)ptr, 0, sizeof(ptr));
+            }
         };
 
         std::string profiler_output_handler(const std::vector<std::string>& args);

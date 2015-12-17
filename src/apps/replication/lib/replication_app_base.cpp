@@ -176,7 +176,7 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
         }
     }
 
-    _app_commit_decree.set(last_committed_decree());
+    _app_commit_decree.add(last_committed_decree());
 
     return err == 0 ? ERR_OK : ERR_LOCAL_APP_FAILURE;
 }
@@ -224,11 +224,11 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
         }
     }
 
-    auto lcd = ++_last_committed_decree;
+    ++_last_committed_decree;
 
     _replica->update_commit_statistics(count);
     _app_commit_throughput.add((uint64_t)count);
-    _app_commit_decree.set(lcd);
+    _app_commit_decree.increment();
 
     return ERR_OK;
 }
