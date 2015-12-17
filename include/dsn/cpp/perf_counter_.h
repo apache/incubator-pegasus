@@ -33,45 +33,40 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+# pragma once
 
-# include "replication_common.h"
-# include "replica_stub.h"
+# include <dsn/service_api_c.h>
 
-# ifdef __TITLE__
-# undef __TITLE__
-# endif
-# define __TITLE__ "replica.service_app"
-
-namespace dsn { namespace replication {
-
-replication_service_app::replication_service_app()
-    : service_app()
+namespace dsn 
 {
-    _stub = new replica_stub();
-}
-
-replication_service_app::~replication_service_app(void)
-{
-}
-
-error_code replication_service_app::start(int argc, char** argv)
-{
-    replication_options opts;
-    opts.initialize();    
-
-    _stub->initialize(opts);
-    _stub->open_service();
-
-    return ERR_OK;
-}
-
-void replication_service_app::stop(bool cleanup)
-{
-    if (_stub != nullptr)
+    class perf_counter_
     {
-        _stub->close();
-        _stub = nullptr;
-    }
-}
+    public:
+        perf_counter_()
+        {
+            _h = nullptr;
+        }
 
-}}
+        void init(const char *name, dsn_perf_counter_type_t type, const char *dsptr)
+        {
+            _h = dsn_perf_counter_create(name, type, dsptr);
+        }
+
+        ~perf_counter_(void)
+        {
+            if (nullptr != _h)
+                dsn_perf_counter_remove(_h);
+        }
+
+        // make sure they are called after init above
+        void   increment() { dsn_perf_counter_increment(_h); }
+        void   decrement()  { dsn_perf_counter_decrement(_h); }
+        void   add(uint64_t val)  { dsn_perf_counter_add(_h, val); }
+        void   set(uint64_t val)  { dsn_perf_counter_set(_h, val); }
+        double get_value()  { dsn_perf_counter_get_value(_h); }
+        double get_percentile(dsn_perf_counter_percentile_type_t type)  { dsn_perf_counter_get_percentile(_h, type); }
+
+    private:
+        dsn_handle_t _h;
+    };
+} // end namespace

@@ -43,14 +43,19 @@ DSN_API dsn_handle_t dsn_perf_counter_create(const char* name, dsn_perf_counter_
 {
     auto cnode = dsn::task::get_current_node2();
     dassert(cnode != nullptr, "cannot get current service node!");
-    return dsn::utils::perf_counters::instance().get_counter(cnode->name(), name, type, description, true);
+    auto c = dsn::utils::perf_counters::instance().get_counter(cnode->name(), name, type, description, true);
+    c->add_ref();
+    return c.get();
 }
 DSN_API void dsn_perf_counter_remove(dsn_handle_t handle)
 {
-    auto cnode = dsn::task::get_current_node2();
-    dassert(cnode != nullptr, "cannot get current service node!");
     auto sptr = reinterpret_cast<dsn::perf_counter*>(handle);
-    dsn::utils::perf_counters::instance().remove_counter(sptr->section(), sptr->name());
+    if (dsn::utils::perf_counters::instance().remove_counter(sptr->section(), sptr->name()))
+        sptr->release_ref();
+    else
+    {
+        dassert(false, "cannot remove counter %s.%s as it is not found in our repo", sptr->section(), sptr->name());
+    }
 }
 
 DSN_API void dsn_perf_counter_increment(dsn_handle_t handle)
@@ -98,7 +103,7 @@ perf_counters::~perf_counters(void)
 {
 }
 
-perf_counter* perf_counters::get_counter(const char *section, const char *name, dsn_perf_counter_type_t flags, const char *dsptr, bool create_if_not_exist /*= false*/)
+perf_counter_ptr perf_counters::get_counter(const char *section, const char *name, dsn_perf_counter_type_t flags, const char *dsptr, bool create_if_not_exist /*= false*/)
 {
     char section_name[512] = "";
     //::GetModuleBaseNameA(::GetCurrentProcess(), ::GetModuleHandleA(nullptr), section_name, 256);
@@ -117,14 +122,14 @@ perf_counter* perf_counters::get_counter(const char *section, const char *name, 
         auto it2 = it->second.find(name);
         if (it2 == it->second.end())
         {
-            auto counter = _factory(section_name, name, flags,dsptr);
-            it->second.emplace(std::piecewise_construct, std::forward_as_tuple(name), std::forward_as_tuple(std::unique_ptr<perf_counter>(counter), flags));
+            perf_counter_ptr counter = _factory(section_name, name, flags, dsptr);
+            it->second.emplace(std::piecewise_construct, std::forward_as_tuple(name), std::forward_as_tuple(counter));
             return counter;
         }
         else
         {
-            dassert (it2->second.second == flags, "counters with the same name %s.%s with differnt types", section_name, name);
-            return it2->second.first.get();
+            dassert (it2->second->type() == flags, "counters with the same name %s.%s with differnt types", section_name, name);
+            return it2->second;
         }
     }
     else
@@ -139,7 +144,7 @@ perf_counter* perf_counters::get_counter(const char *section, const char *name, 
         if (it2 == it->second.end())
             return nullptr;
 
-        return it2->second.first.get();
+        return it2->second;
     }
 }
 
@@ -212,7 +217,12 @@ std::string perf_counters::query_counter(const std::vector<std::string>& args)
 
     utils::perf_counters& c = utils::perf_counters::instance();
     auto counter = c.get_counter(args[0].c_str(), COUNTER_TYPE_NUMBER, "", false);
-    ss << counter->get_current_sample();
+
+    if (counter)
+        ss << counter->get_current_sample();
+    else
+        ss << (uint64_t)(0);
+
     return ss.str();
 }
 

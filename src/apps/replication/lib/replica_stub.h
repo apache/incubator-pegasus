@@ -41,7 +41,8 @@
 //   replica_stub(singleton) --> replica --> replication_app
 //
 
-#include "replication_common.h"
+# include "replication_common.h"
+# include <dsn/cpp/perf_counter_.h>
 
 namespace dsn { namespace replication {
 
@@ -126,8 +127,8 @@ public:
     bool is_connected() const { return NS_Connected == _state; }
 
     void json_state(std::stringstream& out) const;
-    static void static_replica_stub_json_state(void* context, int argc, const char** argv, dsn_cli_reply* reply);
 
+    static void static_replica_stub_json_state(void* context, int argc, const char** argv, dsn_cli_reply* reply);
     static void static_replica_stub_json_state_freer(dsn_cli_reply reply);
 
 private:    
@@ -153,9 +154,12 @@ private:
     void notify_replica_state_update(const replica_configuration& config, bool isClosing);
     void handle_log_failure(error_code err);
 
+    void install_perf_counters();
+
 private:
     friend class ::dsn::replication::replication_checker;    
     friend class ::dsn::replication::test::test_checker;
+    friend class ::dsn::replication::replica;
     typedef std::unordered_map<global_partition_id, ::dsn::task_ptr> opening_replicas;
     typedef std::unordered_map<global_partition_id, std::pair< ::dsn::task_ptr, replica_ptr>> closing_replicas; // <close, replica>
 
@@ -183,6 +187,18 @@ private:
 
     //cli handle, for deregister cli command
     dsn_handle_t    _cli_replica_stub_json_state_handle;
+
+    // performance counters
+    perf_counter_    _counter_replicas_count;
+    perf_counter_    _counter_replicas_opening_count;
+    perf_counter_    _counter_replicas_closing_count;
+    perf_counter_    _counter_replicas_total_commit_throught;
+    
+    perf_counter_    _counter_replicas_learning_failed_latency;
+    perf_counter_    _counter_replicas_learning_success_latency;
+    perf_counter_    _counter_replicas_learning_count;
+
+    perf_counter_    _counter_replicas_2pc_latency;
 
 private:    
     friend class replica;

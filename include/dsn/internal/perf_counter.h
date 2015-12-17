@@ -38,6 +38,7 @@
 # include <memory>
 # include <dsn/internal/enum_helper.h>
 # include <dsn/service_api_c.h>
+# include <dsn/cpp/autoref_ptr.h>
 
 namespace dsn {
 ENUM_BEGIN(dsn_perf_counter_type_t, COUNTER_TYPE_INVALID)
@@ -54,7 +55,10 @@ ENUM_BEGIN(dsn_perf_counter_percentile_type_t, COUNTER_PERCENTILE_INVALID)
     ENUM_REG(COUNTER_PERCENTILE_999)
 ENUM_END(dsn_perf_counter_percentile_type_t)
 
-class perf_counter
+class perf_counter;
+typedef ref_ptr<perf_counter> perf_counter_ptr;
+
+class perf_counter : public ref_counter
 {
 public:
     template <typename T> static perf_counter* create(const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr)
@@ -66,7 +70,7 @@ public:
 
 public:
     perf_counter(const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr) 
-        : _name(name), _section(section), _dsptr(dsptr)
+        : _name(name), _section(section), _dsptr(dsptr), _type(type)
     {
     }
 
@@ -84,11 +88,13 @@ public:
     const char* name() const { return _name.c_str(); }
     const char* section() const { return _section.c_str(); }
     const char* dsptr() const { return _dsptr.c_str(); }
+    dsn_perf_counter_type_t type() const { return _type; }
 
 private:
     std::string _name;
     std::string _section;
     std::string _dsptr;
+    dsn_perf_counter_type_t _type;
 };
 
 } // end namespace

@@ -139,11 +139,29 @@ replication_app_base::replication_app_base(replica* replica)
     {
         dassert(false, "Fail to create directory %s.", _dir_learn.c_str());
     }
+
+    install_perf_counters();
 }
 
 const char* replication_app_base::replica_name() const
 {
     return _replica->name();
+}
+
+void replication_app_base::install_perf_counters()
+{
+    std::stringstream ss;
+    
+    ss << replica_name() << ".commit(#/s)";
+    _app_commit_throughput.init(ss.str().c_str(), COUNTER_TYPE_RATE, "commit throughput for current app");
+
+    ss.clear();
+    ss << replica_name() << ".latency(ns)";
+    _app_commit_latency.init(ss.str().c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, "commit latency for current app");
+
+    ss.clear();
+    ss << replica_name() << ".decree#";
+    _app_commit_decree.init(ss.str().c_str(), COUNTER_TYPE_NUMBER, "commit decree for current app");
 }
 
 error_code replication_app_base::open_internal(replica* r, bool create_new)
@@ -157,6 +175,9 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
             err = _info.load(info_path.c_str());
         }
     }
+
+    _app_commit_decree.set(last_committed_decree());
+
     return err == 0 ? ERR_OK : ERR_LOCAL_APP_FAILURE;
 }
 
@@ -183,7 +204,12 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
                   _replica->name(), mu->name(), dsn_task_code_to_string(r.code));
             binary_reader reader(mu->data.updates[i]);
             dsn_message_t resp = (r.req ? dsn_msg_create_response(r.req) : nullptr);
+
+            uint64_t now = dsn_now_ns();
             dispatch_rpc_call(r.code, reader, resp);
+            now = dsn_now_ns() - now;
+
+            _app_commit_latency.set(now);
         }
         else
         {
@@ -198,7 +224,12 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
         }
     }
 
-    ++_last_committed_decree;
+    auto lcd = ++_last_committed_decree;
+
+    _replica->update_commit_statistics(count);
+    _app_commit_throughput.add((uint64_t)count);
+    _app_commit_decree.set(lcd);
+
     return ERR_OK;
 }
 

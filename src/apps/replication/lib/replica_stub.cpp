@@ -55,7 +55,7 @@ bool replica_stub::s_not_exit_on_log_failure = false;
 
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/, bool is_long_subscriber/* = true*/)
     : serverlet("replica_stub"), _replicas_lock(true), _cli_replica_stub_json_state_handle(nullptr)
-{
+{    
     _replica_state_subscriber = subscriber;
     _is_long_subscriber = is_long_subscriber;
     _failure_detector = nullptr;
@@ -64,8 +64,22 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/, bo
 }
 
 replica_stub::~replica_stub(void)
-{
+{    
     close();
+}
+
+void replica_stub::install_perf_counters()
+{
+    _counter_replicas_count.init("replica#", COUNTER_TYPE_NUMBER, "# in replica_stub._replicas");
+    _counter_replicas_opening_count.init("opening_replica#", COUNTER_TYPE_NUMBER, "# in replica_stub._opening_replicas");
+    _counter_replicas_closing_count.init("closing_replica#", COUNTER_TYPE_NUMBER, "# in replica_stub._closing_replicas");
+    _counter_replicas_total_commit_throught.init("replicas.commit(#/s)", COUNTER_TYPE_RATE, "app commit throughput for all replicas");
+
+    _counter_replicas_learning_failed_latency.init("replicas.learning.failed(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "learning time (failed)");
+    _counter_replicas_learning_success_latency.init("replicas.learning.success(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "learning time (success)");
+    _counter_replicas_learning_count.init("replicas.learnig(#)", COUNTER_TYPE_NUMBER, "total learning count");
+
+    _counter_replicas_2pc_latency.init("replicas.2pc(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "2pc time");
 }
 
 void replica_stub::initialize(bool clear/* = false*/)
@@ -77,6 +91,8 @@ void replica_stub::initialize(bool clear/* = false*/)
 
 void replica_stub::initialize(const replication_options& opts, bool clear/* = false*/)
 {
+    install_perf_counters();
+
     error_code err = ERR_OK;
     //zauto_lock l(_replicas_lock);
 
@@ -256,6 +272,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     
     // attach rps
     _replicas = std::move(rps);
+    _counter_replicas_count.set((uint64_t)_replicas.size());
 
     // start timer for configuration sync
     if (!_options.config_sync_disabled)
@@ -917,6 +934,8 @@ void replica_stub::on_gc()
             {
                 replica_ptr r = it2->second.second;
                 _closing_replicas.erase(it2);
+                _counter_replicas_closing_count.decrement();
+
                 add_replica(r);
 
                 // unlock here to avoid dead lock
@@ -941,6 +960,8 @@ void replica_stub::on_gc()
         else 
         {
             task_ptr task = tasking::enqueue(LPC_OPEN_REPLICA, this, std::bind(&replica_stub::open_replica, this, app_type, gpid, req));
+
+            _counter_replicas_opening_count.increment();
             _opening_replicas[gpid] = task;
             _replicas_lock.unlock();
             return task;
@@ -966,12 +987,15 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
 
     if (rep == nullptr)
     {
+        _counter_replicas_opening_count.decrement();
         zauto_lock l(_replicas_lock);
         _opening_replicas.erase(gpid);
         return;
     }
             
     {
+
+        _counter_replicas_opening_count.decrement();
         zauto_lock l(_replicas_lock);
         auto it = _replicas.find(gpid);
         dassert (it == _replicas.end(), "");
@@ -1001,6 +1025,7 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
             r->status() == PS_ERROR ? 0 : _options.gc_memory_replica_interval_ms
             );
         _closing_replicas[r->get_gpid()] = std::make_pair(task, r);
+        _counter_replicas_closing_count.increment();
         return task;
     }
     else
@@ -1016,6 +1041,7 @@ void replica_stub::close_replica(replica_ptr r)
     r->close();
 
     {
+        _counter_replicas_closing_count.decrement();
         zauto_lock l(_replicas_lock);
         _closing_replicas.erase(r->get_gpid());
     }
@@ -1023,6 +1049,7 @@ void replica_stub::close_replica(replica_ptr r)
 
 void replica_stub::add_replica(replica_ptr r)
 {
+    _counter_replicas_count.increment();
     zauto_lock l(_replicas_lock);
     auto pr = _replicas.insert(replicas::value_type(r->get_gpid(), r));
     dassert(pr.second, "replica %s is already in the collection", r->name());
@@ -1033,6 +1060,7 @@ bool replica_stub::remove_replica(replica_ptr r)
     zauto_lock l(_replicas_lock);
     if (_replicas.erase(r->get_gpid()) > 0)
     {
+        _counter_replicas_count.decrement();
         return true;
     }
     else
@@ -1120,6 +1148,8 @@ void replica_stub::close()
 
             task->wait();
 
+
+            _counter_replicas_closing_count.decrement();
             _replicas_lock.lock();
             _closing_replicas.erase(_closing_replicas.begin());
         }
@@ -1131,6 +1161,7 @@ void replica_stub::close()
 
             task->cancel(true);
 
+            _counter_replicas_opening_count.decrement();
             _replicas_lock.lock();
             _opening_replicas.erase(_opening_replicas.begin());
         }
@@ -1138,6 +1169,8 @@ void replica_stub::close()
         while (_replicas.empty() == false)
         {
             _replicas.begin()->second->close();
+
+            _counter_replicas_count.decrement();
             _replicas.erase(_replicas.begin());
         }
     }

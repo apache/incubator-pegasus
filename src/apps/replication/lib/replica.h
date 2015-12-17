@@ -130,6 +130,7 @@ public:
     mutation_log_ptr private_log() const { return _private_log; }
 
     void json_state(std::stringstream& out) const;
+    void update_commit_statistics(int count);
         
 private:
     // common helpers

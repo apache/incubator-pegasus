@@ -86,6 +86,11 @@ void replica::json_state(std::stringstream& out) const
     JSON_DICT_ENTRIES(out, *this, name(), _config, _app->last_committed_decree(), _app->last_durable_decree());
 }
 
+void replica::update_commit_statistics(int count)
+{
+    _stub->_counter_replicas_total_commit_throught.add((uint64_t)count);
+}
+
 void replica::init_state()
 {
     _inactive_is_transient = false;

@@ -48,18 +48,18 @@ using namespace dsn::tools;
 
 const int count_times = 10000;
 
-static void adder_function(perf_counter* pc, int id, const std::vector<int>& vec) {
+static void adder_function(perf_counter_ptr pc, int id, const std::vector<int>& vec) {
     for (int i=id; i<10000; i+=10)
         pc->add(vec[i]);
 }
 
-static void perf_counter_inc_dec(perf_counter* pc)
+static void perf_counter_inc_dec(perf_counter_ptr pc)
 {
-    std::thread inc_thread([](perf_counter* counter){
+    std::thread inc_thread([](perf_counter_ptr counter){
         for (int i=0; i<count_times; ++i)
             counter->increment();
     }, pc);
-    std::thread dec_thread([](perf_counter* counter){
+    std::thread dec_thread([](perf_counter_ptr counter){
         for (int i=0; i<count_times; ++i)
             counter->decrement();
     }, pc);
@@ -69,7 +69,7 @@ static void perf_counter_inc_dec(perf_counter* pc)
 }
 
 typedef std::shared_ptr<std::thread> thread_ptr;
-static void perf_counter_add(perf_counter* pc, const std::vector<int>& vec)
+static void perf_counter_add(perf_counter_ptr pc, const std::vector<int>& vec)
 {
     std::vector< thread_ptr > add_threads;
     for (int i=0; i<10; ++i) {
