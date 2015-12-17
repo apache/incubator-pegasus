@@ -8,7 +8,7 @@ function run_single()
     echo "${bin} ${prefix}.ini ${prefix}.act"
     ${bin} ${prefix}.ini ${prefix}.act
     ret=$?
-    if find . -name log.1.txt; then
+    if find . -name log.1.txt &>/dev/null; then
         log=`find . -name log.1.txt`
         cat ${log} | grep -v FAILURE_DETECT | grep -v BEACON | grep -v beacon | grep -v THREAD_POOL_FD >${prefix}.log
         rm ${log}

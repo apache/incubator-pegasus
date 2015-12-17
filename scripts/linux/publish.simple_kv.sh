@@ -4,7 +4,7 @@ b_dir=$1
 t_dir=$2
 
 applist="meta replica client client.perf.test"
-
+echo $applist > $t_dir/applist
 function publish_app(){
     cp $DSN_ROOT/lib/libdsn.core.so $t_dir/$1
     cp $b_dir/bin/dsn.replication.simple_kv/dsn.replication.simple_kv $t_dir/$1/simple_kv

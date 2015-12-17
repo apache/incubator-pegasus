@@ -66,10 +66,16 @@ void replica::init_group_check()
 void replica::broadcast_group_check()
 {
     dassert (nullptr != _primary_states.group_check_task, "");
+
+    ddebug(
+        "%s: start broadcast group check",
+        name()
+    );
+
     if (_primary_states.group_check_pending_replies.size() > 0)
     {
         dwarn(
-            "%s: %u group check replies are still pending when doing next round check",
+            "%s: %u group check replies are still pending when doing next round check, cancel first",
             name(), static_cast<int>(_primary_states.group_check_pending_replies.size())
             );
 
