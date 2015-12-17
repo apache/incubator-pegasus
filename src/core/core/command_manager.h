@@ -55,6 +55,7 @@ namespace dsn {
         void start_local_cli();
         void start_remote_cli();
         void on_remote_cli(dsn_message_t req);
+        void set_cli_target_address(dsn_handle_t handle, dsn::rpc_address address);
 
     private:
         bool run_command(const std::string& cmd, const std::vector<std::string>& args, /*out*/ std::string& output);
@@ -62,6 +63,7 @@ namespace dsn {
     private:
         struct command
         {
+            dsn::rpc_address address;
             std::vector<const char*> commands;
             std::string     help_short;
             std::string     help_long;

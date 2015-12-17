@@ -985,6 +985,41 @@ extern DSN_API void         dsn_msg_get_context(
 
 //------------------------------------------------------------------------------
 //
+// perf counters
+//
+//------------------------------------------------------------------------------
+
+typedef enum dsn_perf_counter_type_t
+{
+    COUNTER_TYPE_NUMBER,
+    COUNTER_TYPE_RATE,
+    COUNTER_TYPE_NUMBER_PERCENTILES,
+    COUNTER_TYPE_INVALID,
+    COUNTER_TYPE_COUNT
+} dsn_perf_counter_type_t;
+
+typedef enum dsn_perf_counter_percentile_type_t
+{
+    COUNTER_PERCENTILE_50,
+    COUNTER_PERCENTILE_90,
+    COUNTER_PERCENTILE_95,
+    COUNTER_PERCENTILE_99,
+    COUNTER_PERCENTILE_999,
+
+    COUNTER_PERCENTILE_COUNT,
+    COUNTER_PERCENTILE_INVALID
+} dsn_perf_counter_percentile_type_t;
+
+extern DSN_API dsn_handle_t dsn_perf_counter_create(const char* name, dsn_perf_counter_type_t type, const char* description);
+extern DSN_API void dsn_perf_counter_remove(dsn_handle_t handle);
+extern DSN_API void dsn_perf_counter_increment(dsn_handle_t handle);
+extern DSN_API void dsn_perf_counter_decrement(dsn_handle_t handle);
+extern DSN_API void dsn_perf_counter_add(dsn_handle_t handle, uint64_t val);
+extern DSN_API void dsn_perf_counter_set(dsn_handle_t handle, uint64_t val);
+extern DSN_API double dsn_perf_counter_get_value(dsn_handle_t handle);
+extern DSN_API double dsn_perf_counter_get_percentile(dsn_handle_t handle, dsn_perf_counter_percentile_type_t type);
+//------------------------------------------------------------------------------
+//
 // common marocs
 //
 //------------------------------------------------------------------------------

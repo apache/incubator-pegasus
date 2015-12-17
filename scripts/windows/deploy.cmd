@@ -45,7 +45,7 @@ IF ERRORLEVEL 1 (
 GOTO exit
 
 :usage
-    ECHO deploy.cmd deploy^|start^|stop^|cleanup deploy-name source-dir target-dir machine-list
+    ECHO run.cmd deploy^|start^|stop^|cleanup deploy-name source-dir target-dir machine-list
     ECHO  source-dir is a directory which contains a start.cmd and other resource files/dirs
     GOTO:EOF
 

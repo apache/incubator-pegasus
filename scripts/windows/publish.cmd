@@ -4,12 +4,12 @@ SET build_type=%3
 SET bin_dir=%~dp0
 
 IF "%app_name%" EQU "" (
-    CALL %bin_dir%\echoc.exe 4 please specify app_name before publish
+    CALL %bin_dir%\echoc.exe 4 please specify app_name
     GOTO error
 )
 
 IF NOT EXIST "%bin_dir%\publish.%app_name%.cmd" (
-    CALL %bin_dir%\echoc.exe 4 please create '%bin_dir%\publish.%app_name%.cmd' before publish this app
+    CALL %bin_dir%\echoc.exe 4 please create '%bin_dir%\publish.%app_name%.cmd' before publish 
     GOTO error
 )
 
@@ -37,7 +37,7 @@ CALL %bin_dir%\publish.%app_name%.cmd %build_dir% %build_type%
 GOTO exit
 
 :error    
-    CALL %bin_dir%\echoc.exe 4  Usage: deploy.publish.cmd app_name build_dir build_type(Debug^|Release^|RelWithDebInfo^|MinSizeRel)
+    CALL %bin_dir%\echoc.exe 4  "Usage: run.cmd publish app_name build_dir build_type(Debug|Release|RelWithDebInfo|MinSizeRel)"
 
 :exit
 

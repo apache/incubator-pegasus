@@ -1,6 +1,7 @@
-@ECHO ON
+@ECHO OFF
 SET TOP_DIR=%~dp0
 SET bin_dir=%TOP_DIR%\scripts\windows
+if "%1" EQU "" GOTO usage
 IF "%DSN_ROOT%" NEQ "" GOTO main
 
 SET /p DSN_ROOT=Please enter your DSN_ROOT (default is %TOP_DIR%\install):
@@ -11,8 +12,7 @@ CALL %bin_dir%\echoc.exe 4 %DSN_ROOT% does not exist
 GOTO exit
 
 :usage
-    CALL %bin_dir%\echoc.exe 4  Usage: run.cmd pre-require^|build^|install^|test^|publish^|deploy^|start^|stop^|cleanup
-    CALL %bin_dir%\echoc.exe 4  Usage: please run 'run.cmd $cmd' for more usage for detailed command
+    CALL %bin_dir%\echoc.exe 4  "Usage: run.cmd pre-require|build|install|test|publish|deploy|start|stop|cleanup"
     GOTO:EOF
 
 :install_env
@@ -36,7 +36,7 @@ GOTO exit
 :build
 :install
 :test
-    CALL %bin_dir%\%1.cmd %TOP_DIR% %2 %3 %4 %5 %6 %7 %8 %9
+    CALL %bin_dir%\%1.cmd %2 %3 %4 %5 %6 %7 %8 %9
     GOTO:EOF
 
 :publish

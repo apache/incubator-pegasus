@@ -92,7 +92,7 @@ static void test_perf_counter()
     std::vector<int> gen_numbers{1, 5, 1043};
     int sleep_interval = config()->get_value<int>("components.simple_perf_counter", "counter_computation_interval_seconds", 3, "period");
 
-    perf_counter_impl* counter = new perf_counter_impl("", "", perf_counter_type::COUNTER_TYPE_NUMBER,"");
+    perf_counter_impl* counter = new perf_counter_impl("", "", dsn_perf_counter_type_t::COUNTER_TYPE_NUMBER,"");
     perf_counter_inc_dec(counter);
     perf_counter_add(counter, vec);
     ddebug("%lf", counter->get_value());
@@ -100,21 +100,21 @@ static void test_perf_counter()
     //don't delete the counter as it is shared by timer callback
     //delete counter;
 
-    counter = new perf_counter_impl("", "", perf_counter_type::COUNTER_TYPE_RATE,"");
+    counter = new perf_counter_impl("", "", dsn_perf_counter_type_t::COUNTER_TYPE_RATE,"");
     perf_counter_inc_dec(counter);
     perf_counter_add(counter, vec);
     ddebug("%lf", counter->get_value());
     //don't delete the counter as it is shared by timer callback
     //delete counter;
 
-    counter = new perf_counter_impl("", "", perf_counter_type::COUNTER_TYPE_NUMBER_PERCENTILES,"");
+    counter = new perf_counter_impl("", "", dsn_perf_counter_type_t::COUNTER_TYPE_NUMBER_PERCENTILES,"");
     std::this_thread::sleep_for(std::chrono::seconds(sleep_interval));
     for (auto& count: gen_numbers) {
         for (unsigned int i=0; i!=count; ++i)
             counter->set(rand()%10000);
         std::this_thread::sleep_for(std::chrono::seconds(sleep_interval));
         for (int i=0; i!=COUNTER_PERCENTILE_COUNT; ++i)
-            ddebug("%lf", counter->get_percentile((counter_percentile_type)i));
+            ddebug("%lf", counter->get_percentile((dsn_perf_counter_percentile_type_t)i));
     }
     //don't delete the counter as it is shared by timer callback
     //delete counter;
