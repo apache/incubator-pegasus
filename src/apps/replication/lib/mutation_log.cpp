@@ -69,11 +69,11 @@ void mutation_log::init_states()
     _is_opened = false;
 
     // logs
-    _global_start_offset = 0;
-    _global_end_offset = 0;
-    _last_file_number = 0;
+    _last_file_index = 0;
     _log_files.clear();
     _current_log_file = nullptr;
+    _global_start_offset = 0;
+    _global_end_offset = 0;
 
     // buffering and replica states
     _pending_write = nullptr;
@@ -111,7 +111,6 @@ error_code mutation_log::open(replay_callback callback)
     dassert(nullptr == _current_log_file,
         "the current log file must be null at this point");
 
-
     // create dir if necessary
     if (!dsn::utils::filesystem::path_exists(_dir))
     {
@@ -128,7 +127,7 @@ error_code mutation_log::open(replay_callback callback)
     std::vector<std::string> file_list;
     if (!dsn::utils::filesystem::get_subfiles(_dir, file_list, false))
     {
-        derror("open mutation_log: get files failed.");
+        derror("open mutation_log: get subfiles failed.");
         return ERR_FILE_OPERATION_FAILED;
     }
 
@@ -146,7 +145,7 @@ error_code mutation_log::open(replay_callback callback)
         {
             if (err == ERR_HANDLE_EOF || err == ERR_INCOMPLETE_DATA || err == ERR_INVALID_PARAMETERS)
             {
-                dwarn("Skip file %s during log init", fpath.c_str());
+                dwarn("skip file %s during log init", fpath.c_str());
                 continue;
             }
             else
@@ -160,10 +159,11 @@ error_code mutation_log::open(replay_callback callback)
         dassert(_log_files.find(log->index()) == _log_files.end(), "");
         _log_files[log->index()] = log;
     }
+
     file_list.clear();
 
     // replay with the found files
-    int64_t offset = 0;
+    int64_t end_offset = 0;
     err = replay(
         _log_files,
         [this, callback](mutation_ptr& mu)
@@ -179,16 +179,17 @@ error_code mutation_log::open(replay_callback callback)
             {
                 this->update_max_decrees(mu->data.header.gpid, mu->data.header.decree);
             }
+
             return ret;
         },
-        offset
+        end_offset
         );
 
     if (ERR_OK == err)
     {
         _global_start_offset = _log_files.size() > 0 ? _log_files.begin()->second->start_offset() : 0;
-        _global_end_offset = offset;
-        _last_file_number = _log_files.size() > 0 ? _log_files.rbegin()->first : 0;
+        _global_end_offset = end_offset;
+        _last_file_index = _log_files.size() > 0 ? _log_files.rbegin()->first : 0;
     }
 
     _is_opened = (err == ERR_OK);
@@ -275,21 +276,21 @@ error_code mutation_log::create_new_log_file()
 
     log_file_ptr logf = log_file::create_write(
         _dir.c_str(),
-        _last_file_number + 1,
+        _last_file_index + 1,
         _global_end_offset
         );
 
     if (logf == nullptr)
     {
-        derror ("cannot create log file with index %d", _last_file_number);
+        derror ("cannot create log file with index %d", _last_file_index);
         return ERR_FILE_OPERATION_FAILED;
     }
 
     ddebug ("create new log file %s succeed", logf->path().c_str());
 
-    _last_file_number++;
-    dassert (_log_files.find(_last_file_number) == _log_files.end(), "");
-    _log_files[_last_file_number] = logf;
+    _last_file_index++;
+    dassert (_log_files.find(_last_file_index) == _log_files.end(), "");
+    _log_files[_last_file_index] = logf;
 
     dassert (logf->end_offset() == logf->start_offset(), "");
     dassert (_global_end_offset == logf->end_offset(), "");
@@ -304,7 +305,7 @@ error_code mutation_log::create_new_log_file()
         multi_partition_decrees_ex ds;
         ds[_private_gpid] = log_replica_info(_private_max_decree, _private_valid_start_offset);
         binary_writer temp_writer;
-        len = logf->write_header(
+        len = logf->write_file_header(
             temp_writer,
             ds,
             static_cast<int>(_batch_buffer_bytes)
@@ -314,7 +315,7 @@ error_code mutation_log::create_new_log_file()
     else
     {
         binary_writer temp_writer;
-        len = logf->write_header(
+        len = logf->write_file_header(
             temp_writer,
             _shared_max_decrees,
             static_cast<int>(_batch_buffer_bytes)
@@ -342,17 +343,14 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
     dassert (_pending_write != nullptr, "");
     dassert (_pending_write_callbacks != nullptr, "");
 
-    // write block header
-
-    uint64_t offset = _global_end_offset - _pending_write->size();
+    uint64_t start_offset = _global_end_offset - _pending_write->size();
     bool new_log_file = create_new_log_when_necessary
-        && (_global_end_offset - _current_log_file->start_offset()
-        >= _max_log_file_size_in_bytes)
+        && (_global_end_offset - _current_log_file->start_offset() >= _max_log_file_size_in_bytes)
         ;
 
     auto aio = _current_log_file->commit_log_block(
         *_pending_write,
-        offset,
+        start_offset,
         LPC_WRITE_REPLICATION_LOG_FLUSH,
         this,
         std::bind(
@@ -370,7 +368,7 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
     }
     else
     {
-        dassert (_global_end_offset == _current_log_file->end_offset(), "");
+        dassert(_global_end_offset == _current_log_file->end_offset(), "");
     }
 
     _issued_write = _pending_write;
@@ -385,7 +383,7 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
         error_code ret = create_new_log_file();
         if (ret != ERR_OK)
         {
-            dinfo ("create new log file failed, err = %s", ret.to_string());
+            derror("create new log file failed, err = %s", ret.to_string());
         }
         return ret;
     }
@@ -407,7 +405,7 @@ void mutation_log::internal_write_callback(
 
     if (err == ERR_OK)
     {
-        dassert(static_cast<int>(size) == block->size(),
+        dassert(size == block->size(),
             "log write size must equal to the given size: %d vs %d",
             (int)size,
             block->size()
@@ -427,10 +425,10 @@ void mutation_log::internal_write_callback(
 /*static*/ error_code mutation_log::replay(
     log_file_ptr log,
     replay_callback callback,
-    /*out*/ int64_t& offset
+    /*out*/ int64_t& end_offset
     )
 {
-    offset = log->start_offset();
+    end_offset = log->start_offset();
     dinfo("replay mutation log %s: offset = [%" PRId64 ", %" PRId64 ")",
         log->path().c_str(),
         log->start_offset(),
@@ -446,8 +444,10 @@ void mutation_log::internal_write_callback(
     }
 
     std::shared_ptr<binary_reader> reader(new binary_reader(bb));
-    offset += sizeof(log_block_header);
-    offset += log->read_header(*reader);
+    end_offset += sizeof(log_block_header);
+
+    // read file header
+    end_offset += log->read_file_header(*reader);
     if (!log->is_right_header())
     {
         return ERR_INVALID_DATA;
@@ -462,31 +462,28 @@ void mutation_log::internal_write_callback(
             dassert(nullptr != mu, "");
             mu->set_logged();
 
-            if (mu->data.header.log_offset != offset)
+            if (mu->data.header.log_offset != end_offset)
             {
                 derror("offset mismatch in log entry and mutation %" PRId64 " vs %" PRId64,
-                    offset, mu->data.header.log_offset);
+                    end_offset, mu->data.header.log_offset);
                 err = ERR_INVALID_DATA;
                 break;
             }
 
             callback(mu);
 
-            offset += old_size - reader->get_remaining_size();
+            end_offset += old_size - reader->get_remaining_size();
         }
 
-        /*
-         * if an error in an log mutation block, then the replay log is
-         * stopped
-         */
-        err = log->read_next_log_block(offset - log->start_offset(), bb);
+        err = log->read_next_log_block(end_offset - log->start_offset(), bb);
         if (err != ERR_OK)
         {
+            // if an error occurs in an log mutation block, then the replay log is stopped
             break;
         }
 
         reader.reset(new binary_reader(bb));
-        offset += sizeof(log_block_header);
+        end_offset += sizeof(log_block_header);
     }
 
     return err;
@@ -495,7 +492,7 @@ void mutation_log::internal_write_callback(
 /*static*/ error_code mutation_log::replay(
     std::vector<std::string>& log_files,
     replay_callback callback,
-    /*out*/ int64_t& offset
+    /*out*/ int64_t& end_offset
     )
 {
     std::map<int, log_file_ptr> logs;
@@ -507,7 +504,7 @@ void mutation_log::internal_write_callback(
         {
             if (err == ERR_HANDLE_EOF || err == ERR_INCOMPLETE_DATA || err == ERR_INVALID_PARAMETERS)
             {
-                dinfo("Skip file %s during log replay", fpath.c_str());
+                dinfo("skip file %s during log replay", fpath.c_str());
                 continue;
             }
             else
@@ -520,57 +517,60 @@ void mutation_log::internal_write_callback(
         logs[log->index()] = log;
     }
 
-    return replay(logs, callback, offset);
+    return replay(logs, callback, end_offset);
 }
 
 /*static*/ error_code mutation_log::replay(
     std::map<int, log_file_ptr>& logs,
     replay_callback callback,
-    /*out*/ int64_t& offset
+    /*out*/ int64_t& end_offset
     )
 {
-    int64_t g_start_offset = 0, g_end_offset = 0;
+    int64_t g_start_offset = 0;
+    int64_t g_end_offset = 0;
     error_code err = ERR_OK;
-    std::shared_ptr<binary_reader> reader;
     log_file_ptr last;
-    int last_file_number = 0;
+    int last_file_index = 0;
 
     if (logs.size() > 0)
     {
         g_start_offset = logs.begin()->second->start_offset();
         g_end_offset = logs.rbegin()->second->end_offset();
-        last_file_number = logs.begin()->first - 1;
+        last_file_index = logs.begin()->first - 1;
     }
 
+    // check file index continuity
     for (auto& kv : logs)
     {
-        if (++last_file_number != kv.first)
+        if (++last_file_index != kv.first)
         {
-            derror("log file missing with index %u", last_file_number);
+            derror("log file missing with index %u", last_file_index);
             return ERR_OBJECT_NOT_FOUND;
         }
     }
 
-    offset = g_start_offset;
+    end_offset = g_start_offset;
 
     for (auto& kv : logs)
     {
         log_file_ptr& log = kv.second;
 
-        if (log->start_offset() != offset)
+        if (log->start_offset() != end_offset)
         {
             derror("offset mismatch in log file offset and global offset %" PRId64 " vs %" PRId64,
-                log->start_offset(), offset);
+                log->start_offset(), end_offset);
             return ERR_INVALID_DATA;
         }
 
         last = log;
-        err = mutation_log::replay(log, callback, offset);
+        err = mutation_log::replay(log, callback, end_offset);
 
         log->close();
 
         if (err == ERR_INVALID_DATA || err == ERR_FILE_OPERATION_FAILED)
+        {
             break;
+        }
         else
         {
             // for other error codes, they are all checked by next loop or after loop
@@ -589,19 +589,20 @@ void mutation_log::internal_write_callback(
         }
     }
 
+    // TODO(qinzuoyan): when returns ERR_OK? normally returns ERR_HANDLE_EOF?
     if (err == ERR_OK)
     {
-        dassert(g_end_offset == offset,
+        dassert(g_end_offset == end_offset,
             "make sure the global end offset is correct: %" PRId64 " vs %" PRId64,
             g_end_offset,
-            offset
+            end_offset
             );
     }
     else if (err == ERR_HANDLE_EOF || err == ERR_INCOMPLETE_DATA)
     {
         err = ERR_OK;
-        // fix end offset so later log writing can be continued
-        g_end_offset = offset;
+        // fix end offset so later log writing can be continued, maybe lost the last block
+        g_end_offset = end_offset;
     }
     else
     {
@@ -616,7 +617,10 @@ decree mutation_log::max_decree(global_partition_id gpid) const
 {
     zauto_lock l(_lock);
     if (_is_private)
+    {
+        dassert(gpid == _private_gpid, "replica gpid does not match");
         return _private_max_decree;
+    }
     else
     {
         auto it = _shared_max_decrees.find(gpid);
@@ -723,7 +727,7 @@ void mutation_log::update_max_decrees(global_partition_id gpid, decree d)
     }
     else
     {
-        dassert(gpid == _private_gpid, "replica id does not match");
+        dassert(gpid == _private_gpid, "replica gpid does not match");
         if (d > _private_max_decree)
             _private_max_decree = d;
     }
@@ -810,7 +814,7 @@ void mutation_log::update_max_decrees(global_partition_id gpid, decree d)
             }
         }
     }
-    
+
 
     dassert(
         err == ERR_OK,
@@ -1183,9 +1187,8 @@ int mutation_log::garbage_collection(multi_partition_decrees_ex& durable_decrees
 //------------------- log_file --------------------------
 /*static */log_file_ptr log_file::open_read(const char* path, /*out*/ error_code& err)
 {
-    std::string pt = std::string(path);
     char splitters[] = { '\\', '/', 0 };
-    std::string name = utils::get_last_component(pt, splitters);
+    std::string name = utils::get_last_component(std::string(path), splitters);
 
     // log.index.start_offset
     if (name.length() < strlen("log.")
@@ -1240,11 +1243,6 @@ int mutation_log::garbage_collection(multi_partition_decrees_ex& durable_decrees
         return nullptr;
     }
 
-    /*
-     * so log file is structured with sequences of log_blocks
-     * each block consists of the log_block_header + log_content
-     * and the first block is the log_file_header
-     */
     auto lf = new log_file(path, hfile, index, start_offset, true);
     blob hdr_blob;
     err = lf->read_next_log_block(0, hdr_blob);
@@ -1253,19 +1251,27 @@ int mutation_log::garbage_collection(multi_partition_decrees_ex& durable_decrees
         std::string removed = std::string(path) + ".removed";
         derror("read first log entry of file %s failed, err = %s. Rename the file to %s", path, err.to_string(), removed.c_str());
         delete lf;
+        lf = nullptr;
+
+        // rename file on failure
         dsn::utils::filesystem::rename_path(path, removed);
+
         return nullptr;
     }
 
     binary_reader reader(hdr_blob);
-    lf->read_header(reader);
+    lf->read_file_header(reader);
     if (!lf->is_right_header())
     {
-        err = ERR_INVALID_DATA;
         std::string removed = std::string(path) + ".removed";
         derror("invalid log file header of file %s. Rename the file to %s", path, removed.c_str());
         delete lf;
+        lf = nullptr;
+
+        // rename file on failure
         dsn::utils::filesystem::rename_path(path, removed);
+
+        err = ERR_INVALID_DATA;
         return nullptr;
     }
 
@@ -1358,11 +1364,6 @@ void log_file::flush() const
 
 error_code log_file::read_next_log_block(int64_t local_offset, /*out*/::dsn::blob& bb)
 {
-    /*
-     * so the structure of log block: log_block_header + log_content
-     * and the length_of(log_content) == log_block_header.length
-     * and log_block_header.crc is stored for the check of lock_content
-     */
     dassert (_is_read, "log file must be of read mode");
 
     log_block_header hdr;
@@ -1376,7 +1377,8 @@ error_code log_file::read_next_log_block(int64_t local_offset, /*out*/::dsn::blo
     {
         if (err == ERR_OK || err == ERR_HANDLE_EOF)
         {
-            err = read_count == 0 ? ERR_HANDLE_EOF : ERR_INCOMPLETE_DATA;
+            // if read_count is 0, then we meet the end of file
+            err = (read_count == 0 ? ERR_HANDLE_EOF : ERR_INCOMPLETE_DATA);
         }
         else
         {
@@ -1408,7 +1410,10 @@ error_code log_file::read_next_log_block(int64_t local_offset, /*out*/::dsn::blo
             read_count, (int)hdr.length, err.to_string(), local_offset);
 
         if (err == ERR_OK || err == ERR_HANDLE_EOF)
+        {
+            // because already read log_block_header above, so here must be imcomplete data
             err = ERR_INCOMPLETE_DATA;
+        }
 
         return err;
     }
@@ -1420,6 +1425,7 @@ error_code log_file::read_next_log_block(int64_t local_offset, /*out*/::dsn::blo
         return ERR_INVALID_DATA;
     }
     _crc32 = crc;
+
     return ERR_OK;
 }
 
@@ -1445,14 +1451,15 @@ std::shared_ptr<log_block> log_file::prepare_log_block() const
                 int hash
                 )
 {
-    dassert (!_is_read, "log file must be of write mode");
-    dassert (offset == end_offset(), "offset should match with file's end offset");
+    dassert(!_is_read, "log file must be of write mode");
+    dassert(offset == end_offset(), "block start offset should match with file's end offset");
+    dassert(block.size() > 0, "log_block can not be empty");
 
+    int64_t local_offset = end_offset() - start_offset();
     auto hdr = reinterpret_cast<log_block_header*>(const_cast<char*>(block.front().data()));
 
     dassert(hdr->magic == 0xdeadbeef, "");
-    dassert(hdr->local_offset == static_cast<uint32_t>(offset - start_offset()), "");
-    dassert(block.size() != 0, "log_block cannot be empty");
+    dassert(hdr->local_offset == static_cast<uint32_t>(local_offset), "");
 
     hdr->length = static_cast<int32_t>(block.size() - sizeof(log_block_header));
     hdr->body_crc = _crc32;
@@ -1479,7 +1486,7 @@ std::shared_ptr<log_block> log_file::prepare_log_block() const
         _handle,
         buffer_vector.get(),
         static_cast<int>(block.data().size()),
-        static_cast<int>(offset - start_offset()),
+        static_cast<uint64_t>(local_offset),
         evt,
         callback_host,
         callback,
@@ -1490,7 +1497,7 @@ std::shared_ptr<log_block> log_file::prepare_log_block() const
     return task;
 }
 
-int log_file::read_header(binary_reader& reader)
+int log_file::read_file_header(binary_reader& reader)
 {
     /*
      * and the log file header structure:
@@ -1530,7 +1537,7 @@ bool log_file::is_right_header() const
         _header.start_global_offset == _start_offset;
 }
 
-int log_file::write_header(
+int log_file::write_file_header(
     binary_writer& writer,
     multi_partition_decrees_ex& init_max_decrees,
     int buffer_bytes

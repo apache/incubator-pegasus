@@ -46,6 +46,7 @@ namespace dsn {
                 {
                     set_delta_state_learning_supported();
                 }
+                ddebug("simple_kv_service_impl inited, delta_state_learning_supported = %s", is_delta_state_learning_supported() ? "true" : "false");
             }
 
             // RPC_SIMPLE_KV_READ
@@ -105,6 +106,7 @@ namespace dsn {
                 {
                     recover();
                 }
+                ddebug("simple_kv_service_impl opened, create_new = %s", create_new ? "true" : "false");
                 return 0;
             }
 
@@ -118,6 +120,7 @@ namespace dsn {
                         dassert(false, "Fail to delete directory %s.", data_dir().c_str());
                     }
                 }
+                ddebug("simple_kv_service_impl closed, clear_state = %s", clear_state ? "true" : "false");
                 return 0;
             }
 
@@ -128,7 +131,7 @@ namespace dsn {
 
                 _store.clear();
 
-                decree maxVersion = 0;
+                decree max_version = 0;
                 std::string name;
 
                 std::vector<std::string> sub_list;
@@ -144,19 +147,22 @@ namespace dsn {
                         continue;
 
                     decree version = static_cast<decree>(atoll(s.substr(strlen("checkpoint.")).c_str()));
-                    if (version > maxVersion)
+                    if (version > max_version)
                     {
-                        maxVersion = version;
+                        max_version = version;
                         name = data_dir() + "/" + s;
                     }
                 }
                 sub_list.clear();
 
-                if (maxVersion > 0)
+                if (max_version > 0)
                 {
-                    recover(name, maxVersion);
-                    _last_durable_decree = maxVersion;
+                    recover(name, max_version);
+                    dassert(max_version == last_committed_decree(), "");
+                    _last_durable_decree = max_version;
                 }
+                ddebug("simple_kv_service_impl recovered, last_committed_decree = %" PRId64 ", last_durable_decree = %" PRId64 "",
+                       last_committed_decree(), _last_durable_decree.load());
             }
 
             void simple_kv_service_impl::recover(const std::string& name, decree version)
@@ -196,6 +202,7 @@ namespace dsn {
                 }
 
                 init_last_commit_decree(version);
+                ddebug("simple_kv_service_impl recover from checkpoint succeed, last_committed_decree = %" PRId64 "", last_committed_decree());
             }
 
             int simple_kv_service_impl::checkpoint()
@@ -204,7 +211,8 @@ namespace dsn {
 
                 if (last_committed_decree() == last_durable_decree())
                 {
-                    return 0;
+                    ddebug("simple_kv_service_impl create checkpoint succeed, checkpoint already the latest, last_durable_decree = %" PRId64 "", _last_durable_decree.load());
+                    return ERR_OK;
                 }
 
                 // TODO: should use async write instead
@@ -234,7 +242,8 @@ namespace dsn {
                 }
 
                 _last_durable_decree = last_committed_decree();
-                return 0;
+                ddebug("simple_kv_service_impl create checkpoint succeed, last_durable_decree = %" PRId64 "", _last_durable_decree.load());
+                return ERR_OK;
             }
 
             // helper routines to accelerate learning
@@ -257,12 +266,14 @@ namespace dsn {
                         );
 
                     state.files.push_back(name);
+                    ddebug("simple_kv_service_impl get checkpoint succeed, last_durable_decree = %" PRId64 "", _last_durable_decree.load());
                     return ERR_OK;
                 }
                 else
                 {
                     state.from_decree_excluded = 0;
                     state.to_decree_included = 0;
+                    derror("simple_kv_service_impl get checkpoint failed, no checkpoint found");
                     return ERR_OBJECT_NOT_FOUND;
                 }
             }
@@ -272,6 +283,7 @@ namespace dsn {
                 if (mode == CHKPT_LEARN)
                 {
                     recover(state.files[0], state.to_decree_included);
+                    ddebug("simple_kv_service_impl learn checkpoint succeed, last_committed_decree = %" PRId64 "", last_committed_decree());
                     return ERR_OK;
                 }
                 else
@@ -287,10 +299,14 @@ namespace dsn {
                     std::string lname(name);
 
                     if (!utils::filesystem::rename_path(state.files[0], lname))
+                    {
+                        derror("simple_kv_service_impl copy checkpoint failed, rename path failed");
                         return ERR_CHECKPOINT_FAILED;
+                    }
                     else
                     {
                         _last_durable_decree = state.to_decree_included;
+                        ddebug("simple_kv_service_impl copy checkpoint succeed, last_durable_decree = %" PRId64 "", _last_durable_decree.load());
                         return ERR_OK;
                     }
                 }

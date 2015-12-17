@@ -89,7 +89,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     {
         if (!dsn::utils::filesystem::remove_path(_dir))
         {
-            dassert("Fail to remove %s.", _dir.c_str());
+            dassert(false, "Fail to remove %s.", _dir.c_str());
         }
     }
 
@@ -104,7 +104,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         dassert(false, "Fail to get absolute path from %s.", _dir.c_str());
     }
     _dir = temp;
-    std::string log_dir = _dir + "/log";
+    std::string log_dir = dsn::utils::filesystem::path_combine(_dir, "slog");
     if (!dsn::utils::filesystem::create_directory(log_dir))
     {
         dassert(false, "Fail to create directory %s.", log_dir.c_str());
@@ -122,18 +122,16 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 
     if (!dsn::utils::filesystem::get_subdirectories(dir(), dir_list, false))
     {
-        dassert(false, "Fail to get files in %s.", dir().c_str());
+        dassert(false, "Fail to get subdirectories in %s.", dir().c_str());
     }
 
     for (auto& name : dir_list)
     {
         if (name.length() >= 4 &&
-            (name.substr(name.length() - strlen("log")) == "log" ||
-                name.substr(name.length() - strlen(".err")) == ".err")
-            )
+            (name.substr(name.length() - 4) == "slog" || name.substr(name.length() - 4) == ".err"))
             continue;
 
-        auto r = replica::load(this, name.c_str(), true);
+        auto r = replica::load(this, name.c_str());
         if (r != nullptr)
         {
             ddebug("%u.%u @ %s: load replica '%s' success, <durable, commit> = <%" PRId64 ", %" PRId64 ">, last_prepared_decree = %" PRId64,
@@ -194,7 +192,6 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         auto lerr = _log->open(nullptr);
         dassert(lerr == ERR_OK, "restart log service must succeed");    
     }
-    
 
     for (auto it = rps.begin(); it != rps.end(); it++)
     {
@@ -215,7 +212,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         }
 
         dwarn(
-            "%u.%u @ %s: load replica with err %s, durable = %" PRId64 ", committed = %" PRId64 ", "
+            "%u.%u @ %s: load replica with err = %s, durable = %" PRId64 ", committed = %" PRId64 ", "
             "maxpd = %" PRId64 ", ballot = %" PRId64 ", max(share) = %" PRId64 ", max(private) = %" PRId64 ", log_offset = <%" PRId64 ", %" PRId64 ">",
             it->first.app_id, it->first.pidx,
             primary_address().to_string(),
@@ -957,7 +954,7 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
 
     dwarn("open replica '%s'", dr.c_str());
 
-    replica_ptr rep = replica::load(this, dr.c_str(), true);
+    replica_ptr rep = replica::load(this, dr.c_str());
 
     if (rep == nullptr)
     {
