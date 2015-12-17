@@ -74,7 +74,7 @@ REM
 :cleanup
     SCHTASKS /Delete /S %1 /TN %deploy_name% /F
     set rdst=\\%1\%rdst_dir%
-    @DEL /Q %rdst%
+    @rmdir /Q /S %rdst%
     GOTO:EOF
     
 :exit
