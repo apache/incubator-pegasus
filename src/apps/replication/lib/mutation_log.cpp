@@ -344,17 +344,14 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
     dassert (_pending_write != nullptr, "");
     dassert (_pending_write_callbacks != nullptr, "");
 
-    // write block header
-
-    uint64_t offset = _global_end_offset - _pending_write->size();
+    uint64_t start_offset = _global_end_offset - _pending_write->size();
     bool new_log_file = create_new_log_when_necessary
-        && (_global_end_offset - _current_log_file->start_offset()
-        >= _max_log_file_size_in_bytes)
+        && (_global_end_offset - _current_log_file->start_offset() >= _max_log_file_size_in_bytes)
         ;
 
     auto aio = _current_log_file->commit_log_block(
         *_pending_write,
-        offset,
+        start_offset,
         LPC_WRITE_REPLICATION_LOG_FLUSH,
         this,
         std::bind(
@@ -372,7 +369,7 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
     }
     else
     {
-        dassert (_global_end_offset == _current_log_file->end_offset(), "");
+        dassert(_global_end_offset == _current_log_file->end_offset(), "");
     }
 
     _issued_write = _pending_write;
@@ -387,7 +384,7 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
         error_code ret = create_new_log_file();
         if (ret != ERR_OK)
         {
-            dinfo ("create new log file failed, err = %s", ret.to_string());
+            derror("create new log file failed, err = %s", ret.to_string());
         }
         return ret;
     }
@@ -409,7 +406,7 @@ void mutation_log::internal_write_callback(
 
     if (err == ERR_OK)
     {
-        dassert(static_cast<int>(size) == block->size(),
+        dassert(size == block->size(),
             "log write size must equal to the given size: %d vs %d",
             (int)size,
             block->size()
@@ -818,7 +815,7 @@ void mutation_log::update_max_decrees(global_partition_id gpid, decree d)
             }
         }
     }
-    
+
 
     dassert(
         err == ERR_OK,
@@ -1455,14 +1452,15 @@ std::shared_ptr<log_block> log_file::prepare_log_block() const
                 int hash
                 )
 {
-    dassert (!_is_read, "log file must be of write mode");
-    dassert (offset == end_offset(), "offset should match with file's end offset");
+    dassert(!_is_read, "log file must be of write mode");
+    dassert(offset == end_offset(), "block start offset should match with file's end offset");
+    dassert(block.size() > 0, "log_block can not be empty");
 
+    int64_t local_offset = end_offset() - start_offset();
     auto hdr = reinterpret_cast<log_block_header*>(const_cast<char*>(block.front().data()));
 
     dassert(hdr->magic == 0xdeadbeef, "");
-    dassert(hdr->local_offset == static_cast<uint32_t>(offset - start_offset()), "");
-    dassert(block.size() != 0, "log_block cannot be empty");
+    dassert(hdr->local_offset == static_cast<uint32_t>(local_offset), "");
 
     hdr->length = static_cast<int32_t>(block.size() - sizeof(log_block_header));
     hdr->body_crc = _crc32;
@@ -1489,7 +1487,7 @@ std::shared_ptr<log_block> log_file::prepare_log_block() const
         _handle,
         buffer_vector.get(),
         static_cast<int>(block.data().size()),
-        static_cast<int>(offset - start_offset()),
+        static_cast<uint64_t>(local_offset),
         evt,
         callback_host,
         callback,

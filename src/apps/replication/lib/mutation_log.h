@@ -40,9 +40,6 @@
 
 namespace dsn { namespace replication {
 
-#define INVALID_FILENUMBER (0)
-#define MAX_LOG_FILESIZE (32)
-
 class log_file;
 typedef dsn::ref_ptr<log_file> log_file_ptr;
 
@@ -74,19 +71,21 @@ typedef std::unordered_map<global_partition_id, decree>
 typedef std::unordered_map<global_partition_id, log_replica_info>
     multi_partition_decrees_ex;
 
+// each block in log file has a log_block_header
 struct log_block_header
 {
-    int32_t magic;
+    int32_t magic; //0xdeadbeef
     int32_t length; // block data length (not including log_block_header)
     int32_t body_crc; // block data crc (not including log_block_header)
     uint32_t local_offset; // start offset in the log file
 };
 
+// each log file has a log_file_header stored at the beginning of the first block's data content
 struct log_file_header
 {
-    int32_t  magic;
-    int32_t  version;
-    int64_t  start_global_offset; // equal to the file postfix
+    int32_t  magic; // 0xdeadbeef
+    int32_t  version; // current 0x1
+    int64_t  start_global_offset; // start offset in the global space, equals to the file name's postfix
 };
 
 class log_block
@@ -130,7 +129,7 @@ public:
     mutation_log(
         const std::string& dir,
         bool is_private,
-        uint32_t log_batch_buffer_MB,
+        uint32_t batch_buffer_size_kb,
         uint32_t max_log_file_mb        
         );
     virtual ~mutation_log();
@@ -325,7 +324,7 @@ public:
     std::shared_ptr<log_block> prepare_log_block() const;
 
     // async write log entry into the file
-    // 'bb' is the date to be write
+    // 'block' is the date to be writen
     // 'offset' is start offset of the entry in the global space
     // 'evt' is to indicate which thread pool to execute the callback
     // 'callback_host' is used to get tracer
@@ -335,7 +334,7 @@ public:
     //   - non-null if io task is in pending
     //   - null if error
     ::dsn::task_ptr commit_log_block(
-                    log_block& logs,
+                    log_block& block,
                     int64_t offset,
                     dsn_task_code_t evt,
                     clientlet* callback_host,
