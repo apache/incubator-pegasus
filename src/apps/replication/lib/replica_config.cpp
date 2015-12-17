@@ -270,6 +270,8 @@ void replica::remove(configuration_update_request& proposal)
         break;
     case PS_POTENTIAL_SECONDARY:
         break;
+    default:
+        break;
     }
 
     update_configuration_on_meta_server(CT_REMOVE, proposal.node, proposal.config);
@@ -564,6 +566,8 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
                 );
             return false;
         }
+        break;
+    default:
         break;
     }
 
