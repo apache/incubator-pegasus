@@ -46,21 +46,24 @@
 
 namespace dsn { namespace replication {
 
-    using namespace ::dsn::service;
+using namespace ::dsn::service;
 
 mutation_log::mutation_log(
     const std::string& dir,
-    bool is_private,
     uint32_t batch_buffer_size_kb,
-    uint32_t max_log_file_mb
+    uint32_t max_log_file_mb,
+    bool is_private,
+    global_partition_id private_gpid
     )
 {
     _dir = dir;
     _max_log_file_size_in_bytes = static_cast<int64_t>(max_log_file_mb) * 1024L * 1024L;
     _batch_buffer_bytes = batch_buffer_size_kb * 1024;
-    _is_private = is_private;
 
+    // ATTENTION: must first run init_state()
     init_states();
+    _is_private = is_private;
+    _private_gpid = private_gpid;
 }
 
 void mutation_log::init_states()
@@ -75,11 +78,14 @@ void mutation_log::init_states()
     _global_start_offset = 0;
     _global_end_offset = 0;
 
-    // buffering and replica states
+    // buffering
     _pending_write = nullptr;
+    _pending_write_size = 0;
     _pending_write_callbacks = nullptr;
-    _private_gpid.app_id = 0;
-    _private_gpid.pidx = 0;
+
+    // replica states
+    _is_private = false;
+    _private_gpid = {0, 0};
     _private_max_decree = 0;
     _private_valid_start_offset = 0;
 }
@@ -106,10 +112,8 @@ void mutation_log::set_valid_log_offset_before_open(global_partition_id gpid, in
 
 error_code mutation_log::open(replay_callback callback)
 {
-    error_code err;
     dassert(!_is_opened, "cannot open a opened mutation_log");
-    dassert(nullptr == _current_log_file,
-        "the current log file must be null at this point");
+    dassert(nullptr == _current_log_file, "the current log file must be null at this point");
 
     // create dir if necessary
     if (!dsn::utils::filesystem::path_exists(_dir))
@@ -138,6 +142,7 @@ error_code mutation_log::open(replay_callback callback)
 
     std::sort(file_list.begin(), file_list.end());
 
+    error_code err = ERR_OK;
     for (auto& fpath : file_list)
     {
         log_file_ptr log = log_file::open_read(fpath.c_str(), err);
@@ -145,7 +150,7 @@ error_code mutation_log::open(replay_callback callback)
         {
             if (err == ERR_HANDLE_EOF || err == ERR_INCOMPLETE_DATA || err == ERR_INVALID_PARAMETERS)
             {
-                dwarn("skip file %s during log init", fpath.c_str());
+                dwarn("skip file %s during log init, err = %s", fpath.c_str(), err.to_string());
                 continue;
             }
             else
@@ -194,25 +199,6 @@ error_code mutation_log::open(replay_callback callback)
 
     _is_opened = (err == ERR_OK);
     return err;
-}
-
-error_code mutation_log::open(
-    global_partition_id gpid,
-    replay_callback callback,
-    decree max_decree /*= invalid_decree*/)
-{
-    dassert(_is_private, "this is only valid for private mutation log");
-    if (_private_gpid.app_id != 0)
-    {
-        dassert(_private_gpid == gpid, "invalid gpid");
-    }
-    else
-        _private_gpid = gpid;
-
-    if (max_decree != invalid_decree)
-        _private_max_decree = max_decree;
-
-    return open(callback);
 }
 
 void mutation_log::close(bool clear_all)
@@ -567,46 +553,40 @@ void mutation_log::internal_write_callback(
 
         log->close();
 
-        if (err == ERR_INVALID_DATA || err == ERR_FILE_OPERATION_FAILED)
+        if (err == ERR_OK || err == ERR_HANDLE_EOF)
         {
-            break;
+            // do nothing
+        }
+        else if (err == ERR_INCOMPLETE_DATA)
+        {
+            // If the file is not corrupted, it may also return the value of ERR_INCOMPLETE_DATA.
+            // In this case, the correctness is relying on the check of start_offset.
+            dwarn("delay handling error: %s", err.to_string());
         }
         else
         {
-            // for other error codes, they are all checked by next loop or after loop
-            /*
-             * If the file is not corrupted, it may also return the value of ERR_INCOMPLETE_DATA
-             * or ERR_HANDLE_EOF.
-             * In this case, the correctness is relying on the check of start_offset.
-             */
-            dassert(err == ERR_OK
-                || err == ERR_INCOMPLETE_DATA
-                || err == ERR_HANDLE_EOF
-                ,
-                "unhandled error code: %s",
-                err.to_string()
-                );
+            // for other errors, we should break
+            break;
         }
     }
 
-    // TODO(qinzuoyan): when returns ERR_OK? normally returns ERR_HANDLE_EOF?
-    if (err == ERR_OK)
+    if (err == ERR_OK || err == ERR_HANDLE_EOF)
     {
         dassert(g_end_offset == end_offset,
             "make sure the global end offset is correct: %" PRId64 " vs %" PRId64,
             g_end_offset,
             end_offset
             );
-    }
-    else if (err == ERR_HANDLE_EOF || err == ERR_INCOMPLETE_DATA)
-    {
         err = ERR_OK;
-        // fix end offset so later log writing can be continued, maybe lost the last block
-        g_end_offset = end_offset;
+    }
+    else if (err == ERR_INCOMPLETE_DATA)
+    {
+        // ignore the last incomplate block
+        err = ERR_OK;
     }
     else
     {
-        // data failure
+        // bad error
         derror("replay mutation log failed: %s", err.to_string());
     }
 
@@ -729,7 +709,9 @@ void mutation_log::update_max_decrees(global_partition_id gpid, decree d)
     {
         dassert(gpid == _private_gpid, "replica gpid does not match");
         if (d > _private_max_decree)
+        {
             _private_max_decree = d;
+        }
     }
 }
 
@@ -794,27 +776,27 @@ void mutation_log::update_max_decrees(global_partition_id gpid, decree d)
     //
     // start to write
     //
-    //err = write_pending_mutations();
-    // not batching
     if (_issued_write.expired()) {
         if (_batch_buffer_bytes == 0)
         {
+            // not batching
             err = write_pending_mutations();
         }
-        // batching
         else
         {
+            // batching
             if (static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes)
             {
+                // batch full, write now
                 err = write_pending_mutations();
             }
             else
             {
-                // waiting for batch write later
+                // batch not full, wait for batch write later
+                // TODO(qinzuoyan): add timer triger
             }
         }
     }
-
 
     dassert(
         err == ERR_OK,

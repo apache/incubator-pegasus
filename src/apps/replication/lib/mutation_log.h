@@ -128,9 +128,10 @@ public:
     //
     mutation_log(
         const std::string& dir,
-        bool is_private,
         uint32_t batch_buffer_size_kb,
-        uint32_t max_log_file_mb        
+        uint32_t max_log_file_mb,
+        bool is_private = false,
+        global_partition_id private_gpid = {0, 0}
         );
     virtual ~mutation_log();
     
@@ -139,11 +140,8 @@ public:
     //
     void set_valid_log_offset_before_open(global_partition_id gpid, int64_t valid_start_offset);
 
-    // for shared
+    // open with replay
     error_code open(replay_callback callback);
-
-    // for private
-    error_code open(global_partition_id gpid, replay_callback callback, decree max_decree = invalid_decree);
 
     // 
     void close(bool clear_all = false);
@@ -194,6 +192,7 @@ public:
     //    other inquiry routines
     const std::string& dir() const {return _dir;}
 
+    // current global end offset
     int64_t end_offset() const { zauto_lock l(_lock); return _global_end_offset; }
     
     // maximum decree so far
@@ -251,9 +250,9 @@ private:
     
     
     // bufferring
-    std::weak_ptr<log_block> _issued_write;
-    std::shared_ptr<log_block> _pending_write;
-    size_t _pending_write_size;
+    std::weak_ptr<log_block>       _issued_write;
+    std::shared_ptr<log_block>     _pending_write;
+    size_t                         _pending_write_size;
     pending_callbacks_ptr          _pending_write_callbacks;
 
     // replica states

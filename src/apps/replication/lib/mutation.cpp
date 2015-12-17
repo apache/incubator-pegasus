@@ -41,11 +41,12 @@ namespace dsn { namespace replication {
 
 mutation::mutation()
 {
+    next = nullptr;
     _private0 = 0; 
     _not_logged = 1;
     _prepare_ts_ms = 0;
     _prepare_request = nullptr;
-    next = nullptr;
+    strcpy(_name, "0.0.0.0");
     _appro_data_bytes = sizeof(mutation_header);
 }
 
@@ -142,7 +143,10 @@ bool mutation::add_client_request(dsn_task_code_t code, dsn_message_t request)
         dsn_msg_add_ref(from); // released on dctor
     }
     
-    sprintf(mu->_name, "%" PRId64 ".%" PRId64,
+    snprintf(mu->_name, sizeof(mu->_name),
+        "%" PRId32 ".%" PRId32 ".%" PRId64 ".%" PRId64,
+        mu->data.header.gpid.app_id,
+        mu->data.header.gpid.pidx,
         mu->data.header.ballot,
         mu->data.header.decree);
 

@@ -55,8 +55,8 @@ TEST(replication, log_learn)
         utils::filesystem::create_directory(logp);
 
         // writing logs
-        mutation_log_ptr mlog = new mutation_log(logp, true, 1, 1);
-        mlog->open(gpid, nullptr);
+        mutation_log_ptr mlog = new mutation_log(logp, 1, 1, true, gpid);
+        mlog->open(nullptr);
 
         for (int i = 0; i < 1000; i++)
         {
@@ -90,8 +90,8 @@ TEST(replication, log_learn)
         mlog->close();
         
         // reading logs
-        mlog = new mutation_log(logp, true, 1, 1);
-        mlog->open(gpid, [](mutation_ptr& mu)->bool{ return true; });
+        mlog = new mutation_log(logp, 1, 1, true, gpid);
+        mlog->open([](mutation_ptr& mu)->bool{ return true; });
 
         // learning
         learn_state state;

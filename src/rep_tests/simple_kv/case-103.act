@@ -1,6 +1,6 @@
 # inject on_rpc_call of group check
 
-set:load_balance_for_test=1,not_exist_on_log_failure=1
+set:load_balance_for_test=1,not_exit_on_log_failure=1
 
 # wait until r1 becomes primary
 config:{1,r1,[]}

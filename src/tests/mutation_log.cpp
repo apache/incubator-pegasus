@@ -297,12 +297,13 @@ TEST(replication, mutation_log)
     // writing logs
     mutation_log_ptr mlog = new mutation_log(
         logp,
-        true,
         1,
-        4
+        4,
+        true,
+        gpid
         );
 
-    auto err = mlog->open(gpid, nullptr);
+    auto err = mlog->open(nullptr);
     EXPECT_TRUE(err == ERR_OK);
 
     for (int i = 0; i < 1000; i++)
@@ -336,13 +337,14 @@ TEST(replication, mutation_log)
     // reading logs
     mlog = new mutation_log(
         logp,
-        true,
         1,
-        4
+        4,
+        true,
+        gpid
         );
 
     int mutation_index = -1;
-    mlog->open(gpid,
+    mlog->open(
         [&mutations, &mutation_index](mutation_ptr& mu)->bool
     {
         mutation_ptr wmu = mutations[++mutation_index];

@@ -172,7 +172,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
     {
         _prepare_list->reset(_app->last_committed_decree());
         
-        if (_options->log_enable_private_prepare
+        if (!_options->log_private_disabled
             || !_app->is_delta_state_learning_supported())
         {
             dassert(nullptr == _private_log, "private log must not be initialized yet");
@@ -181,9 +181,10 @@ error_code replica::init_app_and_prepare_list(bool create_new)
 
             _private_log = new mutation_log(
                 log_dir,
+                _options->log_private_batch_buffer_kb,
+                _options->log_file_size_mb,
                 true,
-                _options->log_batch_buffer_KB_private,
-                _options->log_file_size_mb
+                get_gpid()
                 );
         }
 
@@ -207,10 +208,9 @@ error_code replica::init_app_and_prepare_list(bool create_new)
         if (nullptr != _private_log)
         {
             err = _private_log->open(
-                get_gpid(),
                 [this](mutation_ptr& mu)
                 {
-                    return replay_mutation(mu);
+                    return replay_mutation(mu, true);
                 }
             );
 

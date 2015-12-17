@@ -86,7 +86,7 @@ void replica::init_prepare(mutation_ptr& mu)
         mu->set_id(get_ballot(), mu->data.header.decree);
     }
     
-    ddebug("%s: mutation %s init_prepare", name(), mu->name());
+    dinfo("%s: mutation %s init_prepare", name(), mu->name());
 
     // check bounded staleness
     if (mu->data.header.decree > last_committed_decree() + _options->staleness_for_commit)
@@ -136,9 +136,9 @@ void replica::init_prepare(mutation_ptr& mu)
             LPC_WRITE_REPLICATION_LOG,
             this,
             std::bind(&replica::on_append_log_completed, this, mu,
-            std::placeholders::_1,
-            std::placeholders::_2),
-            gpid_to_hash(get_gpid())
+                      std::placeholders::_1,
+                      std::placeholders::_2),
+                      gpid_to_hash(get_gpid())
             );
 
         dassert(nullptr != mu->log_task(), "");
@@ -216,13 +216,14 @@ void replica::on_prepare(dsn_message_t request)
 
     decree decree = mu->data.header.decree;
 
-    ddebug( "%s: mutation %s on_prepare", name(), mu->name());
+    dinfo("%s: mutation %s on_prepare", name(), mu->name());
 
-    dassert (mu->data.header.ballot == rconfig.ballot, "");
+    dassert(mu->data.header.ballot == rconfig.ballot, "");
 
     if (mu->data.header.ballot < get_ballot())
     {
-        ddebug( "%s: mutation %s on_prepare skipped due to old view", name(), mu->name());
+        derror("%s: mutation %s on_prepare skipped due to old view", name(), mu->name());
+        // TODO(qinzuoyan): response something
         return;
     }
 
@@ -231,8 +232,8 @@ void replica::on_prepare(dsn_message_t request)
     {
         if (!update_local_configuration(rconfig))
         {
-            ddebug(
-                "%s: mutation %s on_prepare  to %s failed as update local configuration failed",
+            derror(
+                "%s: mutation %s on_prepare failed as update local configuration failed, state = %s",
                 name(), mu->name(),
                 enum_to_string(status())
                 );
@@ -243,8 +244,8 @@ void replica::on_prepare(dsn_message_t request)
 
     if (PS_INACTIVE == status() || PS_ERROR == status())
     {
-        ddebug( 
-            "%s: mutation %s on_prepare  to %s skipped",
+        derror(
+            "%s: mutation %s on_prepare failed as invalid replica state, state = %s",
             name(), mu->name(),
             enum_to_string(status())
             );
@@ -254,27 +255,28 @@ void replica::on_prepare(dsn_message_t request)
             );
         return;
     }
-
     else if (PS_POTENTIAL_SECONDARY == status())
     {
         // new learning process
         if (rconfig.learner_signature != _potential_secondary_states.learning_signature)
         {
             init_learn(rconfig.learner_signature);
+            // TODO(qinzuoyan): response something
             return;
         }
 
         if (!(_potential_secondary_states.learning_status == LearningWithPrepare
             || _potential_secondary_states.learning_status == LearningSucceeded))
         {
-            ddebug( 
-                "%s: mutation %s on_prepare to %s skipped, learnings state = %s",
+            derror(
+                "%s: mutation %s on_prepare skipped as invalid learning status, state = %s, learning_status = %s",
                 name(), mu->name(),
                 enum_to_string(status()),
                 enum_to_string(_potential_secondary_states.learning_status)
                 );
 
             // do not retry as there may retries later
+            // TODO(qinzuoyan): response something
             return;
         }
     }
@@ -290,11 +292,14 @@ void replica::on_prepare(dsn_message_t request)
     auto mu2 = _prepare_list->get_mutation_by_decree(decree);
     if (mu2 != nullptr && mu2->data.header.ballot == mu->data.header.ballot)
     {
-        ddebug( "%s: mutation %s redundant prepare skipped", name(), mu->name());
-
         if (mu2->is_logged())
         {
             ack_prepare_message(ERR_OK, mu);
+        }
+        else
+        {
+            derror("%s: mutation %s on_prepare skipped as it is duplicate", name(), mu->name());
+            // TODO(qinzuoyan): response something or do merge response
         }
         return;
     }
@@ -316,7 +321,9 @@ void replica::on_prepare(dsn_message_t request)
     mu->log_task() = _stub->_log->append(mu,
         LPC_WRITE_REPLICATION_LOG,
         this,
-        std::bind(&replica::on_append_log_completed, this, mu, std::placeholders::_1, std::placeholders::_2),
+        std::bind(&replica::on_append_log_completed, this, mu,
+                  std::placeholders::_1,
+                  std::placeholders::_2),
         gpid_to_hash(get_gpid())
         );
 }
@@ -325,11 +332,17 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
 {
     check_hashed_access();
 
-    ddebug( "%s: mutation %s on_append_log_completed, err = %s", name(), mu->name(), err.to_string());
+    dinfo("%s: append shared log completed for mutation %s, size = %u, err = %s",
+          name(), mu->name(), size, err.to_string());
 
     if (err == ERR_OK)
     {
         mu->set_logged();
+    }
+    else
+    {
+        derror("%s: append shared log failed for mutation %s, err = %s",
+               name(), mu->name(), err.to_string());
     }
 
     // skip old mutations
@@ -353,7 +366,7 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
             {
                 handle_local_failure(err);
             }
-
+            // always ack
             ack_prepare_message(err, mu);
             break;
         case PS_ERROR:
@@ -364,6 +377,8 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
         }
 
         // mutation log failure, propagted to all replicas
+        // TODO(qinzuoyan): what if log failed for old mutations? it will not reach here,
+        // and if the log will tolerate the failure?
         if (err != ERR_OK)
         {
             _stub->handle_log_failure(err);
@@ -378,8 +393,13 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
             this,
             [this, mu](error_code err, size_t size)
         {
+            dinfo("%s: append private log completed for mutation %s, size = %u, err = %s",
+                  name(), mu->name(), size, err.to_string());
+
             if (err != ERR_OK)
             {
+                derror("%s: append private log failed for mutation %s, err = %s",
+                       name(), mu->name(), err.to_string());
                 handle_local_failure(err);
             }
         },
@@ -447,7 +467,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status> pr, err
             }
             break;
         default:
-            ddebug( 
+            dwarn(
                 "%s: mutation %s prepare ack skipped coz the node is now inactive", name(), mu->name()
                 );
             break;
@@ -499,10 +519,10 @@ void replica::ack_prepare_message(error_code err, mutation_ptr& mu)
     resp.last_committed_decree_in_app = _app->last_committed_decree(); 
     resp.last_committed_decree_in_prepare_list = last_committed_decree();
 
-    dassert (nullptr != mu->prepare_msg(), "");
+    dassert(nullptr != mu->prepare_msg(), "");
     reply(mu->prepare_msg(), resp);
 
-    ddebug( "%s: mutation %s ack_prepare_message", name(), mu->name());
+    ddebug("%s: mutation %s ack_prepare_message, err = %s", name(), mu->name(), err.to_string());
 }
 
 void replica::cleanup_preparing_mutations(bool wait)
