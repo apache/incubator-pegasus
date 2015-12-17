@@ -1,5 +1,7 @@
 [![Build Status](https://travis-ci.org/imzhenyu/rDSN.svg?branch=master)](https://travis-ci.org/imzhenyu/rDSN) [![Build status](https://ci.appveyor.com/api/projects/status/1re27vmu7n7c4j1l?svg=true)](https://ci.appveyor.com/project/imzhenyu/rdsn)
 
+[![Join the chat at https://gitter.im/imzhenyu/rDSN](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/imzhenyu/rDSN?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 All pull requests please now go to https://github.com/imzhenyu/rdsn for automatic integration with latest version. We will preriodically update this repo. Thank you.
 
 ### Top Links
