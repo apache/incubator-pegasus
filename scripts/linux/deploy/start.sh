@@ -1,13 +1,13 @@
 #!/bin/bash
 
 
-APP=${APP:-"meta"}
-META_IP=${META_IP:-"localhost"}
 
-
-PREFIX=$(dirname ${BASH_SOURCE})
+PREFIX=$(readlink -m $(dirname ${BASH_SOURCE}))
 export LD_LIBRARY_PATH=${PREFIX}
 
+META_IP=${META_IP:-"$(cat ${PREFIX}/metalist)"}
+META_IP=${META_IP#*@}
+APP=${APP:-"${PREFIX##*/}"}
 
 PROGRAM=${PREFIX}/simple_kv
 CONFIG=${PREFIX}/config.ini
