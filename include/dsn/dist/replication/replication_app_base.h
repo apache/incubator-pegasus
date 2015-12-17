@@ -44,6 +44,7 @@
 # include <dsn/dist/replication/replication.types.h>
 # include <dsn/dist/replication/replication_other_types.h>
 # include <dsn/dist/replication/replication.codes.h>
+# include <dsn/cpp/perf_counter_.h>
 
 namespace dsn { namespace replication {
 
@@ -106,7 +107,7 @@ public:
 
 public:
     replication_app_base(::dsn::replication::replica* replica);
-    virtual ~replication_app_base() {}
+    virtual ~replication_app_base() { }
 
     //
     // Interfaces to be implemented by app, 
@@ -253,6 +254,8 @@ private:
     const replica_log_info& log_info() const { return _info; }
     error_code update_log_info(replica* r, int64_t shared_log_offset, int64_t private_log_offset);
 
+    void install_perf_counters();
+
 private:
     std::string _dir_data;
     std::string _dir_learn;
@@ -260,12 +263,13 @@ private:
     std::unordered_map<int, std::function<void(binary_reader&, dsn_message_t)> > _handlers;
     int         _physical_error; // physical error (e.g., io error) indicates the app needs to be dropped
     bool        _is_delta_state_learning_supported;
-    replica_log_info _info;
-    batch_state _batch_state;
-
-private:
-    // it is now totally controlled by rdsn as we are now supporting batching
+    replica_log_info    _info;
+    batch_state         _batch_state;
     std::atomic<decree> _last_committed_decree;
+
+    perf_counter_ _app_commit_throughput;
+    perf_counter_ _app_commit_latency;
+    perf_counter_ _app_commit_decree;
 
 protected:    
     std::atomic<decree> _last_durable_decree;

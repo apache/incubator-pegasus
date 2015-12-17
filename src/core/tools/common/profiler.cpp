@@ -356,6 +356,17 @@ namespace dsn {
                     s_spec_profilers[i].ptr[AIO_LATENCY_NS] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".latency(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, "latency from call point to enqueue point for AIO tasks", true);
                 }
 
+                // we don't use perf_counter_ptr but perf_counter* in ptr[xxx] to avoid unnecessary memory access cost
+                // we need to add reference so that the counters won't go
+                // release_ref should be done when the profiler exits (which never hahppens right now so we omit that for the time being)
+                for (size_t j = 0; j < sizeof(s_spec_profilers[i].ptr) / sizeof(perf_counter*); j++)
+                {
+                    if (s_spec_profilers[i].ptr[j] != nullptr)
+                    {
+                        s_spec_profilers[i].ptr[j]->add_ref();
+                    }
+                }
+
                 s_spec_profilers[i].is_profile = config()->get_value<bool>(name.c_str(), "is_profile", profile, "whether to profile this kind of task");
 
                 if (!s_spec_profilers[i].is_profile)

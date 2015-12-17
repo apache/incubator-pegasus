@@ -49,7 +49,7 @@ public:
     perf_counters(void);
     ~perf_counters(void);
 
-    perf_counter* get_counter(
+    perf_counter_ptr get_counter(
                     const char *section, 
                     const char *name, 
                     dsn_perf_counter_type_t flags, 
@@ -59,7 +59,7 @@ public:
 
     bool remove_counter(const char* section, const char* name);
 
-    perf_counter* get_counter(
+    perf_counter_ptr get_counter(
                     const char *name, 
                     dsn_perf_counter_type_t flags,
                     const char *dsptr,
@@ -77,7 +77,7 @@ public:
     static std::string list_counter(const std::vector<std::string>& args);
     static std::string query_counter(const std::vector<std::string>& args);
 
-    typedef std::map<std::string, std::pair<std::unique_ptr<perf_counter>, dsn_perf_counter_type_t> > same_section_counters;
+    typedef std::map<std::string, perf_counter_ptr > same_section_counters;
     typedef std::map<std::string, same_section_counters> all_counters;
 
 private:

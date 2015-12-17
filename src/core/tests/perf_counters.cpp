@@ -41,7 +41,7 @@ using namespace ::dsn;
 TEST(core, perf_counters)
 {
     utils::perf_counters& c = utils::perf_counters::instance();
-    perf_counter* p;
+    perf_counter_ptr p;
 
     p = c.get_counter("test", "number_counter", COUNTER_TYPE_NUMBER,"", false);
     ASSERT_EQ(nullptr, p);
