@@ -97,12 +97,12 @@ namespace dsn {
                 std::cout << "start_offset=" << lf->start_offset() << std::endl;
                 std::cout << "end_offset=" << lf->end_offset() << std::endl;
                 std::cout << "previous_log_max_decrees={";
-                const multi_partition_decrees_ex& previous = lf->previous_log_max_decrees();
+                const replica_log_info_map& previous = lf->previous_log_max_decrees();
                 int i = 0;
                 for (auto& kv : previous)
                 {
                     if (i != 0) std::cout << ",";
-                    std::cout << "p" << kv.first.pidx << "->" << kv.second.decree;
+                    std::cout << "p" << kv.first.pidx << "->" << kv.second.max_decree;
                 }
                 std::cout << "}" << std::endl;
                 std::cout << "-----------------------------------" << std::endl;

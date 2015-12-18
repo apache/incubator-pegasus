@@ -188,20 +188,19 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                 );
         }
 
-        // sync vaid start log offset between app and logs
+        // sync valid_start_offset between app and logs
         if (create_new)
         {
-            err = _app->update_log_info(
-                this,
-                _stub->_log->on_partition_reset(get_gpid(), _app->last_committed_decree()),
-                _private_log ? _private_log->on_partition_reset(get_gpid(), _app->last_committed_decree()) : 0
-                );
+            dassert(_app->last_committed_decree() == 0, "");
+            int64_t shared_log_offset = _stub->_log->on_partition_reset(get_gpid(), 0);
+            int64_t private_log_offset = _private_log ? _private_log->on_partition_reset(get_gpid(), 0) : 0;
+            err = _app->update_init_info(this, shared_log_offset, private_log_offset);
         }
         else
         {
-            _stub->_log->set_valid_log_offset_before_open(get_gpid(), _app->log_info().init_offset_in_shared_log);
+            _stub->_log->set_valid_start_offset_on_open(get_gpid(), _app->init_info().init_offset_in_shared_log);
             if (_private_log)
-                _private_log->set_valid_log_offset_before_open(get_gpid(), _app->log_info().init_offset_in_private_log);
+                _private_log->set_valid_start_offset_on_open(get_gpid(), _app->init_info().init_offset_in_private_log);
         }
 
         // replay the logs
@@ -224,9 +223,9 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                     _app->last_committed_decree(),
                     max_prepared_decree(),
                     get_ballot(),
-                    _app->log_info().init_offset_in_private_log
+                    _app->init_info().init_offset_in_private_log
                     );
-                _private_log->check_log_start_offset(get_gpid(), _app->log_info().init_offset_in_private_log);
+                _private_log->check_valid_start_offset(get_gpid(), _app->init_info().init_offset_in_private_log);
                 set_inactive_state_transient(true);
             }
             /* in the beginning the prepare_list is reset to the durable_decree */
@@ -241,13 +240,15 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                     _app->last_committed_decree(),
                     max_prepared_decree(),
                     get_ballot(),
-                    _app->log_info().init_offset_in_private_log
+                    _app->init_info().init_offset_in_private_log
                     );
 
                 set_inactive_state_transient(false);
 
                 _private_log->close();
                 _private_log = nullptr;
+
+                _stub->_log->on_partition_removed(get_gpid());
             }
         }
 
@@ -281,7 +282,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
 {
     auto d = mu->data.header.decree;
     auto offset = mu->data.header.log_offset;
-    if (is_private && offset < _app->log_info().init_offset_in_private_log)
+    if (is_private && offset < _app->init_info().init_offset_in_private_log)
     {
         ddebug(
             "%s: replay mutation skipped1 as offset is invalid in private log, ballot = %" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
@@ -294,7 +295,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
         return false;
     }
     
-    if (!is_private && offset < _app->log_info().init_offset_in_shared_log)
+    if (!is_private && offset < _app->init_info().init_offset_in_shared_log)
     {
         ddebug(
             "%s: replay mutation skipped2 as offset is invalid in shared log, ballot = %" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,

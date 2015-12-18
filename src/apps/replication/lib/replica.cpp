@@ -188,16 +188,15 @@ void replica::check_state_completeness()
     dassert(max_prepared_decree() >= last_committed_decree(), "");
     dassert(last_committed_decree() >= last_durable_decree(), "");
 
-    auto mind = _stub->_log->max_gced_decree(get_gpid(), _app->log_info().init_offset_in_shared_log);
+    auto mind = _stub->_log->max_gced_decree(get_gpid(), _app->init_info().init_offset_in_shared_log);
     dassert(mind <= last_durable_decree(), "");
-    _stub->_log->check_log_start_offset(get_gpid(), _app->log_info().init_offset_in_shared_log);
+    _stub->_log->check_valid_start_offset(get_gpid(), _app->init_info().init_offset_in_shared_log);
 
     if (_private_log != nullptr)
     {   
-        auto mind = _private_log->max_gced_decree(get_gpid(), _app->log_info().init_offset_in_private_log);
+        auto mind = _private_log->max_gced_decree(get_gpid(), _app->init_info().init_offset_in_private_log);
         dassert(mind <= last_durable_decree(), "");
-
-        _private_log->check_log_start_offset(get_gpid(), _app->log_info().init_offset_in_private_log);
+        _private_log->check_valid_start_offset(get_gpid(), _app->init_info().init_offset_in_private_log);
     }
 }
 

@@ -26,11 +26,11 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     Mutation log read and write.
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
+ *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     Dec., 2015, @qinzuoyan (Zuoyan Qin), refactor and add comments
  */
 
 #pragma once
@@ -43,40 +43,35 @@ namespace dsn { namespace replication {
 class log_file;
 typedef dsn::ref_ptr<log_file> log_file_ptr;
 
-struct log_replica_info
+// a structure to record replica's log info
+struct replica_log_info
 {
-    int64_t decree;
-    int64_t log_start_offset;
-
-    log_replica_info(int64_t d, int64_t o)
+    int64_t max_decree;
+    int64_t valid_start_offset;
+    replica_log_info(int64_t d, int64_t o)
     {
-        decree = d;
-        log_start_offset = o;
+        max_decree = d;
+        valid_start_offset = o;
     }
-
-    log_replica_info()
+    replica_log_info()
     {
-        decree = 0;
-        log_start_offset = 0;
+        max_decree = 0;
+        valid_start_offset = 0;
     }
-
-    bool operator == (const log_replica_info& o) const
+    bool operator == (const replica_log_info& o) const
     {
-        return decree == o.decree && log_start_offset == o.log_start_offset;
+        return max_decree == o.max_decree && valid_start_offset == o.valid_start_offset;
     }
 };
 
-typedef std::unordered_map<global_partition_id, decree>
-    multi_partition_decrees;
-typedef std::unordered_map<global_partition_id, log_replica_info>
-    multi_partition_decrees_ex;
+typedef std::unordered_map<global_partition_id, replica_log_info> replica_log_info_map;
 
 // each block in log file has a log_block_header
 struct log_block_header
 {
-    int32_t magic; //0xdeadbeef
-    int32_t length; // block data length (not including log_block_header)
-    int32_t body_crc; // block data crc (not including log_block_header)
+    int32_t  magic; //0xdeadbeef
+    int32_t  length; // block data length (not including log_block_header)
+    int32_t  body_crc; // block data crc (not including log_block_header)
     uint32_t local_offset; // start offset in the log file
 };
 
@@ -88,38 +83,48 @@ struct log_file_header
     int64_t  start_global_offset; // start offset in the global space, equals to the file name's postfix
 };
 
+// a memory structure holding data which belongs to one block.
 class log_block
 {
     std::vector<blob> _data; // the first blob is log_block_header
-    size_t _size; // total data size of all blobs
+    size_t            _size; // total data size of all blobs
 public:
     log_block(blob &&init_blob) : _data({init_blob}), _size(init_blob.length()) {}
+    // get all blobs in the block
     const std::vector<blob>& data() const
     {
         return _data;
     }
+    // get the first blob (which contains the log_block_header) from the block
     blob& front()
     {
         dassert(!_data.empty(), "trying to get first blob out of an empty log block");
         return _data.front();
     }
+    // add a blob into the block
     void add(const blob& bb)
     {
         _size += bb.length();
         _data.push_back(bb);
     }
+    // return total data size in the block
     size_t size() const
     {
         return _size;
     }
 };
 
-// log file name: log.{index}.{global_start_offset}
+//
+// manage a sequence of continuous mutation log files
+// each log file name is: log.{index}.{global_start_offset}
+//
+// this class is thread safe
+//
 class mutation_log : public virtual clientlet, public ref_counter
 {
 public:
     // return true when the mutation's offset is not less than
-    // the remembered (shared or private) log_start_offset therefore valid for the replica
+    // the remembered (shared or private) valid_start_offset therefore valid for the replica
     typedef std::function<bool (mutation_ptr&)> replay_callback;
 
 public:
@@ -128,23 +133,29 @@ public:
     //
     mutation_log(
         const std::string& dir,
-        uint32_t batch_buffer_size_kb,
-        uint32_t max_log_file_mb,
+        int32_t batch_buffer_size_kb,
+        int32_t max_log_file_mb,
         bool is_private = false,
         global_partition_id private_gpid = {0, 0}
         );
     virtual ~mutation_log();
-    
+
     //
     // initialization
     //
-    void set_valid_log_offset_before_open(global_partition_id gpid, int64_t valid_start_offset);
 
-    // open with replay
+    // open and replay
+    // returns ERR_OK if succeed
+    // not thread safe, but only be called when init
     error_code open(replay_callback callback);
 
-    // 
+    // close the log
+    // thread safe
     void close(bool clear_all = false);
+
+    // flush the pending buffer
+    // thread safe
+    void flush();
 
     //
     // replay
@@ -154,30 +165,61 @@ public:
         replay_callback callback,
         /*out*/ int64_t& end_offset
         );
-           
+
     //
-    // log mutation
+    // append
     //
+
+    // append a log mutation
     // return value: nullptr for error
+    // thread safe
     ::dsn::task_ptr append(mutation_ptr& mu,
             dsn_task_code_t callback_code,
             clientlet* callback_host,
             aio_handler callback,
             int hash = 0);
 
-    // add/remove entry <gpid, decree> from _previous_log_max_decrees
-    // when a partition is added/removed. 
-    void    on_partition_removed(global_partition_id gpid);
-    // return current offset, needs to be remebered by caller for gc usage
-    int64_t on_partition_reset(global_partition_id gpid, decree max_d);
+    //
+    // maintain max_decree & valid_start_offset
+    //
+
+    // when open a exist replica, need to set valid_start_offset on open
+    // thread safe
+    void set_valid_start_offset_on_open(global_partition_id gpid, int64_t valid_start_offset);
+
+    // when create a new replica, need to reset current max decree
+    // returns current global end offset, needs to be remebered by caller for gc usage
+    // thread safe
+    int64_t on_partition_reset(global_partition_id gpid, decree max_decree);
+
+    // remove entry from _previous_log_max_decrees when a partition is removed.
+    // only used for private log.
+    // thread safe
+    void on_partition_removed(global_partition_id gpid);
+
+    // update current max decree
+    // thread safe
+    void update_max_decree(global_partition_id gpid, decree d);
 
     //
     //  garbage collection logs that are already covered by 
     //  durable state on disk, return deleted log segment count
     //
-    int garbage_collection(multi_partition_decrees_ex& durable_decrees);
 
-    int garbage_collection(global_partition_id gpid, decree durable_d, int64_t valid_start_offset);
+    // garbage collection for private log
+    // remove log files if satisfy:
+    //  - file.max_decree <= "durable_decree" || file.end_offset <= "valid_start_offset"
+    //  - the current log file is excluded
+    // thread safe
+    int garbage_collection(global_partition_id gpid, decree durable_decree, int64_t valid_start_offset);
+
+    // garbage collection for shared log
+    // remove log files if satisfy:
+    //  - for each replica "r":
+    //      file.max_decree[r] <= "durable_decree" || file.end_offset[r] <= "valid_start_offset"
+    //  - the current log file is excluded
+    // thread safe
+    int garbage_collection(replica_log_info_map& durable_decrees);
 
     //
     //  when this is a private log, log files are learned by remote replicas
@@ -189,24 +231,26 @@ public:
         ) const;
 
     //
-    //    other inquiry routines
-    const std::string& dir() const {return _dir;}
+    //  other inquiry routines
+    //
 
-    // current global end offset
-    int64_t end_offset() const { zauto_lock l(_lock); return _global_end_offset; }
+    // log dir
+    // thread safe (because nerver changed)
+    const std::string& dir() const { return _dir; }
     
-    // maximum decree so far
+    // get current max decree for gpid
+    // returns 0 if not found
+    // thread safe
     decree max_decree(global_partition_id gpid) const;
 
+    // TODO(qinzuoyan): what the meaning of the method?
     // maximum decree that is garbage collected
+    // thread safe
     decree max_gced_decree(global_partition_id gpid, int64_t valid_start_offset) const;
-    
-    // update
-    void update_max_decrees(global_partition_id gpid, decree d);
 
-    void check_log_start_offset(global_partition_id gpid, int64_t valid_start_offset) const;
-
-    void flush();
+    // check the consistence of valid_start_offset
+    // thread safe
+    void check_valid_start_offset(global_partition_id gpid, int64_t valid_start_offset) const;
 
 private:
     //
@@ -224,29 +268,57 @@ private:
         /*out*/ int64_t& end_offset
         );
 
-    typedef std::shared_ptr<std::list< ::dsn::task_ptr>> pending_callbacks_ptr;
-    void init_states();    
-    error_code create_new_log_file();    
-    void create_new_pending_buffer();    
-    static void internal_write_callback(error_code err, size_t size, pending_callbacks_ptr callbacks, std::shared_ptr<log_block> logs, log_file_ptr file, bool is_private);
+    // init memory states
+    void init_states();
+
+    // update max decree without lock
+    void update_max_decree_no_lock(global_partition_id gpid, decree d);
+
+    // create new log file and set it as the current log file
+    // returns ERR_OK if create succeed
+    // Preconditions:
+    // - _pending_write == nullptr (because we need create new pending buffer to write file header)
+    error_code create_new_log_file();
+
+    // create new pending buffer for new block, will reserve block header
+    // Preconditions:
+    // - _pending_write == nullptr
+    void create_new_pending_buffer();
+
+    // async write pending mutations into log file
+    // Preconditions:
+    // - _pending_write != nullptr
+    // - _issued_write.expired() == true (because only one async write is allowed at the same time)
     error_code write_pending_mutations(bool create_new_log_when_necessary = true);
-    
+
+    // callback of write_pending_mutations()
+    typedef std::shared_ptr<std::list< ::dsn::task_ptr>> pending_callbacks_ptr;
+    static void internal_write_callback(error_code err,
+                                        size_t size,
+                                        pending_callbacks_ptr callbacks,
+                                        std::shared_ptr<log_block> logs,
+                                        log_file_ptr file,
+                                        bool is_private);
+
 private:
+    std::string               _dir;
+
     // options
     int64_t                   _max_log_file_size_in_bytes;    
     uint32_t                  _batch_buffer_bytes;
 
-    // memory states
-    std::string               _dir;
-    bool                      _is_opened;
+    ///////////////////////////////////////////////
+    //// memory states
+    ///////////////////////////////////////////////
+    mutable zlock                  _lock;
+    bool                           _is_opened;
 
     // logs
-    mutable zlock               _lock;
-    int                         _last_file_index;
-    std::map<int, log_file_ptr> _log_files; // index -> log_file_ptr
-    log_file_ptr                _current_log_file;
-    int64_t                     _global_start_offset;
-    int64_t                     _global_end_offset;
+    int                            _last_file_index; // new log file index = _last_file_index + 1
+    std::map<int, log_file_ptr>    _log_files; // index -> log_file_ptr
+    log_file_ptr                   _current_log_file; // current log file
+    int64_t                        _global_start_offset; // global start offset of all files
+    int64_t                        _global_end_offset; // global end offset currently
     
     
     // bufferring
@@ -255,18 +327,21 @@ private:
     size_t                         _pending_write_size;
     pending_callbacks_ptr          _pending_write_callbacks;
 
-    // replica states
+    // replica log info
+    // - log_info.max_decree: the last decree append to the mutation_log
+    // - log_info.valid_start_offset: the same with replica_init_info::init_offset
     bool                           _is_private;
-    multi_partition_decrees_ex     _shared_max_decrees;
-    global_partition_id            _private_gpid;
-    decree                         _private_max_decree;
-    int64_t                        _private_valid_start_offset;
+    replica_log_info_map           _shared_log_info_map; // only used for shared log
+    global_partition_id            _private_gpid; // only used for private log
+    replica_log_info               _private_log_info; // only used for private log
 };
 
 //
 // the log file is structured with sequences of log_blocks,
 // each block consists of the log_block_header + log_content,
 // and the first block contains the log_file_header at the beginning
+//
+// the class is not thread safe
 //
 class log_file : public ref_counter
 {
@@ -287,13 +362,11 @@ public:
     static log_file_ptr open_read(const char* path, /*out*/ error_code& err);
 
     // open the log file for write
-    // file path is '{dir}/log.{index}.{start_offset}'
-    // 'max_staleness_for_commit' will be write into the file header
-    static log_file_ptr create_write(
-        const char* dir, 
-        int index, 
-        int64_t start_offset
-        );
+    // the file path is '{dir}/log.{index}.{start_offset}'
+    // returns:
+    //   - non-null if open succeed
+    //   - null if open failed
+    static log_file_ptr create_write(const char* dir, int index, int64_t start_offset);
 
     // close the log file
     void close();
@@ -313,6 +386,7 @@ public:
     //  - ERR_HANDLE_EOF
     //  - ERR_INCOMPLETE_DATA
     //  - ERR_INVALID_DATA
+    //  - other io errors caused by file read operator
     error_code read_next_log_block(int64_t local_offset, /*out*/::dsn::blob& bb);
 
     //
@@ -320,6 +394,7 @@ public:
     //
 
     // prepare a log entry buffer, with block header reserved and inited
+    // always returns non-nullptr
     std::shared_ptr<log_block> prepare_log_block() const;
 
     // async write log entry into the file
@@ -355,34 +430,37 @@ public:
     // file path
     const std::string& path() const { return _path; }
     // previous decrees
-    const multi_partition_decrees_ex& previous_log_max_decrees() { return _previous_log_max_decrees; }
+    const replica_log_info_map& previous_log_max_decrees() { return _previous_log_max_decrees; }
     // file header
     log_file_header& header() { return _header;}
 
     // read file header from reader, return byte count consumed
     int read_file_header(binary_reader& reader);
     // write file header to writer, return byte count written
-    int write_file_header(binary_writer& writer, multi_partition_decrees_ex& init_max_decrees, int bufferSizeBytes);
+    int write_file_header(binary_writer& writer, const replica_log_info_map& init_max_decrees);
     // get serialized size of current file header
     int get_file_header_size() const;
     // if the file header is valid
     bool is_right_header() const;
     
 private:
-    log_file(const char* path, dsn_handle_t handle, int index, int64_t start_offset, bool isRead);
+    // make private, user should create log_file through open_read() or open_write()
+    log_file(const char* path, dsn_handle_t handle, int index, int64_t start_offset, bool is_read);
 
 private:        
-    uint32_t      _crc32;
-    int64_t       _start_offset; // start offset in the global space
-    int64_t       _end_offset; // end offset in the global space: end_offset = start_offset + file_size
-    dsn_handle_t  _handle; // file handle
-    bool          _is_read; // if opened for read or write
-    std::string   _path; // file path
-    int           _index; // file index
+    uint32_t         _crc32;
+    int64_t          _start_offset; // start offset in the global space
+    int64_t          _end_offset; // end offset in the global space: end_offset = start_offset + file_size
+    dsn_handle_t     _handle; // file handle
+    bool             _is_read; // if opened for read or write
+    std::string      _path; // file path
+    int              _index; // file index
+    log_file_header  _header; // file header
 
-    // for gc
-    multi_partition_decrees_ex _previous_log_max_decrees;    
-    log_file_header            _header;
+    // this data is used for garbage collection, and is part of file header.
+    // for read, the value is read from file header.
+    // for write, the value is set by write_file_header().
+    replica_log_info_map _previous_log_max_decrees;
 };
 
 }} // namespace

@@ -78,9 +78,9 @@ static void overwrite_file(const char* file, int offset, const void* buf, int si
 
 TEST(replication, log_file)
 {
-    multi_partition_decrees_ex mdecrees;
+    replica_log_info_map mdecrees;
     global_partition_id gpid = { 1, 0 };
-    mdecrees[gpid] = log_replica_info(3, 0);
+    mdecrees[gpid] = replica_log_info(3, 0);
     std::string fpath = "./log.1.100";
     int index = 1;
     int64_t offset = 100;
@@ -109,8 +109,7 @@ TEST(replication, log_file)
             binary_writer temp_writer;
             lf->write_file_header(
                 temp_writer,
-                mdecrees,
-                1024
+                mdecrees
                 );
             writer->add(temp_writer.get_buffer());
             ASSERT_EQ(mdecrees, lf->previous_log_max_decrees());

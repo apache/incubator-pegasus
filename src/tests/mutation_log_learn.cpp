@@ -40,7 +40,6 @@ using namespace ::dsn::replication;
 
 TEST(replication, log_learn)
 {
-    multi_partition_decrees mdecrees, mdecrees2;
     global_partition_id gpid = { 1, 1 };
     std::string str = "hello, world!";
     std::string logp = "./test-log";
@@ -132,8 +131,6 @@ TEST(replication, log_learn)
         }
 
         // clear all
-        mdecrees.clear();
-        mdecrees2.clear();
         mutations.clear();
         utils::filesystem::remove_path(logp);
     }
