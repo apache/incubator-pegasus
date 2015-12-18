@@ -124,7 +124,6 @@ DEFINE_TASK_CODE(LPC_REPLICATION_CLIENT_REQUEST_TIMEOUT, TASK_PRIORITY_COMMON, T
 DEFINE_TASK_CODE(LPC_REPLICATION_DELAY_QUERY_CONFIG, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
 replication_app_client_base::request_context* replication_app_client_base::create_write_context(
-    int partition_index,
     uint64_t key_hash,
     dsn_task_code_t code,
     dsn_message_t request,
@@ -139,10 +138,10 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->request = request;
     rc->callback_task = callback;
     rc->is_read = false;
-    rc->partition_index = partition_index;
+    rc->partition_index = -1;
     rc->key_hash = key_hash;
     rc->write_header.gpid.app_id = _app_id;
-    rc->write_header.gpid.pidx = partition_index;
+    rc->write_header.gpid.pidx = -1;
     rc->write_header.code = dsn_task_code_to_string(code);
     rc->timeout_timer = nullptr;
     rc->timeout_ms = timeout_milliseconds;
@@ -165,7 +164,6 @@ replication_app_client_base::request_context* replication_app_client_base::creat
 }
 
 replication_app_client_base::request_context* replication_app_client_base::create_read_context(
-    int partition_index,
     uint64_t key_hash,
     dsn_task_code_t code,
     dsn_message_t request,
@@ -182,10 +180,10 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->request = request;
     rc->callback_task = callback;
     rc->is_read = true;
-    rc->partition_index = partition_index;
+    rc->partition_index = -1;
     rc->key_hash = key_hash;
     rc->read_header.gpid.app_id = _app_id;
-    rc->read_header.gpid.pidx = partition_index;
+    rc->read_header.gpid.pidx = -1;
     rc->read_header.code = dsn_task_code_to_string(code);
     rc->read_header.semantic = read_semantic;
     rc->read_header.version_decree = snapshot_decree;

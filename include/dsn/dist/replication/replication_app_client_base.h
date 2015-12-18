@@ -98,7 +98,7 @@ namespace dsn { namespace replication {
                 reply_hash
                 );
 
-            auto rc = create_write_context(-1, key_hash, code, msg, task, reply_hash);
+            auto rc = create_write_context(key_hash, code, msg, task, reply_hash);
             ::marshall(msg, *req);
             call(rc);
             return std::move(task);
@@ -130,7 +130,7 @@ namespace dsn { namespace replication {
                 reply_hash
                 );
 
-            auto rc = create_write_context(-1, key_hash, code, msg, task, reply_hash);
+            auto rc = create_write_context(key_hash, code, msg, task, reply_hash);
             ::marshall(msg, *req);
             call(rc);
             return std::move(task);
@@ -162,7 +162,7 @@ namespace dsn { namespace replication {
                 context,
                 reply_hash
                 );
-            auto rc = create_write_context(-1, key_hash, code, msg, task, reply_hash);
+            auto rc = create_write_context(key_hash, code, msg, task, reply_hash);
             ::marshall(msg, req);
             call(rc);
             return std::move(task);
@@ -195,7 +195,7 @@ namespace dsn { namespace replication {
                 owner
                 );
 
-            auto rc = create_write_context(-1, key_hash, code, msg, task, reply_hash);
+            auto rc = create_write_context(key_hash, code, msg, task, reply_hash);
             ::marshall(msg, req);
             call(rc);
             return std::move(task);
@@ -229,7 +229,7 @@ namespace dsn { namespace replication {
                 reply_hash
                 );
 
-            auto rc = create_read_context(-1, key_hash, code, msg, task, read_semantic, snapshot_decree, reply_hash);
+            auto rc = create_read_context(key_hash, code, msg, task, read_semantic, snapshot_decree, reply_hash);
             ::marshall(msg, *req);
             call(rc);
             return std::move(task);
@@ -263,7 +263,7 @@ namespace dsn { namespace replication {
                 reply_hash
                 );
 
-            auto rc = create_read_context(-1, key_hash, code, msg, task, read_semantic, snapshot_decree, reply_hash);
+            auto rc = create_read_context(key_hash, code, msg, task, read_semantic, snapshot_decree, reply_hash);
             ::marshall(msg, *req);
             call(rc);
             return std::move(task);
@@ -298,7 +298,7 @@ namespace dsn { namespace replication {
                 reply_hash
                 );
 
-            auto rc = create_read_context(-1, key_hash, code, msg, task, read_semantic, snapshot_decree, reply_hash);
+            auto rc = create_read_context(key_hash, code, msg, task, read_semantic, snapshot_decree, reply_hash);
             ::marshall(msg, req);
             call(rc);
             return std::move(task);
@@ -334,7 +334,7 @@ namespace dsn { namespace replication {
                 owner
                 );
 
-            auto rc = create_read_context(-1, key_hash, code, msg, task, read_semantic, snapshot_decree, reply_hash);
+            auto rc = create_read_context(key_hash, code, msg, task, read_semantic, snapshot_decree, reply_hash);
             ::marshall(msg, req);
             call(rc);
             return std::move(task);
@@ -432,7 +432,6 @@ namespace dsn { namespace replication {
 
     private:
         request_context* create_write_context(
-            int partition_index,
             uint64_t key_hash,
             dsn_task_code_t code,
             dsn_message_t request,
@@ -441,7 +440,6 @@ namespace dsn { namespace replication {
             );
 
         request_context* create_read_context(
-            int partition_index,
             uint64_t key_hash,
             dsn_task_code_t code,
             dsn_message_t request,

@@ -34,7 +34,7 @@ foreach ($svc->functions as $f)
     
 foreach ($keys as $k => $v)
 {
-    echo "    virtual int get_partition_index(const ".$k."& key) { return 0; }".PHP_EOL;
+    echo "    virtual int get_key_hash(const ".$k."& key) { return 0; }".PHP_EOL;
 }
 ?>
 <?php foreach ($svc->functions as $f) { ?>
@@ -46,7 +46,7 @@ foreach ($keys as $k => $v)
         )
     {
         ::dsn::replication::replication_app_client_base::<?=$f->is_write ? "write":"read"?><<?=$f->get_first_param()->get_cpp_type()?>, <?=$f->get_cpp_return_type()?>>(
-            get_partition_index(<?=$f->get_first_param()->name?>),
+	    get_key_hash(<?=$f->get_first_param()->name?>),
             <?=$f->get_rpc_code()?>,
             <?=$f->get_first_param()->name?>,
             nullptr,
@@ -65,7 +65,7 @@ foreach ($keys as $k => $v)
         )
     {
         auto resp_task = ::dsn::replication::replication_app_client_base::<?=$f->is_write ? "write":"read"?><<?=$f->get_first_param()->get_cpp_type()?>, <?=$f->get_cpp_return_type()?>>(
-            get_partition_index(<?=$f->get_first_param()->name?>),
+	    get_key_hash(<?=$f->get_first_param()->name?>),
             <?=$f->get_rpc_code()?>,
             <?=$f->get_first_param()->name?>,
             nullptr,
@@ -91,7 +91,7 @@ foreach ($keys as $k => $v)
         )
     {
         return ::dsn::replication::replication_app_client_base::<?=$f->is_write ? "write":"read"?><<?=$svc->name?>_client, <?=$f->get_first_param()->get_cpp_type()?>, <?=$f->get_cpp_return_type()?>>(
-            get_partition_index(<?=$f->get_first_param()->name?>),
+	    get_key_hash(<?=$f->get_first_param()->name?>),
             <?=$f->get_rpc_code()?>, 
             <?=$f->get_first_param()->name?>,
             this,
@@ -122,7 +122,7 @@ foreach ($keys as $k => $v)
         )
     {
         return ::dsn::replication::replication_app_client_base::<?=$f->is_write ? "write":"read"?><<?=$svc->name?>_client, <?=$f->get_first_param()->get_cpp_type()?>, <?=$f->get_cpp_return_type()?>>(
-            get_partition_index(*<?=$f->get_first_param()->name?>),
+	    get_key_hash(*<?=$f->get_first_param()->name?>),
             <?=$f->get_rpc_code()?>,
             <?=$f->get_first_param()->name?>,
             this,

@@ -58,6 +58,9 @@ namespace dsn {
             virtual int  get_learn_state(decree start, const blob& learn_request, /*out*/ learn_state& state);  // must be thread-safe
             virtual int  apply_learn_state(learn_state& state);  // must be thread-safe, and last_committed_decree must equal to last_durable_decree after learning
 
+            virtual int  checkpoint() override;
+            virtual int  get_checkpoint(decree start, const blob& learn_req, /*out*/ learn_state& state) override;
+            virtual int  apply_checkpoint(::dsn::replication::learn_state& state, chkpt_apply_mode mode) override;
         private:
             void recover();
             void recover(const std::string& name, decree version);

@@ -40,7 +40,6 @@ namespace dsn {
         void counter_service_impl::on_add(const ::dsn::example::count_op& op, ::dsn::rpc_replier<int32_t>& reply)
         {
             service::zauto_lock l(_lock);
-            ++_last_committed_decree;
             auto rt = _counters[op.name] += op.operand;
             reply(rt);
         }
@@ -154,15 +153,22 @@ namespace dsn {
                 _counters[key] = value;
             }
 
-            _last_durable_decree = _last_committed_decree = version;
+            _last_durable_decree = version;
+            init_last_commit_decree(version);
         }
 
         int counter_service_impl::flush(bool force)
+        {
+            return checkpoint();
+        }
+
+        int counter_service_impl::checkpoint()
         {
             service::zauto_lock l(_lock);
 
             if (last_committed_decree() == last_durable_decree())
             {
+                ddebug("counter_service_impl create checkpoint succeed, checkpoint already the latest, last_durable_decree = %" PRId64 "", _last_durable_decree.load());
                 return 0;
             }
 
@@ -185,6 +191,7 @@ namespace dsn {
             }
 
             _last_durable_decree = last_committed_decree();
+            ddebug("counter_service_impl create checkpoint succeed, last_durable_decree = %" PRId64 "", _last_durable_decree.load());
             return 0;
         }
 
@@ -198,9 +205,9 @@ namespace dsn {
             int magic = 0xdeadbeef;
             writer.write(magic);
 
-            writer.write(_last_committed_decree.load());
+            writer.write(last_committed_decree());
 
-            dassert(_last_committed_decree >= 0, "");
+            dassert(last_committed_decree() >= 0, "");
 
             int count = static_cast<int>(_counters.size());
             writer.write(count);
@@ -251,10 +258,76 @@ namespace dsn {
                 _counters[key] = value;
             }
 
-            _last_committed_decree = decree;
+            init_last_commit_decree(decree);
             _last_durable_decree = 0;
 
             return flush(true);
+        }
+
+        // helper routines to accelerate learning
+        int counter_service_impl::get_checkpoint(decree start, const blob& learn_req, /*out*/ learn_state& state)
+        {
+            if (_last_durable_decree.load() == 0 && is_delta_state_learning_supported())
+            {
+                checkpoint();
+            }
+
+            if (_last_durable_decree.load() > 0)
+            {
+                state.from_decree_excluded = 0;
+                state.to_decree_included = _last_durable_decree;
+
+                char name[256];
+                sprintf(name, "%s/checkpoint.%" PRId64,
+                    data_dir().c_str(),
+                    _last_durable_decree.load()
+                    );
+
+                state.files.push_back(name);
+                ddebug("counter_service_impl get checkpoint succeed, last_durable_decree = %" PRId64 "", _last_durable_decree.load());
+                return ERR_OK;
+            }
+            else
+            {
+                state.from_decree_excluded = 0;
+                state.to_decree_included = 0;
+                derror("counter_service_impl get checkpoint failed, no checkpoint found");
+                return ERR_OBJECT_NOT_FOUND;
+            }
+        }
+
+        int counter_service_impl::apply_checkpoint(learn_state& state, chkpt_apply_mode mode)
+        {
+            if (mode == CHKPT_LEARN)
+            {
+                recover(state.files[0], state.to_decree_included);
+                ddebug("counter_service_impl learn checkpoint succeed, last_committed_decree = %" PRId64 "", last_committed_decree());
+                return ERR_OK;
+            }
+            else
+            {
+                dassert(CHKPT_COPY == mode, "invalid mode %d", (int)mode);
+                dassert(state.to_decree_included > _last_durable_decree, "checkpoint's decree is smaller than current");
+
+                char name[256];
+                sprintf(name, "%s/checkpoint.%" PRId64,
+                    data_dir().c_str(),
+                    state.to_decree_included
+                    );
+                std::string lname(name);
+
+                if (!utils::filesystem::rename_path(state.files[0], lname))
+                {
+                    derror("counter_service_impl copy checkpoint failed, rename path failed");
+                    return ERR_CHECKPOINT_FAILED;
+                }
+                else
+                {
+                    _last_durable_decree = state.to_decree_included;
+                    ddebug("counter_service_impl copy checkpoint succeed, last_durable_decree = %" PRId64 "", _last_durable_decree.load());
+                    return ERR_OK;
+                }
+            }
         }
     }
 }
