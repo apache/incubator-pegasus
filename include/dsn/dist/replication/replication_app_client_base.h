@@ -74,7 +74,7 @@ namespace dsn { namespace replication {
 
         template<typename T, typename TRequest, typename TResponse>
         ::dsn::task_ptr write(
-            uint32_t key_hash,
+            uint64_t key_hash,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
 
@@ -106,7 +106,7 @@ namespace dsn { namespace replication {
         
         template<typename TRequest, typename TResponse>
         ::dsn::task_ptr write(
-            uint32_t key_hash,
+            uint64_t key_hash,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
 
@@ -138,7 +138,7 @@ namespace dsn { namespace replication {
 
         template<typename T, typename TRequest, typename TResponse>
         ::dsn::task_ptr write(
-            uint32_t key_hash,
+            uint64_t key_hash,
             dsn_task_code_t code,
             const TRequest& req,
 
@@ -170,7 +170,7 @@ namespace dsn { namespace replication {
 
         template<typename TRequest, typename TResponse>
         ::dsn::task_ptr write(
-            uint32_t key_hash,
+            uint64_t key_hash,
             dsn_task_code_t code,
             const TRequest& req,
 
@@ -203,7 +203,7 @@ namespace dsn { namespace replication {
 
         template<typename T, typename TRequest, typename TResponse>
         ::dsn::task_ptr read(
-            uint32_t key_hash,
+            uint64_t key_hash,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
 
@@ -237,7 +237,7 @@ namespace dsn { namespace replication {
 
         template<typename TRequest, typename TResponse>
         ::dsn::task_ptr read(
-            uint32_t key_hash,
+            uint64_t key_hash,
             dsn_task_code_t code,
             std::shared_ptr<TRequest>& req,
 
@@ -271,7 +271,7 @@ namespace dsn { namespace replication {
 
         template<typename T, typename TRequest, typename TResponse>
         ::dsn::task_ptr read(
-            uint32_t key_hash,
+            uint64_t key_hash,
             dsn_task_code_t code,
             const TRequest& req,
 
@@ -307,7 +307,7 @@ namespace dsn { namespace replication {
 
         template<typename TRequest, typename TResponse>
         ::dsn::task_ptr read(
-            uint32_t key_hash,
+            uint64_t key_hash,
             dsn_task_code_t code,
             const TRequest& req,
 
@@ -383,7 +383,7 @@ namespace dsn { namespace replication {
         struct request_context : public ref_counter
         {
             int                   partition_index;
-            uint32_t              key_hash;
+            uint64_t              key_hash;
             ::dsn::task_ptr callback_task;
             read_request_header   read_header;
             write_request_header  write_header;
@@ -414,7 +414,7 @@ namespace dsn { namespace replication {
         typedef ::dsn::ref_ptr<meta_context> meta_context_ptr;
 
     protected:
-        virtual int get_partition_index(int partition_count, uint32_t key_hash);
+        virtual int get_partition_index(int partition_count, uint64_t key_hash);
 
     private:
         struct partition_context
@@ -433,7 +433,7 @@ namespace dsn { namespace replication {
     private:
         request_context* create_write_context(
             int partition_index,
-            uint32_t key_hash,
+            uint64_t key_hash,
             dsn_task_code_t code,
             dsn_message_t request,
             ::dsn::task_ptr& callback,
@@ -442,7 +442,7 @@ namespace dsn { namespace replication {
 
         request_context* create_read_context(
             int partition_index,
-            uint32_t key_hash,
+            uint64_t key_hash,
             dsn_task_code_t code,
             dsn_message_t request,
             ::dsn::task_ptr& callback,

@@ -125,7 +125,7 @@ DEFINE_TASK_CODE(LPC_REPLICATION_DELAY_QUERY_CONFIG, TASK_PRIORITY_COMMON, THREA
 
 replication_app_client_base::request_context* replication_app_client_base::create_write_context(
     int partition_index,
-    uint32_t key_hash,
+    uint64_t key_hash,
     dsn_task_code_t code,
     dsn_message_t request,
     ::dsn::task_ptr& callback,
@@ -166,7 +166,7 @@ replication_app_client_base::request_context* replication_app_client_base::creat
 
 replication_app_client_base::request_context* replication_app_client_base::create_read_context(
     int partition_index,
-    uint32_t key_hash,
+    uint64_t key_hash,
     dsn_task_code_t code,
     dsn_message_t request,
     ::dsn::task_ptr& callback,
@@ -769,7 +769,7 @@ error_code replication_app_client_base::get_address(int pidx, bool is_write, /*o
     return err;
 }
 
-int replication_app_client_base::get_partition_index(int partition_count, uint32_t key_hash)
+int replication_app_client_base::get_partition_index(int partition_count, uint64_t key_hash)
 {
     return key_hash % (uint64_t)partition_count;
 }
