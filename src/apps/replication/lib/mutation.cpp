@@ -143,7 +143,7 @@ bool mutation::add_client_request(dsn_task_code_t code, dsn_message_t request)
         dsn_msg_add_ref(from); // released on dctor
     }
     
-    snprintf(mu->_name, sizeof(mu->_name),
+    snprintf_p(mu->_name, sizeof(mu->_name),
         "%" PRId32 ".%" PRId32 ".%" PRId64 ".%" PRId64,
         mu->data.header.gpid.app_id,
         mu->data.header.gpid.pidx,
