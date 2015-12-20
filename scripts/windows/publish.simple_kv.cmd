@@ -6,7 +6,7 @@ SET monitor=%3
 IF "%monitor%" NEQ "-m" GOTO start_build
 SET monitor_str=;monitor
 xcopy /z \\srgsi-11\d$\v-chlou\MonitorPack.7z .\
-CALL .\scripts\windows\7z.exe x -y MonitorPack.7z
+CALL %bin_dir%\7z.exe x -y MonitorPack.7z
 del MonitorPack.7z
 
 :start_build

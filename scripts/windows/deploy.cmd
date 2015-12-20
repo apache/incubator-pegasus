@@ -59,11 +59,11 @@ REM
     set machine=%1
     set rdst=\\%machine%\%rdst_dir%
     @mkdir %rdst%
-    CALL .\scripts\windows\7z.exe a send.7z %src_dir%
+    CALL %bin_dir%\7z.exe a send.7z %src_dir%
     mkdir send
     move send.7z send
-    COPY /Y .\scripts\windows\7z.exe send
-    COPY /Y .\scripts\windows\7z.dll send
+    COPY /Y %bin_dir%\7z.exe send
+    COPY /Y %bin_dir%\7z.dll send
     (
         ECHO cd /d %%~dp0
         ECHO CALL .\7z.exe x -y send.7z
@@ -75,6 +75,7 @@ REM
     xcopy /F /Y /S send %rdst%\..
     SCHTASKS /CREATE /S %machine% /RU SYSTEM /SC ONLOGON /TN unzip /TR "%ldst_dir%\..\unzip.cmd" /V1 /F
     @SCHTASKS /RUN /S %1 /TN unzip
+    SCHTASKS /Delete /S %1 /TN unzip /F
     SCHTASKS /CREATE /S %machine% /RU SYSTEM /SC ONLOGON /TN %deploy_name% /TR "%ldst_dir%\..\start.cmd" /V1 /F
     GOTO:EOF
 
