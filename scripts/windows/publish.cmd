@@ -2,6 +2,7 @@ SET app_name=%1
 SET build_dir=%~f2
 SET build_type=%3
 SET bin_dir=%~dp0
+SET monitor=%4
 
 IF "%app_name%" EQU "" (
     CALL %bin_dir%\echoc.exe 4 please specify app_name
@@ -33,11 +34,12 @@ IF "%bt_valid%" EQU "0" (
     GOTO error
 )
 
-CALL %bin_dir%\publish.%app_name%.cmd %build_dir% %build_type%
+
+CALL %bin_dir%\publish.%app_name%.cmd %build_dir% %build_type% %monitor%
 GOTO exit
 
 :error    
-    CALL %bin_dir%\echoc.exe 4  "Usage: run.cmd publish app_name build_dir build_type(Debug|Release|RelWithDebInfo|MinSizeRel)"
+    CALL %bin_dir%\echoc.exe 4  "Usage: run.cmd publish app_name build_dir build_type(Debug|Release|RelWithDebInfo|MinSizeRel) [-m: monitor_enabled]"
 
 :exit
 
