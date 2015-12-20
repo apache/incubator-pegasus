@@ -181,7 +181,7 @@ inline void mutation::set_id(ballot b, decree c)
     data.header.ballot = b;
     data.header.decree = c;
 
-    snprintf(_name, sizeof(_name),
+    snprintf_p(_name, sizeof(_name),
         "%" PRId32 ".%" PRId32 ".%" PRId64 ".%" PRId64,
         data.header.gpid.app_id,
         data.header.gpid.pidx,
