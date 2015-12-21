@@ -336,6 +336,7 @@ namespace dsn {
                     "whether to collect how many time this kind of tasks invoke each of other kinds tasks"
                     );
                 s_spec_profilers[i].call_counts = new std::atomic<int64_t>[dsn_task_code_max() + 1];
+                std::fill(s_spec_profilers[i].call_counts, s_spec_profilers[i].call_counts + dsn_task_code_max() + 1, 0);
 
                 s_spec_profilers[i].ptr[TASK_QUEUEING_TIME_NS] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".queue(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES,"latency due to waiting in the queue", true);
                 s_spec_profilers[i].ptr[TASK_EXEC_TIME_NS] = dsn::utils::perf_counters::instance().get_counter((name + std::string(".exec(ns)")).c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, "latency due to executing tasks", true);

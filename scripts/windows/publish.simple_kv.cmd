@@ -19,15 +19,13 @@ GOTO exit
         ECHO set i=0
         ECHO :loop
         ECHO     set /a i=%%i%%+1
-        ECHO     .\dsn.replication.simple_kv.exe config.ini -app %app% -app_index 1
+        ECHO     .\dsn.replication.simple_kv.exe config.ini -app_list %app%@1
         ECHO     ping -n 16 127.0.0.1 ^>nul
         ECHO goto loop
     )  > .\skv-%app%\start.cmd
     GOTO:EOF
 
-:error    
+:error
     CALL %bin_dir%\echoc.exe 4  Usage: deploy.simple_kv.cmd build_dir build_type(Debug^|Release^|RelWithDebInfo^|MinSizeRel)
 
 :exit
-
-
