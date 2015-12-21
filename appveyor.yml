@@ -4,7 +4,7 @@ environment:
     DSN_VS: "Visual Studio 12 2013 Win64"
     DSN_BOOST: boost_1_57_0
     DSN_BOOST_LIB: lib64-msvc-12.0
-    DSN_BOOST_PKG: https://github.com/imzhenyu/packages/blob/master/windows/boost_1_57_0.7z?raw=true
+    DSN_BOOST_PKG: https://github.com/imzhenyu/packages/blob/master/windows/boost_1_57_0_vc12_amd64.7z?raw=true
 
 install:
     - ps: >-
