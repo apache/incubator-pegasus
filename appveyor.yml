@@ -38,4 +38,5 @@ build_script:
         msbuild dsn.sln /t:Rebuild /p:Configuration=Debug
         
 test_script:
-
+    - cmd: >-
+        ..\run.cmd test Debug .\
