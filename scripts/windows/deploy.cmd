@@ -59,22 +59,22 @@ REM
     set machine=%1
     set rdst=\\%machine%\%rdst_dir%
     @mkdir %rdst%
-    CALL %bin_dir%\7z.exe a send.7z %src_dir%
-    mkdir send
-    move send.7z send
-    COPY /Y %bin_dir%\7z.exe send
-    COPY /Y %bin_dir%\7z.dll send
+    CALL %bin_dir%\7z.exe a rDSN_PACK.7z %src_dir%
+    mkdir rDSN_PACK
+    move rDSN_PACK.7z rDSN_PACK
+    COPY /Y %bin_dir%\7z.exe rDSN_PACK
+    COPY /Y %bin_dir%\7z.dll rDSN_PACK
     (
         ECHO cd /d %%~dp0
-        ECHO CALL .\7z.exe x -y send.7z
-        ECHO del send.7z
+        ECHO CALL .\7z.exe x -y rDSN_PACK.7z -o%ldst_dir%\..
+        ECHO del rDSN_PACK.7z
         ECHO del 7z.exe
         ECHO del 7z.dll
         ECHO del unzip.cmd
-    )  > .\send\unzip.cmd
-    xcopy /F /Y /S send %rdst%\..
-    rd /s /q send
-    SCHTASKS /CREATE /S %machine% /RU SYSTEM /SC ONLOGON /TN unzip /TR "%ldst_dir%\..\unzip.cmd" /V1 /F
+    )  > .\rDSN_PACK\unzip.cmd
+    xcopy /F /Y /S rDSN_PACK %rdst%
+    rd /s /q rDSN_PACK
+    SCHTASKS /CREATE /S %machine% /RU SYSTEM /SC ONLOGON /TN unzip /TR "%ldst_dir%\unzip.cmd" /V1 /F
     @SCHTASKS /RUN /S %1 /TN unzip
     SCHTASKS /Delete /S %1 /TN unzip /F
     SCHTASKS /CREATE /S %machine% /RU SYSTEM /SC ONLOGON /TN %deploy_name% /TR "%ldst_dir%\start.cmd" /V1 /F

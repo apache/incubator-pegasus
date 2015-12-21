@@ -1,11 +1,11 @@
 SET build_dir=%~f1
 SET build_type=%2
 SET bin_dir=%~dp0
-SET monitor=%3
+SET monitor_url=%3
 
-IF "%monitor%" NEQ "-m" GOTO start_build
+IF "%monitor_url%" EQU "" GOTO start_build
 SET monitor_str=;monitor
-xcopy /z \\srgsi-11\d$\v-chlou\MonitorPack.7z .\
+xcopy /z %monitor_url% .\
 CALL %bin_dir%\7z.exe x -y MonitorPack.7z
 del MonitorPack.7z
 
@@ -26,7 +26,7 @@ GOTO exit
         ECHO[
         ECHO [apps.monitor]
         ECHO type = monitor
-        ECHO arguments = 8080
+        ECHO arguments = 8088
         ECHO pools = THREAD_POOL_DEFAULT
         ECHO dmodule = dsn.dev.python_helper
         ECHO dmodule_bridge_arguments = rDSN.monitor\rDSN.Monitor.py
@@ -45,6 +45,6 @@ GOTO exit
     GOTO:EOF
 
 :error
-    CALL %bin_dir%\echoc.exe 4  Usage: deploy.simple_kv.cmd build_dir build_type(Debug^|Release^|RelWithDebInfo^|MinSizeRel) [-m: monitor_enabled]
+    CALL %bin_dir%\echoc.exe 4  Usage: deploy.simple_kv.cmd build_dir build_type(Debug^|Release^|RelWithDebInfo^|MinSizeRel) [monitor_package_url]
 
 :exit
