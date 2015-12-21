@@ -40,6 +40,11 @@
 # include <cinttypes>
 # include <boost/lexical_cast.hpp>
 
+# include <rapidjson/document.h>
+# include <rapidjson/prettywriter.h>
+# include <rapidjson/writer.h>
+# include <rapidjson/stringbuffer.h>
+
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
@@ -54,6 +59,64 @@ void marshall(binary_writer& writer, const app_state& val)
     marshall(writer, val.partitions);
 }
 
+void marshall_json(std::string& output, const app_state& app)
+{
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+
+    writer.StartObject();
+    writer.String("app_type"); writer.String(app.app_type.c_str());
+    writer.String("app_name"); writer.String(app.app_name.c_str());
+    writer.String("app_id"); writer.Int(app.app_id);
+    writer.String("partition_count"); writer.Int(app.partition_count);
+    writer.EndObject();
+
+    output.assign( buffer.GetString() );
+}
+
+static const char* partition_status_str[] = {
+    "inactive", "error", "primary", "secondary",
+    "potential_secondary", "invalid", nullptr
+};
+const char* get_partition_status_string(partition_status ps)
+{
+    return partition_status_str[ps];
+}
+
+void marshall_json(std::string& output, const partition_configuration& pc)
+{
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+
+    writer.StartObject();
+
+    auto end_point_gen_json = [&writer](const ::dsn::rpc_address& ep, partition_status ps) {
+        if (ep.is_invalid())
+            return;
+        writer.StartObject();
+        writer.String("addr"); writer.String( ep.to_string() );
+        writer.String("partition_status"); writer.String( get_partition_status_string(ps) );
+        writer.EndObject();
+    };
+
+    writer.StartObject();
+    writer.String("ballot"); writer.Int64(pc.ballot);
+    writer.String("last_committed_decree"); writer.Int64(pc.last_committed_decree);
+    writer.String("max_replica_count"); writer.Int(pc.max_replica_count);
+
+    writer.String("entries");
+    writer.StartArray();
+    end_point_gen_json(pc.primary, PS_PRIMARY);
+    for (unsigned int i=0; i!=pc.secondaries.size(); ++i)
+        end_point_gen_json(pc.secondaries[i], PS_SECONDARY);
+    for (unsigned int i=0; i!=pc.last_drops.size(); ++i)
+        end_point_gen_json(pc.last_drops[i], PS_INACTIVE);
+    writer.EndArray();
+
+    writer.EndObject();
+    output.assign(buffer.GetString());
+}
+
 void unmarshall(binary_reader& reader, /*out*/ app_state& val)
 {
     unmarshall(reader, val.app_type);
@@ -61,6 +124,41 @@ void unmarshall(binary_reader& reader, /*out*/ app_state& val)
     unmarshall(reader, val.app_id);
     unmarshall(reader, val.partition_count);
     unmarshall(reader, val.partitions);
+}
+
+void unmarshall_json(const std::string& input, app_state& app)
+{
+    rapidjson::Document doc;
+    if (input.empty() || doc.Parse(input.c_str()).HasParseError() )
+        return;
+
+    app.app_type = doc["app_type"].GetString();
+    app.app_id = doc["app_id"].GetInt();
+    app.app_name = doc["app_name"].GetString();
+    app.partition_count = doc["partition_count"].GetInt();
+
+    partition_configuration pc;
+    pc.app_type = app.app_type;
+    pc.ballot = 0;
+    pc.gpid.app_id = app.app_id;
+    pc.last_committed_decree = 0;
+    pc.max_replica_count = 3;
+
+    app.partitions.assign(app.partition_count, pc);
+    for (unsigned int i=0; i!=app.partition_count; ++i)
+        app.partitions[i].gpid.pidx = i;
+}
+
+void unmarshall_json(const std::string& input, partition_configuration& partition_config)
+{
+    rapidjson::Document doc;
+    if ( input.empty() || doc.Parse(input.c_str()).HasParseError())
+        return;
+
+    pc.ballot = doc["ballot"].GetInt64();
+    pc.last_committed_decree = doc["last_committed_decree"].GetInt();
+    pc.max_replica_count = doc["max_replica_count"].GetInt();
+    pc.primary.set_invalid();
 }
 
 server_state::server_state()
