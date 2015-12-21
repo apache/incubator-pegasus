@@ -26,11 +26,15 @@ cache:
     - boost.7z
 
 before_build:
-    - cmd: >-
+    - cmd: >-        
+        SET DSN_AUTO_TEST=1
+        
+        run.cmd setup-env
+        
         mkdir build
 
         cd .\build
-
+        
         cmake .. -DCMAKE_BUILD_TYPE="%DSN_CMAKE_BUILD_TYPE%" -DBOOST_INCLUDEDIR="%APPVEYOR_BUILD_FOLDER%\%DSN_BOOST%" -DBOOST_LIBRARYDIR="%APPVEYOR_BUILD_FOLDER%\%DSN_BOOST%\%DSN_BOOST_LIB%" -G "%DSN_VS%"
 
 build_script:

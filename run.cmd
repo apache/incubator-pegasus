@@ -3,6 +3,10 @@ SET TOP_DIR=%~dp0
 SET bin_dir=%TOP_DIR%\scripts\windows
 if "%1" EQU "" GOTO usage
 IF "%DSN_ROOT%" NEQ "" GOTO main
+IF "%DSN_AUTO_TEST%" NEQ "" (
+    SET DSN_ROOT=%TOP_DIR%\install
+    GOTO install_env
+)
 
 SET /p DSN_ROOT=Please enter your DSN_ROOT (default is %TOP_DIR%\install):
 IF "%DSN_ROOT%" EQU "" SET DSN_ROOT=%TOP_DIR%\install
@@ -41,6 +45,9 @@ GOTO exit
 
 :publish
     CALL %bin_dir%\%1.cmd %2 %3 %4 %5 %6 %7 %8 %9
+    GOTO:EOF
+    
+:setup-env
     GOTO:EOF
     
 :deploy
