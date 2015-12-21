@@ -217,13 +217,15 @@ error_code replica::init_app_and_prepare_list(bool create_new)
             {
                 ddebug(
                     "%s: private log initialized, durable = %" PRId64 ", committed = %" PRId64 ", "
-                    "max_prepared = %" PRId64 ", ballot = %" PRId64 ", valid_offset_in_plog = %" PRId64,
+                    "max_prepared = %" PRId64 ", ballot = %" PRId64 ", valid_offset_in_plog = %" PRId64 ", "
+                    "max_decree_in_plog = %" PRId64 "",
                     name(),
                     _app->last_durable_decree(),
                     _app->last_committed_decree(),
                     max_prepared_decree(),
                     get_ballot(),
-                    _app->init_info().init_offset_in_private_log
+                    _app->init_info().init_offset_in_private_log,
+                    _private_log->max_decree(get_gpid())
                     );
                 _private_log->check_valid_start_offset(get_gpid(), _app->init_info().init_offset_in_private_log);
                 set_inactive_state_transient(true);
