@@ -73,10 +73,11 @@ REM
         ECHO del unzip.cmd
     )  > .\send\unzip.cmd
     xcopy /F /Y /S send %rdst%\..
+    rd /s /q send
     SCHTASKS /CREATE /S %machine% /RU SYSTEM /SC ONLOGON /TN unzip /TR "%ldst_dir%\..\unzip.cmd" /V1 /F
     @SCHTASKS /RUN /S %1 /TN unzip
     SCHTASKS /Delete /S %1 /TN unzip /F
-    SCHTASKS /CREATE /S %machine% /RU SYSTEM /SC ONLOGON /TN %deploy_name% /TR "%ldst_dir%\..\start.cmd" /V1 /F
+    SCHTASKS /CREATE /S %machine% /RU SYSTEM /SC ONLOGON /TN %deploy_name% /TR "%ldst_dir%\start.cmd" /V1 /F
     GOTO:EOF
 
 :start

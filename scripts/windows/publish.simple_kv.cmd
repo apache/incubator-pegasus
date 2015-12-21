@@ -23,6 +23,15 @@ GOTO exit
     COPY /Y %build_dir%\bin\dsn.replication.simple_kv\%build_type%\dsn.replication.simple_kv.* .\skv-%app%
     COPY /Y %build_dir%\bin\dsn.replication.simple_kv\config.ini .\skv-%app%
     (
+        ECHO[
+        ECHO [apps.monitor]
+        ECHO type = monitor
+        ECHO arguments = 8080
+        ECHO pools = THREAD_POOL_DEFAULT
+        ECHO dmodule = dsn.dev.python_helper
+        ECHO dmodule_bridge_arguments = rDSN.monitor\rDSN.Monitor.py
+    ) >> .\skv-%app%\config.ini
+    (
         ECHO cd /d %%~dp0
         ECHO set i=0
         ECHO :loop
