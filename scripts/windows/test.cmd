@@ -35,9 +35,9 @@ CALL  %bin_dir%\echoc.exe 2  %build_type%\dsn.core.tests.exe config-test-sim.ini
 
 cd ..\dsn.tests
 
-CALL  %bin_dir%\echoc.exe 2  %build_type%\dsn.tests.exe config-test.ini
-%build_type%\dsn.tests.exe config-test.ini
-@CALL clear.cmd
+::CALL  %bin_dir%\echoc.exe 2  %build_type%\dsn.tests.exe config-test.ini
+::%build_type%\dsn.tests.exe config-test.ini
+::@CALL clear.cmd
 
 popd
 

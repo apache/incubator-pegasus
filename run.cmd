@@ -22,8 +22,10 @@ GOTO exit
 :install_env
 SET DSN_ROOT=%DSN_ROOT:\=/%
 reg add HKCU\Environment /f /v DSN_ROOT /d %DSN_ROOT% 1>nul
+SET PATH=%PATH%;%DSN_ROOT%
+reg add HKCU\Environment /f /v PATH /d "%PATH%" 1>nul
 CALL %bin_dir%\flushenv.exe
-CALL %bin_dir%\echoc.exe 2 DSN_ROOT (%DSN_ROOT%) is added as env var, and rDSN SDK will be installed there.
+CALL %bin_dir%\echoc.exe 2 DSN_ROOT (%DSN_ROOT%) is added as env var (and added to PATH), and rDSN SDK will be installed there.
 
 :main
 CALL :%1 %1 %2 %3 %4 %5 %6 %7 %8 %9
