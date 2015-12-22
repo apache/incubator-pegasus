@@ -60,6 +60,11 @@ class meta_server_failure_detector : public failure_detector
 {
 public:
     meta_server_failure_detector(server_state* state, meta_service* svc);
+
+    /* these two functions are for test */
+    meta_server_failure_detector(rpc_address leader_address, bool is_myself_leader);
+    void set_leader_for_test(rpc_address leader_address, bool is_myself_leader);
+
     virtual ~meta_server_failure_detector();
 
     bool is_primary() const { return _is_primary; }

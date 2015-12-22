@@ -54,6 +54,8 @@ failure_detector::failure_detector()
     dsn_task_code_query(LPC_BEACON_CHECK, nullptr, nullptr, &pool);
     dsn_task_code_set_threadpool(RPC_FD_FAILURE_DETECTOR_PING, pool);
     dsn_task_code_set_threadpool(RPC_FD_FAILURE_DETECTOR_PING_ACK, pool);
+
+    _is_started = false;
 }
 
 error_code failure_detector::start(
@@ -128,34 +130,31 @@ void failure_detector::register_master(::dsn::rpc_address target)
 
 bool failure_detector::switch_master(::dsn::rpc_address from, ::dsn::rpc_address to)
 {
+    /* the caller of switch master shoud lock necessarily to protect _masters */
+    auto it = _masters.find(from);
+    auto it2 = _masters.find(to);
+    if (it != _masters.end())
     {
-        zauto_lock l(_lock);
-
-        auto it = _masters.find(from);
-        auto it2 = _masters.find(to);
-        if (it != _masters.end())
+        if (it2 != _masters.end())
         {
-            if (it2 != _masters.end())
-            {
-                dwarn("switch master failed as both are already registered, from[%s], to[%s]",
-                      from.to_string(), to.to_string());
-                return false;
-            }
-
-            it->second.node = to;
-            it->second.rejected = false;
-            _masters.insert(std::make_pair(to, it->second));
-            _masters.erase(from);
-
-            dinfo("switch master successfully, from[%s], to[%s]",
-                  from.to_string(), to.to_string());
-        }
-        else
-        {
-            dwarn("switch master failed as from node is not registered yet, from[%s], to[%s]",
+            dwarn("switch master failed as both are already registered, from[%s], to[%s]",
                   from.to_string(), to.to_string());
             return false;
         }
+
+        it->second.node = to;
+        it->second.rejected = false;
+        _masters.insert(std::make_pair(to, it->second));
+        _masters.erase(from);
+
+        dinfo("switch master successfully, from[%s], to[%s]",
+              from.to_string(), to.to_string());
+    }
+    else
+    {
+        dwarn("switch master failed as from node is not registered yet, from[%s], to[%s]",
+              from.to_string(), to.to_string());
+        return false;
     }
     send_beacon(to, now_ms());
     return true;
@@ -173,8 +172,6 @@ bool failure_detector::is_time_greater_than(uint64_t ts, uint64_t base)
 void failure_detector::report(::dsn::rpc_address node, bool is_master, bool is_connected)
 {
     ddebug("%s[%s] %sconnected", is_master ? "master":"worker", node.to_string(), is_connected ? "" : "dis");
-
-    //printf ("%s[%s] %sconnected\n", is_master ? "master":"worker", node.to_string(), is_connected ? "" : "dis");
 }
 
 /*
@@ -228,12 +225,16 @@ void failure_detector::process_all_records()
                 report(record.node, true, false);
             }
         }
+
+        /*
+         * The disconnected event MUST be under the protection of the _lock
+         */
+        if ( expire.size() > 0 )
+        {
+            on_master_disconnected(expire);
+        }
     }
 
-    if ( expire.size() > 0 )
-    {
-        on_master_disconnected(expire);
-    }
 
     // process recv record, for server
     expire.clear();
@@ -336,11 +337,12 @@ void failure_detector::end_ping(::dsn::error_code err, const beacon_ack& ack, vo
 
 bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack& ack)
 {
+    /*
+     * the caller of the end_ping_internal should lock necessarily!!!
+     */
     uint64_t beacon_send_time = ack.time;
     auto node = ack.this_node;
     uint64_t now = now_ms();
-
-    zauto_lock l(_lock);
 
     master_map::iterator itr = _masters.find(node);
 
@@ -365,6 +367,7 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
     if (!is_time_greater_than(beacon_send_time, record.last_send_time_for_beacon_with_ack))
     {
         // out-dated beacon acks, do nothing
+        dinfo("ignore out dated beacon acks");
         return false;
     }
 
@@ -490,9 +493,8 @@ void failure_detector::send_beacon(::dsn::rpc_address target, uint64_t time)
     beacon->from = primary_address();
     beacon->to = target;
 
-    dinfo("send ping message, from[%s], to[%s]",
+    dinfo("send ping message, from[%s], to[%s], time[%" PRId64 "]",
           beacon->from.to_string(), beacon->to.to_string());
-
     begin_ping2(
         beacon,
         static_cast<int>(_check_interval_milliseconds),
@@ -512,6 +514,7 @@ void failure_detector::end_ping2(
         beacon_ack ack;
         ack.this_node = beacon->to;
         ack.time = beacon->time;
+        ack.allowed = true;
         end_ping(err, ack, nullptr);
     }
     else
