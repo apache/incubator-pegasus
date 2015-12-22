@@ -246,7 +246,8 @@ void clear(test_worker* worker, std::vector<test_master*> masters)
 
 void finish(test_worker* worker, test_master* master, int master_index)
 {
-    std::atomic_int wait_count(2);
+    std::atomic_int wait_count;
+    wait_count.store(2);
     worker->fd()->when_disconnected( [&wait_count, master_index](const std::vector<rpc_address>& addr_list) mutable {
         ASSERT_TRUE(addr_list.size() == 1);
         ASSERT_TRUE(addr_list[0].port() == MPORT_START+master_index );
@@ -278,7 +279,8 @@ TEST(fd, dummy_connect_disconnect)
 
     test_master* leader = masters[0];
     //simply wait for two connected
-    std::atomic_int wait_count(2);
+    std::atomic_int wait_count;
+    wait_count.store(2);
     worker->fd()->when_connected( [&wait_count](rpc_address leader) mutable{
         ASSERT_TRUE(leader.port() == MPORT_START);
         --wait_count;
@@ -309,7 +311,8 @@ TEST(fd, master_redirect)
     worker_set_leader(worker, 0);
 
     test_master* leader = masters[index];
-    std::atomic_int wait_count(2);
+    std::atomic_int wait_count;
+    wait_count.store(2);
     /* although we contact to the first master, but in the end we must connect to the right leader */
     worker->fd()->when_connected( [&wait_count, index](rpc_address leader) mutable{
         --wait_count;
@@ -343,7 +346,8 @@ TEST(fd, switch_new_master_suddenly)
     worker_set_leader(worker, 1);
 
     tst_master = masters[index];
-    std::atomic_int wait_count(2);
+    std::atomic_int wait_count;
+    wait_count.store(2);
 
     auto cb = [&wait_count](rpc_address) mutable { --wait_count; };
     worker->fd()->when_connected( cb );
@@ -393,7 +397,8 @@ TEST(fd, old_master_died)
     worker_set_leader(worker, 0);
 
     tst_master = masters[index];
-    std::atomic_int wait_count(2);
+    std::atomic_int wait_count;
+    wait_count.store(2);
 
     auto cb = [&wait_count](rpc_address) mutable { --wait_count; };
     worker->fd()->when_connected( cb );
@@ -452,7 +457,8 @@ TEST(fd, worker_died_when_switch_master)
     worker_set_leader(worker, 0);
 
     tst_master = masters[index];
-    std::atomic_int wait_count(2);
+    std::atomic_int wait_count;
+    wait_count.store(2);
 
     auto cb = [&wait_count](rpc_address) mutable { --wait_count; };
     worker->fd()->when_connected( cb );
