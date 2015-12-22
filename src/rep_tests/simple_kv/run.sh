@@ -14,8 +14,7 @@ function run_single()
         rm ${log}
     fi
 
-    # successful case calls dsn_terminates which returns SIGKILL
-    if [ ${ret} -ne 137 ]; then
+    if [ ${ret} -ne 0 ]; then
         echo "run ${prefix} failed, return value = ${ret}"
         if [ -f core ]; then
             echo "---- gdb ./dsn.rep_tests.simple_kv core ----"

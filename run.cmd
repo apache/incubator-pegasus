@@ -3,6 +3,10 @@ SET TOP_DIR=%~dp0
 SET bin_dir=%TOP_DIR%\scripts\windows
 if "%1" EQU "" GOTO usage
 IF "%DSN_ROOT%" NEQ "" GOTO main
+IF "%DSN_AUTO_TEST%" NEQ "" (
+    SET DSN_ROOT=%TOP_DIR%\install
+    GOTO install_env
+)
 
 SET /p DSN_ROOT=Please enter your DSN_ROOT (default is %TOP_DIR%\install):
 IF "%DSN_ROOT%" EQU "" SET DSN_ROOT=%TOP_DIR%\install
@@ -17,9 +21,11 @@ GOTO exit
 
 :install_env
 SET DSN_ROOT=%DSN_ROOT:\=/%
-reg add HKCU\Environment /f /v DSN_ROOT /d %DSN_ROOT%\ 1>nul
+reg add HKCU\Environment /f /v DSN_ROOT /d %DSN_ROOT% 1>nul
+SET PATH=%PATH%;%DSN_ROOT%
+reg add HKCU\Environment /f /v PATH /d "%PATH%" 1>nul
 CALL %bin_dir%\flushenv.exe
-CALL %bin_dir%\echoc.exe 2 DSN_ROOT (%DSN_ROOT%) is added as env var, and rDSN SDK will be installed there.
+CALL %bin_dir%\echoc.exe 2 DSN_ROOT (%DSN_ROOT%) is added as env var (and added to PATH), and rDSN SDK will be installed there.
 
 :main
 CALL :%1 %1 %2 %3 %4 %5 %6 %7 %8 %9
@@ -42,6 +48,9 @@ GOTO exit
 :publish
 :republish
     CALL %bin_dir%\publish.cmd %1 %2 %3 %4 %5 %6 %7 %8 %9
+    GOTO:EOF
+    
+:setup-env
     GOTO:EOF
     
 :deploy

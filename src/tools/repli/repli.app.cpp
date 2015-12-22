@@ -98,17 +98,18 @@ namespace dsn {
                 std::cout << "file_index=" << lf->index() << std::endl;
                 std::cout << "start_offset=" << lf->start_offset() << std::endl;
                 std::cout << "end_offset=" << lf->end_offset() << std::endl;
-                std::cout << "previous_log_max_decrees={";
+                std::cout << "previous_log_max_decrees={" << std::endl;
+                std::cout << "  /* app_id.pidx : previous_max_decree : valid_start_offset */" << std::endl;
                 const replica_log_info_map& previous = lf->previous_log_max_decrees();
                 int i = 0;
                 for (auto& kv : previous)
                 {
-                    if (i != 0) std::cout << ",";
-                    std::cout << "p" << kv.first.pidx << "->" << kv.second.max_decree;
+                    std::cout << "  " << kv.first.app_id << "." << kv.first.pidx << " : " << kv.second.max_decree
+                              << " : " << kv.second.valid_start_offset << std::endl;
                 }
                 std::cout << "}" << std::endl;
-                std::cout << "-----------------------------------" << std::endl;
-                std::cout << "ballot.decree : last_committed_decree : global_log_offset" << std::endl;
+                std::cout << "mutations={" << std::endl;
+                std::cout << "  /* app_id.pidx.ballot.decree : last_committed_decree : log_offset */" << std::endl;
                 lf->close();
                 lf = nullptr;
                 int64_t offset = 0;
@@ -116,13 +117,13 @@ namespace dsn {
                 files.push_back(file_name);
                 err = mutation_log::replay(files, [](mutation_ptr mu)->bool
                     {
-                        std::cout << mu->name() << " : " << mu->data.header.last_committed_decree
+                        std::cout << "  " << mu->name() << " : " << mu->data.header.last_committed_decree
                                   << " : " << mu->data.header.log_offset << std::endl;
                         return true;
                     },
                     offset
                 );
-                std::cout << "-----------------------------------" << std::endl;
+                std::cout << "}" << std::endl;
                 std::cout << "read_return_err=" << dsn_error_to_string(err) << std::endl;
                 std::cout << "read_end_offset=" << offset << std::endl;
             }

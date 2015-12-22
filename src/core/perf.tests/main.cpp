@@ -80,7 +80,7 @@ GTEST_API_ int main(int argc, char **argv)
     t.join();
     
     // exit without any destruction
-    dsn_terminate();
+    dsn_exit(0);
 
     return 0;    
 }

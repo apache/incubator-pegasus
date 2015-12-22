@@ -47,6 +47,7 @@ set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config-bad-section.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/nfs_test_file2"
                  "${CMAKE_CURRENT_SOURCE_DIR}/run.sh"
                  "${CMAKE_CURRENT_SOURCE_DIR}/clear.sh"
+                 "${CMAKE_CURRENT_SOURCE_DIR}/clear.cmd"
 )
 
 dsn_add_executable()
