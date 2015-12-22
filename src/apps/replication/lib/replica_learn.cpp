@@ -345,13 +345,17 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
             response.state
             );
 
-        if (lerr != 0)
+        if (lerr != ERR_OK)
         {
             response.err = ERR_GET_LEARN_STATE_FAILED;
             derror(
                 "%s: on_learn[%016llx]: learner = %s, get app learn state failed, error = %d",
                 name(), request.signature, request.learner.to_string(), lerr
                 );
+            if (lerr == ERR_OBJECT_NOT_FOUND)
+            {
+                // TODO(qinzuoyan): trigger checkpoint
+            }
         }
         else
         {

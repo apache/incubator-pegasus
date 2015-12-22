@@ -170,6 +170,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
 
     if (err == ERR_OK)
     {
+        dassert(_app->last_committed_decree() == _app->last_durable_decree(), "");
         _prepare_list->reset(_app->last_committed_decree());
         
         if (!_options->log_private_disabled
