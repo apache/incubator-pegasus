@@ -87,11 +87,11 @@ int main(int argc, char** argv)
 
     if (dsn::replication::test::g_fail)
     {
+        dsn_exit(-1);
         return -1;
     }
 
-    // success: avoid rdsn exit coredump (no elegant exits so far
-    dsn_exit(137); // return SIGKILL 137
+    dsn_exit(0);
     return 0;
 }
 
