@@ -68,7 +68,7 @@ void marshall(binary_writer& writer, const app_state& val)
  *   "partition_count": 2323,
  * }
  */
-void marshall_json(std::string& output, const app_state& app)
+void marshall_json(blob& output, const app_state& app)
 {
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
@@ -80,7 +80,9 @@ void marshall_json(std::string& output, const app_state& app)
     writer.String("partition_count"); writer.Int(app.partition_count);
     writer.EndObject();
 
-    output.assign( buffer.GetString() );
+    std::shared_ptr<char> outptr(new char[buffer.GetSize()], [](char* ptr){ delete []ptr; } );
+    memcpy(outptr.get(), buffer.GetString(), buffer.GetSize());
+    output.assign(outptr, 0, buffer.GetSize());
 }
 
 static const char* partition_status_str[] = {
@@ -121,9 +123,16 @@ void marshall_json(blob& output, const partition_configuration& pc)
     };
 
     writer.StartObject();
+
+    writer.String("app_type"); writer.String(pc.app_type.c_str());
+
+    std::stringstream gpid;
+    gpid << pc.gpid.app_id << "." << pc.gpid.pidx;
+    writer.String("gpid"); writer.String( gpid.str().c_str() );
+
     writer.String("ballot"); writer.Int64(pc.ballot);
-    writer.String("last_committed_decree"); writer.Int64(pc.last_committed_decree);
     writer.String("max_replica_count"); writer.Int(pc.max_replica_count);
+    writer.String("last_committed_decree"); writer.Int64(pc.last_committed_decree);
 
     writer.String("entries");
     writer.StartArray();
@@ -135,6 +144,10 @@ void marshall_json(blob& output, const partition_configuration& pc)
     writer.EndArray();
 
     writer.EndObject();
+
+    std::shared_ptr<char> outptr(new char[buffer.GetSize()], [](char* ptr){ delete []ptr; } );
+    memcpy(outptr.get(), buffer.GetString(), buffer.GetSize());
+    output.assign(outptr, 0, buffer.GetSize());
 }
 
 void unmarshall(binary_reader& reader, /*out*/ app_state& val)
@@ -178,15 +191,18 @@ void unmarshall_json(const blob& buf, partition_configuration& pc)
     if ( input.empty() || doc.Parse(input.c_str()).HasParseError())
         return;
 
+    pc.app_type = doc["app_type"].GetString();
+    sscanf(doc["gpid"].GetString(), "%d.%d", &pc.gpid.app_id, &pc.gpid.pidx);
     pc.ballot = doc["ballot"].GetInt64();
-    pc.last_committed_decree = doc["last_committed_decree"].GetInt();
     pc.max_replica_count = doc["max_replica_count"].GetInt();
+    pc.last_committed_decree = doc["last_committed_decree"].GetInt();
     pc.primary.set_invalid();
 
     rapidjson::Value& entries = doc["entries"];
     for (rapidjson::SizeType i=0; i<entries.Size(); ++i) {
         rapidjson::Value& val = entries[i];
-        ::dsn::rpc_address ep = dsn_address_from_string(val["addr"].GetString());
+        ::dsn::rpc_address ep;
+        ep.from_string_ipv4(val["addr"].GetString());
         partition_status ps = get_partition_status(val["partition_status"].GetString());
         switch (ps) {
         case PS_PRIMARY:
@@ -355,10 +371,8 @@ error_code server_state::initialize_apps()
 
     // create cluster_root/apps/app_name node
     std::string app_path = join_path(apps_path, app.app_name);
-    binary_writer writer;
-    marshall(writer, app);
-    
-    blob value = writer.get_buffer();
+    blob value;
+    marshall_json(value, app);
 
     _storage->create_node(app_path, LPC_META_STATE_SVC_CALLBACK,
         [&err, this, &app, &tracker, &app_path](error_code ec)
@@ -383,10 +397,8 @@ error_code server_state::initialize_apps()
 
                     app.partitions.push_back(ps);
 
-                    binary_writer writer;
-                    marshall(writer, ps);
-
-                    blob value = writer.get_buffer();
+                    blob value;
+                    marshall_json(value, ps);
 
                     _storage->create_node(partition_path, LPC_META_STATE_SVC_CALLBACK,
                         [&err, this, &app](error_code ec)
@@ -768,8 +780,8 @@ void server_state::update_configuration(
             break;
         }
 
-        blob_new_config_blob;
-        marshall_json(blob, req->config);
+        blob new_config_blob;
+        marshall_json(new_config_blob, req->config);
         _storage->set_data(
             partition_path,
             new_config_blob,
