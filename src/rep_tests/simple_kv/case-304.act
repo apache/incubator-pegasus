@@ -3,7 +3,7 @@
 # - trigger meta-server to call remove
 # - trigger meta-server to call downgrade_to_secondary
 
-set:load_balance_for_test=1,not_exist_on_log_failure=1
+set:load_balance_for_test=1,not_exit_on_log_failure=1
 
 # wait for server ready
 config:{3,r1,[r2,r3]}

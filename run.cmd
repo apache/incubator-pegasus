@@ -16,7 +16,7 @@ CALL %bin_dir%\echoc.exe 4 %DSN_ROOT% does not exist
 GOTO exit
 
 :usage
-    CALL %bin_dir%\echoc.exe 4  "Usage: run.cmd pre-require|build|install|test|publish|deploy|start|stop|cleanup"
+    CALL %bin_dir%\echoc.exe 4  "Usage: run.cmd pre-require|build|install|test|publish|republish|deploy|start|stop|cleanup"
     GOTO:EOF
 
 :install_env
@@ -46,7 +46,8 @@ GOTO exit
     GOTO:EOF
 
 :publish
-    CALL %bin_dir%\%1.cmd %2 %3 %4 %5 %6 %7 %8 %9
+:republish
+    CALL %bin_dir%\publish.cmd %1 %2 %3 %4 %5 %6 %7 %8 %9
     GOTO:EOF
     
 :setup-env
@@ -56,6 +57,7 @@ GOTO exit
 :start
 :stop
 :cleanup
+:quick-cleanup
     CALL %bin_dir%\deploy.cmd %1 %2 %3 %4 %5 %6 %7 %8 %9
     GOTO:EOF
     

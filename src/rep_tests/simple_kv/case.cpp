@@ -112,10 +112,10 @@ std::string set_case_line::to_string() const
         oss << "close_replica_stub_on_exit=" << _close_replica_stub;
         count++;
     }
-    if (_not_exist_on_log_failure_set)
+    if (_not_exit_on_log_failure_set)
     {
         if (count > 0) oss << ",";
-        oss << "not_exist_on_log_failure=" << _not_exist_on_log_failure;
+        oss << "not_exit_on_log_failure=" << _not_exit_on_log_failure;
         count++;
     }
     return oss.str();
@@ -134,7 +134,7 @@ bool set_case_line::parse(const std::string& params)
     _lb_for_test_set = false;
     _disable_lb_set = false;
     _close_replica_stub_set = false;
-    _not_exist_on_log_failure_set = false;
+    _not_exit_on_log_failure_set = false;
     for (auto& kv : kv_map)
     {
         const std::string& k = kv.first;
@@ -159,10 +159,10 @@ bool set_case_line::parse(const std::string& params)
             _close_replica_stub = boost::lexical_cast<bool>(v);
             _close_replica_stub_set = true;
         }
-        else if (k == "not_exist_on_log_failure")
+        else if (k == "not_exit_on_log_failure")
         {
-            _not_exist_on_log_failure = boost::lexical_cast<bool>(v);
-            _not_exist_on_log_failure_set = true;
+            _not_exit_on_log_failure = boost::lexical_cast<bool>(v);
+            _not_exit_on_log_failure_set = true;
         }
         else
         {
@@ -192,9 +192,9 @@ void set_case_line::apply_set() const
     {
         test_case::s_close_replica_stub_on_exit = _close_replica_stub;
     }
-    if (_not_exist_on_log_failure_set)
+    if (_not_exit_on_log_failure_set)
     {
-        replica_stub::s_not_exit_on_log_failure = _not_exist_on_log_failure;
+        replica_stub::s_not_exit_on_log_failure = _not_exit_on_log_failure;
     }
 }
 

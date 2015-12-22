@@ -445,7 +445,7 @@ void replica::on_learn_reply(
         // invalidate existing mutations in current logs
         if (lerr == 0)
         {
-            err = _app->update_log_info(this,
+            err = _app->update_init_info(this,
                 _stub->_log->on_partition_reset(get_gpid(), 0),
                 _private_log ? _private_log->on_partition_reset(get_gpid(), 0) : 0
                 );
@@ -508,7 +508,7 @@ void replica::on_learn_reply(
             "state is incomplete");       
 
         // invalidate existing mutations in current logs
-        err = _app->update_log_info(
+        err = _app->update_init_info(
             this,
             _stub->_log->on_partition_reset(get_gpid(), resp->prepare_start_decree - 1),
             _private_log ? _private_log->on_partition_reset(get_gpid(), resp->prepare_start_decree - 1) : 0

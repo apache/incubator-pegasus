@@ -112,7 +112,7 @@ private:
     ::dsn::task_ptr _log_task;
     node_tasks      _prepare_or_commit_tasks;
     dsn_message_t   _prepare_request;
-    char            _name[40]; // ballot.decree
+    char            _name[60]; // app_id.pidx.ballot.decree
     int             _appro_data_bytes;
 };
 
@@ -180,7 +180,13 @@ inline void mutation::set_id(ballot b, decree c)
 {
     data.header.ballot = b;
     data.header.decree = c;
-    sprintf (_name, "%" PRId64 ".%" PRId64, b, c);
+
+    snprintf_p(_name, sizeof(_name),
+        "%" PRId32 ".%" PRId32 ".%" PRId64 ".%" PRId64,
+        data.header.gpid.app_id,
+        data.header.gpid.pidx,
+        data.header.ballot,
+        data.header.decree);
 }
 
 }} // namespace

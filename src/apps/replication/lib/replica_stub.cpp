@@ -127,8 +127,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
     }
     _log = new mutation_log(
         log_dir,
-        false,
-        opts.log_batch_buffer_KB_shared,
+        opts.log_shared_batch_buffer_kb,
         opts.log_file_size_mb
         );
 
@@ -173,7 +172,9 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
                 return it->second->replay_mutation(mu, false);
             }
             else
+            {
                 return false;
+            }
         }
         );
 
@@ -215,14 +216,14 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
                 
         decree smax = _log->max_decree(it->first);
         decree pmax = invalid_decree;
-        if (_options.log_enable_private_prepare)
+        if (!_options.log_private_disabled)
         {
             pmax = it->second->private_log()->max_decree(it->first);
 
             // possible when shared log is restarted
             if (smax == 0)
             {
-                _log->update_max_decrees(it->first, pmax);
+                _log->update_max_decree(it->first, pmax);
                 smax = pmax;
             }
         }
@@ -239,8 +240,8 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             it->second->get_ballot(),
             smax,
             pmax,
-            it->second->get_app()->log_info().init_offset_in_shared_log,
-            it->second->get_app()->log_info().init_offset_in_private_log
+            it->second->get_app()->init_info().init_offset_in_shared_log,
+            it->second->get_app()->init_info().init_offset_in_private_log
             );
 
         if (err == ERR_OK)
@@ -844,13 +845,12 @@ void replica_stub::on_gc()
     // gc prepare log
     if (_log != nullptr)
     {
-        multi_partition_decrees_ex durable_decrees;
+        replica_log_info_map durable_decrees;
         for (auto it = rs.begin(); it != rs.end(); it++)
         {
-            log_replica_info ri;
-            ri.decree = it->second->last_durable_decree();
-            ri.log_start_offset = it->second->get_app()->_info.init_offset_in_shared_log;
-
+            replica_log_info ri;
+            ri.max_decree = it->second->last_durable_decree();
+            ri.valid_start_offset = it->second->get_app()->init_info().init_offset_in_shared_log;
             durable_decrees[it->first] = ri;
         }
         _log->garbage_collection(durable_decrees);
