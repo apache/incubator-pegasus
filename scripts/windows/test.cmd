@@ -33,7 +33,7 @@ CALL  %bin_dir%\echoc.exe 2  %build_type%\dsn.core.tests.exe config-test-sim.ini
 %build_type%\dsn.core.tests.exe config-test-sim.ini
 @CALL clear.cmd
 
-cd ..\dsn.tests\%build_type%
+cd ..\dsn.tests
 
 CALL  %bin_dir%\echoc.exe 2  %build_type%\dsn.tests.exe config-test.ini
 %build_type%\dsn.tests.exe config-test.ini
