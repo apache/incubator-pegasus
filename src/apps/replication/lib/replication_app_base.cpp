@@ -52,7 +52,7 @@ void register_replica_provider(replica_app_factory f, const char* name)
     ::dsn::utils::factory_store<replication_app_base>::register_factory(name, f, PROVIDER_TYPE_MAIN);
 }
 
-error_code replica_log_info::load(const char* file)
+error_code replica_init_info::load(const char* file)
 {
     std::ifstream is(file, std::ios::binary);
     if (!is.is_open())
@@ -85,7 +85,7 @@ error_code replica_log_info::load(const char* file)
     return ERR_OK;
 }
 
-error_code replica_log_info::store(const char* file)
+error_code replica_init_info::store(const char* file)
 {
     std::string ffile = std::string(file);
     std::string tmp_file = ffile + ".tmp";
@@ -234,7 +234,7 @@ error_code replication_app_base::write_internal(mutation_ptr& mu)
     return ERR_OK;
 }
 
-error_code replication_app_base::update_log_info(replica* r, int64_t shared_log_offset, int64_t private_log_offset)
+error_code replication_app_base::update_init_info(replica* r, int64_t shared_log_offset, int64_t private_log_offset)
 {
     _info.crc = 0;
     _info.magic = 0xdeadbeef;

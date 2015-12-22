@@ -51,37 +51,30 @@ replication_options::replication_options()
     batch_write_disabled = false;
     staleness_for_commit = 10;
     max_mutation_count_in_prepare_list = 110;
-    
     mutation_2pc_min_replica_count = 1;    
 
-    group_check_interval_ms = 100000;
     group_check_disabled = false;
+    group_check_interval_ms = 100000;
 
     checkpoint_interval_mins = 60; // 60 mins
     checkpoint_min_decree_gap = 10000;
     checkpoint_max_interval_hours = 24; // at least one checkpoint per day
 
-    gc_interval_ms = 30 * 1000; // 30000 milliseconds
     gc_disabled = false;
+    gc_interval_ms = 30 * 1000; // 30000 milliseconds
     gc_memory_replica_interval_ms = 5 * 60 * 1000; // 5 minutes
     gc_disk_error_replica_interval_seconds = 48 * 3600 * 1000; // 48 hrs
-    
+
     fd_disabled = false;
-    //_options.meta_servers = ...;
     fd_check_interval_seconds = 5;
     fd_beacon_interval_seconds = 3;
     fd_lease_seconds = 10;
     fd_grace_seconds = 15;
-            
-    log_batch_buffer_KB_shared = 0;
-    log_batch_buffer_KB_private = 4;
-    log_pending_max_ms = 100;
-    log_file_size_mb = 32;
-    log_buffer_size_mb_private = 1;
-    log_pending_max_ms_private = 100;
-    log_file_size_mb_private = 32;
 
-    log_enable_private_prepare = true;
+    log_private_disabled = false;
+    log_file_size_mb = 32;
+    log_shared_batch_buffer_kb = 0;
+    log_private_batch_buffer_kb = 4;
     
     config_sync_interval_ms = 30000;
     config_sync_disabled = false;
@@ -132,7 +125,6 @@ void replication_options::initialize()
         "timeout (ms) for prepare message to potential secondaries in two phase commit"
         );
 
-
     batch_write_disabled =
         dsn_config_get_value_bool("replication",
         "batch_write_disabled",
@@ -177,14 +169,12 @@ void replication_options::initialize()
         checkpoint_interval_mins,
         "every what period (minutes) we do checkpoints for replicated apps"
         ); 
-
     checkpoint_min_decree_gap = 
         (int64_t)dsn_config_get_value_uint64("replication",
         "checkpoint_min_decree_gap",
         checkpoint_min_decree_gap,
         "minimum decree gap that triggers checkpoint"
         );
-
     checkpoint_max_interval_hours = 
         (int)dsn_config_get_value_uint64("replication",
         "checkpoint_max_interval_hours",
@@ -192,6 +182,12 @@ void replication_options::initialize()
         "maximum time interval (hours) where a new checkpoint must be created"
         );
 
+    gc_disabled =
+        dsn_config_get_value_bool("replication",
+        "gc_disabled",
+        gc_disabled,
+        "whether to disable garbage collection"
+        );
     gc_interval_ms =
         (int)dsn_config_get_value_uint64("replication", 
         "gc_interval_ms", 
@@ -210,15 +206,13 @@ void replication_options::initialize()
         gc_disk_error_replica_interval_seconds,
         "error replica are deleted after they have been closed and lasted on disk this long (seconds)"
         );
-    gc_disabled =
-        dsn_config_get_value_bool("replication", "gc_disabled", gc_disabled,
-        "whether to disable garbage collection"
-        );
+
     fd_disabled =
-        dsn_config_get_value_bool("replication", "fd_disabled", fd_disabled,
+        dsn_config_get_value_bool("replication",
+        "fd_disabled",
+        fd_disabled,
         "whether to disable failure detection"
         );
-    //_options.meta_servers = ...;
     fd_check_interval_seconds =
         (int)dsn_config_get_value_uint64("replication", 
         "fd_check_interval_seconds", 
@@ -243,57 +237,30 @@ void replication_options::initialize()
         fd_grace_seconds,
         "grace (seconds) assigned to remote FD slaves (grace > lease)"
         );
-    
+
+    log_private_disabled =
+        dsn_config_get_value_bool("replication",
+        "log_private_disabled",
+        log_private_disabled,
+        "whether to disable logging committed mutations for each app, which is used for easier learning"
+        );
     log_file_size_mb =
         (int)dsn_config_get_value_uint64("replication", 
         "log_file_size_mb", 
         log_file_size_mb,
-        "maximum log segment file size (MB)"
+        "maximum log segment file size (MB), for both shared and private log"
         );
-    log_batch_buffer_KB_shared =
+    log_shared_batch_buffer_kb =
         (int)dsn_config_get_value_uint64("replication", 
         "log_batch_buffer_KB_shared", 
-        log_batch_buffer_KB_shared,
+        log_shared_batch_buffer_kb,
         "shared log buffer size (KB) for batching incoming logs"
         );
-    log_batch_buffer_KB_private =
+    log_private_batch_buffer_kb =
         (int)dsn_config_get_value_uint64("replication",
-            "log_batch_buffer_KB_private",
-            log_batch_buffer_KB_private,
-            "private log buffer size (KB) for batching incoming logs"
-            );
-    log_pending_max_ms =
-        (int)dsn_config_get_value_uint64("replication", 
-        "log_pending_max_ms", 
-        log_pending_max_ms,
-        "maximum duration (ms) the log entries reside in the buffer for batching"
-        );
-
-    log_file_size_mb_private =
-        (int)dsn_config_get_value_uint64("replication",
-        "log_file_size_mb_private",
-        log_file_size_mb_private,
-        "maximum log segment file size (MB) for private log"
-        );
-    log_buffer_size_mb_private =
-        (int)dsn_config_get_value_uint64("replication",
-        "log_buffer_size_mb_private",
-        log_buffer_size_mb_private,
-        "log buffer size (MB) for batching incoming logs for private log"
-        );
-    log_pending_max_ms_private =
-        (int)dsn_config_get_value_uint64("replication",
-        "log_pending_max_ms_private",
-        log_pending_max_ms_private,
-        "maximum duration (ms) the log entries reside in the buffer for batching for private log"
-        );
-
-    log_enable_private_prepare =
-        dsn_config_get_value_bool("replication",
-        "log_enable_private_prepare",
-        log_enable_private_prepare,
-        "whether to log committed mutations for each app, "
-        "which is used for easier learning"
+        "log_private_batch_buffer_kb",
+        log_private_batch_buffer_kb,
+        "private log buffer size (KB) for batching incoming logs"
         );
 
     config_sync_disabled =
@@ -302,14 +269,13 @@ void replication_options::initialize()
         config_sync_disabled,
         "whether to disable replica configuration periodical sync with the meta server"
         );
-    //_options.meta_servers = ...;
     config_sync_interval_ms =
         (int)dsn_config_get_value_uint64("replication", 
         "config_sync_interval_ms", 
         config_sync_interval_ms,
         "every this period(ms) the replica syncs replica configuration with the meta server"
         );
-        
+
     read_meta_servers();
 
     sanity_check();

@@ -172,7 +172,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
     {
         _prepare_list->reset(_app->last_committed_decree());
         
-        if (_options->log_enable_private_prepare
+        if (!_options->log_private_disabled
             || !_app->is_delta_state_learning_supported())
         {
             dassert(nullptr == _private_log, "private log must not be initialized yet");
@@ -181,36 +181,35 @@ error_code replica::init_app_and_prepare_list(bool create_new)
 
             _private_log = new mutation_log(
                 log_dir,
+                _options->log_private_batch_buffer_kb,
+                _options->log_file_size_mb,
                 true,
-                _options->log_batch_buffer_KB_private,
-                _options->log_file_size_mb
+                get_gpid()
                 );
         }
 
-        // sync vaid start log offset between app and logs
+        // sync valid_start_offset between app and logs
         if (create_new)
         {
-            err = _app->update_log_info(
-                this,
-                _stub->_log->on_partition_reset(get_gpid(), _app->last_committed_decree()),
-                _private_log ? _private_log->on_partition_reset(get_gpid(), _app->last_committed_decree()) : 0
-                );
+            dassert(_app->last_committed_decree() == 0, "");
+            int64_t shared_log_offset = _stub->_log->on_partition_reset(get_gpid(), 0);
+            int64_t private_log_offset = _private_log ? _private_log->on_partition_reset(get_gpid(), 0) : 0;
+            err = _app->update_init_info(this, shared_log_offset, private_log_offset);
         }
         else
         {
-            _stub->_log->set_valid_log_offset_before_open(get_gpid(), _app->log_info().init_offset_in_shared_log);
+            _stub->_log->set_valid_start_offset_on_open(get_gpid(), _app->init_info().init_offset_in_shared_log);
             if (_private_log)
-                _private_log->set_valid_log_offset_before_open(get_gpid(), _app->log_info().init_offset_in_private_log);
+                _private_log->set_valid_start_offset_on_open(get_gpid(), _app->init_info().init_offset_in_private_log);
         }
 
         // replay the logs
         if (nullptr != _private_log)
         {
             err = _private_log->open(
-                get_gpid(),
                 [this](mutation_ptr& mu)
                 {
-                    return replay_mutation(mu);
+                    return replay_mutation(mu, true);
                 }
             );
 
@@ -218,15 +217,17 @@ error_code replica::init_app_and_prepare_list(bool create_new)
             {
                 ddebug(
                     "%s: private log initialized, durable = %" PRId64 ", committed = %" PRId64 ", "
-                    "max_prepared = %" PRId64 ", ballot = %" PRId64 ", valid_offset_in_plog = %" PRId64,
+                    "max_prepared = %" PRId64 ", ballot = %" PRId64 ", valid_offset_in_plog = %" PRId64 ", "
+                    "max_decree_in_plog = %" PRId64 "",
                     name(),
                     _app->last_durable_decree(),
                     _app->last_committed_decree(),
                     max_prepared_decree(),
                     get_ballot(),
-                    _app->log_info().init_offset_in_private_log
+                    _app->init_info().init_offset_in_private_log,
+                    _private_log->max_decree(get_gpid())
                     );
-                _private_log->check_log_start_offset(get_gpid(), _app->log_info().init_offset_in_private_log);
+                _private_log->check_valid_start_offset(get_gpid(), _app->init_info().init_offset_in_private_log);
                 set_inactive_state_transient(true);
             }
             /* in the beginning the prepare_list is reset to the durable_decree */
@@ -241,13 +242,15 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                     _app->last_committed_decree(),
                     max_prepared_decree(),
                     get_ballot(),
-                    _app->log_info().init_offset_in_private_log
+                    _app->init_info().init_offset_in_private_log
                     );
 
                 set_inactive_state_transient(false);
 
                 _private_log->close();
                 _private_log = nullptr;
+
+                _stub->_log->on_partition_removed(get_gpid());
             }
         }
 
@@ -281,7 +284,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
 {
     auto d = mu->data.header.decree;
     auto offset = mu->data.header.log_offset;
-    if (is_private && offset < _app->log_info().init_offset_in_private_log)
+    if (is_private && offset < _app->init_info().init_offset_in_private_log)
     {
         ddebug(
             "%s: replay mutation skipped1 as offset is invalid in private log, ballot = %" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
@@ -294,7 +297,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
         return false;
     }
     
-    if (!is_private && offset < _app->log_info().init_offset_in_shared_log)
+    if (!is_private && offset < _app->init_info().init_offset_in_shared_log)
     {
         ddebug(
             "%s: replay mutation skipped2 as offset is invalid in shared log, ballot = %" PRId64 ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
