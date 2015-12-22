@@ -141,6 +141,7 @@ void replica::assign_primary(configuration_update_request& proposal)
     update_configuration_on_meta_server(proposal.type, proposal.node, proposal.config);
 }
 
+// run on primary to send ADD_LEARNER request to candidate replica server
 void replica::add_potential_secondary(configuration_update_request& proposal)
 {
     if (status() != PS_PRIMARY)

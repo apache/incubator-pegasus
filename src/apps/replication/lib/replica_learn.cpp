@@ -51,18 +51,25 @@ void replica::init_learn(uint64_t signature)
 
     if (status() != PS_POTENTIAL_SECONDARY)
     {
-        ddebug("%s: not potential secondary (%s), skip %s",
-            name(), enum_to_string(status()), __FUNCTION__
+        dwarn("%s: state is not potential secondary but %s, skip learning with signature %" PRIu64,
+            name(), enum_to_string(status()), signature
             );
         return;
-    }   
+    }
+
+    if (signature == invalid_signature)
+    {
+        dwarn("%s: invalid learning signature, skip",
+            name()
+            );
+        return;
+    }
         
     // at most one learning task running
-    if (_potential_secondary_states.learning_round_is_running || signature == invalid_signature)
+    if (_potential_secondary_states.learning_round_is_running)
     {
-        ddebug("%s: previous learning is still running or signature is invalid %" PRIx64,
-            name(),
-            signature
+        dwarn("%s: previous learning is still running, skip learning with signature %" PRIu64,
+            name(), signature
             );
         return;
     }   
@@ -72,8 +79,8 @@ void replica::init_learn(uint64_t signature)
     {
         if (!_potential_secondary_states.cleanup(false))
         {
-            dwarn("%s: previous learning is still in-process, skip new learning request",
-                name()
+            dwarn("%s: previous learning with signature %" PRIu64 " is still in-process, skip init new learning with signature %" PRIu64,
+                name(), _potential_secondary_states.learning_signature, signature
                 );
             return;
         }   
@@ -93,7 +100,7 @@ void replica::init_learn(uint64_t signature)
         // learned state (app state) completed
         case LearningWithPrepare:
             dassert(_app->last_durable_decree() + 1 >= _potential_secondary_states.learning_start_prepare_decree,
-                "leaned state is incomplete");
+                "learned state is incomplete");
             {
                 // check missing state due to _app->flush to checkpoint the learned state
                 auto c = _prepare_list->last_committed_decree();
@@ -212,7 +219,7 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
     else if (it->second.signature != request.signature)
     {
         response.config.learner_signature = it->second.signature;
-        response.err = ERR_OBJECT_NOT_FOUND;
+        response.err = ERR_INVALID_VERSION; // invalid version = invalid signature
         reply(msg, response);
         return;
     }
@@ -237,11 +244,21 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
     // mutations are previously committed already on learner (old primary)
     else if (request.last_committed_decree_in_app > local_committed_decree)
     {
+        derror(
+            "%s: on_learn[%016llx]: learner = %s, learner's last_committed_decree is newer than learnee, "
+            "learner_app_committed_decree = %" PRId64 ", local_committed_decree = %" PRId64 ", commit local hard",
+            name(), request.signature, request.learner.to_string(),
+            request.last_committed_decree_in_app, local_committed_decree
+            );
+
         _prepare_list->commit(request.last_committed_decree_in_app, COMMIT_TO_DECREE_HARD);
         local_committed_decree = last_committed_decree();
     }
 
+    dassert(request.last_committed_decree_in_app <= local_committed_decree, "");
+
     decree learn_start_decree = request.last_committed_decree_in_app + 1;
+    dassert(learn_start_decree <= local_committed_decree + 1, "");
     bool delayed_replay_prepare_list = false;
 
     ddebug(
@@ -256,13 +273,13 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
         _app->last_durable_decree(),
         learn_start_decree
         );
-    
+
     response.address = _stub->_primary_address;
     response.prepare_start_decree = invalid_decree;
     response.last_committed_decree = local_committed_decree;
     response.err = ERR_OK; 
 
-    // set prepare_start_decree when to-be-learn state is covered by prepare list
+    // set prepare_start_decree when to-be-learn state is covered by prepare list,
     // note min_decree can be NOT present in prepare list when list.count == 0
     if (learn_start_decree > _prepare_list->min_decree() 
        || (learn_start_decree == _prepare_list->min_decree() 
@@ -293,7 +310,7 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
         it->second.prepare_start_decree = invalid_decree;
     }
 
-    // learn mutation cache only
+    // only learn mutation cache in range of [learn_start_decree, prepare_start_decree),
     // in this case, the state on the PS should be contiguous (+ to-be-sent prepare list)
     if (response.prepare_start_decree != invalid_decree)
     {
@@ -310,9 +327,10 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
         response.state.meta.push_back(writer.get_buffer());
         ddebug(
             "%s: on_learn[%016llx]: learner = %s, learn mutation cache succeed, "
-            "learn_start_decree = %" PRId64 ", prepare_start_decree = %" PRId64,
+            "learn_start_decree = %" PRId64 ", prepare_start_decree = %" PRId64 ", learn_state_size = %d",
             name(), request.signature, request.learner.to_string(),
-            learn_start_decree, response.prepare_start_decree
+            learn_start_decree, response.prepare_start_decree,
+            response.state.meta[0].length()
             );
     }
 
