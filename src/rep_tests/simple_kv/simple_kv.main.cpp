@@ -91,7 +91,7 @@ int main(int argc, char** argv)
     }
 
     // success: avoid rdsn exit coredump (no elegant exits so far
-    dsn_terminate(); // return SIGKILL 137
+    dsn_exit(137); // return SIGKILL 137
     return 0;
 }
 
