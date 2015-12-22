@@ -59,6 +59,15 @@ void marshall(binary_writer& writer, const app_state& val)
     marshall(writer, val.partitions);
 }
 
+/**
+ * app_state:
+ * {
+ *   "app_type": "whatever",
+ *   "app_id": 11,
+ *   "app_name": "you like",
+ *   "partition_count": 2323,
+ * }
+ */
 void marshall_json(std::string& output, const app_state& app)
 {
     rapidjson::StringBuffer buffer;
@@ -82,13 +91,25 @@ const char* get_partition_status_string(partition_status ps)
 {
     return partition_status_str[ps];
 }
-
-void marshall_json(std::string& output, const partition_configuration& pc)
+partition_status get_partition_status(const char* status_str)
+{
+    for (int i=0; partition_status_str[i]!=nullptr; ++i)
+        if (strcmp(partition_status_str[i], status_str)==0)
+            return (partition_status)i;
+    return PS_INVALID;
+}
+/**
+ * Example partition config:
+ * {"ballot": 1, "last_committed_decree": 2, "max_replica_count": 3,
+ *  "entries": [{"addr": "xxx.xxx.xxx.xxx:12345", "partition_status": "primary"},
+ *              {"addr": "xxx.xxx.xxx.xxb:23424", "partition_status": "secondary"}
+ *             ]}
+ * type of role: primary/secondary/potential primary/potential secondary/inactive
+ **/
+void marshall_json(blob& output, const partition_configuration& pc)
 {
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-
-    writer.StartObject();
 
     auto end_point_gen_json = [&writer](const ::dsn::rpc_address& ep, partition_status ps) {
         if (ep.is_invalid())
@@ -114,7 +135,6 @@ void marshall_json(std::string& output, const partition_configuration& pc)
     writer.EndArray();
 
     writer.EndObject();
-    output.assign(buffer.GetString());
 }
 
 void unmarshall(binary_reader& reader, /*out*/ app_state& val)
@@ -126,9 +146,10 @@ void unmarshall(binary_reader& reader, /*out*/ app_state& val)
     unmarshall(reader, val.partitions);
 }
 
-void unmarshall_json(const std::string& input, app_state& app)
+void unmarshall_json(const blob& buf, app_state& app)
 {
     rapidjson::Document doc;
+    std::string input(buf.data(), buf.length());
     if (input.empty() || doc.Parse(input.c_str()).HasParseError() )
         return;
 
@@ -149,9 +170,11 @@ void unmarshall_json(const std::string& input, app_state& app)
         app.partitions[i].gpid.pidx = i;
 }
 
-void unmarshall_json(const std::string& input, partition_configuration& partition_config)
+void unmarshall_json(const blob& buf, partition_configuration& pc)
 {
     rapidjson::Document doc;
+    std::string input(buf.data(), buf.length());
+
     if ( input.empty() || doc.Parse(input.c_str()).HasParseError())
         return;
 
@@ -159,6 +182,24 @@ void unmarshall_json(const std::string& input, partition_configuration& partitio
     pc.last_committed_decree = doc["last_committed_decree"].GetInt();
     pc.max_replica_count = doc["max_replica_count"].GetInt();
     pc.primary.set_invalid();
+
+    rapidjson::Value& entries = doc["entries"];
+    for (rapidjson::SizeType i=0; i<entries.Size(); ++i) {
+        rapidjson::Value& val = entries[i];
+        ::dsn::rpc_address ep = dsn_address_from_string(val["addr"].GetString());
+        partition_status ps = get_partition_status(val["partition_status"].GetString());
+        switch (ps) {
+        case PS_PRIMARY:
+            pc.primary = ep;
+            break;
+        case PS_SECONDARY:
+            pc.secondaries.push_back(ep);
+            break;
+        default:
+            pc.last_drops.push_back(ep);
+            break;
+        }
+    }
 }
 
 server_state::server_state()
@@ -409,10 +450,8 @@ error_code server_state::sync_apps_from_remote_storage()
                     {
                         if (ec == ERR_OK)
                         {
-                            binary_reader reader(value);
                             app_state state;
-                            unmarshall(reader, state);
-
+                            unmarshall_json(value, state);
                             int app_id = state.app_id;
                             dassert(app_id != 0, "invalid app id");
                             {
@@ -436,9 +475,8 @@ error_code server_state::sync_apps_from_remote_storage()
                                     {
                                         if (ec == ERR_OK)
                                         {
-                                            binary_reader reader(value);
                                             partition_configuration pc;
-                                            unmarshall(reader, pc);
+                                            unmarshall_json(value, pc);
                                             zauto_write_lock l(_lock);
                                             _apps[app_id - 1].partitions[i] = pc;
                                         }
@@ -729,11 +767,9 @@ void server_state::update_configuration(
             maintain_drops(req->config.last_drops, req->node, false);
             break;
         }
-        
-        binary_writer writer;
-        marshall(writer, req->config);
 
-        blob new_config_blob = writer.get_buffer();
+        blob_new_config_blob;
+        marshall_json(blob, req->config);
         _storage->set_data(
             partition_path,
             new_config_blob,
