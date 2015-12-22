@@ -75,6 +75,8 @@ public:
 
     std::list<std::string> get_string_value_list(const char* section, const char* key, char splitter, const char* dsptr);
 
+    void set(const char* section, const char* key, const char* value, const char* dsptr);
+
     void register_config_change_notification(config_file_change_notifier notifier);
 
     bool has_section(const char* section);

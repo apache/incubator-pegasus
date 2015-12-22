@@ -396,6 +396,43 @@ void configuration::dump(std::ostream& os)
     _lock.unlock();
 }
 
+void configuration::set(const char* section, const char* key, const char* value, const char* dsptr)
+{
+    std::map<std::string, conf*>* psection;
+
+    _lock.lock();
+    
+    auto it = _configs.find(section);
+    if (it != _configs.end())
+    {
+        psection = &it->second;
+    }
+    else
+    {
+        std::map<std::string, conf*> s;
+        psection = &_configs.insert(config_map::value_type(section, s)).first->second;
+    }
+
+    auto it2 = psection->find(key);
+    if (it2 == psection->end())
+    {
+        conf* cf = new conf();
+        cf->dsptr = dsptr;
+        cf->key = key;
+        cf->value = value;
+        cf->line = 0;
+        cf->present = true;
+        cf->section = section;
+        psection->insert(std::make_pair(cf->key, cf));
+    }
+    else
+    {
+        it2->second->value = value;
+    }
+
+    _lock.unlock();
+}
+
 void configuration::register_config_change_notification(config_file_change_notifier notifier)
 {
     dassert (false, "not implemented");

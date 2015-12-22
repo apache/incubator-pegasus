@@ -67,7 +67,7 @@ public:
     //
     //    routines for replica stub
     //
-    static replica* load(replica_stub* stub, const char* dir, bool rename_dir_on_failure);    
+    static replica* load(replica_stub* stub, const char* dir);
     static replica* newr(replica_stub* stub, const char* app_type, global_partition_id gpid);    
     // return true when the mutation is valid for the current replica
     bool replay_mutation(mutation_ptr& mu, bool is_private = true);
@@ -130,6 +130,7 @@ public:
     mutation_log_ptr private_log() const { return _private_log; }
 
     void json_state(std::stringstream& out) const;
+    void update_commit_statistics(int count);
         
 private:
     // common helpers
@@ -139,11 +140,10 @@ private:
     mutation_ptr new_mutation(decree decree);    
         
     // initialization
-    error_code init_app_and_prepare_list(const char* app_type, bool create_new);
-    error_code initialize_on_load(const char* dir, const char* app_type, bool rename_dir_on_failure);
-    error_code initialize_on_new(const char* app_type, global_partition_id gpid);    
-    replica(replica_stub* stub, global_partition_id gpid, const char* app_type, const char* dir); // for replica::load(..) only
-    replica(replica_stub* stub, global_partition_id gpid, const char* app_type); // for replica::newr(...) only
+    replica(replica_stub* stub, global_partition_id gpid, const char* app_type, const char* dir);
+    error_code initialize_on_new();
+    error_code initialize_on_load();
+    error_code init_app_and_prepare_list(bool create_new);
         
     /////////////////////////////////////////////////////////////////
     // 2pc
@@ -228,6 +228,7 @@ private:
 
     // constants
     replica_stub*           _stub;
+    std::string             _app_type;
     std::string             _dir;
     char                    _name[256]; // app.index @ host:port
     replication_options     *_options;

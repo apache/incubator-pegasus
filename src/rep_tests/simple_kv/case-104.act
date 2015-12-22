@@ -1,4 +1,4 @@
-# inject on_rpc_call of add_learner and the following group_check
+# inject on_rpc_call of add_learner
 
 set:load_balance_for_test=1,not_exist_on_log_failure=1
 
@@ -6,9 +6,8 @@ set:load_balance_for_test=1,not_exist_on_log_failure=1
 config:{1,r1,[]}
 state:{{r1,pri,1,0}}
 
-# inject add_learner and the following group_check
+# inject add_learner
 inject:on_rpc_call:rpc_name=RPC_LEARN_ADD_LEARNER,from=r1,to=r2
-inject:on_rpc_call:rpc_name=RPC_GROUP_CHECK,from=r1,to=r2
 
 ####
 # after some time, meta_server will do load balance again,

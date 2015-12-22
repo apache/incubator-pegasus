@@ -97,6 +97,7 @@ public:
     int32_t log_file_size_mb;
     int32_t log_batch_buffer_KB_shared;
     int32_t log_batch_buffer_KB_private;
+    // TODO(qinzuoyan): the following log options is not used anywhere
     int32_t log_pending_max_ms;
     int32_t log_file_size_mb_private;
     int32_t log_buffer_size_mb_private;

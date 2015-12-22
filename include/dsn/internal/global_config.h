@@ -159,6 +159,19 @@ struct service_spec
     std::list<std::string>       toollets; // toollets enabled compatible to the main tool
     std::string                  data_dir; // to store all data/log/coredump etc.
     bool                         start_nfs;
+
+    //
+    // we allow multiple apps in the same process in rDSN, and each app (service_app_spec)
+    // has its own rpc/thread/disk engines etc..
+    // when a rDSN call is made in a thread not belonging to any rDSN app,
+    // developers need to call dsn_mimic_app to designated which app this call and subsequent
+    // calls belong to. 
+    // this is kinds of tedious sometimes, we therefore introduce enable_default_app_mimic
+    // option here, which automatically starts an internal app which does nothing but serves
+    // those external calls only. This will release the developers from writing dsn_mimic_app
+    // when they write certain codes, esp. client side code.
+    //
+    bool                         enable_default_app_mimic;
     
     std::string                  timer_factory_name;
     std::string                  aio_factory_name;
@@ -209,6 +222,12 @@ CONFIG_BEGIN(service_spec)
     CONFIG_FLD_STRING_LIST(toollets, "use what toollets, e.g., tracer, profiler, fault_injector")
     CONFIG_FLD_STRING(data_dir, "./data", "where to put the all the data/log/coredump, etc..")
     CONFIG_FLD(bool, bool, start_nfs, false, "whether to start nfs")
+    CONFIG_FLD(bool, bool, enable_default_app_mimic, false,
+        "whether to start a default service app for serving the rDSN calls made in\n"
+        "; non-rDSN threads, so that developers do not need to write dsn_mimic_app call before them\n"
+        "; in this case, a [apps.mimic] section must be defined in config files"
+        );   
+
     CONFIG_FLD_STRING(timer_factory_name, "", "timer service provider")
     CONFIG_FLD_STRING(aio_factory_name, "", "asynchonous file system provider")
     CONFIG_FLD_STRING(env_factory_name, "", "environment provider")

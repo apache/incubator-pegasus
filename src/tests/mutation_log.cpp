@@ -107,7 +107,7 @@ TEST(replication, log_file)
         if (i == 0)
         {
             binary_writer temp_writer;
-            lf->write_header(
+            lf->write_file_header(
                 temp_writer,
                 mdecrees,
                 1024
@@ -260,7 +260,7 @@ TEST(replication, log_file)
 
         if (i == 0)
         {
-            lf->read_header(reader);
+            lf->read_file_header(reader);
             ASSERT_TRUE(lf->is_right_header());
             ASSERT_EQ(100, lf->header().start_global_offset);
         }

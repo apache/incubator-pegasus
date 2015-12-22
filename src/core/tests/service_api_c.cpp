@@ -259,8 +259,11 @@ TEST(core, dsn_file)
         }
         ASSERT_LT(0u, rin.sz);
         ASSERT_EQ(rin.sz, dsn_file_get_io_size(tin));
-        // TODO(qinzuoyan): this line map break travis check, need to check it.
-        //ASSERT_EQ(1, dsn_task_get_ref(tin));
+        // this is only true for simulator
+        if (dsn::tools::get_current_tool()->name() == "simulator")
+        {
+            ASSERT_EQ(1, dsn_task_get_ref(tin));
+        }
         dsn_task_release_ref(tin);
 
         aio_result rout;
@@ -280,8 +283,11 @@ TEST(core, dsn_file)
         ASSERT_EQ(ERR_OK, dsn_task_error(tout));
         ASSERT_EQ(rin.sz, rout.sz);
         ASSERT_EQ(rin.sz, dsn_file_get_io_size(tout));
-        // TODO(qinzuoyan): this line may break travis check, need to check it.
-        //ASSERT_EQ(1, dsn_task_get_ref(tout));
+        // this is only true for simulator
+        if (dsn::tools::get_current_tool()->name() == "simulator")
+        {
+            ASSERT_EQ(1, dsn_task_get_ref(tout));
+        }
         dsn_task_release_ref(tout);
 
         ASSERT_EQ(ERR_OK, dsn_file_flush(fout));
@@ -337,7 +343,11 @@ TEST(core, dsn_nfs)
         ASSERT_EQ(ERR_OK, r.err);
         ASSERT_EQ(r.sz, dsn_file_get_io_size(t));
         ASSERT_EQ(0, r.sz);
-        ASSERT_EQ(1, dsn_task_get_ref(t));
+        // this is only true for simulator
+        if (dsn::tools::get_current_tool()->name() == "simulator")
+        {
+            ASSERT_EQ(1, dsn_task_get_ref(t));
+        }
         dsn_task_release_ref(t);
 
         ASSERT_TRUE(utils::filesystem::file_exists("nfs_test_dir/nfs_test_file1"));
@@ -376,7 +386,11 @@ TEST(core, dsn_nfs)
         ASSERT_EQ(ERR_OK, r.err);
         ASSERT_EQ(r.sz, dsn_file_get_io_size(t));
         ASSERT_EQ(0, r.sz);
-        ASSERT_EQ(1, dsn_task_get_ref(t));
+        // this is only true for simulator
+        if (dsn::tools::get_current_tool()->name() == "simulator")
+        {
+            ASSERT_EQ(1, dsn_task_get_ref(t));
+        }
         dsn_task_release_ref(t);
     }
 
@@ -401,7 +415,11 @@ TEST(core, dsn_nfs)
         ASSERT_EQ(ERR_OK, r.err);
         ASSERT_EQ(r.sz, dsn_file_get_io_size(t));
         ASSERT_EQ(0, r.sz);
-        ASSERT_EQ(1, dsn_task_get_ref(t));
+        // this is only true for simulator
+        if (dsn::tools::get_current_tool()->name() == "simulator")
+        {
+            ASSERT_EQ(1, dsn_task_get_ref(t));
+        }
         dsn_task_release_ref(t);
 
         ASSERT_TRUE(utils::filesystem::directory_exists("nfs_test_dir_copy"));
@@ -443,19 +461,29 @@ TEST(core, dsn_system)
     tools::tool_app* tool = tools::get_current_tool();
     ASSERT_EQ(tool->name(), dsn_config_get_value_string("core", "tool", "", ""));
 
+    int app_count = 5;
+    int type_count = 1;
+    if (tool->get_service_spec().enable_default_app_mimic)
+    {
+        app_count++;
+        type_count++;
+    }   
+
     {
         dsn_app_info apps[20];
         int count = dsn_get_all_apps(apps, 20);
-        ASSERT_EQ(5, count);
+        ASSERT_EQ(app_count, count);
         std::map<std::string, int> type_to_count;
         for (int i = 0; i < count; ++i)
         {
             type_to_count[apps[i].type] += 1;
         }
+
+        ASSERT_EQ(type_count, static_cast<int>(type_to_count.size()));
         ASSERT_EQ(5, type_to_count["test"]);
 
         count = dsn_get_all_apps(apps, 3);
-        ASSERT_EQ(5, count);
+        ASSERT_EQ(app_count, count);
     }
 }
 

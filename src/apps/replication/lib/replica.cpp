@@ -46,37 +46,16 @@
 
 namespace dsn { namespace replication {
 
-// for replica::load(..) only
-replica::replica(replica_stub* stub, global_partition_id gpid, const char* app_type, const char* path)
+replica::replica(replica_stub* stub, global_partition_id gpid, const char* app_type, const char* dir)
     : serverlet<replica>("replica"), 
     _primary_states(gpid, stub->options().staleness_for_commit, stub->options().batch_write_disabled)
 {
-    dassert (stub, "");
+    dassert(stub != nullptr, "");
     _stub = stub;
-    _app = nullptr;
-    _check_timer = nullptr;
-    _dir = path;
+    _app_type = app_type;
+    _dir = dir;
+    sprintf(_name, "%u.%u@%s", gpid.app_id, gpid.pidx, stub->_primary_address.to_string());
     _options = &stub->options();
-
-    init_state();
-    _config.gpid = gpid;
-}
-
-// for replica::newr(...) only
-replica::replica(replica_stub* stub, global_partition_id gpid, const char* app_type)
-: serverlet<replica>("replica"),
-  _primary_states(gpid, stub->options().staleness_for_commit, stub->options().batch_write_disabled)
-{
-    dassert (stub, "");
-    _stub = stub;
-    _app = nullptr;
-    _check_timer = nullptr;
-
-    char buffer[256];
-    sprintf(buffer, "%u.%u.%s", gpid.app_id, gpid.pidx, app_type);
-    _dir = _stub->dir() + "/" + buffer;
-    _options = &stub->options();
-
     init_state();
     _config.gpid = gpid;
 }
@@ -84,6 +63,11 @@ replica::replica(replica_stub* stub, global_partition_id gpid, const char* app_t
 void replica::json_state(std::stringstream& out) const
 {
     JSON_DICT_ENTRIES(out, *this, name(), _config, _app->last_committed_decree(), _app->last_durable_decree());
+}
+
+void replica::update_commit_statistics(int count)
+{
+    _stub->_counter_replicas_total_commit_throught.add((uint64_t)count);
 }
 
 void replica::init_state()

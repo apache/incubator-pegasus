@@ -164,6 +164,8 @@ protected:
 
 private:
     task(const task&);
+    static void            check_tls_dsn();
+    static void            on_tls_dsn_not_set();
 
     uint64_t               _task_id; 
     std::atomic<void*>     _wait_event;
@@ -414,9 +416,17 @@ protected:
 };
 
 // ------------------------ inline implementations --------------------
+__inline /*static*/ void task::check_tls_dsn()
+{
+    if (tls_dsn.magic != 0xdeadbeef)
+    {
+        task::on_tls_dsn_not_set();
+    }
+}
+
 __inline /*static*/ task* task::get_current_task()
 {
-    dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
+    check_tls_dsn();
     return tls_dsn.current_task;
 }
 
@@ -431,7 +441,7 @@ __inline /*static*/ uint64_t task::get_current_task_id()
 
 __inline /*static*/ task_worker* task::get_current_worker()
 {
-    dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
+    check_tls_dsn();
     return tls_dsn.worker;
 }
 
@@ -442,7 +452,7 @@ __inline /*static*/ task_worker* task::get_current_worker2()
 
 __inline /*static*/ service_node* task::get_current_node()
 {
-    dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
+    check_tls_dsn();
     return tls_dsn.node;
 }
 __inline /*static*/ service_node* task::get_current_node2()
@@ -453,37 +463,37 @@ __inline /*static*/ service_node* task::get_current_node2()
 
 __inline /*static*/ int task::get_current_worker_index()
 {
-    dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
+    check_tls_dsn();
     return tls_dsn.worker_index;
 }
 
 __inline /*static*/ rpc_engine* task::get_current_rpc()
 {
-    dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
+    check_tls_dsn();
     return tls_dsn.rpc;
 }
 
 __inline /*static*/ disk_engine* task::get_current_disk()
 {
-    dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
+    check_tls_dsn();
     return tls_dsn.disk;
 }
 
 __inline /*static*/ env_provider* task::get_current_env()
 {
-    dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
+    check_tls_dsn();
     return tls_dsn.env;
 }
 
 __inline /*static*/ nfs_node* task::get_current_nfs()
 {
-    dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
+    check_tls_dsn();
     return tls_dsn.nfs;
 }
 
 __inline /*static*/ timer_service* task::get_current_tsvc()
 {
-    dassert(tls_dsn.magic == 0xdeadbeef, "tls_dsn not inited properly");
+    check_tls_dsn();
     return tls_dsn.tsvc;
 }
 

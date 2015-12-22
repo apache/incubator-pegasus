@@ -199,5 +199,12 @@ TEST(core, configuration)
     ASSERT_EQ("apps.server", sections[2]);
     ASSERT_EQ("my_section", sections[3]);
     ASSERT_EQ("test", sections[4]);
+
+    // configuration set test
+    ASSERT_EQ(false, c->has_key("not-exsit", "not-exsit"));
+    c->set("not-exsit", "not-exsit", "exsit", "kaka");
+    ASSERT_EQ(std::string("exsit"), std::string(c->get_string_value("not-exsit", "not-exsit", "", "")));
+    c->set("not-exsit", "not-exsit", "exsit2", "kaka");
+    ASSERT_EQ(std::string("exsit2"), std::string(c->get_string_value("not-exsit", "not-exsit", "", "")));
 }
 

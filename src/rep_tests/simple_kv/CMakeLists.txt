@@ -36,7 +36,7 @@ set(MY_PROJ_LIB_PATH
         )
 
 # Extra files that will be installed
-FILE(GLOB_RECURSE CASE_FILES "case-*")
+FILE(GLOB CASE_FILES "case-*")
 set(MY_BINPLACES
     "${CMAKE_CURRENT_SOURCE_DIR}/run.sh"
     "${CMAKE_CURRENT_SOURCE_DIR}/clear.sh"

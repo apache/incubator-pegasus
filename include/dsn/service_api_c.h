@@ -313,10 +313,10 @@ extern DSN_API bool      dsn_run_config(
                             );
 //
 // run the system with arguments
-//   config [-cargs k1=v1;k2=v2] [-app app_name] [-app_index index]
-// e.g., config.ini -app replica -app_index 1 to start the first replica as a new process
-//       config.ini -app replica to start ALL replicas (count specified in config) as a new process
-//       config.ini -app replica -cargs replica-port=34556 to start ALL replicas
+//   config [-cargs k1=v1;k2=v2] [-app_list app_name1@index1;app_name2@index]
+// e.g., config.ini -app_list replica@1 to start the first replica as a new process
+//       config.ini -app_list replica to start ALL replicas (count specified in config) as a new process
+//       config.ini -app_list replica -cargs replica-port=34556 to start ALL replicas
 //                 with given port variable specified in config.ini
 //       config.ini to start ALL apps as a new process
 //
@@ -985,6 +985,41 @@ extern DSN_API void         dsn_msg_get_context(
 
 //------------------------------------------------------------------------------
 //
+// perf counters
+//
+//------------------------------------------------------------------------------
+
+typedef enum dsn_perf_counter_type_t
+{
+    COUNTER_TYPE_NUMBER,
+    COUNTER_TYPE_RATE,
+    COUNTER_TYPE_NUMBER_PERCENTILES,
+    COUNTER_TYPE_INVALID,
+    COUNTER_TYPE_COUNT
+} dsn_perf_counter_type_t;
+
+typedef enum dsn_perf_counter_percentile_type_t
+{
+    COUNTER_PERCENTILE_50,
+    COUNTER_PERCENTILE_90,
+    COUNTER_PERCENTILE_95,
+    COUNTER_PERCENTILE_99,
+    COUNTER_PERCENTILE_999,
+
+    COUNTER_PERCENTILE_COUNT,
+    COUNTER_PERCENTILE_INVALID
+} dsn_perf_counter_percentile_type_t;
+
+extern DSN_API dsn_handle_t dsn_perf_counter_create(const char* name, dsn_perf_counter_type_t type, const char* description);
+extern DSN_API void dsn_perf_counter_remove(dsn_handle_t handle);
+extern DSN_API void dsn_perf_counter_increment(dsn_handle_t handle);
+extern DSN_API void dsn_perf_counter_decrement(dsn_handle_t handle);
+extern DSN_API void dsn_perf_counter_add(dsn_handle_t handle, uint64_t val);
+extern DSN_API void dsn_perf_counter_set(dsn_handle_t handle, uint64_t val);
+extern DSN_API double dsn_perf_counter_get_value(dsn_handle_t handle);
+extern DSN_API double dsn_perf_counter_get_percentile(dsn_handle_t handle, dsn_perf_counter_percentile_type_t type);
+//------------------------------------------------------------------------------
+//
 // common marocs
 //
 //------------------------------------------------------------------------------
@@ -997,8 +1032,8 @@ extern DSN_API void         dsn_msg_get_context(
 #define derror(...) dlog(LOG_LEVEL_ERROR, __TITLE__, __VA_ARGS__)
 #define dfatal(...) dlog(LOG_LEVEL_FATAL, __TITLE__, __VA_ARGS__)
 #define dassert(x, ...) do { if (!(x)) {                    \
-            dlog(LOG_LEVEL_FATAL, "assert", "assertion expression: "#x); \
-            dlog(LOG_LEVEL_FATAL, "assert", __VA_ARGS__);  \
+            dlog(LOG_LEVEL_FATAL, __FILE__, "assertion expression: "#x); \
+            dlog(LOG_LEVEL_FATAL, __FILE__, __VA_ARGS__);  \
             dsn_coredump();       \
                 } } while (false)
 

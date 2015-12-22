@@ -46,6 +46,7 @@
 # include <dsn/internal/task.h>
 # include <dsn/internal/singleton_store.h>
 # include <dsn/internal/configuration.h>
+# include <dsn/cpp/utils.h>
 
 # include "command_manager.h"
 # include "service_engine.h"
@@ -835,12 +836,12 @@ DSN_API bool dsn_register_app_role(const char* type_name, dsn_app_create create,
     return store.put(role.type_name, role);
 }
 
-static bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_name, int app_index);
+static bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_list);
 
 DSN_API bool dsn_run_config(const char* config, bool sleep_after_init)
 {
     std::string name;
-    return run(config, nullptr, sleep_after_init, name, -1);
+    return run(config, nullptr, sleep_after_init, name);
 }
 
 DSN_API void dsn_terminate()
@@ -924,10 +925,10 @@ DSN_API void dsn_app_loader_wait()
 
 //
 // run the system with arguments
-//   config [-cargs k1=v1;k2=v2] [-app app_name] [-app_index index]
-// e.g., config.ini -app replica -app_index 1 to start the first replica as a new process
-//       config.ini -app replica to start ALL replicas (count specified in config) as a new process
-//       config.ini -app replica -cargs replica-port=34556 to start ALL replicas with given port variable specified in config.ini
+//   config [-cargs k1=v1;k2=v2] [-app_list app_name1@index1;app_name2@index]
+// e.g., config.ini -app_list replica@1 to start the first replica as a new process
+//       config.ini -app_list replica to start ALL replicas (count specified in config) as a new process
+//       config.ini -app_list replica -cargs replica-port=34556 to start ALL replicas with given port variable specified in config.ini
 //       config.ini to start ALL apps as a new process
 //
 DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init)
@@ -936,10 +937,10 @@ DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init)
     {
         printf("invalid options for dsn_run\n"
             "// run the system with arguments\n"
-            "//   config [-cargs k1=v1;k2=v2] [-app app_name] [-app_index index (1,2,3...)]\n"
-            "// e.g., config.ini -app replica -app_index 1 to start the first replica as a new process\n"
-            "//       config.ini -app replica to start ALL replicas (count specified in config) as a new process\n"
-            "//       config.ini -app replica -cargs replica-port=34556 to start with %%replica-port%% var in config.ini\n"
+            "//   config [-cargs k1=v1;k2=v2] [-app_list app_name1@index1;app_name2@index]\n"
+            "// e.g., config.ini -app_list replica@1 to start the first replica as a new process\n"
+            "//       config.ini -app_list replica to start ALL replicas (count specified in config) as a new process\n"
+            "//       config.ini -app_list replica -cargs replica-port=34556 to start with %%replica-port%% var in config.ini\n"
             "//       config.ini to start ALL apps as a new process\n"
             );
         exit(1);
@@ -948,8 +949,7 @@ DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init)
 
     char* config = argv[1];
     std::string config_args = "";
-    std::string app_name = "";
-    int app_index = -1;
+    std::string app_list = "";
 
     for (int i = 2; i < argc;)
     {
@@ -961,19 +961,11 @@ DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init)
             }
         }
 
-        else if (0 == strcmp(argv[i], "-app"))
+        else if (0 == strcmp(argv[i], "-app_list"))
         {
             if (++i < argc)
             {
-                app_name = std::string(argv[i++]);
-            }
-        }
-
-        else if (0 == strcmp(argv[i], "-app_index"))
-        {
-            if (++i < argc)
-            {
-                app_index = atoi(argv[i++]);
+                app_list = std::string(argv[i++]);
             }
         }
         else
@@ -984,7 +976,7 @@ DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init)
         }
     }
 
-    if (!run(config, config_args.size() > 0 ? config_args.c_str() : nullptr, sleep_after_init, app_name, app_index))
+    if (!run(config, config_args.size() > 0 ? config_args.c_str() : nullptr, sleep_after_init, app_list))
     {
         printf("run the system failed\n");
         dsn_terminate();
@@ -1008,7 +1000,7 @@ namespace dsn {
 }
 
 extern void dsn_log_init();
-bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_name, int app_index)
+bool run(const char* config_file, const char* config_arguments, bool sleep_after_init, std::string& app_list)
 {
     ::dsn::task::set_tls_dsn_context(nullptr, nullptr, nullptr);
 
@@ -1025,7 +1017,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
         printf("Fail to load config file %s\n", config_file);
         return false;
     }
-    
+
     // pause when necessary
     if (dsn_all.config->get_value<bool>("core", "pause_on_start", false,
         "whether to pause at startup time for easier debugging"))
@@ -1038,8 +1030,8 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
         getchar();
     }
 
-    // load all shared libraries so all code and app factories are 
-    // automatically registered
+    // regiser external app roles by loading all shared libraries
+    // so all code and app factories are automatically registered
     dsn::service_spec::load_app_shared_libraries(dsn_all.config);
 
     for (int i = 0; i <= dsn_task_code_max(); i++)
@@ -1047,6 +1039,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
         dsn_all.task_specs.push_back(::dsn::task_spec::get(i));
     }
 
+    // initialize global specification from config file
     ::dsn::service_spec spec;
     spec.config = dsn_all.config;
     if (!spec.init())
@@ -1122,6 +1115,10 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
 
     dsn_all.engine_ready = true;
 
+    // split app_name and app_index
+    std::list<std::string> applistkvs;
+    ::dsn::utils::split_args(app_list.c_str(), applistkvs, ';');
+    
     // init apps
     for (auto& sp : spec.app_specs)
     {
@@ -1129,21 +1126,27 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
             continue;
 
         bool create_it = false;
-        if (app_name == "") // create all apps
+
+        if (app_list == "") // create all apps
         {
             create_it = true;
         }
-        else if (std::string("apps.") + app_name == sp.config_section)
+        else
         {
-            if (app_index == -1)
-                create_it = true;
-            else
+            for (auto &kv : applistkvs)
             {
-                create_it = (app_index == sp.index);
+                std::list<std::string> argskvs;
+                ::dsn::utils::split_args(kv.c_str(), argskvs, '@');
+                if (std::string("apps.") + argskvs.front() == sp.config_section)
+                {
+                    if (argskvs.size() < 2)
+                        create_it = true;
+                    else
+                        create_it = (std::stoi(argskvs.back()) == sp.index);
+                    break;
+                }
             }
         }
-        else
-            create_it = false;
 
         if (create_it)
         {
