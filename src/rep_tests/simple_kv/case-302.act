@@ -2,7 +2,7 @@
 # - inject assign_primary proposal
 # - inject update_partition_configuration
 
-set:load_balance_for_test=1,not_exist_on_log_failure=1
+set:load_balance_for_test=1,not_exit_on_log_failure=1
 
 # initial config
 config:{0,-,[]}
