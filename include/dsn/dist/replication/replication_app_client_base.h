@@ -365,14 +365,20 @@ namespace dsn { namespace replication {
                 owner
                 );
 
-            meta_context* context = new meta_context;
-            context->callback_task = task;
-            context->completed = false;
-            context->request = msg;
-            context->timeout_timer = nullptr;
-            context->timeout_ts_us = now_us() + timeout_milliseconds * 1000;
-
-            call_meta(context);
+            rpc_address target(_meta_servers);
+            rpc::call(
+                target,
+                msg,
+                this,
+                std::bind(&replication_app_client_base::end_meta_request,
+                    this,
+                    task,
+                    std::placeholders::_1,
+                    std::placeholders::_2,
+                    std::placeholders::_3
+                    ),
+                0
+                );
             return std::move(task);
         }
 
@@ -400,19 +406,6 @@ namespace dsn { namespace replication {
         };
         typedef ::dsn::ref_ptr<request_context> request_context_ptr;
 
-        struct meta_context : public ref_counter
-        {
-            dsn_message_t           request;
-            dsn::task_ptr           callback_task;
-            uint64_t                timeout_ts_us; // timeout at this timing point
-
-            dsn::service::zlock     lock; // [
-            task_ptr                timeout_timer; // when partition config is unknown at the first place
-            bool                    completed;
-            // ]
-        };
-        typedef ::dsn::ref_ptr<meta_context> meta_context_ptr;
-
     protected:
         virtual int get_partition_index(int partition_count, uint64_t key_hash);
 
@@ -427,8 +420,6 @@ namespace dsn { namespace replication {
 
         mutable dsn::service::zlock     _requests_lock;
         pending_replica_requests  _pending_replica_requests;
-
-        partition_context _pending_meta_requests;  // query partition count info from meta server
 
     private:
         request_context* create_write_context(
@@ -463,7 +454,6 @@ namespace dsn { namespace replication {
         void call(request_context_ptr request, bool no_delay = true);
         void get_address_and_call(request_context_ptr request, bool no_delay);
         void call_with_address(dsn::rpc_address address, request_context_ptr request, bool no_delay);
-        void call_meta(meta_context_ptr request);
 
         //send rpc
         dsn::task_ptr query_partition_config(request_context_ptr request);
@@ -474,15 +464,12 @@ namespace dsn { namespace replication {
         error_code get_address(int pidx, bool is_write, /*out*/ dsn::rpc_address& addr, dsn::replication::read_semantic_t semantic);
 
         //callback
-        void query_partition_configuration_reply(error_code err, dsn_message_t request, dsn_message_t response, int pdix);
-        void meta_rw_reply(error_code err, dsn_message_t request, dsn_message_t response, meta_context_ptr& rc);
+        void query_partition_configuration_reply(error_code err, dsn_message_t request, dsn_message_t response, request_context_ptr context);
         void replica_rw_reply(error_code err, dsn_message_t request, dsn_message_t response, request_context_ptr& rc);
 
-
         void end_request(request_context_ptr& request, error_code err, dsn_message_t resp);
-        void end_meta_request(meta_context_ptr& request, error_code err, dsn_message_t resp);
+        void end_meta_request(task_ptr callback, error_code err, dsn_message_t request, dsn_message_t resp);
         void on_replica_request_timeout(request_context_ptr& rc);
-        void on_meta_request_timeout(meta_context_ptr& rc);
         void clear_all_pending_tasks();
     };
 #pragma pack(pop)
