@@ -228,6 +228,11 @@ void failure_detector::process_all_records()
 
         /*
          * The disconnected event MUST be under the protection of the _lock
+         * we must guarantee that the record.is_alive switch and the connect/disconnect
+         * callbacks are ATOMIC as these callbacks usually have side effects.
+         *
+         * And you must be careful with these 2 virtual functions as it is very likely to have
+         * nested locks
          */
         if ( expire.size() > 0 )
         {
@@ -256,11 +261,13 @@ void failure_detector::process_all_records()
                 report(record.node, false, false);
             }
         }
-    }
-    
-    if ( expire.size() > 0 )
-    {
-        on_worker_disconnected(expire);
+        /*
+         * The worker disconnected event also need to be under protection of the _lock
+         */
+        if ( expire.size() > 0 )
+        {
+            on_worker_disconnected(expire);
+        }
     }
 }
 
@@ -494,7 +501,7 @@ void failure_detector::send_beacon(::dsn::rpc_address target, uint64_t time)
     beacon->to = target;
 
     dinfo("send ping message, from[%s], to[%s], time[%" PRId64 "]",
-          beacon->from.to_string(), beacon->to.to_string());
+          beacon->from.to_string(), beacon->to.to_string(), time);
     begin_ping2(
         beacon,
         static_cast<int>(_check_interval_milliseconds),
