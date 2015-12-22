@@ -458,23 +458,20 @@ void replica::on_learn_reply(
             resp->last_committed_decree            
             );
 
-        auto lerr = _app->close(true);
-        if (lerr == 0)
+        auto err = _app->close(true);
+
+        if (err == ERR_OK)
         {
-            lerr = _app->open(true);
+            err = _app->open(true);
         }
 
         // invalidate existing mutations in current logs
-        if (lerr == 0)
+        if (err == ERR_OK)
         {
             err = _app->update_init_info(this,
                 _stub->_log->on_partition_reset(get_gpid(), 0),
                 _private_log ? _private_log->on_partition_reset(get_gpid(), 0) : 0
                 );
-        }
-        else
-        {
-            err = ERR_LOCAL_APP_FAILURE;
         }
         
         if (err != ERR_OK)
