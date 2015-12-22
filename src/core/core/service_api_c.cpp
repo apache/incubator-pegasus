@@ -46,7 +46,7 @@
 # include <dsn/internal/task.h>
 # include <dsn/internal/singleton_store.h>
 # include <dsn/internal/configuration.h>
-# include <dsn/cpp/utils.h>
+# include <dsn/cpp/utils.h> 
 
 # include "command_manager.h"
 # include "service_engine.h"
@@ -59,6 +59,9 @@
 
 # ifndef _WIN32
 # include <signal.h>
+# include <unistd.h>
+# else
+# include <TlHelp32.h>
 # endif
 
 //
@@ -679,7 +682,7 @@ DSN_API dsn_error_t dsn_file_flush(dsn_handle_t file)
     return ::dsn::task::get_current_disk()->flush(file);
 }
 
-// native handle: HANDLE for windows, int for non-windows
+// native HANDLE: HANDLE for windows, int for non-windows
 DSN_API void* dsn_file_native_handle(dsn_handle_t file)
 {
     auto dfile = (::dsn::disk_file*)file;
@@ -844,12 +847,73 @@ DSN_API bool dsn_run_config(const char* config, bool sleep_after_init)
     return run(config, nullptr, sleep_after_init, name);
 }
 
-DSN_API void dsn_terminate()
+# ifdef _WIN32
+static BOOL SuspendAllThreads()
+{
+    std::map<uint32_t, HANDLE> threads;
+    uint32_t dwCurrentThreadId = ::GetCurrentThreadId();
+    uint32_t dwCurrentProcessId = ::GetCurrentProcessId();
+    HANDLE hSnapshot;
+    bool bChange = TRUE;
+
+    while (bChange) 
+    {
+        hSnapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+        if (hSnapshot == INVALID_HANDLE_VALUE) 
+        {
+            derror("CreateToolhelp32Snapshot failed, err = %d\n", ::GetLastError());
+            return FALSE;
+        }
+
+        THREADENTRY32 ti;
+        ZeroMemory(&ti, sizeof(ti));
+        ti.dwSize = sizeof(ti);
+        bChange = FALSE;
+
+        if (FALSE == ::Thread32First(hSnapshot, &ti)) 
+        {
+            derror("Thread32First failed, err = %d\n", ::GetLastError());
+            goto err;
+        }
+
+        do 
+        {
+            if (ti.th32OwnerProcessID == dwCurrentProcessId &&
+                ti.th32ThreadID != dwCurrentThreadId &&
+                threads.find(ti.th32ThreadID) == threads.end()) 
+                {
+                    HANDLE hThread = ::OpenThread(THREAD_ALL_ACCESS, FALSE, ti.th32ThreadID);
+                    if (hThread == NULL) 
+                    {
+                        derror("OpenThread failed, err = %d\n", ::GetLastError());
+                        goto err;
+                    }
+                    ::SuspendThread(hThread);
+                    ddebug("thread %d find and suspended ...\n", ti.th32ThreadID);
+                    threads.insert(std::make_pair(ti.th32ThreadID, hThread));
+                    bChange = TRUE;
+                }
+        } while (::Thread32Next(hSnapshot, &ti));
+
+        ::CloseHandle(hSnapshot);
+    }
+
+    return TRUE;
+
+err:
+    ::CloseHandle(hSnapshot);
+    return FALSE;
+}
+#endif
+
+DSN_API void dsn_exit(int code)
 {
 # if defined(_WIN32)
-    ::TerminateProcess(::GetCurrentProcess(), 0);
-# else
-    kill(getpid(), SIGKILL);
+    SuspendAllThreads();
+    ::TerminateProcess(::GetCurrentProcess(), code);
+# else    
+    _exit(code);
+ // kill(getpid(), SIGKILL);
 # endif
 }
 
@@ -979,7 +1043,7 @@ DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init)
     if (!run(config, config_args.size() > 0 ? config_args.c_str() : nullptr, sleep_after_init, app_list))
     {
         printf("run the system failed\n");
-        dsn_terminate();
+        dsn_exit(-1);
         return;
     }
 }

@@ -219,7 +219,7 @@ void meta_server_failure_detector::acquire_leader_lock()
             [this](error_code ec, const std::string& owner, uint64_t version)
         {
             // let's take the easy way right now
-            dsn_terminate();
+            dsn_exit(0);
 
             // reset primary
             //rpc_address addr;
