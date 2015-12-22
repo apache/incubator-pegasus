@@ -67,12 +67,12 @@ REM
     IF NOT EXIST "%deploy_name%.pack" (
         mkdir %deploy_name%.pack
         ECHO Compressing...
-        CALL %bin_dir%\7z.exe a %deploy_name%.pack\%deploy_name%.pack.7z %src_dir% > NUL
+        CALL %bin_dir%\7z.exe a %deploy_name%.pack\%deploy_name%.pack.7z %src_dir%\* > NUL
         COPY /Y %bin_dir%\7z.exe %deploy_name%.pack
         COPY /Y %bin_dir%\7z.dll %deploy_name%.pack
         (
             ECHO cd /d %%~dp0
-            ECHO CALL .\7z.exe x -y %deploy_name%.pack.7z -o%ldst_dir%\..
+            ECHO CALL .\7z.exe x -y %deploy_name%.pack.7z 
             ECHO del %deploy_name%.pack.7z
             ECHO del unzip.cmd
         )  > .\%deploy_name%.pack\unzip.cmd
