@@ -195,13 +195,16 @@ namespace dsn
             _current_log_file_bytes = 0;
 
             // TODO: move gc out of criticial path
-            if (_index - _start_index > 20)
+            while (_index - _start_index > 20)
             {
                 std::stringstream str2;
                 str2 << "log." << _start_index++ << ".txt";
-                if (!::remove(str2.str().c_str()))
+                auto dp = utils::filesystem::path_combine(_log_dir, str2.str());
+                if (::remove(dp.c_str()) != 0)
                 {
-                    printf("Fail to remove file %s\n", str2.str().c_str());
+                    printf("Failed to remove garbage log file %s\n", dp.c_str());
+                    _start_index--;
+                    break;
                 }
             }
         }
