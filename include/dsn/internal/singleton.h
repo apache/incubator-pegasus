@@ -48,16 +48,26 @@ public:
 
     static T& instance()
     {
-        static std::once_flag flag;
-
         if (nullptr == _instance)
         {
-            std::call_once(flag, [&]() 
-            { 
+            // lock 
+            while (0 != _l.exchange(1, std::memory_order_acquire))
+            {
+                while (_l.load(std::memory_order_consume) == 1)
+                {
+                }
+            }
+
+            // re-check and assign
+            if (nullptr == _instance)
+            {
                 auto tmp = new T();
                 std::atomic_thread_fence(std::memory_order::memory_order_seq_cst);
-                _instance = tmp; 
-            });
+                _instance = tmp;
+            }            
+
+            // unlock
+            _l.store(0, std::memory_order_release);
         }
         return *_instance;
     }
@@ -74,6 +84,7 @@ public:
     
 protected:
     static T*    _instance;
+    static std::atomic<int> _l;
     
 private:
     singleton(const singleton&);
@@ -82,6 +93,7 @@ private:
 
 // ----- inline implementations -------------------------------------------------------------------
 
-template<typename T> T*    singleton<T>::_instance = 0;
+template<typename T> T*  singleton<T>::_instance = 0;
+template<typename T> std::atomic<int>  singleton<T>::_l = 0;
 
 }} // end namespace dsn::utils
