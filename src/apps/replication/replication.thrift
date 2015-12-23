@@ -126,22 +126,23 @@ enum learner_status
 struct learn_request
 {
     1:global_partition_id gpid;
-    2:dsn.address         learner;
-    3:i64                 signature;
-    4:i64                 last_committed_decree_in_app;
-    5:i64                 last_committed_decree_in_prepare_list;
-    6:dsn.blob            app_specific_learn_request;
+    2:dsn.address         learner; // learner's address
+    3:i64                 signature; // learning signature
+    4:i64                 last_committed_decree_in_app; // last committed decree of learner's app
+    5:i64                 last_committed_decree_in_prepare_list; // last committed decree of learner's prepare list
+    6:dsn.blob            app_specific_learn_request; // learning request data by app.prepare_learn_request()
 }
 
 struct learn_response
 {
-    1:dsn.error_code        err;
-    2:replica_configuration config;
-    3:i64                   commit_decree;
-    4:i64                   prepare_start_decree;
-    5:learn_type            type;
-    6:learn_state           state;
-    7:string                base_local_dir;
+    1:dsn.error_code        err; // error code
+    2:replica_configuration config; // learner's replica config
+    3:i64                   last_committed_decree; // learnee's last committed decree
+    4:i64                   prepare_start_decree; // prepare start decree
+    5:learn_type            type; // learning type: CACHE, LOG, APP
+    6:learn_state           state; // learning data, including memory data and files
+    7:dsn.address           address; // learnee's address
+    8:string                base_local_dir; // base dir of files on learnee
 }
 
 struct group_check_request
