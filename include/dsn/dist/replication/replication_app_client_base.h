@@ -340,48 +340,6 @@ namespace dsn { namespace replication {
             return std::move(task);
         }
 
-        template<typename TRequest, typename TResponse>
-        ::dsn::task_ptr request_meta(
-            dsn_task_code_t code,
-            std::shared_ptr<TRequest>& req,
-
-            // callback
-            clientlet* owner,
-            std::function<void(error_code, std::shared_ptr<TRequest>&, std::shared_ptr<TResponse>&)> callback,
-
-            // other specific parameters
-            int timeout_milliseconds= 0,
-            int reply_hash = 0
-            )
-        {
-            dsn_message_t msg = dsn_msg_create_request(code, timeout_milliseconds, 0);
-            ::marshall(msg, *req);
-
-            task_ptr task = ::dsn::rpc::internal_use_only::create_rpc_call(
-                msg,
-                req,
-                callback,
-                reply_hash,
-                owner
-                );
-
-            rpc_address target(_meta_servers);
-            rpc::call(
-                target,
-                msg,
-                this,
-                std::bind(&replication_app_client_base::end_meta_request,
-                    this,
-                    task,
-                    std::placeholders::_1,
-                    std::placeholders::_2,
-                    std::placeholders::_3
-                    ),
-                0
-                );
-            return std::move(task);
-        }
-
         ::dsn::rpc_address get_meta_servers() const { return _meta_servers; }
 
     public:
@@ -444,33 +402,28 @@ namespace dsn { namespace replication {
         std::string                             _app_name;
         dsn::rpc_address                        _meta_servers;
 
-        mutable dsn::service::zrwlock_nr      _config_lock;
+        mutable dsn::service::zrwlock_nr       _config_lock;
         std::unordered_map<int, partition_configuration> _config_cache;
         int                                     _app_id;
         int                                     _app_partition_count;
 
     private:
-        //call
-        void call(request_context_ptr request, bool no_delay = true);
+        // local routines
         void get_address_and_call(request_context_ptr request, bool no_delay);
-        void call_with_address(dsn::rpc_address address, request_context_ptr request, bool no_delay);
-
-        //send rpc
-        dsn::task_ptr query_partition_config(request_context_ptr request);
-
-        //memory cache interface
-        // int timeout_ms(request_context_ptr request);
         dsn::rpc_address get_address(bool is_write, read_semantic_t semantic, const partition_configuration& config);
         error_code get_address(int pidx, bool is_write, /*out*/ dsn::rpc_address& addr, dsn::replication::read_semantic_t semantic);
-
-        //callback
-        void query_partition_configuration_reply(error_code err, dsn_message_t request, dsn_message_t response, request_context_ptr context);
-        void replica_rw_reply(error_code err, dsn_message_t request, dsn_message_t response, request_context_ptr& rc);
-
-        void end_request(request_context_ptr& request, error_code err, dsn_message_t resp);
-        void end_meta_request(task_ptr callback, error_code err, dsn_message_t request, dsn_message_t resp);
-        void on_replica_request_timeout(request_context_ptr& rc);
         void clear_all_pending_tasks();
+
+        // with replica
+        void call(request_context_ptr request, bool no_delay = true);
+        void call_with_address(dsn::rpc_address address, request_context_ptr request, bool no_delay);
+        void replica_rw_reply(error_code err, dsn_message_t request, dsn_message_t response, request_context_ptr& rc);
+        void end_request(request_context_ptr& request, error_code err, dsn_message_t resp);
+        void on_replica_request_timeout(request_context_ptr& rc);
+
+        // with meta server
+        dsn::task_ptr query_partition_config(request_context_ptr request);
+        void query_partition_configuration_reply(error_code err, dsn_message_t request, dsn_message_t response, request_context_ptr context);
     };
 #pragma pack(pop)
 }} // namespace

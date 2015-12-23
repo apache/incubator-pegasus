@@ -347,11 +347,6 @@ void replication_app_client_base::call_with_address(dsn::rpc_address addr, reque
     }
 }
 
-void replication_app_client_base::end_meta_request(task_ptr callback, error_code err, dsn_message_t request, dsn_message_t resp)
-{
-    callback->enqueue_rpc_response(err, resp);
-}
-
 /*callback*/
 void replication_app_client_base::replica_rw_reply(
     error_code err,
