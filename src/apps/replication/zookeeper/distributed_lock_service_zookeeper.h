@@ -52,11 +52,11 @@ public:
     virtual std::pair<task_ptr, task_ptr> lock(
         const std::string& lock_id,
         const std::string& myself_id,
-        bool create_if_not_exist,
         task_code lock_cb_code,
         const lock_callback& lock_cb,
         task_code lease_expire_code,
-        const lock_callback& lease_expire_callback
+        const lock_callback& lease_expire_callback, 
+        const lock_options& opt
         ) override;
     virtual task_ptr cancel_pending_lock(
         const std::string& lock_id,
@@ -73,7 +73,12 @@ public:
         const std::string& lock_id,
         task_code cb_code,
         const lock_callback& cb) override;
+    virtual error_code query_cache(
+        const std::string& lock_id, 
+        std::string& owner, 
+        uint64_t& version);
 
+    void refresh_lock_cache(const std::string& lock_id, const std::string& owner, uint64_t version);
 private:
     static std::string LOCK_NODE_PREFIX;
 
@@ -90,8 +95,11 @@ private:
     std::string _lock_root; // lock path: ${lock_root}/${lock_id}/${LOCK_NODE_PREFIX}${i}
 
     typedef std::unordered_map<lock_key, lock_struct_ptr, pair_hash> lock_map;
+    typedef std::map<std::string, std::pair<std::string, uint64_t> > cache_map;
+
     utils::rw_lock_nr _service_lock;
     lock_map _zookeeper_locks;
+    cache_map _lock_cache;
 
     zookeeper_session* _session;
     int _zoo_state;

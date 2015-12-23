@@ -36,6 +36,7 @@
 #include "meta_server_failure_detector.h"
 #include "server_state.h"
 #include "meta_service.h"
+#include <dsn/dist/distributed_lock_service.h>
 #include <dsn/internal/factory_store.h>
 
 # ifdef __TITLE__
@@ -46,6 +47,7 @@
 meta_server_failure_detector::meta_server_failure_detector(server_state* state, meta_service* svc)
 {
     _is_primary = false;
+    _active_fd = false;
     _state = state;
     _svc = svc;
 
@@ -81,7 +83,6 @@ meta_server_failure_detector::meta_server_failure_detector(server_state* state, 
     error_code err = _lock_svc->initialize(argc, argc > 0 ? &args_ptr[0] : nullptr);
     dassert(err == ERR_OK, "init distributed_lock_service failed, err = %s", err.to_string());
     _primary_lock_id = "dsn.meta.server.leader";
-    _local_owner_id = primary_address().to_string();
 
     ddebug("init meta_server_failure_detector succeed");
 }
@@ -147,88 +148,37 @@ void meta_server_failure_detector::on_worker_connected(::dsn::rpc_address node)
 }
 
 DEFINE_TASK_CODE(LPC_META_SERVER_LEADER_LOCK_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_FD)
-DEFINE_TASK_CODE(LPC_CM_QUERY_LEADER_LOCK, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
-DEFINE_TASK_CODE(LPC_CM_QUERY_LEADER_LOCK_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
 void meta_server_failure_detector::acquire_leader_lock()
 {
     //
-    // lets' first set up a timer to query the leader
-    // so as to tell other nodes who is the leader in case they query
-    //
-    int leader_lock_query_interval_seconds = (int)dsn_config_get_value_uint64(
-        "meta_server",
-        "leader_lock_query_interval_seconds",
-        5, // 5 seconds
-        "period (seconds) for meta server to query the leader before itself becomes the leader"
-        );
-
-    task_ptr query_leader_task;
-    task_ptr query_leader_timer = tasking::enqueue(
-        LPC_CM_QUERY_LEADER_LOCK_TIMER,
-        this,
-        [this, &query_leader_task]()
-        {
-            if (query_leader_task != nullptr)
-                return;
-
-            query_leader_task = _lock_svc->query_lock(
-                _primary_lock_id,
-                LPC_CM_QUERY_LEADER_LOCK,
-                [this, &query_leader_task](error_code ec, const std::string& owner_id, uint64_t version)
-                {
-                    if (ec == ERR_OK)
-                    {
-                        rpc_address addr;
-                        if (addr.from_string_ipv4(owner_id.c_str()))
-                        {
-                            dassert(primary_address() == addr, "");
-                            set_primary(addr);
-                        }
-                    }
-                    query_leader_task = nullptr;
-                }
-            );
-        },
-        0,
-        0,
-        leader_lock_query_interval_seconds * 1000
-        );
-        
-    //
     // try to get the leader lock until it is done
     //
+    dsn::dist::distributed_lock_service::lock_options opt = {true, true};
+    std::string local_owner_id;
     while (true)
     {
         error_code err;
         auto tasks =
             _lock_svc->lock(
             _primary_lock_id,
-            _local_owner_id,
-            true,
-
+            primary_address().to_std_string(), 
             // lock granted
             LPC_META_SERVER_LEADER_LOCK_CALLBACK,
-            [this, &err](error_code ec, const std::string& owner, uint64_t version)
-        {
-            err = ec;
-        },
+            [this, &err, &local_owner_id](error_code ec, const std::string& owner, uint64_t version)
+            {
+                err = ec;
+                local_owner_id = owner;
+            },
 
             // lease expire
             LPC_META_SERVER_LEADER_LOCK_CALLBACK,
             [this](error_code ec, const std::string& owner, uint64_t version)
-        {
-            // let's take the easy way right now
-            dsn_terminate();
-
-            // reset primary
-            //rpc_address addr;
-            //set_primary(addr);
-            //_state->on_become_non_leader();
-
-            //// set another round of service
-            //acquire_leader_lock();            
-        }
+            {
+                // let's take the easy way right now
+                dsn_terminate();
+            }, 
+            opt
         );
 
         _lock_grant_task = tasks.first;
@@ -238,19 +188,13 @@ void meta_server_failure_detector::acquire_leader_lock()
         if (err == ERR_OK)
         {
             rpc_address addr;
-            if (addr.from_string_ipv4(_local_owner_id.c_str()))
+            if (addr.from_string_ipv4(local_owner_id.c_str()))
             {
-                query_leader_timer->cancel(true);
-                query_leader_timer = nullptr;
-
-                task_ptr t = query_leader_task;
-                if (t != nullptr)
-                {
-                    t->cancel(true);
-                    query_leader_task = nullptr;
-                }
-
                 dassert(primary_address() == addr, "");
+                /* 
+                 * we don't do register worker things in set_primary
+                 * because currently all nodes in node_state is from failure_detector
+                 */
                 set_primary(addr);
                 break;
             }
@@ -267,17 +211,6 @@ void meta_server_failure_detector::set_primary(rpc_address primary)
         _is_primary = (primary == primary_address());
     }
 
-    if (!old && _is_primary)
-    {
-        node_states ns;
-        _state->get_node_state(ns);
-
-        for (auto& pr : ns)
-        {
-            register_worker(pr.first, pr.second);
-        }
-    }
-
     if (old && !_is_primary)
     {
         clear_workers();
@@ -289,20 +222,28 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::
 {
     fd::beacon_ack ack;
     ack.this_node = beacon.to;
-    if (!is_primary())
-    {
-        ack.time = beacon.time;
-        ack.is_master = false;
+    ack.time = beacon.time;
+    ack.allowed = true;
 
-        {
-            utils::auto_lock<zlock> l(_primary_address_lock);
-            ack.primary_node = _primary_address;
-        }
-    }
-    else
+    if ( !is_primary() )
     {
-        failure_detector::on_ping_internal(beacon, ack);
-        ack.primary_node = primary_address();
+        ack.is_master = false;
+        ack.primary_node = get_primary();
+    }
+    else 
+    {
+        ack.primary_node = beacon.to;
+        ack.is_master = true;
+        /*
+         * _active_fd flag is used for this case: 
+         *      1. the new master acquires the leader lock
+         *      2. but the server state has not been initliazed 
+         * 
+         * In this case, we need to response to worker's ping request. 
+         * And just to make life easier, we don't add it to our worker_list.
+         */
+        if ( _active_fd )
+            failure_detector::on_ping_internal(beacon, ack);
     }
 
     reply(ack);

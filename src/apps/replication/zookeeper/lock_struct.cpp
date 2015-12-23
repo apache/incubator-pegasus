@@ -322,6 +322,7 @@ void lock_struct::after_get_lock_owner(lock_struct_ptr _this, int ec, std::share
         if (_this->_myself._node_value == _this->_owner._node_value)
             _this->remove_duplicated_locknode(_this->_lock_dir + "/" + _this->_owner._node_seq_name);
         else {
+            _this->_dist_lock_service->refresh_lock_cache(_this->_lock_id, _this->_owner._node_seq_name, _this->_owner._sequence_id);
             ddebug("wait the lock(%s) owner(%s:%s) to remove, myself(%s:%s)",
                    _this->_lock_id.c_str(),
                    _this->_owner._node_seq_name.c_str(), _this->_owner._node_value.c_str(),
@@ -483,6 +484,8 @@ void lock_struct::after_get_lockdir_nodes(lock_struct_ptr _this, int ec, std::sh
                     _this->_lock_dir.c_str(), myself_seq);
             _this->_state = lock_state::locked;
             _this->_owner._node_value = _this->_myself._node_value;
+            _this->_dist_lock_service->refresh_lock_cache(_this->_lock_id, _this->_owner._node_value, _this->_owner._sequence_id);
+
             watch_myself = true;
             ddebug("got the lock(%s), myself(%s:%s)", _this->_lock_id.c_str(), _this->_myself._node_seq_name.c_str(), _this->_myself._node_value.c_str());
             __lock_task_bind_and_enqueue(_this->_lock_callback, 
@@ -749,13 +752,6 @@ void lock_struct::unlock(lock_struct_ptr _this, unlock_task_t unlock_callback)
     _this->_state = lock_state::unlocking;
     _this->_unlock_callback = unlock_callback;
     _this->remove_my_locknode( _this->_lock_dir+"/"+_this->_myself._node_seq_name, DONT_IGNORE_CALLBACK, REMOVE_FOR_UNLOCK);
-}
-
-/*static*/
-void lock_struct::query(lock_struct_ptr _this, lock_task_t query_callback)
-{
-    _this->check_hashed_access();
-    __lock_task_bind_and_enqueue(query_callback, ERR_OK, _this->_owner._node_value, _this->_owner._sequence_id);
 }
 
 /*static*/

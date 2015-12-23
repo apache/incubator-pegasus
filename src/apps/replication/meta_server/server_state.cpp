@@ -532,29 +532,33 @@ error_code server_state::sync_apps_from_remote_storage()
         if (_apps.size() == 0)
             return ERR_OBJECT_NOT_FOUND;
 
-        auto& app = _apps[0];
-        for (int i = 0; i < app.partition_count; i++)
+        for (app_state& app: _apps) 
         {
-            auto& ps = app.partitions[i];
-
-            if (ps.primary.is_invalid() == false)
+            for (int i = 0; i < app.partition_count; i++)
             {
-                _nodes[ps.primary].primaries.insert(ps.gpid);
-                _nodes[ps.primary].partitions.insert(ps.gpid);
+                auto& ps = app.partitions[i];
+                auto refresh_state = [this](rpc_address addr, bool is_primary_role, global_partition_id gpid) -> bool {
+                    auto result_pair = this->_nodes.insert( std::make_pair(addr, node_state()) );
+                    node_state& ns = result_pair.first->second;
+                    ns.address = addr;
+                    ns.partitions.insert(gpid);
+                    if ( is_primary_role )
+                        ns.primaries.insert(gpid);
+                    
+                    if (result_pair.second==false || ns.is_alive==false) {
+                        this->_node_live_count++;
+                        ns.is_alive = true;
+                    }
+                };
+                
+                if ( !ps.primary.is_invalid() )
+                    refresh_state(ps.primary, true, ps.gpid);
+                for (auto& ep: ps.secondaries)
+                {
+                    dassert(ep.is_invalid() == false, "");
+                    refresh_state(ep, false, ps.gpid);
+                }
             }
-
-            for (auto& ep : ps.secondaries)
-            {
-                dassert(ep.is_invalid() == false, "");
-                _nodes[ep].partitions.insert(ps.gpid);
-            }
-        }
-
-        for (auto& node : _nodes)
-        {
-            node.second.address = node.first;
-            node.second.is_alive = true;
-            _node_live_count++;
         }
 
         for (auto& app : _apps)

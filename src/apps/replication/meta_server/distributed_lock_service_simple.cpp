@@ -139,11 +139,11 @@ namespace dsn
         std::pair<task_ptr, task_ptr> distributed_lock_service_simple::lock(
             const std::string& lock_id,
             const std::string& myself_id,
-            bool create_if_not_exist,
             task_code lock_cb_code,
             const lock_callback& lock_cb,
             task_code lease_expire_code,
-            const lock_callback& lease_expire_callback
+            const lock_callback& lease_expire_callback, 
+            const lock_options& opt
             )
         {
             task_ptr grant_cb = tasking::create_late_task(
@@ -170,7 +170,7 @@ namespace dsn
                 auto it = _dlocks.find(lock_id);
                 if (it == _dlocks.end())
                 {
-                    if (!create_if_not_exist)
+                    if (!opt.create_if_not_exist)
                         err = ERR_OBJECT_NOT_FOUND;
                     else
                     {
@@ -389,6 +389,30 @@ namespace dsn
                 [=]() { cb(err, cowner, version); }
             );
         }
+        
+        error_code distributed_lock_service_simple::query_cache(
+            const std::string& lock_id, 
+            std::string& owner, 
+            uint64_t& version)
+        {
+            error_code err;
+            {
+                zauto_lock l(_lock);
+                auto it = _dlocks.find(lock_id);
+                if (it == _dlocks.end())
+                {
+                    err = ERR_OBJECT_NOT_FOUND;
+                }
+                else
+                {
+                    err = ERR_OK;
+                    owner = it->second.owner;
+                    version = it->second.version;
+                }
+            }
+            return err;
+        }
+        
     }
 }
 

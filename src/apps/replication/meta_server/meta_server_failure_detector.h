@@ -63,10 +63,20 @@ public:
     virtual ~meta_server_failure_detector();
 
     bool is_primary() const { return _is_primary; }
-
+    void active_failure_detector() { _active_fd=true; }
     rpc_address get_primary()
     {
         dsn::utils::auto_lock<zlock> l(_primary_address_lock);
+        if ( !_is_primary ) 
+        {
+            uint64_t version;
+            error_code ec = _lock_svc->query_cache(_primary_lock_id, _lock_owner_id, version);
+            
+            if (ec != ERR_OK)
+                _primary_address.set_invalid();
+            else
+                _primary_address.from_string_ipv4(_lock_owner_id.c_str());
+        }
         return _primary_address;
     }
     
@@ -91,13 +101,13 @@ public:
 
 private:
     void set_primary(rpc_address primary);
-    void query_leader_callback();
 
 private:
     friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
 
     volatile bool _is_primary;
+    volatile bool _active_fd;
 
     zlock         _primary_address_lock;
     rpc_address   _primary_address;
@@ -109,6 +119,6 @@ private:
     task_ptr    _lock_grant_task;
     task_ptr    _lock_expire_task;
     std::string _primary_lock_id;
-    std::string _local_owner_id;
+    std::string _lock_owner_id;
 };
 
