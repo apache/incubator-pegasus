@@ -223,7 +223,7 @@ void replica::on_prepare(dsn_message_t request)
     if (mu->data.header.ballot < get_ballot())
     {
         derror("%s: mutation %s on_prepare skipped due to old view", name(), mu->name());
-        // TODO(qinzuoyan): response something
+        // no need response because the rpc should have been cancelled on primary in this case
         return;
     }
 
@@ -261,7 +261,7 @@ void replica::on_prepare(dsn_message_t request)
         if (rconfig.learner_signature != _potential_secondary_states.learning_signature)
         {
             init_learn(rconfig.learner_signature);
-            // TODO(qinzuoyan): response something
+            // no need response as rpc is already gone
             return;
         }
 
@@ -275,8 +275,7 @@ void replica::on_prepare(dsn_message_t request)
                 enum_to_string(_potential_secondary_states.learning_status)
                 );
 
-            // do not retry as there may retries later
-            // TODO(qinzuoyan): response something
+            // no need response as rpc is already gone
             return;
         }
     }
@@ -299,7 +298,9 @@ void replica::on_prepare(dsn_message_t request)
         else
         {
             derror("%s: mutation %s on_prepare skipped as it is duplicate", name(), mu->name());
-            // TODO(qinzuoyan): response something or do merge response
+            // response will be unnecessary when we add retry logic in rpc engine.
+            // the retried rpc will use the same id therefore it will be considered responsed
+            // even the response is for a previous try.
         }
         return;
     }
@@ -375,14 +376,12 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
             dassert(false, "");
             break;
         }
+    }
 
-        // mutation log failure, propagted to all replicas
-        // TODO(qinzuoyan): what if log failed for old mutations? it will not reach here,
-        // and if the log will tolerate the failure?
-        if (err != ERR_OK)
-        {
-            _stub->handle_log_failure(err);
-        }
+    if (err != ERR_OK)
+    {
+        // mutation log failure, propagate to all replicas
+        _stub->handle_log_failure(err);
     }
    
     // write local private log if necessary

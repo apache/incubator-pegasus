@@ -179,7 +179,7 @@ error_code replication_app_base::open_internal(replica* r, bool create_new)
 
     _app_commit_decree.add(last_committed_decree());
 
-    return err == 0 ? ERR_OK : ERR_LOCAL_APP_FAILURE;
+    return err;
 }
 
 error_code replication_app_base::write_internal(mutation_ptr& mu)

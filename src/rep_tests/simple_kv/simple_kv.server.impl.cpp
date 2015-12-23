@@ -93,7 +93,7 @@ namespace dsn {
                 reply(0);
             }
 
-            int simple_kv_service_impl::open(bool create_new)
+            ::dsn::error_code simple_kv_service_impl::open(bool create_new)
             {
                 dsn::service::zauto_lock l(_lock);
                 if (create_new)
@@ -107,10 +107,10 @@ namespace dsn {
                     recover();
                 }
                 ddebug("simple_kv_service_impl opened, create_new = %s", create_new ? "true" : "false");
-                return 0;
+                return ERR_OK;
             }
 
-            int simple_kv_service_impl::close(bool clear_state)
+            ::dsn::error_code simple_kv_service_impl::close(bool clear_state)
             {
                 dsn::service::zauto_lock l(_lock);
                 if (clear_state)
@@ -121,7 +121,7 @@ namespace dsn {
                     }
                 }
                 ddebug("simple_kv_service_impl closed, clear_state = %s", clear_state ? "true" : "false");
-                return 0;
+                return ERR_OK;
             }
 
             // checkpoint related
@@ -205,7 +205,7 @@ namespace dsn {
                 ddebug("simple_kv_service_impl recover from checkpoint succeed, last_committed_decree = %" PRId64 "", last_committed_decree());
             }
 
-            int simple_kv_service_impl::checkpoint()
+            ::dsn::error_code simple_kv_service_impl::checkpoint()
             {
                 dsn::service::zauto_lock l(_lock);
 
@@ -247,7 +247,7 @@ namespace dsn {
             }
 
             // helper routines to accelerate learning
-            int simple_kv_service_impl::get_checkpoint(decree start, const blob& learn_req, /*out*/ learn_state& state)
+            ::dsn::error_code simple_kv_service_impl::get_checkpoint(decree start, const blob& learn_req, /*out*/ learn_state& state)
             {
                 if (_last_durable_decree.load() == 0 && is_delta_state_learning_supported())
                 {
@@ -278,7 +278,7 @@ namespace dsn {
                 }
             }
 
-            int simple_kv_service_impl::apply_checkpoint(learn_state& state, chkpt_apply_mode mode)
+            ::dsn::error_code simple_kv_service_impl::apply_checkpoint(learn_state& state, chkpt_apply_mode mode)
             {
                 if (mode == CHKPT_LEARN)
                 {

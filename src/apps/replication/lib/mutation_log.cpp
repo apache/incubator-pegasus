@@ -747,7 +747,6 @@ void mutation_log::check_valid_start_offset(global_partition_id gpid, int64_t va
             else
             {
                 // batch not full, wait for batch write later
-                // TODO(qinzuoyan): add timer triger
             }
         }
     }
@@ -848,6 +847,7 @@ void mutation_log::get_learn_state(
     ) const
 {
     dassert(_is_private, "this method is only valid for private logs");
+    dassert(_private_gpid == gpid, "replica gpid does not match");
 
     std::map<int, log_file_ptr> files;
     std::map<int, log_file_ptr>::reverse_iterator itr;
@@ -887,7 +887,6 @@ void mutation_log::get_learn_state(
                 dassert(bb_iterator != block->data().end(), "there is no file header in a local_offset=0 log block");
                 //skip the file header
                 ++bb_iterator;
-                
             }
             for (; bb_iterator != block->data().end(); ++bb_iterator)
             {
@@ -916,15 +915,19 @@ void mutation_log::get_learn_state(
         }
 
         if (log->end_offset() > log->start_offset())
+        {
+            // not empty file
             learn_files.push_back(log->path());
+        }
 
         skip_next = (log->previous_log_max_decrees().size() == 0);
+        // TODO(qinzuoyan): why continue here?
         if (skip_next)
             continue;
 
         decree last_max_decree = log->previous_log_max_decrees().begin()->second.max_decree;
 
-        // when all possible decress are not needed
+        // when all possible decrees are not needed
         if (last_max_decree < start)
         {
             // skip all older logs
