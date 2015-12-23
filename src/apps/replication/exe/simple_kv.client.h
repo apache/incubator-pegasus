@@ -38,8 +38,6 @@
 # include "simple_kv.code.definition.h"
 # include <iostream>
 
-# define SKV_PARTITION_COUNT 1
-
 namespace dsn { namespace replication { namespace application { 
 class simple_kv_client 
     : public ::dsn::replication::replication_app_client_base
@@ -56,14 +54,9 @@ public:
     
     // from requests to partition index
     // PLEASE DO RE-DEFINE THEM IN A SUB CLASS!!!
-    virtual uint64_t get_key_hash(const std::string& key)
-    {
-        return dsn_crc64_compute(key.c_str(), key.size(), 0);
-    }
-    virtual uint64_t get_key_hash(const ::dsn::replication::application::kv_pair& key)
-    {
-        return dsn_crc64_compute(key.key.c_str(), key.key.size(), 0);
-    }
+    virtual uint64_t get_key_hash(const std::string& key) = 0;
+
+    virtual uint64_t get_key_hash(const ::dsn::replication::application::kv_pair& key) = 0;
 
     // ---------- call RPC_SIMPLE_KV_SIMPLE_KV_READ ------------
     // - synchronous 

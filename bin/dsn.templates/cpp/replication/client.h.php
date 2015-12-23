@@ -34,7 +34,7 @@ foreach ($svc->functions as $f)
     
 foreach ($keys as $k => $v)
 {
-    echo "    virtual uint64_t get_key_hash(const ".$k."& key) { return 0; }".PHP_EOL;
+    echo "    virtual uint64_t get_key_hash(const ".$k."& key) = 0;".PHP_EOL;
 }
 ?>
 <?php foreach ($svc->functions as $f) { ?>

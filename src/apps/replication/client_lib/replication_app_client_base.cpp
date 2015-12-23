@@ -204,9 +204,9 @@ void replication_app_client_base::end_request(request_context_ptr& request, erro
     request->completed = true;
 }
 
-void replication_app_client_base::call(request_context_ptr request, bool no_delay)
+void replication_app_client_base::call(request_context_ptr request, bool from_meta_ack)
 {
-    if (!no_delay)
+    if (from_meta_ack)
     {
         zauto_lock l(request->lock);
         if (request->completed)
@@ -214,90 +214,98 @@ void replication_app_client_base::call(request_context_ptr request, bool no_dela
     }
 
     auto nts = ::dsn_now_us();
+
+    // timeout will happen very soon, no way to get the rpc call done
+    if (nts + 100 >= request->timeout_ts_us) // within 100 us
+    {
+        dsn_message_t nil(nullptr);
+        end_request(request, ERR_TIMEOUT, nil);
+        return;
+    }
+
+    // calculate timeout
     int timeout_ms;
     if (nts + 1000 > request->timeout_ts_us)
         timeout_ms = 1;
     else
         timeout_ms = static_cast<int>(request->timeout_ts_us - nts) / 1000;
-    {
-        zauto_lock l(request->lock);
-        // init timeout timer if necessary
-        if (request->timeout_timer == nullptr)
-        {
-            dinfo("set timeout timer");
-            request->timeout_timer = tasking::enqueue(
-                LPC_REPLICATION_CLIENT_REQUEST_TIMEOUT,
-                this,
-                std::bind(&replication_app_client_base::on_replica_request_timeout, this, request),
-                0,
-                timeout_ms
-                );
-        }
-    }
 
-    // not found app_name
-    if(_app_id == -1)
+    // fill partition index
+    if (_app_partition_count == -1)
     {
         dinfo("not have app id, query for app id first, app_name:%s", _app_name.c_str());
         zauto_lock l(_requests_lock);
         query_partition_config(request);
         return;
     }
-    request->partition_index = get_partition_index(_app_partition_count, request->key_hash);
-    get_address_and_call(request, no_delay);
-}
-
-void replication_app_client_base::get_address_and_call(
-        request_context_ptr request,
-        bool no_delay)
-{
-    dinfo("get partition index:%d", request->partition_index);
-    dbg_dassert(request->partition_index != -1, "");
-
-    ::dsn::rpc_address addr;
-    error_code err = get_address(request->partition_index, !request->is_read, addr, request->read_header.semantic);
-    if(err == ERR_OK)
-    {
-        call_with_address(addr, request, no_delay);
-        return;
-    }
-    // target node not known
-    else if (!no_delay)
-    {
-        dinfo("get_address_and_call delay");
-        // delay 1 second for further config query
-        // TODO: better policies here
-        tasking::enqueue(LPC_REPLICATION_DELAY_QUERY_CONFIG, this,
-            std::bind(&replication_app_client_base::get_address_and_call, this, request, true),
-            0,
-            1000
-            );
-    }
-    //didn't get address and no_delay
     else
     {
-        dinfo("get_address_and_call no delay");
+        request->partition_index = get_partition_index(_app_partition_count, request->key_hash);
+    }
+    
+    // fill target address
+    ::dsn::rpc_address addr;
+    error_code err = get_address(request->partition_index, !request->is_read, addr, request->read_header.semantic);
 
-        zauto_lock l(_requests_lock);
-        // put into pending queue of querying target partition
-        auto it = _pending_replica_requests.find(request->partition_index);
-        if (it == _pending_replica_requests.end())
+    // target address known
+    if (err == ERR_OK)
+    {
+        call_with_address(addr, request);
+    }
+
+    // target node not known
+    else
+    {
+        if (from_meta_ack)
         {
-            auto pc = new partition_context;
-            pc->query_config_task = nullptr;
-            it = _pending_replica_requests.insert(pending_replica_requests::value_type(request->partition_index, pc)).first;
+            // delay 1 second for further config query, call again
+            tasking::enqueue(LPC_REPLICATION_DELAY_QUERY_CONFIG, this,
+                std::bind(&replication_app_client_base::call, this, request, false),
+                0,
+                1000
+                );
         }
 
-        it->second->requests.push_back(request);
-        // init configuration query task if necessary
-        if (it->second->query_config_task == nullptr)
+        else
         {
-            it->second->query_config_task = query_partition_config(request);
+            // init timeout timer only when necessary
+            // DO NOT START THE TIMER FOR EACH REQUEST
+            {
+                zauto_lock l(request->lock);                
+                if (request->timeout_timer == nullptr)
+                {
+                    dinfo("set timeout timer");
+                    request->timeout_timer = tasking::enqueue(
+                        LPC_REPLICATION_CLIENT_REQUEST_TIMEOUT,
+                        this,
+                        std::bind(&replication_app_client_base::on_replica_request_timeout, this, request),
+                        0,
+                        timeout_ms
+                        );
+                }
+            }
+
+            zauto_lock l(_requests_lock);
+            // put into pending queue of querying target partition
+            auto it = _pending_replica_requests.find(request->partition_index);
+            if (it == _pending_replica_requests.end())
+            {
+                auto pc = new partition_context;
+                pc->query_config_task = nullptr;
+                it = _pending_replica_requests.insert(pending_replica_requests::value_type(request->partition_index, pc)).first;
+            }
+
+            it->second->requests.push_back(request);
+            // init configuration query task if necessary
+            if (it->second->query_config_task == nullptr)
+            {
+                it->second->query_config_task = query_partition_config(request);
+            }
         }
     }
 }
 
-void replication_app_client_base::call_with_address(dsn::rpc_address addr, request_context_ptr request, bool no_delay)
+void replication_app_client_base::call_with_address(dsn::rpc_address addr, request_context_ptr request)
 {
     auto& msg = request->request;
 
@@ -372,19 +380,21 @@ void replication_app_client_base::replica_rw_reply(
 
     ::unmarshall(response, err);
 
-    // TODO: zhangxiaotong
-    // decide which err from replica should retry.
-    if (err != ERR_OK && err != ERR_HANDLER_NOT_FOUND)
+    //
+    // some error codes do not need retry
+    //
+    if (err == ERR_OK || err == ERR_HANDLER_NOT_FOUND)
+    {
+        end_request(rc, err, response);
+        return;
+    }
+
+    // retry 
+    else
     {
         dsn::rpc_address adr = dsn_msg_from_address(response);
         dinfo("replica_rw_reply response, err = %s, addr[%s]", err.to_string(), adr.to_string());
-        goto Retry;
     }
-    else
-    {
-        end_request(rc, err, response);
-    }
-    return;
 
 Retry:
     // clear partition configuration as it could be wrong
@@ -393,6 +403,7 @@ Retry:
         dwarn("met error[%d:%s], erase partition config cache, %d", err.get(), err.to_string(), rc->partition_index);
         _config_cache.erase(rc->partition_index);
     }
+
     // then retry
     call(rc.get(), false);
 }
@@ -444,7 +455,7 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
                 }
             }
         }
-        else if(resp.err == ERR_OBJECT_NOT_FOUND)
+        else if (resp.err == ERR_OBJECT_NOT_FOUND)
         {
             derror("can't find table on meta server, stop and return client error code");
             conti = false;
@@ -483,7 +494,7 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
             {
                 if(conti)
                 {
-                    get_address_and_call(req, false);
+                    call(req, true);
                 }
                 else
                 {
@@ -499,7 +510,7 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
     {
         if(conti)
         {
-            call(context, false);
+            call(context, true);
         }
         else
         {

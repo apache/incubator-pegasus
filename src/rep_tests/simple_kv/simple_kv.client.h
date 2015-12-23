@@ -29,8 +29,6 @@
 # include "common.h"
 # include <iostream>
 
-# define SKV_PARTITION_COUNT 1
-
 namespace dsn { namespace replication { namespace test { 
 
 class simple_kv_client 
