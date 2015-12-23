@@ -1080,7 +1080,7 @@ int mutation_log::garbage_collection(replica_log_info_map& durable_decrees)
     else
     {
         // the last one should be the current log file
-        dassert(files.rbegin()->first == current_file_index, "");
+        dassert(-1 == current_file_index || files.rbegin()->first == current_file_index, "");
     }
 
     // find the largest file which can be deleted.
