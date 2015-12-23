@@ -94,6 +94,6 @@ private:
 // ----- inline implementations -------------------------------------------------------------------
 
 template<typename T> T*  singleton<T>::_instance = 0;
-template<typename T> std::atomic<int>  singleton<T>::_l = 0;
+template<typename T> std::atomic<int>  singleton<T>::_l(0);
 
 }} // end namespace dsn::utils
