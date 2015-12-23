@@ -81,14 +81,14 @@ namespace dsn {
                     start(suits);
                 }
 
-                virtual int get_partition_index(const std::string& key) 
+                virtual uint64_t get_key_hash(const std::string& key) override
                 {
-                    return (int)dsn_random32(0, SKV_PARTITION_COUNT - 1);
+                    return dsn_crc64_compute(key.c_str(), key.size(), 0);
                 }
 
-                virtual int get_partition_index(const ::dsn::replication::application::kv_pair& key)
+                virtual uint64_t get_key_hash(const ::dsn::replication::application::kv_pair& key) override
                 {
-                    return (int)dsn_random32(0, SKV_PARTITION_COUNT - 1);
+                    return dsn_crc64_compute(key.key.c_str(), key.key.size(), 0);
                 }
                                 
                 void send_one_read(int payload_bytes)

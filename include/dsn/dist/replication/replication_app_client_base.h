@@ -342,6 +342,8 @@ namespace dsn { namespace replication {
 
         ::dsn::rpc_address get_meta_servers() const { return _meta_servers; }
 
+        int get_partition_count() const { return _app_partition_count; }
+
     public:
 
         struct request_context : public ref_counter
@@ -366,7 +368,7 @@ namespace dsn { namespace replication {
 
     protected:
         virtual int get_partition_index(int partition_count, uint64_t key_hash);
-
+        
     private:
         struct partition_context
         {
@@ -409,14 +411,13 @@ namespace dsn { namespace replication {
 
     private:
         // local routines
-        void get_address_and_call(request_context_ptr request, bool no_delay);
         dsn::rpc_address get_address(bool is_write, read_semantic_t semantic, const partition_configuration& config);
         error_code get_address(int pidx, bool is_write, /*out*/ dsn::rpc_address& addr, dsn::replication::read_semantic_t semantic);
         void clear_all_pending_tasks();
 
         // with replica
-        void call(request_context_ptr request, bool no_delay = true);
-        void call_with_address(dsn::rpc_address address, request_context_ptr request, bool no_delay);
+        void call(request_context_ptr request, bool from_meta_ack = false);
+        void call_with_address(dsn::rpc_address address, request_context_ptr request);
         void replica_rw_reply(error_code err, dsn_message_t request, dsn_message_t response, request_context_ptr& rc);
         void end_request(request_context_ptr& request, error_code err, dsn_message_t resp);
         void on_replica_request_timeout(request_context_ptr& rc);

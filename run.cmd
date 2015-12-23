@@ -1,8 +1,10 @@
-@ECHO OFF
+@ECHO ON
+setlocal enabledelayedexpansion
 SET TOP_DIR=%~dp0
 SET bin_dir=%TOP_DIR%\scripts\windows
+SET old_dsn_root=%DSN_ROOT%
 if "%1" EQU "" GOTO usage
-IF "%DSN_ROOT%" NEQ "" GOTO main
+IF "%1" NEQ "setup-env" IF "%DSN_ROOT%" NEQ "" GOTO main
 IF "%DSN_AUTO_TEST%" NEQ "" (
     SET DSN_ROOT=%TOP_DIR%\install
     GOTO install_env
@@ -16,16 +18,24 @@ CALL %bin_dir%\echoc.exe 4 %DSN_ROOT% does not exist
 GOTO exit
 
 :usage
-    CALL %bin_dir%\echoc.exe 4  "Usage: run.cmd pre-require|build|install|test|publish|republish|deploy|start|stop|cleanup"
+    CALL %bin_dir%\echoc.exe 4  "Usage: run.cmd setup-env|pre-require|build|install|test|publish|republish|deploy|start|stop|cleanup"
     GOTO:EOF
 
 :install_env
 SET DSN_ROOT=%DSN_ROOT:\=/%
 reg add HKCU\Environment /f /v DSN_ROOT /d %DSN_ROOT% 1>nul
-SET PATH=%PATH%;%DSN_ROOT%
+
+SET old_path_appendix=;%old_dsn_root:/=\%\bin;%old_dsn_root:/=\%\lib;
+SET new_path_appendix=;%DSN_ROOT:/=\%\bin;%DSN_ROOT:/=\%\lib;
+ECHO PATH=%PATH%
+CALL SET PATH=%%PATH:!old_path_appendix!=%%
+ECHO PATH=%PATH%
+SET PATH=%PATH%%new_path_appendix%
 reg add HKCU\Environment /f /v PATH /d "%PATH%" 1>nul
+
 CALL %bin_dir%\flushenv.exe
-CALL %bin_dir%\echoc.exe 2 DSN_ROOT (%DSN_ROOT%) is added as env var (and added to PATH), and rDSN SDK will be installed there.
+CALL %bin_dir%\echoc.exe 2 DSN_ROOT (%DSN_ROOT%) is setup, and rDSN SDK will be installed there.
+CALL %bin_dir%\echoc.exe 2 DSN_ROOT\lib and DSN_ROOT\bin are added to PATH env.
 
 :main
 CALL :%1 %1 %2 %3 %4 %5 %6 %7 %8 %9
