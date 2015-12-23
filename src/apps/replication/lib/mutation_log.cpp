@@ -387,6 +387,7 @@ void mutation_log::internal_write_callback(
             (int)size,
             block->size()
             );
+
         //FIXME : the file could have been closed
         if(is_private)
         {
@@ -564,7 +565,8 @@ void mutation_log::internal_write_callback(
 
     if (err == ERR_OK || err == ERR_HANDLE_EOF)
     {
-        dassert(g_end_offset == end_offset,
+        // the log may still be written when used for learning
+        dassert(g_end_offset <= end_offset,
             "make sure the global end offset is correct: %" PRId64 " vs %" PRId64,
             g_end_offset,
             end_offset
