@@ -78,7 +78,7 @@ namespace dsn
                 double f = (double)value / (double)_threshold;
                 int delay_milliseconds;
 
-                if (f < s_default_delay_points[DELAY_COUNT])
+                if (f < s_default_delay_points[DELAY_COUNT - 1])
                 {
                     int idx = static_cast<int>((f - 1.0) / 0.2);
                     delay_milliseconds = _delay[idx];
@@ -123,7 +123,7 @@ namespace dsn
                 double f = (double)value / (double)threshold;
                 int delay_milliseconds;
 
-                if (f < s_default_delay_points[DELAY_COUNT])
+                if (f < s_default_delay_points[DELAY_COUNT - 1])
                 {
                     int idx = static_cast<int>((f - 1.0) / 0.2);
                     delay_milliseconds = _delay[idx];

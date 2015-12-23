@@ -38,7 +38,6 @@
 #include "mutation_log.h"
 #include "replica_stub.h"
 #include "replication_failure_detector.h"
-#include "rpc_replicated.h"
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -270,6 +269,8 @@ void replica::remove(configuration_update_request& proposal)
         }
         break;
     case PS_POTENTIAL_SECONDARY:
+        break;
+    default:
         break;
     }
 
@@ -565,6 +566,8 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
                 );
             return false;
         }
+        break;
+    default:
         break;
     }
 

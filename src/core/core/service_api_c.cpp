@@ -272,6 +272,20 @@ DSN_API uint32_t dsn_crc32_concatenate(uint32_t xy_init, uint32_t x_init, uint32
         );
 }
 
+
+DSN_API uint64_t dsn_crc64_compute(const void* ptr, size_t size, uint64_t init_crc)
+{
+    return ::dsn::utils::crc64::compute(ptr, size, init_crc);
+}
+
+DSN_API uint64_t dsn_crc64_concatenate(uint32_t xy_init, uint64_t x_init, uint64_t x_final, size_t x_size, uint64_t y_init, uint64_t y_final, size_t y_size)
+{
+    return ::dsn::utils::crc64::concatenate(
+        0,
+        x_init, x_final, (uint64_t)x_size,
+        y_init, y_final, (uint64_t)y_size
+        );
+}
 //------------------------------------------------------------------------------
 //
 // tasking - asynchronous tasks and timers tasks executed in target thread pools

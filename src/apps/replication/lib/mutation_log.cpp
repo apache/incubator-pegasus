@@ -961,10 +961,10 @@ int mutation_log::garbage_collection(global_partition_id gpid, decree durable_de
         // nothing to do
         return 0;
     }
-    else
+    else 
     {
         // the last one should be the current log file
-        dassert(files.rbegin()->first == current_file_index, "");
+        dassert(current_file_index == -1 || files.rbegin()->first == current_file_index, "");
     }
 
     // find the largest file which can be deleted.
