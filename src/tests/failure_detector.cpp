@@ -147,6 +147,7 @@ public:
     error_code start(int, char **) override
     {
         _master_fd = new master_fd_test();
+        _master_fd->active_failure_detector();
         _master_fd->start(1, 1, 4, 5);
         ++started_apps;
 

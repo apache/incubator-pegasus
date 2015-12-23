@@ -152,11 +152,11 @@ error_code distributed_lock_service_zookeeper::initialize(int argc, const char**
 std::pair<task_ptr, task_ptr> distributed_lock_service_zookeeper::lock(
     const std::string &lock_id,
     const std::string &myself_id,
-    bool create_if_not_exist,
     task_code lock_cb_code,
     const lock_callback &lock_cb,
     task_code lease_expire_code,
-    const lock_callback &lease_expire_callback)
+    const lock_callback &lease_expire_callback, 
+    const lock_options& opt)
 {
     lock_struct_ptr handle;
     {
@@ -164,7 +164,7 @@ std::pair<task_ptr, task_ptr> distributed_lock_service_zookeeper::lock(
         auto id_pair = std::make_pair(lock_id, myself_id);
         auto iter = _zookeeper_locks.find( id_pair );
         if ( iter==_zookeeper_locks.end() ){
-            if (!create_if_not_exist) {
+            if (!opt.create_if_not_exist) {
                 task_ptr tsk = tasking::enqueue(lock_cb_code, nullptr, 
                                                 std::bind(lock_cb, ERR_OBJECT_NOT_FOUND, "", -1));
                 return std::make_pair(tsk, nullptr);
@@ -239,26 +239,29 @@ task_ptr distributed_lock_service_zookeeper::query_lock(
     task_code cb_code, 
     const lock_callback& cb)
 {
-    lock_struct_ptr handle = nullptr;
-    {
-        utils::auto_read_lock l(_service_lock);
-        for (auto& lock_pair: _zookeeper_locks)
-        {
-            if (lock_pair.first.first == lock_id)
-            {
-                handle = lock_pair.second;
-                break;
-            }
-        }
-    }
-    if (handle == nullptr)
-        return tasking::enqueue(cb_code, nullptr, std::bind(cb, ERR_OBJECT_NOT_FOUND, "", -1)); 
+    std::string owner="";
+    uint64_t version=-1;
+    error_code ec = query_cache(lock_id, owner, version);
+    return tasking::enqueue(cb_code, nullptr, std::bind(cb, ec, owner, version));
+}
+
+error_code distributed_lock_service_zookeeper::query_cache(const std::string& lock_id, std::string& owner, uint64_t& version)
+{
+    utils::auto_read_lock l(_service_lock);
+    auto iter = _lock_cache.find(lock_id);
+    if (_lock_cache.end() == iter)
+        return ERR_OBJECT_NOT_FOUND;
     else {
-        auto query_tsk = tasking::create_late_task<distributed_lock_service::lock_callback>(cb_code, cb);
-        task_ptr ref_holder(query_tsk);
-        tasking::enqueue(TASK_CODE_DLOCK, nullptr, std::bind(&lock_struct::query, handle, query_tsk), handle->hash() );
-        return ref_holder;
+        owner = iter->second.first;
+        version = iter->second.second;
+        return ERR_OK;
     }
+}
+
+void distributed_lock_service_zookeeper::refresh_lock_cache(const std::string& lock_id, const std::string& owner, uint64_t version)
+{
+    utils::auto_write_lock l(_service_lock);
+    _lock_cache[lock_id] = std::make_pair(owner, version);
 }
 
 void distributed_lock_service_zookeeper::dispatch_zookeeper_session_expire()

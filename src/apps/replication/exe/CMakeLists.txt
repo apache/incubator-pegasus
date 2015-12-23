@@ -32,6 +32,7 @@ file(GLOB
     "${CMAKE_CURRENT_SOURCE_DIR}/*.ini"
     "${CMAKE_CURRENT_SOURCE_DIR}/run.sh"
     "${CMAKE_CURRENT_SOURCE_DIR}/clear.sh"
+    "${CMAKE_CURRENT_SOURCE_DIR}/multi-meta.sh"
     )
 
 # Extra files that will be installed

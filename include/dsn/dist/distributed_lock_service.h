@@ -66,6 +66,10 @@ namespace dsn
             typedef std::function<void (error_code ec)> err_callback;
             typedef std::function<void (error_code ec, const std::string& owner_id, uint64_t version)> lock_callback;
 
+            struct lock_options {
+                bool create_if_not_exist;
+                bool create_enable_cache;
+            };
             /*
              * initialization routine
              */
@@ -98,11 +102,11 @@ namespace dsn
             virtual std::pair<task_ptr, task_ptr> lock(
                               const std::string& lock_id,
                               const std::string& myself_id,
-                              bool create_if_not_exist,
                               task_code lock_cb_code,
                               const lock_callback& lock_cb,
                               task_code lease_expire_code,
-                              const lock_callback& lease_expire_callback
+                              const lock_callback& lease_expire_callback, 
+                              const lock_options& opt
                               ) = 0;
             
             /*
@@ -158,6 +162,15 @@ namespace dsn
                                     const std::string& lock_id,
                                     task_code cb_code,
                                     const lock_callback& cb) = 0;
+            /*
+             * error_code: err_invalid_parameters -> if the lock is created without cache enabled
+             *             err_object_not_found -> no lock created with lock_id
+             *             err_ok -> query the cache successfully
+             */
+            virtual error_code query_cache(
+                const std::string& lock_id, 
+                std::string& owner, 
+                uint64_t& version) = 0;
         };
     }
 }
