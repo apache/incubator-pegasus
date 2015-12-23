@@ -526,7 +526,7 @@ error_code server_state::sync_apps_from_remote_storage()
             for (int i = 0; i < app.partition_count; i++)
             {
                 auto& ps = app.partitions[i];
-                auto refresh_state = [this](rpc_address addr, bool is_primary_role, global_partition_id gpid) -> bool {
+                auto refresh_state = [this](rpc_address addr, bool is_primary_role, global_partition_id gpid) {
                     auto result_pair = this->_nodes.insert( std::make_pair(addr, node_state()) );
                     node_state& ns = result_pair.first->second;
                     ns.address = addr;

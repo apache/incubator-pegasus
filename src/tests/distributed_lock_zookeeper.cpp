@@ -105,7 +105,7 @@ TEST(distributed_lock_service_zookeeper, simple_lock_unlock)
     }
     
     int64_t expect_reuslt = 0;
-    for (int i: q) expect_reuslt += i;
+    for (int64_t i: q) expect_reuslt += i;
     
     ss_start = true;
     while ( !ss_finish ) 
