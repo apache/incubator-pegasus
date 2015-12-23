@@ -323,7 +323,7 @@ extern DSN_API bool      dsn_run_config(
 // Note the argc, argv folllows the C main convention that argv[0] is the executable name
 //
 extern DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init DEFAULT(false));
-extern DSN_API void dsn_terminate();
+extern DSN_API void dsn_exit(int code);
 extern DSN_API int  dsn_get_all_apps(dsn_app_info* info_buffer, int count); // return real app count
 extern DSN_API bool dsn_get_current_app_info(/*out*/ dsn_app_info* app_info);
 extern DSN_API const char* dsn_get_current_app_data_dir();
@@ -501,6 +501,27 @@ extern DSN_API uint32_t              dsn_crc32_concatenate(
                                         uint32_t y_final, 
                                         size_t   y_size
                                         );
+
+extern DSN_API uint64_t               dsn_crc64_compute(const void* ptr, size_t size, uint64_t init_crc);
+
+//
+// Given
+//      x_final = dsn_crc64_compute (x_ptr, x_size, x_init);
+// and
+//      y_final = dsn_crc64_compute (y_ptr, y_size, y_init);
+// compute CRC of concatenation of A and B
+//      x##y_crc = dsn_crc64_compute (x##y, x_size + y_size, xy_init);
+// without touching A and B
+//
+
+extern DSN_API uint64_t              dsn_crc64_concatenate(
+                                        uint32_t xy_init,
+                                        uint64_t x_init,
+                                        uint64_t x_final,
+                                        size_t x_size,
+                                        uint64_t y_init,
+                                        uint64_t y_final,
+                                        size_t y_size);
 
 //------------------------------------------------------------------------------
 //

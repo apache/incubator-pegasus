@@ -87,5 +87,6 @@ GTEST_API_ int main(int argc, char **argv)
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
+    dsn_exit(g_test_ret);
     return g_test_ret;
 }

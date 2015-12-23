@@ -43,6 +43,8 @@
 
 bool g_done = false;
 
+extern void dsn_core_init();
+
 int main(int argc, char** argv)
 {
     if (argc < 2)
@@ -73,6 +75,8 @@ int main(int argc, char** argv)
             return -1;
         }
     }
+
+    dsn_core_init();
 
     // register all possible service apps
     dsn::register_app< ::dsn::service::repli_app>("repli");

@@ -46,10 +46,6 @@ namespace dsn {
             public:
                 simple_kv_client_impl(const std::vector< ::dsn::rpc_address>& meta_servers);
                 ~simple_kv_client_impl(void);
-
-            protected:
-                virtual int get_partition_index(const std::string& key);
-                virtual int get_partition_index(const kv_pair& pr);
             };
 
         }

@@ -71,6 +71,7 @@ GTEST_API_ int main(int argc, char **argv)
 
     if (g_test_ret != 0)
     {
+        dsn_exit(g_test_ret);
         return g_test_ret;
     }
 
@@ -98,11 +99,11 @@ GTEST_API_ int main(int argc, char **argv)
     t.join();
     if (g_test_ret != 0)
     {
+        dsn_exit(g_test_ret);
         return g_test_ret;
     }
     
     // exit without any destruction
-    //dsn_terminate();
-
+    dsn_exit(0);
     return 0;    
 }

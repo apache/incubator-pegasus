@@ -39,7 +39,6 @@
 #include "mutation_log.h"
 #include "mutation.h"
 #include "replication_failure_detector.h"
-#include "rpc_replicated.h"
 #include <dsn/cpp/json_helper.h>
 
 # ifdef __TITLE__
