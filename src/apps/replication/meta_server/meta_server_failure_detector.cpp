@@ -93,7 +93,8 @@ meta_server_failure_detector::~meta_server_failure_detector()
     t = _lock_expire_task;
     if (t) t->cancel(true);
 
-    delete _lock_svc;
+    if ( _lock_svc )
+        delete _lock_svc;
 }
 
 void meta_server_failure_detector::on_worker_disconnected(const std::vector< ::dsn::rpc_address>& nodes)
@@ -177,12 +178,11 @@ void meta_server_failure_detector::acquire_leader_lock()
                 LPC_CM_QUERY_LEADER_LOCK,
                 [this, &query_leader_task](error_code ec, const std::string& owner_id, uint64_t version)
                 {
-                    if (ec == ERR_OK)
+                    if ( ec == ERR_OK )
                     {
                         rpc_address addr;
                         if (addr.from_string_ipv4(owner_id.c_str()))
                         {
-                            dassert(primary_address() == addr, "");
                             set_primary(addr);
                         }
                     }
@@ -289,6 +289,8 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::
 {
     fd::beacon_ack ack;
     ack.this_node = beacon.to;
+    ack.allowed = true;
+
     if (!is_primary())
     {
         ack.time = beacon.time;
@@ -306,5 +308,20 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::
     }
 
     reply(ack);
+}
+
+/*the following functions are only for test*/
+meta_server_failure_detector::meta_server_failure_detector(rpc_address leader_address, bool is_myself_leader)
+{
+    _lock_svc = nullptr;
+    _primary_address = leader_address;
+    _is_primary = is_myself_leader;
+}
+
+void meta_server_failure_detector::set_leader_for_test(rpc_address leader_address, bool is_myself_leader)
+{
+    utils::auto_lock<zlock> l(_primary_address_lock);
+    _primary_address = leader_address;
+    _is_primary = is_myself_leader;
 }
 

@@ -88,6 +88,8 @@ namespace dsn {
                     );
             }
                 break;
+            default:
+                break;
             }
         }
 
