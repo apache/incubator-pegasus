@@ -387,6 +387,7 @@ void mutation_log::internal_write_callback(
             (int)size,
             block->size()
             );
+
         //FIXME : the file could have been closed
         if(is_private)
         {
@@ -564,7 +565,8 @@ void mutation_log::internal_write_callback(
 
     if (err == ERR_OK || err == ERR_HANDLE_EOF)
     {
-        dassert(g_end_offset == end_offset,
+        // the log may still be written when used for learning
+        dassert(g_end_offset <= end_offset,
             "make sure the global end offset is correct: %" PRId64 " vs %" PRId64,
             g_end_offset,
             end_offset
@@ -1081,7 +1083,7 @@ int mutation_log::garbage_collection(replica_log_info_map& durable_decrees)
     else
     {
         // the last one should be the current log file
-        dassert(files.rbegin()->first == current_file_index, "");
+        dassert(-1 == current_file_index || files.rbegin()->first == current_file_index, "");
     }
 
     // find the largest file which can be deleted.
