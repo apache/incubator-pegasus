@@ -30,8 +30,10 @@ IF NOT EXIST "%machine_list%" (
     GOTO exit
 )
 
-IF "%cmd%" EQU "deploy" (
-    @RD /s /q %deploy_name%.pack
+IF "%3" EQU "" (
+    CALL %bin_dir%\echoc.exe 4 destination dir not specified
+    CALL :usage
+    GOTO exit
 )
 
 ::SET cmd=%1
