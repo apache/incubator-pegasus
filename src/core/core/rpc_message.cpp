@@ -130,24 +130,24 @@ DSN_API dsn_address_t dsn_msg_to_address(dsn_message_t msg)
 
 DSN_API void dsn_msg_set_context(
     dsn_message_t msg,
-    uint64_t context,
-    uint64_t context2
+    uint64_t vnid,
+    dsn_msg_context_t ctx
     )
 {
     auto c = ((::dsn::message_ex*)msg)->header;
-    c->context = context;
-    c->context2 = context2;
+    c->vnid = vnid;
+    c->context = ctx;
 }
 
 DSN_API void dsn_msg_get_context(
     dsn_message_t msg,
-    /*out*/ uint64_t* context,
-    /*out*/ uint64_t* context2
+    /*out*/ uint64_t* vnid,
+    /*out*/ dsn_msg_context_t* ctx    
     )
 {
     auto c = ((::dsn::message_ex*)msg)->header;
-    *context = c->context;
-    *context2 = c->context2;
+    if (vnid) *vnid = c->vnid;
+    if (ctx) *ctx = c->context;
 }
 
 namespace dsn {
@@ -390,11 +390,9 @@ message_ex* message_ex::create_response()
 
     // init header
     auto& hdr = *msg->header;
-    memset(&hdr, 0, sizeof(hdr));
+    hdr = *header; // copy request header
     hdr.hdr_crc32 = hdr.body_crc32 = CRC_INVALID;
-    hdr.id = header->id;
-    hdr.rpc_id = header->rpc_id;
-    strncpy(hdr.rpc_name, header->rpc_name, sizeof(hdr.rpc_name));
+    hdr.body_length = 0;
     strncat(hdr.rpc_name, "_ACK", sizeof(hdr.rpc_name));
 
     msg->local_rpc_code = task_spec::get(local_rpc_code)->rpc_paired_code;

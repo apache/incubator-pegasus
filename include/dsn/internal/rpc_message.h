@@ -56,32 +56,29 @@ namespace dsn
 
     typedef struct message_header
     {
-        int32_t       hdr_crc32;
-        int32_t       body_crc32;
-        int32_t       body_length;
-        int32_t       version;
-        uint64_t      id;
-        uint64_t      rpc_id;
-        char          rpc_name[DSN_MAX_TASK_CODE_NAME_LENGTH];
-        uint64_t      context;
-        uint64_t      context2;
+        int32_t        hdr_crc32;
+        int32_t        body_crc32;
+        int32_t        body_length;
+        int32_t        version;
+        uint64_t       id;      // sequence id, can be used to track source
+        uint64_t       rpc_id;  // correlation id for connecting rpc caller, request, and response tasks
+        char           rpc_name[DSN_MAX_TASK_CODE_NAME_LENGTH];
+        uint64_t       vnid; // virtual node id
+        dsn_msg_context_t context;
 
-        union
+        struct
         {
-            struct
-            {
-                int32_t    timeout_ms;
-                int32_t    hash;
-                uint16_t   port;
-            } client;
+            int32_t  timeout_ms;
+            int32_t  hash;
+            uint16_t port;                        
+        } client;
 
-            struct
-            {
-                int32_t  error;
-            } server;
-        };
+        struct
+        {
+            int32_t  error;
+        } server;
     } message_header;
-            
+
     class message_ex : 
         public ref_counter, 
         public extensible_object<message_ex, 4>

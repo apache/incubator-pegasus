@@ -57,8 +57,8 @@ TEST(core, message_ex)
         ASSERT_EQ(next_id, h.id);
         ASSERT_EQ(0, h.rpc_id); ///////////////////
         ASSERT_STREQ(dsn_task_code_to_string(RPC_CODE_FOR_TEST), h.rpc_name);
-        ASSERT_EQ(0, h.context);
-        ASSERT_EQ(0, h.context2);
+        ASSERT_EQ(0, h.vnid);
+        ASSERT_EQ(0, h.context.context);
         ASSERT_EQ(100, h.client.timeout_ms);
         ASSERT_EQ(1, h.client.hash);
         ASSERT_EQ(0, h.client.port);
@@ -92,8 +92,8 @@ TEST(core, message_ex)
         ASSERT_EQ(request->header->id, h.id);
         ASSERT_EQ(request->header->rpc_id, h.rpc_id); ///////////////////
         ASSERT_STREQ(dsn_task_code_to_string(RPC_CODE_FOR_TEST_ACK), h.rpc_name);
-        ASSERT_EQ(0, h.context);
-        ASSERT_EQ(0, h.context2);
+        ASSERT_EQ(0, h.vnid);
+        ASSERT_EQ(0, h.context.context);
         ASSERT_EQ(0, h.server.error);
 
         ASSERT_EQ(1u, response->buffers.size());
@@ -196,7 +196,9 @@ TEST(core, message_ex)
         dsn_message_t request = dsn_msg_create_request(RPC_CODE_FOR_TEST, 100, 1);
         int timeout, hash;
 
-        dsn_msg_set_context(request, 333, 444);
+        dsn_msg_context_t ctx;
+        ctx.context = 444;
+        dsn_msg_set_context(request, 333, ctx);
         message_ex* m = (message_ex*)request;
         m->from_address = rpc_address("127.0.0.1", 8080);
         m->to_address = rpc_address("127.0.0.1", 9090);
@@ -211,10 +213,10 @@ TEST(core, message_ex)
         ASSERT_EQ(1000, timeout);
         ASSERT_EQ(2, hash);
 
-        uint64_t context, context2;
-        dsn_msg_get_context(request, &context, &context2);
-        ASSERT_EQ(333u, context);
-        ASSERT_EQ(444u, context2);
+        uint64_t vnid;
+        dsn_msg_get_context(request, &vnid, &ctx);        
+        ASSERT_EQ(333u, vnid);
+        ASSERT_EQ(444u, ctx.context);
 
         ASSERT_EQ(rpc_address("127.0.0.1", 8080), rpc_address(dsn_msg_from_address(request)));
         ASSERT_EQ(rpc_address("127.0.0.1", 9090), rpc_address(dsn_msg_to_address(request)));

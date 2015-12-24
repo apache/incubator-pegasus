@@ -992,16 +992,25 @@ typedef struct __app_role__
     // dsn_app_xxx
 } dsn_app_role;
 
+typedef union __msg_flag__
+{
+    struct {
+        uint64_t replication : 1;
+        uint64_t unused : 63;
+    } u;
+    uint64_t context;
+} dsn_msg_context_t;
+
 extern DSN_API void          dsn_msg_set_context(
                                 dsn_message_t msg,
-                                uint64_t context,
-                                uint64_t context2
+                                uint64_t vnid,
+                                dsn_msg_context_t ctx
                                 );
 
 extern DSN_API void         dsn_msg_get_context(
                                 dsn_message_t msg,
-                                /*out*/ uint64_t* context,
-                                /*out*/ uint64_t* context2
+                                /*out*/ uint64_t* vnid,
+                                /*out*/ dsn_msg_context_t* ctx
                                 );
 
 //------------------------------------------------------------------------------
@@ -1071,5 +1080,8 @@ inline void dsn_address_size_checker()
 {
     static_assert (sizeof(dsn_address_t) == sizeof(uint64_t),
         "sizeof(dsn_address_t) must equal to sizeof(uint64_t)");
+
+    static_assert (sizeof(dsn_msg_context_t) == sizeof(uint64_t),
+        "sizeof(dsn_msg_context_t) must equal to sizeof(uint64_t)");
 }
 # endif

@@ -323,6 +323,10 @@ void replication_app_client_base::call_with_address(dsn::rpc_address addr, reque
             marshall(writer, request->read_header);
 
             dsn_msg_update_request(request->request, request->timeout_ms, gpid_to_hash(request->read_header.gpid));
+
+            dsn_msg_context_t ctx;
+            ctx.context = 0;
+            dsn_msg_set_context(request->request, *(uint64_t*)(&request->read_header.gpid), ctx);
         }
         else
         {
@@ -332,6 +336,11 @@ void replication_app_client_base::call_with_address(dsn::rpc_address addr, reque
             binary_writer writer(buffer);
             marshall(writer, request->write_header);
             dsn_msg_update_request(request->request, request->timeout_ms, gpid_to_hash(request->write_header.gpid));
+
+            dsn_msg_context_t ctx;
+            ctx.context = 0;
+            ctx.u.replication = 1;
+            dsn_msg_set_context(request->request, *(uint64_t*)(&request->read_header.gpid), ctx);
         }
         request->header_pos = 0;
     }
