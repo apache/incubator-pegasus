@@ -182,42 +182,6 @@ namespace dsn {
             return r;
         }
 
-        class random64_generator : public singleton<random64_generator>
-        {
-        public:
-            random64_generator()
-                : _rng(std::random_device()())
-            {
-            }
-
-            uint64_t next()
-            {
-                return _dist(_rng);
-            }
-
-        private:
-            std::default_random_engine _rng;
-            std::uniform_int_distribution<uint64_t> _dist;
-        };
-
-
-        uint64_t get_random64()
-        {
-            return random64_generator::instance().next();
-        }
-
-        uint64_t get_random64_pseudo()
-        {
-            uint64_t v = ((uint64_t)std::rand());
-            v *= ((uint64_t)std::rand());
-            v *= ((uint64_t)std::rand());
-            v *= ((uint64_t)std::rand());
-            v *= ((uint64_t)std::rand());
-            v ^= ((uint64_t)std::rand());
-            return v;
-        }
-
-
         uint64_t get_current_physical_time_ns()
         {
             auto now = std::chrono::high_resolution_clock::now();

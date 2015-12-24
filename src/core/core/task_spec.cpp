@@ -177,34 +177,6 @@ bool task_spec::init()
 }
 
 
-threadpool_spec::threadpool_spec(const threadpool_spec& source)
-    : pool_code(source.pool_code)
-{
-    *this = source;
-}
-
-threadpool_spec& threadpool_spec::operator=(const threadpool_spec& source)
-{
-    name = source.name;
-    pool_code = source.pool_code;
-    worker_count = source.worker_count;
-    worker_priority = source.worker_priority;
-    worker_share_core = source.worker_share_core;
-    worker_affinity_mask = source.worker_affinity_mask;
-    queue_length_throttling_threshold = source.queue_length_throttling_threshold;
-    partitioned = source.partitioned;
-
-    queue_factory_name = source.queue_factory_name;
-    worker_factory_name = source.worker_factory_name;
-    queue_aspects = source.queue_aspects;
-    worker_aspects = source.worker_aspects;
-
-    admission_controller_factory_name = source.admission_controller_factory_name;
-    admission_controller_arguments = source.admission_controller_arguments;
-
-    return *this;
-}
-
 bool threadpool_spec::init(/*out*/ std::vector<threadpool_spec>& specs)
 {
     /*

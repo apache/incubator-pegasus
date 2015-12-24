@@ -400,7 +400,7 @@ Retry:
     // clear partition configuration as it could be wrong
     {
         zauto_write_lock l(_config_lock);
-        dwarn("met error[%d:%s], erase partition config cache, %d", err.get(), err.to_string(), rc->partition_index);
+        dinfo("met error[%d:%s], erase partition config cache, %d", err.get(), err.to_string(), rc->partition_index);
         _config_cache.erase(rc->partition_index);
     }
 
