@@ -160,7 +160,7 @@ error_code mutation_log::open(replay_callback callback)
 
             if (callback)
             {
-                ret = callback(mu);
+                ret = callback(mu); // actually replica::replay_mutation(mu, true|false);
             }
 
             if (ret)
