@@ -28,6 +28,12 @@ IF NOT EXIST "%bin_dir%\7z.exe" (
     @move 7z.dll %bin_dir%
     @move 7z.exe %bin_dir%
 )
+
+IF NOT EXIST "%bin_dir%\sed.exe" (
+    CALL %bin_dir%\wget.exe --no-check-certificate https://github.com/imzhenyu/packages/raw/master/windows/sed.exe?raw=true
+    @move sed.exe %bin_dir%
+)
+
 IF NOT EXIST "%TOP_DIR%\ext\%boost_dir_name%" (
     CALL %bin_dir%\wget.exe --no-check-certificate http://github.com/imzhenyu/packages/blob/master/windows/%boost_package_name%?raw=true
     CALL %bin_dir%\7z.exe x %boost_package_name% -y -o"%TOP_DIR%\ext\"
