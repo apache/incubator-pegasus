@@ -47,7 +47,7 @@ REM
     GOTO:EOF
 
 :quick-cleanup
-    SCHTASKS /Delete /S %1 /TN %deploy_name% /F
+    ::SCHTASKS /Delete /S %1 /TN %deploy_name% /F
     set rdst=\\%1\%rdst_dir%
     @rmdir /Q /S %rdst%\data
     GOTO:EO
