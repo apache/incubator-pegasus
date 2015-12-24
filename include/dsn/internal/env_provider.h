@@ -37,6 +37,7 @@
 
 # include <dsn/ports.h>
 # include <dsn/cpp/utils.h>
+#include <random>
 
 namespace dsn {
 
@@ -50,12 +51,15 @@ public:
 
     typedef env_provider* (*factory)(env_provider*);
 
-public:
     env_provider(env_provider* inner_provider);
 
     virtual uint64_t now_ns() const { return utils::get_current_physical_time_ns(); }
 
     virtual uint64_t random64(uint64_t min, uint64_t max);
+
+protected:
+    static __thread int _tls_magic;
+    static __thread std::ranlux48_base* _rng;
 };
 
 } // end namespace
