@@ -1,3 +1,4 @@
+SET bin_dir=%~dp0
 SET cmd=%1
 SET src_dir=%2
 SET ldst_dir=%3
@@ -60,6 +61,8 @@ REM
     
 :exit
 
-ECHO auto exit after 20 seconds ...
-ping -n 21 127.0.0.1 >nul
+IF ERRORLEVEL 0 exit
+
+CALL %bin_dir%\echoc.exe 4 error happens...
+
 
