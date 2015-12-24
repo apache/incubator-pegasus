@@ -16,6 +16,8 @@ function usage()
     echo "   stop_zk     stop the local single zookeeper server"
     echo "   format      check the code format"
     echo "   publish     publish the program"
+    echo "   publish_docker"
+    echo "               publish the program docker image"
     echo "   deploy      deploy the program to remote machine"
     echo "   start       start program at remote machine"
     echo "   stop        stop program at remote machine"
@@ -286,8 +288,7 @@ case $cmd in
     format)
         shift
         run_format $* ;;
-    publish)
-        shift
+    publish|publish_docker)
         $scripts_dir/publish.sh $* ;;
     deploy|start|stop|clean)
         $scripts_dir/deploy.sh $* ;;

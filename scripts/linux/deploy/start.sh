@@ -9,8 +9,8 @@ META_IP=${META_IP:-"$(cat ${PREFIX}/metalist)"}
 META_IP=${META_IP#*@}
 APP=${APP:-"${PREFIX##*/}"}
 
-PROGRAM=${PREFIX}/simple_kv
+PROGRAM=${PREFIX}/{{ placeholder['deploy_name'] }}
 CONFIG=${PREFIX}/config.ini
-ARGS="-cargs 'meta-ip=${META_IP};data-dir=${PREFIX}' -app ${APP}"
+ARGS="-cargs meta-ip=${META_IP};data-dir=${PREFIX} -app ${APP}"
 
 ${PROGRAM} ${CONFIG} ${ARGS} &>${PREFIX}/${APP}.out
