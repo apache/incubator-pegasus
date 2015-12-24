@@ -1,64 +1,52 @@
-#!/bin/bash
-#
-# Options:
-#    INSTALL_DIR    <dir>
-#    PORT           <port>
+SET bin_dir=%~dp0
+SET INSTALL_DIR=%~f1
+SET PORT=%2
+SET zk=zookeeper-3.4.6
 
-if [ -z "$INSTALL_DIR" ]
-then
-    echo "ERROR: no INSTALL_DIR specified"
-    exit -1
-fi
+IF "%INSTALL_DIR%" EQU "" (
+    CALL %bin_dir%\echoc.exe 4 INSTALL_DIR not specified
+    CALL :usage
+    GOTO exit
+)
 
-if [ -z "$PORT" ]
-then
-    echo "ERROR: no PORT specified"
-    exit -1
-fi
+IF "%PORT%" EQU "" (
+    CALL %bin_dir%\echoc.exe 4 PORT not specified
+    CALL :usage
+    GOTO exit
+)
 
-mkdir -p $INSTALL_DIR
-if [ $? -ne 0 ]
-then
-    echo "ERROR: mkdir $PREFIX failed"
-    exit -1
-fi
+IF NOT EXIST %INSTALL_DIR% mkdir %INSTALL_DIR%
 
-cd $INSTALL_DIR
 
-if [ ! -f zookeeper-3.4.6.tar.gz ]; then
-    echo "Downloading zookeeper..."
-    wget https://github.com/shengofsun/packages/raw/master/zookeeper-3.4.6.tar.gz
-    if [ $? -ne 0 ]; then
-        echo "ERROR: download zookeeper failed"
-        exit -1
-    fi
-fi
+pushd %INSTALL_DIR%
 
-if [ ! -d zookeeper-3.4.6 ]; then
-    echo "Decompressing zookeeper..."
-    tar xfz zookeeper-3.4.6.tar.gz
-    if [ $? -ne 0 ]; then
-        echo "ERROR: decompress zookeeper failed"
-        exit -1
-    fi
-fi
+IF NOT EXIST %INSTALL_DIR%\%zk% (
+    CALL %bin_dir%\wget.exe --no-check-certificate https://github.com/shengofsun/packages/raw/master/%zk%.tar.gz?raw=true
+    IF NOT EXIST %INSTALL_DIR%\%zk% (
+        CALL %bin_dir%\echoc.exe 4 download zookeeper package failed from  https://github.com/shengofsun/packages/raw/master/%zk%.tar.gz?raw=true
+        popd
+        GOTO exit
+    )    
+    CALL %bin_dir%\7z.exe x %INSTALL_DIR%\%zk%.tar.gz -y -o"%INSTALL_DIR%"
+)
 
-ZOOKEEPER_HOME=`pwd`/zookeeper-3.4.6
-ZOOKEEPER_PORT=$PORT
+SET ZOOKEEPER_HOME=%INSTALL_DIR%\%zk%
+SET ZOOKEEPER_PORT=%PORT%
 
-cp $ZOOKEEPER_HOME/conf/zoo_sample.cfg $ZOOKEEPER_HOME/conf/zoo.cfg
-sed -i "s@dataDir=/tmp/zookeeper@dataDir=$ZOOKEEPER_HOME/data@" $ZOOKEEPER_HOME/conf/zoo.cfg
-sed -i "s@clientPort=2181@clientPort=$ZOOKEEPER_PORT@" $ZOOKEEPER_HOME/conf/zoo.cfg
+copy /Y %ZOOKEEPER_HOME%\conf\zoo_sample.cfg %ZOOKEEPER_HOME%\conf\zoo.cfg
+CALL %bin_dir%\sed.exe -i "s@dataDir=/tmp/zookeeper@dataDir=%ZOOKEEPER_HOME%\data@" %ZOOKEEPER_HOME%\conf\zoo.cfg
+CALL %bin_dir%\sed.exe -i "s@clientPort=2181@clientPort=%ZOOKEEPER_PORT%@" %ZOOKEEPER_HOME%\conf\zoo.cfg
 
-mkdir -p $ZOOKEEPER_HOME/data
-$ZOOKEEPER_HOME/bin/zkServer.sh start
+@mkdir %ZOOKEEPER_HOME%\data
+CALL start cmd.exe /k "title zk-%PORT%&& %ZOOKEEPER_HOME%\bin\zkServer.cmd"
 
-sleep 2
-if echo ruok | nc localhost $ZOOKEEPER_PORT | grep -q imok; then
-    echo "Zookeeper started at port $ZOOKEEPER_PORT"
-    exit 0
-else
-    echo "ERROR: start zookeeper failed"
-    exit -1
-fi
- 
+popd
+
+GOTO exit
+
+
+:usage
+    ECHO run.cmd start_zk INSTALL_DIR PORT
+    GOTO:EOF
+    
+:exit

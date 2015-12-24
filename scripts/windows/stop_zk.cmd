@@ -1,17 +1,20 @@
-#!/bin/bash
-#
-# Options:
-#    INSTALL_DIR    <dir>
+SET bin_dir=%~dp0
+SET INSTALL_DIR=%~f1
+SET PORT=%2
+SET zk=zookeeper-3.4.6
 
-if [ -z "$INSTALL_DIR" ]
-then
-    echo "ERROR: no INSTALL_DIR specified"
-    exit -1
-fi
+IF "%PORT%" EQU "" (
+    CALL %bin_dir%\echoc.exe 4 PORT not specified
+    CALL :usage
+    GOTO exit
+)
 
-cd $INSTALL_DIR
+TASKKILL /F /FI "WINDOWTITLE eq zk-%PORT% - %INSTALL_DIR%\%zk%\bin\zkServer.cmd"
+TASKKILL /F /FI "WINDOWTITLE eq zk-%PORT% - %INSTALL_DIR%\%zk%\bin\zkServer.cmd"
+GOTO exit
 
-ZOOKEEPER_HOME=`pwd`/zookeeper-3.4.6
-
-$ZOOKEEPER_HOME/bin/zkServer.sh stop
-
+:usage
+    ECHO run.cmd stop_zk INSTALL_DIR PORT
+    GOTO:EOF
+    
+:exit
