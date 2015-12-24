@@ -833,7 +833,6 @@ DSN_API uint64_t dsn_now_ns()
 
 DSN_API uint64_t dsn_random64(uint64_t min, uint64_t max) // [min, max]
 {
-    //return ::dsn::task::get_current_env()->random64(min, max);
     return ::dsn::service_engine::instance().env()->random64(min, max);
 }
 
