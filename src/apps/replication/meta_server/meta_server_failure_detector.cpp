@@ -36,7 +36,6 @@
 #include "meta_server_failure_detector.h"
 #include "server_state.h"
 #include "meta_service.h"
-#include <dsn/dist/distributed_lock_service.h>
 #include <dsn/internal/factory_store.h>
 
 # ifdef __TITLE__
@@ -192,10 +191,6 @@ void meta_server_failure_detector::acquire_leader_lock()
             if (addr.from_string_ipv4(local_owner_id.c_str()))
             {
                 dassert(primary_address() == addr, "");
-                /* 
-                 * we don't do register worker things in set_primary
-                 * because currently all nodes in node_state is from failure_detector
-                 */
                 set_primary(addr);
                 break;
             }
@@ -205,6 +200,11 @@ void meta_server_failure_detector::acquire_leader_lock()
 
 void meta_server_failure_detector::set_primary(rpc_address primary)
 {
+    /*
+    * we don't do register worker things in set_primary
+    * as only nodes sync from meta_state_service are useful, 
+    * but currently, we haven't do sync yet
+    */
     bool old = _is_primary;
     {
         utils::auto_lock<zlock> l(_primary_address_lock);

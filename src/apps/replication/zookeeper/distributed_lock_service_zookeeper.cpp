@@ -245,7 +245,10 @@ task_ptr distributed_lock_service_zookeeper::query_lock(
     return tasking::enqueue(cb_code, nullptr, std::bind(cb, ec, owner, version));
 }
 
-error_code distributed_lock_service_zookeeper::query_cache(const std::string& lock_id, std::string& owner, uint64_t& version)
+error_code distributed_lock_service_zookeeper::query_cache(
+    const std::string& lock_id, 
+    /*out*/std::string& owner, 
+    /*out*/uint64_t& version)
 {
     utils::auto_read_lock l(_service_lock);
     auto iter = _lock_cache.find(lock_id);

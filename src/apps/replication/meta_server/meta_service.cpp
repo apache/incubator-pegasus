@@ -95,8 +95,9 @@ error_code meta_service::start()
 
     // recover server state
     while ((err = _state->on_become_leader()) != ERR_OK)
+    {
         derror("recover server state failed, err = %s, retry ...", err.to_string());
-
+    }
     ddebug("recover server state succeed, and start to register workers");
     
     node_states all_nodes;

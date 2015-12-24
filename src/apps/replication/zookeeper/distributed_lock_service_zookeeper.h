@@ -75,8 +75,8 @@ public:
         const lock_callback& cb) override;
     virtual error_code query_cache(
         const std::string& lock_id, 
-        std::string& owner, 
-        uint64_t& version);
+        /*out*/std::string& owner, 
+        /*out*/uint64_t& version);
 
     void refresh_lock_cache(const std::string& lock_id, const std::string& owner, uint64_t version);
 private:

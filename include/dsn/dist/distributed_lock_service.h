@@ -169,8 +169,8 @@ namespace dsn
              */
             virtual error_code query_cache(
                 const std::string& lock_id, 
-                std::string& owner, 
-                uint64_t& version) = 0;
+                /*out*/std::string& owner, 
+                /*out*/uint64_t& version) = 0;
         };
     }
 }

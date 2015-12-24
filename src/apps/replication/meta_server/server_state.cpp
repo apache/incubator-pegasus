@@ -102,7 +102,8 @@ partition_status get_partition_status(const char* status_str)
 }
 /**
  * Example partition config:
- * {"ballot": 1, "last_committed_decree": 2, "max_replica_count": 3,
+ * {"app_type":"whatever", "gpid": "1.0", 
+ *  "ballot": 1, "last_committed_decree": 2, "max_replica_count": 3,
  *  "entries": [{"addr": "xxx.xxx.xxx.xxx:12345", "partition_status": "primary"},
  *              {"addr": "xxx.xxx.xxx.xxb:23424", "partition_status": "secondary"}
  *             ]}
@@ -369,6 +370,7 @@ error_code server_state::initialize_apps()
         return err;
     }
 
+    err = ERR_OK;
     // create cluster_root/apps/app_name node
     std::string app_path = join_path(apps_path, app.app_name);
     blob value;
@@ -377,7 +379,6 @@ error_code server_state::initialize_apps()
     _storage->create_node(app_path, LPC_META_STATE_SVC_CALLBACK,
         [&err, this, &app, &tracker, &app_path](error_code ec)
         {
-            err = ec;
             if (ec == ERR_OK)
             {
                 int32_t max_replica_count = (int)dsn_config_get_value_uint64("replication.app",
@@ -404,12 +405,23 @@ error_code server_state::initialize_apps()
                     _storage->create_node(partition_path, LPC_META_STATE_SVC_CALLBACK,
                         [&err, this, &app](error_code ec)
                         {
-                            err = ec;
+                            if (ec == ERR_OK)
+                            {
+
+                            }
+                            else
+                            {
+                                err = ec;
+                            }
                         },
                         value,
                         &tracker
                         );
                 }
+            }
+            else
+            {
+                err = ec;
             }
         },
         value,
@@ -438,7 +450,6 @@ error_code server_state::sync_apps_from_remote_storage()
     _storage->get_children(app_root, LPC_META_STATE_SVC_CALLBACK,
         [&](error_code ec, const std::vector<std::string>& apps)
         {
-            err = ec;
             if (ec == ERR_OK)
             {
                 // get app info
@@ -450,7 +461,6 @@ error_code server_state::sync_apps_from_remote_storage()
                         LPC_META_STATE_SVC_CALLBACK,
                         [this, app_path, &err, &tracker](error_code ec, const blob& value)
                     {
-                        err = ec;
                         if (ec == ERR_OK)
                         {
                             app_state state;
@@ -476,7 +486,6 @@ error_code server_state::sync_apps_from_remote_storage()
                                     LPC_META_STATE_SVC_CALLBACK,
                                     [this, app_id, i, par_path, &err](error_code ec, const blob& value)
                                     {
-                                        err = ec;
                                         if (ec == ERR_OK)
                                         {
                                             partition_configuration pc;
@@ -488,6 +497,7 @@ error_code server_state::sync_apps_from_remote_storage()
                                         {
                                             derror("get partition info from meta state service failed, path = %s, err = %s",
                                                 par_path.c_str(), ec.to_string());
+                                            err = ec;
                                         }
                                     },
                                     &tracker
@@ -498,6 +508,7 @@ error_code server_state::sync_apps_from_remote_storage()
                         {
                             derror("get app info from meta state service failed, path = %s, err = %s",
                                 app_path.c_str(), ec.to_string());
+                            err = ec;
                         }
                     },
                         &tracker
@@ -508,6 +519,7 @@ error_code server_state::sync_apps_from_remote_storage()
             {
                 derror("get app list from meta state service failed, path = %s, err = %s",
                     app_root.c_str(), ec.to_string());
+                err = ec;
             }
         },
         &tracker
@@ -526,28 +538,28 @@ error_code server_state::sync_apps_from_remote_storage()
             for (int i = 0; i < app.partition_count; i++)
             {
                 auto& ps = app.partitions[i];
-                auto refresh_state = [this](rpc_address addr, bool is_primary_role, global_partition_id gpid) {
-                    auto result_pair = this->_nodes.insert( std::make_pair(addr, node_state()) );
-                    node_state& ns = result_pair.first->second;
-                    ns.address = addr;
-                    ns.partitions.insert(gpid);
-                    if ( is_primary_role )
-                        ns.primaries.insert(gpid);
-                    
-                    if (result_pair.second==false || ns.is_alive==false) {
-                        this->_node_live_count++;
-                        ns.is_alive = true;
-                    }
-                };
-                
-                if ( !ps.primary.is_invalid() )
-                    refresh_state(ps.primary, true, ps.gpid);
-                for (auto& ep: ps.secondaries)
+
+                if (ps.primary.is_invalid() == false)
+                {
+                    dassert(_nodes.find(ps.primary)==_nodes.end(), "%s shouldn't in nodes map", ps.primary.to_string());
+                    _nodes[ps.primary].primaries.insert(ps.gpid);
+                    _nodes[ps.primary].partitions.insert(ps.gpid);
+                }
+
+                for (auto& ep : ps.secondaries)
                 {
                     dassert(ep.is_invalid() == false, "");
-                    refresh_state(ep, false, ps.gpid);
+                    dassert(_nodes.find(ep) == _nodes.end(), "%s shouldn't in nodes map", ep.to_string());
+                    _nodes[ep].partitions.insert(ps.gpid);
                 }
             }
+        }
+
+        for (auto& node : _nodes)
+        {
+            node.second.address = node.first;
+            node.second.is_alive = true;
+            _node_live_count++;
         }
 
         for (auto& app : _apps)

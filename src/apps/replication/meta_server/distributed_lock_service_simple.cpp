@@ -392,8 +392,8 @@ namespace dsn
         
         error_code distributed_lock_service_simple::query_cache(
             const std::string& lock_id, 
-            std::string& owner, 
-            uint64_t& version)
+            /*out*/std::string& owner, 
+            /*out*/uint64_t& version)
         {
             error_code err;
             {
