@@ -472,7 +472,10 @@ namespace dsn {
         auto& hdr = *request->header;
 
         hdr.client.port = primary_address().port();
-        hdr.rpc_id = utils::get_random64();        
+        hdr.rpc_id = dsn_random64(
+            std::numeric_limits<decltype(hdr.rpc_id)>::min(),
+            std::numeric_limits<decltype(hdr.rpc_id)>::max()
+            );
         request->seal(_message_crc_required);
         
         switch (request->server_address.type())
