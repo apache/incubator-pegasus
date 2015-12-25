@@ -56,11 +56,13 @@ namespace dsn {
         void replica::gc()
         {
             if (_private_log)
+            {
                 _private_log->garbage_collection(
                     get_gpid(),
                     _app->last_durable_decree(),
-                    _app->log_info().init_offset_in_private_log
+                    _app->init_info().init_offset_in_private_log
                     );
+            }
         }
 
         void replica::init_checkpoint()
@@ -76,9 +78,9 @@ namespace dsn {
             auto err = _app->checkpoint_async();
             if (err != ERR_NOT_IMPLEMENTED)
             {
-                if (err != 0)
+                if (err != ERR_OK)
                 {
-                    derror("%s: checkpoint_async failed, err = %d", err);
+                    derror("%s: checkpoint_async failed, err = %s", err.to_string());
                 }
                 return;
             }
@@ -245,10 +247,7 @@ namespace dsn {
 
         void replica::checkpoint()
         {
-            auto lerr = _app->checkpoint();
-            auto err = lerr == 0 ? ERR_OK :
-                (lerr == ERR_WRONG_TIMING ? ERR_WRONG_TIMING : ERR_LOCAL_APP_FAILURE);
-            
+            auto err = _app->checkpoint();
             tasking::enqueue(
                 LPC_CHECKPOINT_REPLICA_COMPLETED,
                 this,

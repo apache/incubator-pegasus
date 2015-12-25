@@ -165,7 +165,6 @@ private:
     // allow list are set on machine name (port can vary)
     typedef std::unordered_set< ::dsn::rpc_address>   allow_list;
 
-    mutable service::zlock _lock;
     master_map            _masters;
     worker_map            _workers;
 
@@ -174,12 +173,13 @@ private:
     uint32_t             _lease_milliseconds;
     uint32_t             _grace_milliseconds;
     bool                 _is_started;
-    ::dsn::task_ptr _current_task;
+    ::dsn::task_ptr      _current_task;
 
     bool                 _use_allow_list;
     allow_list           _allow_list;
 
 protected:
+    mutable service::zlock _lock;
     // subClass can rewrite these method.
     virtual void send_beacon(::dsn::rpc_address node, uint64_t time);
 

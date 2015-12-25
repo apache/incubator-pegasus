@@ -34,13 +34,14 @@
  */
 # include "mutation_log.h"
 # include <gtest/gtest.h>
+# include <chrono>
+# include <condition_variable>
 
 using namespace ::dsn;
 using namespace ::dsn::replication;
 
 TEST(replication, log_learn)
 {
-    multi_partition_decrees mdecrees, mdecrees2;
     global_partition_id gpid = { 1, 1 };
     std::string str = "hello, world!";
     std::string logp = "./test-log";
@@ -55,8 +56,8 @@ TEST(replication, log_learn)
         utils::filesystem::create_directory(logp);
 
         // writing logs
-        mutation_log_ptr mlog = new mutation_log(logp, true, 1, 1);
-        mlog->open(gpid, nullptr);
+        mutation_log_ptr mlog = new mutation_log(logp, 1, 1, true, gpid);
+        mlog->open(nullptr);
 
         for (int i = 0; i < 1000; i++)
         {
@@ -90,8 +91,8 @@ TEST(replication, log_learn)
         mlog->close();
         
         // reading logs
-        mlog = new mutation_log(logp, true, 1, 1);
-        mlog->open(gpid, [](mutation_ptr& mu)->bool{ return true; });
+        mlog = new mutation_log(logp, 1, 1, true, gpid);
+        mlog->open([](mutation_ptr& mu)->bool{ return true; });
 
         // learning
         learn_state state;
@@ -102,6 +103,8 @@ TEST(replication, log_learn)
         int64_t offset = 0;
         std::set<decree> learned_decress;
         
+        std::chrono::steady_clock clock;
+        auto time_tic = clock.now();
         mutation_log::replay(state.files,
             [&mutations, &learned_decress](mutation_ptr& mu)->bool
             {
@@ -120,10 +123,14 @@ TEST(replication, log_learn)
                     );
                 EXPECT_TRUE(wmu->client_requests.size() == mu->client_requests.size());
                 EXPECT_TRUE(wmu->client_requests[0].code == mu->client_requests[0].code);
+
                 return true;
             },
             offset
             );
+        auto time_toc = clock.now();
+        
+        std::cout << "TEST replay time(us): " << std::chrono::duration_cast<std::chrono::microseconds>(time_toc - time_tic).count() << std::endl;
 
         for (decree s = durable_decree + 1; s < 1000; s++)
         {
@@ -132,8 +139,6 @@ TEST(replication, log_learn)
         }
 
         // clear all
-        mdecrees.clear();
-        mdecrees2.clear();
         mutations.clear();
         utils::filesystem::remove_path(logp);
     }

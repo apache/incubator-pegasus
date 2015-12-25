@@ -68,7 +68,7 @@ TEST(core, perf_counters)
     p = c.get_counter("test", "rate_counter", COUNTER_TYPE_RATE,"", false);
     ASSERT_EQ(nullptr, p);
 
-    p = c.get_counter("unexist_counter", COUNTER_TYPE_NUMBER,"", false);
+    p = c.get_counter("test", "unexist_counter", COUNTER_TYPE_NUMBER,"", false);
     ASSERT_EQ(nullptr, p);
-    ASSERT_FALSE(c.remove_counter("unexist_counter"));
+    ASSERT_FALSE(c.remove_counter("test", "unexist_counter"));
 }

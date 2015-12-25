@@ -104,7 +104,6 @@ extern "C" {
 # define DSN_MAX_TASK_CODE_NAME_LENGTH     48
 # define DSN_MAX_ADDRESS_NAME_LENGTH       48
 # define DSN_MAX_BUFFER_COUNT_IN_MESSAGE   64
-# define DSN_INVALID_HASH                  0xdeadbeef
 # define DSN_MAX_APP_TYPE_NAME_LENGTH      32
 # define DSN_MAX_APP_COUNT_IN_SAME_PROCESS 256
 # define DSN_MAX_PATH                      1024
@@ -191,8 +190,8 @@ typedef void        (*dsn_checker_apply)(void*); // run the given checker
 typedef struct dsn_cli_reply
 {
     const char* message;  // zero-ended reply message
-    uint64_t size;  // message_size
-    void* context;  // context for free_handler
+    uint64_t size;        // message_size
+    void* context;        // context for free_handler
 } dsn_cli_reply;
 
 typedef void  (*dsn_cli_handler)(
@@ -287,6 +286,31 @@ typedef struct dsn_address_t
     } u;
 } dsn_address_t;
 
+typedef union dsn_msg_context_t
+{
+    struct {
+        uint64_t write_replication : 1;
+        uint64_t read_replication : 1;
+        uint64_t read_semantic : 2;
+        uint64_t unused : 10;
+        uint64_t parameter : 50; // parameter for the flags, e.g., snapshort decree for replication read
+    } u;
+    uint64_t context;
+} dsn_msg_context_t;
+
+# define DSN_MSGM_TIMEOUT (0x1 << 0)
+# define DSN_MSGM_HASH    (0x1 << 1)
+# define DSN_MSGM_VNID    (0x1 << 2)
+# define DSN_MSGM_CONTEXT (0x1 << 3)
+
+typedef struct dsn_msg_options_t
+{
+    int               timeout_ms;  
+    int               thread_hash; 
+    uint64_t          vnid;
+    dsn_msg_context_t context;
+} dsn_msg_options_t;
+
 //------------------------------------------------------------------------------
 //
 // system
@@ -323,7 +347,7 @@ extern DSN_API bool      dsn_run_config(
 // Note the argc, argv folllows the C main convention that argv[0] is the executable name
 //
 extern DSN_API void dsn_run(int argc, char** argv, bool sleep_after_init DEFAULT(false));
-extern DSN_API void dsn_terminate();
+extern DSN_API void dsn_exit(int code);
 extern DSN_API int  dsn_get_all_apps(dsn_app_info* info_buffer, int count); // return real app count
 extern DSN_API bool dsn_get_current_app_info(/*out*/ dsn_app_info* app_info);
 extern DSN_API const char* dsn_get_current_app_data_dir();
@@ -353,7 +377,7 @@ extern DSN_API void dsn_app_loader_wait();
 extern DSN_API const char* dsn_cli_run(const char* command_line); // return command output
 extern DSN_API void        dsn_cli_free(const char* command_output);
 
-//return value: Handle (the handle of this registered command)
+// return value: Handle (the handle of this registered command)
 extern DSN_API dsn_handle_t dsn_cli_register(
                             const char* command,
                             const char* help_one_line,
@@ -362,17 +386,18 @@ extern DSN_API dsn_handle_t dsn_cli_register(
                             dsn_cli_handler cmd_handler,
                             dsn_cli_free_handler output_freer
                             );
-//return value: Handle (the handle of this registered command) | NULL (We did no find a service_node, probably you call this function from a non-rdsn thread)
+// return value: Handle (the handle of this registered command)
+// or NULL (We did no find a service_node, probably you call this function from a non-rdsn thread)
 extern DSN_API dsn_handle_t dsn_cli_app_register(
-                            const char* command,        //registered command, you should call this command by app_full_name.command
+                            const char* command,   // auto-augmented by rDSN as $app_full_name.$command
                             const char* help_one_line,
                             const char* help_long,
-                            void* context,              //context to be forwareded to cmd_handler
+                            void* context,         // context to be forwareded to cmd_handler
                             dsn_cli_handler cmd_handler,
                             dsn_cli_free_handler output_freer
                             );
 
-//remove a cli handler, parameter: return value of dsn_cli_register or dsn_cli_app_register
+// remove a cli handler, parameter: return value of dsn_cli_register or dsn_cli_app_register
 extern DSN_API void dsn_cli_deregister(dsn_handle_t cli_handle);
 
 
@@ -502,6 +527,27 @@ extern DSN_API uint32_t              dsn_crc32_concatenate(
                                         size_t   y_size
                                         );
 
+extern DSN_API uint64_t               dsn_crc64_compute(const void* ptr, size_t size, uint64_t init_crc);
+
+//
+// Given
+//      x_final = dsn_crc64_compute (x_ptr, x_size, x_init);
+// and
+//      y_final = dsn_crc64_compute (y_ptr, y_size, y_init);
+// compute CRC of concatenation of A and B
+//      x##y_crc = dsn_crc64_compute (x##y, x_size + y_size, xy_init);
+// without touching A and B
+//
+
+extern DSN_API uint64_t              dsn_crc64_concatenate(
+                                        uint32_t xy_init,
+                                        uint64_t x_init,
+                                        uint64_t x_final,
+                                        size_t x_size,
+                                        uint64_t y_init,
+                                        uint64_t y_final,
+                                        size_t y_size);
+
 //------------------------------------------------------------------------------
 //
 // tasking - asynchronous tasks and timers tasks executed in target thread pools
@@ -550,7 +596,7 @@ extern DSN_API dsn_task_t  dsn_task_create(
                             dsn_task_code_t code,               // task label
                             dsn_task_handler_t cb,              // callback function
                             void* context,                      // context to the callback
-                            int hash DEFAULT(DSN_INVALID_HASH), // hash to callback
+                            int hash DEFAULT(0), // hash to callback
                             dsn_task_tracker_t tracker DEFAULT(nullptr)
                             );
 extern DSN_API dsn_task_t  dsn_task_create_timer(
@@ -574,7 +620,7 @@ extern DSN_API dsn_task_t  dsn_task_create_ex(
     dsn_task_handler_t cb,              // callback function
     dsn_task_cancelled_handler_t on_cancel, 
     void* context,                      // context to the two callbacks above
-    int hash DEFAULT(DSN_INVALID_HASH), // hash to callback
+    int hash DEFAULT(0), // hash to callback
     dsn_task_tracker_t tracker DEFAULT(nullptr)
     );
 extern DSN_API dsn_task_t  dsn_task_create_timer_ex(
@@ -709,21 +755,21 @@ extern DSN_API dsn_address_t dsn_primary_address();
 extern DSN_API dsn_message_t dsn_msg_create_request(
                                 dsn_task_code_t rpc_code, 
                                 int timeout_milliseconds DEFAULT(0),
-                                int hash DEFAULT(DSN_INVALID_HASH)
+                                int hash DEFAULT(0)
                                 );
 extern DSN_API dsn_message_t dsn_msg_create_response(dsn_message_t request);
 extern DSN_API dsn_message_t dsn_msg_copy(dsn_message_t msg);
 extern DSN_API void          dsn_msg_add_ref(dsn_message_t msg);
 extern DSN_API void          dsn_msg_release_ref(dsn_message_t msg);
-extern DSN_API void          dsn_msg_update_request(
-                                dsn_message_t msg, 
-                                int timeout_milliseconds,  // if == 0, no update
-                                int hash // if == DSN_INVALID_HASH, no update
+extern DSN_API void          dsn_msg_set_options(
+                                dsn_message_t msg,
+                                dsn_msg_options_t *opts,
+                                uint32_t mask // set opt bits using DSN_MSGM_XXX
                                 );
-extern DSN_API void          dsn_msg_query_request(
-                                dsn_message_t msg, 
-                                /*out*/ int* ptimeout_milliseconds,
-                                /*out*/ int* phash
+
+extern DSN_API void         dsn_msg_get_options(
+                                dsn_message_t msg,
+                                /*out*/ dsn_msg_options_t* opts
                                 );
 
 // apps write rpc message as follows:
@@ -795,7 +841,7 @@ extern DSN_API dsn_task_t    dsn_rpc_create_response_task(
                                 dsn_message_t request, 
                                 dsn_rpc_response_handler_t cb, 
                                 void* context, 
-                                int reply_hash DEFAULT(DSN_INVALID_HASH),
+                                int reply_hash DEFAULT(0),
                                 dsn_task_tracker_t tracker DEFAULT(nullptr)
                                 );
 extern DSN_API dsn_task_t    dsn_rpc_create_response_task_ex(
@@ -803,7 +849,7 @@ extern DSN_API dsn_task_t    dsn_rpc_create_response_task_ex(
                                 dsn_rpc_response_handler_t cb, 
                                 dsn_task_cancelled_handler_t on_cancel,
                                 void* context, 
-                                int reply_hash DEFAULT(DSN_INVALID_HASH),
+                                int reply_hash DEFAULT(0),
                                 dsn_task_tracker_t tracker DEFAULT(nullptr)
                                 );
 
@@ -971,18 +1017,6 @@ typedef struct __app_role__
     // dsn_app_xxx
 } dsn_app_role;
 
-extern DSN_API void          dsn_msg_set_context(
-                                dsn_message_t msg,
-                                uint64_t context,
-                                uint64_t context2
-                                );
-
-extern DSN_API void         dsn_msg_get_context(
-                                dsn_message_t msg,
-                                /*out*/ uint64_t* context,
-                                /*out*/ uint64_t* context2
-                                );
-
 //------------------------------------------------------------------------------
 //
 // perf counters
@@ -1050,5 +1084,8 @@ inline void dsn_address_size_checker()
 {
     static_assert (sizeof(dsn_address_t) == sizeof(uint64_t),
         "sizeof(dsn_address_t) must equal to sizeof(uint64_t)");
+
+    static_assert (sizeof(dsn_msg_context_t) == sizeof(uint64_t),
+        "sizeof(dsn_msg_context_t) must equal to sizeof(uint64_t)");
 }
 # endif

@@ -1,7 +1,7 @@
 # Case Description:
 # - test the inactive of primary
 
-set:load_balance_for_test=1,not_exist_on_log_failure=1
+set:load_balance_for_test=1,not_exit_on_log_failure=1
 
 config:{1,r1,[]}
 set:disable_load_balance=1

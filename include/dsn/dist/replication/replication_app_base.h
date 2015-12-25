@@ -68,7 +68,7 @@ enum chkpt_apply_mode
     CHKPT_LEARN
 };
 
-class replica_log_info
+class replica_init_info
 {
 public:
     int32_t magic;
@@ -79,7 +79,7 @@ public:
     int64_t init_offset_in_private_log;
 
 public:
-    replica_log_info() { memset((void*)this, 0, sizeof(*this)); }
+    replica_init_info() { memset((void*)this, 0, sizeof(*this)); }
     error_code load(const char* file);
     error_code store(const char* file);
 };
@@ -125,14 +125,14 @@ public:
     // Postconditions:
     // * last_committed_decree() == last_durable_decree()
     //
-    virtual int  open(bool create_new) = 0;
+    virtual ::dsn::error_code open(bool create_new) = 0;
 
     //
     // Close the app.
     // If `clear_state' is true, means clear the app state after close it.
     // Must be thread safe.
     //
-    virtual int  close(bool clear_state) = 0;
+    virtual error_code close(bool clear_state) = 0;
 
     //
     // synchonously checkpoint, and update last_durable_decree internally.
@@ -141,7 +141,7 @@ public:
     // Postconditions:
     // * last_committed_decree() == last_durable_decree()
     //
-    virtual int  checkpoint() = 0;
+    virtual ::dsn::error_code checkpoint() = 0;
 
     //
     // asynchonously checkpoint, which will not stall the normal write ops.
@@ -152,7 +152,7 @@ public:
     // It is not always necessary for the apps to implement this method,
     // but if it is implemented, the checkpoint logic in replication will be much simpler.
     //
-    virtual int  checkpoint_async() { return ERR_NOT_IMPLEMENTED; }
+    virtual ::dsn::error_code checkpoint_async() { return ERR_NOT_IMPLEMENTED; }
     
     //
     // prepare an app-specific learning request (on learner, to be sent to learneee
@@ -172,7 +172,7 @@ public:
     // so when apply the learned file state, make sure using learn_dir() instead of data_dir() to get the
     // full path of the files.
     //
-    virtual int  get_checkpoint(
+    virtual ::dsn::error_code get_checkpoint(
         ::dsn::replication::decree start,
         const ::dsn::blob& learn_req,
         /*out*/ ::dsn::replication::learn_state& state
@@ -193,7 +193,7 @@ public:
     // Postconditions:
     // * after apply_checkpoint() done, last_committed_decree() == last_durable_decree()
     // 
-    virtual int  apply_checkpoint(::dsn::replication::learn_state& state, chkpt_apply_mode mode) = 0;
+    virtual ::dsn::error_code apply_checkpoint(::dsn::replication::learn_state& state, chkpt_apply_mode mode) = 0;
 
     //
     // Query methods.
@@ -251,19 +251,19 @@ private:
     error_code open_internal(replica* r, bool create_new);
     error_code write_internal(mutation_ptr& mu);
     void       dispatch_rpc_call(int code, binary_reader& reader, dsn_message_t response);
-    const replica_log_info& log_info() const { return _info; }
-    error_code update_log_info(replica* r, int64_t shared_log_offset, int64_t private_log_offset);
+    const replica_init_info& init_info() const { return _info; }
+    error_code update_init_info(replica* r, int64_t shared_log_offset, int64_t private_log_offset);
 
     void install_perf_counters();
 
 private:
-    std::string _dir_data;
+    std::string _dir_data; // ${replica_dir}/data
     std::string _dir_learn;
     replica*    _replica;
     std::unordered_map<int, std::function<void(binary_reader&, dsn_message_t)> > _handlers;
     int         _physical_error; // physical error (e.g., io error) indicates the app needs to be dropped
     bool        _is_delta_state_learning_supported;
-    replica_log_info    _info;
+    replica_init_info    _info;
     batch_state         _batch_state;
     std::atomic<decree> _last_committed_decree;
 

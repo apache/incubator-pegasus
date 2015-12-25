@@ -10,11 +10,15 @@ compiler:
 
 before_install:
     # - sudo apt-get install php5-cli
-    - sudo wget https://raw.githubusercontent.com/shengofsun/packages/master/source.list
-    - sudo cp source.list /etc/apt/sources.list
+    # - sudo wget https://raw.githubusercontent.com/shengofsun/packages/master/source.list
+    # - sudo cp source.list /etc/apt/sources.list
     # - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y 
-    - sudo apt-get update -qq
-    - sudo apt-get install -qq libboost-all-dev libaio-dev lcov gdb
+    # - sudo apt-get update -qq
+    - wget https://raw.githubusercontent.com/shengofsun/packages/master/build-depends.tar.gz
+    - tar xf build-depends.tar.gz
+    - cd packages
+    - ls | xargs sudo dpkg -i --force-depends
+    - cd ..
 
 install:
     - ./run.sh format
