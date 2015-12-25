@@ -226,7 +226,7 @@ std::string perf_counters::get_counter_value(const std::vector<std::string>& arg
     utils::perf_counters& c = utils::perf_counters::instance();
     auto counter = c.get_counter(args[0].c_str(), args[1].c_str(), COUNTER_TYPE_NUMBER, "", false);
 
-    if (counter)
+    if (counter && counter->type() != COUNTER_TYPE_NUMBER_PERCENTILES)
         ss << counter->get_value();
     else
         ss << 0;
