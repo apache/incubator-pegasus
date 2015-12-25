@@ -210,11 +210,8 @@ void mutation_log::close()
 
     dinfo("close mutation log %s", dir().c_str());
 
-    // flush pending buffer first
+    // make all data is on disk
     flush();
-
-    // make sure all issued aios are completed
-    dsn_task_tracker_wait_all(tracker());
 
     {
         zauto_lock l(_lock);
@@ -233,11 +230,24 @@ void mutation_log::close()
 
 void mutation_log::flush()
 {
-    zauto_lock _(_lock);
-    if (_pending_write != nullptr)
+    // make sure previous writes are done
+    if (!_issued_write.expired())
     {
-        // TODO(qinzuoyan): is it a problem if previous writing is not done?
-        write_pending_mutations();
+        dsn_task_tracker_wait_all(tracker());
+    }
+
+    {
+        zauto_lock _(_lock);
+        if (_pending_write != nullptr)
+        {
+            write_pending_mutations();
+        }
+    }
+
+    // make sure the latest flush writes are done
+    if (!_issued_write.expired())
+    {
+        dsn_task_tracker_wait_all(tracker());
     }
 }
 
@@ -315,8 +325,7 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
 {
     dassert(_pending_write != nullptr, "");
     dassert(_pending_write_callbacks != nullptr, "");
-    // TODO(qinzuoyan): check _issued_write.expired()?
-    //dassert(_issued_write.expired(), "");
+    dassert(_issued_write.expired(), "");
 
     uint64_t start_offset = _global_end_offset - _pending_write->size();
     bool new_log_file = create_new_log_when_necessary
@@ -351,6 +360,7 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
     }
 
     _issued_write = _pending_write;
+    _issued_write_task = aio;
 
     _pending_write = nullptr;
     _pending_write_callbacks = nullptr;
@@ -748,7 +758,8 @@ void mutation_log::check_valid_start_offset(global_partition_id gpid, int64_t va
     //
     // start to write
     //
-    if (_issued_write.expired()) {
+    if (_issued_write.expired()) 
+    {
         if (_batch_buffer_bytes == 0)
         {
             // not batching
@@ -954,7 +965,8 @@ void mutation_log::get_learn_state(
         }
 
         skip_next = (log->previous_log_max_decrees().size() == 0);
-        // TODO(qinzuoyan): why continue here?
+        
+        // continue checking as this file may be a fault
         if (skip_next)
             continue;
 

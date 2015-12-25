@@ -97,6 +97,24 @@ private:
     ::dsn::utils::ex_lock_nr_spin _requests_lock[MATCHER_BUCKET_NR];
 };
 
+class rpc_server_dispatcher
+{
+public:
+    bool  register_rpc_handler(rpc_handler_ptr& handler);
+    rpc_handler_ptr unregister_rpc_handler(dsn_task_code_t rpc_code);
+    rpc_request_task* on_request(message_ex* msg, service_node* node);
+    int handler_count() const 
+    {
+        utils::auto_read_lock l(_handlers_lock); 
+        return static_cast<int>(_handlers.size()); 
+    }
+
+private:
+    typedef std::unordered_map<std::string, rpc_handler_ptr> rpc_handlers;
+    rpc_handlers                  _handlers;
+    mutable utils::rw_lock_nr     _handlers_lock;
+};
+
 class rpc_engine
 {
 public:
@@ -113,8 +131,8 @@ public:
     //
     // rpc registrations
     //
-    bool  register_rpc_handler(rpc_handler_ptr& handler);
-    rpc_handler_ptr unregister_rpc_handler(dsn_task_code_t rpc_code);
+    bool  register_rpc_handler(rpc_handler_ptr& handler, uint64_t vnid);
+    rpc_handler_ptr unregister_rpc_handler(dsn_task_code_t rpc_code, uint64_t vnid);
 
     //
     // rpc routines
@@ -141,20 +159,22 @@ private:
         );
 
 private:
-    configuration_ptr                               _config;    
-    service_node                                    *_node;
-    std::vector<std::vector<network*>>              _client_nets; // <format, <CHANNEL, network*>>
-    std::unordered_map<int, std::vector<network*>>  _server_nets; // <port, <CHANNEL, network*>>
-    ::dsn::rpc_address                              _local_primary_address;
-    rpc_client_matcher                              _rpc_matcher;
+    configuration_ptr                                _config;    
+    service_node                                     *_node;
+    std::vector<std::vector<network*>>               _client_nets; // <format, <CHANNEL, network*>>
+    std::unordered_map<int, std::vector<network*>>   _server_nets; // <port, <CHANNEL, network*>>
+    ::dsn::rpc_address                               _local_primary_address;
+    rpc_client_matcher                               _rpc_matcher;
+    rpc_server_dispatcher                            _rpc_dispatcher;    
 
-    typedef std::unordered_map<std::string, rpc_handler_ptr> rpc_handlers;
-    rpc_handlers                  _handlers;
-    utils::rw_lock_nr             _handlers_lock;
+    utils::rw_lock_nr                                    _vnodes_lock;
+    std::unordered_map<uint64_t, rpc_server_dispatcher*> _vnodes;
     
     volatile bool                 _is_running;
     static bool                   _message_crc_required;
 };
+
+// ------------------------ inline implementations --------------------
 
 } // end namespace
 

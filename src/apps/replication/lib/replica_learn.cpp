@@ -352,9 +352,11 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
                 "%s: on_learn[%016llx]: learner = %s, get app learn state failed, error = %s",
                 name(), request.signature, request.learner.to_string(), lerr.to_string()
                 );
+
             if (lerr == ERR_OBJECT_NOT_FOUND)
             {
-                // TODO(qinzuoyan): trigger checkpoint
+                // no need to checkpoint as it is imposible
+                // becaues it will go to the private log learning in that case
             }
         }
         else

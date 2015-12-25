@@ -254,7 +254,6 @@ public:
     // thread safe
     decree max_commit() const;
 
-    // TODO(qinzuoyan): what the meaning of the method?
     // maximum decree that is garbage collected
     // thread safe
     decree max_gced_decree(global_partition_id gpid, int64_t valid_start_offset) const;
@@ -339,6 +338,7 @@ private:
     
     // bufferring
     std::weak_ptr<log_block>       _issued_write;
+    task_ptr                       _issued_write_task; // for debugging
     std::shared_ptr<log_block>     _pending_write;
     pending_callbacks_ptr          _pending_write_callbacks;
     decree                         _pending_write_max_commit; // only used for private log
@@ -352,7 +352,7 @@ private:
 
     // replica log info for private log
     replica_log_info               _private_log_info;
-    decree                         _private_max_commit; // the max last_committed_decree of mutations up to now
+    decree                         _private_max_commit; // the max last_committed_decree of written mutations up to now
 };
 
 //
