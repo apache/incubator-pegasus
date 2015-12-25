@@ -18,7 +18,7 @@ IF ERRORLEVEL 1 (
 GOTO exit
 
 :usage
-    ECHO run.cmd deploy^|start^|stop^|cleanup^|quick-cleanup source-dir target-dir
+    ECHO run.cmd deploy^|start^|stop^|cleanup^|quick-cleanup^|sds(stop-deploy-start) source-dir target-dir
     ECHO  source-dir is a directory which contains a start.cmd, machines.txt, and other resource files/dirs
     GOTO:EOF
 
@@ -58,6 +58,14 @@ REM
     set rdst=\\%1\%rdst_dir%
     @rmdir /Q /S %rdst%
     GOTO:EOF
+    
+:sds
+    ECHO stop %machine% ...
+    CALL :stop %machine%
+    ECHO deploy %machine% ...
+    CALL :deploy %machine%
+    ECHO start %machine% ...
+    CALL :start %machine%
     
 :exit
 

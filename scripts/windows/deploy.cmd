@@ -53,7 +53,7 @@ IF ERRORLEVEL 1 (
 GOTO exit
 
 :usage
-    ECHO run.cmd deploy^|start^|stop^|cleanup^|quick-cleanup source-dir target-dir
+    ECHO run.cmd deploy^|start^|stop^|cleanup^|quick-cleanup^|sds(stop-deploy-start) source-dir target-dir
     ECHO  Example: "run deploy .\skv-meta d:\zhenyug" deploys skv-meta to d:\zhenyug\skv-meta.
     ECHO  source-dir is a directory which contains a start.cmd, machines.txt, and other resource files/dirs
     GOTO:EOF
