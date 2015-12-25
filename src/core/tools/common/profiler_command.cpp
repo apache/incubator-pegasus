@@ -403,10 +403,19 @@ namespace dsn {
                             uint64_t* samples = s_spec_profilers[task_id].ptr[counter_type]->get_samples(sample_count);
 
                             std::vector<uint64_t> sampleArr(samples, samples + sample_count);
+                            sampleArr.erase(std::remove(sampleArr.begin(), sampleArr.end(), 0), sampleArr.end());
                             std::sort(sampleArr.begin(), sampleArr.end());
 
-                            for (int l = 0; l < sample_count; l += sample_count / 1000)
-                                ss << ", " << sampleArr[l];
+                            if (sampleArr.size() < 1000)
+                            {
+                                for (int l = 0; l < sampleArr.size(); l++)
+                                    ss << ", " << sampleArr[l];
+                            }
+                            else
+                            {
+                                for (int l = 0; l < 1000; l++)
+                                    ss << ", " << sampleArr[l * sampleArr.size() / 1000];
+                            }
 
                             ss << "],\n";
                         }
@@ -460,8 +469,9 @@ namespace dsn {
                     ss << "unenough arguments" << std::endl;
                     return ss.str();
                 }
-
                 int task_id = find_task_id(args[1]);
+                int query_percentile = (args.size() == 2) ? 50 : atoi(args[2].c_str());
+                
 
                 if ((task_id == TASK_CODE_INVALID) || (s_spec_profilers[task_id].is_profile == false))
                 {
@@ -483,7 +493,25 @@ namespace dsn {
                             if (s_spec_profilers[task_id].ptr[counter_type] == NULL)
                                 continue;
 
-                            double timeGet = s_spec_profilers[task_id].ptr[counter_type]->get_percentile(COUNTER_PERCENTILE_50);
+                            double timeGet = 0;
+                            switch (query_percentile)
+                            {
+                                case 50: 
+                                    timeGet = s_spec_profilers[task_id].ptr[counter_type]->get_percentile(COUNTER_PERCENTILE_50);
+                                    break;
+                                case 90:
+                                    timeGet = s_spec_profilers[task_id].ptr[counter_type]->get_percentile(COUNTER_PERCENTILE_90);
+                                    break;
+                                case 95:
+                                    timeGet = s_spec_profilers[task_id].ptr[counter_type]->get_percentile(COUNTER_PERCENTILE_95);
+                                    break;
+                                case 99:
+                                    timeGet = s_spec_profilers[task_id].ptr[counter_type]->get_percentile(COUNTER_PERCENTILE_99);
+                                    break;
+                                case 999:
+                                    timeGet = s_spec_profilers[task_id].ptr[counter_type]->get_percentile(COUNTER_PERCENTILE_999);
+                                    break;
+                            }
 
                             if (strcmp(counter_info_ptr[counter_type]->title, "RPC.SERVER(ns)") == 0 && task_spec::get(task_id)->type == TASK_TYPE_RPC_REQUEST)
                                 timeList[0] = timeGet;
@@ -505,8 +533,8 @@ namespace dsn {
                         task_id = task_spec::get(task_id)->rpc_paired_code;
                 } while (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE);
 
-                timeList[0] = (timeList[3] - timeList[0]) / 2;
-                timeList[3] = timeList[0];
+                //timeList[0] = (timeList[3] - timeList[0]) / 2;
+                //timeList[3] = timeList[0];
                 for (auto i : timeList)
                     ss << ((i < 0) ? 0 : i) << ",";
                 return ss.str();
