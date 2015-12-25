@@ -57,8 +57,16 @@ namespace dsn {
 
 typedef std::list<std::pair< ::dsn::rpc_address, bool>> node_states;
 
+enum app_status
+{
+    available,
+    creating,
+    creating_failed
+};
+
 struct app_state
 {
+    app_status                           status;
     std::string                          app_type;
     std::string                          app_name;
     int32_t                              app_id;
@@ -124,6 +132,8 @@ public:
         std::function<void()> callback
         );
 
+    // create table
+    void create_table(dsn_message_t msg);
     void unfree_if_possible_on_start();
 
     // if is freezed
@@ -153,6 +163,9 @@ private:
 
     // check equality of two partition configurations, not take last_drops into account
     bool partition_configuration_equal(const partition_configuration& pc1, const partition_configuration& pc2);
+
+    // get the application_id from name, -1 for app doesn't exist
+    int32_t app_id(const char* app_name) const;
 
     // join path
     static std::string join_path(const std::string& input1, const std::string& input2);

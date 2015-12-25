@@ -719,7 +719,87 @@ void server_state::query_configuration_by_index(const configuration_query_by_ind
     response.err = ERR_OBJECT_NOT_FOUND;
 }
 
+int32_t server_state::app_id(const char *app_name) const
+{
+    for (const app_state& app: _apps)
+        if ( strcmp(app.app_name.c_str(), app_name) == 0)
+            return app.app_id;
+    return -1;
+}
+
 DEFINE_TASK_CODE(LPC_META_SERVER_STATE_UPDATE_CALLBACK, TASK_PRIORITY_HIGH, THREAD_POOL_META_SERVER)
+
+void server_state::intialize_app()
+{
+    
+}
+
+void server_state::create_table(dsn_message_t msg)
+{
+    configuration_create_table_request request;
+    configuration_create_table_response response;
+    bool will_create_table = false;
+    
+    ::unmarshall(msg ,request);
+    
+    auto option_check = [](const create_table_options& opt, const app_state& exist_app) {
+        return opt.partition_count==exist_app.partition_count && 
+               opt.app_type==exist_app.app_type;
+    };
+
+    zauto_write_lock l(_lock);
+    int32_t app_id = app_id(request.app_name);
+    if ( app_id != -1 )
+    {
+        app_state& exist_app = _apps[app_id];
+        switch (exist_app.status)
+        {
+        case available:
+            if ( !request.options.success_if_exist || !option_match_check(request.options, exist_app) )
+                response.err = ERR_INVALID_PARAMETERS;
+            else {
+                response.err = ERR_OK;
+                response.appid = app_id;
+            }
+            break;
+        case creating:
+            response.err = ERR_BUSY_CREATING;
+            break;
+        case creating_failed:
+            will_create_table = true;
+            break;
+        default:
+            break;
+        }
+    }
+    else {
+        app_id = _apps.size();
+        _apps.push_back( app_state() );
+        app_state& app = _apps.back();
+        
+        app.app_id = app_id;
+        app.app_name = request.app_name;
+        app.app_type = request.options.app_type;
+        app.partition_count = request.options.partition_count;
+
+        partition_configuration pc;
+        pc.app_type = app.app_type;
+        pc.ballot = 0;
+        pc.gpid.app_id = app.app_id;
+        pc.last_committed_decree = 0;
+        pc.max_replica_count = request.options.replica_count;
+
+        app.partitions.resize(app.partition_count, pc);
+        
+        will_create_table = true;
+    }
+    
+    if ( will_create_table ) {
+        initialize_app();
+    }
+    else
+        reply(msg, response);
+}
 
 void server_state::update_configuration(
     std::shared_ptr<configuration_update_request>& req,

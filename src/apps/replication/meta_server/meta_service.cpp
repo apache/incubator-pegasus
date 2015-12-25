@@ -144,6 +144,24 @@ void meta_service::register_rpc_handlers()
         "RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND",
         &meta_service::on_modify_replica_config_explictly
         );
+
+    register_rpc_handler(
+        RPC_CM_CREATE_TABLE,
+        "RPC_CM_CREATE_TABLE",
+        &meta_service::on_create_table
+        );
+
+    register_rpc_handler(
+        RPC_CM_QUERY_TABLE_STATUS,
+        "RPC_CM_QUERY_TABLE_STATUS",
+        &meta_service::on_query_table_status
+        );
+
+    register_rpc_handler(
+        RPC_CM_DROP_TABLE,
+        "RPC_CM_DROP_TABLE",
+        &meta_service::on_drop_table
+        );
 }
 
 void meta_service::stop()
@@ -208,6 +226,33 @@ bool meta_service::check_primary(dsn_message_t req)
     }
 
     return true;
+}
+
+// table operations
+void meta_service::on_create_table(dsn_message_t req)
+{
+    if (!check_primary(msg))
+        return;
+
+    if (!_started)
+    {
+        configuration_create_table_response response;
+        response.err = ERR_SERVICE_NOT_ACTIVE;
+        reply(msg, response);
+        return;
+    }
+
+    _state->create_table(req);
+}
+
+void meta_service::on_drop_table(dsn_message_t req)
+{
+
+}
+
+void meta_service::on_query_table_status(dsn_message_t req)
+{
+
 }
 
 // partition server & client => meta server
