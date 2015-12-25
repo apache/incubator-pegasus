@@ -70,7 +70,7 @@ public:
     static replica* load(replica_stub* stub, const char* dir);
     static replica* newr(replica_stub* stub, const char* app_type, global_partition_id gpid);    
     // return true when the mutation is valid for the current replica
-    bool replay_mutation(mutation_ptr& mu, bool is_private = true);
+    bool replay_mutation(mutation_ptr& mu, bool is_private);
     void reset_prepare_list_after_replay();
     // return false when update fails or replica is going to be closed
     bool update_local_configuration_with_no_ballot_change(partition_status status);

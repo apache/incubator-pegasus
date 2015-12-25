@@ -442,7 +442,8 @@ void replica::on_learn_reply(
     if (resp->config.ballot > get_ballot())
     {
         ddebug("%s: on_learn_reply[%016llx]: first update configuration as ballot changed", name(), req->signature);
-        update_local_configuration(resp->config);
+        bool ret = update_local_configuration(resp->config);
+        dassert(ret, "");
     }
 
     if (status() != PS_POTENTIAL_SECONDARY)

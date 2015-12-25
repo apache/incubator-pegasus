@@ -204,9 +204,19 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         rps.clear();
 
         // restart log service
-        _log->close(true);
+        _log->close();
+        _log = nullptr;
+        if (!utils::filesystem::remove_path(log_dir))
+        {
+            dassert(false, "remove directory %s failed", log_dir.c_str());
+        }
+        _log = new mutation_log(
+            log_dir,
+            opts.log_shared_batch_buffer_kb,
+            opts.log_file_size_mb
+            );
         auto lerr = _log->open(nullptr);
-        dassert(lerr == ERR_OK, "restart log service must succeed");    
+        dassert(lerr == ERR_OK, "restart log service must succeed");
     }
 
     for (auto it = rps.begin(); it != rps.end(); it++)
@@ -215,7 +225,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
                 
         decree smax = _log->max_decree(it->first);
         decree pmax = invalid_decree;
-        if (!_options.log_private_disabled)
+        if (it->second->private_log())
         {
             pmax = it->second->private_log()->max_decree(it->first);
 
@@ -244,7 +254,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
             );
 
         if (err == ERR_OK)
-        {            
+        {
             dassert(smax == pmax, "incomplete private log state");
             it->second->set_inactive_state_transient(true);
         }
@@ -841,18 +851,29 @@ void replica_stub::on_gc()
         rs = _replicas;
     }
 
-    // gc prepare log
+    // gc shared prepare log
     if (_log != nullptr)
     {
-        replica_log_info_map durable_decrees;
+        // gc condition is:
+        //   d <= last_durable_decree && d <= private_log.max_commit_decree
+        replica_log_info_map gc_condition;
         for (auto it = rs.begin(); it != rs.end(); it++)
         {
             replica_log_info ri;
-            ri.max_decree = it->second->last_durable_decree();
-            ri.valid_start_offset = it->second->get_app()->init_info().init_offset_in_shared_log;
-            durable_decrees[it->first] = ri;
+            replica_ptr r = it->second;
+            mutation_log_ptr plog = r->private_log();
+            if (plog)
+            {
+                ri.max_decree = std::min(r->last_durable_decree(), plog->max_commit());
+            }
+            else
+            {
+                ri.max_decree = r->last_durable_decree();
+            }
+            ri.valid_start_offset = r->get_app()->init_info().init_offset_in_shared_log;
+            gc_condition[it->first] = ri;
         }
-        _log->garbage_collection(durable_decrees);
+        _log->garbage_collection(gc_condition);
     }
     
     // gc on-disk rps
