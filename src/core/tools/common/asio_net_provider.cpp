@@ -216,7 +216,9 @@ namespace dsn {
                 do
                 {
                     //FIXME: we actually do not need to set a random port for clinet if the rpc_engine is refactored
-                    _address.assign_ipv4(get_local_ipv4(), std::numeric_limits<uint16_t>::max() - utils::get_random64() % 5000);
+                    _address.assign_ipv4(get_local_ipv4(), std::numeric_limits<uint16_t>::max() - 
+                        dsn_random64(std::numeric_limits<uint64_t>::min(),
+                                     std::numeric_limits<uint64_t>::max()) % 5000);
                     ::boost::asio::ip::udp::endpoint ep(boost::asio::ip::address_v4::any(), _address.port());
                     try
                     {

@@ -259,8 +259,8 @@ struct threadpool_spec
     std::string             admission_controller_arguments;
 
     threadpool_spec(const dsn_threadpool_code_t& code) : pool_code(code), name(dsn_threadpool_code_to_string(code)) {}
-    threadpool_spec(const threadpool_spec& source);
-    threadpool_spec& operator=(const threadpool_spec& source);
+    threadpool_spec(const threadpool_spec& source) = default;
+    threadpool_spec& operator=(const threadpool_spec& source) = default;
 
     static bool init(/*out*/ std::vector<threadpool_spec>& specs);
 };
