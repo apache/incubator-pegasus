@@ -37,6 +37,7 @@
 # include <dsn/service_api_c.h>
 # include <dsn/internal/command.h>
 # include <dsn/internal/task.h>
+# include <dsn/cpp/json_helper.h>
 # include "service_engine.h"
 
 DSN_API dsn_handle_t dsn_perf_counter_create(const char* name, dsn_perf_counter_type_t type, const char* description)
@@ -88,14 +89,22 @@ namespace dsn { namespace utils {
     
 perf_counters::perf_counters(void)
 {
-    ::dsn::register_command("counter.list", "counter.list - get the list of all counters",
+    ::dsn::register_command("counter.list", 
+        "counter.list - get the list of all counters",
         "counter.list",
         &perf_counters::list_counter
         );
 
-    ::dsn::register_command("counter.query", "counter.query - get current value of a specific counter",
-        "counter.query [counter]",
-        &perf_counters::query_counter
+    ::dsn::register_command("counter.value", 
+        "counter.value - get current value of a specific counter",
+        "counter.value section-name counter-name",
+        &perf_counters::get_counter_value
+        );
+
+    ::dsn::register_command("counter.sample",
+        "counter.sample - get latest sample of a specific counter",
+        "counter.sample section-name counter-name",
+        &perf_counters::get_counter_sample
         );
 }
 
@@ -105,30 +114,27 @@ perf_counters::~perf_counters(void)
 
 perf_counter_ptr perf_counters::get_counter(const char *section, const char *name, dsn_perf_counter_type_t flags, const char *dsptr, bool create_if_not_exist /*= false*/)
 {
-    char section_name[512] = "";
-    //::GetModuleBaseNameA(::GetCurrentProcess(), ::GetModuleHandleA(nullptr), section_name, 256);
-    //strcat(section_name, ".");
-    strcat(section_name, section);
     if (create_if_not_exist)
     {
         auto_write_lock l(_lock);
 
-        auto it = _counters.find(section_name);
+        auto it = _counters.find(section);
         if (it == _counters.end())
         {
-            it = _counters.emplace(std::piecewise_construct, std::forward_as_tuple(section_name), std::forward_as_tuple(same_section_counters{})).first;
+            it = _counters.emplace(std::piecewise_construct, std::forward_as_tuple(section), std::forward_as_tuple(same_section_counters{})).first;
         }
 
         auto it2 = it->second.find(name);
         if (it2 == it->second.end())
         {
-            perf_counter_ptr counter = _factory(section_name, name, flags, dsptr);
+            perf_counter_ptr counter = _factory(section, name, flags, dsptr);
             it->second.emplace(std::piecewise_construct, std::forward_as_tuple(name), std::forward_as_tuple(counter));
             return counter;
         }
         else
         {
-            dassert (it2->second->type() == flags, "counters with the same name %s.%s with differnt types", section_name, name);
+            dassert (it2->second->type() == flags,
+                "counters with the same name %s.%s with differnt types", section, name);
             return it2->second;
         }
     }
@@ -136,7 +142,7 @@ perf_counter_ptr perf_counters::get_counter(const char *section, const char *nam
     {
         auto_read_lock l(_lock);
 
-        auto it = _counters.find(section_name);
+        auto it = _counters.find(section);
         if (it == _counters.end())
             return nullptr;
 
@@ -150,14 +156,9 @@ perf_counter_ptr perf_counters::get_counter(const char *section, const char *nam
 
 bool perf_counters::remove_counter(const char* section, const char* name)
 {
-    char section_name[512] = "";
-    //::GetModuleBaseNameA(::GetCurrentProcess(), ::GetModuleHandleA(nullptr), section_name, 256);
-    //strcat(section_name, ".");
-    strcat(section_name, section);
-
     auto_write_lock l(_lock);
 
-    auto it = _counters.find(section_name);
+    auto it = _counters.find(section);
     if (it == _counters.end())
         return false;
 
@@ -186,42 +187,71 @@ std::string perf_counters::list_counter(const std::vector<std::string>& args)
 
 std::string perf_counters::list_counter_internal(const std::vector<std::string>& args)
 {
-    auto_read_lock l(_lock);
-    std::stringstream ss;
-    ss << "[";
-    bool first_flag = 0;
-    for (auto& section : _counters)
+    std::map<std::string, std::vector<std::string> > counters;
+    std::vector<std::string> empty_v;
     {
-        for (auto& counter : section.second)
+        auto_read_lock l(_lock);
+
+        for (auto& section : _counters)
         {
-            if (!first_flag)
-                first_flag = 1;
-            else
-                ss << ",";
-            ss << "\"" << counter.first << "\"";
+            std::vector<std::string>* pv = &counters.insert(
+                std::unordered_map<std::string, std::vector<std::string> >::value_type(
+                    section.first,
+                    empty_v
+                )
+                ).first->second;
+
+            for (auto& counter : section.second)
+            {
+                pv->push_back(counter.first);
+            }
         }
     }
-    ss << "]";
+
+    std::stringstream ss;
+    std::json_encode(ss, counters);
     return ss.str();
 }
 
-std::string perf_counters::query_counter(const std::vector<std::string>& args)
+std::string perf_counters::get_counter_value(const std::vector<std::string>& args)
 {
     std::stringstream ss;
 
-    if (args.size() < 1)
+    if (args.size() < 2)
     {
-        ss << "unenough arguments" << std::endl;
+        ss << 0;
         return ss.str();
     }
 
     utils::perf_counters& c = utils::perf_counters::instance();
-    auto counter = c.get_counter(args[0].c_str(), COUNTER_TYPE_NUMBER, "", false);
+    auto counter = c.get_counter(args[0].c_str(), args[1].c_str(), COUNTER_TYPE_NUMBER, "", false);
+
+    if (counter)
+        ss << counter->get_value();
+    else
+        ss << 0;
+
+    return ss.str();
+}
+
+
+std::string perf_counters::get_counter_sample(const std::vector<std::string>& args)
+{
+    std::stringstream ss;
+
+    if (args.size() < 2)
+    {
+        ss << 0;
+        return ss.str();
+    }
+
+    utils::perf_counters& c = utils::perf_counters::instance();
+    auto counter = c.get_counter(args[0].c_str(), args[1].c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, "", false);
 
     if (counter)
         ss << counter->get_current_sample();
     else
-        ss << (uint64_t)(0);
+        ss << 0;
 
     return ss.str();
 }
