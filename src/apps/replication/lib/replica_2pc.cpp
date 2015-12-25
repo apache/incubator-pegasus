@@ -385,8 +385,6 @@ void replica::on_append_log_completed(mutation_ptr& mu, error_code err, size_t s
     }
    
     // write local private log if necessary
-    // TODO(qinzuoyan): for task dispatch order reason, this may cause disordering of
-    // appending mutation into private log
     if (err == ERR_OK && _private_log && status() != PS_ERROR)
     {
         _private_log->append(mu,

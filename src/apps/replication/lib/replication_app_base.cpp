@@ -156,10 +156,12 @@ void replication_app_base::install_perf_counters()
     _app_commit_throughput.init(ss.str().c_str(), COUNTER_TYPE_RATE, "commit throughput for current app");
 
     ss.clear();
+    ss.str("");
     ss << replica_name() << ".latency(ns)";
     _app_commit_latency.init(ss.str().c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, "commit latency for current app");
 
     ss.clear();
+    ss.str("");
     ss << replica_name() << ".decree#";
     _app_commit_decree.init(ss.str().c_str(), COUNTER_TYPE_NUMBER, "commit decree for current app");
 }

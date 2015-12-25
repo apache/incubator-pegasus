@@ -219,7 +219,58 @@ namespace dsn {
         call->add_ref(); // released in on_rpc_timeout or on_recv_reply
     }
 
-    //------------------------
+    //----------------------------------------------------------------------------------------------
+    bool rpc_server_dispatcher::register_rpc_handler(rpc_handler_ptr& handler)
+    {
+        auto name = std::string(dsn_task_code_to_string(handler->code));
+
+        utils::auto_write_lock l(_handlers_lock);
+        auto it = _handlers.find(name);
+        auto it2 = _handlers.find(handler->name);
+        if (it == _handlers.end() && it2 == _handlers.end())
+        {
+            _handlers[name] = handler;
+            _handlers[handler->name] = handler;
+            return true;
+        }
+        else
+        {
+            dassert(false, "rpc registration confliction for '%s'", name.c_str());
+            return false;
+        }
+    }
+
+    rpc_handler_ptr rpc_server_dispatcher::unregister_rpc_handler(dsn_task_code_t rpc_code)
+    {
+        utils::auto_write_lock l(_handlers_lock);
+        auto it = _handlers.find(dsn_task_code_to_string(rpc_code));
+        if (it == _handlers.end())
+            return nullptr;
+
+        auto ret = it->second;
+        std::string name = it->second->name;
+        _handlers.erase(it);
+        _handlers.erase(name);
+
+        return ret;
+    }
+
+    rpc_request_task* rpc_server_dispatcher::on_request(message_ex* msg, service_node* node)
+    {
+        rpc_request_task* tsk = nullptr;
+        {
+            utils::auto_read_lock l(_handlers_lock);
+            auto it = _handlers.find(msg->header->rpc_name);
+            if (it != _handlers.end())
+            {
+                msg->local_rpc_code = (uint16_t)it->second->code;
+                tsk = new rpc_request_task(msg, it->second, node);
+            }
+        }
+        return tsk;
+    }
+
+    //----------------------------------------------------------------------------------------------
     /*static*/ bool rpc_engine::_message_crc_required;
 
     rpc_engine::rpc_engine(configuration_ptr config, service_node* node)
@@ -399,52 +450,74 @@ namespace dsn {
         _is_running = true;
         return ERR_OK;
     }
-    
-    bool rpc_engine::register_rpc_handler(rpc_handler_ptr& handler)
-    {
-        auto name = std::string(dsn_task_code_to_string(handler->code));
 
-        utils::auto_write_lock l(_handlers_lock);
-        auto it = _handlers.find(name);
-        auto it2 = _handlers.find(handler->name);
-        if (it == _handlers.end() && it2 == _handlers.end())
+    bool rpc_engine::register_rpc_handler(rpc_handler_ptr& handler, uint64_t vnid)
+    {
+        if (0 == vnid)
         {
-            _handlers[name] = handler;
-            _handlers[handler->name] = handler;
-            return true;
+            return _rpc_dispatcher.register_rpc_handler(handler);
         }
         else
         {
-            dassert(false, "rpc registration confliction for '%s'", name.c_str());
-            return false;
+            utils::auto_write_lock l(_vnodes_lock);
+            auto it = _vnodes.find(vnid);
+            if (it == _vnodes.end())
+            {
+                auto dispatcher = new rpc_server_dispatcher();
+                return _vnodes.insert(
+                    std::unordered_map<uint64_t, rpc_server_dispatcher* >::value_type(vnid, dispatcher))
+                    .first->second->register_rpc_handler(handler);
+            }
+            else
+            {
+                return it->second->register_rpc_handler(handler);
+            }
         }
     }
 
-    rpc_handler_ptr rpc_engine::unregister_rpc_handler(dsn_task_code_t rpc_code)
+    rpc_handler_ptr rpc_engine::unregister_rpc_handler(dsn_task_code_t rpc_code, uint64_t vnid)
     {
-        utils::auto_write_lock l(_handlers_lock);
-        auto it = _handlers.find(dsn_task_code_to_string(rpc_code));
-        if (it == _handlers.end())
-            return nullptr;
-
-        auto ret = it->second;
-        std::string name = it->second->name;
-        _handlers.erase(it);
-        _handlers.erase(name);
-
-        return ret;
+        if (0 == vnid)
+        {
+            return _rpc_dispatcher.unregister_rpc_handler(rpc_code);
+        }
+        else
+        {
+            utils::auto_write_lock l(_vnodes_lock);
+            auto it = _vnodes.find(vnid);
+            if (it == _vnodes.end())
+            {
+                return nullptr;
+            }
+            else
+            {
+                auto r = it->second->unregister_rpc_handler(rpc_code);
+                if (0 == it->second->handler_count())
+                {
+                    delete it->second;
+                    _vnodes.erase(it);
+                }
+                return r;
+            }
+        }
     }
-
+    
     void rpc_engine::on_recv_request(message_ex* msg, int delay_ms)
     {
-        rpc_request_task* tsk = nullptr;
+        rpc_request_task* tsk;
+        if (msg->header->vnid == 0)
+            tsk = _rpc_dispatcher.on_request(msg, _node);
+        else
         {
-            utils::auto_read_lock l(_handlers_lock);
-            auto it = _handlers.find(msg->header->rpc_name);
-            if (it != _handlers.end())
+            utils::auto_read_lock l(_vnodes_lock);
+            auto it = _vnodes.find(msg->header->vnid);
+            if (it != _vnodes.end())
             {
-                msg->local_rpc_code = (uint16_t)it->second->code;
-                tsk = new rpc_request_task(msg, it->second, _node);                
+                tsk = it->second->on_request(msg, _node);
+            }
+            else
+            {
+                tsk = nullptr;
             }
         }
 

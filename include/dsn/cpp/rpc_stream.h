@@ -96,7 +96,7 @@ namespace dsn
         }
 
         // for request
-        rpc_write_stream(task_code code, int timeout_ms = 0, int hash = DSN_INVALID_HASH)
+        rpc_write_stream(task_code code, int timeout_ms = 0, int hash = 0)
             : safe_handle<dsn_msg_release_ref>(dsn_msg_create_request(code, timeout_ms, hash), false)
         {
             _last_write_next_committed = true;

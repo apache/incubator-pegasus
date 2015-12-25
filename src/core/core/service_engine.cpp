@@ -61,13 +61,13 @@ service_node::service_node(service_app_spec& app_spec)
     _app_context_ptr = _app_spec.role.create(_app_spec.role.type_name.c_str());
 }
 
-bool service_node::rpc_register_handler(rpc_handler_ptr& handler)
+bool service_node::rpc_register_handler(rpc_handler_ptr& handler, uint64_t vnid)
 {
     for (auto& io : _ios)
     {
         if (io.rpc)
         {
-            bool r = io.rpc->register_rpc_handler(handler);
+            bool r = io.rpc->register_rpc_handler(handler, vnid);
             if (!r)
                 return false;
         }
@@ -75,14 +75,14 @@ bool service_node::rpc_register_handler(rpc_handler_ptr& handler)
     return true;
 }
 
-rpc_handler_ptr service_node::rpc_unregister_handler(dsn_task_code_t rpc_code)
+rpc_handler_ptr service_node::rpc_unregister_handler(dsn_task_code_t rpc_code, uint64_t vnid)
 {
     rpc_handler_ptr ret = nullptr;
     for (auto& io : _ios)
     {
         if (io.rpc)
         {
-            auto r = io.rpc->unregister_rpc_handler(rpc_code);
+            auto r = io.rpc->unregister_rpc_handler(rpc_code, vnid);
             if (ret != nullptr)
             {
                 dassert(ret == r, "registered context must be the same");
@@ -445,7 +445,7 @@ void service_engine::register_system_rpc_handler(
             for (auto& io : n.second->ios())
             {
                 if (io.rpc)
-                    io.rpc->register_rpc_handler(h);
+                    io.rpc->register_rpc_handler(h, 0);
             }
         }
     }
@@ -457,7 +457,7 @@ void service_engine::register_system_rpc_handler(
             for (auto& io : it->second->ios())
             {
                 if (io.rpc)
-                    io.rpc->register_rpc_handler(h);
+                    io.rpc->register_rpc_handler(h, 0);
             }
         }
         else
