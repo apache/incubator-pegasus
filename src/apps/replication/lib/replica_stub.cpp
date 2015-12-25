@@ -864,7 +864,7 @@ void replica_stub::on_gc()
             mutation_log_ptr plog = r->private_log();
             if (plog)
             {
-                ri.max_decree = std::min(r->last_durable_decree(), plog->max_commit());
+                ri.max_decree = std::min(r->last_durable_decree(), plog->max_commit_on_disk());
             }
             else
             {

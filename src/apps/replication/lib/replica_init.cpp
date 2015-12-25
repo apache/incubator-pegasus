@@ -219,7 +219,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                 ddebug(
                     "%s: private log initialized, durable = %" PRId64 ", committed = %" PRId64 ", "
                     "max_prepared = %" PRId64 ", ballot = %" PRId64 ", valid_offset_in_plog = %" PRId64 ", "
-                    "max_decree_in_plog = %" PRId64 ", max_commit_in_plog = %" PRId64,
+                    "max_decree_in_plog = %" PRId64 ", max_commit_on_disk_in_plog = %" PRId64,
                     name(),
                     _app->last_durable_decree(),
                     _app->last_committed_decree(),
@@ -227,7 +227,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                     get_ballot(),
                     _app->init_info().init_offset_in_private_log,
                     _private_log->max_decree(get_gpid()),
-                    _private_log->max_commit()
+                    _private_log->max_commit_on_disk()
                     );
                 _private_log->check_valid_start_offset(get_gpid(), _app->init_info().init_offset_in_private_log);
                 set_inactive_state_transient(true);
@@ -313,7 +313,7 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     }
 
     // fix private log completeness when it is from shared
-    if (!is_private && _private_log && d > _private_log->max_commit())
+    if (!is_private && _private_log && d > _private_log->max_commit_on_disk())
     {
         _private_log->append(mu,
             LPC_WRITE_REPLICATION_LOG,

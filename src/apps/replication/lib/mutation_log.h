@@ -204,7 +204,7 @@ public:
 
     // update current max commit of private log
     // thread safe
-    void update_max_commit(decree d);
+    void update_max_commit_on_disk(decree d);
 
     //
     //  garbage collection logs that are already covered by 
@@ -250,9 +250,9 @@ public:
     // thread safe
     decree max_decree(global_partition_id gpid) const;
 
-    // get current max commit of private log.
+    // get current max commit on disk of private log.
     // thread safe
-    decree max_commit() const;
+    decree max_commit_on_disk() const;
 
     // maximum decree that is garbage collected
     // thread safe
@@ -284,8 +284,8 @@ private:
     // update max decree without lock
     void update_max_decree_no_lock(global_partition_id gpid, decree d);
 
-    // update max commit without lock
-    void update_max_commit_no_lock(decree d);
+    // update max commit on disk without lock
+    void update_max_commit_on_disk_no_lock(decree d);
 
     // create new log file and set it as the current log file
     // returns ERR_OK if create succeed
@@ -352,7 +352,7 @@ private:
 
     // replica log info for private log
     replica_log_info               _private_log_info;
-    decree                         _private_max_commit; // the max last_committed_decree of written mutations up to now
+    decree                         _private_max_commit_on_disk; // the max last_committed_decree of written mutations up to now
 };
 
 //

@@ -84,7 +84,7 @@ void mutation_log::init_states()
     // replica states
     _shared_log_info_map.clear();
     _private_log_info = {0, 0};
-    _private_max_commit = 0;
+    _private_max_commit_on_disk = 0;
 }
 
 mutation_log::~mutation_log()
@@ -167,7 +167,7 @@ error_code mutation_log::open(replay_callback callback)
                 this->update_max_decree_no_lock(mu->data.header.gpid, mu->data.header.decree);
                 if (this->_is_private)
                 {
-                    this->update_max_commit_no_lock(mu->data.header.last_committed_decree);
+                    this->update_max_commit_on_disk_no_lock(mu->data.header.last_committed_decree);
                 }
             }
 
@@ -317,7 +317,6 @@ void mutation_log::create_new_pending_buffer()
 
     _pending_write = _current_log_file->prepare_log_block();
     _pending_write_callbacks.reset(new std::list< ::dsn::task_ptr>);
-    _pending_write_max_commit = 0;
     _global_end_offset += _pending_write->data().front().length();
 }
 
@@ -401,8 +400,8 @@ void mutation_log::internal_write_callback(
 
         if(_is_private)
         {
-            // update _private_max_commit after write into log file done
-            update_max_commit(max_commit);
+            // update _private_max_commit_on_disk after writen into log file done
+            update_max_commit_on_disk(max_commit);
 
             // TODO(qinzuoyan): why flush here?
             // FIXME : the file could have been closed
@@ -620,11 +619,11 @@ decree mutation_log::max_decree(global_partition_id gpid) const
     }
 }
 
-decree mutation_log::max_commit() const
+decree mutation_log::max_commit_on_disk() const
 {
     zauto_lock l(_lock);
     dassert(_is_private, "this method is only valid for private logs");
-    return _private_max_commit;
+    return _private_max_commit_on_disk;
 }
 
 decree mutation_log::max_gced_decree(global_partition_id gpid, int64_t valid_start_offset) const
@@ -869,18 +868,18 @@ void mutation_log::update_max_decree_no_lock(global_partition_id gpid, decree d)
     }
 }
 
-void mutation_log::update_max_commit(decree d)
+void mutation_log::update_max_commit_on_disk(decree d)
 {
     zauto_lock l(_lock);
-    update_max_commit_no_lock(d);
+    update_max_commit_on_disk_no_lock(d);
 }
 
-void mutation_log::update_max_commit_no_lock(decree d)
+void mutation_log::update_max_commit_on_disk_no_lock(decree d)
 {
     dassert(_is_private, "this method is only valid for private logs");
-    if (d > _private_max_commit)
+    if (d > _private_max_commit_on_disk)
     {
-        _private_max_commit = d;
+        _private_max_commit_on_disk = d;
     }
 }
 

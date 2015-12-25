@@ -139,8 +139,8 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
                 {
                     mutation_ptr mu2 = get_mutation_by_decree(d);
                     pop_min();
-                    // TODO(qinzuoyan): when will mu2 == nullptr?
-                    if (mu2 != nullptr) _committer(mu2);
+                    dassert(mu2 != nullptr, "");
+                    _committer(mu2);
                 }
             }
 
