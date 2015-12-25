@@ -34,6 +34,8 @@
  */
 # include "mutation_log.h"
 # include <gtest/gtest.h>
+# include <chrono>
+# include <condition_variable>
 
 using namespace ::dsn;
 using namespace ::dsn::replication;
@@ -101,6 +103,8 @@ TEST(replication, log_learn)
         int64_t offset = 0;
         std::set<decree> learned_decress;
         
+        std::chrono::steady_clock clock;
+        auto time_tic = clock.now();
         mutation_log::replay(state.files,
             [&mutations, &learned_decress](mutation_ptr& mu)->bool
             {
@@ -119,10 +123,14 @@ TEST(replication, log_learn)
                     );
                 EXPECT_TRUE(wmu->client_requests.size() == mu->client_requests.size());
                 EXPECT_TRUE(wmu->client_requests[0].code == mu->client_requests[0].code);
+
                 return true;
             },
             offset
             );
+        auto time_toc = clock.now();
+        
+        std::cout << "TEST replay time(us): " << std::chrono::duration_cast<std::chrono::microseconds>(time_toc - time_tic).count() << std::endl;
 
         for (decree s = durable_decree + 1; s < 1000; s++)
         {
