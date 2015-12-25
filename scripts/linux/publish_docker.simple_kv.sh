@@ -10,6 +10,8 @@ echo $applist > $t_dir/applist
 
 cp $b_dir/bin/dsn.replication.simple_kv/dsn.replication.simple_kv $t_dir/simple_kv
 cp $b_dir/bin/dsn.replication.simple_kv/config.ini $t_dir/
+cp $scripts_dir/deploy/configtool $t_dir/
+cp $DSN_ROOT/lib/libdsn.core.so $t_dir/ 
 
 echo "please customize your config.ini"
 sleep 5
@@ -34,3 +36,22 @@ EOF
 docker build -t ${REPO}/simple_kv $t_dir
 docker push ${REPO}/simple_kv
 
+
+#cp general start_docker.sh to dir
+sed -e "s/{{ placeholder\['image_name'\] }}/${REPO}\/simple_kv/g" $scripts_dir/deploy/start_docker.sh > $t_dir/start.sh
+
+chmod a+x $t_dir/start.sh
+#publish_docker
+
+function publish_app_docker(){
+    cp $t_dir/config.ini $t_dir/$1
+    cp $t_dir/configtool $t_dir/$1
+    cp $t_dir/start.sh  $t_dir/$1
+    cp $t_dir/libdsn.core.so $t_dir/$1
+}
+
+
+for app in $applist; do
+    mkdir -p $t_dir/$app
+    publish_app_docker $app
+done
