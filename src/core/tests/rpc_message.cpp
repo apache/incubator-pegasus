@@ -77,7 +77,7 @@ TEST(core, message_ex)
     }
 
     { // create_response
-        message_ex* request = message_ex::create_request(RPC_CODE_FOR_TEST, 0, DSN_INVALID_HASH);
+        message_ex* request = message_ex::create_request(RPC_CODE_FOR_TEST, 0, 0);
         request->from_address = rpc_address("127.0.0.1", 8080);
         request->to_address = rpc_address("127.0.0.1", 9090);
         request->header->rpc_id = 123456;
@@ -194,29 +194,21 @@ TEST(core, message_ex)
 
     { // c interface
         dsn_message_t request = dsn_msg_create_request(RPC_CODE_FOR_TEST, 100, 1);
-        int timeout, hash;
+        dsn_msg_options_t opts;
 
-        dsn_msg_context_t ctx;
-        ctx.context = 444;
-        dsn_msg_set_context(request, 333, ctx);
+        opts.context.context = 444;
+        opts.vnid = 333;
+
+        dsn_msg_set_options(request, &opts, DSN_MSGM_CONTEXT | DSN_MSGM_VNID);
         message_ex* m = (message_ex*)request;
         m->from_address = rpc_address("127.0.0.1", 8080);
         m->to_address = rpc_address("127.0.0.1", 9090);
 
-        dsn_msg_query_request(request, &timeout, &hash);
-        ASSERT_EQ(100, timeout);
-        ASSERT_EQ(1, hash);
-
-        // TODO: dsn_msg_update_request(request, 0, DSN_INVALID_HASH) ?
-        dsn_msg_update_request(request, 1000, 2);
-        dsn_msg_query_request(request, &timeout, &hash);
-        ASSERT_EQ(1000, timeout);
-        ASSERT_EQ(2, hash);
-
-        uint64_t vnid;
-        dsn_msg_get_context(request, &vnid, &ctx);        
-        ASSERT_EQ(333u, vnid);
-        ASSERT_EQ(444u, ctx.context);
+        dsn_msg_get_options(request, &opts);
+        ASSERT_EQ(100, opts.timeout_ms);
+        ASSERT_EQ(1, opts.thread_hash);
+        ASSERT_EQ(333u, opts.vnid);
+        ASSERT_EQ(444u, opts.context.context);
 
         ASSERT_EQ(rpc_address("127.0.0.1", 8080), rpc_address(dsn_msg_from_address(request)));
         ASSERT_EQ(rpc_address("127.0.0.1", 9090), rpc_address(dsn_msg_to_address(request)));

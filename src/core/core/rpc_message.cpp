@@ -58,20 +58,6 @@ DSN_API dsn_message_t dsn_msg_copy(dsn_message_t msg)
     return msg ? ((::dsn::message_ex*)msg)->copy() : nullptr;
 }
 
-DSN_API void dsn_msg_update_request(dsn_message_t msg, int timeout_milliseconds, int hash)
-{
-    auto msg2 = (::dsn::message_ex*)msg;
-    if (0 != timeout_milliseconds) msg2->header->client.timeout_ms = timeout_milliseconds;
-    if (DSN_INVALID_HASH != hash) msg2->header->client.hash = hash;
-}
-
-DSN_API void dsn_msg_query_request(dsn_message_t msg, int* ptimeout_milliseconds, int* phash)
-{
-    auto msg2 = (::dsn::message_ex*)msg;
-    if (ptimeout_milliseconds) *ptimeout_milliseconds = msg2->header->client.timeout_ms;
-    if (phash) *phash = msg2->header->client.hash;
-}
-
 DSN_API dsn_message_t dsn_msg_create_response(dsn_message_t request)
 {
     auto msg = ((::dsn::message_ex*)request)->create_response();
@@ -128,26 +114,45 @@ DSN_API dsn_address_t dsn_msg_to_address(dsn_message_t msg)
     return ((::dsn::message_ex*)msg)->to_address.c_addr();
 }
 
-DSN_API void dsn_msg_set_context(
+DSN_API void dsn_msg_set_options(
     dsn_message_t msg,
-    uint64_t vnid,
-    dsn_msg_context_t ctx
+    dsn_msg_options_t *opts,
+    uint32_t mask // set opt bits using DSN_MSGM_XXX
     )
 {
-    auto c = ((::dsn::message_ex*)msg)->header;
-    c->vnid = vnid;
-    c->context = ctx;
+    auto hdr = ((::dsn::message_ex*)msg)->header;
+
+    if (mask & DSN_MSGM_TIMEOUT)
+    {
+        hdr->client.timeout_ms = opts->timeout_ms;
+    }
+    
+    if (mask & DSN_MSGM_HASH)
+    {
+        hdr->client.hash = opts->thread_hash;
+    }
+    
+    if (mask & DSN_MSGM_VNID)
+    {
+        hdr->vnid = opts->vnid;
+    }
+
+    if (mask & DSN_MSGM_CONTEXT)
+    {
+        hdr->context = opts->context;
+    }
 }
 
-DSN_API void dsn_msg_get_context(
+DSN_API void dsn_msg_get_options(
     dsn_message_t msg,
-    /*out*/ uint64_t* vnid,
-    /*out*/ dsn_msg_context_t* ctx    
+    /*out*/ dsn_msg_options_t* opts
     )
 {
-    auto c = ((::dsn::message_ex*)msg)->header;
-    if (vnid) *vnid = c->vnid;
-    if (ctx) *ctx = c->context;
+    auto hdr = ((::dsn::message_ex*)msg)->header;
+    opts->context = hdr->context;
+    opts->thread_hash = hdr->client.hash;
+    opts->timeout_ms = hdr->client.timeout_ms;
+    opts->vnid = hdr->vnid;
 }
 
 namespace dsn {
@@ -362,7 +367,7 @@ message_ex* message_ex::create_request(dsn_task_code_t rpc_code, int timeout_mil
     memset(&hdr, 0, sizeof(hdr));
     hdr.hdr_crc32 = hdr.body_crc32 = CRC_INVALID;    
     
-    if (DSN_INVALID_HASH != hash) 
+    if (0 != hash) 
         hdr.client.hash = hash;
 
     if (0 == timeout_milliseconds)

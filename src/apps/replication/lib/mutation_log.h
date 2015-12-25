@@ -243,7 +243,6 @@ public:
     // thread safe
     decree max_decree(global_partition_id gpid) const;
 
-    // TODO(qinzuoyan): what the meaning of the method?
     // maximum decree that is garbage collected
     // thread safe
     decree max_gced_decree(global_partition_id gpid, int64_t valid_start_offset) const;
@@ -323,6 +322,7 @@ private:
     
     // bufferring
     std::weak_ptr<log_block>       _issued_write;
+    task_ptr                       _issued_write_task; // for debugging
     std::shared_ptr<log_block>     _pending_write;
     size_t                         _pending_write_size;
     pending_callbacks_ptr          _pending_write_callbacks;
