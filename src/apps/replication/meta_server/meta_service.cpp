@@ -146,21 +146,21 @@ void meta_service::register_rpc_handlers()
         );
 
     register_rpc_handler(
-        RPC_CM_CREATE_TABLE,
-        "RPC_CM_CREATE_TABLE",
-        &meta_service::on_create_table
+        RPC_CM_CREATE_APP,
+        "RPC_CM_CREATE_APP",
+        &meta_service::on_create_app
         );
 
     register_rpc_handler(
-        RPC_CM_QUERY_TABLE_STATUS,
-        "RPC_CM_QUERY_TABLE_STATUS",
-        &meta_service::on_query_table_status
+        RPC_CM_QUERY_APP_STATUS,
+        "RPC_CM_QUERY_APP_STATUS",
+        &meta_service::on_query_app_status
         );
 
     register_rpc_handler(
-        RPC_CM_DROP_TABLE,
-        "RPC_CM_DROP_TABLE",
-        &meta_service::on_drop_table
+        RPC_CM_DROP_APP,
+        "RPC_CM_DROP_APP",
+        &meta_service::on_drop_app
         );
 }
 
@@ -172,6 +172,9 @@ void meta_service::stop()
     unregister_rpc_handler(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
     unregister_rpc_handler(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
     unregister_rpc_handler(RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND);
+    unregister_rpc_handler(RPC_CM_CREATE_APP);
+    unregister_rpc_handler(RPC_CM_DROP_APP);
+    unregister_rpc_handler(RPC_CM_QUERY_APP_STATUS);
 
     if (_balancer_timer != nullptr)
     {
@@ -229,28 +232,38 @@ bool meta_service::check_primary(dsn_message_t req)
 }
 
 // table operations
-void meta_service::on_create_table(dsn_message_t req)
+void meta_service::on_create_app(dsn_message_t req)
 {
-    if (!check_primary(msg))
+    if (!check_primary(req))
         return;
 
     if (!_started)
     {
-        configuration_create_table_response response;
+        configuration_create_app_response response;
         response.err = ERR_SERVICE_NOT_ACTIVE;
-        reply(msg, response);
+        reply(req, response);
         return;
     }
 
-    _state->create_table(req);
+    _state->create_app(req);
 }
 
-void meta_service::on_drop_table(dsn_message_t req)
+void meta_service::on_drop_app(dsn_message_t req)
 {
+    if (!check_primary(req))
+        return;
+    if (!_started)
+    {
+        configuration_drop_app_response response;
+        response.err = ERR_SERVICE_NOT_ACTIVE;
+        reply(req, response);
+        return;
+    }
 
+    _state->drop_app(req);
 }
 
-void meta_service::on_query_table_status(dsn_message_t req)
+void meta_service::on_query_app_status(dsn_message_t req)
 {
 
 }

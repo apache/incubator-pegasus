@@ -61,7 +61,10 @@ enum app_status
 {
     available,
     creating,
-    creating_failed
+    creating_failed, 
+    dropping, 
+    dropping_failed, 
+    dropped
 };
 
 struct app_state
@@ -133,7 +136,8 @@ public:
         );
 
     // create table
-    void create_table(dsn_message_t msg);
+    void create_app(dsn_message_t msg);
+    void drop_app(dsn_message_t msg);
     void unfree_if_possible_on_start();
 
     // if is freezed
@@ -166,7 +170,8 @@ private:
 
     // get the application_id from name, -1 for app doesn't exist
     int32_t app_id(const char* app_name) const;
-
+    void initialize_app(app_state& app, dsn_message_t msg);
+    void do_app_drop(app_state& app, dsn_message_t msg);
     // join path
     static std::string join_path(const std::string& input1, const std::string& input2);
 private:

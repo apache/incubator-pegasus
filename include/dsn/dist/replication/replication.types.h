@@ -29,7 +29,7 @@
  *     What is this file about?
  *
  * Revision history:
- *     2015-12-25, @shengofsun(Weijie Sun) add types for create/drop table
+ *     2015-12-25, @shengofsun(Weijie Sun) add types for create/drop app
  *     xxxx-xx-xx, author, first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
@@ -988,8 +988,8 @@ namespace dsn { namespace replication {
         unmarshall(reader, val.is_upgrade);
     };
 
-    // ---------- create_table_options -------------
-    struct create_table_options
+    // ---------- create_app_options -------------
+    struct create_app_options
     {
         int32_t partition_count;
         int32_t replica_count;
@@ -997,7 +997,7 @@ namespace dsn { namespace replication {
         std::string app_type;
     };
 
-    inline void marshall(::dsn::binary_writer& writer, const create_table_options& val)
+    inline void marshall(::dsn::binary_writer& writer, const create_app_options& val)
     {
         marshall(writer, val.partition_count);
         marshall(writer, val.replica_count);
@@ -1005,7 +1005,7 @@ namespace dsn { namespace replication {
         marshall(writer, val.app_type);
     };
 
-    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ create_table_options& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ create_app_options& val)
     {
         unmarshall(reader, val.partition_count);
         unmarshall(reader, val.replica_count);
@@ -1013,123 +1013,123 @@ namespace dsn { namespace replication {
         unmarshall(reader, val.app_type);
     };
 
-    // ---------- configuration_create_table_request -------------
-    struct configuration_create_table_request
+    // ---------- configuration_create_app_request -------------
+    struct configuration_create_app_request
     {
         std::string app_name;
-        create_table_options options;
+        create_app_options options;
     };
 
-    inline void marshall(::dsn::binary_writer& writer, const configuration_create_table_request& val)
+    inline void marshall(::dsn::binary_writer& writer, const configuration_create_app_request& val)
     {
         marshall(writer, val.app_name);
         marshall(writer, val.options);
     };
 
-    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_create_table_request& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_create_app_request& val)
     {
         unmarshall(reader, val.app_name);
         unmarshall(reader, val.options);
     };
 
-    // ---------- configuration_query_table_status_request -------------
-    struct configuration_query_table_status_request
+    // ---------- configuration_query_app_status_request -------------
+    struct configuration_query_app_status_request
     {
         int32_t app_id;
     };
 
-    inline void marshall(::dsn::binary_writer& writer, const configuration_query_table_status_request& val)
+    inline void marshall(::dsn::binary_writer& writer, const configuration_query_app_status_request& val)
     {
         marshall(writer, val.app_id);
     };
 
-    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_query_table_status_request& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_query_app_status_request& val)
     {
         unmarshall(reader, val.app_id);
     };
 
-    // ---------- drop_table_options -------------
-    struct drop_table_options
+    // ---------- drop_app_options -------------
+    struct drop_app_options
     {
         bool success_if_not_exist;
     };
 
-    inline void marshall(::dsn::binary_writer& writer, const drop_table_options& val)
+    inline void marshall(::dsn::binary_writer& writer, const drop_app_options& val)
     {
         marshall(writer, val.success_if_not_exist);
     };
 
-    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ drop_table_options& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ drop_app_options& val)
     {
         unmarshall(reader, val.success_if_not_exist);
     };
 
-    // ---------- configuration_drop_table_request -------------
-    struct configuration_drop_table_request
+    // ---------- configuration_drop_app_request -------------
+    struct configuration_drop_app_request
     {
         std::string app_name;
-        drop_table_options options;
+        drop_app_options options;
     };
 
-    inline void marshall(::dsn::binary_writer& writer, const configuration_drop_table_request& val)
+    inline void marshall(::dsn::binary_writer& writer, const configuration_drop_app_request& val)
     {
         marshall(writer, val.app_name);
         marshall(writer, val.options);
     };
 
-    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_drop_table_request& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_drop_app_request& val)
     {
         unmarshall(reader, val.app_name);
         unmarshall(reader, val.options);
     };
 
-    // ---------- configuration_create_table_response -------------
-    struct configuration_create_table_response
+    // ---------- configuration_create_app_response -------------
+    struct configuration_create_app_response
     {
         ::dsn::error_code err;
         int32_t appid;
     };
 
-    inline void marshall(::dsn::binary_writer& writer, const configuration_create_table_response& val)
+    inline void marshall(::dsn::binary_writer& writer, const configuration_create_app_response& val)
     {
         marshall(writer, val.err);
         marshall(writer, val.appid);
     };
 
-    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_create_table_response& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_create_app_response& val)
     {
         unmarshall(reader, val.err);
         unmarshall(reader, val.appid);
     };
 
-    // ---------- configuration_query_table_status_response -------------
-    struct configuration_query_table_status_response
+    // ---------- configuration_query_app_status_response -------------
+    struct configuration_query_app_status_response
     {
         ::dsn::error_code err;
     };
 
-    inline void marshall(::dsn::binary_writer& writer, const configuration_query_table_status_response& val)
+    inline void marshall(::dsn::binary_writer& writer, const configuration_query_app_status_response& val)
     {
         marshall(writer, val.err);
     };
 
-    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_query_table_status_response& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_query_app_status_response& val)
     {
         unmarshall(reader, val.err);
     };
 
-    // ---------- configuration_drop_table_response -------------
-    struct configuration_drop_table_response
+    // ---------- configuration_drop_app_response -------------
+    struct configuration_drop_app_response
     {
         ::dsn::error_code err;
     };
 
-    inline void marshall(::dsn::binary_writer& writer, const configuration_drop_table_response& val)
+    inline void marshall(::dsn::binary_writer& writer, const configuration_drop_app_response& val)
     {
         marshall(writer, val.err);
     };
 
-    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_drop_table_response& val)
+    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_drop_app_response& val)
     {
         unmarshall(reader, val.err);
     };

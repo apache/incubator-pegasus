@@ -222,7 +222,7 @@ struct configuration_query_by_node_request
     1:dsn.address    node;
 }
 
-struct create_table_options
+struct create_app_options
 {
     1:i32              partition_count;
     2:i32              replica_count;
@@ -230,41 +230,41 @@ struct create_table_options
     4:string           app_type;
 }
 
-struct configuration_create_table_request
+struct configuration_create_app_request
 {
     1:string                       app_name;
-    2:create_table_options         options;
+    2:create_app_options         options;
 }
 
-struct configuration_query_table_status_request
+struct configuration_query_app_status_request
 {
     1:i32              app_id;
 }
 
-struct drop_table_options
+struct drop_app_options
 {
     1:bool             success_if_not_exist;
 }
 
-struct configuration_drop_table_request
+struct configuration_drop_app_request
 {
-    1:string                     app_name;
-    2:drop_table_options         options;
+    1:string                   app_name;
+    2:drop_app_options         options;
 }
 
 // meta server => client
-struct configuration_create_table_response
+struct configuration_create_app_response
 {
     1:dsn.error_code   err;
     2:i32              appid;
 }
 
-struct configuration_query_table_status_response
+struct configuration_query_app_status_response
 {
     1:dsn.error_code       err;
 }
 
-struct configuration_drop_table_response
+struct configuration_drop_app_response
 {
     1:dsn.error_code       err;
 }
