@@ -84,6 +84,7 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
     decree d = mu->data.header.decree;
     dassert (d > last_committed_decree(), "");
 
+    // pop committed mutations if buffer is full
     while (d - min_decree() >= capacity() && last_committed_decree() > min_decree())
     {
         pop_min();
@@ -138,7 +139,8 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
                 {
                     mutation_ptr mu2 = get_mutation_by_decree(d);
                     pop_min();
-                    if (mu2 != nullptr) _committer(mu2);
+                    dassert(mu2 != nullptr, "");
+                    _committer(mu2);
                 }
             }
 
