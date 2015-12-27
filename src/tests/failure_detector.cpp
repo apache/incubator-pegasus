@@ -116,6 +116,11 @@ public:
     {
         _disconnected_cb = func;
     }
+    void test_register_worker(rpc_address node)
+    {
+        zauto_lock l(failure_detector::_lock);
+        register_worker(node);
+    }
 };
 
 class test_worker: public service_app
@@ -147,7 +152,6 @@ public:
     error_code start(int, char **) override
     {
         _master_fd = new master_fd_test();
-        _master_fd->active_failure_detector();
         _master_fd->start(1, 1, 4, 5);
         ++started_apps;
 
@@ -491,7 +495,7 @@ TEST(fd, worker_died_when_switch_master)
         } );
 
     /* we assume the worker is alive */
-    tst_master->fd()->register_worker( rpc_address("localhost", WPORT) );
+    tst_master->fd()->test_register_worker( rpc_address("localhost", WPORT) );
     master_group_set_leader(masters, index);
 
     /* then stop the worker*/

@@ -35,6 +35,7 @@
 
 #pragma once
 
+# include <unordered_set>
 # include <dsn/dist/failure_detector.h>
 # include <dsn/dist/distributed_lock_service.h>
 # include "replication_common.h"
@@ -68,7 +69,6 @@ public:
     virtual ~meta_server_failure_detector();
 
     bool is_primary() const { return _is_primary; }
-    void active_failure_detector() { _active_fd=true; }
     rpc_address get_primary()
     {
         dsn::utils::auto_lock<zlock> l(_primary_address_lock);
@@ -86,7 +86,8 @@ public:
     }
     
     void acquire_leader_lock();
-    
+    void sync_node_state_and_start_service();
+
     // client side
     virtual void on_master_disconnected(const std::vector< ::dsn::rpc_address>& nodes)
     {
@@ -112,13 +113,18 @@ private:
     friend class ::dsn::replication::test::test_checker;
 
     volatile bool _is_primary;
-    volatile bool _active_fd;
 
     zlock         _primary_address_lock;
     rpc_address   _primary_address;
 
     server_state  *_state;
     meta_service  *_svc;
+
+    /*
+     * in the initializing of server_state, we firstly cache all
+     * alived nodes detected by fd.
+     */
+    std::unordered_set<dsn::rpc_address> _cache_alive_nodes;
 
     ::dsn::dist::distributed_lock_service *_lock_svc;
     task_ptr    _lock_grant_task;

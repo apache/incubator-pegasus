@@ -162,6 +162,7 @@ private:
     std::string                                         _cluster_root;
     mutable zrwlock_nr                                  _lock;
     std::unordered_map< ::dsn::rpc_address, node_state> _nodes;
+
     std::vector<app_state>                              _apps; // vec_index = app_id - 1
 
     int                               _node_live_count;

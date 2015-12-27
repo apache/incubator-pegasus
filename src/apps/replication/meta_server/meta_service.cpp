@@ -98,22 +98,8 @@ error_code meta_service::start()
     {
         derror("recover server state failed, err = %s, retry ...", err.to_string());
     }
-    ddebug("recover server state succeed, and start to register workers");
-    
-    node_states all_nodes;
-    _state->get_node_state(all_nodes);
-    for (auto& node: all_nodes) {
-        dassert(node.second, "we assume all nodes are alive");
-        _failure_detector->register_worker(node.first, node.second);
-    }
-    _failure_detector->active_failure_detector();
 
-    _balancer = new load_balancer(_state);
-    // make sure the delay is larger than fd.grace to ensure
-    // all machines are in the correct state (assuming connected initially)
-    tasking::enqueue(LPC_LBM_START, this, &meta_service::on_load_balance_start, 0,
-        _opts.fd_grace_seconds * 1000);
-
+    _failure_detector->sync_node_state_and_start_service();
     ddebug("start meta_service succeed");
     return ERR_OK;
 }

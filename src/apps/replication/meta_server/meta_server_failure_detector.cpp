@@ -46,7 +46,6 @@
 meta_server_failure_detector::meta_server_failure_detector(server_state* state, meta_service* svc)
 {
     _is_primary = false;
-    _active_fd = false;
     _state = state;
     _svc = svc;
 
@@ -106,6 +105,8 @@ void meta_server_failure_detector::on_worker_disconnected(const std::vector< ::d
 
     if (!_svc->_started)
     {
+        for (auto& node: nodes)
+            _cache_alive_nodes.erase(node);
         return;
     }
 
@@ -113,7 +114,6 @@ void meta_server_failure_detector::on_worker_disconnected(const std::vector< ::d
     for (auto& n : nodes)
     {
         states.push_back(std::make_pair(n, false));
-
         dwarn("client expired: %s", n.to_string());
     }
     
@@ -138,6 +138,11 @@ void meta_server_failure_detector::on_worker_connected(::dsn::rpc_address node)
         return;
     }
 
+    if (!_svc->_started)
+    {
+        _cache_alive_nodes.insert(node);
+        return;
+    }
     node_states states;
     states.push_back(std::make_pair(node, true));
 
@@ -198,6 +203,37 @@ void meta_server_failure_detector::acquire_leader_lock()
     }
 }
 
+void meta_server_failure_detector::sync_node_state_and_start_service()
+{
+    /*
+     * we do need the failure_detector::_lock to protect,
+     * because we want to keep the states of server_state::_nodes
+     * and _cache_alive_nodes consistent
+     */
+    zauto_lock l(failure_detector::_lock);
+
+    //first add new nodes to the server_state
+    node_states alive_list;
+    for (auto& node: _cache_alive_nodes)
+        alive_list.push_back( std::make_pair(node, true) );
+    _state->set_node_state(alive_list, nullptr);
+
+    //then we register all workers from server_state
+    alive_list.clear();
+    _state->get_node_state(alive_list);
+
+    for(auto& node_pair: alive_list) {
+        dassert(node_pair.second, "in initializing we don't add dead nodes to server_state");
+
+        // a worker may have been dead in the fd, so we must reactive it
+        unregister_worker(node_pair.first);
+        register_worker(node_pair.first, true);
+    }
+
+    //now nodes in server_state and in fd are in consistent state
+    _svc->on_load_balance_start();
+}
+
 void meta_server_failure_detector::set_primary(rpc_address primary)
 {
     /*
@@ -235,16 +271,7 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg& beacon, ::dsn::
     {
         ack.primary_node = beacon.to;
         ack.is_master = true;
-        /*
-         * _active_fd flag is disabled for this case:
-         *      1. the new master acquires the leader lock
-         *      2. but the server state has not been initliazed 
-         * 
-         * In this case, we need to response to worker's ping request. 
-         * To make life easier, we don't add it to our worker_list.
-         */
-        if ( _active_fd )
-            failure_detector::on_ping_internal(beacon, ack);
+        failure_detector::on_ping_internal(beacon, ack);
     }
 
     dinfo("on_ping, is_master(%s), this_node(%s), primary_node(%s)", ack.is_master?"true":"false",
