@@ -429,8 +429,8 @@ void mutation_log::internal_write_callback(
         );
 
     ::dsn::blob bb;
-    log->crc32() = 0;
-    error_code err = log->read_next_log_block(0, bb);
+    log->reset_stream();
+    error_code err = log->read_next_log_block(bb);
     if (err != ERR_OK)
     {
         return err;
@@ -468,7 +468,7 @@ void mutation_log::internal_write_callback(
             end_offset += old_size - reader->get_remaining_size();
         }
 
-        err = log->read_next_log_block(end_offset - log->start_offset(), bb);
+        err = log->read_next_log_block(bb);
         if (err != ERR_OK)
         {
             // if an error occurs in an log mutation block, then the replay log is stopped
@@ -1278,8 +1278,149 @@ int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
 
     return deleted;
 }
+//log_file::file_streamer
+class log_file::file_streamer
+{
+public:
+    explicit file_streamer(dsn_handle_t fd, size_t file_offset) : file_dispatched_bytes(file_offset), file_handle(fd)
+    {
+        current_buffer = buffers + 0;
+        next_buffer = buffers + 1;
+        fill_buffers();
+    }
+    ~file_streamer()
+    {
+        current_buffer->wait_ongoing_task().end_tracking();
+        next_buffer->wait_ongoing_task().end_tracking();
+    }
+    //try to reset file_offset
+    void reset(size_t file_offset)
+    {
+        current_buffer->wait_ongoing_task().end_tracking();
+        next_buffer->wait_ongoing_task().end_tracking();
+        //fast path if we can just move the cursor
+        if (current_buffer->file_offset_of_buffer <= file_offset && current_buffer->file_offset_of_buffer + current_buffer->end > file_offset)
+        {
+            current_buffer->begin = file_offset - current_buffer->file_offset_of_buffer;
+        }
+        else
+        {
+            current_buffer->begin = current_buffer->end = next_buffer->begin = next_buffer->end = 0;
+            file_dispatched_bytes = file_offset;
+        }
+        fill_buffers();
+    }
+    //possible error_code:
+    //  ERR_OK                      result would always size as expected
+    //  ERR_HANDLE_EOF              if there are not enough data in file. result would still be filled with possible data
+    //  ERR_FILE_OPERATION_FAILED   filesystem failure
+    error_code read_next(size_t size, /*out*/ blob& result)
+    {
+        binary_writer writer(size);
+#define TRY(x) do {auto _x = (x); if (_x != ERR_OK) { result = writer.get_current_buffer(); return _x; } } while(0)
+        TRY(current_buffer->wait_ongoing_task());
+        if (size < current_buffer->length())
+        {
+            result.assign(current_buffer->buffer.get(), current_buffer->begin, size);
+            current_buffer->begin += size;
+        }
+        else
+        {
+            current_buffer->drain(writer);
+            //we can now assign result since writer must have allocated a buffer.
+            dassert(writer.total_size() != 0, "");
+            if (size > writer.total_size())
+            {
+                TRY(next_buffer->wait_ongoing_task());
+                next_buffer->consume(writer, std::min(size - writer.total_size(), next_buffer->length()));
+                //We hope that this never happens, it would deteriorate performance
+                if (size > writer.total_size())
+                {
+                    auto task = file::read(file_handle, writer.get_current_buffer().buffer().get() + writer.total_size(), size - writer.total_size(), file_dispatched_bytes, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr);
+                    task->wait();
+                    writer.write_empty(task->io_size());
+                    file_dispatched_bytes += task->io_size();
+                    TRY(task->error());
+                }
+            }
+            result = writer.get_current_buffer();
+        }
+        fill_buffers();
+        return ERR_OK;
+#undef TRY
+    }
+private:
+    void fill_buffers()
+    {
+        while (!current_buffer->have_ongoing_task && current_buffer->empty())
+        {
+            current_buffer->begin = current_buffer->end = 0;
+            current_buffer->file_offset_of_buffer = file_dispatched_bytes;
+            current_buffer->have_ongoing_task = true;
+            current_buffer->task = file::read(file_handle, current_buffer->buffer.get(), block_size_bytes, file_dispatched_bytes, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr);
+            file_dispatched_bytes += block_size_bytes;
+            std::swap(current_buffer, next_buffer);
+        }
+    }
+
+    //buffer size, in bytes
+    static const size_t block_size_bytes = 1024 * 1024;
+    struct buffer_t
+    {
+        std::unique_ptr<char[]> buffer; //with block_size
+        size_t begin, end; // [buffer[begin]..buffer[end]) contains unconsumed_data
+        size_t file_offset_of_buffer; //file offset projected to buffer[0]
+        bool have_ongoing_task;
+        task_ptr task;
+        buffer_t() : buffer(new char[block_size_bytes]), begin(0), end(0), have_ongoing_task(false), file_offset_of_buffer(0) {}
+        size_t length() const
+        {
+            return end - begin;
+        }
+        bool empty() const
+        {
+            return length() == 0;
+        }
+        void consume(binary_writer& dest, size_t len)
+        {
+            dest.write(buffer.get() + begin, len);
+            begin += len;
+        }
+        size_t drain(binary_writer& dest)
+        {
+            auto len = length();
+            consume(dest, len);
+            return len;
+        }
+        error_code wait_ongoing_task()
+        {
+            if (have_ongoing_task)
+            {
+                task->wait();
+                have_ongoing_task = false;
+                end += task->io_size();
+                dassert(end <= block_size_bytes, "invalid io_size.");
+                return task->error();
+            }
+            else
+            {
+                return ERR_OK;
+            }
+        }
+    } buffers[2];
+    buffer_t* current_buffer, *next_buffer;
+
+    //number of bytes we have issued read operations
+    size_t file_dispatched_bytes;
+    dsn_handle_t file_handle;
+};
+
 
 //------------------- log_file --------------------------
+log_file::~log_file()
+{
+    close();
+}
 /*static */log_file_ptr log_file::open_read(const char* path, /*out*/ error_code& err)
 {
     char splitters[] = { '\\', '/', 0 };
@@ -1339,8 +1480,9 @@ int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
     }
 
     auto lf = new log_file(path, hfile, index, start_offset, true);
+    lf->reset_stream();
     blob hdr_blob;
-    err = lf->read_next_log_block(0, hdr_blob);
+    err = lf->read_next_log_block(hdr_blob);
     if (err == ERR_INVALID_DATA || err == ERR_INCOMPLETE_DATA || err == ERR_HANDLE_EOF || err == ERR_FILE_OPERATION_FAILED)
     {
         std::string removed = std::string(path) + ".removed";
@@ -1429,6 +1571,9 @@ log_file::log_file(
 
 void log_file::close()
 {
+    //_stream implicitly refer to _handle so it needs to be cleaned up first.
+    //TODO: We need better abstraction to avoid those manual stuffs..
+    _stream.reset(nullptr);
     if (_handle)
     {
         error_code err = dsn_file_close(_handle);
@@ -1457,32 +1602,26 @@ void log_file::flush() const
     }
 }
 
-error_code log_file::read_next_log_block(int64_t local_offset, /*out*/::dsn::blob& bb)
+error_code log_file::read_next_log_block(/*out*/::dsn::blob& bb)
 {
     dassert (_is_read, "log file must be of read mode");
-
-    log_block_header hdr;
-    task_ptr tsk = file::read(_handle, reinterpret_cast<char*>(&hdr), static_cast<int>(sizeof(log_block_header)),
-        local_offset, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr);
-    tsk->wait();
-
-    auto read_count = tsk->io_size();
-    auto err = tsk->error();
-    if (err != ERR_OK || read_count != sizeof(log_block_header))
+    auto err = _stream->read_next(sizeof(log_block_header), bb);
+    if (err != ERR_OK || bb.length() != sizeof(log_block_header))
     {
         if (err == ERR_OK || err == ERR_HANDLE_EOF)
         {
             // if read_count is 0, then we meet the end of file
-            err = (read_count == 0 ? ERR_HANDLE_EOF : ERR_INCOMPLETE_DATA);
+            err = (bb.length() == 0 ? ERR_HANDLE_EOF : ERR_INCOMPLETE_DATA);
         }
         else
         {
-            derror("read data block header failed, size = %d vs %d, err = %s, local_offset = %" PRId64,
-                read_count, (int)sizeof(log_block_header), err.to_string(), local_offset);
+            derror("read data block header failed, size = %d vs %d, err = %s",
+                bb.length(), (int)sizeof(log_block_header), err.to_string());
         }
 
         return err;
     }
+    log_block_header hdr = *reinterpret_cast<const log_block_header*>(bb.data());
 
     if (hdr.magic != 0xdeadbeef)
     {
@@ -1490,19 +1629,11 @@ error_code log_file::read_next_log_block(int64_t local_offset, /*out*/::dsn::blo
         return ERR_INVALID_DATA;
     }
 
-    std::shared_ptr<char> data(new char[hdr.length]);
-    bb.assign(data, 0, hdr.length);
-
-    tsk = file::read(_handle, const_cast<char*>(bb.data()), static_cast<int>(hdr.length),
-        local_offset + read_count, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr);
-    tsk->wait();
-
-    read_count = tsk->io_size();
-    err = tsk->error();
-    if (err != ERR_OK || hdr.length != read_count)
+    err = _stream->read_next(hdr.length, bb);
+    if (err != ERR_OK || hdr.length != bb.length())
     {
-        derror("read data block body failed, size = %d vs %d, err = %s, local_offset = %" PRId64,
-            read_count, (int)hdr.length, err.to_string(), local_offset);
+        derror("read data block body failed, size = %d vs %d, err = %s",
+            bb.length(), (int)hdr.length, err.to_string());
 
         if (err == ERR_OK || err == ERR_HANDLE_EOF)
         {
@@ -1590,6 +1721,19 @@ std::shared_ptr<log_block> log_file::prepare_log_block() const
 
     _end_offset += block.size();
     return task;
+}
+
+void log_file::reset_stream()
+{
+    if (_stream == nullptr)
+    {
+        _stream.reset(new file_streamer(_handle, 0));
+    }
+    else
+    {
+        _stream->reset(0);
+    }
+    _crc32 = 0;
 }
 
 int log_file::read_file_header(binary_reader& reader)
