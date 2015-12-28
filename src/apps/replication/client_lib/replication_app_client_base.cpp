@@ -93,7 +93,7 @@ replication_app_client_base::~replication_app_client_base()
 
 void replication_app_client_base::clear_all_pending_tasks()
 {
-    dinfo("clear all pending tasks");
+    dinfo("%s.client: clear all pending tasks", _app_name.c_str());
     dsn_message_t nil(nullptr);
     service::zauto_lock l(_requests_lock);
     //clear _pending_replica_requests
@@ -122,8 +122,8 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     int reply_hash /*= 0*/
     )
 {
-    int timeout_milliseconds;
-    dsn_msg_query_request(request, &timeout_milliseconds, nullptr);
+    dsn_msg_options_t opts;
+    dsn_msg_get_options(request, &opts);
 
     auto rc = new request_context;
     rc->request = request;
@@ -135,8 +135,8 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->write_header.gpid.pidx = -1;
     rc->write_header.code = dsn_task_code_to_string(code);
     rc->timeout_timer = nullptr;
-    rc->timeout_ms = timeout_milliseconds;
-    rc->timeout_ts_us = now_us() + timeout_milliseconds * 1000;
+    rc->timeout_ms = opts.timeout_ms;
+    rc->timeout_ts_us = now_us() + opts.timeout_ms * 1000;
     rc->completed = false;
 
     size_t offset = dsn_msg_body_size(request);
@@ -156,8 +156,8 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     int reply_hash
     )
 {
-    int timeout_milliseconds;
-    dsn_msg_query_request(request, &timeout_milliseconds, nullptr);
+    dsn_msg_options_t opts;
+    dsn_msg_get_options(request, &opts);
 
     auto rc = new request_context;
     rc->request = request;
@@ -171,8 +171,8 @@ replication_app_client_base::request_context* replication_app_client_base::creat
     rc->read_header.semantic = read_semantic;
     rc->read_header.version_decree = snapshot_decree;
     rc->timeout_timer = nullptr;
-    rc->timeout_ms = timeout_milliseconds;
-    rc->timeout_ts_us = now_us() + timeout_milliseconds * 1000;
+    rc->timeout_ms = opts.timeout_ms;
+    rc->timeout_ts_us = now_us() + opts.timeout_ms * 1000;
     rc->completed = false;
 
     size_t offset = dsn_msg_body_size(request);
@@ -233,7 +233,6 @@ void replication_app_client_base::call(request_context_ptr request, bool from_me
     // fill partition index
     if (_app_partition_count == -1)
     {
-        dinfo("not have app id, query for app id first, app_name:%s", _app_name.c_str());
         zauto_lock l(_requests_lock);
         query_partition_config(request);
         return;
@@ -274,7 +273,6 @@ void replication_app_client_base::call(request_context_ptr request, bool from_me
                 zauto_lock l(request->lock);                
                 if (request->timeout_timer == nullptr)
                 {
-                    dinfo("set timeout timer");
                     request->timeout_timer = tasking::enqueue(
                         LPC_REPLICATION_CLIENT_REQUEST_TIMEOUT,
                         this,
@@ -322,7 +320,11 @@ void replication_app_client_base::call_with_address(dsn::rpc_address addr, reque
             binary_writer writer(buffer);
             marshall(writer, request->read_header);
 
-            dsn_msg_update_request(request->request, request->timeout_ms, gpid_to_hash(request->read_header.gpid));
+            dsn_msg_options_t opts;
+            opts.timeout_ms = request->timeout_ms;
+            opts.thread_hash = gpid_to_hash(request->read_header.gpid);
+            opts.vnid = *(uint64_t*)(&request->read_header.gpid);
+            dsn_msg_set_options(request->request, &opts, DSN_MSGM_HASH | DSN_MSGM_TIMEOUT); // TODO: not supported yet DSN_MSGM_VNID);
         }
         else
         {
@@ -331,13 +333,18 @@ void replication_app_client_base::call_with_address(dsn::rpc_address addr, reque
             blob buffer(request->header_pos, 0, sizeof(request->write_header));
             binary_writer writer(buffer);
             marshall(writer, request->write_header);
-            dsn_msg_update_request(request->request, request->timeout_ms, gpid_to_hash(request->write_header.gpid));
+
+            dsn_msg_options_t opts;
+            opts.timeout_ms = request->timeout_ms;
+            opts.thread_hash = gpid_to_hash(request->write_header.gpid);
+            opts.vnid = *(uint64_t*)(&request->write_header.gpid);
+            
+            dsn_msg_set_options(request->request, &opts, DSN_MSGM_HASH | DSN_MSGM_TIMEOUT); // TODO: not supported yet DSN_MSGM_VNID | DSN_MSGM_CONTEXT);
         }
         request->header_pos = 0;
     }
 
     {
-        dinfo("call_with_address[%s] rpc call, gpid:[%s,%d:%d]", addr.to_string(), _app_name.c_str(), _app_id, request->partition_index);
         zauto_lock l(request->lock);
         rpc::call(
             addr,
@@ -367,7 +374,7 @@ void replication_app_client_base::replica_rw_reply(
         zauto_lock l(rc->lock);
         if (rc->completed)
         {
-            dinfo("already time out before replica reply");
+            //dinfo("already time out before replica reply");
             err.end_tracking();
             return;
         }
@@ -393,14 +400,18 @@ void replication_app_client_base::replica_rw_reply(
     else
     {
         dsn::rpc_address adr = dsn_msg_from_address(response);
-        dinfo("replica_rw_reply response, err = %s, addr[%s]", err.to_string(), adr.to_string());
     }
 
 Retry:
+    dinfo("%s.client: get error %s from replica with index %d",
+        _app_name.c_str(),
+        err.to_string(),
+        rc->partition_index
+        );
+
     // clear partition configuration as it could be wrong
     {
         zauto_write_lock l(_config_lock);
-        dwarn("met error[%d:%s], erase partition config cache, %d", err.get(), err.to_string(), rc->partition_index);
         _config_cache.erase(rc->partition_index);
     }
 
@@ -409,8 +420,7 @@ Retry:
 }
 
 void replication_app_client_base::query_partition_configuration_reply(error_code err, dsn_message_t request, dsn_message_t response, request_context_ptr context)
-{
-    dinfo("query_partition_configuration_reply, gpid=[%s,%d,%d], err=%s", _app_name.c_str(), _app_id, context->partition_index, dsn_error_to_string(err));
+{    
     int pidx = context->partition_index;
     bool conti = true;
     error_code client_err = ERR_OK;
@@ -449,28 +459,41 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
                 {
                     it2->second = new_config;
                 }
-                else if (it2->second.ballot > new_config.ballot)
+                else 
                 {
-                    dwarn("config from metas older than client, gpid[%s,%d:%d], ballot [%u vs %u]",_app_name.c_str(), _app_id, pidx, it2->second.ballot, new_config.ballot);
+                    // nothing to do
                 }
             }
         }
         else if (resp.err == ERR_OBJECT_NOT_FOUND)
         {
-            derror("can't find table on meta server, stop and return client error code");
+            derror("%s.client: query config reply err = %s, partition index = %d",
+                _app_name.c_str(),
+                resp.err.to_string(),
+                context->partition_index
+                );
+
             conti = false;
             client_err = ERR_APP_NOT_EXIST;
         }
         else
         {
-            derror("met unknown error, gpid[%s,%d:%d], error[%d:%s]", _app_name.c_str(), _app_id, pidx, resp.err.get(), resp.err.to_string());
+            derror("%s.client: query config reply err = %s, partition index = %d",
+                _app_name.c_str(),
+                resp.err.to_string(),
+                context->partition_index
+                );
             conti = false;
             client_err = resp.err;
         }
     }
     else
     {
-        derror("did not get meta response, network issue, gpid[%s,%d:%d], error[%d:%s]", _app_name.c_str(), _app_id, pidx, err.get(), err.to_string());
+        derror("%s.client: query config reply err = %s, partition index = %d",
+            _app_name.c_str(),
+            err.to_string(),
+            context->partition_index
+            );
     }
 
     // get address call
@@ -523,7 +546,7 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
 /*send rpc*/
 dsn::task_ptr replication_app_client_base::query_partition_config(request_context_ptr request)
 {
-    dinfo("query_partition_config, gpid:[%s,%d,%d]", _app_name.c_str(), _app_id, request->partition_index);
+    //dinfo("query_partition_config, gpid:[%s,%d,%d]", _app_name.c_str(), _app_id, request->partition_index);
     dsn_message_t msg = dsn_msg_create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, 0, 0);
 
     configuration_query_by_index_request req;
@@ -587,24 +610,19 @@ error_code replication_app_client_base::get_address(int pidx, bool is_write, /*o
         auto it = _config_cache.find(pidx);
         if(it != _config_cache.end())
         {
-            dinfo("get_address found address");
             config = it->second;
             addr = get_address(is_write, semantic, config);
             if (addr.is_invalid())
             {
-                _config_cache.erase(it);
-                derror("cache have address but invalid gpid:[%s,%d:%d]", _app_name.c_str(), _app_id, pidx);
                 return ERR_IO_PENDING;
             }
             else
             {
-                dinfo("get_address addr[%s]", addr.to_string());
                 return ERR_OK;
             }
         }
         else
         {
-            ddebug("not find address in cache for gpid:[%s,%d]", _app_name.c_str(), pidx);
             return ERR_OBJECT_NOT_FOUND;
         }
     }

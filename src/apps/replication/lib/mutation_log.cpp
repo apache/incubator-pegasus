@@ -57,13 +57,11 @@ mutation_log::mutation_log(
     )
 {
     _dir = dir;
-    _max_log_file_size_in_bytes = static_cast<int64_t>(max_log_file_mb) * 1024L * 1024L;
-    _batch_buffer_bytes = static_cast<uint32_t>(batch_buffer_size_kb) * 1024u;
-
-    // ATTENTION: must run init_state() before set states
-    init_states();
     _is_private = is_private;
     _private_gpid = private_gpid;
+    _max_log_file_size_in_bytes = static_cast<int64_t>(max_log_file_mb) * 1024L * 1024L;
+    _batch_buffer_bytes = static_cast<uint32_t>(batch_buffer_size_kb) * 1024u;
+    init_states();
 }
 
 void mutation_log::init_states()
@@ -78,14 +76,15 @@ void mutation_log::init_states()
     _global_end_offset = 0;
 
     // buffering
-    _pending_write = nullptr;
-    _pending_write_size = 0;
+    _issued_write.reset();
+    _pending_write.reset();
     _pending_write_callbacks = nullptr;
+    _pending_write_max_commit = 0;
 
     // replica states
-    _is_private = false;
-    _private_gpid = {0, 0};
+    _shared_log_info_map.clear();
     _private_log_info = {0, 0};
+    _private_max_commit_on_disk = 0;
 }
 
 mutation_log::~mutation_log()
@@ -160,12 +159,16 @@ error_code mutation_log::open(replay_callback callback)
 
             if (callback)
             {
-                ret = callback(mu);
+                ret = callback(mu); // actually replica::replay_mutation(mu, true|false);
             }
 
             if (ret)
             {
                 this->update_max_decree_no_lock(mu->data.header.gpid, mu->data.header.decree);
+                if (this->_is_private)
+                {
+                    this->update_max_commit_on_disk_no_lock(mu->data.header.last_committed_decree);
+                }
             }
 
             return ret;
@@ -178,34 +181,37 @@ error_code mutation_log::open(replay_callback callback)
         _global_start_offset = _log_files.size() > 0 ? _log_files.begin()->second->start_offset() : 0;
         _global_end_offset = end_offset;
         _last_file_index = _log_files.size() > 0 ? _log_files.rbegin()->first : 0;
+        _is_opened = true;
+    }
+    else
+    {
+        // clear
+        for (auto& kv : _log_files)
+        {
+            kv.second->close();
+        }
+        _log_files.clear();
+        init_states();
     }
 
-    _is_opened = (err == ERR_OK);
     return err;
 }
 
-void mutation_log::close(bool clear_all)
+void mutation_log::close()
 {
     {
         zauto_lock l(_lock);
         if (!_is_opened)
         {
-            dassert(!clear_all, "should not be here if do clear");
             return;
         }
         _is_opened = false;
     }
 
-    dinfo("close mutation log %s, clear_all = %s",
-        dir().c_str(),
-        clear_all ? "true" : "false"
-        );
+    dinfo("close mutation log %s", dir().c_str());
 
-    // flush pending buffer first
+    // make all data is on disk
     flush();
-
-    // make sure all issued aios are completed
-    dsn_task_tracker_wait_all(tracker());
 
     {
         zauto_lock l(_lock);
@@ -216,19 +222,6 @@ void mutation_log::close(bool clear_all)
             _current_log_file->close();
             _current_log_file = nullptr;
         }
-
-        // clear if need
-        if (clear_all)
-        {
-            for (auto& kv : _log_files)
-            {
-                kv.second->close();
-            }
-            _log_files.clear();
-
-            auto lerr = utils::filesystem::remove_path(dir());
-            dassert(lerr, "remove log %s failed", dir().c_str());
-        }
     }
 
     // reset all states
@@ -237,11 +230,24 @@ void mutation_log::close(bool clear_all)
 
 void mutation_log::flush()
 {
-    zauto_lock _(_lock);
-    if (_pending_write != nullptr)
+    // make sure previous writes are done
+    if (!_issued_write.expired())
     {
-        // TODO(qinzuoyan): is it a problem if previous writing is not done?
-        write_pending_mutations();
+        dsn_task_tracker_wait_all(tracker());
+    }
+
+    {
+        zauto_lock _(_lock);
+        if (_pending_write != nullptr)
+        {
+            write_pending_mutations();
+        }
+    }
+
+    // make sure the latest flush writes are done
+    if (!_issued_write.expired())
+    {
+        dsn_task_tracker_wait_all(tracker());
     }
 }
 
@@ -309,8 +315,8 @@ void mutation_log::create_new_pending_buffer()
     dassert(_pending_write == nullptr, "");
     dassert(_pending_write_callbacks == nullptr, "");
 
-    _pending_write_callbacks.reset(new std::list< ::dsn::task_ptr>);
     _pending_write = _current_log_file->prepare_log_block();
+    _pending_write_callbacks.reset(new std::list< ::dsn::task_ptr>);
     _global_end_offset += _pending_write->data().front().length();
 }
 
@@ -318,8 +324,7 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
 {
     dassert(_pending_write != nullptr, "");
     dassert(_pending_write_callbacks != nullptr, "");
-    // TODO(qinzuoyan): check _issued_write.expired()?
-    //dassert(_issued_write.expired(), "");
+    dassert(_issued_write.expired(), "");
 
     uint64_t start_offset = _global_end_offset - _pending_write->size();
     bool new_log_file = create_new_log_when_necessary
@@ -332,17 +337,20 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
         LPC_WRITE_REPLICATION_LOG_FLUSH,
         this,
         std::bind(
-            &mutation_log::internal_write_callback,
+            &mutation_log::internal_write_callback, this,
             std::placeholders::_1,
             std::placeholders::_2,
-            _pending_write_callbacks, _pending_write, _current_log_file, _is_private),
+            _current_log_file,
+            _pending_write,
+            _pending_write_callbacks,
+            _pending_write_max_commit),
         -1
         );
 
     if (aio == nullptr)
     {
         internal_write_callback(ERR_FILE_OPERATION_FAILED,
-            0, _pending_write_callbacks, _pending_write, _current_log_file, _is_private);
+            0, _current_log_file, _pending_write, _pending_write_callbacks, _pending_write_max_commit);
         return ERR_FILE_OPERATION_FAILED;
     }
     else
@@ -351,9 +359,11 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
     }
 
     _issued_write = _pending_write;
+    _issued_write_task = aio;
 
     _pending_write = nullptr;
     _pending_write_callbacks = nullptr;
+    _pending_write_max_commit = 0;
 
     if (new_log_file)
     {
@@ -371,10 +381,10 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
 void mutation_log::internal_write_callback(
     error_code err,
     size_t size,
-    mutation_log::pending_callbacks_ptr callbacks,
-    std::shared_ptr<log_block> block,
     log_file_ptr file,
-    bool is_private
+    std::shared_ptr<log_block> block,
+    mutation_log::pending_callbacks_ptr callbacks,
+    decree max_commit
     )
 {
     auto hdr = (log_block_header*)block->front().data();
@@ -387,9 +397,14 @@ void mutation_log::internal_write_callback(
             (int)size,
             block->size()
             );
-        //FIXME : the file could have been closed
-        if(is_private)
+
+        if(_is_private)
         {
+            // update _private_max_commit_on_disk after writen into log file done
+            update_max_commit_on_disk(max_commit);
+
+            // TODO(qinzuoyan): why flush here?
+            // FIXME : the file could have been closed
             file->flush();
         }
     }
@@ -564,7 +579,8 @@ void mutation_log::internal_write_callback(
 
     if (err == ERR_OK || err == ERR_HANDLE_EOF)
     {
-        dassert(g_end_offset == end_offset,
+        // the log may still be written when used for learning
+        dassert(g_end_offset <= end_offset,
             "make sure the global end offset is correct: %" PRId64 " vs %" PRId64,
             g_end_offset,
             end_offset
@@ -601,6 +617,13 @@ decree mutation_log::max_decree(global_partition_id gpid) const
         else
             return 0;
     }
+}
+
+decree mutation_log::max_commit_on_disk() const
+{
+    zauto_lock l(_lock);
+    dassert(_is_private, "this method is only valid for private logs");
+    return _private_max_commit_on_disk;
 }
 
 decree mutation_log::max_gced_decree(global_partition_id gpid, int64_t valid_start_offset) const
@@ -725,10 +748,17 @@ void mutation_log::check_valid_start_offset(global_partition_id gpid, int64_t va
         _pending_write_callbacks->push_back(tsk);
     }
 
+    if (_is_private)
+    {
+        _pending_write_max_commit = std::max(_pending_write_max_commit,
+                                             mu->data.header.last_committed_decree);
+    }
+
     //
     // start to write
     //
-    if (_issued_write.expired()) {
+    if (_issued_write.expired()) 
+    {
         if (_batch_buffer_bytes == 0)
         {
             // not batching
@@ -745,7 +775,6 @@ void mutation_log::check_valid_start_offset(global_partition_id gpid, int64_t va
             else
             {
                 // batch not full, wait for batch write later
-                // TODO(qinzuoyan): add timer triger
             }
         }
     }
@@ -839,6 +868,21 @@ void mutation_log::update_max_decree_no_lock(global_partition_id gpid, decree d)
     }
 }
 
+void mutation_log::update_max_commit_on_disk(decree d)
+{
+    zauto_lock l(_lock);
+    update_max_commit_on_disk_no_lock(d);
+}
+
+void mutation_log::update_max_commit_on_disk_no_lock(decree d)
+{
+    dassert(_is_private, "this method is only valid for private logs");
+    if (d > _private_max_commit_on_disk)
+    {
+        _private_max_commit_on_disk = d;
+    }
+}
+
 void mutation_log::get_learn_state(
     global_partition_id gpid,
     ::dsn::replication::decree start,
@@ -846,6 +890,7 @@ void mutation_log::get_learn_state(
     ) const
 {
     dassert(_is_private, "this method is only valid for private logs");
+    dassert(_private_gpid == gpid, "replica gpid does not match");
 
     std::map<int, log_file_ptr> files;
     std::map<int, log_file_ptr>::reverse_iterator itr;
@@ -885,7 +930,6 @@ void mutation_log::get_learn_state(
                 dassert(bb_iterator != block->data().end(), "there is no file header in a local_offset=0 log block");
                 //skip the file header
                 ++bb_iterator;
-                
             }
             for (; bb_iterator != block->data().end(); ++bb_iterator)
             {
@@ -914,15 +958,20 @@ void mutation_log::get_learn_state(
         }
 
         if (log->end_offset() > log->start_offset())
+        {
+            // not empty file
             learn_files.push_back(log->path());
+        }
 
         skip_next = (log->previous_log_max_decrees().size() == 0);
+        
+        // continue checking as this file may be a fault
         if (skip_next)
             continue;
 
         decree last_max_decree = log->previous_log_max_decrees().begin()->second.max_decree;
 
-        // when all possible decress are not needed
+        // when all possible decrees are not needed
         if (last_max_decree < start)
         {
             // skip all older logs
@@ -1054,7 +1103,7 @@ int mutation_log::garbage_collection(global_partition_id gpid, decree durable_de
     return deleted;
 }
 
-int mutation_log::garbage_collection(replica_log_info_map& durable_decrees)
+int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
 {
     dassert(!_is_private, "this method is only valid for shared log");
 
@@ -1078,7 +1127,7 @@ int mutation_log::garbage_collection(replica_log_info_map& durable_decrees)
     else
     {
         // the last one should be the current log file
-        dassert(files.rbegin()->first == current_file_index, "");
+        dassert(-1 == current_file_index || files.rbegin()->first == current_file_index, "");
     }
 
     // find the largest file which can be deleted.
@@ -1100,7 +1149,7 @@ int mutation_log::garbage_collection(replica_log_info_map& durable_decrees)
 
         if (delete_ok)
         {
-            for (auto& kv : durable_decrees)
+            for (auto& kv : gc_condition)
             {
                 if (kickout_replicas.find(kv.first) != kickout_replicas.end())
                 {
@@ -1109,10 +1158,11 @@ int mutation_log::garbage_collection(replica_log_info_map& durable_decrees)
                 }
 
                 global_partition_id gpid = kv.first;
-                decree durable_decree = kv.second.max_decree;
+                decree gc_max_decree = kv.second.max_decree;
                 int64_t valid_start_offset = kv.second.valid_start_offset;
 
-                bool delete_ok_for_this_replica;
+                bool delete_ok_for_this_replica = false;
+                bool kickout_this_replica = false;
                 auto it3 = max_decrees.find(gpid);
 
                 // log not found for this replica, ok to delete
@@ -1121,18 +1171,19 @@ int mutation_log::garbage_collection(replica_log_info_map& durable_decrees)
                     dassert(valid_start_offset >= log->end_offset(),
                         "valid start offset must be greater than the end of this log file");
 
-                    dinfo("gc @ %d.%d: max_decree for %s is missing vs %" PRId64 " as app.durable decree,"
+                    dinfo("gc @ %d.%d: max_decree for %s is missing vs %" PRId64 " as gc max decree,"
                         " safe to delete this and all older logs for this replica",
                         gpid.app_id,
                         gpid.pidx,
                         log->path().c_str(),
-                        durable_decree
+                        gc_max_decree
                         );
                     delete_ok_for_this_replica = true;
+                    kickout_this_replica = true;
                 }
 
                 // log is invalid for this replica, ok to delete
-                else if (valid_start_offset >= log->end_offset())
+                else if (log->end_offset() <= valid_start_offset)
                 {
                     dinfo("gc @ %d.%d: log is invalid for %s, as"
                         " valid start offset vs log end offset = %" PRId64 " vs %" PRId64 ", "
@@ -1144,35 +1195,32 @@ int mutation_log::garbage_collection(replica_log_info_map& durable_decrees)
                         log->end_offset()
                         );
                     delete_ok_for_this_replica = true;
+                    kickout_this_replica = true;
                 }
 
-                // all decrees are durable for this replica, ok to delete
-                else if (durable_decree >= it3->second.max_decree)
+                // all decrees are no more than gc max decree, ok to delete
+                else if (it3->second.max_decree <= gc_max_decree)
                 {
-                    dinfo("gc @ %d.%d: max_decree for %s is %" PRId64 " vs %" PRId64 " as app.durable decree,"
+                    dinfo("gc @ %d.%d: max_decree for %s is %" PRId64 " vs %" PRId64 " as gc max decree,"
                         " it is therefore safe to delete this and all older logs for this replica",
                         gpid.app_id,
                         gpid.pidx,
                         log->path().c_str(),
                         it3->second.max_decree,
-                        durable_decree
+                        gc_max_decree
                         );
                     delete_ok_for_this_replica = true;
+                    kickout_this_replica = true;
                 }
 
-                // otherwise, can not delete
-                else
-                {
-                    delete_ok_for_this_replica = false;
-                }
-
-                if (delete_ok_for_this_replica)
+                if (kickout_this_replica)
                 {
                     // files before this file is useless for this replica,
                     // so from now on, this replica will not be considered anymore
                     kickout_replicas.insert(gpid);
                 }
-                else
+
+                if (!delete_ok_for_this_replica)
                 {
                     // can not delete this file
                     delete_ok = false;

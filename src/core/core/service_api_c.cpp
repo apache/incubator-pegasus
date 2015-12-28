@@ -567,12 +567,12 @@ DSN_API bool dsn_rpc_register_handler(dsn_task_code_t code, const char* name, ds
     h->c_handler = cb;
     h->parameter = param;
 
-    return ::dsn::task::get_current_node()->rpc_register_handler(h);
+    return ::dsn::task::get_current_node()->rpc_register_handler(h, 0);
 }
 
 DSN_API void* dsn_rpc_unregiser_handler(dsn_task_code_t code)
 {
-    auto h = ::dsn::task::get_current_node()->rpc_unregister_handler(code);
+    auto h = ::dsn::task::get_current_node()->rpc_unregister_handler(code, 0);
     return (h != nullptr) ? h->parameter : nullptr;
 }
 
@@ -833,7 +833,6 @@ DSN_API uint64_t dsn_now_ns()
 
 DSN_API uint64_t dsn_random64(uint64_t min, uint64_t max) // [min, max]
 {
-    //return ::dsn::task::get_current_env()->random64(min, max);
     return ::dsn::service_engine::instance().env()->random64(min, max);
 }
 

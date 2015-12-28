@@ -67,6 +67,11 @@ public:
     {
         _disconnected_cb = func;
     }
+    void clear()
+    {
+        _connected_cb = {};
+        _disconnected_cb = {};
+    }
 };
 
 class master_fd_test: public meta_server_failure_detector
@@ -120,6 +125,11 @@ public:
     {
         zauto_lock l(failure_detector::_lock);
         register_worker(node);
+    }
+    void clear()
+    {
+        _connected_cb = {};
+        _disconnected_cb = {};
     }
 };
 
@@ -268,6 +278,8 @@ void finish(test_worker* worker, test_master* master, int master_index)
     //we don't send any ping message now
     worker->fd()->toggle_send_ping(false);
     ASSERT_TRUE(spin_wait_condition([&wait_count] { return wait_count==0; }, 20));
+    worker->fd()->clear();
+    master->fd()->clear();
 }
 
 TEST(fd, dummy_connect_disconnect)

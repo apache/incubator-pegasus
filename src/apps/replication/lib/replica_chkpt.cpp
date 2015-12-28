@@ -78,9 +78,9 @@ namespace dsn {
             auto err = _app->checkpoint_async();
             if (err != ERR_NOT_IMPLEMENTED)
             {
-                if (err != 0)
+                if (err != ERR_OK && err != ERR_WRONG_TIMING && err != ERR_NO_NEED_OPERATE && err != ERR_TRY_AGAIN)
                 {
-                    derror("%s: checkpoint_async failed, err = %d", err);
+                    derror("%s: checkpoint_async failed, err = %s", err.to_string());
                 }
                 return;
             }
@@ -247,10 +247,7 @@ namespace dsn {
 
         void replica::checkpoint()
         {
-            auto lerr = _app->checkpoint();
-            auto err = lerr == 0 ? ERR_OK :
-                (lerr == ERR_WRONG_TIMING ? ERR_WRONG_TIMING : ERR_LOCAL_APP_FAILURE);
-            
+            auto err = _app->checkpoint();
             tasking::enqueue(
                 LPC_CHECKPOINT_REPLICA_COMPLETED,
                 this,
@@ -292,8 +289,8 @@ namespace dsn {
         {
             check_hashed_access();
 
-            // closing or wrong timing
-            if (PS_SECONDARY != status() || ERR_WRONG_TIMING == err)
+            // closing or wrong timing or no need operate
+            if (PS_SECONDARY != status() || err == ERR_WRONG_TIMING || err == ERR_NO_NEED_OPERATE)
             {
                 _secondary_states.checkpoint_task = nullptr;
                 return;

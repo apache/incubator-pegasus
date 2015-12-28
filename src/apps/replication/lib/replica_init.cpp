@@ -170,6 +170,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
 
     if (err == ERR_OK)
     {
+        dassert(_app->last_committed_decree() == _app->last_durable_decree(), "");
         _prepare_list->reset(_app->last_committed_decree());
         
         if (!_options->log_private_disabled
@@ -218,14 +219,15 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                 ddebug(
                     "%s: private log initialized, durable = %" PRId64 ", committed = %" PRId64 ", "
                     "max_prepared = %" PRId64 ", ballot = %" PRId64 ", valid_offset_in_plog = %" PRId64 ", "
-                    "max_decree_in_plog = %" PRId64 "",
+                    "max_decree_in_plog = %" PRId64 ", max_commit_on_disk_in_plog = %" PRId64,
                     name(),
                     _app->last_durable_decree(),
                     _app->last_committed_decree(),
                     max_prepared_decree(),
                     get_ballot(),
                     _app->init_info().init_offset_in_private_log,
-                    _private_log->max_decree(get_gpid())
+                    _private_log->max_decree(get_gpid()),
+                    _private_log->max_commit_on_disk()
                     );
                 _private_log->check_valid_start_offset(get_gpid(), _app->init_info().init_offset_in_private_log);
                 set_inactive_state_transient(true);
@@ -310,6 +312,23 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
         return false;
     }
 
+    // fix private log completeness when it is from shared
+    if (!is_private && _private_log && d > _private_log->max_commit_on_disk())
+    {
+        _private_log->append(mu,
+            LPC_WRITE_REPLICATION_LOG,
+            this,
+            [this, mu](error_code err, size_t size)
+        {
+            if (err != ERR_OK)
+            {
+                handle_local_failure(err);
+            }
+        },
+            gpid_to_hash(get_gpid())
+            );
+    }
+
     if (d <= last_committed_decree())
     {
         ddebug(
@@ -343,7 +362,8 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     if (mu->data.header.ballot > get_ballot())
     {
         _config.ballot = mu->data.header.ballot;
-        update_local_configuration(_config, true);
+        bool ret = update_local_configuration(_config, true);
+        dassert(ret, "");
     }
 
     ddebug(
@@ -357,23 +377,6 @@ bool replica::replay_mutation(mutation_ptr& mu, bool is_private)
     // prepare
     error_code err = _prepare_list->prepare(mu, PS_INACTIVE);
     dassert (err == ERR_OK, "");
-
-    // fix private log completeness when it is from shared
-    if (_private_log && !is_private)
-    {
-        _private_log->append(mu,
-            LPC_WRITE_REPLICATION_LOG,
-            this,
-            [this, mu](error_code err, size_t size)
-        {
-            if (err != ERR_OK)
-            {
-                handle_local_failure(err);
-            }
-        },
-            gpid_to_hash(get_gpid())
-            );
-    }
 
     return true;
 }

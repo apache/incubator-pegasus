@@ -33,6 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 # include <dsn/cpp/perf_test_helper.h>
+# include <fstream>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -224,9 +225,12 @@ namespace dsn {
 
                 if (_current_suit_index >= (int)_suits.size())
                 {
+                    uint64_t ts = dsn_now_ns();
+                    char str[24];
+                    ::dsn::utils::time_ms_to_string(ts / 1000000, str);
                     std::stringstream ss;
-                    ss << ">>>>>>>>>>>>>>>>>>>" << std::endl;
 
+                    ss << "TEST end at " << str << std::endl;
                     for (auto& s : _suits)
                     {
                         for (auto& cs : s.cases)
@@ -247,6 +251,25 @@ namespace dsn {
                     }
 
                     dwarn(ss.str().c_str());
+
+                    // dump to perf result file
+                    if (dsn_config_get_value_bool(
+                        "apps.client.perf.test",
+                        "exit_after_test",
+                        false,
+                        "dump the result and exit the process after the test is finished")
+                        )
+                    {
+                        std::string data_dir(dsn_get_current_app_data_dir());
+                        std::stringstream fns;
+                        fns << "perf-result-" << ts << ".txt";
+                        std::string report = ::dsn::utils::filesystem::path_combine(data_dir, fns.str());
+                        std::ofstream result_f(report.c_str(), std::ios::out);
+                        result_f << ss.str() << std::endl;
+                        result_f.close();
+                        dsn_exit(0);
+                    }
+
                     return;
                 }
             }

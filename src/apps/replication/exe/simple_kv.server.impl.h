@@ -52,13 +52,13 @@ namespace dsn {
                 // RPC_SIMPLE_KV_APPEND
                 virtual void on_append(const kv_pair& pr, ::dsn::rpc_replier<int32_t>& reply);
 
-                virtual int  open(bool create_new);
-                virtual int  close(bool clear_state);
-                virtual int  checkpoint();
+                virtual ::dsn::error_code open(bool create_new) override;
+                virtual ::dsn::error_code close(bool clear_state) override;
+                virtual ::dsn::error_code checkpoint() override;
 
                 // helper routines to accelerate learning
-                virtual int get_checkpoint(decree start, const blob& learn_req, /*out*/ learn_state& state);
-                virtual int apply_checkpoint(learn_state& state, chkpt_apply_mode mode);
+                virtual ::dsn::error_code get_checkpoint(decree start, const blob& learn_req, /*out*/ learn_state& state) override;
+                virtual ::dsn::error_code apply_checkpoint(learn_state& state, chkpt_apply_mode mode) override;
 
             private:
                 void recover();
