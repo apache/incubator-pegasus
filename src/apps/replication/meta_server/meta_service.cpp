@@ -99,6 +99,7 @@ error_code meta_service::start()
         derror("recover server state failed, err = %s, retry ...", err.to_string());
     }
 
+    _balancer = new load_balancer(_state);
     _failure_detector->sync_node_state_and_start_service();
     ddebug("start meta_service succeed");
     return ERR_OK;

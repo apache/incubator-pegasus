@@ -128,9 +128,7 @@ namespace dsn {
                     auto ep = r->primary_address();
                     if (!meta->_service->_failure_detector->is_worker_connected(ep))
                     {
-                        size_t replica_count = r->_stub->_opening_replicas.size() + r->_stub->_replicas.size();
-                        dassert(!r->_stub->is_connected() || replica_count==0, 
-                            "when meta server says a replica is dead, it must be dead");
+                        dassert(!r->_stub->is_connected(), "when meta server says a replica is dead, it must be dead");
                     }
                 }
             }
