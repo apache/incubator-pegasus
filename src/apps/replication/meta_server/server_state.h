@@ -57,7 +57,7 @@ namespace dsn {
 
 typedef std::list<std::pair< ::dsn::rpc_address, bool>> node_states;
 
-enum app_status
+enum class app_status
 {
     available,
     creating,
@@ -135,9 +135,11 @@ public:
         std::function<void()> callback
         );
 
-    // create table
+    // table options
     void create_app(dsn_message_t msg);
     void drop_app(dsn_message_t msg);
+    void query_app_status(dsn_message_t msg);
+
     void unfree_if_possible_on_start();
 
     // if is freezed
@@ -174,6 +176,12 @@ private:
     void do_app_drop(app_state& app, dsn_message_t msg);
     // join path
     static std::string join_path(const std::string& input1, const std::string& input2);
+
+    //path util function in meta_state_service
+    std::string get_app_path(const app_state& app);
+    std::string get_partition_path(const global_partition_id& gpid);
+    std::string get_partition_path(const app_state& app, int partition_id);
+
 private:
     friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
@@ -189,6 +197,9 @@ private:
 
     friend class simple_stateful_load_balancer;
     std::string                                         _cluster_root;
+
+    //_cluster_root + "/apps"
+    std::string                                         _apps_root;
     mutable zrwlock_nr                                  _lock;
     std::unordered_map< ::dsn::rpc_address, node_state> _nodes;
 

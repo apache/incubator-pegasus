@@ -60,7 +60,7 @@ void simple_stateful_load_balancer::run()
     for (size_t i = 0; i < _state->_apps.size(); i++)
     {
         app_state& app = _state->_apps[i];
-        if (app.status != available)
+        if (app.status != app_status::available)
             continue;
         for (int j = 0; j < app.partition_count; j++)
         {

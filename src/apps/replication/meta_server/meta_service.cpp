@@ -265,7 +265,17 @@ void meta_service::on_drop_app(dsn_message_t req)
 
 void meta_service::on_query_app_status(dsn_message_t req)
 {
+    if (!check_primary(req))
+        return;
+    if (!_started)
+    {
+        configuration_drop_app_response response;
+        response.err = ERR_SERVICE_NOT_ACTIVE;
+        reply(req, response);
+        return;
+    }
 
+    _state->query_app_status(req);
 }
 
 // partition server & client => meta server

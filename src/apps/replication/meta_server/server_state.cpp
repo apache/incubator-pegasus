@@ -173,7 +173,7 @@ void unmarshall_json(const blob& buf, app_state& app)
     app.app_id = doc["app_id"].GetInt();
     app.app_name = doc["app_name"].GetString();
     app.partition_count = doc["partition_count"].GetInt();
-    app.status = strcmp(doc["status"].GetString(), "available")==0?available:dropped;
+    app.status = strcmp(doc["status"].GetString(), "available")==0?app_status::available:app_status::dropped;
     partition_configuration pc;
     pc.app_type = app.app_type;
     pc.ballot = 0;
@@ -311,7 +311,7 @@ error_code server_state::initialize()
         }
     }
     _cluster_root = current.empty() ? "/" : current;
-
+    _apps_root = join_path(_cluster_root, "apps");
     dassert(_cli_json_state_handle == nullptr, "server state is initialized twice");
     _cli_json_state_handle = dsn_cli_app_register("info", "get info of nodes and apps on meta_server", "", this, &static_cli_json_state, &static_cli_json_state_cleanup);
     dassert(_cli_json_state_handle != nullptr, "register cil handler failed, maybe it has been registered");
@@ -340,6 +340,27 @@ std::string server_state::join_path(const std::string& input1, const std::string
     return input1.substr(0, pos1) + "/" + input2.substr(pos2);
 }
 
+std::string server_state::get_app_path(const app_state &app)
+{
+    return _apps_root + "/" + boost::lexical_cast<std::string>(app.app_id);
+}
+
+std::string server_state::get_partition_path(const app_state &app, int partition_id)
+{
+    std::stringstream oss;
+    oss << _apps_root << "/" << app.app_id
+        << "/" << partition_id;
+    return oss.str();
+}
+
+std::string server_state::get_partition_path(const global_partition_id& gpid)
+{
+    std::stringstream oss;
+    oss << _apps_root << "/" << gpid.app_id
+        << "/" << gpid.pidx;
+    return oss.str();
+}
+
 error_code server_state::initialize_apps()
 {
     ddebug("start to do initialize");
@@ -358,7 +379,7 @@ error_code server_state::initialize_apps()
     clientlet tracker;
 
     // create  cluster_root/apps node
-    std::string apps_path = join_path(_cluster_root, "apps");
+    std::string& apps_path = _apps_root;
     auto t = _storage->create_node(apps_path, LPC_META_STATE_SVC_CALLBACK,
         [&err](error_code ec)
         {err = ec; }
@@ -374,7 +395,7 @@ error_code server_state::initialize_apps()
 
     err = ERR_OK;
     // create cluster_root/apps/app_name node
-    std::string app_path = join_path(apps_path, app.app_name);
+    std::string app_path = get_app_path(app);
     blob value;
     marshall_json(value, app, true);
 
@@ -448,7 +469,7 @@ error_code server_state::sync_apps_from_remote_storage()
     clientlet tracker(1);
     // get all apps
 
-    std::string app_root = join_path(_cluster_root, "apps");
+    std::string& app_root = _apps_root;
     _storage->get_children(app_root, LPC_META_STATE_SVC_CALLBACK,
         [&](error_code ec, const std::vector<std::string>& apps)
         {
@@ -733,21 +754,21 @@ DEFINE_TASK_CODE(LPC_META_SERVER_STATE_UPDATE_CALLBACK, TASK_PRIORITY_HIGH, THRE
 
 void server_state::initialize_app(app_state& app, dsn_message_t msg)
 {
-    typedef dist::meta_state_service::tree_entries TEntries;
+    typedef dist::meta_state_service::transaction_entries TEntries;
 
     //we need to create entry for the root and for each partition
     std::shared_ptr<TEntries> entries = _storage->new_entries(app.partition_count + 1);
-    std::string app_dir = join_path(_cluster_root, "apps") + "/" + app.app_name;
+    std::string app_dir = get_app_path(app);
     blob value;
 
     marshall_json(value, app, true);
-    entries->append(app_dir, value);
+    entries->create_node(app_dir, value);
 
     std::vector<partition_configuration>& partitions = app.partitions;
     for (unsigned int i = 0; i != partitions.size(); ++i)
     {
         marshall_json(value, partitions[i]);
-        entries->append(app_dir + "/" + boost::lexical_cast<std::string>(i), value);
+        entries->create_node( get_partition_path(app, i), value);
     }
 
     dsn_msg_add_ref(msg);
@@ -766,7 +787,7 @@ void server_state::initialize_app(app_state& app, dsn_message_t msg)
         if (ERR_OK == ec || ERR_NODE_ALREADY_EXIST == ec) {
             { 
                 zauto_write_lock l(_lock);
-                app.status = available;
+                app.status = app_status::available;
             }
             dinfo("create app on storage service ok, appname: %s, appid: %" PRId32 "", 
                 app.app_name.c_str(), 
@@ -780,7 +801,7 @@ void server_state::initialize_app(app_state& app, dsn_message_t msg)
             dwarn("the storage service is not available currently, just ignore this request");
             {
                 zauto_write_lock l(_lock);
-                app.status = creating_failed;
+                app.status = app_status::creating_failed;
             }
         }
         else {
@@ -788,7 +809,7 @@ void server_state::initialize_app(app_state& app, dsn_message_t msg)
         }
         dsn_msg_release_ref(msg);
     };
-    _storage->create_tree(entries,
+    _storage->submit_transaction(entries,
         LPC_META_SERVER_STATE_UPDATE_CALLBACK, 
         after_create_tree);
 }
@@ -810,12 +831,12 @@ void server_state::create_app(dsn_message_t msg)
         zauto_write_lock l(_lock);
         id = app_id(request.app_name.c_str());
         /* so we can't store the data on meta_state_service with app_name, but app_id */
-        if (id != -1 && _apps[id].status!=dropped)
+        if (id != -1 && _apps[id].status!=app_status::dropped)
         {
             app_state& exist_app = _apps[id];
             switch (exist_app.status)
             {
-            case available:
+            case app_status::available:
                 if (!request.options.success_if_exist || !option_match_check(request.options, exist_app))
                     response.err = ERR_INVALID_PARAMETERS;
                 else {
@@ -823,15 +844,15 @@ void server_state::create_app(dsn_message_t msg)
                     response.appid = id;
                 }
                 break;
-            case creating:
+            case app_status::creating:
                 response.err = ERR_BUSY_CREATING;
                 break;
-            case creating_failed:
-                exist_app.status = creating;
+            case app_status::creating_failed:
+                exist_app.status = app_status::creating;
                 will_create_app = true;
                 break;
-            case dropping:
-            case dropping_failed:
+            case app_status::dropping:
+            case app_status::dropping_failed:
                 response.err = ERR_BUSY_DROPPING;
             default:
                 break;
@@ -858,7 +879,7 @@ void server_state::create_app(dsn_message_t msg)
             pc.secondaries.clear();
 
             app.partitions.resize(app.partition_count, pc);
-            app.status = creating;
+            app.status = app_status::creating;
         }
     }
 
@@ -874,7 +895,7 @@ void server_state::do_app_drop(app_state& app, dsn_message_t msg)
     blob value;
     marshall_json(value, app, false);
 
-    std::string app_node = join_path(_cluster_root, "apps") + "/" + app.app_name;
+    std::string app_path = get_app_path(app);
 
     dsn_msg_add_ref(msg);
     auto after_set_app_dropped = [this, &app, msg](error_code ec) {
@@ -883,7 +904,7 @@ void server_state::do_app_drop(app_state& app, dsn_message_t msg)
         {
             {
                 zauto_write_lock l(_lock);
-                app.status = dropped;
+                app.status = app_status::dropped;
             }
             response.err = ERR_OK;
             reply(msg, response);
@@ -893,7 +914,7 @@ void server_state::do_app_drop(app_state& app, dsn_message_t msg)
         {
             dinfo("drop table(id:%d, name:%s) timeout, ignore request", app.app_id, app.app_name.c_str());
             zauto_write_lock l(_lock);
-            app.status = dropping_failed;
+            app.status = app_status::dropping_failed;
         }
         else
         {
@@ -901,7 +922,7 @@ void server_state::do_app_drop(app_state& app, dsn_message_t msg)
         }
         dsn_msg_release_ref(msg);
     };    
-    _storage->set_data(app_node,
+    _storage->set_data(app_path,
         value,
         LPC_META_SERVER_STATE_UPDATE_CALLBACK,
         after_set_app_dropped);
@@ -917,22 +938,22 @@ void server_state::drop_app(dsn_message_t msg)
     {
         zauto_write_lock l(_lock);
         id = app_id(request.app_name.c_str());
-        if (id == -1 || _apps[id].status == dropped) {
+        if (id == -1 || _apps[id].status == app_status::dropped) {
             response.err = request.options.success_if_not_exist?ERR_OK:ERR_APP_NOT_EXIST;
         }
         else {
             switch (_apps[id].status)
             {
-            case available:
-            case dropping_failed:
-            case creating_failed:
+            case app_status::available:
+            case app_status::dropping_failed:
+            case app_status::creating_failed:
                 do_dropping = true;
-                _apps[id].status = dropping;
+                _apps[id].status = app_status::dropping;
                 break;
-            case creating:
+            case app_status::creating:
                 response.err = ERR_BUSY_CREATING;
                 break;
-            case dropping:
+            case app_status::dropping:
                 response.err = ERR_BUSY_DROPPING;
                 break;
             default:
@@ -946,6 +967,11 @@ void server_state::drop_app(dsn_message_t msg)
     }
     else
         reply(msg, response);
+}
+
+void server_state::query_app_status(dsn_message_t msg)
+{
+
 }
 
 void server_state::update_configuration(
@@ -981,9 +1007,7 @@ void server_state::update_configuration(
         else
         {
             write = true;
-            auto apps_path = join_path(_cluster_root, "apps");
-            auto app_path = join_path(apps_path, app.app_name);
-            partition_path = join_path(app_path, boost::lexical_cast<std::string>(old.gpid.pidx));
+            partition_path = get_partition_path(old.gpid);
             req->config.last_drops = old.last_drops;
         }
     }
