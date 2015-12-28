@@ -646,6 +646,14 @@ void server_state::set_node_state(const node_states& nodes, /*out*/ machine_fail
     }
 }
 
+void server_state::apply_cache_nodes()
+{
+    node_states alive_list;
+    for (auto& node: _cache_alive_nodes)
+        alive_list.push_back( std::make_pair(node, true) );
+    set_node_state(alive_list, nullptr);
+}
+
 void server_state::unfree_if_possible_on_start()
 {
     zauto_write_lock l(_lock);

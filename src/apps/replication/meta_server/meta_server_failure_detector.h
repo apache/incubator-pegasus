@@ -35,7 +35,6 @@
 
 #pragma once
 
-# include <unordered_set>
 # include <dsn/dist/failure_detector.h>
 # include <dsn/dist/distributed_lock_service.h>
 # include "replication_common.h"
@@ -119,12 +118,6 @@ private:
 
     server_state  *_state;
     meta_service  *_svc;
-
-    /*
-     * in the initializing of server_state, we firstly cache all
-     * alived nodes detected by fd.
-     */
-    std::unordered_set<dsn::rpc_address> _cache_alive_nodes;
 
     ::dsn::dist::distributed_lock_service *_lock_svc;
     task_ptr    _lock_grant_task;

@@ -106,7 +106,7 @@ void meta_server_failure_detector::on_worker_disconnected(const std::vector< ::d
     if (!_svc->_started)
     {
         for (auto& node: nodes)
-            _cache_alive_nodes.erase(node);
+            _state->remove_dead_node_from_cache(node);
         return;
     }
 
@@ -140,7 +140,7 @@ void meta_server_failure_detector::on_worker_connected(::dsn::rpc_address node)
 
     if (!_svc->_started)
     {
-        _cache_alive_nodes.insert(node);
+        _state->add_alive_node_to_cache(node);
         return;
     }
     node_states states;
@@ -213,13 +213,10 @@ void meta_server_failure_detector::sync_node_state_and_start_service()
     zauto_lock l(failure_detector::_lock);
 
     //first add new nodes to the server_state
-    node_states alive_list;
-    for (auto& node: _cache_alive_nodes)
-        alive_list.push_back( std::make_pair(node, true) );
-    _state->set_node_state(alive_list, nullptr);
+    _state->apply_cache_nodes();
 
     //then we register all workers from server_state
-    alive_list.clear();
+    node_states alive_list;
     _state->get_node_state(alive_list);
 
     for(auto& node_pair: alive_list) {
