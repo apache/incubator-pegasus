@@ -1,0 +1,6 @@
+.matchfile
+.zk_install/
+.gcov_tmp/
+gcov_report/
+builder/
+install/
