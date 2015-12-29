@@ -68,7 +68,6 @@ public:
     static void try_lock(lock_struct_ptr _this, lock_task_t lock_callback, lock_task_t expire_callback);
     static void cancel_pending_lock(lock_struct_ptr _this, lock_task_t cancel_callback);
     static void unlock(lock_struct_ptr _this, unlock_task_t unlock_callback);
-    static void query(lock_struct_ptr _this, lock_task_t query_callback);
     
     static void lock_expired(lock_struct_ptr _this);
     
