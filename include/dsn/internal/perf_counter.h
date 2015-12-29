@@ -40,6 +40,7 @@
 # include <dsn/service_api_c.h>
 # include <dsn/cpp/autoref_ptr.h>
 # include <sstream>
+# include <vector>
 
 namespace dsn {
 ENUM_BEGIN(dsn_perf_counter_type_t, COUNTER_TYPE_INVALID)
@@ -84,8 +85,14 @@ public:
     virtual void   set(uint64_t val) = 0;
     virtual double get_value() = 0;
     virtual double get_percentile(dsn_perf_counter_percentile_type_t type) = 0;
-    virtual uint64_t* get_samples(/*out*/ int& sample_count) const { return nullptr; }
-    virtual uint64_t get_current_sample() const { return 0; }
+
+    typedef std::vector<std::pair<uint64_t*, int> > samples_t;
+
+    // return actual sample count, must <= required_sample_count
+    virtual int get_latest_samples(int required_sample_count, /*out*/ samples_t& samples) const { return 0; }
+
+    // return the latest sample value
+    virtual uint64_t get_latest_sample() const { return 0; }
 
     const char* full_name() const { return _full_name.c_str(); }
     const char* app() const { return _app.c_str(); }

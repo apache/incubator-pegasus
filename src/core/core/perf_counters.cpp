@@ -263,7 +263,7 @@ std::string perf_counters::get_counter_sample(const std::vector<std::string>& ar
     auto counter = c.get_counter(args[0].c_str());
 
     if (counter)
-        ss << counter->get_current_sample();
+        ss << counter->get_latest_sample();
     else
         ss << 0;
 
