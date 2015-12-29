@@ -748,7 +748,7 @@ int32_t server_state::get_app_index(const char *app_name) const
 {
     for (const app_state& app: _apps)
         if ( strcmp(app.app_name.c_str(), app_name) == 0 && app.status!=app_status::dropped)
-            return app.app_id;
+            return app.app_id-1;
     return -1;
 }
 
