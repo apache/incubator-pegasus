@@ -43,32 +43,32 @@ TEST(core, perf_counters)
     utils::perf_counters& c = utils::perf_counters::instance();
     perf_counter_ptr p;
 
-    p = c.get_counter("test", "number_counter", COUNTER_TYPE_NUMBER,"", false);
+    p = c.get_counter("app", "test", "number_counter", COUNTER_TYPE_NUMBER,"", false);
     ASSERT_EQ(nullptr, p);
-    p = c.get_counter("test", "number_counter", COUNTER_TYPE_NUMBER,"", true);
+    p = c.get_counter("app", "test", "number_counter", COUNTER_TYPE_NUMBER, "", true);
     ASSERT_NE(nullptr, p);
-    p = c.get_counter("test", "number_counter", COUNTER_TYPE_NUMBER,"", false);
-    ASSERT_NE(nullptr, p);
-
-    p = c.get_counter("test", "rate_counter", COUNTER_TYPE_RATE,"", false);
-    ASSERT_EQ(nullptr, p);
-    p = c.get_counter("test", "rate_counter", COUNTER_TYPE_RATE,"", true);
-    ASSERT_NE(nullptr, p);
-    p = c.get_counter("test", "rate_counter", COUNTER_TYPE_RATE,"", false);
+    p = c.get_counter("app", "test", "number_counter", COUNTER_TYPE_NUMBER, "", false);
     ASSERT_NE(nullptr, p);
 
-    ASSERT_FALSE(c.remove_counter("unexist_section", "number_counter"));
-    ASSERT_FALSE(c.remove_counter("test", "unexist_counter"));
+    p = c.get_counter("app", "test", "rate_counter", COUNTER_TYPE_RATE, "", false);
+    ASSERT_EQ(nullptr, p);
+    p = c.get_counter("app", "test", "rate_counter", COUNTER_TYPE_RATE, "", true);
+    ASSERT_NE(nullptr, p);
+    p = c.get_counter("app", "test", "rate_counter", COUNTER_TYPE_RATE, "", false);
+    ASSERT_NE(nullptr, p);
 
-    ASSERT_TRUE(c.remove_counter("test", "number_counter"));
-    p = c.get_counter("test", "number_counter", COUNTER_TYPE_NUMBER,"", false);
+    ASSERT_FALSE(c.remove_counter("number_counter"));
+    ASSERT_FALSE(c.remove_counter("unexist_counter"));
+
+    ASSERT_TRUE(c.remove_counter("app*test*number_counter"));
+    p = c.get_counter("app", "test", "number_counter", COUNTER_TYPE_NUMBER,"", false);
     ASSERT_EQ(nullptr, p);
 
-    ASSERT_TRUE(c.remove_counter("test", "rate_counter"));
-    p = c.get_counter("test", "rate_counter", COUNTER_TYPE_RATE,"", false);
+    ASSERT_TRUE(c.remove_counter("app*test*rate_counter"));
+    p = c.get_counter("app", "test", "rate_counter", COUNTER_TYPE_RATE, "", false);
     ASSERT_EQ(nullptr, p);
 
-    p = c.get_counter("test", "unexist_counter", COUNTER_TYPE_NUMBER,"", false);
+    p = c.get_counter("app", "test", "unexist_counter", COUNTER_TYPE_NUMBER, "", false);
     ASSERT_EQ(nullptr, p);
-    ASSERT_FALSE(c.remove_counter("test", "unexist_counter"));
+    ASSERT_FALSE(c.remove_counter("app*test*unexist_counter"));
 }

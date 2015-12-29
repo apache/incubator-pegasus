@@ -60,6 +60,7 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/, bo
     _failure_detector = nullptr;
     _state = NS_Disconnected;
     _log = nullptr;
+    install_perf_counters();
 }
 
 replica_stub::~replica_stub(void)
@@ -69,16 +70,16 @@ replica_stub::~replica_stub(void)
 
 void replica_stub::install_perf_counters()
 {
-    _counter_replicas_count.init("replica#", COUNTER_TYPE_NUMBER, "# in replica_stub._replicas");
-    _counter_replicas_opening_count.init("opening_replica#", COUNTER_TYPE_NUMBER, "# in replica_stub._opening_replicas");
-    _counter_replicas_closing_count.init("closing_replica#", COUNTER_TYPE_NUMBER, "# in replica_stub._closing_replicas");
-    _counter_replicas_total_commit_throught.init("replicas.commit(#/s)", COUNTER_TYPE_RATE, "app commit throughput for all replicas");
+    _counter_replicas_count.init("eon", "replica#", COUNTER_TYPE_NUMBER, "# in replica_stub._replicas");
+    _counter_replicas_opening_count.init("eon", "opening_replica#", COUNTER_TYPE_NUMBER, "# in replica_stub._opening_replicas");
+    _counter_replicas_closing_count.init("eon", "closing_replica#", COUNTER_TYPE_NUMBER, "# in replica_stub._closing_replicas");
+    _counter_replicas_total_commit_throught.init("eon", "replicas.commit(#/s)", COUNTER_TYPE_RATE, "app commit throughput for all replicas");
 
-    _counter_replicas_learning_failed_latency.init("replicas.learning.failed(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "learning time (failed)");
-    _counter_replicas_learning_success_latency.init("replicas.learning.success(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "learning time (success)");
-    _counter_replicas_learning_count.init("replicas.learnig(#)", COUNTER_TYPE_NUMBER, "total learning count");
+    _counter_replicas_learning_failed_latency.init("eon", "replicas.learning.failed(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "learning time (failed)");
+    _counter_replicas_learning_success_latency.init("eon", "replicas.learning.success(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "learning time (success)");
+    _counter_replicas_learning_count.init("eon", "replicas.learnig(#)", COUNTER_TYPE_NUMBER, "total learning count");
 
-    _counter_replicas_2pc_latency.init("replicas.2pc(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "2pc time");
+    _counter_replicas_2pc_latency.init("eon", "replicas.2pc(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "2pc time");
 }
 
 void replica_stub::initialize(bool clear/* = false*/)
@@ -90,8 +91,6 @@ void replica_stub::initialize(bool clear/* = false*/)
 
 void replica_stub::initialize(const replication_options& opts, bool clear/* = false*/)
 {
-    install_perf_counters();
-
     error_code err = ERR_OK;
     //zauto_lock l(_replicas_lock);
 

@@ -44,6 +44,7 @@
 # include <dsn/internal/factory_store.h>
 # include <dsn/internal/command.h>
 # include <dsn/tool_api.h>
+# include <dsn/tool/node_scoper.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -58,7 +59,7 @@ service_node::service_node(service_app_spec& app_spec)
 {
     _computation = nullptr;
     _app_spec = app_spec;
-    _app_context_ptr = _app_spec.role.create(_app_spec.role.type_name.c_str());
+    _app_context_ptr = nullptr;
 }
 
 bool service_node::rpc_register_handler(rpc_handler_ptr& handler, uint64_t vnid)
@@ -295,6 +296,12 @@ error_code service_node::start()
     _computation->start();
     dassert(_computation->is_started(), 
         "task engine must be started at this point");
+
+    // create app
+    {
+        ::dsn::tools::node_scoper scoper(this);
+        _app_context_ptr = _app_spec.role.create(_app_spec.role.type_name.c_str());
+    }
 
     return err;
 }

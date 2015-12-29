@@ -153,17 +153,17 @@ void replication_app_base::install_perf_counters()
     std::stringstream ss;
     
     ss << replica_name() << ".commit(#/s)";
-    _app_commit_throughput.init(ss.str().c_str(), COUNTER_TYPE_RATE, "commit throughput for current app");
+    _app_commit_throughput.init("eon", ss.str().c_str(), COUNTER_TYPE_RATE, "commit throughput for current app");
 
     ss.clear();
     ss.str("");
     ss << replica_name() << ".latency(ns)";
-    _app_commit_latency.init(ss.str().c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, "commit latency for current app");
+    _app_commit_latency.init("eon", ss.str().c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, "commit latency for current app");
 
     ss.clear();
     ss.str("");
     ss << replica_name() << ".decree#";
-    _app_commit_decree.init(ss.str().c_str(), COUNTER_TYPE_NUMBER, "commit decree for current app");
+    _app_commit_decree.init("eon", ss.str().c_str(), COUNTER_TYPE_NUMBER, "commit decree for current app");
 }
 
 error_code replication_app_base::open_internal(replica* r, bool create_new)

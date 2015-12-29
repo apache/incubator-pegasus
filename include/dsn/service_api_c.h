@@ -1044,7 +1044,7 @@ typedef enum dsn_perf_counter_percentile_type_t
     COUNTER_PERCENTILE_INVALID
 } dsn_perf_counter_percentile_type_t;
 
-extern DSN_API dsn_handle_t dsn_perf_counter_create(const char* name, dsn_perf_counter_type_t type, const char* description);
+extern DSN_API dsn_handle_t dsn_perf_counter_create(const char* section, const char* name, dsn_perf_counter_type_t type, const char* description);
 extern DSN_API void dsn_perf_counter_remove(dsn_handle_t handle);
 extern DSN_API void dsn_perf_counter_increment(dsn_handle_t handle);
 extern DSN_API void dsn_perf_counter_decrement(dsn_handle_t handle);
