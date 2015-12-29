@@ -1282,31 +1282,31 @@ int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
 class log_file::file_streamer
 {
 public:
-    explicit file_streamer(dsn_handle_t fd, size_t file_offset) : file_dispatched_bytes(file_offset), file_handle(fd)
+    explicit file_streamer(dsn_handle_t fd, size_t file_offset) : _file_dispatched_bytes(file_offset), _file_handle(fd)
     {
-        current_buffer = buffers + 0;
-        next_buffer = buffers + 1;
+        _current_buffer = _buffers + 0;
+        _next_buffer = _buffers + 1;
         fill_buffers();
     }
     ~file_streamer()
     {
-        current_buffer->wait_ongoing_task().end_tracking();
-        next_buffer->wait_ongoing_task().end_tracking();
+        _current_buffer->wait_ongoing_task().end_tracking();
+        _next_buffer->wait_ongoing_task().end_tracking();
     }
     //try to reset file_offset
     void reset(size_t file_offset)
     {
-        current_buffer->wait_ongoing_task().end_tracking();
-        next_buffer->wait_ongoing_task().end_tracking();
+        _current_buffer->wait_ongoing_task().end_tracking();
+        _next_buffer->wait_ongoing_task().end_tracking();
         //fast path if we can just move the cursor
-        if (current_buffer->file_offset_of_buffer <= file_offset && current_buffer->file_offset_of_buffer + current_buffer->end > file_offset)
+        if (_current_buffer->_file_offset_of_buffer <= file_offset && _current_buffer->_file_offset_of_buffer + _current_buffer->_end > file_offset)
         {
-            current_buffer->begin = file_offset - current_buffer->file_offset_of_buffer;
+            _current_buffer->_begin = file_offset - _current_buffer->_file_offset_of_buffer;
         }
         else
         {
-            current_buffer->begin = current_buffer->end = next_buffer->begin = next_buffer->end = 0;
-            file_dispatched_bytes = file_offset;
+            _current_buffer->_begin = _current_buffer->_end = _next_buffer->_begin = _next_buffer->_end = 0;
+            _file_dispatched_bytes = file_offset;
         }
         fill_buffers();
     }
@@ -1318,28 +1318,28 @@ public:
     {
         binary_writer writer(size);
 #define TRY(x) do {auto _x = (x); if (_x != ERR_OK) { result = writer.get_current_buffer(); return _x; } } while(0)
-        TRY(current_buffer->wait_ongoing_task());
-        if (size < current_buffer->length())
+        TRY(_current_buffer->wait_ongoing_task());
+        if (size < _current_buffer->length())
         {
-            result.assign(current_buffer->buffer.get(), current_buffer->begin, size);
-            current_buffer->begin += size;
+            result.assign(_current_buffer->_buffer.get(), _current_buffer->_begin, size);
+            _current_buffer->_begin += size;
         }
         else
         {
-            current_buffer->drain(writer);
+            _current_buffer->drain(writer);
             //we can now assign result since writer must have allocated a buffer.
             dassert(writer.total_size() != 0, "");
             if (size > writer.total_size())
             {
-                TRY(next_buffer->wait_ongoing_task());
-                next_buffer->consume(writer, std::min(size - writer.total_size(), next_buffer->length()));
+                TRY(_next_buffer->wait_ongoing_task());
+                _next_buffer->consume(writer, std::min(size - writer.total_size(), _next_buffer->length()));
                 //We hope that this never happens, it would deteriorate performance
                 if (size > writer.total_size())
                 {
-                    auto task = file::read(file_handle, writer.get_current_buffer().buffer().get() + writer.total_size(), size - writer.total_size(), file_dispatched_bytes, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr);
+                    auto task = file::read(_file_handle, writer.get_current_buffer().buffer().get() + writer.total_size(), size - writer.total_size(), _file_dispatched_bytes, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr);
                     task->wait();
                     writer.write_empty(task->io_size());
-                    file_dispatched_bytes += task->io_size();
+                    _file_dispatched_bytes += task->io_size();
                     TRY(task->error());
                 }
             }
@@ -1352,14 +1352,14 @@ public:
 private:
     void fill_buffers()
     {
-        while (!current_buffer->have_ongoing_task && current_buffer->empty())
+        while (!_current_buffer->_have_ongoing_task && _current_buffer->empty())
         {
-            current_buffer->begin = current_buffer->end = 0;
-            current_buffer->file_offset_of_buffer = file_dispatched_bytes;
-            current_buffer->have_ongoing_task = true;
-            current_buffer->task = file::read(file_handle, current_buffer->buffer.get(), block_size_bytes, file_dispatched_bytes, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr);
-            file_dispatched_bytes += block_size_bytes;
-            std::swap(current_buffer, next_buffer);
+            _current_buffer->_begin = _current_buffer->_end = 0;
+            _current_buffer->_file_offset_of_buffer = _file_dispatched_bytes;
+            _current_buffer->_have_ongoing_task = true;
+            _current_buffer->_task = file::read(_file_handle, _current_buffer->_buffer.get(), block_size_bytes, _file_dispatched_bytes, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr);
+            _file_dispatched_bytes += block_size_bytes;
+            std::swap(_current_buffer, _next_buffer);
         }
     }
 
@@ -1367,15 +1367,16 @@ private:
     static const size_t block_size_bytes = 1024 * 1024;
     struct buffer_t
     {
-        std::unique_ptr<char[]> buffer; //with block_size
-        size_t begin, end; // [buffer[begin]..buffer[end]) contains unconsumed_data
-        size_t file_offset_of_buffer; //file offset projected to buffer[0]
-        bool have_ongoing_task;
-        task_ptr task;
-        buffer_t() : buffer(new char[block_size_bytes]), begin(0), end(0), have_ongoing_task(false), file_offset_of_buffer(0) {}
+        std::unique_ptr<char[]> _buffer;    //with block_size
+        size_t _begin, _end;                // [buffer[begin]..buffer[end]) contains unconsumed_data
+        size_t _file_offset_of_buffer;      //file offset projected to buffer[0]
+        bool _have_ongoing_task;
+        task_ptr _task;
+
+        buffer_t() : _buffer(new char[block_size_bytes]), _begin(0), _end(0), _have_ongoing_task(false), _file_offset_of_buffer(0) {}
         size_t length() const
         {
-            return end - begin;
+            return _end - _begin;
         }
         bool empty() const
         {
@@ -1383,8 +1384,8 @@ private:
         }
         void consume(binary_writer& dest, size_t len)
         {
-            dest.write(buffer.get() + begin, len);
-            begin += len;
+            dest.write(_buffer.get() + _begin, len);
+            _begin += len;
         }
         size_t drain(binary_writer& dest)
         {
@@ -1394,25 +1395,25 @@ private:
         }
         error_code wait_ongoing_task()
         {
-            if (have_ongoing_task)
+            if (_have_ongoing_task)
             {
-                task->wait();
-                have_ongoing_task = false;
-                end += task->io_size();
-                dassert(end <= block_size_bytes, "invalid io_size.");
-                return task->error();
+                _task->wait();
+                _have_ongoing_task = false;
+                _end += _task->io_size();
+                dassert(_end <= block_size_bytes, "invalid io_size.");
+                return _task->error();
             }
             else
             {
                 return ERR_OK;
             }
         }
-    } buffers[2];
-    buffer_t* current_buffer, *next_buffer;
+    } _buffers[2];
+    buffer_t* _current_buffer, *_next_buffer;
 
     //number of bytes we have issued read operations
-    size_t file_dispatched_bytes;
-    dsn_handle_t file_handle;
+    size_t _file_dispatched_bytes;
+    dsn_handle_t _file_handle;
 };
 
 
