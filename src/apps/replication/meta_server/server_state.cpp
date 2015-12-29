@@ -374,6 +374,7 @@ error_code server_state::initialize_apps()
     dassert(app.app_type.length() > 0, "'[replication.app] app_type' not specified");
     app.partition_count = (int)dsn_config_get_value_uint64("replication.app",
         "partition_count", 1, "how many partitions the app should have");
+    app.status = app_status::available;
 
     error_code err = ERR_OK;
     clientlet tracker;
