@@ -214,11 +214,13 @@ namespace dsn {
 
         simple_logger::~simple_logger(void) 
         { 
+            utils::auto_lock< ::dsn::utils::ex_lock_nr> l(_lock);
             ::fclose(_log);
         }
 
         void simple_logger::flush()
         {
+            utils::auto_lock< ::dsn::utils::ex_lock_nr> l(_lock);
             ::fflush(_log);
         }
 

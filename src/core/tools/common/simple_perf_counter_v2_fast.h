@@ -41,22 +41,13 @@
 namespace dsn {
     namespace tools {
 
-        class simple_perf_counter_v2_fast : public perf_counter
-        {
-        public:
-            simple_perf_counter_v2_fast(const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr);
-            ~simple_perf_counter_v2_fast(void);
-
-            virtual void   increment() { _counter_impl->increment(); }
-            virtual void   decrement() { _counter_impl->decrement(); }
-            virtual void   add(uint64_t val) { _counter_impl->add(val); }
-            virtual void   set(uint64_t val) { _counter_impl->set(val); }
-            virtual double get_value() { return _counter_impl->get_value(); }
-            virtual double get_percentile(dsn_perf_counter_percentile_type_t type) { return _counter_impl->get_percentile(type); }
-
-        private:
-            perf_counter *_counter_impl;
-        };
+        perf_counter* simple_perf_counter_v2_fast_factory(
+            const char* app,
+            const char *section,
+            const char *name,
+            dsn_perf_counter_type_t type,
+            const char *dsptr
+            );
 
     }
 }
