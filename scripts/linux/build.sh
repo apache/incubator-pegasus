@@ -156,7 +156,7 @@ echo "##########################################################################
 ##############################################
 if [ -z "$TEST_MODULE" ]
 then
-    TEST_MODULE="dsn.core.tests dsn.tests dsn.replication.simple_kv dsn.rep_tests.simple_kv"
+    TEST_MODULE="dsn.core.tests,dsn.tests,dsn.replication.simple_kv,dsn.rep_tests.simple_kv"
 fi
 
 echo "TEST_MODULE=$TEST_MODULE"
@@ -182,7 +182,7 @@ then
     fi
 fi
 
-for MODULE in $TEST_MODULE; do
+for MODULE in `echo $TEST_MODULE | sed 's/,/ /g'`; do
     echo "====================== run $MODULE =========================="
     cd $BUILD_DIR/bin/$MODULE
     ./run.sh
