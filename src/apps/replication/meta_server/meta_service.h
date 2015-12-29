@@ -79,7 +79,7 @@ private:
     void update_configuration_on_machine_failure(std::shared_ptr<configuration_update_request>& update);
 
     // load balance actions
-    void on_load_balance_start();
+    void start_load_balance();
     void on_load_balance_timer();
     void on_config_changed(global_partition_id gpid);
 
