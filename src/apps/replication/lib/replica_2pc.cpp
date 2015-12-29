@@ -86,7 +86,7 @@ void replica::init_prepare(mutation_ptr& mu)
         mu->set_id(get_ballot(), mu->data.header.decree);
     }
     
-    dinfo("%s: mutation %s init_prepare", name(), mu->name());
+    dinfo("%s: mutation %s init_prepare, mutation_tid=%" PRIu64, name(), mu->name(), mu->tid());
 
     // check bounded staleness
     if (mu->data.header.decree > last_committed_decree() + _options->staleness_for_commit)

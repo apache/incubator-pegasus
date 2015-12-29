@@ -138,7 +138,7 @@ TEST(replication, log_learn)
             ).end_tracking();
         auto time_toc = clock.now();
         
-        std::cout << "TEST replay time(us): " << std::chrono::duration_cast<std::chrono::microseconds>(time_toc - time_tic).count() << std::endl;
+        std::cout << "TEST replay time(ms): " << std::chrono::duration_cast<std::chrono::microseconds>(time_toc - time_tic).count() << std::endl;
 
         for (decree s = durable_decree + 1; s < 1000; s++)
         {

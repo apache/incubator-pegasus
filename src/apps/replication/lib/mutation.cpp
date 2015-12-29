@@ -39,6 +39,8 @@
 
 namespace dsn { namespace replication {
 
+static std::atomic<uint64_t> s_mutation_tid(0);
+
 mutation::mutation()
 {
     next = nullptr;
@@ -48,6 +50,7 @@ mutation::mutation()
     _prepare_request = nullptr;
     strcpy(_name, "0.0.0.0");
     _appro_data_bytes = sizeof(mutation_header);
+    _tid = ++s_mutation_tid;
 }
 
 mutation::~mutation()
@@ -221,6 +224,9 @@ mutation_ptr mutation_queue::add_work(int code, dsn_message_t request, replica* 
         _pending_mutation = r->new_mutation(invalid_decree);
     }
 
+    dinfo("add request with rpc_id=%016lx into mutation with mutation_tid=%" PRIu64,
+          dsn_msg_rpc_id(request), _pending_mutation->tid());
+
     _pending_mutation->add_client_request(code, request);
 
     // short-cut
@@ -266,6 +272,9 @@ mutation_ptr mutation_queue::add_work(int code, dsn_message_t request, replica* 
 mutation_ptr mutation_queue::check_possible_work(int current_running_count)
 {
     _current_op_count = current_running_count;
+
+    if (_current_op_count >= _max_concurrent_op)
+        return nullptr;
 
     // no further workload
     if (_hdr.is_empty())

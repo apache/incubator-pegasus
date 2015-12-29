@@ -51,7 +51,8 @@ public:
     virtual ~mutation();
 
     // state inquery
-    const char* name() const { return _name; }        
+    const char* name() const { return _name; }
+    const uint64_t tid() const { return _tid; }
     bool is_logged() const { return _not_logged == 0; }
     bool is_ready_for_commit() const { return _private0 == 0; }
     dsn_message_t prepare_msg() { return _prepare_request; }
@@ -114,6 +115,7 @@ private:
     dsn_message_t   _prepare_request;
     char            _name[60]; // app_id.pidx.ballot.decree
     int             _appro_data_bytes;
+    uint64_t        _tid; // trace id, unique in process
 };
 
 class mutation_queue

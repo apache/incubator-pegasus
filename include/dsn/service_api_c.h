@@ -810,6 +810,7 @@ extern DSN_API size_t        dsn_msg_body_size(dsn_message_t msg);
 extern DSN_API void*         dsn_msg_rw_ptr(dsn_message_t msg, size_t offset_begin);
 extern DSN_API dsn_address_t dsn_msg_from_address(dsn_message_t msg);
 extern DSN_API dsn_address_t dsn_msg_to_address(dsn_message_t msg);
+extern DSN_API uint64_t      dsn_msg_rpc_id(dsn_message_t msg);
 
 //
 // server-side rpc calls
