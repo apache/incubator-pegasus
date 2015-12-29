@@ -47,7 +47,7 @@ typedef dsn::ref_ptr<log_file> log_file_ptr;
 struct replica_log_info
 {
     int64_t max_decree;
-    int64_t valid_start_offset;
+    int64_t valid_start_offset; // valid start offset in global space
     replica_log_info(int64_t d, int64_t o)
     {
         max_decree = d;
@@ -72,7 +72,7 @@ struct log_block_header
     int32_t  magic; //0xdeadbeef
     int32_t  length; // block data length (not including log_block_header)
     int32_t  body_crc; // block data crc (not including log_block_header)
-    uint32_t local_offset; // start offset in the log file
+    uint32_t local_offset; // start offset of the block in this log file
 };
 
 // each log file has a log_file_header stored at the beginning of the first block's data content
@@ -130,6 +130,7 @@ public:
 public:
     //
     // ctors 
+    // when is_private = true, should specify "private_gpid"
     //
     mutation_log(
         const std::string& dir,
@@ -151,7 +152,7 @@ public:
 
     // close the log
     // thread safe
-    void close(bool clear_all = false);
+    void close();
 
     // flush the pending buffer
     // thread safe
@@ -201,6 +202,10 @@ public:
     // thread safe
     void update_max_decree(global_partition_id gpid, decree d);
 
+    // update current max commit of private log
+    // thread safe
+    void update_max_commit_on_disk(decree d);
+
     //
     //  garbage collection logs that are already covered by 
     //  durable state on disk, return deleted log segment count
@@ -216,10 +221,12 @@ public:
     // garbage collection for shared log
     // remove log files if satisfy:
     //  - for each replica "r":
-    //      file.max_decree[r] <= "durable_decree" || file.end_offset[r] <= "valid_start_offset"
-    //  - the current log file is excluded
+    //         r in not in file.max_decree
+    //      || file.max_decree[r] <= gc_condition[r].max_decree
+    //      || file.end_offset[r] <= gc_condition[r].valid_start_offset
+    //  - the current log file should not be removed
     // thread safe
-    int garbage_collection(replica_log_info_map& durable_decrees);
+    int garbage_collection(replica_log_info_map& gc_condition);
 
     //
     //  when this is a private log, log files are learned by remote replicas
@@ -243,7 +250,10 @@ public:
     // thread safe
     decree max_decree(global_partition_id gpid) const;
 
-    // TODO(qinzuoyan): what the meaning of the method?
+    // get current max commit on disk of private log.
+    // thread safe
+    decree max_commit_on_disk() const;
+
     // maximum decree that is garbage collected
     // thread safe
     decree max_gced_decree(global_partition_id gpid, int64_t valid_start_offset) const;
@@ -274,6 +284,9 @@ private:
     // update max decree without lock
     void update_max_decree_no_lock(global_partition_id gpid, decree d);
 
+    // update max commit on disk without lock
+    void update_max_commit_on_disk_no_lock(decree d);
+
     // create new log file and set it as the current log file
     // returns ERR_OK if create succeed
     // Preconditions:
@@ -293,15 +306,17 @@ private:
 
     // callback of write_pending_mutations()
     typedef std::shared_ptr<std::list< ::dsn::task_ptr>> pending_callbacks_ptr;
-    static void internal_write_callback(error_code err,
-                                        size_t size,
-                                        pending_callbacks_ptr callbacks,
-                                        std::shared_ptr<log_block> logs,
-                                        log_file_ptr file,
-                                        bool is_private);
+    void internal_write_callback(error_code err,
+                                 size_t size,
+                                 log_file_ptr file,
+                                 std::shared_ptr<log_block> block,
+                                 pending_callbacks_ptr callbacks,
+                                 decree max_commit);
 
 private:
     std::string               _dir;
+    bool                      _is_private;
+    global_partition_id       _private_gpid; // only used for private log
 
     // options
     int64_t                   _max_log_file_size_in_bytes;    
@@ -323,17 +338,21 @@ private:
     
     // bufferring
     std::weak_ptr<log_block>       _issued_write;
+    task_ptr                       _issued_write_task; // for debugging
     std::shared_ptr<log_block>     _pending_write;
-    size_t                         _pending_write_size;
     pending_callbacks_ptr          _pending_write_callbacks;
+    decree                         _pending_write_max_commit; // only used for private log
 
     // replica log info
-    // - log_info.max_decree: the last decree append to the mutation_log
+    // - log_info.max_decree: the max decree of mutations up to now
     // - log_info.valid_start_offset: the same with replica_init_info::init_offset
-    bool                           _is_private;
-    replica_log_info_map           _shared_log_info_map; // only used for shared log
-    global_partition_id            _private_gpid; // only used for private log
-    replica_log_info               _private_log_info; // only used for private log
+
+    // replica log info for shared log
+    replica_log_info_map           _shared_log_info_map;
+
+    // replica log info for private log
+    replica_log_info               _private_log_info;
+    decree                         _private_max_commit_on_disk; // the max last_committed_decree of written mutations up to now
 };
 
 //

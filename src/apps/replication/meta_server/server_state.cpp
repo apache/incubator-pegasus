@@ -40,6 +40,11 @@
 # include <cinttypes>
 # include <boost/lexical_cast.hpp>
 
+# include <rapidjson/document.h>
+# include <rapidjson/prettywriter.h>
+# include <rapidjson/writer.h>
+# include <rapidjson/stringbuffer.h>
+
 # ifdef __TITLE__
 # undef __TITLE__
 # endif
@@ -54,6 +59,98 @@ void marshall(binary_writer& writer, const app_state& val)
     marshall(writer, val.partitions);
 }
 
+/**
+ * app_state:
+ * {
+ *   "app_type": "whatever",
+ *   "app_id": 11,
+ *   "app_name": "you like",
+ *   "partition_count": 2323,
+ * }
+ */
+void marshall_json(blob& output, const app_state& app)
+{
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+
+    writer.StartObject();
+    writer.String("app_type"); writer.String(app.app_type.c_str());
+    writer.String("app_name"); writer.String(app.app_name.c_str());
+    writer.String("app_id"); writer.Int(app.app_id);
+    writer.String("partition_count"); writer.Int(app.partition_count);
+    writer.EndObject();
+
+    std::shared_ptr<char> outptr(new char[buffer.GetSize()], [](char* ptr){ delete []ptr; } );
+    memcpy(outptr.get(), buffer.GetString(), buffer.GetSize());
+    output.assign(outptr, 0, buffer.GetSize());
+}
+
+static const char* partition_status_str[] = {
+    "inactive", "error", "primary", "secondary",
+    "potential_secondary", "invalid", nullptr
+};
+const char* get_partition_status_string(partition_status ps)
+{
+    return partition_status_str[ps];
+}
+partition_status get_partition_status(const char* status_str)
+{
+    for (int i=0; partition_status_str[i]!=nullptr; ++i)
+        if (strcmp(partition_status_str[i], status_str)==0)
+            return (partition_status)i;
+    return PS_INVALID;
+}
+/**
+ * Example partition config:
+ * {"app_type":"whatever", "gpid": "1.0", 
+ *  "ballot": 1, "last_committed_decree": 2, "max_replica_count": 3,
+ *  "entries": [{"addr": "xxx.xxx.xxx.xxx:12345", "partition_status": "primary"},
+ *              {"addr": "xxx.xxx.xxx.xxb:23424", "partition_status": "secondary"}
+ *             ]}
+ * type of role: primary/secondary/potential primary/potential secondary/inactive
+ **/
+void marshall_json(blob& output, const partition_configuration& pc)
+{
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+
+    auto end_point_gen_json = [&writer](const ::dsn::rpc_address& ep, partition_status ps) {
+        if (ep.is_invalid())
+            return;
+        writer.StartObject();
+        writer.String("addr"); writer.String( ep.to_string() );
+        writer.String("partition_status"); writer.String( get_partition_status_string(ps) );
+        writer.EndObject();
+    };
+
+    writer.StartObject();
+
+    writer.String("app_type"); writer.String(pc.app_type.c_str());
+
+    std::stringstream gpid;
+    gpid << pc.gpid.app_id << "." << pc.gpid.pidx;
+    writer.String("gpid"); writer.String( gpid.str().c_str() );
+
+    writer.String("ballot"); writer.Int64(pc.ballot);
+    writer.String("max_replica_count"); writer.Int(pc.max_replica_count);
+    writer.String("last_committed_decree"); writer.Int64(pc.last_committed_decree);
+
+    writer.String("entries");
+    writer.StartArray();
+    end_point_gen_json(pc.primary, PS_PRIMARY);
+    for (unsigned int i=0; i!=pc.secondaries.size(); ++i)
+        end_point_gen_json(pc.secondaries[i], PS_SECONDARY);
+    for (unsigned int i=0; i!=pc.last_drops.size(); ++i)
+        end_point_gen_json(pc.last_drops[i], PS_INACTIVE);
+    writer.EndArray();
+
+    writer.EndObject();
+
+    std::shared_ptr<char> outptr(new char[buffer.GetSize()], [](char* ptr){ delete []ptr; } );
+    memcpy(outptr.get(), buffer.GetString(), buffer.GetSize());
+    output.assign(outptr, 0, buffer.GetSize());
+}
+
 void unmarshall(binary_reader& reader, /*out*/ app_state& val)
 {
     unmarshall(reader, val.app_type);
@@ -61,6 +158,65 @@ void unmarshall(binary_reader& reader, /*out*/ app_state& val)
     unmarshall(reader, val.app_id);
     unmarshall(reader, val.partition_count);
     unmarshall(reader, val.partitions);
+}
+
+void unmarshall_json(const blob& buf, app_state& app)
+{
+    rapidjson::Document doc;
+    std::string input(buf.data(), buf.length());
+    if (input.empty() || doc.Parse(input.c_str()).HasParseError() )
+        return;
+
+    app.app_type = doc["app_type"].GetString();
+    app.app_id = doc["app_id"].GetInt();
+    app.app_name = doc["app_name"].GetString();
+    app.partition_count = doc["partition_count"].GetInt();
+
+    partition_configuration pc;
+    pc.app_type = app.app_type;
+    pc.ballot = 0;
+    pc.gpid.app_id = app.app_id;
+    pc.last_committed_decree = 0;
+    pc.max_replica_count = 3;
+
+    app.partitions.assign(app.partition_count, pc);
+    for (unsigned int i=0; i!=app.partition_count; ++i)
+        app.partitions[i].gpid.pidx = i;
+}
+
+void unmarshall_json(const blob& buf, partition_configuration& pc)
+{
+    rapidjson::Document doc;
+    std::string input(buf.data(), buf.length());
+
+    if ( input.empty() || doc.Parse(input.c_str()).HasParseError())
+        return;
+
+    pc.app_type = doc["app_type"].GetString();
+    sscanf(doc["gpid"].GetString(), "%d.%d", &pc.gpid.app_id, &pc.gpid.pidx);
+    pc.ballot = doc["ballot"].GetInt64();
+    pc.max_replica_count = doc["max_replica_count"].GetInt();
+    pc.last_committed_decree = doc["last_committed_decree"].GetInt();
+    pc.primary.set_invalid();
+
+    rapidjson::Value& entries = doc["entries"];
+    for (rapidjson::SizeType i=0; i<entries.Size(); ++i) {
+        rapidjson::Value& val = entries[i];
+        ::dsn::rpc_address ep;
+        ep.from_string_ipv4(val["addr"].GetString());
+        partition_status ps = get_partition_status(val["partition_status"].GetString());
+        switch (ps) {
+        case PS_PRIMARY:
+            pc.primary = ep;
+            break;
+        case PS_SECONDARY:
+            pc.secondaries.push_back(ep);
+            break;
+        default:
+            pc.last_drops.push_back(ep);
+            break;
+        }
+    }
 }
 
 server_state::server_state()
@@ -214,12 +370,11 @@ error_code server_state::initialize_apps()
         return err;
     }
 
+    err = ERR_OK;
     // create cluster_root/apps/app_name node
     std::string app_path = join_path(apps_path, app.app_name);
-    binary_writer writer;
-    marshall(writer, app);
-    
-    blob value = writer.get_buffer();
+    blob value;
+    marshall_json(value, app);
 
     _storage->create_node(app_path, LPC_META_STATE_SVC_CALLBACK,
         [&err, this, &app, &tracker, &app_path](error_code ec)
@@ -244,10 +399,8 @@ error_code server_state::initialize_apps()
 
                     app.partitions.push_back(ps);
 
-                    binary_writer writer;
-                    marshall(writer, ps);
-
-                    blob value = writer.get_buffer();
+                    blob value;
+                    marshall_json(value, ps);
 
                     _storage->create_node(partition_path, LPC_META_STATE_SVC_CALLBACK,
                         [&err, this, &app](error_code ec)
@@ -265,7 +418,6 @@ error_code server_state::initialize_apps()
                         &tracker
                         );
                 }
-                
             }
             else
             {
@@ -311,10 +463,8 @@ error_code server_state::sync_apps_from_remote_storage()
                     {
                         if (ec == ERR_OK)
                         {
-                            binary_reader reader(value);
                             app_state state;
-                            unmarshall(reader, state);
-
+                            unmarshall_json(value, state);
                             int app_id = state.app_id;
                             dassert(app_id != 0, "invalid app id");
                             {
@@ -338,9 +488,8 @@ error_code server_state::sync_apps_from_remote_storage()
                                     {
                                         if (ec == ERR_OK)
                                         {
-                                            binary_reader reader(value);
                                             partition_configuration pc;
-                                            unmarshall(reader, pc);
+                                            unmarshall_json(value, pc);
                                             zauto_write_lock l(_lock);
                                             _apps[app_id - 1].partitions[i] = pc;
                                         }
@@ -384,21 +533,25 @@ error_code server_state::sync_apps_from_remote_storage()
         if (_apps.size() == 0)
             return ERR_OBJECT_NOT_FOUND;
 
-        auto& app = _apps[0];
-        for (int i = 0; i < app.partition_count; i++)
+        for (app_state& app: _apps) 
         {
-            auto& ps = app.partitions[i];
-
-            if (ps.primary.is_invalid() == false)
+            for (int i = 0; i < app.partition_count; i++)
             {
-                _nodes[ps.primary].primaries.insert(ps.gpid);
-                _nodes[ps.primary].partitions.insert(ps.gpid);
-            }
+                auto& ps = app.partitions[i];
 
-            for (auto& ep : ps.secondaries)
-            {
-                dassert(ep.is_invalid() == false, "");
-                _nodes[ep].partitions.insert(ps.gpid);
+                if (ps.primary.is_invalid() == false)
+                {
+                    dassert(_nodes.find(ps.primary)==_nodes.end(), "%s shouldn't in nodes map", ps.primary.to_string());
+                    _nodes[ps.primary].primaries.insert(ps.gpid);
+                    _nodes[ps.primary].partitions.insert(ps.gpid);
+                }
+
+                for (auto& ep : ps.secondaries)
+                {
+                    dassert(ep.is_invalid() == false, "");
+                    dassert(_nodes.find(ep) == _nodes.end(), "%s shouldn't in nodes map", ep.to_string());
+                    _nodes[ep].partitions.insert(ps.gpid);
+                }
             }
         }
 
@@ -491,6 +644,14 @@ void server_state::set_node_state(const node_states& nodes, /*out*/ machine_fail
         _freeze = (_node_live_count * 100 < _node_live_percentage_threshold_for_update * static_cast<int>(_nodes.size()));
         dinfo("live replica server # changes from %d to %d, freeze = %s", old_lc, _node_live_count, _freeze ? "true":"false");
     }
+}
+
+void server_state::apply_cache_nodes()
+{
+    node_states alive_list;
+    for (auto& node: _cache_alive_nodes)
+        alive_list.push_back( std::make_pair(node, true) );
+    set_node_state(alive_list, nullptr);
 }
 
 void server_state::unfree_if_possible_on_start()
@@ -631,11 +792,9 @@ void server_state::update_configuration(
             maintain_drops(req->config.last_drops, req->node, false);
             break;
         }
-        
-        binary_writer writer;
-        marshall(writer, req->config);
 
-        blob new_config_blob = writer.get_buffer();
+        blob new_config_blob;
+        marshall_json(new_config_blob, req->config);
         _storage->set_data(
             partition_path,
             new_config_blob,

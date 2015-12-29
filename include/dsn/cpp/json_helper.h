@@ -42,7 +42,7 @@
 #include <type_traits>
 #include "autoref_ptr.h"
 
-#define JSON_DICT_ENTRY(out, prefix, T) out << "\""#T"\":"; json_forwarder<std::decay<decltype((prefix).T)>::type>::call(out, (prefix).T)
+#define JSON_DICT_ENTRY(out, prefix, T) out << "\""#T"\":"; ::std::json_forwarder<std::decay<decltype((prefix).T)>::type>::call(out, (prefix).T)
 #define JSON_DICT_ENTRIES2(out, prefix, T1, T2) JSON_DICT_ENTRY(out, prefix, T1); out << ","; JSON_DICT_ENTRY(out, prefix, T2)
 #define JSON_DICT_ENTRIES3(out, prefix, T1, T2, T3) JSON_DICT_ENTRIES2(out, prefix, T1, T2); out << ","; JSON_DICT_ENTRY(out, prefix, T3)
 #define JSON_DICT_ENTRIES4(out, prefix, T1, T2, T3, T4) JSON_DICT_ENTRIES3(out, prefix, T1, T2, T3); out << ","; JSON_DICT_ENTRY(out, prefix, T4)
@@ -59,7 +59,7 @@
 //parameters: fields to be serialized
 #define DEFINE_JSON_SERIALIZATION(...) void json_state(std::stringstream& out) const {JSON_DICT_ENTRIES(out, *this, __VA_ARGS__);}
     
-namespace dsn{ namespace replication{
+namespace std {
 
 template<typename> class json_forwarder;
 
@@ -68,6 +68,7 @@ template<typename T> inline void json_encode(std::stringstream& out, const T& t)
 {
     out << t;
 }
+
 template<typename T> inline void json_encode_iterable(std::stringstream& out, const T& t)
 {
     out << "[";
@@ -81,6 +82,7 @@ template<typename T> inline void json_encode_iterable(std::stringstream& out, co
     }
     out << "]";
 }
+
 template<typename T> inline void json_encode_map(std::stringstream& out, const T& t)
 {
     out << "{";
@@ -96,15 +98,23 @@ template<typename T> inline void json_encode_map(std::stringstream& out, const T
     }
     out << "}";
 }
+
 template<typename T> inline void json_encode(std::stringstream& out, const std::vector<T>& t)
 {
     json_encode_iterable(out, t);
 }
+
 template<typename T> inline void json_encode(std::stringstream& out, const std::set<T>& t)
 {
     json_encode_iterable(out, t);
 }
+
 template<typename T1, typename T2> inline void json_encode(std::stringstream& out, const std::unordered_map<T1, T2>& t)
+{
+    json_encode_map(out, t);
+}
+
+template<typename T1, typename T2> inline void json_encode(std::stringstream& out, const std::map<T1, T2>& t)
 {
     json_encode_map(out, t);
 }
@@ -172,5 +182,4 @@ public:
     }
 };
 
-}
 }

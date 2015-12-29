@@ -60,10 +60,7 @@ namespace dsn {
             register_component_provider<std_lock_provider>("dsn::tools::std_lock_provider");
             register_component_provider<std_lock_nr_provider>("dsn::tools::std_lock_nr_provider");
             register_component_provider<std_rwlock_nr_provider>("dsn::tools::std_rwlock_nr_provider");
-            register_component_provider<std_semaphore_provider>("dsn::tools::std_semaphore_provider");
-            register_component_provider<simple_perf_counter>("dsn::tools::simple_perf_counter");
-            register_component_provider<simple_perf_counter_v2_atomic>("dsn::tools::simple_perf_counter_v2_atomic");
-            register_component_provider<simple_perf_counter_v2_fast>("dsn::tools::simple_perf_counter_v2_fast");
+            register_component_provider<std_semaphore_provider>("dsn::tools::std_semaphore_provider");            
             register_component_provider<asio_network_provider>("dsn::tools::asio_network_provider");
             register_component_provider<asio_udp_provider>("dsn::tools::asio_udp_provider");
             register_component_provider<sim_network_provider>("dsn::tools::sim_network_provider");
@@ -79,7 +76,23 @@ namespace dsn {
 #else
             register_component_provider<native_posix_aio_provider>("dsn::tools::native_aio_provider");
 #endif
-            register_component_provider<empty_aio_provider>("dsn::tools::empty_aio_provider");            
+            register_component_provider<empty_aio_provider>("dsn::tools::empty_aio_provider");        
+
+            ::dsn::tools::internal_use_only::register_component_provider(
+                "dsn::tools::simple_perf_counter",
+                simple_perf_counter_factory,
+                PROVIDER_TYPE_MAIN
+                );
+            ::dsn::tools::internal_use_only::register_component_provider(
+                "dsn::tools::simple_perf_counter_v2_atomic",
+                simple_perf_counter_v2_atomic_factory,
+                PROVIDER_TYPE_MAIN
+                );
+            ::dsn::tools::internal_use_only::register_component_provider(
+                "dsn::tools::simple_perf_counter_v2_fast",
+                simple_perf_counter_v2_fast_factory,
+                PROVIDER_TYPE_MAIN
+                );
         }
     }
 }

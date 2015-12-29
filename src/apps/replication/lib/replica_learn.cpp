@@ -352,9 +352,11 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
                 "%s: on_learn[%016llx]: learner = %s, get app learn state failed, error = %s",
                 name(), request.signature, request.learner.to_string(), lerr.to_string()
                 );
+
             if (lerr == ERR_OBJECT_NOT_FOUND)
             {
-                // TODO(qinzuoyan): trigger checkpoint
+                // no need to checkpoint as it is imposible
+                // becaues it will go to the private log learning in that case
             }
         }
         else
@@ -442,7 +444,8 @@ void replica::on_learn_reply(
     if (resp->config.ballot > get_ballot())
     {
         ddebug("%s: on_learn_reply[%016llx]: first update configuration as ballot changed", name(), req->signature);
-        update_local_configuration(resp->config);
+        bool ret = update_local_configuration(resp->config);
+        dassert(ret, "");
     }
 
     if (status() != PS_POTENTIAL_SECONDARY)

@@ -80,8 +80,7 @@ static void perf_counter_add(perf_counter_ptr pc, const std::vector<int>& vec)
         add_threads[i]->join();
 }
 
-template<class perf_counter_impl>
-static void test_perf_counter()
+static void test_perf_counter(perf_counter::factory f)
 {
     int ans=0;
     std::vector<int> vec(10000, 0);
@@ -92,17 +91,17 @@ static void test_perf_counter()
     std::vector<int> gen_numbers{1, 5, 1043};
     int sleep_interval = config()->get_value<int>("components.simple_perf_counter", "counter_computation_interval_seconds", 3, "period");
 
-    perf_counter_ptr counter = new perf_counter_impl("", "", dsn_perf_counter_type_t::COUNTER_TYPE_NUMBER, "");
+    perf_counter_ptr counter = f("", "", "", dsn_perf_counter_type_t::COUNTER_TYPE_NUMBER, "");
     perf_counter_inc_dec(counter);
     perf_counter_add(counter, vec);
     ddebug("%lf", counter->get_value());
 
-    counter = new perf_counter_impl("", "", dsn_perf_counter_type_t::COUNTER_TYPE_RATE,"");
+    counter = f("", "", "", dsn_perf_counter_type_t::COUNTER_TYPE_RATE, "");
     perf_counter_inc_dec(counter);
     perf_counter_add(counter, vec);
     ddebug("%lf", counter->get_value());
 
-    counter = new perf_counter_impl("", "", dsn_perf_counter_type_t::COUNTER_TYPE_NUMBER_PERCENTILES,"");
+    counter = f("", "", "", dsn_perf_counter_type_t::COUNTER_TYPE_NUMBER_PERCENTILES, "");
     std::this_thread::sleep_for(std::chrono::seconds(sleep_interval));
     for (auto& count: gen_numbers) {
         for (unsigned int i=0; i!=count; ++i)
@@ -115,16 +114,16 @@ static void test_perf_counter()
 
 TEST(tools_common, simple_perf_counter)
 {
-    test_perf_counter<simple_perf_counter>();
+    test_perf_counter(simple_perf_counter_factory);
 }
 
 TEST(tools_common, simple_perf_counter_v2_atomic)
 {
-    test_perf_counter<simple_perf_counter_v2_atomic>();
+    test_perf_counter(simple_perf_counter_v2_atomic_factory);
 }
 
 TEST(tools_common, simple_perf_counter_v2_fast)
 {
-    test_perf_counter<simple_perf_counter_v2_fast>();
+    test_perf_counter(simple_perf_counter_v2_fast_factory);
 }
 

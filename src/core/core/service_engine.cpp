@@ -44,6 +44,7 @@
 # include <dsn/internal/factory_store.h>
 # include <dsn/internal/command.h>
 # include <dsn/tool_api.h>
+# include <dsn/tool/node_scoper.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -58,16 +59,16 @@ service_node::service_node(service_app_spec& app_spec)
 {
     _computation = nullptr;
     _app_spec = app_spec;
-    _app_context_ptr = _app_spec.role.create(_app_spec.role.type_name.c_str());
+    _app_context_ptr = nullptr;
 }
 
-bool service_node::rpc_register_handler(rpc_handler_ptr& handler)
+bool service_node::rpc_register_handler(rpc_handler_ptr& handler, uint64_t vnid)
 {
     for (auto& io : _ios)
     {
         if (io.rpc)
         {
-            bool r = io.rpc->register_rpc_handler(handler);
+            bool r = io.rpc->register_rpc_handler(handler, vnid);
             if (!r)
                 return false;
         }
@@ -75,14 +76,14 @@ bool service_node::rpc_register_handler(rpc_handler_ptr& handler)
     return true;
 }
 
-rpc_handler_ptr service_node::rpc_unregister_handler(dsn_task_code_t rpc_code)
+rpc_handler_ptr service_node::rpc_unregister_handler(dsn_task_code_t rpc_code, uint64_t vnid)
 {
     rpc_handler_ptr ret = nullptr;
     for (auto& io : _ios)
     {
         if (io.rpc)
         {
-            auto r = io.rpc->unregister_rpc_handler(rpc_code);
+            auto r = io.rpc->unregister_rpc_handler(rpc_code, vnid);
             if (ret != nullptr)
             {
                 dassert(ret == r, "registered context must be the same");
@@ -296,6 +297,12 @@ error_code service_node::start()
     dassert(_computation->is_started(), 
         "task engine must be started at this point");
 
+    // create app
+    {
+        ::dsn::tools::node_scoper scoper(this);
+        _app_context_ptr = _app_spec.role.create(_app_spec.role.type_name.c_str());
+    }
+
     return err;
 }
 
@@ -445,7 +452,7 @@ void service_engine::register_system_rpc_handler(
             for (auto& io : n.second->ios())
             {
                 if (io.rpc)
-                    io.rpc->register_rpc_handler(h);
+                    io.rpc->register_rpc_handler(h, 0);
             }
         }
     }
@@ -457,7 +464,7 @@ void service_engine::register_system_rpc_handler(
             for (auto& io : it->second->ios())
             {
                 if (io.rpc)
-                    io.rpc->register_rpc_handler(h);
+                    io.rpc->register_rpc_handler(h, 0);
             }
         }
         else

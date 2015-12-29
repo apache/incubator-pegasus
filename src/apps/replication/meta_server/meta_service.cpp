@@ -69,7 +69,21 @@ error_code meta_service::start()
     }
     ddebug("init server state succeed");
 
+    // we should start the FD service to response to the workers fd request
     _failure_detector = new meta_server_failure_detector(_state, this);
+    err = _failure_detector->start(
+        _opts.fd_check_interval_seconds,
+        _opts.fd_beacon_interval_seconds,
+        _opts.fd_lease_seconds,
+        _opts.fd_grace_seconds,
+        false
+    );
+    if (err != ERR_OK)
+    {
+        derror("start failure_detector failed, err = %s", err.to_string());
+        return err;
+    }
+    
     // should register rpc handlers before acquiring leader lock, so that this meta service
     // can tell others who is the current leader
     register_rpc_handlers();
@@ -82,29 +96,11 @@ error_code meta_service::start()
     // recover server state
     while ((err = _state->on_become_leader()) != ERR_OK)
     {
-        derror("recover server state failed, err = %s, retry ...");
-    }
-    ddebug("recover server state succeed");
-
-    err = _failure_detector->start(
-        _opts.fd_check_interval_seconds,
-        _opts.fd_beacon_interval_seconds,
-        _opts.fd_lease_seconds,
-        _opts.fd_grace_seconds,
-        false
-        );
-    if (err != ERR_OK)
-    {
-        derror("start failure_detector failed, err = %s", err.to_string());
-        return err;
+        derror("recover server state failed, err = %s, retry ...", err.to_string());
     }
 
     _balancer = new load_balancer(_state);
-    // make sure the delay is larger than fd.grace to ensure
-    // all machines are in the correct state (assuming connected initially)
-    tasking::enqueue(LPC_LBM_START, this, &meta_service::on_load_balance_start, 0,
-        _opts.fd_grace_seconds * 1000);
-
+    _failure_detector->sync_node_state_and_start_service();
     ddebug("start meta_service succeed");
     return ERR_OK;
 }
@@ -189,6 +185,7 @@ bool meta_service::check_primary(dsn_message_t req)
     if (!_failure_detector->is_primary())
     {
         auto primary = _failure_detector->get_primary();
+        dinfo("primary address: %s", primary.to_string());
         if (!primary.is_invalid())
         {
             dsn_rpc_forward(req, _failure_detector->get_primary().c_addr());

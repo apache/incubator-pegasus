@@ -67,6 +67,11 @@ public:
     {
         _disconnected_cb = func;
     }
+    void clear()
+    {
+        _connected_cb = {};
+        _disconnected_cb = {};
+    }
 };
 
 class master_fd_test: public meta_server_failure_detector
@@ -115,6 +120,16 @@ public:
     void when_disconnected(const std::function<void (const std::vector<rpc_address>& nodes)>& func)
     {
         _disconnected_cb = func;
+    }
+    void test_register_worker(rpc_address node)
+    {
+        zauto_lock l(failure_detector::_lock);
+        register_worker(node);
+    }
+    void clear()
+    {
+        _connected_cb = {};
+        _disconnected_cb = {};
     }
 };
 
@@ -263,6 +278,8 @@ void finish(test_worker* worker, test_master* master, int master_index)
     //we don't send any ping message now
     worker->fd()->toggle_send_ping(false);
     ASSERT_TRUE(spin_wait_condition([&wait_count] { return wait_count==0; }, 20));
+    worker->fd()->clear();
+    master->fd()->clear();
 }
 
 TEST(fd, dummy_connect_disconnect)
@@ -490,7 +507,7 @@ TEST(fd, worker_died_when_switch_master)
         } );
 
     /* we assume the worker is alive */
-    tst_master->fd()->register_worker( rpc_address("localhost", WPORT) );
+    tst_master->fd()->test_register_worker( rpc_address("localhost", WPORT) );
     master_group_set_leader(masters, index);
 
     /* then stop the worker*/
