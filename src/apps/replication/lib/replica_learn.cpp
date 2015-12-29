@@ -51,7 +51,7 @@ void replica::init_learn(uint64_t signature)
 
     if (status() != PS_POTENTIAL_SECONDARY)
     {
-        dwarn("%s: state is not potential secondary but %s, skip learning with signature %" PRIu64,
+        dwarn("%s: state is not potential secondary but %s, skip learning with signature[%016llx]",
             name(), enum_to_string(status()), signature
             );
         return;
@@ -68,7 +68,7 @@ void replica::init_learn(uint64_t signature)
     // at most one learning task running
     if (_potential_secondary_states.learning_round_is_running)
     {
-        dwarn("%s: previous learning is still running, skip learning with signature %" PRIu64,
+        dwarn("%s: previous learning is still running, skip learning with signature [%016llx]",
             name(), signature
             );
         return;
@@ -79,7 +79,7 @@ void replica::init_learn(uint64_t signature)
     {
         if (!_potential_secondary_states.cleanup(false))
         {
-            dwarn("%s: previous learning with signature %" PRIu64 " is still in-process, skip init new learning with signature %" PRIu64,
+            dwarn("%s: previous learning with signature[%016llx] is still in-process, skip init new learning with signature [%016llx]",
                 name(), _potential_secondary_states.learning_signature, signature
                 );
             return;

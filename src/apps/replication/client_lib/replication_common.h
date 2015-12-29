@@ -97,8 +97,10 @@ public:
     int32_t log_shared_batch_buffer_kb;
     int32_t log_private_batch_buffer_kb;
 
-    int32_t config_sync_interval_ms;
     bool    config_sync_disabled;
+    int32_t config_sync_interval_ms;
+
+    int32_t lb_interval_ms;
 
 public:
     replication_options();

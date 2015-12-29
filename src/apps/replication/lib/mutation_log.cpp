@@ -76,7 +76,9 @@ void mutation_log::init_states()
     _global_end_offset = 0;
 
     // buffering
+    _is_writing = false;
     _issued_write.reset();
+    _issued_write_task = nullptr;
     _pending_write.reset();
     _pending_write_callbacks = nullptr;
     _pending_write_max_commit = 0;
@@ -230,24 +232,25 @@ void mutation_log::close()
 
 void mutation_log::flush()
 {
-    // make sure previous writes are done
-    if (!_issued_write.expired())
+    while (true)
     {
-        dsn_task_tracker_wait_all(tracker());
-    }
-
-    {
-        zauto_lock _(_lock);
-        if (_pending_write != nullptr)
+        if (_is_writing)
         {
+            dsn_task_tracker_wait_all(tracker());
+        }
+        else
+        {
+            zauto_lock _(_lock);
+            if (_is_writing)
+            {
+                continue;
+            }
+            if (_pending_write == nullptr)
+            {
+                break;
+            }
             write_pending_mutations();
         }
-    }
-
-    // make sure the latest flush writes are done
-    if (!_issued_write.expired())
-    {
-        dsn_task_tracker_wait_all(tracker());
     }
 }
 
@@ -324,14 +327,16 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
 {
     dassert(_pending_write != nullptr, "");
     dassert(_pending_write_callbacks != nullptr, "");
-    dassert(_issued_write.expired(), "");
+    dassert(!_is_writing, "");
 
     uint64_t start_offset = _global_end_offset - _pending_write->size();
     bool new_log_file = create_new_log_when_necessary
         && (_global_end_offset - _current_log_file->start_offset() >= _max_log_file_size_in_bytes)
         ;
 
-    task_ptr aio = _current_log_file->commit_log_block(
+    _is_writing = true;
+    _issued_write = _pending_write;
+    _issued_write_task = _current_log_file->commit_log_block(
         *_pending_write,
         start_offset,
         LPC_WRITE_REPLICATION_LOG_FLUSH,
@@ -347,19 +352,26 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
         -1
         );
 
-    if (aio == nullptr)
+    if (_issued_write_task == nullptr)
     {
-        internal_write_callback(ERR_FILE_OPERATION_FAILED,
-            0, _current_log_file, _pending_write, _pending_write_callbacks, _pending_write_max_commit);
+        tasking::enqueue(
+            LPC_WRITE_REPLICATION_LOG_FLUSH,
+            this,
+            std::bind(
+                &mutation_log::internal_write_callback, this,
+                ERR_FILE_OPERATION_FAILED,
+                0,
+                _current_log_file,
+                _pending_write,
+                _pending_write_callbacks,
+                _pending_write_max_commit)
+            );
         return ERR_FILE_OPERATION_FAILED;
     }
     else
     {
         dassert(_global_end_offset == _current_log_file->end_offset(), "");
     }
-
-    _issued_write = _pending_write;
-    _issued_write_task = aio;
 
     _pending_write = nullptr;
     _pending_write_callbacks = nullptr;
@@ -378,6 +390,7 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
     return ERR_OK;
 }
 
+// called in background thread
 void mutation_log::internal_write_callback(
     error_code err,
     size_t size,
@@ -387,6 +400,8 @@ void mutation_log::internal_write_callback(
     decree max_commit
     )
 {
+    dassert(_is_writing, "");
+
     auto hdr = (log_block_header*)block->front().data();
     dassert(hdr->magic == 0xdeadbeef, "header magic is changed: 0x%x", hdr->magic);
 
@@ -400,14 +415,19 @@ void mutation_log::internal_write_callback(
 
         if(_is_private)
         {
-            // update _private_max_commit_on_disk after writen into log file done
-            update_max_commit_on_disk(max_commit);
-
-            // TODO(qinzuoyan): why flush here?
+            // TODO(qinzuoyan): why flush private log but not flush shared log?
             // FIXME : the file could have been closed
             file->flush();
+
+            // update _private_max_commit_on_disk after writen into log file done
+            update_max_commit_on_disk(max_commit);
         }
     }
+
+    // here we use _is_writing instead of _issued_write.expired() to check writing done,
+    // because the following callbacks may run before "block" released, which may cause
+    // the next init_prepare() not starting the write.
+    _is_writing = false;
 
     for (auto& cb : *callbacks)
     {
@@ -701,7 +721,7 @@ void mutation_log::check_valid_start_offset(global_partition_id gpid, int64_t va
     auto d = mu->data.header.decree;
     error_code err = ERR_OK;
 
-    dinfo("write replication log for mutation %s", mu->name());
+    dinfo("start append %s log for mutation %s", (_is_private ? "private" : "shared"), mu->name());
 
     zauto_lock l(_lock);
     dassert(_is_opened, "");
@@ -757,7 +777,7 @@ void mutation_log::check_valid_start_offset(global_partition_id gpid, int64_t va
     //
     // start to write
     //
-    if (_issued_write.expired()) 
+    if (!_is_writing)
     {
         if (_batch_buffer_bytes == 0)
         {

@@ -337,6 +337,7 @@ private:
     
     
     // bufferring
+    volatile bool                  _is_writing;
     std::weak_ptr<log_block>       _issued_write;
     task_ptr                       _issued_write_task; // for debugging
     std::shared_ptr<log_block>     _pending_write;
