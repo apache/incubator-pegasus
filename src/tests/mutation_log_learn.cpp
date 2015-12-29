@@ -56,7 +56,7 @@ TEST(replication, log_learn)
         utils::filesystem::create_directory(logp);
 
         // writing logs
-        mutation_log_ptr mlog = new mutation_log(logp, 1, 1, true, gpid);
+        mutation_log_ptr mlog = new mutation_log(logp, 4, 32, true, gpid);
         mlog->open(nullptr);
 
         for (int i = 0; i < 1000; i++)
@@ -69,7 +69,8 @@ TEST(replication, log_learn)
             mu->data.header.log_offset = 0;
 
             binary_writer writer;
-            for (int j = 0; j < 100; j++)
+            //we want a update mutation to be ~4kByte
+            for (int j = 0; j < 300; j++)
             {
                 writer.write(str);
             }
@@ -83,6 +84,7 @@ TEST(replication, log_learn)
             mutations.push_back(mu);
 
             mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
+            mlog->flush();
         }
 
         decree durable_decree = lp;
@@ -106,8 +108,14 @@ TEST(replication, log_learn)
         std::chrono::steady_clock clock;
         auto time_tic = clock.now();
         mutation_log::replay(state.files,
-            [&mutations, &learned_decress](mutation_ptr& mu)->bool
+            [&mutations, &learned_decress, &clock](mutation_ptr& mu)->bool
             {
+                //wait for 5 usec mimicing mutation replay time
+                auto tic = clock.now();
+                while (std::chrono::duration_cast<std::chrono::microseconds>(clock.now() - tic).count() < 5)
+                {
+                    ;
+                }
                 learned_decress.insert(mu->data.header.decree);
 
                 mutation_ptr wmu = mutations[mu->data.header.decree - 2];
@@ -127,7 +135,7 @@ TEST(replication, log_learn)
                 return true;
             },
             offset
-            );
+            ).end_tracking();
         auto time_toc = clock.now();
         
         std::cout << "TEST replay time(us): " << std::chrono::duration_cast<std::chrono::microseconds>(time_toc - time_tic).count() << std::endl;

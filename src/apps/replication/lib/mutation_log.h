@@ -365,8 +365,8 @@ private:
 //
 class log_file : public ref_counter
 {
-public:    
-    ~log_file() { close(); }
+public:
+    ~log_file();
 
     //
     // file operations
@@ -407,7 +407,7 @@ public:
     //  - ERR_INCOMPLETE_DATA
     //  - ERR_INVALID_DATA
     //  - other io errors caused by file read operator
-    error_code read_next_log_block(int64_t local_offset, /*out*/::dsn::blob& bb);
+    error_code read_next_log_block(/*out*/::dsn::blob& bb);
 
     //
     // write routines
@@ -439,8 +439,8 @@ public:
     //
     // others
     //
-
-    uint32_t& crc32() { return _crc32;  }
+    // reset file_streamer to point to the start of this log file.
+    void reset_stream();
     // end offset in the global space: end_offset = start_offset + file_size
     int64_t end_offset() const { return _end_offset; }
     // start offset in the global space
@@ -471,6 +471,8 @@ private:
     uint32_t         _crc32;
     int64_t          _start_offset; // start offset in the global space
     int64_t          _end_offset; // end offset in the global space: end_offset = start_offset + file_size
+    class file_streamer;
+    std::unique_ptr  <file_streamer> _stream;
     dsn_handle_t     _handle; // file handle
     bool             _is_read; // if opened for read or write
     std::string      _path; // file path

@@ -43,7 +43,7 @@ TEST(core, env)
 {
     uint64_t xs[] = {
         0,
-        (uint64_t)-1LL,
+        std::numeric_limits<uint64_t>::max() - 1,
         0xdeadbeef
         };
 

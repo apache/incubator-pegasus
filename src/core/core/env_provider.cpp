@@ -49,6 +49,7 @@ env_provider::env_provider(env_provider* inner_provider)
     
 uint64_t env_provider::random64(uint64_t min, uint64_t max)
 {
+    dassert(min <= max, "invalid random range");
     if (_tls_magic != 0xdeadbeef)
     {
         _rng = new std::remove_pointer<decltype(_rng)>::type(std::random_device{}());
