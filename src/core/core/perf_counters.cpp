@@ -97,13 +97,13 @@ perf_counters::perf_counters(void)
 
     ::dsn::register_command("counter.value", 
         "counter.value - get current value of a specific counter",
-        "counter.value section-name counter-name",
+        "counter.value app-name*section-name*counter-name",
         &perf_counters::get_counter_value
         );
 
     ::dsn::register_command("counter.sample",
         "counter.sample - get latest sample of a specific counter",
-        "counter.sample section-name counter-name",
+        "counter.sample app-name*section-name*counter-name",
         &perf_counters::get_counter_sample
         );
 }
@@ -231,7 +231,7 @@ std::string perf_counters::get_counter_value(const std::vector<std::string>& arg
 {
     std::stringstream ss;
 
-    if (args.size() < 2)
+    if (args.size() < 1)
     {
         ss << 0;
         return ss.str();
@@ -253,7 +253,7 @@ std::string perf_counters::get_counter_sample(const std::vector<std::string>& ar
 {
     std::stringstream ss;
 
-    if (args.size() < 2)
+    if (args.size() < 1)
     {
         ss << 0;
         return ss.str();
