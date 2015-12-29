@@ -15,12 +15,16 @@ function find_matchfile()
 
 function goto_dest_dir()
 {
-    cd $3
+    all_params=$*
+    dst_dir=`echo $all_params | awk '{print $3}'`
+    cd $dst_dir
 }
 
 function goto_source_dir()
 {
-    cd $2
+    all_params=$*
+    src_dir=`echo $all_params | awk '{print $2}'`
+    cd $src_dir
 }
 
 function g()

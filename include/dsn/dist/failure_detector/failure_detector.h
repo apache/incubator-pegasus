@@ -30,6 +30,7 @@
  *
  * Revision history:
  *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     Dec., 2015, @shengofsun (Weijie Sun), make service::zlock preoteced, give the subClasses flexibility
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
