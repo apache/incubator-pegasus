@@ -39,6 +39,8 @@
 # include "replication_common.h"
 # include <dsn/dist/meta_state_service.h>
 # include <set>
+# include <unordered_set>
+# include <list>
 
 using namespace dsn;
 using namespace dsn::service;
@@ -90,6 +92,15 @@ public:
     //  * set node state from live to unlive, and returns configuration_update_request to apply
     //  * set node state from unlive to live, and leaves load balancer to update configuration
     void set_node_state(const node_states& nodes, /*out*/ machine_fail_updates* pris);
+
+    // add alive node to cache when initializing
+    void add_alive_node_to_cache(const rpc_address& node) { _cache_alive_nodes.insert(node); }
+
+    // remove dead node from cache when initializing
+    void remove_dead_node_from_cache(const rpc_address& node) { _cache_alive_nodes.erase(node); }
+
+    // apply the cache
+    void apply_cache_nodes();
 
     // partition server & client => meta server
 
@@ -162,6 +173,13 @@ private:
     std::string                                         _cluster_root;
     mutable zrwlock_nr                                  _lock;
     std::unordered_map< ::dsn::rpc_address, node_state> _nodes;
+
+    /*
+     * in the initializing of server_state, we firstly cache all
+     * alived nodes detected by fd.
+     */
+    std::unordered_set<dsn::rpc_address> _cache_alive_nodes;
+
     std::vector<app_state>                              _apps; // vec_index = app_id - 1
 
     int                               _node_live_count;

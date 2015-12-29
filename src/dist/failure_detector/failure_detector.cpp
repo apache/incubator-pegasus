@@ -438,8 +438,9 @@ void failure_detector::register_worker( ::dsn::rpc_address target, bool is_conne
 {
     uint64_t now = now_ms();
 
-    zauto_lock l(_lock);
-
+    /*
+     * callers should use the fd::_lock necessarily
+     */
     worker_record record(target, now);
     record.is_alive = is_connected ? true : false;
 
@@ -456,8 +457,9 @@ void failure_detector::register_worker( ::dsn::rpc_address target, bool is_conne
 
 bool failure_detector::unregister_worker(::dsn::rpc_address node)
 {
-    zauto_lock l(_lock);
-
+    /*
+     * callers should use the fd::_lock necessarily
+     */
     bool ret;
 
     size_t count = _workers.erase(node);

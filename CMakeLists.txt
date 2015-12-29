@@ -21,7 +21,7 @@ dsn_add_pseudo_projects()
 
 add_subdirectory(ext/gtest)
 add_subdirectory(ext/zookeeper)
-
+add_subdirectory(ext/rapidjson)
 #
 # !!! gflags is currently not used, and when it is enabled, it causes failure on windows compilation
 # add_subdirectory(ext/gflags)

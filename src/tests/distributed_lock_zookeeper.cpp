@@ -34,9 +34,10 @@ public:
         const char* args[] = { "/dsn/tests/simple_adder_server" };
         dassert(_dlock_service->initialize(1, args) == ERR_OK, "");
         
+        distributed_lock_service::lock_options opt = {true, true};
         while (!ss_finish) {
             std::pair<task_ptr, task_ptr> task_pair = _dlock_service->lock(
-                "test_lock", name(), true, 
+                "test_lock", name(), 
                 DLOCK_CALLBACK, 
                 [this](error_code ec, const std::string& name, int version)
                 {
@@ -51,7 +52,8 @@ public:
                 [this](error_code, const std::string&, int)
                 {
                     dassert(false, "session expired");
-                }
+                }, 
+                opt
             );
             task_pair.first->wait();
             for (int i=0; i<1000; ++i)
@@ -103,7 +105,7 @@ TEST(distributed_lock_service_zookeeper, simple_lock_unlock)
     }
     
     int64_t expect_reuslt = 0;
-    for (int i: q) expect_reuslt += i;
+    for (int64_t i: q) expect_reuslt += i;
     
     ss_start = true;
     while ( !ss_finish ) 
@@ -123,38 +125,43 @@ TEST(distributed_lock_service_zookeeper, abnormal_api_call)
     std::string my_id = "test_myid";
     std::string my_id2 = "test_myid2";
     
+    distributed_lock_service::lock_options opt = {false, true};
     std::pair<task_ptr, task_ptr> cb_pair = dlock_svc->lock(
-        lock_id, my_id, false, 
+        lock_id, my_id, 
         DLOCK_CALLBACK, 
         [](error_code ec, const std::string&, int){
             ASSERT_TRUE(ERR_OBJECT_NOT_FOUND==ec);
         },
         DLOCK_CALLBACK, 
-        nullptr
+        nullptr, 
+        opt
     );
     ASSERT_TRUE(cb_pair.first!=nullptr && cb_pair.second==nullptr);
     cb_pair.first->wait();
     
+    opt.create_if_not_exist = true;
     cb_pair = dlock_svc->lock(
-        lock_id, my_id, true, 
+        lock_id, my_id, 
         DLOCK_CALLBACK, [](error_code ec, const std::string&, int)
         {
             ASSERT_TRUE(ec == ERR_OK);
         }, 
         DLOCK_CALLBACK, 
-        nullptr
+        nullptr,
+        opt
     );
     ASSERT_TRUE(cb_pair.first!=nullptr && cb_pair.second!=nullptr);
     
     /* recursive lock */
-    std::pair<task_ptr, task_ptr> cb_pair2 = dlock_svc->lock(lock_id, my_id, true, 
+    std::pair<task_ptr, task_ptr> cb_pair2 = dlock_svc->lock(lock_id, my_id, 
         DLOCK_CALLBACK, 
         [](error_code ec, const std::string&, int)
         {
             ASSERT_TRUE(ec == ERR_RECURSIVE_LOCK);
         }, 
         DLOCK_CALLBACK, 
-        nullptr
+        nullptr, 
+        opt
     );
     ASSERT_TRUE(cb_pair2.first!=nullptr && cb_pair2.second!=nullptr);
     cb_pair2.first->wait();
@@ -183,13 +190,14 @@ TEST(distributed_lock_service_zookeeper, abnormal_api_call)
     );
     tsk->wait();
     
-    cb_pair2 = dlock_svc->lock(lock_id, my_id2, true, 
+    cb_pair2 = dlock_svc->lock(lock_id, my_id2, 
         DLOCK_CALLBACK, [my_id2](error_code ec, const std::string& name, int) { 
             ASSERT_TRUE(ec==ERR_OK);
             ASSERT_TRUE(name == my_id2);
         }, 
         DLOCK_CALLBACK, 
-        nullptr
+        nullptr, 
+        opt
     );
     
     bool result = cb_pair2.first->wait(2000);
