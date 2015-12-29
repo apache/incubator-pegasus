@@ -121,6 +121,11 @@ public:
     {
         _disconnected_cb = func;
     }
+    void test_register_worker(rpc_address node)
+    {
+        zauto_lock l(failure_detector::_lock);
+        register_worker(node);
+    }
     void clear()
     {
         _connected_cb = {};
@@ -502,7 +507,7 @@ TEST(fd, worker_died_when_switch_master)
         } );
 
     /* we assume the worker is alive */
-    tst_master->fd()->register_worker( rpc_address("localhost", WPORT) );
+    tst_master->fd()->test_register_worker( rpc_address("localhost", WPORT) );
     master_group_set_leader(masters, index);
 
     /* then stop the worker*/
