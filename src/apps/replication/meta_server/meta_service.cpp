@@ -152,12 +152,6 @@ void meta_service::register_rpc_handlers()
         );
 
     register_rpc_handler(
-        RPC_CM_QUERY_APP_STATUS,
-        "RPC_CM_QUERY_APP_STATUS",
-        &meta_service::on_query_app_status
-        );
-
-    register_rpc_handler(
         RPC_CM_DROP_APP,
         "RPC_CM_DROP_APP",
         &meta_service::on_drop_app
@@ -174,7 +168,6 @@ void meta_service::stop()
     unregister_rpc_handler(RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND);
     unregister_rpc_handler(RPC_CM_CREATE_APP);
     unregister_rpc_handler(RPC_CM_DROP_APP);
-    unregister_rpc_handler(RPC_CM_QUERY_APP_STATUS);
 
     if (_balancer_timer != nullptr)
     {
@@ -261,21 +254,6 @@ void meta_service::on_drop_app(dsn_message_t req)
     }
 
     _state->drop_app(req);
-}
-
-void meta_service::on_query_app_status(dsn_message_t req)
-{
-    if (!check_primary(req))
-        return;
-    if (!_started)
-    {
-        configuration_drop_app_response response;
-        response.err = ERR_SERVICE_NOT_ACTIVE;
-        reply(req, response);
-        return;
-    }
-
-    _state->query_app_status(req);
 }
 
 // partition server & client => meta server

@@ -81,7 +81,6 @@ private:
     // table operations
     void on_create_app(dsn_message_t req);
     void on_drop_app(dsn_message_t req);
-    void on_query_app_status(dsn_message_t req);
 
     // load balance actions
     void start_load_balance();

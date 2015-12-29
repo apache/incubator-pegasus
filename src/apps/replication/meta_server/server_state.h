@@ -138,7 +138,6 @@ public:
     // table options
     void create_app(dsn_message_t msg);
     void drop_app(dsn_message_t msg);
-    void query_app_status(dsn_message_t msg);
 
     void unfree_if_possible_on_start();
 
@@ -170,17 +169,18 @@ private:
     // check equality of two partition configurations, not take last_drops into account
     bool partition_configuration_equal(const partition_configuration& pc1, const partition_configuration& pc2);
 
-    // get the application_id from name, -1 for app doesn't exist
-    int32_t app_id(const char* app_name) const;
     void initialize_app(app_state& app, dsn_message_t msg);
     void do_app_drop(app_state& app, dsn_message_t msg);
     // join path
     static std::string join_path(const std::string& input1, const std::string& input2);
 
+    // get the application_id from name, -1 for app doesn't exist
+    int32_t get_app_id(const char* app_name) const;
+
     //path util function in meta_state_service
-    std::string get_app_path(const app_state& app);
-    std::string get_partition_path(const global_partition_id& gpid);
-    std::string get_partition_path(const app_state& app, int partition_id);
+    std::string get_app_path(const app_state& app) const;
+    std::string get_partition_path(const global_partition_id& gpid) const;
+    std::string get_partition_path(const app_state& app, int partition_id) const;
 
 private:
     friend class ::dsn::replication::replication_checker;

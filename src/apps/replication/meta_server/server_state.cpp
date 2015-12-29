@@ -340,12 +340,12 @@ std::string server_state::join_path(const std::string& input1, const std::string
     return input1.substr(0, pos1) + "/" + input2.substr(pos2);
 }
 
-std::string server_state::get_app_path(const app_state &app)
+std::string server_state::get_app_path(const app_state &app) const
 {
     return _apps_root + "/" + boost::lexical_cast<std::string>(app.app_id);
 }
 
-std::string server_state::get_partition_path(const app_state &app, int partition_id)
+std::string server_state::get_partition_path(const app_state &app, int partition_id) const
 {
     std::stringstream oss;
     oss << _apps_root << "/" << app.app_id
@@ -353,7 +353,7 @@ std::string server_state::get_partition_path(const app_state &app, int partition
     return oss.str();
 }
 
-std::string server_state::get_partition_path(const global_partition_id& gpid)
+std::string server_state::get_partition_path(const global_partition_id& gpid) const
 {
     std::stringstream oss;
     oss << _apps_root << "/" << gpid.app_id
@@ -719,33 +719,34 @@ void server_state::query_configuration_by_gpid(global_partition_id id, /*out*/ p
 void server_state::query_configuration_by_index(const configuration_query_by_index_request& request, /*out*/ configuration_query_by_index_response& response)
 {
     zauto_read_lock l(_lock);
-    for (size_t i = 0; i < _apps.size(); i++)
-    {
-        app_state& kv = _apps[i];
-        if (kv.app_name == request.app_name)
-        {
-            response.err = ERR_OK;
-            response.app_id = static_cast<int>(i) + 1;
-            response.partition_count = kv.partition_count;
-            app_state& app = kv;
-            for (auto& idx : request.partition_indices)
-            {
-                if (idx < app.partition_count)
-                { 
-                    response.partitions.push_back(app.partitions[idx]);
-                }
-            }
-            return;
-        }
+    int32_t id = get_app_id(request.app_name.c_str());
+    if ( -1 == id) {
+        response.err = ERR_OBJECT_NOT_FOUND;
+        return;
     }
 
-    response.err = ERR_OBJECT_NOT_FOUND;
+    app_state& app = _apps[id];
+    if ( app.status != app_status::available ) {
+        response.err = ERR_INVALID_STATE;
+        return;
+    }
+
+    response.err = ERR_OK;
+    response.app_id = id;
+    response.partition_count = app.partition_count;
+
+    for (const int32_t& index: request.partition_indices) {
+        if (index>=0 && index<app.partitions.size())
+            response.partitions.push_back( app.partitions[index]);
+    }
+    if (response.partitions.empty() && request.if_query_all_partitions)
+        response.partitions = app.partitions;
 }
 
-int32_t server_state::app_id(const char *app_name) const
+int32_t server_state::get_app_id(const char *app_name) const
 {
     for (const app_state& app: _apps)
-        if ( strcmp(app.app_name.c_str(), app_name) == 0)
+        if ( strcmp(app.app_name.c_str(), app_name) == 0 && app.status!=app_status::dropped)
             return app.app_id;
     return -1;
 }
@@ -829,7 +830,7 @@ void server_state::create_app(dsn_message_t msg)
 
     {
         zauto_write_lock l(_lock);
-        id = app_id(request.app_name.c_str());
+        id = get_app_id(request.app_name.c_str());
         /* so we can't store the data on meta_state_service with app_name, but app_id */
         if (id != -1 && _apps[id].status!=app_status::dropped)
         {
@@ -937,7 +938,7 @@ void server_state::drop_app(dsn_message_t msg)
     ::unmarshall(msg, request);
     {
         zauto_write_lock l(_lock);
-        id = app_id(request.app_name.c_str());
+        id = get_app_id(request.app_name.c_str());
         if (id == -1 || _apps[id].status == app_status::dropped) {
             response.err = request.options.success_if_not_exist?ERR_OK:ERR_APP_NOT_EXIST;
         }
@@ -967,11 +968,6 @@ void server_state::drop_app(dsn_message_t msg)
     }
     else
         reply(msg, response);
-}
-
-void server_state::query_app_status(dsn_message_t msg)
-{
-
 }
 
 void server_state::update_configuration(

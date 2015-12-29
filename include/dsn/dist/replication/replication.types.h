@@ -1032,22 +1032,6 @@ namespace dsn { namespace replication {
         unmarshall(reader, val.options);
     };
 
-    // ---------- configuration_query_app_status_request -------------
-    struct configuration_query_app_status_request
-    {
-        int32_t app_id;
-    };
-
-    inline void marshall(::dsn::binary_writer& writer, const configuration_query_app_status_request& val)
-    {
-        marshall(writer, val.app_id);
-    };
-
-    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_query_app_status_request& val)
-    {
-        unmarshall(reader, val.app_id);
-    };
-
     // ---------- drop_app_options -------------
     struct drop_app_options
     {
@@ -1100,22 +1084,6 @@ namespace dsn { namespace replication {
     {
         unmarshall(reader, val.err);
         unmarshall(reader, val.appid);
-    };
-
-    // ---------- configuration_query_app_status_response -------------
-    struct configuration_query_app_status_response
-    {
-        ::dsn::error_code err;
-    };
-
-    inline void marshall(::dsn::binary_writer& writer, const configuration_query_app_status_response& val)
-    {
-        marshall(writer, val.err);
-    };
-
-    inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_query_app_status_response& val)
-    {
-        unmarshall(reader, val.err);
     };
 
     // ---------- configuration_drop_app_response -------------
@@ -1173,18 +1141,21 @@ namespace dsn { namespace replication {
     struct configuration_query_by_index_request
     {
         std::string app_name;
+        bool if_query_all_partitions;
         std::vector< int32_t> partition_indices;
     };
 
     inline void marshall(::dsn::binary_writer& writer, const configuration_query_by_index_request& val)
     {
         marshall(writer, val.app_name);
+        marshall(writer, val.if_query_all_partitions);
         marshall(writer, val.partition_indices);
     };
 
     inline void unmarshall(::dsn::binary_reader& reader, /*out*/ configuration_query_by_index_request& val)
     {
         unmarshall(reader, val.app_name);
+        unmarshall(reader, val.if_query_all_partitions);
         unmarshall(reader, val.partition_indices);
     };
 

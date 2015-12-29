@@ -232,13 +232,8 @@ struct create_app_options
 
 struct configuration_create_app_request
 {
-    1:string                       app_name;
+    1:string                     app_name;
     2:create_app_options         options;
-}
-
-struct configuration_query_app_status_request
-{
-    1:i32              app_id;
 }
 
 struct drop_app_options
@@ -259,11 +254,6 @@ struct configuration_create_app_response
     2:i32              appid;
 }
 
-struct configuration_query_app_status_response
-{
-    1:dsn.error_code       err;
-}
-
 struct configuration_drop_app_response
 {
     1:dsn.error_code       err;
@@ -278,6 +268,7 @@ struct configuration_query_by_node_response
 struct configuration_query_by_index_request
 {
     1:string           app_name;
+    2:bool             if_query_all_partitions;
     2:list<i32>        partition_indices;
 }
 
