@@ -40,22 +40,22 @@
 # include <dsn/cpp/json_helper.h>
 # include "service_engine.h"
 
-DSN_API dsn_handle_t dsn_perf_counter_create(const char* name, dsn_perf_counter_type_t type, const char* description)
+DSN_API dsn_handle_t dsn_perf_counter_create(const char* section, const char* name, dsn_perf_counter_type_t type, const char* description)
 {
     auto cnode = dsn::task::get_current_node2();
     dassert(cnode != nullptr, "cannot get current service node!");
-    auto c = dsn::utils::perf_counters::instance().get_counter(cnode->name(), name, type, description, true);
+    auto c = dsn::utils::perf_counters::instance().get_counter(cnode->name(), section, name, type, description, true);
     c->add_ref();
     return c.get();
 }
 DSN_API void dsn_perf_counter_remove(dsn_handle_t handle)
 {
     auto sptr = reinterpret_cast<dsn::perf_counter*>(handle);
-    if (dsn::utils::perf_counters::instance().remove_counter(sptr->section(), sptr->name()))
+    if (dsn::utils::perf_counters::instance().remove_counter(sptr->full_name()))
         sptr->release_ref();
     else
     {
-        dassert(false, "cannot remove counter %s.%s as it is not found in our repo", sptr->section(), sptr->name());
+        dwarn("cannot remove counter %s.%s as it is not found in our repo", sptr->section(), sptr->name());
     }
 }
 
@@ -97,13 +97,13 @@ perf_counters::perf_counters(void)
 
     ::dsn::register_command("counter.value", 
         "counter.value - get current value of a specific counter",
-        "counter.value section-name counter-name",
+        "counter.value app-name*section-name*counter-name",
         &perf_counters::get_counter_value
         );
 
     ::dsn::register_command("counter.sample",
         "counter.sample - get latest sample of a specific counter",
-        "counter.sample section-name counter-name",
+        "counter.sample app-name*section-name*counter-name",
         &perf_counters::get_counter_sample
         );
 }
@@ -112,64 +112,69 @@ perf_counters::~perf_counters(void)
 {
 }
 
-perf_counter_ptr perf_counters::get_counter(const char *section, const char *name, dsn_perf_counter_type_t flags, const char *dsptr, bool create_if_not_exist /*= false*/)
+perf_counter_ptr perf_counters::get_counter(const char* app, const char *section, const char *name, dsn_perf_counter_type_t flags, const char *dsptr, bool create_if_not_exist /*= false*/)
 {
+    std::string full_name;
+    perf_counter::build_full_name(app, section, name, full_name);
+
     if (create_if_not_exist)
     {
         auto_write_lock l(_lock);
 
-        auto it = _counters.find(section);
+        auto it = _counters.find(full_name);
         if (it == _counters.end())
         {
-            it = _counters.emplace(std::piecewise_construct, std::forward_as_tuple(section), std::forward_as_tuple(same_section_counters{})).first;
-        }
-
-        auto it2 = it->second.find(name);
-        if (it2 == it->second.end())
-        {
-            perf_counter_ptr counter = _factory(section, name, flags, dsptr);
-            it->second.emplace(std::piecewise_construct, std::forward_as_tuple(name), std::forward_as_tuple(counter));
+            perf_counter_ptr counter = _factory(app, section, name, flags, dsptr);
+            _counters.emplace(std::piecewise_construct, std::forward_as_tuple(full_name), std::forward_as_tuple(counter));
             return counter;
         }
         else
         {
-            dassert (it2->second->type() == flags,
-                "counters with the same name %s.%s with differnt types", section, name);
-            return it2->second;
+            dassert (it->second->type() == flags,
+                "counters with the same name %s with differnt types",
+                full_name.c_str()
+                );
+            return it->second;
         }
     }
     else
     {
         auto_read_lock l(_lock);
 
-        auto it = _counters.find(section);
+        auto it = _counters.find(full_name);
         if (it == _counters.end())
             return nullptr;
-
-        auto it2 = it->second.find(name);
-        if (it2 == it->second.end())
-            return nullptr;
-
-        return it2->second;
+        else
+            return it->second;
     }
 }
 
-bool perf_counters::remove_counter(const char* section, const char* name)
+perf_counter_ptr perf_counters::get_counter(const char* full_name)
 {
-    auto_write_lock l(_lock);
+    auto_read_lock l(_lock);
 
-    auto it = _counters.find(section);
+    auto it = _counters.find(full_name);
     if (it == _counters.end())
-        return false;
+        return nullptr;
+    else
+        return it->second;
+}
 
-    auto it2 = it->second.find(name);
-    if (it2 == it->second.end())
-        return false;
+bool perf_counters::remove_counter(const char* full_name)
+{
+    {
+        auto_write_lock l(_lock);
 
-    it->second.erase(it2);
-    if (it->second.size() == 0)
-        _counters.erase(it);
-
+        auto it = _counters.find(full_name);
+        if (it == _counters.end())
+            return false;
+        else
+        {
+            _counters.erase(it);
+        }
+    }
+    
+    dinfo("performance counter %s is removed", full_name);
     return true;
 }
 
@@ -187,24 +192,33 @@ std::string perf_counters::list_counter(const std::vector<std::string>& args)
 
 std::string perf_counters::list_counter_internal(const std::vector<std::string>& args)
 {
-    std::map<std::string, std::vector<std::string> > counters;
+    // <app, <section, names[] > > counters
+    std::map<std::string, std::map< std::string, std::vector<std::string> > > counters;
+    std::map< std::string, std::vector<std::string> > empty_m;
     std::vector<std::string> empty_v;
+
+    std::map< std::string, std::vector<std::string> >* pp;
+    std::vector<std::string>* pv;
+
     {
         auto_read_lock l(_lock);
-
-        for (auto& section : _counters)
+        for (auto& c : _counters)
         {
-            std::vector<std::string>* pv = &counters.insert(
-                std::unordered_map<std::string, std::vector<std::string> >::value_type(
-                    section.first,
-                    empty_v
+            pp = &counters.insert(
+                std::map<std::string, std::map< std::string, std::vector<std::string> > >::value_type(
+                c.second->app(),
+                empty_m
                 )
                 ).first->second;
 
-            for (auto& counter : section.second)
-            {
-                pv->push_back(counter.first);
-            }
+            pv = &pp->insert(
+                std::map< std::string, std::vector<std::string> >::value_type(
+                c.second->section(),
+                empty_v
+                )
+                ).first->second;
+
+            pv->push_back(c.second->name());
         }
     }
 
@@ -217,14 +231,14 @@ std::string perf_counters::get_counter_value(const std::vector<std::string>& arg
 {
     std::stringstream ss;
 
-    if (args.size() < 2)
+    if (args.size() < 1)
     {
         ss << 0;
         return ss.str();
     }
 
     utils::perf_counters& c = utils::perf_counters::instance();
-    auto counter = c.get_counter(args[0].c_str(), args[1].c_str(), COUNTER_TYPE_NUMBER, "", false);
+    auto counter = c.get_counter(args[0].c_str());
 
     if (counter && counter->type() != COUNTER_TYPE_NUMBER_PERCENTILES)
         ss << counter->get_value();
@@ -239,14 +253,14 @@ std::string perf_counters::get_counter_sample(const std::vector<std::string>& ar
 {
     std::stringstream ss;
 
-    if (args.size() < 2)
+    if (args.size() < 1)
     {
         ss << 0;
         return ss.str();
     }
 
     utils::perf_counters& c = utils::perf_counters::instance();
-    auto counter = c.get_counter(args[0].c_str(), args[1].c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, "", false);
+    auto counter = c.get_counter(args[0].c_str());
 
     if (counter)
         ss << counter->get_current_sample();

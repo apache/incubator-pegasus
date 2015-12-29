@@ -47,9 +47,9 @@ namespace dsn
             _h = nullptr;
         }
 
-        void init(const char *name, dsn_perf_counter_type_t type, const char *dsptr)
+        void init(const char* section, const char *name, dsn_perf_counter_type_t type, const char *dsptr)
         {
-            _h = dsn_perf_counter_create(name, type, dsptr);
+            _h = dsn_perf_counter_create(section, name, type, dsptr);
         }
 
         ~perf_counter_(void)

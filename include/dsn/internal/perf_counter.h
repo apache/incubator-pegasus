@@ -39,6 +39,7 @@
 # include <dsn/internal/enum_helper.h>
 # include <dsn/service_api_c.h>
 # include <dsn/cpp/autoref_ptr.h>
+# include <sstream>
 
 namespace dsn {
 ENUM_BEGIN(dsn_perf_counter_type_t, COUNTER_TYPE_INVALID)
@@ -61,17 +62,18 @@ typedef ref_ptr<perf_counter> perf_counter_ptr;
 class perf_counter : public ref_counter
 {
 public:
-    template <typename T> static perf_counter* create(const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr)
+    template <typename T> static perf_counter* create(const char* app, const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr)
     {
-        return new T(section, name, type, dsptr);
+        return new T(app, section, name, type, dsptr);
     }
 
-    typedef perf_counter* (*factory)(const char *, const char *, dsn_perf_counter_type_t, const char *);
+    typedef perf_counter* (*factory)(const char*, const char *, const char *, dsn_perf_counter_type_t, const char *);
 
 public:
-    perf_counter(const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr) 
-        : _name(name), _section(section), _dsptr(dsptr), _type(type)
+    perf_counter(const char* app, const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr) 
+        : _app(app), _name(name), _section(section), _dsptr(dsptr), _type(type)
     {
+        build_full_name(app, section, name, _full_name);
     }
 
     virtual ~perf_counter(void) {}
@@ -85,14 +87,26 @@ public:
     virtual uint64_t* get_samples(/*out*/ int& sample_count) const { return nullptr; }
     virtual uint64_t get_current_sample() const { return 0; }
 
-    const char* name() const { return _name.c_str(); }
+    const char* full_name() const { return _full_name.c_str(); }
+    const char* app() const { return _app.c_str(); }
     const char* section() const { return _section.c_str(); }
+    const char* name() const { return _name.c_str(); }    
     const char* dsptr() const { return _dsptr.c_str(); }
     dsn_perf_counter_type_t type() const { return _type; }
 
+public:
+    static void build_full_name(const char* app, const char* section, const char* name, /*out*/ std::string& counter_name)
+    {
+        std::stringstream ss;
+        ss << app << "*" << section << "*" << name;
+        counter_name = std::move(ss.str());
+    }
+
 private:
-    std::string _name;
-    std::string _section;
+    std::string _full_name; 
+    std::string _app;
+    std::string _section; 
+    std::string _name;        
     std::string _dsptr;
     dsn_perf_counter_type_t _type;
 };
