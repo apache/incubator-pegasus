@@ -175,7 +175,7 @@ private:
     static std::string join_path(const std::string& input1, const std::string& input2);
 
     // get the application_id from name, -1 for app doesn't exist
-    int32_t get_app_id(const char* app_name) const;
+    int32_t get_app_index(const char* app_name) const;
 
     //path util function in meta_state_service
     std::string get_app_path(const app_state& app) const;
