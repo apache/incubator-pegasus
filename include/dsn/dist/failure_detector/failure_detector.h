@@ -55,7 +55,7 @@
  *    But in udp, you may want to try several times before the worker expires.
  *    So in tcp, the beacon_interval/lease_periods could be 10/30. And in UDP, 4/30 is acceptable
  *
- * 5. The lease_periods should be less than the grace_periods to tolerant the
+ * 5. The lease_periods must be less than the grace_periods to tolerant the
  *    clock drift or delay by the OS scheduler.
  *
  * 6. Another factor have influence on the FD is the lease period in distributed lock and the
