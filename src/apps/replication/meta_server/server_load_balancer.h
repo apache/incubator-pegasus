@@ -26,11 +26,11 @@
 
 /*
  * Description:
- *     interface of the cluster scheduler that schedules a wanted deployment unit
- *     in the schedule, and notifies when failure happens.
- *
+ *     base interface of the server load balancer which defines the scheduling
+ *     policy of how to place the partition replica to the nodes
+  *
  * Revision history:
- *     2015-11-11, @imzhenyu (Zhenyu Guo), first draft
+ *     2015-12-29, @imzhenyu (Zhenyu Guo), first draft
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -42,6 +42,12 @@
 # include <functional>
 # include <memory>
 
+//
+// TODO: make server state also general enough for both stateless
+// and stateful service
+//
+# include "server_state.h"
+
 namespace dsn
 {
     namespace dist
@@ -49,19 +55,33 @@ namespace dsn
         class server_load_balancer
         {
         public:
-            template <typename T> static server_load_balancer* create()
+            template <typename T> static server_load_balancer* create(server_state* state)
             {
-                return new T();
+                return new T(state);
             }
 
-            typedef server_load_balancer* (*factory)();
+            typedef server_load_balancer* (*factory)(server_state* state);
             
         public:
-            /*
-             * initialization work
-             */
-            virtual error_code initialize() = 0;
+            server_load_balancer(server_state* state) {}
+            virtual ~server_load_balancer() {}
 
+            // load balancing for all
+            virtual void run() = 0;
+
+            // load balancing for single partition
+            virtual void run(global_partition_id gpid) = 0;
+
+            // this method is for testing
+            virtual void explictly_send_proposal(global_partition_id gpid, rpc_address receiver, config_type type, rpc_address node) = 0;
+
+        protected:
+            void send_proposal(::dsn::rpc_address node, const configuration_update_request& proposal);
+
+        public:
+            // switchs for replication test
+            static bool s_disable_lb;
+            static bool s_lb_for_test;
         };
     }
 }

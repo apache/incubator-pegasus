@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "load_balancer.h"
+#include "simple_stateful_load_balancer.h"
 #include <algorithm>
 
 # ifdef __TITLE__
@@ -41,19 +41,17 @@
 # endif
 # define __TITLE__ "load.balancer"
 
-bool load_balancer::s_lb_for_test = false;
-bool load_balancer::s_disable_lb = false;
-
-load_balancer::load_balancer(server_state* state)
-: _state(state), serverlet<load_balancer>("load_balancer")
+simple_stateful_load_balancer::simple_stateful_load_balancer(server_state* state)
+: _state(state), ::dsn::dist::server_load_balancer(state),
+  serverlet<simple_stateful_load_balancer>("simple_stateful_load_balancer")
 {
 }
 
-load_balancer::~load_balancer()
+simple_stateful_load_balancer::~simple_stateful_load_balancer()
 {
 }
 
-void load_balancer::run()
+void simple_stateful_load_balancer::run()
 {
     if (s_disable_lb) return;
 
@@ -71,7 +69,7 @@ void load_balancer::run()
     }
 }
 
-void load_balancer::run(global_partition_id gpid)
+void simple_stateful_load_balancer::run(global_partition_id gpid)
 {
     if (s_disable_lb) return;
 
@@ -80,7 +78,7 @@ void load_balancer::run(global_partition_id gpid)
     run_lb(pc);
 }
 
-void load_balancer::explictly_send_proposal(global_partition_id gpid, rpc_address receiver, config_type type, rpc_address node)
+void simple_stateful_load_balancer::explictly_send_proposal(global_partition_id gpid, rpc_address receiver, config_type type, rpc_address node)
 {
     if (gpid.app_id <= 0 || gpid.pidx < 0 || type == CT_NONE)
     {
@@ -110,7 +108,7 @@ void load_balancer::explictly_send_proposal(global_partition_id gpid, rpc_addres
     send_proposal(receiver, req);
 }
 
-::dsn::rpc_address load_balancer::find_minimal_load_machine(bool primaryOnly)
+::dsn::rpc_address simple_stateful_load_balancer::find_minimal_load_machine(bool primaryOnly)
 {
     std::vector<std::pair< ::dsn::rpc_address, int>> stats;
 
@@ -152,7 +150,7 @@ void load_balancer::explictly_send_proposal(global_partition_id gpid, rpc_addres
     return stats[dsn_random32(0, candidate_count - 1)].first;
 }
 
-void load_balancer::run_lb(partition_configuration& pc)
+void simple_stateful_load_balancer::run_lb(partition_configuration& pc)
 {
     if (_state->freezed())
         return;
@@ -220,28 +218,16 @@ void load_balancer::run_lb(partition_configuration& pc)
     }
 }
 
-// meta server => partition server
-void load_balancer::send_proposal(::dsn::rpc_address node, const configuration_update_request& proposal)
+void simple_stateful_load_balancer::query_decree(std::shared_ptr<query_replica_decree_request> query)
 {
-    dinfo("send proposal %s of %s, current ballot = %" PRId64, 
-        enum_to_string(proposal.type),
-        proposal.node.to_string(),
-        proposal.config.ballot
-        );
-
-    rpc::call_one_way_typed(node, RPC_CONFIG_PROPOSAL, proposal, gpid_to_hash(proposal.config.gpid));
+    rpc::call_typed(query->node, RPC_QUERY_PN_DECREE, query, this, &simple_stateful_load_balancer::on_query_decree_ack, gpid_to_hash(query->gpid), 3000);
 }
 
-void load_balancer::query_decree(std::shared_ptr<query_replica_decree_request> query)
-{
-    rpc::call_typed(query->node, RPC_QUERY_PN_DECREE, query, this, &load_balancer::on_query_decree_ack, gpid_to_hash(query->gpid), 3000);
-}
-
-void load_balancer::on_query_decree_ack(error_code err, std::shared_ptr<query_replica_decree_request>& query, std::shared_ptr<query_replica_decree_response>& resp)
+void simple_stateful_load_balancer::on_query_decree_ack(error_code err, std::shared_ptr<query_replica_decree_request>& query, std::shared_ptr<query_replica_decree_response>& resp)
 {
     if (err != ERR_OK)
     {
-        tasking::enqueue(LPC_QUERY_PN_DECREE, this, std::bind(&load_balancer::query_decree, this, query), 0, 1000);
+        tasking::enqueue(LPC_QUERY_PN_DECREE, this, std::bind(&simple_stateful_load_balancer::query_decree, this, query), 0, 1000);
     }
     else
     {

@@ -35,9 +35,9 @@
 
 #include "meta_service.h"
 #include "server_state.h"
-#include "load_balancer.h"
 #include "meta_server_failure_detector.h"
 #include <sys/stat.h>
+#include <dsn/internal/factory_store.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -99,7 +99,21 @@ error_code meta_service::start()
         derror("recover server state failed, err = %s, retry ...", err.to_string());
     }
 
-    _balancer = new load_balancer(_state);
+    // create server load balancer
+    // TODO: create per app server load balancer
+    const char* server_load_balancer = dsn_config_get_value_string(
+        "meta_server",
+        "server_load_balancer_type",
+        "simple_stateful_load_balancer",
+        "server_load_balancer provider type"
+        );
+    
+    _balancer = dsn::utils::factory_store< ::dsn::dist::server_load_balancer>::create(
+        server_load_balancer,
+        PROVIDER_TYPE_MAIN,
+        _state
+        );
+
     _failure_detector->sync_node_state_and_start_service();
     ddebug("start meta_service succeed");
     return ERR_OK;
