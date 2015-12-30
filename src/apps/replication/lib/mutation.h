@@ -38,6 +38,7 @@
 
 # include "replication_common.h"
 # include <list>
+# include <atomic>
 # include <dsn/internal/link.h>
 
 #pragma warning(disable: 4201)
@@ -116,6 +117,7 @@ private:
     char            _name[60]; // app_id.pidx.ballot.decree
     int             _appro_data_bytes;
     uint64_t        _tid; // trace id, unique in process
+    static std::atomic<uint64_t> s_tid;
 };
 
 class mutation_queue

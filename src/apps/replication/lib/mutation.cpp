@@ -39,7 +39,7 @@
 
 namespace dsn { namespace replication {
 
-static std::atomic<uint64_t> s_mutation_tid(0);
+std::atomic<uint64_t> mutation::s_tid(0);
 
 mutation::mutation()
 {
@@ -50,7 +50,7 @@ mutation::mutation()
     _prepare_request = nullptr;
     strcpy(_name, "0.0.0.0");
     _appro_data_bytes = sizeof(mutation_header);
-    _tid = ++s_mutation_tid;
+    _tid = ++s_tid;
 }
 
 mutation::~mutation()

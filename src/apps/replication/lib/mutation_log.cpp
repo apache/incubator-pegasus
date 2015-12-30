@@ -236,6 +236,7 @@ void mutation_log::flush()
     {
         if (_is_writing)
         {
+            // TODO(qinzuoyan): why need wait about 25ms?
             dsn_task_tracker_wait_all(tracker());
         }
         else
