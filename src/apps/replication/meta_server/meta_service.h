@@ -36,13 +36,13 @@
 # pragma once
 
 # include "replication_common.h"
+# include "server_load_balancer.h"
 
 using namespace dsn;
 using namespace dsn::service;
 using namespace dsn::replication;
 
 class server_state;
-class load_balancer;
 class meta_server_failure_detector;
 class replication_checker;
 namespace test {
@@ -91,11 +91,11 @@ private:
     friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
 
-    server_state                 *_state;
-    meta_server_failure_detector *_failure_detector;
-    load_balancer                *_balancer;
-    dsn::task_ptr                _balancer_timer;
-    replication_options          _opts;
-    bool                         _started;
+    server_state                    *_state;
+    meta_server_failure_detector    *_failure_detector;
+    dsn::dist::server_load_balancer *_balancer;
+    dsn::task_ptr                   _balancer_timer;
+    replication_options             _opts;
+    bool                            _started;
 }; 
 
