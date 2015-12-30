@@ -42,7 +42,8 @@ function usage_build()
     echo "   -g|--enable_gcov  generate gcov code coverage report, default no"
     echo "   -v|--verbose      build in verbose mode, default no"
     if [ "$ONLY_BUILD" == "NO" ]; then
-        echo "   -m|--test_module  specify the module to test, e.g., dsn.core.tests,"
+        echo "   -m|--test_module  specify modules to test, split by ',',"
+        echo "                     e.g., \"dsn.core.tests,dsn.tests\","
         echo "                     if not set, then run all tests"
     fi
 }

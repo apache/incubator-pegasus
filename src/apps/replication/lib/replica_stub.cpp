@@ -70,16 +70,14 @@ replica_stub::~replica_stub(void)
 
 void replica_stub::install_perf_counters()
 {
-    _counter_replicas_count.init("eon", "replica#", COUNTER_TYPE_NUMBER, "# in replica_stub._replicas");
-    _counter_replicas_opening_count.init("eon", "opening_replica#", COUNTER_TYPE_NUMBER, "# in replica_stub._opening_replicas");
-    _counter_replicas_closing_count.init("eon", "closing_replica#", COUNTER_TYPE_NUMBER, "# in replica_stub._closing_replicas");
-    _counter_replicas_total_commit_throught.init("eon", "replicas.commit(#/s)", COUNTER_TYPE_RATE, "app commit throughput for all replicas");
+    _counter_replicas_count.init("eon.replication", "replica#", COUNTER_TYPE_NUMBER, "# in replica_stub._replicas");
+    _counter_replicas_opening_count.init("eon.replication", "opening_replica#", COUNTER_TYPE_NUMBER, "# in replica_stub._opening_replicas");
+    _counter_replicas_closing_count.init("eon.replication", "closing_replica#", COUNTER_TYPE_NUMBER, "# in replica_stub._closing_replicas");
+    _counter_replicas_total_commit_throught.init("eon.replication", "replicas.commit(#/s)", COUNTER_TYPE_RATE, "app commit throughput for all replicas");
 
-    _counter_replicas_learning_failed_latency.init("eon", "replicas.learning.failed(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "learning time (failed)");
-    _counter_replicas_learning_success_latency.init("eon", "replicas.learning.success(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "learning time (success)");
-    _counter_replicas_learning_count.init("eon", "replicas.learnig(#)", COUNTER_TYPE_NUMBER, "total learning count");
-
-    _counter_replicas_2pc_latency.init("eon", "replicas.2pc(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "2pc time");
+    _counter_replicas_learning_failed_latency.init("eon.replication", "replicas.learning.failed(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "learning time (failed)");
+    _counter_replicas_learning_success_latency.init("eon.replication", "replicas.learning.success(ns)", COUNTER_TYPE_NUMBER_PERCENTILES, "learning time (success)");
+    _counter_replicas_learning_count.init("eon.replication", "replicas.learnig(#)", COUNTER_TYPE_NUMBER, "total learning count");
 }
 
 void replica_stub::initialize(bool clear/* = false*/)

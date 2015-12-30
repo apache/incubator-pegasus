@@ -78,7 +78,11 @@ namespace dsn {
                 uint64_t task_id = static_cast<int>(::dsn::utils::get_current_tid());
                 _val[task_id % DIVIDE_CONTAINER].fetch_add(val, std::memory_order_consume);
             }
-            virtual void   set(uint64_t val) { dassert(false, "invalid execution flow"); }
+            virtual void   set(uint64_t val)
+            {
+                uint64_t task_id = static_cast<int>(::dsn::utils::get_current_tid());
+                _val[task_id % DIVIDE_CONTAINER] = val;
+            }
             virtual double get_value()
             {
                 double val = 0;
@@ -212,6 +216,36 @@ namespace dsn {
                     return 0.0;
                 }
                 return (double)_results[type];
+            }
+
+            virtual int get_latest_samples(int required_sample_count, /*out*/ samples_t& samples) const override
+            {
+                dassert(required_sample_count <= MAX_QUEUE_LENGTH, "");
+
+                int count = _tail;
+                int return_count = count >= required_sample_count ? required_sample_count : count;
+
+                samples.clear();
+                int end_index = (count + MAX_QUEUE_LENGTH - 1) % MAX_QUEUE_LENGTH;
+                int start_index = (end_index + MAX_QUEUE_LENGTH - return_count) % MAX_QUEUE_LENGTH;
+
+                if (end_index >= start_index)
+                {
+                    samples.push_back(std::make_pair((uint64_t*)_samples + start_index, return_count));
+                }
+                else
+                {
+                    samples.push_back(std::make_pair((uint64_t*)_samples + start_index, MAX_QUEUE_LENGTH - start_index));
+                    samples.push_back(std::make_pair((uint64_t*)_samples, return_count - (MAX_QUEUE_LENGTH - start_index)));
+                }
+
+                return return_count;
+            }
+
+            virtual uint64_t get_latest_sample() const override
+            {
+                int idx = (_tail + MAX_QUEUE_LENGTH - 1) % MAX_QUEUE_LENGTH;
+                return _samples[idx];
             }
 
         private:

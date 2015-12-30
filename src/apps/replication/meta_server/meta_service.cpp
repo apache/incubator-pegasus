@@ -166,7 +166,7 @@ void meta_service::stop()
     }
 }
 
-void meta_service::on_load_balance_start()
+void meta_service::start_load_balance()
 {
     dassert(_balancer_timer == nullptr, "");
 
@@ -174,7 +174,7 @@ void meta_service::on_load_balance_start()
     _balancer_timer = tasking::enqueue(LPC_LBM_RUN, this, &meta_service::on_load_balance_timer, 
         0,
         1,
-        10000
+        _opts.lb_interval_ms
         );
 
     _started = true;

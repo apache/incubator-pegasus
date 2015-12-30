@@ -58,6 +58,10 @@ replica::replica(replica_stub* stub, global_partition_id gpid, const char* app_t
     _options = &stub->options();
     init_state();
     _config.gpid = gpid;
+
+    std::stringstream ss;
+    ss << _name << ".2pc.latency(ns)";
+    _counter_commit_latency.init("eon.replication", ss.str().c_str(), COUNTER_TYPE_NUMBER_PERCENTILES, "commit latency (from mutation create to commit)");
 }
 
 void replica::json_state(std::stringstream& out) const
@@ -283,6 +287,8 @@ void replica::execute_mutation(mutation_ptr& mu)
     }
     
     ddebug("TwoPhaseCommit, %s: mutation %s committed, err = %s", name(), mu->name(), err.to_string());
+
+    _counter_commit_latency.set(dsn_now_ns() - mu->create_ts_ns());
 
     if (err != ERR_OK)
     {

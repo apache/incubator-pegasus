@@ -156,7 +156,7 @@ echo "##########################################################################
 ##############################################
 if [ -z "$TEST_MODULE" ]
 then
-    TEST_MODULE="dsn.core.tests dsn.tests dsn.replication.simple_kv"
+    TEST_MODULE="dsn.core.tests,dsn.tests,dsn.replication.simple_kv"
 fi
 
 echo "TEST_MODULE=$TEST_MODULE"
@@ -168,13 +168,13 @@ then
     rm -rf $GCOV_TMP &>/dev/null
     mkdir -p $GCOV_TMP
     lcov -q -d $BUILD_DIR -z
-    lcov -q -d $BUILD_DIR -b $ROOT --no-external --initial -c -q -o $GCOV_TMP/initial.info
+    lcov -q -d $BUILD_DIR -b $ROOT --no-external --initial -c -o $GCOV_TMP/initial.info
     if [ $? -ne 0 ]
     then
         echo "ERROR: lcov init failed, maybe need to run again with --clear option"
         exit -1
     fi
-    lcov -q -e $GCOV_TMP/initial.info $GCOV_PATTERN -q -o $GCOV_TMP/initial.extract.info
+    lcov -q -e $GCOV_TMP/initial.info $GCOV_PATTERN -o $GCOV_TMP/initial.extract.info
     if [ $? -ne 0 ]
     then
         echo "ERROR: lcov init extract failed"
@@ -182,7 +182,7 @@ then
     fi
 fi
 
-for MODULE in $TEST_MODULE; do
+for MODULE in `echo $TEST_MODULE | sed 's/,/ /g'`; do
     echo "====================== run $MODULE =========================="
     cd $BUILD_DIR/bin/$MODULE
     ./run.sh
@@ -197,13 +197,13 @@ if [ "$ENABLE_GCOV" == "YES" ]
 then
     echo "Generating gcov report..."
     cd $ROOT
-    lcov -q -d $BUILD_DIR -b $ROOT --no-external -c -q -o $GCOV_TMP/gcov.info
+    lcov -q -d $BUILD_DIR -b $ROOT --no-external -c -o $GCOV_TMP/gcov.info
     if [ $? -ne 0 ]
     then
         echo "ERROR: lcov generate failed"
         exit -1
     fi
-    lcov -q -e $GCOV_TMP/gcov.info $GCOV_PATTERN -q -o $GCOV_TMP/gcov.extract.info
+    lcov -q -e $GCOV_TMP/gcov.info $GCOV_PATTERN -o $GCOV_TMP/gcov.extract.info
     if [ $? -ne 0 ]
     then
         echo "ERROR: lcov extract failed"

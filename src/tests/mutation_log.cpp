@@ -248,11 +248,11 @@ TEST(replication, log_file)
     ASSERT_EQ(lf->start_offset() + sz, lf->end_offset());
 
     // read data
-    lf->crc32() = 0;
+    lf->reset_stream();
     for (int i = 0; i < 100; i++)
     {
         blob bb;
-        auto err = lf->read_next_log_block(offset - lf->start_offset(), bb);
+        auto err = lf->read_next_log_block(bb);
         ASSERT_EQ(ERR_OK, err);
 
         binary_reader reader(bb);
@@ -274,7 +274,7 @@ TEST(replication, log_file)
     ASSERT_TRUE(offset == lf->end_offset());
 
     blob bb;
-    err = lf->read_next_log_block(offset - lf->start_offset(), bb);
+    err = lf->read_next_log_block(bb);
     ASSERT_TRUE(err == ERR_HANDLE_EOF);
 
     lf = nullptr;

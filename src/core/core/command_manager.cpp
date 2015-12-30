@@ -193,7 +193,10 @@ namespace dsn {
             if (cmd != nullptr)
             {
                 auto it = _handlers.find(cmd);
-                _handlers.erase(it);
+                if (it != _handlers.end())
+                {
+                    _handlers.erase(it);
+                }
             }
         }
         delete c;

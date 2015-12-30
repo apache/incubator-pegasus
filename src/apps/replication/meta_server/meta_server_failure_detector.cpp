@@ -228,7 +228,7 @@ void meta_server_failure_detector::sync_node_state_and_start_service()
     }
 
     //now nodes in server_state and in fd are in consistent state
-    _svc->on_load_balance_start();
+    _svc->start_load_balance();
 }
 
 void meta_server_failure_detector::set_primary(rpc_address primary)

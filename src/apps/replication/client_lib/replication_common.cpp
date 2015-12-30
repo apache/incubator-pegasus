@@ -75,9 +75,11 @@ replication_options::replication_options()
     log_file_size_mb = 32;
     log_shared_batch_buffer_kb = 0;
     log_private_batch_buffer_kb = 4;
-    
-    config_sync_interval_ms = 30000;
+
     config_sync_disabled = false;
+    config_sync_interval_ms = 30000;
+
+    lb_interval_ms = 10000;
 }
 
 replication_options::~replication_options()
@@ -274,6 +276,13 @@ void replication_options::initialize()
         "config_sync_interval_ms", 
         config_sync_interval_ms,
         "every this period(ms) the replica syncs replica configuration with the meta server"
+        );
+
+    lb_interval_ms =
+        (int)dsn_config_get_value_uint64("replication",
+        "lb_interval_ms",
+        lb_interval_ms,
+        "every this period(ms) the meta server will do load balance"
         );
 
     read_meta_servers();
