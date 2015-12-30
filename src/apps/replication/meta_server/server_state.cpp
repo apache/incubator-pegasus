@@ -180,6 +180,9 @@ void unmarshall_json(const blob& buf, app_state& app)
     pc.gpid.app_id = app.app_id;
     pc.last_committed_decree = 0;
     pc.max_replica_count = 3;
+    pc.primary.set_invalid();
+    pc.secondaries.clear();
+    pc.last_drops.clear();
 
     app.partitions.assign(app.partition_count, pc);
     for (unsigned int i=0; i!=app.partition_count; ++i)
@@ -882,6 +885,9 @@ void server_state::create_app(dsn_message_t msg)
             pc.secondaries.clear();
 
             app.partitions.resize(app.partition_count, pc);
+            for (int i=0; i!=app.partitions.size(); ++i)
+                app.partitions[i].gpid.pidx = i;
+
             app.status = app_status::creating;
         }
     }
