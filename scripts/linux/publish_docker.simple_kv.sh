@@ -10,7 +10,11 @@ echo $applist > $t_dir/applist
 
 cp $b_dir/bin/dsn.replication.simple_kv/dsn.replication.simple_kv $t_dir/simple_kv
 cp $scripts_dir/deploy/configtool $t_dir/
-cp $DSN_ROOT/lib/libdsn.core.so $t_dir/ 
+cp $DSN_ROOT/lib/libdsn.core.so $t_dir/
+cp $scripts_dir/deploy/genrcyaml.sh $t_dir
+cp $scripts_dir/deploy/gensvcyaml.sh $t_dir
+cp $scripts_dir/deploy/rdsn-rc.yaml.in $t_dir
+cp $scripts_dir/deploy/rdsn-service.yaml.in $t_dir
 
 if [ ! -f $t_dir/config.ini ];then
     cp $b_dir/bin/dsn.replication.simple_kv/config.ini $t_dir/
