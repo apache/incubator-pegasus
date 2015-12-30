@@ -194,6 +194,7 @@ void unmarshall_json(const blob& buf, partition_configuration& pc)
     rapidjson::Document doc;
     std::string input(buf.data(), buf.length());
 
+    dinfo("partition config json: %s", input.c_str());
     if ( input.empty() || doc.Parse(input.c_str()).HasParseError())
         return;
 
@@ -519,6 +520,7 @@ error_code server_state::sync_apps_from_remote_storage()
                                             unmarshall_json(value, pc);
                                             zauto_write_lock l(_lock);
                                             _apps[app_id - 1].partitions[i] = pc;
+                                            dassert(pc.gpid.app_id == app_id && pc.gpid.pidx == i, "invalid partition config");
                                         }
                                         else
                                         {
@@ -568,7 +570,6 @@ error_code server_state::sync_apps_from_remote_storage()
 
                 if (ps.primary.is_invalid() == false)
                 {
-                    dassert(_nodes.find(ps.primary)==_nodes.end(), "%s shouldn't in nodes map", ps.primary.to_string());
                     _nodes[ps.primary].primaries.insert(ps.gpid);
                     _nodes[ps.primary].partitions.insert(ps.gpid);
                 }
@@ -576,7 +577,6 @@ error_code server_state::sync_apps_from_remote_storage()
                 for (auto& ep : ps.secondaries)
                 {
                     dassert(ep.is_invalid() == false, "");
-                    dassert(_nodes.find(ep) == _nodes.end(), "%s shouldn't in nodes map", ep.to_string());
                     _nodes[ep].partitions.insert(ps.gpid);
                 }
             }
