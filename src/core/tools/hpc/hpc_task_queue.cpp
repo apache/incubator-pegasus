@@ -60,13 +60,13 @@ namespace dsn
             _cond.notify_one();
         }
 
-        task* hpc_task_queue::dequeue()
+        task* hpc_task_queue::dequeue(int best_batch_size)
         {
             task* t;
             
             _lock.lock();
             _cond.wait(_lock, [=]{ return !_tasks.is_empty(); });
-            t = _tasks.pop_all();
+            t = _tasks.pop_batch(best_batch_size);
             _lock.unlock();
 
             return t;

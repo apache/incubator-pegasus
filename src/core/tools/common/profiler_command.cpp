@@ -412,12 +412,12 @@ namespace dsn {
                             for (auto& s : samples)
                             {
                                 dassert(copy_index + s.second < (int)sorted_samples.size(),
-                                    "return of get_latest_samples() is inconsisten with what is get in samples");
+                                    "return of get_latest_samples() is inconsistent with what is get in samples");
 
                                 memcpy((void*)&sorted_samples[copy_index], (const void*)s.first, s.second * sizeof(uint64_t));
                                 copy_index += s.second;
                             }
-                            dassert(copy_index == sample_count, "return of get_latest_samples() is inconsisten with what is get in samples");
+                            dassert(copy_index == sample_count, "return of get_latest_samples() is inconsistent with what is get in samples");
 
                             std::sort(sorted_samples.begin(), sorted_samples.end());
 

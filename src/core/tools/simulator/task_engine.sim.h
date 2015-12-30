@@ -60,7 +60,7 @@ public:
     sim_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
 
     virtual void     enqueue(task* task);
-    virtual task*    dequeue();
+    virtual task*    dequeue(int best_batch_size);
 
 private:
     std::map<uint32_t, task*> _tasks;

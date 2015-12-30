@@ -47,7 +47,7 @@ namespace dsn {
             simple_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
 
             virtual void     enqueue(task* task);
-            virtual task*    dequeue();
+            virtual task*    dequeue(int best_batch_size);
 
         private:
             typedef utils::blocking_priority_queue<task*, TASK_PRIORITY_COUNT> tqueue;

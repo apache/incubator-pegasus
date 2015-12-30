@@ -59,11 +59,15 @@ public:
     ~task_queue() {}
     
     virtual void     enqueue(task* task) = 0;
-    virtual task*    dequeue() = 0;
+
+    // dequeue may return more than 1 tasks, but there is a configured
+    // best batch size for each worker so that load among workers
+    // are balanced
+    virtual task*    dequeue(int best_batch_size) = 0;
     
     int               approx_count() const { return _queue_length.load(std::memory_order_relaxed); }
-    void              decrease_count() { _queue_length.fetch_sub(1, std::memory_order_relaxed); }
-    void              increase_count() { _queue_length.fetch_add(1, std::memory_order_relaxed); }
+    void              decrease_count(int count = 1) { _queue_length.fetch_sub(count, std::memory_order_relaxed); }
+    void              increase_count(int count = 1) { _queue_length.fetch_add(count, std::memory_order_relaxed); }
     const std::string & get_name() { return _name; }    
     task_worker_pool* pool() const { return _pool; }
     bool              is_shared() const { return _worker_count > 1; }

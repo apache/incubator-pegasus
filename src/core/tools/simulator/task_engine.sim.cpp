@@ -72,7 +72,8 @@ void sim_task_queue::enqueue(task* t)
     }
 }
 
-task* sim_task_queue::dequeue()
+// we always return 1 or 0 task in simulator 
+task* sim_task_queue::dequeue(int best_batch_size)
 {
     scheduler::instance().wait_schedule(false);
 

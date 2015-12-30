@@ -249,7 +249,7 @@ namespace dsn
             }
         }
 
-        task* io_looper_task_queue::dequeue()
+        task* io_looper_task_queue::dequeue(int best_batch_size)
         {
             dassert(false, "never execute here ...");
             return nullptr;

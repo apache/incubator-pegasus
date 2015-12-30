@@ -77,6 +77,7 @@ task_worker::task_worker(task_worker_pool* pool, task_queue* q, int index, task_
     _is_running = false;
 
     _thread = nullptr;
+    _processed_task_count = 0;
 }
 
 task_worker::~task_worker()
@@ -325,19 +326,23 @@ void task_worker::run_internal()
 void task_worker::loop()
 {
     task_queue* q = queue();
+    int dequeue_size = pool_spec().dequeue_batch_size;
 
     //try {
         while (_is_running)
         {
-            task* task = q->dequeue(), *next;
+            task* task = q->dequeue(dequeue_size), *next;
+            int count = 0;
             while (task != nullptr)
-            {
-                q->decrease_count();
+            {                
                 next = task->next;
                 task->next = nullptr;
-                task->exec_internal();
+                task->exec_internal();                
                 task = next;
             }
+
+            q->decrease_count(count);
+            _processed_task_count += count;
         }
     /*}
     catch (std::exception& ex)
