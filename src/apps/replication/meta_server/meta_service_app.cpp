@@ -41,6 +41,7 @@
 # include "../zookeeper/meta_state_service_zookeeper.h"
 # include "../zookeeper/distributed_lock_service_zookeeper.h"
 # include <dsn/internal/factory_store.h>
+# include "simple_stateful_load_balancer.h"
 
 namespace dsn {
     namespace service {
@@ -59,6 +60,16 @@ namespace dsn {
             ::dsn::dist::meta_state_service::factory f)
         {
             return dsn::utils::factory_store< ::dsn::dist::meta_state_service>::register_factory(
+                name,
+                f,
+                PROVIDER_TYPE_MAIN);
+        }
+
+        static bool register_component_provider(
+            const char* name,
+            ::dsn::dist::server_load_balancer::factory f)
+        {
+            return dsn::utils::factory_store< ::dsn::dist::server_load_balancer>::register_factory(
                 name,
                 f,
                 PROVIDER_TYPE_MAIN);
@@ -87,6 +98,11 @@ namespace dsn {
             register_component_provider(
                 "meta_state_service_zookeeper",
                 dsn::dist::meta_state_service::create<dsn::dist::meta_state_service_zookeeper>
+                );
+
+            register_component_provider(
+                "simple_stateful_load_balancer",
+                dsn::dist::server_load_balancer::create<simple_stateful_load_balancer>
                 );
 
             /////////////////////////////////////////////////////

@@ -75,7 +75,7 @@ namespace dsn {
                 dsn::service::zauto_lock l(_lock);
                 _store[pr.key] = pr.value;
 
-                ddebug("=== on_exec_write:decree=%" PRId64 ",key=%s,value=%s\n", last_committed_decree(), pr.key.c_str(), pr.value.c_str());
+                ddebug("=== on_exec_write:decree=%" PRId64 ",key=%s,value=%s", last_committed_decree(), pr.key.c_str(), pr.value.c_str());
                 reply(0);
             }
 
@@ -89,7 +89,7 @@ namespace dsn {
                 else
                     _store[pr.key] = pr.value;
 
-                ddebug("=== on_exec_append:decree=%" PRId64 ",key=%s,value=%s\n", last_committed_decree(), pr.key.c_str(), pr.value.c_str());
+                ddebug("=== on_exec_append:decree=%" PRId64 ",key=%s,value=%s", last_committed_decree(), pr.key.c_str(), pr.value.c_str());
                 reply(0);
             }
 

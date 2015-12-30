@@ -26,48 +26,36 @@
 
 /*
  * Description:
- *     What is this file about?
+ *     base implementation of the server load balancer which defines the scheduling
+ *     policy of how to place the partition replica to the nodes
  *
  * Revision history:
- *     xxxx-xx-xx, author, first version
+ *     2015-12-29, @imzhenyu (Zhenyu Guo), first draft
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#pragma once
+# include "server_load_balancer.h"
 
-#include "server_state.h"
-
-using namespace dsn;
-using namespace dsn::service;
-using namespace dsn::replication;
-
-class load_balancer : public serverlet<load_balancer>
+namespace dsn
 {
-public:
-    // switchs for replication test
-    static bool s_disable_lb;
-    static bool s_lb_for_test;
+    namespace dist
+    {
 
-public:
-    load_balancer(server_state* state);
-    ~load_balancer();
+        bool server_load_balancer::s_lb_for_test = false;
+        bool server_load_balancer::s_disable_lb = false;
 
-    void run();
-    void run(global_partition_id gpid);
 
-    // this method is for testing
-    void explictly_send_proposal(global_partition_id gpid, rpc_address receiver, config_type type, rpc_address node);
+        // meta server => partition server
+        void server_load_balancer::send_proposal(::dsn::rpc_address node, const configuration_update_request& proposal)
+        {
+            dinfo("send proposal %s of %s, current ballot = %" PRId64,
+                enum_to_string(proposal.type),
+                proposal.node.to_string(),
+                proposal.config.ballot
+                );
 
-private:
-    // meta server => partition server
-    void send_proposal(::dsn::rpc_address node, const configuration_update_request& proposal);
-    void query_decree(std::shared_ptr<query_replica_decree_request> query);
-    void on_query_decree_ack(error_code err, std::shared_ptr<query_replica_decree_request>& query, std::shared_ptr<query_replica_decree_response>& resp);
-    
-    void run_lb(partition_configuration& pc);
-    ::dsn::rpc_address find_minimal_load_machine(bool primaryOnly);
+            rpc::call_one_way_typed(node, RPC_CONFIG_PROPOSAL, proposal, gpid_to_hash(proposal.config.gpid));
+        }
 
-private:
-    server_state *_state;
-};
-
+    }
+}
