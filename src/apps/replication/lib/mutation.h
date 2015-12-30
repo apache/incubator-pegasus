@@ -40,6 +40,7 @@
 # include <list>
 # include <atomic>
 # include <dsn/internal/link.h>
+# include <dsn/cpp/perf_counter_.h>
 
 #pragma warning(disable: 4201)
 
@@ -62,6 +63,7 @@ public:
     ::dsn::task_ptr& log_task() { return _log_task; }
     node_tasks& remote_tasks() { return _prepare_or_commit_tasks; }
     bool is_prepare_close_to_timeout(int gap_ms, int timeout_ms) { return dsn_now_ms() + gap_ms >= _prepare_ts_ms + timeout_ms; }
+    uint64_t create_ts_ns() const { return _create_ts_ns; }
 
     // state change
     void set_id(ballot b, decree c);
@@ -116,6 +118,7 @@ private:
     dsn_message_t   _prepare_request;
     char            _name[60]; // app_id.pidx.ballot.decree
     int             _appro_data_bytes;
+    uint64_t        _create_ts_ns; // for profiling
     uint64_t        _tid; // trace id, unique in process
     static std::atomic<uint64_t> s_tid;
 };
@@ -123,17 +126,7 @@ private:
 class mutation_queue
 {
 public:
-    mutation_queue(global_partition_id gpid, int max_concurrent_op = 2, bool batch_write_disabled = false)
-        : _max_concurrent_op(max_concurrent_op), _batch_write_disabled(batch_write_disabled)
-    {
-        _current_op_count = 0;
-        _pending_mutation = nullptr;
-        dassert(gpid.app_id != 0, "invalid gpid");
-        _pcount = dsn_task_queue_virtual_length_ptr(
-            RPC_PREPARE,
-            gpid_to_hash(gpid)
-            );
-    }
+    mutation_queue(global_partition_id gpid, int max_concurrent_op = 2, bool batch_write_disabled = false);
 
     ~mutation_queue()
     {
@@ -169,14 +162,16 @@ private:
         _max_concurrent_op = max_c;
     }
 
-private:
-    int _current_op_count;
-    int _max_concurrent_op;
+private:    
+    int  _current_op_count;
+    int  _max_concurrent_op;
     bool _batch_write_disabled;
     
     volatile int*   _pcount;
     mutation_ptr    _pending_mutation;
     slist<mutation> _hdr;
+
+    perf_counter_  _current_op_counter;
 };
 
 // ---------------------- inline implementation ----------------------------

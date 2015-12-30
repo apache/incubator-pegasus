@@ -58,7 +58,7 @@ namespace dsn {
             virtual void   increment() { _val++; }
             virtual void   decrement() { _val--; }
             virtual void   add(uint64_t val) { _val += val; }
-            virtual void   set(uint64_t val) { dassert(false, "invalid execution flow"); }
+            virtual void   set(uint64_t val) { _val = val; }
             virtual double get_value() { return static_cast<double>(_val.load()); }
             virtual double get_percentile(dsn_perf_counter_percentile_type_t type) { dassert(false, "invalid execution flow"); return 0.0; }
 
@@ -154,13 +154,31 @@ namespace dsn {
                 return (double)_results[type];
             }
 
-            virtual uint64_t* get_samples(/*out*/ int& sample_count) const override 
+            virtual int get_latest_samples(int required_sample_count, /*out*/ samples_t& samples) const override
             { 
-                sample_count = static_cast<int>(sizeof(_samples) / sizeof(uint64_t));
-                return (uint64_t*)(_samples);
+                dassert(required_sample_count <= MAX_QUEUE_LENGTH, "");
+
+                int count = _tail.load();
+                int return_count = count >= required_sample_count ? required_sample_count : count;
+
+                samples.clear();
+                int end_index = (count + MAX_QUEUE_LENGTH - 1) % MAX_QUEUE_LENGTH;
+                int start_index = (end_index + MAX_QUEUE_LENGTH - return_count) % MAX_QUEUE_LENGTH;
+
+                if (end_index >= start_index)
+                {
+                    samples.push_back(std::make_pair((uint64_t*)_samples + start_index, return_count));
+                }
+                else
+                {
+                    samples.push_back(std::make_pair((uint64_t*)_samples + start_index, MAX_QUEUE_LENGTH - start_index));
+                    samples.push_back(std::make_pair((uint64_t*)_samples, return_count - (MAX_QUEUE_LENGTH - start_index)));
+                }
+
+                return return_count;
             }
 
-            virtual uint64_t get_current_sample() const override
+            virtual uint64_t get_latest_sample() const override
             {
                 int idx = (_tail + MAX_QUEUE_LENGTH - 1) % MAX_QUEUE_LENGTH;
                 return _samples[idx];

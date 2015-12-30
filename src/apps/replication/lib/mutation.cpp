@@ -50,6 +50,7 @@ mutation::mutation()
     _prepare_request = nullptr;
     strcpy(_name, "0.0.0.0");
     _appro_data_bytes = sizeof(mutation_header);
+    _create_ts_ns = dsn_now_ns();
     _tid = ++s_tid;
 }
 
@@ -72,6 +73,8 @@ void mutation::copy_from(mutation_ptr& old)
     data.updates = old->data.updates;
     client_requests = old->client_requests;
     _appro_data_bytes = old->_appro_data_bytes;
+    _create_ts_ns = old->_create_ts_ns;
+
     for (auto& r : client_requests)
     {
         if (r.req)
@@ -216,6 +219,24 @@ void mutation::wait_log_task() const
     }
 }
 
+mutation_queue::mutation_queue(global_partition_id gpid, int max_concurrent_op /*= 2*/, bool batch_write_disabled /*= false*/)
+    : _max_concurrent_op(max_concurrent_op), _batch_write_disabled(batch_write_disabled)
+{
+    std::stringstream ss;
+    ss << gpid.app_id << "." << gpid.pidx << "." << "2pc#";
+
+    _current_op_counter.init("eon.replication", ss.str().c_str(), COUNTER_TYPE_NUMBER, "current running 2pc#");
+    _current_op_counter.set(0);
+    
+    _current_op_count = 0;
+    _pending_mutation = nullptr;
+    dassert(gpid.app_id != 0, "invalid gpid");
+    _pcount = dsn_task_queue_virtual_length_ptr(
+        RPC_PREPARE,
+        gpid_to_hash(gpid)
+        );
+}
+
 mutation_ptr mutation_queue::add_work(int code, dsn_message_t request, replica* r)
 {
     // batch and add to work queue
@@ -237,6 +258,7 @@ mutation_ptr mutation_queue::add_work(int code, dsn_message_t request, replica* 
         auto ret = _pending_mutation;
         _pending_mutation = nullptr;
         _current_op_count++;
+        _current_op_counter.increment();
         return ret;
     }
 
@@ -260,11 +282,13 @@ mutation_ptr mutation_queue::add_work(int code, dsn_message_t request, replica* 
         auto ret = _pending_mutation;
         _pending_mutation = nullptr;
         _current_op_count++;
+        _current_op_counter.increment();
         return ret;
     }
     else
     {
         _current_op_count++;
+        _current_op_counter.increment();
         return unlink_next_workload();
     }
 }
@@ -272,6 +296,7 @@ mutation_ptr mutation_queue::add_work(int code, dsn_message_t request, replica* 
 mutation_ptr mutation_queue::check_possible_work(int current_running_count)
 {
     _current_op_count = current_running_count;
+    _current_op_counter.set((uint64_t)current_running_count);
 
     if (_current_op_count >= _max_concurrent_op)
         return nullptr;
@@ -284,6 +309,7 @@ mutation_ptr mutation_queue::check_possible_work(int current_running_count)
             auto ret = _pending_mutation;
             _pending_mutation = nullptr;
             _current_op_count++;
+            _current_op_counter.increment();
             return ret;
         }
         else

@@ -238,6 +238,9 @@ private:
     secondary_context           _secondary_states;
     potential_secondary_context _potential_secondary_states;
     bool                        _inactive_is_transient; // upgrade to P/S is allowed only iff true
+
+    // perf counters
+    perf_counter_               _counter_commit_latency;
 };
 
 }} // namespace
