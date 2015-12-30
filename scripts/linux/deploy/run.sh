@@ -46,6 +46,6 @@ ${PROGRAM} ${CONFIG} ${ARGS} > ${DATA}/foo.out 2> ${DATA}/foo.err </dev/null
 if [ $? != 0 ];then
     while true;do
         echo "Welcome to Debug ......"
-        sleep 1
+        sleep 500
     done
 fi

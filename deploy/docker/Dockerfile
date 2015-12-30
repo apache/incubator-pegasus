@@ -24,6 +24,6 @@ ADD MonitorPack.tar.gz /home/rdsn/
 WORKDIR /home/rdsn
 RUN python setup.py install
 RUN pip install -r apps/rDSN.monitor/requirement.txt
+RUN ulimit -c unlimited
 
-USER rdsn
 ENV HOME /home/rdsn
