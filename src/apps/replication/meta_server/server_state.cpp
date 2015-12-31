@@ -762,7 +762,7 @@ void server_state::initialize_app(app_state& app, dsn_message_t msg)
     typedef dist::meta_state_service::transaction_entries TEntries;
 
     //we need to create entry for the root and for each partition
-    std::shared_ptr<TEntries> entries = _storage->new_entries(app.partition_count + 1);
+    std::shared_ptr<TEntries> entries = _storage->new_transaction_entries(app.partition_count + 1);
     std::string app_dir = get_app_path(app);
     blob value;
 
