@@ -36,6 +36,7 @@
 #include <dsn/dist/replication/replication.types.h>
 #include "client_ddl.h"
 #include <iostream>
+#include <unistd.h>
 
 using namespace dsn::replication;
 

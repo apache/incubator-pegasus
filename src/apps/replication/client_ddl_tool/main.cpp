@@ -51,6 +51,7 @@ int init_environment(char* exe, char* config_file)
 
     dsn_run(4, argv, false);
     dsn_mimic_app("empty_app", 1);
+    return 0;
 }
 
 int main(int argc, char** argv)
