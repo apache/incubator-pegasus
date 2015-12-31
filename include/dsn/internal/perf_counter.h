@@ -72,7 +72,7 @@ public:
 
 public:
     perf_counter(const char* app, const char *section, const char *name, dsn_perf_counter_type_t type, const char *dsptr) 
-        : _app(app), _name(name), _section(section), _dsptr(dsptr), _type(type)
+        : _app(app), _name(name), _section(section), _dsptr(dsptr), _type(type), _index(0)
     {
         build_full_name(app, section, name, _full_name);
     }
@@ -100,6 +100,7 @@ public:
     const char* name() const { return _name.c_str(); }    
     const char* dsptr() const { return _dsptr.c_str(); }
     dsn_perf_counter_type_t type() const { return _type; }
+    uint64_t index() const { return _index; } // index << 32 | version
 
 public:
     static void build_full_name(const char* app, const char* section, const char* name, /*out*/ std::string& counter_name)
@@ -116,6 +117,9 @@ private:
     std::string _name;        
     std::string _dsptr;
     dsn_perf_counter_type_t _type;
+
+    friend class perf_counters;
+    uint64_t    _index; // for quick query in perf_counters: index << 32 | version
 };
 
 } // end namespace
