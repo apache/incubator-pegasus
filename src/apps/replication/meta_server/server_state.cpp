@@ -912,7 +912,7 @@ void server_state::update_configuration_internal(const configuration_update_requ
         switch (request.type)
         {
         case CT_ASSIGN_PRIMARY:
-# ifdef _DEBUG
+# ifndef NDEBUG
             dassert(old.primary != request.node, "");
             dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end(), "");
 # endif
@@ -920,7 +920,7 @@ void server_state::update_configuration_internal(const configuration_update_requ
             node.primaries.insert(old.gpid);
             break; 
         case CT_UPGRADE_TO_PRIMARY:
-# ifdef _DEBUG
+# ifndef NDEBUG
             dassert(old.primary != request.node, "");
             dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) != old.secondaries.end(), "");
 # endif
@@ -931,7 +931,7 @@ void server_state::update_configuration_internal(const configuration_update_requ
             dassert(false, "invalid execution flow");
             break;
         case CT_DOWNGRADE_TO_SECONDARY:
-# ifdef _DEBUG
+# ifndef NDEBUG
             dassert(old.primary == request.node, "");
             dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end(), "");
 # endif
@@ -939,7 +939,7 @@ void server_state::update_configuration_internal(const configuration_update_requ
             break;
         case CT_DOWNGRADE_TO_INACTIVE:
         case CT_REMOVE:
-# ifdef _DEBUG
+# ifndef NDEBUG
             dassert(old.primary == request.node || 
                 std::find(old.secondaries.begin(), old.secondaries.end(), request.node) != old.secondaries.end(), "");
 # endif
@@ -950,7 +950,7 @@ void server_state::update_configuration_internal(const configuration_update_requ
             node.partitions.erase(old.gpid);            
             break;
         case CT_UPGRADE_TO_SECONDARY:
-# ifdef _DEBUG
+# ifndef NDEBUG
             dassert(old.primary != request.node, "");
             dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) == old.secondaries.end(), "");
 # endif
@@ -1002,7 +1002,7 @@ void server_state::update_configuration_internal(const configuration_update_requ
             );
     }
     
-#ifdef _DEBUG
+#ifndef NDEBUG
     check_consistency(request.config.gpid);
 #endif
 

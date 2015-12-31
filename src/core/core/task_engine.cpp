@@ -205,7 +205,7 @@ void task_worker_pool::get_runtime_info(const std::string& indent, const std::ve
     {
         if (q)
         {
-            ss << indent2 << q->get_name() << " now has " << q->approx_count() << " pending tasks" << std::endl;
+            ss << indent2 << q->get_name() << " now has " << q->count() << " pending tasks" << std::endl;
         }
     }
 
@@ -229,7 +229,7 @@ void task_worker_pool::get_queue_info(/*out*/ std::stringstream& ss)
                 first_flag = 1;
             else
                 ss << ",";
-            ss <<"\t\t{\"name\":\""<< q->get_name() << "\",\n\t\t\"num\":" << q->approx_count() << "}\n";
+            ss <<"\t\t{\"name\":\""<< q->get_name() << "\",\n\t\t\"num\":" << q->count() << "}\n";
         }
     }
     ss << "]\n";
