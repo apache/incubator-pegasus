@@ -30,9 +30,41 @@
  *
  * Revision history:
  *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
+ *     Dec., 2015, @shengofsun (Weijie Sun), make service::zlock preoteced, give the subClasses flexibility
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+/*
+ * Notes on the failure detector:
+ * 1. We mainly send beacon when checking the beacons. So in normal cases,
+ *    the beacon_interval_seconds is useless if beacon_interval_seconds < check_interval_seconds.
+ *    So you'd better set the beacon_interval_seconds larger than check_interval_seconds
+ *
+ * 2. Worker may disconnect from master in the period earlier that the lease_seconds
+ *    to ensure the perfect FD. In the worst case, workers may lease "check_interval_seconds"
+ *    earlier.
+ *    While on the master side, it may claim a worker disconnected longer than the grace_seconds, which
+ *    can also be "check_interval_seconds" later in the worst case.
+ *
+ * 3. In practice, your should set check_interval_seconds a small value for a fine-grained FD.
+ *    For client, you may set it 1 second as it usually connect to a small number of masters.
+ *    For master, you may set it 2 or 3 seconds.
+ *
+ * 4. the scale between beacon_interval and lease_periods is up to the rpc channel somewhat.
+ *    In tcp, the channel itself supports the "keepalive" so you don't need to send beacons frequently.
+ *    But in udp, you may want to try several times before the worker expires.
+ *    So in tcp, the beacon_interval/lease_periods could be 10/30. And in UDP, 4/30 is acceptable
+ *
+ * 5. The lease_periods must be less than the grace_periods to tolerant the
+ *    clock drift or delay by the OS scheduler.
+ *
+ * 6. Another factor have influence on the FD is the lease period in distributed lock and the
+ *    config_sync_interval. With zookeeper, the distributed lock's lease period depends on the timeout
+ *    value. We need it to be smaller than the worker's lease period to support master switching fluently.
+ *
+ * 7. All in one: (1) check_interval < beacon_interval
+ *                (2) dist_lock_timeout < lease_period < grace_period
+ */
 # pragma once
 
 # include <dsn/dist/failure_detector/fd.client.h>
