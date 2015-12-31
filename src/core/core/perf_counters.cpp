@@ -44,14 +44,14 @@ DSN_API dsn_handle_t dsn_perf_counter_create(const char* section, const char* na
 {
     auto cnode = dsn::task::get_current_node2();
     dassert(cnode != nullptr, "cannot get current service node!");
-    auto c = dsn::utils::perf_counters::instance().get_counter(cnode->name(), section, name, type, description, true);
+    auto c = dsn::perf_counters::instance().get_counter(cnode->name(), section, name, type, description, true);
     c->add_ref();
     return c.get();
 }
 DSN_API void dsn_perf_counter_remove(dsn_handle_t handle)
 {
     auto sptr = reinterpret_cast<dsn::perf_counter*>(handle);
-    if (dsn::utils::perf_counters::instance().remove_counter(sptr->full_name()))
+    if (dsn::perf_counters::instance().remove_counter(sptr->full_name()))
         sptr->release_ref();
     else
     {
@@ -85,10 +85,30 @@ DSN_API double dsn_perf_counter_get_percentile(dsn_handle_t handle, dsn_perf_cou
     return reinterpret_cast<dsn::perf_counter*>(handle)->get_percentile(type);
 }
 
-namespace dsn { namespace utils {
+namespace dsn {
     
 perf_counters::perf_counters(void)
 {
+    _max_counter_count = dsn_config_get_value_uint64(
+        "core",
+        "perf_counter_max_count",
+        10000,
+        "maximum number of performance counters"
+        );
+
+    dassert(_max_counter_count > 0 && _max_counter_count < 1000000,
+        "invalid given perf_counter_max_count value %" PRIu64, 
+        _max_counter_count
+        );
+    _quick_counters = new perf_counter*[_max_counter_count];
+
+    // index << 32 | version
+    // zero is reserved for invalid
+    for (uint64_t i = 1; i < _max_counter_count; i++)
+    {
+        _quick_counters_empty_slots.push((i << 32) | 0x0);
+    }
+
     ::dsn::register_command("counter.list", 
         "counter.list - get the list of all counters",
         "counter.list",
@@ -106,10 +126,23 @@ perf_counters::perf_counters(void)
         "counter.sample app-name*section-name*counter-name",
         &perf_counters::get_counter_sample
         );
+
+    ::dsn::register_command("counter.valuei",
+        "counter.value - get current value of a specific counter",
+        "counter.value counter-index",
+        &perf_counters::get_counter_value_i
+        );
+
+    ::dsn::register_command("counter.samplei",
+        "counter.sample - get latest sample of a specific counter",
+        "counter.sample counter-index",
+        &perf_counters::get_counter_sample_i
+        );
 }
 
 perf_counters::~perf_counters(void)
 {
+    delete[] _quick_counters;
 }
 
 perf_counter_ptr perf_counters::get_counter(const char* app, const char *section, const char *name, dsn_perf_counter_type_t flags, const char *dsptr, bool create_if_not_exist /*= false*/)
@@ -119,12 +152,25 @@ perf_counter_ptr perf_counters::get_counter(const char* app, const char *section
 
     if (create_if_not_exist)
     {
-        auto_write_lock l(_lock);
+        utils::auto_write_lock l(_lock);
 
         auto it = _counters.find(full_name);
         if (it == _counters.end())
         {
+            dassert(_quick_counters_empty_slots.size() > 0,
+                "no more slots for perf counters, please increase [core] perf_counter_max_count"
+                );
+
+            uint64_t idx = _quick_counters_empty_slots.front();
+            _quick_counters_empty_slots.pop();
+
+            // increase version 
+            idx++;
+
             perf_counter_ptr counter = _factory(app, section, name, flags, dsptr);
+            counter->_index = idx; // index << 32 | version
+
+            _quick_counters[idx >> 32] = counter.get();
             _counters.emplace(std::piecewise_construct, std::forward_as_tuple(full_name), std::forward_as_tuple(counter));
             return counter;
         }
@@ -139,7 +185,7 @@ perf_counter_ptr perf_counters::get_counter(const char* app, const char *section
     }
     else
     {
-        auto_read_lock l(_lock);
+        utils::auto_read_lock l(_lock);
 
         auto it = _counters.find(full_name);
         if (it == _counters.end())
@@ -151,7 +197,7 @@ perf_counter_ptr perf_counters::get_counter(const char* app, const char *section
 
 perf_counter_ptr perf_counters::get_counter(const char* full_name)
 {
-    auto_read_lock l(_lock);
+    utils::auto_read_lock l(_lock);
 
     auto it = _counters.find(full_name);
     if (it == _counters.end())
@@ -159,17 +205,40 @@ perf_counter_ptr perf_counters::get_counter(const char* full_name)
     else
         return it->second;
 }
+perf_counter_ptr perf_counters::get_counter(uint64_t index)
+{
+    utils::auto_read_lock l(_lock);
+
+    auto slot = (index >> 32);
+    if (slot >= _max_counter_count)
+        return nullptr;
+
+    if (_quick_counters[slot] && _quick_counters[slot]->index() == index)
+    {
+        return _quick_counters[slot];
+    }
+    else
+    {
+        return nullptr;
+    }
+}
 
 bool perf_counters::remove_counter(const char* full_name)
 {
     {
-        auto_write_lock l(_lock);
+        utils::auto_write_lock l(_lock);
 
         auto it = _counters.find(full_name);
         if (it == _counters.end())
             return false;
         else
         {
+            _quick_counters_empty_slots.push(it->second->index());
+            auto& c = _quick_counters[it->second->index() >> 32];
+            dassert(c == it->second.get(), 
+                "invalid perf counter pointer stored in quick access array");
+
+            c = nullptr;
             _counters.erase(it);
         }
     }
@@ -180,45 +249,53 @@ bool perf_counters::remove_counter(const char* full_name)
 
 void perf_counters::register_factory(perf_counter::factory factory)
 {
-    auto_write_lock l(_lock);
+    utils::auto_write_lock l(_lock);
     _factory = factory;
 }
 
 
 std::string perf_counters::list_counter(const std::vector<std::string>& args)
 {
-    return utils::perf_counters::instance().list_counter_internal(args);
+    return perf_counters::instance().list_counter_internal(args);
 }
+
+struct counter_info
+{
+    std::string name;
+    uint64_t    index;
+
+    DEFINE_JSON_SERIALIZATION(name, index)
+};
 
 std::string perf_counters::list_counter_internal(const std::vector<std::string>& args)
 {
-    // <app, <section, names[] > > counters
-    std::map<std::string, std::map< std::string, std::vector<std::string> > > counters;
-    std::map< std::string, std::vector<std::string> > empty_m;
-    std::vector<std::string> empty_v;
+    // <app, <section, counter_info[] > > counters
+    std::map<std::string, std::map< std::string, std::vector<counter_info> > > counters;
+    std::map< std::string, std::vector<counter_info> > empty_m;
+    std::vector<counter_info> empty_v;
 
-    std::map< std::string, std::vector<std::string> >* pp;
-    std::vector<std::string>* pv;
+    std::map< std::string, std::vector<counter_info> >* pp;
+    std::vector<counter_info>* pv;
 
     {
-        auto_read_lock l(_lock);
+        utils::auto_read_lock l(_lock);
         for (auto& c : _counters)
         {
             pp = &counters.insert(
-                std::map<std::string, std::map< std::string, std::vector<std::string> > >::value_type(
+                std::map<std::string, std::map< std::string, std::vector<counter_info> > >::value_type(
                 c.second->app(),
                 empty_m
                 )
                 ).first->second;
 
             pv = &pp->insert(
-                std::map< std::string, std::vector<std::string> >::value_type(
+                std::map< std::string, std::vector<counter_info> >::value_type(
                 c.second->section(),
                 empty_v
                 )
                 ).first->second;
 
-            pv->push_back(c.second->name());
+            pv->push_back({ c.second->name(), c.second->index() });
         }
     }
 
@@ -237,7 +314,7 @@ std::string perf_counters::get_counter_value(const std::vector<std::string>& arg
         return ss.str();
     }
 
-    utils::perf_counters& c = utils::perf_counters::instance();
+    perf_counters& c = perf_counters::instance();
     auto counter = c.get_counter(args[0].c_str());
 
     if (counter && counter->type() != COUNTER_TYPE_NUMBER_PERCENTILES)
@@ -259,7 +336,7 @@ std::string perf_counters::get_counter_sample(const std::vector<std::string>& ar
         return ss.str();
     }
 
-    utils::perf_counters& c = utils::perf_counters::instance();
+    perf_counters& c = perf_counters::instance();
     auto counter = c.get_counter(args[0].c_str());
 
     if (counter)
@@ -270,5 +347,53 @@ std::string perf_counters::get_counter_sample(const std::vector<std::string>& ar
     return ss.str();
 }
 
-} } // end namespace
+
+std::string perf_counters::get_counter_value_i(const std::vector<std::string>& args)
+{
+    std::stringstream ss;
+
+    if (args.size() < 1)
+    {
+        ss << 0;
+        return ss.str();
+    }
+
+    uint64_t idx = atoll(args[0].c_str());
+
+    perf_counters& c = perf_counters::instance();
+    auto counter = c.get_counter(idx);
+
+    if (counter && counter->type() != COUNTER_TYPE_NUMBER_PERCENTILES)
+        ss << counter->get_value();
+    else
+        ss << 0;
+
+    return ss.str();
+}
+
+
+std::string perf_counters::get_counter_sample_i(const std::vector<std::string>& args)
+{
+    std::stringstream ss;
+
+    if (args.size() < 1)
+    {
+        ss << 0;
+        return ss.str();
+    }
+
+    uint64_t idx = atoll(args[0].c_str());
+
+    perf_counters& c = perf_counters::instance();
+    auto counter = c.get_counter(idx);
+
+    if (counter)
+        ss << counter->get_latest_sample();
+    else
+        ss << 0;
+
+    return ss.str();
+}
+
+} // end namespace
 
