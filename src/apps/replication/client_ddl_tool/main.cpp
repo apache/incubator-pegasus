@@ -1,16 +1,5 @@
 #include <dsn/service_api_c.h>
 #include <dsn/ports.h>
-
-#include <dsn/tool/simulator.h>
-#include <dsn/tool/nativerun.h>
-#include <dsn/tool/fastrun.h>
-#include <dsn/toollet/tracer.h>
-#include <dsn/toollet/profiler.h>
-#include <dsn/toollet/fault_injector.h>
-
-#include <dsn/tool/providers.common.h>
-#include <dsn/tool/providers.hpc.h>
-
 #include <dsn/dist/replication/empty_app.h>
 #include <dsn/dist/replication/client_ddl.h>
 #include <iostream>
@@ -27,22 +16,14 @@ void usage(char* exe)
     exit(-1);
 }
 
+extern void dsn_core_init();
+
 int init_environment(char* exe, char* config_file)
 {
     // register all possible services
     dsn::register_app<dsn::client::empty_app>("empty_app");
 
-    // register all providers
-    dsn::tools::register_common_providers();
-    dsn::tools::register_hpc_providers();
-
-    // register all possible tools and toollets
-    dsn::tools::register_tool<dsn::tools::nativerun>("nativerun");
-    dsn::tools::register_tool<dsn::tools::fastrun>("fastrun");
-    dsn::tools::register_tool<dsn::tools::simulator>("simulator");
-    dsn::tools::register_toollet<dsn::tools::tracer>("tracer");
-    dsn::tools::register_toollet<dsn::tools::profiler>("profiler");
-    dsn::tools::register_toollet<dsn::tools::fault_injector>("fault_injector");
+    dsn_core_init();
 
     //use config file to run
     char arg1[] = "-app_list";
