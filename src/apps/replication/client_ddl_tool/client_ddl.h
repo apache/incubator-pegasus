@@ -32,8 +32,10 @@
  *     2015-12-30, xiaotz, first version
  */
 
+#include <cctype>
 #include <dsn/dist/replication.h>
 #include <dsn/dist/replication/replication.types.h>
+
 
 using namespace dsn::replication;
 
