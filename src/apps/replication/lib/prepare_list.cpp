@@ -122,32 +122,14 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
     //    return err;
      
     case PS_INACTIVE: // only possible during init  
-        err = ERR_OK;
         if (mu->data.header.last_committed_decree > max_decree())
         {
             reset(mu->data.header.last_committed_decree);
         }
         else if (mu->data.header.last_committed_decree > _last_committed_decree)
         {
-            for (decree d = last_committed_decree() + 1; d <= mu->data.header.last_committed_decree; d++)
-            {
-                _last_committed_decree++;   
-                if (count() == 0)
-                    break;
-                
-                if (d == min_decree())
-                {
-                    mutation_ptr mu2 = get_mutation_by_decree(d);
-                    pop_min();
-                    dassert(mu2 != nullptr, "");
-                    _committer(mu2);
-                }
-            }
-
-            dassert (_last_committed_decree == mu->data.header.last_committed_decree, "");
-            sanity_check();
+            commit(mu->data.header.last_committed_decree, COMMIT_TO_DECREE_HARD);
         }
-        
         err = mutation_cache::put(mu);
         dassert (err == ERR_OK, "");
         return err;
@@ -165,6 +147,8 @@ bool prepare_list::commit(decree d, commit_type ct)
 {
     if (d <= last_committed_decree())
         return false;
+
+    dinfo("commit to decree %" PRId64, d);
     
     switch (ct)
     {

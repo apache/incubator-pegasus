@@ -145,8 +145,9 @@ void replica::add_potential_secondary(configuration_update_request& proposal)
 {
     if (status() != PS_PRIMARY)
     {
+        dwarn("ignore add secondary proposal for invalid state, state = %s", enum_to_string(status()));
         return;
-    }   
+    }
 
     dassert (proposal.config.ballot == get_ballot(), "");
     dassert (proposal.config.gpid == _primary_states.membership.gpid, "");

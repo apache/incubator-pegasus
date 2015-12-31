@@ -220,6 +220,18 @@ bool skip_case_line::parse(const std::string& params)
     return true;
 }
 
+std::string exit_case_line::to_string() const
+{
+    std::ostringstream oss;
+    oss << name() << ":";
+    return oss.str();
+}
+
+bool exit_case_line::parse(const std::string& params)
+{
+    return true;
+}
+
 std::string state_case_line::to_string() const
 {
     std::ostringstream oss;
@@ -886,6 +898,7 @@ test_case::test_case() : _next(0), _null_loop_count(0)
 {
     register_creator<set_case_line>();
     register_creator<skip_case_line>();
+    register_creator<exit_case_line>();
     register_creator<state_case_line>();
     register_creator<config_case_line>();
     register_creator<wait_case_line>();
@@ -1014,6 +1027,12 @@ void test_case::forward()
         {
             set_case_line* scl = static_cast<set_case_line*>(cl);
             scl->apply_set();
+        }
+        else if (cl->name() == exit_case_line::NAME())
+        {
+            ddebug("=== on_case_exit");
+            g_done = true;
+            break;
         }
         else
         {

@@ -109,6 +109,16 @@ private:
     int _skipped;
 };
 
+// EXIT:
+class exit_case_line : public case_line
+{
+public:
+    static const char* NAME() { return "exit"; }
+    virtual std::string name() const { return NAME(); }
+    virtual std::string to_string() const;
+    virtual bool parse(const std::string& params);
+};
+
 class state_case_line : public case_line
 {
 public:

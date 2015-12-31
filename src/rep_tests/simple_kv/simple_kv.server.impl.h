@@ -46,6 +46,7 @@ namespace dsn {
                 virtual ::dsn::error_code open(bool create_new) override;
                 virtual ::dsn::error_code close(bool clear_state) override;
                 virtual ::dsn::error_code checkpoint() override;
+                virtual ::dsn::error_code checkpoint_async() override;
 
                 // helper routines to accelerate learning
                 virtual ::dsn::error_code get_checkpoint(decree start, const blob& learn_req, /*out*/ learn_state& state) override;

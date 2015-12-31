@@ -211,8 +211,8 @@ namespace dsn {
 
                 if (last_committed_decree() == last_durable_decree())
                 {
-                    ddebug("simple_kv_service_impl create checkpoint succeed, checkpoint already the latest, last_durable_decree = %" PRId64 "", _last_durable_decree.load());
-                    return ERR_OK;
+                    ddebug("simple_kv_service_impl no need to create checkpoint, checkpoint already the latest, last_durable_decree = %" PRId64 "", _last_durable_decree.load());
+                    return ERR_NO_NEED_OPERATE;
                 }
 
                 // TODO: should use async write instead
@@ -244,6 +244,11 @@ namespace dsn {
                 _last_durable_decree = last_committed_decree();
                 ddebug("simple_kv_service_impl create checkpoint succeed, last_durable_decree = %" PRId64 "", _last_durable_decree.load());
                 return ERR_OK;
+            }
+
+            ::dsn::error_code simple_kv_service_impl::checkpoint_async()
+            {
+                return checkpoint();
             }
 
             // helper routines to accelerate learning

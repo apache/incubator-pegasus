@@ -350,10 +350,10 @@ decree replica::last_prepared_decree() const
 
 void replica::close()
 {
-    if (nullptr != _check_timer)
+    if (nullptr != _checkpoint_timer)
     {
-        _check_timer->cancel(true);
-        _check_timer = nullptr;
+        _checkpoint_timer->cancel(true);
+        _checkpoint_timer = nullptr;
     }
 
     if (status() != PS_INACTIVE && status() != PS_ERROR)
