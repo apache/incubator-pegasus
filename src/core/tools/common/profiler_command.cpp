@@ -405,23 +405,30 @@ namespace dsn {
                             ss << "[\"" << name << name_suffix << "\"";
                             counterList << "\"" << name << name_suffix << "\",";
 
-                            int sample_count = 0;
-                            uint64_t* samples = s_spec_profilers[task_id].ptr[counter_type]->get_samples(sample_count);
-
-                            std::vector<uint64_t> sampleArr(samples, samples + sample_count);
-                            sampleArr.erase(std::remove(sampleArr.begin(), sampleArr.end(), 0), sampleArr.end());
-                            std::sort(sampleArr.begin(), sampleArr.end());
-
-                            if (sampleArr.size() < 1000)
+                            // get samples
+                            perf_counter::samples_t samples;
+                            int sample_count = 1000;
+                            sample_count = s_spec_profilers[task_id].ptr[counter_type]->get_latest_samples(sample_count, samples);
+                            
+                            // merge and sort
+                            std::vector<uint64_t> sorted_samples;
+                            sorted_samples.resize(sample_count); 
+                            
+                            int copy_index = 0;
+                            for (auto& s : samples)
                             {
-                                for (int l = 0; l < sampleArr.size(); l++)
-                                    ss << ", " << sampleArr[l];
+                                dassert(copy_index + s.second < (int)sorted_samples.size(),
+                                    "return of get_latest_samples() is inconsistent with what is get in samples");
+
+                                memcpy((void*)&sorted_samples[copy_index], (const void*)s.first, s.second * sizeof(uint64_t));
+                                copy_index += s.second;
                             }
-                            else
-                            {
-                                for (int l = 0; l < 1000; l++)
-                                    ss << ", " << sampleArr[l * sampleArr.size() / 1000];
-                            }
+                            dassert(copy_index == sample_count, "return of get_latest_samples() is inconsistent with what is get in samples");
+
+                            std::sort(sorted_samples.begin(), sorted_samples.end());
+
+                            for (int l = 0; l < sorted_samples.size(); l++)
+                                ss << ", " << sorted_samples[l];
 
                             ss << "],\n";
                         }
@@ -604,7 +611,7 @@ namespace dsn {
 
                             ss << "{\"name\":\"" << name << name_suffix << "\"";
 
-                            uint64_t sample = s_spec_profilers[task_id].ptr[counter_type]->get_current_sample();
+                            uint64_t sample = s_spec_profilers[task_id].ptr[counter_type]->get_latest_sample();
                             ss << ", \"value\":" << sample;
 
                             ss << "}\n";

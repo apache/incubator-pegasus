@@ -87,6 +87,8 @@ GTEST_API_ int main(int argc, char **argv)
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
+#ifndef ENABLE_GCOV
     dsn_exit(g_test_ret);
+#endif
     return g_test_ret;
 }

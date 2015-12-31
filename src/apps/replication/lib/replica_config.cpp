@@ -583,10 +583,13 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         switch (config.status)
         {
         case PS_PRIMARY:
+            {
             replay_prepare_list();
-            _primary_states.write_queue.check_possible_work(
+            mutation_ptr next = _primary_states.write_queue.check_possible_work(
                 static_cast<int>(_prepare_list->max_decree() - last_committed_decree())
                 );
+            if (next) init_prepare(next);
+            }
             break;
         case PS_INACTIVE:
             _primary_states.cleanup(old_ballot != config.ballot);
@@ -607,11 +610,14 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         switch (config.status)
         {
         case PS_PRIMARY:
+            {
             init_group_check();            
             replay_prepare_list();
-            _primary_states.write_queue.check_possible_work(
+            mutation_ptr next = _primary_states.write_queue.check_possible_work(
                 static_cast<int>(_prepare_list->max_decree() - last_committed_decree())
                 );
+            if (next) init_prepare(next);
+            }
             break;
         case PS_SECONDARY:
             break;
@@ -656,12 +662,15 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         switch (config.status)
         {
         case PS_PRIMARY:
+            {
             _inactive_is_transient = false;
             init_group_check();
             replay_prepare_list();
-            _primary_states.write_queue.check_possible_work(
+            mutation_ptr next = _primary_states.write_queue.check_possible_work(
                 static_cast<int>(_prepare_list->max_decree() - last_committed_decree())
                 );
+            if (next) init_prepare(next);
+            }
             break;
         case PS_SECONDARY:            
             _inactive_is_transient = false;
@@ -794,6 +803,8 @@ void replica::replay_prepare_list()
 
         if (old != nullptr)
         {
+            dinfo("copy mutation from mutation_tid=%" PRIu64 " to mutation_tid=%" PRIu64,
+                  old->tid(), mu->tid());
             mu->copy_from(old);
         }
         else
@@ -801,9 +812,10 @@ void replica::replay_prepare_list()
             mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);
 
             ddebug(
-                "%s: emit empty mutation %" PRId64 " when replay prepare list",
+                "%s: emit empty mutation %s with mutation_tid=%" PRIu64 " when replay prepare list",
                 name(),
-                decree
+                mu->name(),
+                mu->tid()
                 );
         }
 

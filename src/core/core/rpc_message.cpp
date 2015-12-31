@@ -114,6 +114,11 @@ DSN_API dsn_address_t dsn_msg_to_address(dsn_message_t msg)
     return ((::dsn::message_ex*)msg)->to_address.c_addr();
 }
 
+DSN_API uint64_t dsn_msg_rpc_id(dsn_message_t msg)
+{
+    return ((::dsn::message_ex*)msg)->header->rpc_id;
+}
+
 DSN_API void dsn_msg_set_options(
     dsn_message_t msg,
     dsn_msg_options_t *opts,
@@ -225,7 +230,7 @@ void message_ex::seal(bool fill_crc)
     }
     else
     {
-#ifdef _DEBUG
+#ifndef NDEBUG
         int i_max = (int)buffers.size() - 1;
         size_t len = 0;
         for (int i = 0; i <= i_max; i++)

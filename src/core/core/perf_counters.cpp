@@ -55,7 +55,7 @@ DSN_API void dsn_perf_counter_remove(dsn_handle_t handle)
         sptr->release_ref();
     else
     {
-        dwarn("cannot remove counter %s.%s as it is not found in our repo", sptr->section(), sptr->name());
+        dwarn("cannot remove counter %s as it is not found in our repo", sptr->full_name());
     }
 }
 
@@ -263,7 +263,7 @@ std::string perf_counters::get_counter_sample(const std::vector<std::string>& ar
     auto counter = c.get_counter(args[0].c_str());
 
     if (counter)
-        ss << counter->get_current_sample();
+        ss << counter->get_latest_sample();
     else
         ss << 0;
 

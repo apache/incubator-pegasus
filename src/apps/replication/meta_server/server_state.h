@@ -169,7 +169,7 @@ private:
         DEFINE_JSON_SERIALIZATION(is_alive, address, primaries, partitions);
     };
 
-    friend class load_balancer;
+    friend class simple_stateful_load_balancer;
     std::string                                         _cluster_root;
     mutable zrwlock_nr                                  _lock;
     std::unordered_map< ::dsn::rpc_address, node_state> _nodes;

@@ -72,7 +72,8 @@ void sim_task_queue::enqueue(task* t)
     }
 }
 
-task* sim_task_queue::dequeue()
+// we always return 1 or 0 task in simulator 
+task* sim_task_queue::dequeue(/*inout*/int& batch_size)
 {
     scheduler::instance().wait_schedule(false);
 
@@ -80,10 +81,12 @@ task* sim_task_queue::dequeue()
     {
         auto t = _tasks.begin()->second;
         _tasks.erase(_tasks.begin());
+        batch_size = 1;
         return t;
     }
     else
     {
+        batch_size = 0;
         return nullptr;
     }
 }

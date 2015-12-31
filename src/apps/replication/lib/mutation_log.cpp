@@ -76,7 +76,9 @@ void mutation_log::init_states()
     _global_end_offset = 0;
 
     // buffering
+    _is_writing = false;
     _issued_write.reset();
+    _issued_write_task = nullptr;
     _pending_write.reset();
     _pending_write_callbacks = nullptr;
     _pending_write_max_commit = 0;
@@ -230,24 +232,26 @@ void mutation_log::close()
 
 void mutation_log::flush()
 {
-    // make sure previous writes are done
-    if (!_issued_write.expired())
+    while (true)
     {
-        dsn_task_tracker_wait_all(tracker());
-    }
-
-    {
-        zauto_lock _(_lock);
-        if (_pending_write != nullptr)
+        if (_is_writing)
         {
+            // TODO(qinzuoyan): why need wait about 25ms?
+            dsn_task_tracker_wait_all(tracker());
+        }
+        else
+        {
+            zauto_lock _(_lock);
+            if (_is_writing)
+            {
+                continue;
+            }
+            if (_pending_write == nullptr)
+            {
+                break;
+            }
             write_pending_mutations();
         }
-    }
-
-    // make sure the latest flush writes are done
-    if (!_issued_write.expired())
-    {
-        dsn_task_tracker_wait_all(tracker());
     }
 }
 
@@ -324,14 +328,16 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
 {
     dassert(_pending_write != nullptr, "");
     dassert(_pending_write_callbacks != nullptr, "");
-    dassert(_issued_write.expired(), "");
+    dassert(!_is_writing, "");
 
     uint64_t start_offset = _global_end_offset - _pending_write->size();
     bool new_log_file = create_new_log_when_necessary
         && (_global_end_offset - _current_log_file->start_offset() >= _max_log_file_size_in_bytes)
         ;
 
-    task_ptr aio = _current_log_file->commit_log_block(
+    _is_writing = true;
+    _issued_write = _pending_write;
+    _issued_write_task = _current_log_file->commit_log_block(
         *_pending_write,
         start_offset,
         LPC_WRITE_REPLICATION_LOG_FLUSH,
@@ -347,19 +353,26 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
         -1
         );
 
-    if (aio == nullptr)
+    if (_issued_write_task == nullptr)
     {
-        internal_write_callback(ERR_FILE_OPERATION_FAILED,
-            0, _current_log_file, _pending_write, _pending_write_callbacks, _pending_write_max_commit);
+        tasking::enqueue(
+            LPC_WRITE_REPLICATION_LOG_FLUSH,
+            this,
+            std::bind(
+                &mutation_log::internal_write_callback, this,
+                ERR_FILE_OPERATION_FAILED,
+                0,
+                _current_log_file,
+                _pending_write,
+                _pending_write_callbacks,
+                _pending_write_max_commit)
+            );
         return ERR_FILE_OPERATION_FAILED;
     }
     else
     {
         dassert(_global_end_offset == _current_log_file->end_offset(), "");
     }
-
-    _issued_write = _pending_write;
-    _issued_write_task = aio;
 
     _pending_write = nullptr;
     _pending_write_callbacks = nullptr;
@@ -378,6 +391,7 @@ error_code mutation_log::write_pending_mutations(bool create_new_log_when_necess
     return ERR_OK;
 }
 
+// called in background thread
 void mutation_log::internal_write_callback(
     error_code err,
     size_t size,
@@ -387,6 +401,8 @@ void mutation_log::internal_write_callback(
     decree max_commit
     )
 {
+    dassert(_is_writing, "");
+
     auto hdr = (log_block_header*)block->front().data();
     dassert(hdr->magic == 0xdeadbeef, "header magic is changed: 0x%x", hdr->magic);
 
@@ -400,14 +416,19 @@ void mutation_log::internal_write_callback(
 
         if(_is_private)
         {
-            // update _private_max_commit_on_disk after writen into log file done
-            update_max_commit_on_disk(max_commit);
-
-            // TODO(qinzuoyan): why flush here?
+            // TODO(qinzuoyan): why flush private log but not flush shared log?
             // FIXME : the file could have been closed
             file->flush();
+
+            // update _private_max_commit_on_disk after writen into log file done
+            update_max_commit_on_disk(max_commit);
         }
     }
+
+    // here we use _is_writing instead of _issued_write.expired() to check writing done,
+    // because the following callbacks may run before "block" released, which may cause
+    // the next init_prepare() not starting the write.
+    _is_writing = false;
 
     for (auto& cb : *callbacks)
     {
@@ -429,8 +450,8 @@ void mutation_log::internal_write_callback(
         );
 
     ::dsn::blob bb;
-    log->crc32() = 0;
-    error_code err = log->read_next_log_block(0, bb);
+    log->reset_stream();
+    error_code err = log->read_next_log_block(bb);
     if (err != ERR_OK)
     {
         return err;
@@ -468,7 +489,7 @@ void mutation_log::internal_write_callback(
             end_offset += old_size - reader->get_remaining_size();
         }
 
-        err = log->read_next_log_block(end_offset - log->start_offset(), bb);
+        err = log->read_next_log_block(bb);
         if (err != ERR_OK)
         {
             // if an error occurs in an log mutation block, then the replay log is stopped
@@ -701,7 +722,7 @@ void mutation_log::check_valid_start_offset(global_partition_id gpid, int64_t va
     auto d = mu->data.header.decree;
     error_code err = ERR_OK;
 
-    dinfo("write replication log for mutation %s", mu->name());
+    dinfo("start append %s log for mutation %s", (_is_private ? "private" : "shared"), mu->name());
 
     zauto_lock l(_lock);
     dassert(_is_opened, "");
@@ -757,7 +778,7 @@ void mutation_log::check_valid_start_offset(global_partition_id gpid, int64_t va
     //
     // start to write
     //
-    if (_issued_write.expired()) 
+    if (!_is_writing)
     {
         if (_batch_buffer_bytes == 0)
         {
@@ -1278,8 +1299,150 @@ int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
 
     return deleted;
 }
+//log_file::file_streamer
+class log_file::file_streamer
+{
+public:
+    explicit file_streamer(dsn_handle_t fd, size_t file_offset) : _file_dispatched_bytes(file_offset), _file_handle(fd)
+    {
+        _current_buffer = _buffers + 0;
+        _next_buffer = _buffers + 1;
+        fill_buffers();
+    }
+    ~file_streamer()
+    {
+        _current_buffer->wait_ongoing_task().end_tracking();
+        _next_buffer->wait_ongoing_task().end_tracking();
+    }
+    //try to reset file_offset
+    void reset(size_t file_offset)
+    {
+        _current_buffer->wait_ongoing_task().end_tracking();
+        _next_buffer->wait_ongoing_task().end_tracking();
+        //fast path if we can just move the cursor
+        if (_current_buffer->_file_offset_of_buffer <= file_offset && _current_buffer->_file_offset_of_buffer + _current_buffer->_end > file_offset)
+        {
+            _current_buffer->_begin = file_offset - _current_buffer->_file_offset_of_buffer;
+        }
+        else
+        {
+            _current_buffer->_begin = _current_buffer->_end = _next_buffer->_begin = _next_buffer->_end = 0;
+            _file_dispatched_bytes = file_offset;
+        }
+        fill_buffers();
+    }
+    //possible error_code:
+    //  ERR_OK                      result would always size as expected
+    //  ERR_HANDLE_EOF              if there are not enough data in file. result would still be filled with possible data
+    //  ERR_FILE_OPERATION_FAILED   filesystem failure
+    error_code read_next(size_t size, /*out*/ blob& result)
+    {
+        binary_writer writer(size);
+#define TRY(x) do {auto _x = (x); if (_x != ERR_OK) { result = writer.get_current_buffer(); return _x; } } while(0)
+        TRY(_current_buffer->wait_ongoing_task());
+        if (size < _current_buffer->length())
+        {
+            result.assign(_current_buffer->_buffer.get(), _current_buffer->_begin, size);
+            _current_buffer->_begin += size;
+        }
+        else
+        {
+            _current_buffer->drain(writer);
+            //we can now assign result since writer must have allocated a buffer.
+            dassert(writer.total_size() != 0, "");
+            if (size > writer.total_size())
+            {
+                TRY(_next_buffer->wait_ongoing_task());
+                _next_buffer->consume(writer, std::min(size - writer.total_size(), _next_buffer->length()));
+                //We hope that this never happens, it would deteriorate performance
+                if (size > writer.total_size())
+                {
+                    auto task = file::read(_file_handle, writer.get_current_buffer().buffer().get() + writer.total_size(), size - writer.total_size(), _file_dispatched_bytes, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr);
+                    task->wait();
+                    writer.write_empty(task->io_size());
+                    _file_dispatched_bytes += task->io_size();
+                    TRY(task->error());
+                }
+            }
+            result = writer.get_current_buffer();
+        }
+        fill_buffers();
+        return ERR_OK;
+#undef TRY
+    }
+private:
+    void fill_buffers()
+    {
+        while (!_current_buffer->_have_ongoing_task && _current_buffer->empty())
+        {
+            _current_buffer->_begin = _current_buffer->_end = 0;
+            _current_buffer->_file_offset_of_buffer = _file_dispatched_bytes;
+            _current_buffer->_have_ongoing_task = true;
+            _current_buffer->_task = file::read(_file_handle, _current_buffer->_buffer.get(), block_size_bytes, _file_dispatched_bytes, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr);
+            _file_dispatched_bytes += block_size_bytes;
+            std::swap(_current_buffer, _next_buffer);
+        }
+    }
+
+    //buffer size, in bytes
+    static const size_t block_size_bytes = 1024 * 1024;
+    struct buffer_t
+    {
+        std::unique_ptr<char[]> _buffer;    //with block_size
+        size_t _begin, _end;                // [buffer[begin]..buffer[end]) contains unconsumed_data
+        size_t _file_offset_of_buffer;      //file offset projected to buffer[0]
+        bool _have_ongoing_task;
+        task_ptr _task;
+
+        buffer_t() : _buffer(new char[block_size_bytes]), _begin(0), _end(0), _have_ongoing_task(false), _file_offset_of_buffer(0) {}
+        size_t length() const
+        {
+            return _end - _begin;
+        }
+        bool empty() const
+        {
+            return length() == 0;
+        }
+        void consume(binary_writer& dest, size_t len)
+        {
+            dest.write(_buffer.get() + _begin, len);
+            _begin += len;
+        }
+        size_t drain(binary_writer& dest)
+        {
+            auto len = length();
+            consume(dest, len);
+            return len;
+        }
+        error_code wait_ongoing_task()
+        {
+            if (_have_ongoing_task)
+            {
+                _task->wait();
+                _have_ongoing_task = false;
+                _end += _task->io_size();
+                dassert(_end <= block_size_bytes, "invalid io_size.");
+                return _task->error();
+            }
+            else
+            {
+                return ERR_OK;
+            }
+        }
+    } _buffers[2];
+    buffer_t* _current_buffer, *_next_buffer;
+
+    //number of bytes we have issued read operations
+    size_t _file_dispatched_bytes;
+    dsn_handle_t _file_handle;
+};
+
 
 //------------------- log_file --------------------------
+log_file::~log_file()
+{
+    close();
+}
 /*static */log_file_ptr log_file::open_read(const char* path, /*out*/ error_code& err)
 {
     char splitters[] = { '\\', '/', 0 };
@@ -1339,8 +1502,9 @@ int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
     }
 
     auto lf = new log_file(path, hfile, index, start_offset, true);
+    lf->reset_stream();
     blob hdr_blob;
-    err = lf->read_next_log_block(0, hdr_blob);
+    err = lf->read_next_log_block(hdr_blob);
     if (err == ERR_INVALID_DATA || err == ERR_INCOMPLETE_DATA || err == ERR_HANDLE_EOF || err == ERR_FILE_OPERATION_FAILED)
     {
         std::string removed = std::string(path) + ".removed";
@@ -1429,6 +1593,9 @@ log_file::log_file(
 
 void log_file::close()
 {
+    //_stream implicitly refer to _handle so it needs to be cleaned up first.
+    //TODO: We need better abstraction to avoid those manual stuffs..
+    _stream.reset(nullptr);
     if (_handle)
     {
         error_code err = dsn_file_close(_handle);
@@ -1457,32 +1624,26 @@ void log_file::flush() const
     }
 }
 
-error_code log_file::read_next_log_block(int64_t local_offset, /*out*/::dsn::blob& bb)
+error_code log_file::read_next_log_block(/*out*/::dsn::blob& bb)
 {
     dassert (_is_read, "log file must be of read mode");
-
-    log_block_header hdr;
-    task_ptr tsk = file::read(_handle, reinterpret_cast<char*>(&hdr), static_cast<int>(sizeof(log_block_header)),
-        local_offset, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr);
-    tsk->wait();
-
-    auto read_count = tsk->io_size();
-    auto err = tsk->error();
-    if (err != ERR_OK || read_count != sizeof(log_block_header))
+    auto err = _stream->read_next(sizeof(log_block_header), bb);
+    if (err != ERR_OK || bb.length() != sizeof(log_block_header))
     {
         if (err == ERR_OK || err == ERR_HANDLE_EOF)
         {
             // if read_count is 0, then we meet the end of file
-            err = (read_count == 0 ? ERR_HANDLE_EOF : ERR_INCOMPLETE_DATA);
+            err = (bb.length() == 0 ? ERR_HANDLE_EOF : ERR_INCOMPLETE_DATA);
         }
         else
         {
-            derror("read data block header failed, size = %d vs %d, err = %s, local_offset = %" PRId64,
-                read_count, (int)sizeof(log_block_header), err.to_string(), local_offset);
+            derror("read data block header failed, size = %d vs %d, err = %s",
+                bb.length(), (int)sizeof(log_block_header), err.to_string());
         }
 
         return err;
     }
+    log_block_header hdr = *reinterpret_cast<const log_block_header*>(bb.data());
 
     if (hdr.magic != 0xdeadbeef)
     {
@@ -1490,19 +1651,11 @@ error_code log_file::read_next_log_block(int64_t local_offset, /*out*/::dsn::blo
         return ERR_INVALID_DATA;
     }
 
-    std::shared_ptr<char> data(new char[hdr.length]);
-    bb.assign(data, 0, hdr.length);
-
-    tsk = file::read(_handle, const_cast<char*>(bb.data()), static_cast<int>(hdr.length),
-        local_offset + read_count, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr);
-    tsk->wait();
-
-    read_count = tsk->io_size();
-    err = tsk->error();
-    if (err != ERR_OK || hdr.length != read_count)
+    err = _stream->read_next(hdr.length, bb);
+    if (err != ERR_OK || hdr.length != bb.length())
     {
-        derror("read data block body failed, size = %d vs %d, err = %s, local_offset = %" PRId64,
-            read_count, (int)hdr.length, err.to_string(), local_offset);
+        derror("read data block body failed, size = %d vs %d, err = %s",
+            bb.length(), (int)hdr.length, err.to_string());
 
         if (err == ERR_OK || err == ERR_HANDLE_EOF)
         {
@@ -1590,6 +1743,19 @@ std::shared_ptr<log_block> log_file::prepare_log_block() const
 
     _end_offset += block.size();
     return task;
+}
+
+void log_file::reset_stream()
+{
+    if (_stream == nullptr)
+    {
+        _stream.reset(new file_streamer(_handle, 0));
+    }
+    else
+    {
+        _stream->reset(0);
+    }
+    _crc32 = 0;
 }
 
 int log_file::read_file_header(binary_reader& reader)

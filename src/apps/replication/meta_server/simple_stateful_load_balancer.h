@@ -33,27 +33,37 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#pragma once
+# pragma once
 
-# include <dsn/tool_api.h>
-# include <condition_variable>
+# include "server_load_balancer.h"
 
-namespace dsn 
+using namespace dsn;
+using namespace dsn::service;
+using namespace dsn::replication;
+
+class simple_stateful_load_balancer 
+    : public ::dsn::dist::server_load_balancer,
+      public serverlet<simple_stateful_load_balancer>
 {
-    namespace tools
-    {
-        class hpc_task_queue : public task_queue
-        {
-        public:
-            hpc_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
+public:
+    simple_stateful_load_balancer(server_state* state);
+    ~simple_stateful_load_balancer();
 
-            virtual void     enqueue(task* task) override;
-            virtual task*    dequeue(/*inout*/int& batch_size) override;
+    virtual void run() override;
+    virtual void run(global_partition_id gpid) override;
 
-        private:            
-            utils::ex_lock_nr_spin        _lock;
-            std::condition_variable_any   _cond;
-            slist<task>                   _tasks;
-        };
-    }
-}
+    // this method is for testing
+    virtual void explictly_send_proposal(global_partition_id gpid, rpc_address receiver, config_type type, rpc_address node) override;
+
+private:
+    // meta server => partition server    
+    void query_decree(std::shared_ptr<query_replica_decree_request> query);
+    void on_query_decree_ack(error_code err, std::shared_ptr<query_replica_decree_request>& query, std::shared_ptr<query_replica_decree_response>& resp);
+    
+    void run_lb(partition_configuration& pc);
+    ::dsn::rpc_address find_minimal_load_machine(bool primaryOnly);
+
+private:
+    server_state *_state;
+};
+

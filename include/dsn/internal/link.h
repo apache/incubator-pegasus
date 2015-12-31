@@ -74,6 +74,39 @@ public:
         return ret;
     }
 
+    T* pop_batch(/*inout*/int& batch_size)
+    {   
+        int c = 0;
+        T* next = _first;
+        while (next)
+        {
+            if (++c >= batch_size)
+                break;
+
+            next = next->next;
+        }
+
+        // all returned
+        batch_size = c;
+
+        if (next == nullptr)
+        {
+            T* ret = _first;
+            _first = _last = nullptr;
+            return ret;
+        }
+
+        // partially returned
+        else
+        {
+            // next is included
+            T* ret = _first;
+            _first = next->next;
+            next->next = nullptr;
+            return ret;
+        }
+    }
+
     T* pop_one()
     {
         if (_first)

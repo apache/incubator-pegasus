@@ -38,6 +38,7 @@
 # include <dsn/internal/task_queue.h>
 # include <dsn/internal/extensible_object.h>
 # include <dsn/internal/synchronize.h>
+# include <dsn/internal/perf_counters.h>
 # include <thread>
 
 namespace dsn {
@@ -80,6 +81,7 @@ private:
     std::thread      *_thread;
     bool             _is_running;
     utils::notify_event _started;
+    int              _processed_task_count;
 
 public:
     static void set_name(const char* name);

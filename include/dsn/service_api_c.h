@@ -810,6 +810,7 @@ extern DSN_API size_t        dsn_msg_body_size(dsn_message_t msg);
 extern DSN_API void*         dsn_msg_rw_ptr(dsn_message_t msg, size_t offset_begin);
 extern DSN_API dsn_address_t dsn_msg_from_address(dsn_message_t msg);
 extern DSN_API dsn_address_t dsn_msg_to_address(dsn_message_t msg);
+extern DSN_API uint64_t      dsn_msg_rpc_id(dsn_message_t msg);
 
 //
 // server-side rpc calls
@@ -1071,7 +1072,7 @@ extern DSN_API double dsn_perf_counter_get_percentile(dsn_handle_t handle, dsn_p
             dsn_coredump();       \
                 } } while (false)
 
-#ifdef _DEBUG
+#ifndef NDEBUG
 #define dbg_dassert dassert
 #else
 #define dbg_dassert(x, ...) 

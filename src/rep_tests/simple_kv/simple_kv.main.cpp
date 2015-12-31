@@ -87,11 +87,15 @@ int main(int argc, char** argv)
 
     if (dsn::replication::test::g_fail)
     {
+#ifndef ENABLE_GCOV
         dsn_exit(-1);
+#endif
         return -1;
     }
 
+#ifndef ENABLE_GCOV
     dsn_exit(0);
+#endif
     return 0;
 }
 

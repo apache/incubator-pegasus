@@ -38,7 +38,7 @@
 
 # include <dsn/internal/task.h>
 # include <dsn/internal/rpc_message.h>
-# include "../../apps/replication/meta_server/load_balancer.h"
+# include "../../apps/replication/meta_server/server_load_balancer.h"
 # include "../../apps/replication/lib/replica_stub.h"
 # include "../../core/core/service_engine.h"
 
@@ -182,11 +182,11 @@ void set_case_line::apply_set() const
     }
     if (_lb_for_test_set)
     {
-        load_balancer::s_lb_for_test = _lb_for_test;
+        ::dsn::dist::server_load_balancer::s_lb_for_test = _lb_for_test;
     }
     if (_disable_lb_set)
     {
-        load_balancer::s_disable_lb = _disable_lb;
+        ::dsn::dist::server_load_balancer::s_disable_lb = _disable_lb;
     }
     if (_close_replica_stub_set)
     {
@@ -585,6 +585,7 @@ bool event_on_aio::check_satisfied(const event* ev) const
 void event_on_aio::init(aio_task* tsk)
 {
     event_on_task::init(tsk);
+    if (tsk->aio()->type == dsn::AIO_Invalid) return; // for flush task, the type is AIO_Invalid
     _type = (tsk->aio()->type == dsn::AIO_Read ? "READ" : "WRITE");
     _file_offset = boost::lexical_cast<std::string>(tsk->aio()->file_offset);
     _buffer_size = boost::lexical_cast<std::string>(tsk->aio()->buffer_size);
