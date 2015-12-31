@@ -14,6 +14,12 @@ set(MY_PROJ_INC_PATH "")
 set(MY_BOOST_PACKAGES system)
 
 set(MY_PROJ_LIBS
+    dsn.tools.nfs
+    dsn.dev.cpp.core.use
+    dsn.tools.hpc
+    dsn.tools.simulator
+    dsn.tools.common
+    dsn.corelib
     dsn.replication.global_checker
     dsn.replication
     dsn.replication.clientlib
