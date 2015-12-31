@@ -1,0 +1,85 @@
+#include <dsn/cpp/address.h>
+#include <dsn/internal/aio_provider.h>
+#include <gtest/gtest.h>
+#include <dsn/service_api_cpp.h>
+#include <dsn/internal/priority_queue.h>
+#include "../core/group_address.h"
+#include "test_utils.h"
+#include <boost/lexical_cast.hpp>
+
+DEFINE_TASK_CODE_AIO(LPC_AIO_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
+void aio_testcase(uint64_t block_size, size_t concurrency, bool is_write, bool random_offset)
+{
+    std::chrono::steady_clock clock;
+    std::unique_ptr<char[]> buffer(new char[block_size]);
+    std::atomic_int remain_concurrency;
+    remain_concurrency = concurrency;
+    if (utils::filesystem::file_exists("temp"))
+    {
+        utils::filesystem::remove_path("temp");
+        dassert(!utils::filesystem::file_exists("temp"), "");
+    }
+    auto file_handle = dsn_file_open("temp", O_CREAT | O_RDWR, 0666);
+    auto total_size_mb = 64;
+    auto total_size_bytes = total_size_mb * 1024 * 1024;
+    auto tic = clock.now();
+
+    for (int bytes_written = 0; bytes_written < total_size_bytes; )
+    {
+        while (true)
+        {
+            if (remain_concurrency.fetch_sub(1, std::memory_order_acquire) <= 0)
+            {
+                remain_concurrency.fetch_add(1, std::memory_order_relaxed);
+            }
+            else
+            {
+                break;
+            }
+        }
+        auto cb = [&](error_code ec, int sz)
+        {
+            dassert(ec == ERR_OK && sz == block_size, "");
+            remain_concurrency.fetch_add(1, std::memory_order_relaxed);
+        };
+        auto offset = random_offset ? dsn_random64(0, total_size_bytes - block_size) : bytes_written;
+        if (is_write)
+        {
+            file::write(file_handle, buffer.get(), block_size, offset, LPC_AIO_TEST, nullptr, cb);
+        }
+        else
+        {
+            file::read(file_handle, buffer.get(), block_size, offset, LPC_AIO_TEST, nullptr, cb);
+        }
+
+        bytes_written += block_size;
+    }
+    while (remain_concurrency != concurrency)
+    {
+        ;
+    }
+    dsn_file_flush(file_handle);
+    auto toc = clock.now();
+    dsn_file_close(file_handle);
+    std::cout << "is_write = " << is_write
+        << " random_offset = " << random_offset
+        << " block_size = " << block_size
+        << " concurrency = " << concurrency
+        << " throughput = " << double(total_size_mb) * 1000000 / std::chrono::duration_cast<std::chrono::microseconds>(toc - tic).count() << " mB/s" << std::endl;
+}
+TEST(core, aio_perf_test)
+{
+    auto block_size_list = { 64, 512, 4096, 512 * 1024 };
+    auto concurrency_list = { 1, 4, 16 };
+    for (auto is_write : { true, false }) {
+        for (auto random_offset : { false, true }) {
+            for (auto block_size : block_size_list)
+            {
+                for (auto concurrency : concurrency_list)
+                {
+                    aio_testcase(block_size, concurrency, is_write, random_offset);
+                }
+            }
+        }
+    }
+}
