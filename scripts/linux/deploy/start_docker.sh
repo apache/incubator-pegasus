@@ -1,7 +1,5 @@
 #!/bin/bash
 
-
-
 PREFIX=$(readlink -m $(dirname ${BASH_SOURCE}))
 export LD_LIBRARY_PATH=${PREFIX}
 CFG_TOOL="${PREFIX}/configtool"
@@ -12,12 +10,18 @@ HOST=${HOST:-`ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{print $1}'
 PORT=`${CFG_TOOL} config.ini apps.${NAME} ports`
 NUM=${NUM:-1}
 
-docker run -d -p ${PORT}:${PORT}/udp -p ${PORT}:${PORT} -p 8088:8080 -e NAME=${NAME} -e META_HOST=${META_HOST} -e HOST=${HOST} -e NUM=${NUM} {{ placeholder['image_name'] }}
+m_port=8080
 
-#PROGRAM=${PREFIX}/{{ placeholder['deploy_name'] }}
-#CONFIG=${PREFIX}/config.ini
-#ARGS="-cargs meta-ip=${META_IP};data-dir=${PREFIX} -app ${APP}"
+while true;do
+    nc -z 127.0.0.1 ${m_port} || break
+    ((m_port=m_port+1))
+done
 
-#${PROGRAM} ${CONFIG} ${ARGS} &>${PREFIX}/${APP}.out
+if [ -z $PORT ];then
+    PORT_ARGS="-p ${m_port}:8080"
+else
+    PORT_ARGS="-p ${PORT}:${PORT}/udp -p ${PORT}:${PORT} -p ${m_port}:8080"
+fi
 
-
+docker pull {{ placeholder['image_name'] }}
+docker run -d ${PORT_ARGS} -e NAME=${NAME} -e META_HOST=${META_HOST} -e HOST=${HOST} -e NUM=${NUM} {{ placeholder['image_name'] }}

@@ -18,6 +18,9 @@ function usage()
     echo "   publish     publish the program"
     echo "   publish_docker"
     echo "               publish the program docker image"
+    echo "   republish   republish the program without changes to some configure files"
+    echo "   republish_docker"
+    echo "               republish the program docker image without changes to some configure files"
     echo "   deploy      deploy the program to remote machine"
     echo "   start       start program at remote machine"
     echo "   stop        stop program at remote machine"
@@ -292,7 +295,7 @@ case $cmd in
     format)
         shift
         run_format $* ;;
-    publish|publish_docker)
+    publish|publish_docker|republish|republish_docker)
         $scripts_dir/publish.sh $* ;;
     deploy|start|stop|clean)
         $scripts_dir/deploy.sh $* ;;

@@ -4,6 +4,13 @@ set -e
 
 b_dir=$1
 t_dir=$2
+if [ "$#" -eq "3" ];then
+    repub="x"
+fi
+if [ -z $DOCKER_REPO ];then
+    echo "please specify docker repository using export DOCKER_REPO=<repo name>"
+    exit -1
+fi
 
 applist="meta replica client client.perf.test"
 echo $applist > $t_dir/applist
@@ -16,8 +23,8 @@ cp $scripts_dir/deploy/gensvcyaml.sh $t_dir
 cp $scripts_dir/deploy/rdsn-rc.yaml.in $t_dir
 cp $scripts_dir/deploy/rdsn-service.yaml.in $t_dir
 
-if [ ! -f $t_dir/config.ini ];then
-    cp $b_dir/bin/dsn.replication.simple_kv/config.ini $t_dir/
+if [ -z $repub ] || [ ! -f $t_dir/config.ini ];then
+    cp $b_dir/bin/dsn.replication.simple_kv/config-docker.ini $t_dir/config.ini
     echo "please customize your config.ini"
     sleep 5
     vim $t_dir/config.ini
@@ -27,7 +34,7 @@ sed -e "s/{{ placeholder\['deploy_name'\] }}/simple_kv/g" $scripts_dir/deploy/ru
 chmod a+x $t_dir/run.sh
 
 cat << EOF > $t_dir/Dockerfile
-FROM ${REPO}/rdsn
+FROM ${DOCKER_REPO}/rdsn
 COPY simple_kv /home/rdsn/ 
 COPY config.ini /home/rdsn/
 COPY run.sh /home/rdsn/
@@ -37,12 +44,12 @@ ENV LD_LIBRARY_PATH=/home/rdsn/lib
 CMD ["./run.sh"]
 EOF
 
-docker build -t ${REPO}/simple_kv $t_dir
-docker push ${REPO}/simple_kv
+docker build -t ${DOCKER_REPO}/simple_kv $t_dir
+docker push ${DOCKER_REPO}/simple_kv
 
 
 #cp general start_docker.sh to dir
-sed -e "s/{{ placeholder\['image_name'\] }}/${REPO}\/simple_kv/g" $scripts_dir/deploy/start_docker.sh > $t_dir/start.sh
+sed -e "s/{{ placeholder\['image_name'\] }}/${DOCKER_REPO}\/simple_kv/g" $scripts_dir/deploy/start_docker.sh > $t_dir/start.sh
 
 chmod a+x $t_dir/start.sh
 #publish_docker
@@ -53,6 +60,11 @@ function publish_app_docker(){
     cp $t_dir/start.sh  $t_dir/$1
     cp $t_dir/libdsn.core.so $t_dir/$1
 }
+
+if [ -z $repub ] || [ ! -f $t_dir/metalist ] || [ ! -f $t_dir/replicalist ] || [ ! -f $t_dir/clientlist ] || [ ! -f $t_dir/client.perf.clientlist ];then
+    rm -f $t_dir/{meta,replica,client,client.perf.test}list 
+    touch $t_dir/metalist $t_dir/replicalist $t_dir/clientlist $t_dir/client.perf.testlist
+fi
 
 
 for app in $applist; do

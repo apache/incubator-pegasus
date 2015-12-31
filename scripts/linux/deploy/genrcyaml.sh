@@ -6,7 +6,8 @@ rclist=${rclist:-"meta replica client client.perf.test"}
 rcnums=${rcnums:-"1 3 1 1"}
 rcnums=($rcnums)
 rctemplate=rdsn-rc.yaml.in
-image_name=${image_name:-"goksyli\/monitor:12.24"}
+image_name=${image_name:-"goksyli/monitor:12.24"}
+image_name=`echo $image_name | sed 's|\/|\\\/|g'`
 ii=0
 for rc in $rclist;do
     num=${rcnums[${ii}]}
