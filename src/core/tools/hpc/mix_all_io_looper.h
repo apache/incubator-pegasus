@@ -52,7 +52,7 @@ namespace dsn
             virtual void  handle_local_queues() override;
 
             virtual void  enqueue(task* task) override;
-            virtual task* dequeue(int best_batch_size)override;
+            virtual task* dequeue(/*inout*/int& batch_size)override;
         
         protected:
             virtual bool is_shared_timer_queue() override

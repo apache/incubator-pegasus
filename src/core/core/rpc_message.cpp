@@ -230,7 +230,7 @@ void message_ex::seal(bool fill_crc)
     }
     else
     {
-#ifdef _DEBUG
+#ifndef NDEBUG
         int i_max = (int)buffers.size() - 1;
         size_t len = 0;
         for (int i = 0; i <= i_max; i++)

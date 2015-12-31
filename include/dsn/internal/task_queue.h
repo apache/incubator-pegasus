@@ -62,10 +62,11 @@ public:
 
     // dequeue may return more than 1 tasks, but there is a configured
     // best batch size for each worker so that load among workers
-    // are balanced
-    virtual task*    dequeue(int best_batch_size) = 0;
+    // are balanced,
+    // returned batch size is stored in parameter batch_size
+    virtual task*    dequeue(/*inout*/int& batch_size) = 0;
     
-    int               approx_count() const { return _queue_length.load(std::memory_order_relaxed); }
+    int               count() const { return _queue_length.load(std::memory_order_relaxed); }
     void              decrease_count(int count = 1) { _queue_length.fetch_sub(count, std::memory_order_relaxed); }
     void              increase_count(int count = 1) { _queue_length.fetch_add(count, std::memory_order_relaxed); }
     const std::string & get_name() { return _name; }    

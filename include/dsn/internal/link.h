@@ -74,18 +74,21 @@ public:
         return ret;
     }
 
-    T* pop_batch(int best_batch_size)
+    T* pop_batch(/*inout*/int& batch_size)
     {   
+        int c = 0;
         T* next = _first;
         while (next)
-        {            
-            if (--best_batch_size <= 0)
+        {
+            if (++c >= batch_size)
                 break;
 
             next = next->next;
         }
 
         // all returned
+        batch_size = c;
+
         if (next == nullptr)
         {
             T* ret = _first;

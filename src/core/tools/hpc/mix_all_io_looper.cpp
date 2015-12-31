@@ -249,9 +249,10 @@ namespace dsn
             }
         }
 
-        task* io_looper_task_queue::dequeue(int best_batch_size)
+        task* io_looper_task_queue::dequeue(/*inout*/int& batch_size)
         {
             dassert(false, "never execute here ...");
+            batch_size = 0;
             return nullptr;
         }
                

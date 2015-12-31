@@ -1072,7 +1072,7 @@ extern DSN_API double dsn_perf_counter_get_percentile(dsn_handle_t handle, dsn_p
             dsn_coredump();       \
                 } } while (false)
 
-#ifdef _DEBUG
+#ifndef NDEBUG
 #define dbg_dassert dassert
 #else
 #define dbg_dassert(x, ...) 

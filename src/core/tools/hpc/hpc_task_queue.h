@@ -47,8 +47,8 @@ namespace dsn
         public:
             hpc_task_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
 
-            virtual void     enqueue(task* task);
-            virtual task*    dequeue(int best_batch_size);
+            virtual void     enqueue(task* task) override;
+            virtual task*    dequeue(/*inout*/int& batch_size) override;
 
         private:            
             utils::ex_lock_nr_spin        _lock;

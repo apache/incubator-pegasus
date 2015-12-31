@@ -326,23 +326,39 @@ void task_worker::run_internal()
 void task_worker::loop()
 {
     task_queue* q = queue();
-    int dequeue_size = pool_spec().dequeue_batch_size;
+    int best_batch_size = pool_spec().dequeue_batch_size;
 
     //try {
         while (_is_running)
         {
-            task* task = q->dequeue(dequeue_size), *next;
+            int batch_size = best_batch_size;
+            task* task = q->dequeue(batch_size), *next;
+
+            q->decrease_count(batch_size);
+
+# ifndef NDEBUG
             int count = 0;
+# endif
             while (task != nullptr)
             {                
                 next = task->next;
                 task->next = nullptr;
                 task->exec_internal();                
                 task = next;
+# ifndef NDEBUG
+                count++;
+# endif
             }
 
-            q->decrease_count(count);
-            _processed_task_count += count;
+# ifndef NDEBUG
+            dassert(count == batch_size, 
+                "returned task count and batch size do not match: %d vs %d",
+                count,
+                batch_size
+                );
+# endif
+
+            _processed_task_count += batch_size;
         }
     /*}
     catch (std::exception& ex)

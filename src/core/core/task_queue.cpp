@@ -83,7 +83,7 @@ void task_queue::enqueue_internal(task* task)
         }
         else
         {
-            ac_value = approx_count();
+            ac_value = count();
         }
 
         _delayer.delay(ac_value);
@@ -110,7 +110,7 @@ void task_queue::enqueue_internal(task* task)
         //        if (++i % 1000 == 0)
         //        {
         //            dwarn("task queue %s cannot accept new task now, size = %d",
-        //                q->get_name().c_str(), q->approx_count());
+        //                q->get_name().c_str(), q->count());
         //        }
         //        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         //    }
@@ -119,7 +119,7 @@ void task_queue::enqueue_internal(task* task)
         //    && _spec.queue_length_throttling_threshold != 0x0FFFFFFFUL)
         //{
         //    int i = 0;
-        //    while (q->approx_count() >= _spec.queue_length_throttling_threshold)
+        //    while (q->count() >= _spec.queue_length_throttling_threshold)
         //    {
         //        // any customized rejection handler?
         //        if (t->spec().rejection_handler != nullptr)
@@ -137,7 +137,7 @@ void task_queue::enqueue_internal(task* task)
         //        if (++i % 1000 == 0)
         //        {
         //            dwarn("task queue %s cannot accept new task now, size = %d",
-        //                q->get_name().c_str(), q->approx_count());
+        //                q->get_name().c_str(), q->count());
         //        }
         //        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         //    }
