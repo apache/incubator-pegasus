@@ -11,8 +11,8 @@
 #include <dsn/tool/providers.common.h>
 #include <dsn/tool/providers.hpc.h>
 
-#include "empty_app.h"
-#include "client_ddl.h"
+#include <dsn/dist/replication/empty_app.h>
+#include <dsn/dist/replication/client_ddl.h>
 #include <iostream>
 
 using namespace dsn::client;

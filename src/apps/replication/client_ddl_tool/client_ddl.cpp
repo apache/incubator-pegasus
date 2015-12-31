@@ -34,9 +34,8 @@
 
 #include <dsn/dist/replication.h>
 #include <dsn/dist/replication/replication.types.h>
-#include "client_ddl.h"
+#include <dsn/dist/replication/client_ddl.h>
 #include <iostream>
-#include <unistd.h>
 
 using namespace dsn::replication;
 
@@ -131,7 +130,7 @@ dsn::error_code client_ddl::create_app(const std::string& app_name, const std::s
         if(ready)
             break;
         std::cout << app_name << " not ready yet, still waiting." << std::endl;
-        sleep(sleep_sec);
+        std::this_thread::sleep_for(std::chrono::seconds(sleep_sec));
     }
     std::cout << app_name << " is ready now!" << std::endl;
     return dsn::ERR_OK;
