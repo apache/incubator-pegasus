@@ -101,6 +101,7 @@ perf_counters::perf_counters(void)
         _max_counter_count
         );
     _quick_counters = new perf_counter*[_max_counter_count];
+    memset((void*)_quick_counters, 0, sizeof(perf_counter*) * _max_counter_count);
 
     // index << 32 | version
     // zero is reserved for invalid
@@ -128,14 +129,14 @@ perf_counters::perf_counters(void)
         );
 
     ::dsn::register_command("counter.valuei",
-        "counter.value - get current value of a specific counter",
-        "counter.value counter-index",
+        "counter.valuei - get current value of a specific counter",
+        "counter.valuei counter-index",
         &perf_counters::get_counter_value_i
         );
 
     ::dsn::register_command("counter.samplei",
-        "counter.sample - get latest sample of a specific counter",
-        "counter.sample counter-index",
+        "counter.samplei - get latest sample of a specific counter",
+        "counter.samplei counter-index",
         &perf_counters::get_counter_sample_i
         );
 }
