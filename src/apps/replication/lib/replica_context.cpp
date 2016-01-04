@@ -136,22 +136,28 @@ bool primary_context::check_exist(::dsn::rpc_address node, partition_status st)
 
 void secondary_context::cleanup()
 {
-    if (nullptr != checkpoint_task)
+    task_ptr t = nullptr;
+
+    t = checkpoint_task;
+    if (nullptr != t)
     {
-        checkpoint_task->cancel(true);
+        t->cancel(true);
         checkpoint_task = nullptr;
     }
 }
 
 bool potential_secondary_context::cleanup(bool force)
 {
-    if (learn_remote_files_task != nullptr)
+    task_ptr t = nullptr;
+
+    t = learn_remote_files_task;
+    if (t != nullptr)
     {
         bool clean_remote_learning;
-        learn_remote_files_task->cancel(false, &clean_remote_learning);
+        t->cancel(false, &clean_remote_learning);
         if (force)
         {
-            learn_remote_files_task->cancel(true);
+            t->cancel(true);
         }
         else if (!clean_remote_learning)
         {
@@ -159,19 +165,22 @@ bool potential_secondary_context::cleanup(bool force)
         }
     }
 
-    if (learning_task != nullptr)
+    t = learning_task;
+    if (t != nullptr)
     {
-        learning_task->cancel(true);
+        t->cancel(true);
     }
 
-    if (learn_remote_files_completed_task != nullptr)
+    t = learn_remote_files_completed_task;
+    if (t != nullptr)
     {
-        learn_remote_files_completed_task->cancel(true);
+        t->cancel(true);
     }
 
     learning_signature = 0;
     learning_round_is_running = false;
     learning_start_prepare_decree = invalid_decree;
+    learning_status = Learning_INVALID;
     return true;
 }
 

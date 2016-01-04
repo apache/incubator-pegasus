@@ -1025,11 +1025,19 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
 
 ::dsn::task_ptr replica_stub::begin_close_replica(replica_ptr r)
 {
+    dassert(
+        r->status() == PS_ERROR || r->status() == PS_INACTIVE,
+        "%s: invalid state %s when calling begin_close_replica",
+        r->name(),
+        enum_to_string(r->status())
+        );
+
     zauto_lock l(_replicas_lock);
 
-    // initialization is still ongoing
-    if (nullptr == _failure_detector)
-        return nullptr;
+    //// TODO: so what?
+    //// initialization is still ongoing
+    //if (nullptr == _failure_detector)
+    //    return nullptr;
 
     if (remove_replica(r))
     {
@@ -1083,17 +1091,17 @@ bool replica_stub::remove_replica(replica_ptr r)
     }
 }
 
-void replica_stub::notify_replica_state_update(const replica_configuration& config, bool isClosing)
+void replica_stub::notify_replica_state_update(const replica_configuration& config, bool is_closing)
 {
     if (nullptr != _replica_state_subscriber)
     {
         if (_is_long_subscriber)
         {
-            tasking::enqueue(LPC_REPLICA_STATE_CHANGE_NOTIFICATION, this, std::bind(_replica_state_subscriber, _primary_address, config, isClosing));
+            tasking::enqueue(LPC_REPLICA_STATE_CHANGE_NOTIFICATION, this, std::bind(_replica_state_subscriber, _primary_address, config, is_closing));
         }
         else
         {
-            _replica_state_subscriber(_primary_address, config, isClosing);
+            _replica_state_subscriber(_primary_address, config, is_closing);
         }
     }
 }

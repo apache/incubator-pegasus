@@ -56,6 +56,12 @@ void replica::on_client_write(int code, dsn_message_t request)
         return;
     }
 
+    if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 < _options->mutation_2pc_min_replica_count)
+    {
+        response_client_message(request, ERR_NOT_ENOUGH_MEMBER);
+        return;
+    }
+
     auto mu = _primary_states.write_queue.add_work(code, request, this);
     if (mu)
     {
@@ -69,12 +75,6 @@ void replica::init_prepare(mutation_ptr& mu)
 
     error_code err = ERR_OK;
     uint8_t count = 0;
-    
-    if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 < _options->mutation_2pc_min_replica_count)
-    {
-        err = ERR_NOT_ENOUGH_MEMBER;
-        goto ErrOut;
-    }
             
     mu->data.header.last_committed_decree = last_committed_decree();
     if (mu->data.header.decree == invalid_decree)

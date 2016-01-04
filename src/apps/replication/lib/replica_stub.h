@@ -151,7 +151,7 @@ private:
     void close_replica(replica_ptr r);
     void add_replica(replica_ptr r);
     bool remove_replica(replica_ptr r);
-    void notify_replica_state_update(const replica_configuration& config, bool isClosing);
+    void notify_replica_state_update(const replica_configuration& config, bool is_closing);
     void handle_log_failure(error_code err);
 
     void install_perf_counters();
