@@ -244,6 +244,7 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
     }
 
     // mutations are previously committed already on learner (old primary)
+    // TODO(qinzuoyan): this case will never occur?
     else if (request.last_committed_decree_in_app > local_committed_decree)
     {
         derror(

@@ -137,15 +137,18 @@ error_code replica::initialize_on_load()
         rep = nullptr;
 
         // clear work on failure
-        char rename_dir[256];
-        sprintf(rename_dir, "%s.%" PRIu64 ".err", dir, dsn_now_us());
-        if (!dsn::utils::filesystem::rename_path(dir, rename_dir))
+        if (dsn::utils::filesystem::directory_exists(dir))
         {
-            dwarn("move bad replica from '%s' to '%s'", dir, rename_dir);
-        }
-        else
-        {
-            derror("move bad replica from '%s' to '%s' failed", dir, rename_dir);
+            char rename_dir[256];
+            sprintf(rename_dir, "%s.%" PRIu64 ".err", dir, dsn_now_us());
+            if (dsn::utils::filesystem::rename_path(dir, rename_dir))
+            {
+                dwarn("move bad replica from '%s' to '%s'", dir, rename_dir);
+            }
+            else
+            {
+                derror("move bad replica from '%s' to '%s' failed", dir, rename_dir);
+            }
         }
 
         return nullptr;
