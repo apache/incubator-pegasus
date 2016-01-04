@@ -373,7 +373,7 @@ void service_spec::load_app_shared_libraries(dsn::configuration_ptr config)
 
     int app_id = 0;
     std::vector< std::pair<std::string, std::string> > modules;
-    for (auto it = all_section_names.begin(); it != all_section_names.end(); it++)
+    for (auto it = all_section_names.begin(); it != all_section_names.end(); ++it)
     {
         if (it->substr(0, strlen("apps.")) == std::string("apps."))
         {
@@ -495,7 +495,7 @@ bool service_spec::init_app_specs()
 
     // init all apps
     int app_id = 0;
-    for (auto it = all_section_names.begin(); it != all_section_names.end(); it++)
+    for (auto it = all_section_names.begin(); it != all_section_names.end(); ++it)
     {
         if (it->substr(0, strlen("apps.")) == std::string("apps.") && *it != std::string("apps..default"))
         {

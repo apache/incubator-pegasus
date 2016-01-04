@@ -81,11 +81,17 @@ void mutation::copy_from(mutation_ptr& old)
             dsn_msg_add_ref(r.req);
     }
 
-    if (old->is_logged())
+    // let's always re-append the mutation to 
+    // replication logs as the ballot number
+    // is changed, to ensure the invariance:
+    // if decree(A) >= decree(B) 
+    // then ballot(A) >= ballot(B)
+    /*if (old->is_logged())
     {
         set_logged();
         data.header.log_offset = old->data.header.log_offset;
     }
+    */
 
     _prepare_request = old->prepare_msg();
     if (_prepare_request)

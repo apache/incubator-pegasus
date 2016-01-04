@@ -1100,7 +1100,7 @@ int mutation_log::garbage_collection(global_partition_id gpid, decree durable_de
     // to avoid making a hole in the file list
     int largest_to_delete = mark_it->second->index();
     int deleted = 0;
-    for (auto it = files.begin(); it->second->index() <= largest_to_delete; ++it)
+    for (auto it = files.begin(); it != files.end() && it->second->index() <= largest_to_delete; ++it)
     {
         log_file_ptr log = it->second;
         dassert(it->first == log->index(), "");
@@ -1276,7 +1276,7 @@ int mutation_log::garbage_collection(replica_log_info_map& gc_condition)
     // to avoid making a hole in the file list
     int largest_to_delete = mark_it->second->index();
     int deleted = 0;
-    for (auto it = files.begin(); it->second->index() <= largest_to_delete; ++it)
+    for (auto it = files.begin(); it != files.end() && it->second->index() <= largest_to_delete; ++it)
     {
         log_file_ptr log = it->second;
         dassert(it->first == log->index(), "");

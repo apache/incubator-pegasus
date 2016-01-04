@@ -150,6 +150,7 @@ bool prepare_list::commit(decree d, commit_type ct)
 
     dinfo("commit to decree %" PRId64, d);
     
+    ballot last_bt = 0;
     switch (ct)
     {
     case COMMIT_TO_DECREE_HARD:
@@ -158,12 +159,14 @@ bool prepare_list::commit(decree d, commit_type ct)
             {
                 mutation_ptr mu = get_mutation_by_decree(d0);
                 dassert(mu != nullptr &&
-                    (mu->is_logged()),
+                    (mu->is_logged()) &&
+                    mu->data.header.ballot >= last_bt,
                     "mutation %" PRId64 " is missing in prepare list",
                     d0
                     );
 
                 _last_committed_decree++;
+                last_bt = mu->data.header.ballot;
                 _committer(mu);
             }
 
@@ -175,9 +178,10 @@ bool prepare_list::commit(decree d, commit_type ct)
             for (decree d0 = last_committed_decree() + 1; d0 <= d; d0++)
             {
                 mutation_ptr mu = get_mutation_by_decree(d0);
-                if (mu != nullptr && mu->is_ready_for_commit())
+                if (mu != nullptr && mu->is_ready_for_commit() && mu->data.header.ballot >= last_bt)
                 {
                     _last_committed_decree++;
+                    last_bt = mu->data.header.ballot;
                     _committer(mu);
                 }
                 else
@@ -195,9 +199,10 @@ bool prepare_list::commit(decree d, commit_type ct)
             int count = 0;
             mutation_ptr mu = get_mutation_by_decree(last_committed_decree() + 1);
 
-            while (mu != nullptr && mu->is_ready_for_commit())
+            while (mu != nullptr && mu->is_ready_for_commit() && mu->data.header.ballot >= last_bt)
             {
                 _last_committed_decree++;
+                last_bt = mu->data.header.ballot;
                 _committer(mu);
                 count++;
                 mu = mutation_cache::get_mutation_by_decree(_last_committed_decree + 1);

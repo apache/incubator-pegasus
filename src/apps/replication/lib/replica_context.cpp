@@ -53,7 +53,7 @@ void primary_context::cleanup(bool clean_pending_mutations)
         group_check_task = nullptr;
     }
 
-    for (auto it = group_check_pending_replies.begin(); it != group_check_pending_replies.end(); it++)
+    for (auto it = group_check_pending_replies.begin(); it != group_check_pending_replies.end(); ++it)
     {
         it->second->cancel(true);
     }
@@ -97,13 +97,13 @@ void primary_context::reset_membership(const partition_configuration& config, bo
         statuses[membership.primary] = PS_PRIMARY;
     }
 
-    for (auto it = config.secondaries.begin(); it != config.secondaries.end(); it++)
+    for (auto it = config.secondaries.begin(); it != config.secondaries.end(); ++it)
     {
         statuses[*it] = PS_SECONDARY;
         learners.erase(*it);
     }
 
-    for (auto it = learners.begin(); it != learners.end(); it++)
+    for (auto it = learners.begin(); it != learners.end(); ++it)
     {
         statuses[it->first] = PS_POTENTIAL_SECONDARY;
     }
@@ -136,22 +136,28 @@ bool primary_context::check_exist(::dsn::rpc_address node, partition_status st)
 
 void secondary_context::cleanup()
 {
-    if (nullptr != checkpoint_task)
+    task_ptr t = nullptr;
+
+    t = checkpoint_task;
+    if (nullptr != t)
     {
-        checkpoint_task->cancel(true);
+        t->cancel(true);
         checkpoint_task = nullptr;
     }
 }
 
 bool potential_secondary_context::cleanup(bool force)
 {
-    if (learn_remote_files_task != nullptr)
+    task_ptr t = nullptr;
+
+    t = learn_remote_files_task;
+    if (t != nullptr)
     {
         bool clean_remote_learning;
-        learn_remote_files_task->cancel(false, &clean_remote_learning);
+        t->cancel(false, &clean_remote_learning);
         if (force)
         {
-            learn_remote_files_task->cancel(true);
+            t->cancel(true);
         }
         else if (!clean_remote_learning)
         {
@@ -159,19 +165,22 @@ bool potential_secondary_context::cleanup(bool force)
         }
     }
 
-    if (learning_task != nullptr)
+    t = learning_task;
+    if (t != nullptr)
     {
-        learning_task->cancel(true);
+        t->cancel(true);
     }
 
-    if (learn_remote_files_completed_task != nullptr)
+    t = learn_remote_files_completed_task;
+    if (t != nullptr)
     {
-        learn_remote_files_completed_task->cancel(true);
+        t->cancel(true);
     }
 
     learning_signature = 0;
     learning_round_is_running = false;
     learning_start_prepare_decree = invalid_decree;
+    learning_status = Learning_INVALID;
     return true;
 }
 

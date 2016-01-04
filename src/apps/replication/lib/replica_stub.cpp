@@ -189,7 +189,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
 
         // delete all replicas
         // TODO: checkpoint latest state and update on meta server so learning is cheaper
-        for (auto it = rps.begin(); it != rps.end(); it++)
+        for (auto it = rps.begin(); it != rps.end(); ++it)
         {
             it->second->close();
             std::string new_dir = it->second->dir() + ".err";
@@ -216,7 +216,7 @@ void replica_stub::initialize(const replication_options& opts, bool clear/* = fa
         dassert(lerr == ERR_OK, "restart log service must succeed");
     }
 
-    for (auto it = rps.begin(); it != rps.end(); it++)
+    for (auto it = rps.begin(); it != rps.end(); ++it)
     {
         it->second->reset_prepare_list_after_replay();
                 
@@ -667,7 +667,7 @@ void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, ds
             return;
         
         replicas rs = _replicas;
-        for (auto it = resp.partitions.begin(); it != resp.partitions.end(); it++)
+        for (auto it = resp.partitions.begin(); it != resp.partitions.end(); ++it)
         {
             rs.erase(it->gpid);
             tasking::enqueue(
@@ -679,7 +679,7 @@ void replica_stub::on_node_query_reply(error_code err, dsn_message_t request, ds
         }
 
         // for rps not exist on meta_servers
-        for (auto it = rs.begin(); it != rs.end(); it++)
+        for (auto it = rs.begin(); it != rs.end(); ++it)
         {
             tasking::enqueue(
                 LPC_QUERY_NODE_CONFIGURATION_SCATTER,
@@ -697,7 +697,7 @@ void replica_stub::set_meta_server_connected_for_test(const configuration_query_
     dassert (_state != NS_Connected, "");
     _state = NS_Connected;
 
-    for (auto it = resp.partitions.begin(); it != resp.partitions.end(); it++)
+    for (auto it = resp.partitions.begin(); it != resp.partitions.end(); ++it)
     {
         tasking::enqueue(
             LPC_QUERY_NODE_CONFIGURATION_SCATTER,
@@ -796,7 +796,7 @@ void replica_stub::on_meta_server_disconnected()
 
     _state = NS_Disconnected;
 
-    for (auto it = _replicas.begin(); it != _replicas.end(); it++)
+    for (auto it = _replicas.begin(); it != _replicas.end(); ++it)
     {
         tasking::enqueue(
             LPC_CM_DISCONNECTED_SCATTER,
@@ -855,7 +855,7 @@ void replica_stub::on_gc()
         // gc condition is:
         //   d <= last_durable_decree && d <= private_log.max_commit_decree
         replica_log_info_map gc_condition;
-        for (auto it = rs.begin(); it != rs.end(); it++)
+        for (auto it = rs.begin(); it != rs.end(); ++it)
         {
             replica_log_info ri;
             replica_ptr r = it->second;
@@ -1026,11 +1026,19 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
 
 ::dsn::task_ptr replica_stub::begin_close_replica(replica_ptr r)
 {
+    dassert(
+        r->status() == PS_ERROR || r->status() == PS_INACTIVE,
+        "%s: invalid state %s when calling begin_close_replica",
+        r->name(),
+        enum_to_string(r->status())
+        );
+
     zauto_lock l(_replicas_lock);
 
-    // initialization is still ongoing
-    if (nullptr == _failure_detector)
-        return nullptr;
+    //// TODO: so what?
+    //// initialization is still ongoing
+    //if (nullptr == _failure_detector)
+    //    return nullptr;
 
     if (remove_replica(r))
     {
@@ -1084,17 +1092,17 @@ bool replica_stub::remove_replica(replica_ptr r)
     }
 }
 
-void replica_stub::notify_replica_state_update(const replica_configuration& config, bool isClosing)
+void replica_stub::notify_replica_state_update(const replica_configuration& config, bool is_closing)
 {
     if (nullptr != _replica_state_subscriber)
     {
         if (_is_long_subscriber)
         {
-            tasking::enqueue(LPC_REPLICA_STATE_CHANGE_NOTIFICATION, this, std::bind(_replica_state_subscriber, _primary_address, config, isClosing));
+            tasking::enqueue(LPC_REPLICA_STATE_CHANGE_NOTIFICATION, this, std::bind(_replica_state_subscriber, _primary_address, config, is_closing));
         }
         else
         {
-            _replica_state_subscriber(_primary_address, config, isClosing);
+            _replica_state_subscriber(_primary_address, config, is_closing);
         }
     }
 }

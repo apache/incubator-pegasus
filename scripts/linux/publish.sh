@@ -3,7 +3,7 @@ os=linux
 export scripts_dir=$PWD/scripts/$os
 
 function usage(){
-    echo "Options for subcommand 'publish'"
+    echo "Options for subcommand 'publish|publish_docker|republish|republish_docker'"
     echo " -b, --build-dir <dir> "
     echo "                      rdsn build directory, by default is 'builder'"
     echo " -d, --deploy-name <name>"
@@ -17,7 +17,8 @@ if [ "x${DSN_ROOT}" == "x" ];then
     echo "pleasing run :   run.sh install and source ~/.bashrc"
     exit -1
 fi
-
+CMD=$1
+shift
 while [ $# -gt 0 ]; do
     key=$1
     case $key in
@@ -63,4 +64,21 @@ fi
 
 
 mkdir -p $t_dir
-${scripts_dir}/publish.${d_unit}.sh $b_dir $t_dir
+case $CMD in
+    publish)
+        ${scripts_dir}/publish.${d_unit}.sh $b_dir $t_dir
+        ;;
+    republish)
+        ${scripts_dir}/publish.${d_unit}.sh $b_dir $t_dir republish
+        ;;
+    publish_docker)
+        ${scripts_dir}/publish_docker.${d_unit}.sh $b_dir $t_dir
+        ;;
+    republish_docker)
+        ${scripts_dir}/publish_docker.${d_unit}.sh $b_dir $t_dir republish
+        ;;
+    *)
+        echo "Error: unknown subcommand"
+        exit -1
+        ;;
+esac

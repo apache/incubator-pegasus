@@ -262,7 +262,7 @@ err:
 void configuration::get_all_sections(std::vector<std::string>& sections)
 {
     sections.clear();
-    for (auto it = _configs.begin(); it != _configs.end(); it++)
+    for (auto it = _configs.begin(); it != _configs.end(); ++it)
     {
         sections.push_back(it->first);
     }

@@ -89,7 +89,9 @@ public:
         // all returned
         batch_size = c;
 
-        if (next == nullptr)
+        if (next == nullptr ||
+            next == _last
+            )
         {
             T* ret = _first;
             _first = _last = nullptr;

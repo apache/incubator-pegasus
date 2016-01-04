@@ -16,10 +16,18 @@ function usage()
     echo "   stop_zk     stop the local single zookeeper server"
     echo "   format      check the code format"
     echo "   publish     publish the program"
+    echo "   publish_docker"
+    echo "               publish the program docker image"
+    echo "   republish   republish the program without changes to machinelist and config.ini files"
+    echo "   republish_docker"
+    echo "               republish the program docker image without changes to machinelist and config.ini files"
     echo "   deploy      deploy the program to remote machine"
     echo "   start       start program at remote machine"
     echo "   stop        stop program at remote machine"
     echo "   clean       clean deployed program at remote machine"
+    echo "   k8s_deploy  deploy onto kubernetes cluster"
+    echo "   k8s_undeploy"
+    echo "               undeploy from kubernetes cluster"
     echo
     echo "Command 'run.sh <command> -h' will print help for subcommands."
 }
@@ -287,11 +295,12 @@ case $cmd in
     format)
         shift
         run_format $* ;;
-    publish)
-        shift
+    publish|publish_docker|republish|republish_docker)
         $scripts_dir/publish.sh $* ;;
     deploy|start|stop|clean)
         $scripts_dir/deploy.sh $* ;;
+    k8s_deploy|k8s_undeploy)
+        $scripts_dir/k8s_deploy.sh $* ;;
     *)
         echo "ERROR: unknown command $cmd"
         echo

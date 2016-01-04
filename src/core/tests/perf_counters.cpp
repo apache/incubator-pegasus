@@ -40,7 +40,7 @@ using namespace ::dsn;
 
 TEST(core, perf_counters)
 {
-    utils::perf_counters& c = utils::perf_counters::instance();
+    perf_counters& c = perf_counters::instance();
     perf_counter_ptr p;
 
     p = c.get_counter("app", "test", "number_counter", COUNTER_TYPE_NUMBER,"", false);

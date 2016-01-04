@@ -1180,7 +1180,7 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
     dsn_log_init();
 
     // init toollets
-    for (auto it = spec.toollets.begin(); it != spec.toollets.end(); it++)
+    for (auto it = spec.toollets.begin(); it != spec.toollets.end(); ++it)
     {
         auto tlet = dsn::tools::internal_use_only::get_toollet(it->c_str(), 0);
         dassert(tlet, "toolet not found");

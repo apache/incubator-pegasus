@@ -79,14 +79,14 @@ void replica::broadcast_group_check()
             name(), static_cast<int>(_primary_states.group_check_pending_replies.size())
             );
 
-        for (auto it = _primary_states.group_check_pending_replies.begin(); it != _primary_states.group_check_pending_replies.end(); it++)
+        for (auto it = _primary_states.group_check_pending_replies.begin(); it != _primary_states.group_check_pending_replies.end(); ++it)
         {
             it->second->cancel(true);
         }
         _primary_states.group_check_pending_replies.clear();
     }
 
-    for (auto it = _primary_states.statuses.begin(); it != _primary_states.statuses.end(); it++)
+    for (auto it = _primary_states.statuses.begin(); it != _primary_states.statuses.end(); ++it)
     {
         if (it->first == _stub->_primary_address)
             continue;
