@@ -54,6 +54,7 @@ namespace dsn
 
             // work_path = (argc > 0 ? argv[0] : current_app_data_dir)
             virtual error_code initialize(int argc, const char** argv) override;
+            virtual error_code finalize() override { return ERR_OK; }
 
             virtual std::shared_ptr<meta_state_service::transaction_entries> new_transaction_entries(unsigned int capacity) override;
 
@@ -102,7 +103,7 @@ namespace dsn
                 task_code cb_code,
                 const err_stringv_callback& cb_get_children,
                 clientlet* tracker = nullptr) override;
-            ~meta_state_service_simple();
+            virtual ~meta_state_service_simple() override;
 
         private:
             struct operation

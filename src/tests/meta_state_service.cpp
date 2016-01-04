@@ -1,18 +1,30 @@
+#include <dsn/dist/meta_state_service.h>
 #include <meta_state_service_simple.h>
+#include <meta_state_service_zookeeper.h>
+#include <boost/lexical_cast.hpp>
+
 #include <gtest/gtest.h>
 #include <chrono>
 #include <thread>
 
 using namespace dsn;
+using namespace dsn::dist;
+
 DEFINE_TASK_CODE(META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT);
-TEST(meta_state_service_simple, basics)
-{
-    //environment
-    auto service = new ::dsn::dist::meta_state_service_simple();
-    service->initialize(0, nullptr);
-    //bondary check
+
+typedef std::function<meta_state_service* ()> service_creator_func;
+typedef std::function<void (meta_state_service*)> service_deleter_func;
+
 #define expect_ok  [](error_code ec){EXPECT_TRUE(ec == ERR_OK);}
 #define expect_err [](error_code ec){EXPECT_FALSE(ec == ERR_OK);}
+
+void provider_basic_test(const service_creator_func& service_creator,
+                         const service_deleter_func& service_deleter)
+{
+    //environment
+    auto service = service_creator();
+
+    //bondary check
     service->node_exist("/", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)->wait();
     service->node_exist("", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_err)->wait();
     //recursive delete test
@@ -36,9 +48,8 @@ TEST(meta_state_service_simple, basics)
     }
     //check replay
     {
-        delete service;
-        service = new ::dsn::dist::meta_state_service_simple();
-        service->initialize(0, nullptr);
+        service_deleter(service);
+        service = service_creator();
         service->node_exist("/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)->wait();
         service->node_exist("/1/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_err)->wait();
         service->delete_node("/1", false, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)->wait();
@@ -68,6 +79,10 @@ TEST(meta_state_service_simple, basics)
             dassert(read_value == 0xbeefdead, "get_value != create_value");
         })->wait();
     }
+    //clean the node created in previos code-block, to support test in next round
+    {
+        service->delete_node("/1", false, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)->wait();
+    }
 
     typedef dsn::dist::meta_state_service::transaction_entries TEntries;
     //transaction op
@@ -96,7 +111,7 @@ TEST(meta_state_service_simple, basics)
         entries->create_node("/5");
 
         service->submit_transaction(entries, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_err)->wait();
-        error_code err[4] = {ERR_OK, ERR_OK, ERR_INVALID_PARAMETERS, ERR_CONSISTENCY};
+        error_code err[4] = {ERR_OK, ERR_OK, ERR_INVALID_PARAMETERS, ERR_INCONSISTENT_STATE};
         for (unsigned int i=0; i<4; ++i)
             EXPECT_EQ(err[i], entries->get_result(i));
 
@@ -116,9 +131,8 @@ TEST(meta_state_service_simple, basics)
 
     //check replay with transaction
     {
-        delete service;
-        service = new ::dsn::dist::meta_state_service_simple();
-        service->initialize(0, nullptr);
+        service_deleter(service);
+        service = service_creator();
 
         service->get_children("/2", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, [](error_code ec, const std::vector<std::string>& children)
         {
@@ -134,6 +148,95 @@ TEST(meta_state_service_simple, basics)
         })->wait();
     }
 
+    //delete the nodes created just now, using transaction delete
+    {
+        std::shared_ptr<TEntries> entries = service->new_transaction_entries(2);
+        entries->delete_node("/2/2");
+        entries->delete_node("/2");
+
+        service->submit_transaction(entries, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)->wait();
+        error_code err[2] = {ERR_OK, ERR_OK};
+
+        for (unsigned int i=0; i<2; ++i)
+            EXPECT_EQ(err[i], entries->get_result(i));
+    }
+
+    service_deleter(service);
+}
+
+void recursively_create_node_callback(
+    meta_state_service* service,
+    clientlet* tracker,
+    const std::string& root,
+    int current_layer,
+    error_code ec)
+{
+    ASSERT_TRUE(ec==ERR_OK);
+    if (current_layer<=0)
+        return;
+
+    for (int i=0; i!=10; ++i) {
+        std::string subroot = root+"/"+boost::lexical_cast<std::string>(i);
+        service->create_node(
+            subroot,
+            META_STATE_SERVICE_SIMPLE_TEST_CALLBACK,
+            std::bind(recursively_create_node_callback, service, tracker, subroot, current_layer-1, std::placeholders::_1),
+            blob(),
+            tracker
+        );
+    }
+}
+
+void provider_recursively_create_delete_test(const service_creator_func& creator, const service_deleter_func& deleter)
+{
+    meta_state_service* service = creator();
+    clientlet tracker;
+
+    service->delete_node("/r", true, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, [](error_code ec){ ddebug("result: %s", ec.to_string()); } )->wait();
+    service->create_node(
+        "/r",
+        META_STATE_SERVICE_SIMPLE_TEST_CALLBACK,
+        std::bind(recursively_create_node_callback, service, &tracker, "/r", 1, std::placeholders::_1),
+        blob(),
+        &tracker);
+    dsn_task_tracker_wait_all(tracker.tracker());
+
+    deleter(service);
+}
+
 #undef expect_ok
 #undef expect_err
+
+TEST(meta_state_service, simple)
+{
+    auto simple_service_creator = []
+    {
+        meta_state_service_simple* svc = new meta_state_service_simple();
+        svc->initialize(0, nullptr);
+        return svc;
+    };
+    auto simple_service_deleter = [](meta_state_service* simple_svc)
+    {
+        delete simple_svc;
+    };
+
+    provider_basic_test(simple_service_creator, simple_service_deleter);
+    provider_recursively_create_delete_test(simple_service_creator, simple_service_deleter);
+}
+
+TEST(meta_state_service, zookeeper)
+{
+    auto zookeeper_service_creator = []
+    {
+        meta_state_service_zookeeper* svc = new meta_state_service_zookeeper();
+        svc->initialize(0, nullptr);
+        return svc;
+    };
+    auto zookeeper_service_deleter = [](meta_state_service* zookeeper_svc)
+    {
+        ASSERT_EQ(zookeeper_svc->finalize(), ERR_OK);
+    };
+
+    provider_basic_test(zookeeper_service_creator, zookeeper_service_deleter);
+    provider_recursively_create_delete_test(zookeeper_service_creator, zookeeper_service_deleter);
 }

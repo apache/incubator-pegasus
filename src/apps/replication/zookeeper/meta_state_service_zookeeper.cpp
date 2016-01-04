@@ -114,9 +114,24 @@ error_code zoo_transaction::delete_node(const std::string &path)
 
 error_code zoo_transaction::set_data(const std::string &name, const blob &value)
 {
-    //TODO: implement the set data
-    dassert(false, "to be implemented");
-    return ERR_ARRAY_INDEX_OUT_OF_RANGE;
+    if (_pkt->_count >= _pkt->_capacity)
+        return ERR_ARRAY_INDEX_OUT_OF_RANGE;
+    unsigned int& offset = _pkt->_count;
+    std::string& p = (_pkt->_paths)[offset];
+    blob& b = (_pkt->_datas[offset]);
+    p = name;
+    b = value;
+
+    zoo_op_t& op = _pkt->_ops[offset];
+    op.type = ZOO_SETDATA_OP;
+    op.set_op.path = p.c_str();
+    op.set_op.data = value.data();
+    op.set_op.datalen = value.length();
+    op.set_op.version = -1;
+    op.set_op.stat = (struct Stat*)_pkt->alloc_buffer(sizeof(struct Stat));
+
+    ++offset;
+    return ERR_OK;
 }
 
 error_code zoo_transaction::get_result(unsigned int entry_index)
@@ -162,9 +177,15 @@ error_code meta_state_service_zookeeper::initialize(int /*argc*/, const char** /
     }
 
     ddebug("init meta_state_service_zookeeper succeed");
-    // TODO: add_ref() here because we need add_ref/release_ref in callbacks, so this object should be
-    // stored in ref_ptr to avoid memory leak.
+
+    //Notice: this reference is released in finalize
     add_ref();
+    return ERR_OK;
+}
+
+error_code meta_state_service_zookeeper::finalize()
+{
+    release_ref();
     return ERR_OK;
 }
 
@@ -370,7 +391,7 @@ void meta_state_service_zookeeper::visit_zookeeper_internal(
     void* result)
 {
     zookeeper_session::zoo_opcontext* op = reinterpret_cast<zookeeper_session::zoo_opcontext*>(result);
-    dinfo("visit zookeeper internal: ans(%d), call type(%d)", op->_output.error, op->_optype);
+    dinfo("visit zookeeper internal: ans(%s), call type(%d)", zerror(op->_output.error), op->_optype);
 
     switch (op->_optype)
     {

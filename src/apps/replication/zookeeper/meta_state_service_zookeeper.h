@@ -49,10 +49,11 @@ class meta_state_service_zookeeper:
 {
 public:
     explicit meta_state_service_zookeeper();
-    virtual ~meta_state_service_zookeeper();
+    virtual ~meta_state_service_zookeeper() override;
 
     // no parameter need
     virtual error_code initialize(int argc, const char** argv) override;
+    virtual error_code finalize() override;
 
     virtual std::shared_ptr<meta_state_service::transaction_entries> new_transaction_entries(unsigned int capacity) override;
 

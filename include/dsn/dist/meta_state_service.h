@@ -79,10 +79,16 @@ namespace dsn
             };
 
         public:
+            virtual ~meta_state_service() {}
             /*
              * initialization work
              */
             virtual error_code initialize(int argc, const char** argv) = 0;
+
+            /*
+             * finalize work
+             */
+            virtual error_code finalize() = 0;
 
             /*
              * create a transaction_entries structure

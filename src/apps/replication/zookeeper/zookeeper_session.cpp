@@ -63,6 +63,8 @@ zookeeper_session::zoo_atomic_packet::~zoo_atomic_packet()
     for (int i=0; i<_count; ++i) {
         if (_ops[i].type == ZOO_CREATE_OP)
             free(_ops[i].create_op.buf);
+        else if (_ops[i].type == ZOO_SETDATA_OP)
+            free(_ops[i].set_op.stat);
     }
     free(_ops);
     free(_results);

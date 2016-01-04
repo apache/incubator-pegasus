@@ -428,13 +428,13 @@ namespace dsn
 
             if (i < entries->_offset) {
                 for (int j=i+1; j!=entries->_offset; ++j)
-                    entries->_ops[j]._result = ERR_CONSISTENCY;
+                    entries->_ops[j]._result = ERR_INCONSISTENT_STATE;
                 return tasking::enqueue(
                     cb_code,
                     tracker,
                     [=]()
                     {
-                        cb_transaction(ERR_CONSISTENCY);
+                        cb_transaction(ERR_INCONSISTENT_STATE);
                     });
             }
             else {
