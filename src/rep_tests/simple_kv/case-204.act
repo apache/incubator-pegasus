@@ -67,8 +67,8 @@ state:{{r1,pri,3,10}}
 #
 #                      (1)                 (10)
 #   prepare_list :      |-------------------|  
-#   learn        :                         ||
-#                                         (10)
+#   learn        :                           |-->
+#                                           (11)
 #
 client:replica_config:receiver=r1,type=add_secondary,node=r2
 config:{4,r1,[r2]}

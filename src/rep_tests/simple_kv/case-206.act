@@ -67,7 +67,8 @@ state:{{r1,pri,3,10}}
 #
 #                      (1)                 (10)
 #   prepare_list :      |-------------------|  
-#   learn        :      |-------------------|
+#   learn        :      |-->
+#                      (1)
 #
 client:replica_config:receiver=r1,type=add_secondary,node=r3
 config:{4,r1,[r3]}
@@ -87,8 +88,8 @@ client:end_write:id=12,key=k12,err=err_ok,resp=0
 #
 #                      (3)                 (12)
 #   prepare_list :      |-------------------|  
-#   learn        :                     |----|
-#                                     (11)
+#   learn        :                         |-->
+#                                         (11)
 #
 client:replica_config:receiver=r1,type=add_secondary,node=r2
 config:{5,r1,[r2,r3]}

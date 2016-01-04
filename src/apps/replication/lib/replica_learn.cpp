@@ -37,6 +37,7 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "replica_stub.h"
+#include <dsn/internal/factory_store.h>
 
 # ifdef __TITLE__
 # undef __TITLE__
@@ -246,7 +247,7 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
     else if (request.last_committed_decree_in_app > local_committed_decree)
     {
         derror(
-            "%s: on_learn[%016llx]: learner = %s, learner's last_committed_decree is newer than learnee, "
+            "%s: on_learn[%016llx]: learner = %s, learner's last_committed_decree_in_app is newer than learnee, "
             "learner_app_committed_decree = %" PRId64 ", local_committed_decree = %" PRId64 ", commit local hard",
             name(), request.signature, request.learner.to_string(),
             request.last_committed_decree_in_app, local_committed_decree
@@ -462,23 +463,48 @@ void replica::on_learn_reply(
     // local state is newer than learnee
     if (resp->last_committed_decree < _app->last_committed_decree())
     {
-        dwarn("%s: on_learn_reply[%016llx]: learnee = %s, learner state is newer than learnee (primary): %" PRId64 " vs %" PRId64,
+        dwarn(
+            "%s: on_learn_reply[%016llx]: learnee = %s, learner state is newer than learnee (primary): %" PRId64 " vs %" PRId64 ", create new app",
             name(), req->signature, resp->config.primary.to_string(),
             _app->last_committed_decree(),
             resp->last_committed_decree            
             );
 
+        // TODO(qinzuoyan):
+        // - we'd better backup the old data, which may be recovered in some way.
+        // - we should create a new app object, or the app must be reusable.
+        // - we can clear private log and reopen a new _private_log.
         auto err = _app->close(true);
 
         if (err == ERR_OK)
         {
-            err = _app->open(true);
+            _app.reset(::dsn::utils::factory_store<replication_app_base>::create(_app_type.c_str(), PROVIDER_TYPE_MAIN, this));
+            if (nullptr == _app)
+            {
+                derror(
+                    "%s: on_learn_reply[%016llx]: learnee = %s, app type %s not found",
+                    name(), req->signature, resp->config.primary.to_string(),
+                    _app_type.c_str()
+                    );
+                err = ERR_OBJECT_NOT_FOUND;
+            }
         }
 
-        // invalidate existing mutations in current logs
         if (err == ERR_OK)
         {
-            err = _app->update_init_info(this,
+            err = _app->open_internal(this, true);
+        }
+
+        if (err == ERR_OK)
+        {
+            dassert(_app->last_committed_decree() == 0, "");
+            dassert(_app->last_durable_decree() == 0, "");
+
+            // reset prepare list
+            _prepare_list->reset(_app->last_committed_decree());
+
+            err = _app->update_init_info(
+                this,
                 _stub->_log->on_partition_reset(get_gpid(), 0),
                 _private_log ? _private_log->on_partition_reset(get_gpid(), 0) : 0
                 );
@@ -493,9 +519,6 @@ void replica::on_learn_reply(
                 );
             return;
         }
-
-        // reset preparelist
-        _prepare_list->reset(_app->last_committed_decree());
     }
 
     if (resp->prepare_start_decree != invalid_decree)
@@ -509,8 +532,9 @@ void replica::on_learn_reply(
         _potential_secondary_states.learning_start_prepare_decree = resp->prepare_start_decree;
         _prepare_list->reset(_app->last_committed_decree());
         ddebug(
-            "%s: resetPrepareList = %" PRId64 ", currentState = %s",
-            name(), _app->last_committed_decree(),
+            "%s: on_learn_reply[%016llx]: learnee = %s, reset_prepare_list = %" PRId64 ", current_learning_status = %s",
+            name(), req->signature, resp->config.primary.to_string(),
+            _app->last_committed_decree(),
             enum_to_string(_potential_secondary_states.learning_status)
             );
         
@@ -521,7 +545,7 @@ void replica::on_learn_reply(
         {
             auto mu = mutation::read_from(reader, nullptr);
             mu->set_logged();
-            dinfo("%s: apply learned mutation %s", name(), mu->name());
+            dinfo("%s: on_learn_reply[%016llx]: apply learned mutation %s", name(), req->signature, mu->name());
             if (mu->data.header.decree > last_committed_decree())
                 _prepare_list->prepare(mu, PS_POTENTIAL_SECONDARY);
         }

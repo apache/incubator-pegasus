@@ -29,11 +29,36 @@ client:begin_write:id=8,key=k8,value=v8,timeout=0
 client:begin_write:id=9,key=k9,value=v9,timeout=0
 client:begin_write:id=10,key=k10,value=v10,timeout=0
 
-# wait r2 checkpoint done
-state:{{r1,pri,2,10,10},{r2,sec,2,10,10}}
+# wait write commit
+state:{{r1,pri,2,10,10},{r2,sec,2,5,5}}
 
+# remove primary r1
+client:replica_config:receiver=r1,type=downgrade_to_inactive,node=r1
+config:{3,-,[r2]}
+state:{{r2,sec,3,5}}
+
+# upgrade r2 to primary
+client:replica_config:receiver=r2,type=upgrade_to_primary,node=r2
+config:{4,r2,[]}
+state:{{r2,pri,4,5}}
+
+# add secondary r1
+# will trigger learning in on_learn():
+#   learner.last_committed_decree_in_app {=10} > learnee.last_committed_decree {=5}
+#   learner's last_committed_decree_in_app is newer than learnee, commit local hard
+#
+#                      (1)        (5)        (10)
+#   prepare_list :      |----------|~~~~~~~~~~|
+#   learn        :                             |-->
+#                                             (11)
+#
+client:replica_config:receiver=r2,type=add_secondary,node=r1
+config:{5,r2,[r1]}
+state:{{r1,sec,5,10},{r2,pri,5,10}}
+
+# check r2 data corrent
 client:begin_read:id=1,key=k1,timeout=0
-wait:on_rpc_call:rpc_name=RPC_REPLICATION_CLIENT_READ,from=c,to=r1
+wait:on_rpc_call:rpc_name=RPC_REPLICATION_CLIENT_READ,from=c,to=r2
 client:end_read:id=1,err=err_ok,resp=v1
 client:begin_read:id=2,key=k2,timeout=0
 client:end_read:id=2,err=err_ok,resp=v2
@@ -54,37 +79,17 @@ client:end_read:id=9,err=err_ok,resp=v9
 client:begin_read:id=10,key=k10,timeout=0
 client:end_read:id=10,err=err_ok,resp=v10
 
-# remove secondary r2
-client:replica_config:receiver=r1,type=downgrade_to_inactive,node=r2
-config:{3,r1,[]}
-state:{{r1,pri,3,10}}
+# change primary from r2 to r1
+client:replica_config:receiver=r2,type=downgrade_to_secondary,node=r2
+config:{6,-,[r1,r2]}
+state:{{r1,sec,6,10},{r2,sec,6,10}}
+client:replica_config:receiver=r1,type=upgrade_to_primary,node=r1
+config:{7,r1,[r2]}
+state:{{r1,pri,7,10},{r2,sec,7,10}}
 
-# add secondary r3 (new replica)
-# will trigger learning in on_learn():
-#   _prepare_list.count() {=10} > 0 
-#   learn_start_decree {=1} == _prepare_list->min_decree() {=1}
-#   to-be-learn state is covered by prepare list, learn by CACHE, learn_mutation_count = 10
-#
-#                      (1)                 (10)
-#   prepare_list :      |-------------------|  
-#   learn        :      |-->
-#                      (1)
-#
-client:replica_config:receiver=r1,type=add_secondary,node=r3
-config:{4,r1,[r3]}
-state:{{r1,pri,4,10},{r3,sec,4,10}}
-
-# change primary from r1 to r3
-client:replica_config:receiver=r1,type=downgrade_to_secondary,node=r1
-config:{5,-,[r1,r3]}
-state:{{r1,sec,5,10},{r3,sec,5,10}}
-client:replica_config:receiver=r3,type=upgrade_to_primary,node=r3
-config:{6,r3,[r1]}
-state:{{r1,sec,6,10},{r3,pri,6,10}}
-
-# check r3 data corrent
+# check r1 data corrent
 client:begin_read:id=1,key=k1,timeout=0
-wait:on_rpc_call:rpc_name=RPC_REPLICATION_CLIENT_READ,from=c,to=r3
+wait:on_rpc_call:rpc_name=RPC_REPLICATION_CLIENT_READ,from=c,to=r1
 client:end_read:id=1,err=err_ok,resp=v1
 client:begin_read:id=2,key=k2,timeout=0
 client:end_read:id=2,err=err_ok,resp=v2
