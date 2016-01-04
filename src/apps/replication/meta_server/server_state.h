@@ -57,16 +57,6 @@ namespace dsn {
 
 typedef std::list<std::pair< ::dsn::rpc_address, bool>> node_states;
 
-enum class app_status
-{
-    available,
-    creating,
-    creating_failed, 
-    dropping, 
-    dropping_failed, 
-    dropped
-};
-
 struct app_state
 {
     app_status                           status;
@@ -75,7 +65,7 @@ struct app_state
     int32_t                              app_id;
     int32_t                              partition_count;
     std::vector<partition_configuration> partitions;
-    DEFINE_JSON_SERIALIZATION(app_type, app_name, app_id, partition_count, partitions);
+    DEFINE_JSON_SERIALIZATION(status, app_type, app_name, app_id, partition_count, partitions);
 };
 
 typedef std::unordered_map<global_partition_id, std::shared_ptr<configuration_update_request> > machine_fail_updates;
@@ -138,6 +128,7 @@ public:
     // table options
     void create_app(dsn_message_t msg);
     void drop_app(dsn_message_t msg);
+    void list_apps(dsn_message_t msg);
 
     void unfree_if_possible_on_start();
 

@@ -743,7 +743,7 @@ void server_state::query_configuration_by_index(const configuration_query_by_ind
         if (index>=0 && index<app.partitions.size())
             response.partitions.push_back( app.partitions[index]);
     }
-    if (response.partitions.empty() && request.if_query_all_partitions)
+    if (response.partitions.empty())
         response.partitions = app.partitions;
 }
 
@@ -976,6 +976,29 @@ void server_state::drop_app(dsn_message_t msg)
     }
     else
         reply(msg, response);
+}
+
+void server_state::list_apps(dsn_message_t msg)
+{
+    configuration_list_apps_request request;
+    configuration_list_apps_response response;
+    ::unmarshall(msg, request);
+    {
+        zauto_write_lock l(_lock);
+        for (const app_state& app: _apps)
+            if ( request.status == app_status::all || request.status == app.status)
+            {
+                dsn::replication::app_info info;
+                info.app_id = app.app_id;
+                info.status = app.status;
+                info.app_type = app.app_type;
+                info.app_name = app.app_name;
+                info.partition_count = app.partition_count;
+                response.infos.push_back(info);
+            }
+        response.err = dsn::ERR_OK;
+    }
+    reply(msg, response);
 }
 
 void server_state::update_configuration(

@@ -105,6 +105,16 @@ namespace dsn {
             ENUM_REG(CT_UPGRADE_TO_SECONDARY)
         ENUM_END(config_type)
 
+        ENUM_BEGIN(app_status, invalid)
+            ENUM_REG(available)
+            ENUM_REG(creating)
+            ENUM_REG(creating_failed)
+            ENUM_REG(dropping)
+            ENUM_REG(dropping_failed)
+            ENUM_REG(dropped)
+            ENUM_REG(all)
+        ENUM_END(app_status)
+
         inline void json_encode(std::stringstream& out, const partition_configuration& config)
         {
             JSON_DICT_ENTRIES(out, config, app_type, gpid, ballot, max_replica_count, primary, secondaries, last_drops, last_committed_decree);

@@ -46,6 +46,8 @@ struct partition_configuration
     8:i64                    last_committed_decree;
 }
 
+
+
 struct replica_configuration
 {
     1:global_partition_id gpid;
@@ -180,6 +182,27 @@ enum config_type
     CT_UPGRADE_TO_SECONDARY,
 }
 
+enum app_status
+{
+    available,
+    creating,
+    creating_failed,
+    dropping,
+    dropping_failed,
+    dropped,
+    all,
+    invalid
+}
+
+struct app_info
+{
+    1:app_status    status;
+    2:string        app_type;
+    3:string        app_name;
+    4:i32           app_id;
+    5:i32           partition_count;
+}
+
 struct meta_request_header
 {
     1:string rpc_tag;
@@ -247,6 +270,11 @@ struct configuration_drop_app_request
     2:drop_app_options         options;
 }
 
+struct configuration_list_apps_request
+{
+    1:app_status               status;
+}
+
 // meta server => client
 struct configuration_create_app_response
 {
@@ -259,6 +287,12 @@ struct configuration_drop_app_response
     1:dsn.error_code       err;
 }
 
+struct configuration_list_apps_response
+{
+    1:dsn.error_code       err;
+    2:list<app_info>       info;
+}
+
 struct configuration_query_by_node_response
 {
     1:dsn.error_code                err;
@@ -268,7 +302,6 @@ struct configuration_query_by_node_response
 struct configuration_query_by_index_request
 {
     1:string           app_name;
-    2:bool             if_query_all_partitions;
     2:list<i32>        partition_indices;
 }
 

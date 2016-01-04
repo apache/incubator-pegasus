@@ -34,12 +34,8 @@
 
 #include <cctype>
 #include <dsn/dist/replication.h>
-#include <dsn/dist/replication/replication.types.h>
 
-
-using namespace dsn::replication;
-
-namespace dsn{ namespace client{
+namespace dsn{ namespace replication{
 
 class client_ddl : public clientlet
 {
@@ -50,10 +46,14 @@ public:
 
     dsn::error_code drop_app(const std::string& app_name);
 
-private:
-    bool inline static valid_app_char(int c);
+    dsn::error_code list_apps(const dsn::replication::app_status status, std::string file_name);
 
-    void inline end_meta_request(task_ptr callback, error_code err, dsn_message_t request, dsn_message_t resp);
+    dsn::error_code list_app(const std::string& app_name, bool detailed, std::string file_name);
+
+private:
+    bool static valid_app_char(int c);
+
+    void end_meta_request(task_ptr callback, int retry_times, error_code err, dsn_message_t request, dsn_message_t resp);
 
     template<typename TRequest, typename TResponse>
     dsn::task_ptr request_meta(
@@ -87,6 +87,7 @@ private:
             std::bind(&client_ddl::end_meta_request,
             this,
             task,
+            0,
             std::placeholders::_1,
             std::placeholders::_2,
             std::placeholders::_3
@@ -98,17 +99,7 @@ private:
 
 private:
     dsn::rpc_address _meta_servers;
+    std::vector<dsn::rpc_address> _meta_server_vector;
 };
 
-bool client_ddl::valid_app_char(int c)
-{
-    return (bool)std::isalnum(c) || c == '_';
-}
-
-void client_ddl::end_meta_request(task_ptr callback, error_code err, dsn_message_t request, dsn_message_t resp)
-{
-    callback->enqueue_rpc_response(err, resp);
-}
-
 }} //namespace
-

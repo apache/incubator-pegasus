@@ -1289,6 +1289,9 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
         }
     }
 
+    // add this to allow mimic app call from this thread.
+    memset((void*)&dsn::tls_dsn, 0, sizeof(dsn::tls_dsn));
+
     return true;
 }
 

@@ -33,18 +33,19 @@
  */
 
 #include <dsn/dist/replication.h>
-#include <dsn/dist/replication/replication.types.h>
 #include <dsn/dist/replication/client_ddl.h>
+#include <dsn/dist/replication/replication_other_types.h>
 #include <iostream>
+#include <fstream>
+#include <iomanip>
 
-using namespace dsn::replication;
-
-namespace dsn{ namespace client{
+namespace dsn{ namespace replication{
 
 client_ddl::client_ddl(std::vector<dsn::rpc_address> meta_servers)
 {
+    _meta_server_vector = meta_servers;
     _meta_servers.assign_group(dsn_group_build("meta.servers"));
-    for (auto& m : meta_servers)
+    for (auto& m : _meta_server_vector)
         dsn_group_add(_meta_servers.group_handle(), m.c_addr());
 }
 
@@ -95,7 +96,6 @@ dsn::error_code client_ddl::create_app(const std::string& app_name, const std::s
     {
         std::shared_ptr<configuration_query_by_index_request> query_req(new configuration_query_by_index_request());
         query_req->app_name = app_name;
-        query_req->if_query_all_partitions = true;
 
         auto query_task = request_meta<configuration_query_by_index_request, configuration_query_by_index_response>(
                     RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX,
@@ -164,6 +164,173 @@ dsn::error_code client_ddl::drop_app(const std::string& app_name)
         return resp.err;
     }
     return dsn::ERR_OK;
+}
+
+dsn::error_code client_ddl::list_apps(const dsn::replication::app_status status, std::string file_name)
+{
+    std::shared_ptr<configuration_list_apps_request> req(new configuration_list_apps_request());
+    req->status = status;
+
+    auto resp_task = request_meta<configuration_list_apps_request, configuration_list_apps_response>(
+            RPC_CM_LIST_APPS,
+            req,
+            nullptr,
+            nullptr
+    );
+    resp_task->wait();
+    if (resp_task->error() != dsn::ERR_OK)
+    {
+        return resp_task->error();
+    }
+
+    dsn::replication::configuration_list_apps_response resp;
+    ::unmarshall(resp_task->response(), resp);
+    if(resp.err != dsn::ERR_OK)
+    {
+        return resp.err;
+    }
+
+    // print configuration_list_apps_response
+    std::streambuf * buf;
+    std::ofstream of;
+
+    if(!file_name.empty()) {
+        of.open(file_name);
+        buf = of.rdbuf();
+    } else {
+        buf = std::cout.rdbuf();
+    }
+    std::ostream out(buf);
+
+    out << std::setw(10) << std::left << "app_id"
+        << std::setw(20) << std::left << "status"
+        << std::setw(20) << std::left << "app_name"
+        << std::setw(20) << std::left << "app_type"
+        << std::setw(10) << std::left << "partition_count"
+        << std::endl;
+    for(int i = 0; i < resp.infos.size(); i++)
+    {
+        dsn::replication::app_info info = resp.infos[i];
+        out << std::setw(10) << std::left << info.app_id
+            << std::setw(20) << std::left << enum_to_string(info.status)
+            << std::setw(20) << std::left << info.app_name
+            << std::setw(20) << std::left << info.app_type
+            << std::setw(10) << std::left << info.partition_count
+            << std::endl;
+    }
+    out << std::endl << std::flush;
+    return dsn::ERR_OK;
+}
+
+dsn::error_code client_ddl::list_app(const std::string& app_name, bool detailed, std::string file_name)
+{
+    if(app_name.empty() || !std::all_of(app_name.cbegin(),app_name.cend(),(bool (*)(int)) client_ddl::valid_app_char))
+        return ERR_INVALID_PARAMETERS;
+
+    std::shared_ptr<configuration_query_by_index_request> req(new configuration_query_by_index_request());
+    req->app_name = app_name;
+
+    auto resp_task = request_meta<configuration_query_by_index_request, configuration_query_by_index_response>(
+            RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX,
+            req,
+            nullptr,
+            nullptr
+    );
+
+    resp_task->wait();
+    if (resp_task->error() != dsn::ERR_OK)
+    {
+        return resp_task->error();
+    }
+
+    dsn::replication::configuration_query_by_index_response resp;
+    ::unmarshall(resp_task->response(), resp);
+    if(resp.err != dsn::ERR_OK)
+    {
+        return resp.err;
+    }
+
+    // print configuration_query_by_index_response
+    std::streambuf * buf;
+    std::ofstream of;
+
+    if(!file_name.empty()) {
+        of.open(file_name);
+        buf = of.rdbuf();
+    } else {
+        buf = std::cout.rdbuf();
+    }
+    std::ostream out(buf);
+
+    out << "app name:" << app_name << std::endl
+        << "app id:" << resp.app_id << std::endl
+        << "app partition count:" << resp.partition_count << std::endl;
+    if(detailed)
+    {
+        out << "details:" << std::endl
+            << std::setw(10) << std::left << "pidx"
+            << std::setw(10) << std::left << "ballot"
+            << std::setw(15) << std::left << "commmitdecree"
+            << std::setw(25) << std::left << "primary"
+            << std::setw(40) << std::left << "secondaries"
+            << std::endl;
+        for(int i = 0; i < resp.partitions.size(); i++)
+        {
+            dsn::replication::partition_configuration p = resp.partitions[i];
+            out << std::setw(10) << std::left << p.gpid.pidx
+                << std::setw(10) << std::left << p.ballot
+                << std::setw(15) << std::left << p.last_committed_decree
+                << std::setw(25) << std::left << p.primary.to_std_string()
+                << std::left<< p.secondaries.size() << ":[";
+            for(int j = 0; j < p.secondaries.size(); j++)
+            {
+                if(j!= 0)
+                    out << ",";
+                out << p.secondaries[j].to_std_string();
+            }
+            out << "]" << std::endl;
+        }
+    }
+    out << std::endl;
+    return dsn::ERR_OK;
+}
+
+bool client_ddl::valid_app_char(int c)
+{
+    return (bool)std::isalnum(c) || c == '_' || c == '.';
+}
+
+void client_ddl::end_meta_request(task_ptr callback, int retry_times, error_code err, dsn_message_t request, dsn_message_t resp)
+{
+    if(err == dsn::ERR_TIMEOUT && retry_times < 5)
+    {
+        dsn::rpc_address addr = dsn::rpc_address(dsn_msg_to_address(request));
+
+        // remove current contact meta node
+        dsn::rpc_address _temp_meta_servers;
+        _temp_meta_servers.assign_group(dsn_group_build("meta.servers"));
+        for (auto& m : _meta_server_vector)
+            if(m != addr)
+                dsn_group_add(_temp_meta_servers.group_handle(), m.c_addr());
+        rpc_address target(_temp_meta_servers);
+
+        rpc::call(
+            target,
+            request,
+            this,
+            std::bind(&client_ddl::end_meta_request,
+            this,
+            callback,
+            retry_times + 1,
+            std::placeholders::_1,
+            std::placeholders::_2,
+            std::placeholders::_3
+            ),
+            0
+         );
+    }
+    else
+        callback->enqueue_rpc_response(err, resp);
 }
 
 }} // namespace
