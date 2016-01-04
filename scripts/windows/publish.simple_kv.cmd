@@ -64,7 +64,7 @@ GOTO exit
         ECHO set i=0
         ECHO :loop
         ECHO     set /a i=%%i%%+1
-        ECHO     run run %%i%%th ... ^>^> ./running.txt
+        ECHO     echo run %%i%%th ... ^>^> ./running.txt
         ECHO     .\dsn.replication.simple_kv.exe config.ini -app_list %app%@1%monitor_str%
         ECHO     ping -n 16 127.0.0.1 ^>nul
         ECHO goto loop
