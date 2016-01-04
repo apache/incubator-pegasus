@@ -152,7 +152,7 @@ namespace dsn
             struct simple_transaction_entries: public meta_state_service::transaction_entries
             {
                 std::vector<operation_entry> _ops;
-                int _offset;
+                unsigned int _offset;
 
                 simple_transaction_entries(unsigned int capacity): _ops(capacity), _offset(0){}
                 virtual ~simple_transaction_entries() {}
