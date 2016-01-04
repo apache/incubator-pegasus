@@ -50,10 +50,18 @@ namespace dsn
             : public meta_state_service, public clientlet
         {
         public:
-            explicit meta_state_service_simple() : _root("/", nullptr), _quick_map({std::make_pair("/", &_root)}), _log(nullptr), _offset(0){}
+            explicit meta_state_service_simple() : _root("/", nullptr), _log_lock(true), _quick_map({std::make_pair("/", &_root)}), _log(nullptr), _offset(0){}
 
             // work_path = (argc > 0 ? argv[0] : current_app_data_dir)
             virtual error_code initialize(int argc, const char** argv) override;
+
+            virtual std::shared_ptr<meta_state_service::transaction_entries> new_transaction_entries(unsigned int capacity) override;
+
+            virtual task_ptr submit_transaction(const std::shared_ptr<meta_state_service::transaction_entries>& t_entries,
+                task_code cb_code,
+                const err_callback& cb_create_tree,
+                clientlet* tracker = nullptr
+                ) override;
 
             virtual task_ptr create_node(
                 const std::string& node,
@@ -133,6 +141,56 @@ namespace dsn
                 set_data,
             };
             
+            struct operation_entry {
+                operation_type _type;
+                std::string _node;
+                blob _value; // for only creaet/set
+                error_code _result;
+            };
+
+            struct simple_transaction_entries: public meta_state_service::transaction_entries
+            {
+                std::vector<operation_entry> _ops;
+                int _offset;
+
+                simple_transaction_entries(unsigned int capacity): _ops(capacity), _offset(0){}
+                virtual ~simple_transaction_entries() {}
+
+                virtual error_code create_node(const std::string &node, const blob &value) override
+                {
+                    return append(operation_type::create_node, node, value);
+                }
+
+                virtual error_code delete_node(const std::string &node) override
+                {
+                    return append(operation_type::delete_node, node, blob());
+                }
+
+                virtual error_code set_data(const std::string& node, const blob& value) override
+                {
+                    return append(operation_type::set_data, node, value);
+                }
+
+                error_code append(operation_type type, const std::string &node, const blob &value)
+                {
+                    if (_offset >= _ops.size())
+                        return ERR_ARRAY_INDEX_OUT_OF_RANGE;
+                    _ops[_offset]._type = type;
+                    _ops[_offset]._node = node;
+                    _ops[_offset]._value = value;
+                    ++_offset;
+
+                    return ERR_OK;
+                }
+
+                virtual error_code get_result(unsigned int entry_index) override
+                {
+                    if (entry_index >= _offset)
+                        return ERR_ARRAY_INDEX_OUT_OF_RANGE;
+                    return _ops[entry_index]._result;
+                }
+            };
+
             template<operation_type op, typename ... Args> struct log_struct;
             template<operation_type op, typename Head, typename ...Tail>
             struct log_struct<op, Head, Tail...> {
@@ -185,7 +243,7 @@ namespace dsn
             error_code create_node_internal(const std::string &node, const blob& blob);
             error_code delete_node_internal(const std::string &node, bool recursive);
             error_code set_data_internal(const std::string &node, const blob& blob);
-
+            error_code apply_transaction(const std::shared_ptr<meta_state_service::transaction_entries>& t_entries);
             
             typedef std::unordered_map<std::string, state_node*> quick_map;
 

@@ -51,7 +51,8 @@ error_code from_zerror(int zerr)
         return ERR_OBJECT_NOT_FOUND;
     if (ZNODEEXISTS == zerr)
         return ERR_NODE_ALREADY_EXIST;
-
+    if (ZRUNTIMEINCONSISTENCY == zerr)
+        return ERR_CONSISTENCY;
     return ERR_ZOOKEEPER_OPERATION;
 }
 

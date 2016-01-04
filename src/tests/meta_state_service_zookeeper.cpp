@@ -119,3 +119,52 @@ TEST(meta_state_service_zookeeper, create_delete)
     dsn_task_tracker_wait_all(tracker.tracker());
     ddebug("create delete test finish");
 }
+
+TEST(meta_state_service_zookeeper, batch_op)
+{
+    ref_ptr<meta_state_service_zookeeper> service(new meta_state_service_zookeeper());
+    error_code ec = service->initialize(0, nullptr);
+    ASSERT_TRUE(ec==ERR_OK);
+
+    std::vector<std::string> tree_nodes;
+    tree_nodes.push_back("/trans");
+    for (int i=0; i<10; ++i)
+        tree_nodes.push_back( std::string("/trans/")+boost::lexical_cast<std::string>(i) );
+
+    service->delete_node(tree_nodes[0], true, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, [](error_code ec){ ddebug("result: %s", ec.to_string()); })->wait();
+
+    std::shared_ptr<meta_state_service::transaction_entries> entries = service->new_transaction_entries(11);
+    ASSERT_EQ(entries->create_node(tree_nodes[0]), ERR_OK);
+    for (int i=0; i<10; ++i)
+        ASSERT_EQ(entries->create_node( tree_nodes[i+1] ), ERR_OK);
+
+    service->submit_transaction(entries, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK,
+                         [&ec](error_code e){ ddebug("result: %s", e.to_string()); ec = e; })->wait();
+    ASSERT_TRUE(ec==ERR_OK);
+
+#define expect_ok  [](error_code ec){EXPECT_TRUE(ec == ERR_OK);}
+#define expect_err [](error_code ec){EXPECT_FALSE(ec == ERR_OK);}
+    service->node_exist(tree_nodes[0], META_STATE_SERVICE_SIMPLE_TEST_CALLBACK,
+                        expect_ok)->wait();
+    for (int i=0; i<10; ++i) {
+        service->node_exist(tree_nodes[i+1], META_STATE_SERVICE_SIMPLE_TEST_CALLBACK,
+                expect_ok)->wait();
+    }
+
+    entries = service->new_transaction_entries(11);
+    for (int i=0; i<10; ++i)
+        ASSERT_EQ(entries->delete_node( tree_nodes[i+1] ), ERR_OK);
+    ASSERT_EQ(entries->delete_node(tree_nodes[0]), ERR_OK);
+
+    service->submit_transaction(entries, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK,
+                         [&ec](error_code e){ ddebug("result: %s", e.to_string()); ec = e; })->wait();
+    ASSERT_TRUE(ec==ERR_OK);
+    service->node_exist(tree_nodes[0], META_STATE_SERVICE_SIMPLE_TEST_CALLBACK,
+                        expect_err)->wait();
+    for (int i=0; i<10; ++i) {
+        service->node_exist(tree_nodes[i+1], META_STATE_SERVICE_SIMPLE_TEST_CALLBACK,
+                expect_err)->wait();
+    }
+#undef expect_ok
+#undef expect_err
+}

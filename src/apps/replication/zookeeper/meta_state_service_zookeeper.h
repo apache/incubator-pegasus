@@ -54,6 +54,15 @@ public:
     // no parameter need
     virtual error_code initialize(int argc, const char** argv) override;
 
+    virtual std::shared_ptr<meta_state_service::transaction_entries> new_transaction_entries(unsigned int capacity) override;
+
+    virtual task_ptr submit_transaction(
+        const std::shared_ptr<meta_state_service::transaction_entries>& entries,
+        task_code cb_code,
+        const err_callback& cb_transaction,
+        clientlet* tracker = nullptr
+        ) override;
+
     virtual task_ptr create_node(
         const std::string& node,
         task_code cb_code,

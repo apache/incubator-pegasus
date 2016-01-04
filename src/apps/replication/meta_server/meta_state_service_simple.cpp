@@ -221,6 +221,33 @@ namespace dsn
             return ERR_OK;
         }
 
+        error_code meta_state_service_simple::apply_transaction(const std::shared_ptr<meta_state_service::transaction_entries>& t_entries)
+        {
+            dinfo("internal operation after logged");
+            simple_transaction_entries* entries = dynamic_cast<simple_transaction_entries*>(t_entries.get());
+            dassert(entries!=nullptr, "invalid input parameter");
+            error_code ec;
+            for (int i=0; i!=entries->_offset; ++i) {
+                operation_entry& e = entries->_ops[i];
+                switch (e._type) {
+                case operation_type::create_node:
+                    ec = create_node_internal(e._node, e._value);
+                    break;
+                case operation_type::delete_node:
+                    ec = delete_node_internal(e._node, false);
+                    break;
+                case operation_type::set_data:
+                    ec = set_data_internal(e._node, e._value);
+                    break;
+                default:
+                    dassert(false, "unsupported operation");
+                }
+                dassert(ec == ERR_OK, "unexpected error when applying, err=%s", ec.to_string());
+            }
+
+            return ERR_OK;
+        }
+
         error_code meta_state_service_simple::initialize(int argc, const char** argv)
         {
             const char* work_dir = argc > 0 ? argv[0] : dsn_get_current_app_data_dir();
@@ -294,6 +321,141 @@ namespace dsn
                 return ERR_FILE_OPERATION_FAILED;
             }
             return ERR_OK;
+        }
+
+        std::shared_ptr<meta_state_service::transaction_entries> meta_state_service_simple::new_transaction_entries(unsigned int capacity)
+        {
+            return std::shared_ptr<meta_state_service::transaction_entries>(
+                new meta_state_service_simple::simple_transaction_entries(capacity));
+        }
+
+        task_ptr meta_state_service_simple::submit_transaction(
+            /*in-out*/const std::shared_ptr<meta_state_service::transaction_entries> &t_entries,
+            task_code cb_code,
+            const err_callback &cb_transaction,
+            clientlet *tracker)
+        {
+            //when checking the snapshot, we block all write operations which come later
+            zauto_lock l(_log_lock);
+            std::set<std::string> snapshot;
+            for (const auto& kv: _quick_map)
+                snapshot.insert(kv.first);
+
+            //try
+            simple_transaction_entries* entries = dynamic_cast<simple_transaction_entries*>(t_entries.get());
+            std::string parent, name;
+            size_t i;
+
+            std::vector<blob> batch_buffer;
+            int total_size = 0;
+            batch_buffer.reserve(entries->_offset);
+
+            for (i=0; i!=entries->_offset; ++i) {
+                operation_entry& op = entries->_ops[i];
+                op._node = normalize_path(op._node);
+
+                switch (op._type) {
+                case operation_type::create_node:
+                {
+                    op._result = extract_name_parent_from_path(op._node, name, parent);
+                    if (op._result == ERR_OK)
+                    {
+                        if ( snapshot.find(parent)==snapshot.end() )
+                            op._result = ERR_OBJECT_NOT_FOUND;
+                        else if ( snapshot.find(op._node)!=snapshot.end() )
+                            op._result = ERR_NODE_ALREADY_EXIST;
+                        else
+                        {
+                            batch_buffer.push_back(create_node_log::get_log(op._node, op._value));
+                            total_size += batch_buffer.back().length();
+                            snapshot.insert(op._node);
+                            op._result = ERR_OK;
+                        }
+                    }
+                }
+                    break;
+                case operation_type::delete_node:
+                {
+                    if (snapshot.find(op._node) == snapshot.end())
+                    {
+                        op._result = ERR_OBJECT_NOT_FOUND;
+                    }
+                    else if (op._node=="/")
+                    {
+                        // delete root is forbidden
+                        op._result = ERR_INVALID_PARAMETERS;
+                    }
+                    else
+                    {
+                        op._node.push_back('/');
+                        std::set<std::string>::iterator iter = snapshot.lower_bound(op._node);
+                        if ( iter!=snapshot.end() &&
+                             (*iter).length()>=op._node.length() &&
+                             memcmp( (*iter).c_str(), op._node.c_str(), op._node.length())==0 ) {
+                            //op._node is the prefix of some path, so we regard this directory as not empty
+                            op._result = ERR_INVALID_PARAMETERS;
+                        }
+                        else {
+                            batch_buffer.push_back(delete_node_log::get_log(op._node, false));
+                            total_size += batch_buffer.back().length();
+                            op._node.pop_back();
+                            snapshot.erase(op._node);
+                            op._result = ERR_OK;
+                        }
+                    }
+                }
+                    break;
+                case operation_type::set_data:
+                {
+                    if (snapshot.find(op._node) == snapshot.end())
+                        op._result = ERR_OBJECT_NOT_FOUND;
+                    else
+                    {
+                        batch_buffer.push_back(set_data_log::get_log(op._node, op._value));
+                        total_size += batch_buffer.back().length();
+                        op._result = ERR_OK;
+                    }
+                }
+                    break;
+                default:
+                    dassert(false, "not supported operation");
+                    break;
+                }
+
+                if (op._result != ERR_OK)
+                    break;
+            }
+
+            if (i < entries->_offset) {
+                for (int j=i+1; j!=entries->_offset; ++j)
+                    entries->_ops[j]._result = ERR_CONSISTENCY;
+                return tasking::enqueue(
+                    cb_code,
+                    tracker,
+                    [=]()
+                    {
+                        cb_transaction(ERR_CONSISTENCY);
+                    });
+            }
+            else {
+                //apply
+                std::shared_ptr<char> batch(new char[total_size], [](char* ptr){ delete []ptr; } );
+                char* dest = batch.get();
+                std::for_each(batch_buffer.begin(), batch_buffer.end(),
+                    [&dest](const blob& entry)
+                    {
+                        memcpy(dest, entry.data(), entry.length());
+                        dest += entry.length();
+                    });
+                dassert(dest-batch.get()==total_size, "memcpy error");
+                task_ptr task = tasking::create_late_task(cb_code, cb_transaction, 0, tracker);
+                write_log(
+                    blob(batch, total_size),
+                    [this, t_entries]{ return apply_transaction(t_entries); },
+                    task
+                );
+                return task;
+            }
         }
 
         task_ptr meta_state_service_simple::create_node(
