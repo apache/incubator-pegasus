@@ -53,7 +53,7 @@ void primary_context::cleanup(bool clean_pending_mutations)
         group_check_task = nullptr;
     }
 
-    for (auto it = group_check_pending_replies.begin(); it != group_check_pending_replies.end(); it++)
+    for (auto it = group_check_pending_replies.begin(); it != group_check_pending_replies.end(); ++it)
     {
         it->second->cancel(true);
     }
@@ -97,13 +97,13 @@ void primary_context::reset_membership(const partition_configuration& config, bo
         statuses[membership.primary] = PS_PRIMARY;
     }
 
-    for (auto it = config.secondaries.begin(); it != config.secondaries.end(); it++)
+    for (auto it = config.secondaries.begin(); it != config.secondaries.end(); ++it)
     {
         statuses[*it] = PS_SECONDARY;
         learners.erase(*it);
     }
 
-    for (auto it = learners.begin(); it != learners.end(); it++)
+    for (auto it = learners.begin(); it != learners.end(); ++it)
     {
         statuses[it->first] = PS_POTENTIAL_SECONDARY;
     }

@@ -577,7 +577,7 @@ error_code server_state::sync_apps_from_remote_storage()
 void server_state::get_node_state(/*out*/ node_states& nodes)
 {
     zauto_read_lock l(_lock);
-    for (auto it = _nodes.begin(); it != _nodes.end(); it++)
+    for (auto it = _nodes.begin(); it != _nodes.end(); ++it)
     {
         nodes.push_back(std::make_pair(it->first, it->second.is_alive));
     }

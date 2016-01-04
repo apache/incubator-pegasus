@@ -222,7 +222,7 @@ namespace dsn {
                 os.write((const char*)&count, (uint32_t)sizeof(count));
                 os.write((const char*)&magic, (uint32_t)sizeof(magic));
 
-                for (auto it = _store.begin(); it != _store.end(); it++)
+                for (auto it = _store.begin(); it != _store.end(); ++it)
                 {
                     const std::string& k = it->first;
                     uint32_t sz = (uint32_t)k.length();

@@ -107,13 +107,13 @@ void replica::init_prepare(mutation_ptr& mu)
     // remote prepare
     mu->set_prepare_ts();
     mu->set_left_secondary_ack_count((unsigned int)_primary_states.membership.secondaries.size());
-    for (auto it = _primary_states.membership.secondaries.begin(); it != _primary_states.membership.secondaries.end(); it++)
+    for (auto it = _primary_states.membership.secondaries.begin(); it != _primary_states.membership.secondaries.end(); ++it)
     {
         send_prepare_message(*it, PS_SECONDARY, mu, _options->prepare_timeout_ms_for_secondaries);
     }
 
     count = 0;
-    for (auto it = _primary_states.learners.begin(); it != _primary_states.learners.end(); it++)
+    for (auto it = _primary_states.learners.begin(); it != _primary_states.learners.end(); ++it)
     {
         if (it->second.prepare_start_decree != invalid_decree && mu->data.header.decree >= it->second.prepare_start_decree)
         {
