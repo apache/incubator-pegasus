@@ -147,8 +147,6 @@ bool prepare_list::commit(decree d, commit_type ct)
 {
     if (d <= last_committed_decree())
         return false;
-
-    dinfo("commit to decree %" PRId64, d);
     
     ballot last_bt = 0;
     switch (ct)
