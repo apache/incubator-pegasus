@@ -128,9 +128,9 @@ TEST(meta_state_service_simple, basics)
         service->get_data("/2", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, [](error_code ec, const blob& value) {
             ASSERT_TRUE(ec == ERR_OK);
             binary_reader reader(value);
-            int value;
-            reader.read(value);
-            ASSERT_TRUE(value==0xdeadbeef);
+            int content_value;
+            reader.read(content_value);
+            ASSERT_TRUE(content_value==0xdeadbeef);
         })->wait();
     }
 
