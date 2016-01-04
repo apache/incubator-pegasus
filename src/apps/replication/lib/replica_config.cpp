@@ -728,10 +728,10 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
 
     if (status() != old_status)
     {
-        bool isClosing = (status() == PS_ERROR || (status() == PS_INACTIVE && get_ballot() > old_ballot));
-        _stub->notify_replica_state_update(config, isClosing);
+        bool is_closing = (status() == PS_ERROR || (status() == PS_INACTIVE && get_ballot() > old_ballot));
+        _stub->notify_replica_state_update(config, is_closing);
 
-        if (isClosing)
+        if (is_closing)
         {
             ddebug("%s: being close ...", name());
             _stub->begin_close_replica(this);

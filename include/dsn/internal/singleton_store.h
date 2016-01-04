@@ -77,7 +77,7 @@ public:
 
     void get_all_keys(/*out*/ std::vector<TKey>& keys)
     {
-        for (auto it = _store.begin(); it != _store.end(); it++)
+        for (auto it = _store.begin(); it != _store.end(); ++it)
         {
             keys.push_back(it->first);
         }
@@ -126,7 +126,7 @@ public:
     void get_all_keys(/*out*/ std::vector<TKey>& keys)
     {
         auto_read_lock l(_lock);
-        for (auto it = _store.begin(); it != _store.end(); it++)
+        for (auto it = _store.begin(); it != _store.end(); ++it)
         {
             keys.push_back(it->first);
         }

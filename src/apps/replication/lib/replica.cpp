@@ -350,16 +350,23 @@ decree replica::last_prepared_decree() const
 
 void replica::close()
 {
+    dassert(
+        status() == PS_ERROR || status() == PS_INACTIVE,
+        "%s: invalid state %s when calling replica::close",
+        name(),
+        enum_to_string(status())
+        );
+
     if (nullptr != _check_timer)
     {
         _check_timer->cancel(true);
         _check_timer = nullptr;
     }
 
-    if (status() != PS_INACTIVE && status() != PS_ERROR)
+    /*if (status() != PS_INACTIVE && status() != PS_ERROR)
     {
         update_local_configuration_with_no_ballot_change(PS_INACTIVE);
-    }
+    }*/
 
     cleanup_preparing_mutations(true);
     _primary_states.cleanup();

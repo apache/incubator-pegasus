@@ -9,18 +9,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 		libboost-all-dev \
 		ca-certificates \
         grep \
+        python2.7 \
+        python-pip \
+        gdb        \
 	&& rm -rf /var/lib/apt/lists/*
-
 RUN useradd -d /home/rdsn -s /bin/bash rdsn
 RUN mkdir /home/rdsn 
 COPY script/bash_profile /home/rdsn/.bash_profile
 COPY script/bashrc /home/rdsn/.bashrc
 RUN chown -R rdsn:rdsn /home/rdsn
-COPY script/rdsn_build.sh /usr/local/bin/
-RUN chmod a+x /usr/local/bin/rdsn_build.sh
 
-USER rdsn
+ADD rdsn-release.tar.gz /home/rdsn/
+ADD MonitorPack.tar.gz /home/rdsn/
 WORKDIR /home/rdsn
-ENV HOME /home/rdsn
-RUN rdsn_build.sh
+RUN python setup.py install
+RUN pip install -r apps/rDSN.monitor/requirement.txt
+RUN ulimit -c unlimited
 
+ENV HOME /home/rdsn

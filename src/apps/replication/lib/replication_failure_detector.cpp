@@ -108,7 +108,7 @@ void replication_failure_detector::on_master_disconnected( const std::vector< ::
 {
     bool primaryDisconnected = false;
     rpc_address leader = dsn_group_get_leader(_meta_servers.group_handle());
-    for (auto it = nodes.begin(); it != nodes.end(); it++)
+    for (auto it = nodes.begin(); it != nodes.end(); ++it)
     {
         if (leader == *it)
             primaryDisconnected = true;

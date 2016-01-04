@@ -112,7 +112,7 @@ void simple_stateful_load_balancer::explictly_send_proposal(global_partition_id 
 {
     std::vector<std::pair< ::dsn::rpc_address, int>> stats;
 
-    for (auto it = _state->_nodes.begin(); it != _state->_nodes.end(); it++)
+    for (auto it = _state->_nodes.begin(); it != _state->_nodes.end(); ++it)
     {
         if (it->second.is_alive)
         {
