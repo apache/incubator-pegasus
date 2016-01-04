@@ -446,7 +446,7 @@ void replication_app_client_base::query_partition_configuration_reply(error_code
             _app_id = resp.app_id;
             _app_partition_count = resp.partition_count;
 
-            for (auto it = resp.partitions.begin(); it != resp.partitions.end(); it++)
+            for (auto it = resp.partitions.begin(); it != resp.partitions.end(); ++it)
             {
                 partition_configuration& new_config = *it;
 

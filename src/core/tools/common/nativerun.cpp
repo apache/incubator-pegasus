@@ -103,7 +103,7 @@ namespace dsn {
             if (spec.nfs_factory_name == "")
                 spec.nfs_factory_name = "dsn::service::nfs_node_simple";
 
-            for (auto it = spec.threadpool_specs.begin(); it != spec.threadpool_specs.end(); it++)
+            for (auto it = spec.threadpool_specs.begin(); it != spec.threadpool_specs.end(); ++it)
             {
                 threadpool_spec& tspec = *it;
 
