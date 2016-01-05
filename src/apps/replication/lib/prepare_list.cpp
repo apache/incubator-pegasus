@@ -84,16 +84,15 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
     decree d = mu->data.header.decree;
     dassert (d > last_committed_decree(), "");
 
-    // pop committed mutations if buffer is full
-    while (d - min_decree() >= capacity() && last_committed_decree() > min_decree())
-    {
-        pop_min();
-    }
-
     error_code err;
     switch (status)
     {
     case PS_PRIMARY:
+        // pop committed mutations if buffer is full
+        while (d - min_decree() >= capacity() && last_committed_decree() > min_decree())
+        {
+            pop_min();
+        }
         return mutation_cache::put(mu);
 
     case PS_SECONDARY: 
