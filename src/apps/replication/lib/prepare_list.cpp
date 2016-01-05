@@ -134,11 +134,11 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
         {
             // all mutations with lower decree must be ready
             commit(mu->data.header.last_committed_decree, COMMIT_TO_DECREE_HARD);
-            // pop committed mutations if buffer is full
-            while (d - min_decree() >= capacity() && last_committed_decree() > min_decree())
-            {
-                pop_min();
-            }
+        }
+        // pop committed mutations if buffer is full
+        while (d - min_decree() >= capacity() && last_committed_decree() > min_decree())
+        {
+            pop_min();
         }
         err = mutation_cache::put(mu);
         dassert (err == ERR_OK, "");

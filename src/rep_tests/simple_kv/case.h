@@ -89,8 +89,14 @@ private:
     bool _close_replica_stub_set;
     bool _not_exit_on_log_failure;
     bool _not_exit_on_log_failure_set;
-    bool _get_checkpoint_fail;
-    bool _get_checkpoint_fail_set;
+    bool _simple_kv_open_fail;
+    bool _simple_kv_open_fail_set;
+    bool _simple_kv_close_fail;
+    bool _simple_kv_close_fail_set;
+    bool _simple_kv_get_checkpoint_fail;
+    bool _simple_kv_get_checkpoint_fail_set;
+    bool _simple_kv_apply_checkpoint_fail;
+    bool _simple_kv_apply_checkpoint_fail_set;
 };
 
 // SKIP:100
