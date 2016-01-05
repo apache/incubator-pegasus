@@ -118,10 +118,22 @@ std::string set_case_line::to_string() const
         oss << "not_exit_on_log_failure=" << _not_exit_on_log_failure;
         count++;
     }
-    if (_get_checkpoint_fail_set)
+    if (_simple_kv_open_fail_set)
     {
         if (count > 0) oss << ",";
-        oss << "get_checkpoint_fail=" << _get_checkpoint_fail;
+        oss << "simple_kv_open_fail=" << _simple_kv_open_fail;
+        count++;
+    }
+    if (_simple_kv_close_fail_set)
+    {
+        if (count > 0) oss << ",";
+        oss << "simple_kv_close_fail=" << _simple_kv_close_fail;
+        count++;
+    }
+    if (_simple_kv_get_checkpoint_fail_set)
+    {
+        if (count > 0) oss << ",";
+        oss << "simple_kv_get_checkpoint_fail=" << _simple_kv_get_checkpoint_fail;
         count++;
     }
     return oss.str();
@@ -141,7 +153,9 @@ bool set_case_line::parse(const std::string& params)
     _disable_lb_set = false;
     _close_replica_stub_set = false;
     _not_exit_on_log_failure_set = false;
-    _get_checkpoint_fail_set = false;
+    _simple_kv_open_fail_set = false;
+    _simple_kv_close_fail_set = false;
+    _simple_kv_get_checkpoint_fail_set = false;
     for (auto& kv : kv_map)
     {
         const std::string& k = kv.first;
@@ -171,10 +185,20 @@ bool set_case_line::parse(const std::string& params)
             _not_exit_on_log_failure = boost::lexical_cast<bool>(v);
             _not_exit_on_log_failure_set = true;
         }
-        else if (k == "get_checkpoint_fail")
+        else if (k == "simple_kv_open_fail")
         {
-            _get_checkpoint_fail = boost::lexical_cast<bool>(v);
-            _get_checkpoint_fail_set = true;
+            _simple_kv_open_fail = boost::lexical_cast<bool>(v);
+            _simple_kv_open_fail_set = true;
+        }
+        else if (k == "simple_kv_close_fail")
+        {
+            _simple_kv_close_fail = boost::lexical_cast<bool>(v);
+            _simple_kv_close_fail_set = true;
+        }
+        else if (k == "simple_kv_get_checkpoint_fail")
+        {
+            _simple_kv_get_checkpoint_fail = boost::lexical_cast<bool>(v);
+            _simple_kv_get_checkpoint_fail_set = true;
         }
         else
         {
@@ -208,9 +232,17 @@ void set_case_line::apply_set() const
     {
         replica_stub::s_not_exit_on_log_failure = _not_exit_on_log_failure;
     }
-    if (_get_checkpoint_fail_set)
+    if (_simple_kv_open_fail_set)
     {
-        simple_kv_service_impl::s_get_checkpoint_fail = _get_checkpoint_fail;
+        simple_kv_service_impl::s_simple_kv_open_fail = _simple_kv_open_fail;
+    }
+    if (_simple_kv_close_fail_set)
+    {
+        simple_kv_service_impl::s_simple_kv_close_fail = _simple_kv_close_fail;
+    }
+    if (_simple_kv_get_checkpoint_fail_set)
+    {
+        simple_kv_service_impl::s_simple_kv_get_checkpoint_fail = _simple_kv_get_checkpoint_fail;
     }
 }
 

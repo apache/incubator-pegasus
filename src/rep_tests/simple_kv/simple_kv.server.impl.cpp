@@ -38,7 +38,9 @@ namespace dsn {
     namespace replication {
         namespace test {
 
-            bool simple_kv_service_impl::s_get_checkpoint_fail = false;
+            bool simple_kv_service_impl::s_simple_kv_open_fail = false;
+            bool simple_kv_service_impl::s_simple_kv_close_fail = false;
+            bool simple_kv_service_impl::s_simple_kv_get_checkpoint_fail = false;
 
             simple_kv_service_impl::simple_kv_service_impl(replica* replica)
                 : simple_kv_service(replica), _lock(true)
@@ -97,6 +99,11 @@ namespace dsn {
 
             ::dsn::error_code simple_kv_service_impl::open(bool create_new)
             {
+                if (s_simple_kv_open_fail)
+                {
+                    return ERR_CORRUPTION;
+                }
+
                 dsn::service::zauto_lock l(_lock);
                 if (create_new)
                 {
@@ -114,6 +121,11 @@ namespace dsn {
 
             ::dsn::error_code simple_kv_service_impl::close(bool clear_state)
             {
+                if (s_simple_kv_close_fail)
+                {
+                    return ERR_CORRUPTION;
+                }
+
                 dsn::service::zauto_lock l(_lock);
                 if (clear_state)
                 {
@@ -258,7 +270,7 @@ namespace dsn {
             // helper routines to accelerate learning
             ::dsn::error_code simple_kv_service_impl::get_checkpoint(decree start, const blob& learn_req, /*out*/ learn_state& state)
             {
-                if (s_get_checkpoint_fail)
+                if (s_simple_kv_get_checkpoint_fail)
                 {
                     return ERR_CORRUPTION;
                 }
