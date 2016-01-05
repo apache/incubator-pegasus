@@ -1,0 +1,134 @@
+# Case Description: test learn
+
+set:load_balance_for_test=1,not_exit_on_log_failure=1
+
+wait:on_rpc_call:rpc_name=RPC_CONFIG_PROPOSAL,from=m,to=r1
+set:disable_load_balance=1
+
+# wait until r1 becomes primary
+config:{1,r1,[]}
+state:{{r1,pri,1,0}}
+
+set:disable_load_balance=0
+wait:on_rpc_call:rpc_name=RPC_CONFIG_PROPOSAL,from=m,to=r1
+set:disable_load_balance=1
+
+state:{{r1,pri,1,0},{r2,pot,1,0}}
+
+config:{2,r1,[r2]}
+state:{{r1,pri,2,0},{r2,sec,2,0}}
+
+client:begin_write:id=1,key=k1,value=v1,timeout=0
+client:begin_write:id=2,key=k2,value=v2,timeout=0
+client:begin_write:id=3,key=k3,value=v3,timeout=0
+client:begin_write:id=4,key=k4,value=v4,timeout=0
+client:begin_write:id=5,key=k5,value=v5,timeout=0
+
+# wait r2 checkpoint done
+state:{{r1,pri,2,5,5},{r2,sec,2,5,5}}
+
+# write more
+client:begin_write:id=6,key=k6,value=v6,timeout=0
+client:begin_write:id=7,key=k7,value=v7,timeout=0
+client:begin_write:id=8,key=k8,value=v8,timeout=0
+client:begin_write:id=9,key=k9,value=v9,timeout=0
+client:begin_write:id=10,key=k10,value=v10,timeout=0
+client:begin_write:id=11,key=k11,value=v11,timeout=0
+client:begin_write:id=12,key=k12,value=v12,timeout=0
+client:begin_write:id=13,key=k13,value=v13,timeout=0
+client:begin_write:id=14,key=k14,value=v14,timeout=0
+client:begin_write:id=15,key=k15,value=v15,timeout=0
+
+state:{{r1,pri,2,15,5},{r2,sec,2,15,5}}
+
+# add secondary r3
+# will trigger learning in on_learn():
+#   learn_start_decree {=1} < _prepare_list->min_decree() {=6}
+#   learn_start_decree {=1} < _app->last_durable_decree() {=5}
+#   learn checkpoint + cache
+#
+#                         (5)
+#   check_point  :      -->|
+#                          (6)                 (15)
+#   prepare_list :          |-------------------|  
+#                    (1)
+#   learn        :    |-->
+#
+client:replica_config:receiver=r1,type=add_secondary,node=r3
+config:{3,r1,[r2,r3]}
+state:{{r1,pri,3,15},{r2,sec,3,15},{r3,sec,3,15}}
+
+# check r1 data correct
+client:begin_read:id=1,key=k1,timeout=0
+wait:on_rpc_call:rpc_name=RPC_REPLICATION_CLIENT_READ,from=c,to=r1
+client:end_read:id=1,err=err_ok,resp=v1
+client:begin_read:id=2,key=k2,timeout=0
+client:end_read:id=2,err=err_ok,resp=v2
+client:begin_read:id=3,key=k3,timeout=0
+client:end_read:id=3,err=err_ok,resp=v3
+client:begin_read:id=4,key=k4,timeout=0
+client:end_read:id=4,err=err_ok,resp=v4
+client:begin_read:id=5,key=k5,timeout=0
+client:end_read:id=5,err=err_ok,resp=v5
+client:begin_read:id=6,key=k6,timeout=0
+client:end_read:id=6,err=err_ok,resp=v6
+client:begin_read:id=7,key=k7,timeout=0
+client:end_read:id=7,err=err_ok,resp=v7
+client:begin_read:id=8,key=k8,timeout=0
+client:end_read:id=8,err=err_ok,resp=v8
+client:begin_read:id=9,key=k9,timeout=0
+client:end_read:id=9,err=err_ok,resp=v9
+client:begin_read:id=10,key=k10,timeout=0
+client:end_read:id=10,err=err_ok,resp=v10
+client:begin_read:id=11,key=k11,timeout=0
+client:end_read:id=11,err=err_ok,resp=v11
+client:begin_read:id=12,key=k12,timeout=0
+client:end_read:id=12,err=err_ok,resp=v12
+client:begin_read:id=13,key=k13,timeout=0
+client:end_read:id=13,err=err_ok,resp=v13
+client:begin_read:id=14,key=k14,timeout=0
+client:end_read:id=14,err=err_ok,resp=v14
+client:begin_read:id=15,key=k15,timeout=0
+client:end_read:id=15,err=err_ok,resp=v15
+
+# change primary from r1 to r3
+client:replica_config:receiver=r1,type=downgrade_to_secondary,node=r1
+config:{4,-,[r1,r2,r3]}
+state:{{r1,sec,4,15},{r2,sec,4,15},{r3,sec,4,15}}
+client:replica_config:receiver=r3,type=upgrade_to_primary,node=r3
+config:{5,r3,[r1,r2]}
+state:{{r1,sec,5,15},{r2,sec,5,15},{r3,pri,5,15}}
+
+# check r3 data correct
+client:begin_read:id=1,key=k1,timeout=0
+wait:on_rpc_call:rpc_name=RPC_REPLICATION_CLIENT_READ,from=c,to=r3
+client:end_read:id=1,err=err_ok,resp=v1
+client:begin_read:id=2,key=k2,timeout=0
+client:end_read:id=2,err=err_ok,resp=v2
+client:begin_read:id=3,key=k3,timeout=0
+client:end_read:id=3,err=err_ok,resp=v3
+client:begin_read:id=4,key=k4,timeout=0
+client:end_read:id=4,err=err_ok,resp=v4
+client:begin_read:id=5,key=k5,timeout=0
+client:end_read:id=5,err=err_ok,resp=v5
+client:begin_read:id=6,key=k6,timeout=0
+client:end_read:id=6,err=err_ok,resp=v6
+client:begin_read:id=7,key=k7,timeout=0
+client:end_read:id=7,err=err_ok,resp=v7
+client:begin_read:id=8,key=k8,timeout=0
+client:end_read:id=8,err=err_ok,resp=v8
+client:begin_read:id=9,key=k9,timeout=0
+client:end_read:id=9,err=err_ok,resp=v9
+client:begin_read:id=10,key=k10,timeout=0
+client:end_read:id=10,err=err_ok,resp=v10
+client:begin_read:id=11,key=k11,timeout=0
+client:end_read:id=11,err=err_ok,resp=v11
+client:begin_read:id=12,key=k12,timeout=0
+client:end_read:id=12,err=err_ok,resp=v12
+client:begin_read:id=13,key=k13,timeout=0
+client:end_read:id=13,err=err_ok,resp=v13
+client:begin_read:id=14,key=k14,timeout=0
+client:end_read:id=14,err=err_ok,resp=v14
+client:begin_read:id=15,key=k15,timeout=0
+client:end_read:id=15,err=err_ok,resp=v15
+

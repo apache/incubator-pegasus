@@ -84,22 +84,26 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
     decree d = mu->data.header.decree;
     dassert (d > last_committed_decree(), "");
 
-    // pop committed mutations if buffer is full
-    while (d - min_decree() >= capacity() && last_committed_decree() > min_decree())
-    {
-        pop_min();
-    }   
-
     error_code err;
     switch (status)
     {
     case PS_PRIMARY:
+        // pop committed mutations if buffer is full
+        while (d - min_decree() >= capacity() && last_committed_decree() > min_decree())
+        {
+            pop_min();
+        }
         return mutation_cache::put(mu);
 
     case PS_SECONDARY: 
     case PS_POTENTIAL_SECONDARY:
         // all mutations with lower decree must be ready
         commit(mu->data.header.last_committed_decree, COMMIT_TO_DECREE_HARD);
+        // pop committed mutations if buffer is full
+        while (d - min_decree() >= capacity() && last_committed_decree() > min_decree())
+        {
+            pop_min();
+        }
         err = mutation_cache::put(mu);
         dassert (err == ERR_OK, "");
         return err;
@@ -122,32 +126,20 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
     //    return err;
      
     case PS_INACTIVE: // only possible during init  
-        err = ERR_OK;
         if (mu->data.header.last_committed_decree > max_decree())
         {
             reset(mu->data.header.last_committed_decree);
         }
         else if (mu->data.header.last_committed_decree > _last_committed_decree)
         {
-            for (decree d = last_committed_decree() + 1; d <= mu->data.header.last_committed_decree; d++)
+            // all mutations with lower decree must be ready
+            commit(mu->data.header.last_committed_decree, COMMIT_TO_DECREE_HARD);
+            // pop committed mutations if buffer is full
+            while (d - min_decree() >= capacity() && last_committed_decree() > min_decree())
             {
-                _last_committed_decree++;   
-                if (count() == 0)
-                    break;
-                
-                if (d == min_decree())
-                {
-                    mutation_ptr mu2 = get_mutation_by_decree(d);
-                    pop_min();
-                    dassert(mu2 != nullptr, "");
-                    _committer(mu2);
-                }
+                pop_min();
             }
-
-            dassert (_last_committed_decree == mu->data.header.last_committed_decree, "");
-            sanity_check();
         }
-        
         err = mutation_cache::put(mu);
         dassert (err == ERR_OK, "");
         return err;

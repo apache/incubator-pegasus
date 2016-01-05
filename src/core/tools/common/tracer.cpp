@@ -276,7 +276,7 @@ namespace dsn {
             }
 
             uint64_t xid = 0;
-            sscanf(args[2].c_str(), "016llx", &xid);
+            sscanf(args[2].c_str(), "%016" PRIx64, &xid);
             if (xid == 0)
             {
                 return tracer_log_flow_error("invalid id value - must be with 016llx format");

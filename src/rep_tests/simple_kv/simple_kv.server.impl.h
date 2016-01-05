@@ -34,6 +34,9 @@ namespace dsn {
             class simple_kv_service_impl : public simple_kv_service
             {
             public:
+                static bool s_get_checkpoint_fail;
+
+            public:
                 simple_kv_service_impl(replica* replica);
 
                 // RPC_SIMPLE_KV_READ
@@ -46,6 +49,7 @@ namespace dsn {
                 virtual ::dsn::error_code open(bool create_new) override;
                 virtual ::dsn::error_code close(bool clear_state) override;
                 virtual ::dsn::error_code checkpoint() override;
+                virtual ::dsn::error_code checkpoint_async() override;
 
                 // helper routines to accelerate learning
                 virtual ::dsn::error_code get_checkpoint(decree start, const blob& learn_req, /*out*/ learn_state& state) override;

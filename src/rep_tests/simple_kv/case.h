@@ -89,6 +89,8 @@ private:
     bool _close_replica_stub_set;
     bool _not_exit_on_log_failure;
     bool _not_exit_on_log_failure_set;
+    bool _get_checkpoint_fail;
+    bool _get_checkpoint_fail_set;
 };
 
 // SKIP:100
@@ -107,6 +109,16 @@ public:
 private:
     int _count;
     int _skipped;
+};
+
+// EXIT:
+class exit_case_line : public case_line
+{
+public:
+    static const char* NAME() { return "exit"; }
+    virtual std::string name() const { return NAME(); }
+    virtual std::string to_string() const;
+    virtual bool parse(const std::string& params);
 };
 
 class state_case_line : public case_line
