@@ -34,6 +34,9 @@ namespace dsn {
             class simple_kv_service_impl : public simple_kv_service
             {
             public:
+                static bool s_get_checkpoint_fail;
+
+            public:
                 simple_kv_service_impl(replica* replica);
 
                 // RPC_SIMPLE_KV_READ

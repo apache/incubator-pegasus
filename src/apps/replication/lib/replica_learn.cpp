@@ -348,25 +348,19 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
     else if (_app->is_delta_state_learning_supported() 
         || learn_start_decree <= _app->last_durable_decree())
     {
-        ::dsn::error_code lerr = _app->get_checkpoint(
+        ::dsn::error_code err = _app->get_checkpoint(
             learn_start_decree, 
             request.app_specific_learn_request, 
             response.state
             );
 
-        if (lerr != ERR_OK)
+        if (err != ERR_OK)
         {
             response.err = ERR_GET_LEARN_STATE_FAILED;
             derror(
-                "%s: on_learn[%016llx]: learner = %s, get app learn state failed, error = %s",
-                name(), request.signature, request.learner.to_string(), lerr.to_string()
+                "%s: on_learn[%016llx]: learner = %s, get app checkpoint failed, error = %s",
+                name(), request.signature, request.learner.to_string(), err.to_string()
                 );
-
-            if (lerr == ERR_OBJECT_NOT_FOUND)
-            {
-                // no need to checkpoint as it is imposible
-                // becaues it will go to the private log learning in that case
-            }
         }
         else
         {
@@ -400,7 +394,6 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
             );
     }
 
-    
     for (auto& file : response.state.files)
     {
         file = file.substr(response.base_local_dir.length() + 1);

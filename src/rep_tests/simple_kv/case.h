@@ -89,6 +89,8 @@ private:
     bool _close_replica_stub_set;
     bool _not_exit_on_log_failure;
     bool _not_exit_on_log_failure_set;
+    bool _get_checkpoint_fail;
+    bool _get_checkpoint_fail_set;
 };
 
 // SKIP:100
