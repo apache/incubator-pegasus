@@ -95,6 +95,8 @@ private:
     bool _simple_kv_close_fail_set;
     bool _simple_kv_get_checkpoint_fail;
     bool _simple_kv_get_checkpoint_fail_set;
+    bool _simple_kv_apply_checkpoint_fail;
+    bool _simple_kv_apply_checkpoint_fail_set;
 };
 
 // SKIP:100

@@ -136,6 +136,12 @@ std::string set_case_line::to_string() const
         oss << "simple_kv_get_checkpoint_fail=" << _simple_kv_get_checkpoint_fail;
         count++;
     }
+    if (_simple_kv_apply_checkpoint_fail_set)
+    {
+        if (count > 0) oss << ",";
+        oss << "simple_kv_apply_checkpoint_fail=" << _simple_kv_apply_checkpoint_fail;
+        count++;
+    }
     return oss.str();
 }
 
@@ -156,6 +162,7 @@ bool set_case_line::parse(const std::string& params)
     _simple_kv_open_fail_set = false;
     _simple_kv_close_fail_set = false;
     _simple_kv_get_checkpoint_fail_set = false;
+    _simple_kv_apply_checkpoint_fail_set = false;
     for (auto& kv : kv_map)
     {
         const std::string& k = kv.first;
@@ -200,6 +207,11 @@ bool set_case_line::parse(const std::string& params)
             _simple_kv_get_checkpoint_fail = boost::lexical_cast<bool>(v);
             _simple_kv_get_checkpoint_fail_set = true;
         }
+        else if (k == "simple_kv_apply_checkpoint_fail")
+        {
+            _simple_kv_apply_checkpoint_fail = boost::lexical_cast<bool>(v);
+            _simple_kv_apply_checkpoint_fail_set = true;
+        }
         else
         {
             std::cerr << "bad line: line_no=" << line_no()
@@ -243,6 +255,10 @@ void set_case_line::apply_set() const
     if (_simple_kv_get_checkpoint_fail_set)
     {
         simple_kv_service_impl::s_simple_kv_get_checkpoint_fail = _simple_kv_get_checkpoint_fail;
+    }
+    if (_simple_kv_apply_checkpoint_fail_set)
+    {
+        simple_kv_service_impl::s_simple_kv_apply_checkpoint_fail = _simple_kv_apply_checkpoint_fail;
     }
 }
 

@@ -41,6 +41,7 @@ namespace dsn {
             bool simple_kv_service_impl::s_simple_kv_open_fail = false;
             bool simple_kv_service_impl::s_simple_kv_close_fail = false;
             bool simple_kv_service_impl::s_simple_kv_get_checkpoint_fail = false;
+            bool simple_kv_service_impl::s_simple_kv_apply_checkpoint_fail = false;
 
             simple_kv_service_impl::simple_kv_service_impl(replica* replica)
                 : simple_kv_service(replica), _lock(true)
@@ -306,6 +307,11 @@ namespace dsn {
 
             ::dsn::error_code simple_kv_service_impl::apply_checkpoint(learn_state& state, chkpt_apply_mode mode)
             {
+                if (s_simple_kv_apply_checkpoint_fail)
+                {
+                    return ERR_CORRUPTION;
+                }
+
                 if (mode == CHKPT_LEARN)
                 {
                     recover(state.files[0], state.to_decree_included);

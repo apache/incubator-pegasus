@@ -764,11 +764,10 @@ void replica::handle_learning_error(error_code err)
 {
     check_hashed_access();
 
-    dwarn(
-        "%s: learning failed with err = %s, LastCommitted = %" PRId64,
+    derror(
+        "%s: learning failed with err = %s",
         name(),
-        err.to_string(),
-        _app->last_committed_decree()
+        err.to_string()
         );
 
     _potential_secondary_states.cleanup(true);
