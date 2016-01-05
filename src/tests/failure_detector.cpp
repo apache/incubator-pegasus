@@ -17,6 +17,8 @@ using namespace dsn;
 #define WPORT 40001
 #define MCOUNT 3
 
+DEFINE_TASK_CODE_RPC(RPC_MASTER_CONFIG, TASK_PRIORITY_COMMON, THREAD_POOL_FD)
+
 struct config_master_message
 {
     rpc_address master;
