@@ -78,7 +78,8 @@ function start_server(){
 
 function stop_server(){
     echo "stopping $2 at $1"
-    ssh $1 'pkill '${d_unit}''
+#    ssh $1 'pkill '${d_unit}''
+    ssh $1 'cd '${t_dir}'/'$2';nohup sh -c "(( ./stop.sh >foo.out 2>foo.err </dev/null)&)"'
 }
 
 
