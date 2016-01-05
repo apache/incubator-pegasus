@@ -50,10 +50,11 @@ namespace dsn {
         {
             check_hashed_access();
             init_checkpoint();
-            gc();
+            garbage_collection();
         }
 
-        void replica::gc()
+        // run in replica thread
+        void replica::garbage_collection()
         {
             if (_private_log)
             {
@@ -65,6 +66,7 @@ namespace dsn {
             }
         }
 
+        // run in replica thread
         void replica::init_checkpoint()
         {
             // only applicable to primary and secondary replicas
@@ -78,9 +80,14 @@ namespace dsn {
             auto err = _app->checkpoint_async();
             if (err != ERR_NOT_IMPLEMENTED)
             {
+                if (err == ERR_OK)
+                {
+                    ddebug("%s: checkpoint_async succeed, app_last_committed_decree=%" PRId64 ", app_last_durable_decree=%" PRId64,
+                           name(), _app->last_committed_decree(), _app->last_durable_decree());
+                }
                 if (err != ERR_OK && err != ERR_WRONG_TIMING && err != ERR_NO_NEED_OPERATE && err != ERR_TRY_AGAIN)
                 {
-                    derror("%s: checkpoint_async failed, err = %s", err.to_string());
+                    derror("%s: checkpoint_async failed, err = %s", name(), err.to_string());
                 }
                 return;
             }
@@ -130,7 +137,7 @@ namespace dsn {
                     _secondary_states.checkpoint_task = tasking::enqueue(
                         LPC_CHECKPOINT_REPLICA,
                         this,
-                        &replica::checkpoint,
+                        &replica::background_checkpoint,
                         gpid_to_hash(get_gpid())
                         );
                 }                
@@ -245,7 +252,8 @@ namespace dsn {
             _primary_states.checkpoint_task = nullptr;
         }
 
-        void replica::checkpoint()
+        // run in background thread
+        void replica::background_checkpoint()
         {
             auto err = _app->checkpoint();
             tasking::enqueue(

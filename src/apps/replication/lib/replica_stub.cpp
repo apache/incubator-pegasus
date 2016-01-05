@@ -393,6 +393,8 @@ void replica_stub::on_config_proposal(const configuration_update_request& propos
         return;
     }
 
+    // TODO(qinzuoyan): if all replicas are down, then the meta server will choose one to assign primary,
+    // if we open the replica with new_when_possible = true, then the old data will be cleared, is it reasonable?
     replica_ptr rep = get_replica(proposal.config.gpid, proposal.type == CT_ASSIGN_PRIMARY, proposal.config.app_type.c_str());
     if (rep == nullptr)
     {
@@ -531,7 +533,7 @@ void replica_stub::on_learn_completion_notification(const group_check_response& 
 
 void replica_stub::on_add_learner(const group_check_request& request)
 {
-    replica_ptr rep = get_replica(request.config.gpid, true, request.app_type.c_str());
+    replica_ptr rep = get_replica(request.config.gpid, false, request.app_type.c_str());
     if (rep != nullptr)
     {
         rep->on_add_learner(request);
@@ -1008,7 +1010,6 @@ void replica_stub::open_replica(const std::string app_type, global_partition_id 
     }
             
     {
-
         _counter_replicas_opening_count.decrement();
         zauto_lock l(_replicas_lock);
         auto it = _replicas.find(gpid);

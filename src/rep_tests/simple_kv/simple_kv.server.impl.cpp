@@ -38,6 +38,8 @@ namespace dsn {
     namespace replication {
         namespace test {
 
+            bool simple_kv_service_impl::s_get_checkpoint_fail = false;
+
             simple_kv_service_impl::simple_kv_service_impl(replica* replica)
                 : simple_kv_service(replica), _lock(true)
             {
@@ -119,6 +121,8 @@ namespace dsn {
                     {
                         dassert(false, "Fail to delete directory %s.", data_dir().c_str());
                     }
+                    _store.clear();
+                    reset_states();
                 }
                 ddebug("simple_kv_service_impl closed, clear_state = %s", clear_state ? "true" : "false");
                 return ERR_OK;
@@ -211,8 +215,8 @@ namespace dsn {
 
                 if (last_committed_decree() == last_durable_decree())
                 {
-                    ddebug("simple_kv_service_impl create checkpoint succeed, checkpoint already the latest, last_durable_decree = %" PRId64 "", _last_durable_decree.load());
-                    return ERR_OK;
+                    ddebug("simple_kv_service_impl no need to create checkpoint, checkpoint already the latest, last_durable_decree = %" PRId64 "", _last_durable_decree.load());
+                    return ERR_NO_NEED_OPERATE;
                 }
 
                 // TODO: should use async write instead
@@ -246,9 +250,19 @@ namespace dsn {
                 return ERR_OK;
             }
 
+            ::dsn::error_code simple_kv_service_impl::checkpoint_async()
+            {
+                return checkpoint();
+            }
+
             // helper routines to accelerate learning
             ::dsn::error_code simple_kv_service_impl::get_checkpoint(decree start, const blob& learn_req, /*out*/ learn_state& state)
             {
+                if (s_get_checkpoint_fail)
+                {
+                    return ERR_CORRUPTION;
+                }
+
                 if (_last_durable_decree.load() == 0 && is_delta_state_learning_supported())
                 {
                     checkpoint();

@@ -109,7 +109,7 @@ error_code replica_init_info::store(const char* file)
         return ERR_FILE_OPERATION_FAILED;
     }
 
-    dinfo("update app init info in %s, ballot = %" PRId64 ", decree = %" PRId64 ", log_offset<S,P> = <%" PRId64 ",%" PRId64 ">",
+    ddebug("update app init info in %s, ballot = %" PRId64 ", decree = %" PRId64 ", log_offset<S,P> = <%" PRId64 ",%" PRId64 ">",
         ffile.c_str(),
         init_ballot,
         init_decree,
@@ -141,6 +141,13 @@ replication_app_base::replication_app_base(replica* replica)
     }
 
     install_perf_counters();
+}
+
+void replication_app_base::reset_states()
+{
+    _physical_error = 0;
+    _batch_state = BS_NOT_BATCH;
+    _last_committed_decree = _last_durable_decree = 0;
 }
 
 const char* replication_app_base::replica_name() const

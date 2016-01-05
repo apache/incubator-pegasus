@@ -235,6 +235,9 @@ protected:
 
     // see comments for batch_state, this function is not thread safe
     batch_state get_current_batch_state() { return _batch_state; }
+
+    // reset all states when reopen the app
+    void reset_states();
     
 private:
     template<typename T, typename TRequest, typename TResponse>

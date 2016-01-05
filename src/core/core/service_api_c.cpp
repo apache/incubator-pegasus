@@ -64,6 +64,11 @@
 # include <TlHelp32.h>
 # endif
 
+# ifdef __TITLE__
+# undef __TITLE__
+# endif
+# define __TITLE__ "service_api_c"
+
 //
 // global state
 //
@@ -1288,6 +1293,9 @@ bool run(const char* config_file, const char* config_arguments, bool sleep_after
             std::this_thread::sleep_for(std::chrono::hours(1));
         }
     }
+
+    // add this to allow mimic app call from this thread.
+    memset((void*)&dsn::tls_dsn, 0, sizeof(dsn::tls_dsn));
 
     return true;
 }

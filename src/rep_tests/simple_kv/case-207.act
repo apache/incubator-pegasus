@@ -1,0 +1,140 @@
+# Case Description: test learn
+
+set:load_balance_for_test=1,not_exit_on_log_failure=1
+
+wait:on_rpc_call:rpc_name=RPC_CONFIG_PROPOSAL,from=m,to=r1
+set:disable_load_balance=1
+
+# wait until r1 becomes primary
+config:{1,r1,[]}
+state:{{r1,pri,1,0}}
+
+set:disable_load_balance=0
+wait:on_rpc_call:rpc_name=RPC_CONFIG_PROPOSAL,from=m,to=r1
+set:disable_load_balance=1
+
+state:{{r1,pri,1,0},{r2,pot,1,0}}
+
+config:{2,r1,[r2]}
+state:{{r1,pri,2,0},{r2,sec,2,0}}
+
+client:begin_write:id=1,key=k1,value=v1,timeout=0
+client:begin_write:id=2,key=k2,value=v2,timeout=0
+client:begin_write:id=3,key=k3,value=v3,timeout=0
+client:begin_write:id=4,key=k4,value=v4,timeout=0
+client:begin_write:id=5,key=k5,value=v5,timeout=0
+client:begin_write:id=6,key=k6,value=v6,timeout=0
+client:begin_write:id=7,key=k7,value=v7,timeout=0
+client:begin_write:id=8,key=k8,value=v8,timeout=0
+client:begin_write:id=9,key=k9,value=v9,timeout=0
+client:begin_write:id=10,key=k10,value=v10,timeout=0
+
+# wait r2 checkpoint done
+state:{{r1,pri,2,10,10},{r2,sec,2,10,10}}
+
+client:begin_read:id=1,key=k1,timeout=0
+wait:on_rpc_call:rpc_name=RPC_REPLICATION_CLIENT_READ,from=c,to=r1
+client:end_read:id=1,err=err_ok,resp=v1
+client:begin_read:id=2,key=k2,timeout=0
+client:end_read:id=2,err=err_ok,resp=v2
+client:begin_read:id=3,key=k3,timeout=0
+client:end_read:id=3,err=err_ok,resp=v3
+client:begin_read:id=4,key=k4,timeout=0
+client:end_read:id=4,err=err_ok,resp=v4
+client:begin_read:id=5,key=k5,timeout=0
+client:end_read:id=5,err=err_ok,resp=v5
+client:begin_read:id=6,key=k6,timeout=0
+client:end_read:id=6,err=err_ok,resp=v6
+client:begin_read:id=7,key=k7,timeout=0
+client:end_read:id=7,err=err_ok,resp=v7
+client:begin_read:id=8,key=k8,timeout=0
+client:end_read:id=8,err=err_ok,resp=v8
+client:begin_read:id=9,key=k9,timeout=0
+client:end_read:id=9,err=err_ok,resp=v9
+client:begin_read:id=10,key=k10,timeout=0
+client:end_read:id=10,err=err_ok,resp=v10
+
+# remove secondary r2
+client:replica_config:receiver=r1,type=downgrade_to_inactive,node=r2
+config:{3,r1,[]}
+state:{{r1,pri,3,10}}
+
+# remove primary r1
+client:replica_config:receiver=r1,type=downgrade_to_inactive,node=r1
+config:{4,-,[]}
+state:{}
+
+# assign primary r3
+client:replica_config:receiver=r3,type=assign_primary,node=r3
+config:{5,r3,[]}
+state:{{r3,pri,5,0}}
+
+# add secondary r2
+# will trigger learning in on_learn():
+#   _prepare_list.count() {=0} == 0 
+#   learn_start_decree {=11} > last_prepared_decree(0)
+#   learner state is newer than learnee, learn from scratch
+#
+#                      (0)
+#   prepare_list :      ||
+#   learn        :                           |-->
+#                                           (11)
+#
+client:replica_config:receiver=r3,type=add_secondary,node=r2
+config:{6,r3,[r2]}
+state:{{r2,sec,6,0},{r3,pri,6,0}}
+
+# check r3 data corrent
+client:begin_read:id=1,key=k1,timeout=0
+wait:on_rpc_call:rpc_name=RPC_REPLICATION_CLIENT_READ,from=c,to=r3
+client:end_read:id=1,err=err_ok,resp=<<not-exist>>
+client:begin_read:id=2,key=k2,timeout=0
+client:end_read:id=2,err=err_ok,resp=<<not-exist>>
+client:begin_read:id=3,key=k3,timeout=0
+client:end_read:id=3,err=err_ok,resp=<<not-exist>>
+client:begin_read:id=4,key=k4,timeout=0
+client:end_read:id=4,err=err_ok,resp=<<not-exist>>
+client:begin_read:id=5,key=k5,timeout=0
+client:end_read:id=5,err=err_ok,resp=<<not-exist>>
+client:begin_read:id=6,key=k6,timeout=0
+client:end_read:id=6,err=err_ok,resp=<<not-exist>>
+client:begin_read:id=7,key=k7,timeout=0
+client:end_read:id=7,err=err_ok,resp=<<not-exist>>
+client:begin_read:id=8,key=k8,timeout=0
+client:end_read:id=8,err=err_ok,resp=<<not-exist>>
+client:begin_read:id=9,key=k9,timeout=0
+client:end_read:id=9,err=err_ok,resp=<<not-exist>>
+client:begin_read:id=10,key=k10,timeout=0
+client:end_read:id=10,err=err_ok,resp=<<not-exist>>
+
+# change primary from r3 to r2
+client:replica_config:receiver=r3,type=downgrade_to_secondary,node=r3
+config:{7,-,[r2,r3]}
+state:{{r2,sec,7,0},{r3,sec,7,0}}
+client:replica_config:receiver=r2,type=upgrade_to_primary,node=r2
+config:{8,r2,[r3]}
+state:{{r2,pri,8,0},{r3,sec,8,0}}
+
+# check r2 data corrent
+client:begin_read:id=1,key=k1,timeout=0
+wait:on_rpc_call:rpc_name=RPC_REPLICATION_CLIENT_READ,from=c,to=r2
+client:end_read:id=1,err=err_ok,resp=<<not-exist>>
+client:begin_read:id=2,key=k2,timeout=0
+client:end_read:id=2,err=err_ok,resp=<<not-exist>>
+client:begin_read:id=3,key=k3,timeout=0
+client:end_read:id=3,err=err_ok,resp=<<not-exist>>
+client:begin_read:id=4,key=k4,timeout=0
+client:end_read:id=4,err=err_ok,resp=<<not-exist>>
+client:begin_read:id=5,key=k5,timeout=0
+client:end_read:id=5,err=err_ok,resp=<<not-exist>>
+client:begin_read:id=6,key=k6,timeout=0
+client:end_read:id=6,err=err_ok,resp=<<not-exist>>
+client:begin_read:id=7,key=k7,timeout=0
+client:end_read:id=7,err=err_ok,resp=<<not-exist>>
+client:begin_read:id=8,key=k8,timeout=0
+client:end_read:id=8,err=err_ok,resp=<<not-exist>>
+client:begin_read:id=9,key=k9,timeout=0
+client:end_read:id=9,err=err_ok,resp=<<not-exist>>
+client:begin_read:id=10,key=k10,timeout=0
+client:end_read:id=10,err=err_ok,resp=<<not-exist>>
+

@@ -144,6 +144,24 @@ void meta_service::register_rpc_handlers()
         "RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND",
         &meta_service::on_modify_replica_config_explictly
         );
+
+    register_rpc_handler(
+        RPC_CM_CREATE_APP,
+        "RPC_CM_CREATE_APP",
+        &meta_service::on_create_app
+        );
+
+    register_rpc_handler(
+        RPC_CM_DROP_APP,
+        "RPC_CM_DROP_APP",
+        &meta_service::on_drop_app
+        );
+
+    register_rpc_handler(
+        RPC_CM_LIST_APPS,
+        "RPC_CM_LIST_APPS",
+        &meta_service::on_list_apps
+        );
 }
 
 void meta_service::stop()
@@ -154,6 +172,8 @@ void meta_service::stop()
     unregister_rpc_handler(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
     unregister_rpc_handler(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
     unregister_rpc_handler(RPC_CM_MODIFY_REPLICA_CONFIG_COMMAND);
+    unregister_rpc_handler(RPC_CM_CREATE_APP);
+    unregister_rpc_handler(RPC_CM_DROP_APP);
 
     if (_balancer_timer != nullptr)
     {
@@ -208,6 +228,53 @@ bool meta_service::check_primary(dsn_message_t req)
     }
 
     return true;
+}
+
+// table operations
+void meta_service::on_create_app(dsn_message_t req)
+{
+    if (!check_primary(req))
+        return;
+
+    if (!_started)
+    {
+        configuration_create_app_response response;
+        response.err = ERR_SERVICE_NOT_ACTIVE;
+        reply(req, response);
+        return;
+    }
+
+    _state->create_app(req);
+}
+
+void meta_service::on_drop_app(dsn_message_t req)
+{
+    if (!check_primary(req))
+        return;
+    if (!_started)
+    {
+        configuration_drop_app_response response;
+        response.err = ERR_SERVICE_NOT_ACTIVE;
+        reply(req, response);
+        return;
+    }
+
+    _state->drop_app(req);
+}
+
+void meta_service::on_list_apps(dsn_message_t req)
+{
+    if (!check_primary(req))
+        return;
+    if (!_started)
+    {
+        configuration_list_apps_response response;
+        response.err = ERR_SERVICE_NOT_ACTIVE;
+        reply(req, response);
+        return;
+    }
+
+    _state->list_apps(req);
 }
 
 // partition server & client => meta server
