@@ -96,7 +96,7 @@ namespace dsn
 
             _sema.wait();
 
-            for (int i = 0; i < (int)TASK_PRIORITY_COUNT; i++)
+            for (int i = TASK_PRIORITY_COUNT - 1; i >= 0; --i)
             {
                 _lock[i].lock();
                 t = _tasks[i].pop_one();
