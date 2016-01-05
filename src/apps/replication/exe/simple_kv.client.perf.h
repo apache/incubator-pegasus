@@ -119,7 +119,7 @@ namespace dsn {
 
                     kv_pair req;
                     req.key = ss.str();
-                    req.value = "abcdefghijklmnopqrstuvwxyz1234567890";
+                    req.value = std::string(payload_bytes, 'x');
 
                     begin_write(req, ctx, _timeout_ms);
                 }
@@ -141,7 +141,7 @@ namespace dsn {
 
                     kv_pair req;
                     req.key = ss.str();
-                    req.value = "abcdefghijklmnopqrstuvwxyz1234567890";
+                    req.value = std::string(payload_bytes, 'x');
 
                     begin_append(req, ctx, _timeout_ms);
                 }
