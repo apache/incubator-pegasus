@@ -88,7 +88,7 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
     while (d - min_decree() >= capacity() && last_committed_decree() > min_decree())
     {
         pop_min();
-    }   
+    }
 
     error_code err;
     switch (status)
@@ -100,6 +100,11 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
     case PS_POTENTIAL_SECONDARY:
         // all mutations with lower decree must be ready
         commit(mu->data.header.last_committed_decree, COMMIT_TO_DECREE_HARD);
+        // pop committed mutations if buffer is full
+        while (d - min_decree() >= capacity() && last_committed_decree() > min_decree())
+        {
+            pop_min();
+        }
         err = mutation_cache::put(mu);
         dassert (err == ERR_OK, "");
         return err;
@@ -128,7 +133,13 @@ error_code prepare_list::prepare(mutation_ptr& mu, partition_status status)
         }
         else if (mu->data.header.last_committed_decree > _last_committed_decree)
         {
+            // all mutations with lower decree must be ready
             commit(mu->data.header.last_committed_decree, COMMIT_TO_DECREE_HARD);
+            // pop committed mutations if buffer is full
+            while (d - min_decree() >= capacity() && last_committed_decree() > min_decree())
+            {
+                pop_min();
+            }
         }
         err = mutation_cache::put(mu);
         dassert (err == ERR_OK, "");
