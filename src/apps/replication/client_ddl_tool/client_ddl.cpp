@@ -43,9 +43,8 @@ namespace dsn{ namespace replication{
 
 client_ddl::client_ddl(std::vector<dsn::rpc_address> meta_servers)
 {
-    _meta_server_vector = meta_servers;
     _meta_servers.assign_group(dsn_group_build("meta.servers"));
-    for (auto& m : _meta_server_vector)
+    for (auto& m : meta_servers)
         dsn_group_add(_meta_servers.group_handle(), m.c_addr());
 }
 
@@ -166,7 +165,7 @@ dsn::error_code client_ddl::drop_app(const std::string& app_name)
     return dsn::ERR_OK;
 }
 
-dsn::error_code client_ddl::list_apps(const dsn::replication::app_status status, std::string file_name)
+dsn::error_code client_ddl::list_apps(const dsn::replication::app_status status, const std::string& file_name)
 {
     std::shared_ptr<configuration_list_apps_request> req(new configuration_list_apps_request());
     req->status = status;
@@ -222,7 +221,7 @@ dsn::error_code client_ddl::list_apps(const dsn::replication::app_status status,
     return dsn::ERR_OK;
 }
 
-dsn::error_code client_ddl::list_app(const std::string& app_name, bool detailed, std::string file_name)
+dsn::error_code client_ddl::list_app(const std::string& app_name, bool detailed, const std::string& file_name)
 {
     if(app_name.empty() || !std::all_of(app_name.cbegin(),app_name.cend(),(bool (*)(int)) client_ddl::valid_app_char))
         return ERR_INVALID_PARAMETERS;
@@ -304,18 +303,12 @@ void client_ddl::end_meta_request(task_ptr callback, int retry_times, error_code
 {
     if(err == dsn::ERR_TIMEOUT && retry_times < 5)
     {
-        dsn::rpc_address addr = dsn::rpc_address(dsn_msg_to_address(request));
-
-        // remove current contact meta node
-        dsn::rpc_address _temp_meta_servers;
-        _temp_meta_servers.assign_group(dsn_group_build("meta.servers"));
-        for (auto& m : _meta_server_vector)
-            if(m != addr)
-                dsn_group_add(_temp_meta_servers.group_handle(), m.c_addr());
-        rpc_address target(_temp_meta_servers);
+        rpc_address leader = dsn_group_get_leader(_meta_servers.group_handle());
+        rpc_address next = dsn_group_next(_meta_servers.group_handle(), leader.c_addr());
+        dsn_group_set_leader(_meta_servers.group_handle(), next.c_addr());
 
         rpc::call(
-            target,
+            _meta_servers,
             request,
             this,
             std::bind(&client_ddl::end_meta_request,

@@ -105,14 +105,14 @@ namespace dsn {
             ENUM_REG(CT_UPGRADE_TO_SECONDARY)
         ENUM_END(config_type)
 
-        ENUM_BEGIN(app_status, invalid)
-            ENUM_REG(available)
-            ENUM_REG(creating)
-            ENUM_REG(creating_failed)
-            ENUM_REG(dropping)
-            ENUM_REG(dropping_failed)
-            ENUM_REG(dropped)
-            ENUM_REG(all)
+        ENUM_BEGIN(app_status, app_status::invalid)
+            ENUM_REG(app_status::available)
+            ENUM_REG(app_status::creating)
+            ENUM_REG(app_status::creating_failed)
+            ENUM_REG(app_status::dropping)
+            ENUM_REG(app_status::dropping_failed)
+            ENUM_REG(app_status::dropped)
+            ENUM_REG(app_status::all)
         ENUM_END(app_status)
 
         inline void json_encode(std::stringstream& out, const partition_configuration& config)
@@ -132,13 +132,18 @@ namespace dsn {
         {
             JSON_DICT_ENTRIES(out, gpid, app_id, pidx);
         }
+
+        inline void json_encode(std::stringstream& out, const app_status& status)
+        {
+            out << "\"" << enum_to_string(status) << "\"";
+        }
+
     }
 
     inline void json_encode(std::stringstream& out, const dsn::rpc_address& address)
     {
         out << "\"" << address.to_string() << "\"";
     }
-
 } // namespace
 
 #endif

@@ -648,7 +648,7 @@ namespace dsn { namespace replication {
     DEFINE_POD_SERIALIZATION(config_type);
 
     // ---------- app_status -------------
-    enum app_status
+    enum class app_status
     {
         available = 0,
         creating = 1,

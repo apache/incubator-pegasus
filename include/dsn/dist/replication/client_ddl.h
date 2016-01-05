@@ -46,9 +46,9 @@ public:
 
     dsn::error_code drop_app(const std::string& app_name);
 
-    dsn::error_code list_apps(const dsn::replication::app_status status, std::string file_name);
+    dsn::error_code list_apps(const dsn::replication::app_status status, const std::string& file_name);
 
-    dsn::error_code list_app(const std::string& app_name, bool detailed, std::string file_name);
+    dsn::error_code list_app(const std::string& app_name, bool detailed, const std::string& file_name);
 
 private:
     bool static valid_app_char(int c);
@@ -79,9 +79,8 @@ private:
                  reply_hash,
                  owner
                  );
-        rpc_address target(_meta_servers);
         rpc::call(
-            target,
+            _meta_servers,
             msg,
             this,
             std::bind(&client_ddl::end_meta_request,
