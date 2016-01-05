@@ -55,5 +55,19 @@ namespace dsn
             std::condition_variable_any   _cond;
             slist<task>                   _tasks;
         };
+
+        class hpc_task_priority_queue : public task_queue
+        {
+        public:
+            hpc_task_priority_queue(task_worker_pool* pool, int index, task_queue* inner_provider);
+
+            virtual void     enqueue(task* task) override;
+            virtual task*    dequeue(/*inout*/int& batch_size) override;
+
+        private:
+            utils::ex_lock_nr_spin        _lock[TASK_PRIORITY_COUNT];
+            slist<task>                   _tasks[TASK_PRIORITY_COUNT];
+            utils::semaphore              _sema;
+        };
     }
 }
