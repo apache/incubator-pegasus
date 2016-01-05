@@ -41,7 +41,7 @@
 
 namespace dsn{ namespace replication{
 
-client_ddl::client_ddl(std::vector<dsn::rpc_address> meta_servers)
+client_ddl::client_ddl(const std::vector<dsn::rpc_address>& meta_servers)
 {
     _meta_servers.assign_group(dsn_group_build("meta.servers"));
     for (auto& m : meta_servers)

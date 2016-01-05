@@ -40,7 +40,7 @@ namespace dsn{ namespace replication{
 class client_ddl : public clientlet
 {
 public:
-    client_ddl(std::vector<dsn::rpc_address> meta_servers);
+    client_ddl(const std::vector<dsn::rpc_address>& meta_servers);
 
     dsn::error_code create_app(const std::string& app_name, const std::string& app_type, int partition_count, int replica_count);
 
