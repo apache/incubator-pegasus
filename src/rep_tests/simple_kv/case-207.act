@@ -110,7 +110,7 @@ client:end_read:id=10,err=err_ok,resp=<<not-exist>>
 # change primary from r3 to r2
 client:replica_config:receiver=r3,type=downgrade_to_secondary,node=r3
 config:{7,-,[r2,r3]}
-state:{{r2,sec,6,0},{r3,sec,7,0}}
+state:{{r2,sec,7,0},{r3,sec,7,0}}
 client:replica_config:receiver=r2,type=upgrade_to_primary,node=r2
 config:{8,r2,[r3]}
 state:{{r2,pri,8,0},{r3,sec,8,0}}

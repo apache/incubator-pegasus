@@ -208,7 +208,9 @@ void replica::on_learn(dsn_message_t msg, const learn_request& request)
         reply(msg, response);
         return;
     }
-        
+
+    // TODO(qinzuoyan): get_replica_config() doesn't use the "membership",
+    // but just set state to PS_POTENTIAL_SECONDARY
     _primary_states.get_replica_config(PS_POTENTIAL_SECONDARY, response.config);
 
     auto it = _primary_states.learners.find(request.learner);
@@ -473,34 +475,37 @@ void replica::on_learn_reply(
 
         // TODO(qinzuoyan):
         // - we'd better backup the old data, which may be recovered in some way.
-        // - we should create a new app object, or the app must be reusable.
-        // - we can clear private log and reopen a new _private_log.
+        // - if we reuse the app object (not create a new object), the app must be reusable.
         auto err = _app->close(true);
+        if (err != ERR_OK)
+        {
+            derror(
+                "%s: on_learn_reply[%016llx]: learnee = %s, close app (with clear_state=true) failed, err = %s",
+                name(), req->signature, resp->config.primary.to_string(),
+                err.to_string()
+                );
+        }
 
         if (err == ERR_OK)
         {
-            _app.reset(::dsn::utils::factory_store<replication_app_base>::create(_app_type.c_str(), PROVIDER_TYPE_MAIN, this));
-            if (nullptr == _app)
+            err = _app->open(true);
+            if (err != ERR_OK)
             {
                 derror(
-                    "%s: on_learn_reply[%016llx]: learnee = %s, app type %s not found",
+                    "%s: on_learn_reply[%016llx]: learnee = %s, open app (with create_new=true) failed, err = %s",
                     name(), req->signature, resp->config.primary.to_string(),
-                    _app_type.c_str()
+                    err.to_string()
                     );
-                err = ERR_OBJECT_NOT_FOUND;
+            }
+            else
+            {
+                dassert(_app->last_committed_decree() == 0, "");
+                dassert(_app->last_durable_decree() == 0, "");
             }
         }
 
         if (err == ERR_OK)
         {
-            err = _app->open_internal(this, true);
-        }
-
-        if (err == ERR_OK)
-        {
-            dassert(_app->last_committed_decree() == 0, "");
-            dassert(_app->last_durable_decree() == 0, "");
-
             // reset prepare list
             _prepare_list->reset(_app->last_committed_decree());
 
@@ -509,6 +514,14 @@ void replica::on_learn_reply(
                 _stub->_log->on_partition_reset(get_gpid(), 0),
                 _private_log ? _private_log->on_partition_reset(get_gpid(), 0) : 0
                 );
+            if (err != ERR_OK)
+            {
+                derror(
+                    "%s: on_learn_reply[%016llx]: learnee = %s, update app init info failed, err = %s",
+                    name(), req->signature, resp->config.primary.to_string(),
+                    err.to_string()
+                    );
+            }
         }
         
         if (err != ERR_OK)

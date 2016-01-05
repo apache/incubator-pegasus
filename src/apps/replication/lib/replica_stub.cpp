@@ -533,7 +533,6 @@ void replica_stub::on_learn_completion_notification(const group_check_response& 
 
 void replica_stub::on_add_learner(const group_check_request& request)
 {
-    // TODO(qinzuoyan): here call get_replica() with new_when_possible = ?
     replica_ptr rep = get_replica(request.config.gpid, false, request.app_type.c_str());
     if (rep != nullptr)
     {

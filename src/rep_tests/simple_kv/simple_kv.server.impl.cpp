@@ -119,6 +119,8 @@ namespace dsn {
                     {
                         dassert(false, "Fail to delete directory %s.", data_dir().c_str());
                     }
+                    _store.clear();
+                    reset_states();
                 }
                 ddebug("simple_kv_service_impl closed, clear_state = %s", clear_state ? "true" : "false");
                 return ERR_OK;

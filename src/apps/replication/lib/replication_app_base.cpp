@@ -143,6 +143,14 @@ replication_app_base::replication_app_base(replica* replica)
     install_perf_counters();
 }
 
+void replication_app_base::reset_states()
+{
+    _physical_error = 0;
+    _batch_state = BS_NOT_BATCH;
+    _last_committed_decree = _last_durable_decree = 0;
+    // TODO(qinzuoyan): reset perf counters
+}
+
 const char* replication_app_base::replica_name() const
 {
     return _replica->name();
