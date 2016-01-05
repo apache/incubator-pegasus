@@ -43,7 +43,7 @@ error_code from_zerror(int zerr)
 {
     if (ZOK == zerr)
         return ERR_OK;
-    if (ZBADARGUMENTS == zerr)
+    if (ZBADARGUMENTS == zerr || ZNOTEMPTY == zerr)
         return ERR_INVALID_PARAMETERS;
     if (ZCONNECTIONLOSS == zerr || ZOPERATIONTIMEOUT == zerr)
         return ERR_TIMEOUT;
@@ -51,7 +51,8 @@ error_code from_zerror(int zerr)
         return ERR_OBJECT_NOT_FOUND;
     if (ZNODEEXISTS == zerr)
         return ERR_NODE_ALREADY_EXIST;
-
+    if (ZRUNTIMEINCONSISTENCY == zerr)
+        return ERR_INCONSISTENT_STATE;
     return ERR_ZOOKEEPER_OPERATION;
 }
 

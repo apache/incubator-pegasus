@@ -55,8 +55,26 @@ public:
         ZOO_GETCHILDREN,
         ZOO_SET,
         ZOO_ASYNC,
+        ZOO_TRANSACTION,
         ZOO_OPCOUNT,
         ZOO_OPINVALID
+    };
+
+    struct zoo_atomic_packet
+    {
+    public:
+        unsigned int _capacity;
+        unsigned int _count;
+        zoo_op_t* _ops;
+        zoo_op_result_t* _results;
+
+        std::vector<std::string> _paths;
+        std::vector<blob> _datas;
+    public:
+        zoo_atomic_packet(unsigned int size);
+        ~zoo_atomic_packet();
+
+        static char* alloc_buffer(int buffer_length);
     };
 
     struct zoo_input
@@ -73,6 +91,9 @@ public:
         /* for watcher callback */
         void* _owner;
         std::function<void (int)> _watcher_callback;
+
+        /* for multi-op transaction */
+        std::shared_ptr<zoo_atomic_packet> _pkt;
     };
 
     struct zoo_output

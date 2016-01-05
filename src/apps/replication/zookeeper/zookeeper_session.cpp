@@ -46,6 +46,40 @@
 
 namespace dsn { namespace dist{
 
+zookeeper_session::zoo_atomic_packet::zoo_atomic_packet(unsigned int size)
+{
+    _capacity = size;
+    _count = 0;
+
+    _ops = (zoo_op_t*)malloc(sizeof(zoo_op_t)*size);
+    _results = (zoo_op_result_t*)malloc(sizeof(zoo_op_result_t)*size);
+
+    _paths.resize(size);
+    _datas.resize(size);
+}
+
+zookeeper_session::zoo_atomic_packet::~zoo_atomic_packet()
+{
+    for (int i=0; i<_count; ++i) {
+        if (_ops[i].type == ZOO_CREATE_OP)
+            free(_ops[i].create_op.buf);
+        else if (_ops[i].type == ZOO_SETDATA_OP)
+            free(_ops[i].set_op.stat);
+    }
+    free(_ops);
+    free(_results);
+}
+
+char* zookeeper_session::zoo_atomic_packet::alloc_buffer(int buffer_length)
+{
+    return (char*)malloc(buffer_length);
+}
+
+zookeeper_session::~zookeeper_session()
+{
+
+}
+
 zookeeper_session::zookeeper_session(dsn_app_info* node):
     _handle(nullptr)
 {
@@ -112,7 +146,7 @@ void zookeeper_session::visit(zoo_opcontext *ctx)
     int &ec = ctx->_output.error;
 
     if ( zoo_state(_handle) != ZOO_CONNECTED_STATE ) {
-        ec = ZCONNECTIONLOSS;
+        ec = ZINVALIDSTATE;
         ctx->_callback_function(ctx);
         free_context(ctx);
         return;
@@ -188,6 +222,15 @@ void zookeeper_session::visit(zoo_opcontext *ctx)
             path,
             input._is_set_watch,
             global_strings_completion,
+            (const void*)ctx);
+        break;
+    case ZOO_TRANSACTION:
+        ec = zoo_amulti(
+            _handle,
+            input._pkt->_count,
+            input._pkt->_ops,
+            input._pkt->_results,
+            global_void_completion,
             (const void*)ctx);
         break;
     default:
@@ -281,8 +324,10 @@ void zookeeper_session::global_strings_completion(int rc, const String_vector *s
 void zookeeper_session::global_void_completion(int rc, const void *data)
 {
     COMPLETION_INIT(rc, data);
-    dinfo("rc(%s), input path( %s )", zerror(rc), op_ctx->_input._path.c_str());
-    op_ctx->_callback_function(op_ctx);
+    if (op_ctx->_optype == ZOO_DELETE)
+        dinfo("rc(%s), input path( %s )", zerror(rc), op_ctx->_input._path.c_str());
+    else
+        dinfo("rc(%s)", zerror(rc));    op_ctx->_callback_function(op_ctx);
     free_context(op_ctx);
 }
 

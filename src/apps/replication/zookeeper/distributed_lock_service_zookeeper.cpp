@@ -79,6 +79,12 @@ distributed_lock_service_zookeeper::~distributed_lock_service_zookeeper()
     }
 }
 
+error_code distributed_lock_service_zookeeper::finalize()
+{
+    release_ref();
+    return ERR_OK;
+}
+
 void distributed_lock_service_zookeeper::erase(const lock_key& key)
 {
     utils::auto_write_lock l(_service_lock);
@@ -143,8 +149,7 @@ error_code distributed_lock_service_zookeeper::initialize(int argc, const char**
     _lock_root = current.empty() ? "/" : current;
 
     ddebug("init distributed_lock_service_zookeeper succeed, lock_root = %s", _lock_root.c_str());
-    // TODO: add_ref() here because we need add_ref/release_ref in callbacks, so this object should be
-    // stored in ref_ptr to avoid memory leak.
+    // Notice: this reference is released in the finalize
     add_ref();
     return ERR_OK;
 }
