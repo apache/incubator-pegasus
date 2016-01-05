@@ -2,6 +2,7 @@
 #include "meta_server_failure_detector.h"
 #include "replica_stub.h"
 #include <gtest/gtest.h>
+#include <dsn/service_api_cpp.h>
 #include <vector>
 
 #ifdef __TITLE__
@@ -15,6 +16,24 @@ using namespace dsn;
 #define MPORT_START 30001
 #define WPORT 40001
 #define MCOUNT 3
+
+struct config_master_message
+{
+    rpc_address master;
+    bool is_register;
+};
+
+void marshall(rpc_write_stream& msg, const config_master_message &val)
+{
+    marshall(msg, val.master);
+    marshall(msg, val.is_register);
+}
+
+void unmarshall(rpc_read_stream& msg, config_master_message &val)
+{
+    unmarshall(msg, val.master);
+    unmarshall(msg, val.is_register);
+}
 
 volatile int started_apps = 0;
 class worker_fd_test: public replication::replication_failure_detector
@@ -133,9 +152,10 @@ public:
     }
 };
 
-class test_worker: public service_app
+class test_worker: public service_app, public serverlet<test_worker>
 {
 public:
+    test_worker(): serverlet("test_worker") {}
     error_code start(int argc, char** argv) override
     {
         std::vector<rpc_address> master_group;
@@ -145,12 +165,25 @@ public:
         _worker_fd->start(1, 1, 4, 5);
         ++started_apps;
 
+        register_rpc_handler(RPC_MASTER_CONFIG, "RPC_MASTER_CONFIG", &test_worker::on_master_config);
         return ERR_OK;
     }
+
     void stop(bool) override
     {
 
     }
+
+    void on_master_config(const config_master_message& request, bool& response)
+    {
+        dinfo("master config: request:%s, type:%s", request.master.to_string(), request.is_register?"reg":"unreg");
+        if ( request.is_register )
+            _worker_fd->register_master( request.master );
+        else
+            _worker_fd->unregister_master( request.master );
+        response = true;
+    }
+
     worker_fd_test* fd() { return _worker_fd; }
 private:
     worker_fd_test* _worker_fd;
@@ -244,13 +277,30 @@ void master_group_set_leader(std::vector<test_master*>& master_group, int leader
 void worker_set_leader(test_worker* worker, int leader_contact)
 {
     worker->fd()->set_leader_for_test( rpc_address("localhost", MPORT_START+leader_contact) );
-    worker->fd()->register_master( worker->fd()->current_server_contact());
+    rpc_read_stream response;
+
+    config_master_message msg = { rpc_address("localhost", MPORT_START+leader_contact), true };
+    auto err = rpc::call_typed_wait(
+        &response,
+        rpc_address("localhost", WPORT),
+        dsn_task_code_t(RPC_MASTER_CONFIG),
+        msg);
+    ASSERT_TRUE(err == ERR_OK);
 }
 
 void clear(test_worker* worker, std::vector<test_master*> masters)
 {
     rpc_address leader = dsn_group_get_leader(worker->fd()->get_servers().group_handle());
-    worker->fd()->unregister_master(leader);
+    rpc_read_stream response;
+
+    config_master_message msg = { leader, false };
+    auto err = rpc::call_typed_wait(
+        &response,
+        rpc_address("localhost", WPORT),
+        dsn_task_code_t(RPC_MASTER_CONFIG),
+        msg);
+    ASSERT_TRUE(err == ERR_OK);
+
     worker->fd()->toggle_send_ping(false);
 
     std::for_each(masters.begin(), masters.end(), [](test_master* mst) {
