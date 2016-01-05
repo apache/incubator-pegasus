@@ -60,8 +60,10 @@ GOTO exit
 
 :usage
     ECHO run.cmd deploy^|start^|stop^|cleanup^|quick-cleanup^|scds(stop-cleanup-deploy-start) source-dir target-dir
-    ECHO  Example: "run deploy .\skv-meta d:\zhenyug" deploys skv-meta to d:\zhenyug\skv-meta.
     ECHO  source-dir is a directory which contains a start.cmd, machines.txt, and other resource files/dirs
+    ECHO  or, a directory which contains a set of directories above which will be deployed simultaneously.
+    ECHO  Example: "run deploy .\skv\meta d:\zhenyug" deploys meta to d:\zhenyug\meta
+    ECHO  Example: "run deploy .\skv d:\zhenyug" deploys skv\meta, skv\replica, ... to d:\zhenyug\meta, replica, ...    
     GOTO:EOF
 
 REM  

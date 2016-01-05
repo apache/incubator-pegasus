@@ -59,12 +59,13 @@ typedef std::list<std::pair< ::dsn::rpc_address, bool>> node_states;
 
 struct app_state
 {
+    app_status                           status;
     std::string                          app_type;
     std::string                          app_name;
     int32_t                              app_id;
     int32_t                              partition_count;
     std::vector<partition_configuration> partitions;
-    DEFINE_JSON_SERIALIZATION(app_type, app_name, app_id, partition_count, partitions);
+    DEFINE_JSON_SERIALIZATION(status, app_type, app_name, app_id, partition_count, partitions);
 };
 
 typedef std::unordered_map<global_partition_id, std::shared_ptr<configuration_update_request> > machine_fail_updates;
@@ -124,6 +125,11 @@ public:
         std::function<void()> callback
         );
 
+    // table options
+    void create_app(dsn_message_t msg);
+    void drop_app(dsn_message_t msg);
+    void list_apps(dsn_message_t msg);
+
     void unfree_if_possible_on_start();
 
     // if is freezed
@@ -154,8 +160,19 @@ private:
     // check equality of two partition configurations, not take last_drops into account
     bool partition_configuration_equal(const partition_configuration& pc1, const partition_configuration& pc2);
 
+    void initialize_app(app_state& app, dsn_message_t msg);
+    void do_app_drop(app_state& app, dsn_message_t msg);
     // join path
     static std::string join_path(const std::string& input1, const std::string& input2);
+
+    // get the application_id from name, -1 for app doesn't exist
+    int32_t get_app_index(const char* app_name) const;
+
+    //path util function in meta_state_service
+    std::string get_app_path(const app_state& app) const;
+    std::string get_partition_path(const global_partition_id& gpid) const;
+    std::string get_partition_path(const app_state& app, int partition_id) const;
+
 private:
     friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
@@ -171,6 +188,9 @@ private:
 
     friend class simple_stateful_load_balancer;
     std::string                                         _cluster_root;
+
+    //_cluster_root + "/apps"
+    std::string                                         _apps_root;
     mutable zrwlock_nr                                  _lock;
     std::unordered_map< ::dsn::rpc_address, node_state> _nodes;
 
