@@ -74,7 +74,7 @@ void aio_testcase(uint64_t block_size, size_t concurrency, bool is_write, bool r
         {
             dassert(ec == ERR_OK && sz == block_size, 
                 "ec = %s, sz = %d, block_size = %" PRId64 "",
-                ec, sz, block_size
+                ec.to_string(), sz, block_size
                 );
             remain_concurrency.fetch_add(1, std::memory_order_relaxed);
         };
