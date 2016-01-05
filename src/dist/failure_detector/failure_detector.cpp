@@ -440,6 +440,7 @@ bool failure_detector::unregister_master(::dsn::rpc_address node)
     if (it != _masters.end())
     {
         it->second.send_beacon_timer->cancel(true);
+        _masters.erase(it);
         dinfo("unregister master[%s] successfully", node.to_string());
         return true;
     }
