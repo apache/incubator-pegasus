@@ -770,9 +770,6 @@ void replica::handle_learning_error(error_code err)
         err.to_string()
         );
 
-    _potential_secondary_states.cleanup(true);
-    _potential_secondary_states.learning_status = LearningFailed;
-
     update_local_configuration_with_no_ballot_change(PS_ERROR);
 }
 

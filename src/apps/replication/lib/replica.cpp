@@ -363,17 +363,6 @@ void replica::close()
         _checkpoint_timer = nullptr;
     }
 
-    /*
-    if (status() != PS_INACTIVE && status() != PS_ERROR)
-    {
-        update_local_configuration_with_no_ballot_change(PS_INACTIVE);
-    }
-        
-    _primary_states.cleanup();
-    _secondary_states.cleanup();
-    _potential_secondary_states.cleanup(true);
-    */
-
     cleanup_preparing_mutations(true);
     dassert(_primary_states.is_clean(), "primary context is not cleared");
     dassert(_secondary_states.is_clean(), "secondary context is not cleared");

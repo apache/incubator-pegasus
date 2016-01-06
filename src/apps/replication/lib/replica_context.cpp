@@ -50,7 +50,7 @@ namespace dsn {
         {                                   \
             bool finished;                  \
             t->cancel(force, &finished);    \
-            if (!finished)                  \
+            if (!finished && !dsn_task_current(task_->native_handle()))   \
                 return false;               \
             task_ = nullptr;                \
         }                                   \
@@ -63,7 +63,7 @@ namespace dsn {
         {                                   \
             bool finished;                  \
             t->cancel(false, &finished);    \
-   dassert (finished, "task must be finished at this point"); \
+   dassert (finished || dsn_task_current(task_->native_handle()), "task must be finished at this point"); \
             task_ = nullptr;                \
         }                                   \
     }
