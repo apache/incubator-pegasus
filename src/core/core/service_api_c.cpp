@@ -932,7 +932,9 @@ err:
 DSN_API void dsn_exit(int code)
 {
 # if defined(_WIN32)
-    //SuspendAllThreads();
+    // TODO: do not use std::map above, coz when suspend the other threads, they may stop
+    // inside certain locks which causes deadlock
+    // SuspendAllThreads();
     ::TerminateProcess(::GetCurrentProcess(), code);
 # else    
     _exit(code);

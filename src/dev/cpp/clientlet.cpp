@@ -105,6 +105,42 @@ namespace dsn
 
     namespace tasking 
     {
+        void enqueue(
+            /*our*/ task_ptr* ptask, // null for not returning task handle
+            dsn_task_code_t evt,
+            clientlet* svc,
+            task_handler callback,
+            int hash/* = 0*/,
+            int delay_milliseconds /*= 0*/,
+            int timer_interval_milliseconds /*= 0*/
+            )
+        {
+            dsn_task_t t;
+            auto tsk = new safe_task<task_handler>(callback, timer_interval_milliseconds != 0);
+
+            tsk->add_ref(); // released in exec callback
+            if (timer_interval_milliseconds != 0)
+            {
+                t = dsn_task_create_timer_ex(evt,
+                    safe_task<task_handler>::exec,
+                    safe_task<task_handler>::on_cancel,
+                    tsk, hash, timer_interval_milliseconds, svc ? svc->tracker() : nullptr);
+            }
+            else
+            {
+                t = dsn_task_create_ex(evt,
+                    safe_task<task_handler>::exec,
+                    safe_task<task_handler>::on_cancel,
+                    tsk, hash, svc ? svc->tracker() : nullptr);
+            }
+
+            tsk->set_task_info(t);
+
+            if (ptask) *ptask = tsk;
+
+            dsn_task_call(tsk->native_handle(), delay_milliseconds);
+        }
+
         task_ptr enqueue(
             dsn_task_code_t evt,
             clientlet* svc,
@@ -114,30 +150,9 @@ namespace dsn
             int timer_interval_milliseconds /*= 0*/
             )
         {
-            dsn_task_t t;
-            task_ptr tsk = new safe_task<task_handler>(callback, timer_interval_milliseconds != 0);
-
-            tsk->add_ref(); // released in exec callback
-            if (timer_interval_milliseconds != 0)
-            {
-                t = dsn_task_create_timer_ex(evt, 
-                    safe_task<task_handler>::exec,
-                    safe_task<task_handler>::on_cancel,
-                    tsk, hash, timer_interval_milliseconds, svc ? svc->tracker() : nullptr);
-            }
-            else
-            {
-                t = dsn_task_create_ex(evt, 
-                    safe_task<task_handler>::exec, 
-                    safe_task<task_handler>::on_cancel, 
-                    tsk, hash, svc ? svc->tracker() : nullptr);
-            }
-
-            tsk->set_task_info(t);
-
-            dsn_task_call(tsk->native_handle(), delay_milliseconds);
-
-            return tsk;
+            task_ptr t;
+            enqueue(&t, evt, svc, callback, hash, delay_milliseconds, timer_interval_milliseconds);
+            return t;
         }
     }
     

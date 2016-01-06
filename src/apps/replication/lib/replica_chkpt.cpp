@@ -134,7 +134,8 @@ namespace dsn {
                 // only one running instance
                 if (nullptr == _secondary_states.checkpoint_task)
                 {
-                    _secondary_states.checkpoint_task = tasking::enqueue(
+                    tasking::enqueue(
+                        &_secondary_states.checkpoint_task,
                         LPC_CHECKPOINT_REPLICA,
                         this,
                         &replica::background_checkpoint,
@@ -343,7 +344,8 @@ namespace dsn {
                 // missed ones need to be loaded via private logs
                 else
                 {
-                    _secondary_states.checkpoint_task = tasking::enqueue(
+                    tasking::enqueue(
+                        &_secondary_states.checkpoint_task,
                         LPC_CHECKPOINT_REPLICA,
                         this,
                         [this]() { this->catch_up_with_private_logs(PS_SECONDARY); },

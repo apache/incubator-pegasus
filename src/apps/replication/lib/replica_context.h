@@ -56,7 +56,7 @@ public:
     {}
 
     void cleanup(bool clean_pending_mutations = true);
-    bool is_clean();
+    bool is_cleaned();
        
     void reset_membership(const partition_configuration& config, bool clear_learners);
     void get_replica_config(partition_status status, /*out*/ replica_configuration& config, uint64_t learner_signature = invalid_signature);
@@ -96,7 +96,7 @@ class secondary_context
 {
 public:
     bool cleanup(bool force);
-    bool is_clean();
+    bool is_cleaned();
 
 public:
     ::dsn::task_ptr checkpoint_task;
@@ -113,7 +113,7 @@ public:
     {}
 
     bool cleanup(bool force);
-    bool is_clean();
+    bool is_cleaned();
 
 public:
     uint64_t        learning_signature;

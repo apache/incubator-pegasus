@@ -364,9 +364,9 @@ void replica::close()
     }
 
     cleanup_preparing_mutations(true);
-    dassert(_primary_states.is_clean(), "primary context is not cleared");
-    dassert(_secondary_states.is_clean(), "secondary context is not cleared");
-    dassert(_potential_secondary_states.is_clean(), "potential secondary context is not cleared");
+    dassert(_primary_states.is_cleaned(), "primary context is not cleared");
+    dassert(_secondary_states.is_cleaned(), "secondary context is not cleared");
+    dassert(_potential_secondary_states.is_cleaned(), "potential secondary context is not cleared");
     
     if (_private_log != nullptr)
     {

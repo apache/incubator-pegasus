@@ -90,7 +90,7 @@ void primary_context::cleanup(bool clean_pending_mutations)
     CLEANUP_TASK_ALWAYS(checkpoint_task)
 }
 
-bool primary_context::is_clean()
+bool primary_context::is_cleaned()
 {
     return
         nullptr == group_check_task &&
@@ -166,7 +166,7 @@ bool secondary_context::cleanup(bool force)
     return true;
 }
 
-bool secondary_context::is_clean()
+bool secondary_context::is_cleaned()
 {
     return nullptr == checkpoint_task;
 }
@@ -188,7 +188,7 @@ bool potential_secondary_context::cleanup(bool force)
     return true;
 }
 
-bool potential_secondary_context::is_clean()
+bool potential_secondary_context::is_cleaned()
 {
     return 
         nullptr == learn_remote_files_completed_task &&

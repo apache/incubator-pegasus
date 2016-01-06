@@ -131,7 +131,8 @@ void replica::init_learn(uint64_t signature)
                     {
                         _potential_secondary_states.learning_round_is_running = true;
 
-                        _secondary_states.checkpoint_task = tasking::enqueue(
+                        tasking::enqueue(
+                            &_secondary_states.checkpoint_task,
                             LPC_CHECKPOINT_REPLICA,
                             this,
                             [this]() { this->catch_up_with_private_logs(PS_POTENTIAL_SECONDARY); },
@@ -519,7 +520,8 @@ void replica::on_learn_reply(
         
         if (err != ERR_OK)
         {
-            _potential_secondary_states.learn_remote_files_task = tasking::enqueue(
+            tasking::enqueue(
+                &_potential_secondary_states.learn_remote_files_task,
                 LPC_LEARN_REMOTE_DELTA_FILES,
                 this,
                 std::bind(&replica::on_copy_remote_state_completed, this, err, 0, req, resp)
@@ -576,7 +578,8 @@ void replica::on_learn_reply(
 
         // go to next stage
         _potential_secondary_states.learning_status = LearningWithPrepare;        
-        _potential_secondary_states.learn_remote_files_task = tasking::enqueue(
+        tasking::enqueue(
+            &_potential_secondary_states.learn_remote_files_task,
             LPC_LEARN_REMOTE_DELTA_FILES,
             this,
             std::bind(&replica::on_copy_remote_state_completed, this, err, 0, req, resp)
@@ -605,7 +608,8 @@ void replica::on_learn_reply(
     }
     else
     {
-        _potential_secondary_states.learn_remote_files_task = tasking::enqueue(
+        tasking::enqueue(
+            &_potential_secondary_states.learn_remote_files_task,
             LPC_LEARN_REMOTE_DELTA_FILES,
             this,
             std::bind(&replica::on_copy_remote_state_completed, this, ERR_OK, 0, req, resp)
@@ -733,7 +737,8 @@ void replica::on_copy_remote_state_completed(
     // so that we don't have unnecessary failed reconfiguration later due to this non-nullptr in cleanup
     _potential_secondary_states.learn_remote_files_task = nullptr;
     
-    _potential_secondary_states.learn_remote_files_completed_task = tasking::enqueue(
+    tasking::enqueue(
+        &_potential_secondary_states.learn_remote_files_completed_task,
         LPC_LEARN_REMOTE_DELTA_FILES_COMPLETED,
         this,
         std::bind(&replica::on_learn_remote_state_completed, this, err),
