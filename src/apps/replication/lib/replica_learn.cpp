@@ -728,6 +728,11 @@ void replica::on_copy_remote_state_completed(
         }
     }
 
+    // it is possible that the _potential_secondary_states.learn_remote_files_task is still running
+    // while its body is definitely done already as being here, so we manually set its value to nullptr
+    // so that we don't have unnecessary failed reconfiguration later due to this non-nullptr in cleanup
+    _potential_secondary_states.learn_remote_files_task = nullptr;
+    
     _potential_secondary_states.learn_remote_files_completed_task = tasking::enqueue(
         LPC_LEARN_REMOTE_DELTA_FILES_COMPLETED,
         this,
