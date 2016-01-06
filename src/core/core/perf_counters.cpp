@@ -270,13 +270,13 @@ struct counter_info
 
 struct value_resp {
     double val;
-    std::string time;
+    uint64_t time;
     DEFINE_JSON_SERIALIZATION(val, time)
 };
 
 struct sample_resp {
     uint64_t val;
-    std::string time;
+    uint64_t time;
     DEFINE_JSON_SERIALIZATION(time, val)
 };
 
@@ -322,14 +322,11 @@ std::string perf_counters::get_counter_value(const std::vector<std::string>& arg
     std::stringstream ss;
 
     uint64_t ts = dsn_now_ns();
-    char time_str[24];
-    ::dsn::utils::time_ms_to_string(ts / 1000000, time_str);
-
     double value = 0;
 
     if (args.size() < 1)
     {
-        value_resp{ value, time_str }.json_state(ss);
+        value_resp{ value, ts }.json_state(ss);
         return ss.str();
     }
 
@@ -339,7 +336,7 @@ std::string perf_counters::get_counter_value(const std::vector<std::string>& arg
     if (counter && counter->type() != COUNTER_TYPE_NUMBER_PERCENTILES)
         value =  counter->get_value();
 
-    value_resp{ value, time_str }.json_state(ss);
+    value_resp{ value, ts }.json_state(ss);
     return ss.str();
 }
 
@@ -349,14 +346,11 @@ std::string perf_counters::get_counter_sample(const std::vector<std::string>& ar
     std::stringstream ss;
 
     uint64_t ts = dsn_now_ns();
-    char time_str[24];
-    ::dsn::utils::time_ms_to_string(ts / 1000000, time_str);
-
     uint64_t sample = 0;
 
     if (args.size() < 1)
     {
-        sample_resp{ sample, time_str }.json_state(ss);
+        sample_resp{ sample, ts }.json_state(ss);
         return ss.str();
     }
 
@@ -366,7 +360,7 @@ std::string perf_counters::get_counter_sample(const std::vector<std::string>& ar
     if (counter)
         sample = counter->get_latest_sample();
 
-    sample_resp{ sample, time_str }.json_state(ss);
+    sample_resp{ sample, ts }.json_state(ss);
     return ss.str();
 }
 
@@ -376,14 +370,11 @@ std::string perf_counters::get_counter_value_i(const std::vector<std::string>& a
     std::stringstream ss;
 
     uint64_t ts = dsn_now_ns();
-    char time_str[24];
-    ::dsn::utils::time_ms_to_string(ts / 1000000, time_str);
-
     double value = 0;
 
     if (args.size() < 1)
     {
-        value_resp{ value, time_str }.json_state(ss);
+        value_resp{ value, ts }.json_state(ss);
         return ss.str();
     }
 
@@ -395,7 +386,7 @@ std::string perf_counters::get_counter_value_i(const std::vector<std::string>& a
     if (counter && counter->type() != COUNTER_TYPE_NUMBER_PERCENTILES)
         value = counter->get_value();
 
-    value_resp{ value, time_str }.json_state(ss);
+    value_resp{ value, ts }.json_state(ss);
     return ss.str();
 }
 
@@ -405,14 +396,11 @@ std::string perf_counters::get_counter_sample_i(const std::vector<std::string>& 
     std::stringstream ss;
 
     uint64_t ts = dsn_now_ns();
-    char time_str[24];
-    ::dsn::utils::time_ms_to_string(ts / 1000000, time_str);
-
     uint64_t sample = 0;
 
     if (args.size() < 1)
     {
-        sample_resp{ sample, time_str }.json_state(ss);
+        sample_resp{ sample, ts }.json_state(ss);
         return ss.str();
     }
 
@@ -424,7 +412,7 @@ std::string perf_counters::get_counter_sample_i(const std::vector<std::string>& 
     if (counter)
         sample = counter->get_latest_sample();
 
-    sample_resp{ sample, time_str }.json_state(ss);
+    sample_resp{ sample, ts }.json_state(ss);
     return ss.str();
 }
 
