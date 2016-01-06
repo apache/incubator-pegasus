@@ -232,7 +232,7 @@ namespace dsn {
                 resp->state.files,
                 ldir,
                 false,
-                LPC_REPLICATION_COPY_REMOTE_FILES,
+                LPC_REPLICA_COPY_LAST_CHECKPOINT_DONE,
                 this,
                 [this, resp](error_code err, size_t sz)
                 {
@@ -244,6 +244,8 @@ namespace dsn {
 
         void replica::on_copy_checkpoint_file_completed(error_code err, size_t sz, std::shared_ptr<learn_response> resp)
         {
+            check_hashed_access();
+
             if (PS_PRIMARY == status() && resp->state.to_decree_included > _app->last_durable_decree())
             {
                 _app->apply_checkpoint(resp->state, CHKPT_COPY);

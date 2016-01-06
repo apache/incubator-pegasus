@@ -553,25 +553,28 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         }
         break;
     case PS_SECONDARY:
-        if (config.status != PS_SECONDARY
-            && _secondary_states.checkpoint_task != nullptr)
+        if (config.status != PS_SECONDARY)
         {
-            dwarn(
-                "%s: status change from %s @ %" PRId64 " to %s @ %" PRId64 " is not allowed coz checkpointing %p is still running",
-                name(),
-                enum_to_string(old_status),
-                old_ballot,
-                enum_to_string(config.status),
-                config.ballot,
-                _secondary_states.checkpoint_task->native_handle()
-                );
-            return false;
+            if (!_secondary_states.cleanup(false))
+            {
+                dwarn(
+                    "%s: status change from %s @ %" PRId64 " to %s @ %" PRId64 " is not allowed coz checkpointing %p is still running",
+                    name(),
+                    enum_to_string(old_status),
+                    old_ballot,
+                    enum_to_string(config.status),
+                    config.ballot,
+                    _secondary_states.checkpoint_task->native_handle()
+                    );
+                return false;
+            }
         }
         break;
     default:
         break;
     }
 
+    bool r = false;
     uint64_t oldTs = _last_config_change_time_ms;
     _config = config;
     _last_config_change_time_ms = now_ms();
@@ -584,20 +587,14 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         switch (config.status)
         {
         case PS_PRIMARY:
-            {
             replay_prepare_list();
-            mutation_ptr next = _primary_states.write_queue.check_possible_work(
-                static_cast<int>(_prepare_list->max_decree() - last_committed_decree())
-                );
-            if (next) init_prepare(next);
-            }
             break;
         case PS_INACTIVE:
             _primary_states.cleanup(old_ballot != config.ballot);
             break;
         case PS_SECONDARY:
         case PS_ERROR:
-            _primary_states.cleanup();
+            _primary_states.cleanup(true);
             break;
         case PS_POTENTIAL_SECONDARY:
             dassert (false, "invalid execution path");
@@ -611,14 +608,8 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         switch (config.status)
         {
         case PS_PRIMARY:
-            {
             init_group_check();            
             replay_prepare_list();
-            mutation_ptr next = _primary_states.write_queue.check_possible_work(
-                static_cast<int>(_prepare_list->max_decree() - last_committed_decree())
-                );
-            if (next) init_prepare(next);
-            }
             break;
         case PS_SECONDARY:
             break;
@@ -643,17 +634,20 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
             break;
         case PS_SECONDARY:
             _prepare_list->truncate(_app->last_committed_decree());            
-            _potential_secondary_states.cleanup(true);
+            r = _potential_secondary_states.cleanup(false);
+            dassert(r, "%s: potential secondary contxt cleanup failed", name());
             check_state_completeness();
             break;
         case PS_POTENTIAL_SECONDARY:
             break;
         case PS_INACTIVE:
-            _potential_secondary_states.cleanup(true);
+            r = _potential_secondary_states.cleanup(false);
+            dassert(r, "%s: potential secondary contxt cleanup failed", name());
             break;
         case PS_ERROR:
             _prepare_list->reset(_app->last_committed_decree());
-            _potential_secondary_states.cleanup(true);
+            r = _potential_secondary_states.cleanup(false);
+            dassert(r, "%s: potential secondary contxt cleanup failed", name());
             break;
         default:
             dassert (false, "invalid execution path");
@@ -663,15 +657,9 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         switch (config.status)
         {
         case PS_PRIMARY:
-            {
             _inactive_is_transient = false;
             init_group_check();
             replay_prepare_list();
-            mutation_ptr next = _primary_states.write_queue.check_possible_work(
-                static_cast<int>(_prepare_list->max_decree() - last_committed_decree())
-                );
-            if (next) init_prepare(next);
-            }
             break;
         case PS_SECONDARY:            
             _inactive_is_transient = false;
@@ -743,6 +731,19 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
     {
         _stub->notify_replica_state_update(config, false);
     }
+
+    // start pending mutations if necessary
+    if (status() == PS_PRIMARY)
+    {
+        mutation_ptr next = _primary_states.write_queue.check_possible_work(
+            static_cast<int>(_prepare_list->max_decree() - last_committed_decree())
+            );
+        if (next)
+        {
+            init_prepare(next);
+        }
+    }
+
     return true;
 }
 
