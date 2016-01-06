@@ -932,7 +932,7 @@ err:
 DSN_API void dsn_exit(int code)
 {
 # if defined(_WIN32)
-    SuspendAllThreads();
+    //SuspendAllThreads();
     ::TerminateProcess(::GetCurrentProcess(), code);
 # else    
     _exit(code);

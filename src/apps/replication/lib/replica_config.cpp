@@ -657,11 +657,13 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         switch (config.status)
         {
         case PS_PRIMARY:
+            dassert (_inactive_is_transient, "must be in transient state for being primary next");
             _inactive_is_transient = false;
             init_group_check();
             replay_prepare_list();
             break;
-        case PS_SECONDARY:            
+        case PS_SECONDARY:
+            dassert(_inactive_is_transient, "must be in transient state for being secondary next");
             _inactive_is_transient = false;
             break;
         case PS_POTENTIAL_SECONDARY:
@@ -670,6 +672,10 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         case PS_INACTIVE:
             break;
         case PS_ERROR:
+            if (_inactive_is_transient)
+            {
+                _primary_states.cleanup(true);
+            }
             _inactive_is_transient = false;
             break;
         default:
