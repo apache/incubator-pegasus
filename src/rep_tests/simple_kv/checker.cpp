@@ -209,6 +209,7 @@ void test_checker::get_current_states(state_snapshot& states)
             rs.status = r->status();
             rs.ballot = r->get_ballot();
             rs.last_committed_decree = r->last_committed_decree();
+            rs.last_durable_decree = r->last_durable_decree();
         }
     }
 }

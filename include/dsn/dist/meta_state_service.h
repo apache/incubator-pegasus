@@ -37,6 +37,7 @@
  *                (3) add cb_code parameter, then users can specify where the callback 
  *                    should be executed
  *     2015-11-06, @imzhenyu (Zhenyu Guo), add watch/unwatch API
+ *     2015-12-28, @shengofsun (Weijie SUn), add transaction api
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
@@ -66,11 +67,45 @@ namespace dsn
             typedef std::function<void (error_code ec, const std::vector<std::string>& ret_strv)> err_stringv_callback;
             typedef std::function<void (error_code ec)> err_callback;
 
+            /* providers should implement this to support transaction */
+            class transaction_entries {
+            public:
+                virtual ~transaction_entries() {}
+                virtual error_code create_node(const std::string& node, const blob& value = blob()) = 0;
+                virtual error_code delete_node(const std::string& node) = 0;
+                virtual error_code set_data(const std::string& node, const blob& value = blob()) = 0;
+
+                virtual error_code get_result(unsigned int entry_index) = 0;
+            };
+
         public:
+            virtual ~meta_state_service() {}
             /*
              * initialization work
              */
             virtual error_code initialize(int argc, const char** argv) = 0;
+
+            /*
+             * finalize work
+             */
+            virtual error_code finalize() = 0;
+
+            /*
+             * create a transaction_entries structure
+             * capacity: the maximum entries the structure can hold
+             */
+            virtual std::shared_ptr<transaction_entries> new_transaction_entries(unsigned int capacity) = 0;
+
+            /*
+             * submit transaction, it should be all succeeded or all failed
+             * cb_code: the task code specifies where to execute the callback
+             * cb_transaction: callback, ec to indicate success or failure reason
+             * tracker: to track (wait/cancel) whether the callback is executed
+             */
+            virtual task_ptr submit_transaction(const std::shared_ptr<transaction_entries>& entries,
+                                      task_code cb_code,
+                                      const err_callback& cb_transaction,
+                                      clientlet* tracker = nullptr) = 0;
 
             /*
              * create a dir node

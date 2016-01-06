@@ -70,11 +70,18 @@ namespace dsn
                 bool create_if_not_exist;
                 bool create_enable_cache;
             };
+
+            virtual ~distributed_lock_service() {}
             /*
              * initialization routine
              */
             virtual error_code initialize(int argc, const char** argv) = 0;
             
+            /*
+             * finalize routine
+             */
+            virtual error_code finalize() = 0;
+
             /*
              * lock
              * lock_cb_code: the task code specifies where to execute the callback

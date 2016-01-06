@@ -94,7 +94,8 @@ struct replica_state
     partition_status status;
     int64_t ballot;
     decree last_committed_decree;
-    replica_state() : status(PS_INACTIVE), ballot(0), last_committed_decree(0) {}
+    decree last_durable_decree; // -1 means not set
+    replica_state() : status(PS_INACTIVE), ballot(0), last_committed_decree(0),last_durable_decree(-1) {}
     replica_state& operator= (const replica_state& o)
     {
         if (this == &o) return *this;
@@ -102,6 +103,7 @@ struct replica_state
         status = o.status;
         ballot = o.ballot;
         last_committed_decree = o.last_committed_decree;
+        last_durable_decree = o.last_durable_decree;
         return *this;
     }
     bool operator== (const replica_state& o) const
@@ -109,7 +111,8 @@ struct replica_state
         return id == o.id &&
                 status == o.status &&
                 ballot == o.ballot &&
-                last_committed_decree == o.last_committed_decree;
+                last_committed_decree == o.last_committed_decree &&
+                (last_durable_decree == -1 || o.last_durable_decree == -1 || last_durable_decree == o.last_durable_decree);
     }
     bool operator!= (const replica_state& o) const
     {
@@ -147,6 +150,9 @@ struct state_snapshot
             const replica_state& cur_state = kv.second;
             if (cur_state.ballot > oth_state.ballot
                     || cur_state.last_committed_decree > oth_state.last_committed_decree)
+                return false;
+            if (cur_state.last_durable_decree != -1 && oth_state.last_durable_decree != -1
+                    && cur_state.last_durable_decree > oth_state.last_durable_decree)
                 return false;
         }
         return true;

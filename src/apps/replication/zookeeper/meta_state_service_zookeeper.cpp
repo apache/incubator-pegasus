@@ -43,6 +43,105 @@
 
 namespace dsn{ namespace dist {
 
+class zoo_transaction : public meta_state_service::transaction_entries
+{
+public:
+    zoo_transaction(unsigned int capacity);
+    virtual ~zoo_transaction() override {}
+    virtual error_code create_node(const std::string& name, const blob& value = blob()) override;
+    virtual error_code set_data(const std::string& name, const blob& value = blob()) override;
+    virtual error_code delete_node(const std::string& name) override;
+    virtual error_code get_result(unsigned int entry_index) override;
+
+    std::shared_ptr<zookeeper_session::zoo_atomic_packet> packet() { return _pkt; }
+private:
+    std::shared_ptr<zookeeper_session::zoo_atomic_packet> _pkt;
+};
+
+zoo_transaction::zoo_transaction(unsigned int capacity)
+{
+    _pkt.reset(new zookeeper_session::zoo_atomic_packet(capacity));
+}
+
+error_code zoo_transaction::create_node(const std::string& path, const blob& value)
+{
+    if (_pkt->_count >= _pkt->_capacity)
+        return ERR_ARRAY_INDEX_OUT_OF_RANGE;
+
+    unsigned int& offset = _pkt->_count;
+    std::string& p = (_pkt->_paths)[offset];
+    blob& b = (_pkt->_datas)[offset];
+
+    p = path;
+    b = value;
+
+    zoo_op_t& op = _pkt->_ops[offset];
+    op.type = ZOO_CREATE_OP;
+    op.create_op.path = p.c_str();
+    op.create_op.flags = 0;
+    op.create_op.acl = &ZOO_OPEN_ACL_UNSAFE;
+    op.create_op.data = b.data();
+    op.create_op.datalen = b.length();
+
+    /* output path is either same with path(for non-sequencial node)
+     * or 10 bytes more than the path(for sequencial node) */
+    int buffer_length = path.size() + 20;
+
+    op.create_op.buf = _pkt->alloc_buffer(buffer_length);
+    op.create_op.buflen = buffer_length;
+
+    ++offset;
+    return ERR_OK;
+}
+
+error_code zoo_transaction::delete_node(const std::string &path)
+{
+    if (_pkt->_count >= _pkt->_capacity)
+        return ERR_ARRAY_INDEX_OUT_OF_RANGE;
+    unsigned int& offset = _pkt->_count;
+    std::string& p = (_pkt->_paths)[offset];
+
+    p = path;
+
+    zoo_op_t& op = _pkt->_ops[offset];
+    op.type = ZOO_DELETE_OP;
+    op.delete_op.path = p.c_str();
+    op.delete_op.version = -1;
+
+    ++offset;
+    return ERR_OK;
+}
+
+error_code zoo_transaction::set_data(const std::string &name, const blob &value)
+{
+    if (_pkt->_count >= _pkt->_capacity)
+        return ERR_ARRAY_INDEX_OUT_OF_RANGE;
+    unsigned int& offset = _pkt->_count;
+    std::string& p = (_pkt->_paths)[offset];
+    blob& b = (_pkt->_datas[offset]);
+    p = name;
+    b = value;
+
+    zoo_op_t& op = _pkt->_ops[offset];
+    op.type = ZOO_SETDATA_OP;
+    op.set_op.path = p.c_str();
+    op.set_op.data = value.data();
+    op.set_op.datalen = value.length();
+    op.set_op.version = -1;
+    op.set_op.stat = (struct Stat*)_pkt->alloc_buffer(sizeof(struct Stat));
+
+    ++offset;
+    return ERR_OK;
+}
+
+error_code zoo_transaction::get_result(unsigned int entry_index)
+{
+    if (entry_index >= _pkt->_count)
+        return ERR_ARRAY_INDEX_OUT_OF_RANGE;
+    return from_zerror( _pkt->_results[entry_index].err );
+}
+
+
 meta_state_service_zookeeper::meta_state_service_zookeeper(): clientlet(), ref_counter()
 {
     _first_call = true;
@@ -78,10 +177,22 @@ error_code meta_state_service_zookeeper::initialize(int /*argc*/, const char** /
     }
 
     ddebug("init meta_state_service_zookeeper succeed");
-    // TODO: add_ref() here because we need add_ref/release_ref in callbacks, so this object should be
-    // stored in ref_ptr to avoid memory leak.
+
+    //Notice: this reference is released in finalize
     add_ref();
     return ERR_OK;
+}
+
+error_code meta_state_service_zookeeper::finalize()
+{
+    release_ref();
+    return ERR_OK;
+}
+
+std::shared_ptr<meta_state_service::transaction_entries> meta_state_service_zookeeper::new_transaction_entries(unsigned int capacity)
+{
+    std::shared_ptr<zoo_transaction> t(new zoo_transaction(capacity));
+    return t;
 }
 
 #define VISIT_INIT(tsk, op_type, node) \
@@ -103,6 +214,26 @@ task_ptr meta_state_service_zookeeper::create_node(
     VISIT_INIT(tsk, zookeeper_session::ZOO_OPERATION::ZOO_CREATE, node);
     input->_value = value;
     input->_flags = 0;
+
+    _session->visit(op);
+    return tsk;
+}
+
+task_ptr meta_state_service_zookeeper::submit_transaction(const std::shared_ptr<transaction_entries> &entries,
+    task_code cb_code,
+    const err_callback& cb_transaction,
+    clientlet* tracker
+    )
+{
+    task_ptr tsk = tasking::create_late_task(cb_code, cb_transaction, 0, tracker);
+    dinfo("call submit batch");
+    zookeeper_session::zoo_opcontext* op = zookeeper_session::create_context();
+    zookeeper_session::zoo_input* input = &op->_input;
+    op->_callback_function = std::bind(&meta_state_service_zookeeper::visit_zookeeper_internal, ref_this(this), tsk, std::placeholders::_1);
+    op->_optype = zookeeper_session::ZOO_OPERATION::ZOO_TRANSACTION;
+
+    zoo_transaction* t = dynamic_cast<zoo_transaction*>(entries.get());
+    input->_pkt = t->packet();
 
     _session->visit(op);
     return tsk;
@@ -260,7 +391,7 @@ void meta_state_service_zookeeper::visit_zookeeper_internal(
     void* result)
 {
     zookeeper_session::zoo_opcontext* op = reinterpret_cast<zookeeper_session::zoo_opcontext*>(result);
-    dinfo("visit zookeeper internal: ans(%d), call type(%d)", op->_output.error, op->_optype);
+    dinfo("visit zookeeper internal: ans(%s), call type(%d)", zerror(op->_output.error), op->_optype);
 
     switch (op->_optype)
     {
@@ -268,6 +399,7 @@ void meta_state_service_zookeeper::visit_zookeeper_internal(
     case zookeeper_session::ZOO_OPERATION::ZOO_DELETE:
     case zookeeper_session::ZOO_OPERATION::ZOO_EXISTS:
     case zookeeper_session::ZOO_OPERATION::ZOO_SET:
+    case zookeeper_session::ZOO_OPERATION::ZOO_TRANSACTION:
     {
         auto tsk = reinterpret_cast< safe_late_task<meta_state_service::err_callback>* >(callback.get());
         tsk->bind_and_enqueue([op](meta_state_service::err_callback& cb){

@@ -58,8 +58,6 @@
 
 void dsn_core_init()
 {
-    ddebug("register builtin components");
-
     // register all providers
     dsn::tools::register_common_providers();
     dsn::tools::register_hpc_providers();

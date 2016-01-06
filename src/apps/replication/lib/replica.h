@@ -159,7 +159,7 @@ private:
     // learning    
     void init_learn(uint64_t signature);
     void on_learn_reply(error_code err, std::shared_ptr<learn_request>& req, std::shared_ptr<learn_response>& resp);
-    void on_copy_remote_state_completed(error_code err, size_t size, std::shared_ptr<learn_response> resp);
+    void on_copy_remote_state_completed(error_code err, size_t size, std::shared_ptr<learn_request> req, std::shared_ptr<learn_response> resp);
     void on_learn_remote_state_completed(error_code err);
     void handle_learning_error(error_code err);
     void handle_learning_succeeded_on_primary(::dsn::rpc_address node, uint64_t learn_signature);
@@ -197,9 +197,9 @@ private:
     /////////////////////////////////////////////////////////////////
     // check timer for gc, checkpointing etc.
     void on_checkpoint_timer();
-    void gc();
+    void garbage_collection();
     void init_checkpoint();
-    void checkpoint();
+    void background_checkpoint();
     void catch_up_with_private_logs(partition_status s);
     void on_checkpoint_completed(error_code err);
     void on_copy_checkpoint_ack(error_code err, std::shared_ptr<replica_configuration>& req, std::shared_ptr<learn_response>& resp);
@@ -220,8 +220,8 @@ private:
     // private prepare log (may be empty, depending on config)
     mutation_log_ptr        _private_log;
 
-    // local check timer for gc, checkpoint, etc.
-    dsn::task_ptr           _check_timer;
+    // local checkpoint timer for gc, checkpoint, etc.
+    dsn::task_ptr           _checkpoint_timer;
 
     // application
     std::unique_ptr<replication_app_base>  _app;

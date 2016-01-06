@@ -1,6 +1,12 @@
 SET bin_dir=%~dp0
 SET cmd=%1
 SET src_dir=%~f2
+
+IF EXIST "%src_dir%\apps.txt" (
+    FOR /F "tokens=*" %%A IN (%src_dir%\apps.txt) DO CALL %bin_dir%\deploy.cmd %1 %2\%%A %3 %4 %5
+    GOTO exit
+)
+
 SET deploy_name=%~n2
 SET ldst_dir=%3\%deploy_name%
 
@@ -53,9 +59,11 @@ IF ERRORLEVEL 1 (
 GOTO exit
 
 :usage
-    ECHO run.cmd deploy^|start^|stop^|cleanup^|quick-cleanup^|sds(stop-deploy-start) source-dir target-dir
-    ECHO  Example: "run deploy .\skv-meta d:\zhenyug" deploys skv-meta to d:\zhenyug\skv-meta.
+    ECHO run.cmd deploy^|start^|stop^|cleanup^|quick-cleanup^|scds(stop-cleanup-deploy-start) source-dir target-dir
     ECHO  source-dir is a directory which contains a start.cmd, machines.txt, and other resource files/dirs
+    ECHO  or, a directory which contains a set of directories above which will be deployed simultaneously.
+    ECHO  Example: "run deploy .\skv\meta d:\zhenyug" deploys meta to d:\zhenyug\meta
+    ECHO  Example: "run deploy .\skv d:\zhenyug" deploys skv\meta, skv\replica, ... to d:\zhenyug\meta, replica, ...    
     GOTO:EOF
 
 REM  
