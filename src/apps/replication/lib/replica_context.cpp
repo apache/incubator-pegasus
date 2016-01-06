@@ -175,12 +175,14 @@ bool potential_secondary_context::cleanup(bool force)
 {
     task_ptr t = nullptr;
 
-    CLEANUP_TASK(learn_remote_files_task, force)
-
     CLEANUP_TASK_ALWAYS(learning_task)
 
     CLEANUP_TASK_ALWAYS(learn_remote_files_completed_task)
+        
+    CLEANUP_TASK(learn_remote_files_task, force)
 
+    CLEANUP_TASK(catchup_with_private_log_task, force)
+    
     learning_signature = 0;
     learning_round_is_running = false;
     learning_start_prepare_decree = invalid_decree;
@@ -193,7 +195,8 @@ bool potential_secondary_context::is_cleaned()
     return 
         nullptr == learn_remote_files_completed_task &&
         nullptr == learning_task &&
-        nullptr == learn_remote_files_completed_task
+        nullptr == learn_remote_files_completed_task &&
+        nullptr == catchup_with_private_log_task
         ;
 }
 

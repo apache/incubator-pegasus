@@ -132,8 +132,8 @@ void replica::init_learn(uint64_t signature)
                         _potential_secondary_states.learning_round_is_running = true;
 
                         tasking::enqueue(
-                            &_secondary_states.checkpoint_task,
-                            LPC_CHECKPOINT_REPLICA,
+                            &_potential_secondary_states.catchup_with_private_log_task,
+                            LPC_CATCHUP_WITH_PRIVATE_LOGS,
                             this,
                             [this]() { this->catch_up_with_private_logs(PS_POTENTIAL_SECONDARY); },
                             gpid_to_hash(get_gpid())

@@ -124,8 +124,7 @@ public:
     ::dsn::task_ptr       learning_task;
     ::dsn::task_ptr       learn_remote_files_task;
     ::dsn::task_ptr       learn_remote_files_completed_task;
-
-
+    ::dsn::task_ptr       catchup_with_private_log_task;
 };
 
 //---------------inline impl----------------------------------------------------------------

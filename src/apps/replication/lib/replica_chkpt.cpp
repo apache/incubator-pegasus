@@ -346,7 +346,7 @@ namespace dsn {
                 {
                     tasking::enqueue(
                         &_secondary_states.checkpoint_task,
-                        LPC_CHECKPOINT_REPLICA,
+                        LPC_CATCHUP_WITH_PRIVATE_LOGS,
                         this,
                         [this]() { this->catch_up_with_private_logs(PS_SECONDARY); },
                         gpid_to_hash(get_gpid())
