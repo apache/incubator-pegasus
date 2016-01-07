@@ -241,7 +241,7 @@ void replica::execute_mutation(mutation_ptr& mu)
         break;
 
     case PS_SECONDARY:
-        if (_secondary_states.checkpoint_task == nullptr)
+        if (!_secondary_states.checkpoint_is_running)
         {
             check_state_completeness();
             dassert (_app->last_committed_decree() + 1 == d, "");
@@ -365,8 +365,22 @@ void replica::close()
 
     cleanup_preparing_mutations(true);
     dassert(_primary_states.is_cleaned(), "primary context is not cleared");
-    dassert(_secondary_states.is_cleaned(), "secondary context is not cleared");
-    dassert(_potential_secondary_states.is_cleaned(), "potential secondary context is not cleared");
+
+    if (PS_INACTIVE == status())
+    {
+        dassert(_secondary_states.is_cleaned(), "secondary context is not cleared");
+        dassert(_potential_secondary_states.is_cleaned(), "potential secondary context is not cleared");
+    }
+
+    // for PS_ERROR, context cleanup is done here as they may block
+    else
+    {
+        bool r = _secondary_states.cleanup(true);
+        dassert(r, "secondary context is not cleared");
+        
+        r = _potential_secondary_states.cleanup(true);
+        dassert(r, "potential secondary context is not cleared");
+    }
     
     if (_private_log != nullptr)
     {

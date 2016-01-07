@@ -163,21 +163,43 @@ bool primary_context::check_exist(::dsn::rpc_address node, partition_status st)
 bool secondary_context::cleanup(bool force)
 {
     CLEANUP_TASK(checkpoint_task, force)
+    
+    if (!force)
+    {
+        CLEANUP_TASK_ALWAYS(checkpoint_completed_task);
+    }
+    else
+    {
+        CLEANUP_TASK(checkpoint_completed_task, force)
+    }
+
+    CLEANUP_TASK(catchup_with_private_log_task, force)
+
+    checkpoint_is_running = false;
     return true;
 }
 
 bool secondary_context::is_cleaned()
 {
-    return nullptr == checkpoint_task;
+    return checkpoint_is_running == false;
 }
 
 bool potential_secondary_context::cleanup(bool force)
 {
     task_ptr t = nullptr;
 
-    CLEANUP_TASK_ALWAYS(learning_task)
+    if (!force)
+    {
+        CLEANUP_TASK_ALWAYS(learning_task)
 
-    CLEANUP_TASK_ALWAYS(learn_remote_files_completed_task)
+        CLEANUP_TASK_ALWAYS(learn_remote_files_completed_task)
+    }
+    else
+    {
+        CLEANUP_TASK(learning_task, true)
+
+        CLEANUP_TASK(learn_remote_files_completed_task, true)
+    }
         
     CLEANUP_TASK(learn_remote_files_task, force)
 

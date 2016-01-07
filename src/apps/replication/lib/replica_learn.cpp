@@ -749,10 +749,6 @@ void replica::on_copy_remote_state_completed(
 void replica::on_learn_remote_state_completed(error_code err)
 {
     check_hashed_access();
-    if (_secondary_states.checkpoint_task != nullptr)
-    {
-        _secondary_states.checkpoint_task = nullptr;
-    }
 
     if (PS_POTENTIAL_SECONDARY != status())
         return;

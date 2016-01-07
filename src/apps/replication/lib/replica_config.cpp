@@ -123,7 +123,7 @@ void replica::assign_primary(configuration_update_request& proposal)
     }
 
     if (proposal.type == CT_UPGRADE_TO_PRIMARY 
-        && (status() != PS_SECONDARY || _secondary_states.checkpoint_task != nullptr))
+        && (status() != PS_SECONDARY || _secondary_states.checkpoint_is_running))
     {
         dwarn(
             "%s: invalid upgrade to primary proposal as the node is in %s or during checkpointing",
@@ -505,6 +505,8 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         return true;
 
     // skip invalid change
+    // but do not disable transitions to PS_ERROR as errors
+    // must be handled immmediately
     switch (old_status)
     {
     case PS_ERROR:
@@ -536,7 +538,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         }
         break;
     case PS_POTENTIAL_SECONDARY:
-        if (config.status == PS_ERROR || config.status == PS_INACTIVE)
+        if (config.status == PS_INACTIVE)
         {
             if (!_potential_secondary_states.cleanup(false))
             {
@@ -553,7 +555,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         }
         break;
     case PS_SECONDARY:
-        if (config.status != PS_SECONDARY)
+        if (config.status != PS_SECONDARY && config.status != PS_ERROR)
         {
             if (!_secondary_states.cleanup(false))
             {
@@ -621,6 +623,7 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         case PS_INACTIVE:
             break;
         case PS_ERROR:
+            // _secondary_states.cleanup(true); => do it in close as it may block
             break;
         default:
             dassert (false, "invalid execution path");
@@ -634,20 +637,23 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
             break;
         case PS_SECONDARY:
             _prepare_list->truncate(_app->last_committed_decree());            
-            r = _potential_secondary_states.cleanup(false);
-            dassert(r, "%s: potential secondary contxt cleanup failed", name());
+
+            // using force cleanup now as all tasks must be done already
+            r = _potential_secondary_states.cleanup(true);
+            dassert(r, "%s: potential secondary context cleanup failed", name());
+
             check_state_completeness();
             break;
         case PS_POTENTIAL_SECONDARY:
             break;
         case PS_INACTIVE:
-            r = _potential_secondary_states.cleanup(false);
-            dassert(r, "%s: potential secondary contxt cleanup failed", name());
             break;
         case PS_ERROR:
             _prepare_list->reset(_app->last_committed_decree());
-            r = _potential_secondary_states.cleanup(false);
-            dassert(r, "%s: potential secondary contxt cleanup failed", name());
+            _potential_secondary_states.cleanup(false);
+            // => do this in close as it may block
+            // r = _potential_secondary_states.cleanup(true);
+            // dassert(r, "%s: potential secondary context cleanup failed", name());
             break;
         default:
             dassert (false, "invalid execution path");
@@ -672,9 +678,16 @@ bool replica::update_local_configuration(const replica_configuration& config, bo
         case PS_INACTIVE:
             break;
         case PS_ERROR:
+            // => do this in close as it may block
+            // if (_inactive_is_transient)
+            // {
+            //    _secondary_states.cleanup(true);
+            // }
+
             if (_inactive_is_transient)
             {
                 _primary_states.cleanup(true);
+                _secondary_states.cleanup(false);
             }
             _inactive_is_transient = false;
             break;

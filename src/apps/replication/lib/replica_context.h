@@ -95,11 +95,15 @@ public:
 class secondary_context
 {
 public:
+    secondary_context() : checkpoint_is_running(false) {}
     bool cleanup(bool force);
     bool is_cleaned();
 
 public:
+    bool            checkpoint_is_running;
     ::dsn::task_ptr checkpoint_task;
+    ::dsn::task_ptr checkpoint_completed_task;
+    ::dsn::task_ptr catchup_with_private_log_task;
 };
 
 class potential_secondary_context 
