@@ -138,10 +138,16 @@ public:
     // for test
     void set_config_change_subscriber_for_test(config_change_subscriber subscriber);
 
+    // dump & restore
+    error_code dump_from_remote_storage(const char* format, const char* local_path);
+    error_code restore_from_local_storage(const char* local_path, bool write_back_to_remote_storage);
+
 private:
     // initialize apps in local cache and in remote storage
     error_code initialize_apps();
 
+    // synchronize the state to meta state server
+    error_code sync_apps_to_remote_storage();
     // synchronize the latest state from meta state server (i.e., _storage)
     error_code sync_apps_from_remote_storage();
 
