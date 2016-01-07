@@ -125,6 +125,7 @@ public:
     volatile bool   learning_round_is_running;
     decree          learning_start_prepare_decree;
 
+    ::dsn::task_ptr       delay_learning_task;
     ::dsn::task_ptr       learning_task;
     ::dsn::task_ptr       learn_remote_files_task;
     ::dsn::task_ptr       learn_remote_files_completed_task;
