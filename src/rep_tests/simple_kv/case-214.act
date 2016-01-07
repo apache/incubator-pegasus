@@ -80,11 +80,16 @@ state:{{r1,ina,2,10},{r2,sec,2,10},{r3,pot,2,0}}
 # time +40  (learn@r1)  (downgrade@m)
 wait:on_task_begin:node=r1,task_code=RPC_LEARN
 wait:on_rpc_reply:rpc_name=RPC_LEARN_ACK,from=r1,to=r3
-# time +40  (learn@r3)  (downgrade@r1)
+# time +50  (learn@r3)  (downgrade@r1)
+# this will trigger LPC_DELAY_LEARN
 wait:on_task_begin:node=r3,task_code=RPC_LEARN_ACK
+wait:on_task_enqueue:node=r3,task_code=LPC_DELAY_LEARN
+# after sometimes delay, start another learn
+wait:on_task_begin:node=r3,task_code=LPC_DELAY_LEARN
+wait:on_rpc_call:rpc_name=RPC_LEARN,from=r3,to=r1
+wait:on_rpc_reply:rpc_name=RPC_LEARN_ACK,from=r1,to=r3
 state:{{r1,sec,3,10},{r2,sec,2,10},{r3,err,2,0}}
-# finally
-state:{{r1,sec,3,10},{r2,sec,3,10}}
+state:{{r1,sec,3,10},{r2,sec,2,10}}
 
 # change primary from r1 to r2
 client:replica_config:receiver=r2,type=upgrade_to_primary,node=r2

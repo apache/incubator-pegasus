@@ -442,12 +442,19 @@ void replica::on_learn_reply(
     {
         if (resp->err == ERR_INACTIVE_STATE)
         {
-            // primary is updating ballot, wait group_check to trigger another round of learning
             dwarn(
-                "%s: on_learn_reply[%016llx]: learnee = %s, learnee is updating ballot, waiting",
+                "%s: on_learn_reply[%016llx]: learnee = %s, learnee is updating ballot, delay to start another round of learning",
                 name(), req->signature, resp->config.primary.to_string()
                 );
             _potential_secondary_states.learning_round_is_running = false;
+            tasking::enqueue(
+                &_potential_secondary_states.delay_learning_task,
+                LPC_DELAY_LEARN,
+                this,
+                std::bind(&replica::init_learn, this, req->signature),
+                gpid_to_hash(get_gpid()),
+                1000
+                );
         }
         else
         {

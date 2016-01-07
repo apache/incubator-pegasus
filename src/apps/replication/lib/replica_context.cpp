@@ -190,12 +190,16 @@ bool potential_secondary_context::cleanup(bool force)
 
     if (!force)
     {
+        CLEANUP_TASK_ALWAYS(delay_learning_task)
+
         CLEANUP_TASK_ALWAYS(learning_task)
 
         CLEANUP_TASK_ALWAYS(learn_remote_files_completed_task)
     }
     else
     {
+        CLEANUP_TASK(delay_learning_task, true)
+
         CLEANUP_TASK(learning_task, true)
 
         CLEANUP_TASK(learn_remote_files_completed_task, true)
@@ -214,9 +218,10 @@ bool potential_secondary_context::cleanup(bool force)
 
 bool potential_secondary_context::is_cleaned()
 {
-    return 
-        nullptr == learn_remote_files_completed_task &&
+    return
+        nullptr == delay_learning_task &&
         nullptr == learning_task &&
+        nullptr == learn_remote_files_task &&
         nullptr == learn_remote_files_completed_task &&
         nullptr == catchup_with_private_log_task
         ;
