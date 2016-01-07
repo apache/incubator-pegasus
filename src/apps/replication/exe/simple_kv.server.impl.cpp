@@ -98,6 +98,10 @@ namespace dsn {
             ::dsn::error_code simple_kv_service_impl::open(bool create_new)
             {
                 zauto_lock l(_lock);
+
+                init_last_commit_decree(0);
+                _last_durable_decree = 0;
+
                 if (create_new)
                 {
                     auto& dir = data_dir();

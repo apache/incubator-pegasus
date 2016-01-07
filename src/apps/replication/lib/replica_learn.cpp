@@ -131,8 +131,9 @@ void replica::init_learn(uint64_t signature)
                     {
                         _potential_secondary_states.learning_round_is_running = true;
 
-                        _secondary_states.checkpoint_task = tasking::enqueue(
-                            LPC_CHECKPOINT_REPLICA,
+                        tasking::enqueue(
+                            &_potential_secondary_states.catchup_with_private_log_task,
+                            LPC_CATCHUP_WITH_PRIVATE_LOGS,
                             this,
                             [this]() { this->catch_up_with_private_logs(PS_POTENTIAL_SECONDARY); },
                             gpid_to_hash(get_gpid())
@@ -531,7 +532,8 @@ void replica::on_learn_reply(
         
         if (err != ERR_OK)
         {
-            _potential_secondary_states.learn_remote_files_task = tasking::enqueue(
+            tasking::enqueue(
+                &_potential_secondary_states.learn_remote_files_task,
                 LPC_LEARN_REMOTE_DELTA_FILES,
                 this,
                 std::bind(&replica::on_copy_remote_state_completed, this, err, 0, req, resp)
@@ -588,7 +590,8 @@ void replica::on_learn_reply(
 
         // go to next stage
         _potential_secondary_states.learning_status = LearningWithPrepare;        
-        _potential_secondary_states.learn_remote_files_task = tasking::enqueue(
+        tasking::enqueue(
+            &_potential_secondary_states.learn_remote_files_task,
             LPC_LEARN_REMOTE_DELTA_FILES,
             this,
             std::bind(&replica::on_copy_remote_state_completed, this, err, 0, req, resp)
@@ -617,7 +620,8 @@ void replica::on_learn_reply(
     }
     else
     {
-        _potential_secondary_states.learn_remote_files_task = tasking::enqueue(
+        tasking::enqueue(
+            &_potential_secondary_states.learn_remote_files_task,
             LPC_LEARN_REMOTE_DELTA_FILES,
             this,
             std::bind(&replica::on_copy_remote_state_completed, this, ERR_OK, 0, req, resp)
@@ -740,7 +744,13 @@ void replica::on_copy_remote_state_completed(
         }
     }
 
-    _potential_secondary_states.learn_remote_files_completed_task = tasking::enqueue(
+    // it is possible that the _potential_secondary_states.learn_remote_files_task is still running
+    // while its body is definitely done already as being here, so we manually set its value to nullptr
+    // so that we don't have unnecessary failed reconfiguration later due to this non-nullptr in cleanup
+    _potential_secondary_states.learn_remote_files_task = nullptr;
+    
+    tasking::enqueue(
+        &_potential_secondary_states.learn_remote_files_completed_task,
         LPC_LEARN_REMOTE_DELTA_FILES_COMPLETED,
         this,
         std::bind(&replica::on_learn_remote_state_completed, this, err),
@@ -751,10 +761,6 @@ void replica::on_copy_remote_state_completed(
 void replica::on_learn_remote_state_completed(error_code err)
 {
     check_hashed_access();
-    if (_secondary_states.checkpoint_task != nullptr)
-    {
-        _secondary_states.checkpoint_task = nullptr;
-    }
 
     if (PS_POTENTIAL_SECONDARY != status())
         return;
@@ -781,9 +787,6 @@ void replica::handle_learning_error(error_code err)
         name(),
         err.to_string()
         );
-
-    _potential_secondary_states.cleanup(true);
-    _potential_secondary_states.learning_status = LearningFailed;
 
     update_local_configuration_with_no_ballot_change(PS_ERROR);
 }

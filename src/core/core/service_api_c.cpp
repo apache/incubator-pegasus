@@ -220,6 +220,11 @@ DSN_API const char* dsn_task_priority_to_string(dsn_task_priority_t tt)
     return enum_to_string(tt);
 }
 
+DSN_API bool dsn_task_current(dsn_task_t t)
+{
+    return ::dsn::task::get_current_task() == (::dsn::task*)(t);
+}
+
 DSN_API const char* dsn_config_get_value_string(const char* section, const char* key, const char* default_value, const char* dsptr)
 {
     return dsn_all.config->get_string_value(section, key, default_value, dsptr);
@@ -927,7 +932,9 @@ err:
 DSN_API void dsn_exit(int code)
 {
 # if defined(_WIN32)
-    SuspendAllThreads();
+    // TODO: do not use std::map above, coz when suspend the other threads, they may stop
+    // inside certain locks which causes deadlock
+    // SuspendAllThreads();
     ::TerminateProcess(::GetCurrentProcess(), code);
 # else    
     _exit(code);
